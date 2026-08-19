@@ -376,14 +376,21 @@ function registryPatternChoices(
 }
 
 function dedupeChoices(choices: readonly TapSwapChoice[]): TapSwapChoice[] {
+  // ⚠ SORT FIRST, THEN DEDUPE. It used to dedupe then sort, which keeps the
+  // entry that happened to arrive FIRST rather than the better-tiered one —
+  // harmless while one source ran at a time, and wrong the moment two do: the
+  // same exercise offered by both sources would keep whichever source ran
+  // earlier and could land in "Similar" while it is genuinely a closest match.
   const seen = new Set<string>();
-  return choices.filter((choice) => {
-    const key = `${choice.kind}:${choice.name ?? ''}`.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).sort((left, right) =>
-    compareSafeTrainingFallbackTiers(left.hierarchyTier, right.hierarchyTier));
+  return [...choices]
+    .sort((left, right) =>
+      compareSafeTrainingFallbackTiers(left.hierarchyTier, right.hierarchyTier))
+    .filter((choice) => {
+      const key = `${choice.kind}:${choice.name ?? ''}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 /**
@@ -451,20 +458,28 @@ export function getTapSwapChoices(args: {
           : {}),
       }));
   } else {
-    trainingChoices = patternChoices(
-      args.originalExercise,
-      args.reason,
-      environment,
-      avoidNames,
-    );
-    if (trainingChoices.length === 0) {
-      trainingChoices = registryPatternChoices(
-        args.originalExercise,
-        args.reason,
-        environment,
-        avoidNames,
-      );
-    }
+    /* ── BOTH SOURCES, ALWAYS — SAM WANTS UP TO SIX, NOT THE FIRST ONE ─────
+     *
+     * Sam, 2026-08-19: *"Up to six legal choices: two Closest matches; two
+     * Similar options; two Other useful options ... Show fewer when good legal
+     * options do not exist."*
+     *
+     * The registry fallback used to run ONLY when the substitute engine came
+     * back empty — a first-source-wins ladder, which is right when a caller
+     * wants one answer and wrong when it wants a menu. MEASURED before the
+     * change (`npm run probe:swap-choices`): every row in a real off-season
+     * session offered exactly `2 + 1` — two from one tier and the recovery
+     * fallback — and no row ever filled two training tiers at once.
+     *
+     * Merging is safe because both sources apply the same legality filter
+     * (`assessTapSwapCandidateSafety`) and `dedupeChoices` keeps the
+     * BETTER-TIERED entry: the list is sorted by tier and the first occurrence
+     * of a name wins. So a name the registry also offers cannot demote itself.
+     */
+    trainingChoices = [
+      ...patternChoices(args.originalExercise, args.reason, environment, avoidNames),
+      ...registryPatternChoices(args.originalExercise, args.reason, environment, avoidNames),
+    ];
   }
 
   const choices = dedupeChoices(trainingChoices);
@@ -477,4 +492,77 @@ export function getTapSwapChoices(args: {
   }
   if (args.recoveryAllowed !== false) return [recoveryChoice(environment)];
   return [restChoice('No safe useful training or recovery option remains.')];
+}
+
+/* ── SAM'S THREE GROUPS, AND THEY ARE THE LADDER'S OWN TIERS ────────────────
+ *
+ * Sam, 2026-08-19: *"Up to six legal choices: two Closest matches; two Similar
+ * options; two Other useful options. Label the groups. Show fewer when good
+ * legal options do not exist."*
+ *
+ * NO NEW VOCABULARY. `SAFE_TRAINING_FALLBACK_TIERS` already ranks exactly this
+ * ladder and every choice already carries its tier, so the groups are a
+ * PROJECTION of a signed ordering rather than a second opinion about
+ * closeness. A separate similarity score would be a rival answer to a question
+ * the fallback hierarchy already owns.
+ *
+ *   same_movement_pattern                        -> Closest matches
+ *   similar_muscle_group                         -> Similar options
+ *   unaffected_body_area | recovery_easy_conditioning -> Other useful options
+ *
+ * `rest` is DELIBERATELY not a group. Rest is not a swap — an athlete who wants
+ * the work gone uses Remove, and offering "rest" inside a substitution menu is
+ * the app answering a question it was not asked.
+ */
+export type TapSwapGroupId = 'closest' | 'similar' | 'other';
+
+export const TAP_SWAP_GROUP_LABEL: Record<TapSwapGroupId, string> = {
+  closest: 'Closest matches',
+  similar: 'Similar options',
+  other: 'Other useful options',
+};
+
+/** How many the athlete is offered per group. Sam's number, stated once. */
+export const TAP_SWAP_CHOICES_PER_GROUP = 2;
+
+export interface TapSwapChoiceGroup {
+  id: TapSwapGroupId;
+  label: string;
+  choices: TapSwapChoice[];
+}
+
+function groupIdForTier(tier: TapSwapHierarchyTier): TapSwapGroupId | null {
+  if (tier === 'same_movement_pattern') return 'closest';
+  if (tier === 'similar_muscle_group') return 'similar';
+  if (tier === 'unaffected_body_area' || tier === 'recovery_easy_conditioning') return 'other';
+  return null;
+}
+
+/**
+ * THE ATHLETE'S MENU — at most two per group, and **only groups that have
+ * something in them**.
+ *
+ * *"Show fewer when good legal options do not exist"* is honoured by omission,
+ * not by padding: a group with no legal member is absent, and a row with no
+ * legal option at all returns `[]` so the caller can say so in words rather
+ * than open an empty sheet. Measured on a real off-season session
+ * (`npm run probe:swap-choices`): `Banded Dead Bug` genuinely has one option and
+ * `Bulgarian Split Squats` has five across two training groups.
+ */
+export function groupTapSwapChoices(
+  choices: readonly TapSwapChoice[],
+): TapSwapChoiceGroup[] {
+  const buckets: Record<TapSwapGroupId, TapSwapChoice[]> = {
+    closest: [], similar: [], other: [],
+  };
+  for (const choice of choices) {
+    if (!choice.name) continue;
+    const id = groupIdForTier(choice.hierarchyTier);
+    if (!id) continue;
+    if (buckets[id].length >= TAP_SWAP_CHOICES_PER_GROUP) continue;
+    buckets[id].push(choice);
+  }
+  return (['closest', 'similar', 'other'] as const)
+    .filter((id) => buckets[id].length > 0)
+    .map((id) => ({ id, label: TAP_SWAP_GROUP_LABEL[id], choices: buckets[id] }));
 }

@@ -50,6 +50,7 @@ import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import {
   getTapSwapChoices,
+  groupTapSwapChoices,
   resolveTapSwapEnvironment,
   type TapSwapChoice,
   type TapSwapHierarchyTier,
@@ -245,6 +246,28 @@ type ExerciseEditStep =
    * about.
    */
   | { kind: 'exclusion_scope'; exercise: EditableExercise }
+  /**
+   * SAM'S SWAP MENU — up to six legal options in three labelled groups.
+   *
+   * Sam, 2026-08-19: *"Up to six legal choices: two Closest matches; two
+   * Similar options; two Other useful options. Label the groups. Show fewer
+   * when good legal options do not exist."*
+   *
+   * It sits BEFORE `confirm_swap` and does not replace it: the athlete picks
+   * from the menu and still sees what they are about to get, with its own
+   * prescription, before anything is written. The screen used to take
+   * `getTapSwapChoices(...)[0]` and show that one option as a fait accompli.
+   */
+  | {
+      kind: 'choose_swap';
+      exercise: EditableExercise;
+      reason: SwapReason;
+      groups: readonly {
+        id: string;
+        label: string;
+        options: readonly { name: string; meta: string; suggestion: SuggestedSwap }[];
+      }[];
+    }
   | {
       kind: 'confirm_swap';
       exercise: EditableExercise;
@@ -252,6 +275,12 @@ type ExerciseEditStep =
       reason: SwapReason | 'Injury / pain';
       injuryArea?: InjuryArea;
       injurySeverity?: InjurySeverity;
+      /**
+       * THE MENU THIS CHOICE CAME FROM, so Back returns to it rather than
+       * closing the sheet. Absent when the swap was reached from the injury
+       * flow, which has its own shallower step and no menu of its own.
+       */
+      fromMenu?: Extract<ExerciseEditStep, { kind: 'choose_swap' }>;
     }
   | {
       kind: 'confirm_add';
@@ -785,14 +814,49 @@ export default function DayWorkoutScreenV2() {
         openExerciseInjuryFlow(exercise);
         return;
       }
-      setExerciseEditStep({
-        kind: 'confirm_swap',
-        exercise,
-        suggestion: suggestTapSwap(exercise, reason),
-        reason,
+      const dateISO = date ?? todayISOLocal();
+      const environment = resolveTapSwapEnvironment({
+        date: dateISO,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
       });
+      // THE SAME LADDER, ASKED FOR ITS WHOLE ANSWER. `groupTapSwapChoices` caps
+      // each group at two and OMITS a group with no legal member — Sam's *"show
+      // fewer when good legal options do not exist"* honoured by omission
+      // rather than by padding the list with something illegal.
+      const groups = groupTapSwapChoices(getTapSwapChoices({
+        originalExercise: exercise.name,
+        reason: tapSwapReason(reason),
+        environment,
+        existingExerciseNames: editableExercises.map((item) => item.name),
+      })).map((group) => ({
+        id: group.id,
+        label: group.label,
+        options: group.choices.map((choice) => {
+          const suggestion = suggestedSwapFromChoice(exercise, choice);
+          return {
+            name: displayExerciseName(choice.name ?? ''),
+            meta: suggestion.kind === 'exercise'
+              ? suggestionPrescription(suggestion.suggestion)
+              : choice.reason,
+            suggestion,
+          };
+        }),
+      })).filter((group) => group.options.length > 0);
+      if (groups.length === 0) {
+        // HONEST, NOT AN EMPTY SHEET. A row with no legal substitute says so in
+        // the athlete's words; it does not open a chooser with nothing in it.
+        showExerciseEditFallback(
+          'No safe swap for this one',
+          `There is no safe replacement for ${displayExerciseName(exercise.name)} with today’s kit and how you are pulling up. You can remove it instead.`,
+          `Find a safe replacement for ${displayExerciseName(exercise.name)} on ${dateLabel}.`,
+        );
+        return;
+      }
+      setExerciseEditStep({ kind: 'choose_swap', exercise, reason, groups });
     },
-    [openExerciseInjuryFlow, suggestTapSwap],
+    [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
   );
 
   const prepareAdd = React.useCallback(
@@ -3260,6 +3324,12 @@ function ExerciseEditSheet({
   // `add_kind` (that pairing survives untouched, since add was never routed
   // through exercise_menu or concern_reason).
   const goBack = () => {
+    // A swap chosen from the menu has somewhere shallower to go now, and it is
+    // the menu. An injury-flow swap does not carry one and still closes.
+    if (step.kind === 'confirm_swap' && step.fromMenu) {
+      onStep(step.fromMenu);
+      return;
+    }
     if (step.kind === 'confirm_add') {
       onStep({ kind: 'add_kind' });
       return;
@@ -3359,6 +3429,46 @@ function ExerciseEditSheet({
                 step.exercise.targetId ?? step.exercise.key,
               )}
             />
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      case 'choose_swap':
+        return (
+          <>
+            <Text style={styles.exerciseEditBody}>
+              Pick what you would rather do instead of{' '}
+              {displayExerciseName(step.exercise.name)}.
+            </Text>
+            {step.groups.map((group) => (
+              <View key={group.id} style={styles.exerciseEditGroup}>
+                {/* THE LABEL IS THE POINT. Six unlabelled options are a list;
+                    three labelled groups tell the athlete HOW FAR each option
+                    is from what they were given. */}
+                <Text style={styles.exerciseEditGroupLabel}>{group.label}</Text>
+                {group.options.map((option) => (
+                  <Button
+                    key={`${group.id}:${option.name}`}
+                    label={`${option.name} — ${option.meta}`}
+                    variant="secondary"
+                    size="md"
+                    onPress={() => onStep({
+                      kind: 'confirm_swap',
+                      exercise: step.exercise,
+                      suggestion: option.suggestion,
+                      reason: step.reason,
+                      fromMenu: step,
+                    })}
+                    style={styles.exerciseEditSecondaryButton}
+                  />
+                ))}
+              </View>
+            ))}
             <Button
               label="Cancel"
               variant="secondary"
@@ -3574,6 +3684,8 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return 'What do you want to add?';
     case 'confirm_remove':
       return 'Remove this exercise?';
+    case 'choose_swap':
+      return 'What would you rather do?';
     case 'confirm_swap':
       return 'Swap exercise?';
     case 'confirm_add':
@@ -4643,6 +4755,17 @@ const styles = StyleSheet.create({
     color: colors.accent.lime,
     fontSize: 12,
     fontWeight: '700',
+  },
+  exerciseEditGroup: {
+    marginTop: 10,
+    gap: 6,
+  },
+  exerciseEditGroupLabel: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   exerciseEditSecondaryButton: {
     marginTop: 2,

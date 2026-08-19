@@ -794,3 +794,87 @@ a removal wrote a coach override, and that write is what was ordered removed.
 **NOT COVERED YET:** the simulator. Nothing here has been seen on glass.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — SWAP OFFERS A MENU, AND THE GROUPS ARE THE LADDER'S OWN TIERS
+
+## THE SHAPE
+
+`SAFE_TRAINING_FALLBACK_TIERS` already ranks exactly the ladder Sam's three
+groups describe, and every `TapSwapChoice` already carries its tier. So the
+groups are a PROJECTION of a signed ordering, not a second opinion about
+closeness — a similarity score of my own would have been a rival answer to a
+question the fallback hierarchy already owns.
+
+```
+same_movement_pattern                              -> Closest matches
+similar_muscle_group                               -> Similar options
+unaffected_body_area | recovery_easy_conditioning  -> Other useful options
+rest                                               -> NOT A GROUP
+```
+
+**Rest is deliberately not offered.** An athlete who wants the work gone uses
+Remove; offering rest inside a substitution menu answers a question nobody asked.
+
+## TWO THINGS HAD TO CHANGE IN THE LADDER, AND ONE WAS A LATENT DEFECT
+
+**1. THE LADDER WAS FIRST-SOURCE-WINS.** `registryPatternChoices` ran only when
+`getSubstituteCandidates` came back empty — right for a caller that wants one
+answer, wrong for a menu. Measured before the change
+(`npm run probe:swap-choices`): every row in a real off-season session offered
+exactly `2 + 1` and no row ever filled two training groups. Both sources now run
+and merge; both already apply the same legality filter.
+
+**2. `dedupeChoices` DEDUPED BEFORE IT SORTED.** Harmless while one source ran at
+a time; wrong the moment two do — the same exercise offered by both sources kept
+whichever source ran EARLIER, so a genuine closest match could land under
+"Similar". It sorts first now.
+
+## WHAT THE ATHLETE ACTUALLY GETS, MEASURED
+
+```
+RDLs                     closest:2 other:1
+Bulgarian Split Squats   closest:2 similar:2 other:1
+Landmine Press           closest:2 other:1
+Barbell Row              closest:2 other:1
+Banded Dead Bug          other:1
+```
+
+*"Show fewer when good legal options do not exist"* is honoured by OMISSION: a
+group with no legal member is absent, and a row with no legal option at all gets
+a sentence in the athlete's words instead of an empty sheet.
+
+The screen gains one step — `choose_swap` — BEFORE `confirm_swap`, not instead of
+it. The athlete picks from the menu and still sees the prescription before
+anything is written, and Back returns to the menu.
+
+## THE GATE — `npm run test:exercise-swap-choices`, 24 cells, ALL GREEN
+
+**MUTATION-PROVEN FOUR WAYS**, tree md5-restored after each:
+
+| mutation | reds |
+| --- | --- |
+| the ladder goes back to first-source-wins | the CONTROL cell — no row fills two training groups |
+| the per-group cap is lifted | 2 rows offer 3 and 4 closest matches |
+| `rest` becomes an offerable tier | *"not smuggled into Other useful options"* |
+| a swap writes an exclusion for the original | *"the swap created NO exclusion"* |
+
+⚠ **THE REST-REFUSAL CELL WAS GREEN AND EMPTY TWICE.** First because the ladder
+never emits a rest choice in a healthy off-season world at all, so the mutation
+had nothing to smuggle; the refusal is now asked of `groupTapSwapChoices`
+directly with every tier on the table. Then AGAIN, because the rest entries sat
+last in that input and the per-group CAP absorbed them rather than the tier rule
+REFUSING them — **a cap is not a refusal.** They go first now.
+
+## BLAST RADIUS
+
+`test:compile` 665 / 73, unchanged. `exercise-edit-entry-surface` 35/0,
+`dead-affordances` 6/0, `ui-picture-manifest` 5/0, `action-walker` 19/0 —
+identical at the control worktree. `test:tap-swap-hierarchy` dies at import at
+BOTH trees (pre-existing; a suite's exit code is not its pass count).
+
+**NOT COVERED YET:** the simulator.
+
+Agent: rebuild
