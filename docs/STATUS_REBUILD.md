@@ -1273,3 +1273,86 @@ THROWS, `decision-ledger-ownership` 7/1, `quiescent-boot` 4/1,
 `tap-swap-hierarchy` throws at import.
 
 Agent: rebuild
+
+---
+
+# THE SIMULATOR PASS — the hub is right, and the RESTART CRITERION FAILS
+
+Run on `LFA Explorer 4c8535f`, Metro :8092 from THIS worktree (`:8081` belongs to
+another checkout — verified by an established socket and the app's own logs
+streaming into `/tmp/qa-metro.log`, not by assuming). Seed
+`exercise-removal-restart`. Screenshots 01-09 in the seat scratchpad.
+
+## WHAT IS RIGHT ON GLASS
+
+**The hub is exactly the ordered surface.** "Need to make a change?" —
+**Equipment · Injury · Add · Remove · Swap**, in words, below the session.
+**NO old header icons** (back chevron and title only). **NO per-row Swap/Remove
+icons** — each row carries only its checkbox, demo ▶ and the load −/+.
+
+**All five actions work, and every message was honest:**
+
+| action | what the app said | true? |
+| --- | --- | --- |
+| Swap | "RDLs was replaced with Hip Thrusts in today's session." | yes |
+| Remove | "Cossack Squat was removed from today's session." + header 5→4 | yes, and nothing filled the hole |
+| Add | "Seated Calf Raise was added to today's session." | yes, 4→5 |
+| Injury | recomposed the day, then **REFUSED**: "Could not swap exercise — Could not find 'Back Squat' on 2026-07-13." | **honest refusal** |
+| Equipment | "Saved for this session only… your saved gym setup is unchanged." | yes |
+
+**COMPOSITION IS VISIBLE**: the Injury picker listed `Hip Thrusts` (the swap) and
+`Seated Calf Raise` (the add) and did NOT list `Cossack Squat` (the removal) —
+all three decisions live in one list.
+
+⚠ **A STALE OFFER, NOT A LIE.** The guided injury flow performs its own
+recomposition and THEN offers "Apply change" for a substitution it has already
+made, so applying it refuses. The refusal is honest and nothing is corrupted;
+the offer should not be drawn. Named, not fixed.
+
+## ⚠ THE RESTART CRITERION IS NOT MET, AND THIS IS THE HEADLINE
+
+*"Restart produces the same visible session as immediately before shutdown."*
+**It does not, in a world where the injury and equipment doors have also run.**
+
+```
+BEFORE  Bench Press 3x10 107.5kg · Breathing Reset 1x5 · Band Pallof Press 2x10 BW
+AFTER   RDLs 3x3 90kg · Leg Press 3x4 137.5kg · Band Pallof Press 2x10 BW
+        ("Dumbbells today — no barbell")  ("Swapped from Back Squat — equipment today")
+```
+
+**THE REPLAY RAN — that part of the fix is working.** The boot no longer refuses
+the swap for staleness. It refuses it for something else:
+
+```
+[quiescentBoot] a recorded door action no longer applies on replay
+  swap_exercise   dl-1  "The replacement still loads the active knee issue."
+  swap_exercise   dl-1  "barbell equipment is not available."
+  remove_exercise dl-2  "Could not find \"Cossack Squat\" on 2026-07-13."
+```
+
+**THIS IS THE SAME DEFECT CLASS I REMOVED, ON DIFFERENT GROUNDS.** The swap arm
+re-runs `assessTapSwapCandidateSafety` and the equipment legality check during
+replay, so startup is again a SECOND authority over an already-accepted decision
+— this time refusing on safety/kit rather than on date. The chain:
+
+1. the injury recomposition is **memory-only** (the third defect, above), so it
+   does not replay and the boot rebuilds the day from base + the durable
+   equipment fact;
+2. the athlete's swap is then judged against injury and equipment facts that were
+   declared AFTER it, in an order that never existed when they made it, and is
+   refused;
+3. the removal's replay cannot find its row either — harmless only because the
+   exclusion is durable independently of the ledger.
+
+**WHY THE HEADLESS SUITE DID NOT CATCH IT.** Sequence 5 declares equipment
+FIRST and then swaps; the device walk swapped first and declared injury and
+equipment after. **A replay is only order-safe if no later fact can veto an
+earlier decision**, and that is the property neither suite states. The next slice
+owns it, with the injury-durability slice: they are one question.
+
+**NOT FIXED HERE, AND NOT HIDDEN.** Removing the safety re-adjudication is not a
+line — an accepted swap that is genuinely unsafe under a later injury needs a
+ruled answer (honour it, drop it and SAY SO, or re-offer), and that is Sam's
+ruling to make, not mine.
+
+Agent: rebuild
