@@ -58,6 +58,7 @@ import { generateProgramForProfileFromStore } from '../../utils/weekRebuild';
 import {
   deriveWeeklyCommitmentConversation,
   type CommitmentConversation,
+  type CommitmentConversationOutcome,
   type CommitmentConversationRefusal,
 } from '../../rules/weeklyCommitmentConversation';
 import { commitmentLegalityProbe } from '../../rules/weeklyCommitmentLegality';
@@ -201,6 +202,27 @@ export function coachWeeklyCommitmentInputs(state: {
   };
 }
 
+/**
+ * R-105'S NOTIFICATION, AS A FUNCTION OF THE CONVERSATION AND NOTHING ELSE.
+ *
+ * ⚠ **EXPORTED SO IT CAN BE MUTATED AND SEEN TO DIE.** It was inline in the hook
+ * and a mutation to `hasNotification: true` — a stored-flag-shaped notification
+ * that never clears — SURVIVED the whole suite, because every cell reached for
+ * the conversation directly and nothing read the notification at all. A cell
+ * that asserts the same value twice is not two cells.
+ *
+ * R-099 ruled that the question is DERIVED and only the ANSWER is stored. The
+ * notification is that same object seen from the tab bar: there is no unread
+ * flag to clear, nothing to expire, and no way for a relaunch to resurrect a
+ * notification for a question the athlete has already answered — because there
+ * is no second thing to get out of step.
+ */
+export function coachCommitmentNotification(
+  outcome: CommitmentConversationOutcome,
+): boolean {
+  return outcome.value !== null;
+}
+
 export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
@@ -255,7 +277,7 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
   return {
     conversation,
     refusal: outcome.refusal,
-    hasNotification: conversation !== null,
+    hasNotification: coachCommitmentNotification(outcome),
     accept,
     decline,
   };

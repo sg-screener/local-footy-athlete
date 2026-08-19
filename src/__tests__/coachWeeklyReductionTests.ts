@@ -94,6 +94,7 @@ import {
   setJourneyClock,
 } from './support/athleteJourney';
 import { conversationFor } from './support/coachCommitment';
+import { coachCommitmentNotification } from '../screens/coach/useCoachWeeklyCommitment';
 import { commitmentChangePreview } from '../rules/commitmentChangePreview';
 import { CommitmentCard } from '../components/CommitmentCard';
 import {
@@ -103,6 +104,7 @@ import {
 import {
   commitmentPreviewDaySentence,
   commitmentPreviewUnavailableSentence,
+  sessionComponentName,
   commitmentConversationNoticeSentence,
   commitmentConfirmedSentence,
   commitmentDeclinedSentence,
@@ -384,10 +386,15 @@ async function main(): Promise<void> {
     console.log('\n  ⚠ NO CONVERSATION IN THIS WORLD — every cell below would pass');
     console.log('    vacuously, so they are REPORTED AS FAILURES rather than skipped.');
   }
+  // ⚠ THE NOTIFICATION IS READ THROUGH ITS OWN OWNER, NOT RE-ASSERTED.
+  // The first cut of these two cells both read `raised.value`, so a mutation
+  // making the notification permanently on — the stored-flag shape R-099 exists
+  // to prevent — survived the entire suite. Both directions are checked, on the
+  // live world and on the answered one.
   ok(
-    'the notification is derived, and it is on exactly while the conversation is',
-    raised.value !== null,
-    'hasNotification is `conversation !== null`; there is no stored flag to disagree',
+    'the notification is ON exactly while there is a conversation',
+    coachCommitmentNotification(raised) === (raised.value !== null),
+    `notification=${coachCommitmentNotification(raised)} conversation=${raised.value !== null}`,
   );
   ok(
     'the coach announces it with a signed line that claims nothing about the program',
@@ -426,6 +433,56 @@ async function main(): Promise<void> {
     !/export function WeeklyCommitmentPromptCard/.test(programCards)
       && !/export function ExtraSessionOfferCard/.test(programCards),
     'a deleted card that still exports is a card one import from returning',
+  );
+  /**
+   * ⚠ **THE SURFACE IS MOUNTED, AND THIS IS THE CELL THAT WOULD HAVE CAUGHT THE
+   * REJECTED CANDIDATE'S WORST FINDING.** `codex/finish-product` built ~330
+   * lines behind `CoachScreen`, which `AppNavigator` DEFINES AND NEVER RENDERS —
+   * so its work could not reach an athlete at all, and separately its one
+   * reachable path put unsigned emergency-medical copy in front of one. A
+   * feature nothing mounts is a feature nobody has, however green its cells are.
+   */
+  const coachScreenSource = source('src/screens/coach/CoachTabScreen.tsx');
+  const navigator = source('src/navigation/AppNavigator.tsx');
+  /**
+   * ⚠ **THE CONDITION, NOT THE OCCURRENCE — AND A MUTATION IS WHY.** The first
+   * cut of this cell tested `/<CommitmentCard/`, and a mutation replacing the
+   * card's guard with `{false ? (` SURVIVED: the occurrence was still there and
+   * the card never rendered. *A count is never the whole assertion — locate the
+   * REGION and assert what makes it run.* So the anchors are FOUND first (an
+   * `indexOf` that missed returns -1, which compares perfectly well), and then
+   * what stands between them is checked.
+   */
+  const cardAt = coachScreenSource.indexOf('<CommitmentCard');
+  const guardAt = coachScreenSource.lastIndexOf('weeklyCommitment.conversation ?', cardAt);
+  ok(
+    'both anchors were FOUND in the coach screen — the cell below can fail',
+    cardAt > 0 && guardAt > 0 && cardAt - guardAt < 400,
+    `cardAt=${cardAt} guardAt=${guardAt}`,
+  );
+  ok(
+    'the COACH TAB really mounts the conversation — hook, bubbles and card',
+    /useCoachWeeklyCommitment\(\)/.test(coachScreenSource)
+      && cardAt > 0 && guardAt > 0 && guardAt < cardAt
+      && /coach-tab-commitment-notice/.test(coachScreenSource)
+      && /coach-tab-commitment-question/.test(coachScreenSource),
+    'the conversation is derived and never drawn — a feature nothing mounts',
+  );
+  ok(
+    'and the card is drawn ONLY when there IS a conversation — no dead affordance',
+    coachScreenSource.slice(guardAt, cardAt).indexOf('false') === -1,
+    coachScreenSource.slice(Math.max(0, guardAt - 40), cardAt + 20),
+  );
+  ok(
+    'and the navigator mounts THAT screen as the Coach tab, with the derived badge',
+    /component=\{CoachTabScreen\}/.test(navigator)
+      && /tabBarBadge: coachCommitment\.hasNotification/.test(navigator),
+    'the tab points somewhere else, or the badge is not the derived notification',
+  );
+  ok(
+    'the badge is a DOT with no stored counter behind it',
+    !/unread|badgeCount|notificationCount/i.test(navigator),
+    'a stored unread count has appeared — R-099: only the ANSWER is stored',
   );
   ok(
     'CONTROL — the Program surface DID hold them, so the four cells above are not vacuous',
@@ -500,6 +557,29 @@ async function main(): Promise<void> {
     for (const day of preview?.changedDays ?? []) {
       console.log(`    PREVIEW: ${String(commitmentPreviewDaySentence(day))}`);
     }
+    /**
+     * ⚠ **THE SENTENCE ITSELF, NOT JUST THE MODEL BEHIND IT.** A first pass
+     * printed these lines and asserted nothing about them, so a mutation
+     * replacing `joinSignedCopy` with a raw `.join(', ')` over the component
+     * KINDS survived: the athlete would have read *"Saturday 15/8 … strength,
+     * conditioning"* — unsigned words, the app's internal identifiers, and a
+     * separator this file chose. `copy.joiner.plus` is Sam's own " + " from the
+     * compound-bucket ruling.
+     */
+    ok(
+      'every previewed sentence names components in SIGNED words, joined by Sam\'s " + "',
+      (preview?.changedDays ?? []).every((day) => {
+        const sentence = String(commitmentPreviewDaySentence(day));
+        const namedInFull = day.components
+          .every((kind) => sentence.includes(String(sessionComponentName(kind))));
+        const joinedHisWay = day.components.length < 2 || sentence.includes(' + ');
+        // The raw kind identifiers must not appear — they are addresses, not words.
+        const noIdentifiers = !/\b(team_training|recovery_addon)\b/.test(sentence);
+        return namedInFull && joinedHisWay && noIdentifiers;
+      }),
+      JSON.stringify((preview?.changedDays ?? [])
+        .map((day) => String(commitmentPreviewDaySentence(day)))),
+    );
   } else {
     console.log(`    (this world raised the ${conversation?.direction} direction;`
       + ' the preview cells above are the extra-session offer\'s)');
@@ -515,47 +595,6 @@ async function main(): Promise<void> {
     'a preview that cannot be built REFUSES rather than describing the current week',
     /not guess|could not build/i.test(String(commitmentPreviewUnavailableSentence())),
     String(commitmentPreviewUnavailableSentence()),
-  );
-
-  /* ═════════════════════════════════════════════════════════════════════════ */
-  console.log('\n[2b] AN OFFER THE SCHEDULER WOULD NOT KEEP IS NOT PUT AT ALL');
-
-  /**
-   * ⚠ **THE FINDING THIS GATE EXISTS FOR, MEASURED HERE RATHER THAN RECALLED.**
-   *
-   * `commitmentLegalityProbe` asks *"does a program exist at this count"*. That
-   * is the right question for *"could you train this often"* and the WRONG one
-   * for *"will this session appear"* — and for an in-season athlete with a
-   * Saturday game and two club nights the two answers disagree: the four-day
-   * commitment builds, and it builds the SAME TWO GYM DAYS as the three-day one.
-   * Friday is held as G-1, Saturday is the game, Sunday is the day after it.
-   *
-   * An offer gated on legality alone would promise a session the athlete never
-   * receives, and they would find out by accepting. That is the false-Done class
-   * L6 calls a release blocker, so the REBUILD is the gate.
-   */
-  const blockedAt3 = builtTrainingDays(theBlockedAthlete(), blockTwoStart);
-  const blockedAt4 = builtTrainingDays(theBlockedAthlete({
-    trainingDaysPerWeek: 4,
-    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Sunday'],
-  } as Partial<OnboardingData>), blockTwoStart);
-  console.log(`    BLOCKED WORLD: asked 3 -> built ${JSON.stringify(blockedAt3)};`
-    + ` asked 4 -> built ${JSON.stringify(blockedAt4)}`);
-  ok(
-    'CONTROL — the blocked world really builds a week, so the cell below is not vacuous',
-    blockedAt3.length > 0,
-    'the in-season athlete builds nothing at all; this section proves nothing',
-  );
-  ok(
-    'A FOURTH COMMITTED DAY THAT GENERATION WILL NOT PLACE BUILDS THE SAME WEEK',
-    JSON.stringify(blockedAt3) === JSON.stringify(blockedAt4),
-    'the scheduler did place the fourth day after all — re-measure before claiming it',
-  );
-  ok(
-    'and THE OFFER IS REFUSED THERE, naming the rebuild as the reason',
-    refusalForBlockedWorld() === 'extra_session_rebuild_adds_nothing'
-      || refusalForBlockedWorld() === null,
-    `got ${String(refusalForBlockedWorld())}`,
   );
 
   /* ═════════════════════════════════════════════════════════════════════════ */
@@ -644,6 +683,11 @@ async function main(): Promise<void> {
     JSON.stringify(coachConversation().refusal ?? '')
       .includes('already_answered_for_this_block'),
     JSON.stringify(coachConversation().refusal),
+  );
+  ok(
+    'AND THE NOTIFICATION GOES OFF WITH IT — there is no flag left to clear',
+    coachCommitmentNotification(coachConversation()) === false,
+    'the coach tab still advertises a question the athlete has answered',
   );
   ok(
     'the coach\'s reply to a decline claims nothing happened, because nothing did',
@@ -829,34 +873,93 @@ async function main(): Promise<void> {
     'the coach hook reaches a writer that is not the commitment door',
   );
 
+  /* ═════════════════════════════════════════════════════════════════════════ */
+  console.log('\n[10] AN OFFER THE SCHEDULER WOULD NOT KEEP IS NOT PUT AT ALL');
+
+  /**
+   * ⚠ **A SECOND REAL ATHLETE, COLD-STARTED AND WALKED — NOT THE FIRST ONE'S
+   * WORLD WITH A DIFFERENT PROFILE OBJECT.** The first cut of this section did
+   * exactly that and the instrument was worthless: it compared an off-season
+   * athlete's stored program against a candidate built for an in-season one, so
+   * everything differed and the gate never fired. A world is a world.
+   *
+   * THIS ATHLETE IS THE ONE THE FINDING IS ABOUT: in-season, Saturday game, club
+   * Tuesday and Thursday, gym Monday/Wednesday/Friday — the shape Sam calls real
+   * and the one `completeAthleteJourneyTests` walks. Every gate on the offer
+   * opens for them: the block qualifies, they answer everything easy, Sunday is
+   * free, and `commitmentLegalityProbe` says a four-day commitment builds.
+   *
+   * **AND GENERATION BUILDS THEM THE SAME TWO GYM DAYS EITHER WAY.** Friday is
+   * held as G-1, Saturday is the game, Sunday is the day after it. An offer
+   * gated on legality alone would promise this athlete a session they never
+   * receive, and they would find out by accepting.
+   */
+  const blockedInstall = await coldStartThroughOnboarding({
+    profile: theBlockedAthlete(), installDayISO: INSTALL_DAY,
+  });
+  ok(
+    'the blocked athlete installed a program — the world below is real',
+    blockedInstall.onboardingRefusal === null
+      && blockedInstall.program.microcycles.length > 0,
+    `refusal=${blockedInstall.onboardingRefusal}`,
+  );
+  for (let offset = 0; offset < 28; offset += 1) {
+    const dateISO = addDaysISO(blockedInstall.blockOneStart, offset);
+    setJourneyClock(dateISO);
+    followTheWeek(dateISO);
+    await recordDay(dateISO, {
+      record: true, completion: 'full', feeling: 'easy', soreness: 'none',
+      difficulty: 2, logWeights: true, conditioningRpe: 3,
+    });
+  }
+  const blockedBlockTwo = addDaysISO(blockedInstall.blockOneStart, 28);
+  setJourneyClock(blockedBlockTwo);
+  const blockedRollover = rolloverIfDue(blockedBlockTwo);
+  followTheWeek(blockedBlockTwo);
+  ok(
+    'and their block rolled over, so they are standing where the offer is put',
+    blockedRollover.fired,
+    `refusal=${blockedRollover.refusal}`,
+  );
+
+  const blockedAt3 = builtTrainingDays(theBlockedAthlete(), blockedBlockTwo);
+  const blockedAt4 = builtTrainingDays(theBlockedAthlete({
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Sunday'],
+  } as Partial<OnboardingData>), blockedBlockTwo);
+  console.log(`    BLOCKED WORLD: asked 3 -> built ${JSON.stringify(blockedAt3)};`
+    + ` asked 4 -> built ${JSON.stringify(blockedAt4)}`);
+  ok(
+    'CONTROL — the blocked world really builds a week, so the cell below is not vacuous',
+    blockedAt3.length > 0,
+    'the in-season athlete builds nothing at all; this section proves nothing',
+  );
+  ok(
+    'A FOURTH COMMITTED DAY THAT GENERATION WILL NOT PLACE BUILDS THE SAME WEEK',
+    JSON.stringify(blockedAt3) === JSON.stringify(blockedAt4),
+    'the scheduler did place the fourth day after all — re-measure before claiming it',
+  );
+
+  const blockedOutcome = coachConversation();
+  console.log(`    BLOCKED WORLD REFUSAL: ${JSON.stringify(blockedOutcome.refusal)}`);
+  ok(
+    'CONTROL — every CHEAP gate opened for them, so the rebuild is what refuses',
+    blockedOutcome.refusal === 'extra_session_rebuild_adds_nothing',
+    `got ${JSON.stringify(blockedOutcome.refusal)} — if this names an earlier gate,`
+    + ' the world does not reach the gate under test and the cell below is vacuous',
+  );
+  ok(
+    'AND NO OFFER IS PUT — the app does not promise a session it will not deliver',
+    blockedOutcome.value === null,
+    'the offer was raised for an athlete whose week does not change',
+  );
+
   console.log(`\nCoach weekly reduction: passed=${pass} failures=${fail}`);
   if (failures.length > 0) {
     console.log('\nFAILURES:');
     for (const failure of failures) console.log(`  - ${failure}`);
   }
   totalsPrinted(fail);
-}
-
-/**
- * The conversation's refusal for the blocked in-season world, read through the
- * SAME derivation — with the offer's every other gate forced open by handing it
- * a qualifying history is out of scope here, so this returns `null` when an
- * earlier gate closes first and the cell accepts that as "not this world's
- * answer". The measurement above is the load-bearing part.
- */
-function refusalForBlockedWorld(): string | null {
-  const store = useProgramStore.getState();
-  const outcome = conversationFor({
-    program: store.currentProgram,
-    blockNumber: store.blockState?.blockNumber ?? null,
-    blockStartISO: store.blockState?.blockStartDate ?? null,
-    todayISO: store.blockState?.blockStartDate ?? INSTALL_DAY,
-    feedback: store.sessionFeedback,
-    profile: theBlockedAthlete(),
-    ledgerEntries: [],
-    acceptedBlocks: store.acceptedBlocks ?? {},
-  });
-  return typeof outcome.refusal === 'string' ? outcome.refusal : null;
 }
 
 /** The candidate program the offer's preview was taken from. The same builder. */
