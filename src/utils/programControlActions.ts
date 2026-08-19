@@ -27,6 +27,13 @@ import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoac
 import { getActiveProgramModifiers } from './activeProgramModifiers';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
 import {
+  injuryRecompositionMessage,
+  planInjuryRecomposition,
+  unsafeRowsForInjury,
+  type InjuryRecompositionPlan,
+  type InjurySubstitution,
+} from './injurySessionRecomposition';
+import {
   banExerciseGlobally,
   setPreferredAlternative,
   replaceExerciseAtDate,
@@ -44,6 +51,7 @@ import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
+  type TapSwapPrimaryInjury,
 } from './tapSwapHierarchy';
 import type { PoorSleepPattern } from './readinessConstraints';
 import type { IllnessSeverityTier } from '../rules/readinessIllnessLaw';
@@ -1166,6 +1174,112 @@ export async function executeProgramControlActionDurably(
   });
 }
 
+
+/**
+ * APPLY THE INJURY PLAN TO THE ATHLETE'S OWN SESSION, AND REPORT WHAT HAPPENED.
+ *
+ * ⚠ **THE `remainingUnsafe` COUNT IS MEASURED AFTER THE WRITES, FROM THE REAL
+ * SESSION — NEVER PREDICTED FROM THE PLAN.** A prediction is exactly what the
+ * deleted claim was: `visibleProgramChanged` was a true statement about a
+ * transaction, read as a statement about rows. So the session is re-read through
+ * the same door the screen uses, and the sentence is derived from that.
+ *
+ * SCOPE, STATED: the athlete's own dated session. The injury constraint already
+ * governs every week the composer authors from here on
+ * (`generateProgramLocally` reads active constraints); this is the half nothing
+ * regenerates — the day in front of them.
+ */
+function recomposeSessionForInjury(args: {
+  date: string;
+  constraint: ActiveInjuryConstraint;
+  source: ProgramControlAction['source'];
+}): { changed: boolean; message: string } {
+  const workout = resolveWorkoutOnDate(args.date);
+  const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
+  const primaryInjury = args.constraint.bucket
+    ? {
+      bucket: args.constraint.bucket as TapSwapPrimaryInjury['bucket'],
+      severity: args.constraint.severity,
+      seriousSymptoms: false,
+    }
+    : null;
+  const environment = resolveTapSwapEnvironment({
+    date: args.date,
+    profile: useProfileStore.getState().onboardingData,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+    primaryInjury,
+  });
+  if (!workout) {
+    return {
+      changed: false,
+      message: trainingPaused
+        ? 'Affected training is paused until you get medical or physio advice.'
+        : 'Injury restrictions are active. There is no session on this day to change.',
+    };
+  }
+  const plan = planInjuryRecomposition({ workout, environment, primaryInjury });
+
+  // WHAT ACTUALLY LANDED. A plan is not an outcome: each write goes through the
+  // ordinary action owner and can be refused by it, and counting the PLAN would
+  // be the same class of claim this whole unit exists to delete.
+  const appliedSubstitutions: InjurySubstitution[] = [];
+  const appliedOmissions: string[] = [];
+  const refused: string[] = [];
+  for (const substitution of plan.substitutions) {
+    const outcome = executeProgramControlAction({
+      type: 'swap_exercise',
+      source: args.source,
+      scope: 'today_only',
+      payload: {
+        date: args.date,
+        fromExercise: substitution.from,
+        toExercise: {
+          name: substitution.to.name!,
+          sets: substitution.to.prescription?.sets ?? 3,
+          repsMin: substitution.to.prescription?.repsMin ?? 8,
+          repsMax: substitution.to.prescription?.repsMax ?? 12,
+        },
+      },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    } as ProgramControlAction);
+    if (outcome.ok) appliedSubstitutions.push(substitution);
+    else refused.push(`${substitution.from} (${outcome.message ?? 'refused'})`);
+  }
+  for (const omitted of plan.omissions) {
+    // AN OMISSION IS A REMOVAL, THROUGH THE REMOVAL OWNER. Nothing replaces it —
+    // which is the whole point: the ladder had nothing safe to offer.
+    const outcome = executeProgramControlAction({
+      type: 'remove_exercise',
+      source: args.source,
+      scope: 'today_only',
+      payload: { date: args.date, exercise: omitted },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    } as ProgramControlAction);
+    if (outcome.ok) appliedOmissions.push(omitted);
+    else refused.push(`${omitted} (${outcome.message ?? 'refused'})`);
+  }
+  if (refused.length > 0) {
+    logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
+  }
+
+  const after = resolveWorkoutOnDate(args.date);
+  const remainingUnsafe = unsafeRowsForInjury({ workout: after, environment });
+  const applied: InjuryRecompositionPlan = {
+    ...plan,
+    substitutions: appliedSubstitutions,
+    omissions: appliedOmissions,
+  };
+  return {
+    changed: appliedSubstitutions.length > 0 || appliedOmissions.length > 0,
+    message: injuryRecompositionMessage({ plan: applied, remainingUnsafe, trainingPaused }),
+  };
+}
+
 async function executeProgramControlActionDurablyWithinTrace(
   action: ProgramControlAction,
   context: ProgramControlActionContext,
@@ -1178,12 +1292,49 @@ async function executeProgramControlActionDurablyWithinTrace(
       todayISO: context.todayISO,
     });
     const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    if (!ok) {
+      return {
+        ok,
+        changedProgram: result.changedProgram,
+        requiresRebuild: false,
+        message: result.message,
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    // ── THE SESSION IS ACTUALLY RECOMPOSED, AND THE CLAIM IS DERIVED ────────
+    //
+    // Sam, 2026-08-19: *"Delete the false-success path ... Never say 'safely
+    // recomposed' unless visible content actually changed appropriately."*
+    //
+    // ⚠ **THE OLD SENTENCE CAME FROM `visibleProgramChanged`, WHICH IS ABOUT
+    // STORED STATE, NOT ABOUT ROWS.** Measured
+    // (`npm run probe:injury-recompose`): declaring a knee injury returned
+    // `ok=true changedProgram=true` with the message *"affected sessions were
+    // safely recomposed"*, while the visible session was BYTE-IDENTICAL and
+    // `RDLs` and `Bulgarian Split Squats` were still on it. A hamstring at
+    // severity 8 — `training_paused` — behaved the same way.
+    //
+    // So the recomposition is performed here, over the athlete's own session,
+    // through the SAME action owners their taps use: an injury substitution is a
+    // `swap_exercise` and an injury omission is a `remove_exercise`. There is no
+    // private injury writer, and `planInjuryRecomposition` reads the approved
+    // fallback ladder rather than a second opinion about safety.
+    const injuryDate = (context.todayISO ?? action.payload.constraint!.startDate
+      ?? '').slice(0, 10);
+    const recomposition = recomposeSessionForInjury({
+      date: injuryDate,
+      constraint: action.payload.constraint!,
+      source: action.source,
+    });
     return {
       ok,
-      changedProgram: result.changedProgram,
+      // WHAT THE ATHLETE CAN SEE, not what the store did. A session that needed
+      // no change reports no change, however much accepted state moved.
+      changedProgram: recomposition.changed,
       requiresRebuild: false,
-      createdModifierIds: ok && result.episodeId ? [result.episodeId] : undefined,
-      message: result.message,
+      createdModifierIds: result.episodeId ? [result.episodeId] : undefined,
+      message: recomposition.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

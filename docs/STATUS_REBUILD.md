@@ -946,3 +946,103 @@ the deletion does not take the Add flow's coverage with it.
 **NOT COVERED YET:** the simulator.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — THE INJURY DOOR WAS TELLING THE TRUTH ABOUT THE WRONG THING
+
+## THE FALSE SUCCESS, MEASURED BEFORE ANYTHING WAS BUILT
+
+`npm run probe:injury-recompose`, real athlete, real off-season session:
+
+```
+Knee/6        "Injury restrictions are active and affected sessions were safely recomposed."
+              VISIBLE CONTENT CHANGED: false
+              rows STILL UNSAFE: ["RDLs","Bulgarian Split Squats"]
+
+Hamstring/8   training PAUSED — same sentence, same byte-identical week,
+              same two unsafe lifts still on the day.
+
+Shoulder/4    same sentence; ["Landmine Press","Barbell Row","Banded Dead Bug"] still there.
+```
+
+**The claim was true about the wrong thing.** `visibleProgramChanged` comes from
+the accepted-state transaction and reports that STORED STATE moved — a fact
+written, an overlay published. The athlete's rows are a different question and it
+was never asked.
+
+## WHAT IS THERE NOW
+
+`utils/injurySessionRecomposition` owns the question the claim is about: for THIS
+session and THIS injury, which rows are unsafe, what does the approved fallback
+ladder offer for each, and what is left over. **It writes nothing** — the door
+applies the plan through the SAME action owners an athlete's own taps use, so an
+injury substitution is a `swap_exercise` and an injury omission is a
+`remove_exercise`. No private injury writer, and `assessTapSwapCandidateSafety`
+decides both which rows are unsafe and which replacements are allowed, so there
+is no second opinion about safety.
+
+The same three worlds now:
+
+```
+Knee/6        "2 exercises swapped for a safe option."   changed=true   unsafe left: []
+Hamstring/8   "…but RDLs, Bulgarian Split Squats could not be made safe.
+               Skip those and check with a physio."      changed=FALSE  unsafe left: 2, NAMED
+Shoulder/4    "2 swapped; Banded Dead Bug left out — nothing safe was available."
+                                                          changed=true   unsafe left: []
+```
+
+**The paused hamstring is the honest refusal, and it is correct that nothing
+moved**: with training paused the swap door's own safety check refuses every
+candidate, so the app says so instead of substituting quietly.
+
+**`changedProgram` is now what the ATHLETE can see**, and the count is of what
+LANDED — each write goes through the ordinary owner and can be refused by it, and
+counting the PLAN would be the same class of claim this unit exists to delete.
+
+## THE GATE — `npm run test:injury-recomposition`, 33 cells, ALL GREEN
+
+Three worlds driven end to end, each checked BOTH ways — what the door said and
+what the session actually is. Every world opens with a control proving it really
+carried unsafe work.
+
+**MUTATION-PROVEN FOUR WAYS**, tree md5-restored after each:
+
+| mutation | reds |
+| --- | --- |
+| the old sentence comes back | 2 cells, on the paused hamstring |
+| `changedProgram` comes from the transaction again | *"matches what the athlete can see"* |
+| a nameless choice is accepted as a replacement | the medical-stop plan cell |
+| the duplicate guard is removed | *"nothing is duplicated"* — `Easy Bike` twice |
+
+## THREE INSTRUMENT FAULTS WORTH RECORDING
+
+1. ⚠ **AN UNMUTATABLE CLAUSE.** The first cut filtered on `kind !== 'rest'` AND
+   on the name. Inverting the `kind` clause changed nothing in any world —
+   `restChoice()` carries `name: null`, so the name check had already refused it.
+   **A clause no mutation can reach is not doing the work its comment claims**;
+   it is deleted and the property is stated as *a choice with no name is not a
+   replacement*.
+2. ⚠ **A GREEN-AND-EMPTY REST CELL.** The rest refusal was asked in a knee world,
+   where the ladder returns named exercises long before it reaches rest. It is
+   asked in a MEDICAL-STOP world now, with a control proving that world really
+   does offer a rest fallback.
+3. ⚠ **A MUTATION THAT ONLY BROKE THE SYNTAX.** Commenting out the duplicate
+   guard left a dangling `&&` and sucrase died at import — zero cells, which is
+   not a red about the product. Re-run by replacing the predicate with
+   `Boolean(true)`.
+
+## BLAST RADIUS
+
+`test:compile` 665 / 73, unchanged. `injury-authority` 5/0, `injury-guard` 232/0,
+`injury-engine` 81/20, `pending-injury` 45/0, `coach-injury-integration` 35/1,
+`guided-injury-totality` 25/0, `injury-routing-divergence` 6/0,
+`persistent-injury` 5/0, `program-control-durable` 18/0 — **every one identical
+at the control worktree**, including the two that were already red.
+
+**NOT COVERED YET:** the simulator, and injury recomposition beyond the athlete's
+own dated session — the constraint governs every week the composer authors from
+here, and this is the half nothing regenerates.
+
+Agent: rebuild
