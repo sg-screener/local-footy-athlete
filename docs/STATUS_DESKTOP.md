@@ -71,6 +71,28 @@ the weekly view). The exact five-action hub above is the 2026-08-19 clarificatio
 acceptance item for the separate post-demolition UI rebuild and must be seen on
 the real session screen before that surface is called complete.
 
+## 2026-08-19 — STANDING REBUILD WATCH: OLD OR HIDDEN AUTHORITY
+
+Sam reconfirmed that every clean rebuild slice must actively watch for old or
+hidden behaviour getting in the way. This restates the burn-the-boats rule for
+the rebuild phase; it is not permission to delete current owners by filename.
+
+For every real athlete flow, trace and classify anything that:
+
+- writes or rewrites the program outside the accepted-state transaction;
+- authors, restores, repairs or substitutes content after the composer;
+- invents program content while a screen/projection is being read;
+- reads or manufactures an obsolete persisted shape;
+- keeps a second copy of a fact or decision;
+- silently falls back after the current owner refuses;
+- bypasses the canonical transaction from a UI or coach action.
+
+If one of those paths executes and overrides, rejects or rewrites the current
+owner, delete that obsolete authority within the slice. Do not add compatibility
+logic around it. Record any resulting missing capability for clean rebuilding.
+Preserve current approved data, contracts and single owners, and prove execution
+before deleting — a legacy-looking name alone is not evidence.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
