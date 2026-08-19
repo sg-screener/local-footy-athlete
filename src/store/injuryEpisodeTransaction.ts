@@ -784,6 +784,40 @@ export async function resolveInjuryEpisode(
   episodeId: string,
   options: ResolveInjuryEpisodeOptions = {},
 ): Promise<InjuryEpisodeResolutionResult> {
+  const result = await resolveInjuryEpisodeTraced(episodeId, options);
+  /**
+   * ⚠ **AN INJURY ENDING IS AN INPUT CHANGING, EXACTLY LIKE AN INJURY STARTING.**
+   *
+   * `createOrUpdateInjuryEpisode` has re-derived since R5.1 — *"the fact has
+   * landed as an INPUT, so the week re-derives from it"* — and this, its twin,
+   * did not. **The asymmetry was invisible until a row the injury DISPLACED had
+   * to come back.**
+   *
+   * Sam, 2026-08-19: *"Keep the athlete's original Swap preference underneath.
+   * When the injury/equipment constraint ends, their chosen Swap returns if it
+   * is legal again."*
+   *
+   * MEASURED by `test:session-change-durability` [8]: the athlete swapped to
+   * `Glute Bridge`, a knee injury displaced it with `Bench Press`, and after
+   * clearing the injury the session still read
+   * `["Bench Press<-Glute Bridge:injury", …]` — the displacement was resolved as
+   * a FACT but stayed on the day as stored content, so the preference could
+   * never return.
+   *
+   * Nothing re-swaps anything here. The swap decision was never discarded, so
+   * re-deriving is the whole restoration: the ledger replays it and no active
+   * injury displaces it any more.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
+  await settleDerivedWorldAfterDecision();
+  return result;
+}
+
+async function resolveInjuryEpisodeTraced(
+  episodeId: string,
+  options: ResolveInjuryEpisodeOptions = {},
+): Promise<InjuryEpisodeResolutionResult> {
   if (!athleteActionDiagnosticsEnabled()) return resolveInjuryEpisodeWithinTrace(episodeId, options);
   const sourceSurface = options.sourceSurface ?? 'injury_resolved_action';
   const trace = beginAthleteActionTrace({

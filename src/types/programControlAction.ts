@@ -200,6 +200,22 @@ export type ProgramControlAction =
       fromExerciseId?: string;
       toExercise?: ExercisePrescriptionPayload;
       futureWeeksToo?: boolean;
+      /**
+       * ── WHY THIS ROW IS NOT THE ONE THE ATHLETE ASKED FOR ─────────────────
+       *
+       * Sam, 2026-08-19, on a swap a later injury or kit loss makes illegal:
+       * *"Tell the athlete exactly why their chosen exercise is temporarily not
+       * being used."*
+       *
+       * Set ONLY by a fact's recomposition displacing an earlier choice — the
+       * injury pass naming the exercise it is standing in for. An athlete's own
+       * tap leaves it absent, because nothing is standing in for anything.
+       *
+       * It rides to `WorkoutExercise.substitutedFrom`, which the session screen
+       * already renders as one line, so this adds a producer to an existing
+       * reader rather than a second notice mechanism.
+       */
+      substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
     }>
   | ProgramControlActionBase<'add_exercise', {
       date: string;

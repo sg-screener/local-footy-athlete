@@ -154,6 +154,13 @@ export interface ReplaceExerciseInput {
   todayISO?: string;
   /** Optional exact row identity from a tapped UI exercise. */
   fromExerciseId?: string;
+  /**
+   * WHY THIS ROW IS NOT THE ONE THE ATHLETE ASKED FOR. Set only when a FACT
+   * (an injury, a kit loss) is displacing an earlier choice, so the screen can
+   * say whose place this row is taking. An athlete's own swap leaves it absent.
+   * See the note on the `swap_exercise` payload.
+   */
+  substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
   toExercise: {
     name: string;
     sets: number;
@@ -740,6 +747,12 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     perSide: toExercise.perSide ?? found.perSide,
     restSeconds: toExercise.restSeconds ?? found.restSeconds,
     notes: toExercise.notes || found.notes,
+    // WHOSE PLACE THIS ROW IS TAKING — STATED, NEVER INHERITED. The `...found`
+    // spread above would otherwise carry the OUTGOING row's provenance onto a
+    // row that has nothing to do with it, so an ordinary athlete swap would
+    // claim to be standing in for whatever the last fact displaced. Absent
+    // means "nobody's place", which is the truth for a tap.
+    substitutedFrom: input.substitutedFrom,
     exercise: {
       id: replacementId,
       name: toExercise.name,

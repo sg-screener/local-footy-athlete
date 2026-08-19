@@ -1356,3 +1356,51 @@ ruled answer (honour it, drop it and SAY SO, or re-offer), and that is Sam's
 ruling to make, not mine.
 
 Agent: rebuild
+
+---
+
+# SAM'S RULING BUILT — a later fact DISPLACES an accepted decision, it does not veto it
+
+**The ruling (2026-08-19), as acceptance criteria:** a later injury/equipment fact
+must (1) displace the athlete's chosen exercise rather than refuse it, (2) via the
+approved fallback ladder, omitting only when nothing is legal, (3) tell them
+exactly why, (4) keep the Swap preference underneath, (5) apply **when the action
+occurs**, never first at startup, (6) leave startup replaying decisions and facts
+with **no new choice and nothing discarded**, and (7) stop the injury picker
+offering a row the injury pass already handled.
+
+## WHAT CHANGED, AND WHY EACH ONE
+
+| # | change | why |
+| --- | --- | --- |
+| 1 | the swap arm's safety/kit gate does not run under the replay latch | it was VETOING an accepted decision at startup — the same defect as the staleness guard, on different grounds |
+| 2 | `reapplyActiveInjuryRecompositions`, called by `rebuildDerivedWorld` **after** the ledger replay | the injury's recomposition lived in `dateOverrides`, which boot blanks; the FACT is replayed, no ledger entry, no transaction |
+| 3 | `substitutedFrom` threaded through the swap payload and writer; the injury pass names whose place a row takes | the athlete is told why their choice is not being used, on the row, through the carrier the screen already renders |
+| 4 | `resolveInjuryEpisode` re-derives, exactly as `createOrUpdateInjuryEpisode` already did | **the create path re-derived and the resolve path did not** — so a cleared injury left its displacements on the day forever and the preference could never come back |
+| 5 | the injury door's claim is derived from the athlete's ROWS before/after (`describeVisibleInjuryChange`) | change 2 made the door's own pass a no-op, and it then reported *"Nothing on this session needed changing"* over a session that had just lost two rows — the same false claim from the opposite direction |
+| 6 | the guided injury flow reads the day LIVE and skips its follow-up offer when the row is already gone | the stale picker; the closure's `workout` predates the recomposition by construction |
+
+## THE GATE — `npm run test:session-change-durability`, 47/47
+
+Sequence 8 is the ruling itself and carries a **non-vacuity control**: if the
+ladder ever picks something the injury allows, nothing is displaced and the rest
+would pass by not applying — the control fails instead.
+
+## MUTATIONS — four more, tree restored byte-identical after each
+
+| # | mutation | what reddened |
+| --- | --- | --- |
+| M5 | startup does not replay the injury fact | 3 cells — the restart stops reproducing the session and the reason vanishes |
+| M6 | the fact is replayed BEFORE the decisions | 2 cells, and the *shape* is the proof: the row reads `Bench Press<-RDLs` instead of `<-Glute Bridge` — the injury displaced the ORIGINAL row and the athlete's swap landed on top of the safe one |
+| M7 | the safety gate vetoes at replay again | 2 cells — the choice is discarded rather than displaced |
+| M8 | an ended injury does not re-derive | 2 cells — the preference never comes back |
+
+## BLAST RADIUS — measured against the same tree, twice
+
+`test:compile` byte-identical to baseline (73 pre-existing). The eighteen-suite
+battery identical except `session-change-sequence` 20/2 → 22/0. **The ELEVEN
+injury suites were then run at HEAD and again with this work, and are identical**
+— `injury-engine` 81/20, `injury-authority` 5/20 and three that throw at import
+are all pre-existing and are NOT caused here.
+
+Agent: rebuild

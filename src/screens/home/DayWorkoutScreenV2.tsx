@@ -1024,6 +1024,49 @@ export default function DayWorkoutScreenV2() {
         return;
       }
 
+      /**
+       * ⚠ **THE INJURY PASS HAS ALREADY RECOMPOSED THE DAY. DO NOT OFFER IT AGAIN.**
+       *
+       * Sam, 2026-08-19: *"Fix the stale injury picker as part of this: it must
+       * not offer an exercise that the injury pass has already removed or
+       * replaced."*
+       *
+       * MEASURED ON GLASS the same day: the athlete flagged `Back Squat`, the
+       * injury pass substituted it for `Bench Press` on the way through, and
+       * this handler then offered *"Replace Back Squat with Bench Press"* for a
+       * row that was no longer on the session. Applying it answered
+       * **"Could not find 'Back Squat' on 2026-07-13."** The refusal was honest
+       * — nothing was corrupted — but the OFFER was already false when it was
+       * drawn, and an offer the app knows it cannot keep is a dead button.
+       *
+       * **READ LIVE, BECAUSE THIS CLOSURE IS STALE BY CONSTRUCTION.** `workout`
+       * and `editableExercises` were captured at the render that started the
+       * flow, which is BEFORE the door recomposed anything; testing against them
+       * would always say the row is still there. The lazy require is this file's
+       * existing dodge for reaching store-backed owners from a callback.
+       */
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { resolveDateWithConditioning } = require('../../utils/sessionResolver');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { buildScheduleStateImperative } = require('../../utils/coachWeekDiff');
+      const liveDay = resolveDateWithConditioning(date, buildScheduleStateImperative());
+      const liveNames: string[] = ((liveDay?.workout?.exercises ?? []) as {
+        exercise?: { name?: string };
+      }[]).map((row) => row.exercise?.name ?? '').filter(Boolean);
+      const stillOnTheDay = liveNames.some(
+        (name) => name.toLowerCase() === exercise.name.toLowerCase(),
+      );
+      if (!stillOnTheDay) {
+        setExerciseEditStep({
+          kind: 'result',
+          ok: true,
+          title: 'Injury adjustment active',
+          message: actionResult.message
+            ?? `${displayExerciseName(exercise.name)} has already been changed for this injury.`,
+        });
+        return;
+      }
+
       const area = guidedAreaToExerciseArea(result.area);
       const severity = guidedSeverityToExerciseSeverity(result);
       const primaryInjury = constraint.bucket

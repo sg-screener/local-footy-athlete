@@ -1,5 +1,5 @@
 /**
- * EVERY SESSION CHANGE SURVIVES THE PROCESS DYING — SEVEN SEQUENCES, EXACTLY.
+ * EVERY SESSION CHANGE SURVIVES THE PROCESS DYING — EIGHT SEQUENCES, EXACTLY.
  *
  * Sam, 2026-08-19: *"Swap survives process death with the exact selected
  * exercise and its own load. Remove survives process death. Restore reverses
@@ -8,25 +8,42 @@
  * Restart produces the same visible session as immediately before shutdown. No
  * exercise is silently refilled, reselected or rotated during restart."*
  *
+ * And, after the first device pass found the hole the seven did not cover:
+ * *"If a later injury or equipment fact makes the athlete's chosen exercise
+ * unsafe or impossible … do not show the illegal choice … automatically use the
+ * closest safe/legal replacement … tell the athlete exactly why … keep the
+ * athlete's original Swap preference underneath … when the constraint ends,
+ * their chosen Swap returns if it is legal again. Apply this when the
+ * injury/equipment action occurs — not for the first time during startup."*
+ *
  * ## WHY THIS SUITE IS NOT `test:session-change-sequence`
  *
  * That suite walks ONE long sequence and asks whether the doors compose. This
- * one asks the durability question seven different ways, and it asserts the
+ * one asks the durability question eight different ways, and it asserts the
  * WHOLE VISIBLE ROW LIST — identity, ORDER and LOAD — rather than a count or a
- * membership test. Both defects this suite was written for produced a session
- * with the RIGHT NUMBER OF ROWS and the wrong rows in it, so every cell here
- * compares arrays.
+ * membership test. Every defect it was written for produced a session with the
+ * RIGHT NUMBER OF ROWS and the wrong rows in it, so every cell compares arrays.
  *
- * ## THE TWO DEFECTS IT HOLDS CLOSED
+ * ## THE FOUR DEFECTS IT HOLDS CLOSED
  *
  * 1. **A swap did not survive a restart.** Boot replay passed `entry.occurredAt`
  *    as `todayISO`, and `replaceExerciseAtDate` refuses a date before "today" —
- *    so startup re-adjudicated an already-accepted decision and dropped it. A
- *    replay is not the athlete acting; it is not refused for staleness.
+ *    so startup re-adjudicated an already-accepted decision and dropped it.
  * 2. **Restore could not reveal a row a later swap wrote over.** The swap writer
  *    read its base through the VIEW state, which carries the athlete's
- *    exclusions, and then stored that filtered day — baking the hidden row out
- *    permanently. A filter that gets written down is not a filter.
+ *    exclusions, and then stored that filtered day — baking the hidden row out.
+ *    A filter that gets written down is not a filter.
+ * 3. **The injury recomposition was memory-only.** The episode was durable, the
+ *    rows it changed were not, and no ledger entry replayed them. The FACT is
+ *    now re-applied at boot, after the decisions, through the same owner.
+ * 4. **A later fact VETOED an accepted decision instead of displacing it**, and
+ *    an ended injury never gave the athlete's choice back — the resolve path
+ *    did not re-derive while the create path did.
+ *
+ * ⚠ **SEQUENCE 8 IS THE RULING, AND IT CARRIES ITS OWN NON-VACUITY CONTROL.**
+ * If the ladder ever picks something the declared injury allows, nothing is
+ * displaced and every cell after it would pass by not applying. The control
+ * cell fails in that case rather than reporting a green it did not earn.
  *
  * Run: npm run test:session-change-durability
  */
@@ -147,6 +164,22 @@ function rowsOn(dateISO: string): string[] {
  */
 function sameSession(a: string[], b: string[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+
+/** Every row that is standing in for another, as `standin<-displaced`. */
+function substitutionsOn(dateISO: string): string[] {
+  const week = quiet(() => resolveWeekWithConditioning(
+    mondayFor(dateISO), buildScheduleStateImperative()));
+  const day = week.find((d) => d.date === dateISO);
+  const workout = (day as { workout?: Workout } | undefined)?.workout;
+  return (workout?.exercises ?? []).flatMap((row) => {
+    const sub = (row as { substitutedFrom?: { baseExerciseName?: string; cause?: string } })
+      .substitutedFrom;
+    if (!sub?.baseExerciseName) return [];
+    const name = (row as { exercise?: { name?: string } }).exercise?.name;
+    return [`${name}<-${sub.baseExerciseName}:${sub.cause}`];
+  });
 }
 
 const door = () => require('../utils/programControlActions').executeProgramControlActionDurably;
@@ -406,49 +439,31 @@ async function main(): Promise<void> {
     !s6Before.some((r) => r.startsWith(`${s6Gone}@`)), JSON.stringify(s6Before));
   ok('the app came back up', await restart());
   const s6After = rowsOn(TARGET);
-  /* ⚠⚠ **RED ON PURPOSE — A THIRD DEFECT, IN A DOOR THIS MISSION DOES NOT OWN,
-   * AND IT IS PRE-EXISTING.** Measured byte-identical with this branch's two
-   * fixes REVERTED, so it is not caused by them.
+  /* ⚠ **THIS CELL WAS RED, AND CLOSING IT NEEDED A RULING RATHER THAN A PATCH.**
+   *
+   * It failed like this:
    *
    * ```
    * before restart  ["Easy Bike@-","Landmine Press@35","Barbell Row@72.5","Banded Dead Bug@0"]
    * after  restart  ["RDLs@67.5","Bulgarian Split Squats@25","Landmine Press@35","Barbell Row@72.5","Banded Dead Bug@0"]
    * ```
    *
-   * **THE INJURY RECOMPOSITION IS HELD IN MEMORY ONLY.** The injury EPISODE is
-   * durable — `activeConstraints` still reads `["injury-knee"]` after hydration
-   * — but the recomposition it performed (`RDLs` -> `Bench Press`,
-   * `Bulgarian Split Squats` -> `Easy Bike`) is written to `dateOverrides`,
-   * which boot blanks by design and rebuilds from the DECISION LEDGER. The
-   * ledger holds one entry, `dl-1 remove_exercise`; the injury declaration is
-   * not on it, so nothing replays the recomposition. The removal then hides a
-   * row (`Bench Press`) that the un-replayed injury never created, so the
-   * athlete gets the pristine session back and BOTH changes appear lost.
+   * **THE INJURY RECOMPOSITION WAS HELD IN MEMORY ONLY.** The episode is durable
+   * — `activeConstraints` still reads `["injury-knee"]` after hydration — but the
+   * rows it changed live in `dateOverrides`, which boot blanks by design and
+   * rebuilds from the decision ledger. The injury is deliberately NOT a ledger
+   * decision (`LEDGER_RECORDED_ACTION_TYPES` is the three exercise-level types,
+   * so one act never becomes two undoable decisions), so nothing put it back.
    *
-   * **WHY IT IS NOT FIXED HERE, ON EVIDENCE RATHER THAN ON APPETITE.** Three
-   * independent facts each block the small version of the fix:
-   *   1. `rules/programControlDecisions.LEDGER_RECORDED_ACTION_TYPES` is
-   *      deliberately the three EXERCISE-LEVEL types, and the door states the
-   *      rule the list exists to keep — *"one act"* must not become *"two
-   *      decisions ... which the athlete would feel as an undo that needs two
-   *      taps"*. So recording the injury's component swaps individually is
-   *      ruled out by a standing decision, not by taste.
-   *   2. `withAcceptedMutationLock` is a strict serial queue and is NOT
-   *      re-entrant, so the injury arm cannot route its component writes
-   *      through the durable door from inside itself — it would deadlock.
-   *   3. Recording ONE `set_injury_modifier` decision does not help either:
-   *      boot replay uses the SYNCHRONOUS executor by design, and that executor
-   *      refuses this action outright — *"Injury changes must use the durable
-   *      injury transaction."* Making it replayable means giving the boot an
-   *      async acceptance cycle per recorded edit, which is the exact cost the
-   *      replay's design comment refuses.
-   *
-   * It is therefore its own slice, with the injury episode owner. Editing this
-   * expectation to match would be the
-   * `expectation-edited-to-match-the-regression` defect; the cell stays and
-   * names the cause. */
-  ok('the restarted session is IDENTICAL after an injury change and a removal'
-    + ' — ⚠ OPEN DEFECT (injury durability), see the note above this cell',
+   * Three facts blocked every small fix — that allow-list rule, a
+   * NON-RE-ENTRANT `withAcceptedMutationLock`, and the synchronous executor the
+   * replay uses refusing `set_injury_modifier` outright. Sam ruled the way
+   * through: *"Startup may replay the accepted decisions and facts, but it must
+   * not make a new choice or silently discard anything."* So the FACT is
+   * re-applied at boot, after the decisions, through the same owner the live
+   * door used — `reapplyActiveInjuryRecompositions`. No new ledger entry, no
+   * transaction, same day, same ladder, same answer. */
+  ok('the restarted session is IDENTICAL after an injury change and a removal',
     sameSession(s6After, s6Before), `${JSON.stringify(s6Before)} -> ${JSON.stringify(s6After)}`);
 
   /* ═══ 7 ═══════════════════════════════════════════════════════════════ */
@@ -471,6 +486,65 @@ async function main(): Promise<void> {
     sameSession(s7After, s7Before), `${JSON.stringify(s7Before)} -> ${JSON.stringify(s7After)}`);
   ok('and the ADD is still there by name',
     s7After.some((r) => r.startsWith(`${s7Added}@`)), JSON.stringify(s7After));
+
+  /* ═══ 8 ═══════════════════════════════════════════════════════════════ */
+  console.log("\n[8] SAM'S RULING — a later injury DISPLACES the athlete's choice, says so, keeps it, and gives it back");
+  install();
+  const s8Start = rowsOn(TARGET);
+  const s8Victim = s8Start[0]!.split('@')[0]!;
+  const s8Choice = offeredReplacementFor(s8Victim, s8Start.map((r) => r.split('@')[0]!));
+  await swap(s8Victim, s8Choice);
+  const s8AfterSwap = rowsOn(TARGET);
+  ok("CONTROL — the athlete's chosen exercise is on the day before the injury",
+    s8AfterSwap.some((r) => r.startsWith(`${s8Choice}@`)), `${s8Choice} / ${JSON.stringify(s8AfterSwap)}`);
+
+  const s8Injury = await injuryDeclared() as { ok: boolean; createdModifierIds?: string[] };
+  const s8AfterInjury = rowsOn(TARGET);
+  const s8Subs = substitutionsOn(TARGET);
+  /* ⚠ **NON-VACUITY.** If the ladder happened to pick something the knee allows,
+   * nothing is displaced and every cell below would pass by not applying. The
+   * suite says so rather than reporting a green it did not earn. */
+  const displaced = !s8AfterInjury.some((r) => r.startsWith(`${s8Choice}@`));
+  ok("CONTROL — the injury really does forbid the athlete's choice (else this case proves nothing)",
+    displaced, `${s8Choice} still present: ${JSON.stringify(s8AfterInjury)}`);
+  ok('the illegal choice is NOT shown',
+    !s8AfterInjury.some((r) => r.startsWith(`${s8Choice}@`)), JSON.stringify(s8AfterInjury));
+  ok('a legal replacement stands in its place — the day did not just lose a row',
+    s8AfterInjury.length === s8AfterSwap.length, `${s8AfterSwap.length} -> ${s8AfterInjury.length}`);
+  /* Sam: "Tell the athlete exactly why their chosen exercise is temporarily not
+   * being used." The row names whose place it is taking, and the cause. */
+  ok("the athlete is TOLD why — the standing-in row names their exercise and the injury",
+    s8Subs.some((entry) => entry.includes(`<-${s8Choice}:injury`)), JSON.stringify(s8Subs));
+
+  const s8Before = rowsOn(TARGET);
+  ok('the app came back up', await restart());
+  const s8After = rowsOn(TARGET);
+  ok('and the restart reproduces it EXACTLY — no new choice at startup',
+    sameSession(s8After, s8Before), `${JSON.stringify(s8Before)} -> ${JSON.stringify(s8After)}`);
+  ok('the reason survives the restart too',
+    substitutionsOn(TARGET).some((entry) => entry.includes(`<-${s8Choice}:injury`)),
+    JSON.stringify(substitutionsOn(TARGET)));
+
+  /* ── AND THE PREFERENCE IS STILL UNDERNEATH ──────────────────────────────
+   * Sam: "Keep the athlete's original Swap preference underneath. When the
+   * injury/equipment constraint ends, their chosen Swap returns if it is legal
+   * again." Nothing re-swaps here — the decision was never discarded, so
+   * clearing the fact is enough. */
+  const episodeId = (s8Injury.createdModifierIds ?? [])[0];
+  ok('CONTROL — the injury episode has an id to clear', Boolean(episodeId), String(episodeId));
+  await quietAsync(() => door()({
+    type: 'clear_injury_modifier',
+    source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+    scope: 'current_and_future',
+    payload: { episodeId },
+    requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+  }, { todayISO: TARGET }));
+  const s8Cleared = rowsOn(TARGET);
+  ok("the athlete's chosen exercise RETURNS once the injury clears",
+    s8Cleared.some((r) => r.startsWith(`${s8Choice}@`)), JSON.stringify(s8Cleared));
+  ok('and nothing is standing in for it any more',
+    !substitutionsOn(TARGET).some((entry) => entry.includes(`<-${s8Choice}:injury`)),
+    JSON.stringify(substitutionsOn(TARGET)));
 
   report();
 }

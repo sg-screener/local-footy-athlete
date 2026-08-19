@@ -212,3 +212,57 @@ export function injuryRecompositionMessage(args: {
   }
   return `Injury restrictions are active. ${parts.join('; ')}.`;
 }
+
+/**
+ * ── WHAT ACTUALLY CHANGED ON THE DAY, DESCRIBED FROM THE ROWS THEMSELVES ────
+ *
+ * Sam, 2026-08-19, ruling that a later fact must displace an athlete's choice
+ * and *"tell the athlete exactly why"*. Honouring it moved the injury's
+ * application into the fact's own settle (`quiescentBoot` re-applies active
+ * injuries after the ledger replay), which left the door's own pass a no-op.
+ *
+ * **AND A NO-OP PASS REPORTED "Nothing on this session needed changing" OVER A
+ * SESSION THAT HAD VISIBLY CHANGED** — measured by `test:session-change-sequence`
+ * the moment the re-application landed. That is the same false claim this module
+ * was built to delete, arriving from the opposite direction: the first version
+ * said "safely recomposed" when nothing moved; this one said "nothing needed
+ * changing" when everything did.
+ *
+ * So the claim is derived from the ROWS, before and after, and never from
+ * whichever pass happened to do the work. A name that left and was replaced is
+ * a substitution; a name that left with nothing taking its place is an omission.
+ *
+ * WRITER: none, pure. READER: `utils/programControlActions` (`set_injury_modifier`).
+ */
+export function describeVisibleInjuryChange(args: {
+  before: readonly string[];
+  after: readonly string[];
+  remainingUnsafe: readonly string[];
+  trainingPaused: boolean;
+}): { changed: boolean; message: string } {
+  const before = [...args.before];
+  const after = [...args.after];
+  const gone = before.filter((name) => !after.includes(name));
+  const arrived = after.filter((name) => !before.includes(name));
+  const changed = gone.length > 0 || arrived.length > 0 || before.length !== after.length;
+  // A ROW THAT LEFT IS ONLY AN OMISSION IF NOTHING ARRIVED FOR IT. Pairing by
+  // count rather than by identity is deliberate: the ladder does not promise a
+  // one-to-one mapping and inventing one would name the wrong exercise.
+  const substitutionCount = Math.min(gone.length, arrived.length);
+  const omissions = gone.slice(substitutionCount);
+  return {
+    changed,
+    message: injuryRecompositionMessage({
+      plan: {
+        unsafeRows: gone,
+        substitutions: Array.from({ length: substitutionCount }, (_, index) => ({
+          from: gone[index]!,
+          to: { name: arrived[index]! } as unknown as TapSwapChoice,
+        })),
+        omissions,
+      } as InjuryRecompositionPlan,
+      remainingUnsafe: args.remainingUnsafe,
+      trainingPaused: args.trainingPaused,
+    }),
+  };
+}
