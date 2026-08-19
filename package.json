@@ -58,6 +58,7 @@
     "test:block-two-progression": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoProgressionTests.ts",
     "test:block-two-difficult-missed": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoDifficultMissedTests.ts",
     "test:block-two-screen-delivery": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoScreenDeliveryTests.ts",
+    "test:exercise-add-candidates": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseAddCandidatesTests.ts",
     "test:exercise-swap-choices": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseSwapChoicesTests.ts",
     "test:exercise-removal-owner": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseRemovalOwnerTests.ts",
     "test:exercise-exclusions": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseExclusionScopeTests.ts",

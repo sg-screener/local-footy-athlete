@@ -878,3 +878,71 @@ BOTH trees (pre-existing; a suite's exit code is not its pass count).
 **NOT COVERED YET:** the simulator.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — ADD OFFERS THE APP'S OWN VOCABULARY, NOT A TABLE OF TWELVE
+
+## WHAT WAS THERE
+
+A hand-written table in the day screen: seven "kinds", **two names each**, and
+the flow offered whichever of the two the session did not already contain. It
+asked **nothing** about the athlete's equipment and **nothing** about their
+injuries, and every set/rep band in it was typed by hand. A shoulder-injured
+athlete training at home with no barbell was offered the same two upper-body
+options as everyone else.
+
+## WHAT IS THERE NOW
+
+`utils/addExerciseCandidates.legalAddCandidateGroups` over
+`selectableVocabularyGroups()` — the one vocabulary every generator draws from,
+already grouped and already labelled — filtered by `assessTapSwapCandidateSafety`,
+**the same function the swap ladder uses**, so Add and Swap cannot disagree about
+what is safe today. Load comes from `startingWeightForAthlete`.
+
+Measured on the real athlete: **23 groups**, covering strength slots, arms,
+calves, prehab, midline, shoulder health, tissue quality, **Mobility**, easy
+cardio, breathing, power and **Conditioning** — Sam's *"any legal exercise,
+mobility or conditioning component"*, from data that already existed.
+
+`add_kind`, `ADD_EXERCISE_KINDS`, `ADD_EXERCISE_KIND_ICON`, `suggestAddExercise`
+and `prepareAdd` are DELETED. No shim.
+
+## ⚠ THE ONE THING I HAD TO GREP BEFORE BUILDING — `REGISTRY-GREP: R-088`
+
+*"Respect ... genuine session limits"* reads like the 7-exercise cap. **It is
+not**, and building it that way would have shipped the opposite of a signed
+ruling. R-088, verbatim: *"7 is the max the app should set and **a user should be
+able to add as many of their own things on top of it as they choose**"*. The cap
+binds the PLANNER. So the limits Add respects are equipment, injury and safety —
+the ones that can hurt someone — and there is a cell asserting the athlete's own
+adds keep landing past seven, with a control proving the session really was
+pushed past it.
+
+## THE GATE — `npm run test:exercise-add-candidates`, 21 cells, ALL GREEN
+
+**MUTATION-PROVEN FOUR WAYS**, tree md5-restored after each:
+
+| mutation | reds |
+| --- | --- |
+| the safety filter is dropped | both narrowing cells — full/bodyweight/injured all return 112 |
+| already-present rows are offered again | *"nothing already on the day is offered"* |
+| the load owner is never asked | the CONTROL — 0 loaded candidates |
+| an add refuses at seven | *"the athlete's own adds keep landing past the app's cap"* |
+
+## BLAST RADIUS
+
+`test:compile` 665 / 73, unchanged. `dead-affordances` 6/0, `ui-picture-manifest`
+5/0, `approved-icons` 14/0, `action-walker` 19/0 — all identical to the control.
+
+`test:exercise-edit-entry-surface` went 35/35 → 33/35 and is now **38/38**: it
+pins `prepareAdd` and `add_kind` by name. That file already records the standard
+for editing such a list — *"WHICH SIDE MOVED: the RULING, with a date"* — and it
+is the ruling that moved, exactly as it did for `prepareConcern`. The two
+replacement owners and the two replacement steps are pinned in their place, so
+the deletion does not take the Add flow's coverage with it.
+
+**NOT COVERED YET:** the simulator.
+
+Agent: rebuild

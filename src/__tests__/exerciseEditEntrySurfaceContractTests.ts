@@ -184,8 +184,24 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
   // The later session-equipment ruling replaces prepareConcern's one-row flow
   // with one whole-session owner. Every OTHER owner stays pinned, and that is
   // the point of editing the list rather than the loop.
+  // ── `prepareAdd` LEAVES THIS LIST — SAM, 2026-08-19 ────────────────────
+  //
+  // *"Add any legal exercise, mobility or conditioning component. Respect
+  // equipment, injury and genuine session limits. Own load authority."*
+  //
+  // `prepareAdd` read a HAND-WRITTEN table of twelve names, two per "kind", and
+  // offered whichever one the session did not already contain. It asked nothing
+  // about the athlete's kit and nothing about their injuries, so it cannot
+  // satisfy the ruling by being kept — it is a flow that was CUT, exactly as
+  // `prepareConcern` was, not an entry surface that moved.
+  //
+  // WHICH SIDE MOVED: the RULING, with a date. The replacement owners are
+  // `openExerciseAdd` and `openAddGroup` over
+  // `utils/addExerciseCandidates.legalAddCandidateGroups`, and they are pinned
+  // below in its place — a deletion that leaves nothing pinned is how a flow
+  // quietly stops existing.
   const flowOwners = [
-    'prepareSwap', 'prepareAdd', 'openExerciseInjuryFlow',
+    'prepareSwap', 'openExerciseAdd', 'openAddGroup', 'openExerciseInjuryFlow',
     'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'suggestTapSwap',
@@ -203,8 +219,12 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
 
 console.log('\n[4] Every step the guided flows land on still exists');
 {
+  // `add_kind` is DELETED with `prepareAdd` (Sam, 2026-08-19 — see [3]); the two
+  // steps that replace it are named here so the deletion cannot take the whole
+  // Add flow's coverage with it.
   const survivingSteps = [
-    'pick_exercise', 'swap_reason', 'add_kind', 'confirm_remove', 'confirm_swap',
+    'pick_exercise', 'swap_reason', 'confirm_remove', 'confirm_swap',
+    'choose_swap', 'add_group', 'add_pick',
     'confirm_add', 'future_scope', 'coach_fallback', 'result',
   ];
   for (const step of survivingSteps) {

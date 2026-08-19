@@ -31,6 +31,7 @@ import {
   type ExerciseExclusionScope,
 } from '../../rules/exerciseExclusions';
 import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
+import { legalAddCandidateGroups } from '../../utils/addExerciseCandidates';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -234,7 +235,6 @@ type ExerciseEditStep =
   | { kind: 'closed' }
   | { kind: 'pick_exercise'; action: ExercisePickAction }
   | { kind: 'swap_reason'; exercise: EditableExercise }
-  | { kind: 'add_kind' }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
   /**
    * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
@@ -282,10 +282,34 @@ type ExerciseEditStep =
        */
       fromMenu?: Extract<ExerciseEditStep, { kind: 'choose_swap' }>;
     }
+  /**
+   * **THE ADD MENU — THE APP'S OWN VOCABULARY, FILTERED FOR THIS ATHLETE.**
+   *
+   * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
+   * component ... Respect equipment, injury and genuine session limits."*
+   *
+   * `add_kind` used to be seven hand-written labels over a table of TWELVE
+   * suggestions that asked nothing about the athlete's kit or their injuries.
+   * These two steps replace it with `legalAddCandidateGroups` — every group the
+   * vocabulary offers, minus everything unsafe today and everything already on
+   * the day. A group with nothing legal left in it is ABSENT, so a category the
+   * athlete taps always has something behind it.
+   */
+  | {
+      kind: 'add_group';
+      groups: readonly { label: string; count: number }[];
+    }
+  | {
+      kind: 'add_pick';
+      label: string;
+      options: readonly { name: string; meta: string; suggestion: SuggestedExercise }[];
+    }
   | {
       kind: 'confirm_add';
       addKind: AddExerciseKind;
       suggestion: SuggestedExercise;
+      /** The list this came from, so Back returns to it. */
+      fromPick?: Extract<ExerciseEditStep, { kind: 'add_pick' }>;
     }
   | FutureScopeStep
   | { kind: 'coach_fallback'; title: string; message: string; prefill: string }
@@ -313,15 +337,9 @@ const SWAP_REASONS: SwapReason[] = [
   'Other',
 ];
 
-const ADD_EXERCISE_KINDS: AddExerciseKind[] = [
-  'Upper body',
-  'Lower body',
-  'Midline',
-  'Prehab',
-  'Mobility',
-  'Conditioning finisher',
-  'Other',
-];
+/* `ADD_EXERCISE_KINDS` DELETED with the `add_kind` step it fed (2026-08-19).
+ * `AddExerciseKind` itself survives: `confirm_add` still carries one, and the
+ * future-scope step reads it. */
 
 function getExerciseName(exercise: any, fallback = 'Exercise'): string {
   return String(exercise?.exercise?.name || exercise?.name || fallback).trim();
@@ -412,61 +430,22 @@ function guidedSeverityToExerciseSeverity(result: GuidedInjuryFlowResult): Injur
   }
 }
 
-function suggestAddExercise(
-  kind: AddExerciseKind,
-  existingExercises: EditableExercise[],
-): SuggestedExercise | null {
-  if (kind === 'Other') return null;
-  const existing = new Set(existingExercises.map((exercise) => exercise.name.toLowerCase()));
-  const candidates: Record<Exclude<AddExerciseKind, 'Other'>, SuggestedExercise[]> = {
-    'Upper body': [
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15, notes: 'Keep it controlled.' },
-      { name: 'Push-Ups', sets: 2, repsMin: 8, repsMax: 12 },
-    ],
-    'Lower body': [
-      // Sam ruled 2026-07-25: "Split Squat" named a progression the curated
-      // vocabulary does not have, so the suggestion points at Reverse Lunges
-      // rather than at Bulgarian Split Squats — mapping it to Bulgarian would
-      // have handed a beginner the HARDER variant, which is the opposite of what
-      // the split-squat suggestion was for.
-      { name: 'Reverse Lunges', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
-      { name: 'Hip Thrust', sets: 2, repsMin: 10, repsMax: 12 },
-    ],
-    Midline: [
-      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12, perSide: true },
-      { name: 'Dead Bug', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
-    ],
-    Prehab: [
-      { name: 'Copenhagen Plank (Half)', sets: 2, repsMin: 20, repsMax: 30, prescriptionType: 'duration', perSide: true },
-      // Sam ruled 2026-07-25: Single-Leg Calf Raise. The PRESCRIPTION had to move
-      // with the name — the old entry was a 30-45s isometric hold, and the
-      // curated raise is 12-15 reps per side. Keeping the duration would have
-      // prescribed "30-45 seconds" of a rep-counted movement. Dose matches the
-      // curated pool entry (CALVES_POOL), including its 3-second lowering.
-      { name: 'Single-Leg Calf Raise', sets: 2, repsMin: 12, repsMax: 15, prescriptionType: 'reps', perSide: true, notes: '3-second lowering.' },
-    ],
-    Mobility: [
-      // Sam ruled 2026-07-25: Hip 90/90 Stretch. Flow-capable suggestions are a
-      // POSSIBLE FUTURE BUILD, not now — this table emits single exercises, so a
-      // suggestion naming a whole composed flow has nowhere to land.
-      // The prescription moved with the name: 5-8 MINUTES of a flow becomes
-      // 30-45 SECONDS per side of a stretch, matching MOBILITY_POOL.
-      { name: 'Hip 90/90 Stretch', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration', perSide: true, notes: 'Breathe into the stretch.' },
-      // Sam approved 2026-07-25: "T-Spine Openers" was the same drill under a
-      // name the app could not cue, so it now names the curated entry.
-      { name: 'Open Book Thoracic Rotation', sets: 2, repsMin: 6, repsMax: 8, perSide: true },
-    ],
-    'Conditioning finisher': [
-      // Sam approved 2026-07-25: both finishers named formats that did not exist
-      // in the vocabulary, so both rendered blank. They now name the curated
-      // conditioning entries; the notes carry the "easy, not a test" intent that
-      // the invented "Finisher" suffix used to.
-      { name: 'Easy Bike', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Easy-moderate pace.' },
-      { name: 'Tempo Run', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Smooth, not a test.' },
-    ],
-  };
-  return candidates[kind].find((candidate) => !existing.has(candidate.name.toLowerCase())) ?? null;
-}
+/**
+ * ⚠ **`suggestAddExercise` IS DELETED — 2026-08-19.**
+ *
+ * A hand-written table of TWELVE names, two per 'kind', offering whichever
+ * one the session did not already contain. It asked nothing about the
+ * athlete's equipment and nothing about their injuries, so a shoulder-injured
+ * athlete with no barbell was offered the same two upper-body options as
+ * everyone else, and every band in it was typed by hand.
+ *
+ * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
+ * component. Respect equipment, injury and genuine session limits. Own load
+ * authority."* The owner is `utils/addExerciseCandidates.legalAddCandidateGroups`,
+ * over the app's own `selectableVocabularyGroups()`, filtered by the SAME
+ * safety function the swap ladder uses, with the load from
+ * `startingWeightForAthlete`.
+ */
 
 function suggestionPrescription(suggestion: SuggestedExercise): string {
   const reps =
@@ -735,10 +714,6 @@ export default function DayWorkoutScreenV2() {
   // editableExercises.length > 0`), now guarded at both the render site
   // (hides the row) and here (defensive, matches the retired handler's
   // own belt-and-braces check).
-  const openExerciseAdd = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'add_kind' });
-  }, [editableExercises.length, isTeamOnly]);
 
   const openSessionEquipment = React.useCallback(() => {
     if (isTeamOnly || sessionEquipmentRequirements.length === 0) return;
@@ -859,27 +834,78 @@ export default function DayWorkoutScreenV2() {
     [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
   );
 
-  const prepareAdd = React.useCallback(
-    (kind: AddExerciseKind) => {
-      const suggestion = suggestAddExercise(kind, editableExercises);
-      if (!suggestion) {
-        // R5.7 LEFTOVER, CAUGHT AT THE SIGNING PASS. This sheet was TITLED
-        // "Ask Coach" and, after the beta cut, offers no coach — a sheet named
-        // for a door that no longer exists is the half-alive surface C(a)
-        // forbids, and section [4]'s gate could not see it because it watches
-        // NAVIGATION, not titles. The replacement is not new copy: it is the
-        // signed title the other two fallback sheets already carry.
-        showExerciseEditFallback(
-          'I need a bit more detail',
-          'I need a bit more detail before changing this safely.',
-          `Add one ${kind.toLowerCase()} exercise or small block to ${workoutLabel} on ${dateLabel}.`,
-        );
-        return;
-      }
-      setExerciseEditStep({ kind: 'confirm_add', addKind: kind, suggestion });
-    },
-    [dateLabel, editableExercises, showExerciseEditFallback, workoutLabel],
-  );
+  /**
+   * THE LEGAL ADD MENU FOR THIS ATHLETE, ON THIS DAY.
+   *
+   * Derived at open time and never stored: kit, injuries and what is already on
+   * the session all move, and a cached menu would offer a movement the athlete
+   * can no longer do.
+   */
+  const addCandidateGroups = React.useCallback(() => {
+    const dateISO = date ?? todayISOLocal();
+    return legalAddCandidateGroups({
+      environment: resolveTapSwapEnvironment({
+        date: dateISO,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
+      }),
+      existingExerciseNames: editableExercises.map((item) => item.name),
+      profile: useProfileStore.getState().onboardingData,
+    });
+  }, [date, editableExercises]);
+
+  const openExerciseAdd = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    const groups = addCandidateGroups();
+    if (groups.length === 0) {
+      // HONEST. Every group empty means this athlete's kit and injuries leave
+      // nothing safe to add today, which is a sentence, not an empty list.
+      showExerciseEditFallback(
+        'Nothing safe to add today',
+        'With today’s kit and how you are pulling up, there is nothing safe to add on top of this session.',
+        `Find something safe to add to ${workoutLabel} on ${dateLabel}.`,
+      );
+      return;
+    }
+    setExerciseEditStep({
+      kind: 'add_group',
+      groups: groups.map((group) => ({ label: group.label, count: group.candidates.length })),
+    });
+  }, [
+    addCandidateGroups, dateLabel, editableExercises.length, isTeamOnly,
+    showExerciseEditFallback, workoutLabel,
+  ]);
+
+  const openAddGroup = React.useCallback((label: string) => {
+    const group = addCandidateGroups().find((entry) => entry.label === label);
+    if (!group) return;
+    setExerciseEditStep({
+      kind: 'add_pick',
+      label,
+      options: group.candidates.map((candidate) => {
+        const suggestion: SuggestedExercise = {
+          name: candidate.name,
+          sets: candidate.sets,
+          repsMin: candidate.repsMin,
+          repsMax: candidate.repsMax,
+          ...(candidate.prescriptionType ? { prescriptionType: candidate.prescriptionType } : {}),
+          ...(candidate.perSide ? { perSide: true } : {}),
+          ...(candidate.weightKg !== null ? { weight: candidate.weightKg } : {}),
+        } as SuggestedExercise;
+        return {
+          name: displayExerciseName(candidate.name),
+          meta: suggestionPrescription(suggestion),
+          suggestion,
+        };
+      }),
+    });
+  }, [addCandidateGroups]);
+
+  /* `prepareAdd` DELETED with `suggestAddExercise` and the `add_kind` step
+   * (2026-08-19). `openExerciseAdd` -> `openAddGroup` is the whole route now,
+   * and its fallback is a real sentence about kit and injuries rather than
+   * "I need a bit more detail" for a table that had simply run out of names. */
 
   const applySessionEquipment = React.useCallback(async (
     missingKeys: ReadonlySet<SessionEquipmentRequirementKey>,
@@ -1688,11 +1714,11 @@ export default function DayWorkoutScreenV2() {
         onClose={closeExerciseEditor}
         onStep={setExerciseEditStep}
         onSwapReason={prepareSwap}
-        onAddKind={prepareAdd}
         onInjuryStart={openExerciseInjuryFlow}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
+        onAddGroup={openAddGroup}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
         onExclusionScope={applyExclusionScope}
@@ -3284,7 +3310,7 @@ interface ExerciseEditSheetProps {
   onClose: () => void;
   onStep: (step: ExerciseEditStep) => void;
   onSwapReason: (exercise: EditableExercise, reason: SwapReason) => void;
-  onAddKind: (kind: AddExerciseKind) => void;
+  onAddGroup: (label: string) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
@@ -3303,7 +3329,6 @@ function ExerciseEditSheet({
   onClose,
   onStep,
   onSwapReason,
-  onAddKind,
   onInjuryStart,
   onApplySwapToday,
   onApplyAddToday,
@@ -3311,6 +3336,7 @@ function ExerciseEditSheet({
   onFutureScope,
   onTodayOnly,
   onExclusionScope,
+  onAddGroup,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -3331,7 +3357,15 @@ function ExerciseEditSheet({
       return;
     }
     if (step.kind === 'confirm_add') {
-      onStep({ kind: 'add_kind' });
+      // The list it came from, when it came from one. `add_kind` — the seven
+      // hand-written labels this replaced — is gone, so there is no shallower
+      // step for an add that arrived any other way.
+      if (step.fromPick) onStep(step.fromPick);
+      else onClose();
+      return;
+    }
+    if (step.kind === 'add_pick') {
+      onClose();
       return;
     }
     if (step.kind === 'future_scope') {
@@ -3400,17 +3434,67 @@ function ExerciseEditSheet({
             ))}
           </>
         );
-      case 'add_kind':
+      /* ⚠ **`add_kind` IS DELETED — 2026-08-19.**
+       *
+       * Seven hand-written labels over a table of TWELVE suggestions that asked
+       * nothing about the athlete's kit or their injuries, and offered whichever
+       * of two names the session did not already contain. Sam: *"Add any legal
+       * exercise, mobility or conditioning component. Respect equipment, injury
+       * and genuine session limits."* `add_group` / `add_pick` replace it with
+       * `legalAddCandidateGroups` over the app's own vocabulary. */
+      case 'add_group':
         return (
           <>
-            {ADD_EXERCISE_KINDS.map((kind) => (
-              <ExerciseSheetOption
-                key={kind}
-                label={kind}
-                icon={ADD_EXERCISE_KIND_ICON[kind](OPTION_ICON_ACCENT)}
-                onPress={() => onAddKind(kind)}
+            <Text style={styles.exerciseEditBody}>
+              Everything here is safe with today’s kit and how you are pulling up.
+            </Text>
+            {step.groups.map((group) => (
+              <Button
+                key={group.label}
+                label={`${group.label} (${group.count})`}
+                variant="secondary"
+                size="md"
+                onPress={() => onAddGroup(group.label)}
+                style={styles.exerciseEditSecondaryButton}
               />
             ))}
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      case 'add_pick':
+        return (
+          <>
+            <View style={styles.exerciseEditGroup}>
+              <Text style={styles.exerciseEditGroupLabel}>{step.label}</Text>
+              {step.options.map((option) => (
+                <Button
+                  key={option.name}
+                  label={`${option.name} — ${option.meta}`}
+                  variant="secondary"
+                  size="md"
+                  onPress={() => onStep({
+                    kind: 'confirm_add',
+                    addKind: 'Other',
+                    suggestion: option.suggestion,
+                    fromPick: step,
+                  })}
+                  style={styles.exerciseEditSecondaryButton}
+                />
+              ))}
+            </View>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
           </>
         );
       case 'confirm_remove':
@@ -3680,8 +3764,10 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return 'Which exercise?';
     case 'swap_reason':
       return 'Why do you want to swap it?';
-    case 'add_kind':
+    case 'add_group':
       return 'What do you want to add?';
+    case 'add_pick':
+      return step.label;
     case 'confirm_remove':
       return 'Remove this exercise?';
     case 'choose_swap':
@@ -3716,9 +3802,11 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
     case 'confirm_swap':
       return displayExerciseName(step.exercise.name);
     case 'confirm_add':
-      return step.addKind;
-    case 'add_kind':
       return 'Add one exercise or small block, not another full session.';
+    case 'add_group':
+      return 'Add one exercise or small block, not another full session.';
+    case 'add_pick':
+      return 'Everything here is legal with today’s kit and injuries.';
     case 'exclusion_scope':
       return displayExerciseName(step.exercise.name);
     case 'future_scope':
@@ -3864,23 +3952,8 @@ const OPTION_ICON_ACCENT = '#C8FF00';
 const otherOptionIcon = (color: string) => optionGlyph(color, (
   <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
 ));
-const ADD_EXERCISE_KIND_ICON: Record<AddExerciseKind, (color: string) => React.ReactNode> = {
-  /** Upper body — the literal flexed bicep selected in the audit. */
-  'Upper body': (color) => <LfaIcon name="upper-body" color={color} />,
-  /** Lower body — a dedicated legs mark. */
-  'Lower body': (color) => <LfaIcon name="lower-body" color={color} />,
-  /** Midline — Sam's approved traced torso / abs figure. */
-  Midline: (color) => <LfaIcon name="torso-abs" color={color} />,
-  /** Prehab — the same medical shield as plan editing. */
-  Prehab: (color) => <LfaIcon name="medical-shield" color={color} />,
-  /** Mobility — the same stretching person as plan editing. */
-  Mobility: (color) => <LfaIcon name="mobility" color={color} />,
-  /** Conditioning finisher — a heartbeat trace, same glyph as PlanChangeSheet's. */
-  'Conditioning finisher': (color) => optionGlyph(color, (
-    <Path d="M2 12h4l2-6 4 12 2-6h8" />
-  )),
-  Other: otherOptionIcon,
-};
+/* `ADD_EXERCISE_KIND_ICON` DELETED with the `add_kind` step it decorated
+ * (2026-08-19). Seven icons for seven labels that no longer exist. */
 const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> = {
   /** No equipment — the plain prohibited sign selected in the audit. */
   'No equipment': (color) => <LfaIcon name="no-equipment" color={color} />,
