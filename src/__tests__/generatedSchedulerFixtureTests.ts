@@ -58,20 +58,24 @@ function clockAtPhaseWeek(phaseWeek: number) {
   };
 }
 
-function availabilityFor(targetFixtureDay?: string | null) {
+function availabilityFor(targetFixtureDay?: string | null, athleteProfile = profile) {
   return targetFixtureDay === null
     ? resolveProfileTargetWeekAvailability({
-        profile: profile as never,
+        profile: athleteProfile as never,
         weekStart: WEEK_MONDAY,
         markedDays: { '2026-08-15': 'noGame' },
-        ownedPhase: ownSeasonPhaseForGeneration(profile as never),
+        ownedPhase: ownSeasonPhaseForGeneration(athleteProfile as never),
       })
     : undefined;
 }
 
-function generated(targetFixtureDay?: string | null, microcycleLimit: 1 | 4 = 1) {
-  const targetWeekAvailability = availabilityFor(targetFixtureDay);
-  return generateProgramLocally(profile as never, {
+function generated(
+  targetFixtureDay?: string | null,
+  microcycleLimit: 1 | 4 = 1,
+  athleteProfile = profile,
+) {
+  const targetWeekAvailability = availabilityFor(targetFixtureDay, athleteProfile);
+  return generateProgramLocally(athleteProfile as never, {
     todayISO: WEEK_MONDAY,
     blockNumber: 1,
     microcycleLimit,
@@ -135,6 +139,24 @@ ok('the healthy bye puts the hard replacement exposure on the released fixture d
     type: byeSaturday?.workoutType,
     category: byeSaturday?.conditioningCategory ?? null,
     hasBlock: !!byeSaturday?.conditioningBlock,
+  });
+
+const noClubProfile = {
+  ...profile,
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+};
+const noClubBye = generated(null, 1, noClubProfile);
+const noClubSaturday = noClubBye.microcycles[0]?.workouts
+  .find((workout) => workout.dayOfWeek === 6);
+ok('released-day provenance places the hard bye exposure even when strength uses other days',
+  !!noClubSaturday?.conditioningBlock
+    && (noClubSaturday.conditioningCategory === 'vo2'
+      || noClubSaturday.conditioningCategory === 'glycolytic'),
+  {
+    type: noClubSaturday?.workoutType,
+    rows: noClubSaturday?.exercises?.length ?? 0,
+    category: noClubSaturday?.conditioningCategory ?? null,
   });
 
 const moved = generated('Wednesday');
