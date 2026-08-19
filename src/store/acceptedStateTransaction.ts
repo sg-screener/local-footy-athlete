@@ -2119,6 +2119,8 @@ export function buildFixtureProjection(args: {
             identity: {
               ...targetMicrocycle.exposureContractV2.identity,
               globalWeek: coveringWeek.weekNumber,
+              // BIBLE_ANCHOR: deload_block_length_weeks — the Bible states a
+              // RANGE (3-4 weeks); this modulo pins the top of that range.
               weekInBlock: ((Math.max(1, coveringWeek.weekNumber) - 1) % 4) + 1,
               blockNumber: coveringWeek.miniCycleNumber,
             },
