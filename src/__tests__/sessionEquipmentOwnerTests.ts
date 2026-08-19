@@ -560,7 +560,7 @@ async function main(): Promise<void> {
     console.log('Failures:');
     for (const failure of failures) console.log(`  - ${failure}`);
   }
-  totalsPrinted();
+  totalsPrinted(fail);
   if (fail > 0) process.exit(1);
 }
 

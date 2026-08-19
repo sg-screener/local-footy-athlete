@@ -7,9 +7,10 @@
  * It answers four questions the single probe cannot:
  *   A. does any visible row remain illegal on the kit the athlete kept?
  *   B. does the recompose ever DROP a row without putting anything in its place?
- *   C. does the screen's residual `buildSessionEquipmentReplacementPlan` ever
- *      have anything left to do after the fact-driven recompose? (If never, the
- *      screen is holding selection authority it does not use.)
+ *   C. RETIRED 2026-08-19. It asked whether the screen's residual
+ *      `buildSessionEquipmentReplacementPlan` had anything left to do after the
+ *      fact-driven recompose. Answer: 0 of 2,038 — and that is what authorised
+ *      deleting the planner. Its subject no longer exists.
  *   D. does any replacement carry the OUTGOING row's load?
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
@@ -44,10 +45,6 @@ import { resetStoresToFreshInstall } from '../src/__tests__/support/freshInstall
 import { executeProgramControlActionDurably } from '../src/utils/programControlActions';
 import { resolveEquipmentCapabilities } from '../src/utils/equipmentAvailability';
 import { exerciseAllowedByEquipment } from '../src/data/exercisePoolsStrength';
-import {
-  buildSessionEquipmentReplacementPlan, deriveSessionEquipmentRequirements,
-} from '../src/utils/sessionEquipment';
-import { resolveTapSwapEnvironment } from '../src/utils/tapSwapHierarchy';
 
 const INSTALL_DAY = '2026-07-13';
 const realLog = console.log, realWarn = console.warn, realInfo = console.info, realErr = console.error;
@@ -151,7 +148,7 @@ const REMOVABLE = ['barbell', 'dumbbells', 'machine', 'cables', 'bands', 'pullup
 
 interface Finding { world: string; date: string; tag: string; kind: string; detail: string; }
 const findings: Finding[] = [];
-let cases = 0, doorRefusals = 0, residualPlanNonEmpty = 0, residualRefusals = 0;
+let cases = 0, doorRefusals = 0;
 
 async function main(): Promise<void> {
   for (const w of WORLDS) {
@@ -230,33 +227,11 @@ async function main(): Promise<void> {
         findings.push({ world: w.id, date: cand.date, tag: cand.tags.join('+'), kind: 'B_ROW_COUNT_FELL', detail: `${before.rows.length}->${after.rows.length} lost=[${gone.join(', ')}]` });
       }
 
-      // C. what the SCREEN's residual plan would still do
-      const caps2 = quiet(() => resolveEquipmentCapabilities(
-        useProfileStore.getState().onboardingData as never,
-        useCoachUpdatesStore.getState().activeConstraints as never, cand.date));
-      const editable = after.rows.map((r, i) => ({ key: `k${i}`, name: r.name, targetId: r.raw?.id, raw: r.raw }));
-      const requirements = quiet(() => deriveSessionEquipmentRequirements(editable as never));
-      const env = quiet(() => resolveTapSwapEnvironment({
-        date: cand.date, profile: useProfileStore.getState().onboardingData,
-        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-        readinessSignal: useReadinessStore.getState().signalsByDate[cand.date],
-      } as never));
-      let plan: any = null;
-      try {
-        plan = quiet(() => buildSessionEquipmentReplacementPlan({
-          exercises: editable as never, requirements, missingKeys: new Set(cand.tags.map((t) => `tag:${t}`) as never),
-          capabilities: caps2, environment: env as never,
-        }));
-      } catch (e) { plan = { thrown: String((e as Error).message) }; }
-      if (plan?.ok === false) {
-        residualRefusals += 1;
-        findings.push({ world: w.id, date: cand.date, tag: cand.tags.join('+'), kind: 'C_RESIDUAL_PLAN_REFUSES', detail: `${plan.exerciseName}: ${plan.reason}` });
-      } else if (plan?.ok === true && plan.replacements.length > 0) {
-        residualPlanNonEmpty += 1;
-        findings.push({ world: w.id, date: cand.date, tag: cand.tags.join('+'), kind: 'C_RESIDUAL_PLAN_HAS_WORK', detail: plan.replacements.map((r: any) => `${r.fromExercise}->${r.toExercise?.name}`).join(', ') });
-      } else if (plan?.thrown) {
-        findings.push({ world: w.id, date: cand.date, tag: cand.tags.join('+'), kind: 'C_RESIDUAL_PLAN_THREW', detail: plan.thrown });
-      }
+      // ⚠ **QUESTION C IS GONE BECAUSE ITS SUBJECT IS.** This census used to ask
+      // whether the SCREEN's `buildSessionEquipmentReplacementPlan` had anything
+      // left to do after the fact-driven recompose. The answer was 0 of 2,038,
+      // and that measurement is what authorised deleting it on 2026-08-19. The
+      // question cannot be asked again and does not need to be.
 
       // D. a replacement carrying the outgoing load
       const beforeByName = new Map(before.rows.map((r) => [r.name, r.kg]));
@@ -272,7 +247,7 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\n══ CENSUS ══  cases=${cases}  doorRefusals=${doorRefusals}  residualPlanHasWork=${residualPlanNonEmpty}  residualPlanRefuses=${residualRefusals}`);
+  console.log(`\n══ CENSUS ══  cases=${cases}  doorRefusals=${doorRefusals}`);
   const byKind = new Map<string, Finding[]>();
   for (const f of findings) { const l = byKind.get(f.kind) ?? []; l.push(f); byKind.set(f.kind, l); }
   for (const [kind, list] of [...byKind].sort()) {

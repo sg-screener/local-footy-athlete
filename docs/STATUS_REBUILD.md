@@ -216,7 +216,8 @@ complete UI slice.
 
 | capability | owner to rebuild at | evidence |
 | --- | --- | --- |
-| Remove the screen's dead second selection authority (`buildSessionEquipmentReplacementPlan` + its `swap_exercise` loop in `DayWorkoutScreenV2`) | the composer already owns it | 0 of 2,038 census cases; unreachable branch on glass |
+| ~~Remove the screen's dead second selection authority~~ — **DONE 2026-08-19, own commit.** 615 lines out, 124 in; session output byte-identical, simulator pixel-identical, `test:compile` unchanged at 665. Recorded in `docs/STATUS_DEMOLITION.md` session 5. | — | 0 of 2,038 census cases |
+| Conditioning-modality replacement (`sessionConditioningReplacementName` went with the planner at 0 production callers) — nothing proves a missing rower becomes a bike now | the composer's modality owner | its only cells were in the deleted planner's suite |
 | The equipment checklist over-reports: `deriveSessionEquipmentRequirements` flat-maps display labels, so re-opening the sheet still OFFERS `Barbell` on a day whose only barbell row is an OR-group one | `sessionEquipment.ts`, against `equipmentRequiredFor` | the row is right, the checklist is not |
 | The labelled "Need to make a change?" hub | the session screen, as one complete UI slice | Sam's 2026-08-19 note |
 | A glass proof of restart preserving the equipment change | a Maestro flow using the checkpoint protocol | headless proof exists; a plain icon-relaunch white-screens by design |

@@ -55,7 +55,6 @@ import { loadForReplacementExercise } from '../rules/blockBoundaryProgression';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
 } from '../utils/sessionEquipment';
 import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
@@ -189,97 +188,25 @@ function run(): void {
   check('while a barbell-only row does not',
     exerciseAllowedByEquipment('Barbell Row', KIT_WITHOUT_BARBELL) === false);
 
-  const equipmentRows = [
-    { key: 'rdl', name: 'RDLs', raw: { exercise: { equipmentRequired: ['Barbell'] } } },
-    { key: 'row', name: 'Barbell Row', raw: { exercise: { equipmentRequired: ['Barbell'] } } },
-  ];
-  const equipmentPlan = buildSessionEquipmentReplacementPlan({
-    exercises: equipmentRows as never,
-    requirements: deriveSessionEquipmentRequirements(equipmentRows as never),
-    missingKeys: new Set(['tag:barbell'] as never),
-    capabilities: {
-      tags: KIT_WITH_BARBELL, conditioningModalities: [],
-      selectionCompleteness: 'complete', source: 'athlete_answer',
-    },
-    environment: {
-      activeInjuries: {}, primaryInjury: null,
-      availableEquipment: ['bodyweight', 'dumbbell'],
-      availableEquipmentTags: KIT_WITHOUT_BARBELL,
-      capacity: 'high', hasEquipmentConstraint: true, medicalStop: false,
-    } as never,
-  });
-  const replacedNames = equipmentPlan.ok
-    ? equipmentPlan.replacements.map((entry) => entry.fromExercise)
-    : ['REFUSED'];
-  check('THE PLAN TAKES THE BARBELL-ONLY ROW AND LEAVES THE ONE THAT SURVIVES',
-    JSON.stringify(replacedNames) === '["Barbell Row"]', JSON.stringify(replacedNames));
+  // ⚠ **THE CELLS THAT ASKED THE SCREEN'S PLANNER THIS QUESTION ARE GONE, AND
+  // THE QUESTION IS NOT.** `buildSessionEquipmentReplacementPlan` was deleted
+  // 2026-08-19 as proven-inert (0 replacements in 2,038 real door walks). The
+  // OR-group property is now held against the REAL door, on a real athlete, by
+  // `npm run test:session-equipment-owner` cell [5] — where an `RDLs` that gets
+  // swapped reddens the run. The three oracle checks above stay here because
+  // their subject is the authored sheet, which is alive.
 
-  // ⚠ NEWLY blocked, not blocked. A row already illegal on the athlete's SAVED
-  // kit is a real problem, but it is not this answer's doing and this door must
-  // not silently swap it while they are answering about something else.
-  const preIllegalRows = [
-    { key: 'squat', name: 'Back Squat', raw: { exercise: { equipmentRequired: ['Barbell', 'Rack'] } } },
-    { key: 'row', name: 'Barbell Row', raw: { exercise: { equipmentRequired: ['Barbell'] } } },
-  ];
-  const noRackKit: EquipmentTag[] = ['bodyweight', 'dumbbells', 'barbell'];
-  const preIllegalPlan = buildSessionEquipmentReplacementPlan({
-    exercises: preIllegalRows as never,
-    requirements: deriveSessionEquipmentRequirements(preIllegalRows as never),
-    missingKeys: new Set(['tag:barbell'] as never),
-    capabilities: {
-      tags: noRackKit, conditioningModalities: [],
-      selectionCompleteness: 'complete', source: 'athlete_answer',
-    },
-    environment: {
-      activeInjuries: {}, primaryInjury: null,
-      availableEquipment: ['bodyweight', 'dumbbell'],
-      availableEquipmentTags: ['bodyweight', 'dumbbells'],
-      capacity: 'high', hasEquipmentConstraint: true, medicalStop: false,
-    } as never,
-  });
-  const preIllegalTaken = preIllegalPlan.ok
-    ? preIllegalPlan.replacements.map((entry) => entry.fromExercise).sort()
-    : ['REFUSED'];
-  check('a row ALREADY illegal on the saved kit is not swept up by this answer',
-    !JSON.stringify(preIllegalTaken).includes('Back Squat'), JSON.stringify(preIllegalTaken));
+
 
   // ═══════════════════════════════════════════════════════════════════════
-  // [4] THE EQUIPMENT DOOR'S REPLACEMENT WEARS ITS OWN LOAD
+  // [4] THE EQUIPMENT DOOR'S REPLACEMENT WEARS ITS OWN LOAD — MOVED, NOT LOST
   //
-  // `sessionEquipment.replacementExercise` was a FOURTH copy of the swap payload
-  // rule and still carried `?? raw?.prescribedWeightKg`. Measured through the
-  // real door: `RDLs (80 kg) -> Glute Bridge` arrived at 80 kg, and
-  // `Landmine Press (35 kg) -> Half-Kneeling Single-Arm Overhead Press` at 35
-  // against its own estimate of 20.
+  // This section drove `buildSessionEquipmentReplacementPlan` with a hand-built
+  // 80 kg row and asserted the payload carried no weight of its own. That
+  // planner is deleted (inert in 2,038 door walks), and the property it guarded
+  // is now asserted where it actually matters — on the load the athlete SEES —
+  // by `test:session-equipment-owner` cells [6] and [7].
   // ═══════════════════════════════════════════════════════════════════════
-  console.log('\n[4] The equipment door\'s replacement wears its own load');
-  const heavyRow = { prescribedSets: 3, prescribedRepsMin: 2, prescribedRepsMax: 4, prescribedWeightKg: 80 };
-  const equipmentSwapRows = [
-    { key: 'row', name: 'Barbell Row', targetId: 'row',
-      raw: { ...heavyRow, exercise: { equipmentRequired: ['Barbell'] } } },
-  ];
-  const loadPlan = buildSessionEquipmentReplacementPlan({
-    exercises: equipmentSwapRows as never,
-    requirements: deriveSessionEquipmentRequirements(equipmentSwapRows as never),
-    missingKeys: new Set(['tag:barbell'] as never),
-    capabilities: {
-      tags: KIT_WITH_BARBELL, conditioningModalities: [],
-      selectionCompleteness: 'complete', source: 'athlete_answer',
-    },
-    environment: {
-      activeInjuries: {}, primaryInjury: null,
-      availableEquipment: ['bodyweight', 'dumbbell'],
-      availableEquipmentTags: KIT_WITHOUT_BARBELL,
-      capacity: 'high', hasEquipmentConstraint: true, medicalStop: false,
-    } as never,
-  });
-  const swappedIn = loadPlan.ok ? loadPlan.replacements[0]?.toExercise : null;
-  check('THE EQUIPMENT DOOR PRESCRIBES NO LOAD — the load owner decides',
-    !!swappedIn && swappedIn.weight === undefined,
-    `weight=${String(swappedIn?.weight)} (the outgoing row was 80)`);
-  check('and the DOSE still carries over from the slot it steps into',
-    !!swappedIn && swappedIn.sets === 3 && swappedIn.repsMin === 2 && swappedIn.repsMax === 4,
-    `${swappedIn?.sets}x${swappedIn?.repsMin}-${swappedIn?.repsMax}`);
 
   // ═══════════════════════════════════════════════════════════════════════
   // [5] THE SESSION EQUIPMENT ANSWER IS WRITTEN DOWN
@@ -291,17 +218,22 @@ function run(): void {
   console.log('\n[5] The session equipment answer is written down');
   const screenSource = fs.readFileSync(
     path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
-  const applyBody = screenSource.slice(screenSource.indexOf('const applySessionEquipment'));
-  // ⚠ MATCH CODE, NEVER PROSE. The first version of this cell compared against
-  // `'swap_exercise'` and went red on a tree that was correct — the word appears
-  // in this handler's own explanatory comment, ABOVE the fact write it explains.
-  // A source scan that a comment can move is not asserting the property.
+  const applyBody = screenSource.slice(
+    screenSource.indexOf('const applySessionEquipment'),
+    screenSource.indexOf('const applyExerciseGuidedInjury'));
+  // ⚠ **THIS USED TO ASSERT AN ORDER; IT NOW ASSERTS AN ABSENCE, AND THAT IS
+  // STRICTLY STRONGER.** The old cell checked that the fact write came BEFORE
+  // the handler's `swap_exercise` loop. That loop is deleted — proven inert
+  // across 2,038 door walks — so the handler must now contain the fact write and
+  // NO exercise-choosing call at all. The window is bounded at the next handler
+  // so a swap belonging to the live Swap door cannot satisfy or break this.
   const factWriteAt = applyBody.indexOf("kind: 'missing_for_session'");
-  const firstSwapAt = applyBody.indexOf("type: 'swap_exercise'");
-  check('the sheet writes a typed equipment fact BEFORE it applies anything',
-    factWriteAt >= 0 && firstSwapAt >= 0 && factWriteAt < firstSwapAt,
-    `fact@${factWriteAt} swap@${firstSwapAt} — the fact write must precede the swap loop, `
-      + 'or the producers downstream of it cannot know the kit changed');
+  check('the sheet writes a typed equipment fact',
+    factWriteAt >= 0, `fact@${factWriteAt}`);
+  check('and the equipment handler chooses no exercise and commits no swap',
+    !/type: 'swap_exercise'/.test(applyBody)
+      && !/buildSessionEquipmentReplacementPlan\(/.test(applyBody),
+    'the screen is choosing exercises again — that authority belongs to the composer');
 
   const sessionScope = temporaryFactScope({ kind: 'date', date: '2026-07-15' });
   check('the session scope is the session\'s own day, and expires with it',
@@ -413,71 +345,23 @@ function run(): void {
   // flattened into "That change didn't go through — nothing on your plan
   // changed." The ladder offered an ILLEGAL RUNG, which is not a fallback.
   // ═══════════════════════════════════════════════════════════════════════
-  console.log('\n[7] The fallback ladder — no swap may silently fail');
-  const ladderRow = [{
-    key: 'row', name: 'Barbell Row', targetId: 'row',
-    raw: {
-      prescribedSets: 3, prescribedRepsMin: 4, prescribedRepsMax: 6,
-      prescribedWeightKg: 72.5, exercise: { equipmentRequired: ['Barbell'] },
-    },
-  }];
-  const ladderEnv = {
-    activeInjuries: {}, primaryInjury: null,
-    availableEquipment: ['bodyweight', 'dumbbell', 'cable', 'machine', 'kettlebell'],
-    availableEquipmentTags: NO_BARBELL,
-    capacity: 'high', hasEquipmentConstraint: true, medicalStop: false,
-  };
-  const ladderPlan = buildSessionEquipmentReplacementPlan({
-    exercises: ladderRow as never,
-    requirements: deriveSessionEquipmentRequirements(ladderRow as never),
-    missingKeys: new Set(['tag:barbell'] as never),
-    capabilities: {
-      tags: FULL_KIT, conditioningModalities: [],
-      selectionCompleteness: 'complete', source: 'athlete_answer',
-    },
-    environment: ladderEnv as never,
-  });
-
+  console.log('\n[7] The fallback ladder — held at the real door now');
+  // ⚠ **THE LADDER CELLS DROVE THE SCREEN'S PLANNER AND IT IS DELETED.** They
+  // asserted that a barbell-less athlete gets a LEGAL rung rather than the
+  // `Inverted Row (Bodyweight)` the door used to offer and the write door used
+  // to bounce, and that with nothing legal left the answer is the typed
+  // `no_legal_fallback_on_remaining_kit` rather than silence.
+  //
+  // **BOTH PROPERTIES SURVIVE, ASKED OF THE COMPOSER INSTEAD OF THE SCREEN**,
+  // which is the owner that actually chooses now:
+  //   - every visible row legal on today's kit -> `test:session-equipment-owner` [3]
+  //   - a world with nothing legal says so in words -> the same suite's [13],
+  //     which reads the per-day gap sentences ("No vertical push today — that
+  //     would need Kettlebell") rather than a plan object.
+  // The non-vacuity check below stays: its subject is the authored sheet.
   check('non-vacuity: the rung that used to be offered really is illegal here',
     exerciseAllowedByEquipment('Inverted Row (Bodyweight)', NO_BARBELL) === false,
     `authored requirement ${JSON.stringify(equipmentRequiredFor('Inverted Row (Bodyweight)'))}`);
-  check('THE LADDER LANDS — a legal rung, not a refusal',
-    ladderPlan.ok === true && ladderPlan.replacements.length === 1,
-    ladderPlan.ok ? 'ok' : `REFUSED ${(ladderPlan as { exerciseName: string }).exerciseName}`);
-  const landed = ladderPlan.ok ? ladderPlan.replacements[0] : null;
-  check('AND THE RUNG IT LANDS ON IS LEGAL ON THE REMAINING KIT',
-    !!landed && exerciseAllowedByEquipment(String(landed.toExercise.name), NO_BARBELL),
-    String(landed?.toExercise.name));
-  check('it took the TOP rung — same movement pattern, so coverage is full',
-    !!landed && landed.fallbackTier === 'same_movement_pattern'
-      && landed.coversOriginalPattern === true,
-    `${landed?.fallbackTier} coversOriginalPattern=${landed?.coversOriginalPattern}`);
-  check('and the replacement still prescribes no load of its own',
-    !!landed && landed.toExercise.weight === undefined,
-    String(landed?.toExercise.weight));
-
-  // RUNG 6. When nothing legal remains the answer is a TYPED reason, never
-  // silence and never an illegal row the write door will bounce.
-  const barePlan = buildSessionEquipmentReplacementPlan({
-    exercises: ladderRow as never,
-    requirements: deriveSessionEquipmentRequirements(ladderRow as never),
-    missingKeys: new Set(['tag:barbell'] as never),
-    capabilities: {
-      tags: ['bodyweight', 'barbell'] as EquipmentTag[], conditioningModalities: [],
-      selectionCompleteness: 'complete', source: 'athlete_answer',
-    },
-    environment: {
-      ...ladderEnv,
-      availableEquipment: ['bodyweight'],
-      availableEquipmentTags: ['bodyweight'] as EquipmentTag[],
-    } as never,
-  });
-  check('RUNG 6 — nothing legal left gives a TYPED refusal, not a shrug',
-    barePlan.ok === false
-      && (barePlan as { reason: string }).reason === 'no_legal_fallback_on_remaining_kit',
-    barePlan.ok
-      ? `unexpectedly replaced with ${barePlan.replacements[0]?.toExercise.name}`
-      : (barePlan as { reason: string }).reason);
 
 
   // ═══════════════════════════════════════════════════════════════════════

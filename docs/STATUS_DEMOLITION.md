@@ -1547,3 +1547,94 @@ representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan
 alternatives; and the whole area-1..5 list above.
 
 Agent: demolition
+
+---
+
+# SESSION 5 — APPENDED BY SEAT `rebuild`, 2026-08-19
+
+**⚠ THE "ZERO LEGACY REMAINS" CLAIM ABOVE WAS INCOMPLETE, AND THIS IS THE
+CORRECTION.** Nothing written above is altered — the counts, the completion
+conditions and the surviving-owner map all stand. What they did not cover is
+this, and Sam ordered it recorded here rather than only in the rebuild seat's
+file.
+
+## WHAT THE COMPLETION CENSUS COULD NOT SEE
+
+Session 4's completion conditions counted **executing references to named
+symbols** — `migrateLegacyUserRemovalConstraint`, `deriveLegacyInjuryFromEpisodes`,
+`applyInjuryFilterToWorkout` and the rest — and every one really is 0. The
+instrument was sound. **Its unit was the wrong one for this class.**
+
+`buildSessionEquipmentReplacementPlan` in `utils/sessionEquipment.ts` was a
+**second exercise-selection authority living in a screen.** It walked Sam's
+fallback ladder, chose replacement exercises, and handed
+`DayWorkoutScreenV2.applySessionEquipment` a list of `swap_exercise` actions to
+commit. It carried:
+
+- a live production caller (the screen), so a **caller census reports it ALIVE**;
+- no legacy name — nothing in it says `legacy`, `migrate` or `compat`, so the
+  **term census cannot see it**;
+- typed, current inputs, so the *"does a LIVE writer still produce this shape?"*
+  test — the right test for the retained rows above — **answers YES**.
+
+**It was dead anyway, and only a behavioural measurement could show it.** Driven
+through the real door across **2,038 real (athlete, session date, implement
+subset) walks** on five generated worlds, it produced replacements in **0**. The
+reason is causal, not statistical: the dated equipment fact is written FIRST, the
+composer recomposes the day against the reduced kit, and by the time the screen
+computes a leftover plan there is nothing illegal left to swap. Confirmed on the
+simulator — the `"N exercises were replaced for this session only."` receipt it
+existed to produce is unreachable, and the Maestro flow asserting it had been
+failing on glass.
+
+**THE LESSON FOR THE NEXT CENSUS.** *"Has a caller"* is not *"does something"*.
+A demolition that asks only **who calls this** will keep every dead authority
+that some live screen politely calls and always gets an empty answer from. The
+question that found this one is **"what does it change?"**, asked by driving the
+real door and comparing the athlete-visible session with and without it.
+
+## WHAT WAS DELETED, AND WHAT WAS DELIBERATELY NOT
+
+**DELETED** (`613b8f9`-class change, this branch, commit below): the planner, its
+conditioning-modality helper `sessionConditioningReplacementName` (0 production
+callers), the two result types, four private helpers, ten now-dead imports, the
+screen's call site and swap loop, and the cells in three suites whose SUBJECT was
+the planner.
+
+**NOT TOUCHED — and this is the boundary the order named:** the live Swap and
+Remove transactions. `applySwapToday` in the same file still owns
+`type: 'swap_exercise'` and `type: 'remove_exercise'`, and `getTapSwapChoices`,
+`buildSwapSuggestionPayload` and the tap-swap ladder are untouched. **Sharing a
+file with dead code is not a reason to keep it, and it is not a reason to delete
+its neighbour either.**
+
+**PRESERVED inside the same module because their subject is alive:**
+`deriveSessionEquipmentRequirements` and `missingSessionEquipmentValues` — the
+sheet's checklist reader and its tag translator. The module is now a reader and
+only a reader.
+
+## PROOF — ZERO PRODUCTION EFFECT
+
+**The positive control ran FIRST**, because a comparison that cannot see a change
+proves nothing: a known-live mutation (restoring the illegal original inside
+`composeWeek`) moved **54 lines** of the same capture, and the tree was restored
+byte-identical before the real work began.
+
+Then, across four worlds including a bodyweight-only one, the real
+athlete-visible session before and after deletion:
+
+```
+before sha256  0305350 66a194692281e9b347cdfbff6f29904a744c505df378fa9101e702be8
+after  sha256  0305350 66a194692281e9b347cdfbff6f29904a744c505df378fa9101e702be8
+IDENTICAL
+```
+
+`test:compile` **665**, exactly session 4's recorded final tip; product scope
+carries four pre-existing improvements and **no new error in any scope**.
+`test:session-equipment-owner` 27/0. `test:session-execution` 69/0.
+`test:visible-surfaces` 58 passed / **6 failed — the SAME six, with identical
+text, at the pre-deletion commit in a control worktree**; the pass count moves
+66 -> 58 because ten planner cells went and two absence cells arrived. The
+simulator flow is green and the resulting session is pixel-identical.
+
+Agent: rebuild

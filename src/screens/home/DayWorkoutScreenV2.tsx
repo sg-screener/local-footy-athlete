@@ -75,7 +75,6 @@ type SelectedImplementToday = SelectedImplement & {
 };
 import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import {
-  buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
   missingSessionEquipmentValues,
   type SessionEquipmentRequirementKey,
@@ -863,96 +862,30 @@ export default function DayWorkoutScreenV2() {
       });
       return;
     }
-    const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
-    const profile = useProfileStore.getState().onboardingData;
-    const capabilities = resolveEquipmentCapabilities(profile, activeConstraints, date);
-    const environment = resolveTapSwapEnvironment({
-      date,
-      profile,
-      activeConstraints,
-      readinessSignal: useReadinessStore.getState().signalsByDate[date],
-    });
-    const plan = buildSessionEquipmentReplacementPlan({
-      exercises: editableExercises,
-      requirements: sessionEquipmentRequirements,
-      missingKeys,
-      capabilities,
-      environment,
-    });
-    if ('exerciseName' in plan) {
-      setSessionEquipmentVisible(false);
-      setExerciseEditStep({
-        kind: 'result',
-        ok: false,
-        title: 'No suitable replacement',
-        message: `Your equipment is saved for this session, but there isn’t a safe replacement for ${displayExerciseName(plan.exerciseName)} using what you have left. That exercise is still on the day — skip it, or ask your coach.`,
-      });
-      return;
-    }
-    // ── ⚠ ZERO REPLACEMENTS IS AN OUTCOME, NOT A NON-EVENT ────────────────
+    // ── THE FACT IS THE WHOLE ACTION ─────────────────────────────────────
     //
-    // **This branch used to close the sheet and say NOTHING**, and once the fact
-    // write landed it became the COMMON case rather than a corner: the recompose
-    // triggered by the fact already rebuilt the day against the reduced kit, so
-    // by the time this plan is computed there is usually nothing illegal left to
-    // replace. Measured on the simulator 2026-08-18 — the day was correctly
-    // rebuilt (`Barbell Row` -> `Chest Supported Row`, the implement on every
-    // row changed from Barbell to Dumbbells) **and the athlete was shown no
-    // confirmation at all.** A silent success reads exactly like a dead button.
+    // ⚠ **A SECOND SELECTION AUTHORITY USED TO LIVE HERE AND IT WAS INERT.**
+    // This handler went on to call `buildSessionEquipmentReplacementPlan` and
+    // commit a loop of `swap_exercise` actions from its answer — the screen
+    // choosing exercises, which is the composer's job. Deleted 2026-08-19 after
+    // it was measured across **2,038 real (athlete, session date, implement
+    // subset) door walks**: it produced replacements in **0 of them**, because
+    // the dated fact above is written FIRST and the composer has already
+    // recomposed the day against the reduced kit. Its `"N exercises were
+    // replaced"` receipt was unreachable, and the Maestro flow that asserted it
+    // had been failing on glass.
     //
-    // Sam, this session: *"No swap may silently fail: either the next legal
-    // fallback lands or the athlete sees the typed reason."* The same applies to
-    // silent SUCCESS — the receipt is what tells them the answer was recorded.
-    if (plan.replacements.length === 0) {
-      setSessionEquipmentVisible(false);
-      setExerciseEditStep({
-        kind: 'result',
-        ok: true,
-        title: 'Session equipment updated',
-        message: 'Saved for this session only. Your session was rebuilt using the equipment you have today — your saved gym setup is unchanged.',
-      });
-      return;
-    }
-
-    let applied = 0;
-    for (const replacement of plan.replacements) {
-      const result = executeProgramControlAction({
-        type: 'swap_exercise',
-        source: { screen: 'session_detail', surface: 'session_equipment_sheet', initiatedBy: 'tap' },
-        scope: 'today_only',
-        payload: {
-          date,
-          fromExercise: replacement.fromExercise,
-          fromExerciseId: replacement.targetId,
-          toExercise: replacement.toExercise,
-        },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      });
-      if (!result.ok) {
-        setSessionEquipmentVisible(false);
-        setExerciseEditStep({
-          kind: 'result',
-          ok: false,
-          title: 'Could not finish equipment changes',
-          message: applied > 0
-            ? `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced, but the remaining change could not be applied.`
-            : result.message ?? 'Nothing changed.',
-        });
-        return;
-      }
-      applied += 1;
-    }
-
+    // **THE LIVE SWAP AND REMOVE DOOR IS UNTOUCHED** — `applySwapToday` below
+    // still owns `swap_exercise` and `remove_exercise`. Nothing about ordinary
+    // swapping or removal changed here; only this dead copy of it went.
     setSessionEquipmentVisible(false);
     setExerciseEditStep({
       kind: 'result',
       ok: true,
       title: 'Session equipment updated',
-      message: `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced for this session only.`,
+      message: 'Saved for this session only. Your session was rebuilt using the equipment you have today — your saved gym setup is unchanged.',
     });
-  }, [date, editableExercises, sessionEquipmentRequirements]);
+  }, [date]);
 
   const applyExerciseGuidedInjury = React.useCallback(
     async (result: GuidedInjuryFlowResult) => {
