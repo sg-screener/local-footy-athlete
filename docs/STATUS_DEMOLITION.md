@@ -1079,3 +1079,159 @@ Baseline for every comparison: `test:compile` = **32 files over baseline** at
 `3f97cc67`.
 
 Agent: demolition
+
+---
+
+# SESSION 3 — THE FIVE ORDERED AREAS, AND THE COMPLETION SWEEP
+
+**Started at `13fad4ec`. Control worktree `wt-ctl`, detached at `13fad4ec`,
+never edited.** Every chunk was compared against it before it was committed.
+
+**BASELINE, measured in the control tree:** `test:compile` = 34-line
+fingerprint, TOTAL **470** errors against baseline, **23** file/scope pairs
+worse. Product/devtools/scripts scope = three "improved" lines and nothing else.
+
+**THE ONE MEASUREMENT THAT MATTERS, AND IT HELD SEVEN TIMES:** after every
+chunk, `[product]`, `[devtools]` and `[scripts]` compile scope was **IDENTICAL
+to the control**. Not one new error in any production scope across 5,559 deleted
+lines. Test scope moved 470 → 501 and 23 → 41 worse pairs, all in `[tests]` —
+the suites whose implementation subject was deleted.
+
+## THE SEVEN CHUNKS
+
+| commit | what went |
+| --- | --- |
+| `e7639a98` | area 1 — the post-generation constraint layer's write-time rewriting |
+| `84695756` | area 2 — the pattern-restore authority |
+| `89163523` | area 3 — the resolver's read-time synthesis |
+| `91c836ad` | area 4 — six obsolete persistence migrations |
+| `d6883de5` | area 5 — test disposition by SUBJECT |
+| `c461977b` | completion — the acceptance boundary's own rewriting |
+| `17c45279` | completion — the legacy-unknown evidence mode |
+
+**Session total: 26 files, 613 insertions, 5,559 deletions, 2 files physically
+deleted. Whole mission (`6da38cee`..`17c45279`): 83 files, 17,490 deletions, 27
+files physically deleted.**
+
+## AREA 1 — `postGenerationConstraintValidation.ts`, 1705 → 473 lines
+
+It was a **second programming authority sitting on the store's write
+primitives**. Every export returned a REWRITTEN object. Deleted: the workout
+rewriter, the week/microcycle/program/overlay rewriters, the contract
+re-authoring (`reResolveContractForActiveConstraints`), the legacy v1 per-week
+ledger, the five `validateLive*Write` wrappers, and
+`stage/commit/revalidateLiveStoredProgramSafety` — which restaged and committed
+**every persisted program surface** through the accepted-state transaction after
+any constraint change, as if it were an athlete decision.
+
+**PRESERVED, VERDICTS UNCHANGED:** `temporary_schedule_max_sessions_not_preserved`,
+`temporary_schedule_unavailable_date_not_preserved`,
+`temporary_time_cap_not_preserved`, `Final effective-week exposure contract
+unresolved`, and `requireSection18AcceptedWeek` at all three live write
+surfaces. **A throw is a refusal and stays. A rewrite is a repair and is gone.**
+
+## AREA 2 — the restore authority
+
+The canonicaliser PUT WORK BACK when a day stopped representing a pattern the
+plan intended — the pre-mutation row, or a lift invented in the canonicaliser
+itself. **An athlete's removal, an injury restriction and an equipment answer
+all arrive as the same thing: a missing pattern.** Its two hold-back inputs
+(`excludedIdentities`, `legalIdentityForPattern`) went with it; a pass that has
+to be told when not to fire is a pass that should not fire.
+
+⚠ **INSTRUMENT LESSON.** A brace-depth scan to delete a function cut its HEAD
+and left its BODY, and the file still parsed as a fragment. Recovered from my
+own committed state, ONE path, and redone line-based — a top-level function ends
+at a line that is exactly `}` — then parse-checked with sucrase. **Every
+function deletion after this point was line-based and parse-checked.**
+
+## AREA 3 — `sessionResolver.ts`, 2709 → 1808 lines
+
+Five layers were inventing and rewriting sessions on every render.
+`applyGameProximity` (251 lines) built a mobility flush on G+1, replaced the day
+with a Gunshow on G-1, and rewrote a G-2 session's every row — **none of it
+stored, so the week the athlete SAW and the week §18 COUNTED were different
+objects, and the day could not be edited at all.** `section18TierFour` (166
+lines) ran the §18 gateway over the week being DRAWN and installed its answer.
+`applyInjuryFilterPass` was **the second injury owner, and the file's own
+docblock said so.**
+
+**THE DISTINCTION THAT DECIDED EVERY CALL: a projection may HIDE, it may not
+CREATE.** `applyAwayPass` still takes the club's night and fixture off a day
+inside a live trip. What went is the half that BUILT a replacement.
+
+## AREA 5 — and the reclassified guard that caught me
+
+**34 of the 36 affected suites are PRESERVED.** Their subject is a surviving
+owner; they merely imported something that went. Matching by IMPORT is not
+matching by SUBJECT — the mistake this mission already made once, on 2026-08-16,
+when 16 suites were deleted and all 16 had to be restored.
+
+`resolverDisplacementSweepTests` was RECLASSIFIED rather than deleted. Its table
+proved athlete content outranked each of six derivers; all six are gone. Its
+ratchet now says the stronger thing — **the resolver may not build derived
+content at all** — and **on its first run it went red and found Pass 2, the
+read-time conditioning placement engine, which I had missed while deleting Pass
+3 beside it.** MUTATION-PROVEN: re-adding one `buildDerivedSession(` call reds
+cell [1] and nothing else; tree restored byte-identical.
+
+## THE COMPLETION CENSUS
+
+Positive control present in every scan; absolute roots only.
+
+| condition | state |
+| --- | --- |
+| zero legacy production execution | **MET** for every path measured; two named compatibility bridges survive with reasons (below) |
+| zero competing program writers | **MET** — 0 repair generators, 0 whole-week search, 0 safety finaliser, 0 visible-into-canonical merge; the two remaining name-hits are PROSE |
+| zero post-acceptance repair | **MET** — 0 acceptance-boundary canonicalisers, 0 stored-surface restage, 0 restore pass |
+| zero read-time program mutation | **MET in the resolver** (all seven authoring calls = 0, comment-stripped) and 0 across the whole projection layer |
+| zero obsolete persistence compatibility | **MET but for one**, named below |
+| obsolete modules + implementation-specific tests deleted | **MET** — 27 files across the mission |
+
+### THE THREE THINGS I DID NOT DELETE, AND WHY
+
+**These are stated, not hidden. "Legacy" in a name is not authority to delete.**
+
+1. **`migrateLegacyUserRemovalConstraint`** — bridges a live removal constraint
+   that has no linked ledger adjustment. Live doors still write removal
+   constraints, so it is **not provably a stored-version upgrade.** Needs its
+   own unit.
+2. **`deriveLegacyInjuryFromEpisodes`** and the `InjuryEpisodeV1 → InjuryState`
+   bridge — read by the LIVE coach path in ~25 production places. Deleting the
+   bridge without the readers breaks live coach behaviour. **This is the largest
+   remaining compatibility surface in the app.**
+3. **`visibleProgramProjection`'s injury filter** — the resolver's own docblock
+   names it THE single visible-program gate and the one injury owner. It filters
+   what is shown and writes nothing. Deleting it leaves **no** injury owner
+   anywhere, which is a different act from removing a duplicate. **Sam's call.**
+
+## REBUILD LIST — behaviour now missing or broken
+
+**Nothing here is fixed. Every row names the owner it must be rebuilt at.**
+
+| capability | owner to rebuild at |
+| --- | --- |
+| session-cap compliance — which session an athlete loses | weekly scheduler |
+| time-cap compression of a session | composer |
+| unavailable-date day clearing | weekly scheduler |
+| injury / equipment row removal after authoring | composer + specialists |
+| re-shaping already-accepted weeks when a constraint arrives | rebuild |
+| filling a main-strength slot a removal/injury/equipment answer emptied, reading the typed `cause` | composer, against Sam's ladder |
+| G+1 / G-1 / G-2 fixture-proximity day rules | weekly scheduler, beside the G-3 anchor |
+| no upper-body stacking in the 48h pre-game window | weekly scheduler |
+| filling a freed fixture slot | scheduler + composer |
+| the away SUBSTITUTION (Sam's ruling stands) | composer, via `clubInputsAfterTravel` |
+| conditioning placement on an empty day, its running cap, the off-feet swap | conditioning specialist at authoring |
+| shape canonicalisation of a stored workout | composer, at authoring |
+| a constraint written without a typed source fact is no longer back-filled | the constraint's writer |
+| **carried from earlier sessions:** power allowance stamping + delivery; applying stored athlete deletions; clearing stale derived sessions; safety rewriting of a week; optional-session placement/withdrawal; required-safe-pattern representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan alternatives keeping dependency-owned derived work | as recorded above |
+
+### TEST DEBT, RECORDED
+
+- **34 preserved suites** now carry dangling references to deleted symbols. They
+  guard live owners and the rebuild phase needs them.
+- **37 of 436 test files are registered by no npm script** and run in no sweep.
+  `postGenerationConstraintValidationTests` was one of them — it had been
+  guarding nothing, which is why deleting it cost no cover.
+
+Agent: demolition
