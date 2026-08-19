@@ -11,6 +11,7 @@ import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
+import { UndoToast } from '../../components/UndoToast';
 import { useNavigation } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
@@ -1797,6 +1798,30 @@ export default function DayWorkoutScreenV2() {
         onComplete={applyExerciseGuidedInjury}
         titlePrefix={displayExerciseName(injuryFlowExercise?.name, 'Injury / pain')}
       />
+
+      {/* ── UNDO, ON THE SURFACE THE CHANGE WAS MADE ON (R-107) ────────────
+        *
+        * Sam, 2026-08-20: *"Keep the athlete on the current screen. Undo must
+        * appear on whichever screen initiated the change, including inside the
+        * active session. Do not send them back to the Day page."*
+        *
+        * **THE FIVE LABELLED CHANGES LIVE HERE, SO THEIR UNDO DOES TOO.** Until
+        * this line, `UndoToast` mounted only on the Program screen, so every
+        * Equipment / Injury / Add / Remove / Swap made inside a session raised
+        * its toast on the screen BEHIND this one and expired unseen. Six
+        * seconds, on a screen the athlete was not looking at.
+        *
+        * ⚠ **THIS IS NOT A SECOND TOAST.** The component renders nothing unless
+        * its own screen is focused and keeps its seen-marker current while it
+        * is not, so exactly one is ever visible and one action produces one
+        * toast, once. That guard is inside `UndoToast`, not here — see its
+        * header for why the rule lives with the component rather than at each
+        * call site.
+        *
+        * It sits OUTSIDE `KeyboardSafeArea`, last, so it draws over the session
+        * rather than inside the scrolling content — and absolutely positioned,
+        * so it takes part in no layout. */}
+      <UndoToast />
     </SafeAreaView>
   );
 }

@@ -487,6 +487,88 @@ run('19 undoing a removal reaches the EXCLUSION, not just the ledger entry', () 
     + 'the fact that actually keeps the exercise out');
 });
 
+/* ─── R-107 — UNDO IS ON THE SURFACE THAT MADE THE CHANGE ──────────────────
+ *
+ * Sam, 2026-08-20: *"Keep the athlete on the current screen. Undo must appear
+ * on whichever screen initiated the change, including inside the active
+ * session. Do not send them back to the Day page."*
+ *
+ * ## WHY THIS SECTION READS SOURCE
+ *
+ * The claim is about which screens MOUNT the toast and about a guard inside the
+ * component — the same class of question `test:session-change-hub` and
+ * `test:dead-affordances` already answer by reading the screen. The toast's
+ * BEHAVIOUR (what it offers, and that undoing reverses the fact and not just
+ * the ledger) is the runtime section above.
+ *
+ * ## THE HALF THAT IS EASY TO GET WRONG
+ *
+ * "Mounted on both" is not the ruling. **"At most one visible, and one action
+ * produces one toast, once"** is. So three cells assert the guard, not just the
+ * mounts: the focus check, the render bail-out, and — the one a careless fix
+ * would drop — that an UNFOCUSED mount keeps its seen-marker current. Without
+ * that last one a removal made in a session announces itself again the moment
+ * the athlete goes back to the Day screen. */
+{
+  const readSource = (...parts: string[]): string =>
+    fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+  const toast = readSource('components', 'UndoToast.tsx');
+  const day = readSource('screens', 'home', 'HomeScreenV2.tsx');
+  const session = readSource('screens', 'home', 'DayWorkoutScreenV2.tsx');
+
+  // ⚠ CONTROL. Every cell below is a substring test, and a substring test is
+  // meaningless on a file that failed to read. If the paths ever drift these
+  // would all quietly agree with each other about nothing.
+  run('CONTROL — all three sources were really read', () => {
+    assert(toast.length > 2000 && day.length > 50000 && session.length > 50000,
+      `toast=${toast.length} day=${day.length} session=${session.length}`);
+  });
+
+  run('R-107 — both surfaces that own changes mount the toast', () => {
+    assert(/<UndoToast \/>/.test(day),
+      'the Program screen no longer mounts UndoToast');
+    assert(/<UndoToast \/>/.test(session),
+      'the SESSION screen does not mount UndoToast. The five labelled changes '
+      + 'live there, so until it does, every Equipment/Injury/Add/Remove/Swap '
+      + 'raises its Undo on the screen behind it and expires unseen.');
+    assert(/import \{ UndoToast \}/.test(session),
+      'the session screen names UndoToast without importing it');
+  });
+
+  run('R-107 — at most one is visible, and the guard is in the COMPONENT', () => {
+    assert(/useIsFocused/.test(toast),
+      'UndoToast does not read focus, so two mounts can both draw');
+    assert(/if \(!model \|\| !isFocused\) return null;/.test(toast),
+      'UndoToast renders without checking focus — two toasts on one screen');
+    // THE RULE LIVES WITH THE COMPONENT, NOT AT THE CALL SITES. A guard each
+    // screen has to remember is a guard one screen will forget.
+    assert(!/isFocused/.test(day) || !/UndoToast[\s\S]{0,80}isFocused/.test(day),
+      'a surface is guarding the toast from outside; the component owns this');
+  });
+
+  run('R-107 — an unfocused mount stays CURRENT, not merely silent', () => {
+    const region = toast.slice(toast.indexOf('if (isFocused) return;'));
+    assert(region.length > 0,
+      'the unfocused branch is gone. Without it this mount\u2019s seen-marker '
+      + 'still predates a decision another surface announced, so returning here '
+      + 'replays that surface\u2019s toast — one action, two toasts.');
+    assert(/setSeenEntryId\(undoToastSeenMarker\(entries\)\)/.test(region.slice(0, 200)),
+      'the unfocused branch no longer advances the seen marker');
+  });
+
+  run('R-107 — the athlete is NOT navigated away to reach the toast', () => {
+    // The rejected alternative, named so it cannot come back quietly: sending
+    // the athlete to the Day page after a session change so the old single
+    // mount could be reached. Sam refused it outright.
+    const hubAt = session.indexOf('<SessionChangeHub');
+    const region = session.slice(hubAt, hubAt + 1200);
+    assert(hubAt > 0, 'the session hub is gone; this cell is reading nothing');
+    assert(!/navigation\.(navigate|goBack|popTo)\(/.test(region),
+      'a change control on the session screen navigates away. R-107: "Do not '
+      + 'send them back to the Day page."');
+  });
+}
+
 console.log(`\nUndo reversal totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
 if (failed > 0) {

@@ -2522,3 +2522,97 @@ here rather than built. **NOT BUILT, NOT STARTED.**
 **WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
 coach-update mechanism or a new one, and whether the offer expires, are NOT
 ruled here and must not be invented.
+
+---
+
+**R-105** · *"Choose (c). Add more legitimate no-equipment explosive upper-body
+options. Until that pool exists, skip the power component rather than prescribe
+the identical exercise twice."* (Sam, 2026-08-20, answering `orchestrator`) ·
+**ONE EXERCISE APPEARS ONCE PER SESSION, AND POWER IS THE SIDE THAT GIVES WAY.**
+
+Measured across the 180-world corpus on 2026-08-19: letting the power
+specialist's budget reach the composer delivered **32 sessions prescribing one
+exercise twice** — `Explosive Push-up` as Power and the same movement as
+Strength, on the same day. **Every one was a `Bodyweight Only` world**, because
+`Explosive Push-up` was the **only** `upper` entry in `POWER_EXERCISE_POOL` and
+is also a legal bodyweight push. Full Gym and Dumbbells produced zero.
+
+**TWO PARTS, AND THE SECOND IS THE FLOOR UNDER THE FIRST.**
+
+- **THE POOL GROWS.** More legal zero-equipment explosive upper-body movements,
+  so a non-colliding option exists. **This is the real fix** — a pool with one
+  member for a whole family is the defect.
+- **UNTIL THEN, THE PRIMER IS SKIPPED.** Power is the fence-exempt extra — not a
+  hard exposure, not main strength, no conditioning credit — so dropping it
+  costs the week no exposure it is owed. The strength row is the session's real
+  work and cannot be dropped.
+
+⚠ **"SKIP" IS THE FALLBACK, NOT THE DESIGN.** A future hand that finds the skip
+and treats it as the intended behaviour has read half the ruling. It fires only
+when the pool has nothing else to offer, and every pool entry added makes it
+fire less.
+
+· `BUILT` — pool: `rules/powerExercisePool.ts`; skip:
+`rules/materialiseComposedWeek.ts`, held by `test:power-primer-policy`
+(`generatedPowerDeliveryTests` collision cells) and re-measured by
+`scripts/run-programming-release-matrix.ts`.
+
+---
+
+**R-106** · *"It is one training day containing two separate components: one
+strength session and one conditioning session. Count and assess each component
+separately, but do not call it two training days."* (Sam, 2026-08-20, answering
+`orchestrator`) · **A COMBINED DAY IS ONE DAY AND TWO COMPONENTS. IT IS NOT
+AMBIGUOUS AND IT IS NOT DISCARDED.**
+
+**THIS SETTLES A CONFLICT BETWEEN TWO LIVE AUTHORITIES**, which is why the
+Journey candidate was held. The 2026-08-18 production change at `56eff993`
+counts separately-answered combined strength and conditioning components — and
+that is the only way the extra-session offer becomes reachable at all. Three
+cells of `test:block-two-ladder` still required combined days to be **discarded
+as ambiguous**. Both could not be right.
+
+**SAM'S ANSWER IS THE PRODUCTION CHANGE, NOT THE GUARD.** The three cells are
+obsolete and are rewritten to the ruling; the production behaviour stands.
+
+**THE TWO HALVES ARE BOTH LOAD-BEARING:**
+
+- **SEPARATELY** — a brutal conditioning answer must not make the STRENGTH
+  quality read hard, and vice versa. The athlete answered about one component.
+- **ONE DAY** — day counts, session counts and "did they train" read ONE.
+  Counting it twice inflates every weekly total the athlete is assessed on.
+
+· `BUILT` — `test:block-two-ladder` combined-day section; production owner
+unchanged at `56eff993`. **Supersedes the discard-as-ambiguous reading; the
+older R-101 text describing that reading is superseded on this point only.**
+
+---
+
+**R-107** · *"Keep the athlete on the current screen. Undo must appear on
+whichever screen initiated the change, including inside the active session. Do
+not send them back to the Day page."* (Sam, 2026-08-20, answering
+`orchestrator`) · **UNDO FOLLOWS THE ACTION, NOT THE SCREEN THAT HAPPENS TO OWN
+THE TOAST.**
+
+**THIS AMENDS THE 2026-08-09 UNDO SURFACE RULING'S "ONE MOUNT" CLAUSE, AND ONLY
+THAT CLAUSE.** `docs/UNDO_SURFACE_RULING_2026-08-09.md` killed the standing bar
+and the confirm sheet because they built a second change-interface beside the
+coach. **That reasoning is untouched.** What is amended is the implementation
+note that the transient toast *"mounts once, on the Program screen"* — a
+one-mount rule that, once the five labelled changes moved into the session
+screen, meant every session-screen change raised its toast on the screen BEHIND
+it, where its six-second life expired unseen.
+
+**IT IS STILL ONE TOAST, WITH ONE OWNER AND ONE LEDGER.** The component, its
+copy, its ledger read and its one-step semantics are unchanged. What changes is
+that the surface the athlete acted on is the surface it appears on, and **at
+most one is ever visible**, because a screen renders it only while it is the
+focused one.
+
+⚠ **AND THE ATHLETE IS NOT MOVED.** The rejected alternative was navigating back
+to the Day page after a session change so the existing mount could be reached.
+Sam refused it outright: a change made inside a session must not eject the
+athlete from that session.
+
+· `BUILT` — `components/UndoToast` + its mounts, held by
+`test:undo-reversal` / `test:session-change-hub`.

@@ -764,17 +764,41 @@ ok(
   `${strengthHardSetGain} rows gained a set while the athlete found lifting brutal`,
 );
 
-/**
- * ⚠ **THE COORDINATE THAT KILLS "STRENGTH IS PROGRESSED ON AN AMBIGUOUS
- * ANSWER". MUTATION M3 SURVIVED WITHOUT IT.**
+/* ═══ R-106 — A COMBINED DAY IS ONE DAY AND TWO COMPONENTS ══════════════════
  *
- * Every session in this block carried BOTH strength and conditioning, so the
- * athlete never once answered a question that could only be about lifting. The
- * block-level verdict still reads `good` and the block still QUALIFIES — the
- * ladder's own gate is the only thing standing between an ambiguous answer and
- * an added set. Deleting it turns 41 green cells into 41 green cells unless this
- * world exists.
+ * Sam, 2026-08-20, settling a conflict between two live authorities: *"It is
+ * one training day containing two separate components: one strength session
+ * and one conditioning session. Count and assess each component separately,
+ * but do not call it two training days."*
+ *
+ * ## THREE CELLS HERE ASSERTED THE OPPOSITE AND ARE REWRITTEN, NOT DELETED
+ *
+ * They required a combined day to be DISCARDED as ambiguous: strength quality
+ * `unknown`, zero strength-answer days, no set added. That was correct while
+ * `feeling` and `soreness` were the only evidence — session-level answers with
+ * no way to tell whether "hard" meant the lifting or the running.
+ *
+ * **THE 2026-08-18 PRODUCTION CHANGE MADE THAT AMBIGUITY CONDITIONAL AND THESE
+ * CELLS DID NOT FOLLOW.** Once the athlete answers the conditioning RPE that
+ * component has its own explicit evidence, and the session-level answer is then
+ * attributable to the strength. Both authorities were live and they contradicted
+ * each other; **Sam's answer is the production behaviour, so the guard moves.**
+ *
+ * ⚠ **THE PROTECTION THEY WERE BUILT FOR IS NOT DROPPED — IT MOVES TO THE
+ * COORDINATE WHERE IT STILL APPLIES.** Mutants M3 and M12 must still die. A
+ * combined day with NO conditioning answer is still genuinely ambiguous and is
+ * still discarded; section [C] is that world. Rewriting a guard to a new ruling
+ * and quietly losing its mutant is exactly the shape this file exists to stop.
+ *
+ * ## BOTH HALVES OF THE RULING ARE LOAD-BEARING
+ *
+ * **SEPARATELY** — [A], [D] and [E]: an answer about one component must not
+ * move the other component's quality, in either direction.
+ * **ONE DAY** — [F]: the day counts read one, not two. A day counted twice
+ * inflates every weekly total the athlete is assessed on.
  */
+
+/* ── [A] EACH COMPONENT ANSWERED → EACH COMPONENT ASSESSED ───────────────── */
 const ALL_COMBINED: Record<string, SessionFeedback> = {};
 for (const dateStr of BLOCK_1_DATES) {
   ALL_COMBINED[dateStr] = {
@@ -791,14 +815,22 @@ const allCombinedHistory = readBlockHistory({
 ok(
   'a block of only COMBINED sessions still qualifies at block level',
   allCombinedHistory.qualifies && !allCombinedHistory.reduces,
-  `qualifies=${allCombinedHistory.qualifies} — without this the next cell is vacuous`,
+  `qualifies=${allCombinedHistory.qualifies} — without this the next cells are vacuous`,
 );
 ok(
-  'but the STRENGTH quality reads UNKNOWN — no answer was only about lifting',
-  allCombinedHistory.byQuality.strength === 'unknown'
-    && allCombinedHistory.byQuality.strengthAnswerDays === 0,
+  'R-106 — the STRENGTH component IS assessed on a combined day',
+  allCombinedHistory.byQuality.strength === 'good'
+    && allCombinedHistory.byQuality.strengthAnswerDays === BLOCK_1_DATES.length,
   JSON.stringify(allCombinedHistory.byQuality),
 );
+ok(
+  'R-106 — and so is the conditioning component, from its own answer',
+  allCombinedHistory.byQuality.conditioning === 'good'
+    && allCombinedHistory.byQuality.conditioningAnswerDays === BLOCK_1_DATES.length,
+  JSON.stringify(allCombinedHistory.byQuality),
+);
+
+/* ── [B] SO THE LADDER IS REACHABLE FOR AN ATHLETE WHOSE DAYS ARE COMBINED ── */
 const allCombinedRows = rowsOf(build(ALL_COMBINED));
 let allCombinedGained = 0;
 for (const [key, row] of allCombinedRows) {
@@ -806,20 +838,58 @@ for (const [key, row] of allCombinedRows) {
   if (control && row.sets > control.sets) allCombinedGained++;
 }
 ok(
-  'AND NO SET IS ADDED ON AN AMBIGUOUS ANSWER, even though the block qualifies',
-  allCombinedGained === 0,
-  `${allCombinedGained} rows gained a set with zero strength-attributable answers`,
+  'R-106 — a set IS added when both components were answered and both were good',
+  allCombinedGained > 0,
+  `${allCombinedGained} rows gained a set. THIS IS THE DEFECT THE RULING FIXES: `
+  + 'a pre-season athlete whose gym days are combined days could reach '
+  + 'strengthEasy only by leaving the conditioning question blank, and '
+  + 'conditioningEasy only by answering it — never both, whatever they did — so '
+  + 'the extra-session offer could not fire for any athlete of that shape.',
 );
 
+/* ── [C] THE OLD PROTECTION, AT THE COORDINATE WHERE IT STILL APPLIES ─────── */
 /**
- * ⚠ **THE COORDINATE THAT KILLS "THE COMBINED DAY'S FEELING IS A STRENGTH
- * ANSWER". MUTATION M12 SURVIVED WITHOUT IT.**
- *
- * The contract's own case: the session that felt brutal was the one carrying the
- * conditioning, and the pure lifting days were fine. A read that counts the
- * combined day would call STRENGTH very hard on the strength of an answer that
- * was about running.
+ * ⚠ **MUTANT M3 STILL HAS TO DIE.** "Assess each component separately" needs
+ * each component ANSWERED. A combined day whose conditioning question is blank
+ * has one answer and two components, so the session-level answer cannot be
+ * attributed to either — and that day is still discarded, exactly as before.
  */
+const COMBINED_UNANSWERED: Record<string, SessionFeedback> = {};
+for (const dateStr of BLOCK_1_DATES) {
+  COMBINED_UNANSWERED[dateStr] = {
+    ...GOOD_HISTORY[dateStr],
+    conditioning: { sessionName: 'Steady Blocks' },
+  } as SessionFeedback;
+}
+const combinedUnanswered = readBlockHistory({
+  feedbackByDate: COMBINED_UNANSWERED,
+  blockStartISO: BLOCK_1_START,
+  blockEndISO: '2026-08-02',
+  requiredStrengthSessions: 12,
+});
+ok(
+  'CONTROL — the unanswered-conditioning block still qualifies at block level',
+  combinedUnanswered.qualifies,
+  `qualifies=${combinedUnanswered.qualifies} — without this the next two are vacuous`,
+);
+ok(
+  'R-106 — a combined day with NO conditioning answer is still AMBIGUOUS',
+  combinedUnanswered.byQuality.strength === 'unknown'
+    && combinedUnanswered.byQuality.strengthAnswerDays === 0,
+  JSON.stringify(combinedUnanswered.byQuality),
+);
+let unansweredGained = 0;
+for (const [key, row] of rowsOf(build(COMBINED_UNANSWERED))) {
+  const control = silentRows.get(key);
+  if (control && row.sets > control.sets) unansweredGained++;
+}
+ok(
+  'AND NO SET IS ADDED ON A GENUINELY AMBIGUOUS ANSWER, even though it qualifies',
+  unansweredGained === 0,
+  `${unansweredGained} rows gained a set with zero strength-attributable answers`,
+);
+
+/* ── [D] BOTH COMPONENTS BRUTAL → BOTH READ BRUTAL ───────────────────────── */
 const COMBINED_DAY_BRUTAL: Record<string, SessionFeedback> = {};
 for (const [index, dateStr] of BLOCK_1_DATES.entries()) {
   COMBINED_DAY_BRUTAL[dateStr] = index % 3 === 0
@@ -837,9 +907,10 @@ const combinedBrutal = readBlockHistory({
   requiredStrengthSessions: 12,
 });
 ok(
-  'a brutal COMBINED day does not make the STRENGTH quality hard',
-  combinedBrutal.byQuality.strength === 'good',
-  `got ${combinedBrutal.byQuality.strength} — the answer was about the conditioning`,
+  'R-106 — a brutal STRENGTH answer on a combined day IS a strength answer',
+  combinedBrutal.byQuality.strength === 'very_hard',
+  `got ${combinedBrutal.byQuality.strength} — the athlete said the lifting felt `
+  + 'very hard, and the conditioning carries its own answer beside it',
 );
 ok(
   'and the same day DOES make the conditioning quality hard',
@@ -847,9 +918,55 @@ ok(
   `got ${combinedBrutal.byQuality.conditioning}`,
 );
 ok(
-  'while the BLOCK-level verdict still hears it — R-098\'s reduction is untouched',
+  'while the BLOCK-level verdict still hears it — R-098 reduction untouched',
   combinedBrutal.recoveryVerdict === 'very_hard' && combinedBrutal.reduces,
   `verdict=${combinedBrutal.recoveryVerdict} reduces=${combinedBrutal.reduces}`,
+);
+
+/* ── [E] "SEPARATELY" IN THE DISCRIMINATING DIRECTION ─────────────────────── */
+/**
+ * ⚠ **[D] ALONE CANNOT TELL "BOTH HEARD" FROM "ONE LEAKED INTO THE OTHER".**
+ * There the athlete called both components brutal, so a read that simply copied
+ * the conditioning answer onto the strength would pass it. Here the lifting
+ * felt FINE and only the running was brutal, so strength must stay good.
+ */
+const CONDITIONING_ONLY_BRUTAL: Record<string, SessionFeedback> = {};
+for (const [index, dateStr] of BLOCK_1_DATES.entries()) {
+  CONDITIONING_ONLY_BRUTAL[dateStr] = index % 3 === 0
+    ? {
+      ...GOOD_HISTORY[dateStr],
+      conditioning: { sessionName: 'Steady Blocks', rpe: 9 },
+    } as SessionFeedback
+    : GOOD_HISTORY[dateStr];
+}
+const conditioningOnlyBrutal = readBlockHistory({
+  feedbackByDate: CONDITIONING_ONLY_BRUTAL,
+  blockStartISO: BLOCK_1_START,
+  blockEndISO: '2026-08-02',
+  requiredStrengthSessions: 12,
+});
+ok(
+  'R-106 — a brutal CONDITIONING answer does NOT make the strength quality hard',
+  conditioningOnlyBrutal.byQuality.strength === 'good',
+  `got ${conditioningOnlyBrutal.byQuality.strength} — that answer was about the running`,
+);
+ok(
+  'CONTROL — and that same brutal conditioning answer WAS heard',
+  conditioningOnlyBrutal.byQuality.conditioning === 'very_hard',
+  `got ${conditioningOnlyBrutal.byQuality.conditioning} — without this, the cell `
+  + 'above passes on a read that heard nothing at all',
+);
+
+/* ── [F] "ONE TRAINING DAY", NOT TWO ─────────────────────────────────────── */
+ok(
+  'R-106 — a combined day counts ONCE, not twice',
+  allCombinedHistory.byQuality.strengthAnswerDays === BLOCK_1_DATES.length
+    && allCombinedHistory.byQuality.conditioningAnswerDays === BLOCK_1_DATES.length
+    && allCombinedHistory.completedStrengthSessions <= BLOCK_1_DATES.length,
+  `strengthDays=${allCombinedHistory.byQuality.strengthAnswerDays} `
+  + `conditioningDays=${allCombinedHistory.byQuality.conditioningAnswerDays} `
+  + `completedStrength=${allCombinedHistory.completedStrengthSessions} of `
+  + `${BLOCK_1_DATES.length} dates. Sam: "do not call it two training days".`,
 );
 
 ok(

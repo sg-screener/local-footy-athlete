@@ -19,15 +19,13 @@ tags:
 # per-row icons were deleted), but the way IN is the labelled chip, and the
 # first tap below is on it.
 #
-# ⚠ **THE UNDO HALF OF THIS FLOW WAS REMOVED, AND THAT IS A KNOWN GAP, NOT A
-# TIDY-UP.** It used to prove "the toast appears on the surface the removal
-# happened on", which held only while Remove lived on the Day screen: `UndoToast`
-# mounts on the Program screen and nowhere else, so a removal driven from the
-# pushed session screen raises its toast BEHIND that screen. Asserting
-# `undo-toast` here would red for a reason this flow cannot fix, and deleting it
-# silently would hide the defect. It is finding O-3 in
-# `docs/STATUS_ORCHESTRATOR.md`. Undo's own behaviour stays covered headlessly by
-# `test:undo-reversal`.
+# ⚠ **THE UNDO HALF IS BACK, AND IT IS NOW THE POINT (R-107, 2026-08-20).**
+# Sam: *"Undo must appear on whichever screen initiated the change, including
+# inside the active session. Do not send them back to the Day page."*
+# It was removed from this flow on 2026-08-19 as finding O-3 — `UndoToast`
+# mounted on the Program screen alone, so a removal driven from the pushed
+# session screen raised its toast behind that screen. The ruling closed the gap
+# and step 5 below is what proves it on glass rather than in a source scan.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
@@ -144,3 +142,46 @@ tags:
 - assertVisible:
     id: "session-strength-position-.*-band-pallof-press"
 - takeScreenshot: artifacts/visible/hub-5-rows-back-the-receipt
+
+# ── 5. UNDO, ON THE SURFACE THE CHANGE WAS MADE ON (R-107) ────────────────
+# ⚠ **AND THE ATHLETE IS STILL IN THE SESSION.** `workout-screen` is asserted
+# BEFORE the toast, because a flow that only checked the toast would pass on an
+# app that had bounced the athlete back to the Day page to show it — which is
+# the alternative Sam refused in the same sentence.
+- assertVisible:
+    id: "workout-screen"
+# ⚠ **THE TOAST LIVES SIX SECONDS, SO EVERY COMMAND HERE IS ON A CLOCK.**
+# Measured 2026-08-20: the first version asserted the id, then the action id,
+# then the word, then screenshotted, and the tap that followed failed with
+# `undo-toast-action not found` — **not because Undo was missing but because it
+# had already withdrawn itself.** The toast was visible; the flow was slow. A
+# walk that reports that as a missing control is reporting a defect that does
+# not exist. Wait, prove the word, photograph, tap — nothing else in between.
+- extendedWaitUntil:
+    visible: "Undo"
+    timeout: 15000
+# ⚠ **THE WORD IS ASSERTED BY THE WAIT, NOT BY A SECOND COMMAND.** Each extra
+# hierarchy fetch costs ~1.5s of a six-second toast; asserting the id, then the
+# word, then screenshotting left nothing for the tap.
+- takeScreenshot: artifacts/visible/hub-6-undo-inside-the-session
+
+# ── 6. THE TAP ITSELF IS BEYOND THIS INSTRUMENT, AND THAT IS STATED ───────
+#
+# ⚠ **NOT A SILENT CAP.** Three consecutive runs on 2026-08-20 proved the toast
+# APPEARS on the session screen — `hub-6` shows "You removed an exercise ·
+# Undo" over the session with Back Squat gone. **Every one of those runs then
+# failed to TAP it**, with `undo-toast-action not found`.
+#
+# The toast withdraws itself after 6s (`VISIBLE_MS`) and each Maestro hierarchy
+# fetch on this machine costs ~1.5s. Trimmed to the minimum — one wait, one
+# screenshot, one tap — it still did not fit. **The control was never missing;
+# the walk was slower than the affordance's life.**
+#
+# **SO THE TWO HALVES ARE PROVEN IN THE TWO PLACES THAT CAN PROVE THEM:**
+#   - Undo APPEARS on the surface that made the change — here, on glass, above.
+#   - Undo REVERSES the change — `test:undo-reversal` case 19, headlessly,
+#     which asserts the reversal reaches the EXCLUSION and not merely the
+#     ledger entry.
+#
+# Making this tappable from a flow would mean lengthening the toast for E2E,
+# which is changing the product to suit the instrument. Not done.
