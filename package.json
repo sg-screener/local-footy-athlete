@@ -463,7 +463,8 @@
     "test:mid-block-restart": "TZ=Australia/Melbourne sucrase-node src/__tests__/midBlockRestartConservationTests.ts",
     "test:block-two-explanation-delivery": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoExplanationDeliveryTests.ts",
     "test:visible-surfaces": "TZ=Australia/Melbourne sucrase-node src/__tests__/visibleSurfaceAgreementTests.ts",
-    "test:block-selection-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockSelectionAuthorityTests.ts"
+    "test:block-selection-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockSelectionAuthorityTests.ts",
+    "test:session-change-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionChangeDurabilityTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -286,29 +286,37 @@ async function main(): Promise<void> {
     `before=${JSON.stringify(beforeRestart)} after=${JSON.stringify(afterRestart)}`);
   ok('the add survived',
     afterRestart.some((r) => r.startsWith(`${added}@`)), JSON.stringify(afterRestart));
-  /* ⚠⚠ **THIS CELL IS RED ON PURPOSE AND IT IS THE BRANCH'S ONE OPEN DEFECT.**
+  /* ⚠⚠ **CLOSED 2026-08-19, AND THE FIRST HYPOTHESIS WAS WRONG.**
    *
-   * The swap does not survive a restart. Measured here, three actions deep:
+   * This cell was red with the note *"the later writes appear to compose from a
+   * base that does not carry the earlier one, so the last write wins"*. That
+   * was a guess from the symptom, and the symptom fitted it. It was not the
+   * cause: nothing was composing badly, because **the swap's replay never ran
+   * at all.** Instrumenting the boot (the replay's own warning is swallowed by
+   * the suite's `quietAsync`) produced the actual line:
    *
    * ```
-   * before restart  [..., <replacement>, ...]
-   * after  restart  ["Bulgarian Split Squats", ..., "Back Squat"]
-   *                  ^ the original is back      ^ the ADD replayed fine
+   * [quiescentBoot] a recorded door action no longer applies on replay
+   *   entryId: 'dl-2', actionType: 'swap_exercise',
+   *   message: "2026-07-22 is in the past - I can't change it."
    * ```
    *
-   * The removal survives (it is a decision in athlete preferences) and the ADD
-   * survives (its ledger replay lands), so this is not "the ledger is not
-   * replayed" — it is the SWAP's replay specifically. Remove, swap and add each
-   * write a `dateOverride` for the same day during replay, and the later writes
-   * appear to compose from a base that does not carry the earlier one, so the
-   * last write wins and the swap is the one that loses.
+   * Replay passes `entry.occurredAt` as `todayISO`, and `replaceExerciseAtDate`
+   * refuses any date before "today". So STARTUP was re-adjudicating a decision
+   * the ledger already says was accepted, and dropping it. The removal survived
+   * because it is a durable decision in athlete preferences, and the add
+   * survived because it has no such guard — which is exactly why it read as
+   * *"the SWAP specifically"*.
    *
-   * **NOT FIXED HERE, AND NOT HIDDEN.** The fix is in how overrides for one day
-   * compose during ledger replay, which is `quiescentBoot`'s ordering and not
-   * this mission's five doors. Editing this expectation to match would be the
-   * `expectation-edited-to-match-the-regression` defect; the cell stays, it
-   * names the defect, and the suite is RED until someone closes it. */
-  ok('the swap survived — ⚠ OPEN DEFECT, see the note above this cell',
+   * The guard no longer applies to a replay: a replay is not the athlete
+   * acting. See the note at `utils/coachActions.replaceExerciseAtDate`, which
+   * also records the production world this bites — `occurredAt` is a UTC
+   * instant string-sliced to a date, so in any timezone behind UTC an ordinary
+   * evening swap stamps tomorrow and is refused on the next launch.
+   *
+   * Held by `test:session-change-durability` sequences 1, 3, 4, 5 and 7, and by
+   * its mutation M1 (dropping the swap decision during boot). */
+  ok('the swap survived',
     afterRestart.some((r) => r.startsWith(`${replacement}@`)), JSON.stringify(afterRestart));
 
   /* ═══════════════════════════════════════════════════════════════════════ */
@@ -362,26 +370,27 @@ async function main(): Promise<void> {
    * up had legitimately swapped it out, because the exercise the add chose was a
    * squat and the declared injury is a knee. A restore cell that fails because
    * an injury pass did its job is a cell about the wrong subject. */
-  /* ⚠⚠ **THE SECOND OPEN DEFECT, AND IT IS THE SAME SHAPE AS THE FIRST.**
+  /* ⚠⚠ **CLOSED 2026-08-19, AND IT WAS NARROWER THAN THE NOTE FEARED.**
    *
-   * Restore does not bring the row back once a SWAP has landed on the same day.
-   * Traced here: the injury pass correctly leaves the excluded row alone — the
-   * plan's `unsafe` list is `["Bulgarian Split Squats","Back Squat"]` with
-   * `RDLs` filtered out — but `replaceExerciseAtDate` then writes the day's
-   * override from a read that ALREADY HAS THE FILTER APPLIED, so the hidden row
-   * is baked out of the stored override permanently and there is nothing left
-   * for Restore to reveal.
+   * The diagnosis here was right: `replaceExerciseAtDate` wrote the day's
+   * override from a read that ALREADY HAD THE EXCLUSION FILTER APPLIED, so the
+   * hidden row was baked out of the stored override permanently and Restore had
+   * nothing to reveal. *A filter that gets written down is not a filter.*
    *
-   * **This is the "a filter that gets written down is not a filter" defect,
-   * one door along.** It was closed at the compose owner and at the resolver by
-   * putting the exclusions on `ScheduleState` and giving them only to VIEW
-   * doors; the leak that remains is that `buildScheduleStateImperative` is used
-   * by writers as well as views, so the swap writer sees the filtered week.
+   * The note priced the fix as *"a writer-side `ScheduleState` … and that
+   * function has fourteen callers"*. It does — but the fourteen are callers of
+   * `buildScheduleStateImperative`, and the leak is not there. It is at
+   * `coachActions.resolveDateWorkout`, the module-private read those writers
+   * actually use, and **all six of its callers are writers** (`lightenSession`,
+   * `moveSession`, `makeSessionOptional`, `replaceExerciseAtDate`,
+   * `addExerciseAtDate`, `addWeeklyOverride`) — not one is a view. So the seam
+   * is one function, and it states `athleteExclusions: []` the same way
+   * `liveEvaluationSurfaces.freshGenerationSurfaces` does: a world that
+   * deliberately has none.
    *
-   * **NOT FIXED HERE.** The fix is a writer-side `ScheduleState` that carries no
-   * exclusions, and that function has fourteen callers — it is its own slice,
-   * not a line at the end of this one. The cell stays and names the cause. */
-  ok('restoring the removal brings the EXACT row back — ⚠ OPEN DEFECT, see the note above',
+   * Held by `test:session-change-durability` sequences 2 and 3, and by its
+   * mutation M3 (restoring the removal snapshot over a later swap). */
+  ok('restoring the removal brings the EXACT row back',
     afterRestore.some((r) => r.startsWith(`${removed}@`)), JSON.stringify(afterRestore));
   ok('and it changes NOTHING else — every other row is byte-identical',
     JSON.stringify(afterRestore.filter((r) => !r.startsWith(`${removed}@`)))

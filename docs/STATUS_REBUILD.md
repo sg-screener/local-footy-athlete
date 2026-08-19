@@ -1153,3 +1153,123 @@ control worktree**, including the four already red there.
 **NOT COVERED:** the simulator. Nothing in this mission has been seen on glass.
 
 Agent: rebuild
+
+---
+
+# BOTH OPEN DEFECTS CLOSED — 2026-08-19, same seat, next session
+
+## DEFECT 1 — THE SWAP DID NOT SURVIVE A RESTART. THE FIRST DIAGNOSIS WAS WRONG.
+
+The note above said *"the later writes compose from a base that does not carry
+the earlier one, so the last write wins"*. That was inferred from the symptom and
+the symptom fitted it. **It was not the cause.** Nothing composed badly, because
+**the swap's replay never ran.**
+
+The replay's own warning is swallowed by the suite's `quietAsync`. Instrumented
+(boot run with the console live) it says, verbatim:
+
+```
+[quiescentBoot] a recorded door action no longer applies on replay
+  entryId: 'dl-2', actionType: 'swap_exercise',
+  message: "2026-07-22 is in the past - I can't change it."
+```
+
+`quiescentBoot.replayEntry` passes `entry.occurredAt` as `todayISO`, and
+`replaceExerciseAtDate` refuses any date before "today". **Startup was
+re-adjudicating a decision the ledger already recorded as accepted, and dropping
+it.** The removal survived because it is a durable decision in athlete
+preferences; the add survived because it has no such guard — which is exactly why
+the symptom read as *"the SWAP specifically"*.
+
+**THE FIX REMOVES THE AUTHORITY, IT DOES NOT COMPENSATE FOR IT.** The staleness
+refusal no longer applies while the ledger replay latch is held. The latch is the
+app's existing statement of this same idea — *"a replayed interpreter is not the
+athlete acting"* — and it carries no imports, so consulting it forms no cycle.
+
+**AND IT IS A PRODUCTION DEFECT, NOT A HARNESS ARTEFACT.** `occurredAt` is
+`new Date().toISOString()` — a UTC instant — and replay string-slices it to a
+date. In any timezone BEHIND UTC an ordinary evening swap stamps TOMORROW, so the
+guard refuses the athlete's own edit on the next launch. Fixing only the clock
+would leave the refusal standing for DST, travel and a manual clock change, so
+the refusal is what went.
+
+⚠ **NAMED, NOT FIXED:** `occurredOn` is still a UTC-sliced date and is still
+passed as `todayISO` to every other replay arm. It no longer causes a refusal on
+the five doors; what it does to `plan_change` replay is not measured here.
+
+## DEFECT 2 — RESTORE COULD NOT REVEAL A ROW A SWAP WROTE OVER. NARROWER THAN PRICED.
+
+The diagnosis above was right. The PRICE was wrong. It read *"a writer-side
+`ScheduleState` … and that function has fourteen callers"*. The fourteen are
+callers of `buildScheduleStateImperative`, and the leak is not there — it is
+`coachActions.resolveDateWorkout`, the module-private read those writers actually
+use, and **all six of its callers are writers**: `lightenSession`,
+`moveSession`, `makeSessionOptional`, `replaceExerciseAtDate`,
+`addExerciseAtDate`, `addWeeklyOverride`. Not one is a view.
+
+So the seam is ONE function. It states `athleteExclusions: []` the same way
+`liveEvaluationSurfaces.freshGenerationSurfaces` does — a world that deliberately
+has none, rather than one that forgot to look.
+
+## THE THIRD DEFECT, FOUND BY THE NEW SUITE, AND NOT FIXED
+
+**INJURY IS THE SAME "MEMORY ONLY" CLASS, ONE DOOR ALONG.** Sequence 6
+(injury → remove → restart) is RED. The injury EPISODE is durable
+(`activeConstraints` still reads `["injury-knee"]` after hydration) but the
+recomposition it performed is written to `dateOverrides`, which boot blanks by
+design; the ledger holds only `dl-1 remove_exercise`. Nothing replays it.
+
+**MEASURED BYTE-IDENTICAL WITH BOTH FIXES REVERTED — it is pre-existing.**
+
+Three independent facts each block the small version of the fix, so it is its own
+slice with the injury episode owner:
+
+1. `LEDGER_RECORDED_ACTION_TYPES` is deliberately the three EXERCISE-LEVEL types,
+   and the door states the rule the list exists to keep — one act must not become
+   *"two decisions … which the athlete would feel as an undo that needs two
+   taps"*. Recording the injury's component swaps individually is ruled out.
+2. `withAcceptedMutationLock` is a strict serial queue and is NOT re-entrant, so
+   the injury arm cannot route its component writes through the durable door from
+   inside itself — it would deadlock.
+3. Recording ONE `set_injury_modifier` decision does not help either: boot replay
+   uses the SYNCHRONOUS executor by design, and that executor refuses this action
+   outright — *"Injury changes must use the durable injury transaction."*
+
+## THE GATE — `npm run test:session-change-durability`, 35/36
+
+Seven sequences, and every cell compares the WHOLE ordered row list with loads
+(`Name@kg`), never a count or a membership test: both defects produced a session
+with the right NUMBER of rows and the wrong rows in it.
+
+1 swap→restart (+ a two-swaps-of-one-row ORDER probe) · 2 remove→restart→restore ·
+3 remove→swap→restart→restore · 4 swap→remove→restart→undo · 5 equipment→swap→
+remove→restart · 6 injury→remove→restart **(RED, above)** · 7 add→swap→restart.
+
+## MUTATIONS — all four the mission named, tree restored byte-identical after each
+
+| # | mutation | what reddened |
+| --- | --- | --- |
+| M1 | drop the Swap decision from the replay set at boot | **9 cells** across sequences 1,3,4,5,7 + `test:session-change-sequence`'s "the swap survived" |
+| M2 | replay the decisions in the wrong order | **3 cells** — the order probe lands the day on `Glute Bridge` (the FIRST swap) instead of `Single-Leg RDL` (the last), and undo-after-restart breaks |
+| M3 | writer reads the FILTERED day again (revert defect 2's fix) | the Restore cells in **both** suites |
+| M4 | `recordSelections: 'replay'` → `'author'` — startup re-authors the block | **8 cells**, incl. `Deadlift@77.5` walking into the removed slot during boot |
+
+⚠ **TWO EARLIER M4 ATTEMPTS WERE NO-OPS AND ARE REPORTED AS SUCH.** Blanking
+`blockState`/`acceptedBlocks` proved nothing (this athlete is in block 1, so those
+are already empty), and forcing `generationISO = todayISOLocal()` also changed no
+visible row. A mutation that reds nothing is a claim about the instrument only
+once you know it actually mutated the world — neither of those did.
+
+## BLAST RADIUS — measured against the same tree, not against memory
+
+Eighteen suites run at base and again with the fix. **Every one identical except
+`session-change-sequence`, which went 20/2 → 22/0.** `test:compile` output is
+byte-identical (73 pre-existing failures; `coachActions.ts` itself has none).
+
+Pre-existing reds carried, NOT caused here: `exercise-exclusions` 52/1,
+`athlete-session-deletion` 2/12, `athlete-session-move` 13/9, `week-rebuild`
+THROWS, `decision-ledger-ownership` 7/1, `quiescent-boot` 4/1,
+`program-control-durable` 18/2, `program-control-decisions` 10/1,
+`tap-swap-hierarchy` throws at import.
+
+Agent: rebuild

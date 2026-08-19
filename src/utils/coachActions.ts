@@ -36,6 +36,7 @@ import { applyProgramOverrideWrite, useProgramStore } from '../store/programStor
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
+import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 import {
   useCoachUpdatesStore,
   type ActivePreferenceConstraint,
@@ -292,8 +293,37 @@ function workoutsAreEquivalent(a: Workout, b: Workout): boolean {
 }
 
 /** Resolve a date to its currently-effective Workout (or null if rest). */
+/**
+ * The day as the app AUTHORED it — every row, including ones an exclusion is
+ * currently hiding.
+ *
+ * ⚠ **THIS IS A WRITER'S READ, AND IT MUST NOT CARRY THE ATHLETE'S EXCLUSIONS.**
+ *
+ * Every caller below clones this day and stores the result as an override
+ * (`lightenSession`, `moveSession`, `makeSessionOptional`, `replaceExerciseAtDate`,
+ * `addExerciseAtDate`, `addWeeklyOverride` — all six are writers, none is a view).
+ * `buildScheduleStateImperative` delegates to `assembleScheduleState`, which
+ * attaches `athleteExclusions` because it is one of the two doors that mean
+ * *"what the athlete SEES"*. Reading a WRITE base through it meant the filter
+ * was applied and then written down.
+ *
+ * MEASURED 2026-08-19 by `npm run test:session-change-sequence`: an athlete
+ * removed `RDLs`, swapped a different row, and Restore had nothing to give back
+ * — the swap's stored override had been built from a day `RDLs` was already
+ * filtered out of, so the removal stopped being reversible the moment any other
+ * row on that day was touched. The row was not hidden; it was destroyed.
+ *
+ * **A FILTER THAT GETS WRITTEN DOWN IS NOT A FILTER.** The exclusion stays a
+ * read-time projection: the authored row remains in the stored program and the
+ * VIEW doors hide it, which is what makes Restore able to return the exact item
+ * rather than re-derive a replacement for it.
+ *
+ * `athleteExclusions: []` is STATED rather than defaulted, the same way
+ * `liveEvaluationSurfaces.freshGenerationSurfaces` states it — this is a world
+ * that deliberately has none, not one that forgot to look.
+ */
 function resolveDateWorkout(date: string): Workout | null {
-  const state = buildScheduleStateImperative();
+  const state = { ...buildScheduleStateImperative(), athleteExclusions: [] };
   const resolved = resolveDateWithConditioning(date, state);
   return resolved?.workout || null;
 }
@@ -601,7 +631,34 @@ function loadForReplacementRow(exerciseName: string): number | undefined {
 
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
   const { date, fromExercise, fromExerciseId, toExercise, todayISO } = input;
-  if (todayISO && date.slice(0, 10) < todayISO.slice(0, 10)) {
+  /**
+   * ⚠ **A REPLAY IS NOT THE ATHLETE ACTING, SO IT IS NOT REFUSED FOR STALENESS.**
+   *
+   * This guard is a DOOR guard: it stops an athlete editing a session that has
+   * already happened. It was already asked and already answered at the moment
+   * the decision landed. A boot replay is not a new intent — it reconstructs a
+   * decision the ledger says was accepted — so running the guard again makes
+   * startup a SECOND authority over whether an accepted decision may take
+   * effect, and a refusal there silently drops the athlete's change.
+   *
+   * MEASURED 2026-08-19 by `npm run test:session-change-sequence`: the swap's
+   * replay was refused with `"2026-07-22 is in the past - I can't change it."`
+   * and the athlete's chosen exercise was gone after every restart, while the
+   * removal (a durable decision in athlete preferences) and the add (no such
+   * guard) both survived — which is why it read as "the swap specifically".
+   *
+   * The comparison is against `entry.occurredAt`, and replay passes that as
+   * `todayISO`. It is a UTC instant string-sliced to a date, so in any timezone
+   * BEHIND UTC an ordinary evening swap stamps TOMORROW's date and the guard
+   * refuses the athlete's own edit on the next launch. Fixing only the clock
+   * would leave the refusal standing for DST, travel and a manual clock change.
+   * The authority is removed from the replay path, not compensated for.
+   *
+   * The latch is the app's existing statement of exactly this — *"a replayed
+   * interpreter is not the athlete acting"* — and it carries no imports, so
+   * consulting it here cannot form a cycle.
+   */
+  if (todayISO && !ledgerReplayActive() && date.slice(0, 10) < todayISO.slice(0, 10)) {
     return { success: false, reason: `${date} is in the past - I can't change it.` };
   }
   const current = resolveDateWorkout(date);
