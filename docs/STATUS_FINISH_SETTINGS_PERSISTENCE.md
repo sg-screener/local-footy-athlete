@@ -335,3 +335,49 @@ but the second athlete trains in the gym twice a week and the app counts it once
   exist at all, so one shape carries all of them.
 - **Crash-loss** is not modelled: `relaunchApp` flushes first, so this is a
   restart and not a kill. Crash-loss is its own tape.
+
+## THE TWO OPTIONS, WEIGHED BEFORE CODING (Elegant Solution Requirement, standing)
+
+**For the block-reset and load-reversion defects:**
+
+1. *Incremental.* Add the four arguments to `profileProgramTransaction`, and
+   separately add `progressionHistory` to `temporarySourceFactTransaction`. Two
+   local fixes, smallest possible diff, no shared code touched.
+2. *Ownership redesign.* Make *"what a regenerating caller must state"* ONE
+   projection and route all five callers through it.
+
+**(2) was taken, and the deciding evidence is in the repo already.** The same
+list — the persisted-input field list — had been written out by hand in three
+places, drifted, and killed every seeded Maestro flow in the repo; the remedy
+recorded there was to make it a function. This list had been written out by hand
+in three places and two more callers shipped without it. (1) fixes the two doors
+that are wrong today and leaves the sixth door free to be wrong tomorrow, which
+is Sam's standing *"don't fix edge cases, build a systemic fix"*. The cost of (2)
+is that `weekRebuild` and `quiescentBoot` were touched — measured at zero: both
+state exactly what they stated before, and the full sweep and the sixteen
+cell-for-cell comparisons are identical.
+
+**For the fresh-install reset:** (1) add `acceptedBlocks: {}` — one line;
+(2) derive the CHECK from `projectProgramPersistedInputs`. **(2)**, for the same
+reason and at the same cost: (1) is the line the last two authors also did not
+write.
+
+**For the dishonest refusal:** (1) map the free-text message
+`"Weekly schedule refused (…)"` to a kind; (2) carry the error's typed `code`.
+**(2)** — (1) is a string match against a sentence, which breaks the day anybody
+re-words the error, and it would have to be repeated per error class.
+
+## WHAT THE ATHLETE CAN SEE
+
+**Three things, and all three are athlete-visible.** (a) An athlete in block 2
+who changes their season phase, game day, club nights or gym equipment **keeps
+the loads they earned** — `Leg Press 113.5 kg`, not 110 — and stays in block 2
+instead of being silently restarted at block 1. (b) An athlete who ticks *"no
+barbell today"* sees **the right numbers on the card they are about to train
+off**, instead of numbers that revert until they close and reopen the app.
+(c) An athlete whose new setup cannot make a week reads **why**, instead of
+*"Something went wrong. Please try again."*
+
+**BUT NONE OF IT HAS BEEN SEEN ON GLASS** — another lane owns the simulator
+today. Under L10 this is *"gates green, awaiting Sam device acceptance"*, never
+done.
