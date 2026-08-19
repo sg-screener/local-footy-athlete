@@ -181,9 +181,9 @@ re-bought. **This is question 1 for Sam.**
 
 ## SAM'S TWO RULINGS, 2026-08-20 — BOTH CLOSED
 
-Recorded as **R-112** and **R-113** in `docs/RULINGS_REGISTRY.md`.
+Recorded as **R-114** and **R-115** in `docs/RULINGS_REGISTRY.md`.
 
-### R-112 — the typed sheet outranks the Bible's named swap examples
+### R-114 — the typed sheet outranks the Bible's named swap examples
 
 At 6-7/10 the injury matrix wins. `injuryPermitsExerciseAtSeverity` was already
 correct; the ruling retired the rival authority. Three things changed so there is
@@ -205,7 +205,7 @@ answers, so `resolveTapSwapEnvironment` threw `MissingCapacityAnswerError`, the
 process exited, and the final cells plus the summary never ran. A suite that dies
 reports nothing, not zero failures.
 
-### R-113 — an injury withholds a row; it does not remove one
+### R-115 — an injury withholds a row; it does not remove one
 
 **Nothing is written any more.** `InjuryEpisodeV1` is already a
 `TemporarySourceFact` and `ScheduleState.temporarySourceFacts` is already fed by
@@ -462,7 +462,7 @@ clearing the injury cannot put them back.
 - 2026-08-20 — `dc4356de` the journey, the mutations, the registry row, the seed.
 - 2026-08-20 — the medical-stop world measured; the resolve stops claiming
   success over an empty day; the omission-ownership defect pinned, not patched.
-- 2026-08-20 — **Sam ruled both questions.** R-112 and R-113 recorded; the
+- 2026-08-20 — **Sam ruled both questions.** R-114 and R-115 recorded; the
   ownership defect CLOSED — an injury writes no Remove decision, the accepted
   program is untouched, the red-flag day cannot be recorded, and clearing
   reveals the exact original session across a restart. 17/17 mutants killed.

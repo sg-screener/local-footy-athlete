@@ -107,72 +107,34 @@ function collapseEmptyVisibleWorkoutShell(day: ResolvedDay): ResolvedDay {
 }
 
 /**
- * Does this day carry rows the injury owner WITHHELD rather than removed?
+ * HAS THE INJURY OWNER ALREADY ANSWERED FOR THIS DAY?
  *
- * One typed field, read and not interpreted — `rules/injuryWithheldRows` is the
- * only writer and the only place the decision is made. Deliberately not
- * `injuryWithholdingsOn()`: calling that here would re-run the legality
- * question at the view and make this file a second opinion about it.
- */
-function dayCarriesInjuryWithholding(workout: Workout | null | undefined): boolean {
-  return (workout?.exercises ?? []).some((row) => !!row.unavailableForInjury);
-}
-
-/**
- * ⚠ **A SUBSTITUTED ROW IS THE LADDER'S ANSWER, NOT A WITHHELD ROW.**
- *
- * **FOUND ON GLASS, and only because the fix above stopped blanking the day.**
- * Hamstring 8/10 WITHOUT serious symptoms — an ordinary injury, which
- * SUBSTITUTES rather than withholds. The athlete was shown:
+ * ⚠ **BOTH OF THE LADDER'S OUTCOMES COUNT, AND LEAVING ONE OUT WAS A REAL
+ * DEFECT THAT MEASUREMENT CAUGHT.** The ladder answers an injury in exactly two
+ * ways: it SUBSTITUTES a safe exercise (`substitutedFrom.cause === 'injury'`),
+ * or, when it has nothing safe to offer, it WITHHOLDS the row
+ * (`unavailableForInjury`). A first cut of this predicate read only the second,
+ * and the consequence was measured rather than reasoned about:
  *
  * ```
- *   Chest-Supported DB Row   "Leg Press is not safe with your hamstring …"
- *   Single-Arm DB Floor Press "RDLs is not safe with your hamstring …"
+ *   ORDINARY 8/10, no serious symptoms
+ *     resolver    5 rows  Chest-Supported DB Row, Single-Arm DB Floor Press, …
+ *     projection  workout NULL, source 'rest'      <- the substitutions vanished
  * ```
  *
- * — a SKIP marker and a warning on four rows that are the safe replacements,
- * each sentence naming a different exercise than the row it sits on.
+ * The athlete's day was replaced with safe work and then emptied on the way to
+ * the screen. It only LOOKED correct while a stale marker was riding on those
+ * substituted rows and tripping the withheld branch by accident — so fixing the
+ * marker at its source is what exposed it.
  *
- * **THE CAUSE, MEASURED, NOT GUESSED.** `markInjuryWithheldRows` runs at the
- * resolver and keys by the row's name AT THAT MOMENT. The substitution then
- * renames the row IN PLACE, keeping its id — so the mark, written for
- * `Leg Press`, rides onto `Chest-Supported DB Row`. The domain agrees it should
- * not be there: `injuryWithholdingsOn` over the FINAL workout returns an EMPTY
- * list, and every stale mark carries `redFlag: false`.
- *
- * **WHY THE VIEW DROPS IT RATHER THAN RE-DERIVING.** Sam: *"Do not rederive
- * injury rules on screen."* This asks no injury question. It reads two typed
- * fields the row already carries and states a consistency rule between them: a
- * row that was swapped BECAUSE of the injury cannot also be a row the injury
- * withheld — those are the two opposite outcomes of the same ladder, and no row
- * is both.
- *
- * ⚠ **THIS IS A PLASTER ON SOMEONE ELSE'S WALL, AND IT IS FLAGGED AS ONE.** The
- * real repair is at the marker — either stamping the exercise name it marked so
- * a stale mark is detectable, or clearing the mark when a row is renamed. That
- * is the Injury lane's file and its ruling; it is named in the handoff rather
- * than changed here.
+ * ⚠ **NO INJURY RULE IS RE-DERIVED. TWO TYPED FIELDS, NEITHER INTERPRETED.**
+ * There is no severity band, no red-flag test and no body-part map in this file,
+ * and deliberately no call to `injuryWithholdingsOn()` — that would re-run the
+ * legality question at the view and make this a second opinion about it.
  */
-function withoutStaleInjuryMarks(day: ResolvedDay): ResolvedDay {
-  const workout = day.workout;
-  if (!workout) return day;
-  const rows = workout.exercises ?? [];
-  const stale = (row: (typeof rows)[number]): boolean =>
-    !!row.unavailableForInjury
-    && (row as { substitutedFrom?: { cause?: string } }).substitutedFrom?.cause === 'injury';
-  if (!rows.some(stale)) return day;
-  return {
-    ...day,
-    workout: {
-      ...workout,
-      exercises: rows.map((row) => {
-        if (!stale(row)) return row;
-        const { unavailableForInjury, ...rest } = row;
-        void unavailableForInjury;
-        return rest as typeof row;
-      }),
-    },
-  };
+function dayIsInjuryAdjudicated(workout: Workout | null | undefined): boolean {
+  return (workout?.exercises ?? []).some((row) => !!row.unavailableForInjury
+    || (row as { substitutedFrom?: { cause?: string } }).substitutedFrom?.cause === 'injury');
 }
 
 function alreadyHasInjuryNote(workout: Workout): boolean {
@@ -280,7 +242,7 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
-  /* ══ THE INJURY OWNER HAS ALREADY ADJUDICATED THIS DAY — R-113 ══════════════
+  /* ══ THE INJURY OWNER HAS ALREADY ADJUDICATED THIS DAY — R-115 ══════════════
    *
    * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
    * into the athlete's Remove list or permanently alter the accepted program.
@@ -316,11 +278,15 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
    * resolver hands over carries no `unavailableForInjury` mark at all and this
    * branch is not taken. Measured: of the five seeded injury worlds only the
    * red-flag one carries marks. */
-  if (dayCarriesInjuryWithholding(visibleDay.workout)) {
-    return {
-      day: withoutStaleInjuryMarks(visibleDay),
-      injuryFilterApplied: false, removedNames: [], replacementNames: [],
-    };
+  if (dayIsInjuryAdjudicated(visibleDay.workout)) {
+    /* ⚠ THE VIEW WORKAROUND THAT STOOD HERE IS DELETED — SAM, 2026-08-20.
+     * *"Fix the stale injury mark at its source ... Do not leave a view-level
+     * plaster that hides incorrect domain data."* It stripped the marker off any
+     * row swapped BECAUSE of the injury. The marker is no longer written onto a
+     * replacement at all (`utils/coachActions`, where the outgoing row's fields
+     * were being inherited through a spread), so there is nothing left to strip
+     * and the view is back to passing the domain's answer through untouched. */
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
   // ── Pass 1: universal exposure engine ──

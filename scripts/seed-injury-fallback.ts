@@ -141,7 +141,7 @@ const SEEDS = [
 
 /** The red-flag world gets its own walk — it withholds rather than substitutes. */
 const RED_FLAG = {
-  label: 'hamstring 9/10 WITH SERIOUS SYMPTOMS — R-113, nothing is removed',
+  label: 'hamstring 9/10 WITH SERIOUS SYMPTOMS — R-115, nothing is removed',
   area: 'hamstring', region: 'lower_body', severity: 9,
 } as const;
 
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
     console.log('            Then close and reopen the app: the rows must not move again.');
   }
 
-  /* ── THE RED-FLAG WALK — R-113 (Sam, 2026-08-20) ─────────────────────────
+  /* ── THE RED-FLAG WALK — R-115 (Sam, 2026-08-20) ─────────────────────────
    * The one world where the app withholds instead of substituting, and the one
    * a device pass most needs, because the ROW must still be on the screen. */
   {

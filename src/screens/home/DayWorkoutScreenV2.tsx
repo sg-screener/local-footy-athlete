@@ -2256,7 +2256,7 @@ function SessionList({
               label={executionItem.label}
               completed={completedItemIds.has(executionItem.id)}
               onToggle={onToggleItem}
-              /* R-113 — the row's own typed withholding, straight off the
+              /* R-115 — the row's own typed withholding, straight off the
                  projected workout. Nothing is looked up or re-decided here. */
               withheld={withholdingOfTemplateItem(
                 executionItem.templateIndex === null
@@ -2283,7 +2283,7 @@ function SessionList({
  *
  * `SessionTemplateItem` is a union — a team-training banner and a conditioning
  * choice carry no `row` — so the narrowing is done ONCE here rather than at each
- * call site. It reads one field and interprets nothing (R-113).
+ * call site. It reads one field and interprets nothing (R-115).
  */
 function withholdingOfTemplateItem(
   item: SessionTemplateItem | undefined,
@@ -2338,7 +2338,7 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, 
   completed: boolean;
   onToggle: (itemId: string) => void;
   /**
-   * ⚠ **THE TYPED WITHHOLDING, PASSED IN — NEVER DERIVED HERE (R-113).**
+   * ⚠ **THE TYPED WITHHOLDING, PASSED IN — NEVER DERIVED HERE (R-115).**
    *
    * `WorkoutExercise.unavailableForInjury`, written by
    * `rules/injuryWithheldRows` and carried through the projection untouched.
@@ -2369,7 +2369,7 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, 
     <View style={[styles.executionItem, completed && styles.executionItemComplete]}>
       <View style={styles.executionItemContent}>{children}</View>
       {/*
-        ⚠ **A WITHHELD ROW HAS NO CHECKBOX AT ALL — SAM, 2026-08-20 (R-113).**
+        ⚠ **A WITHHELD ROW HAS NO CHECKBOX AT ALL — SAM, 2026-08-20 (R-115).**
         *"show them as unavailable/skip"*, and *"the injured date cannot be
         completed as normal."* A DISABLED checkbox would still be a checkbox: it
         says "you may tick this later", which is the opposite of what the ruling
@@ -2671,7 +2671,7 @@ function StrengthExerciseCard({
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
-  /* R-113 — read, never decided. See the notice below. */
+  /* R-115 — read, never decided. See the notice below. */
   const injuryWithholding = exercise?.unavailableForInjury ?? null;
 
   return (
@@ -2835,7 +2835,7 @@ function StrengthExerciseCard({
         </Text>
       ) : null}
       {/*
-        ⚠ **THE INJURY SENTENCE IS THE DOMAIN'S, RENDERED VERBATIM — R-113.**
+        ⚠ **THE INJURY SENTENCE IS THE DOMAIN'S, RENDERED VERBATIM — R-115.**
         *"The explanation names the active injury fact without inventing medical
         advice."* Every word comes from `unavailableForInjury.explanation`, which
         `rules/injuryWithheldRows.explanationFor` composes from the athlete's own
@@ -4323,7 +4323,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   exerciseCardGroupedLast: {},
-  // R-113 — a withheld row is dimmed, never hidden and never deleted.
+  // R-115 — a withheld row is dimmed, never hidden and never deleted.
   exerciseCardWithheld: { opacity: 0.55 },
   injuryWithheldNotice: {
     color: '#FF9A8B',

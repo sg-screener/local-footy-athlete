@@ -2795,7 +2795,7 @@ play button opened the Back Squat demo.
 the checkbox to the left reds 1, returning play to the far right reds 2,
 re-centring the row reds the inverted cell — and nothing else in either case.
 
-**R-112** · *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
+**R-114** · *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
 Thrust—or any exercise—the sheet marks risky for that injured area, even if an
 older example says otherwise. Walk down the ladder to the nearest legal option;
 if none exists, omit honestly. Update or remove the contradictory example so
@@ -2827,7 +2827,7 @@ counting it as debt. The three contradictory cells now assert the ruling.
 capacity answers, so `resolveTapSwapEnvironment` threw and the final cells never
 ran). Mutation **M17** — the sheet stops outranking the examples — reds 6.
 
-**R-113** · *"An 8-10 injury with serious symptoms must NEVER write into the
+**R-115** · *"An 8-10 injury with serious symptoms must NEVER write into the
 athlete's Remove list or permanently alter the accepted program. Preserve the
 original exercises. On that date, show them as unavailable/skip with the
 explicit injury safety explanation, or block the session if necessary. Clearing

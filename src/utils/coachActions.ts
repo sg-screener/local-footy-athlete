@@ -753,6 +753,26 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     // claim to be standing in for whatever the last fact displaced. Absent
     // means "nobody's place", which is the truth for a tap.
     substitutedFrom: input.substitutedFrom,
+    /* ⚠ **AND NEITHER IS THE OUTGOING ROW'S INJURY MARKER INHERITED.**
+     *
+     * The paragraph directly above states this rule for `substitutedFrom` and
+     * `unavailableForInjury` was breaking it in exactly the same way, through
+     * the same `...found` spread. **MEASURED ON GLASS**, hamstring 8/10 without
+     * serious symptoms: the athlete was shown four SKIP markers on the safe
+     * REPLACEMENTS, each sentence naming a different exercise than the row it
+     * sat on — `Chest-Supported DB Row` warned about `Leg Press`.
+     *
+     * A REPLACEMENT IS THE LADDER'S ANSWER TO THE INJURY, NOT A CASUALTY OF IT.
+     * It was chosen BECAUSE it is safe, so it cannot also be the row the injury
+     * withheld — those are the two opposite outcomes of one ladder and no row is
+     * both. `injuryWithholdingsOn` over the final workout already agreed: it
+     * returned an EMPTY list while four rows carried marks.
+     *
+     * ⚠ **A WITHHELD ROW IS NOT AFFECTED, BECAUSE A WITHHELD ROW IS NEVER
+     * SWAPPED.** Withholding is what happens when the ladder has nothing safe to
+     * offer; this line is only reached when it did. The red-flag rows keep their
+     * own marker, explanation, dose and load — asserted, not assumed. */
+    unavailableForInjury: undefined,
     exercise: {
       id: replacementId,
       name: toExercise.name,

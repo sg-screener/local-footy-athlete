@@ -1726,7 +1726,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-an-injury-withholds-a-row-it-does-not-remove-one',
     law: "An injury never writes a Remove decision and never alters the accepted program. A row it forbids stays on the day, marked unavailable with a plain-words reason; a red-flag injury also makes that day impossible to record as a normal session. Clearing the injury reveals the exact original session, loads included, and that survives a restart. Remove stays exclusively the athlete's.",
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-113 — Sam, 2026-08-20, verbatim: "An 8-10 injury with serious symptoms must NEVER write into the athlete\'s Remove list or permanently alter the accepted program ... Clearing or resolving the injury must immediately reveal the original accepted session again, including after close/reopen. Remove remains exclusively athlete-authored Remove." R-112, the same day, in the same file, rules that the typed injury sheet outranks the Bible\'s named swap examples from 6-7 up.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-115 — Sam, 2026-08-20, verbatim: "An 8-10 injury with serious symptoms must NEVER write into the athlete\'s Remove list or permanently alter the accepted program ... Clearing or resolving the injury must immediately reveal the original accepted session again, including after close/reopen. Remove remains exclusively athlete-authored Remove." R-114, the same day, in the same file, rules that the typed injury sheet outranks the Bible\'s named swap examples from 6-7 up.',
     guard: {
       state: 'guarded',
       by: 'test:injury-fallback-journey',
