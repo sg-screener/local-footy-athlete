@@ -56,6 +56,9 @@ armTotalsOrRed();
 import type { OnboardingData } from '../types/domain';
 import { addDaysISO } from '../utils/programBlockState';
 import { useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
+import { getAthleteExclusions } from '../store/athletePreferencesStore';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { readBlockHistory, smallestPracticalIncrementKg } from '../rules/blockBoundaryProgression';
 import { probeBlock } from './support/acceptBlock';
 import {
@@ -859,6 +862,14 @@ async function main(): Promise<void> {
    * historical — so proving it there would prove nothing. This closes the app while
    * the athlete is still standing in the block they reported sore in.
    */
+  const sameBlockInputsBeforeRestart = JSON.stringify({
+    profile: useProfileStore.getState().onboardingData,
+    isOnboardingComplete: useProfileStore.getState().isOnboardingComplete,
+    sessionFeedback: useProgramStore.getState().sessionFeedback,
+    weightOverrides: useProgramStore.getState().weightOverrides,
+    exclusions: getAthleteExclusions(),
+    decisions: useDecisionLedgerStore.getState().entries ?? [],
+  });
   const soreRelaunch = await relaunchApp({
     storage: localStorageData, todayISO: soreness!.dateISO,
   });
@@ -879,6 +890,19 @@ async function main(): Promise<void> {
     'the app relaunches cleanly with a live tired/sore report',
     soreRelaunch.ok,
     `boot failed: ${soreRelaunch.error}`,
+  );
+
+  ok(
+    'SAME-BLOCK RESTART preserves profile, results, exclusions and decisions exactly',
+    JSON.stringify({
+      profile: useProfileStore.getState().onboardingData,
+      isOnboardingComplete: useProfileStore.getState().isOnboardingComplete,
+      sessionFeedback: useProgramStore.getState().sessionFeedback,
+      weightOverrides: useProgramStore.getState().weightOverrides,
+      exclusions: getAthleteExclusions(),
+      decisions: useDecisionLedgerStore.getState().entries ?? [],
+    }) === sameBlockInputsBeforeRestart,
+    'one or more canonical inputs changed during relaunch',
   );
 
   ok(
@@ -1402,6 +1426,14 @@ async function main(): Promise<void> {
     requirements: { ...(useProgramStore.getState() as unknown as {
       acceptedBlocks: Record<string, { blockNumber: number;
       requiredStrengthSessions: number }> }).acceptedBlocks },
+    profile: JSON.stringify(useProfileStore.getState().onboardingData),
+    onboardingComplete: useProfileStore.getState().isOnboardingComplete,
+    results: JSON.stringify({
+      sessionFeedback: useProgramStore.getState().sessionFeedback,
+      weightOverrides: useProgramStore.getState().weightOverrides,
+    }),
+    exclusions: JSON.stringify(getAthleteExclusions()),
+    decisions: JSON.stringify(useDecisionLedgerStore.getState().entries ?? []),
   };
 
   for (const [key, value] of localStorageData) {
@@ -1435,6 +1467,30 @@ async function main(): Promise<void> {
     JSON.stringify(afterRequirements) === JSON.stringify(beforeRestart.requirements),
     'the denominator the boundary reads is gone after a relaunch, so the next '
     + 'regeneration cannot qualify anyone',
+  );
+
+  ok(
+    'RESTART: every canonical onboarding/profile answer survived exactly',
+    JSON.stringify(useProfileStore.getState().onboardingData) === beforeRestart.profile
+      && JSON.stringify(useProfileStore.getState().onboardingData) === JSON.stringify(theAthlete())
+      && useProfileStore.getState().isOnboardingComplete === beforeRestart.onboardingComplete,
+    'the athlete profile or completed-onboarding decision changed during relaunch',
+  );
+
+  ok(
+    'RESTART: completed-session results and typed loads survived exactly',
+    JSON.stringify({
+      sessionFeedback: useProgramStore.getState().sessionFeedback,
+      weightOverrides: useProgramStore.getState().weightOverrides,
+    }) === beforeRestart.results,
+    'the result ledger changed during relaunch',
+  );
+
+  ok(
+    'RESTART: exclusions and athlete decisions survived exactly',
+    JSON.stringify(getAthleteExclusions()) === beforeRestart.exclusions
+      && JSON.stringify(useDecisionLedgerStore.getState().entries ?? []) === beforeRestart.decisions,
+    'an exclusion or decision-ledger entry changed during relaunch',
   );
 
   const afterState = useProgramStore.getState() as unknown as {
@@ -1610,10 +1666,10 @@ async function main(): Promise<void> {
       followTheWeek(d);
       await recordDay(d, EASY_DAY);
     }
-    // The LAST WEEK OF THE BLOCK, not the day after it: past the block end the
-    // program has no microcycle and every week reads empty, which is not "the offer
-    // added nothing", it is looking past the program.
-    const boundaryISO = addDaysISO(start, (BLOCK_ONE_WEEKS - 1) * 7);
+    // The card belongs to the NEW block and is shown after rollover. Reading the
+    // final week of the old block after rollover is a green-and-empty instrument:
+    // that week is no longer in `currentProgram`, so both sides compare `[]`.
+    const boundaryISO = addDaysISO(start, BLOCK_ONE_WEEKS * 7);
     const blockEnd = addDaysISO(start, BLOCK_ONE_WEEKS * 7 - 1);
     const feedback = (useProgramStore.getState() as unknown as {
       sessionFeedback: Record<string, unknown> }).sessionFeedback;
@@ -1652,7 +1708,7 @@ async function main(): Promise<void> {
       .filter((day) => day.rows.length > 0)
       .map((day) => `${day.weekday}:[${day.rows.map((r) => r.name).join(',')}]`);
     const gymDays = (weekStartISO: string): number =>
-      resolvedDays(weekStartISO).filter((day) => day.rows.length > 0).length;
+      resolvedDays(weekStartISO).filter((day) => day.components.includes('strength')).length;
 
     /**
      * ⚠ **THE ATHLETE-FACING FORM, ASKED THE WAY THE SCREEN ASKS IT.**
@@ -1692,6 +1748,7 @@ async function main(): Promise<void> {
     }) as { sections: string[]; components: string[] };
 
     setJourneyClock(boundaryISO);
+    rolloverIfDue(boundaryISO);
     followTheWeek(boundaryISO);
     // THE CARD ITSELF — the screen's own producer, not a re-derivation.
     const prompts = quiet(() => {
@@ -1703,11 +1760,10 @@ async function main(): Promise<void> {
       // `blockNumber < 2`, because block 1 has no previous block to have found
       // easy. So it is asked where the athlete would really meet it — standing in
       // block 2, about the block they just finished.
-      rolloverIfDue(addDaysISO(start, BLOCK_ONE_WEEKS * 7));
       return deriveBlockBoundaryPrompts({
         currentProgram: useProgramStore.getState().currentProgram,
         blockNumber: 2,
-        blockStartISO: addDaysISO(start, BLOCK_ONE_WEEKS * 7),
+        blockStartISO: boundaryISO,
         sessionFeedback: (useProgramStore.getState() as unknown as {
           sessionFeedback: Record<string, unknown> }).sessionFeedback,
         onboardingData: useProfileStore.getState().onboardingData,
@@ -1770,14 +1826,11 @@ async function main(): Promise<void> {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { useProfileStore } = require('../store/profileStore');
-
   console.log('\n═══ ACTION 3 — the optional extra-session offer ═══\n');
 
   const accepted = await runOfferWorld('accept');
   console.log(`  ACCEPT world — offer=${JSON.stringify(accepted.offer)}`);
-  console.log(`    gym days before=${accepted.daysBefore} after=${accepted.daysAfter} `
+  console.log(`    strength days before=${accepted.daysBefore} after=${accepted.daysAfter} `
     + `afterRestart=${accepted.daysAfterRestart}`);
   console.log(`    week before=${JSON.stringify(accepted.weekBefore)}`);
   console.log(`    week after =${JSON.stringify(accepted.weekAfter)}`);
@@ -1835,6 +1888,12 @@ async function main(): Promise<void> {
     `refused: ${accepted.doorMessage}`,
   );
 
+  ok(
+    `ACCEPT is measured on a non-empty visible block${offerSuffix}`,
+    !offerReached || accepted.daysBefore > 0 && accepted.weekBefore.length > 0,
+    `before days=${accepted.daysBefore} week=${JSON.stringify(accepted.weekBefore)}`,
+  );
+
   /**
    * ⚠ **MEASURED ON THE COMMITMENT, NOT ON "DAYS THAT HAVE ROWS".**
    *
@@ -1851,6 +1910,18 @@ async function main(): Promise<void> {
       === (accepted.offer.question?.currentSessionsPerWeek ?? 0) + 1),
     `committed days are now ${JSON.stringify(accepted.committedAfter)} from a `
     + `${accepted.offer.question?.currentSessionsPerWeek}-day commitment`,
+  );
+
+  ok(
+    `ACCEPT adds exactly one VISIBLE strength day and keeps it after restart${offerSuffix}`,
+    !offerReached || (
+      accepted.daysAfter === accepted.daysBefore + 1
+      && accepted.daysAfterRestart === accepted.daysAfter
+      && JSON.stringify(accepted.weekAfterRestart) === JSON.stringify(accepted.weekAfter)
+    ),
+    `visible days ${accepted.daysBefore} -> ${accepted.daysAfter} -> `
+    + `${accepted.daysAfterRestart}; week after=${JSON.stringify(accepted.weekAfter)} `
+    + `after restart=${JSON.stringify(accepted.weekAfterRestart)}`,
   );
 
   /**
@@ -1916,7 +1987,7 @@ async function main(): Promise<void> {
 
   const declined = await runOfferWorld('decline');
   console.log(`\n  DECLINE world — offer=${JSON.stringify(declined.offer.offer)}`);
-  console.log(`    gym days before=${declined.daysBefore} after=${declined.daysAfter} `
+  console.log(`    strength days before=${declined.daysBefore} after=${declined.daysAfter} `
     + `afterRestart=${declined.daysAfterRestart}`);
   console.log(`    week after restart=${JSON.stringify(declined.weekAfterRestart)}`);
   console.log(`    asked again? ${JSON.stringify(declined.secondOffer)}`);
