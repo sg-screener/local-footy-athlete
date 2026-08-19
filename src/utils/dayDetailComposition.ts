@@ -48,7 +48,23 @@ export interface ComposedDayDetail {
   isConditioning: boolean;
   isCombinedDay: boolean;
   hasTeamTraining?: boolean;
-  powerExercises: any[];
+  /**
+   * The strength part's rows — **POWER ROWS INCLUDED, AND FIRST** (Sam,
+   * 2026-08-20, extending R-110 to the day card).
+   *
+   * `powerExercises` was a sibling field here and is DELETED, not merely
+   * unread: its only consumer was `rowsForKind`'s `power` branch, and there is
+   * no power part left to give rows to. A bucket nothing renders is the dead
+   * weight later code trusts.
+   *
+   * The two populations are concatenated BEFORE `orderRowsAsSessionPresents`,
+   * not after, so the session template places the whole list in one pass. That
+   * is what makes power lead: D2's `SESSION_ROLE_ORDER` ranks power ahead of the
+   * main lift. Ordering them separately and gluing power on the front would
+   * have produced the same answer today and been a second comparator to drift
+   * tomorrow — the exact defect that made the card say "Cossack Squat, third of
+   * five" while the session said fifth.
+   */
   strengthExercises: any[];
   speedExercises: any[];
   supportExercises: any[];
@@ -70,7 +86,6 @@ export function composeDayDetail(
       isRecovery: false,
       isConditioning: false,
       isCombinedDay: false,
-      powerExercises: [] as any[],
       strengthExercises: [] as any[],
       speedExercises: [] as any[],
       supportExercises: [] as any[],
@@ -129,8 +144,14 @@ export function composeDayDetail(
   // not re-rank anything. No new programming policy: D2's order is authored,
   // shipped, and already what the athlete does. One owner, two readers.
   const order = <T,>(rows: readonly T[]): T[] => orderRowsAsSessionPresents(workout, rows);
-  const powerExercises = order(componentRows.powerRows);
-  const strengthExercises = order(componentRows.strengthRows);
+  // R-110 EXTENDED TO THE DAY CARD (Sam, 2026-08-20) — power rows ARE the
+  // strength part's rows. Concatenated BEFORE the ordering call so the session
+  // template places one list: D2 ranks power ahead of the main lift, so power
+  // leads without this file knowing that rule or restating it.
+  const strengthExercises = order([
+    ...componentRows.powerRows,
+    ...componentRows.strengthRows,
+  ]);
   // SPEED ROWS ARE THE SPEED PART'S (Sam, 2026-08-17, surface 3). Carried
   // through from the ONE row owner rather than re-derived here — the same
   // reason `strengthExercises` is not recomputed from the exercise list.
@@ -178,7 +199,6 @@ export function composeDayDetail(
     isConditioning,
     isCombinedDay,
     hasTeamTraining,
-    powerExercises,
     strengthExercises,
     speedExercises,
     supportExercises,

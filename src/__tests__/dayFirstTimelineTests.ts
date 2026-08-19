@@ -75,6 +75,9 @@ import {
   projectParts,
 } from '../rules/projectVisibleWeek';
 import { dayTimeline } from '../rules/dayTimeline';
+// The exhibit is found by its power ROWS now — the part it used to be found
+// by is exactly what Sam's 2026-08-20 ruling deleted.
+import { powerRows } from '../rules/sessionRowCounting';
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { isSignedCopyText, joinSignedCopy, signedCopy } from '../rules/signedCopy';
 import { registerProjectionCopy } from '../rules/projectionCopy';
@@ -1624,10 +1627,36 @@ run('a charter door\'s own word IS the bucket — Gunshow does not become Streng
     + 'the door\'s answer from the fallback');
 });
 
-run('POWER never titles a day — and the word did not vanish, it moved', () => {
+/* ⚠ **INVERTED, NOT DELETED — SAM, 2026-08-20, EXTENDING R-110 TO THE DAY CARD.**
+ *
+ * *"Merge POWER into Strength on the Program tab's Day summary card too. No
+ * separate POWER row. Strength's count includes the power exercise. If Strength
+ * is expanded, power appears first."*
+ *
+ * This cell REQUIRED the thing the ruling removes. It asserted that a day with
+ * power parts LEADS with one (`day.parts[0].kind === 'power'`) and that the
+ * timeline still NAMES it (`part.headline.power`) — the 2026-08-08 ruling, which
+ * moved the word "Power" off the title and onto the timeline. Sam has now moved
+ * it off the timeline as well, so the two assertions are turned around: there is
+ * no power part at all, and the day's power exercises are inside its STRENGTH
+ * part, first. The half of the old cell that still holds — "Power" never appears
+ * in a day's title — is kept untouched, because that ruling was not overturned.
+ *
+ * ⚠ **IT WAS ALSO RED AT HEAD, FOR A REASON THAT HAD NOTHING TO DO WITH POWER.**
+ * `title === signedCopy('part.headline.strength')` predates the COMPOUND-title
+ * ruling below it, so the exhibit day — which carries team training too —
+ * legitimately reads "Strength + Team Training" and the equality could not hold.
+ * A guard that reds for a stale reason is a guard nobody reads, so it is fixed
+ * here rather than left: the day must CONTAIN the Strength word, which is what
+ * the ruling actually says. */
+run('POWER is not a part — a day\'s power work sits inside Strength, first', () => {
   world();
   let powerDays = 0;
   for (const week of WEEKS) {
+    // The SAME resolved week the projection was built from, so the workout a
+    // day's power rows come from is the workout that day projects — not a
+    // second read that could disagree with it.
+    const resolved = projected(week);
     for (const day of visibleDays(week)) {
       const title = visibleDayLeadHeadline(day);
       // NOT `title !== "Power"` — that was enough while a title was one word, and
@@ -1637,28 +1666,51 @@ run('POWER never titles a day — and the word did not vanish, it moved', () => 
         `${day.date} is titled "${title}". Sam, verbatim: power should not be `
         + 'labelled there for just one exercise — power is part of the Strength '
         + 'work, and "Power" never appears as a week row or a day title.');
-      if (day.parts.some((part) => part.kind === 'power')) {
-        powerDays += 1;
-        // THE EXHIBIT, PINNED. This is the day whose card read "Power" and made
-        // Sam rule: its leading part IS the power component.
-        assert(day.parts[0].kind === 'power',
-          `${day.date} has a power part but does not lead with it — this cell is `
-          + 'no longer standing on the day the ruling was about');
-        assert(title === signedCopy('part.headline.strength'),
-          `${day.date} leads with a power part and is titled "${title}". A day `
-          + 'whose strength work contains power exercises is a Strength day.');
-        // AND THE NAME IS NOT DELETED. It moved to the timeline, which is the
-        // whole shape of this ruling: one enumeration, in one place.
-        const timeline = dayTimeline(day, null);
-        assert(timeline.some((entry) => entry.headline === signedCopy('part.headline.power')),
-          `${day.date}'s timeline no longer names its power component. The ruling `
-          + 'moves the word off the title; it does not take the athlete\'s power '
-          + 'work off the only screen that lists it.');
+
+      // THE EXHIBIT IS FOUND BY ITS ROWS NOW, NOT BY ITS PART. The part is
+      // exactly what the ruling deleted, so a cell that looked for one would
+      // find nothing and pass by saying nothing about any day at all.
+      const workout = resolved.find((entry) => entry.date === day.date)?.workout ?? null;
+      const power = powerRows(workout);
+      if (power.length === 0) continue;
+      powerDays += 1;
+
+      // 1. NO SEPARATE POWER ROW, anywhere on the day.
+      const timeline = dayTimeline(day, null);
+      assert(!timeline.some((entry) => entry.headline === signedCopy('part.headline.power')),
+        `${day.date}'s timeline still names a Power component. Sam: "No separate `
+        + 'POWER row."');
+
+      // 2. STRENGTH'S COUNT INCLUDES THE POWER EXERCISE — and this is the cell
+      //    that catches the lazy fix, which is deleting the power row and
+      //    leaving its exercises off the card entirely.
+      const strength = timeline.filter((entry) => entry.kind === 'strength');
+      assert(strength.length === 1,
+        `${day.date} has ${strength.length} strength rows on its timeline; power `
+        + 'and strength must merge into exactly one.');
+      const names = strength[0].rows.map((row) => String(row.name));
+      for (const row of power) {
+        assert(names.includes(String(row.exercise?.name ?? '')),
+          `${day.date}: "${row.exercise?.name}" is prescribed as power work and `
+          + `is not in the Strength row's ${names.length} exercises: ${names.join(', ')}. `
+          + 'Merging the row must not drop the work.');
       }
+
+      // 3. IF STRENGTH IS EXPANDED, POWER APPEARS FIRST.
+      assert(names[0] === String(power[0].exercise?.name ?? ''),
+        `${day.date}'s Strength row opens with "${names[0]}", not with the power `
+        + `exercise "${power[0].exercise?.name}".`);
+
+      // 4. AND THE DAY IS STILL A STRENGTH DAY BY NAME. Contains, not equals:
+      //    the exhibit carries team training too and reads "Strength + Team
+      //    Training" under the compound-name ruling below.
+      assert(titleWords(day).includes(String(signedCopy('part.headline.strength'))),
+        `${day.date} holds power work and is titled "${title}", which does not `
+        + 'name Strength at all.');
     }
   }
   assert(powerDays >= 1,
-    'no day in three generated weeks carries a power part — this cell proved '
+    'no day in three generated weeks carries power work — this cell proved '
     + 'nothing about the exhibit it was written for');
 });
 
@@ -1714,31 +1766,48 @@ run('a day is named with ALL of its buckets, in timeline order, each word once',
     + 'never exercised the join it exists to check');
 });
 
-run('one bucket twice is ONE word — the exhibit day does not read "Strength + Strength"', () => {
-  // THE DEDUPE IS SAM'S POWER RULING IN A NEW PLACE. The exhibit Tuesday carries
-  // a `power` part AND a `strength` part; both bucket to "Strength". A compound
-  // name built without deduplication says "Strength + Strength" — which is the
-  // word he took off the title coming back as a stutter, on the exact day the
-  // ruling was written about.
+/* ⚠ **INVERTED — SAM, 2026-08-20 — AND THE HONEST HALF IS THE NOT-COVERED NOTE.**
+ *
+ * This cell guarded the deduplication in `dayBuckets`, and its exhibit was named
+ * in its own words: *"a day carrying both a power and a strength part"*, which
+ * both bucket to "Strength". **That day no longer exists** — the power component
+ * projects into the strength PART now, so the collision the dedupe existed to
+ * absorb cannot be built by the generator at all.
+ *
+ * So the cell asserts the ruling's actual consequence, which is stronger than
+ * what it replaced: no day has two parts sharing a bucket, so a compound title
+ * CANNOT stutter, rather than not stuttering because something de-duplicated it.
+ *
+ * ⚠ **NOT COVERED, SAID RATHER THAN HIDDEN:** `dayBuckets`' `seen` set is now
+ * unreachable in three generated weeks, so deleting it would red nothing here.
+ * It is KEPT, because `COMPONENT_TO_PART` is still many-to-one for
+ * `recovery`/`recovery_addon` (both bucket to "Recovery") and a recovery day
+ * carrying add-ons would collide the same way — that world simply is not one the
+ * generator reaches in this suite's three weeks. Removing the safeguard on the
+ * strength of an unreachable exhibit is how the collision comes back. */
+run('no two parts on a day share a bucket — power was the only collision', () => {
   world();
-  let exhibits = 0;
+  let multiPartDays = 0;
   for (const week of WEEKS) {
     for (const day of visibleDays(week)) {
+      if (day.parts.length < 2) continue;
+      multiPartDays += 1;
       const buckets = day.parts.map((part) => String(part.bucket));
-      const repeated = buckets.filter((word, index) => buckets.indexOf(word) !== index);
-      if (repeated.length === 0) continue;
-      exhibits += 1;
+      assert(buckets.length === new Set(buckets).size,
+        `${day.date} has two parts bucketing to the same word. Its parts are `
+        + `${JSON.stringify(day.parts.map((p) => String(p.kind)))}, bucketing to `
+        + `${JSON.stringify(buckets)}. Sam merged the one pair that collided; a `
+        + 'new collision needs its own ruling, not a silent dedupe.');
+      // AND THE TITLE STILL SAYS EACH WORD ONCE, which is what the athlete reads.
       const words = titleWords(day);
       assert(words.length === new Set(words).size,
         `${day.date} is titled "${visibleDayLeadHeadline(day)}" — a bucket word is `
-        + `repeated. Its parts are ${JSON.stringify(day.parts.map((p) => String(p.kind)))}, `
-        + `bucketing to ${JSON.stringify(buckets)}. Each word once.`);
+        + 'repeated.');
     }
   }
-  assert(exhibits >= 1,
-    'no day in three generated weeks has two parts sharing one bucket — this cell '
-    + 'proved nothing about the deduplication it was written for. The exhibit is a '
-    + 'day carrying both a power and a strength part.');
+  assert(multiPartDays >= 1,
+    'no day in three generated weeks carries two parts — this cell proved '
+    + 'nothing, and the suite has stopped generating multi-part days.');
 });
 
 run('a compound name is SIGNED, and one unsigned half makes the whole thing unsigned', () => {

@@ -58,8 +58,16 @@ function visibleWeekFor(candidateWorkouts: typeof workouts) {
   });
 }
 const visible = visibleWeekFor(workouts);
-const visiblePowerParts = visible.days.flatMap((day) =>
-  day.parts.filter((part) => part.kind === 'power'));
+/* ⚠ **THERE IS NO POWER PART TO COUNT — SAM, 2026-08-20.**
+ *
+ * This read `day.parts.filter(part => part.kind === 'power')` and the cell below
+ * asserted one such part per delivered power exercise. The ruling merges power
+ * into the STRENGTH part, so what is asserted now is the thing that actually
+ * matters and that the merge could break: every delivered power exercise still
+ * REACHES the athlete, inside Strength, first. A count of containers became a
+ * check of contents, which is the stronger claim. */
+const visibleStrengthParts = visible.days.flatMap((day) =>
+  day.parts.filter((part) => part.kind === 'strength'));
 
 console.log('\nGenerated composer power delivery\n');
 ok('the eligible power specialist stamps a positive phase-capped allowance',
@@ -166,11 +174,68 @@ ok('power rides real strength content and never creates a standalone day',
 ok('the selected primers remain outside Game, G-1 and G+1',
   delivered.every((workout) => ![0, 5, 6].includes(workout.dayOfWeek)),
   delivered.map((workout) => workout.dayOfWeek));
+const visibleStrengthRowNames = new Set(
+  visibleStrengthParts.flatMap((part) => part.rows.map((row) => String(row.name))));
 ok('the athlete-visible projection prints every delivered power exercise',
-  visiblePowerParts.length === rows.length &&
-    visiblePowerParts.every((part) => part.rows.length === 1),
-  visiblePowerParts.map((part) => ({ headline: part.headline,
-    rows: part.rows.map((row) => row.name) })));
+  rows.length > 0 && rows.every((row) =>
+    visibleStrengthRowNames.has(String(row.exercise?.name ?? ''))),
+  { delivered: rows.map((row) => row.exercise?.name),
+    visible: [...visibleStrengthRowNames] });
+// AND IT PRINTS THEM INSIDE STRENGTH, FIRST — the placement half of the ruling.
+// Checked per DAY, because a set says membership and says nothing about order.
+//
+// The day a date belongs to comes from `datesByDay`, the map this file already
+// built the week from — NOT from re-deriving a weekday out of the ISO string.
+// A date sliced back to a day-of-week is a trap this repo has paid for.
+const dayOfWeekByDate = new Map([...datesByDay].map(([dow, date]) => [date, dow]));
+let placementDaysChecked = 0;
+const placementHolds = visible.days.every((day) => {
+  const dayOfWeek = dayOfWeekByDate.get(day.date);
+  const power = powerRows(
+    workouts.find((workout) => workout.dayOfWeek === dayOfWeek) ?? null);
+  if (power.length === 0) return true;
+  placementDaysChecked += 1;
+  const strength = day.parts.filter((part) => part.kind === 'strength');
+  return strength.length === 1
+    && String(strength[0].rows[0]?.name ?? '') === String(power[0].exercise?.name ?? '');
+});
+// NON-VACUITY FIRST: without a day that actually carries power, the check above
+// is `every` over nothing and passes by saying nothing.
+ok('CONTROL — the projected week really does contain a day with power work',
+  placementDaysChecked > 0,
+  { placementDaysChecked, deliveredRows: rows.length });
+ok('and each day\'s Strength part opens with that day\'s power exercise',
+  placementHolds,
+  visible.days.map((day) => ({ date: day.date,
+    strength: day.parts.filter((part) => part.kind === 'strength')
+      .map((part) => part.rows.map((row) => String(row.name))) })));
+// ⚠ AND NO POWER PART SURVIVES ANYWHERE. Without this, a fix that left the old
+// part in place beside the merged rows would satisfy both cells above.
+// ⚠ **AND THE MERGE DID NOT QUIETLY CHANGE WHAT §18 COUNTS.** Sam: *"Preserve
+// power's internal role for programming, counting and progression."* A power
+// component used to be its own part with `countsTowardLoad: true`; it is now
+// inside a strength part, which carries the same flag. This cell is where that
+// claim lives, because this is the suite with a real projected week that has
+// power days in it — `test:section18-recovery-neutrality`'s table cell had to
+// drop the word `power` when the kind did, and pointed here.
+ok('a day\'s power work counts toward load exactly as the strength it now sits in',
+  placementDaysChecked > 0 && visible.days.every((day) => {
+    const dayOfWeek = dayOfWeekByDate.get(day.date);
+    const power = powerRows(
+      workouts.find((workout) => workout.dayOfWeek === dayOfWeek) ?? null);
+    if (power.length === 0) return true;
+    return day.parts
+      .filter((part) => part.kind === 'strength')
+      .every((part) => part.countsTowardLoad === true);
+  }),
+  visible.days.map((day) => ({ date: day.date,
+    parts: day.parts.map((part) => ({ kind: String(part.kind),
+      counts: part.countsTowardLoad })) })));
+ok('no day projects a separate Power part any more',
+  visible.days.every((day) =>
+    day.parts.every((part) => String(part.kind) !== 'power')),
+  visible.days.map((day) => ({ date: day.date,
+    kinds: day.parts.map((part) => String(part.kind)) })));
 
 const noFixtureProgram = generateProgramLocally({
   ...profile,

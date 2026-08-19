@@ -2502,7 +2502,10 @@ function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripPro
  */
 const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
   strength: 'strength',
-  power: 'bolt',
+  // ⚠ `power: 'bolt'` IS GONE BECAUSE THE KIND IS (Sam, 2026-08-20). A power
+  // component projects as a strength PART now, so its timeline row carries the
+  // strength glyph — the same one the work it sits beside carries, which is the
+  // visual half of "power is part of the Strength work".
   speed: 'bolt',
   conditioning: 'flame',
   support: 'core',

@@ -67,13 +67,31 @@ export type VisibleDayKind = 'training' | 'rest' | 'game';
  * ask what counts, and so capabilities can be reasoned about — not so a card can
  * decide that recovery deserves smaller words.
  */
+/**
+ * ⚠ **THERE IS NO `power` PART — SAM, 2026-08-20, EXTENDING R-110 TO THE DAY
+ * CARD.** *"Merge POWER into Strength on the Program tab's Day summary card
+ * too. No separate POWER row. Strength's count includes the power exercise. If
+ * Strength is expanded, power appears first."*
+ *
+ * The projection already said power was strength work — `PART_BUCKET_KIND`
+ * mapped `power -> strength` so no day could be TITLED "Power" (Sam, 2026-08-08:
+ * *"power is just part of the Strength work"*). What it still did was list power
+ * as its own timeline row underneath that title, so the day card said "Strength"
+ * at the top and "POWER — 1 exercise" one line below it. The bucket ruling now
+ * reaches the parts list: `COMPONENT_TO_PART` maps the power COMPONENT to a
+ * strength PART, and `partsForWorkout` does not mint a second one.
+ *
+ * **The component is untouched.** `getSessionComponents` still emits `power`
+ * with its own `completionPolicy`, `powerRows()` still answers every §18
+ * counter, budget and progression read, and `role: 'power'` still rides the row.
+ * A part is a display grouping; this changes the grouping and nothing else.
+ */
 export type VisiblePartKind =
   | 'strength'
   | 'conditioning'
   | 'recovery'
   | 'team_training'
   | 'game'
-  | 'power'
   | 'speed'
   | 'support';
 
@@ -90,7 +108,6 @@ export type VisiblePartKind =
 export const PART_COUNTS_TOWARD_LOAD: Readonly<Record<VisiblePartKind, boolean>> = {
   strength: true,
   conditioning: true,
-  power: true,
   speed: true,
   support: true,
   team_training: true,

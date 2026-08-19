@@ -29,7 +29,23 @@ export const TEMPLATE_ITEM_KIND: Record<string, string> = {
 };
 
 export const STRENGTH_ROLE_KIND: Record<string, string> = {
-  power: 'power',
+  /*
+   * ⚠ **`power: 'power'` UNTIL 2026-08-20 — SAM MERGED IT.**
+   *
+   * This table's subject is "the domain the athlete READS it as", and after
+   * *"Power belongs inside the Strength section"* + *"Merge POWER into Strength
+   * on the Program tab's Day summary card too"* the athlete reads a power row as
+   * Strength on BOTH surfaces. Leaving `'power'` here would have made the
+   * matrix report a template/projection disagreement on every day carrying
+   * power — a surface-agreement failure manufactured by a stale table, on two
+   * surfaces that now agree exactly.
+   *
+   * ⚠ **THE ROLE ITSELF IS UNTOUCHED, WHICH IS THE POINT.** `role: 'power'`
+   * still rides the template item — it is what orders the row first and what
+   * every §18 counter reads. Only the DOMAIN NAME the athlete reads it under
+   * moved, which is the whole of what Sam ruled.
+   */
+  power: 'strength',
   midline: 'support',
   main_lift: 'strength',
   accessory: 'strength',

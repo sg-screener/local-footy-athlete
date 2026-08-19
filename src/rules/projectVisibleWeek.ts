@@ -112,7 +112,12 @@ const COMPONENT_TO_PART: Readonly<Record<string, VisiblePartKind>> = {
   strength: 'strength',
   conditioning: 'conditioning',
   finisher: 'conditioning',
-  power: 'power',
+  // R-110 EXTENDED TO THE DAY CARD (Sam, 2026-08-20). A power component IS
+  // strength work, so it projects as a strength PART — the same answer
+  // `PART_BUCKET_KIND` already gave the day's NAME, now given to its parts list.
+  // This is the table, not an `if`: the day a power-only session exists, it
+  // reads "Strength" with its power rows in it, and no branch had to know.
+  power: 'strength',
   speed: 'speed',
   support: 'support',
   team_training: 'team_training',
@@ -638,7 +643,11 @@ function toVisibleRows(rows: readonly any[]): VisibleRow[] {
  * them.
  */
 function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): VisibleRow[] {
-  if (kind === 'power') return toVisibleRows(composed.powerExercises);
+  // POWER ROWS ARE STRENGTH ROWS (Sam, 2026-08-20). There is no `power` branch
+  // because there is no power part: `composeDayDetail` merges the two
+  // populations into `strengthExercises`, power first, through the session
+  // template — so this reads ONE list rather than concatenating two here and
+  // becoming a second opinion about their order.
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
   if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
@@ -727,16 +736,47 @@ function partsForWorkout(
   onDay: VisibleDayKind,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
-  return getSessionComponents(workout).map((component) => {
+  const components = getSessionComponents(workout);
+  /*
+   * ⚠ **TWO STRENGTH COMPONENTS ARE ONE STRENGTH PART — SAM, 2026-08-20.**
+   *
+   * `COMPONENT_TO_PART` now sends both `power` and `strength` to a `strength`
+   * part, and parts are keyed on `partId` (which carries the COMPONENT id), so
+   * without this the day card would list "Strength" twice — the defect the
+   * ruling is against, wearing a new label. The power component gives way: its
+   * rows join the strength part at `composeDayDetail`, first, in the session's
+   * own order.
+   *
+   * ⚠ **IT GIVES WAY ONLY WHEN THERE IS SOMETHING TO GIVE WAY TO.** A session
+   * of power work and no strength rows has a power component and no strength
+   * one; dropping its part would take the day's only content off the only
+   * screen that lists it — the exact class `visibleDayDetail`'s "every part, in
+   * order, always" rule exists to prevent, and how `composeDayDetail` once left
+   * recovery, power and speed with nowhere to appear. That day keeps its part
+   * and reads "Strength", which is what the session screen shows it as too.
+   *
+   * ⚠ **THIS IS NOT A DEDUPE BY KIND, AND MUST NEVER BECOME ONE.**
+   * `COMPONENT_TO_PART` is many-to-one in three places — conditioning/finisher,
+   * session/strength, recovery/recovery_addon — and those pairs carry DIFFERENT
+   * rows that must both render. Only the power/strength pair is merged, because
+   * only its rows are re-filed into the survivor.
+   */
+  const foldsIntoStrength = components.some((component) => String(component.id) === 'strength')
+    ? new Set(['power'])
+    : new Set<string>();
+  const parts: Array<ProjectedDayParts['parts'][number]> = [];
+  for (const component of components) {
     const componentId = String(component.id);
+    if (foldsIntoStrength.has(componentId)) continue;
     const kind = partKind(componentId, onDay);
-    return {
+    parts.push({
       id: partIdFor(date, componentId),
       kind,
       capabilities: partCapabilities(componentId, kind, onDay),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],
-    };
-  });
+    });
+  }
+  return parts;
 }
 
 /**
@@ -993,8 +1033,12 @@ function dayHeadline(kind: VisibleDayKind, day: ResolvedDay): SignedCopy {
  * written here rather than assumed.
  */
 const PART_BUCKET_KIND: Readonly<Record<VisiblePartKind, VisiblePartKind>> = {
+  // ⚠ `power: 'strength'` WAS HERE AND IS NOT DELETED WORK — IT WAS PROMOTED.
+  // The kind no longer exists, because a power component now projects as a
+  // strength PART at `COMPONENT_TO_PART`. The mapping this row performed for the
+  // day's NAME is now true one level earlier, for the day's PARTS, so there is
+  // nothing left for it to translate.
   strength: 'strength',
-  power: 'strength',
   conditioning: 'conditioning',
   speed: 'speed',
   support: 'support',

@@ -370,7 +370,17 @@ run('the projection agrees with the ledger about what counts', () => {
   // reads, and a disagreement between them is two representations of one ruling.
   assert(PART_COUNTS_TOWARD_LOAD.recovery === false,
     'the projection thinks recovery counts toward load');
-  for (const kind of ['strength', 'conditioning', 'power', 'speed'] as const) {
+  // ⚠ `'power'` LEFT THIS LIST ON 2026-08-20 BECAUSE THE KIND LEFT THE UNION,
+  // NOT BECAUSE POWER STOPPED COUNTING. Sam merged power into Strength on both
+  // athlete surfaces, so a power component projects as a STRENGTH part — and
+  // `strength` is asserted true right here, one line down, which is the same
+  // arithmetic reaching the ledger by a different name. The claim that power
+  // work still counts is held where a real projected week with power days
+  // exists: `test:power-primer-policy`, "a day's power work counts toward load
+  // exactly as the strength it now sits in". Dropping the word without moving
+  // the claim would have been the quiet half of a merge, and that is the thing
+  // this repo keeps paying for.
+  for (const kind of ['strength', 'conditioning', 'speed'] as const) {
     assert(PART_COUNTS_TOWARD_LOAD[kind] === true,
       `the projection stopped counting ${kind} — ruling 3 was about recovery only`);
   }

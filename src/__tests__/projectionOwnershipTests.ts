@@ -116,23 +116,45 @@ const WEEKS = [WEEK, '2026-08-03', '2026-08-10'];
 
 console.log('\n-- Projection ownership --');
 
-run('project() agrees with the derivation it succeeds, every day', () => {
+/* ⚠ **ONE PART PER COMPONENT WAS THE LAW UNTIL 2026-08-20, AND SAM CHANGED IT.**
+ *
+ * *"Merge POWER into Strength on the Program tab's Day summary card too. No
+ * separate POWER row."* A power component and a strength component are now ONE
+ * strength part, so a strict `parts.length === components.length` is exactly what
+ * the ruling breaks. The cell is not loosened to `<=`: the expectation still
+ * comes from the components, with the one ruled fold named and subtracted, so
+ * any OTHER divergence — a part silently dropped, a second one invented — still
+ * reds it. And the fold is counted, so a build where nothing folds cannot pass
+ * this cell by never exercising the rule. */
+run('project() agrees with the derivation it succeeds, one ruled fold aside', () => {
   world();
+  let foldsSeen = 0;
   for (const week of WEEKS) {
     const days = projected(week);
     const mine = projectParts({ week: days, weekStart: week });
     assert(mine.days.length === days.length,
       `${week}: project() produced ${mine.days.length} days for ${days.length}`);
     for (const [index, day] of days.entries()) {
-      const componentCount = getSessionComponents(day.workout ?? null).length;
+      const components = getSessionComponents(day.workout ?? null);
+      const ids = new Set(components.map((component) => String(component.id)));
+      // THE ONE FOLD, AND ONLY WHEN THERE IS SOMETHING TO FOLD INTO. A power
+      // component with no strength component keeps its own part — dropping it
+      // would take the day's only content off every surface.
+      const folded = ids.has('power') && ids.has('strength') ? 1 : 0;
+      foldsSeen += folded;
       const partCount = mine.days[index].parts.length;
-      const expected = day.workout ? componentCount : 0;
+      const expected = day.workout ? components.length - folded : 0;
       assert(partCount === expected,
         `${day.date}: project() has ${partCount} parts, the derivation it succeeds `
-        + `has ${expected}. A new owner must change nothing before any surface `
-        + 'renders from it.');
+        + `has ${components.length} components and ${folded} ruled fold(s), so `
+        + `${expected} were expected. A new owner must change nothing it was not `
+        + 'ruled to change.');
     }
   }
+  assert(foldsSeen >= 1,
+    'no day in three generated weeks carries both a power and a strength '
+    + 'component, so the fold this cell allows for was never exercised — the '
+    + 'allowance is untested and the cell is back to asserting 1:1 by accident.');
 });
 
 run('project() evaluates without throwing and every headline is registered copy', () => {
@@ -359,7 +381,12 @@ run('a fixture owns its whole day', () => {
 run('recovery counts toward nothing (ruling 3)', () => {
   assert(PART_COUNTS_TOWARD_LOAD.recovery === false,
     'recovery counts toward the load ledger');
-  for (const kind of ['strength', 'conditioning', 'power', 'speed'] as const) {
+  // `'power'` left this list on 2026-08-20 with the KIND, not with the counting:
+  // a power component projects as a `strength` part now, asserted true below on
+  // the same line it always was. The live claim that power work still counts
+  // toward load is held in `test:power-primer-policy`, over a projected week
+  // that actually has power days in it.
+  for (const kind of ['strength', 'conditioning', 'speed'] as const) {
     assert(PART_COUNTS_TOWARD_LOAD[kind] === true,
       `${kind} stopped counting — the ruling was about recovery only`);
   }

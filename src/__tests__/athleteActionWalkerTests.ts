@@ -1196,8 +1196,19 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
       const rowsOwed = getSessionComponentRows(mirror.workout as never);
       const authored = (rows: any[]): number =>
         rows.filter((row) => !isComposedPrescriptionRow(row)).length;
+      //
+      // ⚠ **POWER ROWS ARE OWED TO THE STRENGTH PART — SAM, 2026-08-20.** The
+      // power component projects into the strength part now (*"Merge POWER into
+      // Strength on the Program tab's Day summary card too … Strength's count
+      // includes the power exercise"*), so a strength part on a day with one
+      // power row carries one row MORE than `strengthRows` alone. Adding
+      // `powerRows` here is not loosening the law — it is the law reading the
+      // same merge the projection performs. Left unchanged, this cell would
+      // report every power day as a conservation breach; changed to `>=` it
+      // would have stopped catching a genuinely lost row, which is what the
+      // comment above means by EXACT EQUALITY.
       const owedByKind: Record<string, number> = {
-        strength: authored(rowsOwed.strengthRows),
+        strength: authored([...rowsOwed.powerRows, ...rowsOwed.strengthRows]),
         support: authored(rowsOwed.supportRows),
         conditioning: authored(rowsOwed.conditioningRows),
       };

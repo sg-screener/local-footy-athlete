@@ -2739,16 +2739,80 @@ A second sort agreeing with the first is a rival authority nothing can tell apar
 when they disagree. The property is held end to end instead: a fixture that
 authors power LAST still projects it first.
 
-**WHAT IS NOT CHANGED, AND IS FOR SAM.** The Program tab's DAY CARD still lists
-`POWER — 1 exercise` as its own timeline row. That is a different owner
-(`rules/dayTimeline` over `projectDayDetail`'s typed PARTS, one tappable door per
-component) and power is exactly the typed component this ruling preserves. It was
-left alone rather than swept in; **whether the day card should merge it too is a
-ruling nobody has given.**
+✅ **THE DAY CARD IS INCLUDED — ANSWERED THE SAME DAY, IN THIS SAME TASK.** The
+first pass changed the Session screen only and left the Program tab's day card
+listing `POWER — 1 exercise` as its own timeline row, on the grounds that it is
+a different owner (`rules/dayTimeline` over `projectDayDetail`'s typed PARTS).
+**Sam: *"Merge POWER into Strength on the Program tab's Day summary card too. No
+separate POWER row. Strength's count includes the power exercise. If Strength is
+expanded, power appears first. Tapping Strength opens the combined strength
+work. Preserve power's internal role for programming, counting and progression.
+This is the same athlete-facing ruling, not a new programming decision."*** So it
+is recorded here rather than as a new row.
+
+**THE PROJECTION ALREADY AGREED AND ONLY HALF-ACTED.** `PART_BUCKET_KIND` mapped
+`power -> strength` so no day could be TITLED "Power" (Sam, 2026-08-08: *"power
+is just part of the Strength work"*) — and then listed power as its own row
+underneath that title. The bucket ruling now reaches the parts list:
+`COMPONENT_TO_PART` maps the power COMPONENT to a strength PART, `partsForWorkout`
+does not mint a second strength part, and `composeDayDetail` merges the two row
+populations BEFORE `orderRowsAsSessionPresents` so the session template places
+one list and power leads by D2's authored order rather than by a second sort.
+The `power` member of `VisiblePartKind` is DELETED, so the compiler found every
+table that had to answer for it.
+
+⚠ **A POWER-ONLY SESSION KEEPS ITS PART.** The fold happens only when a strength
+component exists to fold into; a day of power work and no strength rows would
+otherwise lose its only content off every surface — the class
+`visibleDayDetail`'s *"every part, in order, always"* rule exists to prevent. It
+reads "Strength", which is what the session screen calls it too.
+
+⚠ **AND IT IS NOT A DEDUPE BY KIND.** `COMPONENT_TO_PART` is many-to-one in
+three places (conditioning/finisher, session/strength, recovery/recovery_addon)
+and those pairs carry DIFFERENT rows that must both render. Only power/strength
+merges, because only its rows are re-filed into the survivor.
+
+**COUNTING IS UNCHANGED, AND THAT IS ASSERTED WHERE A REAL WORLD EXISTS.**
+`PART_COUNTS_TOWARD_LOAD` said `power: true` and `strength: true`, so a power row
+inside a strength part counts exactly as before. The word `power` had to leave
+two table-lookup cells with the kind; the CLAIM moved rather than vanishing, to
+`test:power-primer-policy` over a projected week that actually contains power
+days.
+
+**FIVE GUARDS WERE INVERTED, NOT DELETED** — every one of them required the old
+shape: the day-card cell that asserted a day LEADS with a power part and that the
+timeline NAMES it; the bucket-dedupe cell whose only exhibit was the
+power+strength day; the `parts.length === components.length` law in
+`test:projection-ownership`; the power-delivery cell that counted one power PART
+per power row; and the walker's L-P3 rows-conservation table, which is owed
+power's rows under Strength now. The last was found by measurement, not by
+reading: it reported *"a strength part with 4 rows while the day has 3 authored
+ones"*.
+
+**FIXED IN PASSING, AND SAID SO:** `test:day-first-timeline`'s power cell was
+ALSO red at HEAD for a reason unrelated to power — it asserted
+`title === "Strength"` from before the compound-title ruling, so the exhibit day
+legitimately read "Strength + Team Training".
+
+**PROVEN ON GLASS, BOTH SURFACES, ONE DAY, 2026-08-20.** Day summary card:
+**`STRENGTH — 6 exercises`**, no POWER row, expanding to Vertical Jump, Back
+Squat, RDLs, Single-Leg RDL, Band Pallof Press, Cossack Squat. Session screen,
+same day: **`STRENGTH 0/6`**, same six, same order.
 
 · `BUILT` — `test:session-execution` section `[7]`, non-vacuity control first
 and mutation-proven: routing power away from Strength reds 7 cells, and the
-deleted sort has its own cell forbidding a new one.
+deleted sort has its own cell forbidding a new one. Day card:
+`test:day-first-timeline` (*"POWER is not a part — a day's power work sits inside
+Strength, first"*), `test:power-primer-policy` (+3 cells, including the load
+count and a non-vacuity control) and `test:projection-ownership`. Mutation-proven
+three ways: un-folding the part reds 4, dropping power's rows reds 3, ordering
+power last reds 2.
+
+**MEASURED AT BOTH ENDS:** 66 suites — every one reading the projection, the
+composition, the timeline or either screen — run before and after, comparing
+failure NAMES. **One line of difference in the whole set, and it is a failure
+REMOVED.** `test:compile` byte-identical at 671 errors / 77 worse pairs, product
+scope unmoved at 30.
 
 ---
 
