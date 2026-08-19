@@ -5,7 +5,6 @@ import type {
   UserRemovalConstraint,
   Workout,
 } from '../types/domain';
-import { composedOptionalClearingPatch } from '../utils/composedOptionalMarker';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import {
   DEFAULT_ATHLETE_CONTEXT,
@@ -26,19 +25,10 @@ import {
   craftBlockingSummary,
   type WeekCraftAssessment,
 } from './section18CraftTier';
-import {
-  presentRequiredCoreConditioning,
-} from './section18OfferPlacement';
 import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
 import {
-  contractOffseasonSubphase,
-  type Section18AuthorisedReduction,
   type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
-import {
-  canonicalContextSubphase,
-  finaliseWorkoutAfterMutation,
-} from '../utils/workoutCanonicalisation';
 // NO `hasPowerRow` HERE, deliberately (ruling 4a, 2026-08-06). Every question
 // this module asks about power is a WEEKLY BUDGET question — what competes for
 // it, what is stripped for exceeding it, what is counted against it, what the
@@ -46,24 +36,12 @@ import {
 // a power row at all"), and each of the four sites that used it here was a
 // separate copy of the budget rule that did not know about the G-2 exemption.
 // Not importing it is what keeps the copy from growing back.
-import {
-  budgetedPowerSession,
-  powerRows,
-  withoutPowerRows,
-} from './sessionRowCounting';
-import { stripConditioningComponent } from './strengthRelocationTemplate';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
-import {
-  buildDerivedSessionExpiryCandidates,
-  createDerivedSessionProvenance,
-  rebindDerivedSessionProvenance,
-} from './derivedSessionProvenance';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
 import type { AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
-import { strengthPatternLedger } from './strengthPatternContributions';
 import {
   currentAthleteActionTrace,
   emitAthleteActionEvent,

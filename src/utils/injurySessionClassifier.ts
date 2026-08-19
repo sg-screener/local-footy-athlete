@@ -19,7 +19,7 @@
  *
  * Pure functions. Tested in isolation. Used by both the engine
  * (programAdjustmentEngine) and the resolver filter
- * (injuryWorkoutFilter) so current-week and future-week behaviour
+ * (the deleted resolver-level filter) so current-week and future-week behaviour
  * agree.
  */
 

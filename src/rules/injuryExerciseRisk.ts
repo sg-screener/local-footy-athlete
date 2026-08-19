@@ -18,7 +18,7 @@ export function classifyExerciseRiskForBucket(
 ): InjuryExerciseRisk {
   if (!exerciseName) return 'unknown';
   // ⚠ `unknown` MEANS "NOT IN THE TAGS MAP", AND CALLERS TREAT IT AS ALLOWED —
-  // `injuryWorkoutFilter.ts:187,223` count only `avoid`/`caution` as risky. So a
+  // the deleted resolver-level filter counted only `avoid`/`caution` as risky. So a
   // MISSING tag and a SAFE tag are indistinguishable HERE.
   //
   // THAT IS NOT A SAFETY GAP, AND THE REASON IS IN ANOTHER FILE — which is
