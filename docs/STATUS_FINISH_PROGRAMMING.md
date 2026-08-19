@@ -176,12 +176,24 @@ guard remaining:
   of 10. The multiple-fixture cell requires the exact two game anchors and the
   exact non-vacuous Monday strength day.
 
+### Mutation proof
+
+Run against checkpoint `14934d13`, then restored byte-identical:
+
+1. Truncating `proposedFixtures` to its first entry reddened exactly both
+   multiple-fixture cells: the authored games became `[Wednesday]` instead of
+   `[Wednesday, Saturday]`, and strength expanded from `[Monday]` to
+   `[Sunday, Monday, Friday, Saturday]`.
+2. Removing the scheduler-declared required-pattern set made the real generated
+   world throw `required_safe_patterns_present:squat|hinge` before either cell
+   could run. This proves the former independent-planner rejection is live and
+   that the scheduler-derived contract is what prevents it.
+
 ## NOT COVERED — after scheduler slice 1b
 
 - Cross-week proximity around an explicit target-week bye/moved fixture still
   uses weekday recurrence rather than dated adjacent fixtures. This is the
   remaining scheduler/game-proximity item.
-- The multi-fixture guard is green but its mutation proof is not yet recorded.
 - Power delivery remains zero in the measured eligible world.
 - Travel and zero-equipment output have only been baseline-printed/censused; no
   owned gap in those slices has yet been changed.
