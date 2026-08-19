@@ -120,12 +120,29 @@ console.log('\n[1] The retired entry surface is gone');
 
 console.log('\n[2] The new entry surface exists');
 {
+  /* ⚠ **RULING 12's THREE HEADER ICONS ARE GONE, AND SO IS THE CELL THAT
+   * PROTECTED THEM (2026-08-19).**
+   *
+   * Sam replaced them: *"Remove the three unlabelled icons from the sticky
+   * header ... Build one 'Need to make a change?' section: Equipment · Injury ·
+   * Add · Remove · Swap."* Three unlabelled glyphs at the top became five
+   * labelled actions in one place, so a cell demanding the three testIDs was
+   * protecting the surface the ruling deleted.
+   *
+   * **IT IS REPLACED, NOT DROPPED.** The thing worth guarding is unchanged in
+   * spirit — the athlete must have a labelled way in — so the cell now asserts
+   * the SHARED hub is mounted with the five, which is the surface that carries
+   * that duty now. */
   ok(
-    'the top-of-page icon row has all three testIDs',
-    source.includes('"day-workout-add-exercise-action"')
-      && source.includes('"day-workout-equipment-concern-action"')
-      && source.includes('"day-workout-injury-concern-action"'),
-    'ruling 12 names three doors from the top of the page: add, equipment, injury',
+    'the labelled five-action hub is the entry surface',
+    /<SessionChangeHub/.test(source)
+      && /id: 'equipment' as const/.test(source)
+      && /id: 'injury' as const/.test(source)
+      && /id: 'add' as const/.test(source)
+      && /id: 'remove' as const/.test(source)
+      && /id: 'swap' as const/.test(source),
+    'the three unlabelled header icons are replaced by five labelled actions '
+      + 'in one hub — see `test:session-change-hub` for the parity contract',
   );
   ok(
     'the top icon row keeps the retired link\'s exact gate',
@@ -133,26 +150,44 @@ console.log('\n[2] The new entry surface exists');
     'team-only days and days with no editable exercises must still see no '
       + 'entry surface at all — the same condition the retired link used',
   );
+  /* ⚠ **THE PER-ROW SWAP/REMOVE PAIR IS GONE, AND ITS TWO CELLS WITH IT.**
+   *
+   * Sam: *"Remove always-visible row Swap/Remove icons."* Two unlabelled icons
+   * on every row of every session competed with the exercise name and the load,
+   * and the hub replaced them with one labelled place. Cells demanding
+   * `ExerciseRowActions` on three row shapes were guarding exactly what the
+   * ruling removed.
+   *
+   * **REPLACED BY THE OPPOSITE CLAIM**, because a deleted surface still needs
+   * watching (`gate-must-watch-the-deleted-surface`): the pair must NOT come
+   * back, and its plumbing must not linger passed to children that ignore it —
+   * which is what this cleanup removed. */
   ok(
-    'a shared row-actions component renders both a swap and a remove control',
-    /function ExerciseRowActions/.test(source)
-      && /accessibilityLabel="Swap exercise"/.test(source)
-      && /accessibilityLabel="Remove exercise"/.test(source),
-    'one row shape, two buttons — swap and remove must both exist as named '
-      + 'affordances, not merged back into a single "Change" action',
+    'the per-row swap/remove pair has not come back',
+    !/function ExerciseRowActions/.test(source)
+      && !/accessibilityLabel="Swap exercise"/.test(source)
+      && !/accessibilityLabel="Remove exercise"/.test(source),
+    'the labelled hub is the only way in; a row-level pair is the surface the '
+      + 'ruling deleted',
   );
   ok(
-    'every editable-row shape mounts the row-actions component',
-    (source.match(/<ExerciseRowActions\b/g) ?? []).length >= 3,
-    'strength rows (via ExerciseHeaderRow), conditioning-phase rows and '
-      + 'combined-day conditioning rows each used to mount `ExerciseChangeAction` '
-      + 'independently — the replacement must reach all of them, not just one',
+    'and its plumbing is deleted, not left threaded through the rows',
+    !/onSwapExercise/.test(source) && !/onRemoveExercise/.test(source)
+      && !/swapTestID/.test(source) && !/removeTestID/.test(source)
+      && !/function SwapIcon/.test(source) && !/function RemoveIcon/.test(source),
+    'props passed to children that no longer read them are how a deleted '
+      + 'surface quietly grows back',
   );
   ok(
-    'ExerciseHeaderRow (strength + recovery rows) takes swap/remove, not one onChange',
-    /onSwap\?: \(\) => void;/.test(source) && /onRemove\?: \(\) => void;/.test(source),
-    'the single onChange callback that opened exercise_menu must be split into '
-      + 'two independent openers',
+    'ExerciseHeaderRow no longer carries swap/remove openers at all',
+    !/onSwap\?: \(\) => void;/.test(source) && !/onRemove\?: \(\) => void;/.test(source),
+    /* ⚠ THE FOURTH CELL OF THE SAME KIND (2026-08-19). Ruling 12 split one
+     * `onChange` into two per-row openers; the hub then deleted both. This cell
+     * asserted the SPLIT, so it was guarding the deleted pair just as the three
+     * above were, and it is inverted for the same reason: the row must stay
+     * clean, and the plumbing must not be threaded back through it. */
+    'the per-row pair is deleted — the labelled hub is the only way in, and a '
+      + 'row that still accepts openers is one prop away from drawing them',
   );
   ok(
     'row swap/remove testIDs are built from the same identity authority as delete',

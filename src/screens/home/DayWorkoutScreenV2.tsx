@@ -5,10 +5,10 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Polygon } from 'react-native-svg';
+import Svg, { Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
-import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
+import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -747,11 +747,6 @@ export default function DayWorkoutScreenV2() {
   // step. The row already tells us which exercise AND which action, so
   // each opener lands straight on the guided step that action starts —
   // no intermediate menu to choose from.
-  const openExerciseRemove = React.useCallback((exercise: any) => {
-    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
-    if (!editable) return;
-    setExerciseEditStep({ kind: 'confirm_remove', exercise: editable });
-  }, []);
 
   const workoutLabel = workout?.name ?? 'this session';
   const dateLabel = date ?? 'today';
@@ -841,14 +836,6 @@ export default function DayWorkoutScreenV2() {
     },
     [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
   );
-
-  // Declared AFTER `prepareSwap`, which it calls: this is a const arrow, not a
-  // hoisted function, so the earlier position was a use-before-declaration.
-  const openExerciseSwap = React.useCallback((exercise: any) => {
-    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
-    if (!editable) return;
-    prepareSwap(editable);
-  }, [prepareSwap]);
 
 
   /**
@@ -1669,12 +1656,9 @@ export default function DayWorkoutScreenV2() {
               >
                 <RecoveryBlock
                   exercises={workout.exercises ?? []}
-                  sessionId={workout.id}
                   expandedCues={expandedCues}
                   toggleCue={toggleCue}
                   onSelectExercise={setSelectedExercise}
-                  onSwapExercise={openExerciseSwap}
-                  onRemoveExercise={openExerciseRemove}
                   completedItemIds={completedExerciseIds}
                   onToggleItem={toggleExerciseComplete}
                 />
@@ -1708,7 +1692,6 @@ export default function DayWorkoutScreenV2() {
                   flow={mobilityFlow}
                   completedItemIds={completedExerciseIds}
                   onToggleItem={toggleExerciseComplete}
-                  sessionId={workout.id}
                   expandedCues={expandedCues}
                   toggleCue={toggleCue}
                   editingWeightId={editingWeightId}
@@ -1728,7 +1711,6 @@ export default function DayWorkoutScreenV2() {
               executionPlan={executionPlan!}
               completedItemIds={completedExerciseIds}
               onToggleItem={toggleExerciseComplete}
-              sessionId={workout.id}
               implementFor={implementFor}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
@@ -1741,8 +1723,6 @@ export default function DayWorkoutScreenV2() {
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
-              onSwapExercise={openExerciseSwap}
-              onRemoveExercise={openExerciseRemove}
             />
           </>
         )}
@@ -2074,7 +2054,6 @@ interface SessionListProps {
   executionPlan: SessionExecutionPlan;
   completedItemIds: ReadonlySet<string>;
   onToggleItem: (itemId: string) => void;
-  sessionId: string;
   /** R-104. Resolved by the screen against the EFFECTIVE kit for this date. */
   implementFor: (exerciseName: string, prescribedWeightKg?: number | null) => SelectedImplementToday;
   expandedCues: Record<string, boolean>;
@@ -2088,8 +2067,6 @@ interface SessionListProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
 }
 
 /**
@@ -2104,7 +2081,6 @@ function MobilityExerciseList({
   flow,
   completedItemIds,
   onToggleItem,
-  sessionId,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2120,7 +2096,6 @@ function MobilityExerciseList({
   flow: MobilityPrehabFlow | null;
   completedItemIds: ReadonlySet<string>;
   onToggleItem: (itemId: string) => void;
-  sessionId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2166,7 +2141,6 @@ function MobilityExerciseList({
           >
             <StrengthExerciseCard
               exercise={row}
-              sessionId={sessionId}
               label={`${index + 1}`}
               isGrouped={false}
               prescriptionLabel={mobilityFlowMovementDose(exercise)}
@@ -2196,7 +2170,6 @@ function SessionList({
   completedItemIds,
   onToggleItem,
   implementFor,
-  sessionId,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2208,8 +2181,6 @@ function SessionList({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
-  onSwapExercise,
-  onRemoveExercise,
 }: SessionListProps) {
   if (items.length === 0) return null;
 
@@ -2223,10 +2194,7 @@ function SessionList({
       return (
         <ConditioningChoiceRow
           key={key}
-          sessionId={sessionId}
           options={item.options}
-          onSwapExercise={onSwapExercise}
-          onRemoveExercise={onRemoveExercise}
         />
       );
     }
@@ -2234,10 +2202,7 @@ function SessionList({
       return (
         <ConditioningPhaseRow
           key={key}
-          sessionId={sessionId}
           exercise={item.row}
-          onSwapExercise={onSwapExercise}
-          onRemoveExercise={onRemoveExercise}
         />
       );
     }
@@ -2254,7 +2219,6 @@ function SessionList({
     return (
       <StrengthExerciseCard
         key={key}
-        sessionId={sessionId}
         exercise={item.row}
         selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         label={labels[index] ?? ''}
@@ -2273,8 +2237,6 @@ function SessionList({
         startEditingWeight={startEditingWeight}
         commitWeightEdit={commitWeightEdit}
         onSelectExercise={onSelectExercise}
-        onSwapExercise={onSwapExercise}
-        onRemoveExercise={onRemoveExercise}
       />
     );
   };
@@ -2468,14 +2430,8 @@ function AddonRow({
  */
 function ConditioningChoiceRow({
   options,
-  sessionId,
-  onSwapExercise,
-  onRemoveExercise,
 }: {
   options: Array<{ title: string; description: string; rows: any[] }>;
-  sessionId: string;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
 }) {
   const isChoice = options.length > 1;
   const [expanded, setExpanded] = React.useState(!isChoice);
@@ -2519,9 +2475,6 @@ function ConditioningChoiceRow({
                   key={exercise.id}
                   exercise={exercise}
                   idx={idx}
-                  sessionId={sessionId}
-                  onSwapExercise={onSwapExercise}
-                  onRemoveExercise={onRemoveExercise}
                 />
               ))}
             </View>
@@ -2546,7 +2499,6 @@ function ConditioningChoiceRow({
  */
 interface StrengthExerciseCardProps {
   exercise: any;
-  sessionId: string;
   label: string;
   isGrouped: boolean;
   isLastInGroup?: boolean;
@@ -2569,12 +2521,9 @@ interface StrengthExerciseCardProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
-  onSwapExercise?: (exercise: any) => void;
-  onRemoveExercise?: (exercise: any) => void;
 }
 function StrengthExerciseCard({
   exercise,
-  sessionId,
   label,
   isGrouped,
   isLastInGroup = true,
@@ -2592,8 +2541,6 @@ function StrengthExerciseCard({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
-  onSwapExercise,
-  onRemoveExercise,
 }: StrengthExerciseCardProps) {
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
@@ -2658,7 +2605,6 @@ function StrengthExerciseCard({
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
-  const isEditableRow = !isTeamTrainingItem(exercise);
 
   return (
     <Card
@@ -2832,23 +2778,17 @@ function StrengthExerciseCard({
  */
 interface RecoveryBlockProps {
   exercises: any[];
-  sessionId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   onSelectExercise: (name: string) => void;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
   completedItemIds: ReadonlySet<string>;
   onToggleItem: (itemId: string) => void;
 }
 function RecoveryBlock({
   exercises,
-  sessionId,
   expandedCues,
   toggleCue,
   onSelectExercise,
-  onSwapExercise,
-  onRemoveExercise,
   completedItemIds,
   onToggleItem,
 }: RecoveryBlockProps) {
@@ -2865,7 +2805,6 @@ function RecoveryBlock({
         const cueText = buildCueText(exerciseName);
         const componentId = exercise.id || exercise.exerciseId;
         const exerciseToken = stableTestIdToken(componentId);
-        const isEditableRow = !isTeamTrainingItem(exercise);
 
         const executionItemId = `exercise:${componentId}`;
         return (
@@ -3031,14 +2970,8 @@ function usePersonalPace(notes: string | null | undefined) {
  */
 function ConditioningPhaseRow({
   exercise,
-  sessionId,
-  onSwapExercise,
-  onRemoveExercise,
 }: {
   exercise: any;
-  sessionId: string;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
 }) {
   const phaseName = exercise.exercise?.name || 'Phase';
   const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
@@ -3087,16 +3020,10 @@ function ConditioningPhaseRow({
 interface ConditioningRowProps {
   exercise: any;
   idx: number;
-  sessionId: string;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
 }
 function ConditioningRow({
   exercise,
   idx,
-  sessionId,
-  onSwapExercise,
-  onRemoveExercise,
 }: ConditioningRowProps) {
   const name = exercise.exercise?.name || `Phase ${idx + 1}`;
   const displayName = displayExerciseName(name, `Phase ${idx + 1}`);
@@ -3177,19 +3104,11 @@ interface ExerciseHeaderRowProps {
   label?: string;
   name: string;
   onPlay: () => void;
-  onSwap?: () => void;
-  onRemove?: () => void;
-  swapTestID?: string;
-  removeTestID?: string;
 }
 function ExerciseHeaderRow({
   label,
   name,
   onPlay,
-  onSwap,
-  onRemove,
-  swapTestID,
-  removeTestID,
 }: ExerciseHeaderRowProps) {
   return (
     <>
@@ -3943,47 +3862,13 @@ function PlayIcon() {
   );
 }
 
-// Circular-arrows swap glyph — the same shape `RowIcon`'s 'refresh' kind
-// draws on the week screen, redrawn here rather than imported so this row's
-// icon vocabulary does not reach across screens for a shared component that
-// does not exist yet. Neutral/muted tint: a per-row utility action, not a CTA.
-function SwapIcon() {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M20 11a8 8 0 00-14.3-4.9L4 8" />
-      <Path d="M4 4v4h4" />
-      <Path d="M4 13a8 8 0 0014.3 4.9L20 16" />
-      <Path d="M20 20v-4h-4" />
-    </Svg>
-  );
-}
-
-// "−" in a circle — remove, in the app's own danger colour
-// (`colors.status.error`), never the plain grey the swap icon uses.
-function RemoveIcon() {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={colors.status.error} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-      <Path d="M8 12h8" />
-    </Svg>
-  );
-}
-
-function PlusIcon() {
-  // Same plus glyph the week screen's "No game this week - add one" and
-  // "Add" menu rows already draw (`PlanChangeSheet.tsx`, `HomeScreenV2.tsx`)
-  // — one vocabulary for "add", not a new mark invented for this screen.
-  return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 5v14" />
-      <Path d="M5 12h14" />
-    </Svg>
-  );
-}
-
-function InjuryIcon() {
-  return <LfaIcon name="injury" color="#FF8A4C" size={15} />;
-}
+/* ⚠ **THE PER-ROW ICON VOCABULARY IS DELETED — 2026-08-19.**
+ *
+ * `SwapIcon`, `RemoveIcon`, `PlusIcon` and `InjuryIcon` drew the always-visible
+ * row controls and the old header row. Both went when the labelled hub landed;
+ * the glyphs stayed, referenced by nothing. The hub draws its own five in
+ * `components/SessionChangeHub`, where a SHARED vocabulary belongs. Proven
+ * unused by `tsc --noUnusedLocals` before deletion. */
 
 // ── ExerciseSheetOption icons (ruling 10 — swap_reason / add_kind /
 // future_scope) ──
@@ -3999,11 +3884,8 @@ const optionGlyph = (color: string, children: React.ReactNode) => (
   </Svg>
 );
 const OPTION_ICON_ACCENT = '#C8FF00';
-/** "Other" — shared by both enums below; it is the same word meaning the
- * same thing in each. */
-const otherOptionIcon = (color: string) => optionGlyph(color, (
-  <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
-));
+/* `otherOptionIcon` DELETED with the two enums that shared it
+ * (`swap_reason` and `add_kind`), both of which are gone. */
 /* `ADD_EXERCISE_KIND_ICON` DELETED with the `add_kind` step it decorated
  * (2026-08-19). Seven icons for seven labels that no longer exist. */
 /* `SWAP_REASON_ICON` DELETED with the `swap_reason` step it decorated
