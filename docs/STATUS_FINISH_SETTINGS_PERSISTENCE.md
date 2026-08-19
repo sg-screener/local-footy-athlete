@@ -556,3 +556,153 @@ earlier in the session:
 - **The Coach lane's own findings B-1..B-5 were not re-verified**, only B-3/B-4.
 - **The stored-vs-visible exclusion residue is named, not fixed.**
 - **Still no glass.** Every number here is headless.
+
+---
+
+# SESSION 3 — THE FROZEN PRODUCT CANDIDATE, AND THE EXCLUDED-EXERCISE RESIDUE
+
+**Frozen Settings candidate `07e01739`.** Both items closed.
+
+## 1. THE RESIDUE — REMOVE MEANS REMOVE, IN STORAGE
+
+**THE AUTHORITY WAS NOT THE SETTINGS DOOR. IT WAS THE REPLAY'S OWN OUTPUT.**
+Measured before anything moved: after the rollover the stored program holds **0**
+rows of the excluded lift; after a **plain relaunch with no settings change at
+all** it holds **4**. Every settings door ends in
+`settleDerivedWorldAfterDecision`, which is that same boot path — which is why
+all five looked guilty and none was.
+
+**WHY THE ROW WAS THERE, AND WHY THE FIX IS NOT "TELL THE COMPOSER".**
+`exclusionsForSelectionAuthority` deliberately withholds the dated decisions from
+a replay so the composer RESTORES the recorded lift instead of choosing a new one
+for the emptied slot. Its founding measurement: an athlete removed `RDLs`,
+reopened the app, and **`Deadlift@77.5` walked into the hinge**. Sam's 2026-08-19
+ruling — *"Remove means simply remove the selected exercise/component. Nothing
+replaces it"* — is exactly what that protects.
+
+**SO THE REMOVAL MOVED; IT WAS NOT ADDED.** `applyExclusionsToAuthoredWeek` is
+`rules/exerciseExclusions`' single definition and was already doing this work at
+READ time, on every render, over a week that had the row in it. It is now applied
+once where the week is **authored**, after selection — so the slot is left empty
+and nothing replaces it. Same ruling, applied to storage instead of to the
+projection. **No new filter, no compatibility layer, selection untouched**; the
+read-time application is now idempotent over anything this generator built.
+
+| state | STORED | VISIBLE |
+| --- | --- | --- |
+| after the rollover | 0 | 0 |
+| after a plain relaunch | 0 | 0 |
+| after each of four settings changes | 0 | 0 |
+| after each relaunch that follows | 0 | 0 |
+
+Ten readings, all agreeing. Progressed loads intact (`Leg Press 113.5`,
+`RDLs 82.5`).
+
+### ⚠ A NAMED CELL CONTRADICTED THIS, AND ITS PREMISE IS REFUTED BY MEASUREMENT
+
+`exerciseExclusionScopeTests` [3] asserted *"the stored program KEPT the row, so
+Restore has something to give back"*. Restore does not need the row hoarded — it
+returns `rebuildRequired: true`, and what gives the lift back is
+`blockSelectionHistoryStore`, the store built to remember what a block chose.
+Walked end to end through the real doors:
+
+```
+STORED 4 -> 4 (excluded) -> 0 (relaunch) -> 0 (restore tap)
+      -> 4 (the rebuild restore ASKS FOR) -> 4 (next relaunch)
+```
+
+with the visible week agreeing at every step, and
+`activeProgramModifiers`' Restore control setting `rebuildRequired` for exactly
+that reason. **THE CELL WAS NOT DELETED.** It asserted a MECHANISM and now
+asserts the two PROPERTIES that mechanism served: stored and visible AGREE, and
+the composer did not re-decide the slot (checked on the recorded selection — the
+`Deadlift@77.5` coordinate). `test:exercise-exclusions` **52 passed / 1 failed at
+base → 53 passed / 1 failed**, the same single pre-existing red.
+
+## 2. THE FROZEN COMBINATION — `measure/settings-plus-frozen-product-DO-NOT-MERGE @ 37d8717d`
+
+Settings `674892b5` + **frozen Product `18968818`**. Conflicts in the same four
+files, resolved the way the first measurement had to be corrected to: **their**
+`weekRebuild` extraction is the caller, and `generateProgramForProfileFromStore`
+reads `statedProgressionInputs` rather than hand-writing the same four fields —
+so the extraction becomes a sixth caller of the one owner. 141 law rows, no
+duplicate ids; 399 suites, both new gates in the chain.
+
+**ALL FOUR GATES GREEN ON THE COMBINED TREE:** `settings-persistence` **148/0**,
+`athlete-journey` **64/0**, `coach-weekly-reduction` **64/0**,
+`exercise-exclusions` **53/1** (the pre-existing red).
+
+### PREVIEW = ACCEPTED = RELAUNCHED — EXACTLY, ON EVERY AXIS
+
+| axis | preview | accepted | relaunched | preview≠accepted | accepted≠relaunched |
+| --- | --- | --- | --- | --- | --- |
+| structure | 28 | 28 | 28 | **0** | **0** |
+| exercise identity | 44 | 44 | 44 | **0** | **0** |
+| prescribed loads | 44 | 44 | 44 | **0** | **0** |
+| full prescription | 44 | 44 | 44 | **0** | **0** |
+
+**Rows the athlete gets that the preview did not show: 0.** On the previous
+combination this was 4 — the excluded lift — so the residue fix is what closed
+the last gap in this question, not the input owner.
+
+### GENERATION AND PUBLISH EVENTS, AND THE FOUR-WAY CONTROL
+
+| | gen 1 blockNumber | gen 1 history | gen 2 blockNumber | publish 1 → 2 changed | preview vs accepted (loads) |
+| --- | --- | --- | --- | --- | --- |
+| base `main` `9f081efa` | `undefined` | **ABSENT** | **1** | **8 of 44** | — |
+| Coach `f5c27c44` alone | `undefined` | **ABSENT** | **1** | **8 of 44** | **20 of 44 differ** |
+| Settings `674892b5` alone | 2 | present | 2 | **0 of 44** | — |
+| **Settings + FROZEN `18968818`** | **2** | **present** | **2** | **0 of 44** | **0 differ** |
+
+**Two generations, two publishes**, per acceptance, on every tree — gen 1 the
+transaction (`author`), gen 2 the settle (`replay`, publishing as
+`quiescent_boot`). `statedProgressionInputs` called **exactly twice, once per
+generation**, both returning `blockNumber=2, acceptedBlocks=2, feedbackDays=19,
+overrideDays=7`. The second generation is **not** obsolete — it is R5.1's settle
+and the reason accepted == relaunched — and on this candidate it no longer
+disagrees with the first.
+
+### SAM'S HANDOFF PROPERTY, PROVEN
+
+`docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md` names this lane
+as owner: *"Existing exercises must retain progression from their own history."*
+On the combined tree, across one real `confirmWeeklyCommitment`: **10 exercises
+carried across the change, 0 loads moved.** Guarded on the candidate by stage 6,
+which walks that door directly.
+
+## MUTATIONS — 18 SUBJECTS, 18 KILLED, 0 UNPROVEN
+
+Subjects 1–15 are unchanged from session 2. New:
+
+| # | subject | final |
+| --- | --- | --- |
+| 16 | the authoring-time removal (stored == visible) | **KILLED** — 5 reds, one per WORN door, naming stored 4/6 vs visible 0 |
+| 17 | the composer may not re-decide the emptied slot | **SURVIVED my suite; KILLED by `test:exercise-exclusions`**, naming the `Deadlift@77.5` defect |
+| 18 | the handoff's carried-load property | **KILLED** — *"3 of 9 carried exercises changed load: Leg Press 113.5→110, RDLs 82.5→80, Single-Leg Leg Press 75→32.5"* |
+
+**M17 IS REPORTED AS IT HAPPENED.** It is killed by the suite that OWNS exclusion
+semantics, not by mine — which is the right place for it — and my suite is
+recorded as blind to that subject rather than credited with it.
+
+## CONTROL COMPARISON — candidate `674892b5`
+
+| instrument | control @ `9f081efa` | candidate |
+| --- | --- | --- |
+| `scripts/sweep.sh`, full, both complete | **184 of 396** | **184 of 397** |
+| GAINED / LOST | — | **0 / 0** |
+| `test:compile` | RED, 78 lines | **diff EMPTY** |
+| `test:exercise-exclusions` | 52 / 1 | **53 / 1** (same red) |
+| `test:settings-persistence` | (absent) | **157 / 0** |
+
+Sanity-checked: `test:law-registry` IS in the candidate's failing set (it must
+be), and `test:settings-persistence` is NOT.
+
+## NOT COVERED — session 3 additions
+
+- **THE NEW-EXERCISE HALF OF SAM'S HANDOFF RULING IS NOT EXERCISED.** *"New
+  exercises use their own history or authored starting estimate"* has an EMPTY
+  subject on this athlete — the commitment change adds days without adding
+  exercises — so stage 6 prints that and asserts nothing over it.
+- **Both `measure/*` branches remain DO-NOT-MERGE.** They carry my merge
+  resolutions, which nobody has reviewed; the real integration should redo them.
+- **Still no glass.**
