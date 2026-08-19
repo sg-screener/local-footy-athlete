@@ -2515,13 +2515,52 @@ is a **second change-interface beside the recorded one**, which is exactly what
 that ruling killed the standing bar and the confirm sheet for. **A surface that
 asks the athlete to renegotiate their week is change-talk by definition.**
 
-**OWNER: unassigned — NEXT MISSION.** Raised during the Remove slice's final
-session under a standing order not to open another surface, so it is recorded
-here rather than built. **NOT BUILT, NOT STARTED.**
+**⚠ THIS ID IS USED TWICE.** The row immediately below also reads `R-105` (the
+power-pool ruling, Sam 2026-08-20). Recorded rather than renumbered — a seat does
+not silently renumber another seat's row — and raised for Sam. Grep for the
+SEARCH WORDS, not the number.
 
-**WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
-coach-update mechanism or a new one, and whether the offer expires, are NOT
-ruled here and must not be invented.
+· **`BUILT` 2026-08-20 by seat `finish-coach-product`** —
+`rules/weeklyCommitmentConversation.ts` (the one derivation, moved out of
+`screens/home/useBlockBoundaryPrompts.ts`), `rules/commitmentChangePreview.ts`
+(the preview), `screens/coach/useCoachWeeklyCommitment.ts` (the Coach hook and
+the derived notification), `components/CommitmentCard.tsx`,
+`screens/coach/CoachTabScreen.tsx` (the bubbles and the footer card) and
+`navigation/AppNavigator.tsx` (the tab dot). **Guarded by
+`test:coach-weekly-reduction`** (62 assertions, in `test:bible`), which walks two
+real athletes through the production doors and compares what the athlete was
+SHOWN against what ARRIVED. Thirteen mutations, twelve seen red.
+
+**THE PROGRAM SURFACE NO LONGER DERIVES IT AT ALL**, which is what makes the
+ruling structural rather than a render that was switched off: the two derive
+functions and the two card components are gone from
+`screens/home/`, so the Day page cannot raise the offer again without importing
+a module it no longer imports.
+
+**HOW THE TWO OPEN QUESTIONS WERE ANSWERED, AND THEY ARE FOR SAM TO CONFIRM:**
+
+- **THE NOTIFICATION IS A DERIVED COACH-TAB DOT, NOT THE COACH-UPDATE
+  MECHANISM.** `coachUpdatesStore` is a PROGRAM-TAB card whose only writer is the
+  frozen `CoachScreen` — using it would have put the conversation's arrival back
+  on the surface this ruling removes it from, and it would have STORED a
+  derivation, which R-099 refuses in as many words. So `hasNotification` is
+  `conversation !== null`, computed from the same facts in the same pass: no
+  unread flag, no counter, nothing to clear, and a relaunch cannot resurrect a
+  notification for an answered question.
+- **THE OFFER DOES NOT EXPIRE, BECAUSE THERE IS NOTHING TO EXPIRE.** It is
+  re-derived from the facts every time; it stops being put when the athlete
+  answers (the ledger entry) or when the facts stop supporting it. A dated expiry
+  would be new stored state for a question that is not stored.
+
+**AND ONE THING THE RULING DID NOT ANTICIPATE, FOUND BY BUILDING IT:** an offer
+gated on legality alone would have promised a session generation will not place.
+Measured on a real walked in-season athlete with a Saturday game — legal at four
+days, and the same two gym days either way. **The rebuild is the last gate.**
+Registry row `LAW-an-offer-the-rebuild-will-not-keep-is-not-put`.
+
+**Search words:** weekly reduction, smaller weekly program, completing 0 of 5,
+coach notification, coach chat, extra session offer, optional session preview,
+add one session, keep it as is, program page card, day page popup, tab badge.
 
 ---
 

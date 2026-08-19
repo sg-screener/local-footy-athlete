@@ -1712,6 +1712,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-16, case [8] of `src/__tests__/exerciseExclusionScopeTests.ts`. THE FOUNDING CASE IS A ONE-MEMBER UNION: `ComposedGap.cause` was the literal `\'kit\'`, so every gap an exclusion emptied told the athlete their EQUIPMENT was the problem — sending them to buy a barbell for a hole only they could fill by restoring an exercise. The exhaustive case excludes EVERY squat-slot identity the composer can choose, read from `selectableExerciseNames()` joined through `slotsForExerciseName` rather than from a list this test typed, so a pool entry added tomorrow cannot leave the case silently non-exhaustive — an "impossible replacement" case that misses one candidate proves the opposite of what it claims. MUTATION: forcing `attributeGap` back to `\'kit\'` reds it. THE COMPLEMENT IS HELD TOO — case [7] proves that when a legal same-pattern replacement DOES exist it is used, in the same slot, with `mainStrengthPattern` preserved and NO gap disclosed, so the disclosure cannot rot into a gap reported whenever anything is excluded.',
     },
   },
+  {
+    id: 'LAW-an-offer-the-rebuild-will-not-keep-is-not-put',
+    law: 'A question that offers the athlete a change to their program is put only when the program the app would actually publish DIFFERS from the one they are on. Whether a commitment is legal and whether it changes anything are two questions, and the second is the one an offer answers to.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-105 (Sam, 2026-08-19: "This should not be popping up on the main page - it should show up in the coaches chat with a notification") together with the approved Block Two contract\'s "Do not silently add a session" and Process Law L6 (a tap that implies success must demonstrably do the thing).',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-weekly-reduction',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-20, seat `finish-coach-product`, section [10]. THE FOUNDING CASE IS A REAL WALKED ATHLETE, NOT A CONSTRUCTED ONE: in-season, Saturday game, club Tuesday and Thursday, gym Monday/Wednesday/Friday — cold-started through onboarding, 28 days recorded through `recordDay`, rolled over through the production owner. EVERY CHEAP GATE OPENS for them: the block qualifies, they answer everything easy, Sunday is free, and `commitmentLegalityProbe` says a four-day commitment BUILDS. It builds the IDENTICAL TWO-GYM-DAY WEEK — `[1,3]` at three days and `[1,3]` at four — because Friday is held as G-1, Saturday is the game and Sunday is the day after it. The athlete would have been promised a session that never appears and found out by accepting. The legality probe is not wrong; it answers "could you train this often", which is the right question for the SHRINKING direction and the wrong one here. MUTATION M1: deleting the gate reds 2 cells, and a CONTROL cell first proves the refusal names the REBUILD rather than an earlier gate — without it the pair would pass on a world that never reaches the gate at all.',
+    },
+  },
+  {
+    id: 'LAW-a-preview-is-built-never-predicted',
+    law: 'A surface that shows the athlete what a change would do BUILDS the program that change produces, with the same inputs the producer that lands uses, and shows what it built. It never predicts from the week the athlete is on. A preview that cannot be built says so and shows nothing.',
+    ruledAt: 'docs/NORTH_STAR.md\'s convergence rule — two representations of one fact is the defect — applied to the offer surface. Raised by the review of `codex/finish-product` (`docs/STATUS_ORCHESTRATOR.md`, "PRODUCT fe6ed715 — REJECTED FOR MERGE"), whose preview predicted and was measured wrong on 11 of 20 generated worlds.',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-weekly-reduction',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-20, seat `finish-coach-product`, section [7]. THE COMPARISON IS THE PREVIEW FUNCTION RUN A SECOND TIME with the ACCEPTED program as its candidate and the same week the athlete was looking at as its current — so what was shown and what arrived are compared day for day, arrival for arrival, component for component, by the same code. WHICH PRODUCER TO BUILD WITH WAS MEASURED, NOT ASSUMED: the transaction\'s own intermediate builder passes NO `progressionHistory` and disagreed with the delivered program in 40 of 90 prescriptions (`Bulgarian Split Squats 3x8-10` previewed, `4x8-10` delivered); the week-rebuild path, which hands generation the store\'s history, matched exactly. MUTATION M3: pointing the preview at the CURRENT week reds 5 cells. MUTATION M8b: a door that records the answer, reports success and changes no program reds 2. MUTATION M11: replacing the signed component join with a raw `.join(", ")` over the internal kind identifiers reds 1 — that one SURVIVED the first pass, because the suite printed the sentences and asserted nothing about them.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
