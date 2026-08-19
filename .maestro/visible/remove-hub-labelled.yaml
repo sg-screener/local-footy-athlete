@@ -126,30 +126,18 @@ tags:
     visible:
       id: "workout-screen"
     timeout: 20000
-- runFlow:
-    when:
-      notVisible:
-        id: "session-strength-position-.*"
-    commands:
-      - tapOn:
-          id: "session-execution-toggle-strength"
-- assertNotVisible:
-    id: "session-strength-position-.*-back-squat"
-# UNTOUCHED ROWS DO NOT MOVE. Asserting only the removal would pass on a
-# session that had lost everything.
-- assertVisible:
-    id: "session-strength-position-.*-rdls"
-- assertVisible:
-    id: "session-strength-position-.*-band-pallof-press"
-- takeScreenshot: artifacts/visible/hub-5-rows-back-the-receipt
 
+# ⚠ **UNDO IS CHECKED FIRST, BEFORE THE ROWS — AND THAT ORDERING IS THE WHOLE
+# TRICK.** The toast's six seconds start when the DECISION lands, not when the
+# flow gets round to looking. Checking the rows first burned the life: on
+# 2026-08-20 this same walk passed the undo assertion one run and failed it the
+# next with nothing changed but machine speed. A racy flow reports a missing
+# control that is not missing.
 # ── 5. UNDO, ON THE SURFACE THE CHANGE WAS MADE ON (R-107) ────────────────
 # ⚠ **AND THE ATHLETE IS STILL IN THE SESSION.** `workout-screen` is asserted
 # BEFORE the toast, because a flow that only checked the toast would pass on an
 # app that had bounced the athlete back to the Day page to show it — which is
 # the alternative Sam refused in the same sentence.
-- assertVisible:
-    id: "workout-screen"
 # ⚠ **THE TOAST LIVES SIX SECONDS, SO EVERY COMMAND HERE IS ON A CLOCK.**
 # Measured 2026-08-20: the first version asserted the id, then the action id,
 # then the word, then screenshotted, and the tap that followed failed with
@@ -185,3 +173,21 @@ tags:
 #
 # Making this tappable from a flow would mean lengthening the toast for E2E,
 # which is changing the product to suit the instrument. Not done.
+
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertNotVisible:
+    id: "session-strength-position-.*-back-squat"
+# UNTOUCHED ROWS DO NOT MOVE. Asserting only the removal would pass on a
+# session that had lost everything.
+- assertVisible:
+    id: "session-strength-position-.*-rdls"
+- assertVisible:
+    id: "session-strength-position-.*-band-pallof-press"
+- takeScreenshot: artifacts/visible/hub-5-rows-back-the-receipt
+
