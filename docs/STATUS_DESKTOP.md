@@ -41,6 +41,36 @@ thing that actually bit.**
 
 ## STATUS
 
+## 2026-08-19 — SESSION CHANGE HUB — SAM RECONFIRMED, UI REBUILD OWED
+
+**THIS IS A DURABLE POST-DEMOLITION UI ACCEPTANCE NOTE, NOT A CLAIM THAT THE
+CURRENT APP IMPLEMENTS IT. No product code was changed when this was recorded.**
+
+The 2026-08-19 simulator screenshots show the wrong interaction: unlabelled
+Add/Swap/Injury icons remain at the top of the session, and Swap/Remove icons
+remain beside every exercise. Sam rejected that layout and explicitly said not
+to repair it during the burn-the-boats demolition.
+
+After demolition, the session screen must have ONE labelled entry surface:
+
+- heading: **"Need to make a change?"**
+- labelled actions: **Equipment · Injury · Add · Remove · Swap**
+- no unlabelled action-icon strip at the top of the session
+- no always-visible Swap or Remove icon beside every exercise
+- after the athlete chooses an action, the app shows the relevant exercise,
+  mobility and conditioning components and then continues through that action's
+  existing flow
+
+This consolidates the already-signed direction in
+`docs/COPY_SHEET_RULINGS_2026-07-30.md` (temporary equipment changes begin
+inside the session; focused session changes) and
+`docs/UI_MERGE_RULINGS_2026-08-10.md` (changes belong on the relevant day, not
+the weekly view). The exact five-action hub above is the 2026-08-19 clarification.
+
+**SEQUENCING:** do not interrupt demolition to implement it. It is an explicit
+acceptance item for the separate post-demolition UI rebuild and must be seen on
+the real session screen before that surface is called complete.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
