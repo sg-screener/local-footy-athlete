@@ -234,3 +234,87 @@ seeing a contradiction while (c) is decided.
 **Against that it clears 41 findings**, all Off-season anchor worlds publishing
 `Team Training` and `Game` in a phase that has neither. That is a worse
 athlete-visible defect than anything it leaves behind.
+
+## PRODUCT CANDIDATE `fe6ed715` — MEASURED, NOT MERGED
+
+QA never reviewed it. I ran the **73 suites in its blast radius** (`test:coach*`,
+`injury*`, `block-two*`, `extra*`, `accessibility*`, `pending*`, `signed-copy*`,
+`copy-rulings*`, `visible*`, `dead*`) at **three** points, because two would have
+conflated its effect with mine:
+
+| tree | red of 73 |
+|---|---:|
+| `20cb1422` | 31 |
+| current `main` (my UI correction) | 30 |
+| current `main` + product | **26** |
+
+### A. MY OWN EFFECT ON THOSE 73 — ONE SUITE, AND IT WENT GREEN
+
+`test:copy-rulings-binding` **8/1 -> 9/0**. Unplanned: the hub reading
+`day.change_card.heading` / `.subline` from the signed sheet again gave those two
+rows their readers back. They had **zero** readers on `20cb1422`, because the
+literals had been inlined into the component.
+
+Nothing else in the 73 moved. The UI correction's blast radius on this surface
+is one suite, in the right direction.
+
+### B. PRODUCT'S EFFECT — FIVE GREEN, ONE RED
+
+| suite | main | + product |
+|---|---|---|
+| `test:coach-accepted-injury` | throws | **37/0** |
+| `test:coach-intent` | red | **37/0** |
+| `test:coach-live-wiring` | red | **17/0** |
+| `test:coach-tab-slice4` | absent | **28/0 + 9/0** |
+| `test:pending-injury-priority` | throws | **12/0** |
+| `test:coach-tab-slice1` | **79/79** | **78/79** ⚠ |
+
+⚠ **CORRECTION TO MY OWN FIRST READING.** `test:coach-tab-slice3` appeared to
+collapse 151/151 -> 9/0, which is the suite-died-at-import shape this repo has a
+law about. **It had not.** The candidate chains `slice3 && slice4`, and
+`coachTrackingContextTests` in turn `require`s `extraSessionOfferPreviewTests`,
+so my reader took the LAST totals line. Verified directly: slice3 still runs
+151/151, and the chain adds 28/0 + 9/0. **A totals line is output; read the pass
+count, and read all of them.**
+
+### THE ONE RED, AND IT IS FIXED ON A BRANCH
+
+`orchestrator/coach-sentence-provenance` @ `f14b3aeb`, off the merged candidate.
+
+The cell enumerated three rule functions plus the literal `proposal.text`. The
+candidate added `say(injuryTurn.text)` where
+`injuryTurn = readAcceptedInjuryChatTurn({...})` — the same shape
+`proposal.text` already was. **The law was never broken; the list was short.**
+The gate now states the law (a coach sentence is a rule's return value, and a
+`.text` off a local is verified by reading the local's assignment and the import
+list) and is strictly stronger than the list it replaces — the old cell would
+have passed a hand-written object assigned to a local named `proposal`.
+Mutation-proven three ways; **80/80**.
+
+⚠ **THE LANE SHIPPED WITH ONE OF ITS OWN GOVERNING GATES RED AND ITS STATUS
+DOCUMENT DOES NOT LIST `test:coach-tab-slice1`.**
+
+### PRODUCT VERDICT — HOLD, PENDING REVIEW, NOT PENDING A RED
+
+Its measured position is good: five suites recovered, one regression, and that
+regression closed on a branch. It also implements the exact handoff the Journey
+lane routed to it — `extraSessionOfferPreview` previews the combined day the
+"Add one session" card creates.
+
+**But 31 files have had no independent review, by QA or by me**, and it does not
+touch either screen in Sam's UI contract (`HomeScreenV2`, `DayWorkoutScreenV2`
+and `SessionChangeHub` are untouched), so correcting the UI neither cleared nor
+blocked it. Merging it now would be merging on a lane's own word, which is the
+one thing this seat was told not to do.
+
+## SUMMARY — WHERE THE FOUR CANDIDATES STAND
+
+| lane | tip | verdict | why |
+|---|---|---|---|
+| **journey** | `74c593aa` | **MERGED** `3ddc4c16` | zero production bytes; 64/0 on this tip; the ladder conflict it was held for is identical with and without it |
+| **product** | `fe6ed715` | HOLD — review, not red | 5 suites recovered, 1 regression closed on `orchestrator/coach-sentence-provenance`; 31 files unreviewed |
+| **programming** | `12fac3f1` | HOLD — one ruling | clears 41 findings; its own 32 duplicates fixed on `orchestrator/power-primer-yields`; blocked on the power-pool question |
+| **qa** | `5f94d6e7` | evidence, not a candidate | its matrix instrument was used here and reproduced exactly |
+
+**AND THE UI CONTRACT ITSELF WAS NONE OF THEM.** It was on `main`, it is fixed
+on `main`, and it is proven on glass.
