@@ -165,7 +165,6 @@
         "src/__tests__/section18AcceptedWeekGatewayTests.ts": 3,
         "src/__tests__/section18ContractV2Tests.ts": 1,
         "src/__tests__/section18OwnershipInvariantTests.ts": 1,
-        "src/__tests__/section18SafetyBoundaryTests.ts": 2,
         "src/__tests__/sessionClassificationAdapterTests.ts": 1,
         "src/__tests__/sessionComponentsTests.ts": 3,
         "src/__tests__/sessionNamingTests.ts": 1,

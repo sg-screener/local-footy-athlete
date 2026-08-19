@@ -62,9 +62,6 @@ import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
 import { readStoredWorldOrResetClean } from './unreadableWorldResetDoor';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
-  finaliseSection18SafetyWorkout,
-} from '../rules/section18SafetyFinaliser';
-import {
   ensureProgramSeasonPhaseClock,
   resolveSeasonPhaseClock,
   type SeasonPhaseClock,
@@ -675,6 +672,21 @@ const LEGACY_DAY_NAMES: DayOfWeek[] = [
 ];
 
 
+/**
+ * THE SAFETY REWRITE AT THE ACCEPTANCE BOUNDARY IS GONE (demolition area B/C,
+ * 2026-08-19).
+ *
+ * This used to run `finaliseSection18SafetyWorkout` over every workout on its
+ * way INTO accepted state — the overlay days, the date-keyed overrides and
+ * today's workout. Conforming a workout at the moment it is accepted is
+ * writing accepted exercise choices, which is the authoring seat, not the
+ * store's.
+ *
+ * The contract argument is kept so every call site stays honest about what it
+ * has; canonicalisation below is shape-only and changes no prescription.
+ * Safety belongs to the composer and its specialists at authoring time
+ * (rebuild list, area A).
+ */
 function canonicaliseHydratedSafetyWorkout(
   workout: Workout,
   contract: WeeklyExposureContractV2 | undefined,
@@ -682,20 +694,12 @@ function canonicaliseHydratedSafetyWorkout(
   /** Clock-resolved fallback for a contract that does not name one. */
   offseasonSubphase?: OffseasonSubphase | null,
 ): Workout {
-  return contract
-    ? finaliseSection18SafetyWorkout({
-        contract,
-        workout,
-        canonicalContext: {
-          phase: contract.identity.seasonPhase,
-          offseasonSubphase: canonicalContextSubphase(
-            contract.identity.seasonPhase,
-            contractOffseasonSubphase(contract) ?? offseasonSubphase,
-          ),
-          section18EvidenceMode: 'preserve_legacy_unknown',
-        },
-      }).workout
-    : canonicaliseHydratedWorkout(workout, phase, undefined, offseasonSubphase);
+  return canonicaliseHydratedWorkout(
+    workout,
+    contract?.identity.seasonPhase ?? phase,
+    undefined,
+    (contract ? contractOffseasonSubphase(contract) : null) ?? offseasonSubphase,
+  );
 }
 
 /**

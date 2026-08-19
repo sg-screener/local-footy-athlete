@@ -862,3 +862,79 @@ law it served — repeat-week has no writer — is now held by there being no wr
 at all, which `storedStateWriterAuditTests` still asserts across the tree.
 
 Agent: demolition
+
+---
+
+## AREA C — THE POST-COMPOSER SAFETY REWRITE IS DELETED
+
+`rules/section18SafetyFinaliser.ts` (654 lines) rewrote a week that the
+composer had already finished. Not a validator with a repair branch — an
+authoring engine sitting behind a validator's name:
+
+- `conformWorkout` over every workout — **conforms a composed week to policy**
+- `collapseWorkoutToRest` — **substitutes Rest**
+- cloned main-strength rows onto OTHER days to satisfy `requiredSafePatterns`,
+  with `exerciseOrder: 1` — **moves sessions and rewrites rows**
+- stripped `planEntryId`, `strengthIntent`, `strengthIntentDiagnostics` and
+  `strengthPatternContributions` from what it rewrote — **re-authored accepted
+  content and erased the provenance that says who authored it**
+
+Every one of those is a named bullet in Sam's area C order.
+
+**Surviving owner:** the composer and its specialists, at authoring time —
+already recorded on the rebuild list by area A ("Safety rewriting of a week →
+composer + specialists (at authoring)"). Area A deleted §18's own copy of this
+call; the FILE survived because two other callers still ran it.
+
+### THE TWO LIVE CALLERS, AND WHY EACH WAS A DIFFERENT OFFENCE
+
+| caller | when it ran | offence |
+| --- | --- | --- |
+| `postGenerationConstraintValidation.ts:1006` | after generation | area C — repaired a week after the composer finished |
+| `programStore.canonicaliseAcceptedBoundaryState` (3 sites: overlays, date-keyed overrides, today's workout) | as a week entered ACCEPTED STATE | area B — **wrote accepted exercise choices at the acceptance boundary** |
+
+The second is the one worth naming. It was not read-time and it was not
+generation: it conformed each workout at the moment it became accepted, so the
+athlete's accepted week and the week the composer authored were never required
+to be the same object.
+
+**WHAT STAYS, AND THE DISTINCTION THAT DECIDED IT.** `requireSection18AcceptedWeek`
+is untouched and still runs at post-generation. **A refusal is not a repair.**
+Sam's order deletes paths that rewrite; it does not delete boundaries that
+refuse. The `throw` sites in `postGenerationConstraintValidation` — schedule
+cap, unavailable date, time cap — are all still there.
+
+### PROOF
+
+```
+test:compile   control 3f97cc67 = 32   after C-1 = 32     DIFF: IDENTICAL
+test:week-validator    control 47 passed / 2 failed  = after
+test:generated-week    control 36 passed / 0 failed  = after
+test:section18-gateway prints no totals line in BOTH (pre-existing)
+```
+
+A stale `typecheck-baseline.json` entry for the deleted test was removed — the
+ratchet had flagged it `2 → 0 (clean)`.
+
+**DELETED:** `rules/section18SafetyFinaliser.ts` (654),
+`__tests__/section18SafetyBoundaryTests.ts` (994) — its subject was the deleted
+module. Script `test:section18-safety` deregistered from its key and from **all
+three** chains that ran it (`test:bible`, `test:bible:extended`,
+`test:bible:report`); a substring replace would have silently missed two, and an
+exact-count assert is what caught it.
+
+**LEFT DELIBERATELY INTACT:** the denylist regex in `generatedWeekContractTests`
+still names `section18SafetyFinaliser` and `wholeWeekRepairEngine`. Both are
+deleted, so neither can ever match — removing them from a denylist would weaken
+a live law to tidy a name.
+
+### REBUILD LIST — added by area C
+
+| capability | approved contract / ruling | state |
+| --- | --- | --- |
+| Safety conforming of a finished week | typed injury/readiness/participation safety policy | **BROKEN** — no owner conforms after authoring. Must be rebuilt IN the composer/specialists, not after them. |
+| `mainStrengthFrequencyCeiling` consolidation | §18 safety ceiling | **BROKEN** — the ceiling is still declared on the contract and nothing enforces it post-authoring |
+| Required-safe-pattern representation | §18 `requiredSafePatterns` | **BROKEN** — was satisfied by cloning a row onto another day, which is authoring; the composer must place it |
+| Safety conforming at the acceptance boundary | — | **DELETED, not to be rebuilt** — acceptance stores a decision, it does not author one |
+
+Agent: demolition

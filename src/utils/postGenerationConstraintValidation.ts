@@ -78,7 +78,6 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
-import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
 import { liveAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import {
   requireSection18AcceptedWeek,
@@ -1001,21 +1000,19 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
           .map((workout) => workout.dayOfWeek),
       })
     : undefined;
+  // THE POST-COMPOSER SAFETY REWRITE IS GONE (demolition area C, 2026-08-19).
+  //
+  // `finaliseSection18SafetyWeek` conformed a FINISHED week: it collapsed days
+  // to Rest, cloned main-strength rows onto other days to satisfy required
+  // patterns, and stripped `planEntryId`/`strengthIntent` from what it
+  // rewrote. That is authoring, and it ran after the composer had authored.
+  //
+  // The surviving owner is the COMPOSER plus its specialists, at authoring
+  // time — recorded on the rebuild list by area A. What stays here is the
+  // BOUNDARY: `requireSection18AcceptedWeek` still validates and still
+  // refuses. A refusal is not a repair.
   let safetyWorkouts = workouts;
   if (exposureContractV2) {
-    const safety = finaliseSection18SafetyWeek({
-      contract: exposureContractV2,
-      workouts,
-      weekStart,
-      canonicalContext: {
-        ...args.canonicalContext,
-        phase: args.canonicalContext?.phase ?? args.profile?.seasonPhase,
-        weekKind: args.canonicalContext?.weekKind ?? args.microcycle.weekKind,
-        profile: args.profile,
-      },
-    });
-    safetyWorkouts = safety.workouts;
-    exposureContractV2 = safety.contract;
     const accepted = requireSection18AcceptedWeek({
       contract: exposureContractV2,
       workouts: safetyWorkouts,
