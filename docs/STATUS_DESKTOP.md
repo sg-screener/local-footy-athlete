@@ -171,6 +171,21 @@ injury/equipment constraint makes them appropriate. Swap options remain grouped
 as Closest matches, Similar options and Other useful options, with fewer rows
 instead of padding a weak tier.
 
+## 2026-08-19 — SESSION HUB MUST MATCH THE DAY HUB
+
+Sam rejected the plain pill-button version of **Need to make a change?** inside
+the active session. The session screen and Day screen are two views of the same
+five athlete actions, not separate products.
+
+There must be one shared change-hub presentation on both surfaces: the same
+card, heading, action icons, colours, labels, spacing and interaction states for
+Equipment, Injury, Add, Remove and Swap. The active-session screen must reuse
+that owner rather than maintaining a second row of unstyled text pills.
+
+This is UI parity only. It must not fork or change the five action behaviours.
+Both surfaces route into the same canonical action doors, and a visual change
+to the shared hub must appear on both surfaces.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
