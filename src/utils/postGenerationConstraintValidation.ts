@@ -1,10 +1,31 @@
 /**
- * Final canonicalisation and active-constraint boundary for program writes.
+ * ACTIVE-CONSTRAINT REFUSAL BOUNDARY FOR PROGRAM WRITES.
  *
- * Generation and edit producers still own programming intent. This module
- * converts their output to the canonical workout shape, applies the existing
- * injury/exposure/equipment rules, then canonicalises the surviving content
- * again immediately before storage.
+ * ⚠ THIS MODULE NO LONGER AUTHORS, REPAIRS OR REWRITES ANYTHING (demolition
+ * area 1, Sam's burn-the-boats ruling 2026-08-19).
+ *
+ * It used to be a second programming authority sitting on the store's write
+ * primitives. Every export returned a REWRITTEN object: it collapsed days to
+ * Rest, filtered rows out for injury and equipment, trimmed sessions to a time
+ * cap, deleted whole sessions to satisfy a session cap, re-authored the week's
+ * exposure contract, and — after any constraint change — restaged and committed
+ * every persisted program surface through the accepted-state transaction. A
+ * week the composer authored and the athlete accepted was not the week that
+ * reached storage.
+ *
+ * WHAT SURVIVES IS THE REFUSAL, AND ONLY THE REFUSAL. Every function here
+ * returns `void` and communicates by throwing. A caller's workout is the
+ * caller's workout: this boundary may say NO to it, and may not hand back a
+ * different one.
+ *
+ *   A THROW IS A REFUSAL AND STAYS. A REWRITE IS A REPAIR AND IS GONE.
+ *
+ * The named current owners of what left: the weekly scheduler owns days and
+ * spacing; the composer and its specialists own content and safety AT
+ * AUTHORING TIME; the accepted-state transaction owns every write. What is
+ * temporarily missing is recorded on the rebuild list in
+ * `docs/STATUS_DEMOLITION.md` — it is not hidden behind a compatibility shim
+ * here.
  */
 
 import type {
@@ -14,105 +35,28 @@ import type {
   WeekScopedWorkoutOverlay,
   Workout,
 } from '../types/domain';
-import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import type {
   ActiveConstraint,
-  ActiveInjuryConstraint,
   ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
-import { canScoreCapacity } from '../data/capacityRubric';
 import { useReadinessStore } from '../store/readinessStore';
-import { useCalendarStore } from '../store/calendarStore';
-import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
-import { applyLighterDayTrim } from './lighterDayTrim';
-import { applyInjuryFilterToWorkout } from './injuryWorkoutFilter';
-import {
-  applyConstraintsToSession,
-  applyConstraintsToTypedComponents,
-  type Constraint,
-} from './exposureEngine';
-import { buildConstraintPlans } from './constraintPlan';
-import {
-  buildGenerationConstraintContext,
-  isStructuralGenerationConstraint,
-} from './generationConstraints';
-import {
-  equipmentRequirementsAreAvailable,
-  resolveEquipmentAvailability,
-} from './equipmentAvailability';
 import {
   buildReadinessActiveConstraints,
   constraintAppliesToDate,
 } from './readinessConstraints';
-import {
-  collapseWorkoutToRest,
-  hasMeaningfulWorkoutContent,
-} from './workoutContent';
+import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { todayISOLocal } from './appDate';
-import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { composeDaySurfaces } from '../rules/dayPrecedence';
-import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
-import {
-  finaliseWorkoutAfterMutation,
-  type WorkoutCanonicalisationContext,
-} from './workoutCanonicalisation';
-import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
-import { deriveScheduleReadiness, type ReadinessSignal } from './readiness';
 import { selectMicrocycleForDate } from './programBlockState';
-import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
-import {
-  evaluateEffectiveWeekExposureContract,
-  type WeeklyExposureContract,
-} from '../rules/weeklyExposureContract';
-import {
-  buildWeeklyExposureContract,
-  resolveRestrictedMainStrengthPatterns,
-} from '../rules/weeklyExposureContractBuilders';
-import { resolvePreseasonSubphase } from '../rules/preseasonSubphase';
-import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
-import { resolveEquipmentCapabilities } from './equipmentAvailability';
-import {
-  migrateLegacyWeeklyExposureContractV2,
-  type WeeklyExposureContractV2,
-} from '../rules/weeklyExposureContractV2';
-import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { liveAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
-import {
-  requireSection18AcceptedWeek,
-  type Section18AcceptedWeekCandidate,
-} from '../rules/section18AcceptedWeekGateway';
-import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
-import { hasPowerRow } from '../rules/sessionRowCounting';
-import { storedGameAnchor } from '../rules/gameAnchor';
-// THE ONE OWNER OF "what part of this day is the club's" (item 28). This seam
-// asks it rather than matching names itself, so away and the day card can never
-// disagree about what a team night is.
-import { getTeamTrainingWorkoutState } from './teamTraining';
-import {
-  hasStoredWeekDeclaration,
-  selectStoredWeekDeclaration,
-} from '../rules/storedWeekDeclaration';
+import { requireSection18AcceptedWeek } from '../rules/section18AcceptedWeekGateway';
+import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 
-export interface ActiveConstraintValidationInput {
-  workout: Workout | null;
-  date: string;
-  todayISO: string;
-  activeConstraints: readonly ActiveConstraint[];
-  profile?: OnboardingData | null;
-  canonicalContext?: WorkoutCanonicalisationContext;
-}
-
-export interface ActiveConstraintValidationResult {
-  workout: Workout | null;
-  changed: boolean;
-  collapsedToRest: boolean;
-  preservedAnchor: boolean;
-  activeConstraintIds: string[];
-  removedExerciseNames: string[];
-  removedComponents: Array<'conditioning' | 'speed' | 'power' | 'recovery_addon'>;
-}
+// ─── Pure date / constraint predicates ───────────────────────────────────────
 
 function dateOnly(value: string | undefined): string | undefined {
   return value?.slice(0, 10);
@@ -124,9 +68,15 @@ function addDaysISO(dateISO: string, days: number): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
-function uniquePatterns<T>(values: readonly T[]): T[] {
-  return Array.from(new Set(values));
-}
+const DAY_NAMES: import('../types/domain').DayOfWeek[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
 
 function constraintIsLiveOnDate(constraint: ActiveConstraint, date: string): boolean {
   if (constraint.status === 'resolved') return false;
@@ -139,42 +89,8 @@ function liveConstraintsForDate(
   constraints: readonly ActiveConstraint[],
   date: string,
 ): ActiveConstraint[] {
-  const live = constraints.filter((constraint) => constraintIsLiveOnDate(constraint, date));
-  const strongestFatigue = live
-    .filter((constraint) => constraint.type === 'fatigue')
-    .sort((left, right) => right.severity - left.severity ||
-      right.lastUpdatedAt.localeCompare(left.lastUpdatedAt))[0];
-  const sorenessByBucket = new Map<string, ActiveConstraint>();
-  for (const constraint of live) {
-    if (constraint.type !== 'soreness') continue;
-    const prior = sorenessByBucket.get(constraint.bucket);
-    if (!prior || constraint.severity > prior.severity ||
-      (constraint.severity === prior.severity && constraint.lastUpdatedAt > prior.lastUpdatedAt)) {
-      sorenessByBucket.set(constraint.bucket, constraint);
-    }
-  }
-  return [
-    ...live.filter((constraint) => constraint.type !== 'fatigue' && constraint.type !== 'soreness'),
-    ...Array.from(sorenessByBucket.values()),
-    ...(strongestFatigue ? [strongestFatigue] : []),
-  ];
+  return constraints.filter((constraint) => constraintIsLiveOnDate(constraint, date));
 }
-
-function isRecoveryWorkout(workout: Workout): boolean {
-  return workout.workoutType === 'Recovery' ||
-    workout.sessionTier === 'recovery' ||
-    /\brecovery\b/i.test(workout.name ?? '');
-}
-
-const DAY_NAMES: import('../types/domain').DayOfWeek[] = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
 
 function scheduleBlocksDate(
   constraint: ActiveScheduleConstraint,
@@ -206,410 +122,6 @@ function scheduleTimeCap(
   return caps.length > 0 ? Math.min(...caps) : null;
 }
 
-/**
- * A hard stop DELETES every non-recovery session in the day (the caller returns
- * `workout: null`). Only a medical signal may do that.
- *
- * READINESS MAY NEVER HARD-STOP. Sam's law: "There is no full pause. The app
- * never empties a week on readiness alone. An athlete who is extremely fatigued
- * gets the deload; they can always skip sessions themselves, and genuinely
- * severe cases route through the illness or injury doors, which are separate."
- *
- * This line used to read `readiness?.fullPause === true`, and the tier migration
- * rewrote it to `readiness?.deloaded === true`. That looks like a rename and is
- * not one: `fullPause` was the rarest tier, while `deloaded` is true for EVERY
- * low-readiness signal — so a single "I'm tired" emptied the athlete's whole
- * week. Widening hid inside a rename because both sides were booleans on the
- * same object.
- */
-function isGlobalHardStop(
-  constraints: readonly ActiveConstraint[],
-): boolean {
-  return constraints.some((constraint) =>
-    constraint.type === 'injury' && constraint.seriousSymptoms === true);
-}
-
-function engineConstraintsFor(
-  constraints: readonly ActiveConstraint[],
-): Constraint[] {
-  return buildConstraintPlans([...constraints].filter((constraint) =>
-    constraint.type !== 'schedule' ||
-    constraint.scheduleKind === undefined ||
-    constraint.scheduleKind === 'busy_week' ||
-    constraint.scheduleKind === 'max_sessions')).map((plan) => plan.constraint);
-}
-
-/**
- * Validate one candidate workout. Null means the final pass removed every
- * meaningful component; callers with non-null storage schemas use the shared
- * Rest-shell helper before committing.
- */
-export function validateWorkoutAgainstActiveConstraints(
-  input: ActiveConstraintValidationInput,
-): ActiveConstraintValidationResult {
-  const unchanged = (workout: Workout | null): ActiveConstraintValidationResult => ({
-    workout,
-    changed: false,
-    collapsedToRest: false,
-    preservedAnchor: false,
-    activeConstraintIds: [],
-    removedExerciseNames: [],
-    removedComponents: [],
-  });
-
-  if (!input.workout) return unchanged(input.workout);
-  const active = input.date < input.todayISO
-    ? []
-    : liveConstraintsForDate(input.activeConstraints, input.date);
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: active,
-    todayISO: input.date,
-  });
-  const prohibitedPatterns = Array.from(resolveRestrictedMainStrengthPatterns({
-    activeInjuries: generationContext?.injuries,
-    profileInjuries: input.profile?.injuries,
-  }));
-  const lowerBodyRestriction = prohibitedPatterns.includes('squat') ||
-    prohibitedPatterns.includes('hinge');
-  // THE DELOAD LAW keeps power: "Power is not removed on a deload; a deload is
-  // not a reason to lose sharpness." The tier migration mapped three tiers onto
-  // `deloaded`, which would have blocked power on EVERY deloaded week — the
-  // opposite of the law, and the same widening the hard-stop above suffered.
-  const readinessPowerBlocked = false;
-  const canonical = finaliseWorkoutAfterMutation(input.workout, {
-    ...input.canonicalContext,
-    date: input.date,
-    profile: input.profile,
-    phase: input.canonicalContext?.phase ?? input.profile?.seasonPhase,
-    prohibitedStrengthPatterns: uniquePatterns([
-      ...(input.canonicalContext?.prohibitedStrengthPatterns ?? []),
-      ...prohibitedPatterns,
-    ]),
-    prohibitPower: input.canonicalContext?.prohibitPower === true || readinessPowerBlocked,
-    // Readiness no longer removes sprint either — that is a count reduction, and
-    // the deload law shrinks the WORK inside a sprint session rather than
-    // deleting it. An injury restriction still does.
-    prohibitSprintHighSpeed: input.canonicalContext?.prohibitSprintHighSpeed === true ||
-      lowerBodyRestriction,
-  });
-  const canonicalRemovedNames = canonical.actions
-    .filter((action) => action.kind === 'row_removed' && !!action.item)
-    .map((action) => action.item!);
-  const canonicalRemovedPower = canonical.actions.some((action) => action.kind === 'power_removed');
-  const canonicalRemovedSpeed = canonical.actions.some((action) =>
-    action.reason === 'section18_safety_sprint_blocked');
-  if (input.date < input.todayISO) {
-    return {
-      ...unchanged(canonical.workout),
-      changed: canonical.changed,
-      removedExerciseNames: canonicalRemovedNames,
-      removedComponents: [
-        ...(canonicalRemovedPower ? ['power' as const] : []),
-        ...(canonicalRemovedSpeed ? ['speed' as const] : []),
-      ],
-    };
-  }
-  const powerAlignment = alignPowerToFinalWorkoutContent(canonical.workout);
-  let alignedWorkout = powerAlignment.workout;
-  let scheduleDurationChanged = false;
-  const alignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
-    powerAlignment.action === 'removed' ? ['power'] : [];
-  const alignedResult = (): ActiveConstraintValidationResult => ({
-    ...unchanged(alignedWorkout),
-    changed: canonical.changed || powerAlignment.action !== 'unchanged' ||
-      scheduleDurationChanged,
-    removedExerciseNames: canonicalRemovedNames,
-    removedComponents: Array.from(new Set([
-      ...(canonicalRemovedPower ? ['power' as const] : []),
-      ...(canonicalRemovedSpeed ? ['speed' as const] : []),
-      ...alignmentRemovedComponents,
-    ])),
-  });
-  if (active.length === 0) {
-    if (!hasMeaningfulWorkoutContent(alignedWorkout)) {
-      return {
-        ...alignedResult(),
-        workout: null,
-        collapsedToRest: true,
-      };
-    }
-    return alignedResult();
-  }
-
-  // ── WHAT BEING AWAY DOES — SEAT_INBOX item 28, Sam 2026-08-13 ──
-  //
-  // **His ruling, in full:** the away flow asks when he leaves and when he
-  // returns, the plan keeps running on whatever kit he has — *"if yes, follow
-  // same program"* — and *"yes clear team training and games while away"*.
-  //
-  // THE TWO HALVES ARE ONE RULE AND THIS IS WHERE IT LIVES, because this is the
-  // only seam that knows what a day is MADE OF. Away used to arrive here as
-  // `unavailableDates` and collapse the whole day to rest, which deleted the
-  // athlete's own gym session along with the club's night — the defect item 28
-  // exists to remove. A trip does not stop him training; it stops him getting
-  // to the club.
-  //
-  // SO: club-bound work goes, solo work stays and is reshaped by the equipment
-  // answer he gave in the same flow. A day that was ONLY club work becomes
-  // rest, which is the honest end of the same rule rather than a second one.
-  // ⚠ MEASURED 2026-08-13, AND THIS RULE DOES NOT YET REACH THE REAL GENERATOR.
-  // Generating a week with a live travel constraint produces a BYTE-IDENTICAL
-  // week: the day's team identity is `isTeamDay` on the PLAN entry, and the
-  // team-day name enforcement re-derives the name and workoutType from it
-  // AFTER this seam runs (`defaultProgram.ts` "Team-day name enforcement"), so
-  // anything decided here about a plan-derived team day is overwritten. What
-  // this rule DOES hold is the row-shaped team training the coach path and the
-  // legacy fixtures produce, which is what its cells exercise.
-  // **THE REAL FIX IS IN THE PLAN — the allocator must not mark a day
-  // `isTeamDay` inside a live travel span.** Named here rather than half-built.
-  const travelling = active.some((constraint): constraint is ActiveScheduleConstraint =>
-    constraint.type === 'schedule' && constraint.scheduleKind === 'travel');
-  if (travelling) {
-    // THE SAME PAIR `programEditWriteGuard` USES to recognise a fixture, so the
-    // two cannot disagree about what a game day is. A practice match rides the
-    // `sessionTier` half; `workoutType: 'Game'` is the stub the generator lays
-    // down for a real fixture.
-    const fixtureStub = alignedWorkout.workoutType === 'Game' ||
-      (alignedWorkout as { sessionTier?: unknown }).sessionTier === 'game';
-    const team = getTeamTrainingWorkoutState(alignedWorkout);
-    if (fixtureStub || team.isTeamTrainingOnly) {
-      return {
-        workout: null,
-        changed: true,
-        collapsedToRest: true,
-        preservedAnchor: false,
-        activeConstraintIds: active.map((constraint) => constraint.id),
-        removedExerciseNames: (alignedWorkout.exercises ?? [])
-          .map((row: any) => row?.exercise?.name ?? row?.name ?? '')
-          .filter(Boolean),
-        removedComponents: [],
-      };
-    }
-    if (team.hasTeamTraining) {
-      // THE DAY KEEPS ITS OWN HALF. Its name follows the survivors through the
-      // ONE owner of that question (`getTeamTrainingWorkoutState`), so a
-      // "Strength + Team Training" day cannot keep announcing a team night the
-      // athlete is a thousand kilometres from.
-      alignedWorkout = {
-        ...alignedWorkout,
-        name: team.displayName ?? alignedWorkout.name,
-        workoutType: team.displayWorkoutType ?? alignedWorkout.workoutType,
-        exercises: team.renderableExercises,
-      } as typeof alignedWorkout;
-      scheduleDurationChanged = true;
-    }
-  }
-
-  const blockingSchedule = active.find((constraint): constraint is ActiveScheduleConstraint =>
-    constraint.type === 'schedule' && scheduleBlocksDate(constraint, input.date));
-  if (blockingSchedule) {
-    return {
-      workout: null,
-      changed: true,
-      collapsedToRest: true,
-      preservedAnchor: false,
-      activeConstraintIds: active.map((constraint) => constraint.id),
-      removedExerciseNames: (alignedWorkout.exercises ?? [])
-        .map((row) => row.exercise?.name ?? '')
-        .filter(Boolean),
-      removedComponents: Array.from(new Set([
-        ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
-        ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
-        ...(hasPowerRow(alignedWorkout) ? ['power' as const] : []),
-        ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
-      ])),
-    };
-  }
-
-  // THE COMPRESSED SESSION (Sam's minutes ruling, 2026-08-02): a session on a
-  // capped date is CUT TO ESSENTIALS, not relabelled — main lift kept
-  // byte-identical, accessory sets halved, hard finisher dropped, hard
-  // conditioning eased — via the Bible §9 authored trim (`applyLighterDayTrim`),
-  // so no fourth naming authority for session content is invented here.
-  //
-  // The old guard read `durationMinutes > timeCap` and generated core sessions
-  // carry `durationMinutes: 0`, so the cap NEVER fired on a real generated
-  // week — the machinery was vacuous on exactly the content it existed for
-  // (declared red 9's deeper shape). Zero is ABSENCE of duration evidence,
-  // not evidence of a short session: an unanchored session compresses unless
-  // its stated duration proves it already fits. After compression the session
-  // states the cap, which is also the idempotency guard — a capped session
-  // re-validated is not trimmed again.
-  //
-  // Anchored sessions (game / team night) are never content-cut and never
-  // have the cap stamped over an unstated duration — the club's night is not
-  // ours to shorten; they keep only the pre-existing over-cap alignment.
-  const timeCap = scheduleTimeCap(active, input.date);
-  if (timeCap !== null) {
-    const capClassification = classifyVisibleSession(alignedWorkout);
-    const capAnchored = capClassification.anchors.game ||
-      capClassification.anchors.teamTraining;
-    const statedDuration = Number.isFinite(alignedWorkout.durationMinutes) &&
-      alignedWorkout.durationMinutes > 0;
-    if (!capAnchored && (!statedDuration || alignedWorkout.durationMinutes > timeCap)) {
-      alignedWorkout = {
-        ...applyLighterDayTrim(alignedWorkout).workout,
-        durationMinutes: timeCap,
-      };
-      scheduleDurationChanged = true;
-    } else if (capAnchored && statedDuration && alignedWorkout.durationMinutes > timeCap) {
-      alignedWorkout = {
-        ...alignedWorkout,
-        durationMinutes: timeCap,
-      };
-      scheduleDurationChanged = true;
-    }
-  }
-
-  if (isGlobalHardStop(active) && !isRecoveryWorkout(alignedWorkout)) {
-    return {
-      workout: null,
-      changed: true,
-      collapsedToRest: true,
-      preservedAnchor: false,
-      activeConstraintIds: active.map((constraint) => constraint.id),
-      removedExerciseNames: (alignedWorkout.exercises ?? [])
-        .map((row) => row.exercise?.name ?? '')
-        .filter(Boolean),
-      removedComponents: Array.from(new Set([
-        ...(canonicalRemovedPower ? ['power' as const] : []),
-        ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
-        ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
-        ...(hasPowerRow(alignedWorkout) || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
-        ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
-      ])),
-    };
-  }
-
-  const classification = classifyVisibleSession(alignedWorkout);
-  if (classification.anchors.game || classification.anchors.teamTraining) {
-    return {
-      ...alignedResult(),
-      preservedAnchor: true,
-      activeConstraintIds: active.map((constraint) => constraint.id),
-    };
-  }
-
-  let workout = alignedWorkout;
-  const beforeNames = new Set(
-    (workout.exercises ?? []).map((row) => row.exercise?.name ?? '').filter(Boolean),
-  );
-
-  for (const injury of active.filter(
-    (constraint): constraint is ActiveInjuryConstraint =>
-      constraint.type === 'injury' && !!constraint.bucket,
-  )) {
-    workout = applyInjuryFilterToWorkout(workout, {
-      bodyPart: injury.bodyPart,
-      bucket: injury.bucket,
-      severity: injury.severity,
-      status: injury.status,
-    });
-  }
-
-  const engineConstraints = engineConstraintsFor(active);
-  if (engineConstraints.length > 0) {
-    const applied = applyConstraintsToSession(workout, engineConstraints);
-    if (applied.applied) workout = applied.workout;
-  }
-
-  const hasEquipmentConstraint = active.some((constraint) => constraint.type === 'equipment');
-  const availableEquipment = hasEquipmentConstraint
-    ? resolveEquipmentAvailability(input.profile, active, input.date)
-    : null;
-  if (availableEquipment) {
-    const exercises = (workout.exercises ?? []).filter((row) =>
-      equipmentRequirementsAreAvailable(
-        row.exercise?.equipmentRequired,
-        availableEquipment,
-      ));
-    if (exercises.length !== (workout.exercises ?? []).length) {
-      workout = { ...workout, exercises };
-    }
-  }
-
-  const componentResult = applyConstraintsToTypedComponents(
-    workout,
-    engineConstraints,
-    {
-      equipmentAvailable: availableEquipment
-        ? (requirements) => equipmentRequirementsAreAvailable(
-            requirements,
-            availableEquipment,
-          )
-        : undefined,
-    },
-  );
-  // Constraints are allowed to remove planned work. Re-run the same shape
-  // canonicaliser afterwards, but never restore content that safety just
-  // removed. This keeps type/name/components honest without fighting injury,
-  // readiness or equipment policy.
-  const postConstraintCanonical = finaliseWorkoutAfterMutation(componentResult.workout, {
-    ...input.canonicalContext,
-    date: input.date,
-    profile: input.profile,
-    phase: input.canonicalContext?.phase ?? input.profile?.seasonPhase,
-    restoreMissingPlanPatterns: false,
-  });
-  workout = postConstraintCanonical.workout;
-  const postCanonicalRemovedNames = postConstraintCanonical.actions
-    .filter((action) => action.kind === 'row_removed' && !!action.item)
-    .map((action) => action.item!);
-  const postCanonicalRemovedPower = postConstraintCanonical.actions.some(
-    (action) => action.kind === 'power_removed',
-  );
-  const removedComponents = Array.from(new Set([
-    ...(canonicalRemovedPower ? ['power' as const] : []),
-    ...(canonicalRemovedSpeed ? ['speed' as const] : []),
-    ...alignmentRemovedComponents,
-    ...componentResult.removedComponents,
-    ...(postCanonicalRemovedPower ? ['power' as const] : []),
-  ])) as ActiveConstraintValidationResult['removedComponents'];
-
-  const afterNames = new Set(
-    (workout.exercises ?? []).map((row) => row.exercise?.name ?? '').filter(Boolean),
-  );
-  const removedExerciseNames = Array.from(new Set([
-    ...canonicalRemovedNames,
-    ...postCanonicalRemovedNames,
-    ...Array.from(beforeNames).filter((name) => !afterNames.has(name)),
-  ]));
-  if (!hasMeaningfulWorkoutContent(workout)) {
-    return {
-      workout: null,
-      changed: true,
-      collapsedToRest: true,
-      preservedAnchor: false,
-      activeConstraintIds: active.map((constraint) => constraint.id),
-      removedExerciseNames,
-      removedComponents,
-    };
-  }
-
-  return {
-    workout,
-    changed: canonical.changed || postConstraintCanonical.changed || workout !== canonical.workout,
-    collapsedToRest: false,
-    preservedAnchor: false,
-    activeConstraintIds: active.map((constraint) => constraint.id),
-    removedExerciseNames,
-    removedComponents,
-  };
-}
-
-export function validateWeekAgainstActiveConstraints<T extends { date: string; workout: Workout | null }>(
-  args: Omit<ActiveConstraintValidationInput, 'date' | 'workout'> & { days: readonly T[] },
-): T[] {
-  return args.days.map((day) => ({
-    ...day,
-    workout: validateWorkoutAgainstActiveConstraints({
-      ...args,
-      date: day.date,
-      workout: day.workout,
-    }).workout,
-  }));
-}
-
 function dateForWorkout(microcycle: Microcycle, workout: Workout): string {
   const start = microcycle.startDate.slice(0, 10);
   const startDow = new Date(`${start}T12:00:00`).getDay();
@@ -617,147 +129,7 @@ function dateForWorkout(microcycle: Microcycle, workout: Workout): string {
   return addDaysISO(start, offset);
 }
 
-const EXPOSURE_DAY_NUMBERS: Readonly<Record<string, number>> = {
-  Sunday: 0,
-  Monday: 1,
-  Tuesday: 2,
-  Wednesday: 3,
-  Thursday: 4,
-  Friday: 5,
-  Saturday: 6,
-};
-
-function reResolveContractForActiveConstraints(args: {
-  contract: WeeklyExposureContract;
-  microcycle: Microcycle;
-  activeConstraints: readonly ActiveConstraint[];
-  profile?: OnboardingData | null;
-  teamTrainingDayNumbers?: readonly number[];
-  hasGame?: boolean;
-  gameDay?: number | null;
-}): WeeklyExposureContract {
-  const profile = args.profile;
-  // This function REFINES an existing contract using the athlete's capacity. It
-  // has always declined when there is no profile at all — refining against
-  // nothing is not possible, so it hands the contract back untouched.
-  //
-  // A profile that exists but carries neither capacity answer is the same
-  // situation, and is now treated the same way. It is NOT a softening of the
-  // fail-loud ruling: generation still refuses outright, because that is where a
-  // capacity guess would reach the athlete as a prescription. Here the only
-  // alternative to declining would be to score a guess and refine against it —
-  // which is the thing the ruling forbids — or to fail an athlete's manual save
-  // on a legacy profile, which the bodyweight precedent does not do either.
-  if (!profile || !canScoreCapacity(profile)) return args.contract;
-  const teamTrainingDayNumbers = args.teamTrainingDayNumbers
-    ? Array.from(new Set(args.teamTrainingDayNumbers)).sort((a, b) => a - b)
-    : args.contract.anchors.teamTrainingDays;
-  const hasGame = args.hasGame ?? args.contract.anchors.gameDay !== null;
-  const gameDay = hasGame
-    ? args.gameDay !== undefined ? args.gameDay : args.contract.anchors.gameDay
-    : null;
-  const anchorsChanged =
-    JSON.stringify(teamTrainingDayNumbers) !==
-      JSON.stringify([...args.contract.anchors.teamTrainingDays].sort((a, b) => a - b)) ||
-    hasGame !== (args.contract.anchors.gameDay !== null) ||
-    gameDay !== args.contract.anchors.gameDay;
-  if (args.activeConstraints.length === 0 && !anchorsChanged) return args.contract;
-  const weekStart = args.microcycle.startDate.slice(0, 10);
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: args.activeConstraints,
-    todayISO: weekStart,
-    periodEndISO: args.microcycle.endDate.slice(0, 10),
-  });
-
-  const selected = new Set<number>();
-  for (const day of profile.preferredTrainingDays ?? []) {
-    const number = EXPOSURE_DAY_NUMBERS[day];
-    if (number !== undefined) selected.add(number);
-  }
-  const hasDeclaredAvailability = selected.size > 0;
-  for (const day of teamTrainingDayNumbers) selected.add(day);
-  // Legacy profiles may not retain preferred weekdays. Their generated
-  // microcycle is the best available record of the declared schedulable set;
-  // this only supplies availability, never achieved exposure.
-  if (!hasDeclaredAvailability) {
-    for (const workout of args.microcycle.workouts) selected.add(workout.dayOfWeek);
-  }
-
-  const equipment = resolveEquipmentCapabilities(
-    profile,
-    args.activeConstraints,
-    weekStart,
-  );
-  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
-    phase: args.contract.identity.phase,
-    equipment,
-    profile,
-    generationConstraints: generationContext,
-  });
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const acceptedContext = require('../store/programStore').useProgramStore.getState()
-    .acceptedMaterialContext;
-  const readinessSignal = (acceptedContext?.revision > 0
-    ? acceptedContext.readinessSignalsByDate
-    : useReadinessStore.getState().signalsByDate)?.[weekStart] ?? null;
-  // RETIRED (Sam, 2026-07-28). When both capacity answers were absent this
-  // inferred the athlete's capacity from the SHAPE OF THE WEEK it had just
-  // built — a big strength target meant "high". That runs the structure/dose
-  // ruling backwards: structure would be setting capacity, and the inference is
-  // circular besides, since capacity is meant to be an input to the week rather
-  // than a reading of it. Absent answers now reach the rubric, which refuses.
-  const capacity = deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal });
-  const subphase = args.contract.identity.subphase;
-  const offseasonSubphase =
-    subphase === 'early_offseason' ||
-    subphase === 'mid_offseason' ||
-    subphase === 'late_offseason'
-      ? subphase
-      : null;
-  const preseasonSubphase =
-    subphase === 'early_preseason' ||
-    subphase === 'mid_preseason' ||
-    subphase === 'late_preseason'
-      ? subphase
-      : null;
-  return buildWeeklyExposureContract({
-    seasonPhase: args.contract.identity.phase,
-    capacity,
-    selectedDayNumbers: Array.from(selected),
-    teamTrainingDayNumbers,
-    hasGame,
-    gameDay,
-    weekKind: args.contract.identity.weekKind,
-    offseasonSubphase: resolveOffseasonSubphase({
-      seasonPhase: args.contract.identity.phase,
-      explicitSubphase: offseasonSubphase,
-    }),
-    preseasonSubphase: resolvePreseasonSubphase({
-      seasonPhase: args.contract.identity.phase,
-      explicitSubphase: preseasonSubphase,
-    }),
-    readinessDeloaded: generationContext?.readiness?.deloaded === true,
-    maxStrengthSessions: profile.experienceLevel
-      ? resolveTrainingAgePolicy(profile.experienceLevel).maxCoreSessions
-      : null,
-    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
-    attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
-    profileInjuries: profile.injuries,
-    activeInjuries: generationContext?.injuries,
-    byeMode: args.contract.identity.mode === 'in_season_bye_recovery'
-      ? 'recovery'
-      : args.contract.identity.mode === 'in_season_bye_build'
-        ? 'build'
-        : undefined,
-    // PRESERVE a minted optional-week mode across re-derivation. Without this the
-    // validation path would re-collapse the fact into a fatigue tier and
-    // downgrade the mode — the reinterpretation seam the design forbids. The
-    // gateway consumes the mode; it never re-reads facts.
-    weekModeOverride: args.contract.identity.mode === 'optional_week'
-      ? 'optional_week'
-      : undefined,
-  });
-}
+// ─── Refusals ────────────────────────────────────────────────────────────────
 
 function assertEffectiveMicrocycleExposure(microcycle: Microcycle): void {
   if (!microcycle.exposureContract) return;
@@ -773,269 +145,37 @@ function assertEffectiveMicrocycleExposure(microcycle: Microcycle): void {
   throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
 }
 
-function resolveLiveDateMutationExposure(args: {
-  date: string;
-  workout: Workout;
-  context: ReturnType<typeof liveValidationContext>;
-}): { weekStart: string; contract: WeeklyExposureContract } | null {
-  const state = require('../store/programStore').useProgramStore.getState();
-  const microcycle = selectMicrocycleForDate(
-    state.currentProgram,
-    state.currentMicrocycle,
-    args.date,
-  );
-  const v2Overlay = state.weekScopedOverlays?.[
-    addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7))
-  ] as WeekScopedWorkoutOverlay | undefined;
-  // THE FLIP, MOVE (ii) — one read door. An EXISTENCE question on the same
-  // precedence, so it is asked of the same owner.
-  if (hasStoredWeekDeclaration({
-    overlay: v2Overlay,
-    coveringMicrocycle: microcycle,
-    weekStart: addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7)),
-    reader: 'postGenerationConstraintValidation.legacyLedgerSuppression',
-  })) {
-    // Contract v2 was already enforced by finaliseLiveDateCandidateAgainstWeek.
-    // The legacy ledger cannot represent stacked same-day credits and must
-    // not become a second, contradictory commit authority.
-    return null;
-  }
-  if (!microcycle?.exposureContract) return null;
-  const weekStart = addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7));
-  const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
-  const contract = state.exposureContractsByWeek?.[weekStart] ??
-    overlay?.exposureContract ?? microcycle.exposureContract;
-  const workouts: Workout[] = [];
-  for (let offset = 0; offset < 7; offset++) {
-    const date = addDaysISO(weekStart, offset);
-    const dow = new Date(`${date}T12:00:00`).getDay();
-    // Tier 2 of THE ordering — `rules/dayPrecedence.ts`. The candidate date
-    // keeps its own answer: this loop is composing the week AROUND an edit
-    // under validation, not resolving it.
-    const workout = date === args.date
-      ? args.workout
-      : composeDaySurfaces({
-          date,
-          dayOfWeek: dow,
-          dateOverrides: state.dateOverrides,
-          overlay,
-          base: microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null,
-        }).workout;
-    if (workout) workouts.push(workout);
-  }
-  const editedDay = new Date(`${args.date}T12:00:00`).getDay();
-  const editedClassification = classifyVisibleSession(args.workout);
-  const originalGameDay = contract.anchors.gameDay;
-  const explicitlyChangedGameAnchor =
-    editedClassification.anchors.game || editedDay === originalGameDay;
-  const resolvedGameDay = editedClassification.anchors.game
-    ? editedDay
-    : explicitlyChangedGameAnchor
-      ? null
-      : originalGameDay;
-  let resolvedContract = reResolveContractForActiveConstraints({
-    contract,
-    microcycle,
-    activeConstraints: args.context.activeConstraints,
-    profile: args.context.profile,
-    teamTrainingDayNumbers: workouts
-      .filter((candidate) => classifyVisibleSession(candidate).anchors.teamTraining)
-      .map((candidate) => candidate.dayOfWeek),
-    hasGame: resolvedGameDay !== null,
-    gameDay: resolvedGameDay,
-  });
-  const validation = evaluateEffectiveWeekExposureContract(
-    resolvedContract,
-    workouts,
-    weekStart,
-  );
-  if (!validation.accepted) {
-    const detail = validation.unresolvedShortfalls
-      .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
-      .join(', ');
-    throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
-  }
-  return { weekStart, contract: resolvedContract };
-}
-
-function isoDayDiff(date: string, gameDate: string): number {
-  const [dy, dm, dd] = date.slice(0, 10).split('-').map(Number);
-  const [gy, gm, gd] = gameDate.slice(0, 10).split('-').map(Number);
-  return Math.round(
-    (Date.UTC(dy, dm - 1, dd) - Date.UTC(gy, gm - 1, gd)) / 86_400_000,
-  );
-}
-
-function gameProximityContext(
-  date: string,
-  gameDates: readonly string[],
-): Pick<WorkoutCanonicalisationContext, 'hasGame' | 'gOffset'> {
-  const offsets = gameDates.map((gameDate) => isoDayDiff(date, gameDate))
-    .filter((offset) => offset >= -6 && offset <= 1)
-    .sort((a, b) => Math.abs(a) - Math.abs(b));
-  return offsets.length > 0
-    ? { hasGame: true, gOffset: offsets[0] }
-    : { hasGame: false };
-}
-
-
-export function validateMicrocycleAgainstActiveConstraints(args: {
-  microcycle: Microcycle;
-  todayISO: string;
+/**
+ * The athlete's TEMPORARY schedule answers — "I can only train N times this
+ * week", "I am not available on this date", "keep it under N minutes" — are
+ * facts they stated. This boundary refuses a week that does not honour them.
+ *
+ * ⚠ IT NO LONGER MANUFACTURES COMPLIANCE. The removal engine that used to
+ * delete sessions until the count fitted the cap is deleted: choosing which
+ * session an athlete loses is programming, and it belongs to the scheduler.
+ * A week over the cap is now REFUSED rather than silently cut.
+ */
+function assertTemporaryScheduleConstraintsHonoured(args: {
+  weekStart: string;
+  datedWorkouts: ReadonlyArray<{ date: string; workout: Workout }>;
   activeConstraints: readonly ActiveConstraint[];
-  profile?: OnboardingData | null;
-  canonicalContext?: WorkoutCanonicalisationContext;
-}): Microcycle {
-  let changed = false;
-  const weekStart = args.microcycle.startDate.slice(0, 10);
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: args.activeConstraints,
-    todayISO: weekStart,
-    periodEndISO: args.microcycle.endDate.slice(0, 10),
-  });
-  const forceFullPause = args.activeConstraints.some((constraint) =>
-    constraint.type === 'injury' && constraint.status !== 'resolved' &&
-    constraint.seriousSymptoms === true);
-  let exposureContractV2: WeeklyExposureContractV2 | undefined =
-    args.microcycle.exposureContractV2 ?? (
-      args.microcycle.exposureContract
-        ? migrateLegacyWeeklyExposureContractV2(args.microcycle.exposureContract, {
-            blockNumber: args.microcycle.miniCycleNumber,
-            // BIBLE_ANCHOR: deload_block_length_weeks — the Bible states 3-4
-            // weeks; this modulo pins the top of that range.
-            weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
-            globalWeek: args.microcycle.weekNumber,
-          })
-        : undefined
-    );
-  if (exposureContractV2) {
-    exposureContractV2 = applyGenerationSafetyToSection18Contract({
-      contract: exposureContractV2,
-      generationConstraints: generationContext,
-      forceFullPause,
-    });
-  }
-  const datedWorkouts = args.microcycle.workouts.map((workout) => ({
-    date: dateForWorkout(args.microcycle, workout),
-    workout,
-  }));
-  const gameDates = datedWorkouts
-    .filter(({ workout }) => classifyVisibleSession(workout).anchors.game)
-    .map(({ date }) => date);
-  let workouts = args.microcycle.workouts.map((workout) => {
-    const date = dateForWorkout(args.microcycle, workout);
-    const result = validateWorkoutAgainstActiveConstraints({
-      workout,
-      date,
-      todayISO: args.todayISO,
-      activeConstraints: args.activeConstraints,
-      profile: args.profile,
-      canonicalContext: {
-        ...args.canonicalContext,
-        phase: args.canonicalContext?.phase ?? args.profile?.seasonPhase,
-        offseasonSubphase: args.canonicalContext?.offseasonSubphase ??
-          resolveOffseasonSubphase({
-            seasonPhase: args.profile?.seasonPhase,
-            explicitSubphase: exposureContractV2?.identity.declaredSubphase === 'early_offseason' ||
-              exposureContractV2?.identity.declaredSubphase === 'mid_offseason' ||
-              exposureContractV2?.identity.declaredSubphase === 'late_offseason'
-              ? exposureContractV2.identity.declaredSubphase
-              : null,
-          }),
-        weekKind: args.canonicalContext?.weekKind ?? args.microcycle.weekKind,
-        ...gameProximityContext(date, gameDates),
-        planIntentValid: !!workout.planEntryId,
-        referenceWorkout: workout,
-        prohibitedStrengthPatterns: exposureContractV2?.safety.prohibitedPatterns,
-        prohibitPower: exposureContractV2?.safety.prohibitedPower,
-        prohibitSprintHighSpeed: exposureContractV2?.safety.prohibitedSprintHighSpeed,
-      },
-    });
-    if (result.changed) changed = true;
-    return result.workout ?? collapseWorkoutToRest(workout);
-  });
+}): void {
   const sessionCaps = args.activeConstraints
     .filter((constraint): constraint is ActiveScheduleConstraint =>
       constraint.type === 'schedule' &&
       typeof constraint.maxSessionsThisWeek === 'number' &&
       constraint.status !== 'resolved' &&
-      (!constraint.weekStartISO || constraint.weekStartISO === weekStart))
+      (!constraint.weekStartISO || constraint.weekStartISO === args.weekStart))
     .map((constraint) => Math.max(0, Math.trunc(constraint.maxSessionsThisWeek!)));
   if (sessionCaps.length > 0) {
     const cap = Math.min(...sessionCaps);
-    const trainable = workouts
-      .map((workout, index) => ({ workout, index, classification: classifyVisibleSession(workout) }))
-      .filter(({ workout }) => hasMeaningfulWorkoutContent(workout));
-    const protectedCount = trainable.filter(({ classification }) =>
-      classification.anchors.game || classification.anchors.teamTraining).length;
-    if (protectedCount > cap) throw new Error('temporary_schedule_max_sessions_impossible');
-    const removable = trainable
-      .filter(({ classification }) =>
-        !classification.anchors.game && !classification.anchors.teamTraining)
-      .sort((left, right) => {
-        const tier = (workout: Workout): number =>
-          workout.sessionTier === 'optional' || workout.sessionTier === 'recovery' ? 0 :
-            workout.sessionTier === 'core' ? 2 : 1;
-        return tier(left.workout) - tier(right.workout) ||
-          right.workout.dayOfWeek - left.workout.dayOfWeek ||
-          left.index - right.index;
-      });
-    const removeCount = Math.max(0, trainable.length - cap);
-    const removeIndexes = new Set(removable.slice(0, removeCount).map(({ index }) => index));
-    if (removeIndexes.size < removeCount) throw new Error('temporary_schedule_max_sessions_impossible');
-    if (removeIndexes.size > 0) {
-      changed = true;
-      workouts = workouts.map((workout, index) =>
-        removeIndexes.has(index) ? collapseWorkoutToRest(workout) : workout);
-    }
-  }
-  let exposureContract = args.microcycle.exposureContract
-    ? reResolveContractForActiveConstraints({
-        contract: args.microcycle.exposureContract,
-        microcycle: args.microcycle,
-        activeConstraints: args.activeConstraints,
-        profile: args.profile,
-        teamTrainingDayNumbers: workouts
-          .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
-          .map((workout) => workout.dayOfWeek),
-      })
-    : undefined;
-  // THE POST-COMPOSER SAFETY REWRITE IS GONE (demolition area C, 2026-08-19).
-  //
-  // `finaliseSection18SafetyWeek` conformed a FINISHED week: it collapsed days
-  // to Rest, cloned main-strength rows onto other days to satisfy required
-  // patterns, and stripped `planEntryId`/`strengthIntent` from what it
-  // rewrote. That is authoring, and it ran after the composer had authored.
-  //
-  // The surviving owner is the COMPOSER plus its specialists, at authoring
-  // time — recorded on the rebuild list by area A. What stays here is the
-  // BOUNDARY: `requireSection18AcceptedWeek` still validates and still
-  // refuses. A refusal is not a repair.
-  let safetyWorkouts = workouts;
-  if (exposureContractV2) {
-    const accepted = requireSection18AcceptedWeek({
-      contract: exposureContractV2,
-      workouts: safetyWorkouts,
-      weekStart,
-      profile: args.profile,
-      // A LIVE-STORE WRITE VALIDATOR MEANS THE LIVE WORLD, and now says so.
-      // All four doors here were forgotten doors
-      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
-      surfaces: liveAcceptedEffectiveWeekSurfaces(),
-    });
-    safetyWorkouts = accepted.canonicalWorkouts;
-    exposureContractV2 = accepted.contract;
-  }
-  if (sessionCaps.length > 0) {
-    const cap = Math.min(...sessionCaps);
-    const visibleSessions = safetyWorkouts.filter((workout) =>
-      hasMeaningfulWorkoutContent(workout)).length;
+    const visibleSessions = args.datedWorkouts
+      .filter(({ workout }) => hasMeaningfulWorkoutContent(workout)).length;
     if (visibleSessions > cap) {
       throw new Error('temporary_schedule_max_sessions_not_preserved');
     }
   }
-  for (const workout of safetyWorkouts) {
-    const date = dateForWorkout(args.microcycle, workout);
+  for (const { date, workout } of args.datedWorkouts) {
     const live = liveConstraintsForDate(args.activeConstraints, date);
     if (live.some((constraint) =>
       constraint.type === 'schedule' && scheduleBlocksDate(constraint, date)) &&
@@ -1047,77 +187,59 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       throw new Error('temporary_time_cap_not_preserved');
     }
   }
-  const contractChanged = (
-    exposureContract !== args.microcycle.exposureContract &&
-    JSON.stringify(exposureContract) !== JSON.stringify(args.microcycle.exposureContract)
-  ) || JSON.stringify(exposureContractV2) !== JSON.stringify(args.microcycle.exposureContractV2);
-  const workoutsChanged = JSON.stringify(safetyWorkouts) !== JSON.stringify(args.microcycle.workouts);
-  const validated = changed || contractChanged || workoutsChanged
-    ? { ...args.microcycle, workouts: safetyWorkouts, exposureContract, exposureContractV2 }
-    : args.microcycle;
-  if (!validated.exposureContractV2) assertEffectiveMicrocycleExposure(validated);
-  return validated;
 }
 
-export function validateProgramAgainstActiveConstraints(args: {
+/**
+ * Refuse a microcycle that the §18 boundary rejects, that breaks a temporary
+ * schedule answer, or whose effective exposure is unresolved.
+ *
+ * `requireSection18AcceptedWeek` returns canonical workouts. THEY ARE
+ * DELIBERATELY DISCARDED: §18 is validation-only (demolition area A), so its
+ * output equals its input, and taking it back would re-open the door this
+ * module was demolished to close.
+ */
+export function assertMicrocycleAgainstActiveConstraints(args: {
+  microcycle: Microcycle;
+  todayISO: string;
+  activeConstraints: readonly ActiveConstraint[];
+  profile?: OnboardingData | null;
+}): void {
+  const weekStart = args.microcycle.startDate.slice(0, 10);
+  const datedWorkouts = args.microcycle.workouts.map((workout) => ({
+    date: dateForWorkout(args.microcycle, workout),
+    workout,
+  }));
+  const contract: WeeklyExposureContractV2 | undefined =
+    args.microcycle.exposureContractV2 ?? undefined;
+  if (contract) {
+    requireSection18AcceptedWeek({
+      contract,
+      workouts: args.microcycle.workouts,
+      weekStart,
+      profile: args.profile,
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
+    });
+  }
+  assertTemporaryScheduleConstraintsHonoured({
+    weekStart,
+    datedWorkouts,
+    activeConstraints: args.activeConstraints,
+  });
+  if (!contract) assertEffectiveMicrocycleExposure(args.microcycle);
+}
+
+export function assertProgramAgainstActiveConstraints(args: {
   program: TrainingProgram;
   todayISO: string;
   activeConstraints: readonly ActiveConstraint[];
   profile?: OnboardingData | null;
-}): TrainingProgram {
-  let changed = false;
-  const microcycles = args.program.microcycles.map((microcycle) => {
-    const validated = validateMicrocycleAgainstActiveConstraints({ ...args, microcycle });
-    if (validated !== microcycle) changed = true;
-    return validated;
-  });
-  return changed ? { ...args.program, microcycles } : args.program;
+}): void {
+  for (const microcycle of args.program.microcycles) {
+    assertMicrocycleAgainstActiveConstraints({ ...args, microcycle });
+  }
 }
 
-export function validateWeekOverlayAgainstActiveConstraints(args: {
-  overlay: WeekScopedWorkoutOverlay;
-  todayISO: string;
-  activeConstraints: readonly ActiveConstraint[];
-  profile?: OnboardingData | null;
-  canonicalContext?: WorkoutCanonicalisationContext;
-}): WeekScopedWorkoutOverlay {
-  let changed = false;
-  let workoutsByDate = Object.fromEntries(
-    Object.entries(args.overlay.workoutsByDate).map(([date, workout]) => {
-      const result = validateWorkoutAgainstActiveConstraints({ ...args, date, workout });
-      if (result.changed) changed = true;
-      return [date, result.workout];
-    }),
-  );
-  let validated = changed ? { ...args.overlay, workoutsByDate } : args.overlay;
-  const contract = validated.exposureContractV2 ?? (
-    validated.exposureContract
-      ? migrateLegacyWeeklyExposureContractV2(validated.exposureContract)
-      : undefined
-  );
-  if (contract) {
-    const accepted = requireSection18AcceptedWeek({
-      contract,
-      workouts: Object.values(workoutsByDate).filter((workout): workout is Workout => !!workout),
-      weekStart: validated.weekStart,
-      profile: args.profile,
-      surfaces: liveAcceptedEffectiveWeekSurfaces(),
-    });
-    const byDay = new Map(accepted.canonicalWorkouts.map((workout) => [workout.dayOfWeek, workout]));
-    workoutsByDate = Object.fromEntries(
-      Object.keys(workoutsByDate).map((date) => {
-        const day = new Date(`${date}T12:00:00`).getDay();
-        return [date, byDay.get(day) ?? null];
-      }),
-    );
-    validated = {
-      ...validated,
-      exposureContractV2: accepted.contract,
-      workoutsByDate,
-    };
-  }
-  return validated;
-}
+// ─── The live world ──────────────────────────────────────────────────────────
 
 function liveValidationContext(
   activeConstraintsOverride?: readonly ActiveConstraint[],
@@ -1144,7 +266,9 @@ function liveValidationContext(
   const readinessSignals = hasAcceptedContext
     ? accepted.readinessSignalsByDate
     : useReadinessStore.getState().signalsByDate;
-  for (const signal of Object.values(readinessSignals ?? {}) as ReadinessSignal[]) {
+  for (const signal of Object.values(readinessSignals ?? {}) as Array<
+    Parameters<typeof buildReadinessActiveConstraints>[0]
+  >) {
     for (const constraint of buildReadinessActiveConstraints(signal)) {
       activeById.set(constraint.id, constraint);
     }
@@ -1156,87 +280,18 @@ function liveValidationContext(
   };
 }
 
-function liveWorkoutCanonicalisationContext(
-  date: string,
-  workout: Workout,
-  profile: OnboardingData,
-): WorkoutCanonicalisationContext {
-  // Dynamic access avoids making ProgramStore statically import itself through
-  // this final write module.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const state = require('../store/programStore').useProgramStore.getState();
-  const datedProgramWorkouts: Array<{ date: string; workout: Workout }> =
-    (state.currentProgram?.microcycles ?? []).flatMap((microcycle: Microcycle) =>
-      (microcycle.workouts ?? []).map((candidate) => ({
-        date: dateForWorkout(microcycle, candidate),
-        workout: candidate,
-      })),
-    );
-  const allProgramWorkouts = datedProgramWorkouts.map(({ workout: candidate }) => candidate);
-  const referenceWorkout = workout.planEntryId
-    ? allProgramWorkouts.find((candidate) => candidate.planEntryId === workout.planEntryId) ?? null
-    : null;
-  const planIntentValid = !!workout.planEntryId && !!referenceWorkout;
-  const phaseResolution = resolveSeasonPhaseClock({
-    selectedPhase: profile.seasonPhase ?? 'Pre-season',
-    targetWeekStartISO: date,
-    persistedClock: state.currentProgram?.seasonPhaseClock,
-    legacyProgram: state.currentProgram,
-  });
-  const acceptedContext = state.acceptedMaterialContext;
-  // The readiness SIGNAL used to be read here too, for the canonical context's
-  // `readiness` field. That field is gone (see below), and reading a signal
-  // nothing consumes is how a retired input keeps its wiring warm. The accepted
-  // context is still needed for the marked days.
-  const gameDates = new Set(
-    datedProgramWorkouts
-      .filter(({ workout: candidate }) => classifyVisibleSession(candidate).anchors.game)
-      .map(({ date: gameDate }) => gameDate),
-  );
-  if (classifyVisibleSession(workout).anchors.game) gameDates.add(date);
-  const markedDays = acceptedContext?.revision > 0
-    ? acceptedContext.markedDays
-    : useCalendarStore.getState().markedDays ?? {};
-  for (const [markedDate, kind] of Object.entries(markedDays)) {
-    if (kind === 'game') gameDates.add(markedDate);
-  }
-  const usualGameDay = storedGameAnchor(profile) ?? undefined;
-  if (profile.seasonPhase === 'In-season' && usualGameDay) {
-    const dayNumbers: Record<string, number> = {
-      Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-      Thursday: 4, Friday: 5, Saturday: 6,
-    };
-    const dateDow = new Date(`${date.slice(0, 10)}T12:00:00`).getDay();
-    const monday = addDaysISO(date, -((dateDow + 6) % 7));
-    const virtualGameDate = addDaysISO(monday, (dayNumbers[usualGameDay] + 6) % 7);
-    const sunday = addDaysISO(monday, 6);
-    const explicitGameThisWeek = Array.from(gameDates).some((gameDate) =>
-      gameDate >= monday && gameDate <= sunday,
-    );
-    if (!explicitGameThisWeek && !['noGame', 'rest'].includes(markedDays[virtualGameDate])) {
-      gameDates.add(virtualGameDate);
-    }
-  }
-  return {
-    date,
-    phase: profile.seasonPhase,
-    offseasonSubphase: phaseResolution.offseasonSubphase,
-    weekKind: phaseResolution.weekKind,
-    // No readiness: the canonical context does not carry capacity any more
-    // (Sam's readiness law, 2026-07-28). The power dose is decided once, by
-    // `decidePowerPrimer`; the finaliser holds only phase, schedule and safety.
-    ...gameProximityContext(date, Array.from(gameDates)),
-    profile,
-    planIntentValid,
-    referenceWorkout,
-  };
-}
-
-function finaliseLiveDateCandidateAgainstWeek(args: {
+/**
+ * Refuse a single-date write whose week the §18 boundary rejects.
+ *
+ * The surrounding week is COMPOSED here purely to be checked, and is thrown
+ * away. Nothing composed in this function is ever returned, stored or handed
+ * back to the caller.
+ */
+function assertLiveDateCandidateAgainstWeek(args: {
   date: string;
   workout: Workout;
   context: ReturnType<typeof liveValidationContext>;
-}): Workout {
+}): void {
   const state = require('../store/programStore').useProgramStore.getState();
   const microcycle = selectMicrocycleForDate(
     state.currentProgram,
@@ -1249,46 +304,23 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
     args.date > microcycle.endDate.slice(0, 10)
   ) {
     // A future override outside the currently materialised block has no
-    // approved target-week contract yet. Preserve it for the rebuild/rollover
-    // path, which composes and gates it once that target week exists; never
-    // validate it against the nearest/current microcycle by accident.
-    return args.workout;
+    // approved target-week contract yet. The rebuild/rollover path composes and
+    // gates it once that target week exists; never check it against the
+    // nearest/current microcycle by accident.
+    return;
   }
   const weekStart = addDaysISO(
     args.date,
     -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7),
   );
   const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
-  // THE FLIP, MOVE (ii) — one read door. The legacy-migration rung sits
-  // BELOW both stored candidates, so it stays a fallback on the door's answer
-  // rather than becoming a branch inside it.
-  let contract = selectStoredWeekDeclaration({
+  const contract = selectStoredWeekDeclaration({
     overlay,
     coveringMicrocycle: microcycle,
     weekStart,
-    reader: 'postGenerationConstraintValidation.finaliseLiveDateCandidate',
-  }) ?? (
-    microcycle.exposureContract
-      ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
-          blockNumber: microcycle.miniCycleNumber,
-          weekInBlock: ((Math.max(1, microcycle.weekNumber) - 1) % 4) + 1,
-          globalWeek: microcycle.weekNumber,
-        })
-      : null
-  );
-  if (!contract) return args.workout;
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: args.context.activeConstraints,
-    todayISO: weekStart,
-    periodEndISO: addDaysISO(weekStart, 6),
+    reader: 'postGenerationConstraintValidation.assertLiveDateCandidate',
   });
-  contract = applyGenerationSafetyToSection18Contract({
-    contract,
-    generationConstraints: generationContext,
-    forceFullPause: args.context.activeConstraints.some((constraint) =>
-      constraint.type === 'injury' && constraint.status !== 'resolved' &&
-      constraint.seriousSymptoms === true),
-  });
+  if (!contract) return;
 
   const workouts: Workout[] = [];
   for (let offset = 0; offset < 7; offset++) {
@@ -1308,124 +340,58 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
   // The candidate is deliberately last: an explicit edit may not displace
   // already-authorised sessions to bypass a safety frequency ceiling.
   workouts.push(args.workout);
-  const accepted = requireSection18AcceptedWeek({
+  requireSection18AcceptedWeek({
     contract,
     workouts,
     weekStart,
     profile: args.context.profile,
     surfaces: liveAcceptedEffectiveWeekSurfaces(),
-    // A single-date store primitive cannot atomically persist repairs to
-    // other dates. Reject cross-day repair needs; week/overlay writers can
-    // use the full deterministic repair loop.
   });
-  return [...accepted.canonicalWorkouts].reverse().find((workout) => workout.id === args.workout.id) ??
-    [...accepted.canonicalWorkouts].reverse().find((workout) => workout.dayOfWeek === args.workout.dayOfWeek) ??
-    collapseWorkoutToRest(args.workout);
 }
 
-/** Live-store wrappers used by ProgramStore's four final write primitives. */
-export function validateLiveProgramWrite(
+/** Live-store refusals used by ProgramStore's final write primitives. */
+export function assertLiveProgramWrite(
   program: TrainingProgram,
   todayISO?: string,
-): TrainingProgram {
-  return validateProgramAgainstActiveConstraints({
+): void {
+  assertProgramAgainstActiveConstraints({
     ...liveValidationContext(undefined, todayISO),
     program,
   });
 }
 
-export function validateLiveMicrocycleWrite(
+export function assertLiveMicrocycleWrite(
   microcycle: Microcycle,
   todayISO?: string,
-): Microcycle {
-  return validateMicrocycleAgainstActiveConstraints({
+): void {
+  assertMicrocycleAgainstActiveConstraints({
     ...liveValidationContext(undefined, todayISO),
     microcycle,
   });
 }
 
-export function validateLiveWorkoutWrite(
+export function assertLiveWorkoutWrite(
   date: string,
   workout: Workout,
   options: {
-    restoreMissingPlanPatterns?: boolean;
     /**
-     * The caller owns an atomic accepted-week transaction that will repair
-     * and gate the complete week. Keep per-workout safety canonicalisation,
-     * but do not ask the single-date boundary to accept an intentionally
-     * incomplete intermediate week.
+     * The caller owns an atomic accepted-week transaction that will gate the
+     * complete week. Do not ask the single-date boundary to accept an
+     * intentionally incomplete intermediate week.
      */
     deferWeekAcceptance?: boolean;
-    /**
-     * Identities the athlete has removed within an active scope. Passed straight
-     * to the canonicaliser so its repair pass cannot restore them — Sam's
-     * removal ruling, 2026-08-18. Without this the athlete's own removal was
-     * undone by the repair and then reported to them as a failure.
-     */
-    excludedIdentities?: readonly string[];
-    /** The legal fallback selector — see the canonicalisation context. */
-    legalIdentityForPattern?: (
-      pattern: MainStrengthPattern,
-      excluded: readonly string[],
-    ) => string | null;
   } = {},
-): Workout {
+): void {
+  if (options.deferWeekAcceptance) return;
   const context = liveValidationContext(undefined, date);
-  const result = validateWorkoutAgainstActiveConstraints({
-    ...context,
-    date,
-    workout,
-    canonicalContext: {
-      ...liveWorkoutCanonicalisationContext(date, workout, context.profile),
-      restoreMissingPlanPatterns: options.restoreMissingPlanPatterns,
-      ...(options.excludedIdentities?.length
-        ? { excludedIdentities: options.excludedIdentities }
-        : {}),
-      ...(options.legalIdentityForPattern
-        ? { legalIdentityForPattern: options.legalIdentityForPattern }
-        : {}),
-    },
-  });
-  const validated = result.workout ?? collapseWorkoutToRest(workout);
-  if (options.deferWeekAcceptance) return validated;
-  return finaliseLiveDateCandidateAgainstWeek({ date, workout: validated, context });
+  assertLiveDateCandidateAgainstWeek({ date, workout, context });
 }
 
-/** Resolve and validate the contract owned by an explicit date override. */
-export function resolveLiveDateMutationExposureContract(
-  date: string,
-  workout: Workout,
-): { weekStart: string; contract: WeeklyExposureContract } | null {
-  return resolveLiveDateMutationExposure({
-    date,
-    workout,
-    context: liveValidationContext(),
-  });
-}
-
-export function resolveLiveEditedWeekExposureContract(
-  weekStart: string,
-): { weekStart: string; contract: WeeklyExposureContract } | null {
-  const state = require('../store/programStore').useProgramStore.getState();
-  const weekEnd = addDaysISO(weekStart, 6);
-  const dates = Object.keys(state.dateOverrides ?? {})
-    .filter((date) => date >= weekStart && date <= weekEnd)
-    .sort();
-  const date = dates[dates.length - 1];
-  const workout = date ? state.dateOverrides[date] as Workout | undefined : undefined;
-  if (!date || !workout) return null;
-  return resolveLiveDateMutationExposure({
-    date,
-    workout,
-    context: liveValidationContext(),
-  });
-}
-
-export function validateLiveNullableWorkoutWrite(
+export function assertLiveNullableWorkoutWrite(
   date: string,
   workout: Workout | null,
-): Workout | null {
-  if (!workout) return null;
+): void {
+  if (!workout) return;
   const state = require('../store/programStore').useProgramStore.getState();
   const storedCandidates: Workout[] = [
     ...(state.currentProgram?.microcycles.flatMap((microcycle: Microcycle) => microcycle.workouts) ?? []),
@@ -1441,39 +407,17 @@ export function validateLiveNullableWorkoutWrite(
     // accepted on another persisted surface. Re-evaluating it against the
     // machine's current date would invent a different target week (notably in
     // fixed-date rebuild and rollover flows).
-    return workout;
+    return;
   }
-  const context = liveValidationContext(undefined, date);
-  const validated = validateWorkoutAgainstActiveConstraints({
-    ...context,
+  assertLiveDateCandidateAgainstWeek({
     date,
     workout,
-    canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
-  }).workout;
-  return validated
-    ? finaliseLiveDateCandidateAgainstWeek({ date, workout: validated, context })
-    : null;
+    context: liveValidationContext(undefined, date),
+  });
 }
 
-export function validateLiveWeekOverlayWrite(
-  overlay: WeekScopedWorkoutOverlay,
-): WeekScopedWorkoutOverlay {
+export function assertLiveWeekOverlayWrite(overlay: WeekScopedWorkoutOverlay): void {
   const context = liveValidationContext();
-  let changed = false;
-  let workoutsByDate = Object.fromEntries(
-    Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
-      if (!workout) return [date, null];
-      const result = validateWorkoutAgainstActiveConstraints({
-        ...context,
-        date,
-        workout,
-        canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
-      });
-      if (result.changed) changed = true;
-      return [date, result.workout];
-    }),
-  );
-  let validatedOverlay = changed ? { ...overlay, workoutsByDate } : overlay;
   const state = require('../store/programStore').useProgramStore.getState();
   const baseMicrocycle = (state.currentProgram?.microcycles ?? []).find(
     (microcycle: Microcycle) =>
@@ -1486,220 +430,44 @@ export function validateLiveWeekOverlayWrite(
       ? state.currentMicrocycle
       : null
   );
-  const exposureContract = state.exposureContractsByWeek?.[overlay.weekStart] ??
-    validatedOverlay.exposureContract ?? baseMicrocycle?.exposureContract;
-  // THE FLIP, MOVE (ii) — one read door. The candidate overlay being
-  // validated is the `overlay` rung here: this is a WRITE being checked, so
-  // the answer must come from the candidate, not from what is already stored.
-  const persistedExposureContractV2 = selectStoredWeekDeclaration({
-    overlay: validatedOverlay,
+  // THE FLIP, MOVE (ii) — one read door. The candidate overlay being checked is
+  // the `overlay` rung here: this is a WRITE being refused or allowed, so the
+  // answer must come from the candidate, not from what is already stored.
+  const contract = selectStoredWeekDeclaration({
+    overlay,
     coveringMicrocycle: baseMicrocycle,
     weekStart: overlay.weekStart,
-    reader: 'postGenerationConstraintValidation.validateLiveWeekOverlayWrite',
-  }) ?? undefined;
-  if (!exposureContract && !persistedExposureContractV2) return validatedOverlay;
+    reader: 'postGenerationConstraintValidation.assertLiveWeekOverlayWrite',
+  });
+  if (!contract) return;
 
-  let effectiveWorkouts: Workout[] = [];
+  const effectiveWorkouts: Workout[] = [];
+  const datedWorkouts: Array<{ date: string; workout: Workout }> = [];
   for (let offset = 0; offset < 7; offset++) {
     const date = addDaysISO(overlay.weekStart, offset);
     const dow = new Date(`${date}T12:00:00`).getDay();
-    // Tier 2 of THE ordering — `rules/dayPrecedence.ts`. NOTE the overlay here
-    // is the LOCALLY VALIDATED `workoutsByDate`, not the stored one: this
-    // function is validating an overlay write before it lands, so the entry it
-    // must compose against is the candidate. Selection stays with the caller
-    // for exactly this reason.
     const workout = composeDaySurfaces({
       date,
       dayOfWeek: dow,
       dateOverrides: state.dateOverrides,
-      overlay: { workoutsByDate },
+      overlay: { workoutsByDate: overlay.workoutsByDate },
       base: baseMicrocycle?.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null,
     }).workout;
-    if (workout) effectiveWorkouts.push(workout);
-  }
-  let exposureContractV2 = persistedExposureContractV2 ?? (
-    exposureContract ? migrateLegacyWeeklyExposureContractV2(exposureContract) : undefined
-  );
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: context.activeConstraints,
-    todayISO: overlay.weekStart,
-    periodEndISO: overlay.weekEnd,
-  });
-  if (exposureContractV2) {
-    exposureContractV2 = applyGenerationSafetyToSection18Contract({
-      contract: exposureContractV2,
-      generationConstraints: generationContext,
-      forceFullPause: context.activeConstraints.some((constraint) =>
-        constraint.type === 'injury' && constraint.status !== 'resolved' &&
-        constraint.seriousSymptoms === true),
-    });
-    const accepted = requireSection18AcceptedWeek({
-      contract: exposureContractV2,
-      workouts: effectiveWorkouts,
-      weekStart: overlay.weekStart,
-      profile: context.profile,
-      surfaces: liveAcceptedEffectiveWeekSurfaces(),
-    });
-    const beforeSafety = effectiveWorkouts;
-    effectiveWorkouts = accepted.canonicalWorkouts;
-    const safeByDay = new Map(effectiveWorkouts.map((workout) => [workout.dayOfWeek, workout]));
-    for (let offset = 0; offset < 7; offset++) {
-      const date = addDaysISO(overlay.weekStart, offset);
-      const dow = new Date(`${date}T12:00:00`).getDay();
-      const before = beforeSafety.find((workout) => workout.dayOfWeek === dow) ?? null;
-      const after = safeByDay.get(dow) ?? null;
-      if (
-        Object.prototype.hasOwnProperty.call(workoutsByDate, date) ||
-        JSON.stringify(before) !== JSON.stringify(after)
-      ) {
-        workoutsByDate[date] = after;
-      }
+    if (workout) {
+      effectiveWorkouts.push(workout);
+      datedWorkouts.push({ date, workout });
     }
-    validatedOverlay = {
-      ...validatedOverlay,
-      workoutsByDate,
-      exposureContractV2: accepted.contract,
-    };
   }
-  if (!exposureContract || !!persistedExposureContractV2) return validatedOverlay;
-  const targetMicrocycle: Microcycle = {
-    ...(baseMicrocycle ?? {
-      id: validatedOverlay.id,
-      programId: state.currentProgram?.id ?? 'overlay-program',
-      weekNumber: 1,
-      miniCycleNumber: 1,
-      intensityMultiplier: 1,
-      startDate: `${overlay.weekStart}T12:00:00.000Z`,
-      endDate: `${overlay.weekEnd}T12:00:00.000Z`,
-      workouts: [],
-      createdAt: validatedOverlay.createdAt,
-      updatedAt: validatedOverlay.updatedAt,
-    }),
-    exposureContract,
+  requireSection18AcceptedWeek({
+    contract,
     workouts: effectiveWorkouts,
-  };
-  const explicitWeekEdits = Object.entries(state.dateOverrides ?? {})
-    .filter(([date]) => date >= overlay.weekStart && date <= overlay.weekEnd) as Array<[string, Workout]>;
-  const explicitGameEdit = explicitWeekEdits.find(([, workout]) =>
-    classifyVisibleSession(workout).anchors.game,
-  );
-  const originalGameDate = exposureContract.anchors.gameDay === null
-    ? null
-    : addDaysISO(overlay.weekStart, (exposureContract.anchors.gameDay + 6) % 7);
-  const explicitlyRemovedOriginalGame = !!originalGameDate &&
-    Object.prototype.hasOwnProperty.call(state.dateOverrides ?? {}, originalGameDate);
-  const targetGameDay = explicitGameEdit
-    ? new Date(`${explicitGameEdit[0]}T12:00:00`).getDay()
-    : explicitlyRemovedOriginalGame
-      ? null
-      : exposureContract.anchors.gameDay;
-  const resolvedContract = reResolveContractForActiveConstraints({
-    contract: exposureContract,
-    microcycle: targetMicrocycle,
-    activeConstraints: context.activeConstraints,
+    weekStart: overlay.weekStart,
     profile: context.profile,
-    teamTrainingDayNumbers: effectiveWorkouts
-      .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
-      .map((workout) => workout.dayOfWeek),
-    hasGame: targetGameDay !== null,
-    gameDay: targetGameDay,
+    surfaces: liveAcceptedEffectiveWeekSurfaces(),
   });
-  const validation = evaluateEffectiveWeekExposureContract(
-    resolvedContract,
-    effectiveWorkouts,
-    overlay.weekStart,
-  );
-  if (!validation.accepted) {
-    assertEffectiveMicrocycleExposure({
-      ...targetMicrocycle,
-      exposureContract: resolvedContract,
-    });
-  }
-  // THE RE-RESOLVED v1 CONTRACT IS NOT STORED (L15, Sam's D-1 ruling
-  // 2026-08-05). It is still DERIVED above, and it still does its job: the
-  // acceptance check just ran on it, and `assertEffectiveMicrocycleExposure`
-  // throws on it when the week is unacceptable. What stops is the WRITE — the
-  // overlay used to keep a copy, giving one week's contract a second home in
-  // a superseded shape, which is the founding census's "One week's contract
-  // has THREE homes" (refiled as LR-30). This branch only runs when no V2
-  // exists anywhere for the week, and nothing reads the overlay's v1 field.
-  return validatedOverlay;
-}
-
-/**
- * Active-constraint mutations are themselves write paths. Re-run the same
- * safety boundary over every persisted program surface after the constraint
- * store changes so later hydration/edit flows cannot start from stale unsafe
- * content.
- */
-export function revalidateLiveStoredProgramSafety(): void {
-  const liveContext = liveValidationContext();
-  const projection = stageLiveStoredProgramSafety(liveContext.activeConstraints);
-  commitLiveStoredProgramSafetyProjection(projection);
-}
-
-export interface LiveStoredProgramSafetyProjection {
-  currentProgram: TrainingProgram | null;
-  currentMicrocycle: Microcycle | null;
-  todayWorkout: Workout | null;
-  dateOverrides: Record<string, Workout>;
-  overrideContexts: Record<string, import('../types/domain').OverrideContext>;
-  weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
-}
-
-/**
- * Stage every persisted program surface against a proposed constraint set.
- * This function is intentionally pure with respect to both Zustand stores:
- * callers may commit the returned projection only after every effective week
- * has passed the accepted-week gateway.
- */
-export function stageLiveStoredProgramSafety(
-  proposedConstraints: readonly ActiveConstraint[],
-): LiveStoredProgramSafetyProjection | null {
-  const context = liveValidationContext(proposedConstraints);
-  const safetyConstraints = context.activeConstraints.filter((constraint) =>
-    isStructuralGenerationConstraint(constraint) &&
-    constraint.status !== 'resolved' &&
-    constraint.type !== 'injury' &&
-    constraint.type !== 'missed_session' && constraint.type !== 'preference');
-  if (safetyConstraints.length === 0) {
-    // Constraint clearing is deliberately conservative. The already-reduced
-    // visible program remains untouched until the user explicitly rebuilds.
-    return null;
-  }
-  const programStore = require('../store/programStore');
-  const state = programStore.useProgramStore.getState();
-  const staged = programStore.canonicaliseAcceptedStateCandidate({
-    currentProgram: state.currentProgram,
-    currentMicrocycle: state.currentMicrocycle,
-    todayWorkout: state.todayWorkout,
-    dateOverrides: state.dateOverrides,
-    overrideContexts: state.overrideContexts,
-    weekScopedOverlays: state.weekScopedOverlays,
-  }, {
+  assertTemporaryScheduleConstraintsHonoured({
+    weekStart: overlay.weekStart,
+    datedWorkouts,
     activeConstraints: context.activeConstraints,
-    profile: context.profile,
-    markedDays: state.acceptedMaterialContext.markedDays,
-  });
-  return {
-    currentProgram: staged.currentProgram ?? null,
-    currentMicrocycle: staged.currentMicrocycle ?? null,
-    todayWorkout: staged.todayWorkout ?? null,
-    dateOverrides: staged.dateOverrides ?? {},
-    overrideContexts: staged.overrideContexts ?? {},
-    weekScopedOverlays: staged.weekScopedOverlays ?? {},
-  };
-}
-
-/** Commit a previously staged projection through the accepted-state owner. */
-export function commitLiveStoredProgramSafetyProjection(
-  projection: LiveStoredProgramSafetyProjection | null,
-): void {
-  if (!projection) return;
-  require('../store/acceptedStateTransaction').commitAcceptedStateTransaction({
-    // The safety projection of a constraint the athlete just stated.
-    operation: 'forward_decision',
-    reason: 'constraint:live_safety_projection',
-    program: projection,
   });
 }

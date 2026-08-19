@@ -29,7 +29,7 @@ import {
   templateIdFromSection,
   visibleDayLooksLikeGame,
 } from './coachRevisionTemplates';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { projectVisibleDay } from './visibleProgramProjection';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
@@ -46,7 +46,8 @@ function canonicalTemplateSectionSignature(
   const workout = transformTemplate ? transformTemplate(built) : built;
   let canonical;
   try {
-    canonical = validateLiveWorkoutWrite(date, workout);
+    assertLiveWorkoutWrite(date, workout);
+    canonical = workout;
   } catch (error) {
     if ((error as { code?: string })?.code === 'section18_week_rejected') {
       return null;
@@ -154,8 +155,10 @@ export function coachRevisionValidationPolicyForWeek(
             change,
             currentDay: day,
             todayISO,
-            canonicalizeWorkout: (date, workout) =>
-              validateLiveWorkoutWrite(date, workout),
+            canonicalizeWorkout: (date, workout) => {
+              assertLiveWorkoutWrite(date, workout);
+              return workout;
+            },
             transformTemplate: g1RouteTemplateTransform(change),
           });
           if (candidate.ok === false) continue;

@@ -663,20 +663,24 @@ function commitConstraintProgramTransaction(
     });
     safetyProjectionInProgress = true;
     try {
-      // Retain the established pure projection seam (including its failure
-      // boundary) but give publication to the accepted-state coordinator. No
-      // ProgramStore surface or compatibility mirror changes until both stages
-      // have succeeded.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const projection = require('../utils/postGenerationConstraintValidation')
-        .stageLiveStoredProgramSafety(proposedConstraints);
+      // ⚠ THE SAFETY RE-PROJECTION IS DELETED (demolition area 1, 2026-08-19).
+      //
+      // `stageLiveStoredProgramSafety` re-ran the whole rewriting boundary over
+      // EVERY persisted program surface — program, microcycle, today, every
+      // date override, every overlay — and committed the rewritten result. A
+      // constraint the athlete stated silently re-authored weeks they had
+      // already accepted. That is post-acceptance repair, and the accepted-state
+      // transaction owns writes.
+      //
+      // WHAT STAYS IS THE FACT: the constraint itself is still committed. What
+      // is missing is any re-shaping of already-accepted weeks in response to
+      // it — recorded on the rebuild list, owner = the composer at rebuild.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       require('./acceptedStateTransaction').commitAcceptedStateTransaction({
       // Constraints are what an athlete just told the app about their body or
       // their week. The gate informs; it does not veto a fact (§18 D3).
       operation: 'forward_decision',
       reason: 'constraint:update',
-      program: projection ?? undefined,
       activeConstraints: [...proposedConstraints],
       activeInjury: legacyInjuryForConstraints(
         proposedConstraints,

@@ -48,7 +48,7 @@ import {
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { resolveExerciseName } from './loadEstimation';
 import { formatExerciseDisplayName } from './exerciseDisplay';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 
@@ -696,7 +696,11 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `"${fromExercise}" already matches the requested swap on ${date}.` };
   }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  // THE BOUNDARY REFUSES OR ALLOWS; IT NO LONGER RETURNS A DIFFERENT SESSION
+  // (demolition area 1). The equivalence check below therefore compares the
+  // coach's own edit, not a canonicalised rewrite of it.
+  assertLiveWorkoutWrite(date, newWorkout);
+  const canonicalWorkout = newWorkout;
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return {
       success: false,
@@ -866,12 +870,11 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
       // took out, the week compares equal, and the transaction reports a
       // failure for a removal that actually worked.
       const removedName = foundById.exercise?.name ?? exercise;
-      const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout, {
-        excludedIdentities: [removedName],
-        legalIdentityForPattern: (pattern) => legalPatternReplacement({
-          date, removedExercise: removedName, cause: removalCause, pattern,
-        })?.name ?? null,
-      });
+      // The excluded-identity and legal-replacement options existed only to
+      // stop the boundary's own repair pass restoring what the athlete removed.
+      // The repair pass is deleted, so there is nothing left to hold back.
+      assertLiveWorkoutWrite(date, newWorkout);
+      const canonicalWorkout = newWorkout;
       if (workoutsAreEquivalent(current, canonicalWorkout)) {
         return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
       }
@@ -907,12 +910,8 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   // function write, and fixing only the id branch would leave the coach's path
   // and any name-addressed removal still restoring the excluded lift.
   const removedName = found.exercise?.name ?? exercise;
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout, {
-    excludedIdentities: [removedName],
-    legalIdentityForPattern: (pattern) => legalPatternReplacement({
-      date, removedExercise: removedName, cause: removalCause, pattern,
-    })?.name ?? null,
-  });
+  assertLiveWorkoutWrite(date, newWorkout);
+  const canonicalWorkout = newWorkout;
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
   }
@@ -989,7 +988,8 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  assertLiveWorkoutWrite(date, newWorkout);
+  const canonicalWorkout = newWorkout;
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return {
       success: false,

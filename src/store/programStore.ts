@@ -543,50 +543,42 @@ async function programStateStorageSetItemBody(name: string, value: string): Prom
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
- * path. Dynamic loading avoids a store-initialisation cycle while ensuring the
- * same validator runs for program, overlay, and manual-override writes.
+ * path. It ASKS the active-constraint boundary whether a write is acceptable
+ * and writes what it was given; it never receives a different object back.
+ *
+ * ⚠ THESE USED TO REWRITE (demolition area 1, 2026-08-19). Each was
+ * `postValidate*` and returned a rewritten program/microcycle/workout/overlay,
+ * so the store persisted content no author had chosen. Dynamic loading still
+ * avoids a store-initialisation cycle.
  */
-function postValidateProgram(program: TrainingProgram, todayISO?: string): TrainingProgram {
+function assertProgramWriteAccepted(program: TrainingProgram, todayISO?: string): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveProgramWrite(program, todayISO);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveProgramWrite(program, todayISO);
 }
 
-function postValidateMicrocycle(microcycle: Microcycle, todayISO?: string): Microcycle {
+function assertMicrocycleWriteAccepted(microcycle: Microcycle, todayISO?: string): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveMicrocycleWrite(microcycle, todayISO);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveMicrocycleWrite(microcycle, todayISO);
 }
 
-function postValidateWorkout(
-  date: string,
-  workout: Workout,
-  options: { restoreMissingPlanPatterns?: boolean } = {},
-): Workout {
+function assertWorkoutWriteAccepted(date: string, workout: Workout): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveWorkoutWrite(date, workout, options);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveWorkoutWrite(date, workout);
 }
 
-function postValidateNullableWorkout(date: string, workout: Workout | null): Workout | null {
+function assertNullableWorkoutWriteAccepted(date: string, workout: Workout | null): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveNullableWorkoutWrite(date, workout);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveNullableWorkoutWrite(date, workout);
 }
 
-function postValidateWeekOverlay(overlay: WeekScopedWorkoutOverlay): WeekScopedWorkoutOverlay {
+function assertWeekOverlayWriteAccepted(overlay: WeekScopedWorkoutOverlay): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveWeekOverlayWrite(overlay);
-}
-
-function resolveDateMutationExposureContract(
-  date: string,
-  workout: Workout,
-): { weekStart: string; contract: WeeklyExposureContract } | null {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .resolveLiveDateMutationExposureContract(date, workout);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveWeekOverlayWrite(overlay);
 }
 
 
@@ -779,22 +771,21 @@ function canonicaliseAcceptedBoundaryState(
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const validator = require('../utils/postGenerationConstraintValidation');
-    let changed = false;
-    const microcycles = currentProgram.microcycles.map((microcycle) => {
-      // An explicit accepted overlay owns this effective week. Validating the
+    for (const microcycle of currentProgram.microcycles) {
+      // An explicit accepted overlay owns this effective week. Checking the
       // hidden base independently would reintroduce a second week authority;
       // the precedence-composed gateway below validates the overlay-owned week.
-      if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) return microcycle;
-      const validated = validator.validateMicrocycleAgainstActiveConstraints({
+      if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) continue;
+      // ASKS ONLY (demolition area 1). This used to take a rewritten microcycle
+      // back and store it, so the accepted candidate was not the week the
+      // producer wrote.
+      validator.assertMicrocycleAgainstActiveConstraints({
         microcycle,
         todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints!,
         profile: options.profile,
       });
-      if (validated !== microcycle) changed = true;
-      return validated;
-    });
-    if (changed) currentProgram = { ...currentProgram, microcycles };
+    }
   }
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
   // Where in the off-season hydrated content sits, resolved from the persisted
@@ -815,8 +806,8 @@ function canonicaliseAcceptedBoundaryState(
   if (currentMicrocycle && options.activeConstraints &&
     !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    currentMicrocycle = require('../utils/postGenerationConstraintValidation')
-      .validateMicrocycleAgainstActiveConstraints({
+    require('../utils/postGenerationConstraintValidation')
+      .assertMicrocycleAgainstActiveConstraints({
         microcycle: currentMicrocycle,
         todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints,
@@ -1618,8 +1609,9 @@ export const useProgramStore = create<ProgramState>()(
         // legacy-shaped program never reaches a writer to be refused.
         const effectiveTodayISO = options?.todayISO ?? todayISOLocal();
         const candidateProgram = program
-          ? postValidateProgram(ensureProgramSeasonPhaseClock(program), effectiveTodayISO)
+          ? ensureProgramSeasonPhaseClock(program)
           : null;
+        if (candidateProgram) assertProgramWriteAccepted(candidateProgram, effectiveTodayISO);
         const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const clearedDates = new Set(options?.clearOverrideDates ?? []);
         const candidateOverrides = clearedDates.size > 0
@@ -1697,6 +1689,7 @@ export const useProgramStore = create<ProgramState>()(
 
       setCurrentMicrocycle: (microcycle, todayISO) => {
         const effectiveTodayISO = todayISO ?? todayISOLocal();
+        if (microcycle) assertMicrocycleWriteAccepted(microcycle, effectiveTodayISO);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           // A SELECTION publishes no new week content: the week it re-gates is
@@ -1708,9 +1701,7 @@ export const useProgramStore = create<ProgramState>()(
           reason: 'program:select_microcycle',
           todayISO: effectiveTodayISO,
           program: {
-            currentMicrocycle: microcycle
-              ? postValidateMicrocycle(microcycle, effectiveTodayISO)
-              : null,
+            currentMicrocycle: microcycle ?? null,
           },
           validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
         });
@@ -1718,6 +1709,7 @@ export const useProgramStore = create<ProgramState>()(
 
       setTodayWorkout: (workout, todayISO) => {
         const effectiveTodayISO = todayISO ?? todayISOLocal();
+        assertNullableWorkoutWriteAccepted(effectiveTodayISO, workout ?? null);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           // Same family as the selection above.
@@ -1725,9 +1717,7 @@ export const useProgramStore = create<ProgramState>()(
           reason: 'program:set_today_workout',
           todayISO: effectiveTodayISO,
           program: {
-            todayWorkout: workout
-              ? postValidateNullableWorkout(effectiveTodayISO, workout)
-              : null,
+            todayWorkout: workout ?? null,
           },
         });
       },
@@ -1850,7 +1840,8 @@ export const useProgramStore = create<ProgramState>()(
         })),
 
       setWeekScopedOverlay: (overlay) => {
-        const validatedOverlay = postValidateWeekOverlay(overlay);
+        assertWeekOverlayWriteAccepted(overlay);
+        const validatedOverlay = overlay;
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
@@ -1909,19 +1900,18 @@ export const useProgramStore = create<ProgramState>()(
             };
           });
 
-          const updatedMicrocycle = postValidateMicrocycle({
+          const updatedMicrocycle = {
             ...state.currentMicrocycle,
             workouts: updatedWorkouts,
-          });
+          };
+          assertMicrocycleWriteAccepted(updatedMicrocycle);
 
           // Also update todayWorkout if it's the same workout
           const updatedToday =
             state.todayWorkout?.id === workoutId
-              ? postValidateNullableWorkout(
-                  todayISOLocal(),
-                  { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] },
-                )
+              ? { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] }
               : state.todayWorkout;
+          assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
 
           return {
             currentMicrocycle: updatedMicrocycle,
@@ -1965,20 +1955,19 @@ export const useProgramStore = create<ProgramState>()(
           return false;
         }
 
-        const updatedMicrocycle = postValidateMicrocycle({
+        const updatedMicrocycle = {
           ...state.currentMicrocycle,
           workouts: updatedWorkouts,
           updatedAt: new Date().toISOString(),
-        });
+        };
+        assertMicrocycleWriteAccepted(updatedMicrocycle);
 
         // Also update todayWorkout if it falls on the same dayOfWeek
         const todayDay = dayOfWeekForISODate(todayISOLocal());
         const updatedToday = todayDay === dayOfWeek
-          ? postValidateNullableWorkout(
-              todayISOLocal(),
-              updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout,
-            )
+          ? updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout
           : state.todayWorkout;
+        assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
 
         useProgramStore.setState({
           currentMicrocycle: updatedMicrocycle,
@@ -2426,16 +2415,13 @@ export function applyProgramOverrideWrite(args: {
   writer: ProgramOverrideWriterId;
 }): ProgramOverrideWriteOutcome {
   const { date, workout, context } = args;
+  // A manual override is the explicit edited result and is written AS GIVEN.
+  // The boundary may refuse it; it may not hand back a different session.
   const validatedWorkout = {
-    ...postValidateWorkout(date, workout, {
-      // A manual override is the explicit edited result. Preserve planned
-      // intent for diagnostics, but never resurrect content the edit
-      // deliberately removed.
-      restoreMissingPlanPatterns: false,
-    }),
+    ...workout,
     dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
   };
-  const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
+  assertWorkoutWriteAccepted(date, validatedWorkout);
   const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
   const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
     constraint.status === 'active' && constraint.targetDate === date);
@@ -2467,12 +2453,11 @@ export function applyProgramOverrideWrite(args: {
       overrideContexts: context
         ? { ...state.overrideContexts, [date]: context }
         : state.overrideContexts,
-      exposureContractsByWeek: exposureResolution
-        ? {
-            ...state.exposureContractsByWeek,
-            [exposureResolution.weekStart]: exposureResolution.contract,
-          }
-        : state.exposureContractsByWeek,
+      // THE LEGACY v1 PER-WEEK CONTRACT LEDGER IS NO LONGER WRITTEN HERE
+      // (demolition area 1). Its writer re-AUTHORED the week's exposure
+      // contract from the edited week — a second contract authority downstream
+      // of the one that authored it. The stored v2 declaration is the contract.
+      exposureContractsByWeek: state.exposureContractsByWeek,
       userRemovalConstraints,
     },
     markedDays,

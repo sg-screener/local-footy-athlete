@@ -642,20 +642,22 @@ function canonicaliseAcceptedProgramWrite(
   proposal: AcceptedStateTransactionProposal,
 ): AcceptedProgramSurfaces {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { validateLiveMicrocycleWrite } = require('../utils/postGenerationConstraintValidation') as {
-    validateLiveMicrocycleWrite: (microcycle: Microcycle, todayISO?: string) => Microcycle;
+  const { assertLiveMicrocycleWrite } = require('../utils/postGenerationConstraintValidation') as {
+    assertLiveMicrocycleWrite: (microcycle: Microcycle, todayISO?: string) => void;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { logger } = require('../utils/logger') as {
     logger: { error: (message: string, detail?: unknown) => void };
   };
   const source = ensureProgramSeasonPhaseClock(program);
-  let changed = source !== program;
-  const microcycles = source.microcycles.map((microcycle) => {
+  const changed = source !== program;
+  // ⚠ THE BOUNDARY NO LONGER RETURNS A WEEK (demolition area 1, 2026-08-19).
+  // It used to hand back a rewritten microcycle and this function stored it,
+  // so the week that reached accepted state was not the week the producer
+  // wrote. It now only ASKS, and the producer's week is published either way.
+  for (const microcycle of source.microcycles) {
     try {
-      const validated = validateLiveMicrocycleWrite(microcycle, proposal.todayISO);
-      if (validated !== microcycle) changed = true;
-      return validated;
+      assertLiveMicrocycleWrite(microcycle, proposal.todayISO);
     } catch (error) {
       /* ── THIS OWNER CANONICALISES. IT NEVER REFUSES. ──────────────────────
        *
@@ -693,11 +695,10 @@ function canonicaliseAcceptedProgramWrite(
             : (error as { message?: string })?.message ?? String(error),
         },
       );
-      return microcycle;
     }
-  });
+  }
   if (!changed) return candidate;
-  return { ...candidate, currentProgram: { ...source, microcycles } };
+  return { ...candidate, currentProgram: source };
 }
 
 export function stageAcceptedStateTransaction(

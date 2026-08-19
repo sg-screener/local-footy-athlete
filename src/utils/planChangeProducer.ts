@@ -54,7 +54,7 @@ import {
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { liveAthleteContext } from './liveAthleteContext';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
@@ -1181,7 +1181,10 @@ export function buildPlanChangeProposal(
         change,
         currentDay,
         todayISO: ctx.todayISO ?? change.date,
-        canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+        canonicalizeWorkout: (date, workout) => {
+          assertLiveWorkoutWrite(date, workout);
+          return workout;
+        },
       });
       if (materialized.ok === false) return { error: materialized.code };
       return revision({
@@ -1231,7 +1234,10 @@ export function buildPlanChangeProposal(
           change,
           currentDay,
           todayISO: ctx.todayISO ?? change.date,
-          canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+          canonicalizeWorkout: (date, workout) => {
+            assertLiveWorkoutWrite(date, workout);
+            return workout;
+          },
         });
         if (materialized.ok === false) return { error: materialized.code };
         return revision({
@@ -1252,7 +1258,10 @@ export function buildPlanChangeProposal(
         change,
         currentDay,
         todayISO: ctx.todayISO ?? change.date,
-        canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+        canonicalizeWorkout: (date, workout) => {
+          assertLiveWorkoutWrite(date, workout);
+          return workout;
+        },
       });
       if (materialized.ok === false) return { error: materialized.code };
 
@@ -1713,7 +1722,7 @@ function materializeAthleteCandidate(
 
 /**
  * Materialise the new session a swap places on the day. Uses the pure
- * finaliseWorkoutAfterMutation boundary — NOT validateLiveWorkoutWrite — so the
+ * finaliseWorkoutAfterMutation boundary — NOT assertLiveWorkoutWrite — so the
  * whole-week §18 gate never runs here; the accepted-state transaction owns
  * week-level §18 (and any authorised reduction it forces).
  */

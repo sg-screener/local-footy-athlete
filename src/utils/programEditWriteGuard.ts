@@ -19,7 +19,7 @@ import {
   compareProgrammingRiskLevels,
   getProgrammingEditDecision,
 } from '../rules/conflictResolutionHierarchy';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 
 export interface ProgramEditWrite {
   date: string;
@@ -240,10 +240,12 @@ export function assessProgramEditWrites(
 ): ProgramEditRiskAssessment | null {
   const writes = input.writes
     .filter((write) => /^\d{4}-\d{2}-\d{2}$/.test(write.date))
-    .map((write) => ({
-      ...write,
-      workout: write.workout ? validateLiveWorkoutWrite(write.date, write.workout) : null,
-    }));
+    .map((write) => {
+      // The guard ASSESSES a write. It never rewrote one before the boundary
+      // handed it a different session back; now it cannot (demolition area 1).
+      if (write.workout) assertLiveWorkoutWrite(write.date, write.workout);
+      return { ...write };
+    });
   if (writes.length === 0) return null;
   const weekStarts = Array.from(new Set(writes.map((write) => getMondayForDate(write.date)))).sort();
   const profile = buildProfile(input.profile);
