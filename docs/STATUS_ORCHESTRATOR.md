@@ -386,3 +386,87 @@ movement in two slots: 52 occurrences corpus-wide (48 running-row, 4
 main/accessory), older and wider than R-105. The guard is narrowed to power and
 carries a DISCLOSURE cell so its green cannot be read as "no duplicates
 anywhere". **Composer-owned, unfixed, measured.**
+
+## PRODUCT `fe6ed715` — **REJECTED FOR MERGE.** THE REVIEW SAM ORDERED FOUND FIVE
+
+Reviewed on the merged tree (main + candidate), against the real generator and
+the real functions, not against the lane's account.
+
+### ⚠ P0 — "CALL EMERGENCY SERVICES" NOW REACHES GLASS, FIRES ON DOMS, UNSIGNED
+
+`coachAcceptedInjuryTurn.ts:37` calls `detectRedFlagSymptoms(args.message)`
+**first and unconditionally**, before any injury-context test, on every message
+typed into the routed Coach tab. Its replies are unsigned string constants
+(`injuryClarificationGuard.ts:29-33`).
+
+**Its only previously reachable caller was `CoachScreen`, which `AppNavigator`
+defines and never renders. This candidate is the first path that puts that text
+in front of an athlete.**
+
+**REPRODUCED BY ME, with the real `readAcceptedInjuryChatTurn` and an EMPTY
+episode list — so it hits every athlete, injured or not:**
+
+| typed | route |
+|---|---|
+| "I cannot walk after leg day" | `red_flag_hard_stop` → *"Stop training now and do not run or lift through this…needs a physio or medical assessment"* |
+| "The tempo run left me breathless" | `red_flag_hard_stop` → *"…call emergency services if symptoms are severe"* |
+| "My hands went numb on the bar" | `red_flag_hard_stop` |
+| "I was a bit dizzy after the sprints" | `red_flag_hard_stop` |
+
+Ordinary post-leg-day soreness is answered with a medical hard stop. **This is
+the highest-stakes copy in the app and it is not in the signed sheet.**
+
+### ⚠ P0 — ORDINARY MESSAGES OPEN AN INJURY MODAL AND GET NO REPLY
+
+`FOLLOWUP` (`:25`) matches the bare words `still`, `same`, `gone`, `pain`,
+`sore`, `tight`. It runs before `readCoachMessage`, so for any athlete with one
+active accepted episode it captures the turn — and the `open_existing_update`
+branch (`CoachTabScreen.tsx:305-317`) calls `coachNoteActions.onAction(...)` and
+returns **without calling `say()`**.
+
+"Can I still do Friday?" → the athlete's message appears, **the coach says
+nothing**, and the guided injury sheet opens.
+
+### P1 — THE EXTRA-SESSION PREVIEW PROMISES A DAY GENERATION DOES NOT BUILD
+
+`extraSessionOfferPreview.ts:41-51` reads the **current** program and tells the
+athlete the day becomes "Strength + Conditioning". Nothing checks the
+regenerated week agrees. Swept over 36 generated worlds: of 20 previews shown,
+**9 matched the rebuilt week and 11 did not.** In-season, 2 gym days: preview
+says "Saturday: Strength + Conditioning"; after accepting, Saturday is strength
+alone and the conditioning moved to Monday.
+
+⚠ **This is the exact second authority `extraSessionOffer.ts`'s own header
+exists to prevent** — the athlete finding out by accepting. The legality probe
+already builds the `n+1` program and throws it away; the preview should be
+derived from that call.
+
+### P1 — ONE INJURY REPORTED AS TWO PROBLEMS
+
+`coachTrackingContext.ts:151-152`: `activeInjuryCount` and
+`activeNiggleRegionCount` are computed from **the same `accepted.injuryEpisodes`
+array** with byte-identical predicates. One hamstring episode prints *"I have 1
+active injury on file. I have 1 active niggle region on file."*
+
+### UNCONFIRMED — two context fields reported as having no reader
+
+`coachIntent.ts:302-303` (`safeFocus`, `advice`). **I could not confirm this and
+I am not asserting it:** both names are used widely elsewhere in the app (138
+and 213 hits), so a name-based census cannot separate these two fields from
+their namesakes. It needs a type-aware check. Recorded as reported, not as
+found.
+
+### NOTED, NOT SCORED
+
+~330 lines of the diff — the dispatcher, deps, state-inspector and `CoachScreen`
+clarifier rebuild — sit behind the unmounted `CoachScreen`. **The lane's own
+status document says so plainly**, which is an honest `BUILT` claim rather than
+an unsupported completion claim.
+
+### VERDICT
+
+Its measured position is good — 5 suites recovered, 1 regression, and that
+regression closed on `orchestrator/coach-sentence-provenance`. **The reds were
+never the problem.** Two P0s that only a read of the code could find are, and
+one of them puts unsigned emergency-medical instruction in front of an athlete
+who typed that their legs are sore.
