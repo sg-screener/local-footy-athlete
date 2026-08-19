@@ -6,7 +6,6 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,15 +59,6 @@ import type { MissedSession, MissedSessionResponse } from '../../utils/missedSes
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
-import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
-import { executeProgramControlActionDurably } from '../../utils/programControlActions';
-import {
-  EXERCISE_EXCLUSION_SCOPES,
-  EXERCISE_EXCLUSION_SCOPE_LABEL,
-  EXERCISE_EXCLUSION_SCOPE_DETAIL,
-  EXERCISE_EXCLUSION_QUESTION,
-} from '../../rules/exerciseExclusions';
-import type { ExerciseExclusionScope } from '../../rules/exerciseExclusions';
 import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
@@ -126,7 +116,6 @@ export default function HomeScreenV2() {
     handleCancelMove,
     handleAddGameMode,
     handleViewWorkout,
-    handleOpenSessionChange,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
@@ -244,102 +233,6 @@ export default function HomeScreenV2() {
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
 
-  /**
-   * THE LABELLED REMOVE HUB'S OWN STEPS — selection, then scope, then a receipt.
-   *
-   * Three steps and not one, because Sam's contract is two questions: WHAT is
-   * coming out, and FOR HOW LONG. Collapsing them is what produced the
-   * unlabelled icon this replaces.
-   */
-  const [removeFlow, setRemoveFlow] = useState<
-    | { kind: 'closed' }
-    | { kind: 'select' }
-    | { kind: 'scope'; exerciseName: string; exerciseId: string | null }
-    | { kind: 'result'; ok: boolean; title: string; message: string }
-  >({ kind: 'closed' });
-
-  /**
-   * Today's removable rows, read off the SAME projected day the card is about.
-   *
-   * `.exercises` and not a re-derivation: the athlete may only remove what they
-   * can currently see, so the list the sheet offers is the list the screen shows.
-   */
-  const removableExercises = useMemo(() => {
-    const rows = (dayFirstDay?.workout?.exercises ?? []) as Array<{
-      id?: string | null;
-      exerciseId?: string | null;
-      exercise?: { name?: string | null } | null;
-    }>;
-    const seen = new Set<string>();
-    return rows.flatMap((row) => {
-      const name = row.exercise?.name?.trim();
-      if (!name || seen.has(name)) return [];
-      seen.add(name);
-      return [{ name, exerciseId: row.exerciseId ?? row.id ?? null }];
-    });
-  }, [dayFirstDay]);
-
-  /**
-   * THE ANSWER, THROUGH BOTH EXISTING OWNERS AND NEITHER REIMPLEMENTED.
-   *
-   * `executeProgramControlActionDurably({type:'remove_exercise'})` takes the row
-   * off today and writes the REVERSIBLE entry — that entry is what `UndoToast`
-   * reads, which is why Undo needs no new authority here. Then
-   * `applyExerciseExclusionDecision` records the canonical fact with its scope.
-   * The same two owners, in the same order, as the session screen's route.
-   *
-   * **NO SUCCESS SENTENCE WITHOUT A VISIBLE CHANGE (Sam's clause).** If the
-   * first owner refuses, the flow reports ITS message and stops — it never
-   * records an exclusion for a session that did not change, and never says
-   * "Saved" over a screen that still shows the exercise.
-   */
-  const applyRemoveFlowScope = useCallback(
-    async (exerciseName: string, exerciseId: string | null, scope: ExerciseExclusionScope) => {
-      const date = dayFirstDay?.date ?? todayISOLocal();
-      const removal = await executeProgramControlActionDurably({
-        type: 'remove_exercise',
-        // `program_tab` is this screen's own id in the ledger vocabulary; the
-        // SURFACE is what distinguishes this card from the rest of the tab.
-        source: { screen: 'program_tab', surface: 'home_change_card', initiatedBy: 'tap' },
-        scope: 'today_only',
-        payload: { date, exercise: exerciseName, exerciseId: exerciseId ?? undefined },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      });
-      if (!removal.ok) {
-        setRemoveFlow({
-          kind: 'result',
-          ok: false,
-          // The owner's OWN typed reason, never a generic sentence.
-          title: 'Could not remove that',
-          message: removal.message ?? 'Your session is unchanged.',
-        });
-        return;
-      }
-      const decision = applyExerciseExclusionDecision({
-        exercise: exerciseName,
-        scope,
-        decidedOnISO: date,
-      });
-      if (!decision.ok || !decision.exclusion) {
-        setRemoveFlow({
-          kind: 'result',
-          ok: false,
-          title: 'Could not save that',
-          message: 'Today\u2019s session is still updated.',
-        });
-        return;
-      }
-      setRemoveFlow({
-        kind: 'result',
-        ok: true,
-        title: 'Saved',
-        message: `${exerciseName} \u2014 ${EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()}.`,
-      });
-    },
-    [dayFirstDay],
-  );
   const reviewAthlete = useAthleteContext();
   const mobilityFlowByDate = useMemo(() => {
     const isGameWeek = weekDays.some((day) => day.indicator === 'game');
@@ -963,97 +856,89 @@ export default function HomeScreenV2() {
 
             The card heading and sub-line remain owned by signedCopy; this row
             changes only the direct status controls beneath them. */}
-        {/* ── ONE HUB, BOTH SURFACES (Sam, 2026-08-19) ────────────────────
+        {/* ── ONE CARD, THREE STATUS FACTS — THE DAY SURFACE'S WHOLE SET ──
             *
-            * *"The Need to make a change? section inside an active session must
-            * use the same shared UI component and visual design as the Day
-            * screen ... Both surfaces must show the same five actions:
-            * Equipment · Injury · Add · Remove · Swap ... Do not keep separate
-            * Day and Session implementations."*
+            * Sam, 2026-08-19 (correcting the ruling below): *"DAY PAGE: exactly
+            * Tired, Sick and Injured, together inside the original 'Need to
+            * make a change?' card … NO Remove, Equipment, Add or Swap. No
+            * separate readiness row. Use HomeScreenV2 at 1a7e7bd0 as the
+            * visual/source authority."*
             *
-            * This card WAS the signed original — heading, sub-line and a row of
-            * tinted icon chips — and the session screen had grown its own row of
-            * plain text pills beside it. The card's markup moved into
-            * `components/SessionChangeHub` unchanged, and both screens now
-            * render it.
+            * ⚠ **THIS RESTORES `1a7e7bd0`. IT IS NOT A NEW DESIGN.** The card,
+            * the three chips, their doors, their testIDs, their tints and their
+            * three glyphs are that commit's, path-for-path. The only thing that
+            * changed is WHERE the chip markup lives: in the shared
+            * `components/SessionChangeHub`, so the session screen can draw the
+            * same card with a different list.
             *
-            * **THE DOORS ARE THE SAME FIVE OWNERS, REACHED WITH THE RIGHT DATE.**
-            * Injury and Remove are this screen's own (Remove deliberately so:
-            * `UndoToast` mounts here, and a removal driven from the pushed
-            * session screen raised its toast on the screen behind it).
-            * Equipment, Add and Swap have exactly one owner each on the session
-            * screen, so they open today's session ON that door — a second copy
-            * here is the duplication this ruling deletes. */}
+            * ## WHAT WAS HERE FOR ONE DAY, AND WHY IT WAS WRONG
+            *
+            * The earlier ruling — *"Both surfaces must show the same five
+            * actions: Equipment · Injury · Add · Remove · Swap … Do not keep
+            * separate Day and Session implementations"* — was about the SESSION
+            * screen growing a second, uglier copy of this card. It was read as
+            * "put the five on the Day screen too", so this card was handed the
+            * five session actions; Tired and Sick were evicted into a bare
+            * card-less row underneath, and **the Injured chip was deleted from
+            * the Day screen entirely**. `test:day-first-timeline` reddened on
+            * exactly those three cells and the change shipped anyway.
+            *
+            * **SHARING THE COMPONENT WAS NEVER THE DEFECT — THE HARD-CODED
+            * ACTION LIST WAS.** The hub now carries every action identity
+            * either surface can draw and no opinion about which belongs where;
+            * this list is the Day surface's answer and the session screen's is
+            * its own. Held by `test:session-change-hub` [8] and [9], which
+            * assert the two sets are DISJOINT rather than equal.
+            *
+            * ## WHY THESE THREE AND NOT THE FIVE
+            *
+            * They are facts about the ATHLETE, not changes to a session: they
+            * open the readiness sheet and the guided injury flow. Equipment,
+            * Add, Remove and Swap each need a session to act on, and the
+            * session screen is where the athlete has one open. */}
+        {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
+            `&& dayFirst` is the whole gate. Sam's reasoning IS the spec and it
+            is a general principle, not a layout note: *"someone will make a
+            change for that day if they need it and if it's chronic they're not
+            going to have to go to each day to make the change - also, people
+            don't plan on being sick or injured in the future so those buttons
+            don't need to be on weekly view"*. */}
         {isNormal && dayFirst && (
           <SessionChangeHub
             testID="home-change-card"
+            /* THE ROW KEEPS ITS OWN ID. `home-life-fact-chips` is the
+               coordinate five Maestro flows and the day-first gate reach this
+               row by; a card that renamed it would silently break every one. */
+            rowTestID="home-life-fact-chips"
             actions={[
-              ...(dayFirstDay?.workout
-                ? [{ id: 'equipment' as const,
-                    onPress: () => handleOpenSessionChange(dayFirstDay, 'equipment') }]
-                : []),
-              { id: 'injury' as const,
-                onPress: () => setReadinessInjuryVisible(true),
-                accessibilityHint: "Tell us about an injury affecting today's session" },
-              ...(dayFirstDay?.workout
-                ? [{ id: 'add' as const,
-                    onPress: () => handleOpenSessionChange(dayFirstDay, 'add') }]
-                : []),
-              { id: 'remove' as const,
-                onPress: () => setRemoveFlow({ kind: 'select' }),
-                accessibilityHint: "Remove an exercise from today's session" },
-              ...(dayFirstDay?.workout
-                ? [{ id: 'swap' as const,
-                    onPress: () => handleOpenSessionChange(dayFirstDay, 'swap') }]
-                : []),
+              { id: 'tired' as const,
+                testID: 'home-tired-entry',
+                accessibilityLabel: 'Tired',
+                onPress: () => { setReadinessAck(null); setReadinessEntry('flat'); } },
+              { id: 'sick' as const,
+                /* ⚠ **THIS ID CHANGES WHEN A READINESS FACT IS ALREADY
+                   ACTIVE**, and it always has. It is a set-or-update door and
+                   the explorer resolves it by which one it is. */
+                testID: weekReadiness
+                  ? explorerTestId.readinessUpdate(weekReadiness.id)
+                  : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`),
+                accessibilityLabel: weekReadiness
+                  ? explorerTestId.readinessUpdate(weekReadiness.id)
+                  : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`),
+                /* A4 SURVIVES THE SHRINK: the spoken line is still the owner's
+                   title, not the card's. A chip cannot show a sentence. */
+                accessibilityHint: weekReadiness ? weekReadiness.title : "I'm sick/flat today",
+                onPress: () => { setReadinessAck(null); setReadinessEntry('sick'); } },
+              { id: 'injured' as const,
+                /* ONE OWNER, TWO DOORS. This opens the SAME
+                   `GuidedInjuryFlowSheet` the readiness sheet's "Something
+                   hurts" row opens, and both complete through
+                   `handleApplyGuidedInjury`. */
+                testID: 'home-injured-entry',
+                accessibilityLabel: "I'm injured",
+                onPress: () => setReadinessInjuryVisible(true) },
             ]}
           />
-        )}
-
-        {/* ── THE READINESS ENTRIES KEEP THEIR OWN ROW ────────────────────
-            *
-            * ⚠ **"Tired" AND "Sick" ARE NOT SESSION CHANGES AND WERE NOT DELETED.**
-            * They shared the old card only because it was the nearest panel.
-            * They are readiness FACTS about the athlete, they open the readiness
-            * sheet rather than any of the five doors, and folding them into a
-            * hub whose contract is "the five actions" would have made the hub
-            * disagree with itself on the two surfaces. They keep their doors,
-            * their testIDs and their tints. */}
-        {isNormal && dayFirst && (
-          <View style={styles.lifeFactChips} testID="home-life-fact-chips">
-            <LifeFactChip
-              onPress={() => { setReadinessAck(null); setReadinessEntry('flat'); }}
-              testID="home-tired-entry"
-              accessibilityLabel="Tired"
-              label="Tired"
-              tint={styles.tiredIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#67D7FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M3 8h15v8H3z" />
-                  <Path d="M21 11v2" />
-                  <Path d="M6 11v2" />
-                </Svg>
-              }
-            />
-            <LifeFactChip
-              onPress={() => { setReadinessAck(null); setReadinessEntry('sick'); }}
-              testID={weekReadiness
-                ? explorerTestId.readinessUpdate(weekReadiness.id)
-                : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-              accessibilityLabel={weekReadiness
-                ? explorerTestId.readinessUpdate(weekReadiness.id)
-                : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-              accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
-              label="Sick"
-              tint={styles.readinessIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFCA68" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z" />
-                  <Path d="M12 10v6" />
-                </Svg>
-              }
-            />
-          </View>
         )}
 
         {/* The answer to a chip tap, in the athlete's own words, directly under
@@ -1595,82 +1480,6 @@ export default function HomeScreenV2() {
         knowing this component exists. That is why there is one mount here and
         no toast call at any of the ten program-control call sites.
       */}
-      {/* ── THE LABELLED REMOVE HUB'S SHEETS ────────────────────────────────
-          Mounted HERE, beside `UndoToast`, and that adjacency is the point:
-          the flow that raises the undoable action finishes on the same surface
-          the toast appears on. */}
-      <Sheet
-        visible={removeFlow.kind === 'select'}
-        onClose={() => setRemoveFlow({ kind: 'closed' })}
-        testID="home-remove-select-sheet"
-      >
-        <Text style={styles.sheetTitle}>Remove an exercise</Text>
-        {removableExercises.length === 0 ? (
-          <Text style={styles.changeCardSubline} testID="home-remove-select-empty">
-            There is nothing to remove in today&apos;s session.
-          </Text>
-        ) : removableExercises.map((row) => (
-          <SheetOption
-            key={row.name}
-            label={row.name}
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFA1C4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/></Svg>}
-            testID={`home-remove-select-${stableTestIdToken(row.name)}`}
-            onPress={() => setRemoveFlow({
-              kind: 'scope',
-              exerciseName: row.name,
-              exerciseId: row.exerciseId,
-            })}
-          />
-        ))}
-      </Sheet>
-
-      <Sheet
-        visible={removeFlow.kind === 'scope'}
-        onClose={() => setRemoveFlow({ kind: 'closed' })}
-        testID="home-remove-scope-sheet"
-      >
-        <Text style={styles.sheetTitle}>
-          {removeFlow.kind === 'scope' ? removeFlow.exerciseName : ''}
-        </Text>
-        {/* The question is the ONE owned constant, so this sheet and My Status
-            ask the athlete the same thing in the same words. */}
-        <Text style={styles.changeCardSubline}>{EXERCISE_EXCLUSION_QUESTION}</Text>
-        {EXERCISE_EXCLUSION_SCOPES.map((scope) => (
-          <SheetOption
-            key={scope}
-            label={EXERCISE_EXCLUSION_SCOPE_LABEL[scope]}
-            sub={EXERCISE_EXCLUSION_SCOPE_DETAIL[scope]}
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx="12" cy="12" r="9"/><Path d="M12 7v5l3 2"/></Svg>}
-            testID={`home-remove-scope-${stableTestIdToken(scope)}`}
-            onPress={() => {
-              if (removeFlow.kind !== 'scope') return;
-              void applyRemoveFlowScope(removeFlow.exerciseName, removeFlow.exerciseId, scope);
-            }}
-          />
-        ))}
-      </Sheet>
-
-      <Sheet
-        visible={removeFlow.kind === 'result'}
-        onClose={() => setRemoveFlow({ kind: 'closed' })}
-        testID={removeFlow.kind === 'result' && removeFlow.ok
-          ? 'home-remove-result-ok'
-          : 'home-remove-result-refused'}
-      >
-        <Text style={styles.sheetTitle}>
-          {removeFlow.kind === 'result' ? removeFlow.title : ''}
-        </Text>
-        <Text style={styles.changeCardSubline} testID="home-remove-result-message">
-          {removeFlow.kind === 'result' ? removeFlow.message : ''}
-        </Text>
-        <SheetOption
-          label="Done"
-          icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M4 12l6 6L20 6"/></Svg>}
-          testID="home-remove-result-done"
-          onPress={() => setRemoveFlow({ kind: 'closed' })}
-        />
-      </Sheet>
-
       <UndoToast />
     </SafeAreaView>
   );
@@ -2600,52 +2409,6 @@ function DayRow({
       )}
       </View>
     </Card>
-  );
-}
-
-interface LifeFactChipProps {
-  readonly icon: React.ReactNode;
-  /** One of the existing `*IconTint` styles. Omitted = the blue the busy row used. */
-  readonly tint?: StyleProp<ViewStyle>;
-  /** PROPOSED, unsigned, one Title Case word. See the row's call site. */
-  readonly label: string;
-  readonly onPress: () => void;
-  readonly testID: string;
-  readonly accessibilityLabel: string;
-  /** The sentence the bar used to show, for anyone the one word is not enough for. */
-  readonly accessibilityHint?: string;
-}
-
-/**
- * A LIFE-FACT CHIP — Sam's 2026-08-01 design, ruled 2026-08-08.
- *
- * ONE CHIP SHAPE, FIVE CALL SITES. Five copies of a round icon over a tiny
- * label is five places for a padding to drift and one place to forget an
- * accessibility label; the same argument that gave the day-first view one
- * `renderDayRow`. What differs between chips — the door, the glyph, the tint,
- * the word — is exactly what arrives as props, and nothing else can.
- *
- * IT OWNS NO DOOR OF ITS OWN. `onPress`, `testID` and `accessibilityLabel` come
- * from the call site unchanged from the bar this chip replaces, so the walker,
- * the explorer and the dev-e2e finder reach the same coordinates they always
- * did. A chip that minted its own testID from its label would have quietly
- * renamed five doors.
- */
-function LifeFactChip({
-  icon, tint, label, onPress, testID, accessibilityLabel, accessibilityHint,
-}: LifeFactChipProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
-      style={({ pressed }) => [styles.lifeFactChip, pressed && { opacity: 0.7 }]}
-    >
-      <View style={[styles.lifeFactChipIcon, tint]}>{icon}</View>
-      <Text style={styles.lifeFactChipLabel} numberOfLines={1}>{label}</Text>
-    </Pressable>
   );
 }
 

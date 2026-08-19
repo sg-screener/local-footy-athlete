@@ -11,7 +11,7 @@ import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
@@ -518,8 +518,6 @@ export default function DayWorkoutScreenV2() {
     isTeamOnly,
   } = useDayWorkout();
 
-  // The Day screen's hub arrives here with `openChange`; see the effect below.
-  const route = useRoute<{ key: string; name: string; params?: { openChange?: string } }>();
   const navigation = useNavigation();
 
   const smokeCoachBikeFlow =
@@ -879,31 +877,6 @@ export default function DayWorkoutScreenV2() {
   }, [
     addCandidateGroups, dateLabel, editableExercises.length, isTeamOnly,
     showExerciseEditFallback, workoutLabel,
-  ]);
-
-  /**
-   * ── THE DAY SCREEN'S HUB, ARRIVING ON THE DOOR IT ASKED FOR ───────────────
-   *
-   * Sam, 2026-08-19: *"Both must render one shared hub and enter the same
-   * canonical action doors."* Equipment, Add and Swap have exactly one owner
-   * each and it is on THIS screen, so the Day hub navigates here with
-   * `openChange` instead of growing a second copy of any of them.
-   *
-   * ⚠ **ONCE, AND ONLY WHEN THE SESSION IS READY.** The effect waits for
-   * `editableExercises` because two of the three doors open a picker over the
-   * session's own rows, and it clears the param afterwards so that going back
-   * and returning does not re-open the sheet the athlete just closed.
-   */
-  const openChangeIntent = (route.params as { openChange?: string } | undefined)?.openChange;
-  React.useEffect(() => {
-    if (!openChangeIntent || !date || isTeamOnly || editableExercises.length === 0) return;
-    if (openChangeIntent === 'equipment') openSessionEquipment();
-    else if (openChangeIntent === 'add') openExerciseAdd();
-    else if (openChangeIntent === 'swap') openExerciseSwapPicker();
-    navigation.setParams({ openChange: undefined } as never);
-  }, [
-    openChangeIntent, date, isTeamOnly, editableExercises.length,
-    openSessionEquipment, openExerciseAdd, openExerciseSwapPicker, navigation,
   ]);
 
   const openAddGroup = React.useCallback((label: string) => {

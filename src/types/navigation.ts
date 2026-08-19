@@ -90,17 +90,6 @@ export type HomeStackParamList = {
     workoutId: string;
     date?: string;
     startFinished?: boolean;
-    /**
-     * WHICH CHANGE DOOR TO OPEN ON ARRIVAL.
-     *
-     * Sam, 2026-08-19: *"Both must render one shared hub and enter the same
-     * canonical action doors."* Equipment, Add and Swap have exactly one owner
-     * each and it lives on this screen, so the Day screen's hub reaches them by
-     * opening today's session ON that door rather than growing a second copy.
-     * Injury and Remove are not routed: the Day screen already owns those two,
-     * and Remove deliberately stays there because `UndoToast` mounts on Home.
-     */
-    openChange?: 'equipment' | 'add' | 'swap';
   };
   QuickStart: {
     workoutId: string;

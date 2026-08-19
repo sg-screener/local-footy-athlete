@@ -1,32 +1,45 @@
 /**
- * ONE "NEED TO MAKE A CHANGE?" HUB, RENDERED BY BOTH SURFACES.
+ * ONE "NEED TO MAKE A CHANGE?" CARD, RENDERED BY BOTH SURFACES — WITH A
+ * DIFFERENT LIST OF ACTIONS ON EACH.
  *
- * Sam, 2026-08-19: *"The Need to make a change? section inside an active session
- * must use the same shared UI component and visual design as the Day screen —
- * not a separate row of plain text pills. Both surfaces must show the same five
- * actions: Equipment · Injury · Add · Remove · Swap. Reuse the Day-screen card
- * layout, icons, colours, labels, spacing and interaction states. Do not keep
- * separate Day and Session implementations."*
+ * Sam, 2026-08-19 (the ruling that built this): *"The Need to make a change?
+ * section inside an active session must use the same shared UI component and
+ * visual design as the Day screen — not a separate row of plain text pills …
+ * Do not keep separate Day and Session implementations."*
  *
- * ## WHAT WAS WRONG
+ * Sam, 2026-08-19 (the ruling that CORRECTED it): *"DAY PAGE: exactly Tired,
+ * Sick and Injured, together inside the original 'Need to make a change?' card
+ * … NO Remove, Equipment, Add or Swap, and no separate readiness row. ACTIVE
+ * SESSION SCREEN: Equipment, Injury, Add, Remove and Swap. It may share a
+ * configurable visual component with Day, but never a hard-coded action list."*
  *
- * There were TWO hubs. The Day screen had the signed card — heading, sub-line
- * and a row of 48px tinted icon chips. The session screen had its own row of
- * plain bordered text pills, built when the five labelled actions landed. Same
- * heading, same intent, two implementations and two visual languages, so the
- * athlete met a different control depending on which screen they were on and
- * every future change had to be made twice.
+ * ## WHAT WENT WRONG, AND WHY THE FIX IS IN THIS FILE
+ *
+ * The first ruling was read as "both surfaces show the same five actions", so
+ * this component was written with the five session actions FROZEN into it —
+ * `SESSION_CHANGE_ACTION_IDS`, a closed tint table, a closed glyph switch. The
+ * Day screen then had to hand it those five, which pushed Tired and Sick out of
+ * the signed card into a bare row beneath it and **deleted the Injured chip
+ * from the Day screen altogether**.
+ *
+ * ⚠ **A HARD-CODED ACTION LIST IS THE DEFECT, NOT THE SHARING.** A shared card
+ * whose vocabulary is one surface's list is not shared — it is one surface's
+ * component that the other has to impersonate. This file now carries the
+ * identity (word, tint, glyph) of EVERY action either surface can offer, and
+ * owns no opinion about which of them belongs where. The two surface sets are
+ * declared here, side by side, so a guard can assert them apart:
+ * `DAY_STATUS_ACTION_IDS` and `SESSION_CHANGE_ACTION_IDS` — **and they are
+ * disjoint**, which is the whole of Sam's correction expressed as data.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
  * It owns the CARD, the heading, the sub-line, the chip row, the icons, the
- * tints, the labels and the pressed state — everything the athlete sees. The
- * five action IDs and their glyphs live here so the two surfaces cannot drift
- * into different words or different pictures for the same door.
+ * tints, the labels and the pressed state — everything the athlete sees.
  *
- * It owns NOTHING about what a tap does. Each surface passes its own `onPress`,
- * because the Day screen acts on today's session and the session screen acts on
- * the one that is open — the same canonical doors, reached with the right date.
+ * It owns NOTHING about what a tap does, and nothing about which taps exist.
+ * Each surface passes its own `onPress`, its own `testID` and its own list,
+ * because the Day screen acts on the athlete's STATE and the session screen
+ * acts on the session that is open.
  *
  * ⚠ **THE `actions` LIST IS STILL THE WHOLE "NO DEAD BUTTONS" MECHANISM.** This
  * component renders what it is handed and nothing else. It has no knowledge of
@@ -34,8 +47,9 @@
  * disabled state for a caller to hand it. An action the surface cannot serve is
  * simply not in the list.
  *
- * WRITER: `screens/home/HomeScreenV2` (Day) and `screens/home/DayWorkoutScreenV2`
- * (session). READER: the athlete. TEST: `test:session-change-hub` parity section.
+ * WRITER: `screens/home/HomeScreenV2` (Day, the three status facts) and
+ * `screens/home/DayWorkoutScreenV2` (session, the five session changes).
+ * READER: the athlete. TEST: `test:session-change-hub` sections [8] and [9].
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -43,27 +57,56 @@ import Svg, { Path } from 'react-native-svg';
 
 import { Card } from './ui';
 import { spacing } from '../theme/spacing';
+import { signedCopy } from '../rules/signedCopy';
 
 /**
- * THE FIVE, IN THE ORDER SAM WRITES THEM: *"Equipment · Injury · Add · Remove ·
- * Swap"*. Exported so a parity guard can assert both surfaces offer the same
- * set rather than trusting two hand-written lists to stay equal.
+ * THE DAY SURFACE'S SET — Sam: *"exactly Tired, Sick and Injured"*.
+ *
+ * These are FACTS ABOUT THE ATHLETE, not changes to a session: they open the
+ * readiness sheet and the guided injury flow, never one of the five session
+ * doors. They were the card's original contents at `1a7e7bd0` and this is a
+ * restoration, not a new design.
+ */
+export const DAY_STATUS_ACTION_IDS = ['tired', 'sick', 'injured'] as const;
+
+/**
+ * THE SESSION SURFACE'S SET, IN THE ORDER SAM WRITES THEM: *"Equipment ·
+ * Injury · Add · Remove · Swap"*.
  */
 export const SESSION_CHANGE_ACTION_IDS = [
   'equipment', 'injury', 'add', 'remove', 'swap',
 ] as const;
 
+/** Every identity this card can draw. Neither surface offers all of them. */
+export const CHANGE_ACTION_IDS = [
+  ...DAY_STATUS_ACTION_IDS, ...SESSION_CHANGE_ACTION_IDS,
+] as const;
+
+export type ChangeActionId = (typeof CHANGE_ACTION_IDS)[number];
+/** Kept as the session surface's narrower type; it is what that screen passes. */
 export type SessionChangeActionId = (typeof SESSION_CHANGE_ACTION_IDS)[number];
 
 export interface SessionChangeAction {
-  id: SessionChangeActionId;
+  id: ChangeActionId;
   onPress: () => void;
-  /** Optional override; the shared label is used when absent. */
+  /**
+   * The coordinate the walker, the explorer and the dev-e2e finder reach this
+   * door by. Defaults to `session-change-<id>`; the Day surface passes the ids
+   * its doors have always had (`home-tired-entry`, `home-injured-entry`, and
+   * the readiness set/update id, which CHANGES when a fact is already active).
+   * A chip that minted its own id from its label would silently rename a door.
+   */
+  testID?: string;
+  /** Defaults to the shared label. Overridden where a door's spoken name differs. */
+  accessibilityLabel?: string;
   accessibilityHint?: string;
 }
 
-/** The word the athlete reads. One place, so the two surfaces cannot disagree. */
-export const SESSION_CHANGE_ACTION_LABEL: Record<SessionChangeActionId, string> = {
+/** The word the athlete reads. One place, so no two surfaces can disagree. */
+export const CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {
+  tired: 'Tired',
+  sick: 'Sick',
+  injured: 'Injured',
   equipment: 'Equipment',
   injury: 'Injury',
   add: 'Add',
@@ -71,12 +114,19 @@ export const SESSION_CHANGE_ACTION_LABEL: Record<SessionChangeActionId, string> 
   swap: 'Swap',
 };
 
+/** The previous name, kept so existing readers do not have to be rewritten. */
+export const SESSION_CHANGE_ACTION_LABEL = CHANGE_ACTION_LABEL;
+
 /**
- * The tints are the ones already chosen on the Day screen for the doors that
- * existed there — the injury red and the remove pink are carried over verbatim
- * rather than re-picked, so nothing the athlete already recognises changes hue.
+ * The tints and strokes are the ones already chosen — the three status colours
+ * are carried over VERBATIM from the Day screen at `1a7e7bd0` (cyan Tired,
+ * amber Sick, red Injured) and the five session tints from this component's
+ * first version, so nothing the athlete already recognises changes hue.
  */
-const ACTION_TINT: Record<SessionChangeActionId, string> = {
+const ACTION_TINT: Record<ChangeActionId, string> = {
+  tired: 'rgba(103, 215, 255, 0.12)',
+  sick: 'rgba(255, 202, 104, 0.12)',
+  injured: 'rgba(255, 127, 127, 0.12)',
   equipment: 'rgba(30, 167, 255, 0.12)',
   injury: 'rgba(255, 127, 127, 0.12)',
   add: 'rgba(198, 255, 0, 0.12)',
@@ -84,7 +134,10 @@ const ACTION_TINT: Record<SessionChangeActionId, string> = {
   swap: 'rgba(185, 167, 255, 0.12)',
 };
 
-const ACTION_STROKE: Record<SessionChangeActionId, string> = {
+const ACTION_STROKE: Record<ChangeActionId, string> = {
+  tired: '#67D7FF',
+  sick: '#FFCA68',
+  injured: '#FF7F7F',
   equipment: '#67D7FF',
   injury: '#FF7F7F',
   add: '#C6FF00',
@@ -92,7 +145,14 @@ const ACTION_STROKE: Record<SessionChangeActionId, string> = {
   swap: '#B9A7FF',
 };
 
-function glyph(id: SessionChangeActionId): React.ReactNode {
+/**
+ * ⚠ **THE THREE STATUS GLYPHS ARE RENEE'S, COPIED PATH-FOR-PATH FROM THE
+ * SIGNED DAY SCREEN AT `1a7e7bd0`.** They are asserted by exact path data in
+ * `test:day-first-timeline`, which is what caught their loss. Do not redraw
+ * them; the battery, the thermometer and the medical cross are the pictures the
+ * athlete has been taught.
+ */
+function glyph(id: ChangeActionId): React.ReactNode {
   const stroke = ACTION_STROKE[id];
   const common = {
     width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
@@ -100,6 +160,28 @@ function glyph(id: SessionChangeActionId): React.ReactNode {
     strokeLinejoin: 'round' as const,
   };
   switch (id) {
+    // A battery with a terminal — energy, drawn a touch heavier as it always was.
+    case 'tired':
+      return (
+        <Svg {...common} strokeWidth={2.2}>
+          <Path d="M3 8h15v8H3z" /><Path d="M21 11v2" /><Path d="M6 11v2" />
+        </Svg>
+      );
+    // A thermometer — illness.
+    case 'sick':
+      return (
+        <Svg {...common} strokeWidth={1.7}>
+          <Path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z" /><Path d="M12 10v6" />
+        </Svg>
+      );
+    // A medical cross — injury. NOT the warning triangle: the triangle is the
+    // SESSION's per-exercise injury door, and the two must not look alike.
+    case 'injured':
+      return (
+        <Svg {...common} strokeWidth={1.7}>
+          <Path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" />
+        </Svg>
+      );
     // A dumbbell — the kit itself.
     case 'equipment':
       return (
@@ -107,7 +189,7 @@ function glyph(id: SessionChangeActionId): React.ReactNode {
           <Path d="M6.5 7v10M4 9v6M17.5 7v10M20 9v6M6.5 12h11" />
         </Svg>
       );
-    // The warning triangle the Day screen's injury entries already draw.
+    // The warning triangle: "this exercise hurts", asked inside a session.
     case 'injury':
       return (
         <Svg {...common}>
@@ -139,28 +221,38 @@ function glyph(id: SessionChangeActionId): React.ReactNode {
 export function SessionChangeHub({
   actions,
   testID = 'session-change-hub',
-  subline = 'Update your status to modify your program.',
+  rowTestID,
+  subline,
 }: {
   actions: readonly SessionChangeAction[];
   testID?: string;
+  /** Defaults to `<testID>-actions`; the Day surface keeps `home-life-fact-chips`. */
+  rowTestID?: string;
+  /** Defaults to the signed sub-line. The session surface narrows it to today. */
   subline?: string;
 }) {
   if (actions.length === 0) return null;
   return (
     <Card tone="default" padding="lg" radius="lg" style={styles.card} testID={testID}>
-      <Text style={styles.heading}>Need to make a change?</Text>
-      <Text style={styles.subline}>{subline}</Text>
-      <View style={styles.row} testID={`${testID}-actions`}>
+      {/* ⚠ **THE WORDS COME FROM THE SHEET, NOT FROM HERE.** They were literals
+          in this file for one day and that is a word Sam could never re-word;
+          `day.change_card.*` are the signed rows and moving the panel must not
+          quietly orphan them. Held by `test:day-first-timeline`. */}
+      <Text style={styles.heading}>{signedCopy('day.change_card.heading')}</Text>
+      <Text style={styles.subline}>
+        {subline ?? signedCopy('day.change_card.subline')}
+      </Text>
+      <View style={styles.row} testID={rowTestID ?? `${testID}-actions`}>
         {actions.map((action) => {
-          const label = SESSION_CHANGE_ACTION_LABEL[action.id];
+          const label = CHANGE_ACTION_LABEL[action.id];
           return (
             <Pressable
               key={action.id}
               onPress={action.onPress}
               accessibilityRole="button"
-              accessibilityLabel={label}
+              accessibilityLabel={action.accessibilityLabel ?? label}
               accessibilityHint={action.accessibilityHint}
-              testID={`session-change-${action.id}`}
+              testID={action.testID ?? `session-change-${action.id}`}
               style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
             >
               <View style={[styles.chipIcon, { backgroundColor: ACTION_TINT[action.id] }]}>
@@ -171,7 +263,7 @@ export function SessionChangeHub({
                   word that does not fit: it first truncated to "Equipm…", then,
                   when wrapped, broke mid-word as "Equipmen / t". A label that
                   hyphenates itself reads as a bug. `adjustsFontSizeToFit` drops
-                  only that one word a fraction; the other four are unchanged. */}
+                  only that one word a fraction; the others are unchanged. */}
               <Text
                 style={styles.chipLabel}
                 numberOfLines={1}

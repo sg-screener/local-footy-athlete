@@ -190,11 +190,13 @@ console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
   ok('both surfaces mount the component',
     /<SessionChangeHub/.test(live) && /<SessionChangeHub/.test(dayLive));
 
-  /* THE FIVE ARE THE COMPONENT'S, NOT EACH SCREEN'S. */
-  ok('the shared owner names all five actions',
+  /* THE VOCABULARY IS THE COMPONENT'S, NOT EACH SCREEN'S. */
+  ok('the shared owner names the five session actions',
     /'equipment', 'injury', 'add', 'remove', 'swap'/.test(hubLive));
+  ok('and it names the three Day status actions beside them',
+    /'tired', 'sick', 'injured'/.test(hubLive));
   ok('and it owns the LABELS, so the two surfaces cannot say different words',
-    /SESSION_CHANGE_ACTION_LABEL/.test(hubLive)
+    /CHANGE_ACTION_LABEL/.test(hubLive)
       && !/label: 'Equipment'/.test(live) && !/label: 'Equipment'/.test(dayLive));
   ok('and it owns the ICONS and tints, so they cannot look different',
     /ACTION_TINT/.test(hubLive) && /function glyph\(/.test(hubLive));
@@ -202,23 +204,100 @@ console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
   for (const id of ['equipment', 'injury', 'add', 'remove', 'swap']) {
     ok(`the session surface offers '${id}'`,
       new RegExp(`id: '${id}' as const`).test(live));
-    ok(`the Day surface offers '${id}'`,
-      new RegExp(`id: '${id}' as const`).test(dayLive));
   }
 
-  /* THE DOORS. Equipment/Add/Swap have ONE owner each and it is the session
-   * screen, so the Day surface reaches them by opening today's session ON that
-   * door rather than by growing a second copy. */
-  ok('the Day surface routes equipment/add/swap to the session screen door',
-    /handleOpenSessionChange\(dayFirstDay, 'equipment'\)/.test(dayLive)
-      && /handleOpenSessionChange\(dayFirstDay, 'add'\)/.test(dayLive)
-      && /handleOpenSessionChange\(dayFirstDay, 'swap'\)/.test(dayLive));
-  ok('and the session screen opens the door it was sent to',
-    /openChangeIntent === 'equipment'/.test(live)
-      && /openChangeIntent === 'add'/.test(live)
-      && /openChangeIntent === 'swap'/.test(live));
-  ok('the intent is cleared so returning does not re-open the sheet',
-    /setParams\(\{ openChange: undefined \}/.test(live));
+  /* ⚠ **THE `openChange` DEEP LINK IS GONE, AND THAT IS THE OTHER HALF OF THE
+   * CORRECTION.** It existed only so the Day hub's Equipment/Add/Swap chips
+   * could open the session screen on a door. The Day hub no longer offers those
+   * three, so nothing navigated with the param any more: a route field with no
+   * writer is exactly the dead weight later code trusts. Sender
+   * (`useHomeScreen.handleOpenSessionChange`), param
+   * (`types/navigation`, `AppNavigator`) and receiver (this screen's effect)
+   * were deleted together — a half-deletion leaves a door that answers to
+   * nobody. */
+  ok('the dead openChange deep link is gone from the session screen',
+    !/openChange/.test(live), 'the receiver outlived its only sender');
+  ok('and from the Day screen',
+    !/handleOpenSessionChange/.test(dayLive));
+}
+
+console.log('\n[9] THE TWO SURFACES OFFER DIFFERENT SETS — AND THAT IS THE CONTRACT');
+{
+  /* ⚠ **THIS SECTION IS THE ONE THAT WAS MISSING, AND ITS ABSENCE SHIPPED THE
+   * DEFECT.**
+   *
+   * Sam, 2026-08-19: *"DAY PAGE: exactly Tired, Sick and Injured, together
+   * inside the original 'Need to make a change?' card … NO Remove, Equipment,
+   * Add or Swap. No separate readiness row. ACTIVE SESSION SCREEN: Equipment,
+   * Injury, Add, Remove and Swap … It may share a configurable visual component
+   * with Day, but never a hard-coded action list."*
+   *
+   * Section [8] proves the two surfaces draw the SAME CARD. On its own that is
+   * satisfied by both drawing the same five chips — which is precisely what
+   * shipped, and it evicted Tired and Sick into a bare row and deleted the
+   * Injured chip outright. **Sameness of component and sameness of contents are
+   * different claims, and only one of them is true.**
+   *
+   * So: each surface's set is asserted EXACTLY (nothing missing, nothing
+   * extra), and the two are asserted DISJOINT. A future hand that hard-codes
+   * one list into the shared component reddens here even if section [8] stays
+   * green. */
+  const dayLive = daySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const hubLive = hubSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  const DAY = ['tired', 'sick', 'injured'];
+  const SESSION = ['equipment', 'injury', 'add', 'remove', 'swap'];
+
+  /** The ids a surface actually hands the hub, read off its own `actions` list. */
+  const offered = (surface: string): string[] => {
+    const at = surface.indexOf('<SessionChangeHub');
+    if (at < 0) return [];
+    const end = surface.indexOf('/>', at);
+    return [...surface.slice(at, end).matchAll(/id: '(\w+)' as const/g)]
+      .map((match) => match[1]!);
+  };
+
+  // ⚠ CONTROL. Every "does not offer" cell below is a negation, and a negation
+  // is true of an empty list. If the reader stopped finding the mount at all,
+  // both surfaces would look perfectly compliant.
+  const dayOffered = offered(dayLive);
+  const sessionOffered = offered(live);
+  ok('CONTROL — the reader finds a non-empty list on each surface',
+    dayOffered.length > 0 && sessionOffered.length > 0,
+    `day ${JSON.stringify(dayOffered)} session ${JSON.stringify(sessionOffered)}`);
+
+  ok('the Day surface offers EXACTLY Tired, Sick and Injured',
+    JSON.stringify(dayOffered) === JSON.stringify(DAY),
+    JSON.stringify(dayOffered));
+  ok('the session surface offers EXACTLY the five, in Sam’s order',
+    JSON.stringify(sessionOffered) === JSON.stringify(SESSION),
+    JSON.stringify(sessionOffered));
+  ok('and the two sets share nothing',
+    dayOffered.every((id) => !sessionOffered.includes(id)));
+
+  for (const id of SESSION) {
+    ok(`the Day surface does NOT offer '${id}'`, !dayOffered.includes(id));
+  }
+
+  /* THE SEPARATE ROW IS GONE — the other half of "no separate readiness row".
+   * Deleting the five from the Day hub while leaving Tired and Sick outside it
+   * would satisfy every cell above and still be the wrong screen. */
+  ok('the three sit INSIDE the card, not in a row beside it',
+    /testID="home-change-card"[\s\S]{0,600}rowTestID="home-life-fact-chips"/.test(dayLive),
+    'the status row must be the change card’s own row');
+  ok('and the Day screen has no second chip row of its own',
+    !/<View style=\{styles\.lifeFactChips\}/.test(dayLive)
+      && !/<LifeFactChip/.test(dayLive),
+    'the bare readiness row Sam ruled out has come back');
+
+  /* THE COMPONENT IS CONFIGURABLE, NOT TWO HARD-CODED LISTS. */
+  ok('the hub renders the list it is handed and picks no list of its own',
+    /actions\.map\(/.test(hubLive) && !/DAY_STATUS_ACTION_IDS\.map\(/.test(hubLive)
+      && !/SESSION_CHANGE_ACTION_IDS\.map\(/.test(hubLive));
+  ok('each surface may name its own testIDs, so no door is silently renamed',
+    /action\.testID \?\?/.test(hubLive)
+      && /testID: 'home-tired-entry'/.test(dayLive)
+      && /testID: 'home-injured-entry'/.test(dayLive));
 }
 
 console.log(`\n${'─'.repeat(72)}`);

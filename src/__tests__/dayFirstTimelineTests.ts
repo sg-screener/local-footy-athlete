@@ -457,6 +457,24 @@ function homeScreenSource(): string {
   ));
 }
 
+/**
+ * THE CARD ITSELF LIVES IN A SHARED COMPONENT NOW (2026-08-19).
+ *
+ * The Day screen composes the LIST — which three doors, with which testIDs —
+ * and `components/SessionChangeHub` draws the card, the heading, the sub-line,
+ * the circles, the tints and the three glyphs. So the cells below read the
+ * SCREEN for the doors and this file for the picture, which is the same split
+ * `test:session-change-hub` already uses.
+ *
+ * ⚠ **A CELL THAT READ ONLY THE SCREEN WOULD NOW PASS ON A CARD WITH NO
+ * PICTURES IN IT AT ALL.**
+ */
+function changeHubSource(): string {
+  return stripComments(fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'SessionChangeHub.tsx'), 'utf8',
+  ));
+}
+
 run('the live Program screen owns one persistent Day/Week choice across weeks', () => {
   const wrapper = stripComments(fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'HomeScreen.tsx'), 'utf8',
@@ -541,23 +559,32 @@ run('week navigation is bounded by the saved program dates, whatever its length'
  * deleted — the cell below asserts it is absent here and present there, because
  * a move that only deletes is how a door quietly stops existing.
  */
-const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: string; readonly testID: string }[] = [
-  { label: 'Tired', onPress: "setReadinessEntry('flat')", testID: 'testID="home-tired-entry"' },
-  { label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
-  { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
-  // ── THREE -> FOUR, RAISED DELIBERATELY, IN THE COMMIT THAT EARNS IT ────────
-  // Sam, 2026-08-19: *"the required trigger is not complete until the athlete
-  // can clearly tap a labelled Remove action."* Until this chip existed, the
-  // ONLY route to a removal was `component-delete-action-…` — an unlabelled
-  // icon on a pushed session screen, behind an expanded strength block.
+const LIFE_FACT_DOORS: readonly {
+  readonly id: string; readonly label: string;
+  readonly onPress: string; readonly testID: string;
+}[] = [
+  { id: 'tired', label: 'Tired', onPress: "setReadinessEntry('flat')", testID: "testID: 'home-tired-entry'" },
+  { id: 'sick', label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
+  { id: 'injured', label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: "testID: 'home-injured-entry'" },
+  // ── FOUR -> THREE, AND THE FOURTH IS SUPERSEDED, NOT FORGOTTEN ─────────────
   //
-  // It belongs on THIS row and not inside the session for the reason the row's
-  // own message gives about Equipment and Away: the row is the "Need to make a
-  // change?" area, and removing an exercise is a change to today. It is also
-  // what makes Undo reachable — `UndoToast` mounts on this screen, so a removal
-  // driven from here finishes where the toast appears, instead of raising it
-  // behind the pushed screen where its life expires unseen.
-  { label: 'Remove', onPress: "setRemoveFlow({ kind: 'select' })", testID: 'testID="home-remove-entry"' },
+  // A `Remove` chip lived here for one day. It was raised on 2026-08-19 —
+  // *"the required trigger is not complete until the athlete can clearly tap a
+  // labelled Remove action"* — because the only route to a removal was then an
+  // unlabelled icon on a pushed session screen.
+  //
+  // **SAM SUPERSEDED IT THE SAME DAY**, once that labelled route existed on the
+  // session screen itself: *"DAY PAGE: exactly Tired, Sick and Injured … NO
+  // Remove, Equipment, Add or Swap."* The requirement was never "Remove must be
+  // on the Day screen" — it was "a labelled Remove must exist", and the session
+  // hub is where it now is. See `test:session-change-hub` [9].
+  //
+  // ⚠ **ONE THING WAS LOST WITH IT AND IS NAMED HERE RATHER THAN ABSORBED.**
+  // `UndoToast` mounts on the Program screen and nowhere else, so a removal
+  // driven from the pushed session screen raises its toast on the screen
+  // BEHIND it. The Day chip had been hiding that. It is recorded as a finding
+  // in `docs/STATUS_ORCHESTRATOR.md`; it is not this cell's to fix, and a
+  // second toast mount would breach the one-mount ruling.
 ];
 
 run('the screen is in the order Sam ruled: toggle, card, then change controls', () => {
@@ -581,7 +608,7 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
   const toggle = at('testID="program-view-toggle"');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
-  const chips = at('testID="home-life-fact-chips"');
+  const chips = at('rowTestID="home-life-fact-chips"');
   const followUp = at('{isNormal && missedSessionPrompt');
   assert(toggle < card && card < changeCard && changeCard < chips && chips < followUp,
     'the Program screen is no longer in the order Sam ruled '
@@ -722,7 +749,7 @@ run('the day timeline uses each session icon as its only marker and matches her 
 run('the Today card has no accent rail and its change link is quiet', () => {
   const home = homeScreenSource();
   const dayRowAt = home.indexOf('function DayRow(');
-  const dayRowEnd = home.indexOf('interface LifeFactChipProps', dayRowAt);
+  const dayRowEnd = home.indexOf('interface WeekStripProps', dayRowAt);
   assert(dayRowAt > 0 && dayRowEnd > dayRowAt,
     'the DayRow region could not be found');
   const dayRow = home.slice(dayRowAt, dayRowEnd);
@@ -777,54 +804,77 @@ run('Start Session sits inside the card, below the drop-downs', () => {
 
 run('the status circles sit in a card with words above them', () => {
   const home = homeScreenSource();
+  const hub = changeHubSource();
   const cardAt = home.indexOf('testID="home-change-card"');
-  const chipsAt = home.indexOf('testID="home-life-fact-chips"');
-  const cardOpenAt = home.lastIndexOf('<Card', cardAt);
+  const chipsAt = home.indexOf('rowTestID="home-life-fact-chips"');
+  const mountAt = home.lastIndexOf('<SessionChangeHub', cardAt);
   assert(cardAt > 0, 'the change card is gone — ruling 1, Sam\'s FIRST bullet '
     + '("there\'s no text above the little buttons like rens said"), is unbuilt.');
-  assert(cardOpenAt >= 0 && cardOpenAt < cardAt && cardAt < chipsAt,
-    'the complete change-card opening tag was not found before its chip row');
-  const region = home.slice(cardOpenAt, chipsAt);
-  assert(/padding="lg"/.test(region)
-    && /lifeFactChipIcon:\s*\{[^}]*width:\s*48[^}]*height:\s*48[^}]*borderRadius:\s*24/.test(home)
-    && /lifeFactChipLabel:\s*\{[^}]*fontSize:\s*12[^}]*lineHeight:\s*16/.test(home),
+  assert(mountAt >= 0 && mountAt < cardAt && cardAt < chipsAt,
+    'the change card is no longer the shared hub carrying the status row — see '
+    + '`test:session-change-hub` [8] for why there is exactly one implementation');
+
+  // THE PICTURE IS THE SHARED COMPONENT'S. Same numbers as before, read where
+  // they now live: `padding="lg"`, a 48pt circle and a 12/16 label.
+  assert(/padding="lg"/.test(hub)
+    && /chipIcon:\s*\{[^}]*width:\s*48[^}]*height:\s*48[^}]*borderRadius:\s*24/.test(hub)
+    && /chipLabel:\s*\{[^}]*fontSize:\s*12[^}]*lineHeight:\s*16/.test(hub),
     'the status card has fallen back to its undersized padding or chip geometry');
-  assert(/signedCopy\('day\.change_card\.heading'\)/.test(region)
-    && /signedCopy\('day\.change_card\.subline'\)/.test(region),
+  assert(/signedCopy\('day\.change_card\.heading'\)/.test(hub)
+    && /signedCopy\('day\.change_card\.subline'\)/.test(hub),
     'the heading and sub-line above the circles are not read from the sheet.');
-  assert(!/Need to make a change\?/.test(home)
-    && !/Update your status to modify your program\./.test(home),
-    'the change card\'s sentences are hardcoded in the screen. They are PROPOSED '
-    + 'sheet entries (batch 33) awaiting Sam — a literal here is a word he can '
-    + 'never re-word.');
+  assert(!/Need to make a change\?/.test(home) && !/Need to make a change\?/.test(hub)
+    && !/Update your status to modify your program\./.test(home)
+    && !/Update your status to modify your program\./.test(hub),
+    'the change card\'s sentences are hardcoded. They are PROPOSED sheet entries '
+    + '(batch 33) awaiting Sam — a literal is a word he can never re-word. They '
+    + 'were literals in the shared component for one day, which is why this cell '
+    + 'now reads BOTH files.');
   // SUPERSEDED 2026-08-11. The old Time door was inert on Sam's screen and its
   // one-tap schedule mutation did not belong beside status controls. Tired now
   // owns this slot and enters the existing flat-readiness choices directly.
-  assert(/label="Tired"/.test(home) && !/label="Time"/.test(home),
+  assert(/tired: 'Tired'/.test(hub) && !/'Time'/.test(hub),
     'the first circle is not the direct Tired readiness door, or the dead Time '
     + 'door has returned.');
 
-  const chipRegionEnd = home.indexOf('</View>', chipsAt);
-  assert(chipRegionEnd > chipsAt,
-    'the status-chip region could not be found before its closing view');
-  const chipRegion = home.slice(chipsAt, chipRegionEnd);
-  assert(/stroke="#67D7FF"[\s\S]*M3 8h15v8H3z/.test(chipRegion)
-    && /tiredIconTint:\s*\{[^}]*rgba\(103,\s*215,\s*255,\s*0\.12\)/.test(home),
+  // ── THE THREE GLYPHS, BY EXACT PATH DATA ────────────────────────────────
+  // ⚠ **THIS IS THE CELL THAT CAUGHT THE 2026-08-19 REGRESSION** — the Injured
+  // cross was deleted from the Day screen and replaced by the session's warning
+  // triangle, and only the path data could tell those apart. Bounded to the
+  // hub's `glyph` function so a picture drawn anywhere else does not count.
+  const glyphAt = hub.indexOf('function glyph(');
+  assert(glyphAt > 0, 'the shared card no longer draws its own glyphs — this '
+    + 'cell would otherwise scan the whole file and pass on a stray path');
+  const glyphs = hub.slice(glyphAt, hub.indexOf('export function SessionChangeHub', glyphAt));
+  assert(/case 'tired':[\s\S]{0,400}M3 8h15v8H3z/.test(glyphs)
+    && /tired: '#67D7FF'/.test(hub)
+    && /tired: 'rgba\(103, 215, 255, 0\.12\)'/.test(hub),
   'Tired is not using the ruled blue battery icon and matching circle tint');
-  // ITEM 28: THE MAP PIN IS NOT IN THIS ROW ANY MORE, and its own cell below
-  // proves it landed on the week shape rather than simply disappearing.
-  assert(!/M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(chipRegion),
-    'the Away map-pin is still in the day-screen chip row — Sam moved that '
+  assert(/case 'sick':[\s\S]{0,400}M10 5a2 2 0 0 1 4 0v8\.2a4 4 0 1 1-4 0Z[\s\S]{0,120}M12 10v6/.test(glyphs)
+    && /sick: '#FFCA68'/.test(hub)
+    && /sick: 'rgba\(255, 202, 104, 0\.12\)'/.test(hub),
+    'Sick is not using Renee\'s amber thermometer icon and tint');
+  assert(/case 'injured':[\s\S]{0,400}M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z/.test(glyphs)
+    && /injured: '#FF7F7F'/.test(hub)
+    && /injured: 'rgba\(255, 127, 127, 0\.12\)'/.test(hub),
+    'Injured is not using Renee\'s red cross icon and tint');
+  // ⚠ THE CROSS AND THE TRIANGLE ARE DIFFERENT DOORS AND MUST STAY DIFFERENT
+  // PICTURES. The regression swapped one for the other and every other cell
+  // stayed green, because both are "an injury icon".
+  const injuredCase = glyphs.slice(glyphs.indexOf("case 'injured':"));
+  assert(!/M10\.3 3\.9 1\.8 18/.test(injuredCase.slice(0, 400)),
+    'the Day screen\'s Injured chip is drawing the SESSION\'s warning triangle. '
+    + 'The triangle asks "does this exercise hurt?" inside an open session; the '
+    + 'cross says "I am injured".');
+
+  // ITEM 28: THE MAP PIN IS NOT IN THIS CARD, and its own cell below proves it
+  // landed on the week shape rather than simply disappearing.
+  assert(!/M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(hub),
+    'the Away map-pin is back in the day-screen chip row — Sam moved that '
     + 'control to the weekly screen, and two live copies is the duplicate this '
     + 'file exists to catch');
-  assert(/stroke="#FFCA68"[\s\S]*M10 5a2 2 0 0 1 4 0v8\.2a4 4 0 1 1-4 0Z[\s\S]*M12 10v6/.test(chipRegion),
-    'Sick is not using Renee\'s amber thermometer icon');
-  assert(/stroke="#FF7F7F"[\s\S]*M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z/.test(chipRegion),
-    'Injured is not using Renee\'s red cross icon');
-  assert(/awayIconTint:\s*\{[^}]*rgba\(185,\s*167,\s*255,\s*0\.12\)/.test(home)
-    && /readinessIconTint:\s*\{[^}]*rgba\(255,\s*202,\s*104,\s*0\.12\)/.test(home)
-    && /injuredIconTint:\s*\{[^}]*rgba\(255,\s*127,\s*127,\s*0\.12\)/.test(home),
-  'the three Renee status icons no longer carry their matching circle tints');
+  assert(/awayIconTint:\s*\{[^}]*rgba\(185,\s*167,\s*255,\s*0\.12\)/.test(home),
+    'the Away chip no longer carries its matching circle tint');
 });
 
 /**
@@ -923,7 +973,7 @@ run('Tired and Sick enter one readiness sheet at their own options', () => {
     'the three Tired severities do not reach three typed readiness actions');
   assert(!/Rough sleep|Sore or tight|readiness-leaf-sleep|bucket === 'sleep'/.test(sheet),
     'sleep or soreness still appears in the Tired pathway');
-  assert(/testID="home-injured-entry"/.test(home)
+  assert(/home-injured-entry/.test(home)
     && /setReadinessInjuryVisible\(true\)/.test(home),
     'the dedicated Injured door or its existing guided pathway was removed');
 });
@@ -1038,7 +1088,7 @@ run('the week starts collapsed while Day owns its persistent weekday directly', 
     'Day still borrows Week expansion instead of owning a persistent weekday directly');
 
   const dayRowAt = home.indexOf('function DayRow(');
-  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface WeekStripProps', dayRowAt));
   assert(dayRowAt > 0 && dayRow.length > 2000,
     'the DayRow region could not be found');
   assert(/selected=\{normal && \(dayShape \? isSelected : day\.isToday\)\}/.test(dayRow),
@@ -1112,7 +1162,7 @@ run('all seven week days use her one card head, including today', () => {
   assert(/canExpand[\s\S]{0,600}weekCardChevron/.test(component),
     'a card with details no longer shows that it opens');
 
-  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface WeekStripProps', dayRowAt));
   assert(dayRow.length > 2000,
     'the DayRow region could not be found — this cell would otherwise pass on '
     + 'a detached WeekDayCardHeader that no day renders');
@@ -1154,7 +1204,7 @@ run('week Game Day and Rest are shorter status cards with centred titles', () =>
   const home = homeScreenSource();
   const componentAt = home.indexOf('function WeekDayCardHeader(');
   const dayRowAt = home.indexOf('function DayRow(');
-  const lifeFactAt = home.indexOf('interface LifeFactChipProps', dayRowAt);
+  const lifeFactAt = home.indexOf('interface WeekStripProps', dayRowAt);
   assert(componentAt > 0 && dayRowAt > componentAt && lifeFactAt > dayRowAt,
     'the week header and DayRow regions could not be found');
   const component = home.slice(componentAt, dayRowAt);
@@ -1224,7 +1274,7 @@ run('Coach Notes have one home and do not render on Today or Week', () => {
 run('the week cards expand details only — session and change controls stay on the day screen', () => {
   const home = homeScreenSource();
   const dayRowAt = home.indexOf('function DayRow(');
-  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface WeekStripProps', dayRowAt));
   assert(dayRowAt > 0 && dayRow.length > 2000,
     'the DayRow region could not be found');
   assert(/!dayShape && isSelected && hasWorkout && !isGame && normal[\s\S]{0,180}\{timeline\}/.test(dayRow),
@@ -1263,37 +1313,49 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
 
 run('the chip row carries its direct status doors and no others', () => {
   const home = homeScreenSource();
-  const rowStart = home.indexOf('testID="home-life-fact-chips"');
+  const hub = changeHubSource();
+  const rowStart = home.indexOf('<SessionChangeHub');
   assert(rowStart > 0, 'the life-fact chip row is gone from HomeScreenV2 — this gate '
     + 'is watching nothing');
   // The region that RUNS the chips, not the whole file: a chip left behind
   // somewhere else on the screen must not count as a chip in the row.
-  const row = home.slice(rowStart, home.indexOf('home-schedule-ack', rowStart));
-  assert(row.length > 500,
+  const row = home.slice(rowStart, home.indexOf('/>', rowStart));
+  assert(row.length > 500 && row.includes('rowTestID="home-life-fact-chips"'),
     'the chip row region could not be delimited — this gate is reading the wrong '
     + 'span and would pass on anything');
-  const chips = row.match(/<LifeFactChip\b/g) ?? [];
+  const chips = [...row.matchAll(/id: '(\w+)' as const/g)].map((match) => match[1]!);
   assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); the Day surface owns four — tired, `
-    + 'sick, injured and remove. Equipment belongs inside the opened session, and '
-    + 'Away belongs on the week shape (item 28).');
+    `the row renders ${chips.length} chip(s); the Day surface owns three — tired, `
+    + 'sick and injured. Equipment, Add, Remove and Swap belong inside the opened '
+    + 'session, and Away belongs on the week shape (item 28).');
   for (const door of LIFE_FACT_DOORS) {
+    assert(chips.includes(door.id),
+      `the "${door.label}" chip is not in the Day surface's action list at all.`);
     assert(row.includes(door.onPress),
       `the "${door.label}" chip no longer calls ${door.onPress}, the direct `
       + 'door it owns.');
     assert(row.includes(door.testID),
       `the "${door.label}" chip no longer resolves by ${door.testID}. That is the `
       + 'coordinate the walker and the explorer reach this door by.');
-    assert(new RegExp(`label="${door.label}"`).test(row),
+    // ⚠ **THE WORD MOVED TO THE SHARED OWNER, SO IT IS ASSERTED THERE.** The
+    // screen names the door by id; `components/SessionChangeHub` holds the one
+    // copy of each label, which is what stops the two surfaces disagreeing.
+    assert(new RegExp(`${door.id}: '${door.label}'`).test(hub),
       `the "${door.label}" chip lost its label. A chip with a glyph and no word is `
       + 'the device-pass finding Sam raised: icon meanings were not obvious.');
   }
   // ONE WORD, TITLE CASE. The short-label law, and also the copy gate: the row is
-  // four-across on a phone, and a chip label long enough to be prose is both
-  // unreadable there and a new athlete-visible sentence nobody signed.
-  const labels = [...row.matchAll(/\blabel="([^"]*)"/g)].map((match) => match[1]);
-  assert(labels.length === LIFE_FACT_DOORS.length,
-    `found ${labels.length} chip label(s) in the row, expected ${LIFE_FACT_DOORS.length}`);
+  // three-across on a phone, and a chip label long enough to be prose is both
+  // unreadable there and a new athlete-visible sentence nobody signed. Counted
+  // over the SHARED table, because that is where a long word could now be added.
+  const labelAt = hub.indexOf('CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {');
+  assert(labelAt > 0, 'the shared label table is gone — this cell would scan the '
+    + 'whole component and pass on any quoted string');
+  const table = hub.slice(labelAt, hub.indexOf('};', labelAt));
+  const labels = [...table.matchAll(/: '([^']*)'/g)].map((match) => match[1]!);
+  assert(labels.length === 8,
+    `found ${labels.length} chip label(s) in the shared table, expected 8 — the `
+    + 'three Day status facts and the five session changes');
   for (const label of labels) {
     assert(/^[A-Z][a-z]+$/.test(label),
       `chip label "${label}" is not one Title Case word. The labels ship PROPOSED `
