@@ -306,3 +306,64 @@ byte-identical before the final green run:
 - No physical iPhone acceptance is claimed.
 
 Agent: finish-programming
+
+## Slice 2b — conditioning specialist remeasurement
+
+### Real generated-world census
+
+- `scripts/probe-conditioning-census.ts` generated 198 distinct phase/week/day/
+  club/fixture worlds at phase weeks 1, 3 and 6 and inspected the final workouts
+  returned by `generateProgramLocally`, not scheduler intent.
+- 196 of 198 worlds built. This improves the conditioning owner's last recorded
+  185 of 198 without adding a repair layer. The two remaining refusals are both
+  early-Off-season optional weeks with five selected gym days plus a game and
+  one or two club nights; they are refusal inputs for the travel/equipment slice,
+  not lost conditioning sessions.
+- Zero authored conditioning categories reached the athlete without a material
+  session. The final weeks delivered all four live categories:
+  `aerobic_base`, `tempo`, `vo2` and `sprint`.
+- Early Off-season phase week 1 delivered zero conditioning in every built
+  world, as the optional-block law allows. Mid Off-season delivered only
+  easy/moderate aerobic work. Late Off-season delivered hard work in 16 worlds
+  and sprint in 8; game/team-load and three-day feasibility shapes lawfully used
+  the contract's permitted range without inventing a required hard-app minimum.
+- The 180-occurrence / 90-distinct-setup refusal census is unchanged from the
+  immediately preceding power checkpoint: 144 built and 36 refused. No
+  conditioning code was changed to make a refusal disappear.
+
+### Printed coaching output inspected
+
+- The real later-Off-season no-club week prints four different conditioning
+  jobs rather than internal category counts: Monday `Steady Blocks`, Tuesday
+  `Classic 4x4`, Wednesday `30:30 Controlled Tempo Blocks`, and Sunday
+  `10m Acceleration`.
+- The real in-season two-team-night week does not add a hidden hard conditioning
+  session around the Saturday game. The team anchors remain the conditioning
+  load and the printed app work stays freshness-compatible.
+
+### Guards and liveness
+
+- Green at this checkpoint: phase authorship 42/42, rollover response 21/21,
+  Off-season deload conditioning 10/10, template equality 95/95, dose ingress
+  12/12, conditioning balance 11/11, and retired progression input 8/8.
+- Current-turn mutation: replaced the specialist's phase-owned hard-quality
+  selection with `null`. `test:conditioning-phase-authorship` fell to 35/42;
+  the seven red cells named real bye, pre-season, healthy-readiness comparator,
+  48-hour-window non-vacuity and late-Off-season outputs. Restoring the exact
+  expression returned 42/42, and the production file matched checkpoint
+  `01fa17eb` byte-for-byte.
+- This is a class guard: it observes final generated athlete sessions and will
+  fail when phase authorship, placement, materialisation or downstream survival
+  removes the hard quality, rather than merely asserting that a scheduler branch
+  exists.
+
+## NOT COVERED — conditioning slice complete
+
+- The two early-Off-season census refusals and the 36-world general refusal set
+  are not represented as conditioning losses. Travel and zero-equipment now own
+  the next diagnosis.
+- Existing status receipts include separate mutation kills for rollover and
+  deload dose/template preservation; they were re-run green here, not re-authored.
+- No physical iPhone acceptance is claimed.
+
+Agent: finish-programming
