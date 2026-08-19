@@ -33,7 +33,6 @@ import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import {
   withSection18WorkoutEvidence,
-  type Section18EvidenceMode,
 } from '../rules/section18WorkoutEvidence';
 import { canonicalConditioningLabel, canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
@@ -152,8 +151,6 @@ export interface WorkoutCanonicalisationContext {
    * removes. Zero post-composition mutation is the slice's own kill criterion.
    */
   composed?: boolean;
-  /** Legacy hydration preserves missing evidence as unknown; modern paths infer it canonically. */
-  section18EvidenceMode?: Section18EvidenceMode;
   /** Safety-owned patterns can never be restored from plan/default identity. */
   prohibitedStrengthPatterns?: readonly MainStrengthPattern[];
   /** Safety eligibility outranks ordinary phase power placement. */
@@ -1128,7 +1125,6 @@ export function finaliseWorkoutAfterMutation(
   }
   workout = withSection18WorkoutEvidence(
     workout,
-    context.section18EvidenceMode ?? 'infer',
     context.planIntentValid === false ? 'explicit_mutation' : 'planner_and_canonical_content',
   );
   return {

@@ -1634,23 +1634,6 @@ function reductionMetric(entry: WeeklyExposureReduction): Section18ReductionMetr
   return 'full_rest_frequency';
 }
 
-function v2ModeFromLegacy(contract: WeeklyExposureContract): Section18WeekMode {
-  if (contract.identity.phase === 'Pre-season' && contract.anchors.gameOrPracticeMatchCredit > 0) {
-    return 'practice_match_week';
-  }
-  return contract.identity.mode;
-}
-
-function anchorStateFromLegacy(contract: WeeklyExposureContract): Section18AnchorState {
-  if (contract.identity.phase === 'Pre-season' && contract.anchors.gameOrPracticeMatchCredit > 0) {
-    return 'practice_match';
-  }
-  if (contract.identity.phase === 'In-season') {
-    return contract.anchors.gameOrPracticeMatchCredit > 0 ? 'game' : 'bye';
-  }
-  return contract.anchors.gameOrPracticeMatchCredit > 0 ? 'game' : 'none';
-}
-
 const OFF_SEASON_SUBPHASES: ReadonlySet<string> = new Set([
   'early_offseason',
   'mid_offseason',
