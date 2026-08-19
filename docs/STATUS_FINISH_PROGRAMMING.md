@@ -189,11 +189,23 @@ Run against checkpoint `14934d13`, then restored byte-identical:
    could run. This proves the former independent-planner rejection is live and
    that the scheduler-derived contract is what prevents it.
 
-## NOT COVERED — after scheduler slice 1b
+## Slice 1c — dated cross-week game proximity
 
-- Cross-week proximity around an explicit target-week bye/moved fixture still
-  uses weekday recurrence rather than dated adjacent fixtures. This is the
-  remaining scheduler/game-proximity item.
+- Explicit target-week fixture resolution now carries dated actual fixtures plus
+  the adjacent prior/next recurring-profile fixtures. The scheduler calculates
+  G+1/G-1/G-2 from those dates; unresolved ordinary weeks retain the existing
+  recurring-weekday path.
+- Real generated Sunday-bye week: no Game Day; Monday is recovery from the prior
+  Sunday fixture; strength is Tuesday, Thursday and Sunday; conditioning is
+  Friday and Saturday. This separates “no fixture in this week” from “no nearby
+  fixture”.
+- Scheduler remains 96 of 96; generated fixture suite is 11 of 11.
+- Mutation proof against `42007ea7`: disabling the dated-proximity branch
+  reddened exactly the Sunday-bye G+1 cell (10 of 11); the tree was restored
+  byte-identical.
+
+## NOT COVERED — scheduler/game slice complete
+
 - Power delivery remains zero in the measured eligible world.
 - Travel and zero-equipment output have only been baseline-printed/censused; no
   owned gap in those slices has yet been changed.
