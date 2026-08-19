@@ -86,6 +86,26 @@ ok('the athlete-visible projection prints every delivered power exercise',
   visiblePowerParts.map((part) => ({ headline: part.headline,
     rows: part.rows.map((row) => row.name) })));
 
+const noFixtureProgram = generateProgramLocally({
+  ...profile,
+  gameDay: undefined,
+  equipment: ['Full Gym'],
+} as never, {
+  todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
+} as never);
+const noFixtureWeek = noFixtureProgram.microcycles[0];
+const noFixtureStrengthDays = noFixtureWeek.workouts.filter((workout) =>
+  exerciseBudgetRows(workout).length > 0);
+ok('the phase cap limits a non-vacuous four-strength-day candidate world to two primers',
+  noFixtureStrengthDays.length === 4 &&
+    noFixtureWeek.exposureContractV2?.power?.plannerSelectedWeeklyBudget === 2 &&
+    noFixtureWeek.workouts.flatMap((workout) => powerRows(workout)).length === 2,
+  {
+    strengthDays: noFixtureStrengthDays.map((workout) => workout.dayOfWeek),
+    budget: noFixtureWeek.exposureContractV2?.power?.plannerSelectedWeeklyBudget,
+    rows: noFixtureWeek.workouts.flatMap((workout) => powerRows(workout)).length,
+  });
+
 const teamProgram = generateProgramLocally({
   ...profile,
   teamTrainingDaysPerWeek: 1,

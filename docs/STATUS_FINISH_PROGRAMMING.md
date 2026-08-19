@@ -252,7 +252,7 @@ Agent: finish-programming
 ### Measurements and printed coaching output
 
 - `test:power-primer-policy`: existing policy/deload suite 58 of 58 and live
-  delivery suite 6 of 6.
+  delivery suite 7 of 7.
 - `test:weekly-scheduler`: scheduler 96 of 96; fixture suite 11 of 11.
 - Power census: 180 generation occurrences / 90 distinct athlete setups; 144
   built, 36 refused; 442 delivered sessions. 100 worlds were authorised for
@@ -279,10 +279,28 @@ Agent: finish-programming
   the deload world. It no longer generates unrelated intermediate weeks merely
   to reach the subject.
 
-## NOT COVERED — power checkpoint before mutation
+### Mutation proof
 
-- The guard has not yet been mutation-proven against the restored allowance,
-  visible-row bridge and team-night typed-row precedence.
+Run against checkpoint `01fa17eb`, with every production mutation restored
+byte-identical before the final green run:
+
+1. Forcing the selected allowance to zero reddened the positive-budget cell and
+   the real club-night delivery cell.
+2. Removing the phase cap raised the fixture-world budget from 2 to 3 and the
+   non-vacuous four-strength-day world's budget/rows from 2 to 4; exactly both
+   cap cells reddened.
+3. Removing the visible power-row bridge reddened exactly the two athlete-surface
+   cells; contract and stored delivery remained green.
+4. Restoring title-based team-only precedence reddened exactly the club-night
+   cell: its visible parts became an empty Power block plus Team Training and
+   the typed strength rows disappeared.
+5. Removing the early-Off-season three-session cap made the phase-week-1 world
+   refuse at `main_strength_permitted_maximum`, expected 3 / actual 4.
+6. Restoring the stale mid-Off-season sprint requirement made the phase-week-4
+   world refuse at `sprint_high_speed_required_minimum`, expected 1 / actual 0.
+
+## NOT COVERED — power slice complete
+
 - The two explicit print refusals and the remaining 36 corpus refusals are not
   claimed fixed; they feed the conditioning/travel work still to come.
 - No physical iPhone acceptance is claimed.
