@@ -102,7 +102,9 @@ import {
   declareSessionEquipmentMissing,
   equipmentAnswerWith,
   programWeekStarts,
+  storedRowCount,
   takeSettingsCensus,
+  visibleRowCount,
   weekPrint,
   type SettingsCensus,
   type SettingsDoorResult,
@@ -428,12 +430,29 @@ async function runCell(args: {
    */
   if (stage.world?.excludedLift) {
     const excluded = stage.world.excludedLift;
-    const visibleRows = weekPrint(stage.weekStartISO, stage.todayISO)
-      .filter((line) => line.includes(`${excluded}|`)).length;
+    const visibleRows = visibleRowCount({
+      weekStartISO: stage.weekStartISO, todayISO: stage.todayISO, exerciseName: excluded,
+    });
+    const storedRows = storedRowCount(excluded);
     ok(`${label}: the lift the athlete left out is STILL not on their week`,
       visibleRows === 0,
       `${excluded} is back on the athlete's week (${visibleRows} row(s)) after this `
       + 'settings change, and they never asked for it back');
+    /**
+     * **Sam, 2026-08-20:** *"A settings change must not re-add an excluded lift
+     * to the stored accepted program and rely on projection to hide it. Stored
+     * truth and visible truth must agree."*
+     *
+     * The cell above reads the PROJECTION and was green while storage held the
+     * row — 0 visible, 4 stored — which is exactly the shape a screen-only guard
+     * cannot see. Both readers, or neither claim means anything.
+     */
+    ok(`${label}: STORED and VISIBLE agree about the excluded lift`,
+      storedRows === visibleRows,
+      `${excluded}: ${storedRows} row(s) in the stored accepted program and `
+      + `${visibleRows} on the athlete's week. A row kept in storage and hidden on `
+      + 'read is two truths, and every reader that goes to the program rather than '
+      + 'the projection gets the wrong one.');
   }
 
   if (args.expectVisibleChange !== undefined) {

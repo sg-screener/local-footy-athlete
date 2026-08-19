@@ -84,7 +84,10 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
-import { resolveWeekExclusions } from '../../rules/exerciseExclusions';
+import {
+  applyExclusionsToAuthoredWeek,
+  resolveWeekExclusions,
+} from '../../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
 import { scheduleToCoachingPlan } from '../../rules/scheduleToCoachingPlan';
@@ -1841,7 +1844,18 @@ export function generateProgramLocally(
   const selectionsAuthored:
     import('../../rules/blockExerciseSelection').BlockExerciseSelection[] = [];
 
-  const microcycles = buildGeneratedMicrocycles({
+  /**
+   * THE ATHLETE'S PREFS AS THEY ACTUALLY ARE, CAPTURED BEFORE THEY ARE NARROWED.
+   *
+   * `exclusionsForSelectionAuthority` deliberately WITHHOLDS the dated decisions
+   * from a REPLAY so the composer restores the recorded lift instead of choosing
+   * a new one for the emptied slot — Sam, 2026-08-19: *"Remove means simply
+   * remove the selected exercise/component. Nothing replaces it."* The removal
+   * itself still has to happen, and it happens below, so it needs the real list.
+   */
+  const athletePrefsAsRecorded = options.athletePrefs ?? getAthletePrefs();
+
+  const builtMicrocycles = buildGeneratedMicrocycles({
     coachWorkouts: [],
     plan,
     coachingInputs,
@@ -1852,7 +1866,7 @@ export function generateProgramLocally(
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
     athletePrefs: exclusionsForSelectionAuthority(
-      options.athletePrefs ?? getAthletePrefs(),
+      athletePrefsAsRecorded,
       options.recordSelections,
     ),
     progressedIdentities,
@@ -1872,6 +1886,51 @@ export function generateProgramLocally(
     weekAcceptance: options.weekAcceptance,
     remainderBoundary: options.remainderBoundary ?? null,
   });
+  /**
+   * ── REMOVE MEANS REMOVE, IN STORAGE AND NOT ONLY ON THE SCREEN ────────────
+   *
+   * **Sam, 2026-08-20:** *"A settings change must not re-add an excluded lift to
+   * the stored accepted program and rely on projection to hide it. Stored truth
+   * and visible truth must agree."*
+   *
+   * **THE AUTHORITY THAT REINTRODUCED IT WAS THIS FUNCTION'S OWN OUTPUT, ON THE
+   * REPLAY PATH.** Measured: an athlete excludes a lift `until_changed`, the
+   * rollover publishes a week WITHOUT it (stored 0 rows) — and the very next
+   * relaunch publishes one WITH it (stored 4 rows), because
+   * `exclusionsForSelectionAuthority` withholds the decision from a replay's
+   * SELECTION so the recorded lift is restored rather than a new one chosen.
+   * The row then reached disk and only `sessionResolver`'s read-time filter kept
+   * it off the athlete's week. Two truths, one hidden behind the other.
+   *
+   * **THIS IS NOT A SECOND FILTER. IT IS THE SAME OWNER, MOVED EARLIER.**
+   * `applyExclusionsToAuthoredWeek` is `rules/exerciseExclusions`' single
+   * definition and it was already the thing doing this work — at read time, on
+   * every render, over a week that had the row in it. Applying it once, here,
+   * where the week is authored, is what makes stored == visible BY
+   * CONSTRUCTION. The read-time application is now idempotent over a program
+   * built by this function: it finds nothing left to remove.
+   *
+   * **AND IT MUST BE AFTER SELECTION, NEVER INSTEAD OF IT.** Feeding the
+   * exclusion to the selection authority on a replay is the defect the 2026-08-19
+   * ruling closed: the composer re-decided the emptied slot and an athlete who
+   * removed `RDLs` got `Deadlift@77.5` back for closing the app. Selection still
+   * restores what the block recorded; the removal happens to the built week, so
+   * the slot is left EMPTY and nothing replaces it — which is the ruling, applied
+   * to storage instead of to the projection.
+   */
+  const microcycles = builtMicrocycles.map((microcycle) => {
+    const kept = applyExclusionsToAuthoredWeek({
+      workouts: microcycle.workouts,
+      weekStart: String(microcycle.startDate).slice(0, 10),
+      exclusions: athletePrefsAsRecorded?.exclusions,
+    });
+    // A week nothing was removed from comes out IDENTICAL — the owner returns
+    // the same array when it removes nothing, so an author path (where the
+    // composer already avoided the exercise) is byte-unchanged rather than
+    // rebuilt into an equal-looking copy.
+    return kept === microcycle.workouts ? microcycle : { ...microcycle, workouts: kept };
+  });
+
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {
     throw new ProgramGenError(

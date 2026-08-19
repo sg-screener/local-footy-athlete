@@ -660,3 +660,42 @@ export async function buildWornWorld(args: {
     rolloverRefusal,
   };
 }
+
+/**
+ * HOW MANY ROWS THE **STORED** ACCEPTED PROGRAM GIVES ONE EXERCISE.
+ *
+ * The companion to `weekPrint`, which reads the PROJECTION. Sam, 2026-08-20:
+ * *"Stored truth and visible truth must agree."* Two readers are the only way to
+ * check that, and the pair is what caught the residue: a settings change was
+ * putting an excluded lift back into storage (0 -> 4) while the read-time filter
+ * kept the athlete's week at 0, so every screen-based cell in this file was
+ * green over two disagreeing truths.
+ *
+ * ⚠ **EXACT NAME MATCH.** A substring test counts `Single-Leg Leg Press` as
+ * `Leg Press`; the first cut of this counter did exactly that and reported a
+ * lift the athlete had excluded as still present.
+ */
+export function storedRowCount(exerciseName: string): number {
+  const program = useProgramStore.getState().currentProgram as {
+    microcycles?: readonly { workouts?: readonly {
+      exercises?: readonly { exercise?: { name?: string } }[] }[] }[];
+  } | null;
+  let count = 0;
+  for (const microcycle of program?.microcycles ?? []) {
+    for (const workout of microcycle.workouts ?? []) {
+      for (const row of workout.exercises ?? []) {
+        if ((row.exercise?.name ?? '') === exerciseName) count += 1;
+      }
+    }
+  }
+  return count;
+}
+
+/** The same count off the PROJECTION, matched on the exact name. */
+export function visibleRowCount(args: {
+  weekStartISO: string; todayISO: string; exerciseName: string;
+}): number {
+  return resolvedDays(args.weekStartISO, args.todayISO)
+    .reduce((total, day) => total
+      + day.rows.filter((row) => row.name === args.exerciseName).length, 0);
+}
