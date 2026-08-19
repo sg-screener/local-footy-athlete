@@ -296,6 +296,8 @@ export interface VisibleDay {
   dateISO: string;
   weekday: string;
   sessionName: string | null;
+  /** The app's own typed session components; never inferred from row names. */
+  components: string[];
   rows: VisibleRow[];
 }
 
@@ -312,6 +314,9 @@ export function resolvedDays(weekStartISO: string, _todayISO?: string): VisibleD
         dateISO: day.date,
         weekday: weekdayName(day.date),
         sessionName: workout?.name ?? null,
+        components: workout
+          ? getSessionComponents(workout).map((component) => String(component.kind))
+          : [],
         // `row.exercise?.name ?? row.name` is the app's own read
         // (`projectVisibleWeek.ts:396`, `sessionComponents.ts:566`). Reading
         // `row.name` alone prints every row as unnamed and reads as a defect.
