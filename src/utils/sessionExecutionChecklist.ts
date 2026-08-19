@@ -4,9 +4,23 @@ import type { MobilityPrehabFlow } from './mobilityPrehabFlow';
 import { getSessionComponents, type SessionComponent } from './sessionComponents';
 import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
 
+/**
+ * ⚠ **THERE IS NO `power` SECTION — SAM, 2026-08-20 (R-110).**
+ *
+ * *"Power belongs inside the Strength section, generally as its first row."*
+ * Power used to open its own collapsible POWER / PRIMER disclosure above
+ * Strength, so a session of one power row and four strength rows read
+ * `Power / Primer 0/1` + `Strength 0/4` — two counts for one block of work the
+ * athlete does in one go. It is now `Strength 0/5`.
+ *
+ * **Power's ROLE and its programming are untouched.** `role: 'power'` still
+ * rides every row, `getSessionComponents` still emits the typed `power`
+ * component with its own `completionPolicy`, and every §18 counter, budget and
+ * policy still reads `powerRows()`. What changed is which disclosure the row is
+ * projected into and where it sits inside it — nothing else.
+ */
 export type SessionExecutionSectionId =
   | 'mobility'
-  | 'power'
   | 'strength'
   | 'accessories'
   | 'conditioning'
@@ -79,7 +93,6 @@ export function deriveSessionExecutionItemCompletion(
 
 const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   mobility: 'Mobility / Warm-up',
-  power: 'Power / Primer',
   strength: 'Strength',
   accessories: 'Accessories / Prehab',
   conditioning: 'Conditioning',
@@ -90,9 +103,26 @@ const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
 };
 
 const SECTION_ORDER: SessionExecutionSectionId[] = [
-  'mobility', 'power', 'strength', 'accessories', 'conditioning',
+  'mobility', 'strength', 'accessories', 'conditioning',
   'team_training', 'recovery', 'optional', 'other',
 ];
+
+/**
+ * ⚠ **NOTHING HERE ORDERS THE STRENGTH SECTION, AND THAT IS DELIBERATE.**
+ *
+ * R-110 says power is generally Strength's FIRST row. A `orderSectionItems`
+ * partition that hoisted power was written here and then DELETED: mutating it
+ * to a no-op reddened not one cell, because `sessionTemplate`'s `d2Rank`
+ * (`SESSION_ROLE_ORDER`: power → main → accessory → midline/prehab) has always
+ * been the owner of that order, and the section filter below preserves whatever
+ * order the composition owner emitted. A second sort agreeing with the first is
+ * not a backstop, it is a rival authority nothing can tell apart when they
+ * disagree — the shape this repo keeps paying for.
+ *
+ * The property is still HELD: `test:session-execution` `[7]` asserts, through
+ * the real template, that Strength opens with the power row even when the
+ * workout authors it last, and begins with the main lift when there is none.
+ */
 
 function rowIdentity(row: any, fallback: string): string {
   return String(row?.id ?? row?.exerciseId ?? row?.exercise?.id ?? fallback);
@@ -123,7 +153,9 @@ function sectionForTemplateItem(item: SessionTemplateItem): SessionExecutionSect
   if (item.kind === 'team_training') return 'team_training';
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') return 'conditioning';
   if (item.kind === 'exercise' && item.optional) return 'optional';
-  if (item.role === 'power') return 'power';
+  // R-110 — power is Strength's first row, not its own section. The ROLE is
+  // still what routes it; only the destination changed.
+  if (item.role === 'power') return 'strength';
   if (item.role === 'main_lift') return 'strength';
   if (item.role === 'accessory' || item.role === 'midline' || item.role === 'prehab') return 'strength';
   return 'other';
@@ -212,7 +244,8 @@ export function buildSessionExecutionPlan(args: {
       sectionId: component.kind === 'recovery' ? 'recovery'
         : component.kind === 'conditioning' || component.kind === 'finisher' ? 'conditioning'
         : component.kind === 'team_training' ? 'team_training'
-        : component.kind === 'power' ? 'power'
+        // R-110 — a rowless power component opens Strength, same as a row does.
+        : component.kind === 'power' ? 'strength'
         : component.kind === 'strength' ? 'strength'
         : 'other',
       componentId: component.id,

@@ -193,10 +193,18 @@ ok('each section has stable toggle and expanded-body identities',
     /session-execution-items-\$\{section\.id\}/.test(screen));
 ok('rows expose a checkbox', /accessibilityRole="checkbox"/.test(screen));
 ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
-ok('every checkbox is centred against its complete exercise row',
-  /executionItem:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
-    && /executionCheckbox:\s*\{[^}]*\.\.\.sessionExecutionCheckbox[^}]*\}/.test(screen)
-    && !/executionCheckbox:\s*\{[^}]*marginTop/.test(screen));
+/* ⚠ **THIS CELL REQUIRED THE OLD PLACEMENT AND IS INVERTED — R-111.**
+ *
+ * It read *"every checkbox is centred against its complete exercise row"* and
+ * demanded `alignItems: 'center'` with NO `marginTop` on the box. Sam ruled the
+ * checkbox to the far right on the exercise-name line, which is `flex-start`
+ * plus exactly the `marginTop` this cell forbade. Inverted rather than deleted
+ * (`gate-must-watch-the-deleted-surface`): the same coordinates are still
+ * watched, they now name the ruled placement. */
+ok('every checkbox sits on the exercise-name line, not centred against the card',
+  /executionItem:\s*\{[^}]*alignItems:\s*'flex-start'/.test(screen)
+    && !/executionItem:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
+    && /executionCheckbox:\s*\{[^}]*\.\.\.sessionExecutionCheckbox[^}]*marginTop/.test(screen));
 ok('mobility movements use the same controlled checklist owner',
   /function MobilityExerciseList/.test(screen)
     && /completedItemIds\.has\(itemId\)/.test(screen)
@@ -388,6 +396,224 @@ ok('the sheet lists derived requirements rather than the whole saved kit',
     && !/ownedEquipmentKit\(\)/.test(sessionEquipmentSheet));
 ok('the sheet keeps permanent equipment changes in Profile',
   /Permanent change\? Update your equipment in Profile\./.test(sessionEquipmentSheet));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * [7] SAM'S TWO SESSION-SCREEN RULINGS, 2026-08-20
+ *
+ * R-110 — power belongs INSIDE Strength, generally as its first row.
+ * R-111 — play beside the name, checkbox at the far right.
+ *
+ * The membership and ordering cells run the REAL plan builder over the REAL
+ * template owner. The placement cells are source-level, because this repo
+ * ships no native renderer — so each one names the exact prop or style that
+ * moved, and each has its negative half (the old placement must be GONE), so a
+ * fix that adds the new arrangement while leaving the old one behind fails.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[7] Power is a Strength row, and the row controls sit where Sam ruled');
+
+// Sam's acceptance criterion, literally: one power row and four other strength
+// rows. Nothing else on the day, so the count under test is unambiguous.
+const powerPlusFour: any = {
+  id: 'session-power-5', name: 'Lower Strength', workoutType: 'Strength',
+  exercises: [
+    row('jump', 'Broad Jump', 'power'),
+    row('squat', 'Back Squat', 'main_lift'),
+    row('rdl', 'Romanian Deadlift', 'accessory'),
+    row('lunge', 'Walking Lunge', 'accessory'),
+    row('pallof', 'Band Pallof Press', 'midline'),
+  ],
+};
+const withPower = buildSessionExecutionPlan({
+  workout: powerPlusFour,
+  template: buildSessionTemplate(powerPlusFour),
+  mobilityFlow: null,
+});
+const strengthOf = (p: typeof withPower) => p.sections.find((s) => s.id === 'strength');
+
+// ── NON-VACUITY FIRST. Every cell below is about a power row; if the fixture
+//    stopped carrying one they would all pass by saying nothing.
+ok('[7] CONTROL — the fixture really does carry a power row',
+  powerPlusFour.exercises.filter((r: any) => r.role === 'power').length === 1
+    && withPower.items.some((item) => item.label === 'Broad Jump'),
+  withPower.items.map((i) => i.label));
+
+ok('[7] there is no Power section left to render',
+  !withPower.sections.some((section) => section.id === ('power' as any)),
+  withPower.sections.map((s) => s.id));
+ok('[7] and no section is labelled Power / Primer anywhere in the plan',
+  !withPower.sections.some((section) => /power|primer/i.test(section.label)),
+  withPower.sections.map((s) => s.label));
+ok('[7] the power row is a member of Strength',
+  strengthOf(withPower)!.items.some((item) => item.label === 'Broad Jump'),
+  strengthOf(withPower)!.items.map((i) => i.label));
+ok('[7] SAM’S CRITERION — one power row + four strength rows reads Strength 0/5',
+  strengthOf(withPower)!.items.length === 5,
+  strengthOf(withPower)!.items.map((i) => i.label));
+ok('[7] power is the FIRST row of Strength',
+  strengthOf(withPower)!.items[0]?.label === 'Broad Jump',
+  strengthOf(withPower)!.items.map((i) => i.label));
+ok('[7] and the main lift follows it',
+  strengthOf(withPower)!.items[1]?.label === 'Back Squat',
+  strengthOf(withPower)!.items.map((i) => i.label));
+
+// ── POWER'S INTERNAL ROLE IS UNTOUCHED. Sam ruled the PROJECTION, not the
+//    programming: the typed power component still exists, still carries its own
+//    completion policy, and the row is still attached to it. A "fix" that got
+//    the display right by deleting power's identity fails here.
+ok('[7] the typed power component survives the move',
+  withPower.components.some((component) => component.id === 'power' && component.kind === 'power'),
+  withPower.components.map((c) => c.id));
+ok('[7] and the power row still belongs to it',
+  withPower.items.find((item) => item.label === 'Broad Jump')?.componentId === 'power');
+
+// ── WITHOUT POWER, STRENGTH BEGINS WITH THE MAIN LIFT AS USUAL.
+const noPower: any = {
+  id: 'session-no-power', name: 'Lower Strength', workoutType: 'Strength',
+  exercises: [
+    row('squat', 'Back Squat', 'main_lift'),
+    row('rdl', 'Romanian Deadlift', 'accessory'),
+    row('lunge', 'Walking Lunge', 'accessory'),
+    row('pallof', 'Band Pallof Press', 'midline'),
+  ],
+};
+const withoutPower = buildSessionExecutionPlan({
+  workout: noPower, template: buildSessionTemplate(noPower), mobilityFlow: null,
+});
+ok('[7] without power, Strength begins with the main lift',
+  strengthOf(withoutPower)!.items[0]?.label === 'Back Squat',
+  strengthOf(withoutPower)!.items.map((i) => i.label));
+ok('[7] and that session has no power component to account for',
+  !withoutPower.components.some((component) => component.kind === 'power')
+    && strengthOf(withoutPower)!.items.length === 4,
+  strengthOf(withoutPower)!.items.map((i) => i.label));
+
+// ── ORDERING IS ASSERTED END TO END, ON ONE OWNER.
+//    `sessionTemplate`'s `d2Rank` is the owner of power-first and the section
+//    filter preserves what it emits. A second sort inside the projection was
+//    written and DELETED: mutating it to a no-op reddened nothing, so it was a
+//    rival authority, not a backstop. This fixture authors power LAST, so the
+//    cell asserts the projection's OUTPUT — the owner going wrong reds it.
+const powerLast: any = {
+  id: 'session-power-last', name: 'Lower Strength', workoutType: 'Strength',
+  exercises: [
+    row('squat', 'Back Squat', 'main_lift'),
+    row('rdl', 'Romanian Deadlift', 'accessory'),
+    row('jump', 'Broad Jump', 'power'),
+  ],
+};
+const authoredLast = buildSessionExecutionPlan({
+  workout: powerLast, template: buildSessionTemplate(powerLast), mobilityFlow: null,
+});
+ok('[7] a power row authored LAST is still projected first in Strength',
+  strengthOf(authoredLast)!.items[0]?.label === 'Broad Jump',
+  strengthOf(authoredLast)!.items.map((i) => i.label));
+ok('[7] and moving it re-orders nothing else',
+  strengthOf(authoredLast)!.items.slice(1).map((i) => i.label)
+    .join(' | ') === 'Back Squat | Romanian Deadlift',
+  strengthOf(authoredLast)!.items.map((i) => i.label));
+
+// ── THE PROJECTION OWNS IT, AND THE OWNER SAYS SO.
+const checklistOwner = fs.readFileSync(
+  path.resolve(__dirname, '..', 'utils', 'sessionExecutionChecklist.ts'), 'utf8');
+ok('[7] the projection routes the power ROLE into strength',
+  /item\.role === 'power'\) return 'strength'/.test(checklistOwner));
+ok('[7] a rowless power COMPONENT lands in strength too',
+  /component\.kind === 'power' \? 'strength'/.test(checklistOwner));
+// ⚠ AND THE PROJECTION KEEPS NO ORDERING AUTHORITY OF ITS OWN. This is the
+// deleted sort's gate: re-introducing one here is what this cell forbids.
+ok('[7] the projection sorts nothing — the composition owner still owns order',
+  !/\.sort\(/.test(checklistOwner));
+// The label and the section id are gone from the DECLARATIONS — not merely
+// unused. Read the two structures, never the prose: the comment above them
+// names the retired section on purpose, so future readers know what moved.
+const sectionIdUnion = checklistOwner.slice(
+  checklistOwner.indexOf('export type SessionExecutionSectionId'),
+  checklistOwner.indexOf('export interface SessionExecutionItem'));
+const sectionLabelMap = checklistOwner.slice(
+  checklistOwner.indexOf('const SECTION_LABELS'),
+  checklistOwner.indexOf('const SECTION_ORDER'));
+const sectionOrderList = checklistOwner.slice(
+  checklistOwner.indexOf('const SECTION_ORDER'),
+  checklistOwner.indexOf('];', checklistOwner.indexOf('const SECTION_ORDER')));
+ok('[7] CONTROL — the three declarations under test were all found',
+  sectionIdUnion.includes("| 'strength'") && sectionLabelMap.includes('strength:')
+    && sectionOrderList.includes("'strength'"));
+ok('[7] the Power / Primer section is gone from the type, the labels and the order',
+  !/\|\s*'power'/.test(sectionIdUnion)
+    && !/power:/.test(sectionLabelMap)
+    && !/'power'/.test(sectionOrderList),
+  { sectionIdUnion, sectionLabelMap });
+
+// ── R-111 — CONTROL PLACEMENT, ON THE ONE OWNER EVERY ROW SHARES.
+const headerRow = screen.slice(
+  screen.indexOf('function ExerciseHeaderRow'),
+  screen.indexOf('function PlayButton'));
+const checklistItemWhole = screen.slice(
+  screen.indexOf('function ExecutionChecklistItem'),
+  screen.indexOf('function OptionalWorkHeader'));
+// The JSX only. The explanatory comment above the `return` quotes the very
+// props these cells assert on, and a cell that matches its own documentation
+// is a cell that cannot fail.
+const checklistItem = checklistItemWhole.slice(checklistItemWhole.indexOf('return ('));
+
+ok('[7] CONTROL — the header owner and the checklist owner were both found',
+  headerRow.length > 100 && checklistItem.includes('accessibilityRole="checkbox"'),
+  { headerRow: headerRow.length, checklistItem: checklistItem.length });
+
+ok('[7] play sits immediately beside the exercise name, inside one group',
+  /exerciseNameGroup[\s\S]*?styles\.exerciseName[\s\S]*?<PlayButton/.test(headerRow),
+  headerRow);
+ok('[7] and the old full-width name — the thing that PUSHED play to the edge — is gone',
+  !/exerciseNameWrap/.test(headerRow)
+    && (headerRow.match(/<PlayButton/g) ?? []).length === 1,
+  headerRow);
+ok('[7] the name group takes the width so the pair stays hard left',
+  /exerciseNameGroup:\s*\{[^}]*flex:\s*1[^}]*flexDirection:\s*'row'/.test(screen)
+    && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen));
+
+ok('[7] the completion checkbox is the LAST child of the row',
+  checklistItem.indexOf('executionItemContent')
+    < checklistItem.indexOf('accessibilityRole="checkbox"'),
+  { content: checklistItem.indexOf('executionItemContent'),
+    checkbox: checklistItem.indexOf('accessibilityRole="checkbox"') });
+
+// ── NOTHING ABOUT COMPLETION OR VIDEO CHANGED, AND THESE SAY SO.
+ok('[7] the checkbox keeps its toggle, its state and its identity',
+  /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItem)
+    && /accessibilityState=\{\{ checked: completed \}\}/.test(checklistItem)
+    && /testID=\{`session-execution-check-\$\{stableTestIdToken\(itemId\)\}`\}/.test(checklistItem));
+ok('[7] the checkbox keeps its spoken label',
+  /accessibilityLabel=\{`\$\{completed \? 'Completed' : 'Mark complete'\}: \$\{label\}`\}/
+    .test(checklistItem));
+ok('[7] both the name and the play button still speak the exercise, and still play it',
+  (headerRow.match(/accessibilityLabel=\{`Play \$\{name\} demo`\}/g) ?? []).length === 2
+    && (headerRow.match(/onPress=\{onPlay\}|onPress=\{onPlay\}/g) ?? []).length >= 1
+    && /<PlayButton onPress=\{onPlay\}/.test(headerRow));
+
+// ── SETS/REPS LOWER LEFT, WEIGHT LOWER RIGHT — UNMOVED.
+ok('[7] sets/reps stay lower-left and the weight control lower-right',
+  /statsRow:\s*\{[^}]*flexDirection:\s*'row'[^}]*justifyContent:\s*'space-between'/.test(screen)
+    && /<View style=\{styles\.statsRow\}>\s*<Text\s*style=\{styles\.statsPrimary\}/.test(screen)
+    && /<View style=\{styles\.weightControl\}>/.test(screen));
+
+// ── ONE OWNER FOR MOBILITY, POWER AND STRENGTH. This is why "apply
+//    consistently" needed no per-surface cell: all three reach the SAME two
+//    components, and a fourth arrangement cannot appear without a new one.
+const mobilityRendererBody = screen.slice(
+  screen.indexOf('function MobilityExerciseList'), screen.indexOf('function SessionList'));
+const sessionListBody = screen.slice(
+  screen.indexOf('function SessionList'), screen.indexOf('function SessionExecutionSection'));
+ok('[7] Mobility rows reach the one header and the one checklist owner',
+  /<ExecutionChecklistItem/.test(mobilityRendererBody)
+    && /<StrengthExerciseCard/.test(mobilityRendererBody));
+ok('[7] Power and Strength rows reach the same two',
+  /<ExecutionChecklistItem/.test(sessionListBody)
+    && /<StrengthExerciseCard/.test(sessionListBody));
+ok('[7] and StrengthExerciseCard has exactly one header, so no row can differ',
+  (screen.match(/<ExerciseHeaderRow/g) ?? []).length
+    === (screen.match(/<ExerciseHeaderRow/g) ?? []).length
+    && (screen.match(/function ExerciseHeaderRow/g) ?? []).length === 1
+    && (screen.match(/function ExecutionChecklistItem/g) ?? []).length === 1);
 
 console.log(`\nsessionExecutionChecklistTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

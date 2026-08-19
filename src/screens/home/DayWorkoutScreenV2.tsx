@@ -2318,8 +2318,26 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }
   onToggle: (itemId: string) => void;
   children: React.ReactNode;
 }) {
+  /*
+   * ⚠ **THE CHECKBOX OWNS THE RIGHT EDGE — SAM, 2026-08-20 (R-111).**
+   *
+   * It used to lead the row, vertically centred against the WHOLE card, which
+   * on an expanded Strength row put it level with the weight stepper rather
+   * than with anything it refers to. It now sits at the far right on the
+   * exercise-name line — the place the play button used to hold — so the row
+   * reads name → demo → … → done, left to right, and the completion state is
+   * where a list keeps its state.
+   *
+   * **This is a MOVE, not a rebuild.** Same `onToggle(itemId)`, same
+   * `accessibilityRole="checkbox"`, same checked state, same spoken label, same
+   * `session-execution-check-…` identity — so every flow that ticks a row keeps
+   * finding it. `flex-start` + `marginTop` is what puts it on the name line;
+   * `styles.executionItem` no longer centres, and the guard that used to
+   * REQUIRE centring is inverted in `test:session-execution`, not deleted.
+   */
   return (
     <View style={[styles.executionItem, completed && styles.executionItemComplete]}>
+      <View style={styles.executionItemContent}>{children}</View>
       <Pressable
         onPress={() => onToggle(itemId)}
         accessibilityRole="checkbox"
@@ -2334,7 +2352,6 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }
       >
         {completed ? <Text style={styles.executionCheckmark}>✓</Text> : null}
       </Pressable>
-      <View style={styles.executionItemContent}>{children}</View>
     </View>
   );
 }
@@ -3083,7 +3100,22 @@ function TeamTrainingRow() {
 }
 
 /**
- * Common exercise header: [label] Name ........ [swap] [remove] [play]
+ * Common exercise header: [label] Name [▶] ................ (checkbox)
+ *
+ * ⚠ **THE PLAY TARGET MOVED TO THE NAME — SAM, 2026-08-20 (R-111).**
+ *
+ * *"Put the play/demo button immediately beside the exercise name. Put the
+ * completion checkbox at the far right where the play button currently sits."*
+ * The two controls had swapped jobs by accident of layout: the far-right end of
+ * a row is where a list puts its state, and play is not state — it belongs to
+ * the name, because the thing it plays IS the name. The checkbox now owns the
+ * right edge (`ExecutionChecklistItem`), and the two never trade places again
+ * on one surface and not the other, because BOTH live in components every row
+ * shares — Mobility, Power and Strength alike.
+ *
+ * **Neither behaviour changed.** Same `onPlay`, same handler, same
+ * `Play <name> demo` label on both the name and the button; the checkbox keeps
+ * its `accessibilityRole="checkbox"`, its checked state and its toggle.
  *
  * TASK 8 (ruling 12): the single "Change" pill that opened the modal
  * exercise_menu is retired. In its place, two icon buttons that already know
@@ -3116,17 +3148,19 @@ function ExerciseHeaderRow({
             <Text style={styles.exerciseLabelText}>{label}</Text>
           </View>
         ) : null}
-        <Pressable
-          style={styles.exerciseNameWrap}
-          onPress={onPlay}
-          accessibilityRole="button"
-          accessibilityLabel={`Play ${name} demo`}
-        >
-          <Text style={styles.exerciseName} numberOfLines={2}>
-            {name}
-          </Text>
-        </Pressable>
-        <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
+        <View style={styles.exerciseNameGroup}>
+          <Pressable
+            style={styles.exerciseNamePress}
+            onPress={onPlay}
+            accessibilityRole="button"
+            accessibilityLabel={`Play ${name} demo`}
+          >
+            <Text style={styles.exerciseName} numberOfLines={2}>
+              {name}
+            </Text>
+          </Pressable>
+          <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
+        </View>
       </View>
     </>
   );
@@ -4139,10 +4173,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   executionSectionBody: { paddingBottom: spacing.md, gap: spacing.sm },
-  executionItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // R-111: content first, checkbox last — the tick is the row's right edge.
+  // `flex-start` + the checkbox's own marginTop land it on the exercise-name
+  // line (card padding 4 + half the 2px difference between the 20px name
+  // line-height and the 22px box), which is exactly where the play button used
+  // to sit. Centring is what put it level with the weight stepper instead.
+  executionItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   executionItemComplete: { opacity: 0.42 },
   executionCheckbox: {
     ...sessionExecutionCheckbox,
+    marginTop: 3,
   },
   executionCheckboxComplete: {
     ...sessionExecutionCheckboxChecked,
@@ -4237,6 +4277,19 @@ const styles = StyleSheet.create({
   },
   exerciseNameWrap: {
     flex: 1,
+  },
+  // R-111: name and play travel together. The group takes the free width so
+  // the pair stays hard left; `flexShrink` on the name is what lets a long
+  // exercise name wrap to its two lines WITHOUT pushing the play button off
+  // the row — the button never leaves the name's side.
+  exerciseNameGroup: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exerciseNamePress: {
+    flexShrink: 1,
   },
   exerciseName: {
     color: '#F2F2F2',

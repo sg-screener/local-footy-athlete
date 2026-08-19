@@ -189,8 +189,14 @@ section('[5] Explorer semantic leaves and lifecycle controls are accessible');
       && /function MissingToggle[\s\S]*?testID=\{testID\}/.test(equipment));
   // The sixth site, the one the census found on glass: the exercise picker row.
   ok('the exercise picker row speaks the exercise NAME',
+    // ⚠ NOT MY SLICE, AND IT KILLED THE WHOLE SUITE. This line shipped with
+    // R-109 calling `readFileSync`/`join`, neither of which this file imports —
+    // it uses the `read()` helper at the top. The suite THREW here on every run
+    // since, so the four reds above it were the last thing anybody saw and
+    // sections after it never executed at all. Repaired in place because this
+    // slice's own accessible-label guards live in it.
     /function ExerciseSheetOption[\s\S]*?accessibilityLabel=\{label\}/.test(
-      readFileSync(join(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8')));
+      read('screens/home/DayWorkoutScreenV2.tsx')));
   ok('fixture expanded action exposes the canonical fixture identity',
     /fixtureIngress\('move', day\.workout\.id\)[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{explorerTestId\.fixtureIngress\('move', day\.workout\.id\)\}/.test(home));
 }

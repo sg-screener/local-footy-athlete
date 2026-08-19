@@ -2701,3 +2701,96 @@ components still carry `testID`, so a "fix" that deleted the id would not pass.
 
 · `BUILT` — `test:accessibility-contracts` section [5], inverted to require the
 LABEL and to prove the id survives.
+
+---
+
+**R-110** · *"Power belongs inside the Strength section, generally as its first
+row. Remove the separate POWER / PRIMER section from the athlete-facing screen.
+A session with one power row and four other strength rows displays Strength 0/5.
+Preserve power's internal role and programming logic; change its
+projection/grouping and order only. Without power, Strength begins with the main
+lift as usual."* (Sam, 2026-08-20) · **POWER IS A STRENGTH ROW, NOT A SECTION.**
+
+The Session screen opened a `Power / Primer` disclosure above `Strength`, so a
+day of one power row and five strength rows read **`Power / Primer 0/1` +
+`Strength 0/5`** — two counters for one block of work the athlete does in one
+go, and a collapsed section hiding a single exercise. It now reads **`Strength
+0/6`, opening with the power row.**
+
+⚠ **THE SECTION IS DELETED, NOT HIDDEN.** `'power'` is gone from
+`SessionExecutionSectionId`, from `SECTION_LABELS` and from `SECTION_ORDER` —
+declarations, not merely an unused branch — so no future reader can route a row
+back into a section that no longer exists.
+
+⚠ **POWER'S PROGRAMMING IS UNTOUCHED, AND THAT IS ASSERTED, NOT ASSUMED.**
+`role: 'power'` still rides every row; `getSessionComponents` still emits the
+typed `power` component with its own `completionPolicy`; the row still carries
+`componentId: 'power'`; every §18 counter, budget and policy still reads
+`powerRows()`. Only the disclosure it is projected into changed. A cell requires
+the component and the row's attachment to it, so a "fix" that got the display
+right by deleting power's identity fails.
+
+⚠ **AND NO SECOND ORDERING AUTHORITY WAS CREATED.** An `orderSectionItems`
+partition that hoisted power inside the projection was written and then
+**DELETED**: mutating it to a no-op reddened not one cell, because
+`sessionTemplate`'s `d2Rank` (`SESSION_ROLE_ORDER`: power → main → accessory →
+midline/prehab) has always owned that order and the section filter preserves it.
+A second sort agreeing with the first is a rival authority nothing can tell apart
+when they disagree. The property is held end to end instead: a fixture that
+authors power LAST still projects it first.
+
+**WHAT IS NOT CHANGED, AND IS FOR SAM.** The Program tab's DAY CARD still lists
+`POWER — 1 exercise` as its own timeline row. That is a different owner
+(`rules/dayTimeline` over `projectDayDetail`'s typed PARTS, one tappable door per
+component) and power is exactly the typed component this ruling preserves. It was
+left alone rather than swept in; **whether the day card should merge it too is a
+ruling nobody has given.**
+
+· `BUILT` — `test:session-execution` section `[7]`, non-vacuity control first
+and mutation-proven: routing power away from Strength reds 7 cells, and the
+deleted sort has its own cell forbidding a new one.
+
+---
+
+**R-111** · *"Put the play/demo button immediately beside the exercise name. Put
+the completion checkbox at the far right where the play button currently sits.
+Keep sets/reps on the lower left and weight controls on the lower right. Apply
+consistently to Mobility, Power and Strength rows. Preserve completion
+behaviour, video behaviour and accessible exercise-name labels."* (Sam,
+2026-08-20) · **THE DEMO BELONGS TO THE NAME; THE RIGHT EDGE BELONGS TO THE
+STATE.**
+
+The two controls had swapped jobs by accident of layout. Play sat at the far
+right of the header row — the end of a list row, which is where a list keeps its
+state — while the checkbox led the row, vertically centred against the WHOLE
+card, so on an expanded Strength row it sat level with the weight stepper rather
+than with anything it referred to. A row now reads **name → demo → … → done**,
+left to right.
+
+⚠ **BOTH ARE MOVES, NOT REBUILDS.** Same `onPlay` handler and the same
+`Play <name> demo` label on both the name and the button; same
+`onToggle(itemId)`, `accessibilityRole="checkbox"`, checked state, spoken label
+and `session-execution-check-…` identity, so every flow that ticks a row keeps
+finding it. Sets/reps and the weight control did not move at all.
+
+⚠ **"CONSISTENTLY" NEEDED NO PER-SURFACE WORK.** Mobility, Power and Strength
+rows already reach ONE header (`ExerciseHeaderRow`) and ONE checklist wrapper
+(`ExecutionChecklistItem`); both changes are in those two components, and a cell
+requires there be exactly one of each, so a fourth arrangement cannot appear
+without a new component.
+
+⚠ **ONE PRIOR GUARD REQUIRED THE OLD PLACEMENT AND IS INVERTED, NOT DELETED**
+(`gate-must-watch-the-deleted-surface`). *"Every checkbox is centred against its
+complete exercise row"* demanded `alignItems: 'center'` and NO `marginTop` — the
+exact two things the ruled placement needs. Same coordinates, now naming the
+ruled arrangement.
+
+**PROVEN ON GLASS, 2026-08-20**, `standard-in-season-week` on iPhone 17 Pro:
+Strength expanded with power (`0/6`, Vertical Jump first) and without it (`0/5`,
+Back Squat first) after a real Remove through the athlete's own door; Mobility
+expanded; a tick moved the counter `0/6 → 1/6` and dulled the row; the relocated
+play button opened the Back Squat demo.
+
+· `BUILT` — `test:session-execution` section `[7]`, mutation-proven: returning
+the checkbox to the left reds 1, returning play to the far right reds 2,
+re-centring the row reds the inverted cell — and nothing else in either case.
