@@ -104,13 +104,66 @@ const MUTATIONS = [
     to: '  const untrained: readonly string[] = [];',
     suites: ['test:injury-fallback-journey'],
   },
+  /* ⚠ **M11 IS RETIRED, NOT LOST.** It mutated the resolve's "this session is
+   * still empty" arm, and it SURVIVED once Sam's ruling of 2026-08-20 landed —
+   * correctly, because nothing empties a session any more, so the arm became
+   * unreachable. The arm is deleted (see \), and the
+   * behaviour it guarded is now held by M12, M13 and M14. A mutant aimed at a
+   * clause no world reaches proves nothing. */
   {
-    id: 'M11',
-    what: 'the resolve goes back to claiming success over a session it left empty',
+    id: 'M12',
+    what: "an injury omission writes into the athlete's Remove list again (Sam's ruling 2, reversed)",
     file: 'src/utils/programControlActions.ts',
-    from: '        : stillMissing',
-    to: '        : false',
+    from: '  appliedOmissions.push(...plan.omissions);',
+    to: `  for (const omitted of plan.omissions) {
+    const outcome = executeProgramControlAction({
+      type: 'remove_exercise', source: args.source, scope: 'today_only',
+      payload: { date: args.date, exercise: omitted },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+    });
+    if (outcome.ok) appliedOmissions.push(omitted);
+  }`,
     suites: ['test:injury-fallback-journey'],
+  },
+  {
+    id: 'M13',
+    what: 'the withhold projection stops marking rows, so nothing says the work is unsafe',
+    file: 'src/rules/injuryWithheldRows.ts',
+    from: '  if (withheld.size === 0) return workout;',
+    to: '  if (withheld.size >= 0) return workout;',
+    suites: ['test:injury-fallback-journey'],
+  },
+  {
+    id: 'M14',
+    what: 'the injured date can be recorded as a normal session again',
+    file: 'src/store/sessionOutcomeTransaction.ts',
+    from: '  if (injuryRefusal) return injuryRefusal;',
+    to: '  if (injuryRefusal && false) return injuryRefusal;',
+    suites: ['test:injury-fallback-journey'],
+  },
+  {
+    id: 'M15',
+    what: 'an ORDINARY injury blocks the session too, not just a red flag',
+    file: 'src/rules/injuryWithheldRows.ts',
+    from: '  const withheld = injuryWithholdingsOn(args).filter((entry) => entry.redFlag);',
+    to: '  const withheld = injuryWithholdingsOn(args);',
+    suites: ['test:injury-fallback-journey'],
+  },
+  {
+    id: 'M16',
+    what: 'an injury withholds work on days BEFORE it was reported',
+    file: 'src/rules/injuryWithheldRows.ts',
+    from: '    .filter((episode) => episode.onsetOrReportedDate.slice(0, 10) <= date);',
+    to: '    .filter(() => true);',
+    suites: ['test:injury-fallback-journey'],
+  },
+  {
+    id: 'M17',
+    what: 'the typed sheet stops outranking the Bible\'s named swap examples at 6-7 (Sam\'s ruling 1, reversed)',
+    file: 'src/rules/injuryExerciseRisk.ts',
+    from: '  return !injurySeverityRemovesRiskyWork(severity);',
+    to: '  return true;',
+    suites: ['test:tap-swap-hierarchy'],
   },
   {
     id: 'M8',

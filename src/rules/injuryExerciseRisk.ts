@@ -109,6 +109,13 @@ export function classifyExerciseRiskForBucket(
  *   **8-10** *"Pause affected training... Use rest, recovery, or clearly
  *   unaffected training only."* -> `good` only.
  *
+ * **THE SHEET OUTRANKS THE SECTION'S NAMED SWAP EXAMPLES FROM 6-7 UP.** Sam,
+ * 2026-08-20: *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
+ * Thrust — or any exercise — the sheet marks risky for that injured area, even
+ * if an older example says otherwise. Walk down the ladder to the nearest legal
+ * option; if none exists, omit honestly."*
+ * BIBLE_ANCHOR: injury_sheet_outranks_swap_examples
+ *
  * `unknown` — a name Sam's matrix does not rate — is refused at every active
  * band. A row that cannot be SHOWN safe is not a safe replacement, and an injury
  * substitution is the last place in this app to guess.

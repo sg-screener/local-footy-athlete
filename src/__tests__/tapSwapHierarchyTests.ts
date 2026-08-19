@@ -16,6 +16,7 @@ import {
   resolveTapSwapEnvironment,
 } from '../utils/tapSwapHierarchy';
 import { getSafeTrainingFallbackRank } from '../rules/conflictResolutionHierarchy';
+import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
 
 let pass = 0;
 let fail = 0;
@@ -115,12 +116,30 @@ console.log('\n-- Bible tap swap hierarchy --');
     }),
     primaryInjury,
   });
-  eq('same muscle group is used when safe same-pattern knee work is unavailable',
-    choices[0]?.hierarchyTier,
-    'similar_muscle_group');
-  eq('knee-blocked squat selects the curated posterior-chain option',
-    choices[0]?.name,
-    'Hip Thrusts');
+  /* ── SAM RULED THIS, 2026-08-20. THE TYPED SHEET WINS AT 6-7. ─────────────
+   *
+   * His words: *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
+   * Thrust — or any exercise — the sheet marks risky for that injured area, even
+   * if an older example says otherwise. Walk down the ladder to the nearest legal
+   * option; if none exists, omit honestly."*
+   *
+   * These two cells asserted the opposite. They expected `Hip Thrusts`, which
+   * his own matrix rates `knee: 'caution'`, on the strength of the Bible's knee
+   * prose (*"Heavy knee-dominant work -> hip thrust"*). That is the contradictory
+   * example his ruling retires, and it is why these cells had been RED on `main`
+   * ever since the matrix landed — the code was already right and the test was
+   * holding the older authority.
+   *
+   * What they assert now is the ruling itself: nothing the sheet marks risky is
+   * offered, and the ladder keeps walking rather than refusing. */
+  const kneeSix = choices.map((choice) => choice.name).filter(Boolean) as string[];
+  ok('CONTROL: the ladder still answers at all for a 6/10 knee',
+    kneeSix.length > 0, kneeSix);
+  ok('nothing the sheet marks risky for the knee is offered at 6/10 — Sam, 2026-08-20',
+    kneeSix.every((name) => injuryPermitsExerciseAtSeverity(name, 'knee', 6)),
+    kneeSix.map((name) => `${name}:${getExerciseTags(name)?.injury.knee}`));
+  ok('and Hip Thrusts specifically is NOT offered, whatever the older example said',
+    !kneeSix.includes('Hip Thrusts'), kneeSix);
 }
 
 {
@@ -139,9 +158,17 @@ console.log('\n-- Bible tap swap hierarchy --');
   eq('unaffected body area is used when pressing options are unsafe/unavailable',
     choices[0]?.hierarchyTier,
     'unaffected_body_area');
-  eq('shoulder issue selects supported pulling before recovery',
-    choices[0]?.name,
-    'Chest Supported Row');
+  /* Same ruling, the shoulder half. The Bible's shoulder prose says *"some
+   * pulling if tolerated"*; his matrix rates `Chest Supported Row`
+   * `shoulder: 'caution'`, and at 6-7 the sheet wins. */
+  const shoulderSix = choices.map((choice) => choice.name).filter(Boolean) as string[];
+  ok('CONTROL: the ladder still answers at all for a 6/10 shoulder on a bare kit',
+    shoulderSix.length > 0, shoulderSix);
+  ok('nothing the sheet marks risky for the shoulder is offered at 6/10 — Sam, 2026-08-20',
+    shoulderSix.every((name) => injuryPermitsExerciseAtSeverity(name, 'shoulder', 6)),
+    shoulderSix.map((name) => `${name}:${getExerciseTags(name)?.injury.shoulder}`));
+  ok('and Chest Supported Row specifically is NOT offered, whatever the older example said',
+    !shoulderSix.includes('Chest Supported Row'), shoulderSix);
 }
 
 console.log('\n-- Injury, readiness and equipment precedence --');
@@ -303,10 +330,21 @@ console.log('\n-- Recovery and rest are true fallbacks --');
 {
   const resolved = resolveTapSwapEnvironment({
     date: '2026-07-06',
+    /* ⚠ **THIS SUITE DIED HERE, AND HAD BEEN DYING ON `main`.**
+     * `scoreCapacity` requires BOTH capacity answers — Bible Section 9, *"there
+     * is no default and no unknown tier"* — and this fixture gave neither, so
+     * `resolveTapSwapEnvironment` threw `MissingCapacityAnswerError`, the
+     * process exited, and the last two cells plus the pass/fail summary never
+     * ran. A suite that dies reports nothing, not zero failures. The answers
+     * below are ordinary ones; the cell is about FATIGUE lowering capacity, and
+     * it still is — whatever the profile scores, the limiting fatigue
+     * constraint takes it to `low`. */
     profile: {
       trainingLocation: 'Commercial gym',
       equipment: ['Dumbbells Only'],
       seasonPhase: 'Off-season',
+      recentTrainingLoad: 'Very consistent',
+      conditioningLevel: 'Good',
     },
     activeConstraints: [{
       id: 'fatigue',

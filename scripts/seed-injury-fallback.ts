@@ -139,6 +139,12 @@ const SEEDS = [
     area: 'shoulder', region: 'upper_body', severity: 6 },
 ] as const;
 
+/** The red-flag world gets its own walk — it withholds rather than substitutes. */
+const RED_FLAG = {
+  label: 'hamstring 9/10 WITH SERIOUS SYMPTOMS — R-113, nothing is removed',
+  area: 'hamstring', region: 'lower_body', severity: 9,
+} as const;
+
 function trainingDays(weekStart: string): string[] {
   const out: string[] = [];
   for (let i = 0; i < 14; i += 1) {
@@ -200,6 +206,76 @@ async function main(): Promise<void> {
     console.log(`  ON GLASS  open the session on ${target} and expect exactly the AFTER rows,`);
     console.log('            each at the load printed, and that sentence on the confirmation.');
     console.log('            Then close and reopen the app: the rows must not move again.');
+  }
+
+  /* ── THE RED-FLAG WALK — R-113 (Sam, 2026-08-20) ─────────────────────────
+   * The one world where the app withholds instead of substituting, and the one
+   * a device pass most needs, because the ROW must still be on the screen. */
+  {
+    const weekStart = install();
+    const target = '2026-07-20';
+    setJourneyClock(target);
+    const before = rowsOf(target, weekStart);
+    const constraint = buildGuidedInjuryConstraint({
+      region: RED_FLAG.region, area: RED_FLAG.area, severity: RED_FLAG.severity,
+      severityBand: 'avoid', adjustmentLevel: 'training_paused',
+      triggers: ['during'], seriousSymptoms: true,
+    } as never, { todayISO: target });
+    const set = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: target })) as { message?: string; createdModifierIds?: string[] };
+    const { injuryWithholdingsOn } = require('../src/rules/injuryWithheldRows');
+    const withheld = quiet(() => injuryWithholdingsOn({
+      workout: workoutOn(target, weekStart), dateISO: target,
+      facts: (useProgramStore.getState() as unknown as {
+        acceptedMaterialContext?: { temporarySourceFacts?: unknown[] };
+      }).acceptedMaterialContext?.temporarySourceFacts,
+    })) as Array<{ exercise: string; explanation: string }>;
+    let refusal = '';
+    try {
+      const { resolveSessionOutcomeTarget } = require('../src/store/sessionOutcomeTransaction');
+      quiet(() => resolveSessionOutcomeTarget(target, target));
+    } catch (error) { refusal = (error as Error).message; }
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_injury_modifier',
+      source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { episodeId: set.createdModifierIds?.[0] },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: target })) as { message?: string };
+
+    console.log(`\n[${RED_FLAG.label}]`);
+    console.log(`  DECLARE   ${RED_FLAG.area} ${RED_FLAG.severity}/10 WITH serious symptoms on ${target} (${weekdayName(target)})`);
+    console.log(`  BEFORE    ${JSON.stringify(before)}`);
+    console.log(`  AFTER     ${JSON.stringify(rowsOf(target, weekStart))}`);
+    console.log('  ^^ IDENTICAL ON PURPOSE. Nothing is removed and nothing is swapped.');
+    console.log(`  SENTENCE  "${set.message ?? ''}"`);
+    console.log('  WITHHELD ROWS, each with the words the athlete must be shown:');
+    for (const entry of withheld) console.log(`      ${entry.exercise}  ->  "${entry.explanation}"`);
+    console.log(`  RECORDING REFUSED WITH: "${refusal}"`);
+    console.log(`  AFTER CLEARING: ${JSON.stringify(rowsOf(target, weekStart))}`);
+    console.log(`  CLEAR SENTENCE  "${cleared.message ?? ''}"`);
+    console.log('');
+    console.log('  ── EXACT GLASS HANDOFF (the UI lane owns every line below) ──');
+    console.log(`  1. Open ${target}. Every BEFORE row must still be listed, at its own load.`);
+    console.log('  2. Each WITHHELD row must render as unavailable/skip — not hidden, not');
+    console.log('     deleted — carrying its explanation above verbatim. The typed source is');
+    console.log('     `WorkoutExercise.unavailableForInjury` { bodyPart, severity, redFlag,');
+    console.log('     explanation }; nothing needs deriving on the screen.');
+    console.log('  3. "Save & Finish" must be unavailable, and the reason shown must be the');
+    console.log('     RECORDING REFUSED text above. `sessionOutcomeRecordableRefusal` already');
+    console.log('     supplies it to the panel — no new call is needed.');
+    console.log('  4. Clear the injury from My Status. Every original row must return, at its');
+    console.log('     original load, with no marks, and the day recordable again.');
+    console.log('  5. Force-quit and reopen. The session must be exactly as in step 4.');
+    console.log('  ⚠ KNOWN, AND NOT THIS LANE\'S: `projectVisibleDay` BLANKS a red-flag day,');
+    console.log('     measured identically on main 9f081efa. Sam\'s ruling permits blocking the');
+    console.log('     session, so this is not a regression — but step 2 cannot be seen until');
+    console.log('     that projection renders the marked rows instead of emptying the day.');
   }
 }
 

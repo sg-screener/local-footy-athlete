@@ -537,43 +537,65 @@ async function main(): Promise<void> {
       { beforeTarget, afterRestore });
   }
 
-  /* ── [10] THE MEDICAL-STOP WORLD, AND ONE DEFECT IT STILL CARRIES ────────
+  /* ── [10] THE RED-FLAG WORLD — SAM'S RULING OF 2026-08-20, ALL SEVEN PARTS ─
    *
-   * A red-flag injury (`seriousSymptoms`) is the only world in which the ladder
-   * genuinely runs out: `getTapSwapChoices` returns a REST choice, which is the
-   * absence of a replacement, so every unsafe row becomes an honest OMISSION.
-   * Measured across four kits (full gym, bodyweight-only, dumbbells+bench,
-   * bands-only) an omission is unreachable for a strength row any other way —
-   * 0 of 1049 unsafe occurrences in every kit — so this is the only place the
-   * omission path can be held at all.
+   * *"An 8-10 injury with serious symptoms must NEVER write into the athlete's
+   * Remove list or permanently alter the accepted program. Preserve the original
+   * exercises. On that date, show them as unavailable/skip with the explicit
+   * injury safety explanation, or block the session if necessary. Clearing or
+   * resolving the injury must immediately reveal the original accepted session
+   * again, including after close/reopen. Remove remains exclusively
+   * athlete-authored Remove."*
    *
-   * **AND IT IS WHERE THE UNIT'S ONE UNFIXED DEFECT LIVES.** An injury omission
-   * is written through `remove_exercise`, which lands in the ATHLETE'S OWN
-   * exclusion ledger — five entries they never made — and re-deriving replays
-   * them, so Restore cannot bring the day back. Substitutions restore correctly
-   * because nothing durable holds them. The mission says *"injury decisions and
-   * ordinary Remove decisions remain owned separately"*, and they are not.
-   *
-   * Fixing it means changing who owns a removal, which another lane signed
-   * ("No second removal authority survives"), so it is MEASURED here rather
-   * than quietly patched — and the athlete is told the truth in the meantime.
-   * The cells below pin BOTH: the defect as it stands, so it cannot deepen
-   * unnoticed, and the honesty of the sentence, so nobody re-introduces the
-   * false-success claim while it is unfixed.
+   * WHAT IT REPLACED. Before the ruling an injury omission was written through
+   * `remove_exercise`, which lands in `athletePreferencesStore.exclusions`.
+   * MEASURED: five entries the athlete never made, and because Restore works by
+   * RE-DERIVING it replayed them — the day was empty FOREVER. These cells used
+   * to pin that defect; they pin the ruling now.
    */
-  console.log('\n[10] the medical-stop world]');
+  console.log('\n[10] the red-flag world — Sam, 2026-08-20]');
   {
     const { executeProgramControlActionDurably } = require('../utils/programControlActions');
     const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
     const { getAthleteExclusions } = require('../store/athletePreferencesStore');
+    const { resolveSessionOutcomeTarget } = require('../store/sessionOutcomeTransaction');
+    const { injuryWithholdingsOn, activeInjuryFactsOn } = require('../rules/injuryWithheldRows');
+
     const weekStart = install();
     const target = '2026-07-20';
     setJourneyClock(target);
     const before = rowsOf(target, weekStart);
-    ok('medical stop — CONTROL: the day really does carry work first',
-      before.length > 0, before);
-    ok('medical stop — CONTROL: the athlete has removed nothing of their own',
+    /** The rows and loads as the STORED program holds them, not as they render. */
+    const storedRows = (dateISO: string): string[] => {
+      const program = (useProgramStore.getState() as unknown as {
+        currentProgram?: { microcycles?: Array<{ startDate?: string; workouts?: Workout[] }> };
+      }).currentProgram;
+      const out: string[] = [];
+      for (const cycle of program?.microcycles ?? []) {
+        const cycleStart = String(cycle.startDate ?? '').slice(0, 10);
+        for (const workout of cycle.workouts ?? []) {
+          const offset = ((workout as unknown as { dayOfWeek: number }).dayOfWeek + 6) % 7;
+          if (addDaysISO(cycleStart, offset) !== dateISO) continue;
+          for (const row of workout.exercises ?? []) {
+            const name = (row as { exercise?: { name?: string } }).exercise?.name;
+            const kg = (row as { prescribedWeightKg?: number }).prescribedWeightKg;
+            if (name) out.push(`${name}@${kg ?? '-'}`);
+          }
+        }
+      }
+      return out;
+    };
+    const storedBefore = storedRows(target);
+
+    ok('red flag — CONTROL: the day really does carry work first', before.length > 0, before);
+    ok('red flag — CONTROL: the accepted program really holds those rows',
+      storedBefore.length > 0, storedBefore);
+    ok('red flag — CONTROL: the athlete has removed nothing of their own',
       (quiet(() => getAthleteExclusions()) as unknown[]).length === 0);
+    ok('red flag — CONTROL: a healthy athlete CAN record this day',
+      (() => { try { quiet(() => resolveSessionOutcomeTarget(target, target)); return true; }
+        catch { return false; } })());
+
     const constraint = buildGuidedInjuryConstraint({
       region: 'lower_body', area: 'hamstring', severity: 9,
       severityBand: 'avoid', adjustmentLevel: 'training_paused',
@@ -587,13 +609,58 @@ async function main(): Promise<void> {
       requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
     }, { todayISO: target })) as { message?: string; createdModifierIds?: string[] };
     const afterSet = rowsOf(target, weekStart);
-    ok('medical stop — every omitted row is NAMED, never counted',
-      namesOf(before).every((name) => (set.message ?? '').includes(name)),
-      { message: set.message, before: namesOf(before) });
-    ok('medical stop — the sentence says nothing safe was available, and does not claim a swap',
-      /nothing safe was available/.test(set.message ?? '')
-        && !/swapped for/.test(set.message ?? ''),
-      set.message);
+
+    /* [1] NO REMOVE DECISION IS CREATED. */
+    ok('red flag — creates NO Remove decision of any kind',
+      (quiet(() => getAthleteExclusions()) as unknown[]).length === 0,
+      quiet(() => getAthleteExclusions()));
+
+    /* [2] THE ACCEPTED PROGRAM IS UNTOUCHED — rows AND loads, in storage. */
+    ok('red flag — the accepted program keeps every row and load, byte for byte',
+      JSON.stringify(storedRows(target)) === JSON.stringify(storedBefore),
+      { storedBefore, storedAfter: storedRows(target) });
+    ok('red flag — and the athlete still sees those rows, not an emptied day',
+      JSON.stringify(afterSet) === JSON.stringify(before), { before, afterSet });
+
+    /* [3] EVERY WITHHELD ROW CARRIES ITS OWN EXPLANATION. */
+    const withheld = quiet(() => injuryWithholdingsOn({
+      workout: workoutOn(target, weekStart), dateISO: target,
+      facts: (useProgramStore.getState() as unknown as {
+        acceptedMaterialContext?: { temporarySourceFacts?: unknown[] };
+      }).acceptedMaterialContext?.temporarySourceFacts,
+    })) as Array<{ exercise: string; explanation: string; redFlag: boolean }>;
+    ok('red flag — CONTROL: rows really are withheld', withheld.length > 0, withheld);
+    ok('red flag — every withheld row names itself and says why, in plain words',
+      withheld.every((entry) => entry.explanation.includes(entry.exercise)
+        && /not safe with your hamstring/.test(entry.explanation)
+        && /physio/.test(entry.explanation)),
+      withheld.map((entry) => entry.explanation));
+    const markedDay = workoutOn(target, weekStart) as unknown as {
+      exercises?: Array<{ exercise?: { name?: string }; unavailableForInjury?: unknown }>;
+    };
+    ok('red flag — the marks reach the row the session screen reads',
+      (markedDay.exercises ?? []).filter((row) => row.unavailableForInjury).length === withheld.length,
+      (markedDay.exercises ?? []).map((row) => [row.exercise?.name, Boolean(row.unavailableForInjury)]));
+
+    /* [4] THE DAY CANNOT BE COMPLETED AS NORMAL, AND FOR THE RIGHT REASON. */
+    let refusal: string | null = null;
+    try { quiet(() => resolveSessionOutcomeTarget(target, target)); }
+    catch (error) { refusal = (error as Error).message; }
+    ok('red flag — the injured date cannot be recorded as a normal session',
+      refusal !== null, refusal);
+    ok('red flag — and the refusal blames the INJURY, not a missing session',
+      refusal !== null && /not safe with your hamstring/.test(refusal)
+        && !/No visible session/.test(refusal),
+      refusal);
+
+    /* [5] THE SENTENCE NAMES WHAT IS WITHHELD AND CLAIMS NO SWAP. */
+    ok('red flag — every withheld row is NAMED in what the athlete is told',
+      withheld.every((entry) => (set.message ?? '').includes(entry.exercise)),
+      { message: set.message });
+    ok('red flag — and no swap is claimed, because none was made',
+      !/swapped for/.test(set.message ?? ''), set.message);
+
+    /* [6] CLEARING REVEALS THE EXACT ORIGINAL SESSION. */
     const cleared = await quietAsync(() => executeProgramControlActionDurably({
       type: 'clear_injury_modifier',
       source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
@@ -601,24 +668,129 @@ async function main(): Promise<void> {
       payload: { episodeId: set.createdModifierIds?.[0] },
       requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
     }, { todayISO: target })) as { ok: boolean; message?: string };
-    ok('medical stop — CONTROL: the Restore door actually ran', cleared.ok === true, cleared);
+    ok('red flag — CONTROL: the Restore door actually ran', cleared.ok === true, cleared);
     const afterClear = rowsOf(target, weekStart);
-    /* ⚠ **THE DEFECT, PINNED AS IT STANDS.** When this starts failing because
-     * the rows DO come back, the ownership fix has landed and this cell and the
-     * one below it are what should be rewritten — not deleted. */
-    ok('medical stop — MEASURED-NOT-FIXED: an omission does not come back on Restore',
-      afterClear.length === 0 && afterSet.length === 0,
-      { afterSet, afterClear });
-    ok('medical stop — MEASURED-NOT-FIXED: the omission sits in the ATHLETE\'s exclusion ledger',
-      (quiet(() => getAthleteExclusions()) as { exercise: string }[]).length === before.length,
-      quiet(() => getAthleteExclusions()));
-    /* ...AND WHILE IT IS UNFIXED, THE ATHLETE IS TOLD THE TRUTH. This is the
-     * cell that matters: the resolve used to answer "Injury resolved. Affected
-     * sessions were safely recomposed." over an empty day. */
-    ok('medical stop — the resolve never claims success over a session it left empty',
+    ok('red flag — clearing reveals the EXACT original session, rows and loads',
+      JSON.stringify(afterClear) === JSON.stringify(before), { before, afterClear });
+    ok('red flag — and nothing is withheld any more',
+      ((workoutOn(target, weekStart) as unknown as {
+        exercises?: Array<{ unavailableForInjury?: unknown }>;
+      }).exercises ?? []).every((row) => !row.unavailableForInjury));
+    ok('red flag — the day can be recorded again once the injury is cleared',
+      (() => { try { quiet(() => resolveSessionOutcomeTarget(target, target)); return true; }
+        catch { return false; } })());
+
+    /* [7] AND THE MESSAGE ONLY CLAIMS A RETURN THAT ACTUALLY HAPPENED. */
+    ok('red flag — the resolve never claims a recomposition it did not make',
       !/safely recomposed/.test(cleared.message ?? ''), cleared.message);
-    ok('medical stop — and it says plainly that the exercises have not come back',
-      /have not come back/.test(cleared.message ?? ''), cleared.message);
+    ok('red flag — it says the exercises are available again, and they visibly are',
+      /available again/.test(cleared.message ?? '')
+        && JSON.stringify(afterClear) === JSON.stringify(before),
+      cleared.message);
+
+    /* ⚠ **ONLY A RED FLAG BLOCKS, AND ONLY FROM THE DAY IT WAS REPORTED.**
+     * Both halves had no cell until mutations M15 and M16 SURVIVED. An ordinary
+     * injury substitutes and the athlete trains, so blocking there would stop
+     * training the app exists to keep going; and an injury reported on Friday
+     * must not reach back and withhold Monday's finished session. */
+    {
+      const laterWeekStart = install();
+      const earlier = '2026-07-20';
+      const later = '2026-07-24';
+      setJourneyClock(later);
+      const earlierRowsBefore = rowsOf(earlier, laterWeekStart);
+      const ordinary = buildGuidedInjuryConstraint({
+        region: 'lower_body', area: 'hamstring', severity: 6,
+        severityBand: 'caution', adjustmentLevel: 'reduce_load',
+        triggers: ['during'], seriousSymptoms: false,
+      } as never, { todayISO: later });
+      await quietAsync(() => executeProgramControlActionDurably({
+        type: 'set_injury_modifier',
+        source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+        scope: 'current_and_future',
+        payload: { constraint: ordinary },
+        requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+      }, { todayISO: later }));
+      ok('an ORDINARY injury does not block the session — the athlete still trains',
+        (() => { try { quiet(() => resolveSessionOutcomeTarget(later, later)); return true; }
+          catch { return false; } })());
+      /* ⚠ **THE FIRST CONTROL HERE WAS WRONG AND SAID SO.** It asserted the
+       * ordinary injury WITHHELD something on its own day — and it withholds
+       * nothing, because at 6/10 the ladder SUBSTITUTES the unsafe rows, which
+       * is the whole point of the unit. The rule mutation M16 actually breaks is
+       * `activeInjuryFactsOn`'s onset-date filter, so that is what is asked. */
+      const factsNow = (useProgramStore.getState() as unknown as {
+        acceptedMaterialContext?: { temporarySourceFacts?: unknown[] };
+      }).acceptedMaterialContext?.temporarySourceFacts;
+      const liveOnLater = quiet(() => activeInjuryFactsOn(factsNow, later)) as unknown[];
+      const liveOnEarlier = quiet(() => activeInjuryFactsOn(factsNow, earlier)) as unknown[];
+      ok('CONTROL: the injury really is in force on the day it was reported',
+        liveOnLater.length > 0, liveOnLater.length);
+      ok('an injury reported today is not in force on a day already past',
+        liveOnEarlier.length === 0, liveOnEarlier.length);
+      ok('and the earlier day the athlete already trained is untouched',
+        JSON.stringify(rowsOf(earlier, laterWeekStart)) === JSON.stringify(earlierRowsBefore),
+        { earlierRowsBefore, now: rowsOf(earlier, laterWeekStart) });
+    }
+
+    /* [8] AND IT ALL SURVIVES CLOSE AND REOPEN. */
+    await relaunchApp({ storage: localStorageData, todayISO: target });
+    ok('red flag — the restored session survives close and reopen',
+      JSON.stringify(rowsOf(target, weekStart)) === JSON.stringify(before),
+      { before, afterReopen: rowsOf(target, weekStart) });
+    ok('red flag — and no Remove decision appeared across the restart',
+      (quiet(() => getAthleteExclusions()) as unknown[]).length === 0,
+      quiet(() => getAthleteExclusions()));
+  }
+
+  /* ── [11] ONLY A RED FLAG BLOCKS — ASKED OF THE PREDICATE DIRECTLY ────────
+   *
+   * ⚠ **THIS IS THE ONE PLACE THIS SUITE HAND-BUILDS AN INPUT, AND THE REASON
+   * IS MEASURED.** `injurySessionOutcomeRefusal`'s red-flag filter is
+   * UNREACHABLE through a real journey world: an ordinary injury SUBSTITUTES
+   * every unsafe row (0 omissions in 1049 unsafe occurrences across four kits),
+   * so it never leaves one withheld for the filter to spare — mutation M15
+   * survived the whole journey for exactly that reason.
+   *
+   * A clause no mutation can reach is a clause not doing the work its comment
+   * claims, and the answer here is not to delete it — an ordinary injury must
+   * keep the athlete training, and a future world that cannot substitute must
+   * not silently start blocking sessions. So the rule is asked of the PURE
+   * PREDICATE over typed facts, where both sides of the boundary exist.
+   */
+  console.log('\n[11] only a red flag blocks]');
+  {
+    const { injurySessionOutcomeRefusal } = require('../rules/injuryWithheldRows');
+    const episode = (severity: number, seriousSymptoms: boolean) => ({
+      protocolVersion: 1, episodeId: `e-${severity}-${seriousSymptoms}`,
+      bodyPart: 'hamstring', bucket: 'hamstring', severity,
+      status: 'active', onsetOrReportedDate: '2026-07-20',
+      createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:00:00Z',
+      resolvedAt: null, triggers: [], seriousSymptoms,
+      transitionHistory: [], sourceActor: 'athlete', sourceSurface: 'test',
+      affectedDates: [], affectedWeeks: [], currentRestrictionPolicy: {},
+      legacyMigrationStatus: 'native_v1', compatibility: { constraintId: 'c' },
+    });
+    const dayWithAnUnsafeRow = {
+      exercises: [{ exercise: { name: 'RDLs' } }],
+    } as unknown as Workout;
+    const ask = (severity: number, serious: boolean) => quiet(() => injurySessionOutcomeRefusal({
+      workout: dayWithAnUnsafeRow, dateISO: '2026-07-20',
+      facts: [episode(severity, serious) as never],
+    })) as { code: string } | null;
+
+    ok('CONTROL: the row really is unsafe for this injury, or nothing below means anything',
+      ask(9, true) !== null || ask(6, false) !== null, {
+        redFlag: ask(9, true), ordinary: ask(6, false),
+      });
+    ok('a red flag (8-10 AND serious symptoms) blocks the session',
+      ask(9, true)?.code === 'red_flag_injury_session', ask(9, true));
+    ok('a LIMITING injury (6-7) does not block — the athlete still trains',
+      ask(6, false) === null, ask(6, false));
+    ok('a PAUSE-band injury without serious symptoms does not block either',
+      ask(9, false) === null, ask(9, false));
+    ok('serious symptoms BELOW the pause band do not block on their own',
+      ask(6, true) === null, ask(6, true));
   }
 
   /* ── EVERY PATTERN THE MISSION NAMES WAS ACTUALLY WALKED ──────────────────

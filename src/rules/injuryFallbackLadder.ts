@@ -57,6 +57,11 @@
  * | 4 `safe_adjacent_pattern` | the authored adjacent plane/pattern | NO — partial |
  * | — | nothing legal | the caller omits, honestly and by name |
  *
+ * **AND THE SHEET OUTRANKS THE BIBLE'S NAMED EXAMPLES FROM 6-7 UP** (Sam,
+ * 2026-08-20). The examples above are the ORDER to walk, not a licence for an
+ * exercise the matrix marks risky for that area.
+ * BIBLE_ANCHOR: injury_sheet_outranks_swap_examples
+ *
  * **INJURY LEGALITY OUTRANKS THE LADDER (R-103, verbatim).** This module NEVER
  * decides what is safe. The caller passes `isLegal`, which in production is
  * `assessTapSwapCandidateSafety` — the single safety owner for equipment,

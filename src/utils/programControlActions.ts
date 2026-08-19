@@ -30,6 +30,7 @@ import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
 // this file's ledger-append site documents at length.
 import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 import { applyExclusionsToAuthoredDay } from '../rules/exerciseExclusions';
+import { injuryWithholdingsOn } from '../rules/injuryWithheldRows';
 import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import {
   describeVisibleInjuryChange,
@@ -207,6 +208,23 @@ const SETUP_ACTIONS = new Set<ProgramControlActionType>([
  * injury door's honesty is measured in — see the note at its `set_injury_modifier`
  * arm, and `injurySessionRecomposition.describeVisibleInjuryChange`.
  */
+/**
+ * The rows an active injury is WITHHOLDING on a date — present, and not to be
+ * done. Read through the same resolver the athlete's week comes from, so this
+ * cannot answer about a different session than the one on screen.
+ */
+function injuryWithheldNamesOn(dateISO: string): string[] {
+  try {
+    return injuryWithholdingsOn({
+      workout: resolveWorkoutOnDate(dateISO),
+      dateISO,
+      facts: useProgramStore.getState().acceptedMaterialContext?.temporarySourceFacts,
+    }).map((entry) => entry.exercise);
+  } catch {
+    return [];
+  }
+}
+
 function visibleExerciseNamesOn(dateISO: string): string[] {
   if (!dateISO) return [];
   const workout = applyExclusionsToAuthoredDay({
@@ -1324,21 +1342,28 @@ function recomposeSessionForInjury(args: {
     if (outcome.ok) appliedSubstitutions.push(substitution);
     else refused.push(`${substitution.from} (${outcome.message ?? 'refused'})`);
   }
-  for (const omitted of plan.omissions) {
-    // AN OMISSION IS A REMOVAL, THROUGH THE REMOVAL OWNER. Nothing replaces it —
-    // which is the whole point: the ladder had nothing safe to offer.
-    const outcome = executeProgramControlAction({
-      type: 'remove_exercise',
-      source: args.source,
-      scope: 'today_only',
-      payload: { date: args.date, exercise: omitted },
-      requiresRebuild: false,
-      createsActiveModifier: false,
-      oneOffOnly: true,
-    } as ProgramControlAction);
-    if (outcome.ok) appliedOmissions.push(omitted);
-    else refused.push(`${omitted} (${outcome.message ?? 'refused'})`);
-  }
+  /* ── AN OMISSION IS WITHHELD, NOT REMOVED ────────────────────────────────
+   *
+   * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
+   * into the athlete's Remove list or permanently alter the accepted program.
+   * Preserve the original exercises ... Remove remains exclusively
+   * athlete-authored Remove."*
+   *
+   * This loop used to call `remove_exercise`, whose `today_only` scope lands in
+   * `athletePreferencesStore.exclusions` — the athlete's OWN decisions. MEASURED
+   * before the ruling, red-flag hamstring 9/10: five exclusions the athlete
+   * never made, and because Restore works by RE-DERIVING, it replayed them and
+   * **the day was empty forever.**
+   *
+   * Nothing is written now. `rules/injuryWithheldRows` marks the rows at the
+   * VIEW doors from the injury FACT, so the accepted program keeps every row and
+   * its load, the athlete sees why each one is unavailable, the day cannot be
+   * recorded as normal, and clearing the injury reveals the original session by
+   * doing nothing at all.
+   *
+   * They are still reported as omissions HERE — the sentence must name them —
+   * they are simply not written. */
+  appliedOmissions.push(...plan.omissions);
   if (refused.length > 0) {
     logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
   }
@@ -1554,17 +1579,36 @@ async function executeProgramControlActionDurablyWithinTrace(
      * athlete is told the truth rather than told it worked. */
     const resolveDate = (context.todayISO ?? '').slice(0, 10);
     const rowsBeforeResolve = resolveDate ? visibleExerciseNamesOn(resolveDate) : [];
+    /* ⚠ **A WITHHELD ROW IS STILL ON THE DAY, SO NAMES ALONE CANNOT SEE IT
+     * COME BACK.** Since the omission stopped writing anything, clearing a
+     * red-flag injury changes no NAME — it lifts the marks. Comparing only
+     * names answered "Nothing on this session needed changing" over a session
+     * that had just become usable again, which is the same false claim from the
+     * other direction. */
+    const withheldBeforeResolve = resolveDate
+      ? injuryWithheldNamesOn(resolveDate).length
+      : 0;
     const result = await resolveInjuryEpisode(episodeId, {
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface: action.source.surface ?? action.source.screen,
       todayISO: context.todayISO,
     });
     const rowsAfterResolve = resolveDate ? visibleExerciseNamesOn(resolveDate) : [];
+    const withheldAfterResolve = resolveDate ? injuryWithheldNamesOn(resolveDate).length : 0;
     const rowsCameBack = rowsAfterResolve.length > rowsBeforeResolve.length
-      || rowsAfterResolve.some((name) => !rowsBeforeResolve.includes(name));
-    const stillMissing = resolveDate
-      && rowsBeforeResolve.length === 0
-      && rowsAfterResolve.length === 0;
+      || rowsAfterResolve.some((name) => !rowsBeforeResolve.includes(name))
+      || withheldAfterResolve < withheldBeforeResolve;
+    /* ⚠ **THE "STILL EMPTY" ARM IS GONE, AND SAM'S RULING IS WHERE IT WENT.**
+     *
+     * It existed because an injury omission emptied the day permanently, so the
+     * resolve had to admit the exercises had not come back. Under his ruling of
+     * 2026-08-20 nothing is ever removed — the rows are WITHHELD at the view
+     * door and the accepted program is untouched — so a session cleared of its
+     * injury cannot be empty for that reason. Kept as a branch it was
+     * UNMUTATABLE (mutation M11 survived: inverting it changed nothing in any
+     * world), which is a clause not doing the work its comment claims, and on a
+     * genuine REST day it would have fired and told the athlete their session
+     * was missing. */
     const ok = result.outcome === 'resolved_and_recomposed' ||
       result.outcome === 'resolved_no_program_change' ||
       result.outcome === 'already_resolved';
@@ -1575,9 +1619,8 @@ async function executeProgramControlActionDurablyWithinTrace(
       clearedModifierIds: ok ? [episodeId] : undefined,
       message: !ok
         ? result.message
-        : stillMissing
-          ? 'Injury cleared, but this session is still empty — the exercises taken '
-            + 'out for the injury have not come back. Check with your coach.'
+        : withheldBeforeResolve > 0 && withheldAfterResolve === 0
+          ? 'Injury cleared. Your usual exercises are available again.'
           : rowsCameBack
             ? result.message
             : 'Injury cleared. Nothing on this session needed changing.',
