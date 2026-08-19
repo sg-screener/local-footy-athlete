@@ -443,3 +443,64 @@ demolition kept and named as the owner. Adding a `factKind: 'removal'` would be 
 second representation of a decision that already has one.
 
 Agent: rebuild
+
+
+## THE REMOVE DESIGN, PROVEN BEFORE A LINE OF PRODUCTION CODE
+
+`npm run probe:removal-design`. Claim under test: with the exclusion STORED, a
+**one-week** scoped regeneration makes the composer substitute a legal
+same-pattern replacement carrying its own load — with no new owner, no new
+stored shape and no change to `composeWeek`.
+
+```
+visible before   RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+decision stored  [{ exercise: RDLs, scope: today_only, activeThroughISO: 2026-07-22 }]
+one-week recompose (microcycleLimit: 1, athletePrefs read from the store by default)
+
+regenerated      Deadlift@77.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+```
+
+- the excluded exercise is **gone**;
+- **`Deadlift` takes the hinge** — same movement pattern, the closest legal option;
+- it carries **its own load, 77.5**, not `RDLs`' 67.5;
+- **row count preserved, 5 -> 5**, and every other row is byte-identical.
+
+**So the whole of Sam's Remove contract falls out of owners that already exist.**
+The build is a wire and a deletion, not new programming:
+
+1. the decision already stores (`applyExerciseExclusionDecision`);
+2. `generateProgramLocally` already reads `prefs.exclusions` by default
+   (`generateProgram.ts:1764`, `athletePrefs: options.athletePrefs ?? getAthletePrefs()`);
+3. `composeWeek` already picks the replacement and `resolveComposedLoad` already
+   gives it its own load;
+4. the scoped lane already publishes one week through the accepted-state
+   transaction as a sparse overlay.
+
+**What must be built:** the trigger from (1) to (2), and the deletion of
+`writeCoachOverride` from the removal path so the composer's answer is what
+ships rather than a patched week.
+
+### ⚠ ONE OPEN QUESTION, PROVISIONALLY ANSWERED — FOR SAM'S END TABLE
+
+`substitutedFrom` is **not** stamped on `Deadlift`, so the athlete would see the
+swap with no "Swapped from RDLs — you left it out" line. The cause: at
+generation the exclusion moves the BLOCK's base hinge selection rather than
+acting as a day-scoped substitution, so `composeWeek` never takes the
+`substitutedToday` branch. **Provisional treatment: none — the row is correct and
+the badge is absent.** Recorded rather than fixed by widening the composer,
+because forcing a day-scoped substitution for a `this_block` or `until_restored`
+removal would be the wrong shape, and I will not invent that rule.
+
+### ⚠ TWO INSTRUMENT FAULTS THAT LOOKED LIKE PRODUCT FAILURES
+
+Both recorded because both would have been reported as findings by a less
+careful pass:
+
+- **importing one probe from another** ran the headless bootstrap twice and died
+  with `Cannot read properties of undefined (reading 'call')`. A probe is not a
+  library; the helpers are inlined now.
+- **a `Workout` carries `dayOfWeek`, not a date.** The first reader looked for
+  `workout.date`, found nothing, and printed `(date not found in generated
+  program)` — which reads exactly like the recompose failing. It had not.
+
+Agent: rebuild
