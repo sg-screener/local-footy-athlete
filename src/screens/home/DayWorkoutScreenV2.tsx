@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
@@ -130,7 +131,6 @@ import {
   buildSessionExecutionSummary,
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
-  type SessionExecutionSectionId,
 } from '../../utils/sessionExecutionChecklist';
 import {
   buildSwapSuggestionPayload,
@@ -1541,12 +1541,13 @@ export default function DayWorkoutScreenV2() {
               accessibilityLabel={combinedSubtitle}
               testID="session-header-date-row"
             >
-              <MaterialCommunityIcons
-                name="calendar-blank-outline"
-                size={15}
-                color={colors.text.tertiary}
-                testID="session-header-calendar-icon"
-              />
+              <View style={styles.headerSubtitleIcon} testID="session-header-calendar-icon">
+                <MaterialCommunityIcons
+                  name="calendar-blank-outline"
+                  size={15}
+                  color={colors.text.tertiary}
+                />
+              </View>
               <Text style={styles.headerSubtitle}>
                 {combinedSubtitle}
               </Text>
@@ -2300,20 +2301,6 @@ function SessionList({
   );
 }
 
-/**
- * THE SECTION HEADING GLYPHS (R-116), from the icon set already on this screen.
- *
- * Sam named three: Mobility / Warm-up, Strength and Conditioning. The map is
- * PARTIAL on purpose — a section not on his list draws nothing, so the table can
- * never quietly answer a question he has not been asked.
- */
-const SECTION_HEADING_ICON: Partial<Record<SessionExecutionSectionId,
-  React.ComponentProps<typeof MaterialCommunityIcons>['name']>> = {
-  mobility: 'run',
-  strength: 'dumbbell',
-  conditioning: 'fire',
-};
-
 function SessionExecutionSection({ section, completedItemIds, children }: {
   section: SessionExecutionSectionModel;
   completedItemIds: ReadonlySet<string>;
@@ -2340,15 +2327,17 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
           * no icon renders none rather than a placeholder — three are ruled
           * (Mobility, Strength, Conditioning) and inventing a fourth is how a
           * table starts drifting from the ruling. */}
-        {SECTION_HEADING_ICON[section.id] ? (
-          <MaterialCommunityIcons
-            name={SECTION_HEADING_ICON[section.id]!}
-            size={17}
-            color={colors.accent.lime}
-            style={styles.executionSectionIcon}
-            testID={`session-execution-icon-${section.id}`}
-          />
-        ) : null}
+        {/* ⚠ **THE DAY SCREEN'S OWN ICON, NOT A LOOKALIKE — SAM, 2026-08-20.**
+          * *"Do not invent new section icons. Reuse the exact established
+          * Day-screen icon and colour mapping through one shared owner."* The
+          * first cut of R-116 had its own three-name table here and the two
+          * surfaces disagreed on glass — Mobility drew a different glyph on each
+          * screen and Team Training drew none. `SESSION_SECTION_ICON_KIND` is a
+          * TOTAL `Record`, so a new section kind stops the build until somebody
+          * gives it an icon; it can never render iconless and silent again. */}
+        <View style={styles.executionSectionIcon} testID={`session-execution-icon-${section.id}`}>
+          <RowIcon kind={SESSION_SECTION_ICON_KIND[section.id]} size={17} />
+        </View>
         <View style={styles.executionSectionHeading}>
           <Text style={styles.executionSectionTitle}>{section.label}</Text>
           <Text style={styles.executionSectionCount}>{completedCount}/{section.items.length}</Text>
@@ -2732,12 +2721,14 @@ function StrengthExerciseCard({
        * the right. Reads left-to-right: "what am I doing, what load?".
        */}
       <View style={styles.statsRow}>
-        <Text
-          style={styles.statsPrimary}
-          testID={`workout-exercise-prescription-${exerciseToken}`}
-        >
-          {setsReps}
-        </Text>
+        <View style={styles.statsLeftColumn}>
+          <Text
+            style={styles.statsPrimary}
+            testID={`workout-exercise-prescription-${exerciseToken}`}
+          >
+            {setsReps}
+          </Text>
+        </View>
         {/* ── THE TYPED IMPLEMENT, ASSERTABLE BUT NOT SHOWN ────────────────
             Sam ruled the always-on label too cluttered, and he is right — it
             repeated "· Dumbbells" down every row of an ordinary session. The
@@ -2777,6 +2768,8 @@ function StrengthExerciseCard({
           style={{ width: 1, height: 1 }}
           testID={`session-strength-position-${label}-${stableTestIdToken(exerciseName)}`}
         />
+        {/* ⚠ ONE GROUP: stepper and tick, 9px apart, hard against each other. */}
+        <View style={[styles.controlGroup, !carriesExternalLoad && styles.controlGroupNoStepper]}>
         <View style={styles.weightControl}>
           <Pressable
             onPress={() => decrementWeight(exercise)}
@@ -2839,11 +2832,10 @@ function StrengthExerciseCard({
         </View>
         {/* ⚠ **IMMEDIATELY RIGHT OF THE STEPPER — SAM, 2026-08-20 (R-116),
             SUPERSEDING R-111's NAME-LINE CLAUSE.** Load and done are one
-            movement of the hand. The slot is reserved with a fixed width so a
-            row WITHOUT a stepper (bodyweight, a mobility hold) still puts its
-            tick in the same column — the right edge must not wander between
-            rows of one session. */}
-        <View style={styles.controlRowCheckboxSlot}>{checkbox}</View>
+            movement of the hand, so they are one object with one small fixed
+            gap — never two things pushed to opposite ends of the row. */}
+        {checkbox}
+        </View>
       </View>
 
       {/* ⚠ **POWER SHOWS NO REST LINE — SAM, 2026-08-20 (R-116).** *"Power is
@@ -4145,7 +4137,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     letterSpacing: 0.1,
-    marginTop: 3,
+    // ⚠ THE `marginTop: 3` IS GONE AND THAT IS THE ALIGNMENT FIX. It pushed the
+    // TEXT down inside the row while the icon stayed put, so no amount of
+    // `alignItems: 'center'` on the parent could make the two share a centre.
+    // The row itself now carries the spacing below the title.
+    lineHeight: 20,
   },
   // Session-level change doors (ruling 12) — three icon chips replacing the
   // single "Edit exercises" link.
@@ -4260,7 +4256,10 @@ const styles = StyleSheet.create({
   // separates one exercise from the next is whitespace alone: the list
   // gap opens up to 10px so the document reads as a training list
   // written on a dark page, not a stack of widgets.
-  exerciseList: { gap: 10 },
+  // 10 -> 8: the SEPARATION between exercises stays clearly larger than the
+  // 1px between a row's own three lines, so compressing the stack does not
+  // make two exercises read as one.
+  exerciseList: { gap: 8 },
   executionSections: { gap: spacing.sm },
   executionSection: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -4276,7 +4275,14 @@ const styles = StyleSheet.create({
   },
   // R-116 — the calendar sits with the date, and the section glyph with its
   // heading. Both are decoration beside text that already says the words.
-  headerSubtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  // ⚠ R-116, SECOND PASS — *"Vertically centre the calendar icon with the date
+  // text. They must share one aligned row and baseline/centre, with a small
+  // fixed gap."* `alignItems: 'center'` alone was not enough: the Text carries
+  // its own line-height box, so the glyph sat high against it. The icon is
+  // given the SAME line height as the text and centres inside it, which is
+  // what makes the two share one optical centre rather than one row.
+  headerSubtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 3 },
+  headerSubtitleIcon: { height: 20, width: 16, alignItems: 'center', justifyContent: 'center' },
   executionSectionIcon: { marginRight: 10 },
   // R-116 — rows with no stepper still reserve the right-side control slot.
   recoveryControlRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
@@ -4325,6 +4331,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderColor: 'transparent',
     borderWidth: 0,
+    // R-116 second pass — the Card primitive's own vertical padding was the last
+    // of the air making one exercise read as three rows. Horizontal padding is
+    // untouched, so nothing moves sideways.
+    paddingTop: 2,
+    paddingBottom: 2,
     ...shadows.none,
   },
 
@@ -4379,15 +4390,18 @@ const styles = StyleSheet.create({
   // Label (index) is now plain text, not a chip — the index is information,
   // not decoration. Tighter bottom gap pulls the stats row closer so the
   // exercise reads as one coherent block rather than a stack of rows.
-  // R-116 — *"Remove the excessive vertical gaps between those three."* The
-  // name/Play line, the sets x reps line and Form cues are one compact block:
-  // this margin was 8, `statsRow` gained a tight top gap, and `CueDisclosure`'s
-  // own top padding came down. Nothing was resized — only the air between.
+  // ⚠ **R-116, SECOND PASS — SAM: "compress each exercise's left text stack
+  // MATERIALLY … so these read as one compact unit, not three separate rows."**
+  // The first cut only trimmed the gaps between the three lines and left the
+  // row's own padding untouched, so they still read as three rows with less air.
+  // Now: this margin 8 -> 0, the list gap between exercises 10 -> 8, the card's
+  // vertical padding cut, and the cue row's padding halved. Nothing is resized —
+  // every font, control and tap target is untouched; only the air is gone.
   exerciseHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 2,
+    marginBottom: 0,
   },
   exerciseLabelBadge: {
     minWidth: 18,
@@ -4476,25 +4490,32 @@ const styles = StyleSheet.create({
   // One horizontal line: sets × reps on the left, weight control on the
   // right. No column labels. Space-between gives the left text natural
   // breathing room without forced flex column widths.
-  // R-116 — ONE control line: sets x reps on the left, then the weight stepper,
-  // then the checkbox immediately right of it. `space-between` still pins the
-  // left column left and the controls right.
+  // ⚠ **R-116, SECOND PASS — SAM REJECTED `space-between`.** *"Treat the weight
+  // stepper and checkbox as one right-side control group. Put them directly
+  // beside each other with a small fixed gap — approximately 8-10 px. Do not use
+  // `space-between` or separate screen columns."* The first cut spread the row
+  // edge to edge, so the tick floated at the screen margin with a gulf between it
+  // and the stepper it belongs to. The left text now simply takes the space it
+  // needs (`flex: 1`) and the control GROUP sits against it as one object.
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: 2,
+    marginTop: 1,
   },
-  // The reserved right-side control position. FIXED WIDTH, so a row with no
-  // stepper puts its tick in the same column as one that has a stepper — the
-  // ruling's "rows without a weight stepper still reserve the same right-side
-  // control position". 22 for the box + 10 of separation from the stepper.
-  controlRowCheckboxSlot: {
-    width: 32,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+  statsLeftColumn: { flex: 1, minWidth: 0 },
+  // The group. `gap: 9` is the ruled 8-10px between stepper and tick, and it is
+  // the ONLY separation between them — no spacer, no justify, nothing that can
+  // widen with the screen.
+  controlGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    flexShrink: 0,
   },
+  // A row with NO stepper keeps the tick in the same column: the group is still
+  // the row's right-hand object, so the tick lands where a loaded row's tick
+  // lands rather than sliding left into the gap the stepper left behind.
+  controlGroupNoStepper: { minHeight: 34 },
   statsPrimary: {
     color: '#F2F2F2',
     fontSize: 15,
@@ -4594,7 +4615,9 @@ const styles = StyleSheet.create({
   cueToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 2,
+    // 2 -> 1 of padding, with `hitSlop` on the Pressable replacing it, so the
+    // line tightens without the tap target shrinking.
+    paddingVertical: 1,
   },
   cueToggleText: {
     color: '#5A5A5A',

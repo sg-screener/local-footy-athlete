@@ -19,6 +19,12 @@ import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { ModifiersSheet } from '../../components/ModifiersSheet';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import {
+  PART_ICON_KIND,
+  RowIcon,
+  rowIconColor,
+  type RowIconKind,
+} from '../../components/icons/SectionIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
@@ -1575,19 +1581,11 @@ function GameBadge() {
   );
 }
 
-type RowIconKind =
-  | 'strength'
-  | 'team'
-  | 'game'
-  | 'recovery'
-  | 'pulse'
-  | 'refresh'
-  | 'bolt'
-  | 'flame'
-  | 'mobility'
-  | 'prehab'
-  | 'core'
-  | 'activity';
+/* `RowIconKind`, `rowIconColor`, `RowIcon` and `rowIconPaths` MOVED to
+ * `components/icons/SectionIcon` on 2026-08-20 (R-116), unchanged — the Session
+ * screen must draw the same glyph and colour for the same work, and two tables
+ * answering one question had already drifted (Mobility disagreed, Team Training
+ * drew nothing). Imported at the top of this file; nothing here renders its own. */
 
 function displayLabelKey(label: string | null | undefined): string {
   return String(label ?? '')
@@ -1684,157 +1682,8 @@ function titleIconKind({
   return 'activity';
 }
 
-function rowIconColor(kind: RowIconKind): string {
-  switch (kind) {
-    case 'game':
-      return '#FFC247';
-    case 'recovery':
-      return '#3AA7D8';
-    case 'bolt':
-      return '#B6D85A';
-    case 'flame':
-      return '#D9874E';
-    case 'strength':
-    case 'team':
-    case 'pulse':
-    case 'refresh':
-    case 'mobility':
-    case 'prehab':
-    case 'core':
-    case 'activity':
-    default:
-      return '#969696';
-  }
-}
 
-function RowIcon({ kind, size = 15, color }: { kind: RowIconKind; size?: number; color?: string }) {
-  const iconColor = color ?? rowIconColor(kind);
 
-  if (kind === 'mobility') {
-    return <LfaIcon name="mobility" color={iconColor} size={size} />;
-  }
-
-  if (kind === 'prehab') {
-    return <LfaIcon name="medical-shield" color={iconColor} size={size} />;
-  }
-
-  if (kind === 'team') {
-    return (
-      <MaterialCommunityIcons
-        name="account-multiple-outline"
-        size={16}
-        color={iconColor}
-        style={[styles.rowIcon, styles.teamTrainingIcon]}
-      />
-    );
-  }
-
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={iconColor}
-      strokeWidth={2.3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={styles.rowIcon}
-    >
-      {rowIconPaths(kind)}
-    </Svg>
-  );
-}
-
-function rowIconPaths(kind: RowIconKind) {
-  switch (kind) {
-    case 'game':
-      return (
-        <>
-          <Path d="M8 4h8v4a4 4 0 01-8 0V4z" />
-          <Path d="M8 6H5a3 3 0 003 3" />
-          <Path d="M16 6h3a3 3 0 01-3 3" />
-          <Path d="M12 12v4" />
-          <Path d="M9 20h6" />
-          <Path d="M10 16h4" />
-        </>
-      );
-    case 'recovery':
-      return (
-        <>
-          <Path d="M4 7h13a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
-          <Path d="M20 10v4" />
-          <Path d="M11 9l-3 4h3l-1 3 4-5h-3l1-2z" />
-        </>
-      );
-    case 'pulse':
-      return <Path d="M3 12h4l2-5 4 10 2-5h6" />;
-    case 'refresh':
-      return (
-        <>
-          <Path d="M20 11a8 8 0 00-14.3-4.9L4 8" />
-          <Path d="M4 4v4h4" />
-          <Path d="M4 13a8 8 0 0014.3 4.9L20 16" />
-          <Path d="M20 20v-4h-4" />
-        </>
-      );
-    case 'bolt':
-      return <Path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />;
-    case 'flame':
-      return (
-        <>
-          <Path d="M12 22c4 0 7-3 7-7 0-3-2-5-4-7 .2 3-1 4-2 5 0-4-2-6-4-8 .5 4-4 6-4 10 0 4 3 7 7 7z" />
-          <Path d="M12 18c1.5 0 2.5-1.1 2.5-2.5 0-1-.5-1.8-1.5-2.8-.2 1.1-.8 1.8-1.7 2.5-.8.6-1.3 1.2-1.3 2.1 0 1.5 1 2.7 2 2.7z" />
-        </>
-      );
-    case 'mobility':
-      return (
-        <>
-          <Path d="M12 5v8" />
-          <Path d="M8 9l4 4 4-4" />
-          <Path d="M12 13l-5 7" />
-          <Path d="M12 13l5 7" />
-        </>
-      );
-    case 'prehab':
-      return (
-        <>
-          <Path d="M12 3l7 3v5c0 4.5-3 7.8-7 10-4-2.2-7-5.5-7-10V6l7-3z" />
-          <Path d="M12 8v6" />
-          <Path d="M9 11h6" />
-        </>
-      );
-    case 'core':
-      return (
-        <>
-          <Path d="M12 4a8 8 0 100 16 8 8 0 000-16z" />
-          <Path d="M12 9a3 3 0 100 6 3 3 0 000-6z" />
-        </>
-      );
-    case 'activity':
-      return (
-        <>
-          <Path d="M8 5h11" />
-          <Path d="M8 12h11" />
-          <Path d="M8 19h11" />
-          <Path d="M4 5h.01" />
-          <Path d="M4 12h.01" />
-          <Path d="M4 19h.01" />
-        </>
-      );
-    case 'strength':
-    default:
-      return (
-        <>
-          <Path d="M6.5 6.5l11 11" />
-          <Path d="M3.5 8.5l5-5" />
-          <Path d="M5.5 10.5l5-5" />
-          <Path d="M13.5 18.5l5-5" />
-          <Path d="M15.5 20.5l5-5" />
-        </>
-      );
-  }
-}
 
 /**
  * A day's ONE leading identity, for any card-ish surface (the week row, the
@@ -2500,19 +2349,6 @@ function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripPro
  * icons are imagery, not copy, and need no signing). Flagged for Sam's icon-pick
  * session — nonsense pairings are his call at the device pass.
  */
-const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
-  strength: 'strength',
-  // ⚠ `power: 'bolt'` IS GONE BECAUSE THE KIND IS (Sam, 2026-08-20). A power
-  // component projects as a strength PART now, so its timeline row carries the
-  // strength glyph — the same one the work it sits beside carries, which is the
-  // visual half of "power is part of the Strength work".
-  speed: 'bolt',
-  conditioning: 'flame',
-  support: 'core',
-  recovery: 'recovery',
-  team_training: 'team',
-  game: 'game',
-};
 
 /**
  * WHAT A SAVED OUTCOME LOOKS LIKE ON A TIMELINE ROW.

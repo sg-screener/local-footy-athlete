@@ -3,6 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
+  PART_ICON_KIND,
+  SESSION_SECTION_ICON_KIND,
+} from '../rules/sectionIconKinds';
+import {
   buildSessionExecutionPlan,
   buildSessionExecutionSummary,
   deriveChecklistComponentCompletions,
@@ -621,9 +625,17 @@ ok('[7] both the name and the play button still speak the exercise, and still pl
     && /<PlayButton onPress=\{onPlay\}/.test(headerRow));
 
 // ── SETS/REPS LOWER LEFT, WEIGHT LOWER RIGHT — UNMOVED.
-ok('[7] sets/reps stay lower-left and the weight control lower-right',
-  /statsRow:\s*\{[^}]*flexDirection:\s*'row'[^}]*justifyContent:\s*'space-between'/.test(screen)
-    && /<View style=\{styles\.statsRow\}>\s*<Text\s*style=\{styles\.statsPrimary\}/.test(screen)
+/* ⚠ `space-between` WAS REJECTED — SAM, 2026-08-20, second pass on R-116:
+  * *"Do not use `space-between` or separate screen columns."* It spread the row
+  * edge to edge, leaving the tick at the screen margin with a gulf between it
+  * and the stepper it belongs to. The claim survives in its true form — the
+  * dose reads on the left, the controls on the right — but it is now a LEFT
+  * COLUMN that takes the free width and a control GROUP that does not. */
+ok('[7] sets/reps stay lower-left and the controls lower-right, WITHOUT space-between',
+  /statsRow:\s*\{[^}]*flexDirection:\s*'row'/.test(screen)
+    && !/statsRow:\s*\{[^}]*justifyContent:\s*'space-between'/.test(screen)
+    && /statsLeftColumn:\s*\{\s*flex:\s*1/.test(screen)
+    && /<View style=\{styles\.statsLeftColumn\}>\s*<Text/.test(screen)
     && /<View style=\{styles\.weightControl\}>/.test(screen));
 
 // ── ONE OWNER FOR MOBILITY, POWER AND STRENGTH. This is why "apply
@@ -674,13 +686,21 @@ ok('[10] CONTROL — all three blocks were found in the card',
   cardOrder.every((index) => index >= 0), cardOrder);
 ok('[10] the row reads name+Play, then sets x reps, then Form cues — in that order',
   cardOrder[0] < cardOrder[1] && cardOrder[1] < cardOrder[2], cardOrder);
-ok('[10] and the gaps between those three are tightened, not merely present',
-  /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*2\b/.test(screen)
-    && /statsRow:\s*\{[^}]*marginTop:\s*2\b/.test(screen)
-    && /cueContainer:\s*\{\s*marginTop:\s*1\s*\}/.test(screen),
-  'the three intra-row gaps must be small and explicit');
+/* SECOND PASS: *"compress … MATERIALLY … so these read as one compact unit,
+  * not three separate rows."* Gaps alone were not enough — the ROW PADDING is
+  * asserted too, which is what the first cut missed. */
+ok('[10] the three lines are compressed materially — gaps AND row padding',
+  /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen)
+    && /statsRow:\s*\{[^}]*marginTop:\s*1\b/.test(screen)
+    && /cueContainer:\s*\{\s*marginTop:\s*1\s*\}/.test(screen)
+    && /cueToggleRow:\s*\{[^}]*paddingVertical:\s*1\b/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingTop:\s*2[^}]*paddingBottom:\s*2/.test(screen),
+  'gaps AND the card padding must both be cut, or it still reads as three rows');
+ok('[10] and the separation BETWEEN exercises stays larger than the gaps inside one',
+  /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen),
+  'compressing a row must not make two exercises read as one');
 ok('[10] sets/reps is still the LEFT of the control row',
-  /<View style=\{styles\.statsRow\}>\s*<Text\s*style=\{styles\.statsPrimary\}/.test(screen));
+  /<View style=\{styles\.statsRow\}>\s*<View style=\{styles\.statsLeftColumn\}>\s*<Text/.test(screen));
 
 // ── WEIGHT AND CHECKBOX SHARE ONE CONTROL ROW, TICK IMMEDIATELY RIGHT.
 const statsRowBlock = strengthCard.slice(
@@ -688,19 +708,25 @@ const statsRowBlock = strengthCard.slice(
   strengthCard.indexOf('{/* ⚠ **POWER SHOWS NO REST LINE'));
 ok('[10] CONTROL — the control row block was found',
   statsRowBlock.length > 200, statsRowBlock.length);
-ok('[10] the weight stepper and the checkbox are in the SAME control row',
-  statsRowBlock.includes('styles.weightControl')
-    && statsRowBlock.includes('controlRowCheckboxSlot'),
-  statsRowBlock.slice(-400));
+ok('[10] the stepper and the checkbox are ONE control group, not two columns',
+  /controlGroup:\s*\{[^}]*flexDirection:\s*'row'[^}]*gap:\s*9\b/.test(screen)
+    && /<View style=\{\[styles\.controlGroup[\s\S]{0,120}<View style=\{styles\.weightControl\}>/.test(statsRowBlock)
+    && /\{checkbox\}\s*<\/View>/.test(statsRowBlock),
+  statsRowBlock.slice(-500));
+ok('[10] and the gap between them is the ruled 8-10px, fixed — nothing can widen it',
+  /controlGroup:\s*\{[^}]*gap:\s*(8|9|10)\b[^}]*flexShrink:\s*0/.test(screen)
+    && !/controlRowCheckboxSlot/.test(screen),
+  'one fixed gap, and the old fixed-width slot is gone');
 ok('[10] and the checkbox comes IMMEDIATELY AFTER the stepper, not before it',
-  statsRowBlock.indexOf('styles.weightControl')
-    < statsRowBlock.indexOf('controlRowCheckboxSlot'),
+  statsRowBlock.indexOf('styles.weightControl') >= 0
+    && statsRowBlock.indexOf('styles.weightControl') < statsRowBlock.indexOf('{checkbox}'),
   { stepper: statsRowBlock.indexOf('styles.weightControl'),
-    checkbox: statsRowBlock.indexOf('controlRowCheckboxSlot') });
-ok('[10] a row with NO stepper still reserves the same right-side slot',
-  /controlRowCheckboxSlot:\s*\{[^}]*width:\s*32/.test(screen)
+    checkbox: statsRowBlock.indexOf('{checkbox}') });
+ok('[10] a row with NO stepper keeps sensible checkbox alignment',
+  /controlGroupNoStepper:\s*\{\s*minHeight:\s*34\s*\}/.test(screen)
+    && /!carriesExternalLoad && styles\.controlGroupNoStepper/.test(screen)
     && /recoveryControlRow:/.test(screen) && /addonCheckboxSlot:/.test(screen),
-  'the slot is a fixed width so the tick column cannot wander between rows');
+  'the group keeps its height so the tick does not ride up when the stepper goes');
 
 // ── THE ICONS.
 ok('[10] the calendar icon renders immediately before the date',
@@ -709,16 +735,81 @@ ok('[10] the calendar icon renders immediately before the date',
   'calendar then date, in that order');
 ok('[10] the date row stays ONE accessibility element speaking the date, not the glyph',
   /styles\.headerSubtitleRow[\s\S]{0,200}accessibilityLabel=\{combinedSubtitle\}/.test(screen));
-ok('[10] all three ruled section headings carry a distinct icon',
-  /SECTION_HEADING_ICON[\s\S]{0,300}mobility:\s*'run'[\s\S]{0,80}strength:\s*'dumbbell'[\s\S]{0,80}conditioning:\s*'fire'/
-    .test(screen),
-  'Mobility / Strength / Conditioning, three different glyphs');
-ok('[10] the icons are keyed on the TYPED section id, never on the label string',
-  /SECTION_HEADING_ICON\[section\.id\]/.test(screen)
-    && !/SECTION_HEADING_ICON\[section\.label\]/.test(screen));
-ok('[10] and they come from the existing icon set — no new graphic asset',
-  /SECTION_HEADING_ICON: Partial<Record<SessionExecutionSectionId,\s*\n?\s*React\.ComponentProps<typeof MaterialCommunityIcons>\['name'\]>>/
-    .test(screen));
+/* ⚠ **THE ICON GUARDS ARE NOW ABOUT ONE OWNER, NOT THREE NAMES — SAM,
+ * 2026-08-20, second pass.** The first cut asserted that three glyphs existed
+ * and said nothing about whether they were the DAY SCREEN'S glyphs. They were
+ * not: Mobility drew a different icon on each surface and Team Training drew
+ * none. These cells run the real maps and compare them kind by kind. */
+const iconOwner = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'icons', 'SectionIcon.tsx'), 'utf8');
+const iconMaps = fs.readFileSync(
+  path.resolve(__dirname, '..', 'rules', 'sectionIconKinds.ts'), 'utf8');
+/* `home` is already read at the top of this file for section [3]; re-declaring
+ * it here is what a second reader of the same source looks like. Reuse it. */
+
+ok('[10] CONTROL — both maps are real and non-empty',
+  Object.keys(SESSION_SECTION_ICON_KIND).length >= 8
+    && Object.keys(PART_ICON_KIND).length >= 7,
+  { sections: Object.keys(SESSION_SECTION_ICON_KIND).length,
+    parts: Object.keys(PART_ICON_KIND).length });
+
+/* EVERY SECTION KIND THAT HAS A DAY-SCREEN TWIN DRAWS THE DAY SCREEN'S ICON.
+ * The pairs are spelled out rather than derived, because deriving them from the
+ * maps under test would make this cell agree with whatever they say. */
+const SHARED_KINDS: Array<[keyof typeof SESSION_SECTION_ICON_KIND,
+  keyof typeof PART_ICON_KIND]> = [
+  ['strength', 'strength'],
+  ['conditioning', 'conditioning'],
+  ['team_training', 'team_training'],
+  ['recovery', 'recovery'],
+  ['accessories', 'support'],
+];
+for (const [sectionId, partKind] of SHARED_KINDS) {
+  ok(`[10] the Session and Day screens draw ONE icon for ${sectionId}`,
+    SESSION_SECTION_ICON_KIND[sectionId] === PART_ICON_KIND[partKind],
+    { session: SESSION_SECTION_ICON_KIND[sectionId], day: PART_ICON_KIND[partKind] });
+}
+ok('[10] Team Training has an icon at all — it had none, which is what Sam saw',
+  !!SESSION_SECTION_ICON_KIND.team_training
+    && SESSION_SECTION_ICON_KIND.team_training === 'team');
+ok('[10] Mobility draws the Day screen\'s mobility glyph, not a lookalike',
+  SESSION_SECTION_ICON_KIND.mobility === 'mobility'
+    && /kind === 'mobility'[\s\S]{0,160}LfaIcon name="mobility"/.test(iconOwner));
+ok('[10] POWER draws the STRENGTH icon, because power IS strength work (R-110)',
+  SESSION_SECTION_ICON_KIND.strength === 'strength'
+    && !('power' in (SESSION_SECTION_ICON_KIND as Record<string, unknown>))
+    && !('power' in (PART_ICON_KIND as Record<string, unknown>)));
+
+/* AN UNKNOWN SECTION KIND MUST FAIL, NOT RENDER BLANK. A total `Record` is the
+ * guard: the compiler refuses a missing member. This cell proves the map really
+ * is total by walking the live section-id union through it. */
+const EVERY_SECTION_ID = Object.keys(SESSION_SECTION_ICON_KIND);
+ok('[10] EVERY section kind the app can emit has an icon — none renders blank',
+  EVERY_SECTION_ID.every((id) =>
+    !!SESSION_SECTION_ICON_KIND[id as keyof typeof SESSION_SECTION_ICON_KIND]),
+  EVERY_SECTION_ID.filter((id) =>
+    !SESSION_SECTION_ICON_KIND[id as keyof typeof SESSION_SECTION_ICON_KIND]));
+ok('[10] and both maps are TOTAL, so a new kind stops the build',
+  /Readonly<Record<SessionExecutionSectionId,\s*RowIconKind>>/.test(iconMaps)
+    && /Readonly<Record<VisiblePartKind,\s*RowIconKind>>/.test(iconMaps)
+    && !/Partial<Record<(SessionExecutionSectionId|VisiblePartKind)/.test(iconMaps),
+  'a Partial here is how Team Training lost its glyph');
+
+ok('[10] there is exactly ONE icon owner — neither screen keeps its own table',
+  !/SECTION_HEADING_ICON/.test(screen)
+    && !/const PART_ICON_KIND/.test(home)
+    && !/function RowIcon\(/.test(home)
+    && /import \{[\s\S]{0,120}RowIcon[\s\S]{0,120}\} from '\.\.\/\.\.\/components\/icons\/SectionIcon'/
+      .test(home),
+  'HomeScreenV2 must import the icons, not define them');
+ok('[10] and the Session screen renders through that same owner',
+  /<RowIcon kind=\{SESSION_SECTION_ICON_KIND\[section\.id\]\}/.test(screen)
+    && !/SESSION_SECTION_ICON_KIND\[section\.label\]/.test(screen));
+ok('[10] the colours moved with the glyphs — one table, not a second palette',
+  /export function rowIconColor/.test(iconOwner)
+    && !/function rowIconColor/.test(home)
+    && !/rowIconColor/.test(screen),
+  'the Session screen takes RowIcon\'s own colour and never overrides it');
 
 // ── POWER IS AN ORDINARY ROW.
 ok('[10] Power shows no rest line — the one format that made it look special',
@@ -761,10 +852,10 @@ ok('[10] a long name wraps instead of pushing the controls off the row',
     && /numberOfLines=\{2\}/.test(headerRow)
     && /exerciseNameGroup:\s*\{[^}]*flex:\s*1/.test(screen),
   'the name shrinks and wraps; the control slot is fixed-width and cannot be squeezed');
-ok('[10] and the control row cannot be overrun by larger text',
-  /controlRowCheckboxSlot:\s*\{[^}]*width:\s*32[^}]*alignItems:\s*'flex-end'/.test(screen)
-    && /statsRow:\s*\{[^}]*justifyContent:\s*'space-between'/.test(screen),
-  'a fixed slot plus space-between keeps the tick in its column at any text size');
+ok('[10] and larger text cannot overrun the control group',
+  /statsLeftColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen)
+    && /controlGroup:\s*\{[^}]*flexShrink:\s*0/.test(screen),
+  'the left column shrinks to zero before the controls give up a pixel');
 
 console.log(`\nsessionExecutionChecklistTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
