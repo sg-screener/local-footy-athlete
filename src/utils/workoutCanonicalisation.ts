@@ -81,7 +81,6 @@ export type WorkoutCanonicalisationAction = {
     | 'row_removed'
     | 'row_promoted'
     | 'row_downgraded'
-    | 'row_restored'
     | 'pairing_removed'
     | 'power_removed'
     | 'power_downgraded'
@@ -144,8 +143,6 @@ export interface WorkoutCanonicalisationContext {
   planIntentValid?: boolean;
   /** Original allocated workout, used to restore an edited-away main pattern. */
   referenceWorkout?: Workout | null;
-  /** False for a final safety pass after constraints intentionally removed work. */
-  restoreMissingPlanPatterns?: boolean;
   /**
    * SLICE B1 clause (f): this workout was COMPOSED, so the drift and restore
    * branches stand down. They exist to rescue a week an AI or a hardcoded
@@ -159,48 +156,6 @@ export interface WorkoutCanonicalisationContext {
   section18EvidenceMode?: Section18EvidenceMode;
   /** Safety-owned patterns can never be restored from plan/default identity. */
   prohibitedStrengthPatterns?: readonly MainStrengthPattern[];
-  /**
-   * ── EXERCISES THE ATHLETE HAS TAKEN OUT, WITHIN THEIR ACTIVE SCOPE ────────
-   *
-   * Sam, 2026-08-18: *"The removed exercise identity must disappear visibly at
-   * once. The app may use the legal fallback selector to fill the training slot
-   * with a different exercise, but **it must not restore the excluded identity
-   * inside its active scope**."*
-   *
-   * **THIS IS THE DEFECT THAT MADE "REMOVE THIS EXERCISE" UNUSABLE.** Measured
-   * through the real door 2026-08-18: `removeExerciseAtDate` reported
-   * `success: true` and `Back Squat` was **back on the day at position 5** —
-   * the restore pass below saw the squat pattern go missing and put the SAME
-   * lift back from the reference workout. The accepted-week transaction then
-   * compared before and after, found the week unchanged, and answered *"That
-   * change didn't go through — nothing on your plan changed."* So the athlete's
-   * own removal was undone by a repair pass and reported as a failure.
-   *
-   * A pattern that cannot be filled without the excluded identity is left
-   * UNFILLED — the day loses that pattern, honestly, rather than silently
-   * refusing the athlete's decision.
-   */
-  excludedIdentities?: readonly string[];
-  /**
-   * ── THE LEGAL FALLBACK SELECTOR, SUPPLIED BY THE DOOR ─────────────────────
-   *
-   * Sam: *"The app **may use the legal fallback selector** to fill the training
-   * slot with a different exercise."* Here that is not a nicety — removing a
-   * main lift leaves the week without its pattern, and §18 then refuses the
-   * whole week (`pattern_restore_failure:strength_patterns:0`, measured). So the
-   * slot has to be filled with something the athlete can actually do.
-   *
-   * **IT IS AN INJECTED RESOLVER, NOT AN IMPORT, AND THAT IS DELIBERATE.** The
-   * selector needs the live kit, injuries and capacity; this module is a pure
-   * shape canonicaliser and reaching into stores from here would make it one
-   * more thing that cannot be reasoned about offline. The DOOR has that context
-   * and passes the same selector the equipment ladder uses, so there is one
-   * fallback selector with two callers rather than two implementations.
-   */
-  legalIdentityForPattern?: (
-    pattern: MainStrengthPattern,
-    excluded: readonly string[],
-  ) => string | null;
   /** Safety eligibility outranks ordinary phase power placement. */
   prohibitPower?: boolean;
   /** Safety eligibility outranks ordinary sprint/high-speed placement. */
@@ -218,18 +173,6 @@ type ClassifiedRow = {
   index: number;
   classification: GeneratedWorkoutRowClassification;
   linkedConditioning: boolean;
-};
-
-const FALLBACK_PATTERN_EXERCISE: Record<MainStrengthPattern, string> = {
-  squat: 'Back Squat',
-  hinge: 'Romanian Deadlift',
-  // The authored fills, not a choice made here: R-086 closes the
-  // bodyweight-capable set at these two, and R-084 closes the single-leg HIP
-  // pool at `Single-Leg RDL` alone — *"Sam is not adding more"*.
-  single_leg_knee: 'Walking Lunges',
-  single_leg_hip: 'Single-Leg RDL',
-  push: 'Overhead Press',
-  pull: 'Pull-Ups',
 };
 
 function rowName(row: WorkoutExercise): string {
@@ -461,57 +404,6 @@ function isMinorCrossPatternAccessory(
   const slots = slotsFilledByRow(classified.row);
   if (slots.length === 0) return true;
   return slots.some((slot) => daySlots.includes(slot));
-}
-
-function matchingReferenceRow(
-  reference: Workout | null | undefined,
-  pattern: MainStrengthPattern,
-): WorkoutExercise | null {
-  for (const [index, row] of (reference?.exercises ?? []).entries()) {
-    const classification = classifyRow(row, index);
-    if (classification.kind === 'strength_main' && classification.mainPattern === pattern) {
-      return { ...row };
-    }
-  }
-  return null;
-}
-
-function fallbackPatternRow(
-  workout: Workout,
-  pattern: MainStrengthPattern,
-  index: number,
-  earlyOffseason: boolean,
-  /** Overrides the deterministic fill — see `legalIdentityForPattern`. */
-  identity?: string | null,
-): WorkoutExercise {
-  const name = identity ?? FALLBACK_PATTERN_EXERCISE[pattern];
-  const now = new Date().toISOString();
-  const id = `canonical-${workout.id}-${pattern}`;
-  return {
-    id,
-    workoutId: workout.id,
-    exerciseId: `ex-canonical-${pattern}`,
-    exerciseOrder: index + 1,
-    prescribedSets: 3,
-    prescribedRepsMin: earlyOffseason ? 8 : 6,
-    prescribedRepsMax: earlyOffseason ? 12 : 10,
-    prescribedWeightKg: 0,
-    restSeconds: 90,
-    notes: 'Restored from the deterministic main-pattern plan after an invalid edit.',
-    exercise: {
-      id: `ex-canonical-${pattern}`,
-      name,
-      description: name,
-      muscleGroups: [],
-      exerciseType: 'Compound',
-      equipmentRequired: [],
-      difficultyLevel: 'Intermediate',
-      createdAt: now,
-      updatedAt: now,
-    },
-    createdAt: now,
-    updatedAt: now,
-  };
 }
 
 function canonicalStrengthName(
@@ -795,19 +687,20 @@ export function finaliseWorkoutAfterMutation(
    * bypasses the canonicalisation that would have stamped `strengthIntent` — so
    * every workout the phone stores carries NO typed intent, and this branch is
    * the one that runs. Removing `Back Squat` on the Monday produced
-   * `intendedPatterns` **without `squat`**, the restore pass never ran,
-   * `legalIdentityForPattern` was **never called**, the day silently lost its
-   * squat, and §18 then refused the whole week
-   * (`pattern_restore_failure:strength_patterns:0`). The athlete's own removal
-   * came back to them as *"That change didn't go through."*
+   * `intendedPatterns` **without `squat`** — the day was judged never to have
+   * intended the lift the athlete had just taken out, so §18 refused the whole
+   * week (`pattern_restore_failure:strength_patterns:0`) and the athlete's own
+   * removal came back to them as *"That change didn't go through."*
    *
    * The same removal on a REGENERATED world succeeded, which is why the door
    * proof and the device disagreed: a regenerated workout carries typed intent
    * and never reaches this branch.
    *
    * `context.referenceWorkout` is the plan's matched entry and is the
-   * PRE-mutation copy — it is already resolved here for the restore pass. Read
-   * intent from it and the untyped case behaves exactly like the typed one.
+   * PRE-mutation copy. Read intent from it and the untyped case behaves exactly
+   * like the typed one. ⚠ THIS IS AN INTENT READ, NOT A RESTORE: it says what
+   * the day was FOR, and nothing here puts a row back — the restore pass that
+   * did was deleted in demolition area 2.
    * **This is not a new policy; it is the existing policy applied to a workout
    * whose intent was never stamped.** Where there is no valid plan reference
    * (a legacy or unmatched day) the candidate's own rows remain the source,
@@ -1001,54 +894,34 @@ export function finaliseWorkoutAfterMutation(
     strengthAndSupportRows.push({ ...item, row: plain });
   }
 
-  if (intendedPatterns.size > 0 && context.restoreMissingPlanPatterns !== false
-    && !context.composed) {
-    const represented = new Set(domainPatterns(strengthAndSupportRows));
-    for (const pattern of intendedPatterns) {
-      if (represented.has(pattern)) continue;
-      // ⚠ THE ATHLETE'S REMOVAL OUTRANKS THE REPAIR. Walk the candidates and
-      // take the first that is NOT an identity they have excluded; if none
-      // qualifies, restore NOTHING. See `excludedIdentities` on the context.
-      const excluded = new Set((context.excludedIdentities ?? [])
-        .map((name) => String(name ?? '').trim().toLowerCase())
-        .filter(Boolean));
-      const legalAlternative = excluded.size > 0 && context.legalIdentityForPattern
-        ? context.legalIdentityForPattern(pattern, [...excluded])
-        : null;
-      const candidates = [
-        matchingReferenceRow(context.referenceWorkout, pattern),
-        fallbackPatternRow(workout, pattern, strengthAndSupportRows.length, earlyOffseason),
-        // The ladder's answer comes LAST so it only runs when the two authored
-        // candidates are both excluded — an ordinary repair is unaffected.
-        legalAlternative
-          ? fallbackPatternRow(
-              workout, pattern, strengthAndSupportRows.length, earlyOffseason, legalAlternative,
-            )
-          : null,
-      ];
-      const restored = candidates.find((candidate) =>
-        !!candidate && !excluded.has(rowName(candidate).trim().toLowerCase()));
-      if (!restored) {
-        actions.push({
-          kind: 'row_removed',
-          item: pattern,
-          reason: `restore_blocked_by_exclusion:${pattern}`,
-        });
-        continue;
-      }
-      strengthAndSupportRows.push({
-        row: restored,
-        index: strengthAndSupportRows.length,
-        classification: classifyRow(restored, strengthAndSupportRows.length),
-        linkedConditioning: false,
-      });
-      actions.push({
-        kind: 'row_restored',
-        item: rowName(restored),
-        reason: `restore_missing_plan_pattern:${pattern}`,
-      });
-    }
-  }
+  /* ── THE PATTERN RESTORE PASS IS DELETED ─────────────────────────────────
+   *
+   * Demolition area 2, Sam's burn-the-boats ruling 2026-08-19: *"remove the
+   * remaining `restoreMissingPlanPatterns` authority and every production route
+   * that restores original work after a user, injury or equipment decision."*
+   *
+   * WHAT IT DID: when a canonicalised day no longer represented a pattern the
+   * plan intended, it PUT WORK BACK — the pre-mutation row from the reference
+   * workout, or a deterministic fallback lift invented here
+   * (`Back Squat`, `Romanian Deadlift`, `Overhead Press`, `Pull-Ups`, …). It
+   * therefore undid decisions: an athlete's removal, an injury restriction and
+   * an equipment answer all reach this function as a MISSING PATTERN, which is
+   * exactly the shape it existed to reverse.
+   *
+   * IT WAS ALREADY KNOWN TO BE HARMFUL. Measured on the device 2026-08-18:
+   * `removeExerciseAtDate` reported success and `Back Squat` was back on the
+   * day — this pass had restored it — and the accepted-week transaction, seeing
+   * an unchanged week, told the athlete *"That change didn't go through."* The
+   * repair of the day was the defeat of the decision. The answer at the time
+   * was `excludedIdentities` + `legalIdentityForPattern`, two more inputs whose
+   * only job was to hold this pass back; they are deleted with it, because a
+   * pass that needs to be told when not to fire is a pass that should not fire.
+   *
+   * NOTHING REPLACES IT HERE. A day that has lost a pattern now LOSES IT,
+   * visibly, and §18 refuses the week if the loss is unlawful. Filling a
+   * pattern is authoring, and authoring belongs to the composer against Sam's
+   * ladder — which is also why the branch already stood down for a composed day
+   * (`!context.composed`). It now stands down for every day. */
 
   const finalConditioningRows = conditioningRows.map((item) =>
     canonicalConditioningRow(item, earlyOffseason, actions));
@@ -1116,16 +989,12 @@ export function finaliseWorkoutAfterMutation(
         actions.push({
           kind: 'effective_pattern_removed',
           item: planned,
-          reason: context.restoreMissingPlanPatterns === false
-            ? 'removed_by_final_constraint_validation'
-            : 'planned_pattern_absent_from_final_main_content',
+          reason: 'planned_pattern_absent_from_final_main_content',
         });
         strengthIntentDiagnostics.push({
           pattern: planned,
           change: 'removed',
-          reason: context.restoreMissingPlanPatterns === false
-            ? 'removed_by_final_constraint_validation'
-            : 'planned_pattern_absent_from_final_main_content',
+          reason: 'planned_pattern_absent_from_final_main_content',
         });
       }
     }
