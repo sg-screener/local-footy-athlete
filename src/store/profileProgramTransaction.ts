@@ -191,6 +191,37 @@ function applyProfileChange(
   };
 }
 
+/**
+ * ⚠ **A TYPED REFUSAL IS CARRIED BY ITS CODE, NEVER BY ITS SENTENCE.**
+ *
+ * This transaction returns a `reason` STRING and the surfaces hand that string
+ * to `classifyProgramMutationRefusal`, whose whole job is to turn a typed reason
+ * into the athlete's account of it. Every reason the door emits deliberately is
+ * a stable code (`accepted_revision_changed`, `no_change`, …) — but this catch
+ * used `error.message`, so an error that already KNEW what it was arrived as
+ * free prose and the classifier could only answer `unknown`.
+ *
+ * **MEASURED 2026-08-20 through the real Profile setup door.** An In-season
+ * athlete with two club nights and a Saturday game cut their gym days to one.
+ * The scheduler refused correctly and the whole change rolled back correctly —
+ * and the athlete was told *"Something went wrong. Please try again."* while the
+ * app was holding `Weekly schedule refused (not_enough_legal_gym_days: WC-142)`.
+ * That sentence is the exact one `rules/programMutationRefusal`'s header names
+ * as the disease it was written to cure; it survived here because the cure was
+ * applied to the reasons this door RETURNS and not to the errors it CATCHES.
+ *
+ * **IT READS `code`, NOT A LIST OF ERROR CLASSES**, so the next typed refusal
+ * thrown under this door is carried the same way without anybody remembering to
+ * add it. A code with no row in `REASON_KINDS` still lands in `unknown` — which
+ * is the honest answer, and `phaseShiftAtomicityTests`' fall-through cell is
+ * where a shipped code without copy is supposed to go red.
+ */
+function typedRefusalReason(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && code.length > 0) return code;
+  return error instanceof Error ? error.message : String(error);
+}
+
 function factFreeBase(args: {
   profile: OnboardingData;
   todayISO: string;
@@ -370,7 +401,7 @@ export async function commitProfileProgramTransaction(
       ok: false,
       changedProgram: false,
       message: 'The profile change could not build a valid accepted base, so nothing changed.',
-      reason: error instanceof Error ? error.message : String(error),
+      reason: typedRefusalReason(error),
     };
   }
   const compatibility = composeTemporarySourceFactCompatibility({

@@ -40,6 +40,24 @@ export type ProgramMutationRefusalKind =
   | 'season_phase_mismatch'
   /** An In-season shift reached the commit without a game-anchor answer. */
   | 'game_anchor_unanswered'
+  /**
+   * THE NEW SETUP CANNOT MAKE A LEGAL WEEK AT ALL.
+   *
+   * The weekly scheduler refused with a typed finding — too few legal gym days
+   * for the athlete's fixtures and club nights, no authored layout for that
+   * phase-and-availability pair, or no arrangement that satisfies the spacing
+   * rules. The transaction rolled the whole change back, so the athlete still
+   * has the program they had; what they needed was to be TOLD WHY.
+   *
+   * **Added 2026-08-20 because it reached the athlete as `unknown`.** Measured
+   * through the real Profile setup door: an In-season athlete with two club
+   * nights and a Saturday game cut their gym days to one, the scheduler refused
+   * with `not_enough_legal_gym_days` (WC-142), and the app said *"Something went
+   * wrong. Please try again."* — the exact sentence this module's own header
+   * names as the disease it exists to cure. It fell through because the
+   * transaction stringified the error's MESSAGE instead of carrying its CODE.
+   */
+  | 'week_cannot_be_built'
   /** Committed, could not be verified, and was rolled back whole. */
   | 'verification_rolled_back'
   /** The change itself is not something we can apply. Retrying is pointless. */
@@ -70,6 +88,11 @@ const CAN_RETRY: Record<ProgramMutationRefusalKind, boolean> = {
   accepted_revision_changed: true,
   season_phase_mismatch: false,
   game_anchor_unanswered: false,
+  // FALSE for the same reason `season_phase_mismatch` is: pressing Save on the
+  // same selection reproduces the same refusal exactly. Offering "Try again" on
+  // an unchanged setup is the app lying about what it already knows. The copy
+  // therefore asks them to CHANGE something first.
+  week_cannot_be_built: false,
   verification_rolled_back: true,
   invalid_change: false,
   generation_failed: true,
@@ -85,6 +108,8 @@ const COPY: Record<ProgramMutationRefusalKind, string> = {
     'This change is for a different season phase than your program is currently built on. Update your phase first, then make this change.',
   game_anchor_unanswered:
     'Tell us your usual game day first — or say you do not have one — and we will build the week around that answer.',
+  week_cannot_be_built:
+    'Those training days cannot make a full week alongside your club nights and your game, so nothing changed. Pick different days, or change your club nights or game day, and save again.',
   verification_rolled_back:
     'We could not confirm the rebuilt program, so nothing changed and your previous plan is intact. You can try again.',
   invalid_change: 'That change cannot be applied to your program as it stands, so nothing changed.',
@@ -110,6 +135,15 @@ const REASON_KINDS: Record<string, ProgramMutationRefusalKind> = {
   season_phase_mismatch: 'season_phase_mismatch',
 
   game_anchor_unanswered: 'game_anchor_unanswered',
+
+  // THE SCHEDULER'S OWN TYPED REFUSAL, carried by its `code` rather than parsed
+  // out of its message. `WeeklyScheduleRefusedError` has three findings
+  // (`not_enough_legal_gym_days`, `no_layout_for_phase_and_availability`,
+  // `no_legal_arrangement_within_spacing_rules`) and one athlete-facing answer:
+  // this combination of days cannot make a week. **The FINDING stays in the
+  // developer diagnostic** — athlete-facing copy never carries an internal
+  // identifier, and the athlete cannot act on a clause id.
+  weekly_schedule_refused: 'week_cannot_be_built',
 
   accepted_profile_candidate_mismatch: 'verification_rolled_back',
   accepted_composition_base_candidate_mismatch: 'verification_rolled_back',
