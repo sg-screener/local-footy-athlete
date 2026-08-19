@@ -183,6 +183,11 @@ export function weeklySchedulerInputsFrom(args: {
     teamTrainingDays?: readonly string[];
     gameDay?: string;
   };
+  // R-079: Off-season has no club training and no fixtures. The profile keeps
+  // the athlete's standing club answers for the next phase; the dated scheduler
+  // input represents THIS week and must not turn those dormant answers into
+  // hard anchors. This is phase projection, not destructive profile cleanup.
+  const offSeason = profile.seasonPhase === 'Off-season';
 
   // ⚠ READINESS IS READ CONSERVATIVELY, AND THAT IS THE CONTRACT'S OWN BIAS.
   // Decision 14: *"Low readiness never adds work."* The app has a typed deload
@@ -213,7 +218,9 @@ export function weeklySchedulerInputsFrom(args: {
 
   // R-020: a live trip takes the club's work off the facts the scheduler plans
   // from. See `clubInputsAfterTravel` for what this replaces and why.
-  const targetGameDays = args.targetWeekAvailability
+  const targetGameDays = offSeason
+    ? []
+    : args.targetWeekAvailability
     ? args.targetWeekAvailability.proposedFixtures.map((fixture) =>
         new Date(`${fixture.date}T12:00:00`).getDay())
     : [args.targetFixtureDay === undefined
@@ -241,7 +248,7 @@ export function weeklySchedulerInputsFrom(args: {
     : undefined;
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
-    clubNights: dayNumbers(profile.teamTrainingDays),
+    clubNights: offSeason ? [] : dayNumbers(profile.teamTrainingDays),
     gameDays: targetGameDays,
     fixtureProximityDates,
     activeConstraints: args.activeConstraints,

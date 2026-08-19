@@ -213,6 +213,90 @@ Run against checkpoint `14934d13`, then restored byte-identical:
 
 Agent: finish-programming
 
+## Slice 3b — Off-season continuity and refusal-census closure
+
+### First-run findings and owner correction
+
+- The scheduler already advanced the first Off-season block correctly: weeks
+  1–2 were early Off-season and weeks 3–4 were mid Off-season. The connector,
+  however, reused the initial edge input's week-1 `phaseWeekNumber` on every
+  generated week. It therefore judged the scheduler's four-session mid-block
+  weeks with early Off-season's three-session maximum and refused the program.
+- `scheduleToCoachingPlan` now feeds the existing §18 identity owner the current
+  week's clock, subphase and agreed fixture state already carried by the
+  connector. No phase table, maximum or acceptance rule was weakened.
+- R-079's “Off-season means no team training” statement was live in specialist
+  conditioning but not in the scheduler input owner. Standing profile club/game
+  answers are now dormant in Off-season scheduling while remaining preserved on
+  the athlete profile for later phases. Both the initial-plan translation and
+  every real generated-week translation apply the same rule.
+
+### Real weeks and final censuses
+
+- A formerly-refused five-day Full Gym athlete with standing Tuesday/Thursday
+  club answers now publishes all four weeks. Weeks 1–2 have phase weeks 1/2,
+  early-Off-season identity, three optional strength sessions and maximum 3.
+  Weeks 3–4 have phase weeks 3/4, mid-Off-season identity, four selected and
+  delivered main-strength sessions and maximum 4. Every week has zero club/game
+  anchors.
+- A three-day control selects and delivers three sessions in mid Off-season; the
+  fix does not force the preferred four when availability cannot hold it. A
+  five-day bodyweight control publishes the same continuous identities while
+  retaining its equipment-narrowed selected count.
+- Final refusal census: 180 generation occurrences / 90 distinct athlete setups,
+  **180 built / 0 refused**, zero typed refusal families. The mission baseline
+  was 140 built / 40 refused; after power it was 144 / 36; after zero-equipment
+  selection it was 164 / 16; after current-week identity and dormant anchors it
+  is 180 / 0.
+- `print:week` now writes all 10 named athlete pages. The formerly-refused early
+  Off-season page is three sensible optional strength days and four full rest
+  days, with no club content. All printed pages report zero missing-copy gaps and
+  zero printer-detected coaching findings.
+
+### Guards and liveness
+
+- `test:offseason-generation-continuity`: 9/9. It drives full four-week
+  production generation and checks current phase-week identity, phase maximum,
+  selected/delivered strength, dormant anchors, availability scaling and the
+  bodyweight control.
+- Mutation 1: restoring the stale initial `phaseWeekNumber` makes the suite die
+  immediately with `main_strength_permitted_maximum`, expected 3 / actual 4.
+- Mutation 2: allowing standing club nights back through the real per-week input
+  makes Team Training reappear on every generated Off-season week and reds both
+  the visible-anchor and contract-anchor cells. Both production mutations were
+  restored before the final run.
+- `test:weekly-scheduler` chain is green: scheduler 96/96, generated fixture
+  ownership 11/11, travel/zero-equipment 10/10, and Off-season continuity 9/9.
+  Generated-week contract remains 36/36. `test:compile` remains globally red on
+  the repository's pre-existing stale typecheck baseline across many unrelated
+  files; both new guard files contribute zero new typecheck-baseline errors.
+
+## Lane result
+
+- Ordered mission complete: scheduler/game proximity, power delivery,
+  conditioning delivery, and travel/zero-equipment generation all have real
+  generated-world evidence, named chained guards, mutation kills and inspected
+  printed athlete weeks.
+- No obsolete programming repair stack was rebuilt. The changes stay at current
+  owners: scheduler inputs, scheduler-derived contract, specialist allowance,
+  current-week identity, direct composition and canonical projection.
+- Gates are green on the owned/relevant surfaces. Athlete-facing completion is
+  awaiting Sam's physical-iPhone acceptance under L10.
+
+## NOT COVERED — lane handoff
+
+- The generated print artifacts are intentionally left uncommitted; they are
+  measurement output shared with the print owner, not programming source owned
+  by this lane.
+- The existing `test:composer-severance` suite remains independently red on its
+  pre-existing rotation/pinning assertions and later fixture crash; this lane did
+  not rewrite that deleted/retired ownership stack to make an unrelated broad
+  suite green.
+- No UI, Coach controller, navigation, Maestro or dev-E2E file was changed.
+- No physical iPhone acceptance is claimed.
+
+Agent: finish-programming
+
 ## Slice 3a — zero-equipment selection and travel delivery
 
 ### First-run diagnosis and correction
@@ -438,5 +522,30 @@ Agent: finish-programming
 - Existing status receipts include separate mutation kills for rollover and
   deload dose/template preservation; they were re-run green here, not re-authored.
 - No physical iPhone acceptance is claimed.
+
+Agent: finish-programming
+
+## CURRENT RESULT — programming lane complete
+
+The later Slice 3a/3b receipts above supersede this earlier conditioning
+checkpoint: final generated-world census is 180/180 built with zero refusal
+families, all 10 printed athlete pages build, and the ordered mission is complete.
+
+## NOT COVERED — final
+
+- Awaiting Sam's physical-iPhone acceptance under L10.
+- Generated print artifacts remain uncommitted measurement output.
+- The unrelated pre-existing composer-severance and global typecheck-baseline
+  reds are recorded in Slice 3b; no legacy repair owner was rebuilt for them.
+- Exact docs-owner handoff: update `docs/RULINGS_REGISTRY.md` rows R-083 and
+  R-090 from `UNENFORCED` to the now-live `test:travel-zero-equipment` guard.
+  This programming lane owns the chained behavioural guard but not the shared
+  registry document. `test:ruling-registry` remains red at 9 UNENFORCED rows
+  against its existing ceiling of 4 until that binding and the other seven
+  registry debts are handled.
+- `test:repo-law-guards` remains red on eight pre-existing shared-doc/history
+  debts (the 2026-08-16 enforcement boundary format, an inbox re-scope, prior
+  inbox rewrites/size, and one existing source-anchor debt). No failing item
+  names a file changed in this mission.
 
 Agent: finish-programming

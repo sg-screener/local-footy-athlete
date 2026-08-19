@@ -180,7 +180,20 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     }],
   };
 
-  const identity = section18ModeAndSubphase(coachingInputs, reduced);
+  // THE CONNECTOR RUNS ONCE PER WEEK. `coachingInputs` describes the first week
+  // supplied to the edge/planner boundary and is intentionally reused only for
+  // athlete facts; its phase-week and fixture fields are stale by week 2. Feed
+  // the identity owner the current scheduler/clock facts already carried by this
+  // connector, otherwise weeks 3–4 of the first Off-season block are judged by
+  // early Off-season's three-session ceiling after the scheduler correctly moves
+  // them to mid Off-season and selects four.
+  const identity = section18ModeAndSubphase({
+    ...coachingInputs,
+    hasGame: input.gameDays.length > 0,
+    phaseWeekNumber: input.section18Identity.phaseWeek ?? undefined,
+    offseasonSubphase: input.offseasonSubphase ?? undefined,
+    preseasonSubphase: input.preseasonSubphase ?? undefined,
+  }, reduced);
 
   // ── HARD DAYS COME FROM THE AGREED WEEK'S ANCHORS ────────────────────────
   //

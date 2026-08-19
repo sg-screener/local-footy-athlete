@@ -657,13 +657,14 @@ function coachingInputsToSchedulerInputs(
   };
   const nums = (list: readonly unknown[] | undefined): number[] =>
     (list ?? []).map(toNumber).filter((n): n is number => n !== null);
+  const offSeason = inputs.seasonPhase === 'Off-season';
   return {
     weekStartISO: args.weekStartISO,
     phase: inputs.seasonPhase as never,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
     gymAccessDays: nums(inputs.selectedDays),
-    clubNights: nums(inputs.teamTrainingDays),
-    gameDay: inputs.hasGame ? toNumber(inputs.gameDay) : null,
+    clubNights: offSeason ? [] : nums(inputs.teamTrainingDays),
+    gameDay: !offSeason && inputs.hasGame ? toNumber(inputs.gameDay) : null,
     // **ALWAYS RECURRING.** `hasGame` + a usual game day means there was a
     // fixture last week too, so a Sunday game makes Monday G+1. Nothing in
     // `CoachingInputs` can say "first fixture ever", so nothing here claims it.
