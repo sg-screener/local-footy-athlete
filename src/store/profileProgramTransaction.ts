@@ -192,32 +192,6 @@ function applyProfileChange(
 }
 
 /**
- * THE PROFILE A CHANGE WOULD PRODUCE — the transaction's own first step, named.
- *
- * ⚠ **EXPORTED SO A PREVIEW CANNOT COMPUTE IT A SECOND WAY.** A surface that
- * wants to show the athlete what accepting would do has to start from the same
- * profile acceptance starts from: the ACCEPTED profile (not the live profile
- * store), with the same patch applied by the same function. Re-deriving either
- * half at the call site is how a preview and its acceptance come to disagree
- * about which athlete they are talking about.
- *
- * Reads the stores; writes nothing, and has nothing imported here that could.
- */
-export function profileProgramNextProfile(args: {
-  change: ProfileProgramChange;
-  now?: string;
-}): OnboardingData {
-  const before = normalizeAcceptedMaterialContext(
-    useProgramStore.getState().acceptedMaterialContext,
-  );
-  const currentProfile = acceptedProfileForContext(
-    before,
-    useProfileStore.getState().onboardingData,
-  );
-  return applyProfileChange(currentProfile, args.change, args.now ?? new Date().toISOString());
-}
-
-/**
  * ⚠ **THIS IS NOT WHAT THE ATHLETE ENDS UP WITH, AND A PREVIEW MUST NOT USE
  * IT.** Measured 2026-08-20 (seat `finish-coach-product`) on a real walked
  * athlete: this builder passes **no `progressionHistory`**, and the program the

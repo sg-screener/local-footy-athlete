@@ -585,6 +585,28 @@ async function main(): Promise<void> {
       + ' the preview cells above are the extra-session offer\'s)');
   }
 
+  /**
+   * ⚠ **ONE ATHLETE IN THE CONVERSATION.** The preview patches the profile every
+   * gate above reasoned about; acceptance patches the ACCEPTED profile snapshot.
+   * In a healthy world those are the same object, and this cell is what makes
+   * that a checked fact rather than an assumption — if they ever diverge, the
+   * preview and the acceptance are describing two different athletes, and this
+   * reds before anybody finds out by accepting.
+   */
+  {
+    const live = useProfileStore.getState().onboardingData;
+    const snapshot = useProgramStore.getState()
+      .acceptedMaterialContext?.acceptedProfileSnapshot?.onboardingData ?? null;
+    ok(
+      'the accepted profile snapshot and the live profile are the same athlete',
+      snapshot === null
+        || JSON.stringify((snapshot as { preferredTrainingDays?: unknown })
+          .preferredTrainingDays)
+          === JSON.stringify(live?.preferredTrainingDays),
+      `snapshot=${JSON.stringify((snapshot as { preferredTrainingDays?: unknown } | null)
+        ?.preferredTrainingDays)} live=${JSON.stringify(live?.preferredTrainingDays)}`,
+    );
+  }
   ok(
     'the two date owners agree — the signed short date IS `shortDayMonthLabel`',
     ['2026-01-05', '2026-07-13', '2026-11-30', '2026-12-25'].every((dateISO) =>

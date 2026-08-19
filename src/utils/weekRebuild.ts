@@ -452,11 +452,51 @@ export function generateProgramForProfileFromStore(args: {
   recordSelections: 'author' | false;
 }): TrainingProgram {
   const persistedState = useProgramStore.getState();
+  return generateProgramForProfile({
+    ...args,
+    previousProgram: persistedState.currentProgram,
+    markedDays: persistedState.acceptedMaterialContext.markedDays,
+    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+    progressionHistory: {
+      sessionFeedback: persistedState.sessionFeedback,
+      weightOverrides: persistedState.weightOverrides,
+      blockState: persistedState.blockState,
+      acceptedBlocks: persistedState.acceptedBlocks,
+    },
+  });
+}
+
+/**
+ * THE SAME BUILD, WITH EVERY INPUT STATED (L14).
+ *
+ * ⚠ **SPLIT OUT AFTER THE STORE-READING VERSION BROKE TWO SUITES, AND THE BREAK
+ * WAS THE POINT.** `test:block-two-extra-session` and `test:athlete-journey`
+ * drive worlds whose program is an ARGUMENT and not in the store, so a preview
+ * that reached for `useProgramStore.getState()` built against a world nobody was
+ * looking at. A production surface can hit the same shape any time it holds a
+ * program the store has not published yet.
+ *
+ * The Coach tab's preview calls THIS one, with the inputs its own hook already
+ * receives — so the preview is pure over the same world the conversation was
+ * derived from, and cannot silently answer about a different one.
+ */
+export function generateProgramForProfile(args: {
+  profile: OnboardingData;
+  todayISO: string;
+  blockNumber?: number;
+  recordSelections: 'author' | false;
+  previousProgram: TrainingProgram | null;
+  markedDays: Parameters<typeof resolveProfileTargetWeekAvailability>[0]['markedDays'];
+  activeConstraints: Parameters<
+    typeof resolveProfileTargetWeekAvailability>[0]['activeConstraints'];
+  progressionHistory: NonNullable<
+    Parameters<typeof generateProgramLocally>[1]>['progressionHistory'];
+}): TrainingProgram {
   const targetWeekAvailability = resolveProfileTargetWeekAvailability({
     profile: args.profile,
     weekStart: getMondayForDate(args.todayISO),
-    markedDays: persistedState.acceptedMaterialContext.markedDays,
-    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+    markedDays: args.markedDays,
+    activeConstraints: args.activeConstraints,
     // Generation input, NOT the persisted clock: this is the branch that
     // rebuilds after a phase shift, and the persisted clock still holds the
     // phase the athlete is leaving.
@@ -472,23 +512,15 @@ export function generateProgramForProfileFromStore(args: {
     weekAcceptance: 'forward_decision',
     todayISO: args.todayISO,
     blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(args.todayISO),
-    previousProgram: persistedState.currentProgram,
+    previousProgram: args.previousProgram,
     targetWeekAvailability,
     targetFixtureDay: targetFixture ? dayNameForDate(targetFixture.date) : null,
-    // THE BLOCK-BOUNDARY OWNER'S INPUTS, STATED HERE RATHER THAN FETCHED THERE.
-    // This is the caller that crosses a block boundary, so it is the caller that
-    // must hand generation the athlete's recorded history. Generation no longer
-    // reaches into the store for it (Sam, product close) — same explicit inputs,
-    // same stored block, every time.
-    progressionHistory: {
-      sessionFeedback: persistedState.sessionFeedback,
-      weightOverrides: persistedState.weightOverrides,
-      blockState: persistedState.blockState,
-      // EVERY ACCEPTED BLOCK'S RECORD — its identity and what it required. Stated
-      // by the caller that owns the grid, and it is the SAME map `quiescentBoot`
-      // states, so the rollover and a relaunch read identical values.
-      acceptedBlocks: persistedState.acceptedBlocks,
-    },
+    // THE BLOCK-BOUNDARY OWNER'S INPUTS, STATED BY THE CALLER RATHER THAN
+    // FETCHED HERE. Generation no longer reaches into the store for them (Sam,
+    // product close) — same explicit inputs, same stored block, every time. The
+    // caller that owns the grid states them; `...FromStore` above is the one
+    // adapter that reads them off it.
+    progressionHistory: args.progressionHistory,
   });
 }
 

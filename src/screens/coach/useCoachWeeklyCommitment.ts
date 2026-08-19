@@ -53,8 +53,7 @@ import {
   WEEKLY_COMMITMENT_SOURCE_SURFACE,
   type ConfirmWeeklyCommitmentResult,
 } from '../../store/weeklyCommitmentAnswer';
-import { profileProgramNextProfile } from '../../store/profileProgramTransaction';
-import { generateProgramForProfileFromStore } from '../../utils/weekRebuild';
+import { generateProgramForProfile } from '../../utils/weekRebuild';
 import {
   deriveWeeklyCommitmentConversation,
   type CommitmentConversation,
@@ -90,15 +89,27 @@ export interface CoachWeeklyCommitment {
  * assembly — the `AN UNDER-FED STATE ANSWERS "NO"` shape. Suites call this with
  * the store snapshots they just wrote.
  */
+type ProgramState = ReturnType<typeof useProgramStore.getState>;
+
 export function coachWeeklyCommitmentInputs(state: {
-  currentProgram: ReturnType<typeof useProgramStore.getState>['currentProgram'];
+  currentProgram: ProgramState['currentProgram'];
   blockNumber: number | null;
   blockStartISO: string | null;
-  sessionFeedback: ReturnType<typeof useProgramStore.getState>['sessionFeedback'];
-  acceptedBlocks: ReturnType<typeof useProgramStore.getState>['acceptedBlocks'];
+  sessionFeedback: ProgramState['sessionFeedback'];
+  acceptedBlocks: ProgramState['acceptedBlocks'];
   onboardingData: ReturnType<typeof useProfileStore.getState>['onboardingData'];
   ledgerEntries: ReturnType<typeof useDecisionLedgerStore.getState>['entries'];
   todayISO: string;
+  /**
+   * THE REST OF WHAT THE BUILD NEEDS, STATED. Defaulted so a caller that only
+   * cares about the QUESTION need not assemble a whole world — the preview is
+   * the only consumer, and a preview built on an empty override map is a preview
+   * that says so rather than one that quietly reads a different world.
+   */
+  weightOverrides?: ProgramState['weightOverrides'];
+  blockState?: ProgramState['blockState'];
+  markedDays?: ProgramState['acceptedMaterialContext']['markedDays'];
+  activeConstraints?: ProgramState['acceptedMaterialContext']['activeConstraints'];
 }) {
   const profile = state.onboardingData;
   /**
@@ -177,19 +188,47 @@ export function coachWeeklyCommitmentInputs(state: {
         weekOrder: DAYS_OF_WEEK,
         availableDays: available(),
       });
-      // THE PROFILE ACCEPTANCE WILL USE — the ACCEPTED profile with the same
-      // patch, through the transaction's own first step. Re-deriving either half
-      // here is how a preview and its acceptance come to disagree about which
-      // athlete they are talking about.
-      const nextProfile = profileProgramNextProfile({
-        change: { kind: 'profile_setup', patch },
-      });
+      /**
+       * ⚠ **ONE PROFILE THROUGH THE WHOLE CONVERSATION — the one every gate
+       * above reasoned about, with the same patch on it.**
+       *
+       * The first cut reached `profileProgramTransaction`'s own first step,
+       * which patches the ACCEPTED profile snapshot read from the store. That is
+       * what acceptance does, and it was still wrong here for two reasons, one
+       * measured and one structural:
+       *
+       *  - MEASURED: it made the preview read a store the caller had not been
+       *    given. `test:block-two-extra-session` drives a world whose profile is
+       *    an ARGUMENT, so the accepted snapshot was empty and every candidate
+       *    build refused — the offer vanished for an athlete who has one.
+       *  - STRUCTURAL: deciding the offer from one profile and previewing it
+       *    from another is two athletes in one conversation. If the accepted
+       *    snapshot and the live profile ever disagree, that is a defect in its
+       *    own right and it must not be discovered as a wrong preview.
+       *
+       * `test:coach-weekly-reduction` asserts the two agree at the moment the
+       * offer is put, so a divergence reds rather than hides here.
+       */
+      const nextProfile = { ...profile, ...patch };
       try {
-        return generateProgramForProfileFromStore({
+        return generateProgramForProfile({
           profile: nextProfile,
           todayISO: state.todayISO,
           blockNumber: state.blockNumber ?? undefined,
           recordSelections: false,
+          // ⚠ EVERY INPUT FROM THIS HOOK'S OWN ARGUMENTS, NOT FROM THE STORE.
+          // A store-reading build answered about a world nobody was looking at
+          // the moment the caller held a program the store had not published —
+          // measured, as two suites going red.
+          previousProgram: state.currentProgram ?? null,
+          markedDays: state.markedDays ?? {},
+          activeConstraints: state.activeConstraints ?? [],
+          progressionHistory: {
+            sessionFeedback: state.sessionFeedback,
+            weightOverrides: state.weightOverrides ?? {},
+            blockState: state.blockState ?? null,
+            acceptedBlocks: state.acceptedBlocks,
+          },
         });
       } catch {
         // ⚠ SWALLOWED, AND ONLY HERE. A refusal means there is no week to show,
@@ -228,6 +267,8 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const blockState = useProgramStore((s) => s.blockState);
   const acceptedBlocks = useProgramStore((s) => s.acceptedBlocks);
+  const weightOverrides = useProgramStore((s) => s.weightOverrides);
+  const acceptedMaterialContext = useProgramStore((s) => s.acceptedMaterialContext);
   const onboardingData = useProfileStore((s) => s.onboardingData);
   const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
   const todayISO = todayISOLocal();
@@ -242,9 +283,13 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
       onboardingData,
       ledgerEntries,
       todayISO,
+      weightOverrides,
+      blockState,
+      markedDays: acceptedMaterialContext.markedDays,
+      activeConstraints: acceptedMaterialContext.activeConstraints,
     })),
-    [currentProgram, blockState?.blockNumber, blockState?.blockStartDate,
-      sessionFeedback, acceptedBlocks, onboardingData, ledgerEntries, todayISO],
+    [currentProgram, blockState, sessionFeedback, acceptedBlocks, onboardingData,
+      ledgerEntries, todayISO, weightOverrides, acceptedMaterialContext],
   );
 
   const conversation = outcome.value;
