@@ -56,7 +56,6 @@ import {
   contractOffseasonSubphase,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
-import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
 import { readStoredWorldOrResetClean } from './unreadableWorldResetDoor';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
@@ -609,48 +608,6 @@ export function liveOffseasonSubphaseForDate(
   }).offseasonSubphase;
 }
 
-/**
- * Persistence is a legacy ingress boundary, not a second programming owner.
- * Old store envelopes may pre-date typed strength intent and canonical
- * component sections, so rehydrate them once through the same finaliser used
- * by generation and edits. Existing modern typed intent wins inside that
- * finaliser; display/scalar fields are compatibility inputs only.
- */
-function canonicaliseHydratedWorkout(
-  workout: Workout,
-  phase?: string,
-  weekKind?: Microcycle['weekKind'],
-  // The resolved off-season position. Required by the canonical context and
-  // therefore required here: this helper reaches the canonicaliser through
-  // `require()`, so the compiler cannot see the context it builds and would not
-  // have caught a missing subphase. Passing it explicitly keeps hydration
-  // honest by hand where the type system is blind.
-  offseasonSubphase?: OffseasonSubphase | null,
-): Workout {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {
-    finaliseWorkoutAfterMutation,
-    canonicalContextSubphase,
-  } = require('../utils/workoutCanonicalisation');
-  const canonicalPhase = /pre/i.test(phase ?? '')
-    ? 'Pre-season'
-    : /off/i.test(phase ?? '')
-      ? 'Off-season'
-      : /in/i.test(phase ?? '')
-        ? 'In-season'
-        : undefined;
-  return finaliseWorkoutAfterMutation(workout, {
-    phase: canonicalPhase,
-    offseasonSubphase: canonicalContextSubphase(canonicalPhase, offseasonSubphase),
-    weekKind,
-    // Persisted allocation ownership is legitimate ingress. This preserves
-    // explicit legacy contribution arrays even before plan-entry IDs existed.
-    planIntentValid: true,
-    referenceWorkout: workout,
-    section18EvidenceMode: 'preserve_legacy_unknown',
-  }).workout;
-}
-
 const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Sunday',
   'Monday',
@@ -661,36 +618,6 @@ const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Saturday',
 ];
 
-
-/**
- * THE SAFETY REWRITE AT THE ACCEPTANCE BOUNDARY IS GONE (demolition area B/C,
- * 2026-08-19).
- *
- * This used to run `finaliseSection18SafetyWorkout` over every workout on its
- * way INTO accepted state — the overlay days, the date-keyed overrides and
- * today's workout. Conforming a workout at the moment it is accepted is
- * writing accepted exercise choices, which is the authoring seat, not the
- * store's.
- *
- * The contract argument is kept so every call site stays honest about what it
- * has; canonicalisation below is shape-only and changes no prescription.
- * Safety belongs to the composer and its specialists at authoring time
- * (rebuild list, area A).
- */
-function canonicaliseHydratedSafetyWorkout(
-  workout: Workout,
-  contract: WeeklyExposureContractV2 | undefined,
-  phase?: string,
-  /** Clock-resolved fallback for a contract that does not name one. */
-  offseasonSubphase?: OffseasonSubphase | null,
-): Workout {
-  return canonicaliseHydratedWorkout(
-    workout,
-    contract?.identity.seasonPhase ?? phase,
-    undefined,
-    (contract ? contractOffseasonSubphase(contract) : null) ?? offseasonSubphase,
-  );
-}
 
 /**
  * Thrown when a program reaches the accept boundary carrying a week the app
@@ -793,13 +720,6 @@ function canonicaliseAcceptedBoundaryState(
   // the power". Null when there is no clock, which for a pre-clock program can
   // never canonicalise to Off-season anyway (`programPhase` has no off-season
   // spelling the phase regex matches).
-  const hydratedOffseasonSubphase = currentProgram?.seasonPhaseClock
-    ? resolveSeasonPhaseClock({
-        selectedPhase: currentProgram.seasonPhaseClock.selectedPhase,
-        persistedClock: currentProgram.seasonPhaseClock,
-        targetWeekStartISO: mondayForDate(effectiveTodayISO),
-      }).offseasonSubphase
-    : null;
   let currentMicrocycle = persistedState.currentMicrocycle;
   if (currentMicrocycle && options.activeConstraints &&
     !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
@@ -830,65 +750,28 @@ function canonicaliseAcceptedBoundaryState(
           // It existed for a stored world written before the v2 declaration.
           // No production users exist and a clean reinstall is allowed, so
           // there is no such world to serve.
-          let exposureContractV2 = overlay.exposureContractV2;
-          if (exposureContractV2) {
-            const generationConstraints = options.activeConstraints
-              ? require('../utils/generationConstraints').buildGenerationConstraintContext({
-                  activeConstraints: options.activeConstraints,
-                  todayISO: weekStart,
-                  periodEndISO: addDaysISO(weekStart, 6),
-                })
-              : undefined;
-            exposureContractV2 = applyGenerationSafetyToSection18Contract({
-              contract: exposureContractV2,
-              generationConstraints,
-              forceFullPause: options.activeConstraints?.some((constraint) =>
-                constraint.type === 'injury' && constraint.status !== 'resolved' &&
-                constraint.seriousSymptoms === true),
-            });
-          }
-          return {
-            ...overlay,
-            exposureContractV2,
-            workoutsByDate: Object.fromEntries(
-              Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
-                date,
-                  workout
-                  ? !exposureContractV2
-                    ? workout
-                    : canonicaliseHydratedSafetyWorkout(
-                        workout, exposureContractV2, phase, hydratedOffseasonSubphase)
-                  : null,
-              ]),
-            ),
-          };
+          /* ⚠ THE ACCEPTANCE BOUNDARY NO LONGER REWRITES THE OVERLAY.
+           *
+           * Two rewrites ran here and both are deleted (demolition completion
+           * sweep, 2026-08-19). `applyGenerationSafetyToSection18Contract`
+           * re-authored the week's stored CONTRACT from the live constraints —
+           * a second contract authority downstream of the one that wrote it —
+           * and `canonicaliseHydratedSafetyWorkout` re-canonicalised every
+           * stored workout on its way IN.
+           *
+           * Sam's own ruling on the sibling case, area C: *"acceptance stores a
+           * decision, it does not author one."* The same sentence decides these.
+           * An overlay is returned exactly as it was stored. */
+          return overlay;
         })(),
       ]))
     : persistedState.weekScopedOverlays;
-  const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
-    // THE FLIP, MOVE (ii) — one read door. NOTE the asymmetry, preserved
-    // exactly: the overlay is found by the week's MONDAY, the two microcycles
-    // by the DATE itself. Collapsing the two onto one coordinate would be a
-    // behaviour change wearing a refactor.
-    return selectStoredWeekDeclaration({
-      overlay: weekScopedOverlays?.[mondayForDate(date)],
-      coveringMicrocycle: currentProgram?.microcycles.find((microcycle) =>
-        microcycleCoversWeek(microcycle, date)),
-      currentMicrocycle: microcycleCoversWeek(currentMicrocycle, date)
-        ? currentMicrocycle
-        : null,
-      weekStart: mondayForDate(date),
-      reader: 'programStore.safetyContractForDate',
-    }) ?? undefined;
-  };
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         {
-          ...(!safetyContractForDate(date)
-            ? workout
-            : canonicaliseHydratedSafetyWorkout(
-                workout, safetyContractForDate(date), phase, hydratedOffseasonSubphase)),
+          // Stored as decided; the acceptance boundary does not re-canonicalise.
+          ...workout,
           // Date-keyed overrides own a concrete calendar day. Older edit
           // writers used the 1..7 coaching convention (Sunday=7), whereas
           // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
@@ -1179,16 +1062,7 @@ function canonicaliseAcceptedBoundaryState(
     ...persistedState,
     currentProgram,
     currentMicrocycle,
-    todayWorkout: hydratedTodayWorkout
-      ? !safetyContractForDate(effectiveTodayISO)
-        ? hydratedTodayWorkout
-        : canonicaliseHydratedSafetyWorkout(
-            hydratedTodayWorkout,
-            safetyContractForDate(effectiveTodayISO),
-            phase,
-            hydratedOffseasonSubphase,
-          )
-      : hydratedTodayWorkout,
+    todayWorkout: hydratedTodayWorkout,
     dateOverrides,
     weekScopedOverlays,
   };
