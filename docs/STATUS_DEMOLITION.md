@@ -1302,3 +1302,248 @@ two are excluded from the 13 above because they were repaired, not recorded.
 | where does the canonical shape come from | `utils/workoutCanonicalisation.ts` — **shapes, never restores** |
 
 Agent: demolition
+
+---
+
+# SESSION 4 — THE THREE THINGS THE LAST REPORT DID NOT DELETE
+
+**Sam's ruling, 2026-08-19:** the previous report called demolition complete
+while RETAINING two genuine legacy compatibility bridges because deleting them
+would break live behaviour. **That is not the ruling.** Temporary coach, injury,
+removal, generation, UI and test breakage is allowed. Record it; do not preserve
+legacy compatibility to avoid it.
+
+**Base `e23f1846`. Control worktree `scratchpad/wt-ctl`, detached at `e23f1846`,
+never edited.** Three commits: `4080481c`, `29136176`, `b65dc7e3`.
+**47 files, 164 insertions, 2,702 deletions, 3 files physically deleted.**
+
+## 1. `migrateLegacyUserRemovalConstraint` — DELETED
+
+**And the measurement is the finding: it never ran in production.** Its one
+production caller is `normalizeReversibleAdjustmentLedger`, called from
+`acceptedStateColdStart.ts:230` — which passes only `value`. The migration loop
+iterates `args.userRemovalConstraints ?? []`, so in production it iterated an
+empty array. Same for the typed-reduction back-fill, which reads
+`args.exposureContractsByWeek ?? {}`.
+
+Deleted with it, each a branch that existed only to read or manufacture that
+shape: `legacyOwnedDays`, `adjustmentKindForLegacyConstraint`,
+`legacyLinkedTypedReductions`, the three `normalize()` args, the exactLinks
+back-fill loop, and `liftOwnedDayAfterSide` — the read-ingress lift for the
+superseded after-side shape, which **no current writer produces**
+(`acceptedStateTransaction` writes only `afterFingerprint` /
+`afterStableIdentity`). `validity.source` narrowed from three members to
+`'runtime_exact_delta'`; the other two had no producer left.
+`mondayForDate` and `workoutOnDate` went with their only caller.
+
+`reversibleAdjustmentLedger.ts` **22,551 → 12,597 bytes.**
+
+**No replacement built.** Removal behaviour that breaks: on the rebuild list.
+
+## 2. The `InjuryEpisodeV1 → InjuryState` bridge — DELETED
+
+`deriveLegacyInjuryFromEpisodes` is gone, and with it **every production
+dependency on the single-slot `activeInjury` alias** — 37 files:
+
+- `coachUpdatesStore.activeInjury`, `setActiveInjury`, `transitionInjuryStatus`,
+  `legacyInjuryForConstraints`, the alias mirror in all three constraint
+  writers, the hydration merge's stored-alias read, the quarantine boundary's
+  alias arm, and the injury term in the wipe-refusal arithmetic;
+- `legacyActiveInjuryConstraint` and the `legacy_active_injury` modifier source;
+- `ScheduleState.activeInjury` **and its `injuryProjectionOwner` switch** — the
+  flag that decided which of two injury owners got to rewrite the day;
+- the accepted-context field, the compatibility payload, the coach packet field
+  and its LLM serialisation;
+- `isDifferentBodyPartInjuryReport`, `handleInjuryProgression`, the dispatcher's
+  `runProgression` / `reapplyInjuryAtSeverity` deps and their providers.
+
+`utils/injuryProgression.ts` is now **TYPES ONLY, 294 → 70 lines**: every
+function measured at 0 production callers.
+
+**PRESERVED, deliberately:** `injuryEpisodes`, `deriveInjuryConstraintsFromEpisodes`,
+`activeInjuryEpisodes`, the accepted injury context, and the `InjuryState['bucket']`
+union that `injuryEpisode` and `temporarySourceFact` index into. Deleting that
+union would delete a canonical injury fact.
+
+**BROKEN AND NOT REPAIRED — each recorded at its own site in the source:**
+the coach's active-injury follow-up, the same-body-part clarifier suppression
+(both dispatcher and CoachScreen), the injury-grounded general reply, the
+why-didn't-it-change re-apply, the state inspector's injury explanation and its
+`no_active_injury` answer, and the surgical reset's injury clear.
+
+## 3. `visibleProgramProjection`'s injury filter — MEASURED, THEN SPLIT
+
+Sam's four conditions, answered arm by arm.
+
+| arm | authors? | writes? | repairs? | reads canonical? | verdict |
+| --- | --- | --- | --- | --- | --- |
+| Pass 1 — `applyInjuryFilterToWorkout` | **YES** — `getReplacementForBucket` SUBSTITUTES exercise names ("Replaced X with Y", "Rebuilt for …") | no | **YES** | **no** — the legacy `InjuryState` | **DELETED** |
+| `buildActiveConstraints`' `activeInjury` arm | no | no | no | **no** — the alias; the file's own docblock called it "the compatibility alias" | **DELETED** |
+| Pass 2 — exposure engine | no | no | no | **yes** — `extraConstraints`, episode-derived | **RETAINED** |
+| Pass 3 — validator sweep | no | no | no | **yes** | **RETAINED** |
+
+`utils/injuryWorkoutFilter.ts` had **exactly one production importer** — that
+pass — and is physically deleted.
+
+**DIRECT PROBE of what survives** (`scratchpad/projection-probe.ts`), driven with
+a canonical episode-derived hamstring constraint:
+
+```
+BEFORE           : Deadlift, Nordic Lower, Bench Press
+AFTER            : Bench Press
+removedNames     : Deadlift, Nordic Lower
+replacementNames : (none)
+INVENTED ROWS    : 0
+input mutated in place? NO
+CONTROL (no constraints): filterApplied=false, 3 rows  ← pure pass-through
+```
+
+It hides. It invents nothing, substitutes nothing, and does not touch its input.
+
+## 4-5. THE CENSUS, AND WHAT CLASSIFICATION FOUND
+
+`scratchpad/census.js` — **absolute root, and it separates EXECUTING code from
+prose** by stripping comments and string literals before counting. Positive
+control (`composeWeek`) non-zero in every run.
+
+| term | executing hits | prose-only files |
+| --- | --- | --- |
+| `legacy\|Legacy\|LEGACY` | 304 in 43 files | 82 |
+| `migrate\|Migrate\|MIGRAT` | **3 in 2 files** | 28 |
+| `compat\|Compat\|COMPAT` | 183 in 31 files | 45 |
+
+**Acted on:** §18 imported **13 bindings it no longer calls** — every one a
+mutator left behind when its caller was deleted. A dead import of a mutator
+inside a validation-only boundary is the door left unlocked. All 13 gone; the
+gateway now has zero import-only bindings.
+
+**RETAINED, each with proof it is CURRENT — the test is "does a LIVE writer still
+produce this shape?", not "does the name say legacy":**
+
+| retained hit | proof it is current and necessary |
+| --- | --- |
+| `legacy_unknown` (18 sites) | **Live production WRITERS**: `section18WorkoutEvidence.ts:88` returns it, `weeklyExposureContractV2.ts:1445,1577` and `generateProgram.ts:617,1042` default to it. It is a CURRENT sentinel meaning "never typed", not a stored legacy shape. |
+| `buildWeeklyExposureContract` (v1) | Called on the live generation path at `scheduleToCoachingPlan.ts:116`; V2 consumes its answer. |
+| `LEGACY_CONDITIONING_FORMAT_MAP` | Live sources still emit those names — `conditioningTemplates.ts:1186` defines a template named `Short Flush`; `coachClarifierResume.ts:2282` constructs `Easy Aerobic Flush (…)`. A current name→format resolver. |
+| `resolveLegacyStrengthIntent` / `shouldUseLegacyStrengthInference` | 3 live callers on the AUTHORING path (`sessionNaming`, `workoutCanonicalisation`, `sessionBuilder`). The controlled ingress boundary for untyped strength text — the phone stores untyped workouts. |
+| `seasonPhaseClock` `deterministic_legacy_migration` | Its input is `previousProgram`, the CURRENT `TrainingProgram` shape — not a stored envelope. Without it a clock loses its entry week and every phase reads Week 1. |
+| `legacyCoachActionFilter` | Its authority is a live **REFUSAL**: it blocks the legacy /coach-chat endpoint from emitting program mutations. A refusal is not a repair. |
+| `applyUserRemovalConstraintsToWeek` (3 callers) | Applies the athlete's own stored DECISION and only REMOVES. Consumes current `userRemovalConstraints`. |
+| `programStore.ts:1909` `migrate: (s) => s` | zustand's required hook, an identity function. Not a migration. |
+| `data/legacyReckoningCensus.ts` | Zero production importers; a records document, not execution. |
+
+**COMPLETION CONDITIONS — measured, not claimed** (0 = zero EXECUTING references;
+every surviving mention verified as prose by hand):
+
+```
+migrateLegacyUserRemovalConstraint  0     setActiveInjury               0
+deriveLegacyInjuryFromEpisodes      0     transitionInjuryStatus        0
+legacyInjuryForConstraints          0     liftOwnedDayAfterSide         0 (1 census-doc string)
+legacyActiveInjuryConstraint        0     legacyEpisodeId               0
+applyInjuryFilterToWorkout          0 (1 comment)  legacyConstraintFromAlias 0
+isDifferentBodyPartInjuryReport     0
+migrate*-named functions in production: 0
+read-path authoring calls (resolver, projection, read model, deriveVisibleWeek): 0
+  — positive control: optionalTopUpPlacement returns 5
+```
+
+## 6. THE WORLD CENSUS — RUN AFTER THE FINAL DELETION
+
+Both arms, same instrument, control at `e23f1846` never edited.
+
+| unit | control `e23f1846` | final tip |
+| --- | --- | --- |
+| distinct generated worlds | 180 | **180** |
+| distinct athlete setups | 90 | **90** |
+| built | 140 | **140** |
+| refused | 40 | **40** |
+| typed refusal families | 40 × `GeneratedWeekRefusedError:generated_week_refused` | **identical** |
+| delivered sessions | 434 | **434** |
+
+**`diff` is EMPTY — byte-identical per world.**
+
+⚠ **AND THE UNIT MATTERS, SO SAY WHAT IT MISSES.** This instrument's unit is the
+GENERATED week. **It cannot reach the visible projection**, and the grid carries
+no injury facts at all — so **no world in it exercises the arm I deleted.** The
+census proves generation is untouched; it proves nothing about the visible
+injury filter. That is what the direct probe above is for, and the two together
+are the whole of what was measured. A visible-row census would need a live
+`ScheduleState` assembled field-for-field like `useScheduleState`; an under-fed
+one answers "no" instead of failing.
+
+## COMPILE — PRODUCTION SCOPE IDENTICAL
+
+```
+control e23f1846  TOTAL 501, 41 pairs worse   [product] 3   [tests] 48
+final tip         TOTAL 665, 73 pairs worse   [product] 4   [devtools] 1  [tests] 81
+```
+
+**The production-scope diff is two lines, both IMPROVEMENTS**
+(`reversibleAdjustmentLedger.ts: 1 → 0 (clean)`). **Not one new error in
+`[product]`, `[devtools]` or `[scripts]` across 2,702 deleted lines.** Every
+regression is `[tests]` — 35 files, the suites whose subject or vehicle was
+deleted. Sam's ruling sanctions that.
+
+## 7. TESTS — DISPOSED OF BY SUBJECT
+
+| deleted | its stated subject |
+| --- | --- |
+| `resolverInjuryFilterTests.ts` (311) | "the resolver-level injury filter" — the module deleted here |
+| `injuryProgressionTests.ts` (474) | the follow-up classifier AND the CoachScreen progression handler — both deleted |
+
+Deregistered by exact count: 1 definition and 1 chain reference each,
+`test:bible` **399 → 397** steps, and their stale `typecheck-baseline.json`
+entries removed.
+
+**PRESERVED though red — subject is a LIVE owner, they merely imported something
+that went:** `injurySeverityBand`, `injuryReintroduction`, `injuryCanonicalisation`,
+`guidedInjuryMenuTotality`, `coachOrchestration`, `coachLiveWiring`,
+`pendingInjuryPriority`, `visibleProgramProjection`, `injuryAuthorityOwnership`,
+`resetCoach`, `coachIntentDispatch`, `coachBehaviourScenario` and the rest of the
+35. **Matching by IMPORT is not matching by SUBJECT** — the mistake this mission
+already made once, on 2026-08-16, when 16 suites were deleted and all 16 restored.
+
+Cell-level obsolescence inside preserved suites is RECORDED, not fixed — e.g.
+`athleteSessionMoveTests:993` still asserts `validity.source ===
+'legacy_exact_user_removal'` and `sourceSurface === 'hydration_migration'`, a
+cell whose subject is deleted inside a suite whose subject is alive.
+
+## THE SURVIVING OWNER MAP
+
+| question | the one owner |
+| --- | --- |
+| which days carry what, spacing, fixture proximity | `rules/weeklyScheduler.ts` |
+| what content fills an authored day | `rules/composeWeek.ts` + its specialists |
+| is a finished week lawful | `rules/section18AcceptedWeekGateway.ts` — accepts or refuses; **zero import-only mutator bindings** |
+| may this write land | `utils/postGenerationConstraintValidation.ts` — speaks by throwing |
+| what is stored | `store/acceptedStateTransaction.ts` — the single write boundary |
+| can a stored world be read at all | `store/unreadableWorldResetDoor.ts` → `rules/unreadableWorldReset.ts` |
+| what does the athlete see | `utils/sessionResolver.ts` (reads and hides) → `utils/visibleProgramProjection.ts` (**hides only; two passes, both remove-or-annotate**) |
+| where does the canonical shape come from | `utils/workoutCanonicalisation.ts` — shapes, never restores |
+| **what is true about an injury** | **`rules/injuryEpisode.ts` — `InjuryEpisodeV1` episodes and the constraints derived from them. There is no second, collapsed representation.** |
+| an athlete's stored removal | `rules/userRemovalConstraints.ts` — removes only, from a stored decision |
+| the ledger of reversible adjustments | `rules/reversibleAdjustmentLedger.ts` — **normalises persisted records only; manufactures none** |
+
+## REBUILD LIST — ADDED BY THIS SESSION
+
+**Nothing here is fixed.**
+
+| capability | owner to rebuild at |
+| --- | --- |
+| Coach active-injury follow-up (classify a message against the injury on file, run the progression) | dispatcher + CoachScreen, against `acceptedInjuryContext` / `injuryEpisodes` |
+| Same-body-part clarifier suppression (don't re-ask severity for an injury already answered) | dispatcher + CoachScreen, against the accepted episode set |
+| Injury-grounded general reply (stops the legacy LLM fabricating injury claims) | `coachDispatchDeps.generalReply`, from `acceptedInjuryContext` |
+| Severity-only reply binding to the injury on file (tier 3 of the body-part ladder) | dispatcher; tiers 1–2 (payload, pending) still stand |
+| "Why didn't the program change" → re-apply the restriction | dispatcher, against the canonical episodes |
+| State inspector's injury explanation and its `no_active_injury` answer | `coachStateInspector`, from the accepted episodes |
+| Surgical reset's injury clear | the injury-episode transaction — clearing an injury is an episode operation |
+| Read-time injury SUBSTITUTION (curated replacement for a removed exercise) | **the composer, at authoring — never at read.** The projection may hide; it may not build |
+| Applying a stored removal that has no linked ledger adjustment | accepted-state transaction |
+
+**Carried unchanged from earlier sessions:** power allowance stamping + delivery;
+applying stored athlete deletions; clearing stale derived sessions; safety
+rewriting of a week; optional-session placement/withdrawal; required-safe-pattern
+representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan
+alternatives; and the whole area-1..5 list above.
+
+Agent: demolition
