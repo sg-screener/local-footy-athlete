@@ -381,3 +381,176 @@ off**, instead of numbers that revert until they close and reopen the app.
 **BUT NONE OF IT HAS BEEN SEEN ON GLASS** — another lane owns the simulator
 today. Under L10 this is *"gates green, awaiting Sam device acceptance"*, never
 done.
+
+---
+
+# SESSION 2 — SAM'S COUNT-IT RULING, AND THE CROSS-LANE INTEGRATION CHECK
+
+**Candidate tip `143d0f0f`.** Code changed, so the tip moved from `3c961390`.
+
+## R-112 — COUNT IT
+
+Sam ruled the question this seat carried. The ruling, its three erasure sites,
+the before/after measurement and the guard are in `docs/RULINGS_REGISTRY.md`
+R-112 and in commit `ffaabdfb`. The headline the report must not bury:
+
+> **the athlete's lifts on a club night were never recorded at all.** Not
+> mis-counted — absent. `buildStrengthPerformanceLogs` returned `[]` for a
+> `workoutType: 'Team Training'` day, so no load and no set count reached the
+> record, and the block boundary had nothing to progress those lifts from.
+
+That third site is the one neither my earlier report nor the ratio arithmetic
+had found: 4-required/4-recorded looked self-consistent from both sides.
+
+| | separated club nights | club night IS a gym day |
+| --- | --- | --- |
+| before | 8 required / 7 recorded | **4 / 4**, and **0 of 3** club-night dates recorded any lifting |
+| after | 8 required / 7 recorded | **8 / 7**, and **3 of 3** recorded |
+
+`LAW-a-combined-day-credits-both-components` born GUARDED. Registry
+**139 rows / 118 guarded / 21 UNENFORCED** — unchanged UNENFORCED.
+
+## THE COMBINED-TREE MEASUREMENT
+
+**Temporary worktree `scratchpad/wt-integration`, branch
+`measure/settings-plus-coach-DO-NOT-MERGE`, tip `e585ed5d`** = Settings
+`ffaabdfb` + Coach/Product `f5c27c44`. Never merged anywhere; the branch name
+says so. Conflicts in four files, resolved keeping BOTH lanes' work.
+
+### ⚠ MY FIRST RESOLUTION WAS WRONG AND IT NEARLY BECAME A FALSE FINDING
+
+The combined tree first failed **13 athlete-journey cells, 5
+settings-persistence cells, and threw in coach-weekly-reduction**. That is not
+an interaction — it was my merge. The Coach lane had EXTRACTED
+`rebuildLocalWeek`'s step-1 generation into `generateProgramForProfile` /
+`...FromStore`, so their side of that hunk was EMPTY; taking "mine" re-inserted
+the inline call *inside* their extracted one, with duplicate `todayISO` and
+`blockNumber` keys. **Each candidate is green alone** — Settings 138/0 + 64/0,
+Coach 64/0 + 62/0 — which is what forced the re-examination. Corrected, all
+three gates are green on the combined tree: **138/0, 64/0, 62/0**.
+
+### THE FIVE QUESTIONS, ANSWERED WITH A FOUR-WAY CONTROL
+
+One `confirmWeeklyCommitment` acceptance, instrumented on the module objects so
+production call sites are intercepted, on the same worn athlete in four trees.
+
+| | gen 1 blockNumber | gen 1 history | gen 2 blockNumber | publish 1 → 2 changed | preview vs accepted, LOADS |
+| --- | --- | --- | --- | --- | --- |
+| base `main` `9f081efa` | `undefined` | **ABSENT** | **1** | **8 of 44** | — |
+| Coach alone `f5c27c44` | `undefined` | **ABSENT** | **1** | **8 of 44** | **20 of 44 differ** |
+| Settings alone `ffaabdfb` | 2 | present | 2 | **0 of 44** | — |
+| **Combined `e585ed5d`** | **2** | **present** | **2** | **0 of 44** | **0 differ** |
+
+**1 — HOW MANY GENERATION AND PUBLISH EVENTS.** **Two of each, on every tree.**
+Generation 1 is the transaction's own build (`recordSelections: 'author'`);
+generation 2 is `settleDerivedWorldAfterDecision` → `rebuildDerivedWorld` →
+`quiescentBoot` (`'replay'`), publishing as `quiescent_boot`.
+
+**2 — DOES THE SHARED INPUT OWNER REMOVE THE 60-OF-90 DIFFERENCE. YES.** On the
+Coach candidate alone the preview and the delivered program differ in **20 of 44
+loads, 8 identities, 24 full prescriptions**. Combined with this branch:
+**0, 0, 0.** Every one of the preview's 44 prescriptions appears identically in
+the accepted program. The second publish also stops rewriting the first: **8 of
+44 → 0 of 44.**
+
+**3 — PREVIEW = ACCEPTED = RELAUNCHED.** **accepted vs relaunched: 0 differences
+on structure, exercise identity, prescribed loads and full prescription** —
+byte-identical. **preview vs accepted: 0 disagreements**, and the accepted
+program carries **4 rows the preview did not show**. Those four are the
+athlete's excluded lift, below.
+
+**4 — IS EACH INPUT SUPPLIED EXACTLY ONCE FROM THE CANONICAL OWNER. YES.**
+`statedProgressionInputs` is called **exactly twice — once per generation** — and
+both calls return identical values: `blockNumber=2`, `acceptedBlocks=2`,
+`feedbackDays=19`, `overrideDays=7`. No caller hand-builds `progressionHistory`
+any more; the Coach lane's extraction became the sixth caller and reads the same
+owner.
+
+**5 — IS THE SECOND GENERATION AN OBSOLETE AUTHORITY TO DELETE. NO — AND ON THIS
+BRANCH IT IS ALSO NO LONGER AN AUTHORITY THAT DISAGREES.** It is R5.1's settle,
+the mechanism that makes *"the week after a tap is the week after a relaunch"*
+true by construction, and question 3's byte-identity is its product. On `main`
+and on the Coach candidate it silently rewrote **8 of 44** of the first publish's
+prescriptions; on this branch it rewrites **0**. Deleting it would delete the
+property, so it stays — what needed removing was the disagreement, and the shared
+input owner removed it.
+
+## THE ONE RESIDUE, MEASURED AND NOT FIXED
+
+Every settings change puts the athlete's excluded lift back into the **STORED**
+program while the athlete never **SEES** it — the read-time projection filters
+it:
+
+| change | visible | stored |
+| --- | --- | --- |
+| phase In→Pre | 0 → 0 | 0 → **6** |
+| game Sat→Sun · club Tue+Thu→Tue · two gym-day changes | 0 → 0 | 0 → **4** |
+
+Pre-existing at `9f081efa` (the base control reproduces it), caused by neither
+candidate, and not athlete-facing. Under the north star the stored program is
+itself a derived artefact regenerated at every boot while the exclusion is the
+stored DECISION, so this is the architecture working. **⚠ WHAT IT PUTS AT RISK:**
+anything reading the STORED program rather than the projection sees the excluded
+row — `deriveAcceptedBlockStrengthRequirement` is exactly such a reader. Not
+reachable on any world this suite builds; named so the next reader of that
+function does not rediscover it.
+
+**The visible property is now pinned on ALL eleven doors** (it was pinned on the
+phase change alone).
+
+## FINAL MUTATION TALLY — 15 SUBJECTS, 15 KILLED, 0 UNPROVEN
+
+The earlier "11 run / 9 killed" was ambiguous. Stated by SUBJECT — the thing
+being proven — at final state:
+
+| # | subject | final |
+| --- | --- | --- |
+| 1 | the settings door states the recorded history | M1 **KILLED** (10) |
+| 2 | the dated-fact door states it too | M2 **KILLED** (2) |
+| 3 | the fresh-install reset is total | M3 **KILLED** (throws by name) |
+| 4 | the block-state ladder's accepted-record arm | M4 **KILLED** (16) |
+| 5 | a typed refusal is carried by its code | M5 **KILLED** (2) |
+| 6 | the scheduler refusal has athlete copy | M6 **KILLED** (2) |
+| 7 | the exclusion census is not blind | M7 **KILLED** |
+| 8 | **the restart really happens** | M8 SURVIVED → guard added → M8b **KILLED** (14) |
+| 9 | **"this session only" is a DAY** | M9 missed → gap found → M9b **KILLED** (1) |
+| 10 | the permanent kit answer reaches the profile | M10 **KILLED** (4) |
+| 11 | the one-sided denominator "fix" is refused | M11 **KILLED** (1) |
+| 12 | the club-night lifts are recorded | M12 **KILLED** (3) |
+| 13 | the denominator is component-aware | M13 **KILLED** (2) |
+| 14 | the predicate discriminates | M14 **KILLED** (2) |
+| 15 | the excluded lift stays off the week | M15 **KILLED** (8) |
+
+**No subject remains unproven.** Subjects 8 and 9 required a guard to be ADDED
+before their mutation could kill; the first attempt on each is recorded as the
+hole it exposed, not as a pass. Every mutation was restored from an own-backup
+and the tree verified byte-identical after each.
+
+## FINAL CONTROL COMPARISON — at tip `143d0f0f`
+
+**⚠ AND THE FIRST READING OF IT WAS WRONG, CAUGHT BY A SANITY CHECK.** I first
+read `branch 31 of 397` against `control 184 of 396` — 153 suites apparently
+repaired. `test:law-registry` was in that "repaired" list and I had run it
+minutes earlier at 12/2, which cannot be green. The branch sweep had **not
+finished**; I had read a partial failure file. Re-read after completion, and
+with the control **re-swept at the same moment** rather than trusted from
+earlier in the session:
+
+| instrument | control @ `9f081efa` | branch @ `143d0f0f` |
+| --- | --- | --- |
+| `scripts/sweep.sh`, full, untruncated, both complete | **184 of 396** | **184 of 397** |
+| GAINED | — | **0** |
+| LOST | — | **0** |
+| failing sets | **IDENTICAL name for name** | |
+| `test:compile` | RED, 78 lines | RED, **diff EMPTY** |
+| `test:law-registry` | 136 / 115 / 21 | 139 / 118 / **21** |
+| `test:settings-persistence` | (does not exist) | **143 passed, 0 failed** |
+
+## NOT COVERED — session 2 additions
+
+- **The combined tree is a MEASUREMENT, not a merge candidate.** It carries my
+  merge resolutions, which nobody has reviewed; whoever integrates for real
+  should redo them rather than take `e585ed5d`.
+- **The Coach lane's own findings B-1..B-5 were not re-verified**, only B-3/B-4.
+- **The stored-vs-visible exclusion residue is named, not fixed.**
+- **Still no glass.** Every number here is headless.
