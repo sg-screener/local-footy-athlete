@@ -317,6 +317,98 @@ async function main(): Promise<void> {
   ok('and the swap created NO exclusion', getAthleteExclusions().length === 0,
     JSON.stringify(getAthleteExclusions()));
 
+  /* ═══ RANKED-CHOICE QUALITY ══════════════════════════════════════════════
+   *
+   * Sam, 2026-08-19, looking at the menu offered for `Back Squat`:
+   * *"Bodyweight Squat is not a normal Back Squat alternative for a moderate or
+   * experienced full-gym athlete. Breathing Reset is not a Back Squat
+   * replacement. … Offer up to two Closest matches, two Similar options, and two
+   * genuinely Other useful options. Show fewer choices instead of padding the
+   * list with weak or irrelevant options. Regression exercises only appear when
+   * an Equipment or Injury constraint justifies them."*
+   *
+   * ⚠ **EVERY ONE OF THOSE OPTIONS WAS LEGAL.** `assessTapSwapCandidateSafety`
+   * was doing its job; legality is simply not the same question as *would this
+   * athlete ever choose it*. So these cells are about USEFULNESS, and the last
+   * one is the control: the same regressions must still appear when a constraint
+   * actually justifies them, or the rule has become a blanket ban.
+   */
+  console.log('\n[RANKED CHOICES] the menu an unconstrained athlete is offered');
+  const { equipmentClassFor } = require('../utils/loadEstimation');
+
+  const freeEnv = quiet(() => resolveTapSwapEnvironment({
+    date: TARGET, profile: useProfileStore.getState().onboardingData,
+    activeConstraints: [], readinessSignal: null,
+  }));
+  const barbellRow = rowsOn(TARGET).map((r) => r.split('@')[0]!)
+    .find((name) => equipmentClassFor(name) === 'barbell');
+  ok('CONTROL — the session has a BARBELL lift to ask about',
+    Boolean(barbellRow), JSON.stringify(rowsOn(TARGET)));
+
+  /* ⚠ **EVERY LOADED ROW, NOT THE FIRST ONE.** The first cut asked only about
+   * `barbellRow` and mutation M9 — disabling the regression filter outright —
+   * SURVIVED it: that row's alternatives happen to be loaded anyway, so the cell
+   * was green whether the filter ran or not. A guard that cannot see its own
+   * rule being deleted is not guarding it. */
+  const loadedRows = rowsOn(TARGET).map((r) => r.split('@')[0]!)
+    .filter((name) => {
+      const kind = equipmentClassFor(name);
+      return Boolean(kind) && kind !== 'bodyweight';
+    });
+  ok('CONTROL — the session has loaded rows to ask about',
+    loadedRows.length > 0, JSON.stringify(rowsOn(TARGET)));
+  const offered = new Map<string, string[]>();
+  for (const row of loadedRows) {
+    offered.set(row, (quiet(() => getTapSwapChoices({
+      originalExercise: row, reason: 'preference', environment: freeEnv,
+      existingExerciseNames: rowsOn(TARGET).map((r) => r.split('@')[0]!),
+    })) as { name: string | null }[]).map((c) => String(c.name)));
+  }
+  ok('CONTROL — the loaded rows have alternatives at all',
+    [...offered.values()].some((names) => names.length > 0),
+    JSON.stringify([...offered]));
+  const withBodyweight = [...offered].filter(([, names]) =>
+    names.some((name) => equipmentClassFor(name) === 'bodyweight'));
+  ok('no BODYWEIGHT regression is offered for ANY loaded lift',
+    withBodyweight.length === 0, JSON.stringify(withBodyweight));
+  const withFiller = [...offered].filter(([, names]) =>
+    names.includes('Breathing Reset') || names.includes('Easy Bike'));
+  ok('no recovery filler is offered while real training options exist',
+    withFiller.length === 0, JSON.stringify(withFiller));
+  const freeGroups = groupTapSwapChoices(quiet(() => getTapSwapChoices({
+    originalExercise: barbellRow!, reason: 'preference', environment: freeEnv,
+    existingExerciseNames: rowsOn(TARGET).map((r) => r.split('@')[0]!),
+  }))) as { id: string; choices: unknown[] }[];
+  ok('at most two per group, and no empty group is drawn',
+    freeGroups.every((g) => g.choices.length > 0 && g.choices.length <= 2),
+    JSON.stringify(freeGroups.map((g) => [g.id, g.choices.length])));
+
+  /* ⚠ **THE CONTROL THAT MAKES THIS A CONDITION, NOT A BAN.**
+   *
+   * Sam: *"Regression exercises only appear when an Equipment or Injury
+   * constraint justifies them."* — so the same regressions MUST still be
+   * offered once one does. Without this cell the suite would pass just as well
+   * on an app that had stopped offering them at all.
+   *
+   * The first cut faked the constraint by blanking `profile.equipment`, and the
+   * menu did not move: `resolveTapSwapEnvironment` reads `equipmentAnswer`, so
+   * the athlete still had a full gym and the cell was asserting nothing. A real
+   * injury is passed instead.
+   */
+  const injuredEnv = quiet(() => resolveTapSwapEnvironment({
+    date: TARGET, profile: useProfileStore.getState().onboardingData,
+    activeConstraints: [], readinessSignal: null,
+    primaryInjury: { bucket: 'shoulder', severity: 7, seriousSymptoms: false },
+  }));
+  const injuredNames = (quiet(() => getTapSwapChoices({
+    originalExercise: barbellRow!, reason: 'injury_or_pain',
+    environment: injuredEnv, existingExerciseNames: [],
+  })) as { name: string | null }[]).map((c) => String(c.name));
+  ok('but WITH an injury the gentler options are allowed back',
+    injuredNames.some((name) => equipmentClassFor(name) === 'bodyweight'
+      || name === 'Breathing Reset' || name === 'Easy Bike'),
+    `${barbellRow} with a shoulder injury -> ${JSON.stringify(injuredNames)}`);
+
   report();
 }
 

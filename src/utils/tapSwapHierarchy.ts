@@ -234,6 +234,64 @@ function isRecoveryName(name: string): boolean {
 }
 
 /**
+ * ── A REGRESSION IS AN ANSWER TO A CONSTRAINT, NOT TO A PREFERENCE ──────────
+ *
+ * Sam, 2026-08-19, on the swap menu offered for `Back Squat` to a full-gym
+ * athlete with no injury: *"Bodyweight Squat is not a normal Back Squat
+ * alternative for a moderate or experienced full-gym athlete. Breathing Reset
+ * is not a Back Squat replacement. … Regression exercises only appear when an
+ * Equipment or Injury constraint justifies them."*
+ *
+ * **THE LADDER WAS ALREADY RIGHT ABOUT SAFETY AND WRONG ABOUT USEFULNESS.**
+ * Everything it offered was legal — that is what `assessTapSwapCandidateSafety`
+ * guarantees — and legality is not the same question as *"would this athlete
+ * ever choose it instead"*. `Breathing Reset` was appended unconditionally
+ * whenever no recovery-tier option was already present, so every ordinary swap
+ * ended with a breathing drill as its third option.
+ */
+function constraintJustifiesRegression(environment: TapSwapEnvironment): boolean {
+  return environment.hasEquipmentConstraint
+    || environment.medicalStop
+    || environment.primaryInjury !== null
+    || Object.keys(environment.activeInjuries).length > 0;
+}
+
+/**
+ * Drop bodyweight stand-ins for a LOADED lift when nothing justifies them.
+ *
+ * The test is the ORIGINAL row, not the athlete's profile: swapping one
+ * bodyweight row (`Band Pallof Press`) for another is an ordinary sideways move
+ * and must keep working, while swapping a barbell lift for a bodyweight version
+ * of itself is the regression Sam is describing.
+ *
+ * ⚠ **IT NEVER EMPTIES THE MENU.** If filtering would leave nothing, the
+ * unfiltered list stands — at that point the bodyweight options are not padding,
+ * they are the only legal answers, and saying so is better than an empty sheet.
+ */
+function withoutUnjustifiedRegressions(
+  choices: readonly TapSwapChoice[],
+  originalExercise: string,
+  environment: TapSwapEnvironment,
+): TapSwapChoice[] {
+  const all = [...choices];
+  if (constraintJustifiesRegression(environment)) return all;
+  /* ⚠ **`equipmentClassFor` RETURNS THE STRING `'bodyweight'`, NOT `null`.**
+   * The first cut tested truthiness and therefore filtered NOTHING — the probe
+   * still offered `Bodyweight Squat`, which is the exact row Sam named. Only
+   * `Breathing Reset` answers `null`. A loaded row is one with a class that is
+   * not `'bodyweight'`. */
+  const originalClass = equipmentForExercise(originalExercise);
+  if (!originalClass || originalClass === 'bodyweight') return all;
+  const kept = all.filter((choice) => {
+    if (!choice.name) return false;
+    if (choice.hierarchyTier === 'recovery_easy_conditioning') return false;
+    if (isRecoveryName(choice.name)) return false;
+    return equipmentForExercise(choice.name) !== 'bodyweight';
+  });
+  return kept.length > 0 ? kept : all;
+}
+
+/**
  * Final safety check used both while ranking suggestions and immediately
  * before the typed program-control action writes an override.
  */
@@ -312,10 +370,26 @@ function patternChoices(
   environment: TapSwapEnvironment,
   avoidNames: readonly string[],
 ): TapSwapChoice[] {
+  /**
+   * ⚠ **FATIGUE PERMISSION FOLLOWS THE ATHLETE'S STATE, NOT A QUESTION WE NO
+   * LONGER ASK.**
+   *
+   * Sam, 2026-08-19: *"Swap means only: I want a different exercise."* With the
+   * reason screen deleted, every ordinary swap arrives as `preference`, and
+   * `allowHigherFatigue: reason === 'too_easy'` then hid every harder option
+   * from the only reason left. MEASURED (`npm run probe:swap-choices`): `RDLs`
+   * offered exactly ONE alternative under `preference` while `Deadlift` and
+   * `Trap Bar Deadlift` — both barbell, both obvious — sat behind the
+   * `too_easy` branch a healthy athlete could no longer reach.
+   *
+   * An unconstrained athlete may be offered a harder lift; a constrained one may
+   * not, and that is the same predicate the regression filter uses, so the two
+   * rules cannot drift apart.
+   */
   const candidates = getSubstituteCandidates(originalExercise, {
     activeInjuries: environment.activeInjuries,
     availableEquipment: environment.availableEquipment,
-    allowHigherFatigue: reason === 'too_easy',
+    allowHigherFatigue: reason === 'too_easy' || !constraintJustifiesRegression(environment),
   });
   const ordered = reason === 'too_easy'
     ? [...candidates].sort((left, right) =>
@@ -356,6 +430,39 @@ function registryPatternChoices(
         return (
           LOAD_RANK[rightTags.load] - LOAD_RANK[leftTags.load] ||
           FATIGUE_RANK[rightTags.fatigue] - FATIGUE_RANK[leftTags.fatigue] ||
+          left[0].localeCompare(right[0])
+        );
+      }
+      /**
+       * ⚠ **CLOSEST, NOT EASIEST — AND EASIEST-FIRST WAS THE REAL BIAS.**
+       *
+       * Sam, 2026-08-19: *"Bodyweight Squat is not a normal Back Squat
+       * alternative for a moderate or experienced full-gym athlete … Regression
+       * exercises only appear when an Equipment or Injury constraint justifies
+       * them."*
+       *
+       * This branch sorted by LOWEST fatigue then LOWEST load and took the top
+       * two, so the default same-pattern menu was the two GENTLEST options in
+       * the pattern. MEASURED (`npm run probe:swap-choices`): `RDLs` offered
+       * `Glute Bridge` and `Single-Leg RDL` while `Deadlift` and
+       * `Trap Bar Deadlift` — same pattern, same barbell, obviously closer —
+       * were only reachable through the `too_easy` branch. Filtering the
+       * bodyweight result out afterwards left ONE option; the ordering, not the
+       * filter, was the defect.
+       *
+       * An unconstrained athlete gets the NEAREST load and fatigue to what they
+       * are replacing. A constrained one keeps easiest-first, because for them
+       * the gentler option is the useful one — the same predicate the
+       * regression filter uses, so the two cannot drift apart.
+       */
+      if (!constraintJustifiesRegression(environment)) {
+        const originalLoad = LOAD_RANK[originalTags.load];
+        const originalFatigue = FATIGUE_RANK[originalTags.fatigue];
+        return (
+          Math.abs(LOAD_RANK[leftTags.load] - originalLoad)
+            - Math.abs(LOAD_RANK[rightTags.load] - originalLoad) ||
+          Math.abs(FATIGUE_RANK[leftTags.fatigue] - originalFatigue)
+            - Math.abs(FATIGUE_RANK[rightTags.fatigue] - originalFatigue) ||
           left[0].localeCompare(right[0])
         );
       }
@@ -482,10 +589,15 @@ export function getTapSwapChoices(args: {
     ];
   }
 
-  const choices = dedupeChoices(trainingChoices);
+  const choices = withoutUnjustifiedRegressions(
+    dedupeChoices(trainingChoices),
+    args.originalExercise,
+    environment,
+  );
   if (choices.length > 0) {
     if (!choices.some((choice) => choice.hierarchyTier === 'recovery_easy_conditioning') &&
-        args.recoveryAllowed !== false) {
+        args.recoveryAllowed !== false &&
+        constraintJustifiesRegression(environment)) {
       choices.push(recoveryChoice(environment));
     }
     return dedupeChoices(choices);

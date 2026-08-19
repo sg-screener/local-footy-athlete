@@ -1404,3 +1404,80 @@ injury suites were then run at HEAD and again with this work, and are identical*
 are all pre-existing and are NOT caused here.
 
 Agent: rebuild
+
+---
+
+# SWAP IS ONE QUESTION NOW — and the menu stopped padding itself
+
+**Sam's correction (2026-08-19):** *"Delete the entire 'Why do you want to swap
+it?' step. Swap means only: I want a different exercise. … Equipment and Injury
+already have separate actions, so do not ask about either inside Swap. Too
+hard/easy also does not belong here."* Plus the option-quality list:
+`Bodyweight Squat` is not a Back Squat alternative for a full-gym athlete,
+`Breathing Reset` is not a Back Squat replacement, up to 2+2+2, **show fewer
+rather than pad**, and regressions only when Equipment or Injury justify them.
+
+## THE ROUTE — one question, then the answer
+
+`pick_exercise(swap)` now calls the swap preparer directly. **Deleted:** the
+`swap_reason` step kind, its render case, title and subtitle; `SWAP_REASONS`;
+`SWAP_REASON_ICON` (six icons for six labels); and four of the six reason values.
+`'Injury / pain'` survives ONLY because the separate Injury action routes through
+the same suggestion owner and needs the injury ladder — it is set by that flow,
+never chosen. Equipment and Injury doors are untouched.
+
+## THE QUALITY — and the ORDERING was the real defect
+
+Three causes, and the first two were the obvious ones:
+
+1. **`recoveryChoice` was appended unconditionally** whenever no recovery-tier
+   option was present, so every ordinary swap ended with a breathing drill.
+   Now appended only when a constraint justifies it.
+2. **Regressions were never filtered.** Now a bodyweight stand-in for a LOADED
+   row is dropped unless Equipment/Injury justifies it. ⚠ The first cut tested
+   `Boolean(equipmentForExercise(name))` and filtered NOTHING —
+   `equipmentClassFor` returns the STRING `'bodyweight'`, not `null`; only
+   `Breathing Reset` answers null.
+3. ⚠ **THE REGISTRY RANKED SAME-PATTERN OPTIONS EASIEST-FIRST.** It sorted by
+   lowest fatigue then lowest load and took the top two, so the default menu was
+   the two GENTLEST options in the pattern. `RDLs` offered `Glute Bridge` while
+   `Deadlift` and `Trap Bar Deadlift` sat behind the `too_easy` branch a healthy
+   athlete could no longer reach. **Filtering the bodyweight result out left ONE
+   option; the ordering, not the filter, was the defect.** An unconstrained
+   athlete now gets the NEAREST load and fatigue; a constrained one keeps
+   easiest-first.
+
+`allowHigherFatigue` also followed the deleted question, so it now follows the
+athlete's state — the same predicate as the regression filter, so they cannot
+drift apart.
+
+**MEASURED (`npm run probe:swap-choices`), preference, full gym, no injury:**
+
+| row | before | after |
+| --- | --- | --- |
+| RDLs | `Glute Bridge`, `Single-Leg RDL`, + `Breathing Reset` | `Single-Leg RDL`, `Hip Thrusts`, `Kettlebell Swings` |
+| Bulgarian Split Squats | incl. `Bodyweight Squat` | `Walking Lunges`, `Reverse Lunges`, `Back Squat` |
+| Barbell Row | incl. `Inverted Row (Bodyweight)` | `Single-Arm DB Row`, `Chest Supported Row` |
+
+## GATES
+
+`test:exercise-swap-choices` 31/31 (six new quality cells, one of them the
+control proving the rule is CONDITIONAL — the regressions must still appear once
+an injury justifies them, or the rule has become a blanket ban).
+`test:exercise-edit-entry-surface` 39/42 — **the three failures are pre-existing**
+(header icons and row-actions, deleted by the hub commit); measured identical at
+HEAD. Five new route cells added there.
+
+## MUTATIONS
+
+| # | mutation | what reddened |
+| --- | --- | --- |
+| M9 | the regression filter is disabled | `no BODYWEIGHT regression … for ANY loaded lift` |
+| M11 | recovery re-appended unconditionally | `no recovery filler … while real training options exist` |
+
+⚠ **M9 SURVIVED THE FIRST VERSION OF THE GUARD**, which asked only about the
+FIRST barbell row — whose alternatives are all loaded anyway. The cell was green
+whether the filter ran or not. It now asks about **every** loaded row. A guard
+that cannot see its own rule being deleted is not guarding it.
+
+Agent: rebuild

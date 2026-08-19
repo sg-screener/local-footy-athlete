@@ -179,13 +179,19 @@ type SuggestedSwap =
  * drift apart.
  */
 type ExercisePickAction = 'injury' | 'swap' | 'remove';
-type SwapReason =
-  | 'No equipment'
-  | 'Injury / pain'
-  | 'Too hard'
-  | 'Too easy'
-  | "Don't like it"
-  | 'Other';
+/**
+ * ⚠ **FOUR OF THESE SIX WERE DELETED WITH THE REASON SCREEN (2026-08-19).**
+ *
+ * Sam: *"Delete the entire 'Why do you want to swap it?' step. Swap means only:
+ * I want a different exercise. … Equipment and Injury already have separate
+ * actions, so do not ask about either inside Swap. Too hard/easy also does not
+ * belong here."*
+ *
+ * `'Preference'` is what every athlete-initiated swap now is. `'Injury / pain'`
+ * survives because the INJURY action still routes through the same suggestion
+ * owner and needs the injury ladder — it is set by that flow, never chosen.
+ */
+type SwapReason = 'Preference' | 'Injury / pain';
 type AddExerciseKind =
   | 'Upper body'
   | 'Lower body'
@@ -242,7 +248,6 @@ type FutureScopeStep =
 type ExerciseEditStep =
   | { kind: 'closed' }
   | { kind: 'pick_exercise'; action: ExercisePickAction }
-  | { kind: 'swap_reason'; exercise: EditableExercise }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
   /**
    * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
@@ -336,14 +341,7 @@ const EXCLUSION_SCOPE_TEST_ID: Record<ExerciseExclusionScope, 'today' | 'block' 
   until_changed: 'future',
 };
 
-const SWAP_REASONS: SwapReason[] = [
-  'No equipment',
-  'Injury / pain',
-  'Too hard',
-  'Too easy',
-  "Don't like it",
-  'Other',
-];
+/* `SWAP_REASONS` DELETED with the `swap_reason` step it fed (2026-08-19). */
 
 /* `ADD_EXERCISE_KINDS` DELETED with the `add_kind` step it fed (2026-08-19).
  * `AddExerciseKind` itself survives: `confirm_add` still carries one, and the
@@ -376,12 +374,7 @@ function buildEditableExercises(workout: any, isTeamOnly: boolean): EditableExer
 }
 
 function tapSwapReason(reason: SwapReason): TapSwapReason {
-  if (reason === 'No equipment') return 'no_equipment';
-  if (reason === 'Injury / pain') return 'injury_or_pain';
-  if (reason === 'Too hard') return 'too_hard';
-  if (reason === 'Too easy') return 'too_easy';
-  if (reason === "Don't like it") return 'preference';
-  return 'other';
+  return reason === 'Injury / pain' ? 'injury_or_pain' : 'preference';
 }
 
 function suggestedSwapFromChoice(
@@ -748,12 +741,6 @@ export default function DayWorkoutScreenV2() {
   // step. The row already tells us which exercise AND which action, so
   // each opener lands straight on the guided step that action starts —
   // no intermediate menu to choose from.
-  const openExerciseSwap = React.useCallback((exercise: any) => {
-    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
-    if (!editable) return;
-    setExerciseEditStep({ kind: 'swap_reason', exercise: editable });
-  }, []);
-
   const openExerciseRemove = React.useCallback((exercise: any) => {
     const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
     if (!editable) return;
@@ -802,11 +789,8 @@ export default function DayWorkoutScreenV2() {
   );
 
   const prepareSwap = React.useCallback(
-    (exercise: EditableExercise, reason: SwapReason) => {
-      if (reason === 'Injury / pain') {
-        openExerciseInjuryFlow(exercise);
-        return;
-      }
+    (exercise: EditableExercise) => {
+      const reason: SwapReason = 'Preference';
       const dateISO = date ?? todayISOLocal();
       const environment = resolveTapSwapEnvironment({
         date: dateISO,
@@ -851,6 +835,15 @@ export default function DayWorkoutScreenV2() {
     },
     [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
   );
+
+  // Declared AFTER `prepareSwap`, which it calls: this is a const arrow, not a
+  // hoisted function, so the earlier position was a use-before-declaration.
+  const openExerciseSwap = React.useCallback((exercise: any) => {
+    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
+    if (!editable) return;
+    prepareSwap(editable);
+  }, [prepareSwap]);
+
 
   /**
    * THE LEGAL ADD MENU FOR THIS ATHLETE, ON THIS DAY.
@@ -1796,7 +1789,7 @@ export default function DayWorkoutScreenV2() {
         editableExercises={editableExercises}
         onClose={closeExerciseEditor}
         onStep={setExerciseEditStep}
-        onSwapReason={prepareSwap}
+        onSwapPick={prepareSwap}
         onInjuryStart={openExerciseInjuryFlow}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
@@ -3369,7 +3362,8 @@ interface ExerciseEditSheetProps {
   editableExercises: EditableExercise[];
   onClose: () => void;
   onStep: (step: ExerciseEditStep) => void;
-  onSwapReason: (exercise: EditableExercise, reason: SwapReason) => void;
+  /** The athlete picked a row to swap. Goes straight to the ranked menu. */
+  onSwapPick: (exercise: EditableExercise) => void;
   onAddGroup: (label: string) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
@@ -3388,7 +3382,7 @@ function ExerciseEditSheet({
   editableExercises,
   onClose,
   onStep,
-  onSwapReason,
+  onSwapPick,
   onInjuryStart,
   onApplySwapToday,
   onApplyAddToday,
@@ -3484,7 +3478,10 @@ function ExerciseEditSheet({
         }
         onPress={() => {
           if (action === 'injury') onInjuryStart(exercise);
-          else if (action === 'swap') onStep({ kind: 'swap_reason', exercise });
+          // SWAP MEANS ONLY "I WANT A DIFFERENT EXERCISE" (Sam, 2026-08-19), so
+          // the pick goes STRAIGHT to the ranked alternatives. Equipment and
+          // Injury are their own actions on the hub and ask their own questions.
+          else if (action === 'swap') onSwapPick(exercise);
           else onStep({ kind: 'confirm_remove', exercise });
         }}
       />
@@ -3495,19 +3492,6 @@ function ExerciseEditSheet({
     switch (step.kind) {
       case 'pick_exercise':
         return <>{renderExercisePicker(step.action)}</>;
-      case 'swap_reason':
-        return (
-          <>
-            {SWAP_REASONS.map((reason) => (
-              <ExerciseSheetOption
-                key={reason}
-                label={reason}
-                icon={SWAP_REASON_ICON[reason](OPTION_ICON_ACCENT)}
-                onPress={() => onSwapReason(step.exercise, reason)}
-              />
-            ))}
-          </>
-        );
       /* ⚠ **`add_kind` IS DELETED — 2026-08-19.**
        *
        * Seven hand-written labels over a table of TWELVE suggestions that asked
@@ -3838,8 +3822,6 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return step.action === 'swap' ? 'Swap which exercise?'
         : step.action === 'remove' ? 'Remove which exercise?'
           : 'Which exercise?';
-    case 'swap_reason':
-      return 'Why do you want to swap it?';
     case 'add_group':
       return 'What do you want to add?';
     case 'add_pick':
@@ -3873,7 +3855,6 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
   switch (step.kind) {
     case 'pick_exercise':
       return 'Team training entries are left alone.';
-    case 'swap_reason':
     case 'confirm_remove':
     case 'confirm_swap':
       return displayExerciseName(step.exercise.name);
@@ -4030,28 +4011,8 @@ const otherOptionIcon = (color: string) => optionGlyph(color, (
 ));
 /* `ADD_EXERCISE_KIND_ICON` DELETED with the `add_kind` step it decorated
  * (2026-08-19). Seven icons for seven labels that no longer exist. */
-const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> = {
-  /** No equipment — the plain prohibited sign selected in the audit. */
-  'No equipment': (color) => <LfaIcon name="no-equipment" color={color} />,
-  /** Injury / pain — the same warning triangle `WeekReadinessSheet`'s
-   * "Something hurts" row draws, redrawn here. */
-  'Injury / pain': (color) => optionGlyph(color, (
-    <><Path d="M12 9v4" /><Path d="M12 17h.01" />
-      <Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>
-  )),
-  /** Too hard — a line trending up and off the top. */
-  'Too hard': (color) => optionGlyph(color, (
-    <><Path d="M3 17l6-6 4 4 8-8" /><Path d="M15 7h6v6" /></>
-  )),
-  /** Too easy — the mirrored line, trending down. Distinct DIRECTION from
-   * "Too hard", not just a different colour on the same arrow. */
-  'Too easy': (color) => optionGlyph(color, (
-    <><Path d="M3 7l6 6 4-4 8 8" /><Path d="M15 17h6v-6" /></>
-  )),
-  /** Don't like it — a recognisable hand giving thumbs down. */
-  "Don't like it": (color) => <LfaIcon name="thumbs-down" color={color} />,
-  Other: otherOptionIcon,
-};
+/* `SWAP_REASON_ICON` DELETED with the `swap_reason` step it decorated
+ * (2026-08-19). Six icons for six labels that no longer exist. */
 /** future_scope — "Today only" vs. "Future weeks too": a blank calendar day
  * (same family as `PlanChangeSheet`'s move-destination day glyph) vs. that
  * same day with a repeat loop, because the row is asking whether the change
