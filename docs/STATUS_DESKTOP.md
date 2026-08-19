@@ -118,6 +118,35 @@ Every replacement uses its own history/estimate and never inherits the outgoing
 exercise's load. Swap choices and cause-driven replacements are filtered by the
 current equipment, injury, exclusions and session-safety rules.
 
+## 2026-08-19 — LOCKED NEXT: ACCELERATED PARALLEL FINISH PLAN
+
+**Trigger:** start this plan as soon as the five-action session-change mission
+is genuinely closed: Equipment/Injury/Add/Remove/Swap all work through the
+labelled hub, Swap and Restore survive restart together, the combined flow is
+green, and simulator evidence exists.
+
+1. Integrate one clean checkpoint before starting parallel work.
+2. Use separate worktrees and strict file ownership.
+3. Run at most these three lanes:
+   - **Programming:** scheduler/game rules → conditioning/power → travel and
+     zero-equipment behaviour.
+   - **Product:** Coach work → athlete-facing display cleanup and UI polish.
+   - **QA:** real scenarios, release matrix, simulator and phone-flow
+     preparation; it does not author programming logic.
+4. Fresh chat per major unit; commits are internal checkpoints, not reasons to
+   stop and report.
+5. Batch all non-blocking questions at the end. A blocked lane moves to another
+   owned item rather than stopping the whole finish plan.
+6. Use targeted checks during a slice and the consolidated matrix at completed
+   boundaries. The physical phone remains the final instrument.
+7. Keep the standing hidden-authority watch active in every lane: delete an
+   executing obsolete authority that interferes; never add compatibility around
+   it.
+
+This plan accelerates calendar time, not by making three agents edit the same
+owners, but by separating programming, product and verification work that can
+genuinely proceed independently.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
