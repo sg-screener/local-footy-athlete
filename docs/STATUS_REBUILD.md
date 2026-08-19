@@ -445,7 +445,22 @@ second representation of a decision that already has one.
 Agent: rebuild
 
 
-## THE REMOVE DESIGN, PROVEN BEFORE A LINE OF PRODUCTION CODE
+## ⚠⚠ VOID — THE SECTION BELOW PROVED THE WRONG SEMANTICS
+
+**Sam's correction, 2026-08-19, arrived before this was built and it reverses the
+design:** *"Remove means simply remove the selected exercise/component. Nothing
+replaces it. The session may have fewer exercises and may lose that movement
+pattern. **Do not ask the composer to fill the empty slot.**"*
+
+The experiment below is left in place because it is a true measurement and
+because what it proves is now a HAZARD rather than a plan: a one-week scoped
+recompose **fills the hole** — `Deadlift@77.5` walked into the hinge slot. That
+is exactly what Remove must not do. **The composer-recompose lane is therefore
+the wrong owner for Remove**, and is now the thing a guard must forbid.
+
+**It stays right for EQUIPMENT and INJURY**, where a replacement IS the contract.
+
+## THE REMOVE DESIGN, PROVEN BEFORE A LINE OF PRODUCTION CODE (SUPERSEDED)
 
 `npm run probe:removal-design`. Claim under test: with the exclusion STORED, a
 **one-week** scoped regeneration makes the composer substitute a legal
@@ -502,5 +517,77 @@ careful pass:
 - **a `Workout` carries `dayOfWeek`, not a date.** The first reader looked for
   `workout.date`, found nothing, and printed `(date not found in generated
   program)` — which reads exactly like the recompose failing. It had not.
+
+Agent: rebuild
+
+
+---
+
+# 2026-08-19 — REMOVE, RE-DIAGNOSED UNDER SAM'S CORRECTED SEMANTICS
+
+## THE FIVE MEANINGS, AS RULED
+
+| action | meaning | replacement? |
+| --- | --- | --- |
+| **Remove** | take the exercise out | **NO — nothing replaces it; the pattern may be lost** |
+| **Swap** | the athlete wants a different exercise | yes, and they choose it from up to six ranked legal options in three labelled groups |
+| **Add** | add a legal exercise/mobility/conditioning item | nothing is removed |
+| **Equipment** | cannot be done with today's kit | same exercise on another legal implement, else the fallback ladder |
+| **Injury** | the movement is unsafe | closest safe replacement, else an honest omission |
+
+## WHAT THIS CHANGES ABOUT THE DIAGNOSIS
+
+**The visible OUTCOME of today's Remove is already correct.** `5 rows -> 4`,
+nothing put back, other days untouched — that is now the specification, not a
+defect. My previous checkpoint listed *"no same-pattern replacement"* as
+Remove's first defect. **It is not a defect. Struck.**
+
+**What remains wrong is the MECHANISM and everything downstream of it:**
+
+1. **It bypasses the accepted-state transaction.** `remove_exercise` ->
+   `removeExerciseAtDate` -> `writeCoachOverride(date, workout-minus-the-row)`.
+   The visible week is patched directly. Deleted in this mission regardless of
+   semantics — Sam kept this instruction in the correction.
+2. **`this_block` and `until_restored` reach nothing past today.** Both return
+   `rebuildRequired: true` and nothing acts on it.
+3. **Undo does not restore the removed item.** The decision is deleted; the
+   override still stands. Sam's requirement is *"Undo restores the exact removed
+   item"* — the exact one, which suits a removal that never chose a replacement.
+4. **No typed refusal path.**
+
+## THE ONE QUESTION THAT DECIDED BUILDABILITY, ASKED FIRST
+
+*"Validation must not quietly force-fill an athlete-authorised removal."* So
+before building: take the real accepted week, drop a row the way a removal would,
+and put it through the real write-validation boundary.
+
+```
+rows      RDLs, Bulgarian Split Squats, Landmine Press, Barbell Row, Banded Dead Bug
+removing  RDLs — 5 rows -> 4, nothing put back
+assertLiveWorkoutWrite: returned (no throw)
+```
+
+`assertLiveWorkoutWrite` is the exact guard `removeExerciseAtDate` already calls
+before it writes, and **it accepts a session with a row gone and a pattern
+missing.** The athlete's removal can survive the write boundary.
+
+⚠ **AND THE OTHER SIX "THREW" LINES IN THAT RUN ARE MY ARGUMENT SHAPES, NOT
+REFUSALS** — `Cannot read properties of undefined (reading 'microcycles')` is a
+probe handing a validator the wrong object, and reporting it as "validation
+refuses removals" would have been a manufactured finding. Only the one assertion
+that received well-formed arguments carries signal, and it is the relevant one.
+
+## THE BUILD, RESTATED
+
+canonical removal decision (`athletePreferencesStore.exclusions` via
+`exerciseExclusionOwner` — scoped today / this block / until restored)
+-> **applied as a REMOVAL over the accepted week, not a recompose**
+-> the accepted-state transaction
+-> the projection displays fewer rows.
+
+**`applyUserRemovalConstraintsToWeek` is NOT the owner for this**, and it is worth
+writing down because its name says otherwise: it filters WHOLE DAYS
+(`workouts.filter(w => w.dayOfWeek !== dayOfWeek)`). It owns session deletion,
+not exercise removal.
 
 Agent: rebuild
