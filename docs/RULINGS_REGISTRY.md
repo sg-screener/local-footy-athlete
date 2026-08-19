@@ -2797,7 +2797,14 @@ re-centring the row reds the inverted cell — and nothing else in either case.
 
 ---
 
-**R-112** · *"A gym session completed on the same date as club training counts
+**⚠ THIS ROW WAS WRITTEN AS `R-112` AND RENUMBERED TO `R-114` ON 2026-08-20.**
+Seat `finish-settings-persistence` branched from `9f081efa`, where `R-111` was
+the last row, and seat `sessionui` landed `R-112` and `R-113` on `main` while
+this branch was unmerged. **The landed rows are untouched — a seat does not
+renumber another seat's row — so the UNLANDED one moved.** Anything citing
+`R-112` for the combined-day ruling means this row.
+
+**R-114** · *"A gym session completed on the same date as club training counts
 as a completed gym session. It remains one calendar training day with two
 components, but each completed component keeps its own credit. Club training
 must not erase the completed gym component from the commitment/completion

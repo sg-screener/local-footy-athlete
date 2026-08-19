@@ -1737,7 +1737,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-a-combined-day-credits-both-components',
     law: 'A gym session completed on the same date as club training counts as a completed gym session. One calendar training day, two components, each keeping its own credit — club training may not erase the completed gym component from the commitment/completion denominator. Both sides of that ratio use the SAME component-aware count.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-112 (Sam, 2026-08-20, verbatim)',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-114 (Sam, 2026-08-20, verbatim; written as R-112 and renumbered when sessionui landed its own R-112/R-113 on main)',
     guard: {
       state: 'guarded',
       by: 'test:settings-persistence',

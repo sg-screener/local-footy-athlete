@@ -388,11 +388,13 @@ done.
 
 **Candidate tip `143d0f0f`.** Code changed, so the tip moved from `3c961390`.
 
-## R-112 — COUNT IT
+## R-114 (written as R-112) — COUNT IT
 
 Sam ruled the question this seat carried. The ruling, its three erasure sites,
 the before/after measurement and the guard are in `docs/RULINGS_REGISTRY.md`
-R-112 and in commit `ffaabdfb`. The headline the report must not bury:
+R-114 and in commit `ffaabdfb`. **It was written as `R-112`; seat `sessionui`
+landed its own `R-112` and `R-113` on `main` while this branch was unmerged, so
+the UNLANDED row moved and the landed ones were left alone.** The headline the report must not bury:
 
 > **the athlete's lifts on a club night were never recorded at all.** Not
 > mis-counted — absent. `buildStrengthPerformanceLogs` returned `[]` for a
