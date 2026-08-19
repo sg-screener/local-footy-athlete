@@ -1232,7 +1232,14 @@ function MenuOption({ label, sub, icon, danger, disabled, onPress, testID }: {
       disabled={disabled}
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={testID ?? label}
+      /* R-109 (Sam, 2026-08-20): *"fix the six accessibility labels so athletes hear
+         exercise names, not internal IDs."* The row is ONE accessibility leaf
+         (`accessibilityRole="button"`), so its label is the whole of what a
+         screen-reader user hears — and it was the test id.
+         ⚠ **THE IDENTITY IS NOT LOST: `testID` still sets
+         `accessibilityIdentifier`, which is what Maestro's `id:` and the
+         explorer match on.** Only the SPOKEN name changes. */
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         icon ? styles.optionWithIcon : styles.option,

@@ -2670,3 +2670,34 @@ keep the exact sentences as coordinates that must never again produce medical
 copy, each behind a CONTROL proving the clarifier still fires. The client suite
 also reads BOTH sources and fails if the words or the detector reappear in
 either.
+
+---
+
+**R-109** · *"Then fix the six accessibility labels so athletes hear exercise
+names, not internal IDs."* (Sam, 2026-08-20) · **A ROW SPEAKS THE ATHLETE'S
+WORD. THE TEST ID IS AN ADDRESS, NOT A NAME.**
+
+Six sheet-row components set `accessibilityLabel={testID}` on an
+`accessibilityRole="button"` Pressable. That role makes the row ONE accessibility
+leaf, so the label is the WHOLE of what a screen-reader user hears — and on the
+Remove picker that was
+`component-delete-action-dev-e2e-standard-in-season-week-2026-07-13-dow-1-…-ex-squat-1`
+where the screen plainly reads **"Back Squat"**.
+
+⚠ **IT WAS DELIBERATE AND GUARDED, WHICH IS WHY IT NEEDED A RULING AND NOT A
+PATCH.** Three cells of `test:accessibility-contracts` REQUIRED it, titled
+*"expose their stable identity to accessibility"*. Sam's ruling overturns those
+three; they are inverted, not deleted.
+
+**NOTHING LOSES ITS ADDRESS.** `testID` sets `accessibilityIdentifier`, which is
+what Maestro's `id:` and the explorer match on; only the spoken name changes.
+Proven on glass the same day — `id: "session-change-remove"` resolves while that
+component's label is the word "Remove" — and asserted by a cell that all three
+components still carry `testID`, so a "fix" that deleted the id would not pass.
+
+**THE SIX:** `EquipmentLimitationSheet.MissingToggle`, `HomeScreenV2.SheetOption`,
+`PlanChangeSheet`, `GuidedInjuryFlowSheet.FlowOption`,
+`DayWorkoutScreenV2.ExerciseSheetOption`, `dev/StoredStateExportButton`.
+
+· `BUILT` — `test:accessibility-contracts` section [5], inverted to require the
+LABEL and to prove the id survives.

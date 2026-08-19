@@ -153,12 +153,44 @@ section('[5] Explorer semantic leaves and lifecycle controls are accessible');
 {
   ok('render witness is an accessibility-visible retained native leaf',
     /<View[\s\S]*?accessible[\s\S]*?accessibilityLabel=\{accessibilityLabel\}[\s\S]*?accessibilityRole="text"[\s\S]*?collapsable=\{false\}/.test(witness));
-  ok('SheetOption keeps semantic IDs as accessibility labels',
-    /function SheetOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(home));
-  ok('injury options expose their stable identity to accessibility',
-    /function FlowOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(injury));
-  ok('equipment options expose their stable identity to accessibility',
-    /function EquipmentOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(equipment));
+  /* ⚠ **THESE THREE CELLS REQUIRED THE DEFECT, AND ARE INVERTED — R-109.**
+   *
+   * Sam, 2026-08-20: *"fix the six accessibility labels so athletes hear
+   * exercise names, not internal IDs."*
+   *
+   * They read `accessibilityLabel={testID}` and were titled *"expose their
+   * stable identity to accessibility"* — so the design was deliberate and
+   * guarded, not an oversight. **What it cost was the athlete:** each row is one
+   * accessibility leaf (`accessibilityRole="button"`), so its label is the whole
+   * of what a screen-reader user hears, and on the Remove picker that was
+   * `component-delete-action-dev-e2e-standard-in-season-week-2026-07-13-dow-1-…-
+   * ex-squat-1` where the screen plainly reads "Back Squat".
+   *
+   * ⚠ **NOTHING LOSES ITS ADDRESS, AND THAT IS ASSERTED BELOW RATHER THAN
+   * ASSUMED.** `testID` sets `accessibilityIdentifier`, which is what Maestro's
+   * `id:` and the explorer match on; only the SPOKEN name changes. Measured on
+   * glass the same day: `id: "session-change-remove"` resolves while that
+   * component's label is the word "Remove". */
+  ok('SheetOption speaks its LABEL, not its test id',
+    /function SheetOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{label\}/.test(home));
+  ok('injury options speak their label',
+    /function FlowOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{label\}/.test(injury));
+  /* ⚠ **`EquipmentOption` HAS NOT EXISTED FOR SOME TIME.** This cell was one of
+   * five already red at HEAD, reading a function name the component was renamed
+   * away from — `MissingToggle`. A guard that cannot find its subject is not
+   * guarding it, and its red said nothing about accessibility. Re-aimed. */
+  ok('equipment options speak their label',
+    /function MissingToggle[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{label\}/.test(equipment));
+  // ⚠ AND THE IDENTITY IS STILL THERE. Without this, a fix that deleted the
+  // testID outright would satisfy all three cells above and break every flow.
+  ok('and all three still carry testID, so nothing loses its address',
+    /function SheetOption[\s\S]*?testID=\{testID\}/.test(home)
+      && /function FlowOption[\s\S]*?testID=\{testID\}/.test(injury)
+      && /function MissingToggle[\s\S]*?testID=\{testID\}/.test(equipment));
+  // The sixth site, the one the census found on glass: the exercise picker row.
+  ok('the exercise picker row speaks the exercise NAME',
+    /function ExerciseSheetOption[\s\S]*?accessibilityLabel=\{label\}/.test(
+      readFileSync(join(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8')));
   ok('fixture expanded action exposes the canonical fixture identity',
     /fixtureIngress\('move', day\.workout\.id\)[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{explorerTestId\.fixtureIngress\('move', day\.workout\.id\)\}/.test(home));
 }
