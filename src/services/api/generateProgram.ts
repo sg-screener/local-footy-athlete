@@ -134,6 +134,7 @@ import {
 import type { FixtureConditionedAvailability } from '../../rules/fixtureConditionedAvailability';
 import {
   ExerciseVocabularyViolation,
+  canonicalExerciseName,
 } from '../../utils/exerciseCanonicalisation';
 import { selectableVocabularyGroups } from '../../data/selectableExerciseVocabulary';
 
@@ -789,6 +790,75 @@ export class GeneratedWeekRefusedError extends Error {
  * the coach path all do — and a hand-built list has always meant "out, full
  * stop". Dropping it here would silently un-ban those athletes' exercises.
  */
+/**
+ * ⚠ **A REPLAY MAY NOT RE-DECIDE A BLOCK BECAUSE AN EXCLUSION APPEARED.**
+ *
+ * Sam, 2026-08-19: *"Remove means simply remove the selected exercise/component.
+ * Nothing replaces it ... Do not ask the composer to fill the empty slot."*
+ *
+ * MEASURED, and it is the reason this function exists. An athlete removed
+ * `RDLs` for the block, closed the app and reopened it. The boot regenerates
+ * (`quiescentBoot`), the exclusion narrowed the hinge slot's legal candidates,
+ * `decideExerciseForBlock`'s *restore-before-decide* rule could no longer
+ * restore the recorded `RDLs`, and it made an honest new decision:
+ * **`Deadlift@77.5` walked into the hinge slot.** The athlete removed a lift and
+ * got a different lift back for closing the app. The read filter could not save
+ * them — it removes `RDLs`, and the row was no longer `RDLs`.
+ *
+ * This is the SAME defect class the `'author' | 'replay'` distinction was
+ * introduced for on 2026-08-18 (LAW `hidden-authority-never-authors`): a
+ * reversible, dated athlete decision reaching a layer entitled to author
+ * permanent structure. That fix stopped a replay RECORDING the re-derived
+ * selection; it did not stop a replay MAKING one. This is the other half.
+ *
+ *   - `'author'` — this door decides the block (onboarding, acceptance,
+ *     rollover). A block being authored for the first time simply never chooses
+ *     an excluded exercise. That is *"until restored removes it from ... future
+ *     sessions/blocks"*, and it is authoring, not refilling.
+ *   - `'replay'` / a probe — this caller reconstructs a block it did not decide.
+ *     The athlete's removal is owned end-to-end by the read-time filter
+ *     (`rules/exerciseExclusions.applyExclusionsToAuthoredDay`), which takes the
+ *     row out and puts nothing back. So the replay must rebuild the block the
+ *     athlete actually has, `RDLs` and all, and let the filter do the removing.
+ *
+ * **ONLY THE DATED DECISIONS ARE WITHHELD.** `prefs.excluded` — the flat,
+ * undated "avoid this forever" list a caller may hand-build — is untouched, for
+ * the reason `composerExclusionInput` already states: a hand-built list has
+ * always meant "out, full stop", and silently un-banning those athletes'
+ * exercises on every boot would be a second defect wearing this one's clothes.
+ */
+function exclusionsForSelectionAuthority(
+  prefs: AthletePoolPrefsArg,
+  recordSelections: 'author' | 'replay' | false | undefined,
+): AthletePoolPrefsArg {
+  // ONLY AN EXPLICIT REPLAY IS WITHHELD FROM. `'author'`, `false` and absent all
+  // author: a probe that asks "would a 2-day week even build?" must see the
+  // athlete's world as it is, and a caller that has not declared itself has not
+  // declared itself a replay. Narrowing this to `!== 'author'` also withheld
+  // from every probe and reddened nine cells that are right about the contract.
+  if (recordSelections !== 'replay') return prefs;
+  const dated = prefs?.exclusions ?? [];
+  if (dated.length === 0) return prefs;
+  // ⚠ **CLEARING `exclusions` ALONE IS NOT ENOUGH, AND THE FIRST CUT DID
+  // EXACTLY THAT AND CHANGED NOTHING.** `getAthletePrefs` is a PROJECTION: it
+  // derives `excluded` from `exclusions` for the day being read
+  // (`store/athletePreferencesStore.ts`), and `composerExclusionInput` unions
+  // that derived list in as a week-wide ban. Withholding the decisions while
+  // leaving their own projection behind withholds nothing.
+  //
+  // So the derived names are withdrawn BY NAME, which leaves a genuinely
+  // hand-built `excluded` list — the tests', the dev seeds' and the coach
+  // path's — exactly as it arrived.
+  const derived = new Set(dated.map((exclusion) => exclusion.exercise));
+  return {
+    ...prefs,
+    exclusions: [],
+    excluded: (prefs?.excluded ?? []).filter(
+      (name) => !derived.has(canonicalExerciseName(String(name ?? '').trim())),
+    ),
+  };
+}
+
 function composerExclusionInput(
   prefs: AthletePoolPrefsArg,
   weekStartISO: string,
@@ -1761,7 +1831,10 @@ export function generateProgramLocally(
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
-    athletePrefs: options.athletePrefs ?? getAthletePrefs(),
+    athletePrefs: exclusionsForSelectionAuthority(
+      options.athletePrefs ?? getAthletePrefs(),
+      options.recordSelections,
+    ),
     progressedIdentities,
     selectionHistory: selectionHistoryForBuild,
     selectionsOut: selectionsAuthored,

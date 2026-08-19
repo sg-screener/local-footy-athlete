@@ -9,7 +9,6 @@ import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
-import { commitAthleteSessionDeletionTransaction } from '../store/acceptedStateTransaction';
 import { resolveDateWithConditioning } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
@@ -26,6 +25,7 @@ import type { TeamNightMoveRouteId } from './planChangeTypes';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
 import { getActiveProgramModifiers } from './activeProgramModifiers';
+import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
 import {
   banExerciseGlobally,
   setPreferredAlternative,
@@ -589,30 +589,40 @@ function executeProgramControlActionWithinTrace(
       };
     }
     case 'remove_exercise': {
-      // ── REMOVE MEANS REMOVE ──────────────────────────────────────────────
+      // ── REMOVE MEANS REMOVE, AND IT IS ONE DECISION ──────────────────────
       //
       // Sam, 2026-08-19: *"Remove means simply remove the selected
       // exercise/component. Nothing replaces it. The session may have fewer
       // exercises and may lose that movement pattern. **Do not ask the composer
-      // to fill the empty slot.**"*
+      // to fill the empty slot.**"* And: *"No second removal authority
+      // survives."*
       //
-      // ⚠ **THIS USED TO CALL `removeExerciseAtDate`, WHICH ENDS IN
-      // `writeCoachOverride`** — it cloned the day, filtered the row out, and
-      // wrote the result straight over the visible week. Three things followed
-      // from that and all three were defects: the accepted-state transaction was
-      // bypassed so nothing validated the result; the removal left no canonical
-      // decision, so `this block` / `until restored` had nothing to act on; and
-      // Undo deleted the athlete's answer while the patched week stood, so the
-      // exercise never came back.
+      // THE DECISION IS THE ONLY THING WRITTEN. `applyExerciseExclusionDecision`
+      // stores one record — the exercise, the scope and the stamped expiry — and
+      // two projections read it and nothing else:
       //
-      // The canonical owner already existed and already had the right shape.
-      // `stageAthleteSessionDeletionTransaction` takes a `remainingWorkout` —
-      // its own comment names *"a component-bin's remainder"* — so an exercise
-      // removal is the day MINUS one row, with nothing chosen to take its place.
-      // `originalWorkout` is the day as it stood, which is what makes Undo
-      // restore the EXACT item rather than a fresh choice.
+      //   READ  `rules/exerciseExclusions.applyExclusionsToAuthoredDay`, applied
+      //         at `utils/sessionResolver`, takes the row off every remaining
+      //         already-authored session inside the decision's span. That is
+      //         *"this block removes it from every remaining already-authored
+      //         session in this block"*.
+      //   AUTHOR `services/api/generateProgram.composerExclusionInput` keeps it
+      //         out of blocks the app has not authored yet. That is *"until
+      //         restored removes it from current and future sessions/blocks"*.
       //
-      // **The composer never runs on this path, so nothing can refill the slot.**
+      // **NOTHING IS DESTROYED, SO NOTHING HAS TO BE REBUILT TO UNDO IT.** The
+      // authored row stays in the stored program; the decision hides it. Undo
+      // and Restore delete the decision and the EXACT item is back — which is
+      // Sam's requirement stated as a mechanism rather than as a repair.
+      //
+      // ⚠ **TWO EARLIER AUTHORITIES ARE GONE FROM THIS DOOR.**
+      // `coachActions.removeExerciseAtDate` cloned the day and wrote the result
+      // as a COACH OVERRIDE (`writeCoachOverride`), patching the visible week
+      // with the transaction bypassed. Its replacement,
+      // `commitAthleteSessionDeletionTransaction`, was correct for TODAY and
+      // could not speak for a block: a dated constraint answers one date, and
+      // an athlete who says "this block" means every session in it. Both are
+      // off this path, and `removeExerciseAtDate` is deleted outright.
       const removalDate = action.payload.date.slice(0, 10);
       const removalOriginal = resolveWorkoutOnDate(removalDate);
       if (!removalOriginal) {
@@ -632,7 +642,8 @@ function executeProgramControlActionWithinTrace(
       );
       if (removalTarget.kind !== 'found') {
         // TYPED, never a shrug. The athlete asked for something the session does
-        // not carry, or carries twice under one name.
+        // not carry, or carries twice under one name. Asked BEFORE the decision
+        // is written, so a removal that cannot name its target writes nothing.
         return {
           ok: false,
           changedProgram: false,
@@ -644,39 +655,41 @@ function executeProgramControlActionWithinTrace(
           route: route.route,
         };
       }
-      const removalRemaining: Workout = {
-        ...(JSON.parse(JSON.stringify(removalOriginal)) as Workout),
-        exercises: removalOriginal.exercises.filter((_, index) => index !== removalTarget.index),
-      };
-      let removalOutcome: { outcome?: string } | null = null;
-      try {
-        removalOutcome = commitAthleteSessionDeletionTransaction({
-          date: removalDate,
-          reason: 'athlete_removed_exercise',
-          source: action.source.initiatedBy === 'system' ? 'coach' : 'tap',
-          scope: 'strength_component',
-          originalWorkout: removalOriginal,
-          remainingWorkout: removalRemaining,
-        }) as { outcome?: string };
-      } catch (error) {
+      // THE ROW'S OWN NAME, not the caller's spelling. A removal matched by id
+      // may have been asked for under a display name the exclusion's canonical
+      // identity would never match, and a decision keyed on the wrong name is a
+      // decision that hides nothing.
+      const removalRow = removalOriginal.exercises![removalTarget.index] as
+        { exercise?: { name?: string }; name?: string };
+      const removalIdentity = String(
+        removalRow.exercise?.name ?? removalRow.name ?? action.payload.exercise,
+      );
+      const removalDecision = applyExerciseExclusionDecision({
+        exercise: removalIdentity,
+        // "Future weeks too" is the athlete saying *until I change it*. It is
+        // the same question the day screen asks after the tap, so it resolves to
+        // the same three-answer vocabulary rather than to a second one.
+        scope: action.payload.futureWeeksToo || action.scope === 'future_weeks'
+          ? 'until_changed'
+          : 'today_only',
+        decidedOnISO: removalDate,
+      });
+      if (!removalDecision.ok || !removalDecision.exclusion) {
         return {
           ok: false,
           changedProgram: false,
           requiresRebuild: false,
-          message: `That removal could not be saved: ${(error as Error).message}`,
+          message: `That removal could not be saved (${removalDecision.reason ?? 'unknown'}).`,
           fallbackToCoach: false,
           route: route.route,
         };
       }
-      let futureResult: { success: boolean; reason?: string } | null = null;
-      if (action.payload.futureWeeksToo) {
-        futureResult = banExerciseGlobally({ exercise: action.payload.exercise });
-      }
       return {
-        ok: futureResult?.success !== false,
+        ok: true,
         changedProgram: true,
+        // NO REBUILD. Nothing regenerates for a removal — a rebuild is exactly
+        // the thing that would let the composer choose a replacement.
         requiresRebuild: false,
-        message: futureResult?.reason,
         fallbackToCoach: false,
         route: route.route,
       };

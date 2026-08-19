@@ -688,3 +688,109 @@ choice. Typed refusals added for *not found* and *ambiguous*.
 `4142f85d`** — pre-existing, not this change.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — REMOVE IS ONE DECISION, AND THE RESTART WAS PUTTING A DIFFERENT LIFT BACK
+
+## THE SHAPE, AFTER SAM'S THREE ANSWERS
+
+One stored decision (`ExerciseExclusion` — exercise, scope, stamped expiry) and
+**two projections of it, neither of which writes anything**:
+
+| projection | what it answers | Sam's clause |
+| --- | --- | --- |
+| `applyExclusionsToAuthoredDay`, at `utils/sessionResolver` | the row is not on any REMAINING already-authored session inside the span | *"this block removes it from every remaining already-authored session in this block"* |
+| `composerExclusionInput`, at generation | a block the app has not authored yet never chooses it | *"until restored removes it from current and future sessions/blocks"* |
+
+**Nothing is destroyed, so nothing has to be rebuilt to undo it.** The authored
+row stays in the stored program and the decision hides it — which is what makes
+*"Undo restores the exact removed item"* a mechanism rather than a repair. And
+**the composer never runs on this path, so nothing can refill the slot.**
+
+`removeExerciseAtDate` and its `writeCoachOverride` implementation are DELETED.
+The coach's `remove_exercise` returns a typed refusal naming the one real door.
+No shim.
+
+## THREE THINGS I GOT WRONG FIRST, EACH CAUGHT BY A MEASUREMENT
+
+**1. I INSTALLED THE FILTER AT THE COMPOSE OWNER, AND IT WAS WRITTEN DOWN.**
+`rebaseAcceptedEffectiveWeek` is the obvious site — every accepted-week read goes
+through it — and it is also what the WRITE paths compose with.
+`commitRebuiltProgram` published the filter's answer, and within ONE boot three
+stored microcycles had lost the row permanently while the block before the
+decision day kept it. **A filter that gets written down is not a filter**: it
+cannot expire and Restore has nothing to give back.
+
+**2. THEN I READ THE LIVE STORE IN THE RESOLVER, AND IT WAS WRITTEN DOWN AGAIN.**
+`programStore.canonicaliseAcceptedBoundaryState` composes the accepted week
+THROUGH the resolver. So the exclusions travel on `ScheduleState` and only the
+two doors that mean *"what the athlete SEES"* carry them —
+`deriveVisibleWeek.assembleScheduleState` and `hooks/useSchedule`. The
+canonicalisers build their own bare states and compose the week the app
+AUTHORED, which is the week that must be stored.
+
+**3. THE RESTART PUT A DIFFERENT LIFT IN THE HOLE — and this is the one that
+would have shipped.** Remove `RDLs`, close the app, reopen it:
+
+```
+before restart  Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+after  restart  Deadlift@77.5, Bulgarian Split Squats@25, Landmine Press@35, ...
+```
+
+The boot regenerates; the exclusion narrowed the hinge slot's legal candidates;
+`decideExerciseForBlock`'s *restore-before-decide* rule could no longer restore
+the recorded `RDLs` and made an honest new decision. **The athlete removed a lift
+and got a different lift back for closing the app**, and the read filter could
+not save them — it removes `RDLs`, and the row was no longer `RDLs`.
+
+This is the SAME defect class the `'author' | 'replay'` distinction was
+introduced for on 2026-08-18: a reversible dated decision reaching a layer
+entitled to author permanent structure. That fix stopped a replay RECORDING a
+re-derived selection; it did not stop a replay MAKING one. `exclusionsForSelectionAuthority`
+is the other half — **only an explicit `'replay'` is withheld from**, and only
+the DATED decisions are, because `getAthletePrefs` projects them into `excluded`
+and clearing `exclusions` alone withheld nothing.
+
+## THE GATE — `npm run test:exercise-removal-owner`, 35 cells, ALL GREEN
+
+Seven cases, every one driving production doors and each opening with a control
+that refuses to continue on a world where the exercise was never there.
+
+**MUTATION-PROVEN FOUR WAYS**, tree restored byte-identical from my own backups
+after each (md5 checked):
+
+| mutation | reds |
+| --- | --- |
+| the view state stops carrying the decisions | 9 cells |
+| `exclusionIsActiveOn` loses its lower bound | 1 — *"a decision taken LATER does not reach back"* |
+| a replay may re-decide the block | 3, and it REPRODUCES `Deadlift@77.5` exactly |
+| the filter goes back on the write side | 1 — *"after a restart, Restore still returns every day"* |
+
+⚠ **THE LOWER-BOUND CELL WAS GREEN AND EMPTY AND THE MUTATION SAID SO.** It
+first asked about the Monday before the decision — a day that does not carry the
+victim at all — so deleting the bound outright left all 32 cells green. It now
+asks an EARLIER day that DOES carry it, with the decision taken later.
+
+## BLAST RADIUS — MEASURED AGAINST A CONTROL WORKTREE AT `5ccee7bc`
+
+`test:compile` **665 / 73 pairs**, identical to base. Nine suites run both
+sides — `derived-week-ownership`, `day-precedence-ownership`,
+`visible-program-projection`, `surface-agreement`, `quiescent-boot`,
+`block-two-boot-preservation`, `week-rebuild`, `block-selection-authority`,
+`athlete-journey` — **identical pass/fail counts at both trees**.
+
+`test:exercise-exclusions` moved 51/3 → 52/1 and the remaining failure is the
+control's own. Four of its cells asked the STORED PROGRAM whether a removal had
+happened; under the corrected semantics the program KEEPS the row and the
+athlete's screen loses it, so those cells moved to the visible coordinate and one
+duplicate boot cell was deleted — its own docstring had already ruled that the
+relaunch claim belongs to case [3] alone.
+
+Four cells in `coachActionsTests` are disposed of BY SUBJECT: they asserted that
+a removal wrote a coach override, and that write is what was ordered removed.
+
+**NOT COVERED YET:** the simulator. Nothing here has been seen on glass.
+
+Agent: rebuild

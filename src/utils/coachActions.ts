@@ -736,83 +736,30 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   return { success: true };
 }
 
-/** Remove a single exercise from a single date. */
-
-export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
-  const { date, exercise, exerciseId } = input;
-  const current = resolveDateWorkout(date);
-  if (!current) {
-    return { success: false, reason: `No session on ${date} to remove exercise from.` };
-  }
-  if (exerciseId) {
-    const id = String(exerciseId);
-    const foundById = current.exercises.find((ex: any) =>
-      [ex.id, ex.exerciseId, ex.exercise?.id]
-        .filter(Boolean)
-        .some((candidate) => String(candidate) === id),
-    );
-    if (foundById) {
-      const newWorkout = cloneWorkout(current, {
-        exercises: current.exercises.filter((ex) => ex !== foundById),
-      });
-      if (workoutsAreEquivalent(current, newWorkout)) {
-        return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
-      }
-      // THE REMOVED IDENTITY TRAVELS WITH THE WRITE. Without it the
-      // canonicaliser's repair pass restores exactly the lift the athlete just
-      // took out, the week compares equal, and the transaction reports a
-      // failure for a removal that actually worked.
-      const removedName = foundById.exercise?.name ?? exercise;
-      // The excluded-identity and legal-replacement options existed only to
-      // stop the boundary's own repair pass restoring what the athlete removed.
-      // The repair pass is deleted, so there is nothing left to hold back.
-      assertLiveWorkoutWrite(date, newWorkout);
-      const canonicalWorkout = newWorkout;
-      if (workoutsAreEquivalent(current, canonicalWorkout)) {
-        return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
-      }
-      const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
-      if (blocked) return blocked;
-      writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
-      return { success: true };
-    }
-  }
-  const matchResult = findExerciseMatch(current, exercise);
-  if (matchResult.kind === 'not_found') {
-    return { success: false, reason: `Could not find "${exercise}" on ${date}.` };
-  }
-  if (matchResult.kind === 'ambiguous') {
-    return {
-      success: false,
-      reason: `"${exercise}" matches multiple exercises on ${date}: ${matchResult.candidates.join(', ')}. Ask the athlete which one they mean.`,
-      ambiguous: { candidates: matchResult.candidates },
-    };
-  }
-  const found = matchResult.match;
-
-  const newWorkout = cloneWorkout(current, {
-    exercises: current.exercises.filter((ex) => ex !== found),
-  });
-  // Removing an exercise always changes exercise count → comparator catches
-  // any pathological case (e.g. workout with 0 matching) but in practice
-  // this branch always writes.
-  if (workoutsAreEquivalent(current, newWorkout)) {
-    return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
-  }
-  // THE BY-NAME BRANCH CARRIES THE EXCLUSION TOO. Both branches of this
-  // function write, and fixing only the id branch would leave the coach's path
-  // and any name-addressed removal still restoring the excluded lift.
-  const removedName = found.exercise?.name ?? exercise;
-  assertLiveWorkoutWrite(date, newWorkout);
-  const canonicalWorkout = newWorkout;
-  if (workoutsAreEquivalent(current, canonicalWorkout)) {
-    return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
-  }
-  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
-  if (blocked) return blocked;
-  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
-  return { success: true };
-}
+/**
+ * ⚠ **`removeExerciseAtDate` IS DELETED — 2026-08-19, Sam: *"Delete
+ * `removeExerciseAtDate` and its coach-override implementation ... No second
+ * removal authority survives."***
+ *
+ * It cloned the day, filtered the row out and wrote the result through
+ * `writeCoachOverride`. Three defects followed and all three were structural:
+ * the accepted-state transaction was bypassed, so nothing validated the week it
+ * published; the removal left no canonical decision, so "this block" and "until
+ * restored" had nothing to act on; and Undo deleted the athlete's answer while
+ * the patched week stood, so the exercise never came back.
+ *
+ * THE ONE REMOVAL AUTHORITY IS NOW `utils/exerciseExclusionOwner
+ * .applyExerciseExclusionDecision`, reached from `remove_exercise` in
+ * `utils/programControlActions`. It writes ONE decision; the read projection
+ * hides the row and the composer input keeps it out of unauthored blocks.
+ *
+ * **THE COACH'S `remove_exercise` COMMAND IS TEMPORARILY BROKEN** and Sam ruled
+ * that acceptable in the same breath: *"If Coach still calls it, record Coach
+ * Remove as temporarily broken; later it must call the same canonical Remove
+ * action."* The dispatcher below returns a typed refusal that says so rather
+ * than a silent no-op. NO COMPATIBILITY SHIM — a wrapper that forwarded to the
+ * canonical owner would be a second door wearing the deleted one's name.
+ */
 
 /** Add one exercise to a single date. */
 export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
@@ -1142,7 +1089,15 @@ export function applyCoachAction(action: CoachAction): ActionResult {
     case 'replace_exercise':
       return replaceExerciseAtDate(action.payload as ReplaceExerciseInput);
     case 'remove_exercise':
-      return removeExerciseAtDate(action.payload as RemoveExerciseInput);
+      // TEMPORARILY BROKEN BY RULING, AND IT SAYS SO. See the note where
+      // `removeExerciseAtDate` used to be. The coach must come to the canonical
+      // Remove action; it may not keep a private removal authority in the
+      // meantime.
+      return {
+        success: false,
+        reason: 'Removing an exercise from the coach is temporarily unavailable. '
+          + 'Use Remove on the session itself — that is the one door that records the decision.',
+      };
     case 'add_exercise':
       return addExerciseAtDate(action.payload as AddExerciseAtDateInput);
     case 'add_weekly_override':

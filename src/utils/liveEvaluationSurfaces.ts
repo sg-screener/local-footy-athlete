@@ -33,6 +33,7 @@ import type {
 } from '../types/domain';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import type { ExerciseExclusion } from '../rules/exerciseExclusions';
 
 /**
  * THE ONE COMPOSER (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
@@ -70,6 +71,20 @@ export function composeAcceptedEffectiveWeekSurfaces(source: {
    * facts should not say it has none by silence.
    */
   temporarySourceFacts?: readonly TemporarySourceFact[];
+  /**
+   * THE ATHLETE'S "LEAVE THIS EXERCISE OUT" DECISIONS.
+   *
+   * Omitted by every ordinary caller ON PURPOSE, and defaulted here from the
+   * live store. It is not a property of a program snapshot — a staged program,
+   * a published program and the store all describe the SAME athlete, whose
+   * standing exclusions are the same in all three — so asking each of the
+   * twenty-odd doors to carry it would be asking twenty doors to agree about a
+   * fact none of them owns. That is the shape that cost 328 forgotten entries
+   * on `userRemovalConstraints`.
+   *
+   * Pass it explicitly ONLY to state a world that deliberately has none.
+   */
+  athleteExclusions?: readonly ExerciseExclusion[];
 }): AcceptedEffectiveWeekSurfaces {
   return {
     currentProgram: source.currentProgram ?? null,
@@ -79,7 +94,25 @@ export function composeAcceptedEffectiveWeekSurfaces(source: {
     userRemovalConstraints: source.applyOnly ?? source.removalDecisions,
     removalDecisions: source.removalDecisions,
     temporarySourceFacts: source.temporarySourceFacts ?? [],
+    athleteExclusions: source.athleteExclusions ?? liveAthleteExclusions(),
   };
+}
+
+/**
+ * The athlete's live exclusions, reached the same lazy way this module already
+ * reaches `programStore`: at call time, never at module load, so `rules/` stays
+ * out of the store's module graph and a harness that never mounts the store
+ * gets an empty world rather than a throw.
+ */
+export function liveAthleteExclusions(): readonly ExerciseExclusion[] {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const store = require('../store/athletePreferencesStore') as
+      typeof import('../store/athletePreferencesStore');
+    return store.getAthleteExclusions() ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -143,6 +176,12 @@ export function freshGenerationSurfaces(): AcceptedEffectiveWeekSurfaces {
   return composeAcceptedEffectiveWeekSurfaces({
     currentProgram: null,
     removalDecisions: [],
+    // STATED, not defaulted. Generation honours an exclusion by never CHOOSING
+    // the exercise (`composerExclusionInput`); the read-time filter answers the
+    // week the composer already authored. A generator's world has none of the
+    // latter, and saying so here is the same decision the removal list states
+    // one line up.
+    athleteExclusions: [],
   });
 }
 

@@ -106,6 +106,15 @@ function useScheduleState(): ScheduleState & {
   // this adapter omitted the surface entirely, so the screen could not honour a
   // removal the accepted week honours.
   const userRemovalConstraints = useProgramStore((s) => s.userRemovalConstraints);
+  // The athlete's "leave this exercise out" decisions. SUBSCRIBED, not read
+  // once: the day screen applies one and returns to a week that must already
+  // have lost the row. This adapter is a VIEW door, which is the whole reason
+  // it may carry them at all — see `deriveVisibleWeek.assembleScheduleState`.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
+  const athleteExclusions = useAthletePreferencesStore(
+    (s: { prefs?: { exclusions?: unknown[] } }) => s.prefs?.exclusions,
+  ) ?? [];
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
@@ -192,6 +201,7 @@ function useScheduleState(): ScheduleState & {
     manualOverrides: manualOverrides || {},
     weekScopedOverlays: weekScopedOverlays || {},
     userRemovalConstraints: userRemovalConstraints || [],
+    athleteExclusions,
     // The RECORD, from the same source in the same breath
     // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). On the live path
     // nothing has consumed the list, so the two are the same — they diverge

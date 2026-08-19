@@ -38,6 +38,7 @@ import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { OnboardingData } from '../types/domain';
 
@@ -164,6 +165,18 @@ export function assembleScheduleState(
     manualOverrides: (inputs.dateOverrides as never) || {},
     weekScopedOverlays: (inputs.weekScopedOverlays as never) || {},
     userRemovalConstraints: (inputs.userRemovalConstraints as never) || [],
+    // THE ATHLETE'S EXCLUSIONS, ON THE VIEW STATE ONLY.
+    //
+    // This assembler and `hooks/useSchedule.useScheduleState` are the two doors
+    // that mean "what the athlete sees"; every other `ScheduleState` in the app
+    // is built by a canonicaliser composing the week to be STORED, and those
+    // must not carry exclusions or a reversible decision gets written into the
+    // program. See `utils/sessionResolver.resolveDate`.
+    //
+    // Read live rather than threaded through `DeriveWeekInputs`: the exclusions
+    // live in a different store from every other input here, and a standing
+    // athlete decision is the same in every world this assembler is asked about.
+    athleteExclusions: liveAthleteExclusions(),
     // The RECORD, same source, same breath — see the declared rival
     // (`hooks/useSchedule.ts`) and
     // `docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`.

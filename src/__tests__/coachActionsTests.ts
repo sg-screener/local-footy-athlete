@@ -119,7 +119,6 @@ import {
   moveSession,
   makeSessionOptional,
   replaceExerciseAtDate,
-  removeExerciseAtDate,
   addExerciseAtDate,
   addWeeklyOverride,
   banExerciseGlobally,
@@ -370,33 +369,18 @@ console.log('\n[coachActions] replace_exercise (not found)');
   eq('no override written', overrideCalls.length, 0);
 }
 
-// 11. remove_exercise — exercise filtered out
-console.log('\n[coachActions] remove_exercise');
-{
-  reset();
-  const date = '2026-04-27';
-  setFixture(date, makeWorkout('Lower Strength', [
-    makeExercise('Back Squat', 4),
-    makeExercise('RDL', 3),
-    makeExercise('Pallof Press', 3),
-  ]));
-  const result = removeExerciseAtDate({ date, exercise: 'RDL' });
-  eq('success', result.success, true);
-  const exercises = overrideCalls[0]?.workout?.exercises || [];
-  eq('two exercises remain', exercises.length, 2);
-  eq('Back Squat kept', exercises[0]?.exercise?.name, 'Back Squat');
-  eq('Pallof Press kept', exercises[1]?.exercise?.name, 'Pallof Press');
-}
+// ⚠ FOUR CELLS DISPOSED OF BY SUBJECT — `removeExerciseAtDate` is DELETED
+// (2026-08-19, Sam: *"Delete `removeExerciseAtDate` and its coach-override
+// implementation ... No second removal authority survives."*).
+//
+// They asserted that a removal wrote a COACH OVERRIDE (`overrideCalls[0]`), and
+// that write IS the thing that was ordered removed. They are not repaired and
+// not ported: the two that carry real product meaning — a removal that names
+// nothing, and a name that matches two rows — are asked of the surviving owner
+// instead, where the typed refusal now lives. See
+// `npm run test:exercise-removal-owner`.
 
 // 12. remove_exercise — not found
-console.log('\n[coachActions] remove_exercise (not found)');
-{
-  reset();
-  setFixture('2026-04-27', makeWorkout('Upper Push', [makeExercise('Bench Press', 3)]));
-  const result = removeExerciseAtDate({ date: '2026-04-27', exercise: 'RDL' });
-  eq('success=false', result.success, false);
-  eq('no override written', overrideCalls.length, 0);
-}
 
 // 13. add_weekly_override — reduce_lower_volume halves only lower-pattern sets
 console.log('\n[coachActions] add_weekly_override (reduce_lower_volume)');
@@ -783,40 +767,8 @@ console.log('\n[coachActions] replace_exercise (precision: single-leg specific)'
 }
 
 // 27. remove_exercise — ambiguous bench (Bench Press + DB Bench Press)
-console.log('\n[coachActions] remove_exercise (precision: ambiguous bench)');
-{
-  reset();
-  const date = '2026-04-27';
-  setFixture(date, makeWorkout('Upper Push', [
-    makeExercise('Bench Press', 4),
-    makeExercise('DB Bench Press', 3),
-  ]));
-  // "bench" appears as substring in both candidate names → ambiguous
-  const result = removeExerciseAtDate({ date, exercise: 'bench' });
-  eq('success=false (ambiguous)', result.success, false);
-  ok('ambiguous candidates populated', !!result.ambiguous, JSON.stringify(result.ambiguous));
-  eq('two candidates returned', result.ambiguous?.candidates.length, 2);
-  eq('NO override written', overrideCalls.length, 0);
-}
 
 // 27b. remove_exercise — tapped row identity beats ambiguous text
-console.log('\n[coachActions] remove_exercise (row id disambiguates)');
-{
-  reset();
-  const date = '2026-04-27';
-  const bench = makeExercise('Bench Press', 4);
-  const dbBench = makeExercise('DB Bench Press', 3);
-  setFixture(date, makeWorkout('Upper Push', [bench, dbBench]));
-  const result = removeExerciseAtDate({
-    date,
-    exercise: 'bench',
-    exerciseId: bench.id,
-  });
-  eq('success with row id', result.success, true);
-  const exercises = overrideCalls[0]?.workout?.exercises || [];
-  eq('one exercise remains', exercises.length, 1);
-  eq('specific tapped row removed', exercises[0]?.exercise?.name, 'DB Bench Press');
-}
 
 // 27c. replace_exercise — tapped row identity beats ambiguous text
 console.log('\n[coachActions] replace_exercise (row id disambiguates)');

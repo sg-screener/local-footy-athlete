@@ -42,6 +42,10 @@ import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import {
+  applyExclusionsToAuthoredDay,
+  type ExerciseExclusion,
+} from '../rules/exerciseExclusions';
+import {
   type AthleteContext,
 } from './sessionBuilder';
 import type { WeekLog } from './conditioningRules';
@@ -113,6 +117,13 @@ export interface ScheduleState {
    * and applying them twice would re-remove a remainder.
    */
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S "LEAVE THIS EXERCISE OUT" DECISIONS, for the days this state
+   * will be asked about. Supplied by the VIEW doors only — see the note beside
+   * `applyExclusionsToAuthoredDay` in `resolveDate` for why a canonicalising
+   * caller must NOT supply them.
+   */
+  athleteExclusions?: readonly ExerciseExclusion[];
   /**
    * THE RECORD of those same decisions, never blanked
    * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
@@ -856,6 +867,48 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     constraints: state.userRemovalConstraints,
   });
 
+  // ── THE ATHLETE'S "LEAVE THIS EXERCISE OUT", ON AN AUTHORED DAY ──────────
+  //
+  // INSTALL SITE 2 OF 2. Site 1 is `rebaseAcceptedEffectiveWeek`, the accepted
+  // stack's compose owner. **This function is the one the athlete's SCREEN
+  // takes** — measured 2026-08-13, `resolveWeekWithConditioning` leaves through
+  // its `!state.seasonPhase` guard and never reaches its own tail — so a filter
+  // installed only at the accepted stack is a filter the athlete never sees.
+  // Both sites read the SAME decisions from the SAME owner
+  // (`liveAthleteExclusions`), so they cannot disagree.
+  //
+  // AFTER the removal constraint, deliberately: a constraint pushes its own
+  // `remainingWorkout` back onto the day, and content the athlete's removal
+  // deposited must answer the athlete's exclusion too.
+  //
+  // ⚠ **ON `ScheduleState`, AND THE FIRST CUT READ THE LIVE STORE HERE INSTEAD.**
+  // That looked safer — nothing can forget a field that does not exist — and it
+  // was measured WRONG within one restart. This resolver is not only the read
+  // door: `programStore.canonicaliseAcceptedBoundaryState` composes the accepted
+  // week THROUGH it, and `commitRebuiltProgram` persists the result. So a filter
+  // that applies unconditionally is a filter that gets WRITTEN DOWN — three
+  // stored microcycles lost the row permanently while the block before the
+  // decision day kept it, and Restore then had nothing to give back.
+  //
+  // A filter that is persisted is not a filter. So the exclusions travel on the
+  // STATE, and only the doors that mean *"what does the athlete SEE"* carry
+  // them: `deriveVisibleWeek.assembleScheduleState` and `hooks/useSchedule`.
+  // The canonicalisers build their own bare states and therefore compose the
+  // week the app AUTHORED, which is the week that must be stored.
+  const dayExclusions = state.athleteExclusions ?? [];
+  const composedWorkout = applyExclusionsToAuthoredDay({
+    workout: composed.workout,
+    dateISO: date,
+    exclusions: dayExclusions,
+  });
+  const constrainedWorkout = constrained
+    ? applyExclusionsToAuthoredDay({
+      workout: constrained.workout,
+      dateISO: date,
+      exclusions: dayExclusions,
+    })
+    : null;
+
   // ── The date override answers WITHOUT needing block data ──
   //
   // A date override is stored content FOR THIS DATE. It is not derived from a
@@ -866,8 +919,8 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // date outside `[program.startDate, program.endDate]` silently stopped
   // rendering. Marks and removal constraints still outrank it: both are
   // resolved above this line.
-  if (!constrained && composed.owner === 'date_override' && composed.workout) {
-    return buildDay(date, dow, today, composed.workout, 'manual');
+  if (!constrained && composed.owner === 'date_override' && composedWorkout) {
+    return buildDay(date, dow, today, composedWorkout, 'manual');
   }
 
   // ── No block data → nothing to resolve ──
@@ -875,7 +928,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, null, 'none');
   }
 
-  const templateWorkout = constrained ? constrained.workout : composed.workout;
+  const templateWorkout = constrained ? constrainedWorkout : composedWorkout;
   const templateMicrocycleId = overlayTemplate.overlay?.id ?? currentMicrocycle?.id ?? 'derived';
 
   /* ── PRIORITY 4, GAME PROXIMITY, IS DELETED ────────────────────────────────
