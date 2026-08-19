@@ -320,8 +320,6 @@ async function main(): Promise<void> {
   storage.set('program-store', JSON.stringify({ state: clone(fixture), version: 0 }));
 
   const programStore = require('../store/programStore') as typeof import('../store/programStore');
-  const ingress = require('../store/programHydrationIngress') as
-    typeof import('../store/programHydrationIngress');
   const projection = require('../store/programHydrationProjection') as
     typeof import('../store/programHydrationProjection');
   /**
@@ -335,18 +333,11 @@ async function main(): Promise<void> {
    * lighter substitute, and the assertions below are unchanged.
    */
   const canonicaliseAtReadBoundary = (state: Record<string, unknown>): any =>
-    projection.projectHydratedStateDerivedFields(
-      ingress.dropRetiredWeekOverlaysAtHydration(state as never) as Record<string, unknown>,
-    );
+    projection.projectHydratedStateDerivedFields(state);
   const temporaryFacts = require('../rules/temporarySourceFact') as
     typeof import('../rules/temporarySourceFact');
   const reversible = require('../rules/reversibleAdjustmentLedger') as
     typeof import('../rules/reversibleAdjustmentLedger');
-
-  await run('1 accepted envelope is classified from durable protocols', () => {
-    const result = ingress.requireProgramHydrationIngress(fixture, 0);
-    assert(result.kind === 'accepted_canonical', JSON.stringify(result));
-  });
 
   await run('2 accepted mixed workout repairs stale workoutType without semantic mutation', () => {
     const projected = canonicaliseAtReadBoundary(clone(fixture) as any);
@@ -474,19 +465,12 @@ async function main(): Promise<void> {
    * reason, and rewiring these to a live door would have been inventing a new
    * claim rather than keeping an old one.
    *
-   * WHAT DID NOT GO WITH THEM is cell 14's incidental claim about the CLASSIFIER,
-   * which is live and has its own owner (`programHydrationIngress`). It is kept
-   * below, under its own name, saying only what it actually proves.
+   * AND ON 2026-08-19 THE CLASSIFIER WENT TOO (demolition area B/G). Cells 1,
+   * 13 and 18 were its implementation tests and were deleted with it. It had
+   * ZERO production callers: a stored world the current code cannot read is
+   * RESET CLEAN by `readStoredWorldOrResetClean` (Sam, 2026-08-10), which is
+   * the surviving owner of "can this envelope be read".
    */
-  await run('13 an envelope missing typed intent still classifies as migration_required', () => {
-    const legacyEnvelope = clone(fixture) as any;
-    legacyEnvelope.currentProgram.microcycles[0].workouts[0].strengthIntent = undefined;
-    legacyEnvelope.currentMicrocycle.workouts[0].strengthIntent = undefined;
-    legacyEnvelope.todayWorkout.strengthIntent = undefined;
-    const classified = ingress.requireProgramHydrationIngress(legacyEnvelope, 0);
-    assert(classified.kind === 'migration_required', JSON.stringify(classified));
-  });
-
   const legacyEquipmentConstraint = {
     id: 'legacy-equipment', type: 'equipment', status: 'active', startDate: WEEK,
     expiresAt: '2026-07-19', mode: 'only', tags: ['bike_or_treadmill'],
@@ -522,8 +506,6 @@ async function main(): Promise<void> {
       isGenerating: false, isLoading: false, error: null,
       sessionFeedback: {}, weightOverrides: {},
     } as any;
-    assert(ingress.requireProgramHydrationIngress(legacyEnvelope, 0).kind ===
-      'migration_required', 'legacy fixture was not classified for migration');
     const legacySerialized = JSON.stringify({ state: legacyEnvelope, version: 0 });
     storage.set('program-store', legacySerialized);
     assert(await programStore.readDurableProgramStoreEnvelope() === legacySerialized,
@@ -571,35 +553,16 @@ async function main(): Promise<void> {
       'typed prescription changed during scalar repair');
   });
 
-  await run('18 unsupported schema fails closed with an exact hydration reason', () => {
-    let reason = '';
-    try {
-      ingress.requireProgramHydrationIngress(fixture, 99);
-    } catch (error) {
-      reason = (error as { reason?: string }).reason ?? '';
-    }
-    assert(reason === 'unsupported_program_store_persistence_version:99',
-      `unexpected reason=${reason}`);
-    const unsupportedBaseLedger = clone(fixture) as any;
-    unsupportedBaseLedger.acceptedMaterialContext.acceptedCompositionBase.surfaces
-      .reversibleAdjustmentLedger.protocolVersion = 99;
-    reason = '';
-    try {
-      ingress.requireProgramHydrationIngress(unsupportedBaseLedger, 0);
-    } catch (error) {
-      reason = (error as { reason?: string }).reason ?? '';
-    }
-    assert(reason === 'unsupported_accepted_base_reversible_ledger_protocol:99',
-      `unexpected accepted-base reason=${reason}`);
-  });
-
-  // 17, NOT 18, SINCE 2026-08-14 — and the number is stated rather than left to
-  // drift. Old cell 14 ("legacy typed-intent … migrates idempotently") is gone
-  // because the legacy structural migration it drove is gone; old cell 13 was
-  // re-formed into the classifier claim that survived it. The cell NUMBERS are
-  // deliberately left alone: 14 is absent, and a silent renumber would make the
-  // history of this file unreadable against its own commits.
-  console.log(`\nProgram hydration ownership totals: passed=${passed}/17 failures=${failures.length}`);
+  // 14, NOT 17, SINCE 2026-08-19 — and the number is stated rather than left to
+  // drift. It was 17, NOT 18, since 2026-08-14: old cell 14 ("legacy typed-intent
+  // … migrates idempotently") went with the legacy structural migration it drove.
+  // Demolition area B/G then deleted the ingress CLASSIFIER itself, and cells 1,
+  // 13 and 18 were its implementation tests, so they went with it — 7 passes
+  // became 4, and the 10 failures below are UNCHANGED by that deletion.
+  // The cell NUMBERS are deliberately left alone: 1, 13, 14 and 18 are absent,
+  // and a silent renumber would make the history of this file unreadable
+  // against its own commits.
+  console.log(`\nProgram hydration ownership totals: passed=${passed}/14 failures=${failures.length}`);
   if (failures.length > 0) process.exit(1);
 }
 

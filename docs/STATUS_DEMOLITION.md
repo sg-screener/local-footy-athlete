@@ -769,3 +769,96 @@ losing a live owner's guard is not "deleting an obsolete test", and the rebuild
 phase needs them.
 
 Agent: demolition
+
+---
+
+## ⚠ INSTRUMENT TRAP — `imports.js` WITH A RELATIVE ROOT REPORTS **ZERO FOR EVERYTHING**
+
+Caught on the first census of this session, before any deletion.
+
+```
+node tools/imports.js .    store/quiescentBoot  ->  importers=0 (prod/script=0)
+node tools/imports.js $WT  store/quiescentBoot  ->  importers=26 (prod/script=5)
+```
+
+`ROOT` is used with `path.join`/`path.relative`, so a relative `.` silently
+resolves nothing and **every file looks dead**. It does not warn and it does not
+exit non-zero — it prints a clean, confident zero.
+
+**The census that triggered it returned `importers=0` for ten modules including
+`quiescentBoot` (the live boot owner) and `appHydrationGate` (mounted by
+`RootNavigator`).** Acting on that output would have deleted the app's boot path
+under a "zero production imports" proof. The tell was that the answer was zero
+for *everything*, including files I already knew were live — a census where
+nothing is reachable is measuring nothing.
+
+**ALWAYS pass an ABSOLUTE root, and always keep one known-live module in the
+argument list as a positive control.** A deletion instrument that cannot show a
+non-zero is not evidence. Same class as [[a-green-gate-is-a-claim]].
+
+---
+
+## AREA B/G — THE HYDRATION INGRESS CLASSIFIER IS DELETED (zero production execution)
+
+**Surviving owner:** `readStoredWorldOrResetClean` (`store/unreadableWorldResetDoor.ts`
+→ `rules/unreadableWorldReset.ts`), live at boot ingress in
+`programStore.ts:419`. Sam, 2026-08-10: a stored world the current code cannot
+read is **RESET CLEAN** and the athlete is told. That is the whole of "can this
+envelope be read", and it is the canonical accepted-state loading Sam's order
+says to PRESERVE — it is preserved untouched.
+
+**Proof the target was superseded, on two independent grounds:**
+
+1. **Zero production callers.** `classifyProgramHydrationIngress`,
+   `requireProgramHydrationIngress` and `dropRetiredWeekOverlaysAtHydration` were
+   referenced by NOTHING outside tests and one stale comment. `programStore`
+   imported the module for exactly one live symbol — the version constant — plus
+   a type it never used.
+2. **The suites that drove it say so themselves.** `slice4PersistenceProbe`:
+   *"nothing reads a stored program back at all (`partialize` persists inputs
+   only)"*. Both remaining callers hand-rebuilt a function deleted on 2026-08-14
+   out of two pieces in order to keep asserting on it.
+
+| deleted | lines | why |
+| --- | --- | --- |
+| `store/programHydrationIngress.ts` | 379 | pre-release legacy/canonical envelope classifier; zero production execution |
+| `__tests__/hydrationUpgradePathTests.ts` | 325 | SUBJECT is the deleted upgrade path — hydrating a previous-build store |
+| `__tests__/fixtures/previousBuildStore-49c8579.json` | 45 | obsolete seed, zero code readers (named only in the deleted test's prose) |
+
+**PRESERVED, and deliberately:** `previousBuildStore-1e9c822.json` is still read
+by the LIVE `hydrationRefusalQuarantineTests` — matching fixtures by name would
+have taken a live suite's payload with it. `programHydrationProjection.ts` stays:
+its name says hydration but its live caller is
+`canonicaliseAcceptedStateCandidate`, on the ACCEPTANCE boundary.
+
+`PROGRAM_STORE_PERSISTENCE_VERSION` moved to `programStore.ts`, the store that
+writes it. With no second reader there is no one left to agree with about it.
+
+**Two live suites detached, not deleted** — the ⚠ lesson from areas E/G/H holds:
+`programHydrationOwnershipTests` and `slice4PersistenceProbe` are about LIVE
+owners and merely imported the dead one. Their classifier cells (1, 13, 18) were
+its implementation tests and went with it; cell 15's incidental classification
+assert was dropped.
+
+### PROOF
+
+```
+test:compile   control 3f97cc67 = 32 file(s) over baseline
+               after   B-1      = 32 file(s) over baseline     DIFF: IDENTICAL
+test:program-hydration-ownership
+               control 3f97cc67 = passed 7/17  failures 10
+               after   B-1      = passed 4/14  failures 10
+```
+
+Cells run 17 → 14, passes 7 → 4 — **exactly the three deleted classifier cells,
+and not one failure moved.** The suite's hardcoded `/17` denominator was updated
+to `/14` in the file's own stated-number convention; leaving it would have made
+the suite misreport its own size.
+
+**REBUILD LIST — nothing added.** A path with zero production execution loses no
+athlete capability when deleted. The retired-overlay filter
+(`dropRetiredWeekOverlaysAtHydration`) is the only behaviour that went, and the
+law it served — repeat-week has no writer — is now held by there being no writer
+at all, which `storedStateWriterAuditTests` still asserts across the tree.
+
+Agent: demolition

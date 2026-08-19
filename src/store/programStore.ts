@@ -101,10 +101,16 @@ import {
   createEmptyReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
-import {
-  PROGRAM_STORE_PERSISTENCE_VERSION,
-  type ProgramHydrationIngressClassification,
-} from './programHydrationIngress';
+/**
+ * Durable Zustand envelope version written by ProgramStore.
+ *
+ * Owned HERE, by the store that writes it. It previously lived in
+ * `programHydrationIngress`, the pre-release legacy/canonical classifier
+ * deleted 2026-08-19: a stored world the current code cannot read is RESET
+ * CLEAN by `readStoredWorldOrResetClean` (Sam, 2026-08-10), so there is no
+ * second reader to agree with about a version number.
+ */
+export const PROGRAM_STORE_PERSISTENCE_VERSION = 0 as const;
 import {
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';

@@ -289,16 +289,17 @@ async function run(scenarioId: string) {
   // at all (`partialize` persists inputs only) — that function's ENTIRE body
   // was these two calls, in this order, and then an early return. So the probe
   // observes exactly what it observed before, with the unreachable branch gone.
-  const { dropRetiredWeekOverlaysAtHydration } =
-    require('../../../store/programHydrationIngress') as
-      typeof import('../../../store/programHydrationIngress');
+  // `dropRetiredWeekOverlaysAtHydration` went with `programHydrationIngress`
+  // on 2026-08-19 (demolition area B/G). It filtered ONE retired overlay
+  // reason that no code path can write, on a boundary this same comment
+  // records as already unreachable — so removing it changes nothing this
+  // probe observes. The projection half is live and stays.
   const { projectHydratedStateDerivedFields } =
     require('../../../store/programHydrationProjection') as
       typeof import('../../../store/programHydrationProjection');
   const canonicaliseAtReadBoundary = (state: Record<string, unknown>) =>
-    projectHydratedStateDerivedFields(
-      dropRetiredWeekOverlaysAtHydration(state as never) as Record<string, unknown>,
-    ) as { currentProgram?: { microcycles?: { workouts?: Workout[] }[] } };
+    projectHydratedStateDerivedFields(state) as
+      { currentProgram?: { microcycles?: { workouts?: Workout[] }[] } };
   void legacy;
   const canonicalOnce = canonicaliseAtReadBoundary(envelope.state as never);
   const hydratedWorkouts =
