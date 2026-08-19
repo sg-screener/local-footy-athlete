@@ -1046,3 +1046,110 @@ own dated session — the constraint governs every week the composer authors fro
 here, and this is the half nothing regenerates.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — ONE PLACE TO CHANGE THE SESSION, AND THE WALK THAT FOUND TWO DEFECTS
+
+## THE HUB
+
+Deleted: three unlabelled icons in the sticky header (a plus, a dumbbell, a
+plaster — nothing said which was which, and the dumbbell came and went with the
+session's equipment needs) and the swap/remove icon pair on EVERY row of every
+session.
+
+Built: **"Need to make a change?" — Equipment · Injury · Add · Remove · Swap**,
+below the session, in words. Remove and Swap ask which exercise through the
+existing `pick_exercise` step, which now serves all three of the doors that need
+a row rather than growing a picker each.
+
+**"NO DEAD BUTTONS" IS ENFORCED BY CONSTRUCTION.** `SessionChangeHub` takes the
+actions as a LIST and renders exactly what it is handed — it knows nothing about
+which doors exist, so it cannot render one with nowhere to go, and there is no
+disabled state for a caller to pass. Equipment is the only door that comes and
+goes, and it goes by absence.
+
+⚠ **THE INGRESS TEST IDS MOVED WITH THE INGRESS.** `componentSwapIngress` and
+`componentDeleteIngress` named the deleted row icons; they are on the picker's
+rows now, because the picker IS the swap/remove ingress. Deleting them with the
+icons would have left the explorer and the lifecycle witness watching a door that
+exists under a new name.
+
+Kept, as ordered and asserted: the play/demo button and its video modal, the
+checkboxes, the load controls (`weightControl` / `weightInput`) and the form cues.
+
+**GATE:** `npm run test:session-change-hub`, 35 cells, ALL GREEN — half of them
+asserting what SURVIVED, and one CONTROL proving the comment-stripped source
+still holds the screen, because every absence cell is a `!includes` and
+`!includes` is true of an empty string.
+
+## THE COMBINED WALK — AND IT EARNED ITS KEEP IMMEDIATELY
+
+`npm run test:session-change-sequence`: one athlete, remove → swap → add on one
+session, then a real restart, then an injury pass over the top, then Restore.
+
+**20 of 22 cells green. It found THREE defects in one run; I fixed one and named
+two.**
+
+### FIXED — SWAP AND ADD WERE HELD IN MEMORY ONLY
+
+The athlete swapped a lift and added an exercise, closed the app, and both were
+gone. **The durability was never in the store — it is in the DECISION LEDGER**:
+`quiescentBoot` blanks `dateOverrides` on purpose and rebuilds the athlete's
+edits by replaying the ledger. Only `executeProgramControlActionDurably` appends
+to it. Remove already used it; swap and add used the synchronous twin, so nothing
+recorded them and the clean slate erased them. Both doors are durable now, and
+**the ADD survives**.
+
+⚠ My first cut added `dateOverrides` to the persisted inputs. It reached disk
+correctly and changed nothing, because boot blanks it after hydration by design —
+and keeping it would have been a SECOND representation of the athlete's edits
+racing the ledger's replay. Reverted, and the reason is recorded at the fix.
+
+### FIXED — THE INJURY PASS WAS RECOMPOSING ROWS THE ATHLETE HAD ALREADY REMOVED
+
+`resolveWorkoutOnDate` returns the AUTHORED day, which still carries every row an
+exclusion is hiding. The injury pass "made safe" a row the athlete had already
+taken out. It reads the athlete-visible day now: **an exercise the athlete has
+removed is not unsafe, it is not there.**
+
+### ⚠ OPEN #1 — A SWAP DOES NOT SURVIVE A RESTART
+
+Removal survives (a decision in athlete preferences) and the ADD survives (its
+ledger replay lands), so this is not "the ledger is not replayed" — it is the
+SWAP's replay specifically. Remove, swap and add each write a `dateOverride` for
+the same day during replay and the later writes appear to compose from a base
+that does not carry the earlier one. **The fix is in how one day's overrides
+compose during ledger replay — `quiescentBoot`'s ordering, not this mission's
+five doors.**
+
+### ⚠ OPEN #2 — RESTORE CANNOT REVEAL A ROW A SWAP HAS WRITTEN OVER
+
+**The same defect this branch fixed twice, one door along.**
+`replaceExerciseAtDate` writes the day's override from a read that ALREADY HAS
+THE FILTER APPLIED, so a hidden row is baked out of the stored override and
+Restore has nothing to give back. Traced: the injury plan correctly excludes the
+removed row (`unsafe=["Bulgarian Split Squats","Back Squat"]`, `RDLs` filtered),
+and the write still loses it.
+
+The boundary that closed this at the compose owner and the resolver — exclusions
+travel on `ScheduleState`, and only VIEW doors carry them — leaks because
+`buildScheduleStateImperative` is used by writers as well as views. **The fix is
+a writer-side `ScheduleState` that carries no exclusions, and that function has
+fourteen callers: its own slice, not a line at the end of this one.**
+
+**BOTH CELLS STAY RED AND NAME THEIR CAUSE.** Editing either expectation to match
+would be the `expectation-edited-to-match-the-regression` defect.
+
+## BLAST RADIUS
+
+`test:compile` 665 / 73, unchanged. `exercise-edit-entry-surface` 35/0,
+`dead-affordances` 6/0, `action-walker` 19/0, `accessibility-contracts` 33/5,
+`dev-e2e-testids` 28/2, `maestro-element-contract` 0/1, `program-control-durable`
+18/0, `undo-reversal` 19/0, `athlete-journey` 58/0 — **every one identical at the
+control worktree**, including the four already red there.
+
+**NOT COVERED:** the simulator. Nothing in this mission has been seen on glass.
+
+Agent: rebuild

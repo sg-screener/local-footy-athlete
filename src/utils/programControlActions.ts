@@ -26,6 +26,8 @@ import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
 import { getActiveProgramModifiers } from './activeProgramModifiers';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
+import { applyExclusionsToAuthoredDay } from '../rules/exerciseExclusions';
+import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import {
   injuryRecompositionMessage,
   planInjuryRecomposition,
@@ -1194,7 +1196,27 @@ function recomposeSessionForInjury(args: {
   constraint: ActiveInjuryConstraint;
   source: ProgramControlAction['source'];
 }): { changed: boolean; message: string } {
-  const workout = resolveWorkoutOnDate(args.date);
+  /**
+   * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
+   *
+   * `resolveWorkoutOnDate` returns the AUTHORED day, which still carries every
+   * row an exclusion is currently hiding — the filter is a READ-time projection
+   * and this is not a read door. Measured 2026-08-19 by
+   * `npm run test:session-change-sequence`: an athlete removed `RDLs`, then
+   * declared a knee injury, and the injury pass "made safe" the very row they
+   * had already taken out — swapping the hidden `RDLs` for `Bench Press`. The
+   * damage only surfaced at Restore, which then had nothing named `RDLs` to give
+   * back: **an injury pass had quietly consumed the athlete's own decision.**
+   *
+   * So the exclusions are applied here, through the same owner the screen uses,
+   * before anything is planned. An exercise the athlete has removed is not
+   * unsafe — it is not there.
+   */
+  const workout = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(args.date),
+    dateISO: args.date,
+    exclusions: liveAthleteExclusions(),
+  });
   const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
   const primaryInjury = args.constraint.bucket
     ? {
@@ -1267,7 +1289,11 @@ function recomposeSessionForInjury(args: {
     logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
   }
 
-  const after = resolveWorkoutOnDate(args.date);
+  const after = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(args.date),
+    dateISO: args.date,
+    exclusions: liveAthleteExclusions(),
+  });
   const remainingUnsafe = unsafeRowsForInjury({ workout: after, environment });
   const applied: InjuryRecompositionPlan = {
     ...plan,

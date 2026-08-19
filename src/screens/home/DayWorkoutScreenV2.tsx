@@ -170,7 +170,15 @@ type SuggestedSwap =
  * design would have routed through — are deleted outright rather than kept
  * as dead-but-present.
  */
-type ExercisePickAction = 'injury';
+/**
+ * WHICH EXERCISE, AND FOR WHAT.
+ *
+ * Sam, 2026-08-19: the hub is *"Equipment · Injury · Add · Remove · Swap"*, and
+ * three of those five need a row before they can act. They all ask the same
+ * question, so they all use the same step rather than three pickers that could
+ * drift apart.
+ */
+type ExercisePickAction = 'injury' | 'swap' | 'remove';
 type SwapReason =
   | 'No equipment'
   | 'Injury / pain'
@@ -725,6 +733,16 @@ export default function DayWorkoutScreenV2() {
     setExerciseEditStep({ kind: 'pick_exercise', action: 'injury' });
   }, [editableExercises.length, isTeamOnly]);
 
+  const openExerciseSwapPicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'swap' });
+  }, [editableExercises.length, isTeamOnly]);
+
+  const openExerciseRemovePicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'remove' });
+  }, [editableExercises.length, isTeamOnly]);
+
   // Per-row swap/remove buttons. Replace `openSpecificExerciseEditor`,
   // which routed every row tap through the now-deleted `exercise_menu`
   // step. The row already tells us which exercise AND which action, so
@@ -1023,11 +1041,33 @@ export default function DayWorkoutScreenV2() {
     [date, injuryFlowExercise, suggestTapSwap],
   );
 
+  /**
+   * ⚠ **SWAP AND ADD USED THE SYNCHRONOUS DOOR, AND THEY DID NOT SURVIVE A
+   * RESTART.**
+   *
+   * Measured 2026-08-19 by `npm run test:session-change-sequence`, the first
+   * thing in this repo to take four actions and then kill the process: the
+   * athlete swapped a lift and added an exercise, relaunched, and both were
+   * gone. `dateOverrides` reached disk and came back EMPTY — because
+   * `quiescentBoot`'s clean slate deliberately blanks `dateOverrides` and
+   * rebuilds the athlete's edits by REPLAYING THE DECISION LEDGER
+   * (`migrated_day_placement` / `program_control`).
+   *
+   * Only `executeProgramControlActionDurably` appends to that ledger. Remove
+   * already used it; swap and add did not, so nothing recorded them and the
+   * clean slate simply erased them. **The durability was never in the store —
+   * it is in the ledger, and these two doors were not writing to it.**
+   *
+   * (The first cut of this fix added `dateOverrides` to the persisted inputs.
+   * It reached disk correctly and changed nothing, because boot blanks it after
+   * hydration on purpose — and keeping it would have been a SECOND
+   * representation of the athlete's edits racing the ledger's replay. Reverted.)
+   */
   const applySwapToday = React.useCallback(
-    (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => {
+    async (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => {
       if (!date) return;
       const result = step.suggestion.kind === 'rest'
-        ? executeProgramControlAction({
+        ? await executeProgramControlActionDurably({
             type: 'remove_exercise',
             source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
             scope: 'today_only',
@@ -1039,8 +1079,8 @@ export default function DayWorkoutScreenV2() {
             requiresRebuild: false,
             createsActiveModifier: false,
             oneOffOnly: true,
-          })
-        : executeProgramControlAction({
+          }, { todayISO: date })
+        : await executeProgramControlActionDurably({
             type: 'swap_exercise',
             source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
             scope: 'today_only',
@@ -1053,7 +1093,7 @@ export default function DayWorkoutScreenV2() {
             requiresRebuild: false,
             createsActiveModifier: false,
             oneOffOnly: true,
-          });
+          }, { todayISO: date });
       if (result.ok) {
         if (step.suggestion.kind === 'rest') {
           // A swap with no safe replacement IS a removal — the row came out and
@@ -1082,10 +1122,11 @@ export default function DayWorkoutScreenV2() {
     [date],
   );
 
+  /** Durable for the same reason as the swap above — see its note. */
   const applyAddToday = React.useCallback(
-    (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => {
+    async (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => {
       if (!date) return;
-      const result = executeProgramControlAction({
+      const result = await executeProgramControlActionDurably({
         type: 'add_exercise',
         source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
         scope: 'today_only',
@@ -1096,7 +1137,7 @@ export default function DayWorkoutScreenV2() {
         requiresRebuild: false,
         createsActiveModifier: false,
         oneOffOnly: true,
-      });
+      }, { todayISO: date });
       if (result.ok) {
         setExerciseEditStep({
           kind: 'future_scope',
@@ -1462,48 +1503,18 @@ export default function DayWorkoutScreenV2() {
               {combinedSubtitle}
             </Text>
           ) : null}
-          {/*
-            Session-level change doors (ruling 12). The weekly Program card
-            owns day/session edits; inside an opened workout these icons edit
-            exercises only. The single "Edit exercises" link and its modal
-            MENU are retired — three doors, three icons, no menu in between.
-            Same gate the link used to apply, and the same hidden-when-not-
-            applicable pattern every other gated affordance on this screen
-            uses (staleWarning, the finish moment, the description line):
-            nothing renders rather than a disabled control sitting there.
-            Lives in the sticky header so it stays reachable at any scroll
-            depth.
-          */}
-          {date && !isTeamOnly && editableExercises.length > 0 ? (
-            <View style={styles.exerciseActionsRow}>
-              <IconButton
-                onPress={openExerciseAdd}
-                accessibilityLabel="Add an exercise"
-                tone="accent"
-                size="sm"
-                icon={<PlusIcon />}
-                testID="day-workout-add-exercise-action"
-              />
-              {sessionEquipmentRequirements.length > 0 ? (
-                <IconButton
-                  onPress={openSessionEquipment}
-                  accessibilityLabel="Equipment for this session"
-                  tone="default"
-                  size="sm"
-                  icon={<MaterialCommunityIcons name="dumbbell" size={16} color="#C6FF6B" />}
-                  testID="day-workout-equipment-concern-action"
-                />
-              ) : null}
-              <IconButton
-                onPress={openExerciseInjuryPicker}
-                accessibilityLabel="Something hurts"
-                tone="default"
-                size="sm"
-                icon={<InjuryIcon />}
-                testID="day-workout-injury-concern-action"
-              />
-            </View>
-          ) : null}
+          {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
+            *
+            * *"Remove unlabelled header icons. Remove always-visible row
+            * Swap/Remove icons. Build one 'Need to make a change?' section:
+            * Equipment · Injury · Add · Remove · Swap."*
+            *
+            * A plus, a dumbbell and a plaster in the sticky header, each opening
+            * a different change flow, and nothing on the screen said which was
+            * which. The equipment one also came and went with
+            * `sessionEquipmentRequirements`, so the row silently changed shape
+            * between sessions. All five doors now live in ONE labelled section
+            * below the session — see `SessionChangeHub`. */}
         </View>
       </View>
 
@@ -1692,6 +1703,35 @@ export default function DayWorkoutScreenV2() {
               />
             )}
           </View>
+        ) : null}
+
+        {/* ── ONE PLACE TO CHANGE THE SESSION ────────────────────────────
+          *
+          * Sam, 2026-08-19: *"Build one 'Need to make a change?' section:
+          * Equipment · Injury · Add · Remove · Swap. No dead buttons."*
+          *
+          * It replaces three unlabelled icons in the sticky header and two more
+          * on every single row. Five doors, five words, one place — and below
+          * the session, because a change is what the athlete reaches for AFTER
+          * reading what they have been given, not instead of reading it.
+          *
+          * **NO DEAD BUTTONS** is enforced by construction: `SessionChangeHub`
+          * takes the actions as a list and renders exactly the ones handed to
+          * it, so a door that cannot act today is ABSENT rather than present
+          * and inert. Equipment is the only one that comes and goes, and it
+          * goes when the session needs no equipment at all. */}
+        {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
+          <SessionChangeHub
+            actions={[
+              ...(sessionEquipmentRequirements.length > 0
+                ? [{ id: 'equipment' as const, label: 'Equipment', onPress: openSessionEquipment }]
+                : []),
+              { id: 'injury' as const, label: 'Injury', onPress: openExerciseInjuryPicker },
+              { id: 'add' as const, label: 'Add', onPress: openExerciseAdd },
+              { id: 'remove' as const, label: 'Remove', onPress: openExerciseRemovePicker },
+              { id: 'swap' as const, label: 'Swap', onPress: openExerciseSwapPicker },
+            ]}
+          />
         ) : null}
 
         {/* ── Finish moment (hidden once the session is complete) ── */}
@@ -2567,10 +2607,6 @@ function StrengthExerciseCard({
         label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
-        onSwap={isEditableRow && onSwapExercise ? () => onSwapExercise(exercise) : undefined}
-        onRemove={isEditableRow && onRemoveExercise ? () => onRemoveExercise(exercise) : undefined}
-        swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-        removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
       />
 
       {/*
@@ -2782,10 +2818,6 @@ function RecoveryBlock({
               label={`${index + 1}`}
               name={exerciseDisplayName}
               onPlay={() => onSelectExercise(exerciseName)}
-              onSwap={isEditableRow ? () => onSwapExercise(exercise) : undefined}
-              onRemove={isEditableRow ? () => onRemoveExercise(exercise) : undefined}
-              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
             />
 
             <View style={styles.recoveryPrescriptionRow}>
@@ -2958,14 +2990,6 @@ function ConditioningPhaseRow({
             {phaseDisplayName}
           </Text>
         </View>
-        {!isTeamTrainingItem(exercise) ? (
-          <ExerciseRowActions
-            onSwap={() => onSwapExercise(exercise)}
-            onRemove={() => onRemoveExercise(exercise)}
-            swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-            removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
-          />
-        ) : null}
       </View>
       {description ? (
         <Text
@@ -3026,14 +3050,6 @@ function ConditioningRow({
       <View style={{ flex: 1 }}>
         <View style={styles.conditioningRowHeader}>
           <Text style={styles.conditioningRowName}>{displayName}</Text>
-          {!isTeamTrainingItem(exercise) ? (
-            <ExerciseRowActions
-              onSwap={() => onSwapExercise(exercise)}
-              onRemove={() => onRemoveExercise(exercise)}
-              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
-            />
-          ) : null}
         </View>
         {prescription ? (
           <Text
@@ -3124,70 +3140,71 @@ function ExerciseHeaderRow({
             {name}
           </Text>
         </Pressable>
-        {onSwap && onRemove ? (
-          <ExerciseRowActions
-            onSwap={onSwap}
-            onRemove={onRemove}
-            swapTestID={swapTestID}
-            removeTestID={removeTestID}
-          />
-        ) : null}
         <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
       </View>
     </>
   );
 }
 
+
 /**
- * Two per-row icon buttons, shared by every row shape that used to mount the
- * single `ExerciseChangeAction` pill (strength, recovery, and both
- * conditioning row shapes) — one definition, so "what a row's edit
- * affordance looks like" cannot drift between them the way three separate
- * copies of a "Change" pill could have.
+ * "NEED TO MAKE A CHANGE?" — THE ONE SESSION-CHANGE SURFACE.
+ *
+ * Sam, 2026-08-19: *"Equipment · Injury · Add · Remove · Swap. No dead
+ * buttons."*
+ *
+ * **LABELLED, NOT ICONISED.** The five doors it replaces were icons: a plus, a
+ * dumbbell and a plaster in the header, and a swap/remove pair on every row.
+ * Nothing on the screen said what any of them did. The words are the change.
+ *
+ * **THE `actions` LIST IS THE WHOLE "NO DEAD BUTTONS" MECHANISM.** This
+ * component renders what it is given and nothing else — it has no knowledge of
+ * which doors exist, so it cannot render one that has nowhere to go, and a
+ * caller cannot hand it a disabled control because there is no disabled state
+ * to hand.
  */
-function ExerciseRowActions({
-  onSwap,
-  onRemove,
-  swapTestID,
-  removeTestID,
+function SessionChangeHub({
+  actions,
 }: {
-  onSwap: () => void;
-  onRemove: () => void;
-  swapTestID?: string;
-  removeTestID?: string;
+  actions: readonly { id: string; label: string; onPress: () => void }[];
 }) {
+  if (actions.length === 0) return null;
   return (
-    <View style={styles.exerciseRowActions}>
-      <Pressable
-        onPress={onSwap}
-        testID={swapTestID}
-        accessibilityRole="button"
-        accessibilityLabel="Swap exercise"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={({ pressed }) => [
-          styles.exerciseRowActionBtn,
-          pressed && { opacity: 0.65 },
-        ]}
-      >
-        <SwapIcon />
-      </Pressable>
-      <Pressable
-        onPress={onRemove}
-        testID={removeTestID}
-        accessibilityRole="button"
-        accessibilityLabel="Remove exercise"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={({ pressed }) => [
-          styles.exerciseRowActionBtn,
-          styles.exerciseRowActionBtnDanger,
-          pressed && { opacity: 0.65 },
-        ]}
-      >
-        <RemoveIcon />
-      </Pressable>
+    <View style={styles.changeHub} testID="day-workout-change-hub">
+      <Text style={styles.changeHubTitle}>Need to make a change?</Text>
+      <View style={styles.changeHubRow}>
+        {actions.map((action) => (
+          <Pressable
+            key={action.id}
+            onPress={action.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
+            testID={`day-workout-change-${action.id}`}
+            style={({ pressed }) => [
+              styles.changeHubButton,
+              pressed && { opacity: 0.65 },
+            ]}
+          >
+            <Text style={styles.changeHubButtonText}>{action.label}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
+
+/* ⚠ **`ExerciseRowActions` IS DELETED — SAM, 2026-08-19.**
+ *
+ * *"Remove always-visible row Swap/Remove icons."* Two unlabelled icons on
+ * EVERY row of every session, competing with the exercise name and the load
+ * controls for the athlete's attention, for two actions they take rarely. Both
+ * doors are in the one labelled section now (`SessionChangeHub`), which asks
+ * which exercise rather than putting the question on all of them at once.
+ *
+ * The `componentSwapIngress` / `componentDeleteIngress` test ids MOVED with the
+ * ingress, onto the picker's rows — a deleted surface whose gate keeps watching
+ * is the shape `gate-must-watch-the-deleted-surface` names.
+ */
 
 /**
  * Pro-mode play button — smaller, muted at rest, brightens only on press.
@@ -3409,9 +3426,23 @@ function ExerciseEditSheet({
       <ExerciseSheetOption
         key={exercise.key}
         label={displayExerciseName(exercise.name)}
-        testID={explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
+        /* ⚠ **THE INGRESS TEST IDS MOVED HERE WITH THE INGRESS ITSELF.**
+         * They named the per-row swap/remove icons, which Sam deleted on
+         * 2026-08-19; this picker IS the swap/remove ingress now, one row per
+         * exercise. Deleting the ids with the icons would have left the explorer
+         * and the lifecycle witness pointing at a door that exists under a new
+         * name — the "gate must watch the deleted surface" shape. */
+        testID={
+          action === 'swap'
+            ? explorerTestId.componentSwapIngress(sessionId, exercise.targetId ?? exercise.key)
+            : action === 'remove'
+              ? explorerTestId.componentDeleteIngress(sessionId, exercise.targetId ?? exercise.key)
+              : explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)
+        }
         onPress={() => {
           if (action === 'injury') onInjuryStart(exercise);
+          else if (action === 'swap') onStep({ kind: 'swap_reason', exercise });
+          else onStep({ kind: 'confirm_remove', exercise });
         }}
       />
     ));
@@ -3761,7 +3792,9 @@ function ExerciseEditSheet({
 function exerciseEditTitle(step: ExerciseEditStep): string {
   switch (step.kind) {
     case 'pick_exercise':
-      return 'Which exercise?';
+      return step.action === 'swap' ? 'Swap which exercise?'
+        : step.action === 'remove' ? 'Remove which exercise?'
+          : 'Which exercise?';
     case 'swap_reason':
       return 'Why do you want to swap it?';
     case 'add_group':
@@ -4828,6 +4861,36 @@ const styles = StyleSheet.create({
     color: colors.accent.lime,
     fontSize: 12,
     fontWeight: '700',
+  },
+  changeHub: {
+    marginTop: 18,
+    marginHorizontal: 16,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: colors.surface.secondary,
+    gap: 10,
+  },
+  changeHubTitle: {
+    color: colors.text.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  changeHubRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  changeHubButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.surface.tertiary,
+  },
+  changeHubButtonText: {
+    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
   exerciseEditGroup: {
     marginTop: 10,
