@@ -401,6 +401,7 @@
     "test:coach-note-action-source": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachNoteActionSourceTests.ts",
     "test:my-status-modifiers": "TZ=Australia/Melbourne sucrase-node src/__tests__/myStatusOwnsTheModifiersTests.ts",
     "probe:session-equipment": "TZ=Australia/Melbourne sucrase-node scripts/probe-equipment-slice.ts",
+    "probe:removal-slice": "TZ=Australia/Melbourne sucrase-node scripts/probe-removal-slice.ts",
     "census:five-actions": "TZ=Australia/Melbourne sucrase-node scripts/census-five-actions.ts",
     "census:equipment-recompose": "TZ=Australia/Melbourne sucrase-node scripts/census-equipment-recompose.ts",
     "test:session-equipment-owner": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionEquipmentOwnerTests.ts",

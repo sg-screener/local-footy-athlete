@@ -357,3 +357,89 @@ change.
 conditioning, power, away substitution and optional sessions.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — REMOVE, DIAGNOSED. AND A CORRECTION TO MY OWN CHECKPOINT.
+
+## ⚠ THE CHECKPOINT ABOVE WAS HALF WRONG — I MEASURED ONE OF TWO DOORS
+
+I reported Remove as *"STORED, NEVER SEEN"*. **The row does leave the session.**
+`npm run probe:removal-slice` walks both doors the screen actually uses, and the
+five-actions census had only walked the second:
+
+| door | what it is | effect on the visible session |
+| --- | --- | --- |
+| A `remove_exercise` | `executeProgramControlActionDurably`, fired by `removeExerciseToday` | **the row goes** — 5 rows -> 4, other days byte-identical |
+| B `applyExerciseExclusionDecision` | the scope answer that follows it | **nothing** |
+
+Walking B alone and calling Remove broken was the error. Corrected here rather
+than quietly.
+
+## WHAT REMOVE ACTUALLY DOES, AND THE FOUR THINGS IT DOES NOT
+
+Real athlete, off-season 3-day, `2026-07-22`, removing `RDLs`:
+
+```
+before  RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+after   Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+```
+
+1. **NO SAME-PATTERN REPLACEMENT.** The row is deleted, not replaced: `rows 5 -> 4`,
+   `replaced by: []`. The hinge is simply lost for the day. Sam's requirement is
+   *"same-pattern replacement where legal"*, and `Glute Bridge` — which the SWAP
+   door offers for this exact row at `same_movement_pattern` — is legal here.
+2. **`this_block` AND `until_restored` REACH NOTHING BEYOND TODAY.** Both return
+   `rebuildRequired: true` and nothing acts on it. The same session one week on
+   still carries `RDLs@82.5`.
+3. **UNDO DOES NOT RESTORE.** `restoreExcludedExercise` returns `ok=true` and the
+   row stays gone — the decision is deleted, the patched week is not revisited.
+4. **NO TYPED REFUSAL PATH** — nothing is asked, so nothing can refuse.
+
+## ⚠ HIDDEN AUTHORITY FOUND — REMOVE PATCHES THE VISIBLE WEEK
+
+`remove_exercise` -> `coachActions.removeExerciseAtDate` -> **`writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' })`**.
+
+It clones the day's workout with the row filtered out and writes it as a COACH
+OVERRIDE. **The composer never runs, so nothing can choose a replacement; the
+accepted-state transaction is bypassed, so nothing validates it; and the visible
+week is patched directly** — the three things this mission's shared path forbids.
+It also explains defect 3: Undo deletes the decision but the override still
+stands.
+
+Named for deletion in the Remove build, per the hidden-legacy rule. No
+compatibility wrapper.
+
+## THE SHARED BOUNDARY — IT ALREADY EXISTS, AND EQUIPMENT IS ALREADY ON IT
+
+`commitDerivingSourceFactScopedRegen` (`store/temporarySourceFactTransaction.ts:429`)
+is the lane every clean session change should ride:
+
+```
+generateProgramLocally(profile, { microcycleLimit: 1, previousProgram, blockNumber,
+                                  blockStartISO, remainderBoundary, weekAcceptance })
+   -> buildWeekScopedWorkoutOverlay   (a SPARSE week overlay; the base microcycle is never touched)
+   -> the accepted-state transaction  (validated, atomic, fact-linked, reversible)
+```
+
+**One week, not the program** — `microcycleLimit: 1` and a `remainderBoundary`
+that pins days already lived. That is exactly *"recompose only the affected
+session; do not regenerate the whole program"*.
+
+**And Remove needs no new stored shape to join it.** `generateProgramLocally`
+already reads `prefs.exclusions` through `composerExclusionInput`
+(`generateProgram.ts:1171` — I checked this twice; my first reading called it
+uncalled and was wrong), and `composeWeek` already carries `excludedToday`,
+`attributeGap({ excluded })` and `substitutedFor.cause = 'excluded_today'`. Run
+that lane with the decision stored and the same-pattern replacement, its own
+load, the typed gap and the reversible adjustment all fall out of owners that
+already exist.
+
+The lane is currently shaped around a `TemporarySourceFact`. Remove must drive it
+from its own cause — **a removal is not a fact kind**; its canonical home is
+`athletePreferencesStore.exclusions` via `exerciseExclusionOwner`, which the
+demolition kept and named as the owner. Adding a `factKind: 'removal'` would be a
+second representation of a decision that already has one.
+
+Agent: rebuild
