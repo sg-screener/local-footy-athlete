@@ -147,6 +147,25 @@ export function splitTeamTrainingFromExercises(
   return { teamTrainingItems, renderableExercises };
 }
 
+/**
+ * A typed row is the athlete's own programmed work even when a stale session
+ * title still says only "Team Training". The title is presentation; authored
+ * row evidence is the executable authority. Legacy team-only shells carry no
+ * such declaration and keep their read-ingress cleanup below.
+ */
+function declaresAthleteProgrammedWork(row: any): boolean {
+  if (!row || isTeamTrainingItem(row)) return false;
+  if (row.role && row.role !== 'team_training') return true;
+  return [
+    'main_strength',
+    'strength_accessory',
+    'trunk_support',
+    'recovery_support',
+    'conditioning',
+    'power',
+  ].includes(String(row.section18Evidence?.role ?? ''));
+}
+
 export function getTeamTrainingWorkoutState(
   workout: WorkoutLike | null | undefined,
 ): TeamTrainingWorkoutState {
@@ -164,9 +183,10 @@ export function getTeamTrainingWorkoutState(
 
   const exercises = Array.isArray(workout.exercises) ? workout.exercises : [];
   const isSessionOnly = isTeamTrainingSessionOnly(workout);
+  const hasDeclaredAthleteWork = exercises.some(declaresAthleteProgrammedWork);
   const { teamTrainingItems, renderableExercises } = splitTeamTrainingFromExercises(
     exercises,
-    { treatAllAsTeamTraining: isSessionOnly },
+    { treatAllAsTeamTraining: isSessionOnly && !hasDeclaredAthleteWork },
   );
   const hasTeamTraining =
     isTeamTrainingSession(workout) || teamTrainingItems.length > 0;

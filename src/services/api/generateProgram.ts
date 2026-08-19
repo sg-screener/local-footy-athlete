@@ -92,7 +92,7 @@ import { materialiseAuthoredSessions } from '../../rules/materialiseAuthoredSess
 import { calculateCapacity } from '../../utils/coachingEngine';
 import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
 import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
-import { scheduleRefused, scheduleWeek } from '../../rules/weeklyScheduler';
+import { scheduleRefused, scheduledGameDays, scheduleWeek } from '../../rules/weeklyScheduler';
 import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
@@ -598,6 +598,7 @@ export function buildInitialGeneratedCoachingPlan(args: {
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
     },
     gameDay: schedInputs.gameDay,
+    gameDays: scheduledGameDays(schedInputs),
   });
   return scheduleToCoachingPlan({
     schedule: sched,
@@ -621,14 +622,14 @@ export function buildInitialGeneratedCoachingPlan(args: {
       currentProductionClaimsAnchorCredit: true,
     } as never,
     clubNights: schedInputs.clubNights,
-    gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+    gameDays: scheduledGameDays(schedInputs),
     v1Input: {
       seasonPhase: inputs.seasonPhase,
       capacity,
       selectedDayNumbers: [...schedInputs.gymAccessDays],
       teamTrainingDayNumbers: [...schedInputs.clubNights],
-      hasGame: schedInputs.gameDay !== null,
-      gameDay: schedInputs.gameDay,
+      hasGame: scheduledGameDays(schedInputs).length > 0,
+      gameDay: scheduledGameDays(schedInputs)[0] ?? null,
       weekKind: firstState?.weekKind,
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
       preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
@@ -656,13 +657,14 @@ function coachingInputsToSchedulerInputs(
   };
   const nums = (list: readonly unknown[] | undefined): number[] =>
     (list ?? []).map(toNumber).filter((n): n is number => n !== null);
+  const offSeason = inputs.seasonPhase === 'Off-season';
   return {
     weekStartISO: args.weekStartISO,
     phase: inputs.seasonPhase as never,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
     gymAccessDays: nums(inputs.selectedDays),
-    clubNights: nums(inputs.teamTrainingDays),
-    gameDay: inputs.hasGame ? toNumber(inputs.gameDay) : null,
+    clubNights: offSeason ? [] : nums(inputs.teamTrainingDays),
+    gameDay: !offSeason && inputs.hasGame ? toNumber(inputs.gameDay) : null,
     // **ALWAYS RECURRING.** `hasGame` + a usual game day means there was a
     // fixture last week too, so a Sunday game makes Monday G+1. Nothing in
     // `CoachingInputs` can say "first fixture ever", so nothing here claims it.
@@ -941,6 +943,13 @@ export function buildGeneratedMicrocycles(args: {
    * reassessment's D1 (2026-08-05).
    */
   targetWeekStartISO?: string;
+  /**
+   * The live calendar fixture for `targetWeekStartISO`. Later block weeks keep
+   * the profile's recurring default; a target-week bye is not a block-long bye.
+   */
+  targetFixtureDay?: DayOfWeek | null;
+  /** The availability owner's answer for `targetWeekStartISO`. */
+  targetWeekAvailability?: FixtureConditionedAvailability;
   /** See GenerateProgramFromProfileOptions.weekAcceptance. */
   weekAcceptance?: AcceptedStateOperationKind;
   /** See GenerateProgramFromProfileOptions.remainderBoundary. */
@@ -992,6 +1001,12 @@ export function buildGeneratedMicrocycles(args: {
     // weeks are an approved no-deload exception), because that rule governs what
     // the app SCHEDULES and an athlete-declared deload is not a schedule change.
     const effectiveWeekKind: WeekKind = blockState.weekKind;
+    const targetFixtureDay = blockState.weekStart === targetWeekStartISO
+      ? args.targetFixtureDay
+      : undefined;
+    const targetWeekAvailability = blockState.weekStart === targetWeekStartISO
+      ? args.targetWeekAvailability
+      : undefined;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
     /* ── THE ONE EQUIPMENT OWNER, ASKED FOR THE WHOLE WEEK ───────────────────
      *
@@ -1069,6 +1084,8 @@ export function buildGeneratedMicrocycles(args: {
         generationConstraints,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
+        targetFixtureDay,
+        targetWeekAvailability,
         miniCycleNumber: blockState.miniCycleNumber ?? null,
         weekKind: effectiveWeekKind,
       });
@@ -1092,6 +1109,7 @@ export function buildGeneratedMicrocycles(args: {
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         },
         gameDay: schedInputs.gameDay,
+        gameDays: scheduledGameDays(schedInputs),
       });
       allocatedWeekPlan = scheduleToCoachingPlan({
         schedule: sched,
@@ -1121,14 +1139,14 @@ export function buildGeneratedMicrocycles(args: {
             equipmentWindow.reachableAcrossWindow),
         } as never,
         clubNights: schedInputs.clubNights,
-        gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+        gameDays: scheduledGameDays(schedInputs),
         v1Input: {
           seasonPhase: profile.seasonPhase,
           capacity: cutoverCapacity,
           selectedDayNumbers: [...schedInputs.gymAccessDays],
           teamTrainingDayNumbers: [...schedInputs.clubNights],
-          hasGame: schedInputs.gameDay !== null,
-          gameDay: schedInputs.gameDay,
+          hasGame: scheduledGameDays(schedInputs).length > 0,
+          gameDay: scheduledGameDays(schedInputs)[0] ?? null,
           weekKind: effectiveWeekKind,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
@@ -1182,6 +1200,8 @@ export function buildGeneratedMicrocycles(args: {
       generationConstraints,
       activeConstraints: args.activeConstraints ?? [],
       exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+      targetFixtureDay,
+      targetWeekAvailability,
       miniCycleNumber: blockState.miniCycleNumber ?? null,
       weekKind: effectiveWeekKind,
     });
@@ -1847,6 +1867,8 @@ export function generateProgramLocally(
         .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
     targetWeekStartISO: getMondayISOForDate(effectiveTodayISO),
+    targetFixtureDay: options.targetFixtureDay,
+    targetWeekAvailability: options.targetWeekAvailability,
     weekAcceptance: options.weekAcceptance,
     remainderBoundary: options.remainderBoundary ?? null,
   });

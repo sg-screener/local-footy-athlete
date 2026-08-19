@@ -56,6 +56,7 @@ export interface LegalityCandidate {
   readonly unavailableDays: readonly number[];
   readonly clubNights: readonly number[];
   readonly gameDay: number | null;
+  readonly gameDays?: readonly number[];
   /**
    * Game proximity, SUPPLIED by the scheduler from its canonical context.
    * Passing the answer rather than the inputs is deliberate: re-deriving
@@ -80,7 +81,7 @@ function hardDaysOf(c: LegalityCandidate): Set<number> {
   return new Set<number>([
     ...c.assignment.map((s) => s.day),
     ...c.clubNights,
-    ...(c.gameDay !== null ? [c.gameDay] : []),
+    ...(c.gameDays ?? (c.gameDay !== null ? [c.gameDay] : [])),
   ]);
 }
 
@@ -98,7 +99,8 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
     clauseId: 'WC-050',
     violated: (c) => {
       const bad = c.assignment.find((s) =>
-        s.day === c.gameDay || c.isGameMinusOne(s.day) || c.isGamePlusOne(s.day));
+        (c.gameDays ?? (c.gameDay !== null ? [c.gameDay] : [])).includes(s.day)
+        || c.isGameMinusOne(s.day) || c.isGamePlusOne(s.day));
       return bad ? `strength on the game day, G-1 or G+1 (day ${bad.day})` : null;
     },
   },

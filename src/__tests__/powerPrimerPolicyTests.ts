@@ -244,7 +244,6 @@ function workoutsFor(
   weekKind?: 'deload',
   weekInBlock: number = 4,
 ) {
-  const offseasonSubphase = weekInBlock <= 2 ? 'early_offseason' : 'mid_offseason';
   // ── SAME INSTRUMENT DEFECT AS THE INJURY SUITE ──────────────────────────
   //
   // plan -> `buildWorkoutsFromCoach` with NO `composeWeek` is the old two-step
@@ -253,11 +252,21 @@ function workoutsFor(
   // primer policy is a live product rule**, so the harness is repaired rather
   // than the suite deleted: it drives the real generator, in production's order.
   // No expectation is rebased and no product code changes.
-  void offseasonSubphase;
+  const phaseWeek = weekKind === 'deload' ? 8 : weekInBlock;
+  const phaseEntry = new Date('2026-07-06T12:00:00');
+  const targetWeek = new Date(phaseEntry);
+  targetWeek.setDate(targetWeek.getDate() + ((phaseWeek - 1) * 7));
   const program = generateProgramLocally(data, {
-    todayISO: '2026-07-06',
+    todayISO: targetWeek.toISOString().slice(0, 10),
     blockNumber: 1,
     microcycleLimit: 1,
+    seasonPhaseClock: {
+      protocolVersion: 1,
+      selectedPhase: data.seasonPhase,
+      phaseEntryWeekStartISO: phaseEntry.toISOString().slice(0, 10),
+      originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
+    },
   } as never);
   return program.microcycles[0].workouts;
 }
@@ -477,7 +486,7 @@ function workoutsFor(
 //      work, not the structure, and `reduced` (the niggle flag that hands the
 //      lower slot to Pogo Hops) is deliberately not set by the shrink.
 {
-  const normal = workoutsFor(profile());
+  const normal = workoutsFor(profile(), undefined, 7);
   const deload = workoutsFor(profile(), 'deload');
   const normalBlocks = normal.filter((w) => powerRows(w).length > 0);
   const deloadBlocks = deload.filter((w) => powerRows(w).length > 0);

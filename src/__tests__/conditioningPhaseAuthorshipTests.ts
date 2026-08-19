@@ -144,11 +144,31 @@ function build(args: {
       }
       if (((w as any).exercises ?? []).length > 0) strengthDays.push(w.dayOfWeek);
     }
+    /* ⚠ **THE GAME DAY IS READ OFF THE BUILT WEEK, NOT OFF THE REQUEST
+     * (2026-08-20).**
+     *
+     * This returned `args.gameDay` — the day the PROFILE asked for. That is the
+     * request, not the result, and the two are not the same thing: an Off-season
+     * week has no fixture however the profile is written.
+     *
+     * **MEASURED:** once Off-season stopped publishing phantom Game and Team
+     * Training anchors, `[48h]` reported 11 breaches, every one of them
+     * `Off-season/...`, all of the form "hard conditioning too close to the
+     * game" — **in weeks containing no game at all**. The guard was measuring
+     * proximity to a fixture that had just been correctly removed, and it read
+     * exactly like the conditioning author had regressed.
+     *
+     * Reading the week's own `Game` workout makes the cell correct in every
+     * phase instead of needing an Off-season special case: where there is no
+     * fixture, `gameDay` is null, `gOffset` is null, and nothing is "inside the
+     * window" — which is the truth. */
+    const fixtureDay = week.find((w: any) =>
+      w?.workoutType === 'Game' || w?.workoutType === 'Practice Match');
     return {
       built: true,
       exposures,
       strengthDays,
-      gameDay: args.gameDay ? DAY_NUM[args.gameDay] : null,
+      gameDay: fixtureDay ? fixtureDay.dayOfWeek : null,
       clubNights: (args.clubNights ?? []).map((d) => DAY_NUM[d]),
     };
   } catch (err: any) {

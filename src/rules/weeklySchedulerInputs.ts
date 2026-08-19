@@ -8,7 +8,7 @@
  * generation constraints, and explicit unavailability from the active constraints
  * the away/busy doors already write.
  */
-import type { OnboardingData } from '../types/domain';
+import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type {
   SchedulerReadiness,
@@ -18,6 +18,7 @@ import type {
 import type { ContractPhase, OffseasonBlock } from './weeklyProgrammingContract';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
+import type { FixtureConditionedAvailability } from './fixtureConditionedAvailability';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
   'Friday', 'Saturday'];
@@ -38,6 +39,13 @@ function dateForDayNumber(weekStartISO: string, dayOfWeek: number): string {
   monday.setDate(monday.getDate() + offset);
   return `${monday.getFullYear()}-${String(monday.getMonth() + 1)
     .padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+}
+
+function shiftedDateISO(dateISO: string, days: number): string {
+  const date = new Date(`${dateISO.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    + `-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -72,20 +80,28 @@ function dateForDayNumber(weekStartISO: string, dayOfWeek: number): string {
 function clubInputsAfterTravel(args: {
   weekStartISO: string;
   clubNights: readonly number[];
-  gameDay: number | null;
+  gameDays: readonly number[];
+  fixtureProximityDates?: readonly string[];
   activeConstraints: readonly unknown[] | undefined;
-}): { clubNights: number[]; gameDay: number | null } {
+}): { clubNights: number[]; gameDays: number[]; fixtureProximityDates?: string[] } {
   const spans = awaySpansFromConstraints(
     args.activeConstraints as readonly ActiveConstraint[] | undefined,
   );
   if (spans.length === 0) {
-    return { clubNights: [...args.clubNights], gameDay: args.gameDay };
+    return {
+      clubNights: [...args.clubNights],
+      gameDays: [...args.gameDays],
+      fixtureProximityDates: args.fixtureProximityDates === undefined
+        ? undefined : [...args.fixtureProximityDates],
+    };
   }
   const away = (day: number): boolean =>
     dateIsInsideAwaySpan(dateForDayNumber(args.weekStartISO, day), spans);
   return {
     clubNights: args.clubNights.filter((day) => !away(day)),
-    gameDay: args.gameDay !== null && away(args.gameDay) ? null : args.gameDay,
+    gameDays: args.gameDays.filter((day) => !away(day)),
+    fixtureProximityDates: args.fixtureProximityDates?.filter((date) =>
+      !dateIsInsideAwaySpan(date, spans)),
   };
 }
 
@@ -148,6 +164,15 @@ export function weeklySchedulerInputsFrom(args: {
   } | null;
   readonly activeConstraints?: readonly unknown[];
   readonly exposureContract?: { readonly anchors?: unknown } | null;
+  /**
+   * The accepted calendar's fixture for THIS week. `undefined` means the
+   * profile's recurring default, `null` means a bye, and a day means an actual
+   * or moved fixture. The distinction is material: collapsing `null` into the
+   * profile default silently resurrects a game the athlete removed.
+   */
+  readonly targetFixtureDay?: DayOfWeek | null;
+  /** Canonical effective app-training days for this target week, when resolved. */
+  readonly targetWeekAvailability?: FixtureConditionedAvailability;
   /** WC-136. Rotates the authored hard conditioning quality at the block boundary. */
   readonly miniCycleNumber?: number | null;
   /** WC-136. A scheduled deload week is never authored hard conditioning. */
@@ -158,6 +183,11 @@ export function weeklySchedulerInputsFrom(args: {
     teamTrainingDays?: readonly string[];
     gameDay?: string;
   };
+  // R-079: Off-season has no club training and no fixtures. The profile keeps
+  // the athlete's standing club answers for the next phase; the dated scheduler
+  // input represents THIS week and must not turn those dormant answers into
+  // hard anchors. This is phase projection, not destructive profile cleanup.
+  const offSeason = profile.seasonPhase === 'Off-season';
 
   // ⚠ READINESS IS READ CONSERVATIVELY, AND THAT IS THE CONTRACT'S OWN BIAS.
   // Decision 14: *"Low readiness never adds work."* The app has a typed deload
@@ -188,10 +218,39 @@ export function weeklySchedulerInputsFrom(args: {
 
   // R-020: a live trip takes the club's work off the facts the scheduler plans
   // from. See `clubInputsAfterTravel` for what this replaces and why.
+  const targetGameDays = offSeason
+    ? []
+    : args.targetWeekAvailability
+    ? args.targetWeekAvailability.proposedFixtures.map((fixture) =>
+        new Date(`${fixture.date}T12:00:00`).getDay())
+    : [args.targetFixtureDay === undefined
+        ? dayNumber(profile.gameDay)
+        : dayNumber(args.targetFixtureDay)]
+      .filter((day): day is number => day !== null);
+  const explicitTargetWeek = args.targetWeekAvailability !== undefined
+    || args.targetFixtureDay !== undefined;
+  const actualFixtureDates = args.targetWeekAvailability
+    ? args.targetWeekAvailability.proposedFixtures.map((fixture) => fixture.date)
+    : args.targetFixtureDay !== undefined && args.targetFixtureDay !== null
+      ? [dateForDayNumber(args.weekStartISO, dayNumber(args.targetFixtureDay)!)]
+      : [];
+  const usualGameDay = dayNumber(profile.gameDay);
+  const usualDateThisWeek = usualGameDay === null
+    ? null : dateForDayNumber(args.weekStartISO, usualGameDay);
+  const fixtureProximityDates = explicitTargetWeek
+    ? Array.from(new Set([
+        ...actualFixtureDates,
+        ...(usualDateThisWeek === null ? [] : [
+          shiftedDateISO(usualDateThisWeek, -7),
+          shiftedDateISO(usualDateThisWeek, 7),
+        ]),
+      ]))
+    : undefined;
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
-    clubNights: dayNumbers(profile.teamTrainingDays),
-    gameDay: dayNumber(profile.gameDay),
+    clubNights: offSeason ? [] : dayNumbers(profile.teamTrainingDays),
+    gameDays: targetGameDays,
+    fixtureProximityDates,
     activeConstraints: args.activeConstraints,
   });
 
@@ -199,9 +258,13 @@ export function weeklySchedulerInputsFrom(args: {
     weekStartISO: args.weekStartISO,
     phase: profile.seasonPhase as ContractPhase,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
-    gymAccessDays: dayNumbers(profile.preferredTrainingDays),
+    gymAccessDays: args.targetWeekAvailability
+      ? [...args.targetWeekAvailability.effectiveAvailableDayNumbers]
+      : dayNumbers(profile.preferredTrainingDays),
     clubNights: club.clubNights,
-    gameDay: club.gameDay,
+    gameDay: club.gameDays[0] ?? null,
+    gameDays: club.gameDays,
+    fixtureProximityDates: club.fixtureProximityDates,
     // **ALWAYS RECURRING FROM ONBOARDING.** The athlete names a usual game day,
     // which by definition means there was one last week too. Nothing in the
     // profile can say "first fixture ever", so nothing here may claim it — and
@@ -210,6 +273,12 @@ export function weeklySchedulerInputsFrom(args: {
     age: ageFromRange(profile.ageRange),
     readiness,
     unavailableDays: [...unavailableDays],
+    releasedFixtureDays: args.targetWeekAvailability?.days
+      .filter((day) => day.provenance.some((value) =>
+        value === 'released_game_day'
+        || value === 'released_practice_match_day'
+        || value === 'bye_usual_game_day'))
+      .map((day) => day.dayNumber) ?? [],
     miniCycleNumber: args.miniCycleNumber ?? null,
     weekKind: args.weekKind ?? null,
   };

@@ -35,6 +35,7 @@ import {
 } from './weeklyExposureContractV2';
 import type { WeeklySchedule } from './weeklyScheduler';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import type { MovementPattern } from './weeklyProgrammingContract';
 
 export interface SchedulerExposureContractInput {
   readonly schedule: WeeklySchedule;
@@ -43,7 +44,66 @@ export interface SchedulerExposureContractInput {
     'plannerSelected' | 'teamTrainingDays' | 'fixtureDays'>;
   readonly clubNights: readonly number[];
   readonly gameDays: readonly number[];
+  /** Primer decisions already made by the power specialist on authorised strength days. */
+  readonly powerPrimerCandidates: number;
   readonly kitUnachievablePatterns?: readonly MainStrengthPattern[];
+}
+
+/**
+ * The main-strength patterns the completed scheduler week actually asks the
+ * composer to cover. This is deliberately derived from `intendedPatterns`: a
+ * fixture-compressed week that lawfully substitutes its only remaining lower
+ * session with upper work must not be re-expanded to squat + hinge by §18's
+ * generic four-pattern default.
+ */
+function schedulerRequiredPatterns(
+  schedule: WeeklySchedule,
+): MainStrengthPattern[] {
+  const required = new Set<MainStrengthPattern>();
+  for (const pattern of schedule.intendedPatterns) {
+    if (pattern === 'squat' || pattern === 'hinge') required.add(pattern);
+    if (pattern === 'horizontal_push' || pattern === 'vertical_push') required.add('push');
+    if (pattern === 'horizontal_pull' || pattern === 'vertical_pull') required.add('pull');
+  }
+  return ['squat', 'hinge', 'push', 'pull'].filter((pattern) =>
+    required.has(pattern as MainStrengthPattern)) as MainStrengthPattern[];
+}
+
+function mainStrengthPatternFor(
+  pattern: MovementPattern,
+): MainStrengthPattern | null {
+  if (pattern === 'squat' || pattern === 'hinge') return pattern;
+  if (pattern === 'horizontal_push' || pattern === 'vertical_push') return 'push';
+  if (pattern === 'horizontal_pull' || pattern === 'vertical_pull') return 'pull';
+  return null;
+}
+
+/**
+ * R-090 — EQUIPMENT NARROWS WHAT THE APPROVED LAYOUT CAN SELECT, NOT WHAT THE
+ * COMPOSER HAPPENED TO DELIVER.
+ *
+ * A bodyweight in-season layout can include an `upper_pull` day while the kit
+ * contract truthfully says pull is impossible. Composition still gives that day
+ * any legal accessory it can, so counting non-empty workouts later mistakes an
+ * accessory-only day for a selected main-strength session. Conversely, setting
+ * the target to the composer's actual count would hide a dropped ACHIEVABLE day.
+ *
+ * The completed scheduler week already owns both required inputs: each strength
+ * day's planned movement intention, and the typed kit-impossible pattern set.
+ * Count a day only when at least one of its planned main patterns remains
+ * achievable. The composer must then deliver exactly that independently-derived
+ * selection or the existing §18 judge still refuses it.
+ */
+function kitAchievableSelectedStrengthCount(
+  schedule: WeeklySchedule,
+  kitUnachievablePatterns: readonly MainStrengthPattern[],
+): number {
+  const impossible = new Set(kitUnachievablePatterns);
+  return schedule.days.filter((day) => day.owner === 'strength'
+    && day.movementIntention.some((pattern) => {
+      const mainPattern = mainStrengthPatternFor(pattern);
+      return mainPattern !== null && !impossible.has(mainPattern);
+    })).length;
 }
 
 /**
@@ -104,6 +164,27 @@ function availabilityReductions(
   }];
 }
 
+function equipmentFrequencyReductions(
+  schedule: WeeklySchedule,
+  selectedMainStrength: number,
+  effectiveRequiredMinimum: number,
+): Section18AuthorisedReduction[] {
+  if (!(selectedMainStrength < effectiveRequiredMinimum)) return [];
+  return [{
+    metric: 'main_strength_frequency',
+    originalApprovedTarget: effectiveRequiredMinimum,
+    reducedTarget: selectedMainStrength,
+    reason: 'equipment_infeasibility',
+    scope: 'week',
+    change: 'frequency',
+    detail: `Approved layout ${schedule.layoutClauseId} requires ${effectiveRequiredMinimum} `
+      + `main-strength session(s), but this athlete's kit makes every planned main `
+      + `pattern on ${effectiveRequiredMinimum - selectedMainStrength} scheduled day(s) `
+      + `unachievable. R-090 publishes the best achievable week and discloses the gap.`,
+    provenance: 'live_typed_reduction',
+  }];
+}
+
 export function schedulerExposureContract(
   input: SchedulerExposureContractInput,
 ): WeeklyExposureContractV2 {
@@ -112,7 +193,7 @@ export function schedulerExposureContract(
   // A copy of the per-phase number here would be a THIRD representation of the
   // very thing this reduction exists to reconcile. One throwaway build answers
   // "what would the floor be without me", and the real build follows.
-  const phaseFloor = buildSection18WeeklyExposureContractV2({
+  const unselected = buildSection18WeeklyExposureContractV2({
     ...input.identity,
     teamTrainingDays: input.clubNights,
     fixtureDays: input.gameDays,
@@ -122,7 +203,32 @@ export function schedulerExposureContract(
       sprintHighSpeed: demand.sprintHighSpeed,
       powerPrimers: null,
     },
-  }).mainStrength.exposure.requiredMinimum;
+  });
+  const phaseFloor = unselected.mainStrength.exposure.requiredMinimum;
+  // POWER'S SPECIALIST STAMPS ITS OWN SELECTION. The former §18 trimmer wrote
+  // this budget while deleting excess rows; after that rewriter was demolished,
+  // leaving `null` here made the composer correctly place zero of every decided
+  // primer. The specialist has already decided the eligible days. Its selected
+  // weekly allowance is those candidates capped by the phase-owned range.
+  const selectedPowerBudget = unselected.power.eligible
+    ? Math.min(input.powerPrimerCandidates, unselected.power.preferredWeeklyRange.max)
+    : 0;
+  const kitUnachievablePatterns = input.kitUnachievablePatterns
+    ?? input.identity.kitUnachievablePatterns
+    ?? [];
+  const selectedMainStrength = kitAchievableSelectedStrengthCount(
+    input.schedule,
+    kitUnachievablePatterns,
+  );
+  const availability = availabilityReductions(input.schedule, phaseFloor);
+  const existingFrequencyTargets = [
+    ...(input.identity.reductions ?? []),
+    ...availability,
+  ].filter((entry) => entry.metric === 'main_strength_frequency'
+    && entry.change !== 'dose_intensity');
+  const effectiveRequiredMinimum = existingFrequencyTargets.length > 0
+    ? existingFrequencyTargets[existingFrequencyTargets.length - 1].reducedTarget
+    : phaseFloor;
 
   return buildSection18WeeklyExposureContractV2({
     ...input.identity,
@@ -130,16 +236,24 @@ export function schedulerExposureContract(
     fixtureDays: input.gameDays,
     reductions: [
       ...(input.identity.reductions ?? []),
-      ...availabilityReductions(input.schedule, phaseFloor),
+      ...availability,
+      ...equipmentFrequencyReductions(
+        input.schedule,
+        selectedMainStrength,
+        effectiveRequiredMinimum,
+      ),
     ],
-    kitUnachievablePatterns: input.kitUnachievablePatterns
-      ?? input.identity.kitUnachievablePatterns,
+    kitUnachievablePatterns,
+    // §18 validates the scheduler's declared purpose set; it does not restore
+    // the generic healthy-week set after the scheduler has recorded a lawful
+    // fixture-proximity substitution/reduction.
+    declaredRequiredPatterns: schedulerRequiredPatterns(input.schedule),
     // ── THE SUBSTITUTION ────────────────────────────────────────────────────
     //
     // Every one of these was the legacy allocator's answer. They are now the
     // scheduler's, counted from the DATED WEEK it produced.
     plannerSelected: {
-      mainStrength: demand.mainStrength,
+      mainStrength: selectedMainStrength,
       coreConditioning: demand.coreConditioning,
       sprintHighSpeed: demand.sprintHighSpeed,
       // ⚠ POWER PRIMERS ARE NOT A SCHEDULER DECISION AND THE CONTRACT SAYS SO.
@@ -150,11 +264,10 @@ export function schedulerExposureContract(
       // count** — and §18's own per-phase table already owns `power.eligible` and
       // `preferredWeeklyRange`.
       //
-      // `null` means THE SCHEDULER SELECTS NO BUDGET, which leaves the phase
-      // policy's own preferred range in charge — the pre-existing behaviour for
-      // every route that never selected one. It is not a zero and must not be
-      // written as one: zero would assert the week is owed no power at all.
-      powerPrimers: null,
+      // The connector therefore carries the specialist's already-decided
+      // candidates and caps them against that phase range. It does not invent
+      // another number and the scheduler still makes no power selection.
+      powerPrimers: selectedPowerBudget,
     },
   });
 }

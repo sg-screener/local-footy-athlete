@@ -633,11 +633,12 @@ function toVisibleRows(rows: readonly any[]): VisibleRow[] {
  * conditioning-generation owner's, not a UI task's.
  *
  * Kinds with no row-level surface in `composeDayDetail` (recovery, team_training,
- * power, speed, game) still get `[]` here — unchanged from Task 2, and separately
+ * game) still get `[]` here — unchanged from Task 2, and separately
  * declared by the same rows-conservation law where the day does hold rows for
  * them.
  */
 function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): VisibleRow[] {
+  if (kind === 'power') return toVisibleRows(composed.powerExercises);
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
   if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
