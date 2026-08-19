@@ -147,6 +147,30 @@ This plan accelerates calendar time, not by making three agents edit the same
 owners, but by separating programming, product and verification work that can
 genuinely proceed independently.
 
+## 2026-08-19 — SWAP FLOW: NO REASON STEP
+
+Sam rejected the intermediate **"Why do you want to swap it?"** sheet. The
+session hub already has separate Equipment and Injury actions, so Swap means
+only that the athlete would rather perform another exercise.
+
+The Swap flow is:
+
+1. tap **Swap**;
+2. choose the exercise/component;
+3. go directly to the ranked replacement choices.
+
+There is no No equipment / Injury or pain / Too hard / Too easy / Don't like it
+/ Other step inside Swap. Equipment and Injury use their own cause-specific
+flows; load/readiness changes are not disguised as exercise swapping.
+
+The ranked choices must also honour the approved exercise hierarchy. A
+moderate/experienced full-gym athlete swapping Back Squat must not be offered
+Bodyweight Squat as a normal closest match, and Breathing Reset is not a useful
+Back Squat replacement. Regression exercises belong only where the relevant
+injury/equipment constraint makes them appropriate. Swap options remain grouped
+as Closest matches, Similar options and Other useful options, with fewer rows
+instead of padding a weak tier.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
