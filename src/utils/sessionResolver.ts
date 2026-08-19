@@ -42,14 +42,9 @@ import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import {
-  buildConditioningSession,
-  isRunningBasedConditioning,
   type AthleteContext,
 } from './sessionBuilder';
-import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
-import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
 import type { WeekLog } from './conditioningRules';
-import { resolveRecovery } from './recoveryRules';
 import {
   applyStrengthProgression,
   buildStrengthWorkoutHistoryFromFeedback,
@@ -1290,36 +1285,14 @@ export function resolveWeekWithConditioning(
   // one flow, the line at the bottom of it reached ZERO.
   if (!state.seasonPhase) return applyAwayPass(baseDays, state);
 
-  // ── Availability hard-filter ──
-  // Build a Set of allowed day-of-week numbers for O(1) lookup.
-  // If availableDayNumbers is undefined/empty, all days are allowed.
-  const availableSet: Set<number> | null =
-    state.availableDayNumbers && state.availableDayNumbers.length > 0
-      ? new Set(state.availableDayNumbers)
-      : null;
-  const isDayAvailable = (dayOfWeek: number): boolean =>
-    availableSet === null || availableSet.has(dayOfWeek);
-
-  // Extract all game dates from markedDays (full calendar, not just this week).
-  // Augments with VIRTUAL games around this week so conditioning + recovery
-  // placement see Saturday as a game even when it's not in calendarStore.
+  // The availability set, the block bounds and the weekly feedback summary were
+  // all inputs to the deleted conditioning/recovery PLACEMENT passes. Nothing
+  // reads them now that the resolver places nothing (demolition area 3).
   const gameDates: string[] = [];
   {
     const effSet = getEffectiveGameDates(state, mondayStr);
     effSet.forEach((d) => gameDates.push(d));
   }
-
-  // Determine block bounds for in-block check
-  const blockStart = state.currentProgram?.startDate?.split('T')[0] || null;
-  const blockEnd = state.currentProgram?.endDate?.split('T')[0] || null;
-
-  // Weekly feedback context for the conditioning / recovery passes below.
-  const feedbackMap = state.sessionFeedback || {};
-  const allFeedbackSorted: SessionFeedback[] = Object.values(feedbackMap)
-    .sort((a: SessionFeedback, b: SessionFeedback) => b.dateStr.localeCompare(a.dateStr));
-  const weekPatternSummary = analyzeFeedbackPatterns(
-    allFeedbackSorted.filter((fb: SessionFeedback) => fb.dateStr < baseDays[0]?.date)
-  );
 
   // Strength progression is materialised once at authoring/acceptance time
   // (see materialiseWeekStrengthProgression / bakeMicrocycleStrengthProgression)
@@ -1458,177 +1431,28 @@ export function resolveWeekWithConditioning(
     return applyAwayPass(rested, state);
   }
 
-  // Pass 2: progressive conditioning placement
-  // THE CAPACITY BAND PASSES THROUGH UNTOUCHED (Sam, 2026-08-13, the readiness
-  // homonym). This used to step it down one, which reached `WeekLog.capacity`
-  // and from there every capacity reader — a fatigue streak arriving as "this
-  // athlete's baseline is low". The vote now travels under its own name.
-  const conditioningCapacity = state.capacity || 'medium';
-  const conditioningRecentFatigue = conditioningReportsRecentFatigue(weekPatternSummary);
-  const conditioningPlaced: WeekLog['sessions'] = [];
-  // The bye mode is the CONTRACT's, not this pass's. Conditioning used to infer
-  // "fresh" from readiness and injury and cap the week's tiers on the answer,
-  // which is capacity setting structure (Sam's readiness law, 2026-07-28).
-  //
-  // There is no `weekKind === 'deload'` fallback here (Sam's bye-mode ruling,
-  // 2026-07-29): the athlete's answer is the only producer of the recovery mode,
-  // and the accepted contract is where that answer has already landed. An
-  // unanswered bye is a build bye.
-  const byeMode: WeekLog['byeMode'] =
-    section18Microcycle?.exposureContract?.identity.mode === 'in_season_bye_recovery'
-      ? 'recovery'
-      : 'build';
-
-  // ── In-season primary conditioning cap ──
-  // For in-season weeks (including bye/freed-game weeks), limit the
-  // conditioning pass to ONE primary (A or B-tier) placement.
-  // After that primary slot is filled, remaining empty days should fall
-  // through to Pass 3 (recovery) rather than stacking back-to-back
-  // conditioning sessions on the weekend.
-  // Pre-season and off-season allow multiple primary conditioning sessions.
-  const inSeasonPrimaryCap = state.seasonPhase === 'In-season' ? 1 : Infinity;
-  let primaryConditioningCount = 0;
-
-  // ── Running days the app may PROGRAM ──
-  // THE RUNNING LAW (§17.B, Sam 2026-07-27): 2 minimum, 3 preferred, 4 hard max.
-  // This is the PROGRAMMING half — 3 by default, 4 only under the two authored
-  // conditions. It is deliberately NOT the validator's hard max: an athlete may
-  // add a 4th (or the app may program one here) and that stays perfectly valid.
-  // Seeded from anchors that already exist after base resolution; team training,
-  // games and practice matches all count toward it.
-  //
-  // At the limit, further running sessions convert to off-feet modalities
-  // (bike/row/ski) while preserving the conditioning stimulus — same session
-  // intent, different modality.
-  //
-  // Condition (a) is "no equipment — off-leg conditioning isn't available", so
-  // it turns on whether the athlete has a machine to do that off-leg work ON.
-  // Bodyweight/bands alone cannot absorb a converted running session, which is
-  // exactly why the law lets the 4th day stay on feet.
-  const hasOffLegEquipment = (state.athleteContext?.equipmentTags ?? []).some(
-    (tag) => tag === 'bike_or_treadmill' || tag === 'machine',
-  );
-  const runningAllowance = programmedRunningDayAllowance({
-    phase: state.seasonPhase ?? 'Pre-season',
-    hasEquipment: hasOffLegEquipment,
-  });
-  const MAX_RUNNING_SESSIONS = runningAllowance.days;
-  if (runningAllowance.reason) {
-    logger.debug(
-      `[RUNNING-LAW] 4th running day unlocked: ${runningAllowance.reason} `
-      + `(phase=${state.seasonPhase}, offLegEquipment=${hasOffLegEquipment})`,
-    );
-  }
-  let runningSessionCount = countWeeklyExposures(
-    result.map((day) => ({ date: day.date, workout: day.workout })),
-  ).runningExposures;
-
-  // ── Pre-season team-day guard (safety belt) ──
-  // In pre-season, team training days are FIELD-LOAD ANCHORS. Even if the
-  // AI/engine did not place a workout on a team day (or the team workout was
-  // stripped somehow), the conditioning pass must NEVER add a standalone
-  // conditioning session on a known team training day. The engine already
-  // enforces this upstream; this is a belt-and-braces guard at placement time.
-  const DAY_NAME_TO_NUM: Record<string, number> = {
-    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-    Thursday: 4, Friday: 5, Saturday: 6,
-  };
-  const preSeasonTeamDayNums: Set<number> = new Set(
-    state.seasonPhase === 'Pre-season'
-      ? (state.athleteContext?.onboardingData?.teamTrainingDays || [])
-          .map((n) => DAY_NAME_TO_NUM[n])
-          .filter((n): n is number => typeof n === 'number')
-      : [],
-  );
-  // Note: sprint-adjacency to team days is already enforced by the coaching
-  // engine's H-PRE-3 constraint and scorer. The resolver does not need to
-  // re-enforce it here because the AI's weeklyPlan already reflects the
-  // engine's category choices.
-
-  for (let i = 0; i < result.length; i++) {
-    const day = result[i];
-
-    // Only place conditioning on truly empty days within the active block
-    if (day.workout !== null) continue;
-    if (day.source !== 'none') continue;
-    if (!blockStart || !blockEnd) continue;
-    if (day.date < blockStart || day.date > blockEnd) continue;
-
-    // HARD CONSTRAINT: never place sessions on unavailable days
-    if (!isDayAvailable(day.dayOfWeek)) continue;
-
-    // PRE-SEASON HARD GUARD: never place standalone conditioning on a team
-    // training day. Team training IS the conditioning for that day.
-    if (preSeasonTeamDayNums.has(day.dayOfWeek)) {
-      logger.debug(`[PRE-SEASON-GUARD] ${day.date} (dayOfWeek=${day.dayOfWeek}): skipping conditioning — team training day.`);
-      continue;
-    }
-
-    // In-season: skip if we've already placed the primary conditioning session.
-    // Tier C (flush/recovery conditioning) is still allowed beyond the cap.
-    if (primaryConditioningCount >= inSeasonPrimaryCap && state.seasonPhase === 'In-season') {
-      // Allow only Tier C (recovery-level conditioning) beyond the cap.
-      // For simplicity, skip entirely — Pass 3 (recovery) will fill this day
-      // with a proper recovery session instead.
-      continue;
-    }
-
-    // Build WeekLog with accumulated placements (biased readiness)
-    const weekLog = buildWeekLog(
-      baseDays,
-      state.markedDays || {},
-      conditioningCapacity,
-      conditioningPlaced,
-      byeMode,
-      conditioningRecentFatigue,
-    );
-
-    // Try conditioning placement
-    const condWorkout = buildConditioningSession(
-      day.date,
-      gameDates,
-      state.athleteContext,
-      state.seasonPhase,
-      weekLog,
-      microcycleIdForDate(day.date, state),
-      { sessionFeedback: feedbackMap },
-    );
-
-    if (condWorkout) {
-      // ── Running exposure cap enforcement ──
-      // If this is a running-based session and we've hit the cap,
-      // swap exercises to off-feet modality (bike/row/ski).
-      // The workout name, type, and tier stay the same — only the exercises change.
-      //
-      // EXCEPTION: Flying Sprints are NEVER converted off-feet.
-      // They are top-end speed exposure and must always remain running-based.
-      // They still count toward the running total but are exempt from conversion.
-      const isRunning = isRunningBasedConditioning(condWorkout.name);
-      const isFlyingSprints = condWorkout.name === 'Flying Sprints';
-
-      if (isRunning && !isFlyingSprints && runningSessionCount >= MAX_RUNNING_SESSIONS) {
-        const offFeetTemplate = offFeetAlternative(condWorkout.name, day.date);
-        const offFeet = offFeetTemplate
-          ? composeConditioningRows(offFeetTemplate, day.date)
-          : null;
-        if (offFeet) {
-          for (const ex of offFeet) { ex.workoutId = condWorkout.id; }
-          condWorkout.exercises = offFeet;
-          logger.debug(`[RUNNING-CAP] ${day.date}: "${condWorkout.name}" → off-feet modality (running sessions=${runningSessionCount}/${MAX_RUNNING_SESSIONS})`);
-        }
-      } else if (isRunning) {
-        runningSessionCount++;
-      }
-
-      result[i] = buildDay(day.date, day.dayOfWeek, today, condWorkout, 'conditioning');
-      const entry = conditioningToWeekLogEntry(day.date, condWorkout.name);
-      conditioningPlaced.push(entry);
-      // Count primary (non-C) placements for the in-season cap
-      if (entry.tier !== 'C') {
-        primaryConditioningCount++;
-      }
-    }
-  }
+  /* ── PASS 2 IS GONE: THE READ-TIME CONDITIONING PLACEMENT ENGINE ──────────
+   *
+   * Demolition area 3, Sam 2026-08-19. It is the same class as Pass 3 below,
+   * which went on 2026-07-30 for the same reason, and this file already said so
+   * one branch up: *"the legacy gap-fill passes below must not invent a new
+   * conditioning or recovery session after the accepted-week gateway."*
+   *
+   * WHAT IT DID: walked every empty day in the block and AUTHORED conditioning
+   * onto it — choosing the template through `buildConditioningSession`, counting
+   * a weekly running cap, and swapping a running session to an off-feet modality
+   * when the cap was hit. Template choice, dose and modality are the
+   * conditioning specialist's decisions, taken at authoring against the week's
+   * contract; taken here they produced work no contract had counted and no door
+   * could edit.
+   *
+   * ⚠ AND IT WAS ALREADY UNREACHABLE ON A REAL WEEK. The §18 branch above
+   * returns for any week that has a stored contract, which every generated week
+   * does. This pass only ever ran for a week with no declaration at all.
+   *
+   * SURVIVING OWNER: the conditioning specialist at authoring time, already on
+   * the rebuild list from area A ("add conditioning after authorship ->
+   * conditioning specialist"). Not rebuilt here. */
 
   // ── PASS 3 IS GONE: THE NINTH RECOVERY PLACEMENT SITE ──
   // BIBLE_ANCHOR: optional_placement_five_conditions
