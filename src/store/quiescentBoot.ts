@@ -35,7 +35,7 @@ import {
   useProgramStore,
   PROGRAM_STORE_PERSISTENCE_KEY,
   generationAnchorForProgram,
-  currentAcceptedBlock,
+  statedProgressionInputs,
 } from './programStore';
 import { useProfileStore } from './profileStore';
 import { useCalendarStore } from './calendarStore';
@@ -490,33 +490,29 @@ export async function rebuildDerivedWorld(): Promise<void> {
   // hands generation the same recorded facts the rollover handed it, so the same
   // inputs author the same block on both paths.
   const bootProgressionInputs = (() => {
-    const inputs = useProgramStore.getState();
+    /**
+     * WHICH BLOCK THE ATHLETE IS IN — RESTORED, NEVER INFERRED (Sam, 2026-08-18).
+     *
+     * *"Once Block 2 is accepted, restart must never infer or reset them to
+     * Block 1."*
+     *
+     * ⚠ **THE FOUR FIELDS AND THE `blockState ?? currentAcceptedBlock` LADDER
+     * MOVED TO `statedProgressionInputs` (`programStore`) ON 2026-08-20 AND
+     * NOTHING ABOUT WHAT BOOT STATES CHANGED.** They were written out here, and
+     * two other regenerating doors then shipped without them — the settings
+     * transaction stating none of the four, the dated-fact transaction stating
+     * the block's coordinates but not its history. A list written by hand is a
+     * list the next door forgets, which is the same lesson
+     * `projectProgramPersistedInputs` learned about the PERSISTED field list.
+     * Read that function's header for the measured cost of both silences.
+     *
+     * **THE CAPTURE POINT IS STILL BOOT'S OWN AND IS STILL LOAD-BEARING** — see
+     * the note above: the slate below sets `blockState: null`, so a read placed
+     * with the `generateProgramLocally` call returns the value boot itself just
+     * erased and the fix silently does nothing. The projection takes the state as
+     * an ARGUMENT precisely so this caller keeps choosing the moment.
+     */
     return {
-      sessionFeedback: inputs.sessionFeedback ?? {},
-      weightOverrides: inputs.weightOverrides ?? {},
-      /**
-       * WHICH BLOCK THE ATHLETE IS IN — RESTORED, NEVER INFERRED (Sam, 2026-08-18).
-       *
-       * *"Once Block 2 is accepted, restart must never infer or reset them to
-       * Block 1."*
-       *
-       * The LIVE `blockState` first: in an in-process settle after a decision it is
-       * current, and it is the value this running app just derived. Then the
-       * ACCEPTED RECORD, because after a real process death the live field is empty
-       * — `blockState` is a derived surface and hydration sweeps it, and persisting
-       * it directly was measured RACY (a queued write that had captured it as null
-       * landed last and overwrote a correct value).
-       *
-       * **Neither branch is a fallback to a guess.** Both are the same recorded
-       * fact; `currentAcceptedBlock` reads the athlete's own accepted history and
-       * consults no calendar. When there is no record at all the athlete is
-       * genuinely new, `null` flows on, and block 1 is authored — which is the
-       * truthful answer for them and the only case that reaches it.
-       */
-      blockState: inputs.blockState
-        ?? currentAcceptedBlock(inputs.acceptedBlocks)
-        ?? null,
-      acceptedBlocks: inputs.acceptedBlocks ?? {},
       // WHAT EACH ACCEPTED BLOCK REQUIRED (Sam, 2026-08-17) — the completion
       // denominator, and the reason it is a stored input rather than a read-time
       // count. THIS caller regenerates with `previousProgram: null`, so nothing
@@ -528,7 +524,7 @@ export async function rebuildDerivedWorld(): Promise<void> {
       // ⚠ CAPTURED WITH THE OTHERS, BEFORE THE CLEAN SLATE, for the same reason
       // `blockState` is: a read placed with the `generateProgramLocally` call
       // below would answer from state this function has already emptied.
-
+      ...statedProgressionInputs(useProgramStore.getState()),
     };
   })();
 

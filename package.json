@@ -462,6 +462,7 @@
     "test:exercise-rotation": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseRotationTests.ts",
     "test:athlete-projection": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteVisibleProjectionTests.ts",
     "test:athlete-journey": "TZ=Australia/Melbourne sucrase-node src/__tests__/completeAthleteJourneyTests.ts",
+    "test:settings-persistence": "TZ=Australia/Melbourne sucrase-node src/__tests__/settingsPersistenceJourneyTests.ts",
     "test:mid-block-restart": "TZ=Australia/Melbourne sucrase-node src/__tests__/midBlockRestartConservationTests.ts",
     "test:block-two-explanation-delivery": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoExplanationDeliveryTests.ts",
     "test:visible-surfaces": "TZ=Australia/Melbourne sucrase-node src/__tests__/visibleSurfaceAgreementTests.ts",

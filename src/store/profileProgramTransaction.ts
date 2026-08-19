@@ -14,7 +14,7 @@ import {
 } from './acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from './acceptedStateTransaction';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
-import { useProgramStore } from './programStore';
+import { statedProgressionInputs, useProgramStore } from './programStore';
 import { useProfileStore } from './profileStore';
 import { composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -200,6 +200,47 @@ function factFreeBase(args: {
   const state = useProgramStore.getState();
   let surfaces = normalizeAcceptedProgramSurfaces(state);
   if (state.currentProgram) {
+    /**
+     * ⚠ **WHICH BLOCK THE ATHLETE IS IN, AND WHAT THEY HAVE LIFTED — STATED, NOT
+     * LEFT FOR GENERATION TO GUESS.**
+     *
+     * **THE DEFECT THIS CLOSES, MEASURED 2026-08-20 THROUGH THE REAL DOORS.** An
+     * athlete four weeks into block 1, who had recorded nineteen days, typed their
+     * own loads and crossed a REAL rollover into block 2, changed their usual game
+     * day from Saturday to Sunday. Afterwards:
+     *
+     *     acceptedBlocks  {2026-07-13:1, 2026-08-10:2} -> {2026-07-13:1, 2026-08-10:1}
+     *     blockState      blockNumber 2 -> 1
+     *     Leg Press       113.5 kg -> 110 kg      (their own recorded 111 -> gone)
+     *     RDLs             82.5 kg ->  80 kg
+     *
+     * **and it survived the relaunch, so it was permanent.** Sam's ruling of
+     * 2026-08-18 — *"Once Block 2 is accepted, restart must never infer or reset
+     * them to Block 1"* — was held at boot and broken here, by the one door the
+     * athlete uses to change their setup.
+     *
+     * **THE CAUSE IS FOUR MISSING ARGUMENTS, WHICH IS R-097's SHAPE EXACTLY.** This
+     * call stated `previousProgram` and nothing else, so generation authored a
+     * BLOCK 1 with no history; `commitAcceptedStateTransaction` then derived
+     * `blockState` from that program and `recordAcceptedBlock` stamped
+     * `blockNumber: 1` over the athlete's own block-2 record — the only copy.
+     *
+     * **THE FIX IS THE PATTERN THE OTHER TWO REGENERATING DOORS ALREADY USE, NOT A
+     * NEW ONE.** `weekRebuild.ts:649` (the rollover) and `quiescentBoot.ts:566`
+     * (a relaunch) both say the same thing in their own comments: *"the caller
+     * that owns the grid STATES the inputs"*. This door owns the grid too — it is
+     * the third caller of `generateProgramLocally` that regenerates an accepted
+     * athlete's block — and it was the only one not saying so. Nothing is
+     * re-derived and no compatibility layer is added; the same four recorded facts
+     * are handed over, so a profile change, a rollover and a relaunch author the
+     * same block from the same inputs BY CONSTRUCTION.
+     *
+     * `statedProgressionInputs` is that shared owner — see its header in
+     * `programStore.ts` for why the list is a function and not a habit, and for
+     * why `blockState ?? currentAcceptedBlock` is two readings of ONE recorded
+     * fact rather than a fallback to a guess.
+     */
+    const progressionHistory = statedProgressionInputs(state);
     const program = generateProgramLocally(args.profile, {
       // ONBOARDING / A PROFILE CHANGE AUTHORS THE BLOCK — the athlete just
       // restated who they are, and this door decides what that block selects.
@@ -214,6 +255,12 @@ function factFreeBase(args: {
       previousProgram: state.currentProgram,
       activeConstraints: [],
       readinessSignal: null,
+      // ABSENT BLOCK STATE MEANS BLOCK 1 — the pre-existing default, and the
+      // truthful answer for an athlete who has not crossed a boundary yet.
+      ...(progressionHistory.blockState
+        ? { blockNumber: progressionHistory.blockState.blockNumber }
+        : {}),
+      progressionHistory,
     });
     const context = collectWeekRebuildContext({
       baseProfile: args.profile,
