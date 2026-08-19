@@ -41,14 +41,10 @@ import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
-import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
-import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import {
-  buildDerivedSession,
   buildConditioningSession,
   isRunningBasedConditioning,
   type AthleteContext,
-  DEFAULT_ATHLETE_CONTEXT,
 } from './sessionBuilder';
 import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
 import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
@@ -404,11 +400,6 @@ function toDateString(year: number, month: number, day: number): string {
 
 // ─── Classification Helpers (from blockAdjuster) ───
 
-function isLowerDominant(workout: Workout): boolean {
-  const region = classifyVisibleSession(workout).strengthRegion;
-  return region === 'lower' || region === 'full_body';
-}
-
 // ─── Core Exposure Protection ───
 
 /**
@@ -420,80 +411,6 @@ function isLowerDominant(workout: Workout): boolean {
 const REQUIRED_EXPOSURE_PATTERNS = [
   'lower', 'push', 'pull', 'upper', 'full body', 'balanced',
 ] as const;
-
-/**
- * Returns true when a workout is a protected core exposure that the resolver
- * must never remove or replace. Such sessions may only be intensity-modified,
- * exercise-adjusted, or annotated.
- *
- * A session is protected when:
- *   1. It has tier === 'core'
- *   2. Its name matches a required exposure pattern (lower, push, pull, upper, balanced, full body)
- *
- * Game stubs (workoutType === 'Game') are NOT protected by this guard — they
- * follow their own calendar-mark resolution path.
- */
-export function isProtectedCoreExposure(workout: Workout | null): boolean {
-  if (!workout) return false;
-  if (workout.sessionTier !== 'core') return false;
-  if (workout.workoutType === 'Game') return false;
-  const name = workout.name.toLowerCase();
-  return REQUIRED_EXPOSURE_PATTERNS.some(p => name.includes(p));
-}
-
-/**
- * Shared guard: can this session be replaced by the resolver?
- *
- * Returns false (replacement blocked) when:
- *   - The session is a protected core exposure (see isProtectedCoreExposure)
- *   - AND it came from 'template' or 'manual' source (engine-planned or coach-authored)
- *
- * Returns true (replacement allowed) when:
- *   - The session is derived (source: gameProximity, conditioning, recovery)
- *   - OR it's non-core / non-exposure (prehab, accessories, arms/pump)
- *   - OR workout is null
- *
- * @param workout  The workout that would be replaced
- * @param source   The ResolvedDay source of the session
- * @param context  Descriptive label for dev logging (e.g. 'G+1 recovery', 'fatigue-stacking guard')
- * @param date     ISO date string for dev logging
- */
-export function canReplaceSession(
-  workout: Workout | null,
-  source: ResolvedDay['source'],
-  context: string,
-  date: string,
-): boolean {
-  if (!workout) return true;
-
-  // The athlete's own placement outranks every replacement this guard governs,
-  // and it is asked FIRST because it does not depend on which pass happened to
-  // put the session on the day — a placed session can render from any source.
-  if (!resolverMayDisplace(workout)) {
-    if (IS_DEV) {
-      logger.debug(
-        `[resolver] BLOCKED replacement of athlete-placed "${workout.name}" on ${date}`
-        + ` — context: ${context}`
-      );
-    }
-    return false;
-  }
-
-  // Only protect template (engine-planned) and manual (coach-authored) sessions
-  if (source !== 'template' && source !== 'manual') return true;
-
-  if (isProtectedCoreExposure(workout)) {
-    if (IS_DEV) {
-      logger.debug(
-        `[resolver] BLOCKED replacement of protected core "${workout.name}" ` +
-        `(tier=${workout.sessionTier}, source=${source}) on ${date} — context: ${context}`
-      );
-    }
-    return false;
-  }
-
-  return true;
-}
 
 function createGameStub(
   dateStr: string,
@@ -604,15 +521,6 @@ function weekHasExplicitGameMark(
 }
 
 // ─── Game Proximity Logic (from blockAdjuster) ───
-
-/** Extract all game date strings from markedDays. */
-function getAllGameDates(markedDays: Record<string, CalendarDayType>): Set<string> {
-  const games = new Set<string>();
-  for (const [date, type] of Object.entries(markedDays)) {
-    if (type === 'game') games.add(date);
-  }
-  return games;
-}
 
 /**
  * Effective game dates for proximity and placement logic.
@@ -752,258 +660,6 @@ export function effectiveGameDatesAround(args: {
   return games;
 }
 
-/**
- * Check if a nearby game modifies this session via proximity rules.
- * Returns a modified Workout if so, null if the template is fine as-is.
- *
- * Rules:
- *   G+1 (day after game)  → Recovery Session (flush, mobilise, restore)
- *   G-1 (day before game) → Gunshow (always — low-fatigue upper body pump)
- *   G-2 (2 days before)   → moderate lower-dominant sessions
- *
- * G-1 defaults to Gunshow but preserves recovery and rest sessions
- * (for fatigue/injury flexibility). This ensures the pre-game session
- * follows the game dynamically when the game date moves.
- */
-function applyGameProximity(
-  date: string,
-  templateWorkout: Workout | null,
-  gameDates: Set<string>,
-  microcycleId: string,
-  athlete: AthleteContext,
-  explicitGameDates: Set<string> = new Set(),
-): Workout | null {
-  const fixtureDependency = (args: {
-    origin: 'fixture_recovery' | 'fixture_proximity';
-    fixtureDate: string;
-    relation: 'g_plus_1' | 'g_minus_1' | 'g_minus_2';
-    creditMetric: 'safe_session_content' | 'hard_day_distribution';
-  }) => {
-    // ── LR-27: A FILLER HAS NOTHING UNDERNEATH IT TO RESTORE ─────────────────
-    //
-    // MEASURED 2026-08-05 (stage 2 priority B, `LR27_PROBE=1` on the deep
-    // walker): in every acted-world invocation the "displaced session" snapshot
-    // was a copy of THE VERY WORKOUT CARRYING IT — carrier and snapshot shared
-    // one id (`derived-arms_pump-…:week-overlay:…`), and the record carried no
-    // `sourcePlanEntryId` at all. That is the doubling, caught in the act.
-    //
-    // The mechanism: this resolver derives a G-1 Gunshow / G+1 flush over the
-    // day, `materialiseVisibleSystemWork` persists it into the week overlay,
-    // and on the NEXT resolve that stored filler arrives back here as
-    // `templateWorkout`. `resolverMayDisplace` says only "the athlete did not
-    // place it", which is true, so the filler was snapshotted into its own
-    // successor — provenance depth +1, payload ×2, every launch, on disk.
-    //
-    // A resolver-owned filler is not an accepted session. There is no
-    // prescription underneath it that a returning fixture must give back; the
-    // resolver simply stops synthesising it. So the dependency records the
-    // reference and NO snapshot, and the recursion becomes structurally
-    // unrepresentable rather than bounded by a cap.
-    //
-    // `isResolverOwnedDerivedSession` is the existing owner of exactly this
-    // question (system-authored game-proximity provenance + no backing plan
-    // entry) — asked here rather than re-answered, so this site cannot drift
-    // from the five others that already consult it.
-    const displaced = isResolverOwnedDerivedSession(templateWorkout)
-      ? null
-      : templateWorkout;
-    const snapshot = (): Workout | null => displaced
-      ? JSON.parse(JSON.stringify(displaced)) as Workout
-      : null;
-    return createDerivedSessionProvenance({
-      origin: args.origin,
-      scope: 'session',
-      triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
-      credit: { metric: args.creditMetric, amount: 1 },
-      originatingDate: date,
-      originatingFixtureDate: args.fixtureDate,
-      sourcePlanEntryId: displaced?.planEntryId ?? null,
-      validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
-      invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
-      dependency: {
-        kind: 'fixture_to_session',
-        source: {
-          date: args.fixtureDate,
-          weekStart: getMondayForDate(args.fixtureDate),
-        },
-        target: {
-          date,
-          weekStart: getMondayForDate(date),
-        },
-        crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
-        displacedSession: {
-          targetDate: date,
-          sourcePlanEntryId: displaced?.planEntryId ?? null,
-          workout: snapshot(),
-        },
-        restoration: {
-          targetDate: date,
-          sourcePlanEntryId: displaced?.planEntryId ?? null,
-          workout: snapshot(),
-        },
-      },
-    });
-  };
-
-  // G+1: the day after a game.
-  //
-  // AN EMPTY G+1 IS REST, NOT RECOVERY (Sam's charter, 2026-07-30). This branch
-  // used to read "even if no template workout" and materialise a recovery
-  // session onto a day nothing was planned for. The Bible's anchor is
-  // `g_plus_1_rest_or_recovery` — a DISJUNCTION the app was resolving on the
-  // athlete's behalf, which is the whole finding of the session-type survey.
-  //
-  // AND IT MADE THE DELETION DOOR LIE. Once the generator stopped filling spare
-  // days (the nine deleted recovery sites), G+1 had no template, so this derived
-  // one from nothing — and an athlete tapping Remove on that session got
-  // `visible_change_unverified`, because there was no stored thing to remove and
-  // the day re-derived identically. `athleteSessionDeletionTests` regression 6
-  // caught it on the Sunday-fixture scenario. A day whose content exists only as
-  // a derivation cannot be edited by a door that edits stored decisions.
-  //
-  // What is NOT changed here: when a real planned session sits on G+1, the
-  // proximity rule still applies. Replacing planned work with recovery is a
-  // second, heavier question — it protects the athlete from training the day
-  // after a game — and it is declared charter debt rather than settled in
-  // passing. See `rules/sessionTypeCharter.ts`, recovery/placement.
-  const previousDate = shiftDate(date, -1);
-  if (gameDates.has(previousDate) && templateWorkout) {
-    if (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game') {
-      // GUARD: never replace protected core exposure for virtual/recurring
-      // proximity. Explicit calendar game/practice-match marks are different:
-      // Bible G+1 wins, so the core session is dropped rather than made up.
-      //
-      // AND never replace what the athlete put here. Sam's law is not about
-      // which side of the fixture the day falls on — the day after a game was
-      // eating athlete-placed sessions for exactly as long as the day before
-      // was, it just had no device report against it.
-      if (!resolverMayDisplace(templateWorkout) ||
-        (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate))) {
-        if (IS_DEV) {
-          logger.debug(
-            `[resolver] BLOCKED G+1 recovery replacing protected core "${templateWorkout!.name}" on ${date}`
-          );
-        }
-      } else {
-        // THE DELETED TYPE IS NOT MATERIALISED (2026-08-01, device-pass
-        // fail 3). This used to build a `recovery` session named "Post-game
-        // recovery" — recovery is charter-deleted, and its authored contents
-        // ARE the mobility flows (the charter's own row: "the 10 mobility
-        // flow templates"). The Bible's G+1 protection stands — planned
-        // displaceable work is still replaced with easy movement the day
-        // after a game — but what lands is a MOBILITY session that names
-        // itself, not a type no door offers. The planned-work-on-G+1
-        // disjunction itself stays the charter's declared debt; this changes
-        // which WORD and which authored composition the protection uses.
-        const flush = buildDerivedSession(
-          'mobility',
-          date,
-          microcycleId,
-          'Post-game',
-          athlete,
-        );
-        return {
-          ...flush,
-          derivedSessionProvenance: [fixtureDependency({
-            origin: 'fixture_recovery',
-            fixtureDate: previousDate,
-            relation: 'g_plus_1',
-            creditMetric: 'safe_session_content',
-          })],
-        };
-      }
-    }
-  }
-
-  // G-1: day before a game → Gunshow (light upper-body pump)
-  // BUT preserve recovery sessions and rest days (fatigue/injury flexibility)
-  const nextDate = shiftDate(date, 1);
-  if (gameDates.has(nextDate)) {
-    // Keep recovery as-is
-    if (templateWorkout?.sessionTier === 'recovery' || templateWorkout?.workoutType === 'Recovery') {
-      return null;
-    }
-    // A canonical explicit-rest stub is a final accepted-week decision. Keep
-    // it empty so optional G-1 gunshow work cannot erase the true-rest floor.
-    if (templateWorkout?.workoutType === 'Rest' && templateWorkout.exercises.length === 0) {
-      return null;
-    }
-    // Keep game as-is (shouldn't happen but guard)
-    if (templateWorkout?.workoutType === 'Game') {
-      return null;
-    }
-    // ── WHO OWNS THE DAY BEFORE A FIXTURE ────────────────────────────────
-    //
-    // SAM'S LAW (2026-07-28), extended by his rulings of 2026-07-30 (#4, #5):
-    // athlete-placed content outranks derived filler, and the G-1 ask-flow is
-    // the ONLY door onto this day. So there is exactly one question here, and
-    // the placement stamp answers it: did the athlete put this here?
-    //
-    // Two things used to answer it alongside the stamp, and both have been
-    // retired because neither is information about ownership:
-    //
-    //   * `!explicitGameDates.has(nextDate)` — the STORAGE FORM of the fixture.
-    //     An identical week behaved one way on a usual Saturday and another on
-    //     an explicit practice match, so whether a committed swap survived
-    //     depended on how the fixture happened to be recorded (ruling #5).
-    //   * `isProtectedCoreExposure(templateWorkout)` — the session's NAME and
-    //     TIER. That is `applyGameProximity` re-deciding ownership from a
-    //     heuristic, which ruling #4 forbids: it consults the stamp, it does
-    //     not re-decide. It also silently made G-1 non-light whenever
-    //     generation happened to plan a core exposure there, which is the
-    //     opposite of the Bible rule it was written next to.
-    //
-    // Required exposure displaced from G-1 is not lost — §18 owns the week's
-    // counts and relocates it, which is the pipeline doing its job rather than
-    // a render-time heuristic pre-empting it.
-    if (!resolverMayDisplace(templateWorkout)) {
-      return null;
-    }
-    // Everything the athlete did not place → Gunshow (derivedType 'arms_pump')
-    return {
-      ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
-      derivedSessionProvenance: [fixtureDependency({
-        origin: 'fixture_proximity',
-        fixtureDate: nextDate,
-        relation: 'g_minus_1',
-        creditMetric: 'safe_session_content',
-      })],
-    };
-  }
-
-  if (!templateWorkout) return null;
-
-  // G-2: 2 days before a game → moderate lower-dominant sessions
-  if (gameDates.has(shiftDate(date, 2))) {
-    if (isLowerDominant(templateWorkout) && templateWorkout.sessionTier === 'core') {
-      const fixtureDate = shiftDate(date, 2);
-      return {
-        ...templateWorkout,
-        id: `derived-nearGame-${date}`,
-        intensity: 'Moderate',
-        description: `${templateWorkout.description} (48h to game - moderate load)`,
-        exercises: templateWorkout.exercises.map(e => ({
-          ...e,
-          // Preserve nested exercise sub-object for display
-          exercise: e.exercise || { id: e.exerciseId, name: e.notes || `Exercise ${e.exerciseOrder}`, description: '' } as Exercise,
-        })),
-        derivedSessionProvenance: [
-          ...(templateWorkout.derivedSessionProvenance ?? []),
-          fixtureDependency({
-            origin: 'fixture_proximity',
-            fixtureDate,
-            relation: 'g_minus_2',
-            creditMetric: 'hard_day_distribution',
-          }),
-        ],
-        updatedAt: new Date().toISOString(),
-      };
-    }
-  }
-
-  return null; // no proximity effect
-}
-
 // ─── Indicator Helper ───
 
 function workoutToIndicator(workout: Workout | null, source: ResolvedDay['source']): ResolvedDay['indicator'] {
@@ -1018,173 +674,6 @@ function workoutToIndicator(workout: Workout | null, source: ResolvedDay['source
 }
 
 // ─── Build Helper ───
-
-/**
- * §18 AS TIER 4 OF THE DERIVATION — legs (ii) and (iii) at the deriver.
- *
- * Leg (iii): the week's contract is DERIVED from current fixture facts here,
- * not read stale off the overlay. Leg (ii): §18 then runs as TIER 4 of the
- * ordering (`rules/dayPrecedence.ts:19`) — a projection with the resolver
- * IDENTITY (`resolveVisibleWorkouts: (w) => [...w]`, which is also what stops
- * the gateway re-entering this resolver), output never persisted.
- *
- * The gateway imports this module, so the import is lazy by construction.
- */
-function section18TierFour(args: {
-  days: ResolvedDay[];
-  storedContract: WeeklyExposureContractV2 | null;
-  /** The week's AUTHORED plan — the repair search's relocation templates. */
-  weekStart: string;
-  today: string;
-  state: ScheduleState;
-}): ResolvedDay[] {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const derived = require('../rules/derivedWeekContract') as
-    typeof import('../rules/derivedWeekContract');
-  if (!args.storedContract) return args.days;
-  const profile = args.state.athleteContext?.onboardingData ?? null;
-  const contract = derived.deriveWeekContract({
-    contract: args.storedContract,
-    weekStart: args.weekStart,
-    profile,
-    markedDays: args.state.markedDays,
-    userRemovalConstraints: args.state.userRemovalConstraints,
-    workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
-    // Leg (v) read side, install site 2 of 3 — the same facts, the same owner.
-    temporarySourceFacts: args.state.temporarySourceFacts,
-  });
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const gateway = require('../rules/section18AcceptedWeekGateway') as
-    typeof import('../rules/section18AcceptedWeekGateway');
-  let result;
-  try {
-    result = gateway.runSection18AcceptedWeekGateway({
-      contract,
-      workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
-      weekStart: args.weekStart,
-      profile,
-      // THE DERIVER IS JUDGED AGAINST THE STATE IT IS DERIVING FROM
-      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`). Tier 4 at read has no
-      // accepted surfaces of its own — it is producing the week those surfaces
-      // would describe — so the only thing it carries is the athlete's
-      // decisions, and it says so rather than leaving the field absent.
-      // Composed through the ONE composer, and it says both things: the
-      // removals still to APPLY (blanked above this line by the gateway, which
-      // has already applied them) and the RECORD of the decisions, which is
-      // what the repair search's stand-down asks
-      // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
-      surfaces: composeAcceptedEffectiveWeekSurfaces({
-        currentProgram: null,
-        removalDecisions: args.state.removalDecisions ?? [],
-        applyOnly: args.state.userRemovalConstraints ?? [],
-      }),
-      // ── ROOT 1b (sixteenth pass): the exact-date fixture
-      // authority, derived from the same facts the host already carries
-      // (profile + markedDays), the `governedFromISO` treatment. Without it
-      // the expiry guard's `fixture_absent` check degrades to day-of-week in
-      // THIS week's contract — structurally false for cross-week
-      // dependencies — and tier 4 at read expires every fixture-linked
-      // derived session the write path deliberately preserved.
-      activeFixtureDates: profile
-        ? (require('../rules/rollingHorizonRepair') as
-            typeof import('../rules/rollingHorizonRepair'))
-            .effectiveFixtureDatesForWeeks({
-              profile,
-              markedDays: args.state.markedDays ?? {},
-              weekStarts: [
-                (require('./programBlockState') as
-                  typeof import('./programBlockState'))
-                  .addDaysISO(args.weekStart, -7),
-                args.weekStart,
-                (require('./programBlockState') as
-                  typeof import('./programBlockState'))
-                  .addDaysISO(args.weekStart, 7),
-              ],
-            })
-        : undefined,
-      // THE PROJECTION IDENTITY the ruling specifies.
-      resolveVisibleWorkouts: (workouts) => [...workouts],
-    });
-  } catch {
-    // Tier 4 at read is a projection: a week it cannot accept is reported by
-    // the accepted stack, never by blanking the athlete's screen.
-    return args.days;
-  }
-  // DIAGNOSTIC ONLY — see `lastTierFourDerivation`'s header. The contract the
-  // visible week answers to is never stored, so this is the only place the
-  // lawfulness proof can read it from.
-  derived.lastTierFourDerivation.weekStart = args.weekStart;
-  derived.lastTierFourDerivation.contract = result.contract;
-  derived.lastTierFourDerivation.status = result.status;
-  derived.lastTierFourDerivation.repairs = result.repairs.map((repair) => repair.kind);
-  derived.lastTierFourDerivation.blockingViolations = result.evaluation.blockingViolations
-    .map((finding) => `${finding.code}:${finding.domain}`);
-  const byDay = new Map<number, Workout>();
-  for (const workout of result.visibleWorkouts) byDay.set(workout.dayOfWeek, workout);
-  /* ── THE BOUNDARY: A PROJECTION MAY NOT DELETE AUTHORED WORK ───────────────
-   *
-   * Tier 4 at read is a CONFORMING pass. It may reshape a day and it may not
-   * empty one, because the session it would empty was authored by the composer,
-   * stored in the accepted program, and counted by §18 on the way in.
-   *
-   * ⚠ **MEASURED, AND IT COST THE ATHLETE A WHOLE SESSION.** 2026-08-17, a
-   * mid-week trip on dumbbells and bands, Friday `2026-08-14`:
-   *
-   *     composer        day 5 lower_hinge, 5 rows, RDLs classified main_strength
-   *     stored program  lower_hinge | Strength | 5 rows
-   *     before tier 4   lower_hinge | Strength | 5 rows
-   *     AFTER tier 4    Rest | Rest | 0 rows            <- here
-   *     screen          Rest Day
-   *
-   * The gateway handed back a Rest for that weekday and this map installed it
-   * over the athlete's session. **§18 counted those rows on the way in and the
-   * athlete never got them** — the week that was JUDGED and the week that
-   * SHIPPED disagreed about a main lift.
-   *
-   * **THE ONLY THING THAT MAY EMPTY A DAY IS A DECISION, AND A DECISION IS
-   * TYPED.** `userRemovalConstraints` and `removalDecisions` are the athlete's
-   * own emptying decisions and they already reach this function; a day either
-   * carries one or it keeps its work. This is the precedence the comment below
-   * already states for the `!day.workout` case — *"tier 4 runs last; last is not
-   * highest"* — applied to the case it did not cover: the day that still HAS
-   * work.
-   *
-   * Nothing is special-cased. The rule reads the SHAPE of the conformed answer,
-   * never a weekday, a session name or a kit. */
-  const authorisedRemovalDates = new Set<string>([
-    ...(args.state.userRemovalConstraints ?? []),
-    ...(args.state.removalDecisions ?? []),
-  ].flatMap((constraint) => {
-    const raw = constraint as unknown as { date?: unknown; dates?: unknown };
-    const dates = Array.isArray(raw.dates) ? raw.dates : [];
-    return [...dates, raw.date]
-      .filter((value): value is string => typeof value === 'string')
-      .map((value) => value.slice(0, 10));
-  }));
-  const carriesWork = (workout: Workout | null | undefined): boolean => !!workout
-    && ((workout.exercises ?? []).length > 0
-      || !!workout.conditioningBlock
-      || !!workout.speedBlock
-      || hasPowerRow(workout));
-  return args.days.map((day) => {
-    // TIER 4 RUNS LAST; LAST IS NOT HIGHEST.
-    // Tier 1 — the emptying decision — outranks it, so a day already emptied by
-    // decision is left exactly as it is rather than having a typed Rest
-    // installed onto it.
-    if (!day.workout) return day;
-    const conformed = byDay.get(day.dayOfWeek);
-    // A day the conforming pass dropped entirely, or answered with an empty
-    // shell, KEEPS the work it already had — unless a typed decision names it.
-    if (!carriesWork(conformed) && carriesWork(day.workout)
-      && !authorisedRemovalDates.has(day.date)) {
-      return day;
-    }
-    if (!conformed) return buildDay(day.date, day.dayOfWeek, args.today, null, 'rest');
-    return conformed === day.workout
-      ? day
-      : buildDay(day.date, day.dayOfWeek, args.today, conformed, day.source);
-  });
-}
 
 function buildDay(
   date: string,
@@ -1230,36 +719,6 @@ function microcycleIdForDate(date: string, state: ScheduleState): string {
     state.currentMicrocycle,
     date,
   )?.id || 'derived';
-}
-
-/**
- * Resolver-level injury filter pass — applied AFTER priority
- * resolution + after conditioning / recovery layering. Walks the full
- * week and rewrites each day's workout through `applyInjuryFilterToWorkout`
- * when an active injury is in state.
- *
- * Manual overrides (source='manual') are SKIPPED — they're already the
- * authoritative state for that date and contain explicit coach
- * decisions; double-applying the filter would compound modifications.
- *
- * Game stubs and rest days are also skipped — neither has exercises to
- * filter and the filter is bucket-relevance-only.
- */
-function applyInjuryFilterPass(
-  days: ResolvedDay[],
-  state: ScheduleState,
-): ResolvedDay[] {
-  if (!state.activeInjury) return days;
-  if (state.activeInjury.status === 'resolved') return days;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { applyInjuryFilterToWorkout } = require('./injuryWorkoutFilter');
-  return days.map((d) => {
-    if (!d.workout) return d;
-    if (d.source === 'manual' || d.source === 'game' || d.source === 'rest') return d;
-    const filtered = applyInjuryFilterToWorkout(d.workout, state.activeInjury);
-    if (filtered === d.workout) return d;
-    return { ...d, workout: filtered, indicator: workoutToIndicator(filtered, d.source) };
-  });
 }
 
 // ─── Core Function ───
@@ -1455,64 +914,40 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const templateWorkout = constrained ? constrained.workout : composed.workout;
   const templateMicrocycleId = overlayTemplate.overlay?.id ?? currentMicrocycle?.id ?? 'derived';
 
-  // ── Priority 4: Game proximity rules (G+1 recovery, G-1 Gunshow, G-2 moderate) ──
-  // Evaluated BEFORE freed-game-slot so that a moved game's G+1 takes priority
-  // over a template game that no longer has a calendar mark.
-  // gameDates includes VIRTUAL games (from profile.usualGameDay) so proximity
-  // fires on Fri (G-1) + Thu (G-2) + Sun (G+1) even when Saturday is virtual
-  // and not explicitly marked in calendarStore.
+  /* ── PRIORITY 4, GAME PROXIMITY, IS DELETED ────────────────────────────────
+   *
+   * Demolition area 3, Sam 2026-08-19: *"Reading/drawing a program must not
+   * author, persist, restore, repair or rewrite it."*
+   *
+   * `applyGameProximity` (251 lines) INVENTED SESSIONS while drawing the week.
+   * On G+1 it built a `mobility` flush the composer had never authored; on G-1
+   * it replaced whatever was there with a `arms_pump` Gunshow; on G-2 it
+   * rewrote a lower session's intensity, description and every row's load. None
+   * of it was stored, so the week the athlete saw and the week §18 counted were
+   * different objects — and the day could not be edited, because a door that
+   * edits stored decisions has nothing to edit on a day that exists only as a
+   * derivation (`athleteSessionDeletionTests` regression 6).
+   *
+   * THE SURVIVING OWNER IS THE WEEKLY SCHEDULER, which already reasons about
+   * fixtures — `daysUntilNextGame`, `sprintDayIsLegal`, the G-3 Bible anchor
+   * moved onto it in this same demolition. G+1/G-1/G-2 are Bible laws about
+   * which DAY carries what, and days are the scheduler's. Rebuilding them there
+   * is on the rebuild list; nothing is rebuilt here. */
   const gameDates = getEffectiveGameDates(state, date);
-  const explicitGameDates = getAllGameDates(markedDays || {});
-  const effectiveTemplate = (templateWorkout?.workoutType === 'Game' && !mark)
-    ? null  // template game without calendar mark → treat as empty for proximity
-    : templateWorkout;
-  const proximityResult = applyGameProximity(
-    date,
-    effectiveTemplate,
-    gameDates,
-    templateMicrocycleId,
-    state.athleteContext,
-    explicitGameDates,
-  );
-  if (proximityResult) {
-    logger.debug(`[RESOLVER-PROXIMITY] date=${date} dow=${dow} → ${proximityResult.name} (tier=${proximityResult.sessionTier})`);
-    return buildDay(date, dow, today, proximityResult, 'gameProximity');
-  }
 
-  // ── Priority 5: Template says game but calendar doesn't (freed slot) ──
-  // Only reached if game proximity didn't claim this date.
-  // If other games still exist THIS WEEK → low-priority prehab (athlete has game fatigue).
-  // If NO games this week (bye / game removed) → promote to core training slot.
-  // This prevents the freed game day from being wasted on prehab when the athlete
-  // has full recovery capacity and should use the day for real training.
-  //
-  // IMPORTANT: gameDates includes ALL marked games across the entire block.
-  // We must filter to only games within the same Mon–Sun week as `date`.
+  /* ── Priority 5: template says game, calendar doesn't (a freed slot) ──────
+   *
+   * ⚠ THE PREHAB SYNTHESIS IS DELETED (area 3, 2026-08-19). When other games
+   * remained in the week this branch BUILT a `prehab_accessories` session onto
+   * the freed day — content nobody authored, on a day the athlete cannot edit
+   * because there is nothing stored to edit.
+   *
+   * The freed day is now simply EMPTY, which is the honest reading of the fact:
+   * the fixture the stub stood for is not on the calendar. Filling a freed slot
+   * is authoring and belongs to the scheduler and composer. On the rebuild
+   * list. */
   if (templateWorkout?.workoutType === 'Game' && !mark) {
-    const mondayOfWeek = getMondayForDate(date);
-    const sundayOfWeek = addDays(mondayOfWeek, 6);
-    let gamesThisWeek = 0;
-    for (const gd of gameDates) {
-      if (gd >= mondayOfWeek && gd <= sundayOfWeek) {
-        gamesThisWeek++;
-      }
-    }
-    logger.debug(`[RESOLVER-FREED-GAME] date=${date} dow=${dow} mondayOfWeek=${mondayOfWeek} gamesThisWeek=${gamesThisWeek} totalGameDates=${gameDates.size}`);
-    if (gamesThisWeek > 0) {
-      // Other games exist THIS WEEK — athlete still has game fatigue. Light prehab is appropriate.
-      logger.debug(`[RESOLVER-FREED-GAME] other games remain this week -> returning prehab`);
-      return buildDay(
-        date, dow, today,
-        buildDerivedSession('prehab_accessories', date, templateMicrocycleId, 'Freed game slot', state.athleteContext),
-        'gameProximity',
-      );
-    } else {
-      // No games this week — freed capacity. Return null workout so
-      // conditioning pass (Pass 2) can fill this as the primary training slot.
-      // Source 'none' lets conditioning/recovery passes claim it.
-      logger.debug(`[RESOLVER-FREED-GAME] no games this week -> returning none (freed for conditioning)`);
-      return buildDay(date, dow, today, null, 'none');
-    }
+    return buildDay(date, dow, today, null, 'none');
   }
 
   // Accepted-week rest stubs are persisted scheduling decisions, not visible
@@ -1528,56 +963,38 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, null, 'rest');
   }
 
-  // ── Priority 6a: Recovery template → replace with derived pool session ──
-  // AI-generated recovery workouts lack structured prescription fields (prescriptionType,
-  // perSide, restSeconds). Replace them with deterministic pool-built sessions so every
-  // recovery exercise has proper sets/duration/reps for the structured renderer.
-  // A recovery session the ATHLETE placed is not an AI-generated one missing
-  // its prescription fields — it is the session they chose, and rebuilding it
-  // from the pool replaces their content with the app's while keeping the
-  // shape close enough that nobody notices.
-  if (
-    templateWorkout &&
-    resolverMayDisplace(templateWorkout) &&
-    (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery') &&
-    // A TYPED COMPOSED OPTIONAL SESSION IS NOT A LEGACY TEMPLATE (2026-08-01).
-    // This branch exists because AI-generated recovery templates lack
-    // structured prescription fields; a session `buildDerivedSession` composed
-    // (a mobility top-up, an athlete's Mobility add) already has them, and
-    // rebuilding it re-rolled its composition on every read — worse, the
-    // rebuilt id collided with the stored top-up's id in the bake-back pass,
-    // so a `sessionTier: 'optional'` top-up was silently re-stored at tier
-    // `recovery` (found by the absolutely-cooked bible cell). The typed marker
-    // is the boundary: carried, never inferred, and never rebuilt over.
-    !templateWorkout.composedOptionalKind
-  ) {
-    // Recovery-tier templates are LEGACY ingress now (generation stopped
-    // minting the athlete-visible 'Recovery Session'; the allocator's safety
-    // demotions materialise as Mobility). Whatever recovery-shaped template
-    // still arrives is rebuilt as the thing its contents are — a mobility
-    // flow that names itself — never as the charter-deleted type's word.
-    return buildDay(
-      date, dow, today,
-      buildDerivedSession('mobility', date, templateMicrocycleId, 'Scheduled mobility', state.athleteContext),
-      'template',
-    );
-  }
+  /* ── Priority 6a IS DELETED: a stored session is not rebuilt at read ───────
+   *
+   * This branch REPLACED a stored recovery-tier session with a freshly built
+   * mobility session on every read, because legacy AI-authored templates lacked
+   * structured prescription fields. Rebuilding stored content while drawing it
+   * is read-time authoring: the athlete saw a session that was composed anew on
+   * each render rather than the one the app is holding.
+   *
+   * The surviving owner is the composer, which authors mobility with its
+   * prescription fields already present. A legacy template that arrives without
+   * them now renders as what it is. On the rebuild list (area 3). */
 
   // ── Priority 6b: Unmodified template ──
   return buildDay(date, dow, today, templateWorkout, templateWorkout ? 'template' : 'none');
 }
 
 /**
- * Public base resolver. Temporary injury facts are intentionally not applied
- * here: the visible-program gate composes them once for every card/detail
- * surface, including manual overrides. Keeping this resolver on the accepted
- * base prevents a second injury owner and lets later athlete edits survive.
+ * Public base resolver. Injury facts are not applied here: the visible-program
+ * gate composes them once for every card/detail surface, including manual
+ * overrides. Keeping this resolver on the accepted base prevents a second
+ * injury owner and lets later athlete edits survive.
+ *
+ * ⚠ THE SECOND INJURY OWNER IS DELETED (demolition area 3, 2026-08-19). This
+ * function used to run `applyInjuryFilterPass` over its own answer whenever the
+ * legacy `state.activeInjury` field was populated — the exact second owner the
+ * paragraph above says must not exist, guarded only by a flag
+ * (`injuryProjectionOwner`) that decided which of the two got to rewrite the
+ * day. A projection does not filter safety: the composer refuses an illegal row
+ * before authoring it, and the visible-program gate composes the fact.
  */
 export function resolveDate(date: string, state: ScheduleState): ResolvedDay {
-  const day = _resolveDateRaw(date, state);
-  if (!state.activeInjury || state.injuryProjectionOwner === 'accepted_episode') return day;
-  const [legacyProjected] = applyInjuryFilterPass([day], state);
-  return legacyProjected;
+  return _resolveDateRaw(date, state);
 }
 
 // ─── Wrapper Functions ───
@@ -1950,62 +1367,17 @@ export function resolveWeekWithConditioning(
     }
   }
 
-  // ── Pre-game fatigue-stacking guard ──
-  // After Pass 1, game proximity may have assigned G-1 as Gunshow.
-  // If G-2 is ALSO a Gunshow / arms-pump-ish derived game-proximity session
-  // (NOT a template core session), the athlete gets redundant upper-body
-  // stress in the 48h pre-game window.
-  //
-  // CRITICAL INVARIANT: Template core sessions on G-2 are NEVER replaced.
-  // The coaching engine specifically places a moderate push/upper session
-  // at G-2. That is the intended design — Upper Push on G-2 + Gunshow
-  // on G-1 is the correct fatigue wave. Only derived/proximity duplicates
-  // should be downgraded (e.g. two Gunshow sessions from adjacent games).
-  for (let i = 0; i < result.length; i++) {
-    const day = result[i];
-    // Find G-1 days (Gunshow placed by game proximity)
-    if (
-      day.source === 'gameProximity' &&
-      day.workout &&
-      day.workout.name === 'Gunshow'
-    ) {
-      // G-2 is the day before G-1 in the result array
-      const g2Idx = i - 1;
-      if (g2Idx < 0) continue;
-      const g2Day = result[g2Idx];
-      if (!g2Day.workout) continue;
-
-      // Shared guard: block replacement of any protected core exposure
-      if (!canReplaceSession(g2Day.workout, g2Day.source, 'fatigue-stacking guard G-2→prehab', g2Day.date)) {
-        continue;
-      }
-
-      // Only downgrade derived/proximity duplicates (e.g. two Gunshow
-      // from adjacent games) or non-core upper sessions.
-      const isArmsPump = g2Day.workout.name === 'Gunshow';
-      const isDerivedUpper = g2Day.source === 'gameProximity' &&
-        (g2Day.workout.name.toLowerCase().includes('gunshow') ||
-         g2Day.workout.name.toLowerCase().includes('arm') ||
-         g2Day.workout.name.toLowerCase().includes('pump'));
-
-      if (isArmsPump || isDerivedUpper) {
-        // Downgrade derived G-2 to Prehab & Accessories (low-fatigue, no upper bias)
-        result[g2Idx] = buildDay(
-          g2Day.date,
-          g2Day.dayOfWeek,
-          today,
-          buildDerivedSession(
-            'prehab_accessories',
-            g2Day.date,
-            microcycleIdForDate(g2Day.date, state),
-            'Pre-game window - avoiding upper-body stacking with G-1',
-            state.athleteContext,
-          ),
-          'gameProximity',
-        );
-      }
-    }
-  }
+  /* ── THE PRE-GAME FATIGUE-STACKING GUARD IS DELETED (area 3, 2026-08-19) ───
+   *
+   * It only ever fired on a day whose `source` was `'gameProximity'` and whose
+   * workout was named `Gunshow` — both of which the deleted read-time proximity
+   * engine produced. With that engine gone the guard is UNREACHABLE, and its
+   * remedy was itself a synthesis: it replaced the G-2 day with a freshly built
+   * `prehab_accessories` session.
+   *
+   * The real rule it protected — do not stack upper-body stress in the 48h
+   * pre-game window — is a SCHEDULING law and belongs to the weekly scheduler,
+   * beside the G-3 anchor. On the rebuild list. */
 
   // Contract v2 is the final owner of selected core, optional work and true
   // rest for an accepted week. Game-proximity and progression have already
@@ -2070,15 +1442,20 @@ export function resolveWeekWithConditioning(
     // stored §18 contract, so it leaves HERE — which is why every filter added
     // at the bottom of this function over two days never ran, and why the club
     // kept showing on a week the athlete was already looking at.
-    return applyAwayPass(section18TierFour({
-      days: rested,
-      storedContract: section18StoredContract,
-      // The AUTHORED week, which is what the publisher relocated from. A
-      // session the fixture displaced is gone from `rested` by definition.
-      weekStart: mondayStr,
-      today,
-      state,
-    }), state);
+    // ⚠ TIER 4 AT READ IS DELETED (demolition area 3, 2026-08-19).
+    //
+    // `section18TierFour` (166 lines) re-derived the week's contract, ran the
+    // §18 gateway over the week being DRAWN, and installed the gateway's answer
+    // over the resolved days. It is the read-time conforming pass Sam's ruling
+    // names: it *"may reshape a day"*. It also needed a hand-written boundary to
+    // stop it EMPTYING one — measured 2026-08-17, it turned an authored
+    // `lower_hinge | 5 rows` Friday into `Rest | 0 rows` on the athlete's
+    // screen, so the week §18 judged and the week that shipped disagreed about
+    // a main lift. A pass that needs a guard against destroying authored work is
+    // a pass that should not run at read.
+    //
+    // §18 still runs, at the write boundaries, where it REFUSES.
+    return applyAwayPass(rested, state);
   }
 
   // Pass 2: progressive conditioning placement
@@ -2354,8 +1731,7 @@ export function resolveWeekWithConditioning(
   // Final pass: apply the resolver-level injury filter to every day in
   // the week. This catches sessions added by the conditioning + recovery
   // overlays (which call buildDay directly without the wrapper). Manual
-  // overrides are preserved as-is by `applyInjuryFilterPass`.
-  return applyAwayPass(applyInjuryFilterPass(result, state), state);
+  return applyAwayPass(result, state);
 }
 
 /**
@@ -2383,98 +1759,6 @@ function withoutTeamTrainingSegment(name: string | undefined): string {
   const parts = String(name ?? '').split(/\s+\+\s+/).map((part) => part.trim());
   const kept = parts.filter((part) => part.toLowerCase() !== 'team training');
   return kept.length > 0 ? kept.join(' + ') : String(name ?? '');
-}
-
-/**
- * WHAT STANDS ON A DAY THE TRIP EMPTIED — R-075, Sam 2026-08-13.
- *
- * ***"Away has to replace the work it removes, not just delete it - your
- * Saturday Rest Day is the wrong case."***
- *
- * **BOTH OF THIS APP'S PREVIOUS ANSWERS WERE THE SAME WRONG ANSWER.**
- * `'none'` printed *"Training Day"* — the empty-day placeholder — and `'rest'`
- * printed *"Rest Day"*. Two wordings of one hole. He does not want the hole
- * named better; he wants it FILLED. **Away is a SUBSTITUTION, never a
- * subtraction.**
- *
- * ── AND THE APP ALREADY KNEW THE ANSWER, ONE BRANCH OVER ──
- * `_resolveDateRaw` answers *"a game slot was freed"* with exactly this call —
- * `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)`. It never
- * reached an away week only because it is gated to a TEMPLATE game with NO
- * calendar mark, and an away-vacated fixture is a MARKED one. **A freed slot is
- * a freed slot however it was freed**, so this reuses that owner rather than
- * inventing a second one — no new machinery, no stored state, no §18 change.
- *
- * IT IS STILL DERIVATION, WHICH IS WHY IT MAY LIVE IN A READ PASS AT ALL. The
- * session is BUILT on every read from the athlete's own context and never
- * written; his mark, his fixture and his accepted week are untouched and all
- * return the moment the fact lifts. `buildDerivedSession` is the resolver's own
- * builder and is already called this way three lines of reasoning away.
- *
- * ⚠ WHAT THIS DOES NOT CLAIM. It fills the DAY; it does not re-plan the WEEK.
- * The bigger half of R-075 — a club-less week whose §18 contract declares more
- * core conditioning than a bye-build delivers — is measured, open, and shared
- * with SEAT_INBOX item 28. **This is the day the athlete was looking at, not the
- * whole ruling.**
- */
-function freedByTheTrip(
-  date: string,
-  state: ScheduleState,
-  weekDays: readonly ResolvedDay[],
-): Workout {
-  // ── THE QUALITY IS CONDITIONING, AND SAM'S OWN ARITHMETIC IS WHY ──
-  //
-  // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
-  // and 5 strength sessions, then the 2 weeks should aim to fill those with 5
-  // conditionings and 5 strength ya know"***.
-  //
-  // **4 team trainings + 1 game = 5 removed -> 5 CONDITIONING.** Team training
-  // and a fixture are the athlete's FIELD work; that is the quality they
-  // supplied and the quality that has to come back. **The first version of this
-  // gave `prehab_accessories`, which filled the day but replaced running with
-  // arm work** — a substitution in shape and not in kind, and his sentence is
-  // explicitly about kind: *"substituted with a new similar session to keep the
-  // program flowing"*.
-  //
-  // The same crosswalk the exposure counts already use
-  // (`sessionClassificationAdapter` credits an anchor as sprint/COD) — so this
-  // is not a new mapping, it is the one the app already reasons with.
-  //
-  // ⚠ NO GAME DATES ARE PASSED, AND THAT IS DELIBERATE. He is away, so the week
-  // has no fixture — `derivedWeekContract` has already made it a bye build.
-  // Handing the conditioning builder the game he is not attending would taper
-  // this session for a match he is not at, which is the exact reasoning he gave
-  // when he ruled the fixture off the week in the first place.
-  if (state.seasonPhase) {
-    const conditioning = buildConditioningSession(
-      date,
-      [],
-      state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT,
-      state.seasonPhase,
-      buildWeekLog(weekDays as ResolvedDay[], state.markedDays || {},
-        state.capacity ?? 'medium', [], 'build'),
-      microcycleIdForDate(date, state),
-    );
-    if (conditioning) return conditioning;
-  }
-  // ***"AIM to fill"*** — a target, not a hard floor. When conditioning cannot be
-  // built (no season phase, or the builder declines the day) the day still gets
-  // WORK rather than a hole, because a hole is the one answer he has now ruled
-  // out twice. **This is the shortfall arm and it is named, not silent.**
-  return buildDerivedSession(
-    'prehab_accessories',
-    date,
-    microcycleIdForDate(date, state),
-    'Freed by the trip',
-    // ⚠ THE FALLBACK IS NOT DEFENSIVE PADDING — IT IS THIS PASS'S REACH.
-    // `athleteContext` is REQUIRED by the builder (it reads `.injuries`) and is
-    // absent in the thin projection worlds this pass now runs in, which every
-    // OTHER caller in this file is shielded from by an earlier return. Reached
-    // it on the first run and it threw. `DEFAULT_ATHLETE_CONTEXT` was already
-    // imported here and read by nothing — the same authored-and-inert shape this
-    // week keeps finding.
-    state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT,
-  );
 }
 
 function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
@@ -2526,10 +1810,26 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     // STILL A FILTER, NEVER AN EDIT — same as every other line in this pass.
     // The mark, the fixture and the stored week are all intact and all return
     // when the fact lifts.
+    /* ⚠ THE SUBSTITUTION IS DELETED; THE FILTER STAYS (area 3, 2026-08-19).
+     *
+     * `freedByTheTrip` BUILT a conditioning session — or a prehab session when
+     * the builder declined — onto every day a live trip vacated. That is
+     * authoring at read: content the composer never wrote, appearing on the
+     * athlete's screen and countable by nothing.
+     *
+     * Sam's ruling that it served is intact and is NOT withdrawn: *"away has to
+     * replace the work it removes, not just delete it"*. Its owner is the
+     * COMPOSER, which already gets the trip — `weeklySchedulerInputs`
+     * `clubInputsAfterTravel` takes the club night and the fixture out of the
+     * facts the plan is built from, so the substitution can be authored in the
+     * week rather than painted over it. On the rebuild list; not rebuilt here.
+     *
+     * WHAT REMAINS IS THE FILTER: the club's work is hidden while the athlete
+     * is away, the mark and the stored week are untouched, and everything
+     * returns the moment the fact lifts. */
     if (day.source === 'game' || day.indicator === 'game' ||
       day.workout?.workoutType === 'Game') {
-      return buildDay(day.date, day.dayOfWeek, today,
-        freedByTheTrip(day.date, state, days), 'gameProximity');
+      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
     }
     if (!day.workout) return day;
     const team = getTeamTrainingWorkoutState(day.workout);
@@ -2543,8 +1843,7 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     // keeps its own half and loses the club's, renamed through the ONE owner of
     // that question, below.
     if (team.isTeamTrainingOnly) {
-      return buildDay(day.date, day.dayOfWeek, today,
-        freedByTheTrip(day.date, state, days), 'gameProximity');
+      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
     }
     return {
       ...day,
