@@ -1150,7 +1150,9 @@ function policyFor(input: Pick<
       return {
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 1 },
-        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
+        // R-079 begins off-season sprinting only AFTER the first four weeks.
+        // Mid off-season is weeks 3-4, so the transition block owes none.
+        sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
