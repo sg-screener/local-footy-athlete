@@ -218,37 +218,48 @@ export function profileProgramNextProfile(args: {
 }
 
 /**
- * THE PROGRAM A PROFILE CHANGE WOULD PUBLISH.
+ * ⚠ **THIS IS NOT WHAT THE ATHLETE ENDS UP WITH, AND A PREVIEW MUST NOT USE
+ * IT.** Measured 2026-08-20 (seat `finish-coach-product`) on a real walked
+ * athlete: this builder passes **no `progressionHistory`**, and the program the
+ * athlete is actually left on after a profile change disagreed with it in **40
+ * of 90 prescriptions** — every one a set count and a load. A build through
+ * `utils/weekRebuild.generateProgramForProfileFromStore`, which hands generation
+ * the store's recorded history, matched the delivered program exactly.
  *
- * ⚠ **THIS IS `factFreeBase` UNDER ITS EXPORTED NAME, AND THAT IS THE WHOLE
- * POINT.** `commitProfileProgramTransaction` calls exactly this function to
- * build what it commits, so a preview that calls it too is not *predicting* the
- * accepted program — it is BUILDING the accepted program and then not
- * committing it. "The preview equals what acceptance produces" stops being a
- * claim a cell has to check on every world and becomes a property of there
- * being one builder.
- *
- * The rejected `codex/finish-product` candidate is the founding case: its
- * `extraSessionOfferPreview` read the CURRENT program and told the athlete what
- * the changed day would become. Swept over 36 generated worlds by the review
- * seat, **9 of 20 previews matched the rebuilt week and 11 did not** — the
- * athlete found out by accepting. A second predictor of a thing the app can
- * simply build is the two-representations defect this repo exists to kill.
- *
- * ⚠ **`now` AND `sourceRevision` DO NOT REACH GENERATION.** They are stamped
- * onto the returned base's metadata only, so a preview taken a second before
- * the acceptance builds the same PROGRAM with different timestamps. Compare
- * programs, never bases.
- *
- * ⚠ **IT WRITES NOTHING.** It reads `useProgramStore.getState()` and calls pure
- * builders. `test:coach-weekly-reduction` holds that as a property, by
- * fingerprinting every persisted store around a preview.
+ * Recorded here rather than changed: which producer should own the program after
+ * a profile change is a real ownership question and it is not this unit's to
+ * answer. `docs/STATUS_FINISH_COACH_PRODUCT.md` carries it as a finding.
  */
-export function profileProgramCandidateBase(args: {
+function factFreeBase(args: {
   profile: OnboardingData;
   todayISO: string;
   now: string;
   sourceRevision: number;
+  /**
+   * ⚠ **`false` FOR A PREVIEW, AND IT IS NOT A DETAIL — IT IS THE DIFFERENCE
+   * BETWEEN A PREVIEW AND A CHANGE.**
+   *
+   * `'author'` APPENDS to the block-selection history, which is what makes the
+   * NEXT block rotate away from the exercises this one chose. A preview that
+   * authors therefore does two wrong things at once: it writes persisted state
+   * for a change the athlete has not agreed to, and it makes its own prediction
+   * false — the acceptance that follows reads the preview's record and rotates
+   * away from it.
+   *
+   * MEASURED 2026-08-20 before this argument existed, on a real walked athlete:
+   * the previewed Monday prescribed `Bulgarian Split Squats 3x8-10` and the
+   * ACCEPTED Monday prescribed `4x8-10`. Same profile, same day, same lift,
+   * different dose — because the first build had recorded itself. Both halves
+   * are held by `test:coach-weekly-reduction`: a disk fingerprint around the
+   * preview, and a prescription-for-prescription comparison of the previewed and
+   * the accepted program.
+   *
+   * ⚠ **IT CHANGES THE WRITE, NEVER THE OUTPUT.** The program is computed from
+   * the history that already exists; `recordSelections` only decides whether
+   * this build joins it. That is what makes suppressing it safe — and what makes
+   * the equality cell meaningful rather than tautological.
+   */
+  recordSelections?: 'author' | false;
 }): AcceptedCompositionBaseV1 {
   const state = useProgramStore.getState();
   let surfaces = normalizeAcceptedProgramSurfaces(state);
@@ -256,7 +267,8 @@ export function profileProgramCandidateBase(args: {
     const program = generateProgramLocally(args.profile, {
       // ONBOARDING / A PROFILE CHANGE AUTHORS THE BLOCK — the athlete just
       // restated who they are, and this door decides what that block selects.
-      recordSelections: 'author',
+      // A PREVIEW passes `false`; see the argument's own note.
+      recordSelections: args.recordSelections ?? 'author',
       // The athlete just changed their season phase / profile. Generation may
       // not veto that fact: unstated, this inherited `restoration` and THREW,
       // and the transaction reported "The profile change could not build a
@@ -365,7 +377,7 @@ export async function commitProfileProgramTransaction(
   }
   let base: AcceptedCompositionBaseV1;
   try {
-    base = profileProgramCandidateBase({
+    base = factFreeBase({
       profile: nextProfile,
       todayISO: input.todayISO,
       now,

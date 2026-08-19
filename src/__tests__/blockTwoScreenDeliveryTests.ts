@@ -296,7 +296,6 @@ const hardPrompts = deriveBlockBoundaryPrompts({
   currentProgram: hardProgram,
   blockNumber: 2,
   ledgerEntries: ledger(),
-  weekOrder: WEEK_ORDER,
 });
 
 ok(

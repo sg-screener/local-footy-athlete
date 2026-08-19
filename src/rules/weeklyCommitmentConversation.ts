@@ -137,6 +137,31 @@ export type CommitmentConversationRefusal =
   | 'no_block'
   | 'first_block'
   | 'no_commitment'
+  /**
+   * ⚠ **THE REBUILD ADDS NOTHING, SO THERE IS NOTHING TO OFFER.**
+   *
+   * MEASURED 2026-08-20 on a real walked athlete — in-season, Saturday game,
+   * club Tuesday and Thursday, gym Monday/Wednesday/Friday. Every gate above
+   * opened: the block qualified, the athlete had free days, and the legality
+   * probe said a four-day commitment builds. **It builds the IDENTICAL WEEK.**
+   * Monday and Wednesday strength, Friday held as G-1, Saturday the game,
+   * Sunday rest — with `preferredTrainingDays` reading Mon/Wed/Fri/**Sun** and
+   * `trainingDaysPerWeek` reading 4. Proven at three layers in one run: the
+   * patch, the next profile, and a DIRECT `generateProgramLocally` call on it.
+   *
+   * So `commitmentLegalityProbe` does not answer this question. It asks *"does a
+   * program exist at this count"* — which is the right question for *"could you
+   * train this often"* and the wrong one for *"will this session appear"*. An
+   * offer gated on it alone is a promise the scheduler does not keep, and the
+   * athlete finds out by accepting: the false-Done class L6 calls a release
+   * blocker.
+   *
+   * **THE REBUILD IS THE GATE.** There is no offer unless the program acceptance
+   * would publish actually differs from the one the athlete is on. That is one
+   * authority instead of two, and it makes *"acceptance matches the preview"*
+   * true by construction rather than by a cell.
+   */
+  | 'extra_session_rebuild_adds_nothing'
   | { smaller: WeeklyCommitmentQuestionRefusal; extra: ExtraSessionOfferRefusal };
 
 /**
@@ -289,7 +314,7 @@ export function deriveWeeklyCommitmentConversation(
     };
   }
 
-  // ⚠ THE ONLY BUILD, AND IT HAPPENS AFTER THE OFFER IS ALREADY LIVE.
+  // ⚠ THE ONLY BUILD, AND IT HAPPENS AFTER EVERY CHEAP GATE HAS OPENED.
   const candidate = candidateProgramFor(extra.question.offeredSessionsPerWeek);
   const preview = commitmentChangePreview({
     current: currentProgram,
@@ -297,6 +322,18 @@ export function deriveWeeklyCommitmentConversation(
     todayISO,
     weekOrder,
   });
+
+  // ── THE REBUILD IS THE LAST GATE, AND IT IS THE ONE THAT MATTERS ──
+  //
+  // See `extra_session_rebuild_adds_nothing` above for the measurement. A
+  // preview that finds nothing changed is not a missing preview — it is the
+  // app saying it cannot honour the offer, and an offer the app cannot honour
+  // must not be put. **This is also what makes "the preview equals what
+  // acceptance produces" structural: there is no offer without a preview, and
+  // the preview is built by the function acceptance builds with.**
+  if (preview.value === null) {
+    return { value: null, refusal: 'extra_session_rebuild_adds_nothing' };
+  }
 
   return {
     refusal: null,
@@ -311,6 +348,9 @@ export function deriveWeeklyCommitmentConversation(
       declineLabel: extraSessionOfferDeclineLabel(),
       attendance: null,
       offer: extra.question,
+      // NEVER NULL ON A LIVE OFFER — the gate above returned already if it were.
+      // The field stays so the type cannot silently start carrying a null
+      // preview, and a cell asserts the pair.
       preview: preview.value,
       previewRefusal: preview.refusal,
     },

@@ -48,7 +48,7 @@ export function conversationFor(args: ConversationForArgs): CommitmentConversati
     sessionFeedback: args.feedback,
     acceptedBlocks: args.acceptedBlocks,
     onboardingData: args.profile ?? null,
-    ledgerEntries: args.ledgerEntries ?? [],
+    ledgerEntries: [...(args.ledgerEntries ?? [])],
     todayISO: args.todayISO,
   }));
 }

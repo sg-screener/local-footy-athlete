@@ -53,10 +53,8 @@ import {
   WEEKLY_COMMITMENT_SOURCE_SURFACE,
   type ConfirmWeeklyCommitmentResult,
 } from '../../store/weeklyCommitmentAnswer';
-import {
-  profileProgramCandidateBase,
-  profileProgramNextProfile,
-} from '../../store/profileProgramTransaction';
+import { profileProgramNextProfile } from '../../store/profileProgramTransaction';
+import { generateProgramForProfileFromStore } from '../../utils/weekRebuild';
 import {
   deriveWeeklyCommitmentConversation,
   type CommitmentConversation,
@@ -144,14 +142,31 @@ export function coachWeeklyCommitmentInputs(state: {
       })(sessionsPerWeek);
     },
     /**
-     * ⚠ **THE PREVIEW IS THE ACCEPTANCE PATH, RUN AND NOT COMMITTED.**
+     * ⚠ **THE PREVIEW IS THE PRODUCER THAT ACTUALLY LANDS, RUN AND NOT
+     * COMMITTED — AND WHICH PRODUCER THAT IS WAS MEASURED, NOT ASSUMED.**
      *
-     * `profileProgramNextProfile` + `profileProgramCandidateBase` are the two
-     * steps `commitProfileProgramTransaction` itself takes, called with the
-     * SAME patch `confirmWeeklyCommitment` will supply. So the previewed program
-     * is not a prediction of the accepted program — it IS the accepted program,
-     * built early. The rejected `codex/finish-product` candidate predicted
-     * instead and was wrong on 11 of 20 worlds.
+     * The obvious choice was `commitProfileProgramTransaction`'s own intermediate
+     * builder, on the reasoning that the transaction is what commits. **It was
+     * wrong, in 40 of 90 prescriptions**, because that builder hands generation
+     * **no `progressionHistory`** and the program the athlete is left on is
+     * built with it: `Bulgarian Split Squats 3x8-10 @25` previewed against
+     * `4x8-10 @25` delivered, and so on for every set count and load in the
+     * block. `generateProgramForProfileFromStore` is the step
+     * `rebuildLocalWeek` performs, hands generation the store's recorded
+     * history, and matched the delivered program EXACTLY.
+     *
+     * Two things make this a preview rather than a change:
+     *
+     *  - `recordSelections: false` — `'author'` appends to the block-selection
+     *    history, so an authoring preview would write persisted state for a
+     *    change nobody agreed to AND rotate the acceptance away from its own
+     *    prediction. The output is unaffected; only the write is.
+     *  - nothing is committed. This returns a program object; the caller shows
+     *    it and throws it away.
+     *
+     * The rejected `codex/finish-product` candidate predicted the changed day
+     * from the CURRENT week instead of building it, and was measured wrong on 11
+     * of 20 generated worlds. There is no prediction here at all.
      */
     candidateProgramFor: (sessionsPerWeek: number) => {
       if (!profile) return null;
@@ -161,19 +176,27 @@ export function coachWeeklyCommitmentInputs(state: {
         weekOrder: DAYS_OF_WEEK,
         availableDays: available(),
       });
+      // THE PROFILE ACCEPTANCE WILL USE — the ACCEPTED profile with the same
+      // patch, through the transaction's own first step. Re-deriving either half
+      // here is how a preview and its acceptance come to disagree about which
+      // athlete they are talking about.
       const nextProfile = profileProgramNextProfile({
         change: { kind: 'profile_setup', patch },
       });
-      // `now` and `sourceRevision` are stamped onto the base's METADATA only and
-      // never reach generation, so a preview taken a second before the
-      // acceptance builds the same PROGRAM. Compare programs, never bases.
-      const base = profileProgramCandidateBase({
-        profile: nextProfile,
-        todayISO: state.todayISO,
-        now: new Date(0).toISOString(),
-        sourceRevision: 0,
-      });
-      return base.surfaces.currentProgram ?? null;
+      try {
+        return generateProgramForProfileFromStore({
+          profile: nextProfile,
+          todayISO: state.todayISO,
+          blockNumber: state.blockNumber ?? undefined,
+          recordSelections: false,
+        });
+      } catch {
+        // ⚠ SWALLOWED, AND ONLY HERE. A refusal means there is no week to show,
+        // which the preview reports as `no_candidate_week` and the conversation
+        // turns into no offer at all. Nothing else in this app treats a
+        // generation refusal as data.
+        return null;
+      }
     },
   };
 }
