@@ -83,13 +83,18 @@ armTotalsOrRed();
 
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import { useProfileStore } from '../store/profileStore';
+import { startingWeightForAthlete } from '../utils/loadEstimation';
 import { useProgramStore } from '../store/programStore';
-import { readBlockHistory } from '../rules/blockBoundaryProgression';
+import {
+  loadForReplacementExercise,
+  readBlockHistory,
+} from '../rules/blockBoundaryProgression';
 import { addDaysISO } from '../utils/programBlockState';
 import {
   acceptExtraSession,
   coldStartThroughOnboarding,
   followTheWeek,
+  resolvedDays,
   relaunchApp,
   setJourneyClock,
   substituteExercise,
@@ -124,6 +129,28 @@ function ok(name: string, condition: boolean, detail?: string): void {
 
 const same = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
+
+/**
+ * THE ATHLETE'S OWN RECORDED LOAD FOR EVERY LIFT THEY HAVE LOGGED.
+ *
+ * `readBlockHistory`'s `lastRecordedLoadByExercise`, which is read OVER ALL TIME
+ * rather than over one block — Sam, 2026-08-16: *"A returning exercise keeps its
+ * own history even after being absent for one or more blocks."* That is the same
+ * map `loadForReplacementExercise` consults, so the suite asks the authority the
+ * question with the authority's own input.
+ */
+function recordedLoadsFor(stage: Stage): Record<string, number> {
+  const blockOne = stage.world?.blockOneStart ?? stage.weekStartISO;
+  const history = readBlockHistory({
+    feedbackByDate: (useProgramStore.getState() as unknown as {
+      sessionFeedback?: Record<string, never>;
+    }).sessionFeedback ?? {},
+    blockStartISO: blockOne,
+    blockEndISO: addDaysISO(blockOne, 27),
+    requiredStrengthSessions: 8,
+  }) as unknown as { lastRecordedLoadByExercise?: Record<string, number> };
+  return history.lastRecordedLoadByExercise ?? {};
+}
 
 /** Every loaded exercise and its load, by exact name — one entry per exercise. */
 function loadsByExercise(): Map<string, string> {
@@ -1255,6 +1282,263 @@ async function main(): Promise<void> {
         `${excluded}: stored ${storedRowCount(excluded)} vs visible `
         + `${visibleRowCount({ weekStartISO: stage.weekStartISO, todayISO: stage.todayISO, exerciseName: excluded })}`);
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 7 — AN EXERCISE THE ATHLETE DID NOT HAVE BEFORE, AND THE LOAD IT GETS
+  // ═══════════════════════════════════════════════════════════════════════
+
+  console.log('\n═══ STAGE 7 — a newcomer\u2019s load ═══\n');
+  {
+    /**
+     * **THE AUTHORITY, AND IT IS NOT NEW.** `loadForReplacementExercise`
+     * (`rules/blockBoundaryProgression`) is the one ladder: (1) the athlete's own
+     * recorded load for THAT exercise, however long ago; (2) authored-as-unloaded
+     * stays blank; (3) Sam's authored anchor estimate from their own answers;
+     * (4) nothing honest to say, so the athlete chooses. **The outgoing row's
+     * load is not a rung and cannot be** — it is not even a parameter.
+     *
+     * ⚠ **A MEASURED FACT THAT SHAPES THIS STAGE: A SETTINGS CHANGE NEVER
+     * INTRODUCES A LIFT THE ATHLETE HAS RECORDED.** Searched over real
+     * transitions rather than assumed — 18 equipment losses (every askable tag
+     * alone, plus twelve pairs and triples) at three depths (4, 8 and 12 weeks,
+     * i.e. blocks 2, 3 and 4), and a phase change: **zero arrivals with recorded
+     * history, every time.** That is ROTATION WORKING — `decideExerciseForBlock`
+     * steers away from what the athlete has recently done — not a gap in the
+     * search. So rung 1 has no subject through a settings door, and inventing one
+     * would mean changing programming to manufacture the case.
+     *
+     * The two halves are therefore proven on the two real doors that reach them:
+     *   7a — a SETTINGS change (the gym loses its machines) for the no-history
+     *        rungs, and for "never inherits the outgoing load";
+     *   7b — the athlete's OWN substitution, where the app itself offers a lift
+     *        they have recorded, for rung 1.
+     */
+    const stage = await stageFor('WORN');
+    const recorded = recordedLoadsFor(stage);
+    console.log(`     the athlete's recorded loads: ${JSON.stringify(recorded)}`);
+
+    // ── 7a — A SETTINGS CHANGE BRINGS IN EXERCISES THEY HAVE NEVER LOADED ────
+    const before = loadsByExercise();
+    const outgoingLoads = new Set([...before.values()].filter((v) => v !== '-' && v !== '0'));
+    const kit = await changePermanentEquipment({
+      answer: equipmentAnswerWith({
+        from: useProfileStore.getState().onboardingData.equipmentAnswer,
+        tags: { machine: undefined },
+        answeredOn: stage.todayISO,
+      }),
+      todayISO: stage.todayISO,
+    });
+    const after = loadsByExercise();
+    const arrivals = [...after.keys()].filter((name) => !before.has(name));
+    const departures = [...before.keys()].filter((name) => !after.has(name));
+
+    console.log(`     kit change: ok=${kit.ok}`);
+    console.log(`     DEPARTED: ${departures.map((n) => `${n}@${before.get(n)}`).join(', ')}`);
+    for (const name of arrivals) {
+      console.log(`     ARRIVED  ${name} @ ${after.get(name)}  `
+        + `(own recorded: ${recorded[name] ?? 'none'}, authority says: `
+        + `${String(loadForReplacementExercise({
+          exerciseName: name,
+          onboardingData: useProfileStore.getState().onboardingData,
+          recordedLoadByExercise: recorded,
+        }) ?? 'blank')})`);
+    }
+
+    ok('7a: the settings change really introduced an exercise',
+      arrivals.length > 0 && departures.length > 0,
+      `${arrivals.length} arrivals, ${departures.length} departures — the stage has no subject`);
+    ok('7a: at least one departing row carried a real load, so "never inherits" is not vacuous',
+      departures.some((n) => {
+        const v = before.get(n); return v !== undefined && v !== '-' && Number(v) > 0;
+      }),
+      `departing loads: ${departures.map((n) => `${n}@${before.get(n)}`).join(', ')}`);
+
+    for (const name of arrivals) {
+      const landed = after.get(name) ?? '-';
+      const authority = loadForReplacementExercise({
+        exerciseName: name,
+        onboardingData: useProfileStore.getState().onboardingData,
+        recordedLoadByExercise: recorded,
+      });
+      const expected = authority === undefined ? ['-', '0'] : [String(authority)];
+      ok(`7a [${name}]: its load is what the AUTHORITY says, not a guess`,
+        expected.includes(landed),
+        `landed ${landed}, authority says ${authority === undefined ? 'blank' : authority}`);
+      ok(`7a [${name}]: it did NOT inherit an outgoing exercise's load`,
+        !(landed !== '-' && landed !== '0' && outgoingLoads.has(landed)
+          && recorded[name] === undefined && String(authority) !== landed),
+        `landed ${landed}, which is a load one of the departing rows carried `
+        + `(${[...outgoingLoads].join(', ')}) and is neither its own history nor its estimate`);
+    }
+
+    const weekAfterKit = weekPrint(stage.weekStartISO, stage.todayISO);
+    await reopenTheApp('7a', stage.todayISO);
+    const afterRestart = loadsByExercise();
+    ok('7a: every newcomer\u2019s load is the same after close/reopen',
+      arrivals.every((name) => afterRestart.get(name) === after.get(name)),
+      arrivals.filter((n) => afterRestart.get(n) !== after.get(n))
+        .map((n) => `${n} ${after.get(n)} -> ${afterRestart.get(n)}`).join(', '));
+    ok('7a: and the whole week is identical after close/reopen',
+      same(weekAfterKit, weekPrint(stage.weekStartISO, stage.todayISO)),
+      'the week moved across the restart');
+
+    // ── 7b — RUNG 1: A NEWCOMER THE ATHLETE HAS ACTUALLY LOADED BEFORE ───────
+    //
+    // Reached through the athlete's own substitution, because that is the door
+    // where the app offers a lift they have recorded. The option is taken from
+    // `getTapSwapChoices` — the production producer — so this is a swap the app
+    // itself put in front of them, not one this suite invented.
+    const swapStage = await stageFor('WORN');
+    const swapRecorded = recordedLoadsFor(swapStage);
+    const days = resolvedDays(swapStage.weekStartISO, swapStage.todayISO);
+    const present = new Set(days.flatMap((day) => day.rows.map((row) => row.name)));
+    let chosen: {
+      dateISO: string; from: string; fromLoad: number; to: string; ownRecorded: number;
+      sets: number; repsMin: number; repsMax: number;
+    } | null = null;
+    for (const day of days) {
+      for (const row of day.rows) {
+        if (chosen || !row.name || (row.weightKg ?? 0) <= 0) continue;
+        const offered = swapOptionsFor({
+          dateISO: day.dateISO, originalExercise: row.name,
+          existingExerciseNames: [...present],
+        }).find((option) => swapRecorded[option.name] !== undefined && !present.has(option.name));
+        if (offered) {
+          chosen = {
+            dateISO: day.dateISO, from: row.name, fromLoad: row.weightKg as number,
+            to: offered.name, ownRecorded: swapRecorded[offered.name],
+            sets: row.sets ?? 3, repsMin: row.repsMin ?? 3, repsMax: row.repsMax ?? 6,
+          };
+        }
+      }
+    }
+
+    ok('7b: the app itself offers a substitute the athlete HAS loaded before',
+      chosen !== null,
+      'no offered substitute has recorded history on this athlete — rung 1 has no '
+      + 'subject here and the cells below would be vacuous');
+
+    if (chosen) {
+      console.log(`     ${chosen.from}@${chosen.fromLoad} -> ${chosen.to} `
+        + `(own recorded ${chosen.ownRecorded})`);
+      ok('7b: the two loads are far apart, so "own history" and "inherited" are distinguishable',
+        Math.abs(chosen.fromLoad - chosen.ownRecorded) > 1,
+        `outgoing ${chosen.fromLoad} vs own recorded ${chosen.ownRecorded}`);
+      const swap = await substituteExercise({
+        dateISO: chosen.dateISO, weekStartISO: swapStage.weekStartISO,
+        fromExercise: chosen.from,
+        toExercise: {
+          name: chosen.to, sets: chosen.sets,
+          repsMin: chosen.repsMin, repsMax: chosen.repsMax,
+        },
+      });
+      ok('7b: the substitution lands', swap.ok, swap.message);
+      const landedLoad = resolvedDays(swapStage.weekStartISO, swapStage.todayISO)
+        .flatMap((day) => day.rows).find((row) => row.name === chosen!.to)?.weightKg ?? null;
+      console.log(`     landed at ${landedLoad}`);
+      ok('7b: IT USES ITS OWN STORED HISTORY',
+        landedLoad === chosen.ownRecorded,
+        `${chosen.to} landed at ${landedLoad}; its own recorded load is ${chosen.ownRecorded}`);
+      ok('7b: AND IT DID NOT INHERIT THE OUTGOING EXERCISE\u2019S LOAD',
+        landedLoad !== chosen.fromLoad,
+        `${chosen.to} landed at ${landedLoad}, which is exactly what ${chosen.from} `
+        + 'was carrying — the replacement inherited the outgoing row\u2019s load');
+      const weekAfterSwap = weekPrint(swapStage.weekStartISO, swapStage.todayISO);
+      await reopenTheApp('7b', swapStage.todayISO);
+      const reLanded = resolvedDays(swapStage.weekStartISO, swapStage.todayISO)
+        .flatMap((day) => day.rows).find((row) => row.name === chosen!.to)?.weightKg ?? null;
+      ok('7b: the newcomer keeps its own load after close/reopen',
+        reLanded === chosen.ownRecorded,
+        `after reopening it reads ${reLanded}, not ${chosen.ownRecorded}`);
+      ok('7b: and the whole week is identical after close/reopen',
+        same(weekAfterSwap, weekPrint(swapStage.weekStartISO, swapStage.todayISO)),
+        'the week moved across the restart');
+    }
+
+    // ── 7c — RUNG 1 THROUGH A *SETTINGS* DOOR, AT A DISTINGUISHABLE COORDINATE ──
+    //
+    // ⚠ **7b CANNOT TELL RUNG 1 FROM RUNG 3, AND A MUTATION PROVED IT.** Deleting
+    // the authority's own-recorded-load rung left the whole suite green, because
+    // `Bulgarian Split Squats` was logged AT the card's number: its recorded load
+    // and its authored estimate are both 25, so the two rungs collide and no
+    // assertion at that coordinate can separate them. Measured, all five recorded
+    // lifts: only `Leg Press` differs — recorded **111** (the athlete typed it
+    // over the card's 125) against an authored estimate of **125**.
+    //
+    // So the returning lift is `Leg Press`, and the transition is the athlete's
+    // gym losing its machines and getting them back — two ordinary profile edits
+    // through the same canonical door, in both directions. On the way back it is
+    // a NEWCOMER, and what it comes back on says which rung answered.
+    const returnStage = await stageFor('WORN');
+    const returnRecorded = recordedLoadsFor(returnStage);
+    const SUBJECT = 'Leg Press';
+    const ownRecorded = returnRecorded[SUBJECT];
+    const authoredEstimate = startingWeightForAthlete(
+      SUBJECT, useProfileStore.getState().onboardingData,
+    );
+    const beforeLoads = loadsByExercise();
+    const startedWith = beforeLoads.get(SUBJECT);
+
+    const withoutMachines = await changePermanentEquipment({
+      answer: equipmentAnswerWith({
+        from: useProfileStore.getState().onboardingData.equipmentAnswer,
+        tags: { machine: undefined }, answeredOn: returnStage.todayISO,
+      }),
+      todayISO: returnStage.todayISO,
+    });
+    const goneLoads = loadsByExercise();
+    const departedCarrying = [...beforeLoads.entries()]
+      .filter(([name]) => !goneLoads.has(name))
+      .map(([name, load]) => `${name}@${load}`);
+
+    const machinesBack = await changePermanentEquipment({
+      answer: equipmentAnswerWith({
+        from: useProfileStore.getState().onboardingData.equipmentAnswer,
+        tags: { machine: 'have' }, answeredOn: returnStage.todayISO,
+      }),
+      todayISO: returnStage.todayISO,
+    });
+    const backLoads = loadsByExercise();
+    const returned = backLoads.get(SUBJECT);
+
+    console.log(`     ${SUBJECT}: started at ${startedWith}, `
+      + `${goneLoads.has(SUBJECT) ? 'STILL THERE' : 'departed'} when the machines went `
+      + `(with ${departedCarrying.join(', ')}), came back at ${returned}`);
+    console.log(`     own recorded ${ownRecorded} · authored estimate ${authoredEstimate}`);
+
+    ok('7c: the gym losing its machines really removed the lift',
+      withoutMachines.ok && !goneLoads.has(SUBJECT),
+      `${SUBJECT} did not depart, so its return is not a return`);
+    ok('7c: and getting them back brought it in as a NEWCOMER',
+      machinesBack.ok && backLoads.has(SUBJECT),
+      `${SUBJECT} did not come back`);
+    ok('7c: the two rungs are distinguishable at this coordinate',
+      typeof ownRecorded === 'number' && typeof authoredEstimate === 'number'
+        && ownRecorded !== authoredEstimate,
+      `recorded ${ownRecorded} vs estimate ${authoredEstimate} — if these collide the `
+      + 'cell below cannot tell own-history from authored-estimate');
+    ok('7c: IT COMES BACK ON ITS OWN HISTORY, NOT THE AUTHORED ESTIMATE',
+      returned !== undefined && returned !== '-'
+        && Number(returned) !== authoredEstimate
+        && Number(returned) >= (ownRecorded as number),
+      `${SUBJECT} returned at ${returned}. Its own recorded load is ${ownRecorded} and the `
+      + `authored starting estimate is ${authoredEstimate}; coming back on the estimate `
+      + 'means the athlete\u2019s own number was thrown away when the lift left the program.');
+    ok('7c: and it did not come back on a departing row\u2019s load',
+      !departedCarrying.some((entry) => entry.endsWith(`@${returned}`)
+        && !entry.startsWith(`${SUBJECT}@`)),
+      `${SUBJECT} returned at ${returned}, which is what one of `
+      + `${departedCarrying.join(', ')} was carrying`);
+
+    const weekBack = weekPrint(returnStage.weekStartISO, returnStage.todayISO);
+    await reopenTheApp('7c', returnStage.todayISO);
+    ok('7c: the returning lift keeps that load after close/reopen',
+      loadsByExercise().get(SUBJECT) === returned,
+      `${returned} -> ${loadsByExercise().get(SUBJECT)}`);
+    ok('7c: and the whole week is identical after close/reopen',
+      same(weekBack, weekPrint(returnStage.weekStartISO, returnStage.todayISO)),
+      'the week moved across the restart');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
