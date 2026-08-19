@@ -255,3 +255,105 @@ Green at base and still green: `test:dated-equipment-fact` 3/0,
   typed and honest; nobody has ruled what that athlete should be shown.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — CHECKPOINT: THE NEXT SLICE IS **REMOVE**
+
+Measured before choosing, with `npm run census:five-actions` — the four
+remaining hub actions driven through their real doors on the real off-season
+3-day athlete, session `2026-07-22`
+(`RDLs / Bulgarian Split Squats / Landmine Press / Barbell Row / Banded Dead Bug`).
+
+| action | door | what the athlete gets |
+| --- | --- | --- |
+| **Equipment** | `set_equipment_modifier` | **WORKS** — slice 1, 27-cell gate |
+| **Swap** | `swap_exercise` | **WORKS** — 2 options offered, `RDLs -> Glute Bridge` (`same_movement_pattern`), row changes on screen |
+| **Remove** | `applyExerciseExclusionDecision` | **STORED, NEVER SEEN** — the decision persists correctly, the session is byte-identical |
+| **Injury** | `set_injury_modifier` | **STORED, NEVER SEEN — AND IT CLAIMS OTHERWISE** |
+| **Add** | `decideExtraSessionOffer` | **NOT MEASURED** — this driver cannot build the block history the offer reads. A harness limit, not a finding. |
+
+## ⚠ THE INJURY DOOR RETURNS A SENTENCE THAT IS NOT TRUE
+
+```
+door ok=true "Injury restrictions are active and affected sessions were safely recomposed."
+before : RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+after  : RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+```
+
+A moderate hamstring, `train_around`, and **the athlete is told their sessions
+were recomposed while every row — the hinge included — stands untouched.** This
+is worse than a silent failure: a silent failure invites a second attempt, and
+this one closes the question. Recorded here now; it is the injury slice's first
+cell, not something to patch at the message.
+
+## WHY REMOVE IS THE NEXT DEPENDENCY, AND NOT INJURY
+
+**Both fail the same way, and Remove is the one that isolates the cause.**
+
+The Remove owner says so in its own comment:
+
+> `today_only` changes THIS session, **which the removal override already did**;
+> it does not change what future generation may choose, so it asks for no rebuild.
+
+**That override is gone.** `applyUserRemovalConstraintsToWeek` was cut out of
+§18 by the demolition (area A: *"Applying stored athlete deletions -> accepted
+state transaction"*, BROKEN). The owner still stores the decision and still
+declines to ask for a rebuild, on a premise the demolition retired.
+
+⚠ **AND MY FIRST DIAGNOSIS WAS WRONG.** I read `composerExclusionInput` in
+`generateProgram.ts` as having zero callers and nearly reported a dead producer.
+A whole-repo grep with a positive control found it called at
+`generateProgram.ts:1171`. **The wire exists — at GENERATION.** The athlete's
+`prefs.exclusions` reach `composeWeek` the next time a program is generated, and
+nothing regenerates when a removal is stored. A `today_only` removal is therefore
+invisible until something else triggers generation, by which time its
+`activeThroughISO` has passed. It can never be seen.
+
+Remove is the next dependency because:
+
+1. **It is the same missing wire, on the simplest cause.** Equipment already
+   proved the spine: a stored decision that triggers a recompose-and-publish
+   arrives on screen and survives a restart. Removal has one stored decision
+   type, no severity, no body-part ladder, no coach surface.
+2. **Injury is strictly downstream of it.** Injury needs that same wire PLUS a
+   risk/movement-restriction model PLUS nine items on the demolition's own
+   rebuild list. Building injury first means building the wire blind, inside the
+   larger problem.
+3. **The composer is already waiting.** `composeWeek` carries `excludedToday`,
+   `attributeGap({ excluded })` and `substitutedFor.cause = 'excluded_today'` —
+   the branch is built and currently unreachable from a live decision. This is a
+   rebuild through a current owner, not a new authority.
+4. **Its acceptance is already written.** The six red cells in
+   `test:visible-surfaces` are removal and injury behaviour, and their words are
+   the spec: *"the fallback selector IS asked to fill the removed pattern"*,
+   *"the PATTERN is kept by a legal loaded variation"*, *"the screen's case
+   defaults to an identity EXCLUSION"*.
+5. **It keeps the causes distinct, as ordered.** Equipment asks what is legal
+   with today's kit; ordinary removal rotates within the pattern. They must not
+   collapse into one exclusion list, and building them one at a time against the
+   same spine is what keeps them apart.
+
+## WHAT REMAINS UNBUILT AFTER THIS CHECKPOINT
+
+**Of the five hub actions:** Equipment done; Swap works but has no end-to-end
+gate of its own; Remove chosen next; Injury after it; Add unmeasured.
+
+**Carried, unchanged, from the demolition's rebuild list:** power allowance
+stamping and delivery; clearing stale derived sessions; safety rewriting of a
+week at the composer; optional-session placement/withdrawal; required-safe-pattern
+representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan
+alternatives; and the nine injury items.
+
+**Added by slice 1 and still open:** the equipment checklist over-reports
+(`deriveSessionEquipmentRequirements` flat-maps display labels, so the sheet
+still offers `Barbell` on a day whose only barbell row is an OR-group one);
+conditioning-modality replacement is unproven since its only cells went with the
+deleted planner; and there is no glass proof of restart preserving an equipment
+change.
+
+**Not started, by instruction:** the five-action UI hub, game-day rules,
+conditioning, power, away substitution and optional sessions.
+
+Agent: rebuild
