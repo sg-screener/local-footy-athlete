@@ -92,7 +92,7 @@ import { materialiseAuthoredSessions } from '../../rules/materialiseAuthoredSess
 import { calculateCapacity } from '../../utils/coachingEngine';
 import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
 import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
-import { scheduleRefused, scheduleWeek } from '../../rules/weeklyScheduler';
+import { scheduleRefused, scheduledGameDays, scheduleWeek } from '../../rules/weeklyScheduler';
 import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
@@ -598,6 +598,7 @@ export function buildInitialGeneratedCoachingPlan(args: {
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
     },
     gameDay: schedInputs.gameDay,
+    gameDays: scheduledGameDays(schedInputs),
   });
   return scheduleToCoachingPlan({
     schedule: sched,
@@ -621,14 +622,14 @@ export function buildInitialGeneratedCoachingPlan(args: {
       currentProductionClaimsAnchorCredit: true,
     } as never,
     clubNights: schedInputs.clubNights,
-    gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+    gameDays: scheduledGameDays(schedInputs),
     v1Input: {
       seasonPhase: inputs.seasonPhase,
       capacity,
       selectedDayNumbers: [...schedInputs.gymAccessDays],
       teamTrainingDayNumbers: [...schedInputs.clubNights],
-      hasGame: schedInputs.gameDay !== null,
-      gameDay: schedInputs.gameDay,
+      hasGame: scheduledGameDays(schedInputs).length > 0,
+      gameDay: scheduledGameDays(schedInputs)[0] ?? null,
       weekKind: firstState?.weekKind,
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
       preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
@@ -1107,6 +1108,7 @@ export function buildGeneratedMicrocycles(args: {
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         },
         gameDay: schedInputs.gameDay,
+        gameDays: scheduledGameDays(schedInputs),
       });
       allocatedWeekPlan = scheduleToCoachingPlan({
         schedule: sched,
@@ -1136,14 +1138,14 @@ export function buildGeneratedMicrocycles(args: {
             equipmentWindow.reachableAcrossWindow),
         } as never,
         clubNights: schedInputs.clubNights,
-        gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+        gameDays: scheduledGameDays(schedInputs),
         v1Input: {
           seasonPhase: profile.seasonPhase,
           capacity: cutoverCapacity,
           selectedDayNumbers: [...schedInputs.gymAccessDays],
           teamTrainingDayNumbers: [...schedInputs.clubNights],
-          hasGame: schedInputs.gameDay !== null,
-          gameDay: schedInputs.gameDay,
+          hasGame: scheduledGameDays(schedInputs).length > 0,
+          gameDay: scheduledGameDays(schedInputs)[0] ?? null,
           weekKind: effectiveWeekKind,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,

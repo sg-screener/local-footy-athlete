@@ -140,12 +140,48 @@ guard remaining:
    mutation then reddened exactly that cell: Saturday became Rest while the hard
    exposure moved elsewhere.
 
-## NOT COVERED — after scheduler slice 1
+## Slice 1b — every target-week fixture
 
-- Multiple fixtures in one target week are not yet represented by the scalar
-  scheduler fixture input; this remains an open scheduler item under R-001.
-- The scheduler fixture slice is mutation-proven; multiple-fixture scheduling is
-  the remaining fixture-model gap.
+### First-run findings
+
+- The availability owner already represented every accepted target-week
+  fixture, but `weeklySchedulerInputs` collapsed that set to one `gameDay`.
+  Every proximity, hard-day and conditioning calculation therefore saw only the
+  first game.
+- Once both games reached the scheduler, a Wednesday/Saturday week was refused
+  before the existing reduction ladder could run: the early check required two
+  legal days even though the ladder expressly supports one lawful session.
+- Once the scheduler built the reduced Monday-upper week, §18 restored its
+  generic squat/hinge requirement and rejected the scheduler-owned purpose set.
+  The scheduler-derived contract now declares the completed schedule's actual
+  pattern intentions; §18 still validates that set but no longer acts as an
+  independent planner.
+
+### Owner-side correction and real world
+
+- The live input is now `gameDays`, with the scalar retained only as a legacy
+  pure-caller fallback. Scheduler anchors, cyclic proximity, legality, hard-day
+  accounting, running, sprint placement, conditioning and power eligibility all
+  consume the complete set.
+- The smallest approved layout is still two access days. A one-access-day
+  athlete still refuses. An athlete with an approved access pattern compressed
+  to one legal day by fixtures can now reach the already-approved reduction
+  ladder; zero legal days still refuses.
+- Real generated week, marks Wednesday 12 August and Saturday 15 August 2026 as
+  games: Monday carries the sole upper-strength session; Wednesday and Saturday
+  are both Game Day; Tuesday, Thursday, Friday and Sunday carry no strength.
+  The generated week publishes rather than being rejected for lower patterns
+  the scheduler deliberately omitted for fixture freshness.
+- `test:weekly-scheduler` is 96 of 96 and the generated fixture suite is now 10
+  of 10. The multiple-fixture cell requires the exact two game anchors and the
+  exact non-vacuous Monday strength day.
+
+## NOT COVERED — after scheduler slice 1b
+
+- Cross-week proximity around an explicit target-week bye/moved fixture still
+  uses weekday recurrence rather than dated adjacent fixtures. This is the
+  remaining scheduler/game-proximity item.
+- The multi-fixture guard is green but its mutation proof is not yet recorded.
 - Power delivery remains zero in the measured eligible world.
 - Travel and zero-equipment output have only been baseline-printed/censused; no
   owned gap in those slices has yet been changed.

@@ -121,9 +121,13 @@ export function materialiseAuthoredSessions(args: {
   readonly schedule: WeeklySchedule;
   readonly facts: MaterialisationFacts;
   readonly gameDay: number | null;
+  readonly gameDays?: readonly number[];
 }): MaterialisedSession[] {
   const { schedule, facts } = args;
-  const hasGame = args.gameDay !== null;
+  const gameDays = args.gameDays === undefined
+    ? (args.gameDay === null ? [] : [args.gameDay])
+    : args.gameDays;
+  const hasGame = gameDays.length > 0;
 
   // ⚠ ONE ENTRY PER AUTHORISED DAY, IN THE SCHEDULER'S ORDER. `map`, never
   // `flatMap`, never `filter`, never a push into the result — the specialists
@@ -202,9 +206,11 @@ export function materialiseAuthoredSessions(args: {
     // why this is gated on `owner === 'strength'` AND `powerEligible`, and why a
     // declined primer changes nothing about the day.
     let powerPrimer: PowerPrimerSpec | null = null;
-    const gOffset = args.gameDay === null
+    const gOffset = gameDays.length === 0
       ? -99
-      : orderIndex(intention.dayOfWeek) - orderIndex(args.gameDay);
+      : gameDays.map((gameDay) =>
+          orderIndex(intention.dayOfWeek) - orderIndex(gameDay))
+        .sort((left, right) => Math.abs(left) - Math.abs(right))[0];
     if (intention.owner === 'strength' && intention.powerEligible && intention.purpose) {
       powerPrimer = decidePowerPrimer({
         phase: facts.phase,

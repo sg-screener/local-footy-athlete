@@ -47,6 +47,26 @@ export interface SchedulerExposureContractInput {
 }
 
 /**
+ * The main-strength patterns the completed scheduler week actually asks the
+ * composer to cover. This is deliberately derived from `intendedPatterns`: a
+ * fixture-compressed week that lawfully substitutes its only remaining lower
+ * session with upper work must not be re-expanded to squat + hinge by §18's
+ * generic four-pattern default.
+ */
+function schedulerRequiredPatterns(
+  schedule: WeeklySchedule,
+): MainStrengthPattern[] {
+  const required = new Set<MainStrengthPattern>();
+  for (const pattern of schedule.intendedPatterns) {
+    if (pattern === 'squat' || pattern === 'hinge') required.add(pattern);
+    if (pattern === 'horizontal_push' || pattern === 'vertical_push') required.add('push');
+    if (pattern === 'horizontal_pull' || pattern === 'vertical_pull') required.add('pull');
+  }
+  return ['squat', 'hinge', 'push', 'pull'].filter((pattern) =>
+    required.has(pattern as MainStrengthPattern)) as MainStrengthPattern[];
+}
+
+/**
  * THE APPROVED LAYOUT'S OWN STRENGTH COUNT, HANDED TO §18 AS A TYPED REDUCTION.
  *
  * ## ⚠ THE DEFECT THIS CLOSES, MEASURED
@@ -134,6 +154,10 @@ export function schedulerExposureContract(
     ],
     kitUnachievablePatterns: input.kitUnachievablePatterns
       ?? input.identity.kitUnachievablePatterns,
+    // §18 validates the scheduler's declared purpose set; it does not restore
+    // the generic healthy-week set after the scheduler has recorded a lawful
+    // fixture-proximity substitution/reduction.
+    declaredRequiredPatterns: schedulerRequiredPatterns(input.schedule),
     // ── THE SUBSTITUTION ────────────────────────────────────────────────────
     //
     // Every one of these was the legacy allocator's answer. They are now the

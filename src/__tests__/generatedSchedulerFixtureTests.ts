@@ -164,6 +164,45 @@ ok('a moved target-week fixture replaces rather than duplicates the usual fixtur
   games(moved).length === 1 && games(moved)[0].dayOfWeek === 3,
   games(moved).map((workout) => ({ day: workout.dayOfWeek, name: workout.name })));
 
+const doubleProfile = {
+  ...profile,
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+  preferredTrainingDays: [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ],
+};
+const doubleAvailability = resolveProfileTargetWeekAvailability({
+  profile: doubleProfile as never,
+  weekStart: WEEK_MONDAY,
+  markedDays: {
+    '2026-08-12': 'game',
+    '2026-08-15': 'game',
+  },
+  ownedPhase: ownSeasonPhaseForGeneration(doubleProfile as never),
+});
+const doubleFixtureWeek = generateProgramLocally(doubleProfile as never, {
+  todayISO: WEEK_MONDAY,
+  blockNumber: 1,
+  microcycleLimit: 1,
+  seasonPhaseClock: clockAtPhaseWeek(8),
+  previousProgram: null,
+  athletePrefs: {},
+  activeConstraints: [],
+  targetWeekAvailability: doubleAvailability,
+  targetFixtureDay: 'Wednesday',
+} as never);
+ok('every accepted target-week fixture reaches the scheduler and authored week',
+  JSON.stringify(games(doubleFixtureWeek).map((workout) => workout.dayOfWeek))
+    === JSON.stringify([3, 6]),
+  games(doubleFixtureWeek).map((workout) => ({ day: workout.dayOfWeek, name: workout.name })));
+const doubleStrengthDays = doubleFixtureWeek.microcycles[0].workouts
+  .filter((workout) => (workout.exercises?.length ?? 0) > 0)
+  .map((workout) => workout.dayOfWeek);
+ok('double-fixture proximity protects both games from adjacent strength work',
+  JSON.stringify(doubleStrengthDays) === JSON.stringify([1]),
+  doubleStrengthDays);
+
 const targetByeBlock = generated(null, 4);
 ok('the target-week bye does not erase recurring fixtures from later weeks',
   games(targetByeBlock, 0).length === 0

@@ -73,20 +73,20 @@ function dateForDayNumber(weekStartISO: string, dayOfWeek: number): string {
 function clubInputsAfterTravel(args: {
   weekStartISO: string;
   clubNights: readonly number[];
-  gameDay: number | null;
+  gameDays: readonly number[];
   activeConstraints: readonly unknown[] | undefined;
-}): { clubNights: number[]; gameDay: number | null } {
+}): { clubNights: number[]; gameDays: number[] } {
   const spans = awaySpansFromConstraints(
     args.activeConstraints as readonly ActiveConstraint[] | undefined,
   );
   if (spans.length === 0) {
-    return { clubNights: [...args.clubNights], gameDay: args.gameDay };
+    return { clubNights: [...args.clubNights], gameDays: [...args.gameDays] };
   }
   const away = (day: number): boolean =>
     dateIsInsideAwaySpan(dateForDayNumber(args.weekStartISO, day), spans);
   return {
     clubNights: args.clubNights.filter((day) => !away(day)),
-    gameDay: args.gameDay !== null && away(args.gameDay) ? null : args.gameDay,
+    gameDays: args.gameDays.filter((day) => !away(day)),
   };
 }
 
@@ -198,12 +198,17 @@ export function weeklySchedulerInputsFrom(args: {
 
   // R-020: a live trip takes the club's work off the facts the scheduler plans
   // from. See `clubInputsAfterTravel` for what this replaces and why.
+  const targetGameDays = args.targetWeekAvailability
+    ? args.targetWeekAvailability.proposedFixtures.map((fixture) =>
+        new Date(`${fixture.date}T12:00:00`).getDay())
+    : [args.targetFixtureDay === undefined
+        ? dayNumber(profile.gameDay)
+        : dayNumber(args.targetFixtureDay)]
+      .filter((day): day is number => day !== null);
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
     clubNights: dayNumbers(profile.teamTrainingDays),
-    gameDay: args.targetFixtureDay === undefined
-      ? dayNumber(profile.gameDay)
-      : dayNumber(args.targetFixtureDay),
+    gameDays: targetGameDays,
     activeConstraints: args.activeConstraints,
   });
 
@@ -215,7 +220,8 @@ export function weeklySchedulerInputsFrom(args: {
       ? [...args.targetWeekAvailability.effectiveAvailableDayNumbers]
       : dayNumbers(profile.preferredTrainingDays),
     clubNights: club.clubNights,
-    gameDay: club.gameDay,
+    gameDay: club.gameDays[0] ?? null,
+    gameDays: club.gameDays,
     // **ALWAYS RECURRING FROM ONBOARDING.** The athlete names a usual game day,
     // which by definition means there was one last week too. Nothing in the
     // profile can say "first fixture ever", so nothing here may claim it — and

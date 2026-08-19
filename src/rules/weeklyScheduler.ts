@@ -73,6 +73,9 @@ export interface WeeklySchedulerInputs {
   readonly gymAccessDays: readonly number[];
   /** The athlete's REAL club nights. Never assumed (WC-062). */
   readonly clubNights: readonly number[];
+  /** Every actual fixture in the target week. Present (including `[]`) on live paths. */
+  readonly gameDays?: readonly number[];
+  /** Legacy single-fixture input for pure callers not yet supplying `gameDays`. */
   readonly gameDay: number | null;
   /**
    * Whether a PREVIOUS fixture exists. **Defaults to `'recurring'` at every
@@ -356,21 +359,53 @@ export function gameProximity(
   };
 }
 
+/** The live fixture set wins even when it is empty; scalar input is legacy-only. */
+export function scheduledGameDays(inputs: WeeklySchedulerInputs): readonly number[] {
+  return inputs.gameDays === undefined
+    ? (inputs.gameDay === null ? [] : [inputs.gameDay])
+    : Array.from(new Set(inputs.gameDays));
+}
+
+function hasScheduledGame(inputs: WeeklySchedulerInputs): boolean {
+  return scheduledGameDays(inputs).length > 0;
+}
+
+function isScheduledGameDay(day: number, inputs: WeeklySchedulerInputs): boolean {
+  return scheduledGameDays(inputs).includes(day);
+}
+
+/** Nearest previous and next fixture across every actual target-week anchor. */
+function scheduledGameProximity(
+  day: number,
+  inputs: WeeklySchedulerInputs,
+): GameProximity {
+  const proximities = scheduledGameDays(inputs)
+    .map((gameDay) => gameProximity(day, gameDay, inputs.fixtureRecurrence));
+  const minimum = (values: readonly (number | null)[]): number | null => {
+    const present = values.filter((value): value is number => value !== null);
+    return present.length === 0 ? null : Math.min(...present);
+  };
+  return {
+    daysSincePreviousGame: minimum(proximities.map((value) => value.daysSincePreviousGame)),
+    daysUntilNextGame: minimum(proximities.map((value) => value.daysUntilNextGame)),
+  };
+}
+
 /** G+1: the day after a game. WC-050 reserves it for rest or recovery. */
 function isGamePlusOne(day: number, inputs: WeeklySchedulerInputs): boolean {
-  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+  return scheduledGameProximity(day, inputs)
     .daysSincePreviousGame === 1;
 }
 
 /** G-1: the day before a game. WC-050 forbids heavy lifting. */
 function isGameMinusOne(day: number, inputs: WeeklySchedulerInputs): boolean {
-  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+  return scheduledGameProximity(day, inputs)
     .daysUntilNextGame === 1;
 }
 
 /** G-2: two days out. No heavy LOWER work, and no added lower-body power. */
 function isGameMinusTwo(day: number, inputs: WeeklySchedulerInputs): boolean {
-  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+  return scheduledGameProximity(day, inputs)
     .daysUntilNextGame === 2;
 }
 
@@ -383,7 +418,7 @@ function isGameMinusTwo(day: number, inputs: WeeklySchedulerInputs): boolean {
  */
 function dayIsUsableForStrength(day: number, inputs: WeeklySchedulerInputs): boolean {
   if (inputs.unavailableDays.includes(day)) return false;
-  if (inputs.gameDay === day) return false;
+  if (isScheduledGameDay(day, inputs)) return false;
   if (!inputs.gymAccessDays.includes(day)) return false;
   // G-1: no heavy lifting (WC-050). G+1: rest or recovery only (WC-050).
   // **Cyclic**: a Sunday fixture makes Monday G+1, which the old in-week
@@ -428,6 +463,7 @@ function legalityViolation(
     unavailableDays: inputs.unavailableDays,
     clubNights: inputs.clubNights,
     gameDay: inputs.gameDay,
+    gameDays: scheduledGameDays(inputs),
     isGameMinusOne: (day) => isGameMinusOne(day, inputs),
     isGameMinusTwo: (day) => isGameMinusTwo(day, inputs),
     isGamePlusOne: (day) => isGamePlusOne(day, inputs),
@@ -474,7 +510,7 @@ function scoreAssignment(
   // hard days too, which is why they are counted here and not only app sessions.
   const hardDays = new Set<number>([
     ...byOrder.map((s) => s.day), ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
   ]);
   let run = 0; let longestRun = 0;
   for (const day of WEEK_ORDER) {
@@ -485,7 +521,7 @@ function scoreAssignment(
     score -= (longestRun - GLOBAL_RULES.consecutiveHardDays.preferred) * 15;
   }
   // WC-050 — keep the two days before the game clear of heavy lower work.
-  if (inputs.gameDay !== null) {
+  if (hasScheduledGame(inputs)) {
     for (const slot of byOrder) {
       if (isGameMinusTwo(slot.day, inputs) && PURPOSE_IS_LOWER[slot.purpose]) score -= 25;
     }
@@ -532,28 +568,35 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // **THE CONTRACT SAYS SCALE, NOT REFUSE.** §8 Pre-season: *"Scale honestly to
   // two or three strength sessions when that is all the athlete can do."* §6's
   // in-season rows are *"the two-, three- or four-session reference structure"*, a
-  // ladder the scheduler picks from. So the layout is chosen by the number of days
-  // that are actually usable, floored at the smallest approved layout.
+  // ladder the scheduler picks from. So the layout is normally chosen by the
+  // number of days that are actually usable. When fixture proximity compresses
+  // an otherwise approved availability pattern to ONE legal day, the approved
+  // base is still selected and the reduction ladder below is allowed to reach
+  // its explicit one-session rung.
   //
   // MEASURED: refusing instead cost 60 occurrences across 30 worlds — every
   // three-day athlete with a weekend game — for a week the contract has a stated
   // answer for.
-  // Below the smallest approved layout there is nothing to scale TO, and that is
-  // a different fact from "no layout exists for this phase" — so it gets its own
-  // typed finding rather than falling through to the layout lookup.
+  // Below the smallest approved ACCESS pattern there is no base layout to reduce
+  // FROM, and that is a different fact from a valid week being compressed by
+  // fixtures — so it gets its own typed finding rather than falling through to
+  // the layout lookup.
   const SMALLEST_APPROVED_LAYOUT = 2;
-  if (usableGymDays.length < SMALLEST_APPROVED_LAYOUT) {
+  if (inputs.gymAccessDays.length < SMALLEST_APPROVED_LAYOUT
+      || usableGymDays.length === 0) {
     return {
       refused: true, finding: 'not_enough_legal_gym_days', clauseId: 'WC-142',
-      detail: `only ${usableGymDays.length} legal gym day(s) remain after game `
-        + 'proximity and explicit unavailability — below the smallest approved '
-        + `layout of ${SMALLEST_APPROVED_LAYOUT}`,
+      detail: inputs.gymAccessDays.length < SMALLEST_APPROVED_LAYOUT
+        ? `only ${inputs.gymAccessDays.length} gym-access day(s) were supplied — `
+          + `below the smallest approved layout of ${SMALLEST_APPROVED_LAYOUT}`
+        : 'zero legal gym days remain after game proximity and explicit '
+          + 'unavailability — there is no session the reduction ladder can place',
     };
   }
 
   const effectiveGymDays = Math.min(
     Math.max(inputs.gymAccessDays.length, 0),
-    Math.max(usableGymDays.length, 0),
+    Math.max(usableGymDays.length, SMALLEST_APPROVED_LAYOUT),
     6);
 
   const layout = baseLayoutFor({
@@ -705,7 +748,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // loop happens to reach first.
   const anchorConditioningDays = new Set<number>([
     ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
   ]).size;
   const purposeByDay = new Map(best.assignment.map((s) => [s.day, s.purpose]));
 
@@ -773,7 +816,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
   const weekAllowsHard =
-    (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
+    (!overlay.hardConditioning.requiresNoGameWeek || !hasScheduledGame(inputs))
     && !weekIsReduced;
   const hardQuality = weekAllowsHard
     ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
@@ -798,7 +841,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     inputs.gymAccessDays.includes(day)
     && !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
-    && inputs.gameDay !== day);
+    && !isScheduledGameDay(day, inputs));
   const conditioningCandidates = Array.from(new Set([
     ...(hardQuality !== null ? releasedReceivers : []),
     ...WEEK_ORDER.filter((day) => purposeByDay.has(day)),
@@ -806,7 +849,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const conditioningDays = conditioningCandidates.filter((day) =>
     !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
-    && inputs.gameDay !== day).slice(0, appConditioningBudget);
+    && !isScheduledGameDay(day, inputs)).slice(0, appConditioningBudget);
   const conditioningDaySet = new Set(conditioningDays);
 
   // ── WC-060: THE SHORTFALL MAY LEAVE THE GYM DAYS ─────────────────────────
@@ -871,7 +914,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // the job — it is one arm of the single question *"is this a week we may add
   // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
   const hardEligible = conditioningDays.filter((day) => {
-    if (inputs.gameDay === null) return true;
+    if (!hasScheduledGame(inputs)) return true;
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
     return !isGamePlusOne(day, inputs);
   });
@@ -896,7 +939,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     const dateISO = dateForDayOfWeek(inputs.weekStartISO, day);
     if (inputs.unavailableDays.includes(day)) continue;   // WC-061 — never used
     const purpose = purposeByDay.get(day) ?? null;
-    if (inputs.gameDay === day) {
+    if (isScheduledGameDay(day, inputs)) {
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'game', movementIntention: [],
         setBudget: null, conditioning: null, conditioningCategory: null,
@@ -949,8 +992,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // something else: the day keeps its strength session and simply carries
         // no primer.
         powerEligible: (() => {
-          if (inputs.gameDay === null) return true;
-          if (inputs.gameDay === day) return false;          // the game itself
+          if (!hasScheduledGame(inputs)) return true;
+          if (isScheduledGameDay(day, inputs)) return false; // the game itself
           if (isGameMinusOne(day, inputs) || isGamePlusOne(day, inputs)) return false;
           // WC-051: G-2 bars LOWER-body power only. An upper day keeps its
           // eligibility — *"should not rule out upper body power"* (Sam,
@@ -1008,7 +1051,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // they seed the tally rather than being ignored.
   const runningDays = new Set<number>([
     ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
     ...days.filter((d) => d.conditioning === 'running').map((d) => d.dayOfWeek),
   ]);
   const runningTopUps: SessionIntention[] = [];
@@ -1032,7 +1075,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const trainingDayNumbers = new Set<number>([
     ...purposeByDay.keys(),
     ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
   ]);
   // ⚠ **CYCLIC.** A Sunday top-up is adjacent to NEXT Monday's lower session,
   // and a Mon-to-Sun scan cannot see that — it scored Sunday as a streak of one
@@ -1057,7 +1100,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       if (runningDays.size >= GLOBAL_RULES.running.min && outstandingConditioning <= 0) break;
       if (runningDays.has(day)) continue;
       if (inputs.unavailableDays.includes(day)) continue;      // WC-061
-      if (inputs.gameDay === day) continue;
+      if (isScheduledGameDay(day, inputs)) continue;
       if (purposeByDay.has(day)) continue;                      // already a gym day
       // WC-050, cyclic — G-1 and G+1 take no app running either.
       if (isGameMinusOne(day, inputs) || isGamePlusOne(day, inputs)) continue;
@@ -1138,7 +1181,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // composer week against a count nobody built.
   const anchorConditioning = new Set<number>([
     ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
   ]).size;
   // ⚠ A WC-139 SPRINT COMPONENT IS ITS OWN EXPOSURE. It shares a DAY with the
   // hard session but it is a second piece of conditioning, and Sam counts it:
@@ -1167,7 +1210,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const hardDaySet = new Set<number>([
     ...withRunning.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
     ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+    ...scheduledGameDays(inputs),
   ]);
   const fullRestDays = withRunning.filter((day) =>
     day.owner === 'rest_or_recovery' && !day.clubTraining && !day.game).length;
@@ -1266,12 +1309,11 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  */
 function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {
   if (inputs.clubNights.includes(day)) return false;
-  if (inputs.gameDay === day) return false;
+  if (isScheduledGameDay(day, inputs)) return false;
   if (inputs.unavailableDays.includes(day)) return false;
-  if (inputs.gameDay === null) return true;
+  if (!hasScheduledGame(inputs)) return true;
   if (isGamePlusOne(day, inputs)) return false;
-  const until = gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
-    .daysUntilNextGame;
+  const until = scheduledGameProximity(day, inputs).daysUntilNextGame;
   return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
 }
 
@@ -1302,16 +1344,16 @@ function upperDayForSprint(
   // a line in this one.**
   if (inputs.phase !== 'Off-season') return null;
   const untilGame = (day: number) =>
-    gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence).daysUntilNextGame;
+    scheduledGameProximity(day, inputs).daysUntilNextGame;
   const eligible = WEEK_ORDER
     .filter((day) => purposeByDay.has(day))
     .filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
     .filter((day) => !inputs.unavailableDays.includes(day))
     .filter((day) => !inputs.clubNights.includes(day))
-    .filter((day) => inputs.gameDay !== day)
-    .filter((day) => (inputs.gameDay === null ? true : !isGamePlusOne(day, inputs)))
+    .filter((day) => !isScheduledGameDay(day, inputs))
+    .filter((day) => (!hasScheduledGame(inputs) ? true : !isGamePlusOne(day, inputs)))
     .filter((day) => {
-      if (inputs.gameDay === null) return true;
+      if (!hasScheduledGame(inputs)) return true;
       const until = untilGame(day);
       return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
     });
@@ -1356,19 +1398,19 @@ export function appSprintDay(
   // rest: `daysUntilNextGame >= 3`. The old form compared raw week positions,
   // which for a Sunday fixture called every day eligible — including G+1.
   const untilGame = (day: number) =>
-    gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence).daysUntilNextGame;
+    scheduledGameProximity(day, inputs).daysUntilNextGame;
   const eligible = WEEK_ORDER
     .filter((day) => !inputs.unavailableDays.includes(day))
     .filter((day) => !occupiedDays.has(day))
-    .filter((day) => inputs.gameDay !== day)
+    .filter((day) => !isScheduledGameDay(day, inputs))
     .filter((day) => !inputs.clubNights.includes(day))
     // A NO-GAME WEEK HAS NO PROXIMITY TO RESPECT, so every free day is legal and
     // the ordering below is a no-op. Guarding the whole function on a fixture —
     // which the in-season-only version did — is what left a bye week, and every
     // off-season week, with no sprint owner at all.
-    .filter((day) => (inputs.gameDay === null ? true : !isGamePlusOne(day, inputs)))
+    .filter((day) => (!hasScheduledGame(inputs) ? true : !isGamePlusOne(day, inputs)))
     .filter((day) => {
-      if (inputs.gameDay === null) return true;
+      if (!hasScheduledGame(inputs)) return true;
       const until = untilGame(day);
       return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
     })
