@@ -728,3 +728,88 @@ be), and `test:settings-persistence` is NOT.
 - **Both `measure/*` branches remain DO-NOT-MERGE.** They carry my merge
   resolutions, which nobody has reviewed; the real integration should redo them.
 - **Still no glass.**
+
+---
+
+# SESSION 4 — THE NEWCOMER'S LOAD, AT THREE REAL COORDINATES
+
+Closes the NOT COVERED item *"the new-exercise half of the ruling is not
+exercised"*. **Frozen candidate `b9a9a62f`** (code), see the tip line below.
+
+## ⚠ THE FACT THAT SHAPED THE WHOLE STAGE, AND IT WAS SEARCHED FOR NOT ASSUMED
+
+**A SETTINGS CHANGE NEVER INTRODUCES A LIFT THE ATHLETE HAS RECORDED.** 18
+equipment losses — every askable tag alone, plus twelve pairs and triples — at
+three depths (4, 8 and 12 weeks; blocks 2, 3 and 4), plus a phase change:
+**zero arrivals with recorded history, every time.** That is
+`decideExerciseForBlock`'s rotation working — it steers away from what the
+athlete has recently done — not a gap in the search. So rung 1 of the load
+authority has no subject through a settings re-selection, and inventing one
+would have meant changing programming to manufacture the case.
+
+The authority itself is unchanged and is the one ladder
+(`loadForReplacementExercise`): **(1)** the athlete's own recorded load for THAT
+exercise, however long ago; **(2)** authored-as-unloaded stays blank; **(3)**
+Sam's authored anchor estimate; **(4)** nothing honest to say, the athlete
+chooses. **The outgoing row's load is not a rung and is not even a parameter.**
+
+## THE THREE COORDINATES
+
+**7a — THE GYM LOSES ITS MACHINES** (a settings change, no history involved).
+`Leg Press@113.5`, `Single-Arm Lat Pulldown@30` and `Single-Leg Leg Press@75`
+depart. `Goblet Squat@27.5`, `Scap Pull Ups@0` and `Single-Leg Squat (to Box)@17.5`
+arrive. Each newcomer's load is exactly what the authority says — its own
+authored estimate, or blank for an authored-as-unloaded movement — and **none is
+a departing row's number**. Identical after close/reopen.
+
+**7b — THE ATHLETE'S OWN SUBSTITUTION**, the one door where the app offers a lift
+they have loaded. `getTapSwapChoices` offers `Bulgarian Split Squats` for
+`Leg Press`; the outgoing row carries **113.5** and their own recorded load is
+**25**. **It lands at 25**, and still reads 25 after reopening.
+
+**7c — RUNG 1 AT A DISTINGUISHABLE COORDINATE, BECAUSE 7b IS NOT ONE.** Mutation
+M20 deleted rung 1 and the whole suite stayed **green**: `Bulgarian Split Squats`
+was logged AT the card's number, so its recorded load and its authored estimate
+are **both 25** and nothing at that coordinate can separate the rungs. Measured
+across all five recorded lifts, **only `Leg Press` differs — recorded 111 (the
+athlete typed over the card's 125) against an estimate of 125.** So 7c is the gym
+losing its machines **and getting them back** — two ordinary profile edits through
+the same canonical door, in both directions. `Leg Press` departs and returns as a
+newcomer at **113.5**: progressed from their own 111, **not** the authored 125,
+and not any departing row's load. Same after close/reopen.
+
+## PREVIEW = ACCEPTED = RELAUNCHED, FOR THE NEWCOMER
+
+Measured on the combined tree (the preview producer is the Coach lane's), Settings
+`b9a9a62f` + frozen Product `18968818`:
+
+| newcomer | preview | accepted | relaunched |
+| --- | --- | --- | --- |
+| `Goblet Squat` | 27.5 | 27.5 | 27.5 |
+| `Scap Pull Ups` | 0 | 0 | 0 |
+| `Single-Leg Squat (to Box)` | 17.5 | 17.5 | 17.5 |
+
+**Whole-program disagreements across the three: none.** Gates on that tree:
+`settings-persistence` **187/0**, `coach-weekly-reduction` **64/0**,
+`athlete-journey` **64/0**.
+
+## MUTATIONS — 22 SUBJECTS, 22 KILLED, 0 UNPROVEN
+
+| # | subject | final |
+| --- | --- | --- |
+| 19 | the replacement inherits the outgoing row's load | **KILLED** — 3 reds: *"Bulgarian Split Squats landed at 113.5; its own recorded load is 25"* |
+| 20 | the authority's rung 1 | **MISSED at 7b's coordinate** — the two rungs collide there at 25. Answered by ADDING 7c, not by weakening a cell. |
+| 21 | the authority returns a constant | **KILLED** — 5 reds, and it settles a green-and-empty worry: 7a reds with *"landed 27.5, authority says 99"*, so the composer's load and the authority's answer are computed INDEPENDENTLY and 7a is a real cross-check between two owners, not a tautology |
+| 22 | the block boundary keeps the athlete's recorded loads | **KILLED** — 7c reds with *"Leg Press returned at 125. Its own recorded load is undefined and the authored estimate is 125"* |
+
+Subjects 1–18 unchanged. **M20 is reported as a MISS with its cause measured**,
+and the coordinate it could not reach is now covered by M22 at 7c.
+
+## NOT COVERED — session 4
+
+- **A newcomer arriving through a SETTINGS door WITH recorded history does not
+  occur** — measured across 18 transitions at three depths, because rotation
+  prevents it. Rung 1 is proven through the substitution door (7b) and through a
+  departure-and-return (7c) instead.
+- **Still no glass.** Phone verification deferred to consolidated integration, as
+  instructed.
