@@ -12,7 +12,7 @@ declare global {
   // eslint-disable-next-line no-var
   var __DEV__: boolean;
 }
-(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+(globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -172,11 +172,10 @@ check('[10] the dated zero-kit fact reaches composition and remains disclosed',
   kitGaps(away).length > 0,
   JSON.stringify(kitGaps(away)));
 
-totalsPrinted();
+totalsPrinted(failures.length);
 console.log(`\n[travel-zero-equipment] ${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
-  console.error(failures.map((failure) => `  - ${failure}`).join('\n'));
-  process.exit(1);
+  throw new Error(failures.map((failure) => `  - ${failure}`).join('\n'));
 }
 
 export {};
