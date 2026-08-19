@@ -106,6 +106,75 @@ function collapseEmptyVisibleWorkoutShell(day: ResolvedDay): ResolvedDay {
   };
 }
 
+/**
+ * Does this day carry rows the injury owner WITHHELD rather than removed?
+ *
+ * One typed field, read and not interpreted — `rules/injuryWithheldRows` is the
+ * only writer and the only place the decision is made. Deliberately not
+ * `injuryWithholdingsOn()`: calling that here would re-run the legality
+ * question at the view and make this file a second opinion about it.
+ */
+function dayCarriesInjuryWithholding(workout: Workout | null | undefined): boolean {
+  return (workout?.exercises ?? []).some((row) => !!row.unavailableForInjury);
+}
+
+/**
+ * ⚠ **A SUBSTITUTED ROW IS THE LADDER'S ANSWER, NOT A WITHHELD ROW.**
+ *
+ * **FOUND ON GLASS, and only because the fix above stopped blanking the day.**
+ * Hamstring 8/10 WITHOUT serious symptoms — an ordinary injury, which
+ * SUBSTITUTES rather than withholds. The athlete was shown:
+ *
+ * ```
+ *   Chest-Supported DB Row   "Leg Press is not safe with your hamstring …"
+ *   Single-Arm DB Floor Press "RDLs is not safe with your hamstring …"
+ * ```
+ *
+ * — a SKIP marker and a warning on four rows that are the safe replacements,
+ * each sentence naming a different exercise than the row it sits on.
+ *
+ * **THE CAUSE, MEASURED, NOT GUESSED.** `markInjuryWithheldRows` runs at the
+ * resolver and keys by the row's name AT THAT MOMENT. The substitution then
+ * renames the row IN PLACE, keeping its id — so the mark, written for
+ * `Leg Press`, rides onto `Chest-Supported DB Row`. The domain agrees it should
+ * not be there: `injuryWithholdingsOn` over the FINAL workout returns an EMPTY
+ * list, and every stale mark carries `redFlag: false`.
+ *
+ * **WHY THE VIEW DROPS IT RATHER THAN RE-DERIVING.** Sam: *"Do not rederive
+ * injury rules on screen."* This asks no injury question. It reads two typed
+ * fields the row already carries and states a consistency rule between them: a
+ * row that was swapped BECAUSE of the injury cannot also be a row the injury
+ * withheld — those are the two opposite outcomes of the same ladder, and no row
+ * is both.
+ *
+ * ⚠ **THIS IS A PLASTER ON SOMEONE ELSE'S WALL, AND IT IS FLAGGED AS ONE.** The
+ * real repair is at the marker — either stamping the exercise name it marked so
+ * a stale mark is detectable, or clearing the mark when a row is renamed. That
+ * is the Injury lane's file and its ruling; it is named in the handoff rather
+ * than changed here.
+ */
+function withoutStaleInjuryMarks(day: ResolvedDay): ResolvedDay {
+  const workout = day.workout;
+  if (!workout) return day;
+  const rows = workout.exercises ?? [];
+  const stale = (row: (typeof rows)[number]): boolean =>
+    !!row.unavailableForInjury
+    && (row as { substitutedFrom?: { cause?: string } }).substitutedFrom?.cause === 'injury';
+  if (!rows.some(stale)) return day;
+  return {
+    ...day,
+    workout: {
+      ...workout,
+      exercises: rows.map((row) => {
+        if (!stale(row)) return row;
+        const { unavailableForInjury, ...rest } = row;
+        void unavailableForInjury;
+        return rest as typeof row;
+      }),
+    },
+  };
+}
+
 function alreadyHasInjuryNote(workout: Workout): boolean {
   const notes = workout.coachNotes ?? [];
   if (notes.length === 0) return false;
@@ -209,6 +278,49 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
     alreadyHasInjuryNote(visibleDay.workout)
   ) {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+  }
+
+  /* ══ THE INJURY OWNER HAS ALREADY ADJUDICATED THIS DAY — R-113 ══════════════
+   *
+   * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
+   * into the athlete's Remove list or permanently alter the accepted program.
+   * Preserve the original exercises. On that date, show them as unavailable/skip
+   * … Clearing or resolving the injury must immediately reveal the original
+   * accepted session again."*
+   *
+   * ⚠ **WHAT THIS PROJECTION WAS DOING, MEASURED ON THE REAL DOOR.** Hamstring
+   * 9/10 with serious symptoms on 2026-07-20. The resolver — the owner the
+   * Injury lane fixed — hands this function five rows at their own loads with
+   * four of them MARKED `unavailableForInjury`. Pass 1's exposure engine and
+   * Pass 2's validator sweep then FILTERED those four out as constraint
+   * violations, `collapseEmptyVisibleWorkoutShell` saw what was left and
+   * returned `workout: null, source: 'rest'`, and the athlete's day became a
+   * Rest day. The ruling's "preserve the original exercises" survived the
+   * domain and died at the view.
+   *
+   * ⚠ **THE SHORT-CIRCUIT IS THE SIBLING OF THE ONE DIRECTLY ABOVE, FOR THE
+   * SAME REASON.** That one skips a day whose injury edit has already been
+   * applied, so it is not applied twice. This one skips a day whose injury has
+   * already been applied AS A WITHHOLDING. Re-running the constraint engine over
+   * it cannot add information — the rows are already adjudicated, by the single
+   * legality owner (`injuryPermitsExerciseAtSeverity`) that the fallback ladder
+   * and every tap surface answer to — and it can only delete them.
+   *
+   * ⚠ **NO INJURY RULE IS RE-DERIVED HERE, WHICH WAS THE INSTRUCTION.** This
+   * reads one typed field the domain wrote. There is no severity band, no
+   * red-flag test, no body-part map and no classifier in this file; the decision
+   * arrived already made and this is the projection agreeing to it.
+   *
+   * ⚠ **AN ORDINARY INJURY IS UNAFFECTED, BY CONSTRUCTION.** A non-red-flag
+   * injury SUBSTITUTES: the ladder replaces the unsafe row, so the day the
+   * resolver hands over carries no `unavailableForInjury` mark at all and this
+   * branch is not taken. Measured: of the five seeded injury worlds only the
+   * red-flag one carries marks. */
+  if (dayCarriesInjuryWithholding(visibleDay.workout)) {
+    return {
+      day: withoutStaleInjuryMarks(visibleDay),
+      injuryFilterApplied: false, removedNames: [], replacementNames: [],
+    };
   }
 
   // ── Pass 1: universal exposure engine ──

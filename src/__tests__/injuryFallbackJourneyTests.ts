@@ -821,6 +821,248 @@ async function main(): Promise<void> {
       accepted.some((name) => PATTERNS_SEEN.has(name)), [...PATTERNS_SEEN].sort());
   }
 
+
+  /* ── [11] THE VISIBLE SIDE — THE PROJECTION AND THE SCREEN ────────────────
+   *
+   * Section [10] proves the DOMAIN preserves the day. This section proves the
+   * ATHLETE SEES it, because between the two sat the defect this lane owns:
+   *
+   *   MEASURED, hamstring 9/10 + serious symptoms, 2026-07-20, on `b09626a3`:
+   *     resolver           5 rows at their loads, 4 marked withheld
+   *     projectVisibleDay  workout: null, source: 'rest'   <- the day vanished
+   *
+   * Pass 1's exposure engine and Pass 2's validator sweep filtered the marked
+   * rows out as violations, and `collapseEmptyVisibleWorkoutShell` turned what
+   * was left into a Rest day. Sam's *"preserve the original exercises"* survived
+   * the domain and died at the view.
+   *
+   * ⚠ **NO INJURY RULE IS RE-DERIVED ON THE SCREEN, AND CELLS BELOW ENFORCE
+   * THAT.** The projection reads one typed field; the screen reads the same
+   * field and renders the sentence the domain composed.
+   */
+  console.log('\n[11] the visible side — projection and screen');
+  {
+    const { executeProgramControlActionDurably } = require('../utils/programControlActions');
+    const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
+    const { getAthleteExclusions } = require('../store/athletePreferencesStore');
+    const { resolveSessionOutcomeTarget } = require('../store/sessionOutcomeTransaction');
+    const { buildProgramTabProjectedWeek } = require('../utils/visibleProgramReadModel');
+    const { buildSessionExecutionPlan } = require('../utils/sessionExecutionChecklist');
+    const { buildSessionTemplate } = require('../utils/sessionTemplate');
+    const fs = require('fs');
+    const path = require('path');
+
+    const weekStart = install();
+    const target = '2026-07-20';
+    setJourneyClock(target);
+
+    /** THE DAY AS EVERY ATHLETE SURFACE RECEIVES IT — one projection, two readers. */
+    const projectedDay = (): { workout?: Workout | null; source?: string } | undefined => {
+      const week = quiet(() => buildProgramTabProjectedWeek({
+        mondayISO: weekStart, todayISO: target,
+        state: buildScheduleStateImperative(),
+        overrideContexts: (useProgramStore.getState() as unknown as {
+          overrideContexts?: Record<string, unknown> }).overrideContexts ?? {},
+      })) as Array<{ date: string; workout?: Workout | null; source?: string }>;
+      return week.find((d) => d.date === target);
+    };
+    const projectedRows = (): string[] => ((projectedDay()?.workout?.exercises ?? []) as Array<{
+      exercise?: { name?: string }; prescribedWeightKg?: number }>)
+      .map((r) => `${r.exercise?.name}@${r.prescribedWeightKg ?? '-'}`);
+    /** The Session screen's own list, built from that same projected workout. */
+    const sessionRows = (): string[] => {
+      const workout = projectedDay()?.workout ?? null;
+      if (!workout) return [];
+      const plan = quiet(() => buildSessionExecutionPlan({
+        workout, template: buildSessionTemplate(workout), mobilityFlow: null,
+      })) as { sections: Array<{ id: string; items: Array<{ label: string }> }> };
+      return plan.sections.filter((s) => s.id !== 'mobility')
+        .flatMap((s) => s.items.map((i) => i.label));
+    };
+    const marks = (): string[] => ((projectedDay()?.workout?.exercises ?? []) as Array<{
+      exercise?: { name?: string }; unavailableForInjury?: { explanation?: string } }>)
+      .filter((r) => !!r.unavailableForInjury).map((r) => String(r.exercise?.name));
+    const canRecord = (): boolean => {
+      try { quiet(() => resolveSessionOutcomeTarget(target, target)); return true; }
+      catch { return false; }
+    };
+
+    const projectedBefore = projectedRows();
+    ok('[11] CONTROL — the projection carries a real session before any injury',
+      projectedBefore.length > 0 && !!projectedDay()?.workout, projectedBefore);
+    ok('[11] CONTROL — and it is recordable while healthy', canRecord());
+
+    const constraint = buildGuidedInjuryConstraint({
+      region: 'lower_body', area: 'hamstring', severity: 9,
+      severityBand: 'avoid', adjustmentLevel: 'training_paused',
+      triggers: ['during'], seriousSymptoms: true,
+    } as never, { todayISO: target });
+    const set = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: target })) as { createdModifierIds?: string[] };
+
+    /* MUTATION TARGET 1 — BLANKING THE RED-FLAG DAY MUST FAIL. */
+    ok('[11] the projected red-flag day still HAS a session',
+      !!projectedDay()?.workout, { source: projectedDay()?.source });
+    ok('[11] and it is not presented as a Rest day',
+      projectedDay()?.source !== 'rest', projectedDay()?.source);
+
+    /* MUTATION TARGET 3 — LOSING ROWS OR LOADS MUST FAIL. */
+    ok('[11] every original row and load survives into the projection, in order',
+      JSON.stringify(projectedRows()) === JSON.stringify(projectedBefore),
+      { before: projectedBefore, after: projectedRows() });
+    ok('[11] the Session screen lists them too — not an empty failed program',
+      sessionRows().length >= projectedBefore.length, sessionRows());
+    ok('[11] BOTH SURFACES AGREE — the day summary count and the session list match',
+      (projectedDay()?.workout?.exercises ?? []).length > 0
+        && sessionRows().length >= (projectedDay()?.workout?.exercises ?? [])
+          .filter((r: unknown) => !!(r as { exercise?: { name?: string } }).exercise?.name).length - 1,
+      { projectedCount: (projectedDay()?.workout?.exercises ?? []).length, session: sessionRows() });
+
+    /* THE WITHHELD ROWS ARE MARKED, VISIBLY, WITH THE DOMAIN'S OWN WORDS. */
+    ok('[11] the withheld rows reach the screen still carrying their typed mark',
+      marks().length > 0, marks());
+    ok('[11] and each mark carries the sentence the DOMAIN wrote, not one from the screen',
+      ((projectedDay()?.workout?.exercises ?? []) as Array<{
+        exercise?: { name?: string }; unavailableForInjury?: { explanation?: string } }>)
+        .filter((r) => !!r.unavailableForInjury)
+        .every((r) => String(r.unavailableForInjury?.explanation ?? '')
+          .includes(String(r.exercise?.name ?? ''))),
+      marks());
+
+    /* MUTATION TARGET 2 — ENABLING COMPLETION MUST FAIL. */
+    ok('[11] the athlete cannot record the red-flag session as normal', !canRecord());
+
+    /* MUTATION TARGET 5 — CREATING A REMOVE DECISION MUST FAIL. */
+    ok('[11] and none of this created a Remove decision',
+      (quiet(() => getAthleteExclusions()) as unknown[]).length === 0,
+      quiet(() => getAthleteExclusions()));
+
+    /* MUTATION TARGET 4 — CLEARING MUST RESTORE, AND SURVIVE A RELAUNCH. */
+    await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_injury_modifier',
+      source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { episodeId: set.createdModifierIds?.[0] },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: target }));
+    ok('[11] clearing the injury restores the exact session in the PROJECTION',
+      JSON.stringify(projectedRows()) === JSON.stringify(projectedBefore),
+      { before: projectedBefore, cleared: projectedRows() });
+    ok('[11] and the rows go back to ordinary interactive ones — no marks left',
+      marks().length === 0, marks());
+    ok('[11] and the day is recordable again', canRecord());
+
+    quiet(() => relaunchApp('injury-visible:relaunch'));
+    setJourneyClock(target);
+    ok('[11] close/reopen preserves the RESTORED state',
+      JSON.stringify(projectedRows()) === JSON.stringify(projectedBefore)
+        && marks().length === 0,
+      { rows: projectedRows(), marks: marks() });
+
+    /* AND CLOSE/REOPEN PRESERVES THE WITHHELD STATE TOO. */
+    const set2 = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint: buildGuidedInjuryConstraint({
+        region: 'lower_body', area: 'hamstring', severity: 9,
+        severityBand: 'avoid', adjustmentLevel: 'training_paused',
+        triggers: ['during'], seriousSymptoms: true,
+      } as never, { todayISO: target }) },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: target })) as { createdModifierIds?: string[] };
+    void set2;
+    quiet(() => relaunchApp('injury-visible:relaunch-withheld'));
+    setJourneyClock(target);
+    ok('[11] close/reopen preserves the WITHHELD state — rows, loads and marks',
+      JSON.stringify(projectedRows()) === JSON.stringify(projectedBefore)
+        && marks().length > 0 && !projectedDay()?.workout === false,
+      { rows: projectedRows(), marks: marks(), source: projectedDay()?.source });
+    ok('[11] and it is still refused, and still creates no Remove decision',
+      !canRecord() && (quiet(() => getAthleteExclusions()) as unknown[]).length === 0);
+
+    /* ⚠ AN ORDINARY INJURY SUBSTITUTES, AND A SUBSTITUTE IS NOT A WITHHELD ROW.
+     *
+     * FOUND ON GLASS once the day stopped being blanked: hamstring 8/10 without
+     * serious symptoms showed four SKIP markers on the safe REPLACEMENTS, each
+     * sentence naming a different exercise than the row it sat on
+     * (`Chest-Supported DB Row` -> *"Leg Press is not safe …"*). The mark is
+     * written before the substitution renames the row in place. */
+    quiet(() => relaunchApp('injury-visible:ordinary'));
+    const weekStart2 = install();
+    const ordinaryTarget = '2026-07-20';
+    setJourneyClock(ordinaryTarget);
+    await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint: buildGuidedInjuryConstraint({
+        region: 'lower_body', area: 'hamstring', severity: 8,
+        severityBand: 'avoid', adjustmentLevel: 'training_paused',
+        triggers: ['during'], seriousSymptoms: false,
+      } as never, { todayISO: ordinaryTarget }) },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: ordinaryTarget }));
+    const ordinaryWeek = quiet(() => buildProgramTabProjectedWeek({
+      mondayISO: weekStart2, todayISO: ordinaryTarget,
+      state: buildScheduleStateImperative(),
+      overrideContexts: (useProgramStore.getState() as unknown as {
+        overrideContexts?: Record<string, unknown> }).overrideContexts ?? {},
+    })) as Array<{ date: string; workout?: Workout | null }>;
+    const ordinaryRows = (ordinaryWeek.find((d) => d.date === ordinaryTarget)?.workout?.exercises
+      ?? []) as Array<{ exercise?: { name?: string };
+        unavailableForInjury?: { explanation?: string };
+        substitutedFrom?: { baseExerciseName?: string; cause?: string } }>;
+    ok('[11] CONTROL — an ordinary injury really did SUBSTITUTE on this day',
+      ordinaryRows.some((r) => r.substitutedFrom?.cause === 'injury'),
+      ordinaryRows.map((r) => `${r.exercise?.name}<-${r.substitutedFrom?.baseExerciseName ?? '-'}`));
+    ok('[11] an ordinary injury substitution carries NO withheld mark',
+      ordinaryRows.every((r) => !(r.substitutedFrom?.cause === 'injury' && r.unavailableForInjury)),
+      ordinaryRows.filter((r) => !!r.unavailableForInjury)
+        .map((r) => `${r.exercise?.name}: ${r.unavailableForInjury?.explanation}`));
+    ok('[11] and no row is ever warned about an exercise that is not itself',
+      ordinaryRows.every((r) => !r.unavailableForInjury
+        || String(r.unavailableForInjury.explanation ?? '')
+          .includes(String(r.exercise?.name ?? ''))),
+      ordinaryRows.filter((r) => !!r.unavailableForInjury)
+        .map((r) => `${r.exercise?.name}: ${r.unavailableForInjury?.explanation}`));
+
+    /* ── THE SCREEN, AT SOURCE. There is no native renderer in this repo, so
+     *    these pin the props that decide what the athlete can touch. ── */
+    const screen = fs.readFileSync(
+      path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8') as string;
+    ok('[11] a withheld row has NO checkbox to press — it is replaced, not disabled',
+      /withheld \? \([\s\S]{0,400}?session-execution-withheld-[\s\S]{0,200}?\) : \([\s\S]{0,200}?accessibilityRole="checkbox"/.test(screen),
+      'ExecutionChecklistItem must swap the Pressable for a static Skip marker');
+    ok('[11] the row renders the DOMAIN\'s sentence and composes none of its own',
+      /workout-exercise-injury-withheld-\$\{exerciseToken\}/.test(screen)
+        && /\{injuryWithholding\.explanation\}/.test(screen));
+    ok('[11] the screen derives NO injury rule — it reads one typed field',
+      !/injuryPermitsExerciseAtSeverity|injurySeverityPauses|isRedFlagInjury|injuryWithholdingsOn/.test(screen)
+        && /unavailableForInjury/.test(screen));
+    const projection = fs.readFileSync(
+      path.resolve(__dirname, '..', 'utils', 'visibleProgramProjection.ts'), 'utf8') as string;
+    /* COMMENTS STRIPPED FIRST. The projection's own comment NAMES the legality
+     * owner to say it is not being called here — a raw grep would read that
+     * sentence as the call it forbids, which is a cell failing on its own
+     * documentation rather than on the code. */
+    const projectionCode = projection
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^[ \t]*\/\/.*$/gm, '');
+    ok('[11] CONTROL — stripping comments left the projection\'s real code behind',
+      /unavailableForInjury/.test(projectionCode) && projectionCode.includes('projectVisibleDay'),
+      projectionCode.length);
+    ok('[11] and neither does the projection — one field, no classifier, no import',
+      !/injuryPermitsExerciseAtSeverity|injurySeverityPauses|isRedFlagInjury|injuryWithholdingsOn/
+        .test(projectionCode)
+        && !/from '\.\.\/rules\/injuryWithheldRows'/.test(projectionCode),
+      projectionCode.split('\n').filter((l: string) => /injury/i.test(l)).slice(0, 6));
+  }
+
   console.log(`\n──────────────────────────────────────────────`);
   console.log(`Pass: ${pass}   Fail: ${fail}`);
   if (fail > 0) {
