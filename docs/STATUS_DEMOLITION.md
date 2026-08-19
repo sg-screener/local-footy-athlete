@@ -1235,3 +1235,70 @@ Positive control present in every scan; absolute roots only.
   guarding nothing, which is why deleting it cost no cover.
 
 Agent: demolition
+
+---
+
+## THE COMPREHENSIVE INVENTORY — BOTH ARMS, SAME INSTRUMENT, 398 SUITES
+
+Run once, at the end, as ordered. Control arm in `wt-ctl` detached at
+`13fad4ec`, never edited; after arm in `wt-demo` at `6502ecd5`.
+
+| | suites | failing |
+| --- | --- | --- |
+| control `13fad4ec` | 398 | **162** |
+| after the demolition `6502ecd5` | 398 | **174** |
+
+**NEWLY FAILING (13):** `test:away-flow`, `test:coach-pending-clarifier`,
+`test:coach-revision-override-writer`, `test:constraint-plan`,
+`test:equipment-scopes`, `test:exercise-exclusions`, `test:persistent-injury`,
+`test:readiness-ownership`, `test:request-program-adjustment`,
+`test:resolver-injury`, `test:strength-progression-integration`,
+`test:visible-surfaces`, `test:workout-canonicalisation`.
+
+**NEWLY PASSING (1):** `test:displacement-sweep` — the reclassified read-time
+authoring guard.
+
+**⚠ THE UNIT IS THE SUITE, NOT THE WORLD.** Sam's own correction of 2026-08-19
+applies here unchanged: a suite comparison says nothing about weeks. **No
+per-world census was run this session** — the world grid measures what
+GENERATION produces, and this session deleted post-generation, write-time and
+read-time layers rather than generation itself. That measurement is owed and is
+not claimed.
+
+Every one of the 13 is the behavioural cover for a capability on the rebuild
+list — the away substitution, the exclusion fill, the resolver's injury
+projection, the canonicaliser's restore. **They are the point, not a surprise:
+Sam's ruling sanctions worse counts during demolition, recorded and not fixed.**
+
+Sampled by hand rather than assumed: `test:workout-canonicalisation` fails on
+`missing hinge is restored from allocated reference` — a cell whose subject is
+the deleted restore pass, inside a suite whose subject (the canonicaliser) is
+alive. That is cell-level obsolescence in a PRESERVED suite, which is exactly
+the shape rule 5 says to leave for the rebuild phase.
+
+### TWO SUITES THAT REDDENED AND WERE NOT LEFT RED
+
+`test:bible-anchors` and `test:bible-coverage` both fell to one missing
+citation: `deload_block_length_weeks` cited
+`postGenerationConstraintValidation.ts` / `weekInBlock`, deleted in area 4.
+**The LAW is current and approved; only that implementation of it was legacy.**
+The citation MOVED to the live owner — `store/acceptedStateTransaction.ts`,
+which stamps `weekInBlock` when a week is accepted. 274/274, mutation-proven,
+tree restored byte-identical. **Second time this mission the anchor registry has
+caught a Bible law losing a site** (`last_high_stress_g3` was the first). Those
+two are excluded from the 13 above because they were repaired, not recorded.
+
+## THE SURVIVING OWNER MAP
+
+| question | the one owner |
+| --- | --- |
+| which days carry what, spacing, fixture proximity | `rules/weeklyScheduler.ts` |
+| what content fills an authored day | `rules/composeWeek.ts` + its specialists |
+| is a finished week lawful | `rules/section18AcceptedWeekGateway.ts` — **accepts or refuses; authors nothing** |
+| may this write land | `utils/postGenerationConstraintValidation.ts` — **473 lines, every export returns `void` and speaks by throwing** |
+| what is stored | `store/acceptedStateTransaction.ts` — the single write boundary |
+| can a stored world be read at all | `store/unreadableWorldResetDoor.ts` → `rules/unreadableWorldReset.ts` |
+| what does the athlete see | `utils/sessionResolver.ts` (reads and hides; **builds nothing**) → `utils/visibleProgramProjection.ts` |
+| where does the canonical shape come from | `utils/workoutCanonicalisation.ts` — **shapes, never restores** |
+
+Agent: demolition
