@@ -31,7 +31,6 @@
 
 import {
   detectInjurySignals,
-  detectRedFlagSymptoms,
   normalizeText,
   BODY_PARTS,
 } from './injuryClarificationGuard';
@@ -181,7 +180,13 @@ export function extractBodyPart(text: string): string | null {
 // ─── Composite parser: full injury context ───
 
 export function extractInjuryContext(text: string): InjuryContext | null {
-  if (detectRedFlagSymptoms(text)) return null;
+  /* ⚠ **THE RED-FLAG BAIL-OUT WENT WITH THE AUTHORITY (R-108, 2026-08-20).**
+   * This read `if (detectRedFlagSymptoms(text)) return null;` — a keyword list
+   * deciding that a sentence was too serious for the engine. **Nothing is
+   * weakened by its removal:** the severity gate below is unchanged and still
+   * refuses every message without an actual number, so a bare "I cannot walk"
+   * reaches no adjustment either way. What changed is that the decision is now
+   * made by a stored fact rather than by the word "walk". */
   const signals = detectInjurySignals(text);
   // Needs an injury signal OR negative descriptor to discriminate intent
   // (otherwise any "6/10" message would fire). Body part is OPTIONAL —

@@ -11,10 +11,7 @@
 
 import {
   SEVERITY_QUESTION,
-  RED_FLAG_URGENT_MEDICAL_REPLY,
-  RED_FLAG_PHYSIO_MEDICAL_REPLY,
   detectInjurySignals,
-  detectRedFlagSymptoms,
   normalizeText,
   checkInjuryClarificationGuard,
   GuardMessage,
@@ -42,32 +39,48 @@ function asst(content: string): GuardMessage {
   return { role: 'assistant', content };
 }
 
-// ─── 0. Red-flag hard stops run before severity clarification ───
+// ─── 0. THE KEYWORD ESCALATION AUTHORITY IS DELETED, AND STAYS DELETED ───
 {
-  console.log('\n[0] Red-flag hard stops');
-  const cases: Array<[string, 'urgent_medical' | 'physio_medical']> = [
-    ["chest hurts and I'm dizzy, 4/10", 'urgent_medical'],
-    ['short of breath and chest tight', 'urgent_medical'],
-    ['my leg is numb/tingling', 'urgent_medical'],
-    ['I heard a pop in my hamstring', 'physio_medical'],
-    ["I can't bear weight", 'physio_medical'],
-    ["I can't walk", 'physio_medical'],
-    ['my knee has severe swelling', 'physio_medical'],
-    ['suspected concussion after a head knock', 'urgent_medical'],
+  /**
+   * R-108, Sam 2026-08-20: *"Delete the obsolete Coach keyword/escalation
+   * authority rather than patching phrases around it. Coach responses must come
+   * from canonical injury/readiness facts and Sam-approved wording — not words
+   * such as 'breathless' or 'cannot walk' taken out of context."*
+   *
+   * **INVERTED, NOT DELETED** (`gate-must-watch-the-deleted-surface`). These are
+   * the very sentences the old section required a medical hard stop for; they
+   * are kept as the coordinates the authority must never answer again.
+   */
+  console.log('\n[0] R-108 — no keyword escalation, and no unsigned medical copy');
+
+  // ⚠ CONTROL. Every assertion below is a negation and would pass on a guard
+  // that had stopped working entirely.
+  const control = checkInjuryClarificationGuard([user('I hurt my hammy')]);
+  ok('CONTROL — the severity clarifier still fires and still asks the question',
+    control.fired === true && control.reply === SEVERITY_QUESTION,
+    JSON.stringify(control));
+
+  const wasEscalated = [
+    "chest hurts and I'm dizzy, 4/10",
+    'short of breath and chest tight',
+    'my leg is numb/tingling',
+    'I heard a pop in my hamstring',
+    "I can't bear weight",
+    "I can't walk",
+    'my knee has severe swelling',
+    'suspected concussion after a head knock',
+    'something popped in my knee',
+    'felt it pop',
   ];
-  for (const [input, advice] of cases) {
+  for (const input of wasEscalated) {
     const r = checkInjuryClarificationGuard([user(input)]);
-    ok(`"${input}" → guard hard-stops`, r.fired === true);
-    ok(`"${input}" → kind is red_flag_hard_stop`, r.kind === 'red_flag_hard_stop');
-    ok(`"${input}" → does not ask severity`, r.reply !== SEVERITY_QUESTION && !/how bad/i.test(r.reply ?? ''));
-    ok(`"${input}" → reply says stop training`, /stop training/i.test(r.reply ?? ''));
-    ok(`"${input}" → detector advice is ${advice}`, r.redFlag?.advice === advice);
-    if (advice === 'urgent_medical') {
-      ok(`"${input}" → urgent medical reply`, r.reply === RED_FLAG_URGENT_MEDICAL_REPLY && /urgent medical/i.test(r.reply ?? ''));
-    } else {
-      ok(`"${input}" → physio/medical reply`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY && /physio|medical assessment/i.test(r.reply ?? ''));
-    }
-    ok(`"${input}" → exported detector matches`, detectRedFlagSymptoms(input)?.advice === advice);
+    // `String(...)` deliberately: the union no longer HOLDS that literal, so a
+    // direct comparison is a compile error rather than a test. This still
+    // catches a runtime resurrection.
+    ok(`"${input}" → no hard-stop kind`, String(r.kind ?? '') !== 'red_flag_hard_stop');
+    ok(`"${input}" → no unsigned medical instruction`,
+      !/stop training|emergency services|physio or medical assessment/i.test(r.reply ?? ''),
+      r.reply);
   }
 }
 
@@ -322,12 +335,10 @@ function asst(content: string): GuardMessage {
     ok(`"${input}" → reply is severity question`, r.reply === SEVERITY_QUESTION);
   }
 
-  const redFlagFires = ['something popped in my knee', 'felt it pop'];
-  for (const input of redFlagFires) {
-    const r = checkInjuryClarificationGuard([user(input)]);
-    ok(`"${input}" → hard-stops, not normal severity clarifier`, r.kind === 'red_flag_hard_stop');
-    ok(`"${input}" → physio/medical advice`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY);
-  }
+  /* R-108: these two were the escalation authority's coordinates. They are
+   * asserted in section [0] as sentences that must NOT produce medical copy;
+   * what they do here is whatever the ordinary injury vocabulary decides, which
+   * is not this section's claim. */
 
   // Severity given → no fire, even with slang/misspellings.
   const passThrough = checkInjuryClarificationGuard([user('My hammy is a 6/10')]);

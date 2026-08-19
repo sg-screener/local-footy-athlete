@@ -1043,9 +1043,10 @@ export default function CoachScreen() {
       // body part, we log [pending-injury] replaced so the live-bug
       // signature ("9" applied to old hammy instead of new shoulder)
       // is provable from logs. The latest pending always wins.
-      const bodyPart = guardResult.kind === 'red_flag_hard_stop'
-        ? null
-        : extractBodyPart(userMessage.content);
+      /* R-108 (2026-08-20): the `red_flag_hard_stop` branch went with the
+       * keyword escalation authority. There is no longer a kind of turn that
+       * suppresses body-part extraction, so the extraction is unconditional. */
+      const bodyPart = extractBodyPart(userMessage.content);
       if (bodyPart) {
         const prior = pendingInjuryRef.current;
         const isReplacement =

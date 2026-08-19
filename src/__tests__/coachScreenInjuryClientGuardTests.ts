@@ -13,10 +13,10 @@
  * Run: npx sucrase-node src/__tests__/coachScreenInjuryClientGuardTests.ts
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   SEVERITY_QUESTION,
-  RED_FLAG_URGENT_MEDICAL_REPLY,
-  RED_FLAG_PHYSIO_MEDICAL_REPLY,
   checkInjuryClarificationGuard,
   GuardMessage,
 } from '../utils/injuryClarificationGuard';
@@ -52,43 +52,82 @@ function simulateClientGuard(
 }
 
 function simulateWouldStorePendingBodyPart(input: string): boolean {
-  const r = checkInjuryClarificationGuard([{ role: 'user', content: input }]);
-  return r.fired && r.kind !== 'red_flag_hard_stop';
+  /* R-108: there is no longer a kind of turn that suppresses body-part
+   * extraction, so this is just "did the guard fire". */
+  return checkInjuryClarificationGuard([{ role: 'user', content: input }]).fired;
 }
 
-// ─── Red-flag hard stops (must fire locally, no API request) ───
+// ─── [0] THE KEYWORD ESCALATION AUTHORITY IS GONE, AND STAYS GONE (R-108) ───
 {
-  console.log('\n[0] Red-flag hard stops');
+  /**
+   * Sam, 2026-08-20: *"Delete the obsolete Coach keyword/escalation authority
+   * rather than patching phrases around it. Coach responses must come from
+   * canonical injury/readiness facts and Sam-approved wording — not words such
+   * as 'breathless' or 'cannot walk' taken out of context."*
+   *
+   * **THIS SECTION IS INVERTED, NOT DELETED.** It used to assert that these
+   * exact sentences produced a medical hard stop. It now asserts they do not,
+   * because the surface that produced it is gone —
+   * `gate-must-watch-the-deleted-surface`. A section simply removed would let
+   * the authority return with nothing red.
+   *
+   * ⚠ **WHAT WAS ACTUALLY WRONG WAS NOT THE PHRASE LIST.** Measured with the
+   * real detector and an EMPTY episode set, so it reached every athlete:
+   * "I cannot walk after leg day" answered with *"Stop training now … needs a
+   * physio"*, and "The tempo run left me breathless" with *"call emergency
+   * services"*. Both are unsigned copy. **A pattern list cannot tell a symptom
+   * from a figure of speech**, so narrowing the regexes would only have moved
+   * the false positives, not removed them.
+   */
+  console.log('\n[0] R-108 — the keyword escalation authority is deleted');
 
-  const urgent = [
+  // ⚠ CONTROL FIRST. Every cell below is a negation, and a negation is true of
+  // a guard that stopped firing at all. This proves the guard still works.
+  const control = simulateClientGuard([], 'my hamstring is sore');
+  ok('CONTROL — the severity clarifier still fires on a real injury turn',
+    control.fired === true && control.reply === SEVERITY_QUESTION);
+
+  const wasEscalated = [
     "chest hurts and I'm dizzy, 4/10",
     'short of breath and chest tight',
     'my leg is numb/tingling',
-  ];
-  for (const input of urgent) {
-    const r = simulateClientGuard([], input);
-    ok(`"${input}" → client guard hard-stops`, r.fired === true);
-    ok(`"${input}" → red-flag kind`, r.kind === 'red_flag_hard_stop');
-    ok(`"${input}" → urgent medical advice`, r.reply === RED_FLAG_URGENT_MEDICAL_REPLY);
-    ok(`"${input}" → not severity clarifier`, r.reply !== SEVERITY_QUESTION);
-  }
-
-  const structural = [
     'I heard a pop in my hamstring',
     "I can't bear weight",
+    'I cannot walk after leg day',
+    'The tempo run left me breathless',
   ];
-  for (const input of structural) {
+  for (const input of wasEscalated) {
     const r = simulateClientGuard([], input);
-    ok(`"${input}" → client guard hard-stops`, r.fired === true);
-    ok(`"${input}" → red-flag kind`, r.kind === 'red_flag_hard_stop');
-    ok(`"${input}" → physio/medical advice`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY);
-    ok(`"${input}" → not severity clarifier`, r.reply !== SEVERITY_QUESTION);
+    // `String(...)` deliberately: the union no longer HOLDS that literal, so a
+    // direct comparison is a compile error rather than a test. This still
+    // catches a runtime resurrection.
+    ok(`"${input}" → no hard-stop kind`, String(r.kind ?? '') !== 'red_flag_hard_stop');
+    ok(`"${input}" → no unsigned medical instruction`,
+      !/Stop training now|emergency services|physio or medical assessment/i.test(r.reply ?? ''));
   }
 
-  ok(
-    '"I heard a pop in my hamstring" → no pending injury body part stored',
-    simulateWouldStorePendingBodyPart('I heard a pop in my hamstring') === false,
-  );
+  // AND THE WORDS THEMSELVES ARE NOT IN THE SHIPPED SOURCE ANY MORE. A reply
+  // constant left behind is one import away from being live again.
+  const guardSource = readFileSync(
+    join(__dirname, '..', 'utils', 'injuryClarificationGuard.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  // A deleted authority whose words are still exported is not deleted.
+  ok('the escalation replies are not in the guard source',
+    !/emergency services/i.test(guardSource)
+      && !/RED_FLAG_URGENT_MEDICAL_REPLY|RED_FLAG_PHYSIO_MEDICAL_REPLY/.test(guardSource));
+  ok('and neither is the detector',
+    !/function detectRedFlagSymptoms/.test(guardSource));
+
+  // ⚠ THE SERVER MIRROR TOO. This file cannot import from `src/`, so it carried
+  // its own copy under a KEEP IN SYNC note. Deleting one half is how it returns.
+  const edgeSource = readFileSync(
+    join(__dirname, '..', '..', 'supabase', 'functions', 'coach-chat', 'index.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  // Otherwise the authority is alive on the server, one "restore the client to
+  // match it" away from returning.
+  ok('the edge function carries no mirrored escalation authority either',
+    !/emergency services/i.test(edgeSource)
+      && !/guardDetectRedFlagSymptoms/.test(edgeSource));
 }
 
 // ─── Spec validation cases (verbatim from request) ───

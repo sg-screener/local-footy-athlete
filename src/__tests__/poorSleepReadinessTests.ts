@@ -23,7 +23,6 @@ import { executeProgramControlAction } from '../utils/programControlActions';
 import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
 import { applyConstraintsToSession, buildFatigueConstraint } from '../utils/exposureEngine';
-import { detectRedFlagSymptoms } from '../utils/injuryClarificationGuard';
 import { todayISOLocal } from '../utils/appDate';
 import { addDays, getMondayForDate } from '../utils/sessionResolver';
 
@@ -313,9 +312,22 @@ console.log('\n[5] anchors and red flags stay higher priority');
   eq('team training anchor remains present', projectedTeam.workout.workoutType, 'Team Training');
   eq('team training anchor name remains present', projectedTeam.workout.name, 'Team Training');
 
-  const redFlag = detectRedFlagSymptoms("I barely slept and I'm dizzy and faint");
-  ok('dizziness/fainting remains a red-flag hard stop',
-    redFlag?.advice === 'urgent_medical' && /dizziness\/fainting/.test(redFlag.reason), redFlag);
+  /* ⚠ **R-108 (2026-08-20) — THIS CELL'S SUBJECT WAS DELETED, AND WHAT IT WAS
+   * ACTUALLY PROTECTING IS NOT LOST.**
+   *
+   * It read `detectRedFlagSymptoms("I barely slept and I'm dizzy and faint")`
+   * and required an `urgent_medical` hard stop. Sam deleted that authority:
+   * *"Coach responses must come from canonical injury/readiness facts and
+   * Sam-approved wording — not words such as 'breathless' or 'cannot walk'
+   * taken out of context."*
+   *
+   * **THE READINESS HALF — this suite's own subject — IS UNTOUCHED AND IS
+   * ASSERTED ABOVE**: a poor-sleep fatigue constraint still reduces the session
+   * and still leaves the game and team-training anchors alone. That is a
+   * decision made from a STORED readiness fact, which is precisely the kind of
+   * answer the ruling keeps. What went was a sentence-matcher that answered
+   * before any fact was consulted. The absence itself is held by
+   * `test:injury-guard` [0] and `test:injury-client-guard` [0]. */
 }
 
 resetStores();

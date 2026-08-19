@@ -2616,3 +2616,57 @@ athlete from that session.
 
 · `BUILT` — `components/UndoToast` + its mounts, held by
 `test:undo-reversal` / `test:session-change-hub`.
+
+---
+
+**R-108** · *"Delete the obsolete Coach keyword/escalation authority rather than
+patching phrases around it. Coach responses must come from canonical
+injury/readiness facts and Sam-approved wording — not words such as 'breathless'
+or 'cannot walk' taken out of context."* (Sam, 2026-08-20, answering
+`orchestrator`) · **A COACH REPLY ABOUT THE ATHLETE'S BODY COMES FROM A STORED
+FACT AND SIGNED WORDS, OR IT DOES NOT EXIST.**
+
+**WHAT WAS DELETED:** `RED_FLAG_URGENT_MEDICAL_REPLY`,
+`RED_FLAG_PHYSIO_MEDICAL_REPLY`, 21 regex patterns, `detectRedFlagSymptoms`,
+`RedFlagDetection`, the guard's `red_flag_hard_stop` branch and kind, the
+engine's bail-out, the screen's suppression branch — **and the embedded mirror
+of all of it in `supabase/functions/coach-chat/index.ts`.**
+
+**MEASURED BEFORE DELETION**, with the real function and an EMPTY accepted-injury
+set, so it reached every athlete regardless of what the app knew about them:
+
+| typed | answered |
+| --- | --- |
+| "I cannot walk after leg day" | *"Stop training now … needs a physio or medical assessment"* |
+| "The tempo run left me breathless" | *"… call emergency services if symptoms are severe"* |
+| "My hands went numb on the bar" | *"… call emergency services"* |
+| "I was a bit dizzy after the sprints" | *"… call emergency services"* |
+
+Ordinary post-leg-day soreness answered with a medical hard stop, in words that
+were never in the signed sheet — **the highest-stakes copy in the app, selected
+by matching a word against a sentence with no reference to a single stored
+fact.**
+
+⚠ **THIS IS A DELETION, NOT A NARROWER REGEX, AND THAT IS THE RULING.** A
+pattern list cannot tell a symptom from a figure of speech; editing the phrases
+moves the false positives, it does not remove them. Sam's instruction names that
+explicitly — *"rather than patching phrases around it"*.
+
+⚠ **BOTH HALVES WENT TOGETHER.** The edge function cannot import from `src/`, so
+it carried its own copy under a `KEEP IN SYNC` note. Deleting only the client is
+how the defect returns: the next reader finds the server still escalating and
+restores the client to match.
+
+**WHAT SURVIVES, AND WHY IT IS NOT THE SAME THING.** The severity clarifier
+(*"How bad is it? Rough pain out of 10."*) is a QUESTION drawn from the injury
+vocabulary; what was deleted was an ANSWER — medical instruction. The readiness
+path is untouched: a poor-sleep fatigue constraint still reduces the session and
+still leaves the game and team-training anchors alone, because that decision is
+made from a stored fact.
+
+· `BUILT` — `test:injury-guard` `[0]` and `test:injury-client-guard` `[0]`, both
+**INVERTED rather than deleted** (`gate-must-watch-the-deleted-surface`): they
+keep the exact sentences as coordinates that must never again produce medical
+copy, each behind a CONTROL proving the clarifier still fires. The client suite
+also reads BOTH sources and fails if the words or the detector reappear in
+either.
