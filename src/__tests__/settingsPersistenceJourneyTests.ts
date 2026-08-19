@@ -120,6 +120,12 @@ function ok(name: string, condition: boolean, detail?: string): void {
 const same = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
+/** The weekday name a date falls on — `weekPrint` keys its lines by it. */
+function weekdayOf(dateISO: string): string {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+    new Date(`${dateISO}T12:00:00Z`).getUTCDay()];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // THE ATHLETE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -272,6 +278,36 @@ function loadsIn(weekStartISO: string, todayISO: string): string[] {
     .sort();
 }
 
+
+/**
+ * A RELAUNCH THAT PROVES IT HAPPENED.
+ *
+ * ⚠ **WRITTEN BECAUSE MUTATION M8 SURVIVED.** Replacing `relaunchApp` with
+ * `{ ok: true, error: null }` left **all 112 cells green**: every *"identical
+ * after close/reopen"* claim in this file was comparing a week against ITSELF.
+ * That is L12a's green-and-empty bind, and `relaunch.ok` cannot catch it —
+ * a relaunch that never ran also never fails.
+ *
+ * The witness is object IDENTITY, not equality. The program is never persisted;
+ * `quiescentBoot` nulls `currentProgram` and REGENERATES it, so a real reopen
+ * always yields a different object and an inert one yields the same reference.
+ * Equality is precisely what the surrounding cells assert, so only identity can
+ * tell the two apart.
+ */
+async function reopenTheApp(label: string, todayISO: string): Promise<void> {
+  const before = useProgramStore.getState().currentProgram;
+  const relaunch = await relaunchApp({ storage: localStorageData, todayISO });
+  setJourneyClock(todayISO);
+  followTheWeek(todayISO);
+  const after = useProgramStore.getState().currentProgram;
+  ok(`${label}: the app REOPENS`, relaunch.ok, relaunch.error ?? 'boot threw');
+  ok(`${label}: the restart really destroyed and rebuilt the program`,
+    before != null && after != null && after !== before,
+    'the store holds the SAME program object after the relaunch — boot did not '
+    + 'regenerate, so every "identical after reopen" claim is comparing a week '
+    + 'against itself');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ONE MATRIX CELL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -357,14 +393,11 @@ async function runCell(args: {
   // death plus `runQuiescentBoot` produces. Comparing them is what makes
   // "the week after a tap is the week after a relaunch" a measured property
   // rather than two engines happening to agree.
-  const relaunch = await relaunchApp({ storage: localStorageData, todayISO: stage.todayISO });
-  setJourneyClock(stage.todayISO);
-  followTheWeek(stage.todayISO);
+  await reopenTheApp(label, stage.todayISO);
   const restarted = takeSettingsCensus();
   const weekRestart = weekPrint(stage.weekStartISO, stage.todayISO);
   const identical = same(weekAfter, weekRestart);
 
-  ok(`${label}: the app REOPENS`, relaunch.ok, relaunch.error ?? 'boot threw');
   ok(`${label}: the VISIBLE week is identical after close/reopen — rows, doses AND loads`,
     identical,
     `settled:\n      ${weekAfter.join('\n      ')}\n    reopened:\n      `
@@ -606,15 +639,11 @@ async function main(): Promise<void> {
         movedAthleteState(before, after).length === 0,
         `moved: ${movedAthleteState(before, after).join(', ')}`);
 
-      const relaunch = await relaunchApp({
-        storage: localStorageData, todayISO: stage.todayISO,
-      });
-      setJourneyClock(stage.todayISO);
-      followTheWeek(stage.todayISO);
+      await reopenTheApp('coach/program edit · WORN', stage.todayISO);
       const weekRestart = weekPrint(stage.weekStartISO, stage.todayISO);
       ok('coach/program edit · WORN: it SURVIVES close and reopen',
-        relaunch.ok && same(weekAfter, weekRestart),
-        `boot=${relaunch.error ?? 'ok'}\n      settled:\n      ${weekAfter.join('\n      ')}`
+        same(weekAfter, weekRestart),
+        `settled:\n      ${weekAfter.join('\n      ')}`
         + `\n    reopened:\n      ${weekRestart.join('\n      ')}`);
       matrix.push({
         setting: 'coach/program edit', shape: 'WORN', committed: edit.ok,
@@ -680,8 +709,7 @@ async function main(): Promise<void> {
     // AND THE TWO SCOPES SURVIVE A RESTART DIFFERENTLY — the permanent one
     // because it is an ANSWER, the dated one because it is a recorded FACT.
     // Both are inputs; neither is a stored week.
-    await relaunchApp({ storage: localStorageData, todayISO: stage.todayISO });
-    setJourneyClock(stage.todayISO); followTheWeek(stage.todayISO);
+    await reopenTheApp('2a', stage.todayISO);
     const restarted = takeSettingsCensus();
     ok('2a: the permanent kit answer survives close/reopen',
       same(afterKit, restarted.equipmentTags),
@@ -702,8 +730,7 @@ async function main(): Promise<void> {
     });
     const after = takeSettingsCensus();
     const weekAfter = weekPrint(stage.weekStartISO, stage.todayISO);
-    await relaunchApp({ storage: localStorageData, todayISO: stage.todayISO });
-    setJourneyClock(stage.todayISO); followTheWeek(stage.todayISO);
+    await reopenTheApp('2b', stage.todayISO);
     const restarted = takeSettingsCensus();
     const weekRestart = weekPrint(stage.weekStartISO, stage.todayISO);
 
@@ -779,8 +806,7 @@ async function main(): Promise<void> {
     }
     const after = takeSettingsCensus();
     const weekAfter = weekPrint(stage.weekStartISO, stage.todayISO);
-    await relaunchApp({ storage: localStorageData, todayISO: stage.todayISO });
-    setJourneyClock(stage.todayISO); followTheWeek(stage.todayISO);
+    await reopenTheApp('2c', stage.todayISO);
     const restarted = takeSettingsCensus();
     const weekRestart = weekPrint(stage.weekStartISO, stage.todayISO);
 
@@ -847,6 +873,32 @@ async function main(): Promise<void> {
     ok('3: a session-only equipment fact reaches THE DAY IT WAS ANSWERED FOR',
       !same(beforeThis, afterThis),
       'the day is byte-identical — the dated fact reached nothing');
+
+    /**
+     * ⚠ **THE OTHER DAYS OF THE SAME WEEK, AND THIS CELL EXISTS BECAUSE A
+     * MUTATION MISSED.**
+     *
+     * M9 widened the action's `scope` from `today_only` to `current_and_future`
+     * and **nothing went red** — because the horizon of an equipment fact is set
+     * by the DECISION KIND, not by the action's scope
+     * (`programControlActions.ts:1643`: `missing_for_session` -> a one-day
+     * window, `missing_this_week` -> a week, `missing_for_span` -> the away
+     * window). The mutation changed a field the product does not read here.
+     *
+     * Telling "the gate is blind" from "the mutation missed" then showed the
+     * gate WAS partly blind: the cells around this one compare WEEKS, so a
+     * session answer that leaked to every day of its own week would have passed
+     * all of them. *"For this session only"* is a claim about a DAY.
+     */
+    const otherDaysMoved = beforeThis
+      .filter((line, index) => !line.startsWith(weekdayOf(stage.weekStartISO))
+        && line !== afterThis[index])
+      .map((line) => line.split(':')[0]);
+    ok('3: and it reaches NO OTHER DAY of the same week — "this session only" is a DAY',
+      otherDaysMoved.length === 0,
+      `a one-session answer moved ${otherDaysMoved.join(', ')} as well:\n`
+      + `       before ${beforeThis.join('\n       ')}\n`
+      + `       after  ${afterThis.join('\n       ')}`);
     ok('3: and it reaches NO OTHER WEEK in the block',
       same(beforeLater, afterLater),
       `week ${laterWeek} moved:\n       before ${beforeLater.join('\n       ')}\n`
@@ -944,7 +996,7 @@ async function main(): Promise<void> {
     console.log('\nFAILURES:');
     for (const line of failures) console.log(`  - ${line}`);
   }
-  totalsPrinted();
+  totalsPrinted(fail);
   if (fail > 0) process.exit(1);
 }
 
