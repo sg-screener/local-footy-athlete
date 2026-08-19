@@ -54,7 +54,6 @@ import { appDateNow, dayOfWeekForISODate, todayISOLocal } from '../utils/appDate
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   contractOffseasonSubphase,
-  migrateLegacyWeeklyExposureContractV2,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
@@ -87,7 +86,6 @@ import {
   type AcceptedMaterialContext,
 } from './acceptedStateColdStart';
 import {
-  migrateLegacyTemporarySourceFacts,
   normalizeTemporarySourceFacts,
 } from '../rules/temporarySourceFact';
 import {
@@ -828,11 +826,11 @@ function canonicaliseAcceptedBoundaryState(
             // a base contract during rebuild/rollover materialisation.
             return overlay;
           }
-          let exposureContractV2 = overlay.exposureContractV2 ?? (
-            overlay.exposureContract
-              ? migrateLegacyWeeklyExposureContractV2(overlay.exposureContract)
-              : undefined
-          );
+          // THE PERSISTED v1 -> v2 UPGRADE IS DELETED (demolition area 4).
+          // It existed for a stored world written before the v2 declaration.
+          // No production users exist and a clean reinstall is allowed, so
+          // there is no such world to serve.
+          let exposureContractV2 = overlay.exposureContractV2;
           if (exposureContractV2) {
             const generationConstraints = options.activeConstraints
               ? require('../utils/generationConstraints').buildGenerationConstraintContext({

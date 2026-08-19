@@ -43,7 +43,6 @@ import {
   expireTemporarySourceFacts,
   isInjurySourceFact,
   isTemporarySourceFactConstraint,
-  migrateLegacyTemporarySourceFacts,
   normalizeTemporarySourceFacts,
   temporarySourceFactId,
   type TemporarySourceFact,
@@ -227,22 +226,14 @@ export function loadCanonicalTemporarySourceFactOwnership(now: string): Canonica
   const rawContext = state.acceptedMaterialContext;
   let context = normalizeAcceptedMaterialContext(rawContext);
   let facts = context.temporarySourceFacts;
-  const unownedLegacyConstraints = (rawContext.activeConstraints ?? []).filter((constraint) =>
-    (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
-    ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
-      constraint.type === 'equipment' || constraint.type === 'schedule') &&
-      (constraint.temporarySourceFactIds?.length ?? 0) === 0));
-  const legacyFacts = migrateLegacyTemporarySourceFacts({
-    activeConstraints: unownedLegacyConstraints,
-    activeInjury: facts.some(isInjurySourceFact) ? null : rawContext.activeInjury,
-    readinessSignalsByDate: rawContext.readinessSignalsByDate ?? {},
-    availabilityConstraints: acceptedProfileForContext(
-      context,
-      useProfileStore.getState().onboardingData,
-    ).availabilityConstraints,
-    sourceSurface: 'temporary_source_fact_transaction',
-  });
-  facts = normalizeTemporarySourceFacts({ value: [...legacyFacts, ...facts] });
+  // ⚠ THE UNOWNED-CONSTRAINT BACK-FILL IS DELETED (demolition area 4).
+  //
+  // It manufactured typed source facts for stored constraints that carried no
+  // `injuryEpisodeId` and no `temporarySourceFactIds` — the shape of a world
+  // written before typed facts existed. No production users exist, so there is
+  // no such world. A constraint's WRITER produces its fact; nothing back-fills
+  // one at load, which is also the only way a fact can carry honest provenance.
+  facts = normalizeTemporarySourceFacts({ value: [...facts] });
   const surfaces = normalizeAcceptedProgramSurfaces(state);
   const legacyAfterStateOnly = facts.some((fact) =>
     isInjurySourceFact(fact)
@@ -1158,13 +1149,9 @@ async function transactTemporarySourceFactWithinTrace(
     semanticFingerprint(ownership.context.temporarySourceFacts);
   let targetFactId = input.factId ?? (input.fact ? temporarySourceFactId(input.fact) : null);
   if (input.operation === 'hydrate') {
-    if (nextFacts.length === 0) {
-      nextFacts = migrateLegacyTemporarySourceFacts({
-        activeConstraints: ownership.context.activeConstraints,
-        activeInjury: ownership.context.activeInjury,
-        readinessSignalsByDate: ownership.context.readinessSignalsByDate,
-      });
-    }
+    // The legacy hydration migration is deleted (demolition area 4): an empty
+    // fact list now means the athlete has no temporary facts, not that they
+    // have some in a shape this build cannot read.
     targetFactId = targetFactId ?? (nextFacts[0]
       ? temporarySourceFactId(nextFacts[0])
       : 'temporary-source-facts:empty');

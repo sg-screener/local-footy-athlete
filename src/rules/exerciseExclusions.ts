@@ -278,41 +278,6 @@ export function exclusionExpiryLabel(exclusion: ExerciseExclusion): string {
   return `Until ${exclusion.activeThroughISO}`;
 }
 
-/**
- * LEGACY EXCLUSIONS ARRIVE AS BARE NAMES, AND THEY MEANT FOREVER.
- *
- * `prefs.excluded: string[]` is on real devices today and carries no scope, no
- * expiry and no decision date. The only honest reading is the one the old code
- * actually implemented: excluded from every future program until removed —
- * `until_changed`. Reading them as `this_block` would quietly restore an
- * exercise an athlete banned months ago, which is the one thing the contract
- * forbids outright.
- *
- * `decidedOnISO` is stamped as the hydration day rather than invented backwards:
- * we do not know when they answered, and a made-up past date would make
- * `exclusionIsActiveOn`'s lower bound a fiction.
- */
-export function migrateLegacyExcludedNames(
-  names: readonly string[] | null | undefined,
-  hydratedOnISO: string,
-): ExerciseExclusion[] {
-  const seen = new Set<string>();
-  const out: ExerciseExclusion[] = [];
-  for (const raw of names ?? []) {
-    const exercise = canonicalExerciseName(String(raw ?? '').trim());
-    if (!exercise || seen.has(exercise)) continue;
-    seen.add(exercise);
-    out.push({
-      exercise,
-      scope: 'until_changed',
-      decidedOnISO: hydratedOnISO,
-      activeThroughISO: null,
-      blockNumber: null,
-    });
-  }
-  return out;
-}
-
 /** Local, dependency-free date step. Mirrors `programBlockState.addDaysISO`. */
 function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(`${dateISO.slice(0, 10)}T12:00:00`);

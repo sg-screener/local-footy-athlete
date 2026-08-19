@@ -65,7 +65,6 @@ import {
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
-import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
 import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import {
@@ -240,16 +239,10 @@ export function buildWeekScopedWorkoutOverlay(args: {
     // retire together or the world is half-stored. The readers already derive
     // (leg (v)'s read half, landed at 8ca5ae24) and the reduction-ownership
     // consumers already derive (08212473). Inert without the flag.
+    // The persisted v1 -> v2 upgrade is deleted (demolition area 4): a stored
+    // world predating the v2 declaration has no one to serve.
     exposureContractV2: LEGV_SCAFFOLD.writer ? undefined : (
-      sourceMicrocycle.exposureContractV2 ?? (
-        sourceMicrocycle.exposureContract
-          ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
-              blockNumber: sourceMicrocycle.miniCycleNumber,
-              weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
-              globalWeek: sourceMicrocycle.weekNumber,
-            })
-          : undefined
-      )
+      sourceMicrocycle.exposureContractV2
     ),
     workoutsByDate,
     createdAt: now,
