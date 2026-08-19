@@ -10,6 +10,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { SessionChangeHub } from '../../components/SessionChangeHub';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
@@ -516,6 +518,10 @@ export default function DayWorkoutScreenV2() {
     isTeamOnly,
   } = useDayWorkout();
 
+  // The Day screen's hub arrives here with `openChange`; see the effect below.
+  const route = useRoute<{ key: string; name: string; params?: { openChange?: string } }>();
+  const navigation = useNavigation();
+
   const smokeCoachBikeFlow =
     __DEV__ && getSmokeRuntimeSignal().flow === 'coach-bike-flow';
   const [exerciseEditStep, setExerciseEditStep] =
@@ -886,6 +892,31 @@ export default function DayWorkoutScreenV2() {
   }, [
     addCandidateGroups, dateLabel, editableExercises.length, isTeamOnly,
     showExerciseEditFallback, workoutLabel,
+  ]);
+
+  /**
+   * ── THE DAY SCREEN'S HUB, ARRIVING ON THE DOOR IT ASKED FOR ───────────────
+   *
+   * Sam, 2026-08-19: *"Both must render one shared hub and enter the same
+   * canonical action doors."* Equipment, Add and Swap have exactly one owner
+   * each and it is on THIS screen, so the Day hub navigates here with
+   * `openChange` instead of growing a second copy of any of them.
+   *
+   * ⚠ **ONCE, AND ONLY WHEN THE SESSION IS READY.** The effect waits for
+   * `editableExercises` because two of the three doors open a picker over the
+   * session's own rows, and it clears the param afterwards so that going back
+   * and returning does not re-open the sheet the athlete just closed.
+   */
+  const openChangeIntent = (route.params as { openChange?: string } | undefined)?.openChange;
+  React.useEffect(() => {
+    if (!openChangeIntent || !date || isTeamOnly || editableExercises.length === 0) return;
+    if (openChangeIntent === 'equipment') openSessionEquipment();
+    else if (openChangeIntent === 'add') openExerciseAdd();
+    else if (openChangeIntent === 'swap') openExerciseSwapPicker();
+    navigation.setParams({ openChange: undefined } as never);
+  }, [
+    openChangeIntent, date, isTeamOnly, editableExercises.length,
+    openSessionEquipment, openExerciseAdd, openExerciseSwapPicker, navigation,
   ]);
 
   const openAddGroup = React.useCallback((label: string) => {
@@ -1758,14 +1789,16 @@ export default function DayWorkoutScreenV2() {
           * goes when the session needs no equipment at all. */}
         {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
           <SessionChangeHub
+            testID="day-workout-change-hub"
+            subline="Change today's session."
             actions={[
               ...(sessionEquipmentRequirements.length > 0
-                ? [{ id: 'equipment' as const, label: 'Equipment', onPress: openSessionEquipment }]
+                ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
                 : []),
-              { id: 'injury' as const, label: 'Injury', onPress: openExerciseInjuryPicker },
-              { id: 'add' as const, label: 'Add', onPress: openExerciseAdd },
-              { id: 'remove' as const, label: 'Remove', onPress: openExerciseRemovePicker },
-              { id: 'swap' as const, label: 'Swap', onPress: openExerciseSwapPicker },
+              { id: 'injury' as const, onPress: openExerciseInjuryPicker },
+              { id: 'add' as const, onPress: openExerciseAdd },
+              { id: 'remove' as const, onPress: openExerciseRemovePicker },
+              { id: 'swap' as const, onPress: openExerciseSwapPicker },
             ]}
           />
         ) : null}
@@ -3183,51 +3216,13 @@ function ExerciseHeaderRow({
 }
 
 
-/**
- * "NEED TO MAKE A CHANGE?" — THE ONE SESSION-CHANGE SURFACE.
+/* ⚠ **THE SESSION-ONLY PILL HUB IS DELETED — SAM, 2026-08-19.**
  *
- * Sam, 2026-08-19: *"Equipment · Injury · Add · Remove · Swap. No dead
- * buttons."*
- *
- * **LABELLED, NOT ICONISED.** The five doors it replaces were icons: a plus, a
- * dumbbell and a plaster in the header, and a swap/remove pair on every row.
- * Nothing on the screen said what any of them did. The words are the change.
- *
- * **THE `actions` LIST IS THE WHOLE "NO DEAD BUTTONS" MECHANISM.** This
- * component renders what it is given and nothing else — it has no knowledge of
- * which doors exist, so it cannot render one that has nowhere to go, and a
- * caller cannot hand it a disabled control because there is no disabled state
- * to hand.
- */
-function SessionChangeHub({
-  actions,
-}: {
-  actions: readonly { id: string; label: string; onPress: () => void }[];
-}) {
-  if (actions.length === 0) return null;
-  return (
-    <View style={styles.changeHub} testID="day-workout-change-hub">
-      <Text style={styles.changeHubTitle}>Need to make a change?</Text>
-      <View style={styles.changeHubRow}>
-        {actions.map((action) => (
-          <Pressable
-            key={action.id}
-            onPress={action.onPress}
-            accessibilityRole="button"
-            accessibilityLabel={action.label}
-            testID={`day-workout-change-${action.id}`}
-            style={({ pressed }) => [
-              styles.changeHubButton,
-              pressed && { opacity: 0.65 },
-            ]}
-          >
-            <Text style={styles.changeHubButtonText}>{action.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
+ * *"Do not keep separate Day and Session implementations. Both must render
+ * one shared hub."* This file grew its own row of bordered text pills when
+ * the five labelled actions landed, while the Day screen already had the
+ * signed card of tinted icon chips. Same heading, same five doors, two
+ * visual languages. The shared owner is `components/SessionChangeHub`. */
 
 /* ⚠ **`ExerciseRowActions` IS DELETED — SAM, 2026-08-19.**
  *
@@ -4866,36 +4861,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  changeHub: {
-    marginTop: 18,
-    marginHorizontal: 16,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.surface.secondary,
-    gap: 10,
-  },
-  changeHubTitle: {
-    color: colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  changeHubRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  changeHubButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
-  },
-  changeHubButtonText: {
-    color: colors.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  /* The pill-hub styles are DELETED with the local component they styled
+   * (2026-08-19). The shared owner carries the Day card's own values. */
   exerciseEditGroup: {
     marginTop: 10,
     gap: 6,

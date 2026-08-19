@@ -20,6 +20,7 @@ import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { ModifiersSheet } from '../../components/ModifiersSheet';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { SessionChangeHub } from '../../components/SessionChangeHub';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -125,6 +126,7 @@ export default function HomeScreenV2() {
     handleCancelMove,
     handleAddGameMode,
     handleViewWorkout,
+    handleOpenSessionChange,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
@@ -961,14 +963,63 @@ export default function HomeScreenV2() {
 
             The card heading and sub-line remain owned by signedCopy; this row
             changes only the direct status controls beneath them. */}
+        {/* ── ONE HUB, BOTH SURFACES (Sam, 2026-08-19) ────────────────────
+            *
+            * *"The Need to make a change? section inside an active session must
+            * use the same shared UI component and visual design as the Day
+            * screen ... Both surfaces must show the same five actions:
+            * Equipment · Injury · Add · Remove · Swap ... Do not keep separate
+            * Day and Session implementations."*
+            *
+            * This card WAS the signed original — heading, sub-line and a row of
+            * tinted icon chips — and the session screen had grown its own row of
+            * plain text pills beside it. The card's markup moved into
+            * `components/SessionChangeHub` unchanged, and both screens now
+            * render it.
+            *
+            * **THE DOORS ARE THE SAME FIVE OWNERS, REACHED WITH THE RIGHT DATE.**
+            * Injury and Remove are this screen's own (Remove deliberately so:
+            * `UndoToast` mounts here, and a removal driven from the pushed
+            * session screen raised its toast on the screen behind it).
+            * Equipment, Add and Swap have exactly one owner each on the session
+            * screen, so they open today's session ON that door — a second copy
+            * here is the duplication this ruling deletes. */}
         {isNormal && dayFirst && (
-          <Card tone="default" padding="lg" radius="lg" style={styles.changeCard} testID="home-change-card">
-            <Text style={styles.changeCardHeading}>
-              {signedCopy('day.change_card.heading')}
-            </Text>
-            <Text style={styles.changeCardSubline}>
-              {signedCopy('day.change_card.subline')}
-            </Text>
+          <SessionChangeHub
+            testID="home-change-card"
+            actions={[
+              ...(dayFirstDay?.workout
+                ? [{ id: 'equipment' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'equipment') }]
+                : []),
+              { id: 'injury' as const,
+                onPress: () => setReadinessInjuryVisible(true),
+                accessibilityHint: "Tell us about an injury affecting today's session" },
+              ...(dayFirstDay?.workout
+                ? [{ id: 'add' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'add') }]
+                : []),
+              { id: 'remove' as const,
+                onPress: () => setRemoveFlow({ kind: 'select' }),
+                accessibilityHint: "Remove an exercise from today's session" },
+              ...(dayFirstDay?.workout
+                ? [{ id: 'swap' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'swap') }]
+                : []),
+            ]}
+          />
+        )}
+
+        {/* ── THE READINESS ENTRIES KEEP THEIR OWN ROW ────────────────────
+            *
+            * ⚠ **"Tired" AND "Sick" ARE NOT SESSION CHANGES AND WERE NOT DELETED.**
+            * They shared the old card only because it was the nearest panel.
+            * They are readiness FACTS about the athlete, they open the readiness
+            * sheet rather than any of the five doors, and folding them into a
+            * hub whose contract is "the five actions" would have made the hub
+            * disagree with itself on the two surfaces. They keep their doors,
+            * their testIDs and their tints. */}
+        {isNormal && dayFirst && (
           <View style={styles.lifeFactChips} testID="home-life-fact-chips">
             <LifeFactChip
               onPress={() => { setReadinessAck(null); setReadinessEntry('flat'); }}
@@ -984,14 +1035,6 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
-            {/* ── ITEM 28: THE AWAY CHIP LEFT THIS ROW FOR THE WEEK SCREEN ──
-                Sam, 2026-08-13: *"I think the away button should live on the
-                weekly screen, it should say 'when do you leave?' then 'when do
-                you return'"*. The same reasoning that moved add-a-game (item
-                19): "when do you leave" is a question about a SPAN, and this
-                row sits on the screen about ONE day. Its door, its icon and
-                its purple tint all moved together — see the away entry under
-                `!dayFirst` above. */}
             <LifeFactChip
               onPress={() => { setReadinessAck(null); setReadinessEntry('sick'); }}
               testID={weekReadiness
@@ -1000,14 +1043,6 @@ export default function HomeScreenV2() {
               accessibilityLabel={weekReadiness
                 ? explorerTestId.readinessUpdate(weekReadiness.id)
                 : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-              /* A4 SURVIVES THE SHRINK: the label is still the owner's, not the
-                 card's. A chip cannot show a sentence, so the owner's title is
-                 what this chip SAYS (accessibility) while the row shows one
-                 word — and the athlete still reads that title in full, because
-                 an active readiness fact is a Coach Note and Coach Notes now sit
-                 directly below this row. The word "I'm sick/flat today" (signed,
-                 ruling 4) is still this file's, which is what its two pins
-                 assert. */
               accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
               label="Sick"
               tint={styles.readinessIconTint}
@@ -1018,58 +1053,7 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
-            <LifeFactChip
-              /* ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
-                 the readiness sheet's "Something hurts" row opens, and both
-                 complete through `handleApplyGuidedInjury`. */
-              onPress={() => setReadinessInjuryVisible(true)}
-              testID="home-injured-entry"
-              accessibilityLabel="I'm injured"
-              label="Injured"
-              tint={styles.injuredIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7F7F" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" />
-                </Svg>
-              }
-            />
-            {/* ── THE LABELLED REMOVE ENTRY (Sam, 2026-08-19) ─────────────────
-                **THE WORD IS THE REQUIREMENT.** The only route to a removal was
-                a per-row icon on the pushed session screen — `component-delete-
-                action-…`, no label, and reachable only by an athlete who had
-                already opened the session and expanded the strength block. Sam:
-                *"seeing the words 'Need to make a change?' does not prove the
-                labelled Remove hub exists ... the required trigger is not
-                complete until the athlete can clearly tap a labelled Remove
-                action."*
-
-                It sits in THIS card because this card is the "Need to make a
-                change?" area, and it opens COMPONENT SELECTION rather than
-                acting immediately — the athlete says what to remove before they
-                say for how long.
-
-                **AND IT IS WHY UNDO CAN WORK AT ALL.** `UndoToast` mounts once,
-                here on the Home screen. A removal driven from the pushed session
-                screen raised its toast on the screen BEHIND it, where its
-                six-second life expired unseen. A removal driven from this card
-                finishes on the surface the toast is already on. Same reversible
-                owner, no second undo authority — the surface moved, not the
-                mechanism. */}
-            <LifeFactChip
-              onPress={() => setRemoveFlow({ kind: 'select' })}
-              testID="home-remove-entry"
-              accessibilityLabel="Remove"
-              accessibilityHint="Remove an exercise from today's session"
-              label="Remove"
-              tint={styles.removeIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFA1C4" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M5 12h14" />
-                </Svg>
-              }
-            />
           </View>
-          </Card>
         )}
 
         {/* The answer to a chip tap, in the athlete's own words, directly under

@@ -1481,3 +1481,50 @@ whether the filter ran or not. It now asks about **every** loaded row. A guard
 that cannot see its own rule being deleted is not guarding it.
 
 Agent: rebuild
+
+---
+
+# ONE HUB, BOTH SURFACES
+
+**Sam, 2026-08-19:** *"The Need to make a change? section inside an active
+session must use the same shared UI component and visual design as the Day
+screen — not a separate row of plain text pills … Do not keep separate Day and
+Session implementations. Both must render one shared hub and enter the same
+canonical action doors."*
+
+**THERE WERE TWO HUBS.** The Day screen had the signed card — heading, sub-line,
+a row of 48px tinted icon chips. The session screen had its own row of bordered
+text pills, built when the five labelled actions landed. Same heading, same five
+doors, two visual languages, and every future change to make twice.
+
+`components/SessionChangeHub` is now the one owner. It carries the CARD, the
+heading, the sub-line, the chips, the icons, the tints, the labels and the
+pressed state. The session screen's local component and its five pill styles are
+DELETED. Both screens import and mount the shared one.
+
+**THE DOORS ARE THE SAME FIVE OWNERS, REACHED WITH THE RIGHT DATE.** Injury and
+Remove are the Day screen's own — Remove deliberately, because `UndoToast` mounts
+on Home and a removal driven from the pushed screen raised its toast behind it.
+Equipment, Add and Swap have exactly one owner each and it is the session screen,
+so the Day hub opens today's session ON that door via a new `openChange` route
+param, which the session screen consumes once and then clears. A second copy of
+those three on the Day screen is the duplication this ruling deletes.
+
+⚠ **"Tired" AND "Sick" WERE NOT DELETED, AND THEY ARE NOT IN THE HUB.** They
+shared the old card only because it was the nearest panel. They are readiness
+FACTS, they open the readiness sheet rather than any of the five doors, and
+folding them in would make a hub whose contract is *"the five actions"* disagree
+with itself. They keep their doors, testIDs and tints in their own row.
+
+**TWO LABEL DEFECTS, BOTH SEEN ONLY ON GLASS.** At five chips a 402pt screen
+gives each about 68pt: `Equipment` first truncated to `Equipm…`, and when
+wrapped it broke mid-word as `Equipmen / t`. It is shrunk to fit one line
+instead; the other four are untouched.
+
+**PARITY GUARD:** `test:session-change-hub` section [8], 57/57 — both screens
+import the shared module, NEITHER declares one of its own, the pill styles are
+gone, both offer all five ids, the component owns the labels/icons/tints, and the
+Day surface's three routed doors are asserted against the session screen's
+consumer.
+
+Agent: rebuild
