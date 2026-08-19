@@ -1532,11 +1532,39 @@ async function executeProgramControlActionDurablyWithinTrace(
         route: routeProgramControlAction(action).route,
       };
     }
+    /* ── THE RESOLVE'S CLAIM IS DERIVED FROM THE ROWS TOO ──────────────────
+     *
+     * Sam, 2026-08-19: *"Never say 'safely recomposed' unless visible content
+     * actually changed appropriately."* The SET path was fixed for that; its
+     * twin was not, and it says the same words.
+     *
+     * **MEASURED, in a medical-stop world (`seriousSymptoms: true`, hamstring
+     * 9/10):** the injury omitted all five rows, `clear_injury_modifier`
+     * returned *"Injury resolved. Affected sessions were safely recomposed."*
+     * and the session was **still empty** — none of the five came back. The
+     * sentence was the deleted false-success claim, arriving from the
+     * resolution end.
+     *
+     * The cause is recorded and NOT fixed here: an injury OMISSION is written
+     * through `remove_exercise`, which lands in the athlete's own exclusion
+     * ledger, so re-deriving replays it as if the athlete had chosen it.
+     * Substitutions restore correctly because nothing durable holds them. That
+     * is an ownership question about the removal authority, which another lane
+     * signed — see `docs/STATUS_FINISH_INJURY.md`. Until it is ruled, the
+     * athlete is told the truth rather than told it worked. */
+    const resolveDate = (context.todayISO ?? '').slice(0, 10);
+    const rowsBeforeResolve = resolveDate ? visibleExerciseNamesOn(resolveDate) : [];
     const result = await resolveInjuryEpisode(episodeId, {
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface: action.source.surface ?? action.source.screen,
       todayISO: context.todayISO,
     });
+    const rowsAfterResolve = resolveDate ? visibleExerciseNamesOn(resolveDate) : [];
+    const rowsCameBack = rowsAfterResolve.length > rowsBeforeResolve.length
+      || rowsAfterResolve.some((name) => !rowsBeforeResolve.includes(name));
+    const stillMissing = resolveDate
+      && rowsBeforeResolve.length === 0
+      && rowsAfterResolve.length === 0;
     const ok = result.outcome === 'resolved_and_recomposed' ||
       result.outcome === 'resolved_no_program_change' ||
       result.outcome === 'already_resolved';
@@ -1545,7 +1573,14 @@ async function executeProgramControlActionDurablyWithinTrace(
       changedProgram: result.changedProgram,
       requiresRebuild: false,
       clearedModifierIds: ok ? [episodeId] : undefined,
-      message: result.message,
+      message: !ok
+        ? result.message
+        : stillMissing
+          ? 'Injury cleared, but this session is still empty — the exercises taken '
+            + 'out for the injury have not come back. Check with your coach.'
+          : rowsCameBack
+            ? result.message
+            : 'Injury cleared. Nothing on this session needed changing.',
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

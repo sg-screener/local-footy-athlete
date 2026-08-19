@@ -537,6 +537,90 @@ async function main(): Promise<void> {
       { beforeTarget, afterRestore });
   }
 
+  /* ── [10] THE MEDICAL-STOP WORLD, AND ONE DEFECT IT STILL CARRIES ────────
+   *
+   * A red-flag injury (`seriousSymptoms`) is the only world in which the ladder
+   * genuinely runs out: `getTapSwapChoices` returns a REST choice, which is the
+   * absence of a replacement, so every unsafe row becomes an honest OMISSION.
+   * Measured across four kits (full gym, bodyweight-only, dumbbells+bench,
+   * bands-only) an omission is unreachable for a strength row any other way —
+   * 0 of 1049 unsafe occurrences in every kit — so this is the only place the
+   * omission path can be held at all.
+   *
+   * **AND IT IS WHERE THE UNIT'S ONE UNFIXED DEFECT LIVES.** An injury omission
+   * is written through `remove_exercise`, which lands in the ATHLETE'S OWN
+   * exclusion ledger — five entries they never made — and re-deriving replays
+   * them, so Restore cannot bring the day back. Substitutions restore correctly
+   * because nothing durable holds them. The mission says *"injury decisions and
+   * ordinary Remove decisions remain owned separately"*, and they are not.
+   *
+   * Fixing it means changing who owns a removal, which another lane signed
+   * ("No second removal authority survives"), so it is MEASURED here rather
+   * than quietly patched — and the athlete is told the truth in the meantime.
+   * The cells below pin BOTH: the defect as it stands, so it cannot deepen
+   * unnoticed, and the honesty of the sentence, so nobody re-introduces the
+   * false-success claim while it is unfixed.
+   */
+  console.log('\n[10] the medical-stop world]');
+  {
+    const { executeProgramControlActionDurably } = require('../utils/programControlActions');
+    const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
+    const { getAthleteExclusions } = require('../store/athletePreferencesStore');
+    const weekStart = install();
+    const target = '2026-07-20';
+    setJourneyClock(target);
+    const before = rowsOf(target, weekStart);
+    ok('medical stop — CONTROL: the day really does carry work first',
+      before.length > 0, before);
+    ok('medical stop — CONTROL: the athlete has removed nothing of their own',
+      (quiet(() => getAthleteExclusions()) as unknown[]).length === 0);
+    const constraint = buildGuidedInjuryConstraint({
+      region: 'lower_body', area: 'hamstring', severity: 9,
+      severityBand: 'avoid', adjustmentLevel: 'training_paused',
+      triggers: ['during'], seriousSymptoms: true,
+    } as never, { todayISO: target });
+    const set = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: target })) as { message?: string; createdModifierIds?: string[] };
+    const afterSet = rowsOf(target, weekStart);
+    ok('medical stop — every omitted row is NAMED, never counted',
+      namesOf(before).every((name) => (set.message ?? '').includes(name)),
+      { message: set.message, before: namesOf(before) });
+    ok('medical stop — the sentence says nothing safe was available, and does not claim a swap',
+      /nothing safe was available/.test(set.message ?? '')
+        && !/swapped for/.test(set.message ?? ''),
+      set.message);
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_injury_modifier',
+      source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { episodeId: set.createdModifierIds?.[0] },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: target })) as { ok: boolean; message?: string };
+    ok('medical stop — CONTROL: the Restore door actually ran', cleared.ok === true, cleared);
+    const afterClear = rowsOf(target, weekStart);
+    /* ⚠ **THE DEFECT, PINNED AS IT STANDS.** When this starts failing because
+     * the rows DO come back, the ownership fix has landed and this cell and the
+     * one below it are what should be rewritten — not deleted. */
+    ok('medical stop — MEASURED-NOT-FIXED: an omission does not come back on Restore',
+      afterClear.length === 0 && afterSet.length === 0,
+      { afterSet, afterClear });
+    ok('medical stop — MEASURED-NOT-FIXED: the omission sits in the ATHLETE\'s exclusion ledger',
+      (quiet(() => getAthleteExclusions()) as { exercise: string }[]).length === before.length,
+      quiet(() => getAthleteExclusions()));
+    /* ...AND WHILE IT IS UNFIXED, THE ATHLETE IS TOLD THE TRUTH. This is the
+     * cell that matters: the resolve used to answer "Injury resolved. Affected
+     * sessions were safely recomposed." over an empty day. */
+    ok('medical stop — the resolve never claims success over a session it left empty',
+      !/safely recomposed/.test(cleared.message ?? ''), cleared.message);
+    ok('medical stop — and it says plainly that the exercises have not come back',
+      /have not come back/.test(cleared.message ?? ''), cleared.message);
+  }
+
   /* ── EVERY PATTERN THE MISSION NAMES WAS ACTUALLY WALKED ──────────────────
    * Printed AND asserted: a suite that covers four of eight planes and says
    * "all patterns" is the claim this repo keeps finding. */

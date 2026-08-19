@@ -179,8 +179,85 @@ re-bought. **This is question 1 for Sam.**
 
 ---
 
+## THE ONE DEFECT I MEASURED AND DID NOT FIX
+
+**AN INJURY OMISSION LANDS IN THE ATHLETE'S OWN REMOVE LEDGER, AND RESTORE
+CANNOT UNDO IT.**
+
+Measured in a medical-stop world (`seriousSymptoms: true`, hamstring 9/10), on
+this branch:
+
+```
+rows BEFORE          Leg Press, RDLs, Bulgarian Split Squats,
+                     Single-Leg RDL, Band Pallof Press
+exclusions BEFORE    []
+rows AFTER           []
+exclusions AFTER     5 entries — one per row, scope today_only
+clear_injury         ok
+rows RESTORED        []
+exclusions RESTORED  the same 5 entries
+```
+
+An injury OMISSION is written through `remove_exercise`, which lands in
+`athletePreferencesStore.exclusions` — the athlete's own decisions. Restore works
+by RE-DERIVING (`settleDerivedWorldAfterDecision`), so it replays those
+exclusions as if the athlete had chosen them. Substitutions restore correctly
+because nothing durable holds them.
+
+That is the mission's *"injury decisions and ordinary Remove decisions remain
+owned separately"*, and they are not. It is **pre-existing** — the same
+exclusions are written on `main` — but this branch does not fix it, because
+fixing it means changing who owns a removal, and another lane signed *"No second
+removal authority survives"* when `removeExerciseAtDate` was deleted.
+
+**WHAT I DID DO:** the resolve no longer lies about it. It used to answer
+*"Injury resolved. Affected sessions were safely recomposed."* over an empty
+day — the same false-success claim this whole unit exists to delete, arriving
+from the resolution end. It now says *"Injury cleared, but this session is still
+empty — the exercises taken out for the injury have not come back."* Both the
+defect and the honesty are pinned by cells in section [10] of
+`test:injury-fallback-journey`, so neither can drift while it waits for a ruling.
+
+**AN OMISSION IS ONLY REACHABLE THERE.** Measured across four kits (full gym,
+bodyweight-only, dumbbells + bench, bands-only): **0 omissions out of 1049
+unsafe occurrences in every kit.** Rungs 5 and 6 always have something
+bodyweight-legal, so an ordinary injury never drops a row. Only a red-flag
+medical stop, where the ladder returns REST, produces one.
+
+**This is question 2 for Sam.**
+
+---
+
+## QUESTIONS FOR SAM — TWO, AND ONLY TWO
+
+**REGISTRY-GREP: R-103, R-102, R-104, R-087, R-092, R-100, R-098, R-096.**
+Neither question is answered by any of those rows: R-103 rules the ORDER of the
+ladder and says nothing about which rating is legal at which band; nothing in
+the registry rules who owns an injury-caused removal.
+
+**1. Your Bible and your injury matrix disagree at 6-7/10.** Your knee section
+says *"Heavy knee-dominant work -> hip thrust"* and your shoulder section says
+*"some pulling if tolerated"*, but your ruled matrix rates `Hip Thrusts` and
+`Chest Supported Row` as `caution` for those regions, and your 6-7 band removes
+risky work through the area. Three cells have been red on `main` since the matrix
+landed because of it. I tried the reading that would reconcile them — only
+HEAVY caution work goes at 6-7 — and it shipped three of your own bad swaps
+(`Broad Jumps` for a 7/10 knee, `Single-Leg RDL` for a 7/10 hamstring), so I
+reverted it. **Which wins at 6-7: the matrix rating, or the region's named good
+swap?**
+
+**2. A red-flag injury empties the session and it never comes back.** Should a
+red-flag injury (8-10 plus serious symptoms) TAKE the exercises off the day, or
+leave them showing with *"skip these and check with a physio"*? Today it takes
+them off, and because it does that through the same door as your own Remove,
+clearing the injury cannot put them back.
+
+---
+
 ## LOG
 
 - 2026-08-20 — worktree created, baseline measured, defects named.
 - 2026-08-20 — `f1e3eeea` the derived ladder + the band split.
-- 2026-08-20 — the journey, the mutations, the registry row, the seed.
+- 2026-08-20 — `dc4356de` the journey, the mutations, the registry row, the seed.
+- 2026-08-20 — the medical-stop world measured; the resolve stops claiming
+  success over an empty day; the omission-ownership defect pinned, not patched.

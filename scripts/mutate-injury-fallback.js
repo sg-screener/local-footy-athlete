@@ -105,6 +105,14 @@ const MUTATIONS = [
     suites: ['test:injury-fallback-journey'],
   },
   {
+    id: 'M11',
+    what: 'the resolve goes back to claiming success over a session it left empty',
+    file: 'src/utils/programControlActions.ts',
+    from: '        : stillMissing',
+    to: '        : false',
+    suites: ['test:injury-fallback-journey'],
+  },
+  {
     id: 'M8',
     what: 'the 6-7 and 8-10 bands stop removing caution work, so risky rows stay legal',
     file: 'src/rules/injuryExerciseRisk.ts',
