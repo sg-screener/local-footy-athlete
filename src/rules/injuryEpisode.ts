@@ -3,7 +3,6 @@ import type {
   ActiveInjuryConstraint,
 } from '../store/coachUpdatesStore';
 import type {
-  InjuryHistoryEntry,
   InjuryState,
 } from '../utils/injuryProgression';
 
@@ -228,71 +227,12 @@ export function deriveInjuryConstraintsFromEpisodes(
   });
 }
 
-export function deriveLegacyInjuryFromEpisodes(
-  episodes: readonly InjuryEpisodeV1[],
-): InjuryState | null {
-  const episode = activeInjuryEpisodes(episodes)
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
-  if (!episode) return null;
-  const history: InjuryHistoryEntry[] = episode.transitionHistory.map((entry) => ({
-    timestamp: entry.timestamp,
-    fromStatus: entry.fromStatus === 'superseded' ? 'resolved' : entry.fromStatus,
-    toStatus: entry.toStatus === 'superseded' ? 'resolved' : entry.toStatus,
-    severity: entry.severity,
-    note: entry.note,
-  }));
-  return {
-    bodyPart: episode.bodyPart,
-    bucket: episode.bucket,
-    severity: episode.severity,
-    initialSeverity: history[0]?.severity ?? episode.severity,
-    priorSeverity: episode.currentRestrictionPolicy.priorSeverity,
-    status: episode.status === 'improving' ? 'improving' : 'active',
-    rules: [...episode.currentRestrictionPolicy.rules],
-    seriousSymptoms: episode.seriousSymptoms,
-    seriousSymptom: episode.seriousSymptom,
-    adjustmentLevel: episode.currentRestrictionPolicy.adjustmentLevel,
-    safeFocus: [...episode.currentRestrictionPolicy.safeFocus],
-    advice: [...episode.currentRestrictionPolicy.advice],
-    startDate: episode.onsetOrReportedDate,
-    createdAt: episode.createdAt,
-    lastUpdatedAt: episode.updatedAt,
-    history,
-  };
-}
-
-function legacyEpisodeId(constraintId: string): string {
-  return `injury-episode:legacy:${stablePart(constraintId || 'unknown')}`;
-}
-
-function legacyConstraintFromAlias(injury: InjuryState): ActiveInjuryConstraint {
-  const constraintId = `injury-${stablePart(injury.bucket || injury.bodyPart || 'unknown')}`;
-  return {
-    id: constraintId,
-    type: 'injury',
-    bodyPart: injury.bodyPart,
-    bucket: injury.bucket,
-    severity: injury.severity,
-    priorSeverity: injury.priorSeverity,
-    status: injury.status,
-    startDate: injury.startDate,
-    lastUpdatedAt: injury.lastUpdatedAt,
-    seriousSymptoms: injury.seriousSymptoms,
-    seriousSymptom: injury.seriousSymptom,
-    adjustmentLevel: injury.adjustmentLevel,
-    rules: [...(injury.rules ?? [])],
-    safeFocus: [...(injury.safeFocus ?? [])],
-    advice: [...(injury.advice ?? [])],
-  };
-}
-
 export function composeInjuryCompatibility(args: {
   activeConstraints: readonly ActiveConstraint[];
   injuryEpisodes: readonly InjuryEpisodeV1[];
-}): { activeConstraints: ActiveConstraint[]; activeInjury: InjuryState | null } {
+}): { activeConstraints: ActiveConstraint[] } {
   const nonInjury = args.activeConstraints.filter((constraint) => constraint.type !== 'injury');
   return {
     activeConstraints: [...nonInjury, ...deriveInjuryConstraintsFromEpisodes(args.injuryEpisodes)],
-    activeInjury: deriveLegacyInjuryFromEpisodes(args.injuryEpisodes),
   };
 }

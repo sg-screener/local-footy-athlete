@@ -323,7 +323,6 @@ async function applyAuxiliaryState(
         reason: `dev_e2e_seed:temporary_equipment:${factId}`,
         temporarySourceFacts,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         profile,
@@ -497,7 +496,6 @@ export function readDevE2EWitnessState(): DevE2EWitnessState {
     reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,
     profile: useProfileStore.getState().onboardingData,
     calendarMarks: useCalendarStore.getState().markedDays,
-    activeInjury: updates.activeInjury,
     activeConstraints: updates.activeConstraints,
     injuryEpisodes: accepted.injuryEpisodes,
     temporarySourceFacts: accepted.temporarySourceFacts,
@@ -549,7 +547,7 @@ function captureReloadEvidence(
     state: schedule,
     overrideContext: program.overrideContexts[day.date],
   }));
-  const notes = buildActiveCoachNotes(context.activeConstraints, context.activeInjury);
+  const notes = buildActiveCoachNotes(context.activeConstraints);
   return {
     accepted: { fingerprints: memory, fingerprint: semanticFingerprintV2(memory) },
     persisted: { fingerprints: persisted, fingerprint: semanticFingerprintV2(persisted) },

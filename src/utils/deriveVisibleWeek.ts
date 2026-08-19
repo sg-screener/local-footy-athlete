@@ -65,7 +65,6 @@ export interface DeriveWeekInputs {
   readonly markedDays: Record<string, string>;
   readonly readinessSignalsByDate: Record<string, unknown>;
   readonly coachActiveConstraints: unknown[];
-  readonly coachActiveInjury: unknown;
   /** The decision ledger (consumed from R1.4). */
   readonly decisions: readonly DecisionLedgerEntry[];
   /** Stored program surfaces — outputs today, replay products from R1.4. */
@@ -97,7 +96,6 @@ export function gatherDeriveInputs(todayISO?: string): DeriveWeekInputs {
     markedDays: { ...(calendarState.markedDays ?? {}) },
     readinessSignalsByDate: { ...(useReadinessStore.getState().signalsByDate ?? {}) },
     coachActiveConstraints: [...(coachUpdatesState.activeConstraints ?? [])],
-    coachActiveInjury: coachUpdatesState.activeInjury ?? null,
     decisions: decisionLedgerEntries(),
     currentProgram: programState.currentProgram,
     currentMicrocycle: programState.currentMicrocycle,
@@ -153,9 +151,6 @@ export function assembleScheduleState(
           .filter((n: number | undefined): n is number => n !== undefined)
       : undefined;
 
-  const activeInjury = acceptedOwnsMaterialState
-    ? acceptedContext.activeInjury
-    : (inputs.coachActiveInjury as never) ?? null;
   const activeConstraints = acceptedOwnsMaterialState
     ? acceptedContext.activeConstraints
     : (inputs.coachActiveConstraints as never[]) ?? [];
@@ -204,10 +199,6 @@ export function assembleScheduleState(
     sessionFeedback: (inputs.sessionFeedback as never) || {},
     weightOverrides: (inputs.weightOverrides as never) || {},
     availableDayNumbers,
-    activeInjury,
-    injuryProjectionOwner: acceptedContext.injuryEpisodes.length > 0
-      ? 'accepted_episode'
-      : undefined,
     activeConstraints: [
       ...activeConstraints,
       ...readinessActiveConstraints,

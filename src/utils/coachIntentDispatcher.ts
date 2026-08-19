@@ -34,7 +34,6 @@ import { isFixtureChangeIntent } from './coachIntent';
 import { logger } from './logger';
 import type { ResolvedDay } from './sessionResolver';
 import type { Workout, OverrideContext } from '../types/domain';
-import type { InjuryState } from './injuryProgression';
 import {
   detectConstraintResolution,
   formatResolutionAmbiguityQuestion,
@@ -396,25 +395,6 @@ function normalizeInjuryDispatchDependencyResult(
 }
 
 export interface DispatchDeps {
-  /** Re-apply the injury policy to the week — used by why-handler. */
-  reapplyInjuryAtSeverity: (
-    bodyPart: string,
-    severity: number,
-    monday: string,
-    todayISO: string,
-    trace?: AthleteActionTraceContext,
-  ) => Awaitable<{ applied: number; visibleDiffDetected: boolean }>;
-  /** Run the active-injury progression handler. */
-  runProgression: (
-    outcome:
-      | { kind: 'resolved' }
-      | { kind: 'improving'; newSeverity: number }
-      | { kind: 'worsening'; newSeverity: number }
-      | { kind: 'unchanged' },
-    current: InjuryState,
-    note: string,
-    trace?: AthleteActionTraceContext,
-  ) => Awaitable<string | InjuryDispatchDependencyResult>;
   /** Run UAE for a known {bodyPart, severity}. Returns the reply text. */
   runUAEForInjury: (
     bodyPart: string,
@@ -504,13 +484,6 @@ export async function dispatchCoachIntentWithinTrace(
     needsClarification: intent.needsClarification,
     payloadKeys: intent.payload ? Object.keys(intent.payload) : [],
   });
-  logger.debug('[coach-flow] activeInjury', packet.activeInjury
-    ? {
-        bodyPart: packet.activeInjury.bodyPart,
-        severity: packet.activeInjury.severity,
-        status: packet.activeInjury.status,
-      }
-    : null);
 
   if (intent.intent === 'fixture_change') {
     if (!isFixtureChangeIntent(intent)) {
@@ -875,42 +848,6 @@ export async function dispatchCoachIntentWithinTrace(
           : null,
       };
     }
-    // Hard-block when activeInjury exists for the SAME body part. The
-    // LLM should not have classified this as needing clarification —
-    // belt-and-braces here in case it does.
-    if (
-      packet.activeInjury &&
-      packet.activeInjury.status !== 'resolved' &&
-      (!intent.payload?.bodyPart ||
-        intent.payload.bodyPart.toLowerCase() ===
-          packet.activeInjury.bodyPart.toLowerCase())
-    ) {
-      logger.debug('[coach-flow] suppressed_clarifier', {
-        reason: 'activeInjury exists for same body part',
-        activeBodyPart: packet.activeInjury.bodyPart,
-      });
-      // Treat as active_injury_followup instead.
-      const progression = normalizeInjuryDispatchDependencyResult(
-        await deps.runProgression(
-          { kind: 'unchanged' },
-          packet.activeInjury,
-          packet.userMessage,
-          trace,
-        ),
-      );
-      logger.debug('[coach-flow] route', {
-        route: 'active_injury_followup',
-        mutated: progression.mutated,
-      });
-      logger.debug('[coach-reply] source', { mode: 'progression' });
-      return {
-        handled: true,
-        reply: progression.reply,
-        mutated: progression.mutated,
-        replyMode: 'progression',
-        rationale: 'clarifier suppressed (activeInjury same bodyPart)',
-      };
-    }
     logger.debug('[coach-flow] route', { route: 'severity_clarifier', mutated: false });
     logger.debug('[coach-reply] source', { mode: 'severity_clarifier' });
     return {
@@ -927,21 +864,18 @@ export async function dispatchCoachIntentWithinTrace(
       // Severity-only follow-up — body part priority:
       //   1. Explicit payload.bodyPart from the LLM (highest signal)
       //   2. Pending clarifier body part (the most recent question)
-      //   3. activeInjury fallback (only when no pending exists)
       //
       // The pending tier is critical: without it, "shoulder is sore"
-      // → "9" reply would bind to activeInjury (hammy) and reply
-      // about the wrong body part. See pendingInjuryPriorityTests.
+      // → "9" reply would bind to the wrong body part. See
+      // pendingInjuryPriorityTests.
       const bodyPart =
         intent.payload?.bodyPart ??
-        packet.pendingInjury?.bodyPart ??
-        packet.activeInjury?.bodyPart;
+        packet.pendingInjury?.bodyPart;
       const severity = intent.payload?.severity;
       if (packet.pendingInjury?.bodyPart) {
         logger.debug('[injury-context] severity_bound_to_pending', {
           source: 'dispatcher',
           pendingBodyPart: packet.pendingInjury.bodyPart,
-          activeInjuryBodyPart: packet.activeInjury?.bodyPart ?? null,
           payloadBodyPart: intent.payload?.bodyPart ?? null,
           chosenBodyPart: bodyPart,
         });
@@ -976,46 +910,18 @@ export async function dispatchCoachIntentWithinTrace(
     }
 
     case 'active_injury_followup': {
-      const current = packet.activeInjury;
-      if (!current || current.status === 'resolved') {
-        // No injury to follow up on → general state reply.
-        const reply = deps.generalReply(intent, packet);
-        logger.debug('[coach-flow] route', { route: 'general_state_grounded', mutated: false });
-        return {
-          handled: true,
-          reply,
-          mutated: false,
-          replyMode: 'general_state_grounded',
-        };
-      }
-      const followup = intent.payload?.followupKind;
-      let outcome:
-        | { kind: 'resolved' }
-        | { kind: 'improving'; newSeverity: number }
-        | { kind: 'worsening'; newSeverity: number }
-        | { kind: 'unchanged' };
-      if (followup === 'resolved') outcome = { kind: 'resolved' };
-      else if (followup === 'improving' && intent.payload?.severity != null) {
-        outcome = { kind: 'improving', newSeverity: intent.payload.severity };
-      } else if (followup === 'worsening' && intent.payload?.severity != null) {
-        outcome = { kind: 'worsening', newSeverity: intent.payload.severity };
-      } else {
-        outcome = { kind: 'unchanged' };
-      }
-      const progression = normalizeInjuryDispatchDependencyResult(
-        await deps.runProgression(outcome, current, packet.userMessage, trace),
-      );
-      logger.debug('[coach-flow] route', {
-        route: 'active_injury_followup',
-        followup,
-        mutated: progression.mutated,
-      });
-      logger.debug('[coach-reply] source', { mode: 'progression' });
+      // ⚠ BROKEN BY DEMOLITION (2026-08-19). This route ran the injury
+      // progression against the single-slot `activeInjury` alias, which is
+      // deleted. It must be rebuilt against `packet.acceptedInjuryContext`
+      // — the canonical episode set — and until then every follow-up falls
+      // through to the general state reply.
+      const reply = deps.generalReply(intent, packet);
+      logger.debug('[coach-flow] route', { route: 'general_state_grounded', mutated: false });
       return {
         handled: true,
-        reply: progression.reply,
-        mutated: progression.mutated,
-        replyMode: 'progression',
+        reply,
+        mutated: false,
+        replyMode: 'general_state_grounded',
       };
     }
 
@@ -1028,30 +934,11 @@ export async function dispatchCoachIntentWithinTrace(
           extractExerciseFromConcern(intent.payload?.concern),
       });
       logger.debug('[coach-flow] explanation_path', { kind: ans.kind });
-      let mutated = false;
-      let suffix = '';
-      if (
-        ans.suggestReapply &&
-        packet.activeInjury &&
-        packet.activeInjury.status !== 'resolved' &&
-        ans.date
-      ) {
-        const monday = mondayOf(ans.date);
-        const result = await deps.reapplyInjuryAtSeverity(
-          packet.activeInjury.bodyPart,
-          packet.activeInjury.severity,
-          monday,
-          packet.todayISO,
-          trace,
-        );
-        if (result.visibleDiffDetected) {
-          mutated = true;
-          suffix = ` Re-applied the ${packet.activeInjury.bodyPart} restriction - the program has been updated for ${ans.date}.`;
-          logger.debug('[active-constraint] future filter applied', { date: ans.date, applied: result.applied });
-        } else {
-          suffix = ` I tried to reconcile but the program already matches the active restriction.`;
-        }
-      }
+      // ⚠ BROKEN BY DEMOLITION (2026-08-19). The re-apply branch read the
+      // deleted `activeInjury` alias for its body part and severity. Rebuild
+      // it against `packet.acceptedInjuryContext`.
+      const mutated = false;
+      const suffix = '';
       logger.debug('[coach-flow] route', { route: 'state_inspector', mutated });
       logger.debug('[coach-reply] source', { mode: mutated ? 'reapplied' : 'state_inspector' });
       return {
@@ -1273,26 +1160,11 @@ export async function dispatchCoachIntentWithinTrace(
 
     case 'general_question':
     case 'exercise_swap': {
-      // For generic chat / soft requests, ALWAYS reply from the
-      // dispatcher when activeInjury is set so the legacy LLM can't
-      // fabricate injury-related claims. Without an active injury,
-      // fall through to the legacy path (that handles exercise_swap
-      // via the existing action tools).
-      if (packet.activeInjury && packet.activeInjury.status !== 'resolved') {
-        const reply = deps.generalReply(intent, packet);
-        logger.debug('[coach-flow] route', {
-          route: 'general_state_grounded',
-          mutated: false,
-          activeInjury: true,
-        });
-        logger.debug('[coach-reply] source', { mode: 'general_state_grounded' });
-        return {
-          handled: true,
-          reply,
-          mutated: false,
-          replyMode: 'general_state_grounded',
-        };
-      }
+      // ⚠ BROKEN BY DEMOLITION (2026-08-19). This guard grounded generic
+      // chat in the deleted `activeInjury` alias so the legacy LLM could not
+      // fabricate injury claims. Rebuild it against
+      // `packet.acceptedInjuryContext`; until then generic chat falls
+      // straight through to the legacy path.
       logger.debug('[coach-flow] route', { route: 'fall_through', reason: intent.intent });
       return {
         handled: false,

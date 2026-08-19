@@ -5,14 +5,14 @@
  * Why this layer exists:
  *   The UAE only emits AdjustmentEvent[] for the current week. The
  *   exposure engine + visibleProgramProjection silently filter future
- *   weeks via the activeInjury constraint. Without this helper, the
+ *   weeks via the injury constraint. Without this helper, the
  *   coach reply (and Coach Update card) would say "left the program
  *   unchanged" because no events fired — even though next Monday's
  *   Lower Body Strength was rebuilt by the projection.
  *
  *   Pipeline:
  *     applyAdjustmentEvents → current-week applied (events surface)
- *     activeInjury seed     → projection filters next week silently
+ *     injury constraint seed → projection filters next week silently
  *     summariseConstraintProjectionEffects(...) → bridge the two so
  *                              the reply + card can describe BOTH.
  *

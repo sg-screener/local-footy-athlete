@@ -127,22 +127,13 @@ function useScheduleState(): ScheduleState & {
   const modalityPreferences = useCoachPreferencesStore(
     (s: any) => s.modalityPreferences,
   );
-  // Subscribe to activeInjury so the resolver-level filter runs in the
-  // LIVE React app. Without this, useScheduleState used to return
-  // ScheduleState without activeInjury — applyInjuryFilterPass would
-  // early-return and future weeks would render unfiltered (the live
-  // bug where Deadlift / Nordic Lower kept showing after hammy 6/10).
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const mirroredActiveInjury = useCoachUpdatesStore((s: any) => s.activeInjury);
   // Subscribe to the FULL activeConstraints[] too. Non-injury entries
   // (fatigue / soreness / schedule / missed_session) flow through the
   // visible-program projection's `extraConstraints` seam — see
   // useResolvedDay / useResolvedWeek below.
   const mirroredCoachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
-  const activeInjury = acceptedContext.revision > 0
-    ? acceptedContext.activeInjury
-    : mirroredActiveInjury;
   const coachActiveConstraints = acceptedContext.revision > 0
     ? acceptedContext.activeConstraints
     : mirroredCoachActiveConstraints;
@@ -223,7 +214,6 @@ function useScheduleState(): ScheduleState & {
     sessionFeedback: sessionFeedback || {},
     weightOverrides: weightOverrides || {},
     availableDayNumbers,
-    activeInjury: activeInjury ?? null,
     activeConstraints: [...coachActiveConstraints, ...readinessActiveConstraints],
     modalityPreferences: modalityPreferences ?? {},
   };
@@ -234,7 +224,7 @@ function useScheduleState(): ScheduleState & {
  * / missed_session) into engine `Constraint[]` so the visible-program
  * projection can layer them on top of the injury constraint. Injury
  * entries are skipped here — the projection already builds the injury
- * Constraint from `activeInjury`.
+ * Constraint from the active constraint set.
  */
 const buildExtraConstraints = buildExtraConstraintsForVisibleProgram;
 

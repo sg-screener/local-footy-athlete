@@ -40,7 +40,6 @@ import {
   type InjuryBucket,
 } from './injuryAdjustmentEngine';
 import { resolveInjuryBucket } from './programAdjustmentEngine';
-import type { InjuryState } from './injuryProgression';
 import { logger } from './logger';
 
 export const PENDING_INJURY_TTL_MS = 10 * 60 * 1000;
@@ -172,8 +171,8 @@ export function resolveInjuryFromMessage(
   // Canonicalise the bodyPart → InjuryBucket here so every consumer
   // gets the same answer. Returning bucket=null when the body part is
   // a KNOWN alias was the root cause of the live "future weeks not
-  // filtered" bug — the activeInjury seed was using bucket from this
-  // resolution, the resolver-level filter then had no bucket to act
+  // filtered" bug — the injury seed was using bucket from this
+  // resolution, the visible gate then had no bucket to act
   // on, and next week kept showing Deadlifts/Nordics for hamstring.
   const canonicalBucket = resolveInjuryBucket(pending.bodyPart);
   if (!canonicalBucket && pending.bodyPart && pending.bodyPart !== 'unknown') {
@@ -201,33 +200,6 @@ export function resolveInjuryFromMessage(
     },
     pendingAfter: null,
   };
-}
-
-/**
- * Decide whether `message` is a NEW injury report for a body part that
- * differs from `activeInjury.bodyPart`. When true, the active-injury
- * follow-up logic must NOT consume the message — it's a new injury,
- * not a hammy → hammy update.
- *
- *   activeInjury = hamstring 6/10
- *   message = "knee is sore"   → true  (different body part)
- *   message = "9"              → false (no body part to compare)
- *   message = "hammy still cooked" → false (same body part)
- *
- * Used by CoachScreen.handleSend to gate the active-injury follow-up
- * block. Pure: no I/O, no store reads.
- */
-export function isDifferentBodyPartInjuryReport(
-  message: string,
-  activeInjury: InjuryState | null | undefined,
-): boolean {
-  if (!activeInjury || activeInjury.status === 'resolved') return false;
-  if (!message || typeof message !== 'string') return false;
-  const messageBodyPart = extractBodyPart(message);
-  if (!messageBodyPart) return false;
-  return (
-    messageBodyPart.toLowerCase() !== (activeInjury.bodyPart || '').toLowerCase()
-  );
 }
 
 /**

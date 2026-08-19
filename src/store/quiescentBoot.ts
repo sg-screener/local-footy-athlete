@@ -557,7 +557,6 @@ export async function rebuildDerivedWorld(): Promise<void> {
         }).acceptedMaterialContext,
         markedDays: {},
         activeConstraints: [],
-        activeInjury: null,
         readinessSignalsByDate: {},
         revision: 0,
         lastTransaction: null,

@@ -160,7 +160,6 @@ const semanticStores: SemanticStoreDescriptor[] = [
     select: (state) => ({
       updatesByWeek: state.updatesByWeek ?? {},
       activeConstraints: state.activeConstraints ?? [],
-      activeInjury: state.activeInjury ?? null,
     }),
   },
   {

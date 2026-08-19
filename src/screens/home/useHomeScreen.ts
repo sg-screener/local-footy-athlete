@@ -304,7 +304,7 @@ export function useHomeScreen() {
   const temporarySourceFacts = useProgramStore((s) =>
     s.acceptedMaterialContext.temporarySourceFacts);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  // `activeInjury`, `dismissedCoachNoteIds`, `athletePrefs` and
+  // `dismissedCoachNoteIds`, `athletePrefs` and
   // `modalityPreferences` were read here ONLY to feed the inline
   // `selectActiveCoachNotes` memo above. That memo is now `useActiveModifiers`,
   // which subscribes to the same four itself, so these four reads lost their

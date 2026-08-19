@@ -164,20 +164,15 @@ export function buildProgramTabProjectedWeek(args: {
       day.date,
     );
     const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
-    if (hasAcceptedWeekContract(args.state, day.date) &&
-      !args.state.activeInjury && !hasTemporaryFactProjection) {
+    if (hasAcceptedWeekContract(args.state, day.date) && !hasTemporaryFactProjection) {
       return day;
     }
     const projectionConstraints = hasAcceptedWeekContract(args.state, day.date)
       ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
       : dayActiveConstraints;
     const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
-    const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
     return projectVisibleDay({
       day,
-      activeInjury: !canonicalInjuryProjection && args.state.activeInjury
-        ? { ...args.state.activeInjury, rules: args.state.activeInjury.rules ?? [] }
-        : null,
       extraConstraints,
       overrideContext: args.overrideContexts?.[day.date],
       todayISO: args.todayISO,
@@ -199,23 +194,18 @@ export function buildDayWorkoutProjectedDay(args: {
     args.date,
   );
   const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
-  if (hasAcceptedWeekContract(args.state, args.date) &&
-    !args.state.activeInjury && !hasTemporaryFactProjection) {
+  if (hasAcceptedWeekContract(args.state, args.date) && !hasTemporaryFactProjection) {
     return raw;
   }
   const projectionConstraints = hasAcceptedWeekContract(args.state, args.date)
     ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
     : dayActiveConstraints;
   const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
-  const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
   const prefs =
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
   return projectVisibleDay({
     day: raw,
-    activeInjury: !canonicalInjuryProjection && args.state.activeInjury
-      ? { ...args.state.activeInjury, rules: args.state.activeInjury.rules ?? [] }
-      : null,
     extraConstraints,
     overrideContext: args.overrideContext,
     todayISO: args.todayISO,

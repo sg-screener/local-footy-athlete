@@ -12,7 +12,6 @@ import type {
 import type { CalendarDayType } from './calendarStore';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
-import type { InjuryState } from '../utils/injuryProgression';
 import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
 import {
   isTemporarySourceFactConstraint,
@@ -216,7 +215,6 @@ export interface AcceptedStateTransactionProposal {
   markedDays?: Record<string, CalendarDayType>;
   readinessSignalsByDate?: Record<string, ReadinessSignal>;
   activeConstraints?: ActiveConstraint[];
-  activeInjury?: InjuryState | null;
   injuryEpisodes?: InjuryEpisodeV1[];
   temporarySourceFacts?: TemporarySourceFact[];
   acceptedCompositionBase?: AcceptedCompositionBaseV1 | null;
@@ -297,7 +295,6 @@ function materialContext(state: ProgramState): AcceptedMaterialContext {
       useReadinessStore.getState().signalsByDate,
     ),
     activeConstraints: normalizeAcceptedArray(useCoachUpdatesStore.getState().activeConstraints),
-    activeInjury: useCoachUpdatesStore.getState().activeInjury ?? null,
     // R3: THE LIFE-FACTS ARE INPUTS AND THIS BRANCH USED TO DROP THEM.
     //
     // Cold start composes the accepted context from the armoured input stores.
@@ -721,9 +718,6 @@ export function stageAcceptedStateTransaction(
     activeConstraints: proposal.activeConstraints === undefined
       ? priorContext.activeConstraints
       : proposal.activeConstraints,
-    activeInjury: proposal.activeInjury === undefined
-      ? priorContext.activeInjury
-      : proposal.activeInjury,
     injuryEpisodes: proposal.injuryEpisodes === undefined
       ? priorContext.injuryEpisodes
       : proposal.injuryEpisodes,
@@ -946,7 +940,7 @@ export function commitAcceptedStateTransaction(
     throw error;
   }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+  if (proposal.activeConstraints !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     for (const microcycle of staged.program.currentProgram?.microcycles ?? []) {
       equivalenceWeeks.add(microcycle.startDate.slice(0, 10));
@@ -1091,11 +1085,10 @@ export function commitAcceptedStateTransaction(
       endReadinessResetAction(readinessResetActionId);
     }
   }
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+  if (proposal.activeConstraints !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: staged.context.activeConstraints,
-      activeInjury: staged.context.activeInjury,
     });
   }
   if (staged.context.acceptedProfileSnapshot) {
@@ -1131,9 +1124,9 @@ export function commitAcceptedStateTransaction(
   });
   if (trace && diagnosticsEnabled && beforeContext) {
     const activeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
-      .buildActiveCoachNotes(staged.context.activeConstraints, staged.context.activeInjury);
+      .buildActiveCoachNotes(staged.context.activeConstraints);
     const beforeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
-      .buildActiveCoachNotes(beforeContext.activeConstraints, beforeContext.activeInjury);
+      .buildActiveCoachNotes(beforeContext.activeConstraints);
     const beforeIds = new Set(beforeNotes.map((note) => note.id));
     const afterIds = new Set(activeNotes.map((note) => note.id));
     const afterConstraintIds = new Set(staged.context.activeConstraints.map((constraint) => constraint.id));
@@ -1166,10 +1159,7 @@ export function commitAcceptedStateTransaction(
           ? 'owned_override_removed_for_visible_reprojection'
           : 'owned_override_still_present',
       noteStateMatchesAcceptedProvenance: activeNotes.every((note) =>
-        afterConstraintIds.has(note.constraintId) || (
-          staged.context.activeInjury &&
-          note.constraintId === 'legacy_active_injury'
-        )),
+        afterConstraintIds.has(note.constraintId)),
       acceptedConstraintIdsPreserved: staged.context.activeConstraints
         .filter((constraint) => beforeConstraintIds.has(constraint.id))
         .map((constraint) => constraint.id),

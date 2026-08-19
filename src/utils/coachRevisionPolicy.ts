@@ -64,7 +64,6 @@ function canonicalTemplateSectionSignature(
       indicator: null,
       workout: canonical,
     } as ResolvedDay,
-    activeInjury: null,
     todayISO,
   }).day;
   const section = snapshotProjectedDay(projected).workout?.sections[0];

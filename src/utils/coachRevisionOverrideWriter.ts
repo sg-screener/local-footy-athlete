@@ -341,7 +341,6 @@ export function buildWorkoutOverrideFromRevision(args: {
       workout,
       source: 'manual' as any,
     },
-    activeInjury: null,
     todayISO: args.todayISO,
   }).day;
   const projectedDay = snapshotProjectedDay(projected);

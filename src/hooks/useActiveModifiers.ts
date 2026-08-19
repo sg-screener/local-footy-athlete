@@ -81,7 +81,6 @@ export function useActiveModifiers(
   input: ActiveModifiersSnapshotInput = {},
 ): ActiveModifiers {
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
@@ -92,7 +91,6 @@ export function useActiveModifiers(
   const modifiers = useMemo(
     () => selectActiveCoachNotes({
       activeConstraints,
-      activeInjury,
       dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,
@@ -103,7 +101,6 @@ export function useActiveModifiers(
     } as Parameters<typeof selectActiveCoachNotes>[0]),
     [
       activeConstraints,
-      activeInjury,
       dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,

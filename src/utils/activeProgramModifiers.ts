@@ -42,7 +42,6 @@ import type {
   WeekKind,
   Workout,
 } from '../types/domain';
-import type { InjuryState } from './injuryProgression';
 import type { ReadinessSignal } from './readiness';
 import {
   severityHasModerateEffect,
@@ -59,7 +58,6 @@ export type ActiveProgramModifierType =
 
 export type ActiveProgramModifierSource =
   | 'active_constraint'
-  | 'legacy_active_injury'
   | 'athlete_preferences'
   | 'modality_preferences'
   | 'profile_availability'
@@ -188,7 +186,6 @@ export interface ActiveProgramModifier {
 
 export interface ActiveProgramModifierSnapshot {
   activeConstraints?: readonly ActiveConstraint[] | null;
-  activeInjury?: InjuryState | null;
   athletePrefs?: AthletePoolPrefs | null;
   modalityPreferences?: Record<string, ModalityPreference> | null;
   onboardingData?: OnboardingData | null;
@@ -886,23 +883,6 @@ function isActiveAvailabilityConstraint(
   return true;
 }
 
-function legacyActiveInjuryConstraint(injury: InjuryState): ActiveInjuryConstraint {
-  return {
-    id: `injury-${(injury.bucket || injury.bodyPart || 'unknown').toLowerCase()}`,
-    type: 'injury',
-    bodyPart: injury.bodyPart,
-    bucket: injury.bucket,
-    severity: injury.severity,
-    status: injury.status,
-    startDate: injury.startDate,
-    lastUpdatedAt: injury.lastUpdatedAt,
-    rules: Array.isArray(injury.rules) ? [...injury.rules] : [],
-    safeFocus: [],
-    advice: [],
-    modifierAffects: ['current_week', 'future_generation'],
-  };
-}
-
 function injuryModifier(
   c: ActiveInjuryConstraint,
   source: ActiveProgramModifierSource,
@@ -930,9 +910,7 @@ function injuryModifier(
     title: c.modifierTitle ?? (isSerious ? 'Training paused for injury' : `${displayPart} issue active`),
     body: c.modifierBody ?? fallbackBody,
     severity: c.severity,
-    affects: source === 'legacy_active_injury'
-      ? ['current_week', 'future_generation']
-      : modifierAffects(c, []),
+    affects: modifierAffects(c, []),
     actions: c.injuryEpisodeId
       ? [
           { kind: 'clear_injury', label: 'Injury resolved' },
@@ -1454,25 +1432,6 @@ export function selectActiveProgramModifiers(
   const activeConstraints = [...(snapshot.activeConstraints ?? [])]
     .filter((constraint) => !isExpiredActiveConstraint(constraint, todayISO));
 
-  if (
-    snapshot.activeInjury &&
-    snapshot.activeInjury.status !== 'resolved' &&
-    !activeConstraints.some((c) => c.type === 'injury' && c.status !== 'resolved')
-  ) {
-    addUnique(
-      out,
-      seen,
-      proofGateInjuryModifier(
-        injuryModifier(
-          legacyActiveInjuryConstraint(snapshot.activeInjury),
-          'legacy_active_injury',
-        ),
-        legacyActiveInjuryConstraint(snapshot.activeInjury),
-        snapshot.visibleWeekDays,
-      ),
-    );
-  }
-
   const activePreferenceExercises = new Set<string>();
   const activePreferenceAlternatives = new Set<string>();
 
@@ -1563,7 +1522,6 @@ export function selectActiveProgramModifiers(
 export function getActiveProgramModifiers(todayISO: string = todayISOLocal()): ActiveProgramModifier[] {
   return selectActiveProgramModifiers({
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    activeInjury: useCoachUpdatesStore.getState().activeInjury,
     athletePrefs: useAthletePreferencesStore.getState().prefs,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
     onboardingData: useProfileStore.getState().onboardingData,
@@ -1596,8 +1554,7 @@ function mergeClearedOverrideDates(...groups: readonly string[][]): string[] {
 function hasLiveInjurySource(): boolean {
   const store = useCoachUpdatesStore.getState();
   return store.activeConstraints.some((constraint) =>
-    constraint.type === 'injury' && constraint.status !== 'resolved') ||
-    (!!store.activeInjury && store.activeInjury.status !== 'resolved');
+    constraint.type === 'injury' && constraint.status !== 'resolved');
 }
 
 export function clearActiveProgramModifier(
@@ -1661,13 +1618,6 @@ export function clearActiveProgramModifier(
         );
       }
       if (existing.type === 'equipment') rebuildRequired = true;
-    } else if (store.activeInjury) {
-      clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, null);
-      store.setActiveInjury(null);
-      clearedOverrideDates = mergeClearedOverrideDates(
-        clearedOverrideDates,
-        removeInjuryOverridesFromDate(todayISOLocal()),
-      );
     }
     if (modifier.type === 'exercise_adjustment') {
       const prefStore = useAthletePreferencesStore.getState();
@@ -1677,9 +1627,6 @@ export function clearActiveProgramModifier(
       if (typeof alternative === 'string') prefStore.removePinned(alternative);
       rebuildRequired = true;
     }
-  } else if (modifier.source === 'legacy_active_injury') {
-    useCoachUpdatesStore.getState().setActiveInjury(null);
-    clearedOverrideDates = removeInjuryOverridesFromDate(todayISOLocal());
   } else if (modifier.source === 'athlete_preferences') {
     const prefStore = useAthletePreferencesStore.getState();
     const exercise = modifier.payload?.exercise;

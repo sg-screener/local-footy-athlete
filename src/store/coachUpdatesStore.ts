@@ -22,7 +22,7 @@
  *   - clearAllCoachUpdates                       — nuke (test/reset use)
  *
  * ARMOURED 2026-08-03 (`docs/STORE_ARMOUR_RECIPE_2026-08-03.md`): update
- * cards, active constraints and the legacy activeInjury alias are the
+ * cards and active constraints are the
  * athlete's record of WHY their week changed, so every write of them goes
  * through `applyCoachUpdatesWrite` — one door, typed refusals of the wipe
  * shape, every writer on the tape, and a quarantine boundary at the
@@ -43,7 +43,6 @@ import {
 } from './acceptedStateColdStart';
 import type {
   InjuryState,
-  InjuryHistoryEntry,
   InjuryStatus,
 } from '../utils/injuryProgression';
 import type { EquipmentTag } from '../data/exercisePools';
@@ -86,7 +85,7 @@ export interface CoachUpdate {
   changes: string[];
   /**
    * Per-session change bullets for NEXT week (constraint-projection
-   * derived — the activeInjury / exposure engine reshaped future
+   * derived — the exposure engine reshaped future
    * sessions silently; this surfaces them on the card). Optional for
    * back-compat — older entries simply don't render the section.
    */
@@ -139,10 +138,6 @@ export interface CoachUpdate {
  * soreness, schedule, preference) becomes one ActiveConstraint entry.
  * The visible projection + Coach Update card derive from the array,
  * so adding a second injury never silently overwrites the first.
- *
- * `activeInjury` is kept as a derived alias for the FIRST active
- * injury constraint — back-compat for callers that haven't migrated
- * to the array yet.
  */
 export type ActiveConstraintType =
   | 'injury'
@@ -449,15 +444,6 @@ interface CoachUpdatesState {
   dismissedCoachNoteIds: string[];
   dismissCoachNote: (noteId: string) => void;
 
-  /**
-   * Single active injury — DERIVED ALIAS for the FIRST active injury
-   * constraint. Kept for back-compat with callers (resolver,
-   * progression handler) that haven't migrated to `activeConstraints`
-   * yet. Setting `activeInjury` is a write-through that adds/updates
-   * the matching constraint in the array.
-   */
-  activeInjury: InjuryState | null;
-
   /** Upsert (creates a new entry or replaces the existing one for the same week). */
   upsertCoachUpdate: (
     weekStartISO: string,
@@ -469,27 +455,6 @@ interface CoachUpdatesState {
 
   /** Wipe everything (used by tests + Settings → Reset). */
   clearAllCoachUpdates: () => void;
-
-  /**
-   * Set the active injury — used on the very first injury report. Past
-   * the first report, prefer `transitionInjuryStatus` so history is
-   * preserved.
-   */
-  setActiveInjury: (state: InjuryState | null) => void;
-
-  /**
-   * Apply a status/severity transition + append a history entry.
-   * Returns the resulting InjuryState (or null if there was nothing to
-   * transition from).
-   */
-  transitionInjuryStatus: (
-    args: {
-      toStatus: InjuryStatus;
-      severity: number;
-      note: string;
-      timestamp?: string;
-    },
-  ) => InjuryState | null;
 
   // ─── Multi-constraint API ────────────────────────────────────────
   /** Add a new active constraint (or upsert by id). */
@@ -507,7 +472,7 @@ export const COACH_UPDATES_PERSISTENCE_KEY = 'coach-updates';
 /**
  * THE STORE'S WRITER BOUNDARY, declared once. A payload carries the athlete's
  * material when any part of the record survives in it — one update card, one
- * active constraint, or the legacy activeInjury alias. Unreadable bytes prove
+ * active constraint. Unreadable bytes prove
  * nothing and answer no.
  */
 registerQuarantineBoundary(COACH_UPDATES_PERSISTENCE_KEY, {
@@ -517,12 +482,10 @@ registerQuarantineBoundary(COACH_UPDATES_PERSISTENCE_KEY, {
         state?: {
           updatesByWeek?: Record<string, CoachUpdate>;
           activeConstraints?: ActiveConstraint[];
-          activeInjury?: InjuryState | null;
         };
       }).state;
       return Object.keys(state?.updatesByWeek ?? {}).length > 0
-        || (state?.activeConstraints ?? []).length > 0
-        || (state?.activeInjury ?? null) !== null;
+        || (state?.activeConstraints ?? []).length > 0;
     } catch {
       return false;
     }
@@ -564,35 +527,6 @@ export const coachUpdatesGuardedStorage = {
     }),
   removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
 };
-
-function legacyInjuryForConstraints(
-  constraints: readonly ActiveConstraint[],
-  history: readonly InjuryHistoryEntry[] = [],
-): InjuryState | null {
-  const primary = constraints
-    .filter((constraint): constraint is ActiveInjuryConstraint =>
-      constraint.type === 'injury' && constraint.status !== 'resolved')
-    .sort((left, right) =>
-      (right.lastUpdatedAt || '').localeCompare(left.lastUpdatedAt || ''))[0];
-  if (!primary) return null;
-  return {
-    bodyPart: primary.bodyPart,
-    bucket: primary.bucket,
-    severity: primary.severity,
-    initialSeverity: primary.severity,
-    status: primary.status,
-    rules: Array.isArray(primary.rules) ? [...primary.rules] : [],
-    seriousSymptoms: primary.seriousSymptoms,
-    seriousSymptom: primary.seriousSymptom,
-    adjustmentLevel: primary.adjustmentLevel,
-    safeFocus: [...primary.safeFocus],
-    advice: [...primary.advice],
-    startDate: primary.startDate,
-    lastUpdatedAt: primary.lastUpdatedAt,
-    createdAt: primary.startDate,
-    history: [...history],
-  };
-}
 
 function commitConstraintProgramTransaction(
   proposedConstraints: readonly ActiveConstraint[],
@@ -682,10 +616,6 @@ function commitConstraintProgramTransaction(
       operation: 'forward_decision',
       reason: 'constraint:update',
       activeConstraints: [...proposedConstraints],
-      activeInjury: legacyInjuryForConstraints(
-        proposedConstraints,
-        getAcceptedInjuryHistory(),
-      ),
       });
       // The commit is a write of accepted truth, and it may legitimately
       // empty the store (the last constraint resolved, clearAll). It runs
@@ -729,13 +659,6 @@ function commitConstraintProgramTransaction(
       safetyProjectionInProgress = false;
     }
   });
-}
-
-function getAcceptedInjuryHistory(): InjuryHistoryEntry[] | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const context = require('./programStore').useProgramStore.getState()
-    .acceptedMaterialContext;
-  return context?.activeInjury?.history;
 }
 
 function hasCanonicalInjuryOwnership(): boolean {
@@ -792,7 +715,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   persist(
     (set, get) => ({
       updatesByWeek: {},
-      activeInjury: null,
       activeConstraints: [],
       dismissedCoachNoteIds: [],
       dismissCoachNote: (noteId) => set((state) => ({
@@ -855,7 +777,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           applyCoachUpdatesWrite({
             next: {
               updatesByWeek: {},
-              activeInjury: hasCanonicalInjuryOwnership() ? get().activeInjury : null,
               activeConstraints: hasCanonicalTemporaryFactOwnership()
                 ? canonicalTemporaryFactCompatibilityConstraints()
                 : canonicalInjuryCompatibilityConstraints(),
@@ -863,78 +784,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
             },
             writer: 'reset',
           })),
-
-      setActiveInjury: (state) => {
-        if (hasCanonicalInjuryOwnership()) return;
-        // Write-through: the legacy single-slot setter ALSO mirrors
-        // into activeConstraints so multi-constraint consumers see
-        // the new injury without a separate call.
-        if (state === null) {
-          // Clearing the legacy slot removes any injury constraints
-          // for the same body part — but other injury constraints
-          // (e.g. shoulder when this clears hammy) survive.
-          const prior = get().activeInjury;
-          const id = prior
-            ? `injury-${(prior.bucket || prior.bodyPart || 'unknown').toLowerCase()}`
-            : null;
-          const remaining = id
-            ? get().activeConstraints.filter((constraint) => constraint.id !== id)
-            : get().activeConstraints;
-          const nextActiveInjury = legacyInjuryForConstraints(
-            remaining,
-            get().activeInjury?.history,
-          );
-          commitConstraintProgramTransaction(remaining, () =>
-            applyCoachUpdatesWrite({
-              next: { activeInjury: nextActiveInjury, activeConstraints: remaining },
-              writer: 'constraint_transaction',
-            }));
-          return;
-        }
-        const id = `injury-${(state.bucket || state.bodyPart || 'unknown').toLowerCase()}`;
-        // Staged reintroduction: when this update improves on a previous
-        // severity for the same injury, record that previous value so the
-        // restriction pipeline relaxes at most one band at a time. Respect a
-        // caller-provided priorSeverity (guided flow); otherwise derive it from
-        // the value being replaced. Cleared/worsening/stable reports carry none.
-        const prevConstraint = get().activeConstraints.find(
-          (c): c is ActiveInjuryConstraint => c.id === id && c.type === 'injury',
-        );
-        const prevSeverity = prevConstraint?.severity ?? get().activeInjury?.severity;
-        const priorSeverity =
-          typeof state.priorSeverity === 'number'
-            ? state.priorSeverity
-            : typeof prevSeverity === 'number' && state.severity > 0 && state.severity < prevSeverity
-              ? prevSeverity
-              : undefined;
-        const stateWithPrior: InjuryState =
-          priorSeverity === undefined ? state : { ...state, priorSeverity };
-        const next: ActiveInjuryConstraint = {
-          id,
-          type: 'injury',
-          bodyPart: state.bodyPart,
-          bucket: state.bucket,
-          severity: state.severity,
-          ...(priorSeverity === undefined ? {} : { priorSeverity }),
-          status: state.status,
-          startDate: state.startDate,
-          lastUpdatedAt: state.lastUpdatedAt,
-          // Defensive: older callers / test fixtures may build an
-          // InjuryState without `rules` populated. Default to [] so
-          // we never crash spreading undefined.
-          rules: Array.isArray(state.rules) ? [...state.rules] : [],
-          safeFocus: [],
-          advice: [],
-          modifierAffects: [...INJURY_MODIFIER_AFFECTS],
-        };
-        const existing = get().activeConstraints.filter((c) => c.id !== id);
-        const nextConstraints = [...existing, next];
-        commitConstraintProgramTransaction(nextConstraints, () =>
-          applyCoachUpdatesWrite({
-            next: { activeInjury: stateWithPrior, activeConstraints: nextConstraints },
-            writer: 'constraint_transaction',
-          }));
-      },
 
       upsertActiveConstraint: (c) => {
         if (c.type === 'injury' && hasCanonicalInjuryOwnership()) return;
@@ -948,7 +797,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
             publishAcceptedCoachUpdatesCompatibilityMirror({
               activeConstraints: accepted.activeConstraints,
-              activeInjury: accepted.activeInjury,
             });
           }
           return;
@@ -958,25 +806,11 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           x.id !== nextConstraint.id &&
           !sharesGameChangePresentationSlot(x, nextConstraint));
         const nextConstraints = [...filtered, nextConstraint];
-        // Mirror back to legacy activeInjury when the constraint is
-        // an injury — pick the most recently-touched as "primary".
-        if (nextConstraint.type === 'injury') {
-          const legacy = legacyInjuryForConstraints(
-            nextConstraints,
-            get().activeInjury?.history,
-          );
-          commitConstraintProgramTransaction(nextConstraints, () =>
-            applyCoachUpdatesWrite({
-              next: { activeConstraints: nextConstraints, activeInjury: legacy },
-              writer: 'constraint_transaction',
-            }));
-        } else {
-          commitConstraintProgramTransaction(nextConstraints, () =>
-            applyCoachUpdatesWrite({
-              next: { activeConstraints: nextConstraints },
-              writer: 'constraint_transaction',
-            }));
-        }
+        commitConstraintProgramTransaction(nextConstraints, () =>
+          applyCoachUpdatesWrite({
+            next: { activeConstraints: nextConstraints },
+            writer: 'constraint_transaction',
+          }));
       },
 
       removeActiveConstraint: (id) => {
@@ -992,28 +826,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
             publishAcceptedCoachUpdatesCompatibilityMirror({
               activeConstraints: accepted.activeConstraints,
-              activeInjury: accepted.activeInjury,
             });
           }
           return;
         }
         const remaining = get().activeConstraints.filter((c) => c.id !== id);
-        // activeInjury is a derived alias. Recompute whenever any injury is
-        // removed; constraint ids are not required to use the legacy format.
-        if (removed?.type === 'injury') {
-          const legacy = legacyInjuryForConstraints(remaining);
-          commitConstraintProgramTransaction(remaining, () =>
-            applyCoachUpdatesWrite({
-              next: { activeConstraints: remaining, activeInjury: legacy },
-              writer: 'constraint_transaction',
-            }));
-        } else {
-          commitConstraintProgramTransaction(remaining, () =>
-            applyCoachUpdatesWrite({
-              next: { activeConstraints: remaining },
-              writer: 'constraint_transaction',
-            }));
-        }
+        commitConstraintProgramTransaction(remaining, () =>
+          applyCoachUpdatesWrite({
+            next: { activeConstraints: remaining },
+            writer: 'constraint_transaction',
+          }));
       },
 
       setActiveConstraints: (constraints) => {
@@ -1029,65 +851,13 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
               ...canonicalInjuryCompatibilityConstraints(),
             ]
           : requested;
-        const legacy = legacyInjuryForConstraints(
-          nextConstraints,
-          get().activeInjury?.history,
-        );
         commitConstraintProgramTransaction(nextConstraints, () =>
           applyCoachUpdatesWrite({
-            next: { activeConstraints: [...nextConstraints], activeInjury: legacy },
+            next: { activeConstraints: [...nextConstraints] },
             writer: 'constraint_transaction',
           }));
       },
 
-      transitionInjuryStatus: ({ toStatus, severity, note, timestamp }) => {
-        const current = get().activeInjury;
-        if (!current) return null;
-        if (hasCanonicalInjuryOwnership()) return current;
-        const nowISO = timestamp ?? new Date().toISOString();
-        const entry: InjuryHistoryEntry = {
-          timestamp: nowISO,
-          fromStatus: current.status,
-          toStatus,
-          severity,
-          note,
-        };
-        // Refresh the rules snapshot to match the new severity. The
-        // resolver-level filter doesn't read this field (it derives
-        // from `severity` directly), but UI surfaces (Coach Update
-        // card, debug screens) read `state.rules` as a fast path.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { buildInjuryPolicy } = require('../utils/programAdjustmentEngine');
-        const refreshedRules: string[] =
-          toStatus === 'resolved'
-            ? []
-            : [...buildInjuryPolicy(current.bucket as any, severity).globalRules];
-        const next: InjuryState = {
-          ...current,
-          severity,
-          status: toStatus,
-          rules: refreshedRules,
-          lastUpdatedAt: nowISO,
-          history: [...current.history, entry],
-        };
-        const id = `injury-${(current.bucket || current.bodyPart || 'unknown').toLowerCase()}`;
-        const nextConstraints = get().activeConstraints.map((constraint) =>
-          constraint.id === id && constraint.type === 'injury'
-            ? {
-                ...constraint,
-                severity,
-                status: toStatus,
-                rules: refreshedRules,
-                lastUpdatedAt: nowISO,
-              }
-            : constraint);
-        commitConstraintProgramTransaction(nextConstraints, () =>
-          applyCoachUpdatesWrite({
-            next: { activeInjury: next, activeConstraints: nextConstraints },
-            writer: 'constraint_transaction',
-          }));
-        return next;
-      },
     }),
     {
       name: COACH_UPDATES_PERSISTENCE_KEY,
@@ -1096,14 +866,12 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         const incoming = (persisted as Partial<CoachUpdatesState> | undefined) ?? {};
         const context = normalizeAcceptedMaterialContext({
           activeConstraints: incoming.activeConstraints,
-          activeInjury: incoming.activeInjury,
         });
         return {
           ...current,
           ...incoming,
           updatesByWeek: normalizeAcceptedKeyedMap<CoachUpdate>(incoming.updatesByWeek),
           activeConstraints: context.activeConstraints,
-          activeInjury: context.activeInjury,
           dismissedCoachNoteIds: Array.isArray(incoming.dismissedCoachNoteIds)
             ? Array.from(new Set(incoming.dismissedCoachNoteIds.filter((id): id is string =>
                 typeof id === 'string')))
@@ -1142,7 +910,6 @@ function setCoachUpdatesCompatibilityMirror(
  * compatibility read model without starting a second program transaction. */
 export function publishAcceptedCoachUpdatesCompatibilityMirror(args: {
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
 }): void {
   setCoachUpdatesCompatibilityMirror(args, 'accepted_mirror', 'accepted_mirror_publish');
 }
@@ -1151,7 +918,6 @@ export function publishAcceptedCoachUpdatesCompatibilityMirror(args: {
 export function restoreCoachUpdatesCompatibilityMirror(args: {
   updatesByWeek: Record<string, CoachUpdate>;
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
   dismissedCoachNoteIds: string[];
 }): void {
   setCoachUpdatesCompatibilityMirror(args, 'coach_mutation_mirror', 'coach_mutation_rollback');
@@ -1169,7 +935,6 @@ useCoachUpdatesStore.subscribe((state, previous) => {
   if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: accepted.activeConstraints,
-      activeInjury: accepted.activeInjury,
     });
     return;
   }
@@ -1194,7 +959,7 @@ export function getActiveCoachUpdate(weekStartISO: string): CoachUpdate | null {
  * (`docs/STORE_ARMOUR_RECIPE_2026-08-03.md`):
  *
  *   1. ONE DOOR. Every write of the material slices — update cards, active
- *      constraints, the legacy activeInjury alias — goes through here. The
+ *      constraints — goes through here. The
  *      card actions, the constraint-transaction commits, the accepted mirror
  *      publish and the rollback restore are its writers, not exceptions.
  *   2. THE DEFAULT IS NOT A VALUE. A patch whose EFFECTIVE result is the
@@ -1229,7 +994,6 @@ export type CoachUpdatesWriterId =
 export interface CoachUpdatesMaterialPatch {
   updatesByWeek?: Record<string, CoachUpdate>;
   activeConstraints?: ActiveConstraint[];
-  activeInjury?: InjuryState | null;
   dismissedCoachNoteIds?: string[];
 }
 
@@ -1264,12 +1028,10 @@ function activeCoachUpdatesResetActionId(): string | undefined {
 function materialCounts(state: {
   updatesByWeek: Record<string, CoachUpdate>;
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
-}): { updates: number; constraints: number; injury: number } {
+}): { updates: number; constraints: number } {
   return {
     updates: Object.keys(state.updatesByWeek).length,
     constraints: state.activeConstraints.length,
-    injury: state.activeInjury ? 1 : 0,
   };
 }
 
@@ -1293,8 +1055,6 @@ export function applyCoachUpdatesWrite(args: {
       updateCountAfter: after.updates,
       constraintCountBefore: before.constraints,
       constraintCountAfter: after.constraints,
-      activeInjuryCountBefore: before.injury,
-      activeInjuryCountAfter: after.injury,
       ...(reason ? { internalResultCode: reason } : {}),
       ...(resetActionId ? { resetActionId } : {}),
     });
@@ -1303,12 +1063,9 @@ export function applyCoachUpdatesWrite(args: {
   const effective = materialCounts({
     updatesByWeek: args.next.updatesByWeek ?? current.updatesByWeek,
     activeConstraints: args.next.activeConstraints ?? current.activeConstraints,
-    activeInjury: args.next.activeInjury !== undefined
-      ? args.next.activeInjury
-      : current.activeInjury,
   });
-  const nextIsTheDefault = effective.updates + effective.constraints + effective.injury === 0;
-  const beforeIsMaterial = before.updates + before.constraints + before.injury > 0;
+  const nextIsTheDefault = effective.updates + effective.constraints === 0;
+  const beforeIsMaterial = before.updates + before.constraints > 0;
   const effectiveResetActionId = args.resetActionId ?? activeCoachUpdatesResetActionId();
   if (nextIsTheDefault && beforeIsMaterial) {
     if (!effectiveResetActionId) {
@@ -1328,7 +1085,6 @@ export function applyCoachUpdatesWrite(args: {
   if (args.next.activeConstraints !== undefined) {
     patch.activeConstraints = args.next.activeConstraints;
   }
-  if (args.next.activeInjury !== undefined) patch.activeInjury = args.next.activeInjury;
   if (args.next.dismissedCoachNoteIds !== undefined) {
     patch.dismissedCoachNoteIds = args.next.dismissedCoachNoteIds;
   }

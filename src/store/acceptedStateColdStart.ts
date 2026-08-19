@@ -12,7 +12,6 @@ import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import type { CalendarDayType } from './calendarStore';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
-import type { InjuryState } from '../utils/injuryProgression';
 import {
   type InjuryEpisodeV1,
 } from '../rules/injuryEpisode';
@@ -37,7 +36,6 @@ export interface AcceptedMaterialContext {
   markedDays: Record<string, CalendarDayType>;
   readinessSignalsByDate: Record<string, ReadinessSignal>;
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
   /** Canonical temporary-injury source facts. Resolved episodes remain here. */
   injuryEpisodes: InjuryEpisodeV1[];
   /** Canonical temporary health source facts. Compatibility fields are derived. */
@@ -111,7 +109,6 @@ export function createEmptyAcceptedMaterialContext(): AcceptedMaterialContext {
     markedDays: {},
     readinessSignalsByDate: {},
     activeConstraints: [],
-    activeInjury: null,
     injuryEpisodes: [],
     temporarySourceFacts: [],
     acceptedCompositionBase: null,
@@ -140,7 +137,6 @@ export function normalizeAcceptedMaterialContext(
     : {
         injuryEpisodes: [],
         activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
-        activeInjury: isObjectRecord(value?.activeInjury) ? value.activeInjury : null,
         readinessSignalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(value?.readinessSignalsByDate),
       };
   const rawBase = value?.acceptedCompositionBase;
@@ -190,7 +186,6 @@ export function normalizeAcceptedMaterialContext(
     markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(value?.markedDays),
     readinessSignalsByDate: compatibility.readinessSignalsByDate,
     activeConstraints: compatibility.activeConstraints,
-    activeInjury: compatibility.activeInjury,
     injuryEpisodes: compatibility.injuryEpisodes,
     temporarySourceFacts,
     acceptedCompositionBase,
@@ -274,7 +269,6 @@ export function acceptedStatePresenceSummary(args: {
     markedDays: describe(args.context?.markedDays),
     readinessSignalsByDate: describe(args.context?.readinessSignalsByDate),
     activeConstraints: describe(args.context?.activeConstraints),
-    activeInjury: describe(args.context?.activeInjury),
     injuryEpisodes: describe(args.context?.injuryEpisodes),
     temporarySourceFacts: describe(args.context?.temporarySourceFacts),
     acceptedCompositionBase: describe(args.context?.acceptedCompositionBase),

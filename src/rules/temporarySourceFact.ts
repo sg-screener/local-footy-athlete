@@ -216,7 +216,6 @@ export type TemporarySourceFact =
 export interface TemporarySourceFactCompatibility {
   injuryEpisodes: InjuryEpisodeV1[];
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
   readinessSignalsByDate: Record<string, ReadinessSignal>;
 }
 
@@ -1150,7 +1149,6 @@ export function composeTemporarySourceFactCompatibility(args: {
       ...scheduleProjection(activeSchedule),
       ...timeCapProjection(activeTimeCaps),
     ],
-    activeInjury: injury.activeInjury,
     readinessSignalsByDate: {
       ...retainedSignals,
       ...readinessProjection(activeHealth),

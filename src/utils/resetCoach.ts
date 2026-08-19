@@ -13,7 +13,7 @@
  *
  *   clearCoachChat()             — clears CoachScreen chat messages
  *                                  and the pendingInjury ref. Preserves
- *                                  program + activeInjury (caller can
+ *                                  program + injury episodes (caller can
  *                                  combine with clearCoachAdjustments).
  *
  *   resetProgramAndOnboarding()  — full reset across all coach + program
@@ -86,9 +86,7 @@ export interface ResetDeps {
     clear: () => void;
   };
   coachUpdatesStore: {
-    getActiveInjury: () => unknown;
     getUpdatesByWeek: () => Record<string, unknown>;
-    setActiveInjury: (state: any) => void;
     clearAllCoachUpdates: () => void;
   };
   profileStore: {
@@ -154,10 +152,7 @@ function defaultDeps(): ResetDeps {
       clear: () => useProgramStore.getState().clear(),
     },
     coachUpdatesStore: {
-      getActiveInjury: () => useCoachUpdatesStore.getState().activeInjury,
       getUpdatesByWeek: () => useCoachUpdatesStore.getState().updatesByWeek,
-      setActiveInjury: (state) =>
-        useCoachUpdatesStore.getState().setActiveInjury(state),
       clearAllCoachUpdates: () =>
         useCoachUpdatesStore.getState().clearAllCoachUpdates(),
     },
@@ -290,7 +285,6 @@ export function buildDevPostOnboardingResetProfile(
  * marks, and user-authored manual overrides.
  *
  * Specifically:
- *   - activeInjury ⇒ null
  *   - all CoachUpdate cards ⇒ removed
  *   - dateOverrides where overrideContext.intent === 'injury' ⇒ removed
  *   - coach-authored coachNotes on remaining (non-injury) overrides ⇒
@@ -330,20 +324,13 @@ export function clearCoachAdjustments(opts?: {
       (c): c is ActivePreferenceConstraint => c.type === 'preference',
     );
 
-  // 1. Active injury — single record on coachUpdatesStore.
-  const activeInjury = deps.coachUpdatesStore.getActiveInjury();
-  if (activeInjury) {
-    deps.coachUpdatesStore.setActiveInjury(null);
-    summary.activeInjuryCleared = true;
-    logger.debug('[reset] active_injury_cleared');
-  }
-
-  // 2. Coach Update cards.
+  // 1. Coach Update cards.
+  // ⚠ The single-slot active-injury clear that stood here is deleted with
+  // the alias (2026-08-19). Clearing an injury is an episode operation and
+  // belongs to the injury-episode transaction.
   const updates = deps.coachUpdatesStore.getUpdatesByWeek();
   const updateCount = Object.keys(updates).length;
   if (updateCount > 0) {
-    // clearAllCoachUpdates also nulls activeInjury — already handled
-    // above but harmless to call again.
     deps.coachUpdatesStore.clearAllCoachUpdates();
     summary.coachUpdatesCleared = updateCount;
     logger.debug('[reset] coach_updates_cleared', { count: updateCount });
@@ -490,7 +477,7 @@ export function clearCoachAdjustments(opts?: {
  * Wipe the CoachScreen conversation. Clears the persisted coachStore
  * (conversations, messages) and the in-memory pending injury ref.
  *
- * Preserves: program, activeInjury, coachUpdates, overrides.
+ * Preserves: program, injury episodes, coachUpdates, overrides.
  *
  * Use when the user wants to start a fresh conversation but keep
  * their current program/injury state intact.

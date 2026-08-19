@@ -176,7 +176,7 @@ export interface ReversibleAdjustmentLinkedReduction {
 
 export interface ReversibleAdjustmentValidity {
   reversible: boolean;
-  source: 'runtime_exact_delta' | 'legacy_exact_user_removal' | 'legacy_after_state_only';
+  source: 'runtime_exact_delta';
   validWhile: string[];
   invalidWhen: string[];
 }
@@ -244,11 +244,6 @@ export interface ReversibleAdjustmentLedger {
   adjustments: ReversibleAdjustmentRecord[];
 }
 
-export type ReversibleAdjustmentMigrationContracts = Record<
-  string,
-  WeeklyExposureContractV2 | null | undefined
->;
-
 export function createEmptyReversibleAdjustmentLedger(): ReversibleAdjustmentLedger {
   return {
     protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
@@ -277,210 +272,12 @@ export function reversibleAdjustmentWorkoutFingerprint(
   });
 }
 
-function mondayForDate(date: string): string {
-  const value = new Date(`${date.slice(0, 10)}T12:00:00`);
-  value.setDate(value.getDate() - ((value.getDay() + 6) % 7));
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-}
-
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function workoutOnDate(workout: Workout | null, date: string): Workout | null {
-  return workout
-    ? { ...clone(workout), dayOfWeek: new Date(`${date}T12:00:00`).getDay() }
-    : null;
-}
-
-function adjustmentKindForLegacyConstraint(
-  constraint: UserRemovalConstraint,
-): ReversibleAdjustmentKind {
-  if (constraint.mutationKind === 'move') return 'session_move';
-  return constraint.scope === 'whole_session'
-    ? 'session_delete'
-    : 'session_component_delete';
-}
-
-function legacyOwnedDays(constraint: UserRemovalConstraint): ReversibleAdjustmentOwnedDayDelta[] {
-  const targetDate = constraint.targetDate.slice(0, 10);
-  const targetAfter = workoutOnDate(constraint.remainingWorkout, targetDate);
-  const targetBefore = workoutOnDate(constraint.originalWorkout, targetDate);
-  const owned: ReversibleAdjustmentOwnedDayDelta[] = [{
-    date: targetDate,
-    weekStart: mondayForDate(targetDate),
-    beforeWorkout: targetBefore,
-    beforeDateOverride: null,
-    beforeOverrideContext: null,
-    beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(targetDate, targetBefore),
-    afterFingerprint: reversibleAdjustmentWorkoutFingerprint(targetDate, targetAfter),
-    afterStableIdentity: targetAfter?.planEntryId ?? targetAfter?.id ?? null,
-    afterDateOverrideFingerprint: semanticFingerprint(null),
-    afterOverrideContextFingerprint: semanticFingerprint(null),
-  }];
-  if (constraint.mutationKind === 'move' && constraint.moveTargetDate) {
-    const moveDate = constraint.moveTargetDate.slice(0, 10);
-    const moveBefore = workoutOnDate(constraint.remainingWorkout, moveDate);
-    const moveAfter = workoutOnDate(constraint.movedWorkout ?? null, moveDate);
-    owned.push({
-      date: moveDate,
-      weekStart: mondayForDate(moveDate),
-      beforeWorkout: moveBefore,
-      beforeDateOverride: null,
-      beforeOverrideContext: null,
-      beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(moveDate, moveBefore),
-      afterFingerprint: reversibleAdjustmentWorkoutFingerprint(moveDate, moveAfter),
-      afterStableIdentity: moveAfter?.planEntryId ?? moveAfter?.id ?? null,
-      afterDateOverrideFingerprint: semanticFingerprint(null),
-      afterOverrideContextFingerprint: semanticFingerprint(null),
-    });
-  }
-  return owned;
-}
-
-/**
- * Lossless legacy migration is deliberately limited to UserRemovalConstraint.
- * Its exact original/remaining/moved prescriptions prove ownership. Fixture
- * Coach Notes contain after-state only and therefore never enter this ledger.
- */
-export function migrateLegacyUserRemovalConstraint(
-  constraint: UserRemovalConstraint,
-  acceptedRevision: number,
-  exposureContractsByWeek: ReversibleAdjustmentMigrationContracts = {},
-): ReversibleAdjustmentRecord | null {
-  if (!constraint?.id || !constraint.originalWorkout?.id) return null;
-  const ownedDays = legacyOwnedDays(constraint);
-  const affectedDates = ownedDays.map((entry) => entry.date).sort();
-  const affectedWeeks = Array.from(new Set(ownedDays.map((entry) => entry.weekStart))).sort();
-  const identity = constraint.targetPlanEntryId ?? constraint.targetWorkoutId;
-  const active = constraint.status === 'active';
-  const calendarFacts = constraint.wholeDayRestOwned
-    ? [{ date: constraint.targetDate, before: null, after: 'rest' as const }]
-    : [];
-  return {
-    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
-    id: `reversible-adjustment:legacy:${constraint.id}`,
-    kind: adjustmentKindForLegacyConstraint(constraint),
-    sourceActor: constraint.source === 'coach' ? 'coach' : 'athlete',
-    sourceSurface: 'hydration_migration',
-    sourceActionOrIntentId: constraint.id,
-    createdAt: constraint.createdAt,
-    acceptedRevision,
-    status: active ? 'active' : 'cleared',
-    clearedAt: constraint.restoredAt,
-    supersededById: null,
-    supersededReason: null,
-    affectedDates,
-    affectedWeeks,
-    rollingDependencyWeeks: affectedWeeks,
-    displacedOriginalState: {
-      ownedDays,
-      ownedWeeks: [],
-      calendarFacts,
-      userRemovalConstraint: clone(constraint),
-    },
-    acceptedAfterSemanticFingerprints: ownedDays.map((entry) => ({
-      date: entry.date,
-      fingerprint: entry.afterFingerprint,
-    })),
-    restorationTarget: {
-      kind: constraint.mutationKind === 'move'
-        ? 'session'
-        : constraint.scope === 'whole_session' ? 'session' : 'session_component',
-      dates: affectedDates,
-      stableIdentities: [identity],
-      componentScope: constraint.scope,
-    },
-    linkedConstraintIds: [],
-    linkedCalendarFacts: calendarFacts,
-    linkedOverrideOwners: [],
-    linkedOverlayIds: [],
-    linkedUserRemovalConstraintIds: [constraint.id],
-    linkedProvenanceIds: [],
-    linkedTypedReductions: legacyLinkedTypedReductions(
-      constraint.id,
-      exposureContractsByWeek,
-    ),
-    validity: {
-      reversible: true,
-      source: 'legacy_exact_user_removal',
-      validWhile: ['linked_user_removal_constraint_identity_matches'],
-      invalidWhen: ['accepted_after_semantic_fingerprint_changes'],
-    },
-    laterIntentPolicy: 'newer_athlete_intent_wins',
-  };
-}
-
-function legacyLinkedTypedReductions(
-  deletionIdentity: string,
-  exposureContractsByWeek: ReversibleAdjustmentMigrationContracts,
-): ReversibleAdjustmentLinkedReduction[] {
-  const linked = Object.entries(exposureContractsByWeek).flatMap(([weekStart, contract]) =>
-    (contract?.authorisedReductions ?? [])
-      .filter((entry) => entry.deletionIdentity === deletionIdentity)
-      .map((entry) => {
-        const reduction = {
-          weekStart,
-          metric: entry.metric,
-          reason: entry.reason,
-          originalApprovedTarget: entry.originalApprovedTarget,
-          reducedTarget: entry.reducedTarget,
-          detail: entry.detail,
-          deletionIdentity: entry.deletionIdentity ?? null,
-        };
-        return {
-          ...reduction,
-          fingerprint: semanticFingerprint(reduction),
-        };
-      }));
-  return Array.from(new Map(linked.map((entry) => [entry.fingerprint, entry])).values())
-    .sort((left, right) => left.weekStart.localeCompare(right.weekStart) ||
-      left.fingerprint.localeCompare(right.fingerprint));
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * READ-INGRESS LIFT for LR-26's after-side deletion (L15).
- *
- * A ledger already on the athlete's phone carries the superseded shape — full
- * `afterWorkout` / `afterDateOverride` / `afterOverrideContext` objects and no
- * identity or fingerprints. L15 says a superseded format lives on as a lift at
- * the boundary and is never written again, so the old objects are converted
- * here, once, on hydrate: the identity and the two fingerprints are exactly
- * what the readers consumed, so a lifted record verifies identically to the
- * record that produced it.
- *
- * The legacy keys are DROPPED rather than carried, which is what makes the
- * payload cut real for existing installs and not only for new writes.
- */
-function liftOwnedDayAfterSide(
-  owned: ReversibleAdjustmentOwnedDayDelta,
-): ReversibleAdjustmentOwnedDayDelta {
-  const legacy = owned as ReversibleAdjustmentOwnedDayDelta & {
-    afterWorkout?: Workout | null;
-    afterSurfaceWorkout?: Workout | null;
-    afterDateOverride?: Workout | null;
-    afterOverrideContext?: OverrideContext | null;
-  };
-  const lifted: ReversibleAdjustmentOwnedDayDelta = {
-    ...owned,
-    afterStableIdentity: owned.afterStableIdentity
-      ?? legacy.afterWorkout?.planEntryId
-      ?? legacy.afterWorkout?.id
-      ?? null,
-    afterDateOverrideFingerprint: owned.afterDateOverrideFingerprint
-      ?? semanticFingerprint(legacy.afterDateOverride ?? null),
-    afterOverrideContextFingerprint: owned.afterOverrideContextFingerprint
-      ?? semanticFingerprint(legacy.afterOverrideContext ?? null),
-  };
-  delete (lifted as { afterWorkout?: unknown }).afterWorkout;
-  delete (lifted as { afterSurfaceWorkout?: unknown }).afterSurfaceWorkout;
-  delete (lifted as { afterDateOverride?: unknown }).afterDateOverride;
-  delete (lifted as { afterOverrideContext?: unknown }).afterOverrideContext;
-  return lifted;
 }
 
 function validPersistedAdjustment(value: unknown): value is ReversibleAdjustmentRecord {
@@ -498,17 +295,13 @@ function validPersistedAdjustment(value: unknown): value is ReversibleAdjustment
 
 export function normalizeReversibleAdjustmentLedger(args: {
   value: Partial<ReversibleAdjustmentLedger> | null | undefined;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
-  acceptedRevision?: number;
-  exposureContractsByWeek?: ReversibleAdjustmentMigrationContracts;
 }): ReversibleAdjustmentLedger {
   const persisted = Array.isArray(args.value?.adjustments)
     ? args.value!.adjustments.filter(validPersistedAdjustment).map((adjustment) => ({
         ...clone(adjustment),
         displacedOriginalState: {
           ...clone(adjustment.displacedOriginalState),
-          ownedDays: (adjustment.displacedOriginalState.ownedDays ?? [])
-            .map((owned) => liftOwnedDayAfterSide(clone(owned))),
+          ownedDays: clone(adjustment.displacedOriginalState.ownedDays ?? []),
           ownedWeeks: clone(adjustment.displacedOriginalState.ownedWeeks ?? []),
           weekOverlay: clone(adjustment.displacedOriginalState.weekOverlay ?? null),
           sweptOverrides: clone(adjustment.displacedOriginalState.sweptOverrides ?? []),
@@ -523,36 +316,6 @@ export function normalizeReversibleAdjustmentLedger(args: {
         },
       }))
     : [];
-  const linkedRemovalIds = new Set(persisted.flatMap((adjustment) =>
-    adjustment.linkedUserRemovalConstraintIds ?? []));
-  for (const constraint of args.userRemovalConstraints ?? []) {
-    if (linkedRemovalIds.has(constraint.id)) continue;
-    const migrated = migrateLegacyUserRemovalConstraint(
-      constraint,
-      args.acceptedRevision ?? 0,
-      args.exposureContractsByWeek,
-    );
-    if (migrated) persisted.push(migrated);
-  }
-  for (let index = 0; index < persisted.length; index++) {
-    const adjustment = persisted[index];
-    const exactLinks = adjustment.linkedUserRemovalConstraintIds.flatMap((constraintId) =>
-      legacyLinkedTypedReductions(
-        constraintId,
-        args.exposureContractsByWeek ?? {},
-      ));
-    if (exactLinks.length === 0) continue;
-    const byFingerprint = new Map([
-      ...(adjustment.linkedTypedReductions ?? []),
-      ...exactLinks,
-    ].map((entry) => [entry.fingerprint, entry]));
-    persisted[index] = {
-      ...adjustment,
-      linkedTypedReductions: Array.from(byFingerprint.values()).sort((left, right) =>
-        left.weekStart.localeCompare(right.weekStart) ||
-        left.fingerprint.localeCompare(right.fingerprint)),
-    };
-  }
   persisted.sort((left, right) => left.createdAt.localeCompare(right.createdAt) ||
     left.id.localeCompare(right.id));
   return {

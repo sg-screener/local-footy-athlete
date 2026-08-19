@@ -654,7 +654,7 @@ export function buildCoachRevisionTemplateSection(
     indicator: null,
     workout,
   } as any;
-  const projected = projectVisibleDay({ day, activeInjury: null, todayISO: date }).day;
+  const projected = projectVisibleDay({ day, todayISO: date }).day;
   const snapshot = snapshotProjectedDay(projected);
   return snapshot.workout?.sections[0] ?? null;
 }

@@ -191,7 +191,6 @@ export interface DevE2EWitnessState {
   reversibleAdjustmentLedger?: ReversibleAdjustmentLedger;
   profile: OnboardingData;
   calendarMarks: Record<string, 'game' | 'rest' | 'noGame'>;
-  activeInjury: { bodyPart: string; severity: number } | null;
   activeConstraints: Array<{
     id: string;
     type: string;
@@ -1246,8 +1245,7 @@ function hasSourceFact(
   kind: Extract<DevE2EWitness, { kind: 'absent_source_fact' }>['factKind'],
 ): boolean {
   if (kind === 'injury') {
-    return !!state.activeInjury ||
-      (state.injuryEpisodes?.length ?? 0) > 0 ||
+    return (state.injuryEpisodes?.length ?? 0) > 0 ||
       (state.temporarySourceFacts ?? []).some((fact) => 'episodeId' in fact) ||
       state.activeConstraints.some((constraint) => constraint.type === 'injury');
   }
@@ -1358,8 +1356,8 @@ export function validateDevE2EWitnesses(
           candidate.id === witness.constraintId &&
           candidate.type === 'injury' &&
           candidate.injuryEpisodeId === witness.episodeId);
-        if (state.activeInjury?.bodyPart !== witness.bodyPart ||
-          state.activeInjury?.severity !== witness.severity ||
+        if (episode?.bodyPart !== witness.bodyPart ||
+          episode?.severity !== witness.severity ||
           episode?.legacyMigrationStatus !== 'native_v1' ||
           !sourceFact ||
           !constraint) {

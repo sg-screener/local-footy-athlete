@@ -83,13 +83,6 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
     const serialisedPacket = serialisePacketForLLM(packet);
     logger.debug('[coach-intent] input', {
       messageLength: packet.userMessage.length,
-      activeInjury: packet.activeInjury
-        ? {
-            bodyPart: packet.activeInjury.bodyPart,
-            severity: packet.activeInjury.severity,
-            status: packet.activeInjury.status,
-          }
-        : null,
       coachUpdate: packet.coachUpdate ? packet.coachUpdate.reason : null,
       packetBytes: serialisedPacket.length,
       todayISO: packet.todayISO,

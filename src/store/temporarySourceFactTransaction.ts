@@ -259,7 +259,6 @@ export function loadCanonicalTemporarySourceFactOwnership(now: string): Canonica
     temporarySourceFacts: facts,
     injuryEpisodes: compatibility.injuryEpisodes,
     activeConstraints: compatibility.activeConstraints,
-    activeInjury: compatibility.activeInjury,
     readinessSignalsByDate: compatibility.readinessSignalsByDate,
     acceptedCompositionBase: compositionBase,
   });
@@ -618,7 +617,6 @@ function commitDerivingSourceFactScopedRegen(args: {
     temporarySourceFacts: args.normalizedFacts,
     injuryEpisodes: args.compatibility.injuryEpisodes,
     activeConstraints: args.compatibility.activeConstraints,
-    activeInjury: args.compatibility.activeInjury,
     readinessSignalsByDate: args.compatibility.readinessSignalsByDate,
     acceptedCompositionBase: args.compositionBase,
     profile,
@@ -911,7 +909,6 @@ export async function commitTemporarySourceFactSet(
         temporarySourceFacts: normalizedFacts,
         injuryEpisodes: compatibility.injuryEpisodes,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
       });
@@ -966,7 +963,6 @@ export async function commitTemporarySourceFactSet(
         temporarySourceFacts: normalizedFacts,
         injuryEpisodes: compatibility.injuryEpisodes,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
         // Off the whole-week §18 re-gate: a deriving change was already gated

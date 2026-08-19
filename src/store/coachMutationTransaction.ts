@@ -101,7 +101,6 @@ interface AcceptedMirrorSnapshot {
   readinessSignalsByDate: ReturnType<typeof useReadinessStore.getState>['signalsByDate'];
   coachUpdatesByWeek: ReturnType<typeof useCoachUpdatesStore.getState>['updatesByWeek'];
   activeConstraints: ReturnType<typeof useCoachUpdatesStore.getState>['activeConstraints'];
-  activeInjury: ReturnType<typeof useCoachUpdatesStore.getState>['activeInjury'];
   dismissedCoachNoteIds: ReturnType<typeof useCoachUpdatesStore.getState>['dismissedCoachNoteIds'];
   mutationHistoryEntries: ReturnType<typeof useCoachMutationHistoryStore.getState>['entries'];
   modalityPreferences: ReturnType<typeof useCoachPreferencesStore.getState>['modalityPreferences'];
@@ -644,7 +643,6 @@ function restoreAcceptedInMemory(
   restoreCoachUpdatesCompatibilityMirror({
     updatesByWeek: clone(mirrors.coachUpdatesByWeek),
     activeConstraints: clone(mirrors.activeConstraints),
-    activeInjury: clone(mirrors.activeInjury),
     dismissedCoachNoteIds: clone(mirrors.dismissedCoachNoteIds),
   });
   // Through the mutation-history owner. A rollback restoring "no history yet"
@@ -759,7 +757,6 @@ function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
     readinessSignalsByDate: useReadinessStore.getState().signalsByDate,
     coachUpdatesByWeek: useCoachUpdatesStore.getState().updatesByWeek,
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    activeInjury: useCoachUpdatesStore.getState().activeInjury,
     dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
     mutationHistoryEntries: useCoachMutationHistoryStore.getState().entries,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
@@ -787,7 +784,6 @@ function serializeAcceptedMirrorEnvelopes(
       state: {
         updatesByWeek: mirrors.coachUpdatesByWeek,
         activeConstraints: mirrors.activeConstraints,
-        activeInjury: mirrors.activeInjury,
         dismissedCoachNoteIds: mirrors.dismissedCoachNoteIds,
       },
       version: 0,

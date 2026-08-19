@@ -397,7 +397,6 @@ export async function commitProfileProgramTransaction(
         profile: nextProfile,
         markedDays: nextMarkedDays,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,
         temporarySourceFacts: before.temporarySourceFacts,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,

@@ -186,37 +186,6 @@ export interface ScheduleState {
    */
   availableDayNumbers?: number[];
 
-  /**
-   * Active injury — when set, the resolver applies a tier-aware filter
-   * to every resolved workout (except manual overrides, which are
-   * authoritative). This means future weeks reflect the injury too,
-   * not just current-week overrides.
-   *
-   * Type is loose (`any`) at the resolver layer to avoid a circular
-   * import with coachUpdatesStore. The shape matches `InjuryState` from
-   * `utils/injuryProgression.ts` — `bodyPart`, `bucket`, `severity`,
-   * `status` are the fields the filter reads.
-   *
-   * Resolved when `status === 'active'` or `'improving'`. `null` /
-   * `undefined` / `'resolved'` skip the filter (template stands).
-   */
-  activeInjury?: {
-    bodyPart: string;
-    bucket: string | null;
-    severity: number;
-    status: 'active' | 'improving' | 'resolved';
-    rules?: string[];
-    seriousSymptoms?: boolean;
-    seriousSymptom?: string;
-    adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
-    safeFocus?: string[];
-    advice?: string[];
-    /** Recent peak/previous severity — drives staged reintroduction. */
-    priorSeverity?: number | null;
-  } | null;
-  /** Canonical episodes compose at visibleProgramReadModel; legacy aliases
-   * retain this resolver pass only until migration. */
-  injuryProjectionOwner?: 'accepted_episode';
 }
 
 export interface ResolvedDay {
@@ -980,12 +949,10 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
  * overrides. Keeping this resolver on the accepted base prevents a second
  * injury owner and lets later athlete edits survive.
  *
- * ⚠ THE SECOND INJURY OWNER IS DELETED (demolition area 3, 2026-08-19). This
- * function used to run `applyInjuryFilterPass` over its own answer whenever the
- * legacy `state.activeInjury` field was populated — the exact second owner the
- * paragraph above says must not exist, guarded only by a flag
- * (`injuryProjectionOwner`) that decided which of the two got to rewrite the
- * day. A projection does not filter safety: the composer refuses an illegal row
+ * ⚠ THE SECOND INJURY OWNER IS DELETED (demolition area 3, 2026-08-19), and
+ * with it the legacy `state.activeInjury` alias and the `injuryProjectionOwner`
+ * flag that decided which of the two got to rewrite the day (2026-08-19).
+ * A projection does not filter safety: the composer refuses an illegal row
  * before authoring it, and the visible-program gate composes the fact.
  */
 export function resolveDate(date: string, state: ScheduleState): ResolvedDay {
