@@ -87,6 +87,7 @@ import { useProgramStore } from '../store/programStore';
 import { readBlockHistory } from '../rules/blockBoundaryProgression';
 import { addDaysISO } from '../utils/programBlockState';
 import {
+  acceptExtraSession,
   coldStartThroughOnboarding,
   followTheWeek,
   relaunchApp,
@@ -123,6 +124,30 @@ function ok(name: string, condition: boolean, detail?: string): void {
 
 const same = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
+
+/** Every loaded exercise and its load, by exact name — one entry per exercise. */
+function loadsByExercise(): Map<string, string> {
+  const out = new Map<string, string>();
+  const program = useProgramStore.getState().currentProgram as {
+    microcycles?: readonly { workouts?: readonly {
+      exercises?: readonly {
+        exercise?: { name?: string }; prescribedWeightKg?: number }[] }[] }[];
+  } | null;
+  for (const microcycle of program?.microcycles ?? []) {
+    for (const workout of microcycle.workouts ?? []) {
+      for (const row of workout.exercises ?? []) {
+        const name = row.exercise?.name;
+        if (!name) continue;
+        const load = String(row.prescribedWeightKg ?? '-');
+        // A lift prescribed twice in a block at two loads is itself a change, so
+        // the value records BOTH rather than letting the last one win.
+        out.set(name, out.has(name) && out.get(name) !== load
+          ? `${out.get(name)}+${load}` : load);
+      }
+    }
+  }
+  return out;
+}
 
 /** The weekday name a date falls on — `weekPrint` keys its lines by it. */
 function weekdayOf(dateISO: string): string {
@@ -1141,6 +1166,95 @@ async function main(): Promise<void> {
       + `exactly as much on separate days is credited `
       + `${separated.recorded}/${separated.required}. Club training must not erase `
       + 'the completed gym component from the commitment/completion denominator.');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 6 — THE WEEKLY-COMMITMENT DOOR, AND THE LOADS IT MAY NOT MOVE
+  // ═══════════════════════════════════════════════════════════════════════
+
+  console.log('\n═══ STAGE 6 — accepting a bigger weekly commitment ═══\n');
+  {
+    /**
+     * **THE HANDOFF THIS CLOSES.** Seat `finish-coach-product` measured that
+     * accepting a commitment change moved **60 of 90 prescribed loads**, and Sam
+     * ruled on it (2026-08-20, `docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md`,
+     * owner named as this lane):
+     *
+     * > *"That is a transaction defect, not intended product behaviour. Existing
+     * > exercises must retain progression from their own history; new exercises
+     * > use their own history or authored starting estimate."*
+     *
+     * The cause was `factFreeBase` stating no `progressionHistory`, which
+     * `statedProgressionInputs` fixed — so this stage is that fix's guard on the
+     * door the handoff was raised from. `confirmWeeklyCommitment` is a DIFFERENT
+     * door from `changeProgramSetup`: it builds its own patch through
+     * `commitmentPatchFor` and is what the Coach tab's Accept button calls.
+     *
+     * ⚠ **THE CLAIM IS ABOUT CARRIED-OVER EXERCISES.** An exercise the athlete
+     * already had keeps the load its own history earned. An exercise that is new
+     * to the program is NOT covered here — see the suite's NOT COVERED note; on
+     * this athlete the commitment change adds days without adding exercises, and
+     * asserting over an empty set would be a green-and-empty cell.
+     */
+    const stage = await stageFor('WORN');
+    const before = takeSettingsCensus();
+    const loadsBefore = loadsByExercise();
+    const excluded = stage.world?.excludedLift ?? null;
+
+    const result = await acceptExtraSession({
+      profile: useProfileStore.getState().onboardingData,
+      forBlockNumber: before.currentBlockNumber ?? 2,
+      sessionsPerWeek: 4,
+      todayISO: stage.todayISO,
+      availableDays: ['Thursday', 'Sunday'] as DayOfWeek[],
+    });
+    const after = takeSettingsCensus();
+    const loadsAfter = loadsByExercise();
+    const weekAfter = weekPrint(stage.weekStartISO, stage.todayISO);
+
+    const carried = [...loadsAfter.keys()].filter((name) => loadsBefore.has(name));
+    const movedLoads = carried.filter((name) =>
+      loadsBefore.get(name) !== loadsAfter.get(name));
+    const brandNew = [...loadsAfter.keys()].filter((name) => !loadsBefore.has(name));
+
+    console.log(`     door: ok=${result.ok} ${result.message}`);
+    console.log(`     exercises carried across the change: ${carried.length}, `
+      + `of which loads moved: ${movedLoads.length}`);
+    movedLoads.forEach((n) => console.log(`       ${n}: ${loadsBefore.get(n)} -> ${loadsAfter.get(n)}`));
+    console.log(`     exercises new to the program: ${brandNew.length}`
+      + `${brandNew.length ? ` (${brandNew.join(', ')})` : ' [the new-exercise half of the '
+        + 'ruling is NOT exercised by this world]'}`);
+
+    ok('6: the commitment door commits', result.ok, result.message);
+    ok('6: the change carried exercises across — the load claim is not vacuous',
+      carried.length >= 5, `only ${carried.length} exercises carried across`);
+    ok('6: EVERY CARRIED EXERCISE KEEPS THE LOAD ITS OWN HISTORY EARNED',
+      movedLoads.length === 0,
+      `${movedLoads.length} of ${carried.length} carried exercises changed load: `
+      + movedLoads.map((n) => `${n} ${loadsBefore.get(n)}->${loadsAfter.get(n)}`).join(', ')
+      + '. Sam, 2026-08-20: "Existing exercises must retain progression from their '
+      + 'own history" — a commitment change is not a reason to re-derive a load.');
+    ok('6: the athlete is still in the block they earned',
+      after.currentBlockNumber === before.currentBlockNumber,
+      `${before.currentBlockNumber} -> ${after.currentBlockNumber}`);
+
+    await reopenTheApp('6', stage.todayISO);
+    const restarted = takeSettingsCensus();
+    ok('6: the accepted week and the reopened week agree',
+      same(weekAfter, weekPrint(stage.weekStartISO, stage.todayISO)),
+      `accepted:\n       ${weekAfter.join('\n       ')}\n     reopened:\n       `
+      + weekPrint(stage.weekStartISO, stage.todayISO).join('\n       '));
+    ok('6: nothing of the athlete\u2019s was lost across the door or the restart',
+      movedAthleteState(before, restarted).length === 0,
+      `moved: ${movedAthleteState(before, restarted).join(', ')}`);
+    if (excluded) {
+      ok('6: STORED and VISIBLE still agree about the excluded lift',
+        storedRowCount(excluded) === visibleRowCount({
+          weekStartISO: stage.weekStartISO, todayISO: stage.todayISO, exerciseName: excluded,
+        }),
+        `${excluded}: stored ${storedRowCount(excluded)} vs visible `
+        + `${visibleRowCount({ weekStartISO: stage.weekStartISO, todayISO: stage.todayISO, exerciseName: excluded })}`);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
