@@ -83,7 +83,8 @@ import { resolve } from 'path';
 import { generateProgramLocally } from '../src/services/api/generateProgram';
 import { buildProgramTabProjectedWeek } from '../src/utils/visibleProgramReadModel';
 import { project } from '../src/rules/projectVisibleWeek';
-import { ownSeasonPhase } from '../src/rules/seasonPhaseOwner';
+import { ownSeasonPhase, ownSeasonPhaseForGeneration } from '../src/rules/seasonPhaseOwner';
+import { resolveProfileTargetWeekAvailability } from '../src/rules/fixtureConditionedAvailability';
 import { profileCapacityBandOrNull } from '../src/utils/readiness';
 import { resolveEquipmentAvailability } from '../src/utils/equipmentAvailability';
 import {
@@ -625,6 +626,15 @@ export function runScenario(scenario: PrintScenario): PrintedWeek {
   const away = scenario.awaySpan ? awayConstraintsFor(scenario.awaySpan, todayISO) : null;
   const activeConstraints = away ? [...away.compatibility.activeConstraints] : [];
   const temporarySourceFacts = away ? [away.fact] : [];
+  const targetWeekAvailability = scenario.markedDays
+    ? resolveProfileTargetWeekAvailability({
+        profile: scenario.profile,
+        weekStart: WEEK_MONDAY,
+        markedDays: scenario.markedDays as never,
+        activeConstraints: activeConstraints as never,
+        ownedPhase: ownSeasonPhaseForGeneration(scenario.profile),
+      })
+    : undefined;
 
   const program = generateProgramLocally(scenario.profile, {
     todayISO,
@@ -638,6 +648,7 @@ export function runScenario(scenario: PrintScenario): PrintedWeek {
     ...(scenario.targetFixtureDay !== undefined
       ? { targetFixtureDay: scenario.targetFixtureDay }
       : {}),
+    ...(targetWeekAvailability ? { targetWeekAvailability } : {}),
   } as Parameters<typeof generateProgramLocally>[1]);
 
   const weekDays = buildProgramTabProjectedWeek({

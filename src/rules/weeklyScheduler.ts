@@ -86,6 +86,12 @@ export interface WeeklySchedulerInputs {
   /** Days the athlete explicitly marked unavailable. Never used (WC-061). */
   readonly unavailableDays: readonly number[];
   /**
+   * Target-week fixture days released by a bye, removal or move. These are
+   * effective app-training days, not permanent profile preferences. A healthy
+   * bye may place its hard replacement here; no downstream repair owns that.
+   */
+  readonly releasedFixtureDays?: readonly number[];
+  /**
    * WC-136. The block this week sits in, used ONLY to rotate the authored hard
    * conditioning quality at the block boundary. Optional because a caller that
    * cannot say which block it is gets the first quality rather than none —
@@ -765,6 +771,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       - (sprintUpperDay !== null || plannedSprintDay === null ? 0 : 1),
   );
 
+  const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
+  const weekAllowsHard =
+    (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
+    && !weekIsReduced;
+  const hardQuality = weekAllowsHard
+    ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
+    : null;
+
   // ── WHICH DAYS MAY CARRY APP CONDITIONING AT ALL, DECIDED BEFORE THE LOOP ─
   //
   // The budget used to be spent greedily inside the day loop, which meant the
@@ -776,9 +790,21 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // days."* A club night is already a conditioning exposure and already counted
   // in `anchorConditioningDays`; attaching app conditioning to it both
   // double-counts the day and stacks the athlete's hardest evening.
-  const conditioningDays = WEEK_ORDER.filter((day) =>
-    purposeByDay.has(day)
+  // A released fixture day is the first receiver in a healthy bye. This is the
+  // scheduler consuming the availability owner's provenance, not a special
+  // post-generation rewrite: if another blocker removed the day it would not
+  // be present in `releasedFixtureDays`/`gymAccessDays` at all.
+  const releasedReceivers = (inputs.releasedFixtureDays ?? []).filter((day) =>
+    inputs.gymAccessDays.includes(day)
     && !inputs.unavailableDays.includes(day)
+    && !inputs.clubNights.includes(day)
+    && inputs.gameDay !== day);
+  const conditioningCandidates = Array.from(new Set([
+    ...(hardQuality !== null ? releasedReceivers : []),
+    ...WEEK_ORDER.filter((day) => purposeByDay.has(day)),
+  ]));
+  const conditioningDays = conditioningCandidates.filter((day) =>
+    !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
     && inputs.gameDay !== day).slice(0, appConditioningBudget);
   const conditioningDaySet = new Set(conditioningDays);
@@ -844,20 +870,16 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // longer a redundant second refusal sitting behind an owner that already did
   // the job — it is one arm of the single question *"is this a week we may add
   // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
-  const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
-  const weekAllowsHard =
-    (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
-    && !weekIsReduced;
-  const hardQuality = weekAllowsHard
-    ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
-    : null;
   const hardEligible = conditioningDays.filter((day) => {
     if (inputs.gameDay === null) return true;
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
     return !isGamePlusOne(day, inputs);
   });
   const hardDayForSprint = hardQuality === null ? null : (
-    hardEligible.find((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
+    hardEligible.find((day) => {
+      const purpose = purposeByDay.get(day);
+      return purpose === undefined || !PURPOSE_IS_LOWER[purpose];
+    })
     ?? hardEligible[0] ?? null);
   const hardDay = hardDayForSprint;
   // WC-139 — the sprint joins the hard day when the phase asks for that shape,
@@ -947,6 +969,19 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         setBudget: null, conditioning: null, conditioningCategory: null,
         conditioningRole: null, powerEligible: false, sprintComponent: false,
         optional: false, clauseId: 'WC-062', clubTraining: true, game: false,
+      });
+      continue;
+    }
+    if (conditioningDaySet.has(day)) {
+      days.push({
+        dateISO, dayOfWeek: day, purpose: null, owner: 'conditioning',
+        movementIntention: [], setBudget: null, conditioning: 'running',
+        conditioningCategory: day === hardDay && hardQuality !== null
+          ? hardQuality
+          : CATEGORY_FOR_CONDITIONING.running,
+        conditioningRole: 'standalone', powerEligible: false,
+        sprintComponent: false, optional: false, clauseId: 'WC-136',
+        clubTraining: false, game: false,
       });
       continue;
     }

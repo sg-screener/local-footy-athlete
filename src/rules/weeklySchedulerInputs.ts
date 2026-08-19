@@ -8,7 +8,7 @@
  * generation constraints, and explicit unavailability from the active constraints
  * the away/busy doors already write.
  */
-import type { OnboardingData } from '../types/domain';
+import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type {
   SchedulerReadiness,
@@ -18,6 +18,7 @@ import type {
 import type { ContractPhase, OffseasonBlock } from './weeklyProgrammingContract';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
+import type { FixtureConditionedAvailability } from './fixtureConditionedAvailability';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
   'Friday', 'Saturday'];
@@ -148,6 +149,15 @@ export function weeklySchedulerInputsFrom(args: {
   } | null;
   readonly activeConstraints?: readonly unknown[];
   readonly exposureContract?: { readonly anchors?: unknown } | null;
+  /**
+   * The accepted calendar's fixture for THIS week. `undefined` means the
+   * profile's recurring default, `null` means a bye, and a day means an actual
+   * or moved fixture. The distinction is material: collapsing `null` into the
+   * profile default silently resurrects a game the athlete removed.
+   */
+  readonly targetFixtureDay?: DayOfWeek | null;
+  /** Canonical effective app-training days for this target week, when resolved. */
+  readonly targetWeekAvailability?: FixtureConditionedAvailability;
   /** WC-136. Rotates the authored hard conditioning quality at the block boundary. */
   readonly miniCycleNumber?: number | null;
   /** WC-136. A scheduled deload week is never authored hard conditioning. */
@@ -191,7 +201,9 @@ export function weeklySchedulerInputsFrom(args: {
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
     clubNights: dayNumbers(profile.teamTrainingDays),
-    gameDay: dayNumber(profile.gameDay),
+    gameDay: args.targetFixtureDay === undefined
+      ? dayNumber(profile.gameDay)
+      : dayNumber(args.targetFixtureDay),
     activeConstraints: args.activeConstraints,
   });
 
@@ -199,7 +211,9 @@ export function weeklySchedulerInputsFrom(args: {
     weekStartISO: args.weekStartISO,
     phase: profile.seasonPhase as ContractPhase,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
-    gymAccessDays: dayNumbers(profile.preferredTrainingDays),
+    gymAccessDays: args.targetWeekAvailability
+      ? [...args.targetWeekAvailability.effectiveAvailableDayNumbers]
+      : dayNumbers(profile.preferredTrainingDays),
     clubNights: club.clubNights,
     gameDay: club.gameDay,
     // **ALWAYS RECURRING FROM ONBOARDING.** The athlete names a usual game day,
@@ -210,6 +224,12 @@ export function weeklySchedulerInputsFrom(args: {
     age: ageFromRange(profile.ageRange),
     readiness,
     unavailableDays: [...unavailableDays],
+    releasedFixtureDays: args.targetWeekAvailability?.days
+      .filter((day) => day.provenance.some((value) =>
+        value === 'released_game_day'
+        || value === 'released_practice_match_day'
+        || value === 'bye_usual_game_day'))
+      .map((day) => day.dayNumber) ?? [],
     miniCycleNumber: args.miniCycleNumber ?? null,
     weekKind: args.weekKind ?? null,
   };

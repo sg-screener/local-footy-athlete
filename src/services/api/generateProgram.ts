@@ -941,6 +941,13 @@ export function buildGeneratedMicrocycles(args: {
    * reassessment's D1 (2026-08-05).
    */
   targetWeekStartISO?: string;
+  /**
+   * The live calendar fixture for `targetWeekStartISO`. Later block weeks keep
+   * the profile's recurring default; a target-week bye is not a block-long bye.
+   */
+  targetFixtureDay?: DayOfWeek | null;
+  /** The availability owner's answer for `targetWeekStartISO`. */
+  targetWeekAvailability?: FixtureConditionedAvailability;
   /** See GenerateProgramFromProfileOptions.weekAcceptance. */
   weekAcceptance?: AcceptedStateOperationKind;
   /** See GenerateProgramFromProfileOptions.remainderBoundary. */
@@ -992,6 +999,12 @@ export function buildGeneratedMicrocycles(args: {
     // weeks are an approved no-deload exception), because that rule governs what
     // the app SCHEDULES and an athlete-declared deload is not a schedule change.
     const effectiveWeekKind: WeekKind = blockState.weekKind;
+    const targetFixtureDay = blockState.weekStart === targetWeekStartISO
+      ? args.targetFixtureDay
+      : undefined;
+    const targetWeekAvailability = blockState.weekStart === targetWeekStartISO
+      ? args.targetWeekAvailability
+      : undefined;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
     /* ── THE ONE EQUIPMENT OWNER, ASKED FOR THE WHOLE WEEK ───────────────────
      *
@@ -1069,6 +1082,8 @@ export function buildGeneratedMicrocycles(args: {
         generationConstraints,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
+        targetFixtureDay,
+        targetWeekAvailability,
         miniCycleNumber: blockState.miniCycleNumber ?? null,
         weekKind: effectiveWeekKind,
       });
@@ -1182,6 +1197,8 @@ export function buildGeneratedMicrocycles(args: {
       generationConstraints,
       activeConstraints: args.activeConstraints ?? [],
       exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+      targetFixtureDay,
+      targetWeekAvailability,
       miniCycleNumber: blockState.miniCycleNumber ?? null,
       weekKind: effectiveWeekKind,
     });
@@ -1847,6 +1864,8 @@ export function generateProgramLocally(
         .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
     targetWeekStartISO: getMondayISOForDate(effectiveTodayISO),
+    targetFixtureDay: options.targetFixtureDay,
+    targetWeekAvailability: options.targetWeekAvailability,
     weekAcceptance: options.weekAcceptance,
     remainderBoundary: options.remainderBoundary ?? null,
   });
