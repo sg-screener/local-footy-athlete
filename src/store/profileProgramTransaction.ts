@@ -191,7 +191,60 @@ function applyProfileChange(
   };
 }
 
-function factFreeBase(args: {
+/**
+ * THE PROFILE A CHANGE WOULD PRODUCE — the transaction's own first step, named.
+ *
+ * ⚠ **EXPORTED SO A PREVIEW CANNOT COMPUTE IT A SECOND WAY.** A surface that
+ * wants to show the athlete what accepting would do has to start from the same
+ * profile acceptance starts from: the ACCEPTED profile (not the live profile
+ * store), with the same patch applied by the same function. Re-deriving either
+ * half at the call site is how a preview and its acceptance come to disagree
+ * about which athlete they are talking about.
+ *
+ * Reads the stores; writes nothing, and has nothing imported here that could.
+ */
+export function profileProgramNextProfile(args: {
+  change: ProfileProgramChange;
+  now?: string;
+}): OnboardingData {
+  const before = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  const currentProfile = acceptedProfileForContext(
+    before,
+    useProfileStore.getState().onboardingData,
+  );
+  return applyProfileChange(currentProfile, args.change, args.now ?? new Date().toISOString());
+}
+
+/**
+ * THE PROGRAM A PROFILE CHANGE WOULD PUBLISH.
+ *
+ * ⚠ **THIS IS `factFreeBase` UNDER ITS EXPORTED NAME, AND THAT IS THE WHOLE
+ * POINT.** `commitProfileProgramTransaction` calls exactly this function to
+ * build what it commits, so a preview that calls it too is not *predicting* the
+ * accepted program — it is BUILDING the accepted program and then not
+ * committing it. "The preview equals what acceptance produces" stops being a
+ * claim a cell has to check on every world and becomes a property of there
+ * being one builder.
+ *
+ * The rejected `codex/finish-product` candidate is the founding case: its
+ * `extraSessionOfferPreview` read the CURRENT program and told the athlete what
+ * the changed day would become. Swept over 36 generated worlds by the review
+ * seat, **9 of 20 previews matched the rebuilt week and 11 did not** — the
+ * athlete found out by accepting. A second predictor of a thing the app can
+ * simply build is the two-representations defect this repo exists to kill.
+ *
+ * ⚠ **`now` AND `sourceRevision` DO NOT REACH GENERATION.** They are stamped
+ * onto the returned base's metadata only, so a preview taken a second before
+ * the acceptance builds the same PROGRAM with different timestamps. Compare
+ * programs, never bases.
+ *
+ * ⚠ **IT WRITES NOTHING.** It reads `useProgramStore.getState()` and calls pure
+ * builders. `test:coach-weekly-reduction` holds that as a property, by
+ * fingerprinting every persisted store around a preview.
+ */
+export function profileProgramCandidateBase(args: {
   profile: OnboardingData;
   todayISO: string;
   now: string;
@@ -312,7 +365,7 @@ export async function commitProfileProgramTransaction(
   }
   let base: AcceptedCompositionBaseV1;
   try {
-    base = factFreeBase({
+    base = profileProgramCandidateBase({
       profile: nextProfile,
       todayISO: input.todayISO,
       now,

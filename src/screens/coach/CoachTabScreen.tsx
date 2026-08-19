@@ -41,6 +41,16 @@ import type { ProgramControlAction } from '../../types/programControlAction';
 import type { VisibleWeek } from '../../rules/visibleProjection';
 import type { TabParamList } from '../../navigation/AppNavigator';
 import { SeasonPhaseShiftSheet } from '../../components/SeasonPhaseShiftSheet';
+import { useCoachWeeklyCommitment } from './useCoachWeeklyCommitment';
+import { CommitmentCard } from '../../components/CommitmentCard';
+import {
+  commitmentConfirmedSentence,
+  commitmentConversationNoticeSentence,
+  commitmentDeclinedSentence,
+  commitmentFailedSentence,
+  commitmentPreviewDaySentence,
+  commitmentPreviewUnavailableSentence,
+} from '../../rules/projectionCopy';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -139,6 +149,28 @@ type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
  * composer does. **It cannot be occluded because it is positioned against the
  * keyboard rather than laid out above it**, and its buttons are outside the
  * ScrollView, so no tap of theirs is ever spent dismissing a keyboard first.
+ *
+ * ## R-105 — THE WEEKLY-REDUCTION CONVERSATION LIVES HERE NOW
+ *
+ * **Sam, 2026-08-19, seeing it on the Program screen:** *"This should not be
+ * popping up on the main page - it should show up in the coaches chat with a
+ * notification"*.
+ *
+ * ⚠ **THIS ADDS A SECOND DOOR TO THIS SCREEN, AND IT IS NAMED RATHER THAN
+ * SLIPPED IN.** Slice 3's import ban was re-aimed, not lifted: the screen may
+ * reach `executeProgramControlActionDurably` and now also
+ * `confirmWeeklyCommitment` / `declineWeeklyCommitment`, both reached ONLY
+ * through `useCoachWeeklyCommitment`. Every other writer family is still
+ * forbidden and `coachTabSlice1Tests` asserts the two doors by NAME, so a third
+ * arriving is a red cell rather than a diff nobody reads.
+ *
+ * Both of those functions live in `store/weeklyCommitmentAnswer.ts` and rebuild
+ * through `commitProfileProgramTransaction` — the canonical accepted-program
+ * transaction. **This screen does not know how to rebuild a program and has no
+ * import that could.**
+ *
+ * The NOTIFICATION is derived with the question (R-099), so there is no unread
+ * flag to clear and nothing that can resurrect an answered question.
  *
  * ## ONE CHIP, NOT THREE
  *
@@ -239,6 +271,8 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // while the other opens the detail. Closing clears the same state that opened
   // it, which also makes a second Program tap work after returning.
   const statusVisible = route.params?.status === 'open';
+  // R-105. Derived every render from the stores; no unread flag, no expiry job.
+  const weeklyCommitment = useCoachWeeklyCommitment();
   const phaseControl = useSeasonPhaseControl();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
@@ -356,6 +390,35 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     say(coachChangeDeclined());
   }, [say]);
 
+  /**
+   * THE ATHLETE SAID YES TO A NEW WEEKLY COMMITMENT.
+   *
+   * ⚠ **THE CONFIRMATION IS GATED ON THE TRANSACTION'S OWN ANSWER, NOT ON THE
+   * TAP.** `confirmWeeklyCommitment` returns the accepted-state transaction's
+   * result and, when it wrote one, the commitment it actually committed. The
+   * coach speaks the DOOR's count, and only when the door says both `ok` and
+   * that the program changed. A "Done" spoken because a button was pressed is
+   * the false-Done class L6 names as a release blocker.
+   */
+  const handleCommitmentAccept = useCallback(async (sessionsPerWeek: number) => {
+    const result = await weeklyCommitment.accept(sessionsPerWeek);
+    if (result?.ok && result.changedProgram && result.committed) {
+      say(commitmentConfirmedSentence(result.committed.sessionsPerWeek));
+      return;
+    }
+    say(commitmentFailedSentence());
+  }, [weeklyCommitment, say]);
+
+  /**
+   * *"Keep it as is."* One ledger entry, no program write, and no way to make
+   * one — `declineWeeklyCommitment` imports nothing that can write a program.
+   * The entry is what stops the question being put again during this block.
+   */
+  const handleCommitmentDecline = useCallback(() => {
+    weeklyCommitment.decline();
+    say(commitmentDeclinedSentence());
+  }, [weeklyCommitment, say]);
+
   // THE COACH SPEAKS AFTER THE WEEK COMES BACK, NEVER BEFORE.
   //
   // `setSettling` is what schedules the render that re-reads the store, so by
@@ -382,6 +445,18 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // would imply it depends on something.
   const composer = (
     <View style={styles.footer}>
+      {/* ⚠ AT MOST ONE CARD, AND THE CHANGE THE ATHLETE JUST ASKED FOR WINS.
+          Two cards stacked in a keyboard-safe footer is two confirm buttons
+          competing for one thumb. The commitment conversation is not going
+          anywhere — it is derived, so it returns the moment the pending change
+          is answered. */}
+      {!pending && weeklyCommitment.conversation ? (
+        <CommitmentCard
+          conversation={weeklyCommitment.conversation}
+          onAccept={handleCommitmentAccept}
+          onDecline={handleCommitmentDecline}
+        />
+      ) : null}
       {pending ? (
         <ChangeCard
           selectedChoiceId={pending.action.type === 'move_session'
@@ -466,6 +541,42 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
           <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
+          {/* ── R-105: THE COACH RAISES IT, IN THE CONVERSATION ──
+              The notification line, then Sam's signed question, then — for the
+              extra-session offer — exactly what the REGENERATED week becomes,
+              read off the program acceptance publishes. These sit above the
+              athlete's turns because the coach raised the subject; they are
+              derived, so answering makes them go and a relaunch cannot bring an
+              answered question back. */}
+          {weeklyCommitment.conversation ? (
+            <>
+              <Bubble
+                speaker="coach"
+                text={String(commitmentConversationNoticeSentence())}
+                testID="coach-tab-commitment-notice"
+              />
+              <Bubble
+                speaker="coach"
+                text={String(weeklyCommitment.conversation.sentence)}
+                testID="coach-tab-commitment-question"
+              />
+              {weeklyCommitment.conversation.preview?.changedDays.map((day) => (
+                <Bubble
+                  key={day.dateISO}
+                  speaker="coach"
+                  text={String(commitmentPreviewDaySentence(day))}
+                  testID={`coach-tab-commitment-preview-${day.dateISO}`}
+                />
+              ))}
+              {weeklyCommitment.conversation.previewRefusal ? (
+                <Bubble
+                  speaker="coach"
+                  text={String(commitmentPreviewUnavailableSentence())}
+                  testID="coach-tab-commitment-preview-unavailable"
+                />
+              ) : null}
+            </>
+          ) : null}
           {turns.map((turn) => (
             <Bubble
               key={turn.id}

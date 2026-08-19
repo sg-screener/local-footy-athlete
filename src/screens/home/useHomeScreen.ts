@@ -15,12 +15,8 @@ import { useProfileStore } from '../../store/profileStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import {
   acknowledgeBlockBoundaryNotice,
-  confirmWeeklyCommitment,
-  declineWeeklyCommitment,
-  EXTRA_SESSION_SOURCE_SURFACE,
 } from '../../store/weeklyCommitmentAnswer';
 import { useBlockBoundaryPrompts } from './useBlockBoundaryPrompts';
-import { availableTrainingDays } from '../../rules/extraSessionOffer';
 import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useReadinessStore } from '../../store/readinessStore';
@@ -692,24 +688,26 @@ export function useHomeScreen() {
   );
 
 
-  // ── THE TWO BLOCK-BOUNDARY PROMPTS ──
+  // ── THE BLOCK-BOUNDARY NOTICE ──
   //
-  // Both are DERIVED (`useBlockBoundaryPrompts`) from the stored program, the
-  // logged sessions and the decision ledger. Nothing here writes; the answers
-  // below go through `store/weeklyCommitmentAnswer.ts`, the only writer.
+  // DERIVED (`useBlockBoundaryPrompts`) from the stored program and the decision
+  // ledger. Nothing here writes; the acknowledgement goes through
+  // `store/weeklyCommitmentAnswer.ts`, the only writer.
+  //
+  // ⚠ **THE COMMITMENT QUESTION AND THE EXTRA-SESSION OFFER ARE NOT HERE ANY
+  // MORE — R-105.** Sam, 2026-08-19: *"This should not be popping up on the main
+  // page - it should show up in the coaches chat with a notification"*. They are
+  // derived by `rules/weeklyCommitmentConversation.ts` and owned by the Coach
+  // tab through `screens/coach/useCoachWeeklyCommitment.ts`. This surface no
+  // longer knows the conversation exists, which is what makes the ruling
+  // structural rather than a render that was switched off.
   const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
   const blockBoundaryPrompts = useBlockBoundaryPrompts({
     currentProgram,
     blockNumber: blockState?.blockNumber ?? null,
-    blockStartISO: blockState?.blockStartDate ?? null,
-    sessionFeedback,
-    onboardingData,
     ledgerEntries,
-    weekOrder: DAYS_OF_WEEK,
   });
   const blockBoundaryNotice = blockBoundaryPrompts.notice;
-  const weeklyCommitmentPrompt = blockBoundaryPrompts.commitment;
-  const extraSessionOffer = blockBoundaryPrompts.extraSession;
 
   /** Dismiss the reduced-block notice. Records the read; touches no program. */
   const handleAcknowledgeBlockBoundaryNotice = useCallback(() => {
@@ -717,58 +715,13 @@ export function useHomeScreen() {
     acknowledgeBlockBoundaryNotice({ forBlockNumber: blockBoundaryNotice.forBlockNumber });
   }, [blockBoundaryNotice]);
 
-  /** Confirm a smaller weekly commitment: one canonical fact, then a rebuild. */
-  const handleConfirmWeeklyCommitment = useCallback(async (sessionsPerWeek: number) => {
-    if (!weeklyCommitmentPrompt || !onboardingData) return;
-    await confirmWeeklyCommitment({
-      forBlockNumber: weeklyCommitmentPrompt.question.forBlockNumber,
-      sessionsPerWeek,
-      profile: onboardingData,
-      todayISO: todayISOLocal(),
-      weekOrder: DAYS_OF_WEEK,
-    });
-  }, [weeklyCommitmentPrompt, onboardingData]);
-
-  /** Decline. Records the answer so it is not re-asked; changes nothing else. */
-  const handleDeclineWeeklyCommitment = useCallback(() => {
-    if (!weeklyCommitmentPrompt) return;
-    declineWeeklyCommitment({
-      forBlockNumber: weeklyCommitmentPrompt.question.forBlockNumber,
-    });
-  }, [weeklyCommitmentPrompt]);
-
-  /**
-   * Accept the extra session — THE SAME DOOR, one session larger.
-   *
-   * The offer's own `trainingDays` were produced by `commitmentPatchFor` and
-   * proven buildable by generation before the card ever rendered, so the athlete
-   * cannot accept a week the app will refuse.
-   */
-  const handleAcceptExtraSession = useCallback(async (sessionsPerWeek: number) => {
-    if (!extraSessionOffer || !onboardingData) return;
-    await confirmWeeklyCommitment({
-      forBlockNumber: extraSessionOffer.offer.forBlockNumber,
-      sessionsPerWeek,
-      profile: onboardingData,
-      todayISO: todayISOLocal(),
-      weekOrder: DAYS_OF_WEEK,
-      availableDays: availableTrainingDays({
-        profile: onboardingData,
-        weekOrder: DAYS_OF_WEEK,
-      }),
-      sourceSurface: EXTRA_SESSION_SOURCE_SURFACE,
-    });
-  }, [extraSessionOffer, onboardingData]);
-
-  /**
-   * *"Keep my current schedule."* One ledger entry, no program write — the same
-   * construction the missed-session decline uses, and what stops the offer being
-   * put again during this block.
-   */
-  const handleDeclineExtraSession = useCallback(() => {
-    if (!extraSessionOffer) return;
-    declineWeeklyCommitment({ forBlockNumber: extraSessionOffer.offer.forBlockNumber });
-  }, [extraSessionOffer]);
+  // ⚠ FOUR HANDLERS LEFT WITH THE CONVERSATION (R-105):
+  // `handleConfirmWeeklyCommitment`, `handleDeclineWeeklyCommitment`,
+  // `handleAcceptExtraSession` and `handleDeclineExtraSession`. They are now
+  // `accept`/`decline` on `screens/coach/useCoachWeeklyCommitment.ts`, calling
+  // the same two functions on the same door — `confirmWeeklyCommitment` and
+  // `declineWeeklyCommitment` in `store/weeklyCommitmentAnswer.ts`. The door did
+  // not move and did not change; only its caller did.
 
   // ───────── Error helpers ─────────
 
@@ -1676,13 +1629,7 @@ export function useHomeScreen() {
     handleClearWeekReadiness,
     missedSessionPrompt,
     blockBoundaryNotice,
-    weeklyCommitmentPrompt,
-    extraSessionOffer,
     handleAcknowledgeBlockBoundaryNotice,
-    handleConfirmWeeklyCommitment,
-    handleAcceptExtraSession,
-    handleDeclineExtraSession,
-    handleDeclineWeeklyCommitment,
     handleLogMissedSession,
     handleSkipMissedSession,
 

@@ -50,6 +50,9 @@ import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { rebuildDerivedWorld } from '../store/quiescentBoot';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
+// R-105: the commitment question moved to the Coach tab. The notice stayed on
+// the Program surface, so this suite now reads two owners rather than one.
+import { conversationOrNull } from './support/coachCommitment';
 import { isReductionExplanationRow } from '../rules/blockBoundaryProgression';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { SessionFeedback } from '../store/programStore';
@@ -276,11 +279,17 @@ function snapshot(): WorldSnapshot {
   const prompts = deriveBlockBoundaryPrompts({
     currentProgram: program,
     blockNumber: state.blockState?.blockNumber ?? null,
-    blockStartISO: state.blockState?.blockStartDate ?? null,
-    sessionFeedback: state.sessionFeedback,
-    onboardingData: useProfileStore.getState().onboardingData,
     ledgerEntries: useDecisionLedgerStore.getState().entries,
-    weekOrder: WEEK_ORDER,
+  });
+  const conversation = conversationOrNull({
+    program,
+    blockNumber: state.blockState?.blockNumber ?? null,
+    blockStartISO: state.blockState?.blockStartDate ?? null,
+    todayISO: state.blockState?.blockStartDate ?? BLOCK_2_START,
+    feedback: state.sessionFeedback,
+    profile: useProfileStore.getState().onboardingData,
+    ledgerEntries: useDecisionLedgerStore.getState().entries,
+    acceptedBlocks: state.acceptedBlocks ?? {},
   });
   return {
     loads: JSON.stringify(loads.sort()),
@@ -288,7 +297,7 @@ function snapshot(): WorldSnapshot {
     explanation: JSON.stringify(program?.blockBoundaryExplanation ?? []),
     hasReduction: (program?.blockBoundaryExplanation ?? []).some(isReductionExplanationRow),
     noticeVisible: prompts.notice !== null,
-    commitmentVisible: prompts.commitment !== null,
+    commitmentVisible: conversation !== null && conversation.direction === 'smaller_week',
     trackedLoads,
     accessoryLoads,
   };

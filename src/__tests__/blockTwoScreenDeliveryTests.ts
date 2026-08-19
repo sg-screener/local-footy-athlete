@@ -78,10 +78,11 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
-import {
-  BlockBoundaryNoticeCard,
-  WeeklyCommitmentPromptCard,
-} from '../screens/home/BlockBoundaryCards';
+// R-105 — the missed-session question moved to the Coach tab, so this suite
+// reads TWO owners: the notice on the Program surface, the question on Coach.
+import { conversationOrNull } from './support/coachCommitment';
+import { CommitmentCard } from '../components/CommitmentCard';
+import { BlockBoundaryNoticeCard } from '../screens/home/BlockBoundaryCards';
 import {
   acknowledgeBlockBoundaryNotice,
   declineWeeklyCommitment,
@@ -294,9 +295,6 @@ clearLedger();
 const hardPrompts = deriveBlockBoundaryPrompts({
   currentProgram: hardProgram,
   blockNumber: 2,
-  blockStartISO: BLOCK_2_START,
-  sessionFeedback: veryHardBlock1(),
-  onboardingData: athlete(),
   ledgerEntries: ledger(),
   weekOrder: WEEK_ORDER,
 });
@@ -392,28 +390,22 @@ console.log('\n[2] DISMISSING IT — THE REAL TAP');
   ok(
     'the card is gone on the next derivation',
     deriveBlockBoundaryPrompts({
-      currentProgram: hardProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: veryHardBlock1(), onboardingData: athlete(),
-      ledgerEntries: ledger(), weekOrder: WEEK_ORDER,
+      currentProgram: hardProgram, blockNumber: 2, ledgerEntries: ledger(),
     }).notice === null,
   );
   ok(
     'IT STAYS GONE ACROSS A RELOAD — the acknowledgement is durable, not local state',
     deriveBlockBoundaryPrompts({
-      currentProgram: hardProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: veryHardBlock1(), onboardingData: athlete(),
+      currentProgram: hardProgram, blockNumber: 2,
       // The ledger as it comes back off disk.
       ledgerEntries: JSON.parse(JSON.stringify(ledger())) as DecisionLedgerEntry[],
-      weekOrder: WEEK_ORDER,
     }).notice === null,
     'a relaunch would show the athlete the same notice again, forever',
   );
   ok(
     'and it is still shown to an athlete who has NOT acknowledged (control)',
     deriveBlockBoundaryPrompts({
-      currentProgram: hardProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: veryHardBlock1(), onboardingData: athlete(),
-      ledgerEntries: [], weekOrder: WEEK_ORDER,
+      currentProgram: hardProgram, blockNumber: 2, ledgerEntries: [],
     }).notice !== null,
     'the notice never renders at all — the cells above pass vacuously',
   );
@@ -424,63 +416,77 @@ console.log('\n[3] THE MISSED-SESSION QUESTION RENDERS WITH THE REAL NUMBERS');
 
 clearLedger();
 const missedProgram = build(halfAttendedBlock1());
-const missedPrompts = deriveBlockBoundaryPrompts({
-  currentProgram: missedProgram,
-  blockNumber: 2,
-  blockStartISO: BLOCK_2_START,
-  sessionFeedback: halfAttendedBlock1(),
-  onboardingData: athlete(),
-  ledgerEntries: ledger(),
-  weekOrder: WEEK_ORDER,
-});
+/**
+ * ⚠ R-105 — THE QUESTION IS THE COACH'S NOW. Same derivation, same numbers, same
+ * signed words; a different surface owns it. `acceptedBlocks` is empty here on
+ * purpose: the SHRINKING direction does not read it (attendance is counted
+ * against the commitment the block was built on), and passing a value would hide
+ * that fact behind a fixture.
+ */
+function missedConversation(entries = ledger()) {
+  return conversationOrNull({
+    program: missedProgram,
+    blockNumber: 2,
+    blockStartISO: BLOCK_2_START,
+    todayISO: BLOCK_2_START,
+    feedback: halfAttendedBlock1(),
+    profile: athlete(),
+    ledgerEntries: entries,
+    acceptedBlocks: {},
+  });
+}
+const missedCommitment = missedConversation();
 
 ok(
   'the derivation asks the question below 75% attendance',
-  missedPrompts.commitment !== null,
+  missedCommitment !== null && missedCommitment.direction === 'smaller_week',
   'the athlete is never asked',
 );
 
-const promptTree = missedPrompts.commitment
-  ? WeeklyCommitmentPromptCard({
-    prompt: missedPrompts.commitment,
-    onConfirm: () => {}, onDecline: () => {},
+const promptTree = missedCommitment
+  ? CommitmentCard({
+    conversation: missedCommitment,
+    onAccept: () => {}, onDecline: () => {},
   })
   : null;
 
 ok(
-  'the card mounts with its Program-surface testID',
-  testIDs(promptTree).includes('home-weekly-commitment-prompt'),
+  'the card mounts on the COACH surface, with the coach testID',
+  testIDs(promptTree).includes('coach-tab-commitment-card'),
   `ids: ${JSON.stringify(testIDs(promptTree))}`,
 );
 ok(
-  "the rendered question is EXACTLY Sam's approved wording, with the real numbers",
-  textOf(nodeWithTestID(promptTree, 'home-weekly-commitment-question'))
-    === APPROVED_QUESTION_SENTENCE,
-  `rendered ${JSON.stringify(textOf(nodeWithTestID(promptTree, 'home-weekly-commitment-question')))}`,
+  'and the PROGRAM surface\'s id is GONE — R-105, not a hidden render',
+  !testIDs(promptTree).includes('home-weekly-commitment-prompt'),
+  `ids: ${JSON.stringify(testIDs(promptTree))}`,
+);
+ok(
+  "the coach speaks EXACTLY Sam's approved wording, with the real numbers",
+  String(missedCommitment?.sentence) === APPROVED_QUESTION_SENTENCE,
+  `spoke ${JSON.stringify(String(missedCommitment?.sentence))}`,
 );
 ok(
   'the numbers it renders are the athlete\'s real completed and planned counts',
-  missedPrompts.commitment?.question.attendance.completedSessions === 6
-    && missedPrompts.commitment?.question.attendance.requiredSessions === 12
-    && missedPrompts.commitment?.question.plannedPerWeek === 3,
-  `${JSON.stringify(missedPrompts.commitment?.question.attendance)}`,
+  missedCommitment?.attendance?.completedSessions === 6
+    && missedCommitment?.attendance?.requiredSessions === 12
+    && missedCommitment?.attendance?.sessionsPerWeek === 3,
+  `${JSON.stringify(missedCommitment?.attendance)}`,
 );
 ok(
   'it offers a SCHEDULER-PROVEN smaller commitment, and a decline',
-  testIDs(promptTree).includes('home-weekly-commitment-option-2')
-    && testIDs(promptTree).includes('home-weekly-commitment-decline'),
+  testIDs(promptTree).includes('coach-tab-commitment-option-2')
+    && testIDs(promptTree).includes('coach-tab-commitment-decline'),
   `ids: ${JSON.stringify(testIDs(promptTree))}`,
 );
 ok(
   'it offers NO count the scheduler cannot build for this athlete',
-  (missedPrompts.commitment?.options ?? []).every((option) => option.sessionsPerWeek === 2),
-  `offered ${JSON.stringify((missedPrompts.commitment?.options ?? []).map((o) => o.sessionsPerWeek))}`,
+  (missedCommitment?.options ?? []).every((option) => option.sessionsPerWeek === 2),
+  `offered ${JSON.stringify((missedCommitment?.options ?? []).map((o) => o.sessionsPerWeek))}`,
 );
 ok(
   'the option label is signed copy, not a string this card built',
-  textOf(nodeWithTestID(promptTree, 'home-weekly-commitment-option-2')) === ''
-    || String(missedPrompts.commitment?.options[0].label) === '2 sessions a week',
-  `label ${String(missedPrompts.commitment?.options[0].label)}`,
+  String(missedCommitment?.options[0].label) === '2 sessions a week',
+  `label ${String(missedCommitment?.options[0].label)}`,
 );
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -488,14 +494,14 @@ console.log('\n[4] DECLINING — THE REAL TAP');
 
 {
   const before = prescriptions(missedProgram);
-  const liveTree = WeeklyCommitmentPromptCard({
-    prompt: missedPrompts.commitment!,
-    onConfirm: () => { throw new Error('confirm must not fire on a decline tap'); },
+  const liveTree = CommitmentCard({
+    conversation: missedCommitment!,
+    onAccept: () => { throw new Error('confirm must not fire on a decline tap'); },
     onDecline: () => declineWeeklyCommitment({
-      forBlockNumber: missedPrompts.commitment!.question.forBlockNumber,
+      forBlockNumber: missedCommitment!.forBlockNumber,
     }),
   });
-  ok('the decline control is on the card', tap(liveTree, 'home-weekly-commitment-decline'));
+  ok('the decline control is on the card', tap(liveTree, 'coach-tab-commitment-decline'));
   ok(
     'the tap records a DECLINED answer',
     ledger().some((entry) =>
@@ -509,20 +515,11 @@ console.log('\n[4] DECLINING — THE REAL TAP');
   );
   ok(
     'and the athlete is not asked again',
-    deriveBlockBoundaryPrompts({
-      currentProgram: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: halfAttendedBlock1(), onboardingData: athlete(),
-      ledgerEntries: ledger(), weekOrder: WEEK_ORDER,
-    }).commitment === null,
+    missedConversation() === null,
   );
   ok(
     'THE DECLINE SURVIVES A RELOAD',
-    deriveBlockBoundaryPrompts({
-      currentProgram: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: halfAttendedBlock1(), onboardingData: athlete(),
-      ledgerEntries: JSON.parse(JSON.stringify(ledger())) as DecisionLedgerEntry[],
-      weekOrder: WEEK_ORDER,
-    }).commitment === null,
+    missedConversation(JSON.parse(JSON.stringify(ledger())) as DecisionLedgerEntry[]) === null,
     'a relaunch would re-ask a question the athlete has already answered',
   );
 }
@@ -533,12 +530,12 @@ console.log('\n[5] CONFIRMING — THE REAL TAP CARRIES THE REAL COUNT');
 clearLedger();
 {
   const confirmed: number[] = [];
-  const liveTree = WeeklyCommitmentPromptCard({
-    prompt: missedPrompts.commitment!,
-    onConfirm: (sessionsPerWeek: number) => { confirmed.push(sessionsPerWeek); },
+  const liveTree = CommitmentCard({
+    conversation: missedCommitment!,
+    onAccept: (sessionsPerWeek: number) => { confirmed.push(sessionsPerWeek); },
     onDecline: () => { throw new Error('decline must not fire on a confirm tap'); },
   });
-  ok('the option control is on the card', tap(liveTree, 'home-weekly-commitment-option-2'));
+  ok('the option control is on the card', tap(liveTree, 'coach-tab-commitment-option-2'));
   ok(
     'the tap hands the handler the count the athlete chose',
     JSON.stringify(confirmed) === '[2]',
@@ -595,11 +592,11 @@ console.log('\n[6] NO QUESTION AT EXACTLY 75%, AND NONE ON A WELL-ATTENDED BLOCK
   clearLedger();
   ok(
     'exactly 75% renders NO question card',
-    deriveBlockBoundaryPrompts({
-      currentProgram: build(oneWeekLost), blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: oneWeekLost, onboardingData: athlete(),
-      ledgerEntries: [], weekOrder: WEEK_ORDER,
-    }).commitment === null,
+    conversationOrNull({
+      program: build(oneWeekLost), blockNumber: 2, blockStartISO: BLOCK_2_START,
+      todayISO: BLOCK_2_START, feedback: oneWeekLost, profile: athlete(),
+      ledgerEntries: [], acceptedBlocks: {},
+    }) === null,
     'one disrupted week would redesign the programme',
   );
   ok(
@@ -616,22 +613,26 @@ console.log('\n[6] NO QUESTION AT EXACTLY 75%, AND NONE ON A WELL-ATTENDED BLOCK
           }],
         } as SessionFeedback;
       }
+      const goodProgram = build(good);
       const prompts = deriveBlockBoundaryPrompts({
-        currentProgram: build(good), blockNumber: 2, blockStartISO: BLOCK_2_START,
-        sessionFeedback: good, onboardingData: athlete(),
-        ledgerEntries: [], weekOrder: WEEK_ORDER,
+        currentProgram: goodProgram, blockNumber: 2, ledgerEntries: [],
       });
-      return prompts.notice === null && prompts.commitment === null;
+      return prompts.notice === null && conversationOrNull({
+        program: goodProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
+        todayISO: BLOCK_2_START, feedback: good, profile: athlete(),
+        ledgerEntries: [], acceptedBlocks: {},
+      }) === null;
     })(),
     'an athlete who trained well is shown a notice or a question',
   );
   ok(
     'BLOCK 1 IS NEVER QUESTIONED — there is no previous block to count',
-    deriveBlockBoundaryPrompts({
-      currentProgram: build(halfAttendedBlock1()), blockNumber: 1,
-      blockStartISO: BLOCK_2_START, sessionFeedback: halfAttendedBlock1(),
-      onboardingData: athlete(), ledgerEntries: [], weekOrder: WEEK_ORDER,
-    }).commitment === null,
+    conversationOrNull({
+      program: build(halfAttendedBlock1()), blockNumber: 1,
+      blockStartISO: BLOCK_2_START, todayISO: BLOCK_2_START,
+      feedback: halfAttendedBlock1(), profile: athlete(),
+      ledgerEntries: [], acceptedBlocks: {},
+    }) === null,
   );
 }
 
@@ -660,10 +661,10 @@ console.log('\n[7] THE CHEAP GATES ARE REAL GATES — U3, U4 and U6 survived wit
 
   clearLedger();
   probeBuilds = 0;
-  deriveBlockBoundaryPrompts({
-    currentProgram: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-    sessionFeedback: halfAttendedBlock1(), onboardingData: countingProfile,
-    ledgerEntries: [], weekOrder: WEEK_ORDER,
+  conversationOrNull({
+    program: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
+    todayISO: BLOCK_2_START, feedback: halfAttendedBlock1(), profile: countingProfile,
+    ledgerEntries: [], acceptedBlocks: {},
   });
   const buildsWhenAsking = probeBuilds;
   ok(
@@ -673,11 +674,11 @@ console.log('\n[7] THE CHEAP GATES ARE REAL GATES — U3, U4 and U6 survived wit
   );
 
   probeBuilds = 0;
-  deriveBlockBoundaryPrompts({
-    currentProgram: build(veryHardBlock1()), blockNumber: 2, blockStartISO: BLOCK_2_START,
+  conversationOrNull({
+    program: build(veryHardBlock1()), blockNumber: 2, blockStartISO: BLOCK_2_START,
     // A well-attended block: the threshold gate must stop before the probe.
-    sessionFeedback: veryHardBlock1(), onboardingData: countingProfile,
-    ledgerEntries: [], weekOrder: WEEK_ORDER,
+    todayISO: BLOCK_2_START, feedback: veryHardBlock1(), profile: countingProfile,
+    ledgerEntries: [], acceptedBlocks: {},
   });
   ok(
     'A WELL-ATTENDED BLOCK NEVER PAYS FOR THE LEGALITY PROBE',
@@ -687,10 +688,10 @@ console.log('\n[7] THE CHEAP GATES ARE REAL GATES — U3, U4 and U6 survived wit
 
   probeBuilds = 0;
   declineWeeklyCommitment({ forBlockNumber: 1 });
-  deriveBlockBoundaryPrompts({
-    currentProgram: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-    sessionFeedback: halfAttendedBlock1(), onboardingData: countingProfile,
-    ledgerEntries: ledger(), weekOrder: WEEK_ORDER,
+  conversationOrNull({
+    program: missedProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
+    todayISO: BLOCK_2_START, feedback: halfAttendedBlock1(), profile: countingProfile,
+    ledgerEntries: ledger(), acceptedBlocks: {},
   });
   ok(
     'AN ALREADY-ANSWERED BLOCK NEVER PAYS FOR IT EITHER',
@@ -714,9 +715,7 @@ console.log('\n[7] THE CHEAP GATES ARE REAL GATES — U3, U4 and U6 survived wit
   ok(
     'a stored row whose loads were NOT held renders NO CARD AT ALL',
     deriveBlockBoundaryPrompts({
-      currentProgram: lyingProgram, blockNumber: 2, blockStartISO: BLOCK_2_START,
-      sessionFeedback: veryHardBlock1(), onboardingData: athlete(),
-      ledgerEntries: [], weekOrder: WEEK_ORDER,
+      currentProgram: lyingProgram, blockNumber: 2, ledgerEntries: [],
     }).notice === null,
     'the athlete would be told their weights were kept on a block where they were not',
   );

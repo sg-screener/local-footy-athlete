@@ -56,8 +56,12 @@ import { generateProgramLocally } from '../services/api/generateProgram';
  * record nothing — the two are different names on purpose. */
 import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
-import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
-import { ExtraSessionOfferCard } from '../screens/home/BlockBoundaryCards';
+// R-105 — Sam, 2026-08-19: *"This should not be popping up on the main page -
+// it should show up in the coaches chat with a notification"*. The offer moved
+// to the Coach tab, so this suite drives the COACH's owner and the COACH's card.
+// `gate-must-watch-the-deleted-surface`: nothing here was deleted, it was re-aimed.
+import { conversationFor, conversationOrNull } from './support/coachCommitment';
+import { CommitmentCard } from '../components/CommitmentCard';
 import { declineWeeklyCommitment } from '../store/weeklyCommitmentAnswer';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import {
@@ -239,22 +243,79 @@ function logRealBlock(
   return feedback;
 }
 
+/**
+ * ⚠ **IT PASSES `acceptedBlocks`, AND THAT IS THE WHOLE REASON THIS SUITE WAS
+ * RED AT BASE.** Before R-105 this helper omitted it, exactly as the only
+ * production caller did, so `requiredStrengthSessions` was `?? 0`,
+ * `readBlockHistory`'s `> 0` gate failed, and every offer cell failed while the
+ * `[0]` LIVENESS cells above passed. The block-1 acceptance records the real
+ * requirement; it is read here rather than invented.
+ */
 function promptsFor(args: {
   program: TrainingProgram;
   feedback: Record<string, SessionFeedback>;
   profile?: OnboardingData;
   ledgerEntries?: readonly DecisionLedgerEntry[];
 }) {
-  return deriveBlockBoundaryPrompts({
-    currentProgram: args.program,
+  const conversation = conversationOrNull({
+    program: args.program,
     blockNumber: 2,
     blockStartISO: BLOCK_2_START,
-    sessionFeedback: args.feedback,
-    onboardingData: args.profile ?? athlete(),
+    todayISO: BLOCK_2_START,
+    feedback: args.feedback,
+    profile: args.profile ?? athlete(),
     ledgerEntries: args.ledgerEntries ?? [],
-    weekOrder: WEEK_ORDER,
+    acceptedBlocks: acceptedBlocksForBlockOne(),
   });
+  return {
+    extraSession: conversation && conversation.direction === 'extra_session'
+      ? { offer: conversation.offer!, conversation }
+      : null,
+    commitment: conversation && conversation.direction === 'smaller_week'
+      ? conversation
+      : null,
+    refusal: conversationFor({
+      program: args.program,
+      blockNumber: 2,
+      blockStartISO: BLOCK_2_START,
+      todayISO: BLOCK_2_START,
+      feedback: args.feedback,
+      profile: args.profile ?? athlete(),
+      ledgerEntries: args.ledgerEntries ?? [],
+      acceptedBlocks: acceptedBlocksForBlockOne(),
+    }).refusal,
+  };
 }
+
+/**
+ * WHAT BLOCK ONE REQUIRED, as the acceptance recorded it.
+ *
+ * `readBlockHistory` counts strength sessions, so the denominator is the
+ * strength sessions block 1 actually asked for. Read off the built block rather
+ * than computed from the athlete's stated intent — the second of the two numbers
+ * Sam ruled out on 2026-08-17.
+ */
+function acceptedBlocksFor(
+  program: TrainingProgram,
+): Record<string, import('../store/programStore').AcceptedBlockRecord> {
+  let requiredStrengthSessions = 0;
+  for (const microcycle of program.microcycles) {
+    for (const workout of microcycle.workouts) {
+      const hasStrength = (workout.exercises ?? [])
+        .some((row) => row.role !== 'conditioning' && (row.exercise?.name ?? '') !== '');
+      if (hasStrength) requiredStrengthSessions += 1;
+    }
+  }
+  return {
+    [BLOCK_1_START]: {
+      blockNumber: 1,
+      blockStartDate: BLOCK_1_START,
+      requiredStrengthSessions,
+    } as import('../store/programStore').AcceptedBlockRecord,
+  };
+}
+
+function acceptedBlocksForBlockOne() { return acceptedBlocksFor(block1); }
 
 const block1 = acceptBlock(athlete(), { todayISO: BLOCK_1_START, blockNumber: 1 });
 /** Everything consistently easy — the contract's third case. */
@@ -436,15 +497,16 @@ ok(
  */
 ok(
   'BLOCK 1 IS NEVER OFFERED A SESSION — there is no previous block to have earned it',
-  deriveBlockBoundaryPrompts({
-    currentProgram: easyProgram,
+  conversationOrNull({
+    program: easyProgram,
     blockNumber: 1,
     blockStartISO: BLOCK_2_START,
-    sessionFeedback: EASY,
-    onboardingData: athlete(),
+    todayISO: BLOCK_2_START,
+    feedback: EASY,
+    profile: athlete(),
     ledgerEntries: [],
-    weekOrder: WEEK_ORDER,
-  }).extraSession === null,
+    acceptedBlocks: acceptedBlocksForBlockOne(),
+  }) === null,
 );
 
 /**
@@ -665,15 +727,19 @@ ok(
 );
 ok(
   'A CLUBLESS ATHLETE IS OFFERED THE EXTRA SESSION — club training is NOT a requirement',
-  deriveBlockBoundaryPrompts({
-    currentProgram: noClubProgram,
-    blockNumber: 2,
-    blockStartISO: BLOCK_2_START,
-    sessionFeedback: NO_CLUB_EASY,
-    onboardingData: noClubAthlete,
-    ledgerEntries: [],
-    weekOrder: WEEK_ORDER,
-  }).extraSession !== null,
+  (() => {
+    const value = conversationOrNull({
+      program: noClubProgram,
+      blockNumber: 2,
+      blockStartISO: BLOCK_2_START,
+      todayISO: BLOCK_2_START,
+      feedback: NO_CLUB_EASY,
+      profile: noClubAthlete,
+      ledgerEntries: [],
+      acceptedBlocks: acceptedBlocksFor(noClubProgram),
+    });
+    return value !== null && value.direction === 'extra_session';
+  })(),
   'the offer refused an athlete whose only difference is having no club night',
 );
 ok(
@@ -716,23 +782,33 @@ console.log('\n[3] ON GLASS — the exact words, the two buttons, the real taps'
 const model = easyPrompts.extraSession!;
 let accepted: number | null = null;
 let declined = 0;
-const card = ExtraSessionOfferCard({
-  model,
+// ⚠ R-105 — THE COACH'S CARD, ON THE COACH'S TAB. `ExtraSessionOfferCard` on
+// the Program surface is deleted; this is where the offer is drawn now, and the
+// cells below check the SAME three things against the new coordinates.
+const card = CommitmentCard({
+  conversation: model.conversation,
   onAccept: (sessionsPerWeek) => { accepted = sessionsPerWeek; },
   onDecline: () => { declined++; },
 });
 
 ok(
-  'the card renders SAM\'S SENTENCE, word for word',
-  textOf(nodeWithTestID(card, 'home-extra-session-offer-sentence')) === APPROVED_OFFER_SENTENCE,
-  `got "${textOf(nodeWithTestID(card, 'home-extra-session-offer-sentence'))}"`,
+  'the coach speaks SAM\'S SENTENCE, word for word',
+  String(model.conversation.sentence) === APPROVED_OFFER_SENTENCE,
+  `got "${String(model.conversation.sentence)}"`,
 );
 ok(
   'and BOTH of Sam\'s buttons, word for word',
-  labelOf(card, 'home-extra-session-accept') === APPROVED_ACCEPT_LABEL
-    && labelOf(card, 'home-extra-session-decline') === APPROVED_DECLINE_LABEL,
-  `accept="${labelOf(card, 'home-extra-session-accept')}" `
-  + `decline="${labelOf(card, 'home-extra-session-decline')}"`,
+  String(model.conversation.options[0].label) === APPROVED_ACCEPT_LABEL
+    && String(model.conversation.declineLabel) === APPROVED_DECLINE_LABEL,
+  `accept="${String(model.conversation.options[0].label)}" `
+  + `decline="${String(model.conversation.declineLabel)}"`,
+);
+ok(
+  'and the card really draws them, at coordinates a flow can find',
+  labelOf(card, 'coach-tab-commitment-option-4') === APPROVED_ACCEPT_LABEL
+    && labelOf(card, 'coach-tab-commitment-decline') === APPROVED_DECLINE_LABEL,
+  `accept="${labelOf(card, 'coach-tab-commitment-option-4')}" `
+  + `decline="${labelOf(card, 'coach-tab-commitment-decline')}"`,
 );
 ok(
   'NOTHING HAPPENS BY RENDERING — no handler fired on its own',
@@ -741,12 +817,12 @@ ok(
 );
 ok(
   'tapping "Add one session" asks for exactly one more',
-  tap(card, 'home-extra-session-accept') && accepted === 4,
+  tap(card, 'coach-tab-commitment-option-4') && accepted === 4,
   `accepted=${String(accepted)}`,
 );
 ok(
   'tapping "Keep my current schedule" calls the decline and nothing else',
-  tap(card, 'home-extra-session-decline') && declined === 1 && accepted === 4,
+  tap(card, 'coach-tab-commitment-decline') && declined === 1 && accepted === 4,
   `declined=${declined}`,
 );
 
@@ -755,7 +831,7 @@ console.log('\n[4] THE ANSWER PERSISTS, AND THE QUESTION IS NOT PUT AGAIN');
 
 useDecisionLedgerStore.setState({ entries: [] });
 // ⚠ THE NUMBER THE CARD WOULD ACTUALLY HAND THE DOOR, not a hand-written 1.
-declineWeeklyCommitment({ forBlockNumber: model.offer.forBlockNumber });
+declineWeeklyCommitment({ forBlockNumber: model.conversation.forBlockNumber });
 const afterDecline = useDecisionLedgerStore.getState().entries;
 ok(
   'the decline is on the decision ledger',
