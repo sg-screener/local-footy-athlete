@@ -995,3 +995,87 @@ phase must restore first.
 | Guards for the whole fixture-mutation path | — | **BROKEN AT CONTROL, not by this chunk** — 3 suites dead at import on `homeGameMutationController` since the areas E/G/H chunk |
 
 Agent: demolition
+
+---
+
+# CHECKPOINT 2026-08-19 — CLEAN, AT `7f67f5eb`. NEXT DELETION AREA BELOW.
+
+## RUNNING TOTALS
+
+| span | files deleted | lines removed |
+| --- | --- | --- |
+| whole mission (`6da38cee`..`7f67f5eb`) | **25** | **11,964** |
+| this session (`3f97cc67`..`7f67f5eb`) | 5 | 2,530 |
+
+Three chunks landed this session, each with a control-compared `test:compile`
+that was **IDENTICAL to control (32 = 32) every time**:
+
+| commit | what went |
+| --- | --- |
+| `a35ca63e` | legacy hydration ingress classifier (area B/G) |
+| `3b5301e0` | post-composer safety rewrite (area C) + its acceptance-boundary caller (area B) |
+| `7f67f5eb` | visible-into-canonical merge (area B/E) |
+
+## ⚠ A NEAR-MISS THE NEXT SEAT WILL HIT TOO
+
+Censusing "which legacy functions are dead" with
+`grep -rl <fn> ... | grep -v <defining file>` reported **zero production
+callers** for `migrateLegacyUserRemovalConstraint`,
+`deriveLegacyInjuryFromEpisodes` and `composeCoachAdjustmentReplyLegacy`.
+
+**All three are live.** Each is called from INSIDE its own defining file — the
+exact file the filter removed. Excluding the definition also excludes the
+caller. **Deleting on that reading would have cut three live paths under a
+"zero callers" proof.**
+
+Census a function by reading ALL of its references including the ones in its own
+file, and separate "defines" from "calls" by hand. This is the function-level
+twin of the `imports.js` relative-root trap recorded above: both produce a
+confident, clean-looking ZERO.
+
+## NEXT EXACT DELETION AREA — IN THIS ORDER
+
+**1. AREA C, remainder — `utils/postGenerationConstraintValidation.ts` (1,708 lines).**
+The safety rewrite is out; the file still REPAIRS. `collapseWorkoutToRest` at
+~line 990 deletes sessions to satisfy `temporary_schedule_max_sessions`.
+Decide it the same way C-1 was decided: **a throw is a refusal and stays, a
+rewrite is a repair and goes.** The `throw` sites (schedule cap, unavailable
+date, time cap) are already correct and must survive.
+
+**2. AREA C — the `restoreMissingPlanPatterns` restore branch**
+(`utils/workoutCanonicalisation.ts:1004`). This is Sam's "restores missing
+patterns" bullet. **MEASURED: every one of the four production call sites passes
+`false`** (`postGenerationConstraintValidation:553`, `section18SafetyFinaliser:187`
+— now deleted, `programStore:2430`, and a pass-through at `:1383`). But the
+DEFAULT is ON (`!== false`), so any caller that omits it restores. Delete the
+branch and the option; prove first that no caller omits it.
+
+**3. AREA D — `utils/sessionResolver.ts` (2,709 lines), the read-time synthesiser.**
+The largest remaining read-time authority. It calls `buildDerivedSession` while
+resolving for display (~lines 898, 964) and pulls in `rollingHorizonRepair` at
+`:1089`. D-1 removed the WRITE that made its output permanent; this is the
+synthesis itself. Sam: projection becomes formatting/explanation only.
+
+**4. AREA G — the remaining legacy migrations.** Live, and each needs the
+by-hand census above: `migrateLegacyTemporarySourceFacts`,
+`migrateLegacyWeeklyExposureContractV2`, `migrateLegacyExcludedNames`,
+`migrateLegacyInjuryEpisodes`, `migrateLegacyReductionV2`,
+`migrateLegacyUserRemovalConstraint`, `deriveLegacyInjuryFromEpisodes`,
+`composeCoachAdjustmentReplyLegacy`. **No production users exist and a clean
+reinstall is allowed**, so stored-shape migration has no one to serve.
+
+**5. AREA H — the 16 suites dead at import.** Still dark since the E/G/H chunk
+(`homeGameMutationController` and friends). They are guards for LIVE owners, so
+they are RESTORED, not deleted — but until then the fixture-mutation path has no
+cover, which is why D-1 could not be behaviourally checked.
+
+## THE INSTRUMENTS
+
+`scratchpad/tools/imports.js` — **ABSOLUTE root only**, and always pass one
+known-live module as a positive control. Control worktree for this session:
+`scratchpad/wt-ctl` at `3f97cc67`, `node_modules` symlinked.
+
+Baseline for every comparison: `test:compile` = **32 files over baseline** at
+`3f97cc67`.
+
+Agent: demolition
