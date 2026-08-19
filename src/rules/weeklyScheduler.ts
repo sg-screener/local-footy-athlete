@@ -611,13 +611,19 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     Math.max(inputs.gymAccessDays.length, 0),
     Math.max(usableGymDays.length, SMALLEST_APPROVED_LAYOUT),
     6);
+  // Early off-season is a 2-3 session OPTIONAL rebuild block. Four available
+  // days do not turn that preferred ceiling into a fourth offer.
+  const layoutGymDays = inputs.phase === 'Off-season'
+    && inputs.offseasonBlock === 'early_optional'
+    ? Math.min(effectiveGymDays, 3)
+    : effectiveGymDays;
 
   const layout = baseLayoutFor({
     phase: inputs.phase,
-    gymDayCount: effectiveGymDays,
+    gymDayCount: layoutGymDays,
     weekendAvailable,
     fourthSession: {
-      gymDayCount: effectiveGymDays,
+      gymDayCount: layoutGymDays,
       age: inputs.age,
       consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
       highReadiness: inputs.readiness.highReadiness,

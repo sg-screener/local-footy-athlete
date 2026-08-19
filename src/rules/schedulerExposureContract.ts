@@ -43,6 +43,8 @@ export interface SchedulerExposureContractInput {
     'plannerSelected' | 'teamTrainingDays' | 'fixtureDays'>;
   readonly clubNights: readonly number[];
   readonly gameDays: readonly number[];
+  /** Primer decisions already made by the power specialist on authorised strength days. */
+  readonly powerPrimerCandidates: number;
   readonly kitUnachievablePatterns?: readonly MainStrengthPattern[];
 }
 
@@ -132,7 +134,7 @@ export function schedulerExposureContract(
   // A copy of the per-phase number here would be a THIRD representation of the
   // very thing this reduction exists to reconcile. One throwaway build answers
   // "what would the floor be without me", and the real build follows.
-  const phaseFloor = buildSection18WeeklyExposureContractV2({
+  const unselected = buildSection18WeeklyExposureContractV2({
     ...input.identity,
     teamTrainingDays: input.clubNights,
     fixtureDays: input.gameDays,
@@ -142,7 +144,16 @@ export function schedulerExposureContract(
       sprintHighSpeed: demand.sprintHighSpeed,
       powerPrimers: null,
     },
-  }).mainStrength.exposure.requiredMinimum;
+  });
+  const phaseFloor = unselected.mainStrength.exposure.requiredMinimum;
+  // POWER'S SPECIALIST STAMPS ITS OWN SELECTION. The former §18 trimmer wrote
+  // this budget while deleting excess rows; after that rewriter was demolished,
+  // leaving `null` here made the composer correctly place zero of every decided
+  // primer. The specialist has already decided the eligible days. Its selected
+  // weekly allowance is those candidates capped by the phase-owned range.
+  const selectedPowerBudget = unselected.power.eligible
+    ? Math.min(input.powerPrimerCandidates, unselected.power.preferredWeeklyRange.max)
+    : 0;
 
   return buildSection18WeeklyExposureContractV2({
     ...input.identity,
@@ -174,11 +185,10 @@ export function schedulerExposureContract(
       // count** — and §18's own per-phase table already owns `power.eligible` and
       // `preferredWeeklyRange`.
       //
-      // `null` means THE SCHEDULER SELECTS NO BUDGET, which leaves the phase
-      // policy's own preferred range in charge — the pre-existing behaviour for
-      // every route that never selected one. It is not a zero and must not be
-      // written as one: zero would assert the week is owed no power at all.
-      powerPrimers: null,
+      // The connector therefore carries the specialist's already-decided
+      // candidates and caps them against that phase range. It does not invent
+      // another number and the scheduler still makes no power selection.
+      powerPrimers: selectedPowerBudget,
     },
   });
 }

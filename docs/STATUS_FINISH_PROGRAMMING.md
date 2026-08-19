@@ -212,3 +212,79 @@ Run against checkpoint `14934d13`, then restored byte-identical:
 - No physical iPhone acceptance is claimed.
 
 Agent: finish-programming
+
+## Slice 2a — composer-side power delivery
+
+### First-run findings
+
+- The scheduler and power specialist authored primer candidates, but the
+  scheduler-derived §18 contract left `plannerSelectedWeeklyBudget` null. The
+  composer correctly treated the missing allowance as zero, producing the
+  measured 0 delivered rows despite eligible worlds.
+- Repairing the existing phase-aware generator guard exposed two stale phase
+  contracts before it reached power: early Off-season offered four optional
+  strength sessions although the approved range is 2–3; mid Off-season still
+  required sprinting in weeks 3–4 although R-079 begins it only after week 4.
+- The paper-phone run then found a live projection gap invisible to the internal
+  census: stored power rows produced a named `Power` block with no exercise.
+- Once row projection was restored, five club-night worlds still hid the power
+  row and every same-day strength row. `getTeamTrainingWorkoutState` let an exact
+  `Team Training` title overrule typed composer row evidence and treated the
+  entire workout as the club's. Typed athlete rows now outrank that stale title;
+  untyped legacy team-only shells retain their ingress cleanup.
+
+### Owner-side correction and real worlds
+
+- `schedulerExposureContract` now receives the number of candidates already
+  selected by the power specialist and stamps the smaller of that count and the
+  phase-owned preferred maximum. No scheduler power count and no §18 trimming
+  pass were added.
+- `materialiseComposedWeek` receives the positive allowance through the existing
+  connector and places the selected rows ahead of real strength content.
+- The projection now carries the component owner's `powerRows` into the visible
+  part instead of declaring that population rowless.
+- Real pre-season bodyweight world: budget 2; Lateral Bounds on Monday and
+  Explosive Push-up on Tuesday; both have athlete strength content and neither is
+  Game, G-1 or G+1.
+- Real club-night world: Tuesday visibly prints Explosive Push-up, Barbell Row,
+  Lat Pulldown and Band Pull-Apart, followed by the Team Training appointment.
+
+### Measurements and printed coaching output
+
+- `test:power-primer-policy`: existing policy/deload suite 58 of 58 and live
+  delivery suite 6 of 6.
+- `test:weekly-scheduler`: scheduler 96 of 96; fixture suite 11 of 11.
+- Power census: 180 generation occurrences / 90 distinct athlete setups; 144
+  built, 36 refused; 442 delivered sessions. 100 worlds were authorised for
+  power, all 100 received it, 200 power rows were delivered, and the typed
+  authorised-but-undelivered map is empty. The demolition baseline was 0 rows
+  across 96 authorised worlds.
+- Refusal census improved from 140 built / 40 refused to 144 / 36. Remaining
+  typed families: 20 occurrences / 10 distinct setups at
+  `main_strength_planner_selected_target`; 12 / 6 at
+  `hard_day_permitted_maximum`; 4 / 4 at the combined hard-day and
+  main-strength maximum.
+- `print:week`: 8 real weeks written, 0 missing-copy gaps and 0 detected output
+  findings after projection repair. Two scenarios still refuse generation and
+  remain printed as refusals rather than being counted as weeks that built.
+
+### Verification strategy
+
+- The live guard enters `generateProgramLocally`, checks the contract budget,
+  stored rows, role-filtered strength content, game-proximity fence, canonical
+  visible projection, and a real combined club-night projection. A future defect
+  that restores internal counts but loses the row on the athlete surface is red.
+- The existing phase-aware guard now dates its requested phase week directly:
+  phase week 7 is the normal comparator and the scheduled phase-week-8 deload is
+  the deload world. It no longer generates unrelated intermediate weeks merely
+  to reach the subject.
+
+## NOT COVERED — power checkpoint before mutation
+
+- The guard has not yet been mutation-proven against the restored allowance,
+  visible-row bridge and team-night typed-row precedence.
+- The two explicit print refusals and the remaining 36 corpus refusals are not
+  claimed fixed; they feed the conditioning/travel work still to come.
+- No physical iPhone acceptance is claimed.
+
+Agent: finish-programming

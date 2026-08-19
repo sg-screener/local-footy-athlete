@@ -211,6 +211,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     } as Section18ContractV2Input,
     clubNights: input.clubNights,
     gameDays: input.gameDays,
+    powerPrimerCandidates: materialised.filter((session) => session.powerPrimer !== null).length,
   });
 
   // ── THE WEEK, TRANSLATED DAY BY DAY ──────────────────────────────────────

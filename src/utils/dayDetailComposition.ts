@@ -48,6 +48,7 @@ export interface ComposedDayDetail {
   isConditioning: boolean;
   isCombinedDay: boolean;
   hasTeamTraining?: boolean;
+  powerExercises: any[];
   strengthExercises: any[];
   speedExercises: any[];
   supportExercises: any[];
@@ -69,6 +70,7 @@ export function composeDayDetail(
       isRecovery: false,
       isConditioning: false,
       isCombinedDay: false,
+      powerExercises: [] as any[],
       strengthExercises: [] as any[],
       speedExercises: [] as any[],
       supportExercises: [] as any[],
@@ -127,6 +129,7 @@ export function composeDayDetail(
   // not re-rank anything. No new programming policy: D2's order is authored,
   // shipped, and already what the athlete does. One owner, two readers.
   const order = <T,>(rows: readonly T[]): T[] => orderRowsAsSessionPresents(workout, rows);
+  const powerExercises = order(componentRows.powerRows);
   const strengthExercises = order(componentRows.strengthRows);
   // SPEED ROWS ARE THE SPEED PART'S (Sam, 2026-08-17, surface 3). Carried
   // through from the ONE row owner rather than re-derived here — the same
@@ -175,6 +178,7 @@ export function composeDayDetail(
     isConditioning,
     isCombinedDay,
     hasTeamTraining,
+    powerExercises,
     strengthExercises,
     speedExercises,
     supportExercises,
