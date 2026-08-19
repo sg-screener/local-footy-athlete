@@ -93,6 +93,31 @@ logic around it. Record any resulting missing capability for clean rebuilding.
 Preserve current approved data, contracts and single owners, and prove execution
 before deleting — a legacy-looking name alone is not evidence.
 
+## 2026-08-19 — SESSION ACTION SEMANTICS — SAM CORRECTED REMOVE/SWAP
+
+**This supersedes any plan that automatically fills a slot after an ordinary
+Remove action.** The five actions are different intentions and must not be
+collapsed into one fallback behaviour.
+
+- **Remove:** remove the selected exercise/component. Nothing replaces it.
+  The session is allowed to become smaller. Scope controls how long the absence
+  lasts; Undo restores the removed item.
+- **Swap:** replace the selected exercise because the athlete wants another
+  exercise. Show a ranked legal choice set, up to six where available:
+  approximately two **Closest matches**, two **Similar options**, and two
+  **Other useful options**. Never pad a tier with illegal or poor choices.
+- **Add:** add a legal exercise, mobility item or conditioning component the
+  athlete chooses. It removes nothing.
+- **Equipment:** the exercise cannot be done with today's kit, so preserve it
+  with a legal implement or replace it through the equipment fallback ladder.
+- **Injury:** the exercise/movement is unsafe for the active injury, so remove
+  it and use the closest safe replacement where one exists; otherwise disclose
+  the omission/refusal honestly.
+
+Every replacement uses its own history/estimate and never inherits the outgoing
+exercise's load. Swap choices and cause-driven replacements are filtered by the
+current equipment, injury, exclusions and session-safety rules.
+
 ## 2026-08-13 — AWAY (items 28, 36, 37 / R-075) — session `691865a7`
 
 **WHAT THE ATHLETE CAN SEE NOW, photographed each time:** telling the app he is
