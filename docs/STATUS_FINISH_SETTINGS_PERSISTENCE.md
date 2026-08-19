@@ -684,7 +684,29 @@ Subjects 1–15 are unchanged from session 2. New:
 semantics, not by mine — which is the right place for it — and my suite is
 recorded as blind to that subject rather than credited with it.
 
-## CONTROL COMPARISON — candidate `674892b5`
+## CONTROL COMPARISON — FROZEN CANDIDATE `07e01739`
+
+Both sweeps run to completion and read only after the `SWEEP RESULT` line
+appeared. **⚠ I READ A PARTIAL FAILURE FILE AGAIN** — the second time — and the
+sanity check is what caught it: `test:law-registry` was absent from the
+"failing" set, which is impossible when it has two red cells. A `nohup … &`
+task-completion notification reports the SHELL returning, not the sweep
+finishing; only the `SWEEP RESULT` line does.
+
+| instrument | control @ `9f081efa` | frozen candidate @ `07e01739` |
+| --- | --- | --- |
+| `scripts/sweep.sh`, full, both complete | **184 of 396** | **184 of 397** |
+| GAINED / LOST | — | **0 / 0** |
+| `test:compile` | RED, 78 lines | **diff EMPTY** |
+| `test:settings-persistence` | (absent) | **157 passed, 0 failed** |
+| `test:athlete-journey` | 64 / 0 | **64 / 0** |
+| `test:exercise-exclusions` | 52 / 1 | **53 / 1** (same red) |
+| `test:law-registry` | 12 / 2 | **12 / 2** (same two) |
+
+Sanity-checked on the completed file: `test:law-registry` IS in the failing set,
+`test:settings-persistence` is NOT, `test:exercise-exclusions` IS (pre-existing).
+
+## EARLIER CONTROL COMPARISON — at `674892b5`, before stage 6
 
 | instrument | control @ `9f081efa` | candidate |
 | --- | --- | --- |
