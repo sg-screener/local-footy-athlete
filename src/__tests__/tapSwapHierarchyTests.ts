@@ -8,7 +8,7 @@
   },
 };
 
-import { getExerciseTags } from '../data/exerciseTags';
+import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import type { TapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import {
   assessTapSwapCandidateSafety,
@@ -36,9 +36,35 @@ function eq(name: string, actual: unknown, expected: unknown): void {
   ok(name, JSON.stringify(actual) === JSON.stringify(expected), { expected, actual });
 }
 
-function environment(overrides: Partial<TapSwapEnvironment> = {}): TapSwapEnvironment {
+/**
+ * ⚠ **`injurySeverities` IS THE STORED FACT AND `activeInjuries` IS ITS
+ * PROJECTION, SO THE HELPER DERIVES ONE FROM THE OTHER.**
+ *
+ * Every case below states its world as `activeInjuries: { knee: 'avoid' }`, and
+ * that is now the LEGALITY level: `avoid` is Sam's 6-7 band (*"remove risky work
+ * through the area"*) and `caution` is 1-5 (*"keep safe work in"*). Deriving the
+ * severity here keeps each case meaning exactly what it meant, and — because
+ * `TapSwapEnvironment` requires the field — no case can silently describe a
+ * healthy athlete and pass for the wrong reason.
+ */
+const SEVERITY_FOR_LEVEL = { avoid: 6, caution: 4 } as const;
+
+interface CaseOverrides extends Partial<Omit<TapSwapEnvironment, 'injurySeverities'>> {
+  /** Each case states its world in the old two-value vocabulary; translated here. */
+  activeInjuries?: Partial<Record<InjuryKey, 'caution' | 'avoid'>>;
+  injurySeverities?: TapSwapEnvironment['injurySeverities'];
+}
+
+function environment(overrides: CaseOverrides = {}): TapSwapEnvironment {
+  const activeInjuries = overrides.activeInjuries ?? {};
+  const injurySeverities = overrides.injurySeverities ?? (Object.fromEntries(
+    Object.entries(activeInjuries).map(([region, level]) => [
+      region, SEVERITY_FOR_LEVEL[level as 'avoid' | 'caution'],
+    ]),
+  ) as TapSwapEnvironment['injurySeverities']);
+  const { activeInjuries: _ignored, ...rest } = overrides;
   return {
-    activeInjuries: {},
+    injurySeverities,
     primaryInjury: null,
     availableEquipment: ['bodyweight', 'barbell', 'dumbbell', 'cable', 'machine', 'kettlebell'],
     availableEquipmentTags: [
@@ -53,7 +79,7 @@ function environment(overrides: Partial<TapSwapEnvironment> = {}): TapSwapEnviro
     capacity: 'high',
     hasEquipmentConstraint: false,
     medicalStop: false,
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -167,6 +193,15 @@ console.log('\n-- Injury, readiness and equipment precedence --');
     }),
     primaryInjury,
   });
+  /* ⚠ **THE REGEX ALSO HAD TO STOP MATCHING `Air Bike Sprints`, AND THAT WAS A
+   * REAL DEFECT, NOT A TEST ARTEFACT.** When the recovery rung began deriving
+   * from the exercise library rather than from a four-name table, it offered
+   * `Air Bike Sprints`, `Hard Assault Bike Intervals` and `MetCon` — all rated
+   * `hamstring: 'good'` because they are off-feet, all hard sessions, and all
+   * named by Sam's own bad-swap line *"Hamstring pain from sprinting ->
+   * repeated sprint bike at max effort without control."* The rung now reads
+   * `CONDITIONING_META.tier === 'C'`, his authored recovery/flush tier, so the
+   * assertion below is kept EXACTLY as it was and passes on the fix. */
   ok('hamstring issue avoids sprint, heavy hinge and Nordic suggestions',
     choices.every((choice) =>
       !/sprint|nordic|deadlift|rdl/i.test(choice.name ?? '')),
@@ -184,9 +219,22 @@ console.log('\n-- Injury, readiness and equipment precedence --');
     }),
     primaryInjury,
   });
-  eq('knee issue sends jumping to recovery/easy work',
-    choices[0]?.hierarchyTier,
-    'recovery_easy_conditioning');
+  /* ⚠ **THIS CELL PINNED THE OLD TABLE'S ONLY ANSWER, NOT SAM'S RULE.**
+   * `REPLACEMENT_BY_BUCKET.knee['Box Jumps']` held exactly one entry —
+   * `Easy Bike` — so "recovery is first" was a statement about the table's size.
+   * His actual line is *"Jump/plyo -> **controlled strength** or bike or ski
+   * erg"* (Bible :2144), and controlled strength is named FIRST. The derived
+   * ladder now reaches it, so the cell asserts the rule instead of the table:
+   * the first answer is legal for this knee, is not more jumping, and easy
+   * conditioning is still on offer below it. */
+  const firstKneeTags = choices[0]?.name ? getExerciseTags(choices[0].name) : null;
+  ok('knee issue answers jumping with safe work, not more jumping',
+    firstKneeTags?.injury.knee === 'good'
+      && firstKneeTags?.movement !== 'plyo',
+    choices[0]);
+  ok('knee issue still offers easy conditioning below it',
+    choices.some((choice) => choice.hierarchyTier === 'recovery_easy_conditioning'),
+    choices.map((choice) => choice.hierarchyTier));
   ok('knee issue does not return knee-dominant, COD or jumping work',
     choices.every((choice) => !/jump|sprint|change of direction|cod/i.test(choice.name ?? '')),
     choices);

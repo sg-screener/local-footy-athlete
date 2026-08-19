@@ -242,7 +242,15 @@ async function main(): Promise<void> {
     primaryInjury: { bucket: 'knee', severity: 7 },
   }));
   const injuredNames = namesOf(legalAddCandidateGroups({
-    environment: { ...injured, activeInjuries: { ...injured.activeInjuries, knee: 'avoid' } },
+    /* ⚠ **THIS USED TO SET `activeInjuries`, WHICH IS NOW DELETED.** It was a
+     * projection of the severity, and setting it here without the severity is
+     * exactly the shape that made a healthy-athlete control read 32 exercises as
+     * unsafe. `injurySeverities` is the fact; 6 is Sam's limiting band, which is
+     * what `'avoid'` meant. */
+    environment: {
+      ...injured,
+      injurySeverities: { ...injured.injurySeverities, knee: 6 },
+    },
     profile,
   }));
   ok('an athlete with a bad knee is offered FEWER things',

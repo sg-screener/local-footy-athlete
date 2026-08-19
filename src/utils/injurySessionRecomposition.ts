@@ -42,8 +42,16 @@
  * **THE LADDER IS `getTapSwapChoices` WITH `reason: 'injury_or_pain'`**, the
  * approved `SAFE_TRAINING_FALLBACK_TIERS` hierarchy — same-pattern, then similar
  * muscle group, then unaffected body area, then easy conditioning. No second
- * opinion about what is safe: `assessTapSwapCandidateSafety` decides both which
- * rows are unsafe and which replacements are allowed.
+ * opinion about what is safe.
+ *
+ * ⚠ **BUT THEY ARE TWO QUESTIONS, AND ONE PREDICATE WAS ANSWERING BOTH.** *"Must
+ * this row come out"* is `injuryRequiresChange`, at Sam's 4-5 band (*"swap
+ * obvious aggravators"*). *"May this be the replacement"* is
+ * `assessTapSwapCandidateSafety`, at his 6-7 band (*"remove risky work through
+ * the area"*, against 4-5's *"keep safe work in"*). Asking the second question
+ * for both is what turned a 4/10 shoulder's upper day into `Goblet Squat, Easy
+ * Bike`: every upper row is rated `caution`, so nothing upper could be a
+ * replacement and the ladder had to leave the body region.
  *
  * WRITER: none. READER: `utils/programControlActions` (`set_injury_modifier`).
  * TEST: `src/__tests__/injuryRecompositionTests.ts`.
@@ -51,7 +59,7 @@
 
 import type { Workout } from '../types/domain';
 import {
-  assessTapSwapCandidateSafety,
+  injuryRequiresChange,
   getTapSwapChoices,
   type TapSwapChoice,
   type TapSwapEnvironment,
@@ -102,7 +110,7 @@ export function unsafeRowsForInjury(args: {
   environment: TapSwapEnvironment;
 }): string[] {
   return sessionRowNames(args.workout).filter(
-    (name) => !assessTapSwapCandidateSafety(name, args.environment).safe,
+    (name) => injuryRequiresChange(name, args.environment),
   );
 }
 
