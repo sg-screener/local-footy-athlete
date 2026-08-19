@@ -413,6 +413,29 @@ async function runCell(args: {
     same(weeksBefore, programWeekStarts()),
     `${weeksBefore.join(' ')} -> ${programWeekStarts().join(' ')}`);
 
+  /**
+   * ⚠ **THE EXCLUDED LIFT STAYS OFF THE SCREEN — ASSERTED ON EVERY DOOR, NOT
+   * JUST THE ONE THAT HAPPENED TO BE TESTED.**
+   *
+   * Stage 2b held this for a PHASE change only. The cross-lane measurement then
+   * showed that every settings change puts the excluded lift back into the
+   * STORED program — 0 rows -> 4 (6 after a phase change) — and that only the
+   * read-time projection keeps it off the athlete's week. That is pre-existing
+   * on `main` and it is NOT athlete-visible, so it is recorded as a finding
+   * rather than fixed here (see the seat file). But the visible property is the
+   * one Sam's exclusion ruling is about, and it was pinned on one door out of
+   * eleven, so it is pinned on all of them now.
+   */
+  if (stage.world?.excludedLift) {
+    const excluded = stage.world.excludedLift;
+    const visibleRows = weekPrint(stage.weekStartISO, stage.todayISO)
+      .filter((line) => line.includes(`${excluded}|`)).length;
+    ok(`${label}: the lift the athlete left out is STILL not on their week`,
+      visibleRows === 0,
+      `${excluded} is back on the athlete's week (${visibleRows} row(s)) after this `
+      + 'settings change, and they never asked for it back');
+  }
+
   if (args.expectVisibleChange !== undefined) {
     ok(`${label}: the athlete ${args.expectVisibleChange ? 'SEES' : 'sees NO'} change in their week`,
       same(weekBefore, weekAfter) !== args.expectVisibleChange,
