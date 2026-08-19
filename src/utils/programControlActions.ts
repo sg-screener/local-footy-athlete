@@ -9,6 +9,9 @@ import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
+import { commitAthleteSessionDeletionTransaction } from '../store/acceptedStateTransaction';
+import { resolveDateWithConditioning } from './sessionResolver';
+import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
   applyPlanChange,
   planChangeResultIsLandingAsk,
@@ -27,7 +30,6 @@ import {
   banExerciseGlobally,
   setPreferredAlternative,
   replaceExerciseAtDate,
-  removeExerciseAtDate,
   addExerciseAtDate,
   pinExerciseGlobally,
 } from './coachActions';
@@ -178,6 +180,51 @@ const SETUP_ACTIONS = new Set<ProgramControlActionType>([
   'update_season_phase',
   'update_program_setup',
 ]);
+
+/**
+ * WHICH ROW THE ATHLETE MEANT — id first, then name, and AMBIGUITY IS AN ANSWER.
+ *
+ * Kept here rather than reusing `coachActions.findExerciseMatch` because that
+ * module's removal path is the coach-override one this door just stopped using,
+ * and a shared helper would be the seam that quietly pulls it back in.
+ */
+/** The day as the athlete is seeing it, through the one resolver. */
+function resolveWorkoutOnDate(dateISO: string): Workout | null {
+  const state = buildScheduleStateImperative();
+  const resolved = resolveDateWithConditioning(dateISO, state);
+  return (resolved?.workout as Workout | undefined) ?? null;
+}
+
+function findRemovableExerciseIndex(
+  workout: Workout,
+  exerciseName: string,
+  exerciseId: string | undefined,
+): { kind: 'found'; index: number } | { kind: 'not_found' } | { kind: 'ambiguous' } {
+  const rows = workout.exercises ?? [];
+  if (exerciseId) {
+    const wanted = String(exerciseId);
+    const byId = rows.findIndex((row) => [
+      (row as { id?: string }).id,
+      (row as { exerciseId?: string }).exerciseId,
+      (row as { exercise?: { id?: string } }).exercise?.id,
+    ].filter(Boolean).some((candidate) => String(candidate) === wanted));
+    if (byId >= 0) return { kind: 'found', index: byId };
+  }
+  const wantedName = String(exerciseName ?? '').trim().toLowerCase();
+  if (!wantedName) return { kind: 'not_found' };
+  const matches: number[] = [];
+  rows.forEach((row, index) => {
+    const name = String(
+      (row as { exercise?: { name?: string } }).exercise?.name
+      ?? (row as { name?: string }).name
+      ?? '',
+    ).trim().toLowerCase();
+    if (name === wantedName) matches.push(index);
+  });
+  if (matches.length === 1) return { kind: 'found', index: matches[0]! };
+  if (matches.length > 1) return { kind: 'ambiguous' };
+  return { kind: 'not_found' };
+}
 
 export function routeProgramControlAction(
   action: ProgramControlAction,
@@ -542,20 +589,94 @@ function executeProgramControlActionWithinTrace(
       };
     }
     case 'remove_exercise': {
-      const result = removeExerciseAtDate({
-        date: action.payload.date,
-        exercise: action.payload.exercise,
-        exerciseId: action.payload.exerciseId,
-      });
+      // ── REMOVE MEANS REMOVE ──────────────────────────────────────────────
+      //
+      // Sam, 2026-08-19: *"Remove means simply remove the selected
+      // exercise/component. Nothing replaces it. The session may have fewer
+      // exercises and may lose that movement pattern. **Do not ask the composer
+      // to fill the empty slot.**"*
+      //
+      // ⚠ **THIS USED TO CALL `removeExerciseAtDate`, WHICH ENDS IN
+      // `writeCoachOverride`** — it cloned the day, filtered the row out, and
+      // wrote the result straight over the visible week. Three things followed
+      // from that and all three were defects: the accepted-state transaction was
+      // bypassed so nothing validated the result; the removal left no canonical
+      // decision, so `this block` / `until restored` had nothing to act on; and
+      // Undo deleted the athlete's answer while the patched week stood, so the
+      // exercise never came back.
+      //
+      // The canonical owner already existed and already had the right shape.
+      // `stageAthleteSessionDeletionTransaction` takes a `remainingWorkout` —
+      // its own comment names *"a component-bin's remainder"* — so an exercise
+      // removal is the day MINUS one row, with nothing chosen to take its place.
+      // `originalWorkout` is the day as it stood, which is what makes Undo
+      // restore the EXACT item rather than a fresh choice.
+      //
+      // **The composer never runs on this path, so nothing can refill the slot.**
+      const removalDate = action.payload.date.slice(0, 10);
+      const removalOriginal = resolveWorkoutOnDate(removalDate);
+      if (!removalOriginal) {
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: `There is no session on ${removalDate} to remove anything from.`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      const removalTarget = findRemovableExerciseIndex(
+        removalOriginal,
+        action.payload.exercise,
+        action.payload.exerciseId,
+      );
+      if (removalTarget.kind !== 'found') {
+        // TYPED, never a shrug. The athlete asked for something the session does
+        // not carry, or carries twice under one name.
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: removalTarget.kind === 'ambiguous'
+            ? `"${action.payload.exercise}" matches more than one exercise on ${removalDate}.`
+            : `Could not find "${action.payload.exercise}" on ${removalDate}.`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      const removalRemaining: Workout = {
+        ...(JSON.parse(JSON.stringify(removalOriginal)) as Workout),
+        exercises: removalOriginal.exercises.filter((_, index) => index !== removalTarget.index),
+      };
+      let removalOutcome: { outcome?: string } | null = null;
+      try {
+        removalOutcome = commitAthleteSessionDeletionTransaction({
+          date: removalDate,
+          reason: 'athlete_removed_exercise',
+          source: action.source.initiatedBy === 'system' ? 'coach' : 'tap',
+          scope: 'strength_component',
+          originalWorkout: removalOriginal,
+          remainingWorkout: removalRemaining,
+        }) as { outcome?: string };
+      } catch (error) {
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: `That removal could not be saved: ${(error as Error).message}`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
       let futureResult: { success: boolean; reason?: string } | null = null;
-      if (result.success && action.payload.futureWeeksToo) {
+      if (action.payload.futureWeeksToo) {
         futureResult = banExerciseGlobally({ exercise: action.payload.exercise });
       }
       return {
-        ok: result.success && futureResult?.success !== false,
-        changedProgram: result.success,
+        ok: futureResult?.success !== false,
+        changedProgram: true,
         requiresRebuild: false,
-        message: futureResult?.reason ?? result.reason,
+        message: futureResult?.reason,
         fallbackToCoach: false,
         route: route.route,
       };

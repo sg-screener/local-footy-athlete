@@ -164,6 +164,15 @@ async function main(): Promise<void> {
     console.log(`  after  ${fmt(after)}`);
     console.log(`  CHANGED: ${fmt(before) !== fmt(after) ? 'YES' : '*** NO ***'}`);
     console.log(`  other days untouched: ${fmt(session('2026-07-20', ws))}`);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { undoLastDecision, undoableDecisionCount } = require('../src/__tests__/../store/undoLastDecision');
+    console.log(`  undoable decisions after the door: ${quiet(() => undoableDecisionCount())}`);
+    const undo = await undoLastDecision().catch((e: Error) => ({ ok: false, message: e.message }));
+    const restored = session(TARGET, ws);
+    console.log(`  UNDO ok=${(undo as { ok?: boolean }).ok} "${(undo as { message?: string }).message ?? ''}"`);
+    console.log(`  after undo ${fmt(restored)}`);
+    console.log(`  EXACT item back: ${restored.some((r) => r.name === victim.name)}`);
+    console.log(`  day identical to before: ${fmt(restored) === fmt(before)}`);
   }
 
   // ── DOOR B: the scope answer alone ──────────────────────────────────────

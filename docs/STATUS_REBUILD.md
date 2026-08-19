@@ -651,3 +651,40 @@ long — the two axes are independent and both are needed.
 6. Guard + mutations, including one that forbids a refill, and simulator proof.
 
 Agent: rebuild
+
+
+---
+
+# 2026-08-19 — REMOVE: THE CLEAN PATH IS BUILT AND THE OVERRIDE IS OFF THE DOOR
+
+`remove_exercise` now routes to `commitAthleteSessionDeletionTransaction`
+(`scope: 'strength_component'`, `originalWorkout` = the day as it stood,
+`remainingWorkout` = the day minus one row). The `removeExerciseAtDate` import
+— and with it `writeCoachOverride` — is gone from this door.
+
+Measured on the real athlete, `2026-07-22`, removing `RDLs`:
+
+```
+before  RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+after   Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+the exercise is gone      : true
+NOTHING replaced it       : true (5 -> 4)
+other rows byte-identical : true
+other DAY untouched       : true
+stored: user-removal:2026-07-22:strength_component:...  originalWorkout rows=5
+undoable decisions        : 1
+UNDO -> RDLs@67.5, Bulgarian Split Squats@25, Landmine Press@35, Barbell Row@72.5, Banded Dead Bug@0
+EXACT item back           : true
+day identical to before   : true
+```
+
+**The composer never runs on this path, so nothing can refill the slot.** Undo
+restores the exact item because `originalWorkout` is the day itself, not a fresh
+choice. Typed refusals added for *not found* and *ambiguous*.
+
+`test:compile` **665**, unchanged. `test:session-equipment-owner` 27/0,
+`test:undo-reversal` 19/0. `test:athlete-session-deletion` (30 failures) and
+`test:program-control-durable` (2) are **identical at a control worktree on
+`4142f85d`** — pre-existing, not this change.
+
+Agent: rebuild
