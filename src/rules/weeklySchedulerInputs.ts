@@ -41,6 +41,13 @@ function dateForDayNumber(weekStartISO: string, dayOfWeek: number): string {
     .padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 }
 
+function shiftedDateISO(dateISO: string, days: number): string {
+  const date = new Date(`${dateISO.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    + `-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * ── R-020, STATED AS DATA RATHER THAN AS A DELETION ────────────────────────
  *
@@ -74,19 +81,27 @@ function clubInputsAfterTravel(args: {
   weekStartISO: string;
   clubNights: readonly number[];
   gameDays: readonly number[];
+  fixtureProximityDates?: readonly string[];
   activeConstraints: readonly unknown[] | undefined;
-}): { clubNights: number[]; gameDays: number[] } {
+}): { clubNights: number[]; gameDays: number[]; fixtureProximityDates?: string[] } {
   const spans = awaySpansFromConstraints(
     args.activeConstraints as readonly ActiveConstraint[] | undefined,
   );
   if (spans.length === 0) {
-    return { clubNights: [...args.clubNights], gameDays: [...args.gameDays] };
+    return {
+      clubNights: [...args.clubNights],
+      gameDays: [...args.gameDays],
+      fixtureProximityDates: args.fixtureProximityDates === undefined
+        ? undefined : [...args.fixtureProximityDates],
+    };
   }
   const away = (day: number): boolean =>
     dateIsInsideAwaySpan(dateForDayNumber(args.weekStartISO, day), spans);
   return {
     clubNights: args.clubNights.filter((day) => !away(day)),
     gameDays: args.gameDays.filter((day) => !away(day)),
+    fixtureProximityDates: args.fixtureProximityDates?.filter((date) =>
+      !dateIsInsideAwaySpan(date, spans)),
   };
 }
 
@@ -205,10 +220,30 @@ export function weeklySchedulerInputsFrom(args: {
         ? dayNumber(profile.gameDay)
         : dayNumber(args.targetFixtureDay)]
       .filter((day): day is number => day !== null);
+  const explicitTargetWeek = args.targetWeekAvailability !== undefined
+    || args.targetFixtureDay !== undefined;
+  const actualFixtureDates = args.targetWeekAvailability
+    ? args.targetWeekAvailability.proposedFixtures.map((fixture) => fixture.date)
+    : args.targetFixtureDay !== undefined && args.targetFixtureDay !== null
+      ? [dateForDayNumber(args.weekStartISO, dayNumber(args.targetFixtureDay)!)]
+      : [];
+  const usualGameDay = dayNumber(profile.gameDay);
+  const usualDateThisWeek = usualGameDay === null
+    ? null : dateForDayNumber(args.weekStartISO, usualGameDay);
+  const fixtureProximityDates = explicitTargetWeek
+    ? Array.from(new Set([
+        ...actualFixtureDates,
+        ...(usualDateThisWeek === null ? [] : [
+          shiftedDateISO(usualDateThisWeek, -7),
+          shiftedDateISO(usualDateThisWeek, 7),
+        ]),
+      ]))
+    : undefined;
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
     clubNights: dayNumbers(profile.teamTrainingDays),
     gameDays: targetGameDays,
+    fixtureProximityDates,
     activeConstraints: args.activeConstraints,
   });
 
@@ -222,6 +257,7 @@ export function weeklySchedulerInputsFrom(args: {
     clubNights: club.clubNights,
     gameDay: club.gameDays[0] ?? null,
     gameDays: club.gameDays,
+    fixtureProximityDates: club.fixtureProximityDates,
     // **ALWAYS RECURRING FROM ONBOARDING.** The athlete names a usual game day,
     // which by definition means there was one last week too. Nothing in the
     // profile can say "first fixture ever", so nothing here may claim it — and

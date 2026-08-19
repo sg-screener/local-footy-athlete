@@ -203,6 +203,34 @@ ok('double-fixture proximity protects both games from adjacent strength work',
   JSON.stringify(doubleStrengthDays) === JSON.stringify([1]),
   doubleStrengthDays);
 
+const sundayByeProfile = { ...doubleProfile, gameDay: 'Sunday' };
+const sundayByeAvailability = resolveProfileTargetWeekAvailability({
+  profile: sundayByeProfile as never,
+  weekStart: WEEK_MONDAY,
+  markedDays: { '2026-08-16': 'noGame' },
+  ownedPhase: ownSeasonPhaseForGeneration(sundayByeProfile as never),
+});
+const sundayBye = generateProgramLocally(sundayByeProfile as never, {
+  todayISO: WEEK_MONDAY,
+  blockNumber: 1,
+  microcycleLimit: 1,
+  seasonPhaseClock: clockAtPhaseWeek(8),
+  previousProgram: null,
+  athletePrefs: {},
+  activeConstraints: [],
+  targetWeekAvailability: sundayByeAvailability,
+  targetFixtureDay: null,
+} as never);
+const sundayByeStrengthDays = sundayBye.microcycles[0].workouts
+  .filter((workout) => (workout.exercises?.length ?? 0) > 0)
+  .map((workout) => workout.dayOfWeek);
+ok('a Sunday bye keeps Monday clear as G+1 from the previous Sunday fixture',
+  games(sundayBye).length === 0
+    && sundayByeStrengthDays.length > 0
+    && !sundayByeStrengthDays.includes(1),
+  { games: games(sundayBye).map((workout) => workout.dayOfWeek),
+    strength: sundayByeStrengthDays });
+
 const targetByeBlock = generated(null, 4);
 ok('the target-week bye does not erase recurring fixtures from later weeks',
   games(targetByeBlock, 0).length === 0

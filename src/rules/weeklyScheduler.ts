@@ -75,6 +75,8 @@ export interface WeeklySchedulerInputs {
   readonly clubNights: readonly number[];
   /** Every actual fixture in the target week. Present (including `[]`) on live paths. */
   readonly gameDays?: readonly number[];
+  /** Dated previous/current/next fixtures when the target week is explicitly resolved. */
+  readonly fixtureProximityDates?: readonly string[];
   /** Legacy single-fixture input for pure callers not yet supplying `gameDays`. */
   readonly gameDay: number | null;
   /**
@@ -379,6 +381,17 @@ function scheduledGameProximity(
   day: number,
   inputs: WeeklySchedulerInputs,
 ): GameProximity {
+  if (inputs.fixtureProximityDates !== undefined) {
+    const dayTime = new Date(`${dateForDayOfWeek(inputs.weekStartISO, day)}T12:00:00`).getTime();
+    const deltas = inputs.fixtureProximityDates.map((date) =>
+      Math.round((dayTime - new Date(`${date}T12:00:00`).getTime()) / 86_400_000));
+    const since = deltas.filter((delta) => delta >= 0);
+    const until = deltas.filter((delta) => delta <= 0).map((delta) => -delta);
+    return {
+      daysSincePreviousGame: since.length === 0 ? null : Math.min(...since),
+      daysUntilNextGame: until.length === 0 ? null : Math.min(...until),
+    };
+  }
   const proximities = scheduledGameDays(inputs)
     .map((gameDay) => gameProximity(day, gameDay, inputs.fixtureRecurrence));
   const minimum = (values: readonly (number | null)[]): number | null => {
