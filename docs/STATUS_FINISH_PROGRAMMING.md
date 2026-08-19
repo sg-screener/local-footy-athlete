@@ -213,6 +213,79 @@ Run against checkpoint `14934d13`, then restored byte-identical:
 
 Agent: finish-programming
 
+## Slice 3a — zero-equipment selection and travel delivery
+
+### First-run diagnosis and correction
+
+- The composer did not delete the zero-equipment strength day. A scheduled
+  `upper_pull` day correctly retained any legal accessory it could author, but
+  no bodyweight exercise could fill its planned horizontal/vertical pull main
+  patterns. The scheduler contract nevertheless counted the accessory-only day
+  as one of three or four selected main-strength sessions, so the independent
+  judge refused the best-achievable week.
+- A post-composer target such as “whatever was delivered” was rejected because
+  it would also forgive a composer that lost an achievable day. The scheduler
+  contract now counts a strength day only when its own movement intention has at
+  least one main pattern outside the typed kit-unachievable set. The composer is
+  still independently required to deliver that count.
+- If equipment makes even the policy floor unreachable after the existing
+  availability reduction, the contract records the existing typed
+  `equipment_infeasibility` frequency reduction. It never raises an optional
+  floor and never reduces to observed composer output.
+
+### Real worlds and output
+
+- The 180 generation-occurrence / 90 distinct-athlete-setup refusal census moved
+  from 144 built / 36 refused to 164 built / 16 refused. All 20 zero-equipment
+  refusal occurrences (10 distinct setups) now publish weeks. The only remaining
+  families are Off-season hard-day/maximum disagreements.
+- Real In-season, four-day, two-club-night, bodyweight athlete: contract selects
+  and delivers two main-strength days, removes pull from the safe required set,
+  and stores typed horizontal- and vertical-pull kit gaps. The Full Gym control
+  still selects and delivers all three layout days.
+- Real Pre-season, five-day, no-club bodyweight athlete: three achievable
+  main-strength days selected and delivered; the formerly counted pull-only day
+  is not laundered into a main session by its accessory/conditioning content.
+- Real dated travel + zero-kit world: a permanent Full Gym athlete receives a
+  week; the travel fact removes team/game anchors, the equipment fact reaches
+  composition, athlete strength remains, and typed kit gaps survive.
+- The printed `6-bodyweight-only.md` changed from a typed refusal to a full
+  seven-day athlete page: Bodyweight Squat, Glute Bridge, Single-Leg RDL,
+  Cossack Squat, Bosch Hold, Explosive Push-up and Scap Push-Up, with the missing
+  pull and vertical-push capabilities named on the affected days. The printer
+  reports zero missing-copy gaps and zero detected coaching findings.
+
+### Guard and liveness
+
+- `test:travel-zero-equipment`: 10/10. It drives real permanent bodyweight,
+  permanent Full Gym, Pre-season bodyweight and combined dated travel/zero-kit
+  generation. It asserts selected versus delivered main-session counts, typed
+  stored gaps, anchor removal, athlete-work survival and the achievable-day
+  control.
+- The guard is in the Bible chain through `test:weekly-scheduler`. Scheduler
+  remains 96/96, generated fixture ownership 11/11, and generated-week contract
+  36/36.
+- Production mutation: replacing the kit-achievable scheduler count with the raw
+  scheduler demand made the first real bodyweight world throw
+  `main_strength_planner_selected_target`, expected 3 / actual 2. The guard died
+  before a behavioural assertion could be vacuously evaluated. Restoring the
+  owner returned 10/10.
+- Validator mutation inside the guard: remove an achievable Full Gym push day
+  after generation. The independent judge refuses it at
+  `main_strength_planner_selected_target`; the new selection is not a blanket
+  composer pardon.
+
+## NOT COVERED — travel/zero-equipment delivery gap closed
+
+- Sixteen corpus refusal occurrences remain, all Off-season hard-day and/or
+  main-strength maximum disagreements. They are the next owned scheduler slice;
+  this section does not call the lane complete while they remain.
+- `print:week` still has one separate early-Off-season scenario refusal at
+  `main_strength_permitted_maximum`; it joins that same remaining family.
+- No physical iPhone acceptance is claimed.
+
+Agent: finish-programming
+
 ## Slice 2a — composer-side power delivery
 
 ### First-run findings
