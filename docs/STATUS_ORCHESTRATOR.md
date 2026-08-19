@@ -318,3 +318,71 @@ one thing this seat was told not to do.
 
 **AND THE UI CONTRACT ITSELF WAS NONE OF THEM.** It was on `main`, it is fixed
 on `main`, and it is proven on glass.
+
+---
+
+# 2026-08-20 — SAM'S THREE RULINGS, AND WHAT EACH ONE COST
+
+All three are in `docs/RULINGS_REGISTRY.md` as **R-105**, **R-106**, **R-107**,
+added in the same commits that record them.
+
+## R-107 — UNDO FOLLOWS THE ACTION · `4dc5339a` · MERGED
+
+Mounted on the session screen; the "at most one visible" guard lives inside
+`UndoToast` (focus check + an unfocused mount that keeps its seen-marker
+CURRENT, not merely quiet — silence alone replays the session's toast when the
+athlete returns to Day). `test:undo-reversal` **19 -> 24**, mutation-proven
+three ways.
+
+**ON GLASS:** `artifacts/visible/hub-6-undo-inside-the-session.png` — "You
+removed an exercise · Undo" over the session screen, Back Squat gone.
+
+⚠ **ONE HALF IS NOT PROVEN ON GLASS AND IS NAMED, NOT DROPPED.** Three runs
+proved the toast APPEARS; all three failed to TAP it. The toast lives 6s
+(`VISIBLE_MS`) and each Maestro hierarchy fetch here costs ~1.5s — trimmed to
+one wait, one screenshot, one tap, it still did not fit. **The control was never
+missing; the walk is slower than the affordance's life.** Reversal stays proven
+headlessly (`test:undo-reversal` case 19, which reaches the EXCLUSION and not
+just the ledger). Lengthening the toast for E2E would be changing the product to
+suit the instrument.
+
+## R-106 — A COMBINED DAY IS ONE DAY, TWO COMPONENTS · `4dc5339a` · MERGED
+
+**This is what the Journey candidate was held for, and it is now closed.**
+`test:block-two-ladder` **49/3 -> 59/0**. The three obsolete cells are rewritten
+to the ruling; the protection they were built for MOVED to the coordinate where
+it still applies (a combined day with no conditioning answer is still ambiguous
+and still discarded — the original M3 mutant still dies there).
+
+Mutation-proven three ways, including the leak direction: copying the
+conditioning answer onto the strength quality reds the discriminating cell.
+
+## R-105 — THE PRIMER YIELDS, AND THE POOL MUST GROW · HALF BUILT
+
+**The half Sam ordered as the interim IS built** —
+`orchestrator/power-primer-yields` (`a1f91e27` skip, `276b3e39` guard rewrite).
+84 -> 52 duplicate occurrences, 180/180 still built, `generatedPowerDelivery`
+**14/14** with the original claims moved to a Full Gym world where a shortfall
+would be a real defect.
+
+⚠ **THE HALF THAT MATTERS MOST — MORE POOL ENTRIES — NEEDS SAM, AND THE
+PRECEDENT IS EXACT.** A new selectable exercise name must carry a curated cue
+AND a demo video URL: `test:authored-cues` reads
+`docs/VIDEO_CHANGESET_2026-07-24.md` and fails a pool exercise with no demo.
+That file records the identical situation: *"Reopened 2026-07-27 when the
+power-pool wiring turned `Vertical Jump` and `Explosive Push-up` into pool
+exercises with no demo. **Sam supplied both URLs.**"*
+
+**I will not invent a demo video URL.** A fabricated link is shown to an
+athlete. For each new movement Sam supplies: the name, one primary cue, one
+secondary cue, and a demo URL. The wiring (pool entry, cues, tags, equipment
+requirement, vocabulary) is mechanical once those exist.
+
+⚠ **A REAL DEFECT SURFACED WHILE WRITING THAT GUARD, AND IT IS NOT R-105'S.**
+The first cut asked "does any session name one exercise twice?" and reddened on
+a day reading `["Explosive Push-up", "Explosive Push-up"]` **with no power row
+on it** — two STRENGTH rows, one identity. That is the composer placing one
+movement in two slots: 52 occurrences corpus-wide (48 running-row, 4
+main/accessory), older and wider than R-105. The guard is narrowed to power and
+carries a DISCLOSURE cell so its green cannot be read as "no duplicates
+anywhere". **Composer-owned, unfixed, measured.**
