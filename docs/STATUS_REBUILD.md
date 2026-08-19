@@ -585,9 +585,69 @@ canonical removal decision (`athletePreferencesStore.exclusions` via
 -> the accepted-state transaction
 -> the projection displays fewer rows.
 
-**`applyUserRemovalConstraintsToWeek` is NOT the owner for this**, and it is worth
-writing down because its name says otherwise: it filters WHOLE DAYS
-(`workouts.filter(w => w.dayOfWeek !== dayOfWeek)`). It owns session deletion,
-not exercise removal.
+⚠ **I WROTE HERE THAT `applyUserRemovalConstraintsToWeek` IS NOT THE OWNER. IT
+IS.** I read its first filter line — `workouts.filter(w => w.dayOfWeek !==
+dayOfWeek)` — and stopped. Twenty lines further down it **pushes
+`remainingWorkout` back**, and its own comment names this exact case: *"a swap's
+replacement, an add's new session and **a component-bin's remainder** all arrive
+as `remainingWorkout`"*. Reading a function to its first `filter` and concluding
+is the same mistake as reading a call site without its arguments.
+
+Agent: rebuild
+
+
+---
+
+# 2026-08-19 — REMOVE: THE CANONICAL PATH, AND IT IS ALL CURRENT OWNERS
+
+## THE OWNER, FOUND
+
+`stageAthleteSessionDeletionTransaction` already takes a **`remainingWorkout`**,
+and its comment says why: *"A swap rides this deletion with a non-null
+remainingWorkout ... When content remains on the day it is not a whole-day
+rest."* An exercise removal is that shape exactly — the day, minus one row.
+
+```
+stageAthleteSessionDeletionTransaction({
+  date, scope: 'strength_component',
+  originalWorkout:  the day BEFORE the removal,     <- exact-item Undo comes free
+  remainingWorkout: the day MINUS that one exercise, <- nothing is chosen to replace it
+})
+   -> a UserRemovalConstraint, through the accepted-state transaction
+   -> applyUserRemovalConstraintsToWeek re-lands the remainder at every read (3 live callers)
+   -> athletePlacementFor() stamps it, so no deriver may regenerate over it
+```
+
+**The composer never runs, so nothing can refill the slot** — which is now the
+requirement rather than the defect. Every piece is a current owner; nothing is
+restored, wrapped or invented.
+
+## THE TWO SCOPES ARE COMPLEMENTARY, NOT DUPLICATES
+
+This looked like two rival removal stores. It is not, and the distinction is the
+whole of Sam's *"Today / This block / Until restored"*:
+
+| store | what it answers | horizon |
+| --- | --- | --- |
+| `UserRemovalConstraint` | *what is on THIS dated session* | the day |
+| `athletePreferencesStore.exclusions` | *what generation may choose at all* | this block / until restored |
+
+So **Today** = a removal constraint alone. **This block / Until restored** = a
+removal constraint for today PLUS the exclusion that future generation already
+reads through `composerExclusionInput`.
+
+`UserRemovalScope` (`whole_session | strength_component | conditioning_component |
+recovery_component | team_component`) is about WHAT was removed, not for how
+long — the two axes are independent and both are needed.
+
+## WHAT IS LEFT TO BUILD
+
+1. Route `remove_exercise` to this transaction instead of `writeCoachOverride`.
+2. **Delete the `writeCoachOverride` removal path.**
+3. Wire the scope answer: today -> constraint only; block/until -> constraint + exclusion.
+4. Undo -> resolve the constraint (its `originalWorkout` is the exact item) and
+   drop the exclusion.
+5. Typed refusal when the removal cannot be represented.
+6. Guard + mutations, including one that forbids a refill, and simulator proof.
 
 Agent: rebuild
