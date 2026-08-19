@@ -96,6 +96,7 @@ import {
 import { conversationFor } from './support/coachCommitment';
 import { coachCommitmentNotification } from '../screens/coach/useCoachWeeklyCommitment';
 import { commitmentChangePreview } from '../rules/commitmentChangePreview';
+import { generateProgramForProfileFromStore } from '../utils/weekRebuild';
 import { CommitmentCard } from '../components/CommitmentCard';
 import {
   confirmWeeklyCommitment,
@@ -624,8 +625,65 @@ async function main(): Promise<void> {
 
   const diskBeforeDerivation = diskFingerprint();
   const programBeforeDerivation = prescriptionsOf(useProgramStore.getState().currentProgram);
+  /**
+   * ⚠ **THE IN-MEMORY STORE, NOT ONLY THE DISK — AND A SURVIVING MUTATION IS
+   * WHY.** The block-selection history is what `recordSelections: 'author'`
+   * appends to, and its persistence is DEBOUNCED. A disk fingerprint taken
+   * immediately after the build can therefore be identical while the write is
+   * queued, and the mutation that makes the preview author survived exactly that
+   * way. The store's own state is synchronous and is the thing the law is about.
+   * BOTH are checked: the store because it is immediate, the disk because
+   * "writes nothing" has to mean nothing reaches persistence either.
+   */
+  /**
+   * ⚠ **THE WRITE IS COUNTED, NOT THE STATE COMPARED — AND A SURVIVING MUTATION
+   * TAUGHT ME THE DIFFERENCE.** A state diff of the selection history is
+   * defeated whenever the re-recorded selections happen to equal the ones
+   * already stored, which is exactly what a preview of a NEARBY commitment
+   * produces. `recordBlockSelections` is therefore WRAPPED and its calls
+   * counted: the law is *"a preview does not author"*, and authoring is a CALL,
+   * not a diff. The wrapper is removed immediately afterwards.
+   */
+  const historyModule = require('../store/blockSelectionHistoryStore') as {
+    recordBlockSelections: (...args: unknown[]) => unknown;
+  };
+  const realRecord = historyModule.recordBlockSelections;
+  let authoringCalls = 0;
+  historyModule.recordBlockSelections = (...args: unknown[]) => {
+    authoringCalls += 1;
+    return realRecord(...args);
+  };
   // Derive again — which BUILDS the preview program a second time.
   coachConversation();
+  historyModule.recordBlockSelections = realRecord;
+  ok(
+    'BUILDING THE PREVIEW AUTHORS NOTHING — the selection recorder is never called',
+    authoringCalls === 0,
+    `the preview recorded its selections ${authoringCalls} time(s), so the`
+    + ' acceptance would rotate away from the very program the athlete was shown',
+  );
+  ok(
+    'CONTROL — an authoring build DOES call it, so the cell above is not vacuous',
+    (() => {
+      let calls = 0;
+      historyModule.recordBlockSelections = (...args: unknown[]) => {
+        calls += 1;
+        return realRecord(...args);
+      };
+      const store = useProgramStore.getState();
+      try {
+        quiet(() => generateProgramForProfileFromStore({
+          profile: useProfileStore.getState().onboardingData,
+          todayISO: store.blockState?.blockStartDate ?? blockTwoStart,
+          blockNumber: store.blockState?.blockNumber ?? 2,
+          recordSelections: 'author',
+        }));
+      } catch { /* a refusal is not what this control is about */ }
+      historyModule.recordBlockSelections = realRecord;
+      return calls > 0;
+    })(),
+    'the recorder is never called by ANY build here, so counting it proves nothing',
+  );
   ok(
     'BUILDING THE PREVIEW WRITES NOTHING TO DISK',
     diskFingerprint() === diskBeforeDerivation,

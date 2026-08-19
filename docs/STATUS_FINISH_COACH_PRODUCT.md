@@ -334,3 +334,100 @@ untouched.
 | 2 | An in-season athlete with a Saturday game and two club nights is never offered a fourth session, because the scheduler will not place one. Is that the right coaching answer, or should the app find them a day? | R-099 rules the SHRINKING direction's "nothing legal to offer → no question". Nobody has ruled the growing direction's equivalent. |
 | 3 | Accepting a commitment change moves 60 of 90 loads for the coming block. Should the athlete be told before they accept? | Not ruled anywhere. The preview deliberately claims structure and not loads. |
 | 4 | `R-105` is used by two different rulings. Which one keeps the number? | A seat does not renumber another seat's row. |
+
+
+---
+
+# SAM'S RULINGS, 2026-08-20 — APPLIED, AND THE CANDIDATE FROZEN
+
+| # | ruling | what it changed |
+| --- | --- | --- |
+| 1 | *"I approve all seven proposed Coach sentences exactly as written."* | all seven now `source: 'sam_ruling'` with that provenance; words unchanged |
+| 2 | *"If the scheduler cannot actually place the additional session safely, do not offer it."* | already built as the rebuild gate; now RULED and recorded on the R-105 row |
+| 3 | *"Do not add a warning... That is a transaction defect."* | no warning added; handed off in full to the settings/persistence lane |
+| 4 | *"The weekly-reduction ruling keeps R-105."* | recorded; the power-pool row is renumbered by the INTEGRATOR |
+| 5 | *"Do not make further HomeScreen changes."* | none made; the committed deletion is preserved as a patch + handoff |
+
+**SIGNING THE SEVEN COST TWO UNAUTHORED STRINGS UNTIL THE TAB LABEL WAS FIXED.**
+The badge's accessible name was a TERNARY of two literals, which
+`test:signed-copy-extraction` reads as two athlete-visible strings nobody
+authored — correctly, because a surface choosing between two literals is a
+surface authoring words. The spoken name is now the conversation's own SIGNED
+notification line, so the dot and the first thing the athlete reads inside the
+tab are the same words, and no eighth sentence was invented.
+**584 unauthored at base → 585 while broken → 583 frozen.**
+
+## MUTATION SET — RERUN COMPLETE FROM THE FROZEN TREE: **13 OF 13 KILLED**
+
+Every mutation applied to a clean tree, one at a time, restored from a scratchpad
+copy (never `git checkout --`), suite run alone.
+
+| # | mutation | cells reddened |
+| --- | --- | --- |
+| M01 | the rebuild gate deleted | 2 |
+| M02 | the preview authors block selections | 2 |
+| M03 | the preview reads the CURRENT week | 4 |
+| M04 | the decline records nothing | 5 |
+| M05 | the notification permanently on | 1 |
+| M06 | every changed day called a new training day | 1 |
+| M07 | the Program page draws the card again | 1 |
+| M08 | accept records the answer, reports success, changes no program | 2 |
+| M09 | the confirmation speaks the tap, not the door | 1 |
+| M10 | the preview reports every day as changed | 2 |
+| M11 | the signed join becomes `.join(', ')` over raw kinds | 1 |
+| M12 | the card's render condition becomes `false` | 2 |
+| M13 | the tab badge deleted | 1 |
+
+**13 run, 13 killed. No survivors, no missed mutations in this set.**
+
+### WHAT THE RERUN FOUND — M02 SURVIVED AGAIN, FOR A NEW REASON
+
+The earlier report said M02 killed. On the frozen tree it **survived twice**, and
+chasing it corrected the instrument twice:
+
+1. The original cell was a DISK fingerprint. The block-selection store's
+   persistence is **debounced**, so a fingerprint taken straight after the build
+   can be identical while the write is still queued.
+2. Replacing it with an in-memory state DIFF also survived —
+   `recordBlockSelections` REPLACES the entry for a block start, and a preview of
+   a nearby commitment can re-record byte-identical selections.
+
+**The law is *"a preview does not author"*, and authoring is a CALL, not a diff.**
+`recordBlockSelections` is now wrapped and its calls counted, behind a CONTROL
+that proves an authoring build does call it. M02 reddens 2.
+
+**The earlier claim that the preview was authoring was CORRECT; the guard that
+reported it was not the guard that could see it.** The first kill came from the
+old builder's other store writes, not from the recording — so the right finding
+was reached through a wrong instrument, and that is worth as much as the finding.
+
+## THE DISCARDED MUTATION, NAMED SO THE COUNT IS HONEST
+
+An earlier attempt forced `commitProfileProgramTransaction`'s result to `ok` in a
+world where the transaction already succeeds. It changed nothing observable —
+**a mutation that MISSED, not a blind gate**, and the two must be told apart. It
+is not a member of the set above; **M08 is that property with a real coordinate**
+(record the answer, report success, publish no program).
+
+## FROZEN MEASUREMENTS
+
+| suite | frozen |
+| --- | --- |
+| `test:coach-weekly-reduction` | **64 passed, 0 failed** |
+| `test:block-two-extra-session` | 40 passed, 1 failed (base: 18 pass, 8 FAIL + THROWS) |
+| `test:athlete-journey` | 64 / 0 — identical to base |
+| `test:block-two-screen-delivery` | 36 / 0 · `difficult-missed` 88 / 0 · `ladder` 59 / 0 · `boot-preservation` 20 / 0 |
+| `test:coach-tab-slice1/2/3` | 80/80 · 76/76 · 151/151 |
+| `test:signed-copy-extraction` | 583 unauthored (base 584) — still red, red at base |
+| `test:compile` | over-baseline file set **identical to base**: 45 files, all tests, zero product |
+
+`signed-copy-extraction`, `ruling-registry`, `law-registry`, `repo-law-guards`,
+`approved-icons` — **failure names diffed against base and identical**.
+
+## STILL NOT COVERED AT FREEZE
+
+- **No simulator, no glass.** L10 is not satisfied and this is not "done" until
+  Sam has seen it on his phone.
+- The smaller-week direction has no per-option preview (cost, stated).
+- **The double regeneration is handed off, not fixed** — Sam's ruling.
+- The power-pool ruling still carries `R-105` until the integrator renumbers it.
