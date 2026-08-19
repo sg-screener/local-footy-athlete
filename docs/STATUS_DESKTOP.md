@@ -182,6 +182,13 @@ card, heading, action icons, colours, labels, spacing and interaction states for
 Equipment, Injury, Add, Remove and Swap. The active-session screen must reuse
 that owner rather than maintaining a second row of unstyled text pills.
 
+Action identity is preserved across both surfaces. Injury keeps the existing
+red medical-cross icon and colour. The other four actions each use their own
+distinct established icon and colour: Equipment uses the equipment symbol,
+Add uses a plus, Remove uses a minus, and Swap uses swap arrows. Do not flatten
+them into same-colour pills, substitute text-only controls, or invent different
+icons between the Day and active-session views.
+
 This is UI parity only. It must not fork or change the five action behaviours.
 Both surfaces route into the same canonical action doors, and a visual change
 to the shared hub must appear on both surfaces.
