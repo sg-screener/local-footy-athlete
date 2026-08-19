@@ -84,6 +84,8 @@ armTotalsOrRed();
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
+import { readBlockHistory } from '../rules/blockBoundaryProgression';
+import { addDaysISO } from '../utils/programBlockState';
 import {
   coldStartThroughOnboarding,
   followTheWeek,
@@ -973,6 +975,93 @@ async function main(): Promise<void> {
       noAnchor.blockedBy.includes('game_day_unanswered'), JSON.stringify(noAnchor));
     ok('4: a Save that would change nothing is REPORTED, never silently swallowed',
       noop.blockedBy.includes('no_changes'), JSON.stringify(noop));
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 5 — WHEN THE CLUB NIGHT IS A GYM DAY, BOTH SIDES OF THE COMPLETION
+  //           RATIO MUST COUNT THE SAME SESSIONS
+  // ═══════════════════════════════════════════════════════════════════════
+
+  console.log('\n═══ STAGE 5 — the club night IS a gym day ═══\n');
+  {
+    /**
+     * ⚠ **THIS STAGE EXISTS BECAUSE I BUILT A DEFECT REPORT AND THEN REFUTED IT.**
+     *
+     * When the club night lands on a gym day the accepted block records a
+     * requirement of **4** where the separated athlete records **8**, while the
+     * athlete still visibly receives gym work on two days a week: the combined
+     * day is stored as `workoutType: 'Team Training'` and yet
+     * `getSessionComponents` reports `["power","strength","team_training"]` on
+     * it. That reads exactly like the two-representations defect this repo
+     * fights, and I was one edit away from "fixing" the denominator.
+     *
+     * **MEASURED FIRST, AND THE PREMISE WAS FALSE.** `readBlockHistory` — the
+     * NUMERATOR — excludes the same combined day, so the ratio is consistent on
+     * both sides and the 75% gate is not wrong.
+     *
+     * So the stage holds the AGREEMENT, not a number, and it holds it on BOTH
+     * athletes so the comparison cannot be satisfied by one shape alone.
+     * `deriveAcceptedBlockStrengthRequirement` says in its own docstring that it
+     * must count *"sessions that could have PRODUCED a strength log, because
+     * that is what `readBlockHistory` counts on the other side of the ratio"* —
+     * and nothing was checking that the two actually agreed. A change to one
+     * side alone silently halves or doubles every athlete's completion rate.
+     *
+     * **WHAT THIS DOES NOT DECIDE:** whether a combined club/gym day OUGHT to
+     * count as a strength session for attendance. That is a coaching question,
+     * R-099 does not answer it, and it goes to Sam rather than being settled by
+     * whichever side of the ratio somebody edits first.
+     */
+    for (const [shapeLabel, clubDays] of [
+      ['club nights on their OWN days', ['Tuesday', 'Thursday']],
+      ['the club night IS a gym day', ['Wednesday']],
+    ] as [string, DayOfWeek[]][]) {
+      localStorageData.clear();
+      const profile = theAthlete() as unknown as Record<string, unknown>;
+      profile.teamTrainingDays = clubDays;
+      profile.teamTrainingDaysPerWeek = clubDays.length;
+      const world = await buildWornWorld({
+        profile: profile as unknown as OnboardingData, installDayISO: INSTALL_DAY,
+      });
+      const census = takeSettingsCensus();
+      const blockOne = world.blockOneStart;
+      const required = census.acceptedBlockRequirements[
+        census.acceptedBlockKeys.indexOf(blockOne)] ?? 0;
+      const history = readBlockHistory({
+        feedbackByDate: (useProgramStore.getState() as unknown as {
+          sessionFeedback?: Record<string, never>;
+        }).sessionFeedback ?? {},
+        blockStartISO: blockOne,
+        blockEndISO: addDaysISO(blockOne, 27),
+        requiredStrengthSessions: required,
+      }) as unknown as { recordedStrengthSessions?: number; qualifies?: boolean };
+      const recorded = history.recordedStrengthSessions ?? -1;
+
+      console.log(`  ── ${shapeLabel} ──`);
+      console.log(`     block 1 ${blockOne}: DENOMINATOR ${required} · NUMERATOR `
+        + `${recorded} · qualifies ${history.qualifies}`);
+      console.log(`     the athlete's week:\n       `
+        + weekPrint(blockOne, blockOne).join('\n       '));
+
+      // ANTI-VACUITY: a world where nothing was required, or nothing recorded,
+      // makes the agreement below true for free.
+      ok(`5 [${shapeLabel}]: the block required strength sessions and the athlete did them`,
+        required > 0 && recorded > 0,
+        `required=${required} recorded=${recorded} — the agreement below would be `
+        + 'vacuous on this world');
+      // THE ATHLETE MISSED EXACTLY ONE SESSION in `buildWornWorld`, so the
+      // numerator is the denominator minus at most that one miss. A numerator of
+      // HALF the denominator (or double it) is the two-sided disagreement.
+      ok(`5 [${shapeLabel}]: BOTH SIDES OF THE COMPLETION RATIO COUNT THE SAME SESSIONS`,
+        recorded === required || recorded === required - 1,
+        `the block recorded that ${required} strength sessions were required and `
+        + `readBlockHistory counts ${recorded} recorded, on an athlete who missed `
+        + 'exactly one. A denominator that counts a combined club/gym day while '
+        + 'the numerator does not (or the reverse) silently halves or doubles the '
+        + "athlete's completion rate, which drives both the 75% missed-session "
+        + 'ask and the block boundary.');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
