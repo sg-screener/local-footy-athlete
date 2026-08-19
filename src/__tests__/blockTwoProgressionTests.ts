@@ -244,7 +244,25 @@ function derivedRowsOf(program: TrainingProgram): DerivedRow[] {
     for (const w of mc.workouts) {
       for (const ex of w.exercises ?? []) {
         const name = ex.exercise?.name ?? '';
-        if (!name || ex.role === 'conditioning') continue;
+        /* ⚠ **POWER JOINED CONDITIONING HERE ON 2026-08-20, AND IT IS THE SAME
+         * EXEMPTION, NOT A NEW ONE.**
+         *
+         * This filter was written when no generated athlete could receive a
+         * power row at all. The moment the specialist's budget reached the
+         * composer, `Kneeling Jump` became the first row with
+         * `countsAsMainOrSecondary === false`, so the accessory derivation below
+         * selected a bodyweight plyometric as its subject and then asked it to
+         * restore a 17.5kg load. It reported `expected 17.5, got undefined`,
+         * which reads exactly like broken accessory seeding.
+         *
+         * **PRODUCTION WAS RIGHT AND THE SUBJECT WAS WRONG.** A power row
+         * carries no load and must not: `role: 'power'` is the fence
+         * (`rules/sessionRowCounting.ts`) — not a hard exposure, not main
+         * strength, no conditioning credit. A row that is exempt from the set
+         * budget for that reason is not an "accessory outside the set budget";
+         * it is not strength work at all, which is precisely why conditioning
+         * was already excluded on this line. */
+        if (!name || ex.role === 'conditioning' || ex.role === 'power') continue;
         out.set(name, {
           name,
           kg: ex.prescribedWeightKg,
