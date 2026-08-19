@@ -238,3 +238,108 @@ it prints is longer and somebody should retire it — it also owns a declared re
 on the walker, so retiring it is a two-file job with its own measurement.
 
 **Also not covered:** Product work, per Sam's non-goal for this task.
+
+---
+
+# PART 3 — THE COUNTING AMBIGUITY, CLOSED (Sam, before acceptance)
+
+**His statement:** power counts in the athlete-visible completion counter
+(`Strength 0/6` for one power row plus five strength rows), and must NOT count
+toward the strength exercise cap, the 16-set/session ceiling, strength-set
+progression, or decisions about whether another strength exercise or set can be
+added.
+
+**Why it needed a guard at all:** before R-110 the athlete SAW the separation —
+`Power / Primer 0/1` beside `Strength 0/5`. Now it is one number, and the
+separation is a claim about code nobody can see.
+
+## THE FOUR OWNERS — and they are NOT one mechanism
+
+| Sam's statement | owner | how power is excluded |
+| --- | --- | --- |
+| strength exercise cap | `exerciseBudgetRows` (`ROLES_EXEMPT_FROM_THE_CAP`) | **by ROLE** |
+| 16-set/session ceiling | `countMainSecondarySets` → `slotCountsTowardSetBudget` | **by SLOT** |
+| strength-set progression | `applyStrengthProgression` → `participatesInCounting` | **by ROLE** |
+| can another set be added | `decideBlockBoundarySetAdditions` (ceiling = `LADDER_SESSION_SET_CEILING` = 16) | **both** |
+
+**Two fences, not one.** A single cell spanning them would go green while one
+rotted. They are split.
+
+## MEASURED ON REAL GENERATED DAYS — nothing hand-built
+
+Pre-season, Full gym, 3 microcycles → 8 days carrying power.
+
+| | WITH power | WITHOUT |
+| --- | --- | --- |
+| visible Strength counter | **6** | **5** |
+| cap counter `exerciseBudgetRows` | 5 | **5** |
+| 16-set `countMainSecondarySets` | 12 | **12** |
+| set-ladder decision | `Back Squat 3→4, before=12 after=13` | **identical** |
+| at the ceiling (16) | refuses | **refuses** |
+| one under (15) | adds, lands on 16 | **identical** |
+
+**Removing the power row frees NO capacity** — the cap counter's rows are the
+same list, name for name.
+
+**PROGRESSION, ON THE DAY THAT CAN ACTUALLY FAIL.** Of the generated power
+exercises, `Lateral Bounds` classifies as NOTHING to progression and
+**`Explosive Push-up` classifies as `secondary_strength`** — the trap
+`sessionRowCounting`'s own header names. On that day, with history built through
+the real feedback door, progression moved **5 strength rows (+1 set each) and 0
+power rows**.
+
+## THE PERMANENT GUARDS — `test:power-primer-policy`, section `[8]`, 15 cells
+
+`src/__tests__/generatedPowerDeliveryTests.ts`. **5 of the 15 are non-vacuity
+controls**, because every "X equals Y" cell here would pass on two zeros.
+
+- `[8] CONTROL — real generation produces days carrying power AND strength`
+- `[8] the visible Strength counter COUNTS the power row`
+- `[8] SAM'S NUMBERS — one power row and five strength rows reads 6, and 5 without it`
+- `[8] power does not count toward the strength exercise cap`
+- `[8] and removing the power row creates no capacity that was not already there`
+- `[8] power adds nothing to the 16-set/session count`
+- `[8] CONTROL — that count is non-zero, so equality is not two zeros agreeing`
+- `[8] and NO generated power row carries a slot the set budget counts`
+- `[8] CONTROL — the ladder really does add a set on this day`
+- `[8] the set ladder decides identically with and without the power row`
+- `[8] at the ceiling the ladder refuses — and refuses the same with power present`
+- `[8] one under the ceiling the rung is available, identically, and lands ON 16`
+- `[8] CONTROL — the subject's power row is one progression WOULD otherwise move`
+- `[8] CONTROL — progression really is moving rows on this day`
+- `[8] strength-set progression never moves a power row`
+
+## MUTATION-PROVEN — power deliberately counted as strength
+
+| mutation | cells killed |
+| --- | --- |
+| **M-A** — `'power'` removed from `ROLES_EXEMPT_FROM_COUNTING` | the cap · no-extra-capacity · progression (**3**) |
+| **M-B** — `countMainSecondarySets` counts power rows | the 16-count · all three ladder cells (**4**) |
+
+Neither mutation reds the visible-counter cells — correct: power SHOULD count
+there. Restored from my own backups, md5-verified, 33/33 after.
+
+⚠ **AND THE FIRST MUTATION RUN LIED.** `test:power-primer-policy` is a CHAIN —
+`powerPrimerPolicyTests && generatedPowerDeliveryTests`. Under M-A the FIRST
+suite went red, `&&` stopped the second, **and my 15 cells never executed**. The
+totals line I would have reported belonged to a suite that never ran. Both
+mutations were re-run against the file DIRECTLY.
+
+## NOT COVERED — and Sam should know this one
+
+⚠ **THE STRENGTH EXERCISE CAP HAS NO PRODUCTION ENFORCER.**
+`maxExercisesPerStrengthSession: 7` (R-088) is read by no validator, trim or
+door, and `exerciseBudgetRows` has **zero production callers** — only tests. The
+module's own comment says so: *"nothing enforces a cap today"*. So *"power does
+not count toward the cap"* is proven **at the counter**, and there is currently
+no live decision it could change. `test:exercise-cap`'s own non-vacuity cell is
+red at HEAD for the matching reason — *"the corpus contains sessions at or near
+the cap"* — at both ends, unchanged by this work. **The guard is in place for
+when the enforcement lands; it is not evidence that enforcement exists.**
+
+**Also not covered:** *"whether another strength EXERCISE can be added"* — the
+add door (`planChangeProducer`) consults no session-size limit at all, so there
+is no decision to test. The SET half of that sentence is fully covered by the
+three ladder cells above.
+
+`test:compile` unchanged: 671 errors / 77 worse pairs, product scope 30.
