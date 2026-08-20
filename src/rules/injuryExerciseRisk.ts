@@ -130,3 +130,51 @@ export function injuryPermitsExerciseAtSeverity(
   if (risk === 'good') return true;
   return !injurySeverityRemovesRiskyWork(severity);
 }
+
+/**
+ * ── MUST THIS ROW, ALREADY ON THE ATHLETE'S SESSION, BE TAKEN OUT? ──────────
+ *
+ * **TWO QUESTIONS WERE SHARING ONE PREDICATE, AND THEY DISAGREE ON EXACTLY ONE
+ * ANSWER: `unknown`.** Sam, 2026-08-20, on a screenshot: *"'Breathing Reset is
+ * unsafe with your hamstring' appears wrong and may expose a broader
+ * classification defect."* It did.
+ *
+ *   **MAY THIS BE A REPLACEMENT?** — `injuryPermitsExerciseAtSeverity` above.
+ *   `unknown` is refused, and rightly: an injury substitution is the last place
+ *   in this app to guess, and there is always another rung to try.
+ *
+ *   **MUST THIS EXISTING ROW COME OUT?** — this function. `unknown` is ALLOWED,
+ *   because refusing it invents a restriction out of absent data. There is no
+ *   other rung to fall to here: the answer is taken away from the athlete and
+ *   the row is struck off their session.
+ *
+ * ⚠ **THE COST OF GETTING THIS BACKWARDS WAS MEASURED, NOT ARGUED.** `unknown`
+ * means "no `EXERCISE_TAGS` entry", and **70 of the 90 pooled and conditioning
+ * names have none** — every conditioning format in the app, plus the swap
+ * surface's own `Breathing Reset` literal. So every one of them was being marked
+ * *"not safe with your <region> right now"* on the athlete's session, for every
+ * injury, at every active band, purely because nobody had written a row in a
+ * table. `classifyExerciseRiskForBucket`'s own comment already says the rule
+ * — *"DO NOT 'FIX' THIS BY MAKING `unknown` RISKY … If you want the gap closed,
+ * close it in the DATA"* — and this is the caller that was breaking it.
+ *
+ * ⚠ **THE LOADED GAP IS NOT LEFT OPEN.** The same comment records why: every
+ * loadable untagged row is already refused before it is ever chosen, by
+ * `PoolExercise.contraindications` in `sessionBuilder`. What `unknown` covers
+ * here is stretches, breathing, foam rolling and conditioning formats.
+ *
+ * WRITER: none, pure. READERS: `tapSwapHierarchy.injuryRequiresChange` (must
+ * this row change) and `rules/injuryWithheldRows` (must it be withheld).
+ * TEST: `test:session-injury-review` section [11].
+ */
+export function injuryWithholdsExistingRow(
+  exerciseName: string,
+  bucket: InjuryKey,
+  severity: number,
+): boolean {
+  const risk = classifyExerciseRiskForBucket(exerciseName, bucket, severity);
+  if (risk === 'unknown') return false;
+  if (risk === 'avoid') return true;
+  if (risk === 'good') return false;
+  return injurySeverityRemovesRiskyWork(severity);
+}

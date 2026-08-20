@@ -471,6 +471,7 @@
     "test:block-selection-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockSelectionAuthorityTests.ts",
     "test:session-change-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionChangeDurabilityTests.ts",
     "census:injury-fallback": "TZ=Australia/Melbourne sucrase-node scripts/census-injury-fallback.ts",
+    "probe:injury-ladder": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-ladder.ts",
     "test:session-injury-review": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionInjuryReviewTests.ts",
     "test:injury-fallback-journey": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryFallbackJourneyTests.ts",
     "seed:injury-fallback": "TZ=Australia/Melbourne sucrase-node scripts/seed-injury-fallback.ts",

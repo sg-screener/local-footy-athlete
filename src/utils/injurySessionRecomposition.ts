@@ -58,6 +58,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import {
   injuryRequiresChange,
   getTapSwapChoices,
@@ -115,6 +116,27 @@ export function unsafeRowsForInjury(args: {
 }
 
 /**
+ * MAY THIS CANDIDATE FILL THAT ROW'S SLOT? — the section question, asked once.
+ *
+ * ⚠ **AN UNPLACED ORIGINAL IMPOSES NO BOUNDARY.** A few names the app's own
+ * vocabulary does not place (`Breathing Reset` is the one Sam named — the swap
+ * surface mints it as a literal rather than drawing it from a pool) would
+ * otherwise match nothing and be withheld for a reason that is really "we could
+ * not classify this row". Not knowing the section is a reason to leave the
+ * boundary off, never a reason to omit the row.
+ *
+ * ⚠ **AN UNPLACED CANDIDATE, HOWEVER, IS REFUSED** whenever the original IS
+ * placed — the defect being closed here is a row arriving in a section nothing
+ * had said it belonged to, and "we do not know" cannot be the evidence that it
+ * belongs.
+ */
+function injuryReplacementKeepsSection(original: string, candidate: string): boolean {
+  const section = exerciseSessionFamily(original);
+  if (!section) return true;
+  return exerciseSessionFamily(candidate) === section;
+}
+
+/**
  * THE PLAN. Nothing is applied here.
  *
  * A substitution is offered only when the ladder returns a NAMED exercise: a
@@ -155,6 +177,28 @@ export function planInjuryRecomposition(args: {
        * and the property is stated here instead: **a choice with no name is not
        * a replacement**, and rest is the only choice the ladder builds that way. */
       .find((candidate) => Boolean(candidate.name)
+        /* ⚠ **A REPLACEMENT MUST STAY IN THE ROW'S OWN SECTION.**
+         *
+         * Sam, 2026-08-20: *"Breathing Reset must never appear inside Strength …
+         * A Strength replacement must remain a legal Strength exercise. Mobility
+         * / Warm-up and Conditioning movements cannot be used to fill a Strength
+         * slot … If no safe Strength option exists after the full ladder, leave
+         * it unavailable rather than inserting recovery work."*
+         *
+         * **THE LADDER ALREADY REFUSES THESE — THIS CATCHES THE ONES THAT NEVER
+         * WENT THROUGH IT.** `getTapSwapChoices` appends its own
+         * `recoveryChoice` after the ladder has spoken, and that fallback is two
+         * hard-coded literals (`Easy Bike`, and `Breathing Reset` when there is
+         * no bike) minted inside the swap surface with no notion of a section.
+         * **MEASURED: that is exactly how a Strength row became a breathing
+         * drill** — the ladder returned nothing for it, and the fallback filled
+         * the slot. A row with no safe answer in its own section is WITHHELD
+         * here, which is what Sam asked for and what R-115 already knows how to
+         * show.
+         *
+         * The predicate is `rules/exerciseSessionFamily`, the same owner the
+         * ladder asks and the same one the Add menu is built from. */
+        && injuryReplacementKeepsSection(name, candidate.name!)
         // ⚠ **AND NOT SOMETHING THIS SESSION IS ALREADY GETTING.** `taken` is
         // handed to the ladder as `existingExerciseNames`, and the ladder's
         // RECOVERY fallback does not read it — it is a fixed answer. Measured: a

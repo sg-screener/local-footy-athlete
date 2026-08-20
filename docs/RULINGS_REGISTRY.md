@@ -3557,3 +3557,90 @@ injury really does land on a row the FIRST one produced, without which every cel
 under it would be green and empty. Mutations: **M6** (the settle names the
 authored row again) reds 4, **M7** (the badge reaches for the older exercise)
 reds 3, **M8** (the internal history stops being written) reds 1.
+
+---
+
+**R-122** · *"The resulting session violates the approved Injury fallback ladder.
+'Skip' is the final option only after the app proves there is no safe
+alternative. … Breathing Reset must never appear inside Strength … A Strength
+replacement must remain a legal Strength exercise. Mobility / Warm-up and
+Conditioning movements cannot be used to fill a Strength slot. 'Safe adjacent
+pattern' still means useful Strength work. If no safe Strength option exists
+after the full ladder, leave it unavailable rather than inserting recovery
+work."* (Sam, 2026-08-20) · **A SECTION IS A BOUNDARY, AND SKIP IS THE LAST
+ANSWER, NOT AN EARLY ONE.**
+
+**Search words:** breathing reset strength, easy bike strength, recovery in
+strength slot, category boundary, session section, skipped work, unavailable
+today, unknown injury rating, unrated exercise unsafe, ladder exhausted.
+
+**WHY IT WAS ORDERED:** a stacked-injury session came back as a screen of
+skipped work with a breathing drill sitting in the Strength section.
+
+**THREE DEFECTS, MEASURED.**
+
+**D1 — THE LADDER HAD NO CONCEPT OF A SECTION.** It ranked the whole legal
+library by movement pattern and safety. The app already knew `Breathing Reset` is
+Mobility — the Add menu has known since R-120, through a TOTAL map from pool to
+leaf to family — but the injury path never asked. `rules/exerciseSessionFamily`
+now derives the family from those same maps and authors nothing of its own; a new
+category table would have been a second answer, free to disagree.
+
+**D2 — RECOVERY WAS INJECTED AFTER THE LADDER HAD SPOKEN.**
+`getTapSwapChoices` appends `recoveryChoice`, two hard-coded literals minted
+inside the swap surface (`Easy Bike`, or `Breathing Reset` when there is no
+bike), which never went through the ladder at all. **FIXING ONLY THE LADDER MADE
+THIS WORSE** — the pooled recovery option disappeared, the "already has a
+recovery tier" guard stopped matching, and `Breathing Reset` was pushed onto a
+`Bench Press` menu that had never carried it. Caught by `test:tap-swap-hierarchy`,
+not by reasoning.
+
+**D3 — THE CLASSIFICATION DEFECT SAM SUSPECTED FROM THE SCREENSHOT.**
+*"'Breathing Reset is unsafe with your hamstring' appears wrong and may expose a
+broader classification defect."* It did. **Two questions were sharing one
+predicate and they disagree on exactly one answer, `unknown`.** *May this be a
+REPLACEMENT?* rightly refuses an unrated exercise — there is always another rung.
+*Must this EXISTING row come out?* must NOT, because there is no other rung and
+the row is struck off the athlete's session. **70 of the 90 pooled and
+conditioning names have no entry in the injury sheet**, so every conditioning
+format in the app was being marked *"not safe with your <region> right now"* for
+every injury at every band. `injuryWithholdsExistingRow` is the second owner;
+`classifyExerciseRiskForBucket`'s own comment already stated the rule
+(*"DO NOT 'FIX' THIS BY MAKING `unknown` RISKY … close it in the DATA"*) and this
+was the caller breaking it.
+
+**AND THE STACKING RULE THAT CAME WITH IT** — *"Stacked injuries operate on the
+session the athlete could see before the newest injury."* The settle used to
+re-plan every active injury JOINTLY from the authored week, so a second injury
+planned against `Leg Press` and never saw the row the first had put there.
+Injuries are now applied **in declaration order, each against the result of the
+one before it**, and **stage k sees only the injuries that existed by stage k** —
+a full environment at every stage re-derived the first injury while already
+knowing the second, which is the same defect wearing a different hat. The final
+state is still checked against every active injury, because the last stage
+carries them all. R-121's naming falls out of this for free rather than needing a
+derivation bolted on, and R-121's withheld half — recorded as OPEN when it was
+ruled — is closed by it.
+
+· `WORKING` — `rules/exerciseSessionFamily` (the boundary),
+`rules/injuryFallbackLadder.walkInjuryFallbackLadder` (one traversal producing
+both the options and the rung-by-rung explanation, so no separate explainer can
+drift), `rules/injuryExerciseRisk.injuryWithholdsExistingRow`, and the ordered
+stages in `programControlActions.recomposeSessionForInjury`.
+
+**MEASURED AFTER, ordinary single injuries on a real generated week** — knee
+7/10: 4 unsafe rows, **4 Strength replacements, 0 skipped**; shoulder 6/10: 1
+row, 1 replacement, 0 skipped; hamstring 5/10: `RDLs -> Glute Bridge`, Sam's own
+Bible good swap, 0 skipped.
+
+**GUARDED:** `test:session-injury-review` `[11]` — the check Sam asked for by
+name, sweeping 13 regions x 4 bands **on top of an already-applied injury**.
+⚠ **THE FIRST VERSION OF THAT GATE WAS GREEN AND EMPTY**: with one injury the
+ladder almost never runs out, so removing the boundary from the planner, the
+ladder AND the recovery fallback reddened NOTHING. It sweeps a stacked world now
+and asserts it reached the state the boundary is about. Mutation **M13** (the
+planner and the recovery-fallback boundaries both off) reds 2 and reproduces
+`Chest-Supported DB Row -> Easy Bike` exactly. ⚠ **THE TWO BOUNDARIES ARE
+BELT-AND-BRACES — either alone holds, which is why single mutations do not bite.
+Do not delete one as redundant.** `npm run probe:injury-ladder` prints, for every
+skipped row, each rung's candidates and why each was rejected.

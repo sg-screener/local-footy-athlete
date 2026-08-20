@@ -217,7 +217,7 @@ export const ADD_LEAF_LABELS: Readonly<Record<AddLeafId, string>> = {
  * conditioning pool is the one group that does NOT map whole, because its 90
  * formats already carry Sam's own tier.
  */
-const LEAF_FOR_POOL:
+export const LEAF_FOR_POOL:
   Readonly<Record<VocabularyGroupId, AddLeafId | 'by_conditioning_tier'>> = {
   // ⚠ These two are then re-read by `liftUnilateralToSingleLeg` below — Sam put
   // `Single leg` BESIDE Hinge and Squat, so it takes from them.

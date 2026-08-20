@@ -33,6 +33,7 @@ import { applyExclusionsToAuthoredDay } from '../rules/exerciseExclusions';
 import { injuryWithholdingsOn } from '../rules/injuryWithheldRows';
 import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import {
+  sessionRowNames,
   describeVisibleInjuryChange,
   injuryRecompositionMessage,
   planInjuryRecomposition,
@@ -55,7 +56,6 @@ import {
 } from './tapProgramModifiers';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
-import { mostRecentlyDeclaredInjuryId } from '../rules/injurySubstitutionSource';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
@@ -1246,6 +1246,80 @@ export async function executeProgramControlActionDurably(
 
 
 /**
+ * EVERY ACTIVE INJURY, OLDEST FIRST — the order the athlete lived them in.
+ *
+ * ⚠ **DERIVED FROM THE FACTS, SO BOOT AND THE LIVE DOOR AGREE FOREVER.** The
+ * live door knows which injury was just declared; boot does not. Ordering by the
+ * stored stamps means the replay produces the identical sequence, which is the
+ * whole reason the athlete's session does not re-shuffle on relaunch.
+ *
+ * The constraint being applied is folded in even when the store has not settled
+ * it yet, so the live pass and the replay see the same list.
+ */
+function injuryStagesInDeclarationOrder(
+  pending: ActiveInjuryConstraint,
+): ActiveInjuryConstraint[] {
+  const constraints = (useCoachUpdatesStore.getState().activeConstraints ?? [])
+    .filter((constraint) => constraint.type === 'injury' && constraint.status === 'active');
+  const merged = constraints.some((constraint) => constraint.id === pending.id)
+    ? [...constraints]
+    : [...constraints, pending as never];
+  return merged
+    .slice()
+    .sort((left, right) => {
+      const byStart = String((left as { startDate?: string }).startDate ?? '')
+        .localeCompare(String((right as { startDate?: string }).startDate ?? ''));
+      if (byStart !== 0) return byStart;
+      const byUpdated = String((left as { lastUpdatedAt?: string }).lastUpdatedAt ?? '')
+        .localeCompare(String((right as { lastUpdatedAt?: string }).lastUpdatedAt ?? ''));
+      if (byUpdated !== 0) return byUpdated;
+      return String((left as { id?: string }).id ?? '')
+        .localeCompare(String((right as { id?: string }).id ?? ''));
+    })
+    .filter((constraint) => Boolean((constraint as { bucket?: string }).bucket)) as ActiveInjuryConstraint[];
+}
+
+/** The `TapSwapPrimaryInjury` a stage's constraint stands for. */
+function stagePrimaryInjury(constraint: ActiveInjuryConstraint): TapSwapPrimaryInjury {
+  return {
+    bucket: constraint.bucket as TapSwapPrimaryInjury['bucket'],
+    severity: constraint.severity,
+    seriousSymptoms: constraint.seriousSymptoms === true,
+  };
+}
+
+/**
+ * THE SESSION AS IT WOULD LOOK WITH ONE STAGE APPLIED — in memory, written
+ * nowhere.
+ *
+ * Only the NAMES move: this exists so the next stage plans against the rows the
+ * athlete would be looking at, and every real write still goes through
+ * `swap_exercise` at the end. A withheld row stays exactly where it is, which is
+ * R-115's rule and is why omissions are not removed here.
+ */
+function applyPlanToWorkout(
+  workout: Workout | null,
+  plan: { substitutions: readonly { from: string; to: { name: string | null } }[] },
+): Workout | null {
+  if (!workout || plan.substitutions.length === 0) return workout;
+  const replacement = new Map(
+    plan.substitutions
+      .filter((entry) => entry.to.name)
+      .map((entry) => [entry.from.toLowerCase(), entry.to.name!]),
+  );
+  return {
+    ...workout,
+    exercises: (workout.exercises ?? []).map((row) => {
+      const name = (row as { exercise?: { name?: string } }).exercise?.name ?? '';
+      const next = replacement.get(String(name).toLowerCase());
+      return next
+        ? { ...row, exercise: { ...(row as { exercise?: object }).exercise, name: next } }
+        : row;
+    }) as Workout['exercises'],
+  };
+}
+
+/**
  * THE INJURY PASS'S INPUTS, ASSEMBLED ONCE — SO THE REVIEW AND THE WRITE CANNOT
  * DISAGREE ABOUT WHAT THE INJURY DOES.
  *
@@ -1325,62 +1399,6 @@ export function resolveInjuryRecompositionInputs(args: {
 }
 
 /**
- * THE DAY AS IT WOULD BE WITHOUT THE INJURY JUST DECLARED — i.e. what the
- * athlete was looking at when they declared it.
- *
- * Returns `authored name -> the name they could see`, and ONLY for rows where
- * the two differ. An empty map is the normal, single-injury answer and means
- * "the authored name is what they saw", which is true.
- *
- * ⚠ **WHICH INJURY IS "THE NEW ONE" IS DERIVED FROM THE FACTS, NOT FROM THE
- * ACTION.** The live door knows what the athlete just tapped; boot does not, and
- * if the two disagreed the badge would change wording on the first restart.
- * Both call `mostRecentlyDeclaredInjuryId`, so both get the same answer forever.
- *
- * ⚠ **THIS DECIDES A NAME, NEVER AN OUTCOME.** It runs the same planner over a
- * smaller fact set purely to read the previous view; nothing it returns can
- * change which exercise is chosen or which row is withheld. That separation is
- * why the fix carries no risk to the ladder's answers.
- */
-function previouslyVisibleInjurySources(args: {
-  date: string;
-  workout: Workout | null;
-  constraint: ActiveInjuryConstraint;
-}): Map<string, string> {
-  const empty = new Map<string, string>();
-  if (!args.workout) return empty;
-  const constraints = useCoachUpdatesStore.getState().activeConstraints ?? [];
-  const newestId = mostRecentlyDeclaredInjuryId(constraints as never);
-  // Nothing older to have been seen: the authored row IS what they were looking at.
-  if (!newestId) return empty;
-  const older = constraints.filter(
-    (constraint) => (constraint as { id?: string }).id !== newestId,
-  );
-  if (older.length === 0) return empty;
-
-  const olderEnvironment = resolveTapSwapEnvironment({
-    date: args.date,
-    profile: useProfileStore.getState().onboardingData,
-    activeConstraints: older,
-    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
-    // NO `primaryInjury` — the pending fact is precisely the one being excluded.
-    primaryInjury: null,
-  });
-  const olderPlan = planInjuryRecomposition({
-    workout: args.workout,
-    environment: olderEnvironment,
-    primaryInjury: null,
-  });
-  const seen = new Map<string, string>();
-  for (const substitution of olderPlan.substitutions) {
-    if (substitution.to.name && substitution.to.name !== substitution.from) {
-      seen.set(substitution.from, substitution.to.name);
-    }
-  }
-  return seen;
-}
-
-/**
  * APPLY THE INJURY PLAN TO THE ATHLETE'S OWN SESSION, AND REPORT WHAT HAPPENED.
  *
  * ⚠ **THE `remainingUnsafe` COUNT IS MEASURED AFTER THE WRITES, FROM THE REAL
@@ -1412,31 +1430,36 @@ function recomposeSessionForInjury(args: {
         : 'Injury restrictions are active. There is no session on this day to change.',
     };
   }
-  const plan = planInjuryRecomposition({ workout, environment, primaryInjury });
-
   /**
-   * ⚠ **WHAT THE ATHLETE COULD SEE HERE A MOMENT AGO — DERIVED, NOT REMEMBERED.**
+   * ── STACKED INJURIES ACT ON THE SESSION THE ATHLETE COULD SEE ─────────────
    *
-   * Sam, 2026-08-20: *"The review and the applied session must both name the
-   * exercise currently visible to the athlete."*
+   * Sam, 2026-08-20: *"Stacked injuries operate on the session the athlete could
+   * see before the newest injury."*
    *
-   * MEASURED, two injuries on one day: this settle rebuilds the day from the
-   * AUTHORED week and re-applies every active injury in ONE pass, so the second
-   * injury plans against `Leg Press` and never sees the `Chest-Supported DB Row`
-   * the athlete had been looking at. The intermediate view is not stored — it is
-   * a derivation, and this app derives rather than stores.
+   * ⚠ **THIS SETTLE USED TO RE-PLAN EVERY ACTIVE INJURY JOINTLY, FROM THE
+   * AUTHORED WEEK.** MEASURED, knee 7/10 then shoulder 7/10 on one day: the
+   * second pass planned against `Leg Press` — the authored row — and never saw
+   * the `Chest-Supported DB Row` the first injury had put there and the athlete
+   * had been looking at all week. Two things fell out of that, and they are the
+   * same defect seen from two sides: the row's *"Swapped from"* named an
+   * exercise the athlete could not see (R-121), and the REVIEW — which is built
+   * from the visible day — promised changes the settle then made differently.
    *
-   * **So it is derived again here**: the day as it would be with every active
-   * injury EXCEPT the most recently declared one. A pure function of stored
-   * facts, which is the whole reason it survives a restart — boot re-derives the
-   * identical answer instead of quietly reverting to the authored name.
+   * **So the injuries are applied IN DECLARATION ORDER, each against the result
+   * of the one before it.** Stage k plans against the day as it stands after
+   * stages 0..k-1, which IS "the session the athlete could see before this
+   * injury". The newest stage therefore plans against exactly what the review
+   * planned against, and the two agree by construction rather than by a name
+   * derivation bolted on afterwards.
    *
-   * ⚠ **WITH ONE INJURY THIS MAP IS EMPTY AND NOTHING CHANGES**, which is the
-   * overwhelmingly common case and is asserted as a control.
+   * ⚠ **EVERY STAGE STILL CHECKS SAFETY WITH ALL ACTIVE INJURIES.** Sam's
+   * requirement, and it is what makes the sequence converge: an earlier
+   * injury's answer that a later injury forbids is caught, because the earlier
+   * stage's own environment already carries the later injury's severity. The
+   * ORDER decides which row each substitution is named against; it never widens
+   * what counts as safe.
    */
-  const previouslyVisible = previouslyVisibleInjurySources({
-    date: args.date, workout, constraint: args.constraint,
-  });
+  const stages = injuryStagesInDeclarationOrder(args.constraint);
 
   // WHAT ACTUALLY LANDED. A plan is not an outcome: each write goes through the
   // ordinary action owner and can be refused by it, and counting the PLAN would
@@ -1444,67 +1467,126 @@ function recomposeSessionForInjury(args: {
   const appliedSubstitutions: InjurySubstitution[] = [];
   const appliedOmissions: string[] = [];
   const refused: string[] = [];
-  for (const substitution of plan.substitutions) {
-    const outcome = executeProgramControlAction({
-      type: 'swap_exercise',
-      source: args.source,
-      scope: 'today_only',
-      payload: {
+  /** The authored exercise each slot began as, carried across stages. */
+  const authoredOrigin = new Map<string, string>();
+  const unsafeSeen = new Set<string>();
+
+  /**
+   * ⚠ **EACH STAGE WRITES BEFORE THE NEXT ONE PLANS, AND IT HAS TO.**
+   *
+   * An in-memory sequence was written first and did not work: stage 2's rows
+   * only exist once stage 1's swaps are on the day, so its `swap_exercise`
+   * calls named exercises the live session did not carry and were refused. The
+   * day IS the state these stages hand to each other.
+   */
+  for (let index = 0; index < stages.length; index += 1) {
+    const stage = stages[index]!;
+    /**
+     * ⚠ **STAGE k SEES THE INJURIES THAT EXISTED BY STAGE k, AND NOT THE ONES
+     * AFTER IT.** This was the full environment first, and it did not work: the
+     * day is reset to the authored week before this pass, so stage 1 re-planned
+     * the athlete's FIRST injury while already knowing about the second — and
+     * answered it differently from the session they had been looking at. Then
+     * stage 2 had nothing of theirs to act on and the naming reverted to
+     * authored rows, which is the very thing R-121 forbids.
+     *
+     * **THE FINAL ANSWER IS STILL CHECKED AGAINST EVERY ACTIVE INJURY** (Sam's
+     * requirement) because the LAST stage carries them all: an earlier stage's
+     * answer that a later injury forbids is unsafe in the later stage's world,
+     * so that stage replaces it. The sequence reproduces the athlete's history
+     * and the final state is safe against all of it.
+     */
+    const stageConstraints = [
+      ...(useCoachUpdatesStore.getState().activeConstraints ?? [])
+        .filter((constraint) => constraint.type !== 'injury'),
+      ...stages.slice(0, index + 1),
+    ];
+    const stageWorkout = applyExclusionsToAuthoredDay({
+      workout: resolveWorkoutOnDate(args.date),
+      dateISO: args.date,
+      exclusions: liveAthleteExclusions(),
+    });
+    if (!stageWorkout) break;
+    const stagePlan = planInjuryRecomposition({
+      workout: stageWorkout,
+      environment: resolveTapSwapEnvironment({
         date: args.date,
-        fromExercise: substitution.from,
-        toExercise: {
-          name: substitution.to.name!,
-          sets: substitution.to.prescription?.sets ?? 3,
-          repsMin: substitution.to.prescription?.repsMin ?? 8,
-          repsMax: substitution.to.prescription?.repsMax ?? 12,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: stageConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+        primaryInjury: stagePrimaryInjury(stage),
+      }),
+      primaryInjury: stagePrimaryInjury(stage),
+    });
+    for (const name of stagePlan.unsafeRows) unsafeSeen.add(name);
+
+    for (const substitution of stagePlan.substitutions) {
+      const origin = authoredOrigin.get(substitution.from) ?? substitution.from;
+      const outcome = executeProgramControlAction({
+        type: 'swap_exercise',
+        source: args.source,
+        scope: 'today_only',
+        payload: {
+          date: args.date,
+          fromExercise: substitution.from,
+          toExercise: {
+            name: substitution.to.name!,
+            sets: substitution.to.prescription?.sets ?? 3,
+            repsMin: substitution.to.prescription?.repsMin ?? 8,
+            repsMax: substitution.to.prescription?.repsMax ?? 12,
+          },
+          /**
+           * R-121: the name the athlete reads is the row this substitution
+           * actually replaced, and because the stage planned against the
+           * session they could see, `substitution.from` IS that row.
+           * `originExerciseName` carries the authored exercise when the two
+           * differ — internal history, rendered nowhere.
+           */
+          substitutedFrom: {
+            baseExerciseName: substitution.from,
+            ...(origin !== substitution.from ? { originExerciseName: origin } : {}),
+            cause: 'injury',
+          },
         },
-        // THE ROW SAYS WHOSE PLACE IT IS TAKING. Sam, 2026-08-19: *"Tell the
-        // athlete exactly why their chosen exercise is temporarily not being
-        // used."* The outgoing name is carried even when it was the athlete's
-        // OWN swap — especially then, because that is the case where a row they
-        // deliberately chose has quietly become something else.
-        /**
-         * THE NAME THE ATHLETE READS IS THE ONE THEY COULD SEE; the authored
-         * exercise rides along as internal history and is rendered nowhere.
-         * `rules/injurySubstitutionSource` owns both halves of that rule.
-         */
-        substitutedFrom: {
-          baseExerciseName: previouslyVisible.get(substitution.from) ?? substitution.from,
-          ...(previouslyVisible.has(substitution.from)
-            ? { originExerciseName: substitution.from }
-            : {}),
-          cause: 'injury',
-        },
-      },
-      requiresRebuild: false,
-      createsActiveModifier: false,
-      oneOffOnly: true,
-    } as ProgramControlAction);
-    if (outcome.ok) appliedSubstitutions.push(substitution);
-    else refused.push(`${substitution.from} (${outcome.message ?? 'refused'})`);
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      } as ProgramControlAction);
+      if (outcome.ok) {
+        if (substitution.to.name) authoredOrigin.set(substitution.to.name, origin);
+        // A row this pass already replaced is superseded, not listed twice.
+        const superseded = appliedSubstitutions
+          .findIndex((entry) => entry.to.name === substitution.from);
+        if (superseded >= 0) appliedSubstitutions.splice(superseded, 1);
+        appliedSubstitutions.push(substitution);
+      } else refused.push(`${substitution.from} (${outcome.message ?? 'refused'})`);
+    }
+    /* ── AN OMISSION IS WITHHELD, NOT REMOVED ────────────────────────────
+     *
+     * **Sam, 2026-08-20 (R-115):** *"An 8-10 injury with serious symptoms must
+     * NEVER write into the athlete's Remove list or permanently alter the
+     * accepted program."* This loop used to call `remove_exercise`, whose
+     * `today_only` scope lands in `athletePreferencesStore.exclusions` — the
+     * athlete's OWN decisions. MEASURED before the ruling, red-flag hamstring
+     * 9/10: five exclusions the athlete never made, and because Restore works by
+     * RE-DERIVING, it replayed them and **the day was empty forever.**
+     *
+     * Nothing is written. `rules/injuryWithheldRows` marks the rows at the VIEW
+     * doors from the injury FACT, so the accepted program keeps every row and
+     * its load, the athlete sees why each one is unavailable, and clearing the
+     * injury reveals the original session by doing nothing at all. They are
+     * still reported as omissions here — the sentence must name them. */
+    for (const omission of stagePlan.omissions) {
+      if (!appliedOmissions.includes(omission)) appliedOmissions.push(omission);
+    }
   }
-  /* ── AN OMISSION IS WITHHELD, NOT REMOVED ────────────────────────────────
-   *
-   * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
-   * into the athlete's Remove list or permanently alter the accepted program.
-   * Preserve the original exercises ... Remove remains exclusively
-   * athlete-authored Remove."*
-   *
-   * This loop used to call `remove_exercise`, whose `today_only` scope lands in
-   * `athletePreferencesStore.exclusions` — the athlete's OWN decisions. MEASURED
-   * before the ruling, red-flag hamstring 9/10: five exclusions the athlete
-   * never made, and because Restore works by RE-DERIVING, it replayed them and
-   * **the day was empty forever.**
-   *
-   * Nothing is written now. `rules/injuryWithheldRows` marks the rows at the
-   * VIEW doors from the injury FACT, so the accepted program keeps every row and
-   * its load, the athlete sees why each one is unavailable, the day cannot be
-   * recorded as normal, and clearing the injury reveals the original session by
-   * doing nothing at all.
-   *
-   * They are still reported as omissions HERE — the sentence must name them —
-   * they are simply not written. */
-  appliedOmissions.push(...plan.omissions);
+
+  const plan: InjuryRecompositionPlan = {
+    unsafeRows: Array.from(unsafeSeen),
+    substitutions: appliedSubstitutions,
+    omissions: appliedOmissions,
+    untouched: [],
+  };
   if (refused.length > 0) {
     logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
   }

@@ -32,7 +32,8 @@ import {
   type SafeTrainingFallbackTier,
 } from '../rules/conflictResolutionHierarchy';
 import { severityHasModerateEffect, severityIsLimiting } from '../rules/injurySeverityBands';
-import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
+import { injuryPermitsExerciseAtSeverity, injuryWithholdsExistingRow } from '../rules/injuryExerciseRisk';
+import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -482,7 +483,12 @@ export function injuryRequiresChange(
   for (const [region, severity] of Object.entries(environment.injurySeverities) as Array<
     [InjuryKey, number]
   >) {
-    if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), region, severity)) {
+    /* ⚠ **"MUST THIS ROW COME OUT" IS NOT "MAY THIS BE A REPLACEMENT".** The
+     * two used to share `injuryPermitsExerciseAtSeverity`, which refuses an
+     * exercise the injury sheet does not rate — right for a replacement, wrong
+     * here, where it struck every untagged row off the athlete's session for
+     * every injury. See `injuryWithholdsExistingRow`. */
+    if (injuryWithholdsExistingRow(resolveExerciseName(name), region, severity)) {
       return true;
     }
   }
@@ -758,16 +764,43 @@ export function getTapSwapChoices(args: {
     args.originalExercise,
     environment,
   );
+  /**
+   * ⚠ **RECOVERY IS NOT AN ANSWER FOR A STRENGTH ROW.**
+   *
+   * Sam, 2026-08-20: *"A Strength replacement must remain a legal Strength
+   * exercise. Mobility / Warm-up and Conditioning movements cannot be used to
+   * fill a Strength slot … If no safe Strength option exists after the full
+   * ladder, leave it unavailable rather than inserting recovery work."*
+   *
+   * **THIS IS THE SECOND PLACE RECOVERY GETS IN, AND FIXING ONLY THE LADDER
+   * MADE IT WORSE.** `recoveryChoice` is two hard-coded literals minted right
+   * here — `Easy Bike`, or `Breathing Reset` when there is no bike — and it is
+   * appended AFTER the ladder has spoken, so it never went through the ladder's
+   * section boundary at all. MEASURED the moment the ladder started refusing
+   * cross-section candidates: the pooled recovery option disappeared from the
+   * list, the `some(... recovery_easy_conditioning)` guard below stopped
+   * matching, and `Breathing Reset` was pushed onto a `Bench Press` menu that
+   * had never carried it before — caught by `test:tap-swap-hierarchy`'s R-114
+   * cell, not by reasoning.
+   *
+   * A strength row with nothing safe left gets `restChoice`, whose `name` is
+   * `null` — which every caller already reads as "no replacement", and which
+   * `planInjuryRecomposition` turns into an honest withholding.
+   */
+  const originalIsStrength = exerciseSessionFamily(args.originalExercise) === 'strength';
+  const recoveryAllowed = args.recoveryAllowed !== false && !originalIsStrength;
   if (choices.length > 0) {
     if (!choices.some((choice) => choice.hierarchyTier === 'recovery_easy_conditioning') &&
-        args.recoveryAllowed !== false &&
+        recoveryAllowed &&
         constraintJustifiesRegression(environment)) {
       choices.push(recoveryChoice(environment));
     }
     return dedupeChoices(choices);
   }
-  if (args.recoveryAllowed !== false) return [recoveryChoice(environment)];
-  return [restChoice('No safe useful training or recovery option remains.')];
+  if (recoveryAllowed) return [recoveryChoice(environment)];
+  return [restChoice(originalIsStrength
+    ? 'No safe Strength option remains, and recovery work cannot fill a Strength slot.'
+    : 'No safe useful training or recovery option remains.')];
 }
 
 /* ── SAM'S THREE GROUPS, AND THEY ARE THE LADDER'S OWN TIERS ────────────────

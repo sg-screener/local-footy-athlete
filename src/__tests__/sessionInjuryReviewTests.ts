@@ -526,11 +526,34 @@ async function main(): Promise<void> {
       injuryRows().every((row) => row.sub.originExerciseName === undefined),
       injuryRows().map((r) => r.sub));
 
-    /* ── A SECOND INJURY ON ROWS THE FIRST ONE ALREADY REPLACED ─────────── */
+    /* ── A SECOND INJURY ON ROWS THE FIRST ONE ALREADY REPLACED ───────────
+     *
+     * ⚠ **THE SECOND INJURY IS MEASURED, NOT NAMED, AND IT HAS TO BE.** These
+     * cells need a world where the second injury SUBSTITUTES a row the first one
+     * produced — that is the only shape in which two different names for one row
+     * can exist. A fixed `Shoulder 7/10` used to give it and stopped the day the
+     * section boundary landed: with a 7/10 knee AND a 7/10 shoulder there is no
+     * legal Strength work left in either half of the body, so every row is
+     * withheld and there is nothing to name. Searching keeps the cells honest
+     * instead of quietly green over an all-withheld session. */
     const visibleBefore = rowsOf(pairDay, weekStart4);
-    const secondConstraint = constraintFor('Shoulder', 7, pairDay);
-    const secondReview = quiet(() =>
+    const firstProducedNames = firstPromised.map((pair) => pair.split(' -> ')[1]!);
+    let secondConstraint = constraintFor('Shoulder', 5, pairDay);
+    let secondReview = quiet(() =>
       buildSessionInjuryReview({ date: pairDay, constraint: secondConstraint })) as SessionInjuryReview;
+    for (const candidate of CANDIDATE_AREAS) {
+      for (const severity of [4, 5, 6]) {
+        let attempt;
+        try { attempt = constraintFor(candidate, severity, pairDay); } catch { continue; }
+        const review = quiet(() =>
+          buildSessionInjuryReview({ date: pairDay, constraint: attempt })) as SessionInjuryReview;
+        const substitutesAProducedRow = review.changes.some((change) =>
+          change.kind === 'substitution' && firstProducedNames.includes(change.from));
+        if (substitutesAProducedRow) { secondConstraint = attempt; secondReview = review; break; }
+      }
+      if (secondReview.changes.some((change) =>
+        change.kind === 'substitution' && firstProducedNames.includes(change.from))) break;
+    }
     const secondPromised = secondReview.changes
       .filter((change) => change.kind === 'substitution')
       .map((change) => `${change.from} -> ${change.to}`).sort();
@@ -539,21 +562,29 @@ async function main(): Promise<void> {
      * touched, every R-121 cell under it would be green and empty — the two
      * names agree trivially when there is no earlier substitution. What it
      * needs is a row the FIRST injury PRODUCED being replaced again. */
-    const firstProduced = firstPromised.map((pair) => pair.split(' -> ')[1]!);
-    ok('[9] CONTROL — the second injury really does land on rows the FIRST one produced',
-      secondReview.changes.some((change) => firstProduced.includes(change.from)),
-      { secondNames: secondReview.changes.map((c) => c.from), firstProduced });
+    ok('[9] CONTROL — the second injury really does SUBSTITUTE a row the FIRST one produced',
+      secondReview.changes.some((change) =>
+        change.kind === 'substitution' && firstProducedNames.includes(change.from)),
+      { secondNames: secondReview.changes.map((c) => `${c.kind}:${c.from}`), firstProducedNames });
     ok('[9] the review names rows that are ON THE SESSION the athlete can see',
       secondReview.changes.every((change) => visibleBefore.includes(change.from)),
       { named: secondReview.changes.map((c) => c.from), visibleBefore });
 
     await declare(secondConstraint);
-    ok('[9] R-121 — the applied session names the SAME visible row the review did',
-      JSON.stringify(pairsOn()) === JSON.stringify(secondPromised),
+    /* ⚠ **THE SESSION CARRIES BOTH INJURIES' CHANGES; THE REVIEW LISTS ONE.**
+     * The first injury's own substitutions are still on the day and still
+     * correctly named against the rows THEY replaced. So the promise is a
+     * SUBSET relation, not equality — asserting equality here failed for a row
+     * the athlete had had for a week, which is the assertion being wrong rather
+     * than the app. */
+    ok('[9] R-121 — every change the review promised lands, named the same way',
+      secondPromised.every((pair) => pairsOn().includes(pair)),
       { promised: secondPromised, landed: pairsOn() });
-    ok('[9] R-121 — and never an older exercise the athlete cannot see',
-      injuryRows().every((row) => visibleBefore.includes(String(row.sub.baseExerciseName))),
-      { shown: injuryRows().map((r) => r.sub.baseExerciseName), visibleBefore });
+    ok('[9] R-121 — and every substitution names a row that was on the session '
+      + 'when it was made, never an older one',
+      injuryRows().every((row) => visibleBefore.includes(String(row.sub.baseExerciseName))
+        || firstPromised.some((pair) => pair.startsWith(`${row.sub.baseExerciseName} ->`))),
+      { shown: injuryRows().map((r) => r.sub.baseExerciseName), visibleBefore, firstPromised });
 
     /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half. */
     const carried = injuryRows().filter((row) => row.sub.originExerciseName !== undefined);
@@ -566,33 +597,22 @@ async function main(): Promise<void> {
      * visible source is re-derived from the stored facts on every settle. */
     await relaunchApp({ storage: localStorageData, todayISO: pairDay });
     ok('[9] R-121 — and it still reads the same way after close and reopen',
-      JSON.stringify(pairsOn()) === JSON.stringify(secondPromised),
+      secondPromised.every((pair) => pairsOn().includes(pair)),
       { promised: secondPromised, afterRelaunch: pairsOn() });
 
-    /* ══ R-121'S OTHER HALF IS NOT DONE, AND THIS IS WHERE IT IS RECORDED ═══
+    /* ══ R-121'S OTHER HALF — WITHHELD ROWS, NOW CLOSED ════════════════════
      *
-     * ⚠ **THE CELL BELOW ASSERTS BEHAVIOUR SAM HAS ALREADY RULED AGAINST.** It
-     * is here so the gap is measured, durable and impossible to drift through
-     * unnoticed — NOT because it is right. Do not read it as approval.
+     * ⚠ **THIS CELL IS INVERTED FROM THE ONE THAT SHIPPED BEFORE IT.** It used
+     * to assert the GAP as a measurement awaiting Sam's ruling: the review
+     * promised to leave out `Tricep Pushdown` while the session withheld
+     * `Bulgarian Split Squats`, because the settle re-derived the day from the
+     * authored week and the first injury's replacement stopped existing.
      *
-     * R-121 is satisfied for SUBSTITUTED rows above. It is NOT satisfied for
-     * WITHHELD ones. MEASURED, two injuries in sequence:
-     *
-     *   the review promises to leave out   Tricep Pushdown, Bicep Curl (Barbell)
-     *   the session actually withholds     Bulgarian Split Squats, Single-Leg RDL
-     *
-     * **AND THIS ONE IS NOT A NAME — IT IS THE ROW.** A substituted row can be
-     * relabelled, because the row itself is whatever the ladder chose. A
-     * withheld row is the athlete's ORIGINAL exercise by R-115's design
-     * ("preserve the original exercises ... show them as unavailable"), and the
-     * settle's joint re-derivation reverts it to the AUTHORED one — so the first
-     * injury's replacement stops existing rather than being withheld in place.
-     *
-     * **THE FIX IS A DERIVATION CHANGE, NOT A WORDING ONE**: injuries would have
-     * to be applied one on top of another in declaration order instead of jointly
-     * from the authored week. That changes WHICH EXERCISE THE ATHLETE GETS, not
-     * just what it is called, so it is Sam's ruling to make and is deliberately
-     * not taken here.
+     * **Sam ruled the derivation, not the wording:** *"Stacked injuries operate
+     * on the session the athlete could see before the newest injury."* With the
+     * stages applied in declaration order, a withheld row IS the row the athlete
+     * was looking at, so the two sides agree here for the same reason the
+     * substitutions do — and this asserts it rather than recording its absence.
      */
     const withheldPromised = secondReview.changes
       .filter((change) => change.kind === 'withheld').map((change) => change.from).sort();
@@ -603,12 +623,11 @@ async function main(): Promise<void> {
         .filter((row) => row.unavailableForInjury)
         .map((row) => String((row.exercise as { name?: string } | undefined)?.name ?? '')).sort();
     })();
-    ok('[9] CONTROL — the second injury really does withhold some rows',
-      withheldPromised.length > 0 && withheldActual.length > 0,
-      { withheldPromised, withheldActual });
-    ok('[9] ⚠ OPEN — a WITHHELD row still reverts to the AUTHORED exercise, so the '
-      + 'review and the session name different rows (R-121 half-done, Sam to rule)',
-      JSON.stringify(withheldPromised) !== JSON.stringify(withheldActual),
+    ok('[9] CONTROL — the second injury really does withhold at least one row',
+      withheldPromised.length > 0, { withheldPromised, withheldActual });
+    ok('[9] R-121 — a WITHHELD row is the row the athlete could see, so the review '
+      + 'and the session name the same ones',
+      JSON.stringify(withheldPromised) === JSON.stringify(withheldActual),
       { promised: withheldPromised, actual: withheldActual });
   }
 
@@ -662,6 +681,107 @@ async function main(): Promise<void> {
       mostRecentlyDeclaredInjuryId([
         { id: 'injury-knee', type: 'injury', status: 'resolved', lastUpdatedAt: '2026-08-20T00:00:00Z' },
       ]) === null && mostRecentlyDeclaredInjuryId([]) === null);
+  }
+
+  /* ══ [11] THE SECTION GATE — SAM ASKED FOR IT BY NAME ════════════════════
+   *
+   * *"Add a check that fails if any Mobility / Warm-up or Conditioning exercise
+   * appears as a Strength replacement."* (2026-08-20)
+   *
+   * ⚠ **SWEPT, NOT SAMPLED.** One world would pass the day the boundary broke
+   * for a different region or band — the defect it is guarding against was
+   * reachable only when the ladder ran out of Strength options, which is a
+   * property of the injury, not of the code path. So it walks every region the
+   * menu offers at every authored band, over a real generated week, and asserts
+   * the boundary on every substitution any of them produce.
+   */
+  console.log('\n[11] no Strength row is ever given Mobility or Conditioning work');
+  {
+    const { exerciseSessionFamily } = require('../rules/exerciseSessionFamily');
+    const weekStart5 = install();
+    const days5 = trainingDays(weekStart5);
+    let strengthRowsSeen = 0;
+    let substitutionsSeen = 0;
+    let ranOutOfStrength = 0;
+    const violations: string[] = [];
+    const recoveryOffered: string[] = [];
+
+    /* ⚠ **THE SWEEP HAD TO BE STACKED, AND A MUTATION IS WHAT PROVED IT.** The
+     * first version declared ONE injury per world and was GREEN AND EMPTY:
+     * removing the section boundary from the planner, from the ladder AND from
+     * the recovery fallback reddened nothing at all, because a single injury
+     * almost always leaves some legal Strength work and the cross-section path
+     * is never reached. The defect Sam saw needed the ladder to RUN OUT — which
+     * took a second injury on an already-recomposed session. So a first injury
+     * is applied through the real door, and the sweep runs on top of it. */
+    const seedDay = days5.find((d) => rowsOf(d, weekStart5).length >= 4)!;
+    setJourneyClock(seedDay);
+    await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint: constraintFor('Knee', 7, seedDay) },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: seedDay }));
+
+    for (const day of [seedDay]) {
+      setJourneyClock(day);
+      for (const area of CANDIDATE_AREAS) {
+        for (const severity of [3, 5, 7, 9]) {
+          let constraint;
+          try { constraint = constraintFor(area, severity, day); } catch { continue; }
+          const review = quiet(() =>
+            buildSessionInjuryReview({ date: day, constraint })) as SessionInjuryReview;
+          for (const change of review.changes) {
+            const from = exerciseSessionFamily(change.from);
+            if (from === 'strength') strengthRowsSeen += 1;
+            /* The state the whole boundary is about: a Strength row the ladder
+             * had no Strength answer for. If this never happens the cells below
+             * are green and empty, so it is counted and asserted. */
+            if (from === 'strength' && change.kind === 'withheld') ranOutOfStrength += 1;
+            if (change.kind !== 'substitution' || !change.to) continue;
+            substitutionsSeen += 1;
+            const to = exerciseSessionFamily(change.to);
+            if (from && to !== from) {
+              violations.push(`${day} ${area}/${severity}: ${change.from}[${from}] -> ${change.to}[${to}]`);
+            }
+            if (from === 'strength' && (to === 'conditioning' || to === 'mobility' || to === null)) {
+              recoveryOffered.push(`${day} ${area}/${severity}: ${change.from} -> ${change.to}[${to}]`);
+            }
+          }
+        }
+      }
+    }
+
+    ok('[11] CONTROL — the sweep actually walked Strength rows and real substitutions',
+      strengthRowsSeen > 20 && substitutionsSeen > 10,
+      { strengthRowsSeen, substitutionsSeen });
+    ok('[11] CONTROL — and it REACHED the state the boundary is about: a Strength '
+      + 'row with no Strength answer left',
+      ranOutOfStrength > 0, { ranOutOfStrength });
+    ok('[11] NO Mobility / Warm-up or Conditioning exercise is ever a Strength replacement',
+      recoveryOffered.length === 0, recoveryOffered.slice(0, 8));
+    ok('[11] and no replacement crosses its row\'s section in either direction',
+      violations.length === 0, violations.slice(0, 8));
+
+    /* ⚠ **THE CLASSIFICATION HALF OF THE SAME RULING.** Sam, on the screenshot:
+     * *"'Breathing Reset is unsafe with your hamstring' appears wrong and may
+     * expose a broader classification defect."* It did — `unknown` (no entry in
+     * the injury sheet) was refused by the predicate that decides whether an
+     * EXISTING row must come out, so every unrated row on the athlete's session
+     * was marked unsafe for every injury. 70 of 90 pooled and conditioning names
+     * are unrated. */
+    const { injuryWithholdsExistingRow, injuryPermitsExerciseAtSeverity } =
+      require('../rules/injuryExerciseRisk');
+    ok('[11] an unrated row is NOT withheld from a session it is already on',
+      injuryWithholdsExistingRow('Breathing Reset', 'hamstring', 9) === false
+        && injuryWithholdsExistingRow('Breathing Reset', 'shoulder', 7) === false,
+      'Breathing Reset');
+    ok('[11] but an unrated exercise is still never CHOSEN as a replacement',
+      injuryPermitsExerciseAtSeverity('Breathing Reset', 'hamstring', 9) === false,
+      'the two questions keep their opposite defaults');
+    ok('[11] CONTROL — a rated risky row is still withheld, so this is not blanket permission',
+      injuryWithholdsExistingRow('Back Squat', 'knee', 9) === true,
+      'Back Squat / knee 9');
   }
 
   /* ══ [1] THE INERTNESS CONTROL ON THE PENDING medicalStop CLAUSE ══════ */

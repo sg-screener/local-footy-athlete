@@ -229,6 +229,76 @@ Same simulator, same seed, Metro :8097.
 | 42 | the SECOND review names only rows on the session now — Band Pull-Apart, Chest-Supported DB Row, Single-Arm DB Floor Press, Banded Bicep Curl, Tricep Pushdown, Band Pallof Press. **No older exercise anywhere** |
 | 43 | applied — and this is the screen that showed the open half: the withheld rows read `Single-Leg RDL`, `Cossack Squat`, `Band Pallof Press`, not the rows the review named |
 
+## R-122 — THE LADDER, THE SECTION BOUNDARY AND THE CLASSIFICATION DEFECT
+
+Sam stopped the merge: *"The resulting session violates the approved Injury
+fallback ladder. 'Skip' is the final option only after the app proves there is no
+safe alternative."* Then: *"Breathing Reset must never appear inside Strength …
+A Strength replacement must remain a legal Strength exercise."*
+
+**THE TRACE HE ASKED FOR.** `Breathing Reset` is not drawn from any pool — it is
+a literal minted inside `tapSwapHierarchy.recoveryChoice`, the equipment-free
+half of a fallback appended AFTER the ladder has spoken. So it never went through
+the ladder's ranking at all, and the ladder had no concept of a section to refuse
+it with. That is how a Strength row became a breathing drill.
+
+**THREE DEFECTS, ALL FIXED AT SHARED OWNERS:**
+
+1. **The ladder had no section boundary.** `rules/exerciseSessionFamily` derives
+   the family from the SAME maps the Add menu is built from (R-120's total
+   pool→leaf→family record). No new table.
+2. **Recovery was injected after the ladder.** Fixing only the ladder made this
+   WORSE — the pooled recovery option vanished, the "already has recovery"
+   guard stopped matching, and `Breathing Reset` was pushed onto a `Bench Press`
+   menu that never carried it. Caught by a suite, not by reasoning.
+3. **`unknown` meant "unsafe" for a row already on the session.** Two questions
+   were sharing one predicate. **70 of 90 pooled and conditioning names are
+   unrated**, so every conditioning format was being marked unsafe for every
+   injury. `injuryWithholdsExistingRow` splits it.
+
+**AND THE STACKING RULE.** Injuries are applied in declaration order, each
+against the result of the one before, with **stage k seeing only the injuries
+that existed by stage k**. A full environment at every stage re-derived the first
+injury while already knowing the second. **This closes R-121's withheld half**,
+which was recorded as OPEN when it was ruled.
+
+### THE NUMBERS — ORDINARY CASES PRODUCE USEFUL WORK
+
+`npm run probe:injury-ladder`, real generated week, real doors:
+
+| world | unsafe rows | replacements | skipped |
+| --- | --- | --- | --- |
+| knee 7/10 | 4 | **4 Strength** | **0** |
+| shoulder 6/10 | 1 | 1 Strength | 0 |
+| hamstring 5/10 | 1 | `RDLs -> Glute Bridge` (Sam's own Bible swap) | 0 |
+
+For a genuinely exhausted world — knee 7/10 AND shoulder 7/10 — the probe prints
+every rung's candidates and every rejection: rungs 1-4 empty because the sheet
+refuses the whole upper body for the shoulder and the whole lower body for the
+knee, rung 5 refused 33 as still loading the knee and 15 as heavier than the row.
+**That skip is honest and now provable.**
+
+### THE GATE SAM ASKED FOR, AND WHY ITS FIRST VERSION WAS WORTHLESS
+
+`[11]` fails if any Mobility / Warm-up or Conditioning exercise appears as a
+Strength replacement. ⚠ **THE FIRST VERSION WAS GREEN AND EMPTY** — with one
+injury the ladder almost never runs out, so removing the boundary from the
+planner, the ladder AND the recovery fallback reddened NOTHING. It sweeps 13
+regions x 4 bands **on top of an already-applied injury** now, and asserts it
+reached the state the boundary is about. **M13** (both boundaries off) reds 2 and
+reproduces `Chest-Supported DB Row -> Easy Bike` exactly.
+
+⚠ **THE TWO BOUNDARIES ARE BELT-AND-BRACES — either alone holds, which is why
+single mutations do not bite. Do not delete one as redundant.**
+
+### THE THIRD GLASS PASS
+
+Knee 7/10 on the `injury-case` seed: the review offers **five real Strength
+replacements** (`Back Squat → Chest-Supported DB Row`, `Glute Bridge → Explosive
+Landmine Press`, …), and the applied session carries all five at their own loads
+(25kg / 20kg / BW / 27.5kg), each naming the row it replaced — **no recovery
+work, no breathing drill, nothing skipped.**
+
 ## LOG
 
 - 2026-08-20 — worktree off `da1dbf89`, baseline measured, defects named.
