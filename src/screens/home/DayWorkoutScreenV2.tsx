@@ -2395,7 +2395,14 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }
       accessibilityState={{ checked: completed }}
       accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
       testID={`session-execution-check-${stableTestIdToken(itemId)}`}
-      hitSlop={{ top: 10, bottom: 10, left: 8, right: 10 }}
+      /* ⚠ **22x22 DRAWN, 44x44 TAPPABLE — SAM, R-116 FINAL.** *"Make the
+         checkbox visually slightly smaller … approximately 22 x 22 px — but
+         preserve a minimum 44 x 44 accessible tap target using its
+         wrapper/hit slop."* 22 + 11 + 11 = 44 on BOTH axes, so the box can be
+         small without the target being. Symmetric on purpose: an uneven slop
+         would move the tappable centre away from the drawn centre, which is the
+         same class of defect as the margin that caused the drift. */
+      hitSlop={{ top: 11, bottom: 11, left: 11, right: 11 }}
       style={({ pressed }) => [
         styles.executionCheckbox,
         completed && styles.executionCheckboxComplete,
@@ -4295,9 +4302,8 @@ const styles = StyleSheet.create({
   // separates one exercise from the next is whitespace alone: the list
   // gap opens up to 10px so the document reads as a training list
   // written on a dark page, not a stack of widgets.
-  // 5-6px between cards (R-116 final). The container now does the separating,
-  // so the gap can come down without two exercises reading as one.
-  exerciseList: { gap: 6 },
+  // ~8px between cards (R-116 final).
+  exerciseList: { gap: 8 },
   executionSections: { gap: spacing.sm },
   executionSection: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -4391,15 +4397,21 @@ const styles = StyleSheet.create({
   // ⚠ **AND IT WRAPS THE GRID WITHOUT TOUCHING IT.** The padding is on the
   // container; the gutter, the text stack and the control group keep their own
   // geometry, so the alignment proven above is unchanged.
+  // ⚠ **SAM SUPERSEDED "SIX ON ONE SCREEN" — 2026-08-20, R-116 FINAL.**
+  // *"Each exercise should be a comfortable, scrollable card … Scrolling is
+  // expected. Do not compress the cards merely to fit six exercises on
+  // screen."* The previous pass spent its whole budget buying back a sixth row;
+  // the ruling now says generous space AROUND each exercise and tight grouping
+  // WITHIN it. Those are different axes and this is the one that changed.
   exerciseCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.025)',
     borderColor: 'rgba(255, 255, 255, 0.07)',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 11,
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingLeft: 8,
-    paddingRight: 8,
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingLeft: 13,
+    paddingRight: 13,
     ...shadows.none,
   },
 
@@ -4498,12 +4510,15 @@ const styles = StyleSheet.create({
   exerciseNamePress: {
     flexShrink: 1,
   },
+  // R-116 final: ~15px, semibold ITALIC — `fontStyle: 'italic'` on the System
+  // face the app already uses (`HomeScreenV2`, `CoachTabScreen`). No new family.
   exerciseName: {
     color: '#F2F2F2',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+    fontStyle: 'italic',
     letterSpacing: -0.1,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   // Per-row swap/remove icon buttons (ruling 12) — replace the single
   // retired "Change" pill styles.
@@ -4581,7 +4596,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 3,
   },
   statsLeftColumn: { flex: 1, minWidth: 0 },
   // ⚠ **THE ONE CONTROL ROW.** Stepper and checkbox are SIBLINGS here — no
@@ -4594,11 +4609,14 @@ const styles = StyleSheet.create({
     gap: 9,
     flexShrink: 0,
   },
+  // ~14px, medium/semibold italic — the dose reads as the name's own second line.
   statsPrimary: {
     color: '#F2F2F2',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
+    fontStyle: 'italic',
     letterSpacing: 0.2,
+    lineHeight: 18,
   },
 
   // ── Weight segmented control ──
@@ -4693,7 +4711,7 @@ const styles = StyleSheet.create({
   // ── Cue toggle ──
   // R-116 — Form cues sit DIRECTLY below sets x reps. 6 -> 1: the disclosure
   // keeps its own `paddingVertical` tap area, so the target does not shrink.
-  cueContainer: { marginTop: 1 },
+  cueContainer: { marginTop: 3 },
   cueToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4701,11 +4719,14 @@ const styles = StyleSheet.create({
     // line tightens without the tap target shrinking.
     paddingVertical: 1,
   },
+  // ~12-13px, REGULAR and muted — the quietest of the three, and not italic:
+  // the italic pair above is the prescription, this is the note under it.
   cueToggleText: {
-    color: '#5A5A5A',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    color: '#6E6E6E',
+    fontSize: 12.5,
+    fontWeight: '400',
+    letterSpacing: 0.2,
+    lineHeight: 16,
   },
   cueText: {
     marginTop: 2,

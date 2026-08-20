@@ -695,16 +695,16 @@ ok('[10] the row reads name+Play, then sets x reps, then Form cues — in that o
   * asserted too, which is what the first cut missed. */
 ok('[10] the three lines are compressed materially — gaps AND row padding',
   /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen)
-    && /statsRow:\s*\{[^}]*marginTop:\s*[123]\b/.test(screen)
-    && /cueContainer:\s*\{\s*marginTop:\s*1\s*\}/.test(screen)
+    && /statsRow:\s*\{[^}]*marginTop:\s*[234]\b/.test(screen)
+    && /cueContainer:\s*\{\s*marginTop:\s*[234]\s*\}/.test(screen)
     && /cueToggleRow:\s*\{[^}]*paddingVertical:\s*1\b/.test(screen)
     // The card's padding is the CONTAINER's now (asserted in its own cell); what
     // this one still owns is that the three LINES sit tight inside it.
     && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen),
   'the three lines must sit tight inside whatever padding the container has');
 ok('[10] and the separation BETWEEN exercises stays larger than the gaps inside one',
-  /exerciseList:\s*\{\s*gap:\s*[56]\s*\}/.test(screen),
-  'the container now does the separating, so the gap can come down to 5-6');
+  /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen),
+  '~8px between cards; 2-4px between the lines inside one');
 ok('[10] sets/reps is still the LEFT of the control row',
   /<View style=\{styles\.statsRow\}>\s*<View style=\{styles\.statsLeftColumn\}>\s*<Text/.test(screen));
 
@@ -862,13 +862,39 @@ ok('[10] and the grid centres them against the whole row',
  * low-contrast neutral border; extremely subtle background tint; 10-12px
  * radius; ~6px vertical and 8px horizontal internal padding; ~5-6px between
  * cards; no shadow."* */
-ok('[10] every exercise sits in one subtle container, to spec',
+/* ⚠ SAM SUPERSEDED "SIX ON ONE SCREEN" — the card is COMFORTABLE now, and this
+ * cell moved with the ruling: ~16px vertical, 12-14 horizontal, ~8 between. */
+ok('[10] every exercise sits in one comfortable container, to spec',
   /exerciseCard:\s*\{[^}]*borderWidth:\s*StyleSheet\.hairlineWidth/.test(screen)
     && /exerciseCard:\s*\{[^}]*borderRadius:\s*1[012]\b/.test(screen)
-    && /exerciseCard:\s*\{[^}]*paddingTop:\s*6[^}]*paddingBottom:\s*6/.test(screen)
-    && /exerciseCard:\s*\{[^}]*paddingLeft:\s*8[^}]*paddingRight:\s*8/.test(screen)
-    && /exerciseList:\s*\{\s*gap:\s*[56]\s*\}/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingTop:\s*16[^}]*paddingBottom:\s*16/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingLeft:\s*1[234][^}]*paddingRight:\s*1[234]/.test(screen)
+    && /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen)
     && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen));
+
+/* ── TYPOGRAPHY (R-116 final). The app's own System italic, no new family. ── */
+ok('[10] the exercise name is ~15px semibold italic',
+  /exerciseName:\s*\{[^}]*fontSize:\s*15\b[^}]*fontWeight:\s*'600'[^}]*fontStyle:\s*'italic'/
+    .test(screen));
+ok('[10] sets x reps is ~14px medium/semibold italic',
+  /statsPrimary:\s*\{[^}]*fontSize:\s*14\b[^}]*fontWeight:\s*'[56]00'[^}]*fontStyle:\s*'italic'/
+    .test(screen));
+ok('[10] Form cues is 12-13px, REGULAR and muted — not italic, not bold',
+  /cueToggleText:\s*\{[^}]*fontSize:\s*12(\.5)?\b[^}]*fontWeight:\s*'400'/.test(screen)
+    && !/cueToggleText:\s*\{[^}]*fontStyle/.test(screen));
+ok('[10] and no new typeface was introduced — italic on the existing face',
+  !/fontFamily/.test(strengthCard) && !/fontFamily:/.test(
+    screen.slice(screen.indexOf('  exerciseName: {'), screen.indexOf('  exerciseName: {') + 300)),
+  'fontStyle italic on System, as HomeScreenV2 and CoachTabScreen already do');
+ok('[10] the three lines stay 2-4px apart inside that comfortable card',
+  /statsRow:\s*\{[^}]*marginTop:\s*[234]\b/.test(screen)
+    && /cueContainer:\s*\{\s*marginTop:\s*[234]\s*\}/.test(screen),
+  'generous space AROUND the exercise, tight grouping WITHIN it');
+ok('[10] the checkbox is drawn ~22px but stays a 44x44 tap target',
+  /width:\s*22/.test(fs.readFileSync(
+    path.resolve(__dirname, '..', 'theme', 'sessionExecutionCheckbox.ts'), 'utf8'))
+    && /hitSlop=\{\{ top: 11, bottom: 11, left: 11, right: 11 \}\}/.test(checklistItemWhole),
+  '22 + 11 + 11 = 44 on both axes, symmetric so the tappable centre is the drawn centre');
 ok('[10] the border is NEUTRAL and the tint subtle — not an accent, not a panel',
   /exerciseCard:\s*\{[^}]*backgroundColor:\s*'rgba\(255, 255, 255, 0\.0[123]\d*\)'/.test(screen)
     && /exerciseCard:\s*\{[^}]*borderColor:\s*'rgba\(255, 255, 255, 0\.0\d+\)'/.test(screen)
@@ -1035,9 +1061,9 @@ ok('[10] the checkbox and Play are separate Pressables with their own handlers',
     && /<PlayButton onPress=\{onPlay\}/.test(headerRow)
     && !/onPlay[\s\S]{0,60}onToggle/.test(headerRow));
 ok('[10] both keep a practical tap target — neither shrank to fit the tighter row',
-  /hitSlop=\{\{ top: 10, bottom: 10, left: 8, right: 10 \}\}/.test(checklistItemWhole)
+  /hitSlop=\{\{ top: 11, bottom: 11, left: 11, right: 11 \}\}/.test(checklistItemWhole)
     && /hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/.test(screen),
-  'checkbox and PlayButton both carry hitSlop');
+  'checkbox 44x44, PlayButton unchanged');
 ok('[10] a long name wraps instead of pushing the controls off the row',
   /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen)
     && /numberOfLines=\{2\}/.test(headerRow)
