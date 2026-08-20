@@ -337,4 +337,20 @@ hamstring 5/10, lower back 6/10 and calf 7/10 all still skip nothing.
 
 - 2026-08-20 — worktree off `da1dbf89`, baseline measured, defects named.
 - 2026-08-20 — the review owner, the screen flow, the suite, the mutations.
-- 2026-08-20 — **NOT MERGED. Sam's approval not given and not assumed.**
+- 2026-08-20 — **MERGED to `main` `350c3de3`** on Sam's explicit approval
+  (*"Merge it. Preserve all unrelated changes and make no additional product
+  changes."*). **Rollback: `pre-sessioninjury-merge-2026-08-20`** (`da1dbf89`).
+
+  `main` had not moved since the branch was cut, so the merge is the branch and
+  nothing else. **The other seat's ELEVEN uncommitted `docs/printed-weeks/*`
+  edits were fingerprinted before the merge and are byte-identical after it** —
+  zero overlap with this branch's 21 files, checked by `comm` rather than by
+  eye. The two `.fuse_hidden*` files predate this session and are untouched.
+
+  **VERIFIED ON THE MERGED TREE, not on the branch:** `test:session-injury-review`
+  68/68, `injury-fallback-journey` 172/0, `tap-swap-hierarchy` 26/0,
+  `injury-recomposition` 41, `session-change-sequence` 22, `session-change-hub`
+  65, `exercise-edit-entry-surface` 48/48, `guided-injury-totality` 25/0, and the
+  `test:compile` set identical to pre-merge `main`.
+
+  **NO ADDITIONAL PRODUCT CHANGES WERE MADE FOR THE MERGE.**
