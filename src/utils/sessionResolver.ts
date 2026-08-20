@@ -141,6 +141,29 @@ export interface ScheduleState {
    */
   removalDecisions?: readonly UserRemovalConstraint[];
   /**
+   * ── R-124: A PLANNER MUST SEE THE DAY AS IT IS, NOT AS IT IS DRAWN ────────
+   *
+   * The injury session adjustment REMOVES the paused rows and APPENDS a block,
+   * which is the one thing `markInjuryWithheldRows` has always refused to do
+   * ("MARK, NEVER FILTER") — and for exactly this reason: the injury
+   * recomposition owner reads the day back through this same resolver
+   * (`programControlActions.resolveWorkoutOnDate`), so a projection that
+   * reshapes the row list reshapes what the WRITER plans against.
+   *
+   * MEASURED by `test:session-injury-review` [9]: with two injuries, the review
+   * promised to pause `Kettlebell Swings` and `Glute Bridge` — the rows the
+   * athlete could see — while the session paused `Leg Press` and
+   * `Bulgarian Split Squats`, the authored rows underneath, because the first
+   * injury's substitutions were planned against a day the projection had
+   * already stripped. That is R-121 broken from a new direction.
+   *
+   * So the planner's read sets this and gets the day the athlete's decisions and
+   * the earlier injuries actually left behind. **The VIEW doors leave it unset**,
+   * exactly as they leave `temporarySourceFacts` set — one flag, one direction,
+   * and the asymmetry is the point.
+   */
+  suppressInjuryAdjustment?: boolean;
+  /**
    * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
    *
    * The week's IDENTITY (a severe illness makes it optional) reached this
@@ -938,7 +961,8 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
       if (name) weekExerciseNames.push(name);
     }
   }
-  const adjust = <T extends Workout | null>(workout: T): T => applyInjurySessionAdjustment({
+  const adjust = <T extends Workout | null>(workout: T): T => (
+    state.suppressInjuryAdjustment ? workout : applyInjurySessionAdjustment({
     workout,
     adjustment: injurySessionAdjustmentForDay({
       workout,
@@ -951,7 +975,8 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
        * doors for the same reason. */
       excludedByAthlete: (state.athleteExclusions ?? []).map((entry) => entry.exercise),
     }),
-  });
+    })
+  );
   const withhold = <T extends Workout | null>(workout: T): T => adjust(markInjuryWithheldRows({
     workout, dateISO: date, facts: dayInjuryFacts,
   }));

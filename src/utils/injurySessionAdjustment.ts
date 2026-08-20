@@ -49,8 +49,21 @@ export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
 export interface InjurySessionAdjustment {
   /** The one line the active session shows instead of five greyed-out cards. */
   summary: string;
-  /** Rows the injury pauses. Hidden from the session; still carried as data. */
+  /**
+   * Rows the injury pauses, **in the name the athlete could see** (R-121).
+   * Hidden from the session; still carried as data.
+   */
   paused: readonly string[];
+  /**
+   * ⚠ **THE SAME ROWS, IN THE NAME THE DAY ACTUALLY CARRIES.** The two differ
+   * exactly when an earlier injury substituted a row and the settle could not
+   * re-write that substitution — the athlete was looking at `Kettlebell Swings`
+   * while the day underneath had reverted to `Bulgarian Split Squats`. The
+   * REPORT must use the first (that is what R-121 rules) and the FILTER must use
+   * the second, or nothing is removed at all and the untrained-pattern
+   * disclosure goes silent (`test:injury-fallback-journey`, five worlds).
+   */
+  pausedOnTheDay: readonly string[];
   /** The block that replaces them — attached to the SESSION, named against nothing. */
   added: readonly AddCandidate[];
 }
@@ -439,6 +452,9 @@ export interface InjurySessionAdjustmentInputs {
   excludedByAthlete: readonly string[];
   /** The rows this injury pauses, decided by the ladder, never re-decided here. */
   pausedRowNames: readonly string[];
+  /** The same rows in the day's own names. Defaults to `pausedRowNames`, which
+   *  is correct whenever no earlier injury renamed a slot. */
+  pausedOnTheDay?: readonly string[];
 }
 
 export function injuryAdjustmentEnvironment(args: {
@@ -524,6 +540,7 @@ export function deriveInjurySessionAdjustment(
   });
 
   return {
+    pausedOnTheDay: args.pausedOnTheDay ?? [...args.pausedRowNames],
     summary: injuryAdjustmentSummary({
       pausedCount: args.pausedRowNames.length,
       bodyPart: args.bodyPart,
@@ -561,7 +578,10 @@ export function applyInjurySessionAdjustment<T extends Workout | null | undefine
   const workout = args.workout;
   const adjustment = args.adjustment;
   if (!workout || !adjustment || adjustment.paused.length === 0) return workout;
-  const paused = new Set(adjustment.paused.map(normalise));
+  /* THE DAY'S OWN NAMES — see `pausedOnTheDay`. Reporting and filtering are two
+   * questions and they have two answers exactly when an earlier injury renamed
+   * a slot the settle could not re-write. */
+  const paused = new Set(adjustment.pausedOnTheDay.map(normalise));
   const rowNameOf = (row: unknown): string => String(
     (row as { exercise?: { name?: string } }).exercise?.name
     ?? (row as { name?: string }).name ?? '',
@@ -597,6 +617,7 @@ export function applyInjurySessionAdjustment<T extends Workout | null | undefine
     ],
     injuryAdjustment: {
       summary: adjustment.summary,
+      /* R-121 — the athlete reads the row they were looking at. */
       paused: [...adjustment.paused],
       added: adjustment.added.map((candidate) => candidate.name),
     },
@@ -628,29 +649,98 @@ export function injurySessionAdjustmentForDay(args: {
   if (!args.workout || (args.workout.exercises ?? []).length === 0) return null;
   const episodes = activeInjuryFactsOn(args.facts, args.dateISO);
   if (episodes.length === 0) return null;
-  const environment = injuryAdjustmentEnvironment({
-    dateISO: args.dateISO, profile: args.profile, facts: args.facts,
-  });
   const worst = episodes.reduce((a, b) => (b.severity > a.severity ? b : a));
   if (episodes.some((episode) => isRedFlagInjury(episode))) return null;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { planInjuryRecomposition } = require('./injurySessionRecomposition') as
     typeof import('./injurySessionRecomposition');
-  const plan = planInjuryRecomposition({
-    workout: args.workout,
-    environment,
-    primaryInjury: worst.bucket
-      ? { bucket: worst.bucket as never, severity: worst.severity, seriousSymptoms: false }
-      : null,
-  });
+
+  /**
+   * ── STAGED, IN DECLARATION ORDER, IN MEMORY ───────────────────────────────
+   *
+   * Sam, 2026-08-21: *"the second injury reviews and changes the exercises
+   * currently visible to the athlete, not the older originals underneath."*
+   *
+   * ⚠ **THE DAY THIS IS HANDED IS NOT THE DAY THE ATHLETE WAS LOOKING AT, AND
+   * THAT IS MEASURED, NOT ASSUMED.** With two injuries, the settle resets the
+   * day to the authored week and replays each injury in turn — and stage 1's
+   * `swap_exercise` is then REFUSED by the ordinary door, because the row it
+   * wants to write (`Glute Bridge`) is unsafe under the injury declared
+   * afterwards. Correct, and it leaves `Leg Press` and `Bulgarian Split Squats`
+   * back on the day. So a single pass here paused the AUTHORED names while the
+   * review, built while the swaps were still standing, had promised
+   * `Kettlebell Swings` and `Glute Bridge` — the athlete told one thing and
+   * shown another. (`test:session-injury-review` [9].)
+   *
+   * So the athlete's history is reproduced HERE, in memory, exactly as
+   * `recomposeSessionForInjury` reproduces it on disk: stage k plans against the
+   * day as stages 0..k-1 left it, with an environment carrying only the
+   * injuries that existed by stage k. **Nothing is written and nothing is
+   * re-decided** — the earlier stages' substitutions are replayed only so that
+   * the newest stage can name the row the athlete can actually see.
+   */
+  /* Declaration order is `createdAt` — the order the athlete actually reported
+   * them, which is what "the session they could see before this injury" means. */
+  const staged = [...episodes].sort((a, b) => String(a.createdAt ?? '')
+    .localeCompare(String(b.createdAt ?? '')));
+  const originalDayRows: string[] = (args.workout.exercises ?? []).map((row) => String(
+    (row as { exercise?: { name?: string } }).exercise?.name
+    ?? (row as { name?: string }).name ?? '',
+  ).trim()).filter(Boolean);
+  let dayRows: string[] = [...originalDayRows];
+  /** visible name -> the name the DAY carries for that same slot. */
+  const dayNameOf = new Map<string, string>(originalDayRows.map((name) => [name, name]));
+  let pausedRows: string[] = [];
+  for (let index = 0; index < staged.length; index += 1) {
+    const stage = staged[index]!;
+    const stageEnvironment = injuryAdjustmentEnvironment({
+      dateISO: args.dateISO,
+      profile: args.profile,
+      /* Only the injuries that existed by this stage — the same scoping the
+       * on-disk stage loop uses, and the reason an earlier answer is not
+       * re-decided by a later injury. */
+      facts: staged.slice(0, index + 1),
+    });
+    const stagePlan = planInjuryRecomposition({
+      workout: { ...args.workout, exercises: dayRows.map((name) => ({
+        exercise: { name },
+      })) } as unknown as Workout,
+      environment: stageEnvironment,
+      primaryInjury: stage.bucket
+        ? { bucket: stage.bucket as never, severity: stage.severity, seriousSymptoms: false }
+        : null,
+    });
+    const replaced = new Map(stagePlan.substitutions
+      .filter((substitution) => substitution.to.name)
+      .map((substitution) => [substitution.from, substitution.to.name!]));
+    dayRows = dayRows.map((name) => {
+      const next = replaced.get(name);
+      if (!next) return name;
+      /* The slot keeps its identity on the day even as its visible name moves,
+       * so the filter can still find the row this pause is about. */
+      dayNameOf.set(next, dayNameOf.get(name) ?? name);
+      return next;
+    });
+    /* A row paused by an earlier stage stays paused; the later stages simply
+     * never see it again. */
+    pausedRows = [...pausedRows, ...stagePlan.pausedRows.filter((n) => !pausedRows.includes(n))];
+    dayRows = dayRows.filter((name) => !pausedRows.includes(name));
+  }
+  const plan = { pausedRows };
+  const pausedOnTheDay = pausedRows
+    .map((name) => dayNameOf.get(name) ?? name)
+    .filter((name) => originalDayRows.includes(name));
   return deriveInjurySessionAdjustment({
     workout: args.workout,
-    environment,
+    environment: injuryAdjustmentEnvironment({
+      dateISO: args.dateISO, profile: args.profile, facts: args.facts,
+    }),
     profile: args.profile,
     bodyPart: worst.bodyPart,
     redFlag: false,
     weekExerciseNames: args.weekExerciseNames,
     excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: plan.pausedRows,
+    pausedOnTheDay,
   });
 }

@@ -230,7 +230,12 @@ function injuryWithheldNamesOn(dateISO: string): string[] {
 function visibleExerciseNamesOn(dateISO: string): string[] {
   if (!dateISO) return [];
   const workout = applyExclusionsToAuthoredDay({
-    workout: resolveWorkoutOnDate(dateISO),
+    /* ⚠ **THE NAME IS THE CONTRACT: this is what the ATHLETE can see**, so it
+     * reads the visible day and not the planner's. Reading the planner's here
+     * made the before/after measurement blind to the session adjustment, the
+     * door reported "nothing changed", and the honest sentence lost its
+     * *"that means no squatting…"* tail (`test:injury-fallback-journey`). */
+    workout: visibleWorkoutOnDate(dateISO),
     dateISO,
     exclusions: liveAthleteExclusions(),
   });
@@ -240,9 +245,39 @@ function visibleExerciseNamesOn(dateISO: string): string[] {
 }
 
 /** The day as the athlete is seeing it, through the one resolver. */
+/**
+ * ⚠ **THE PLANNER'S READ, AND IT SUPPRESSES THE SESSION ADJUSTMENT (R-124).**
+ *
+ * Everything in this file that PLANS an injury reads the day through here, and
+ * what it needs is the day the athlete's own decisions and the earlier injuries
+ * left behind — not the day the screen draws. The adjustment removes paused rows
+ * and appends a block; letting a writer plan against that is how the second of
+ * two injuries came to pause `Leg Press` while the review had promised
+ * `Kettlebell Swings` (`test:session-injury-review` [9]).
+ *
+ * `visibleExerciseNamesOn` deliberately does NOT suppress it: that one is the
+ * honest before/after measurement of what the athlete can see, which is the
+ * opposite question.
+ */
 function resolveWorkoutOnDate(dateISO: string): Workout | null {
-  const state = buildScheduleStateImperative();
+  const state = { ...buildScheduleStateImperative(), suppressInjuryAdjustment: true };
   const resolved = resolveDateWithConditioning(dateISO, state);
+  return (resolved?.workout as Workout | undefined) ?? null;
+}
+
+/**
+ * ⚠ **THE HONESTY READ — THE DAY AS THE ATHLETE SEES IT, ADJUSTMENT AND ALL.**
+ *
+ * Its twin above is for PLANNING and suppresses the adjustment. This one is for
+ * CLAIMING, and must not: *"nothing unsafe is left under a claim that it is
+ * safe"* is a statement about the athlete's screen. MEASURED when the two were
+ * conflated — the refusal arm fired over a session whose unsafe rows the athlete
+ * could no longer see, and told them to *"skip those and check with a physio"*
+ * about work that was not on their session (`test:injury-fallback-journey`,
+ * five worlds).
+ */
+function visibleWorkoutOnDate(dateISO: string): Workout | null {
+  const resolved = resolveDateWithConditioning(dateISO, buildScheduleStateImperative());
   return (resolved?.workout as Workout | undefined) ?? null;
 }
 
@@ -1627,8 +1662,9 @@ function recomposeSessionForInjury(args: {
     logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
   }
 
+  /* THE ATHLETE'S OWN SCREEN, not the planner's day — see `visibleWorkoutOnDate`. */
   const after = applyExclusionsToAuthoredDay({
-    workout: resolveWorkoutOnDate(args.date),
+    workout: visibleWorkoutOnDate(args.date),
     dateISO: args.date,
     exclusions: liveAthleteExclusions(),
   });
@@ -1770,7 +1806,8 @@ async function executeProgramControlActionDurablyWithinTrace(
       after: injuryRowsAfter,
       remainingUnsafe: unsafeRowsForInjury({
         workout: applyExclusionsToAuthoredDay({
-          workout: resolveWorkoutOnDate(injuryDate),
+          /* The claim is about the athlete's screen, so it reads the screen. */
+          workout: visibleWorkoutOnDate(injuryDate),
           dateISO: injuryDate,
           exclusions: liveAthleteExclusions(),
         }),

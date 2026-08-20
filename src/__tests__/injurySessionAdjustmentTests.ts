@@ -349,6 +349,49 @@ async function main(): Promise<void> {
       { before: JSON.parse(adjusted), after: JSON.parse(fingerprintOn(TARGET)) });
   }
 
+  console.log('\n[10] A PLANNER READS THE DAY, NOT THE DRAWING');
+  {
+    /* ⚠ **THE BOUNDARY A MUTATION FOUND UNGUARDED.** The adjustment removes the
+     * paused rows and appends a block — the one thing `markInjuryWithheldRows`
+     * refuses to do ("MARK, NEVER FILTER"), and for this reason: the injury
+     * planner reads the day back through the same resolver. Point that read at
+     * the drawn day and it plans against its own output.
+     *
+     * Removing `suppressInjuryAdjustment` reddened NOTHING until this section
+     * existed, so the claim was prose. It is measured now: a SECOND injury is
+     * declared on top of the first, and the block must not compound — the added
+     * rows of pass one must not become "rows the session already has" that pass
+     * two then builds on top of. */
+    install();
+    ok('CONTROL — the first injury adjusted the session',
+      (await declare(constraintFor('Knee', 'moderate', TARGET))).ok === true);
+    const afterOne = dayOn(TARGET);
+    const addedOne = afterOne?.injuryAdjustment?.added ?? [];
+    ok('CONTROL — and it really did add a block', addedOne.length > 0, addedOne);
+
+    ok('CONTROL — a second injury lands too',
+      (await declare(constraintFor('Shoulder', 'moderate', TARGET))).ok === true);
+    const afterTwo = dayOn(TARGET);
+    const rowsTwo = (afterTwo?.exercises ?? []).map((row) => String(
+      (row as { exercise?: { name?: string } }).exercise?.name ?? '',
+    ));
+    ok('the block never compounds — no row appears twice',
+      new Set(rowsTwo.map((n) => n.toLowerCase())).size === rowsTwo.length, rowsTwo);
+    ok(`and it is still capped at ${INJURY_ADJUSTMENT_MAX_ADDED} added rows`,
+      (afterTwo?.injuryAdjustment?.added ?? []).length <= INJURY_ADJUSTMENT_MAX_ADDED,
+      afterTwo?.injuryAdjustment?.added);
+    ok('the session never grew past the day it started as',
+      rowsTwo.length <= beforeRows.length,
+      { after: rowsTwo.length, before: beforeRows.length });
+    /* The boundary itself, named where it lives, so a future reader finds the
+     * rule and not only its symptom. */
+    ok('the planner\'s read declares the suppression',
+      /suppressInjuryAdjustment: true/.test(fs.readFileSync(
+        path.resolve(__dirname, '..', 'utils', 'programControlActions.ts'), 'utf8'))
+      && /state\.suppressInjuryAdjustment \? workout/.test(fs.readFileSync(
+        path.resolve(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8')));
+  }
+
   console.log(`\nInjury session adjustment totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
   totalsPrinted(failures.length);
   if (failures.length > 0) {
