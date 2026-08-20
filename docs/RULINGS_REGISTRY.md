@@ -3015,3 +3015,66 @@ nothing rather than inviting a fourth answer.
 controls. Mutation-proven five ways, each killing exactly one cell: the checkbox
 back before the stepper; Power's rest line restored; the calendar icon removed;
 Conditioning dropped from the icon table; the row gaps returned to loose.
+
+---
+
+**R-117** · *"The Conditioning screenshot is rejected for both units and copy
+quality. Clean the entire athlete-facing Conditioning projection, not only this
+one line … The pace must be calculated using `60 / kmh`, rounded to the nearest
+second. Do not relabel km/h values as min/km … Remove these athlete-inappropriate
+implementation lines … Trace where punctuation is being lost. Fix the shared
+structured formatter/projection rather than patching this card with one literal
+string. Add a census that renders every authored Conditioning session and fails
+on malformed percentage ranges, missing punctuation, internal/debug vocabulary or
+incorrect pace units."* (Sam, 2026-08-20) · **THE PROJECTION IS THE COPY.**
+
+Plus, mid-task: *"icon for conditioning should not be amber - keep same grey as
+the other logos"* — one line in `components/icons/SectionIcon.rowIconColor`, so
+the Day card and the Session screen moved together. `game` keeps its amber; it
+is a fixture, not a section the athlete trains through.
+
+**WHAT THE ATHLETE READ BEFORE.** `composeConditioningRows` pasted six authored
+FIELDS together with separators. Classic 4×4 arrived as `Rest: 3 min easy jog` /
+`Sets: 4 reps` / `90–100% MAS; HR 90–95% max late` / a lower-case cue / and
+`All 5 modalities — 4 min is inside the 8 min erg cap; Air Bike is time-native.`
+The pace beneath it read `13.5-15 km/h` under the word "pace".
+
+**`rules/conditioningDisplay` IS THE ONE PROJECTION.** Labelled lines, not a
+join. The welded intensity field splits into a speed target and a heart-rate
+SENTENCE. Authoring parentheticals are removed by MARKER, so `(1 km)` and
+`(20+20)` survive and `(Sam's 1:2 ruling)` does not. Comma splices become full
+stops — punctuation only, no word added or moved.
+
+⚠ **THE DOSE LABEL COMES FROM THE QUALITY, NOT THE SHEET'S OWN UNIT WORD.**
+Measured across all 55 templates, the sheet uses `reps` and `rounds` for
+structurally identical doses inside ONE quality — `aerobic_power` holds both
+`4 reps` (Classic 4×4) and `8 rounds` (MAS 15:15). Promoting that word printed
+`Reps: 4` on Classic 4×4, which is Sam's rejected line wearing a different word.
+`QUALITY_DOSE_LABEL` is a total `Record`, so a new quality stops the build.
+
+⚠ **WHERE THE PUNCTUATION WAS ACTUALLY LOST — AND IT WAS NOT THE FORMATTER.**
+`dayWorkoutHelpers.cleanNotes` step 2 stripped `[|•–—]` as "orphan separators",
+matching a dash with zero whitespace either side. So `90–100% MAS` reached the
+glass as `90 100% MAS`, and every em dash Sam wrote into a cue went with it. The
+rule was right for the world it was written in — notes were once six fields
+pasted with ` – ` between them. `|` and `•` still go; a dash is now the author's.
+
+⚠ **THE FIRST CENSUS WENT 35/35 GREEN WHILE THE SIMULATOR SHOWED `90 100%`.**
+It read `conditioningDisplayLines` — one call short of the glass. It now renders
+through `cleanNotes` as the screen does. **A census that stops before the
+renderer measures the sheets, not what the athlete reads.**
+
+· `WORKING` — `test:conditioning-copy-census`, 35 cells over all 55 authored
+templates, 3 non-vacuity controls. It found four templates my own read had
+missed. Mutations, each killing the named cells and nothing else: `90 100%`
+restored · km/h pace restored · the authoring-note remover stripped (4) ·
+every dose relabelled `Sets` (2) · **`cleanNotes`' dash-stripping restored (29
+lines, and the eaten em dash manufactured a comma splice)**. One mutation
+SURVIVED the first census — the welded `HR … max late` line — and that gap is
+now its own cell.
+
+**THE SHEET WAS NOT EDITED.** `conditioningTemplateEquality` proves the module
+ships Sam's 2026-07-25 spreadsheet byte for byte; form repairs live in the
+projection so it stays green. The one field Sam re-authored in chat is a CITED
+override with its own non-vacuity control — editing a snapshot named after a
+date would make it a record of nothing. 95/95 → 96/96.

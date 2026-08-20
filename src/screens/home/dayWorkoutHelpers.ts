@@ -116,11 +116,26 @@ export function cleanNotes(raw?: string | null): string | null {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // 2. Strip orphan separators: |, •, –, —
-  cleaned = cleaned.replace(/\s*[|•–—]\s*/g, ' ');
+  /* 2. Strip orphan separators: | and •
+   *
+   * ⚠ **A DASH IS NOT A SEPARATOR HERE, AND TREATING IT AS ONE WAS A DEFECT
+   * ON GLASS.** This line used to read `[|•–—]`, which matches a dash with
+   * ZERO whitespace on either side — so `90–100% MAS` reached the athlete as
+   * `90 100% MAS`, and Sam rejected the card for it. Every em dash Sam wrote
+   * into a cue went the same way.
+   *
+   * The rule was right for the world it was written in: notes were once six
+   * authored FIELDS pasted together with ` – ` between them, so a dash really
+   * was structure. `rules/conditioningDisplay` ended that — notes are now
+   * labelled lines joined by newlines, and a dash is the author's punctuation
+   * or a range. `|` and `•` never appear in authored copy, so they stay.
+   *
+   * A dash that has genuinely lost its words is still removed: step 3 collapses
+   * a doubled one and step 4 strips it from either end. */
+  cleaned = cleaned.replace(/\s*[|•]\s*/g, ' ');
 
-  // 3. Collapse repeated punctuation (e.g. ",," or ". .")
-  cleaned = cleaned.replace(/([,;.:])\s*\1+/g, '$1');
+  // 3. Collapse repeated punctuation (e.g. ",," or ". ." or "– –")
+  cleaned = cleaned.replace(/([,;.:–—])\s*\1+/g, '$1');
 
   // 4. Remove leading/trailing punctuation and separators
   cleaned = cleaned.replace(/^[\s,;:.!?|•–—]+/, '').replace(/[\s,;:|•–—]+$/, '');

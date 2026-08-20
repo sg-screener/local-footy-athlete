@@ -53,8 +53,12 @@ export function rowIconColor(kind: RowIconKind): string {
       return '#3AA7D8';
     case 'bolt':
       return '#B6D85A';
+    /* Conditioning is GREY like every other work section — Sam, 2026-08-20:
+     * *"icon for conditioning should not be amber - keep same grey as the other
+     * logos"*. It was #D9874E. The amber that remains belongs to `game`, which
+     * is a fixture and not a section the athlete trains through. Changed HERE,
+     * in the one owner, so the Day card and the Session screen move together. */
     case 'flame':
-      return '#D9874E';
     case 'strength':
     case 'team':
     case 'pulse':

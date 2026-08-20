@@ -468,3 +468,38 @@ programming lane, not this one — it is recorded, not judged.
 **Where it was measured:** `profileForDevE2ESeed('conditioning-showcase')` in
 `src/dev/e2e/devE2ESeedRegistry.ts` documents the working answers beside the
 failing ones.
+
+## R-117 — the conditioning projection, 2026-08-20
+
+**WHERE THE PUNCTUATION WAS LOST.** Not the formatter. `dayWorkoutHelpers.cleanNotes`
+step 2 stripped `[|•–—]` as "orphan separators" with a pattern that matches a dash
+carrying ZERO whitespace on either side, so `90–100% MAS` reached the glass as
+`90 100% MAS`. There was a comment at the CALL SITE in `DayWorkoutScreenV2`
+already recording this — it routed the PACE parse around the cleaner and left the
+RENDER going through it. The workaround outlived the reason to look further.
+
+**THE CENSUS WAS GREEN WHILE THE GLASS WAS WRONG.** 35/35 reading
+`conditioningDisplayLines`, one call short of what the screen renders. It now runs
+through `cleanNotes`. Restoring the old pattern reds 29 lines.
+
+**FINDING — CONDITIONING REACHABILITY, PROGRAMMING LANE, NOT FIXED HERE.**
+Measured 24 generated worlds (3 phases × 4 conditioning levels × 2 block weeks)
+through `generateProgramLocally` from the showcase profile:
+
+| phase | week 1 | week 4 |
+| --- | --- | --- |
+| Pre-season | Classic 4×4 | Steady Blocks (3×8 min or 4×6 min) |
+| Off-season | NONE | Steady Blocks · 30:30 Controlled Tempo Blocks |
+| In-season | NONE | NONE |
+
+**In-season reaches no conditioning row in ANY of its 8 variants.** An in-season
+athlete — the app's main audience — never sees the conditioning surface at all.
+
+⚠ **AND THE DEVICE DISAGREES WITH THE SWEEP.** The off-season seed anchored at
+2026-07-27 produced `Steady Blocks` headlessly and a week of Strength-only
+OPTIONAL days on the simulator. The harness and the phone are different worlds
+(boot regenerates); a headless reachability claim is not a device claim, and this
+table is the harness's answer only.
+
+**NOT MEASURED:** whether the in-season zero is a selection refusal or an
+allowance of zero. That is the programming lane's question, not this task's.

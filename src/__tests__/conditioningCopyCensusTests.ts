@@ -36,6 +36,7 @@ import {
   type ConditioningDisplayLine,
 } from '../rules/conditioningDisplay';
 import { personalPaceLine } from '../rules/masPace';
+import { cleanNotes } from '../screens/home/dayWorkoutHelpers';
 
 let pass = 0;
 let fail = 0;
@@ -65,9 +66,21 @@ const rendered: Rendered[] = (CONDITIONING_TEMPLATES as readonly never[]).map((t
     answer: TRIAL,
     experienceLevel: '5+ years' as never,
   } as never);
+  /* ⚠ **THROUGH `cleanNotes`, BECAUSE THE SCREEN RENDERS `cleanNotes(notes)`.**
+   * The first cut of this census read `conditioningDisplayLines` directly and
+   * went 35/35 green while the simulator showed `Intensity: 90 100% MAS` — the
+   * exact line Sam rejected. The projection was right and the RENDERER ate the
+   * en dash. A census that stops one call short of the glass measures the
+   * sheets, not what the athlete reads. */
+  const projected = conditioningDisplayLines({ template: t as never });
+  const rendered = (cleanNotes(projected.map((l) => (l.label ? `${l.label}: ${l.text}` : l.text)).join('\n')) ?? '').split('\n');
   return {
     name: template.name,
-    lines: conditioningDisplayLines({ template: t as never }),
+    lines: projected.map((l, i) => {
+      const shown = rendered[i] ?? '';
+      const text = l.label && shown.startsWith(`${l.label}: `) ? shown.slice(l.label.length + 2) : shown;
+      return { label: l.label, text };
+    }),
     paceLine: pace == null ? null : String(pace),
   };
 });

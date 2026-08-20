@@ -37,6 +37,7 @@ export const DEV_E2E_SEED_IDS = [
    * and then does nothing else. The template, its name, its dose and its
    * section all arrive through production code. */
   'conditioning-showcase',
+  'conditioning-showcase-aerobic',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -78,6 +79,10 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   'exercise-removal-restart': '2026-07-13',
   'session-layout-showcase': '2026-07-13',
   'conditioning-showcase': '2026-07-13',
+  /* Four weeks into the block, not week one: the sweep found the off-season
+   * athlete reaching NO conditioning row in week 1 and two aerobic-capacity
+   * templates in week 4. The date is the measurement, not a preference. */
+  'conditioning-showcase-aerobic': '2026-08-03',
 };
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {

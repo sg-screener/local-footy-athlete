@@ -835,6 +835,40 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
       teamTrainingDays: ['Monday', 'Thursday'],
     });
   }
+  if (seedId === 'conditioning-showcase-aerobic') {
+    /* THE SECOND CONDITIONING TYPE — Sam asked for "at least one other".
+     *
+     * Same athlete, one answer different: OFF-SEASON. Measured across 24
+     * generated worlds (3 phases × 4 conditioning levels × 2 block weeks), the
+     * off-season athlete reaches `Steady Blocks (3×8 min or 4×6 min)` and
+     * `30:30 Controlled Tempo Blocks` — both `aerobic_capacity`, where Classic
+     * 4×4 is `aerobic_power`. That is a genuinely different quality AND a
+     * COMPOUND dose (`3 × 8 min, or 4 × 6 min`), which is the branch the
+     * projection renders verbatim rather than reducing to a number.
+     *
+     * ⚠ NOTHING IS ASSEMBLED HERE EITHER. Onboarding answers only; the
+     * production generator selects and materialises the authored template.
+     * That same sweep found IN-SEASON reaching no conditioning row in any of
+     * its 8 variants — recorded as a programming-lane finding, not fixed here. */
+    return fixedProfile({
+      seasonPhase: 'Pre-season',
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      conditioningLevel: 'Average',
+      recentTrainingLoad: 'Pretty consistent',
+      equipmentAnswer: {
+        tags: {
+          barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+          bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+          foam_roller: 'have', plyo_box: 'have',
+        },
+        modalities: {
+          bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have',
+        },
+        answeredOn: '2026-07-13',
+      },
+    } as Partial<OnboardingData>);
+  }
   if (seedId === 'conditioning-showcase') {
     /* ⚠ **NOTHING IS ASSEMBLED HERE — THIS SEED ONLY ANSWERS ONBOARDING.**
      *
