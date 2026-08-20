@@ -75,6 +75,28 @@ export function resetStoresToFreshInstall(reason: string): void {
     userRemovalConstraints: [],
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
+    // ─── EVERY PERSISTED INPUT, AND THE CHECK BELOW IS WHY THESE THREE ARE
+    //     HERE RATHER THAN JUST `acceptedBlocks` ─────────────────────────────
+    //
+    // FOUND 2026-08-20 by the settings-persistence matrix, and it is this file's
+    // own founding warning coming true a second time: *"A FRESH INSTALL IS TOTAL
+    // OR IT IS NOT A FRESH INSTALL."*
+    //
+    // `acceptedBlocks` joined `programStore` on 2026-08-17 as a persisted INPUT
+    // and never joined this list. So a fresh install after any athlete who had
+    // crossed a block boundary kept their accepted record — and `quiescentBoot`
+    // reads `currentAcceptedBlock(acceptedBlocks)` to answer *"which block am I
+    // in"*. **MEASURED: a brand-new athlete, cold-started immediately after a
+    // worn one, was booted as BLOCK 2** — `blockState.blockNumber 1 -> 2`,
+    // `miniCycleNumber [1,1,1,1] -> [2,2,2,2]`, and their power row rotated
+    // `Vertical Jump -> Lateral Jump` across the relaunch. Nothing failed; the
+    // next suite simply measured a different athlete than the one it built.
+    //
+    // `generationAnchorISO` and `hydratedSeasonPhaseClock` are the same class,
+    // caught by the same check rather than by noticing them.
+    acceptedBlocks: {},
+    generationAnchorISO: null,
+    hydratedSeasonPhaseClock: null,
   } as never);
 
   // ─── RESET THE SOURCE BEFORE THE MIRROR, OR THE MIRROR PUTS IT BACK ───────
@@ -112,4 +134,51 @@ export function resetStoresToFreshInstall(reason: string): void {
       + `survived it. Something re-published the mirror after its source was `
       + `cleared; find the new source and reset that, do not clear twice.`);
   }
+  assertNoPersistedProgramInputSurvived(reason);
+}
+
+/**
+ * ⚠ **THE LIST GROWS BY ITSELF, OR IT DRIFTS AGAIN.**
+ *
+ * `acceptedBlocks` is the second key to be added to `programStore`'s persisted
+ * inputs and forgotten here, and the first one cost every seeded Maestro flow in
+ * the repo (`projectProgramPersistedInputs`'s own docstring records that day).
+ * The lesson taken there was to make the field list ONE FUNCTION rather than
+ * three copies. This is the same lesson applied to the RESET: instead of adding
+ * a line per key and hoping the next author adds theirs, the check ASKS THE
+ * PROJECTION what the store persists and requires every one of those values to
+ * be empty.
+ *
+ * So a future input key that does not join the `setState` above turns this red
+ * on the next run of any suite that resets — which is the behaviour a comment
+ * saying *"remember to add your key"* has never once produced.
+ *
+ * **What "empty" means, stated rather than guessed:** `null`/`undefined`, an
+ * empty object, or an empty array. Anything else is state a fresh install could
+ * not be carrying. A scalar with a real value is therefore a red too, which is
+ * correct — `generationAnchorISO` surviving an install is the same defect wearing
+ * a different type.
+ */
+function assertNoPersistedProgramInputSurvived(reason: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { projectProgramPersistedInputs } = require('../../store/programStore');
+  const inputs = projectProgramPersistedInputs(
+    useProgramStore.getState() as unknown as Record<string, unknown>,
+  ) as Record<string, unknown>;
+  const survivors = Object.entries(inputs).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value as object).length > 0;
+    return true;
+  });
+  if (survivors.length === 0) return;
+  throw new Error(
+    `A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL (${reason}): `
+    + `${survivors.length} persisted program input(s) survived the reset — `
+    + `${survivors.map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(', ')}. `
+    + 'Add the key to the `useProgramStore.setState` above. Every key '
+    + '`projectProgramPersistedInputs` reports is a value the app writes to disk '
+    + 'and reads at boot, so one left behind hands the next athlete somebody '
+    + "else's history.",
+  );
 }

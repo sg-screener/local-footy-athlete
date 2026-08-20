@@ -51,6 +51,7 @@ import {
   generationAnchorForProgram,
   getCurrentBlockNumberForGeneration,
   recordAcceptedBlock,
+  statedProgressionInputs,
   useProgramStore,
 } from '../store/programStore';
 import {
@@ -657,15 +658,16 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
     // must hand generation the athlete's recorded history. Generation no longer
     // reaches into the store for it (Sam, product close) — same explicit inputs,
     // same stored block, every time.
-    progressionHistory: {
-      sessionFeedback: persistedState.sessionFeedback,
-      weightOverrides: persistedState.weightOverrides,
-      blockState: persistedState.blockState,
-      // EVERY ACCEPTED BLOCK'S RECORD — its identity and what it required. Stated
-      // by the caller that owns the grid, and it is the SAME map `quiescentBoot`
-      // states, so the rollover and a relaunch read identical values.
-      acceptedBlocks: persistedState.acceptedBlocks,
-    },
+    //
+    // ⚠ **THE FOUR FIELDS USED TO BE WRITTEN OUT HERE AND THAT IS WHY TWO OTHER
+    // DOORS SHIPPED WITHOUT THEM.** `statedProgressionInputs` (`programStore`) is
+    // now the one projection of *"what a regenerating caller must state"*, for
+    // the same reason `projectProgramPersistedInputs` beside it is the one
+    // projection of what the store persists: a list written out by hand is a
+    // list the next door forgets. Nothing about what this caller states has
+    // changed — it takes the same captured snapshot and reads the same four
+    // fields; only the authorship of the list moved.
+    progressionHistory: statedProgressionInputs(persistedState),
   });
 
   // 2. Canonical context + pure sweep decision.

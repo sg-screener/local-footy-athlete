@@ -3078,3 +3078,71 @@ ships Sam's 2026-07-25 spreadsheet byte for byte; form repairs live in the
 projection so it stays green. The one field Sam re-authored in chat is a CITED
 override with its own non-vacuity control — editing a snapshot named after a
 date would make it a record of nothing. 95/95 → 96/96.
+
+---
+
+**⚠ THIS ROW HAS MOVED TWICE: WRITTEN AS `R-112`, RENUMBERED TO `R-114` BY ITS
+OWN SEAT, AND RENUMBERED AGAIN TO `R-119` BY THE INTEGRATOR ON 2026-08-20.**
+Seat `finish-settings-persistence` branched from `9f081efa`, where `R-111` was
+the last row, and seat `sessionui` landed `R-112` and `R-113` on `main` while
+this branch was unmerged, so that seat moved its own unlanded row to `R-114`.
+**Seat `finish-injury` independently claimed `R-114` AND `R-115` for a matched
+pair on the same day** — the injury-matrix authority and the withholding it
+enables — and leaving that pair in place was measured to be the smaller move.
+So this row moved once more, to the first id no tree uses. **The landed rows are
+untouched; only unlanded rows moved.** Anything citing `R-112` or `R-114` for
+the combined-day ruling means this row.
+
+**R-119** · *"A gym session completed on the same date as club training counts
+as a completed gym session. It remains one calendar training day with two
+components, but each completed component keeps its own credit. Club training
+must not erase the completed gym component from the commitment/completion
+denominator. Guard both sides of that ratio so generation and later
+block-history evaluation use the same component-aware count."* (Sam,
+2026-08-20) · **A COMBINED DAY IS ONE DAY WITH TWO COMPONENTS, AND EACH
+COMPONENT IS CREDITED SEPARATELY.**
+
+**⚠ THE APP ERASED THE GYM COMPONENT IN THREE PLACES, ALL THE SAME LINE.** A
+gym session sharing a date with club training is stored as
+`workoutType: 'Team Training'`, while `getSessionComponents` on that very
+workout returns `["power","strength","team_training"]` — the app knew the
+lifting was there. Three readers asked `workoutType === 'Strength' || 'Mixed'`
+and could not see it:
+- `strengthLogging.buildStrengthPerformanceLogs:132` returned `[]`, so **the
+  athlete's lifts on a club night were never recorded at all** — no load, no set
+  count, and nothing for the block boundary to progress those lifts from;
+- `readBlockHistory`'s NUMERATOR counts days carrying strength logs, so it missed
+  the day as a consequence;
+- `deriveAcceptedBlockStrengthRequirement`, the DENOMINATOR, skipped it directly.
+
+**MEASURED BEFORE THE FIX, two worn athletes identical but for where the club
+night falls** (cold start through real onboarding, four weeks lived through the
+live outcome writer, one real miss): separated club nights **8 required / 7
+recorded**; a club night on a gym day **4 required / 4 recorded**, and **0 of 3
+club-night dates recorded any lifting**. The ratio was self-consistent, which is
+precisely why it survived — nothing looked wrong from either side alone.
+
+**AFTER: both athletes read 8 required / 7 recorded, and 3 of 3 club-night dates
+record the lifting.** The separated athlete is unchanged, and their pure club
+nights still record nothing, which is correct — those days carry no gym rows.
+
+**THE FIX IS ONE SHARED OWNER, NOT THREE EDITS.**
+`sessionComponents.carriesStrengthComponent` asks the component question — does
+this day carry gym rows, with `getSessionComponentRows` already separating the
+club session from them — and both sides of the ratio call it. A fourth reader
+cannot re-invent the `workoutType` answer without deleting the shared one.
+
+**Search words:** club night, team training, combined day, gym on a club night,
+completed component, completion denominator, commitment denominator, 75 percent,
+attendance, component-aware count, strength logs missing, workoutType gate.
+
+· `BUILT src/utils/sessionComponents.ts carriesStrengthComponent`, read by
+`strengthLogging.buildStrengthPerformanceLogs` and
+`blockBoundaryProgression.deriveAcceptedBlockStrengthRequirement`. **Guarded by
+`test:settings-persistence` stage 5**, which compares the TWO athlete shapes
+rather than asserting agreement — an earlier cut asserted only that the two
+sides agreed, and they agreed at 4 and 4 on exactly the app this ruling
+forbids. Three cells: the club-night lifting is recorded, the same training
+earns the same credit, and both sides of the ratio count the same sessions,
+each preceded by an anti-vacuity cell. **⚠ NOT SEEN ON GLASS** — another lane
+owns the simulator; this is headless.

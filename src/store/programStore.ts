@@ -2019,6 +2019,71 @@ export function currentAcceptedBlock(
   return { blockStartDate: latest, blockNumber: record.blockNumber };
 }
 
+/**
+ * **THE ONE PROJECTION OF "WHAT A REGENERATING CALLER MUST STATE".**
+ *
+ * Five production callers hand `generateProgramLocally` a week for an athlete
+ * who already has one: the rollover (`weekRebuild`), a relaunch
+ * (`quiescentBoot`), a profile/settings change (`profileProgramTransaction`), a
+ * dated fact (`temporarySourceFactTransaction`) and acceptance
+ * (`acceptedStateTransaction`). Each of them owns the grid, so each of them —
+ * in `quiescentBoot`'s own words — **STATES the inputs**; generation reaches
+ * into no store for them.
+ *
+ * **THREE OF THE FIVE SAID IT AND TWO DID NOT, AND BOTH SILENCES WERE MEASURED
+ * ON A REAL ATHLETE, 2026-08-20.** The same shape as R-097 (*"the defect was
+ * four empty arguments, not a missing layer"*), one door over, twice:
+ *
+ *   - `profileProgramTransaction` stated none of them, so changing a SETTING
+ *     re-authored an established block-2 athlete as block 1 and put every load
+ *     the boundary had raised back down — `Leg Press 113.5 -> 110`, and it
+ *     survived the relaunch, so it was permanent.
+ *   - `temporarySourceFactTransaction` stated the block's NUMBER and START and
+ *     not its HISTORY, so ticking *"no barbell today"* reverted the whole
+ *     week's loads and sets to the authored estimate — `RDLs 82.5 -> 80`,
+ *     `4 sets -> 3` — until the athlete closed and reopened the app, at which
+ *     point boot silently put them back.
+ *
+ * **SO THE LIST IS A FUNCTION AND NOT A HABIT.** This is the same remedy
+ * `projectProgramPersistedInputs` (above) applied to the persisted-field list
+ * after its third divergent copy cost the whole simulator rig: a sixth
+ * regenerating door now gets the four facts by calling one thing, and a fifth
+ * FACT joins all five callers at once. A comment asking authors to remember has
+ * already been tried here and has now failed twice.
+ *
+ * **IT TAKES THE STATE RATHER THAN READING IT**, because the callers do not all
+ * read the same moment: `quiescentBoot` must capture BEFORE its clean slate
+ * (which nulls `blockState`), and `weekRebuild` holds a captured snapshot. A
+ * function that read the live store would silently answer from the wrong moment
+ * in exactly the caller that needs it most.
+ *
+ * **`blockState ?? currentAcceptedBlock` IS NOT A FALLBACK TO A GUESS.** Both
+ * are the same recorded fact: the live derived field when the process is warm,
+ * and the athlete's own accepted record after a process death (hydration sweeps
+ * the derived field, and persisting it directly was measured RACY). When there
+ * is no record at all the athlete is genuinely new, `null` flows on, and block 1
+ * is authored — the truthful answer, arrived at by having no history.
+ */
+export function statedProgressionInputs(state: {
+  sessionFeedback?: Readonly<Record<string, SessionFeedback>> | null;
+  weightOverrides?: Readonly<Record<string, Record<string, number | null>>> | null;
+  blockState?: StoredProgramBlockState | null;
+  acceptedBlocks?: Readonly<Record<string, AcceptedBlockRecord>> | null;
+}): {
+  sessionFeedback: Readonly<Record<string, SessionFeedback>>;
+  weightOverrides: Readonly<Record<string, Record<string, number | null>>>;
+  blockState: StoredProgramBlockState | null;
+  acceptedBlocks: Readonly<Record<string, AcceptedBlockRecord>>;
+} {
+  const acceptedBlocks = state.acceptedBlocks ?? {};
+  return {
+    sessionFeedback: state.sessionFeedback ?? {},
+    weightOverrides: state.weightOverrides ?? {},
+    blockState: state.blockState ?? currentAcceptedBlock(acceptedBlocks) ?? null,
+    acceptedBlocks,
+  };
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
  * THE OVERRIDE DOOR — LR-1
  *
