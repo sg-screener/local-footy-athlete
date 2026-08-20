@@ -4032,7 +4032,8 @@ function ExerciseEditBody({
             {review.paused.length > 0 ? (
               <View style={styles.exerciseEditGroup} testID="injury-review-paused">
                 <Text style={styles.exerciseEditGroupLabel}>
-                  {`PAUSED \u2014 YOUR ${review.bodyPart.toUpperCase()}`}
+                  {`${signedCopy('injury_review.paused_heading')} `
+                    + `${review.bodyPart.toUpperCase()}`}
                 </Text>
                 {review.paused.map((change) => (
                   <View
@@ -4051,7 +4052,9 @@ function ExerciseEditBody({
             {/* ── 3. THE BLOCK THAT GOES IN THEIR PLACE, NAMED AGAINST NOTHING ── */}
             {review.added.length > 0 ? (
               <View style={styles.exerciseEditGroup} testID="injury-review-added">
-                <Text style={styles.exerciseEditGroupLabel}>ADDED INSTEAD</Text>
+                <Text style={styles.exerciseEditGroupLabel}>
+                  {signedCopy('injury_review.added_heading')}
+                </Text>
                 {review.added.map((candidate) => (
                   <View
                     key={`added:${candidate.name}`}

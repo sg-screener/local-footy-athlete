@@ -710,6 +710,28 @@ export function registerProjectionCopy(): void {
       text: 'Update your status to modify your program.',
     },
 
+    // ── The injury review's two section headings, R-124. ──
+    //
+    // SIGNED BY SAM, 2026-08-21, on the screenshots: *"Keep those two
+    // headings."* They were the last two athlete-visible strings this unit
+    // added that nobody had authored, and they put `test:signed-copy-extraction`
+    // one over its ceiling. His words, verbatim, now with a source.
+    {
+      id: 'injury_review.paused_heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED, Sam 2026-08-21, R-124: "Keep those two headings." The '
+        + 'area is appended by the caller and is the athlete\'s own answer, so the '
+        + 'AUTHORED half ends at "YOUR" — a signed template may never take a free '
+        + 'word through its slot, which is the whole point of the branded type.',
+      text: 'PAUSED — YOUR',
+    },
+    {
+      id: 'injury_review.added_heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED, Sam 2026-08-21, R-124: "Keep those two headings."',
+      text: 'ADDED INSTEAD',
+    },
+
     // ── The active-modifiers strip, rulings 4, 7 and 9. ──
     //
     // PROPOSED, batch 34. Her prototype's two lines, read out of
