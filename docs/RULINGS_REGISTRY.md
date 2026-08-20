@@ -3742,3 +3742,86 @@ proving the widening still bites.
 the guided flow's LAST question, in a component that always restarts at `region`,
 so a Back landing there would not be "up one step". Cancel exits applying
 nothing, exactly as before. **That is a ruling nobody has given.**
+
+---
+
+**R-124** · *"The Injury review must not apply the 'unaffected body area' fallback
+separately to every blocked row, producing false pairings like Back Squat → Row
+and RDL → Floor Press. Preserve the existing ordered ladder through same
+movement, secondary compound, accessory or isometric, safe adjacent pattern —
+those remain per-exercise replacements. If those stages find nothing safe, do not
+describe unrelated upper-body work as replacing that specific lower-body
+exercise. Handle the unresolved rows at session level … Do not show false arrows
+between unrelated exercises. Clearing the injury must restore the exact original
+session, including after restart."* · Sam, 2026-08-21 · seat `sheetshell` ·
+MERGED `68918d47`, rollback `pre-injury-fallback-merge-2026-08-21`.
+
+**MEASURED BEFORE ANY CODE MOVED** (`npm run probe:injury-review-pairings`), knee
+7/10 on the athlete's real Monday: **rungs 1-4 accepted ZERO candidates for all
+five blocked rows** while rung 5 accepted 44-73. Every arrow the athlete saw was
+the loop handing each row the next unused name off one long list — reorder the
+rows and `Back Squat` gets a different partner. **Two of the five were already
+elsewhere in the same week** (`Band Pull-Apart` Tuesday, `Single-Arm DB Floor
+Press` Thursday), taking the athlete's upper-body rows for the week from 7 to 12.
+Swept every region at 6-7: rungs 1-4 are real for Lower back, Shoulder, Elbow and
+Neck on the upper days, and **structurally empty for every lower-limb region on
+the lower-body day** — Sam's matrix rates 0 of 9 squats, 0 of 7 lunges and 0 of 8
+hinges `good` for any lower limb.
+
+**SAM'S DECISIONS, 2026-08-21, IN HIS ORDER:** keep the safe row and add at most
+three · `Chest-Supported Row`, `Side Plank` and a non-kneeling dead-bug instead of
+`Ab Wheel` if Ab Wheel kneels (it does) · paused rows appear in the REVIEW and
+leave the ACTIVE SESSION — **no five greyed-out SKIP cards** · one concise summary
+line · cap at three and never exceed the original session size or the existing
+weekly limits · **carries and kneeling OUT for a 6-7 knee, held in the SHARED
+safety authority, never a screen-specific exception, and never a blanket ban for
+a mild knee** · no false arrows · clearing restores exactly, including after
+restart.
+
+**THE DERIVATION IS `utils/injurySessionAdjustment`**, and for the measured world
+it returns exactly Sam's three: `Chest Supported Row`, `Dead Bug`, `Side Plank`,
+under *"5 lower-body exercises paused for your knee. Today's session has been
+adjusted to safe upper-body and core work."* — every word of it derived from what
+happened to the rows.
+
+⚠ **NOTHING IS STORED, AND THAT IS THE WHOLE OF REQUIREMENT 8.** It is a
+read-time projection from the injury FACT at the same VIEW door as
+`rules/injuryWithheldRows`. Writing the three added rows as `add_exercise`
+decisions was the obvious build and fails outright: the ledger replays them
+forever after the knee is better.
+
+⚠ **A PLANNER READS THE DAY, NOT THE DRAWING.** The adjustment removes and
+appends rows, which `markInjuryWithheldRows` has always refused to do — because
+the injury planner reads back through the same resolver.
+`resolveWorkoutOnDate` suppresses it; `visibleWorkoutOnDate`, which answers *"what
+can the athlete see"*, deliberately does not. **Removing that suppression
+reddened NOTHING until `[10]` was written for it.**
+
+⚠ **STACKED INJURIES ARE STAGED IN DECLARATION ORDER, IN MEMORY.** Measured by
+instrumenting the settle: stage 1 plans `Leg Press -> Glute Bridge` and the
+ordinary swap door then REFUSES the write, because that row is unsafe under the
+injury declared afterwards. Correct — and it leaves the authored day, so the
+review promised `Kettlebell Swings` while the session paused `Leg Press`. R-121
+from a new direction. **Reporting and filtering are two questions**: `paused`
+carries the name the athlete saw, `pausedOnTheDay` the name the day holds.
+
+⚠ **A RED FLAG GETS NO ADJUSTMENT AT ALL** — the 8-10 full-stop rule owns it
+start to finish (R-115). **And the athlete is never left with an empty session**:
+where nothing is kept and nothing can be added, the rows stay, dimmed, with their
+reason and a `SKIP` badge where the checkbox would be — the checkbox is REPLACED,
+not disabled.
+
+**GUARDED:** `test:injury-session-adjustment`, 44 cells. **MUTATION-PROVEN, four
+mutations, tree restored byte-identical after each:** staging replaced by one
+pass (1 red), the report using the day's names (1), the planner reading the drawn
+day (1, only after `[10]` existed), the honesty read pointed at the planner's day
+(5). Controls in four older suites were RE-AIMED to genuine worlds by searching
+the real doors, never lowered — and where no such world exists any more
+(`exercise-restore-owner` `[2]`: no injury substitutes on that day at any band)
+the cell names the mechanism that is actually there and says so with the
+measurement.
+
+**NOT COVERED, NAMED:** a temporary equipment fact does not narrow the added
+block — the block's environment carries the permanent kit and the injuries, and
+projecting equipment facts into it is `composeTemporarySourceFactCompatibility`'s
+territory, not this unit's.
