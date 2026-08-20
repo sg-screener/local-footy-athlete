@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   Pressable,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -36,7 +37,13 @@ import {
   type ExerciseExclusionScope,
 } from '../../rules/exerciseExclusions';
 import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
-import { legalAddCandidateGroups } from '../../utils/addExerciseCandidates';
+import {
+  ADD_SUBCATEGORIES,
+  legalAddCandidates,
+  legalAddFamilies,
+  type AddFamilyId,
+  type AddSubcategoryId,
+} from '../../utils/addExerciseCandidates';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -301,26 +308,46 @@ type ExerciseEditStep =
       fromMenu?: Extract<ExerciseEditStep, { kind: 'choose_swap' }>;
     }
   /**
-   * **THE ADD MENU — THE APP'S OWN VOCABULARY, FILTERED FOR THIS ATHLETE.**
+   * **THE ADD MENU — SAM'S THREE LEVELS, 2026-08-20.**
    *
-   * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
-   * component ... Respect equipment, injury and genuine session limits."*
+   * *"1. Strength / Conditioning / Mobility-Warm-up. 2. A relevant subcategory,
+   * such as upper/lower/movement pattern. 3. Legal final exercise choices.
+   * Never show athletes a mixed internal list containing options like
+   * 'Breathing reset'."*
    *
-   * `add_kind` used to be seven hand-written labels over a table of TWELVE
-   * suggestions that asked nothing about the athlete's kit or their injuries.
-   * These two steps replace it with `legalAddCandidateGroups` — every group the
-   * vocabulary offers, minus everything unsafe today and everything already on
-   * the day. A group with nothing legal left in it is ABSENT, so a category the
-   * athlete taps always has something behind it.
+   * ⚠ **`add_group` — ONE FLAT LEVEL — IS DELETED.** It opened on every group
+   * the VOCABULARY has, which is the generation prompt's own filing: 23 buttons
+   * on a full-kit athlete, reading `Upper push horizontal`, `Groin / adductors`,
+   * `Tissue quality`, `Breathing reset`, in a sheet that does not scroll. The
+   * names behind it were already legal and already the athlete's; it was the
+   * MENU that was internal.
+   *
+   * `add_family` -> `add_subcategory` -> `add_pick` replace it. Levels 1 and 2
+   * come from `legalAddFamilies`, level 3 from `legalAddCandidates`, and both
+   * read one legality pass so a count can never disagree with the list behind
+   * it. A family or subcategory with nothing legal left is ABSENT, so the
+   * hierarchy can never dead-end on an empty screen.
    */
   | {
-      kind: 'add_group';
-      groups: readonly { label: string; count: number }[];
+      kind: 'add_family';
+      families: readonly { id: AddFamilyId; label: string; count: number }[];
+    }
+  | {
+      kind: 'add_subcategory';
+      family: AddFamilyId;
+      familyLabel: string;
+      subcategories: readonly { id: AddSubcategoryId; label: string; count: number }[];
+      /** The family list this came from, so Back climbs rather than closing. */
+      fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>;
     }
   | {
       kind: 'add_pick';
+      family: AddFamilyId;
+      subcategory: AddSubcategoryId;
       label: string;
       options: readonly { name: string; meta: string; suggestion: SuggestedExercise }[];
+      /** The subcategory list this came from, so Back climbs one level. */
+      fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>;
     }
   | {
       kind: 'confirm_add';
@@ -447,9 +474,9 @@ function guidedSeverityToExerciseSeverity(result: GuidedInjuryFlowResult): Injur
  *
  * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
  * component. Respect equipment, injury and genuine session limits. Own load
- * authority."* The owner is `utils/addExerciseCandidates.legalAddCandidateGroups`,
- * over the app's own `selectableVocabularyGroups()`, filtered by the SAME
- * safety function the swap ladder uses, with the load from
+ * authority."* The owners are `utils/addExerciseCandidates.legalAddFamilies`
+ * and `legalAddCandidates`, over the app's own `selectableVocabularyGroups()`,
+ * filtered by the SAME safety function the swap ladder uses, with the load from
  * `startingWeightForAthlete`.
  */
 
@@ -846,9 +873,17 @@ export default function DayWorkoutScreenV2() {
    * the session all move, and a cached menu would offer a movement the athlete
    * can no longer do.
    */
-  const addCandidateGroups = React.useCallback(() => {
+  /**
+   * THE ATHLETE, THEIR KIT AND THEIR INJURIES — ASSEMBLED ONCE, READ BY ALL
+   * THREE LEVELS.
+   *
+   * Derived at every open and never stored: kit, injuries and what is already
+   * on the session all move, and a cached menu would offer a movement the
+   * athlete can no longer do.
+   */
+  const addCandidateArgs = React.useCallback(() => {
     const dateISO = date ?? todayISOLocal();
-    return legalAddCandidateGroups({
+    return {
       environment: resolveTapSwapEnvironment({
         date: dateISO,
         profile: useProfileStore.getState().onboardingData,
@@ -857,14 +892,15 @@ export default function DayWorkoutScreenV2() {
       }),
       existingExerciseNames: editableExercises.map((item) => item.name),
       profile: useProfileStore.getState().onboardingData,
-    });
+    };
   }, [date, editableExercises]);
 
+  /** LEVEL 1 — Strength / Conditioning / Mobility / Warm-up. */
   const openExerciseAdd = React.useCallback(() => {
     if (isTeamOnly || editableExercises.length === 0) return;
-    const groups = addCandidateGroups();
-    if (groups.length === 0) {
-      // HONEST. Every group empty means this athlete's kit and injuries leave
+    const families = legalAddFamilies(addCandidateArgs());
+    if (families.length === 0) {
+      // HONEST. Every family empty means this athlete's kit and injuries leave
       // nothing safe to add today, which is a sentence, not an empty list.
       showExerciseEditFallback(
         'Nothing safe to add today',
@@ -874,21 +910,48 @@ export default function DayWorkoutScreenV2() {
       return;
     }
     setExerciseEditStep({
-      kind: 'add_group',
-      groups: groups.map((group) => ({ label: group.label, count: group.candidates.length })),
+      kind: 'add_family',
+      families: families.map((family) => ({
+        id: family.id, label: family.label, count: family.count,
+      })),
     });
   }, [
-    addCandidateGroups, dateLabel, editableExercises.length, isTeamOnly,
+    addCandidateArgs, dateLabel, editableExercises.length, isTeamOnly,
     showExerciseEditFallback, workoutLabel,
   ]);
 
-  const openAddGroup = React.useCallback((label: string) => {
-    const group = addCandidateGroups().find((entry) => entry.label === label);
-    if (!group) return;
+  /** LEVEL 2 — the subcategories of ONE family: movement pattern, or Sam's
+   * conditioning tiers, or the three kinds of mobility work. */
+  const openAddFamily = React.useCallback((
+    family: AddFamilyId,
+    fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>,
+  ) => {
+    const offer = legalAddFamilies(addCandidateArgs()).find((entry) => entry.id === family);
+    if (!offer) return;
+    setExerciseEditStep({
+      kind: 'add_subcategory',
+      family: offer.id,
+      familyLabel: offer.label,
+      subcategories: offer.subcategories,
+      ...(fromFamily ? { fromFamily } : {}),
+    });
+  }, [addCandidateArgs]);
+
+  /** LEVEL 3 — every legal choice in that subcategory, each carrying its own
+   * dose and this athlete's own load. */
+  const openAddSubcategory = React.useCallback((
+    family: AddFamilyId,
+    subcategory: AddSubcategoryId,
+    fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>,
+  ) => {
+    const candidates = legalAddCandidates({ ...addCandidateArgs(), subcategory });
+    if (candidates.length === 0) return;
     setExerciseEditStep({
       kind: 'add_pick',
-      label,
-      options: group.candidates.map((candidate) => {
+      family,
+      subcategory,
+      label: ADD_SUBCATEGORIES[subcategory].label,
+      options: candidates.map((candidate) => {
         const suggestion: SuggestedExercise = {
           name: candidate.name,
           sets: candidate.sets,
@@ -904,13 +967,15 @@ export default function DayWorkoutScreenV2() {
           suggestion,
         };
       }),
+      ...(fromSubcategory ? { fromSubcategory } : {}),
     });
-  }, [addCandidateGroups]);
+  }, [addCandidateArgs]);
 
   /* `prepareAdd` DELETED with `suggestAddExercise` and the `add_kind` step
-   * (2026-08-19). `openExerciseAdd` -> `openAddGroup` is the whole route now,
-   * and its fallback is a real sentence about kit and injuries rather than
-   * "I need a bit more detail" for a table that had simply run out of names. */
+   * (2026-08-19). `openExerciseAdd` -> `openAddFamily` -> `openAddSubcategory`
+   * is the whole route now, and its fallback is a real sentence about kit and
+   * injuries rather than "I need a bit more detail" for a table that had simply
+   * run out of names. */
 
   const applySessionEquipment = React.useCallback(async (
     missingKeys: ReadonlySet<SessionEquipmentRequirementKey>,
@@ -1790,7 +1855,8 @@ export default function DayWorkoutScreenV2() {
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
-        onAddGroup={openAddGroup}
+        onAddFamily={openAddFamily}
+        onAddSubcategory={openAddSubcategory}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
         onExclusionScope={applyExclusionScope}
@@ -3557,7 +3623,17 @@ interface ExerciseEditSheetProps {
   onStep: (step: ExerciseEditStep) => void;
   /** The athlete picked a row to swap. Goes straight to the ranked menu. */
   onSwapPick: (exercise: EditableExercise) => void;
-  onAddGroup: (label: string) => void;
+  /** LEVEL 1 -> LEVEL 2. Carries the family list so Back can climb to it. */
+  onAddFamily: (
+    family: AddFamilyId,
+    fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>,
+  ) => void;
+  /** LEVEL 2 -> LEVEL 3. Carries the subcategory list for the same reason. */
+  onAddSubcategory: (
+    family: AddFamilyId,
+    subcategory: AddSubcategoryId,
+    fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>,
+  ) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
@@ -3583,7 +3659,8 @@ function ExerciseEditSheet({
   onFutureScope,
   onTodayOnly,
   onExclusionScope,
-  onAddGroup,
+  onAddFamily,
+  onAddSubcategory,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -3611,8 +3688,18 @@ function ExerciseEditSheet({
       else onClose();
       return;
     }
+    // SAM'S THREE LEVELS CLIMB. Each add step carries the list it was opened
+    // from, so Back walks 3 -> 2 -> 1 -> closed rather than dropping the
+    // athlete out of the flow from level 3 — which is what `add_pick` did when
+    // there was only one level above it to return to.
     if (step.kind === 'add_pick') {
-      onClose();
+      if (step.fromSubcategory) onStep(step.fromSubcategory);
+      else onClose();
+      return;
+    }
+    if (step.kind === 'add_subcategory') {
+      if (step.fromFamily) onStep(step.fromFamily);
+      else onClose();
       return;
     }
     if (step.kind === 'future_scope') {
@@ -3691,22 +3778,28 @@ function ExerciseEditSheet({
        * nothing about the athlete's kit or their injuries, and offered whichever
        * of two names the session did not already contain. Sam: *"Add any legal
        * exercise, mobility or conditioning component. Respect equipment, injury
-       * and genuine session limits."* `add_group` / `add_pick` replace it with
-       * `legalAddCandidateGroups` over the app's own vocabulary. */
-      case 'add_group':
+       * and genuine session limits."* Sam's three levels — `add_family` /
+       * `add_subcategory` / `add_pick` — replace it, over the app's own
+       * vocabulary. */
+      /* LEVEL 1 — SAM'S THREE. The glyph is the SESSION SCREEN'S own, through
+       * `SESSION_SECTION_ICON_KIND` (R-116's one owner), because these three
+       * buttons name the same three sections the athlete's session is already
+       * divided into. Adding under "Conditioning" here lands in the section
+       * called Conditioning there. */
+      case 'add_family':
         return (
           <>
             <Text style={styles.exerciseEditBody}>
               Everything here is safe with today’s kit and how you are pulling up.
             </Text>
-            {step.groups.map((group) => (
-              <Button
-                key={group.label}
-                label={`${group.label} (${group.count})`}
-                variant="secondary"
-                size="md"
-                onPress={() => onAddGroup(group.label)}
-                style={styles.exerciseEditSecondaryButton}
+            {step.families.map((family) => (
+              <ExerciseSheetOption
+                key={family.id}
+                label={family.label}
+                sub={`${family.count} to choose from`}
+                icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[family.id]} size={18} />}
+                testID={`add-family-${family.id}`}
+                onPress={() => onAddFamily(family.id, step)}
               />
             ))}
             <Button
@@ -3718,11 +3811,46 @@ function ExerciseEditSheet({
             />
           </>
         );
+      /* LEVEL 2 — the subcategory. Every row carries its FAMILY'S glyph, which
+       * is the honest one: these are all Strength, or all Conditioning. */
+      case 'add_subcategory':
+        return (
+          <>
+            <ScrollView
+              style={styles.exerciseEditScrollList}
+              contentContainerStyle={styles.exerciseEditScrollContent}
+            >
+              {step.subcategories.map((subcategory) => (
+                <ExerciseSheetOption
+                  key={subcategory.id}
+                  label={subcategory.label}
+                  sub={`${subcategory.count} to choose from`}
+                  icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
+                  testID={`add-subcategory-${subcategory.id}`}
+                  onPress={() => onAddSubcategory(step.family, subcategory.id, step)}
+                />
+              ))}
+            </ScrollView>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      /* LEVEL 3 — *"legal final exercise choices"*, all of them. The list
+       * SCROLLS: `Sheet` hugs its children, so an unbounded list of real
+       * exercise names would run off the bottom of the screen with no way to
+       * reach the last of them — which is what the flat 23-button menu did. */
       case 'add_pick':
         return (
           <>
-            <View style={styles.exerciseEditGroup}>
-              <Text style={styles.exerciseEditGroupLabel}>{step.label}</Text>
+            <ScrollView
+              style={styles.exerciseEditScrollList}
+              contentContainerStyle={styles.exerciseEditScrollContent}
+            >
               {step.options.map((option) => (
                 <Button
                   key={option.name}
@@ -3738,7 +3866,7 @@ function ExerciseEditSheet({
                   style={styles.exerciseEditSecondaryButton}
                 />
               ))}
-            </View>
+            </ScrollView>
             <Button
               label="Cancel"
               variant="secondary"
@@ -4015,8 +4143,10 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return step.action === 'swap' ? 'Swap which exercise?'
         : step.action === 'remove' ? 'Remove which exercise?'
           : 'Which exercise?';
-    case 'add_group':
+    case 'add_family':
       return 'What do you want to add?';
+    case 'add_subcategory':
+      return step.familyLabel;
     case 'add_pick':
       return step.label;
     case 'confirm_remove':
@@ -4053,8 +4183,10 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
       return displayExerciseName(step.exercise.name);
     case 'confirm_add':
       return 'Add one exercise or small block, not another full session.';
-    case 'add_group':
+    case 'add_family':
       return 'Add one exercise or small block, not another full session.';
+    case 'add_subcategory':
+      return 'Pick the kind of work.';
     case 'add_pick':
       return 'Everything here is legal with today’s kit and injuries.';
     case 'exclusion_scope':
@@ -5200,6 +5332,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
+  /**
+   * ⚠ **THE ADD LISTS SCROLL; THE CONFIRM STEPS STILL HUG.**
+   *
+   * `Sheet` is auto-height by design — it hugs its children, which is right for
+   * "Remove this exercise?" and is why `flexibleBody` exists as an opt-in.
+   * Sam's level 3 is *"legal final exercise choices"* — all of them — and
+   * Conditioning's tempo tier alone is nineteen. An unbounded column inside an
+   * auto-height sheet grows off the bottom of the screen and the last rows
+   * cannot be reached at all.
+   *
+   * A `maxHeight` (not `flex: 1`) is what a hugging parent can resolve: the
+   * list is its own height up to the cap, then scrolls. `flex: 1` here would
+   * resolve against a flex-basis of 0 inside an auto-height parent and collapse
+   * to nothing — the sliver-sheet defect this file's `Sheet` header records.
+   */
+  exerciseEditScrollList: { maxHeight: 360 },
+  exerciseEditScrollContent: { paddingBottom: 4 },
   exerciseEditSecondaryButton: {
     marginTop: 2,
   },

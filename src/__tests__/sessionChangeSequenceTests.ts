@@ -184,7 +184,7 @@ async function main(): Promise<void> {
     require('../utils/programControlActions');
   const { resolveTapSwapEnvironment, getTapSwapChoices, groupTapSwapChoices } =
     require('../utils/tapSwapHierarchy');
-  const { legalAddCandidateGroups } = require('../utils/addExerciseCandidates');
+  const { legalAddFamilies, legalAddCandidates } = require('../utils/addExerciseCandidates');
   const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
   const { unsafeRowsForInjury } = require('../utils/injurySessionRecomposition');
   const { restoreExcludedExerciseDurably } = require('../utils/exerciseExclusionOwner');
@@ -245,15 +245,23 @@ async function main(): Promise<void> {
 
   // ── ADD, seeing what the first two left ────────────────────────────────
   const onTheDay = afterSwap.map((r) => r.split('@')[0]!);
-  const addGroups = legalAddCandidateGroups({
+  // SAM'S THREE LEVELS (2026-08-20). The menu is walked the way the athlete
+  // walks it, and the "does not offer the replacement" check is asked of every
+  // LEAF, not of one flat list — a hierarchy could hide the collision in a
+  // subcategory nobody opened.
+  const addArgs = {
     environment, existingExerciseNames: onTheDay,
     profile: useProfileStore.getState().onboardingData,
-  }) as { candidates: { name: string }[] }[];
-  ok('CONTROL — the add menu is not empty after two changes', addGroups.length > 0);
+  };
+  const addFamilies = legalAddFamilies(addArgs) as
+    { subcategories: { id: string }[] }[];
+  const everyOffered = addFamilies.flatMap((family) => family.subcategories.flatMap(
+    (sub) => (legalAddCandidates({ ...addArgs, subcategory: sub.id }) as { name: string }[])
+      .map((candidate) => candidate.name)));
+  ok('CONTROL — the add menu is not empty after two changes', everyOffered.length > 0);
   ok('and it does not offer the replacement the swap just put on the day',
-    addGroups.every((g) => g.candidates.every((c) => c.name !== replacement)),
-    replacement);
-  const added = addGroups[0]!.candidates[0]!.name;
+    !everyOffered.includes(replacement), replacement);
+  const added = everyOffered[0]!;
   const addResult = await quietAsync(() => executeProgramControlActionDurably({
     type: 'add_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },

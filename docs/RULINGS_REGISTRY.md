@@ -3299,3 +3299,74 @@ forbids. Three cells: the club-night lifting is recorded, the same training
 earns the same credit, and both sides of the ratio count the same sessions,
 each preceded by an anti-vacuity cell. **⚠ NOT SEEN ON GLASS** — another lane
 owns the simulator; this is headless.
+
+**R-120** · *"Replace the Active Session Add action's random flat list with the
+approved hierarchy: 1. Strength / Conditioning / Mobility-Warm-up. 2. A relevant
+subcategory, such as upper/lower/movement pattern. 3. Legal final exercise
+choices. Never show athletes a mixed internal list containing options like
+'Breathing reset'."* (Sam, 2026-08-20) · **THE ADD MENU IS THREE LEVELS, AND ITS
+WORDS ARE THE ATHLETE'S.**
+
+**WHAT THE ATHLETE SAW, MEASURED ON GLASS AND HEADLESSLY.** Add opened one flat
+list of the GENERATION PROMPT's own groups — **23 buttons** on a full-kit
+off-season athlete: `Lower squat`, `Upper push horizontal`, `Upper pull
+vertical`, `Groin / adductors`, `Hamstring (light)`, `Lower prehab`, `Tissue
+quality`, `Easy cardio (zone 1)`, `Breathing reset`. The sheet is auto-height
+and does not scroll, so on the simulator the list **ran off the top of the
+screen past the status bar** and the first ten entries could not be reached at
+all. The NAMES behind it were already legal, already equipment- and
+injury-filtered, and already the athlete's; it was the MENU that was internal.
+
+**IT NOW READS `Strength (125)` / `Conditioning (94)` / `Mobility / Warm-up
+(30)`**, then a subcategory, then the choices.
+
+**⚠ NO NEW TAXONOMY — THREE JOINS ONTO OWNERS THAT ALREADY EXIST.** A fourth
+filing of "what kind of work is this" is the rival-authority shape this repo
+keeps paying for, so nothing here invents one:
+- **The families ARE session sections.** `AddFamilyId` is an `Extract` of
+  `SessionExecutionSectionId` and the labels are `SECTION_LABELS` itself, so
+  adding under "Conditioning" lands in the section the session screen calls
+  Conditioning — and the level-1 glyph is `SESSION_SECTION_ICON_KIND` (R-116's
+  one owner), not a lookalike.
+- **The strength subcategories ARE the pools.** The join is a new stable
+  `VocabularyGroup.id` — the pool key — never the prompt's label text. A
+  `label === 'Mobility'` join would break silently the day the prompt is
+  reworded.
+- **The conditioning subcategories ARE `ConditioningTier`.** Sam's own
+  session-intent classification already sorts all 90 formats into A / B-high /
+  B-low / C; they render as Sprints & speed, Hard intervals, Tempo & steady,
+  Easy & flush.
+
+**`REGISTRY-GREP: R-110`** — *"Power belongs inside the Strength section,
+generally as its first row."* It does here too: Power & jumps is Strength's
+FIRST subcategory and is not a family of its own, which is the same sentence
+applied to a menu. Guarded by name.
+
+**⚠ THE SIX-PER-GROUP CAP IS DELETED, AND THAT IS THE RULING, NOT A LIBERTY.**
+Its own stated reason was *"few enough that the sheet is a decision rather than
+a catalogue"* — a reason belonging to a screen that showed all 23 groups at
+once. The hierarchy is what makes it a decision now, so the cap had nothing left
+to do except hide movements: at six an athlete with a full rack could not reach
+Dips, Face Pull or the Z-Press at all. `REGISTRY-GREP: R-088` — *"a user should
+be able to add as many of their own things on top of it as they choose"*. Level
+3 shows every legal choice and SCROLLS, in a `maxHeight` list rather than
+`flex: 1`, which would collapse to zero inside an auto-height `Sheet`.
+
+**Search words:** add exercise, add menu, add flow, three levels, hierarchy,
+family, subcategory, breathing reset, tissue quality, easy cardio, flat list,
+internal label, movement pattern, conditioning tier, add candidates, six per
+group, ADD_CANDIDATES_PER_GROUP.
+
+· `BUILT src/utils/addExerciseCandidates.ts legalAddFamilies` /
+`legalAddCandidates` (replacing `legalAddCandidateGroups`), read by
+`screens/home/DayWorkoutScreenV2` through `openExerciseAdd` -> `openAddFamily`
+-> `openAddSubcategory`, whose steps are `add_family` / `add_subcategory` /
+`add_pick`. **Guarded by `test:exercise-add-candidates` case [5]** — 16 cells:
+three families in Sam's order, labels identical to `SECTION_LABELS`, R-110's
+power placement, every count equal to the list it opens, no measured internal
+label at level 1 or 2, and — the other half — that nothing legal fell out of the
+vocabulary on the way into the hierarchy. **Five mutations were run and each
+reddened its own cell and only its own**: power moved to another family, a
+prompt label passed through to level 2, a count off by one, a pool dropped, and
+a hand-typed family label. `test:exercise-edit-entry-surface` re-points onto the
+three new step names rather than dropping the rows with the old ones.

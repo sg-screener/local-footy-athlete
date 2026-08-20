@@ -234,16 +234,20 @@ async function add(exercise: string): Promise<{ ok: boolean }> {
 
 function offeredAddFor(existing: string[]): string {
   const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
-  const { legalAddCandidateGroups } = require('../utils/addExerciseCandidates');
+  const { legalAddFamilies, legalAddCandidates } = require('../utils/addExerciseCandidates');
   const environment = quiet(() => resolveTapSwapEnvironment({
     date: TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: [], readinessSignal: null,
   }));
-  const groups = legalAddCandidateGroups({
+  // SAM'S THREE LEVELS (2026-08-20): the first thing the athlete could actually
+  // tap through to — first family, first subcategory, first choice.
+  const args = {
     environment, existingExerciseNames: existing,
     profile: useProfileStore.getState().onboardingData,
-  }) as { candidates: { name: string }[] }[];
-  return groups[0]!.candidates[0]!.name;
+  };
+  const families = legalAddFamilies(args) as { subcategories: { id: string }[] }[];
+  const subcategory = families[0]!.subcategories[0]!.id;
+  return (legalAddCandidates({ ...args, subcategory }) as { name: string }[])[0]!.name;
 }
 
 async function restart(): Promise<boolean> {

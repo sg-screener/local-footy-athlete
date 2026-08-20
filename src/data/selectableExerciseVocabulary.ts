@@ -38,7 +38,7 @@
  * generationVocabularyContractTests §1.
  */
 
-import { POOL_REGISTRY } from './exercisePools';
+import { POOL_REGISTRY, type ExerciseCategory } from './exercisePools';
 import { STRENGTH_POOLS, type PoolSlotKey, type PoolRole } from './exercisePoolsStrength';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import { CONDITIONING_META } from './exerciseTags';
@@ -213,7 +213,30 @@ export function hasExemption(name: string, kind: ContentExemptionKind): boolean 
 
 // ─── Selectable pool membership ───
 
+/**
+ * THE POOL A GROUP CAME FROM, AS AN IDENTITY RATHER THAN A SENTENCE.
+ *
+ * The `label` is prose written for the GENERATION PROMPT — "Upper push
+ * horizontal", "Breathing reset". It is the wrong thing for any other reader to
+ * match on: it is athlete-hostile, it is free to be reworded for the prompt's
+ * benefit, and a `label === 'Mobility'` join breaks silently the day somebody
+ * improves the wording.
+ *
+ * `id` is the pool key itself, so a second reader can ask WHICH POOL this is
+ * and be told in the vocabulary's own terms. The Add menu's athlete-facing
+ * taxonomy (`utils/addExerciseCandidates`) joins on this, and its map is a
+ * TOTAL `Record` over the union — a new pool category stops the build until
+ * somebody decides where the athlete finds it.
+ */
+export type VocabularyGroupId =
+  | PoolSlotKey
+  | ExerciseCategory
+  | 'power'
+  | 'conditioning';
+
 export interface VocabularyGroup {
+  /** The pool this group IS. Machine identity; never rendered. */
+  id: VocabularyGroupId;
   /** Human-readable movement group, used to structure the generation prompt. */
   label: string;
   names: string[];
@@ -279,24 +302,28 @@ export function selectableVocabularyGroups(): VocabularyGroup[] {
   const groups: VocabularyGroup[] = [];
   const seen = new Set<string>();
 
-  const push = (label: string, names: readonly string[]) => {
+  const push = (id: VocabularyGroupId, label: string, names: readonly string[]) => {
     const fresh = names.filter((name) => !seen.has(name));
     for (const name of fresh) seen.add(name);
-    if (fresh.length > 0) groups.push({ label, names: fresh });
+    if (fresh.length > 0) groups.push({ id, label, names: fresh });
   };
 
   for (const slot of STRENGTH_GROUP_ORDER) {
-    push(STRENGTH_GROUP_LABELS[slot], strengthPoolNames(slot));
+    push(slot, STRENGTH_GROUP_LABELS[slot], strengthPoolNames(slot));
   }
   for (const [category, pool] of Object.entries(POOL_REGISTRY)) {
-    push(REGISTRY_GROUP_LABELS[category] ?? category, pool.map((e) => e.name));
+    push(
+      category as ExerciseCategory,
+      REGISTRY_GROUP_LABELS[category] ?? category,
+      pool.map((e) => e.name),
+    );
   }
   // The 'Recovery flows' group is gone with the flow bundles it enumerated
   // (2026-07-30). Every movement it contributed was a curated pool name — that was
   // the constraint on those bundles — so `POOL_REGISTRY.mobility` above already
   // carries all of them, and the composed flow can only ever draw from there.
-  push('Power', POWER_EXERCISE_POOL.map((entry) => entry.name));
-  push('Conditioning', Object.keys(CONDITIONING_META));
+  push('power', 'Power', POWER_EXERCISE_POOL.map((entry) => entry.name));
+  push('conditioning', 'Conditioning', Object.keys(CONDITIONING_META));
 
   return groups;
 }
