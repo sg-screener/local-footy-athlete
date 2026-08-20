@@ -458,6 +458,93 @@ async function main(): Promise<void> {
     }
   }
 
+  /* ══ [9] THE PAIRING, AND THE ONE PLACE THE ROW AND THE REVIEW USE
+   *      DIFFERENT NAMES FOR THE SAME THING ═════════════════════════════════
+   *
+   * A review is only a promise if it promises the RIGHT PAIRS, not just the
+   * right set. `[6]` asserts membership — every promised replacement arrives,
+   * every replaced row leaves — which a shuffled mapping would satisfy. This
+   * asserts `from -> to`, pair for pair, against what the session records.
+   *
+   * ⚠ **AND IT IS EXACT ONLY UNTIL A ROW IS SUBSTITUTED TWICE.** MEASURED, with
+   * two injuries applied in sequence to one session:
+   *
+   *   after a knee injury   the session records `Leg Press -> Chest-Supported DB Row`
+   *   then a shoulder one   the review says   `Chest-Supported DB Row -> Easy Bike`
+   *                         the session says  `Leg Press -> Easy Bike`
+   *
+   * **BOTH ARE TRUE AND NEITHER IS THIS UNIT'S DOING.** `substitutedFrom`
+   * preserves the HEAD of the substitution chain — the exercise the athlete
+   * originally lost — which is pre-existing behaviour on `main` and is the more
+   * useful fact for the athlete ("what happened to my Leg Press?"). The review
+   * names the row that is on the session in front of them, which is the only
+   * name they can act on. **They disagree only on a row that has already been
+   * substituted once, and the disagreement is a NAMING one, never a pairing
+   * one** — the same physical row is meant in both.
+   *
+   * ⚠ **THIS IS A QUESTION FOR SAM, NOT A DEFECT THIS SEAT SHOULD DECIDE.**
+   * Making them agree means either the review naming the chain head (and so
+   * naming a row the athlete cannot see) or the caption naming the intermediate
+   * (and so losing what was originally displaced). It is pinned here so it
+   * cannot drift silently while it is undecided.
+   */
+  console.log('\n[9] the pairing is exact, and where the two names diverge');
+  {
+    const weekStart4 = install();
+    const days4 = trainingDays(weekStart4);
+    const pairDay = days4.find((d) => rowsOf(d, weekStart4).length >= 4)!;
+    setJourneyClock(pairDay);
+
+    const injuryPairsOn = (): string[] => {
+      const week = quiet(() => resolveWeekWithConditioning(weekStart4, buildScheduleStateImperative()));
+      const d = week.find((x: { date: string }) => x.date === pairDay) as { workout?: Workout } | undefined;
+      return ((d?.workout?.exercises ?? []) as Array<Record<string, unknown>>)
+        .map((row) => {
+          const sub = row.substitutedFrom as { baseExerciseName?: string; cause?: string } | undefined;
+          const name = (row.exercise as { name?: string } | undefined)?.name
+            ?? (row as { name?: string }).name;
+          return sub?.cause === 'injury' ? `${sub.baseExerciseName} -> ${name}` : null;
+        })
+        .filter((entry): entry is string => entry !== null);
+    };
+
+    const firstConstraint = constraintFor('Knee', 7, pairDay);
+    const firstReview = quiet(() =>
+      buildSessionInjuryReview({ date: pairDay, constraint: firstConstraint })) as SessionInjuryReview;
+    const firstPromised = firstReview.changes
+      .filter((change) => change.kind === 'substitution')
+      .map((change) => `${change.from} -> ${change.to}`).sort();
+    ok('[9] CONTROL — the first injury really does propose substitutions',
+      firstPromised.length >= 2, firstPromised);
+
+    await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint: firstConstraint },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: pairDay }));
+
+    ok('[9] on a fresh session the review\'s pairing is EXACT, pair for pair',
+      JSON.stringify(injuryPairsOn().sort()) === JSON.stringify(firstPromised),
+      { promised: firstPromised, landed: injuryPairsOn().sort() });
+
+    /* THE SECOND INJURY — every row it touches has already been substituted. */
+    const secondConstraint = constraintFor('Shoulder', 7, pairDay);
+    const secondReview = quiet(() =>
+      buildSessionInjuryReview({ date: pairDay, constraint: secondConstraint })) as SessionInjuryReview;
+    const visibleRows = rowsOf(pairDay, weekStart4);
+    ok('[9] the review names rows that are ON THE SESSION the athlete can see',
+      secondReview.changes.every((change) => visibleRows.includes(change.from)),
+      { named: secondReview.changes.map((c) => c.from), visibleRows });
+
+    const chainHeads = injuryPairsOn().map((pair) => pair.split(' -> ')[0]!);
+    ok('[9] MEASURED — and the session\'s captions name the CHAIN HEAD instead, '
+      + 'which is why the two disagree on an already-substituted row',
+      secondReview.changes.some((change) => !chainHeads.includes(change.from))
+        && chainHeads.some((head) => !visibleRows.includes(head)),
+      { reviewNames: secondReview.changes.map((c) => c.from), chainHeads, visibleRows });
+  }
+
   /* ══ [1] THE INERTNESS CONTROL ON THE PENDING medicalStop CLAUSE ══════ */
   console.log('\n[1] the pending-medicalStop clause is inert for every prior caller');
   {

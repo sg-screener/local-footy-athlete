@@ -84,7 +84,7 @@ hierarchy are untouched.**
 
 ## THE NUMBERS
 
-`test:session-injury-review` — **39 pass / 0 fail**, on a real generated week
+`test:session-injury-review` — **43 pass / 0 fail**, on a real generated week
 through the real doors, with the injured area chosen BY MEASUREMENT.
 
 **MUTATIONS (all bite):**
@@ -125,6 +125,50 @@ the doors cell now asserts the OPPOSITE and asserts more: that
 door leads to the review.
 
 ---
+
+## THE GLASS PASS — DONE, AND IT IS WHAT MADE THE LAST FINDING
+
+Simulator `LFA Explorer 4c8535f Proof 2`, seed `injury-case`, Metro :8097 from
+this worktree. **A separate port and a separate simulator on purpose** — :8081
+was held by another seat's in-flight `expo run:ios --device` build and eight
+other seats had Metro up; borrowing either would have proved somebody else's
+tree. Screenshots in `/tmp/injshots`.
+
+| # | what the athlete did | what they saw |
+| --- | --- | --- |
+| 03 | opened the session | **the five-action hub, unchanged** — Equipment · Injury · Add · Remove · Swap |
+| 04 | tapped Injury | **"Where is the issue?"** — NOT "Which exercise?" |
+| 07 | answered knee 7/10 | **ONE review, 5 cards**, `X → Y` each, the untrained disclosure, the untouched list, `Apply these 5 changes` / `Cancel` |
+| 10 | approved | all five landed together, each row naming what it replaced, **each at its own load** (25kg / 27.5kg / BW) |
+| 30 | wrist/hand 7/10 | one card, and the button says **`Apply this change`** — singular |
+| 31 | neck 5/10 | **"Nothing needs changing"**, and the button says **`Save this injury`** |
+
+**`[31]` IS SAM'S LAST SENTENCE ON GLASS.** No success claim, no "recomposed",
+and the injury is still saved because it is still true.
+
+## THE ONE FINDING, AND IT IS NOT MINE TO DECIDE
+
+**THE REVIEW AND THE APPLIED ROW USE DIFFERENT NAMES FOR A ROW THAT HAS ALREADY
+BEEN SUBSTITUTED ONCE.** Spotted on glass — the review said `Glute Bridge →
+Explosive Landmine Press` and the session then read *"Swapped from RDLs"* —
+and then reproduced headlessly with two injuries in sequence:
+
+```
+after a knee injury   session records  Leg Press -> Chest-Supported DB Row
+then a shoulder one   review says      Chest-Supported DB Row -> Easy Bike
+                      session says     Leg Press -> Easy Bike
+```
+
+**BOTH ARE TRUE AND NEITHER IS THIS UNIT'S DOING.** `substitutedFrom` preserves
+the HEAD of the chain — what the athlete originally lost — which is pre-existing
+behaviour on `main`. The review names the row that is in front of them, which is
+the only name they can act on. **On a session with no prior substitution the two
+agree pair-for-pair** (measured, `[9]`); they diverge only on a re-substituted
+row, and the divergence is a NAMING one, never a PAIRING one.
+
+Making them agree means either the review naming a row the athlete cannot see,
+or the caption losing what was originally displaced. **That is a ruling, so it is
+pinned by `[9]` and left for Sam rather than decided here.**
 
 ## LOG
 
