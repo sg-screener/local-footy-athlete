@@ -50,6 +50,27 @@ export interface V2SheetProps {
    * overlay is `flex: 1` inside the Modal, so its height is definite.
    */
   flexibleBody?: boolean;
+  /**
+   * THE SECOND SAFE ANSWER, AND IT IS NOT THE SAME AS `flexibleBody`.
+   *
+   * `flexibleBody` gives a DEFINITE height, which is what a `flex: 1` child
+   * needs. But a definite height also means a two-line confirm opens as a
+   * 92%-tall sheet with white space under it, which is why every caller that
+   * wanted "hug the content, but stop before the top of the screen" had been
+   * inventing its own `maxHeight` on an inner list instead — three different
+   * ones, at the last count.
+   *
+   * `cappedBody` is that shape, once: the sheet still hugs, and stops at 92%.
+   *
+   * ⚠ **A `cappedBody` SHEET'S SCROLLING CHILD MUST USE `flexShrink: 1`, NEVER
+   * `flex: 1`.** `flex: 1` is `flexBasis: 0`, and a flex-basis-0 child measures
+   * ZERO inside a parent that is still deriving its height from its children —
+   * the sliver defect `flexibleBody` exists to prevent, which a `maxHeight`
+   * cannot fix because a cap on an undetermined height never binds. `flexShrink`
+   * with an AUTO basis measures the content first and gives space back only when
+   * the cap bites, which is exactly the behaviour wanted here.
+   */
+  cappedBody?: boolean;
 }
 
 export function Sheet({
@@ -60,6 +81,7 @@ export function Sheet({
   contentStyle,
   testID,
   flexibleBody = false,
+  cappedBody = false,
 }: V2SheetProps) {
   const handleClose = dismissable ? onClose : undefined;
 
@@ -87,6 +109,7 @@ export function Sheet({
           style={[
             styles.content,
             flexibleBody && styles.contentFlexible,
+            cappedBody && styles.contentCapped,
             contentStyle,
           ]}
           accessible={false}
@@ -123,6 +146,11 @@ const styles = StyleSheet.create({
    */
   contentFlexible: {
     height: '92%',
+  },
+  /** The hug-but-stop mode. See `cappedBody` above for why this is a cap and
+   *  `contentFlexible` is not. */
+  contentCapped: {
+    maxHeight: '92%',
   },
   handle: {
     width: 40,

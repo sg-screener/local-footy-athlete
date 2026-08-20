@@ -1,0 +1,251 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - all five Active Session actions open through ONE sheet shell
+tags:
+  - e2e
+  - visible
+---
+# ⚠ **THE ROWS WITH AN UNDERSCORE IN THEIR ID ARE TAPPED BY THEIR WORD.**
+# `injury-region-lower_body`, `add-group-lower_body` and `add-leaf-lower_hinge`
+# are real ids the product really renders, but `test:maestro-element-contract`
+# builds its vocabulary from `[a-z0-9-]` shapes only, so an underscore id is
+# reported as a name no source can produce. Rather than grow that red list with
+# three false entries, this flow taps the LABEL — which for a `visible` flow is
+# the better selector anyway: it is the word the athlete reads.
+# R-123 (Sam, 2026-08-20): *"Every action opens through the same visible sheet
+# shell. Back moves up exactly one step. Cancel closes from every step without
+# applying anything. Reopening an action always starts at its first step.
+# Returning from Back or Cancel does not alter or shrink the five hub labels."*
+#
+# ⚠ **THIS FLOW APPLIES NOTHING.** Every action is opened, walked one or two
+# steps deep, and left by Back or Cancel. That is deliberate: the acceptance is
+# that the chrome is one thing and that leaving changes nothing, so the hub's
+# five words are re-asserted after every single exit. What each action DOES when
+# you finish it is proven by the flows that already exist for it
+# (`remove-hub-labelled`, `equipment-today`, `swap-load`, `exclusion-restore-undo`).
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- assertVisible:
+    id: "day-workout-change-hub"
+- assertVisible: "Equipment"
+- assertVisible: "Injury"
+- assertVisible: "Add"
+- assertVisible: "Remove"
+- assertVisible: "Swap"
+- takeScreenshot: artifacts/shell/00-hub-five-actions
+
+# ── EQUIPMENT — one step, so NO Back, and Cancel is the exit ───────────────
+- tapOn:
+    id: "session-change-equipment"
+- extendedWaitUntil:
+    visible:
+      id: "session-equipment-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "session-action-cancel"
+# A one-step action must not draw a Back that only closes the sheet.
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/01-equipment
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- assertVisible: "Equipment"
+- assertVisible: "Swap"
+
+# ── INJURY — first step has no Back; step two does, and it climbs ONE ──────
+- tapOn:
+    id: "session-change-injury"
+- extendedWaitUntil:
+    visible:
+      id: "guided-injury-flow-sheet"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- assertVisible:
+    id: "session-action-cancel"
+- takeScreenshot: artifacts/shell/02-injury-step1-no-back
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- assertVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/03-injury-step2-back-appears
+# BACK MOVES UP EXACTLY ONE STEP: area -> region, and region has no Back again.
+- tapOn:
+    id: "session-action-back"
+# ⚠ **NOT the title — `Where is the issue?` is the title of the region step AND
+# the area step, so waiting on it would pass on either. `Upper body` is a row
+# only the region step has.
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/04-injury-back-one-step
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- assertVisible: "Injury"
+
+# REOPENING STARTS AT THE FIRST STEP — the athlete was two steps in a moment ago.
+- tapOn:
+    id: "session-change-injury"
+# ⚠ **NOT the title — `Where is the issue?` is the title of the region step AND
+# the area step, so waiting on it would pass on either. `Upper body` is a row
+# only the region step has.
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/05-injury-reopens-at-step-one
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+
+# ── ADD — the variable-depth hierarchy, in the same shell ──────────────────
+- tapOn:
+    id: "session-change-add"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-edit-sheet"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- assertVisible:
+    id: "session-action-cancel"
+- takeScreenshot: artifacts/shell/06-add-level1
+- tapOn:
+    id: "add-family-strength"
+- extendedWaitUntil:
+    visible:
+      id: "add-group-.*"
+    timeout: 10000
+- assertVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/07-add-level2-back-appears
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible:
+      id: "add-family-strength"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/08-add-back-one-step
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- assertVisible: "Add"
+
+# ── REMOVE — the picker has no Back; the confirm now climbs back to it ─────
+- tapOn:
+    id: "session-change-remove"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-action-.*"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/09-remove-picker
+- tapOn:
+    id: "component-delete-action-.*-ex-squat-.*"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-confirm-.*"
+    timeout: 10000
+- assertVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/10-remove-confirm-back-appears
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-action-.*"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/11-remove-back-one-step
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- assertVisible: "Remove"
+
+# ── SWAP — the ranked alternatives, reached and left without applying ──────
+- tapOn:
+    id: "session-change-swap"
+- extendedWaitUntil:
+    visible:
+      id: "component-swap-action-.*"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/12-swap-picker
+- tapOn:
+    id: "component-swap-action-.*-ex-squat-.*"
+- extendedWaitUntil:
+    visible:
+      id: "session-action-back"
+    timeout: 15000
+- takeScreenshot: artifacts/shell/13-swap-choices-back-appears
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible:
+      id: "component-swap-action-.*"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/14-swap-back-one-step
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+
+# ── THE HUB IS EXACTLY WHAT IT WAS, AFTER FIVE OPENS AND SEVEN EXITS ───────
+- assertVisible: "Equipment"
+- assertVisible: "Injury"
+- assertVisible: "Add"
+- assertVisible: "Remove"
+- assertVisible: "Swap"
+# NOTHING WAS APPLIED: the session still has the rows it started with.
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-1-vertical-jump"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertVisible:
+    id: "session-strength-position-2-back-squat"
+- assertVisible:
+    id: "session-strength-position-3-rdls"
+- takeScreenshot: artifacts/shell/15-hub-and-rows-unchanged

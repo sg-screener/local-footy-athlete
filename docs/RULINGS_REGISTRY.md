@@ -3674,3 +3674,71 @@ BY A MISSING ONE** — for a 7/10 knee, `Band Pull-Apart`, `Chest-Supported DB
 Row`, `Explosive Landmine Press`, `Banded Bicep Curl` and `Single-Arm DB Floor
 Press` are each rated **`knee: good`** in Sam's ruled matrix (2026-07-28), and
 each is a Strength row by the Add menu's own family map.
+
+---
+
+**R-123** · *"Put all five Active Session actions into one shared bottom-sheet
+shell — Equipment, Injury, Add, Remove, Swap. The shell must be the single owner
+of opening and closing animation, safe-area spacing, title and step header,
+scrolling, Back behaviour, Cancel behaviour, resetting state when closed, and
+consistent height and layout. Each action must keep ownership of its own
+questions and behaviour. Compare the current incremental wrappers with a true
+one-owner shell before coding; prefer the design that removes duplicated
+sheet/navigation behaviour."* · Sam, 2026-08-20 · seat `sheetshell`.
+
+**THE SHARED THING ALREADY EXISTED AND WAS NOT ENOUGH.** All three surfaces used
+`ui/Sheet`. Each then decided height, scrolling, title, Back and Cancel ON TOP
+of it, so five actions had **three** sheet call sites — and Injury crossed two of
+them mid-flow, its questions in `GuidedInjuryFlowSheet` and its review a step of
+`ExerciseEditSheet`. MEASURED before any edit: three heights (fixed 92% / auto /
+auto), three scroll answers (whole-sheet / **none at all** / a `maxHeight: 360`
+list on three add levels only, with `pick_exercise`, `choose_swap` and
+`injury_review` unbounded and unscrolled), three title styles, three Back
+implementations plus a fourth `Button` labelled "Back", **nine identical inline
+Cancel buttons in one file**, two reset rules and a third owned by the screen —
+and Add/Remove/Swap SNAPPED shut where the other two faded, because the component
+returned `null` on close.
+
+**`components/SessionActionSheet` is the one thing that renders a `Sheet` for a
+session action**, and the gate is the NEGATIVE half: no action file may render a
+`Sheet`, keep a Back, keep a Cancel, keep a scroll view or keep a
+reset-on-`visible` effect. Bodies publish their step UP (`useSessionActionStep`)
+rather than the shell taking a header down, because the header comes from
+wherever the step state lives and that state must live INSIDE the shell for the
+shell to be able to reset it.
+
+**`onBack` UNDEFINED DRAWS NO BACK.** Six steps had shown a Back that closed the
+sheet; an exit wearing a Back label is not *"up exactly one step"*, and this app
+already refuses to draw a door that cannot act. **`choose_swap` and
+`confirm_remove` GAINED the Back they should have had** — each is reached from
+`pick_exercise` and nowhere else, so the step above them is that picker.
+
+⚠ **KEYING THE SCROLL VIEW BY THE STEP IS THE OBVIOUS RESET AND IT IS WRONG
+HERE.** The body renders inside the scroll view and the injury flow keeps its own
+current step in `useState` inside the body, so a remount on every step change
+throws that away and the flow can never leave its first question. The offset is
+reset imperatively instead. **The remount that IS wanted is the per-OPEN one**,
+and it is keyed by an epoch the shell mints, because RN's `Modal` keeps its
+children mounted through the dismiss animation on iOS — so "did a reopen see
+fresh state?" had depended on animation timing.
+
+**`ui/Sheet` GAINED A SECOND NAMED MODE, `cappedBody`** — hug the content, stop
+at 92%. `flexibleBody` is a DEFINITE height, which a `flex: 1` child needs and
+which would open "Remove this exercise?" 92% tall with two lines in it; that is
+why three callers had each invented their own inner `maxHeight`. A `cappedBody`
+sheet's scrolling child must use `flexShrink: 1`, never `flex: 1` — flex-basis-0
+measures ZERO inside a parent still deriving its height, the sliver defect from
+Sam's device on 2026-07-29. The sliver gate (`test:profile-reset-ui` `[13]`) was
+WIDENED to accept the second declared mode, not exempted for one file.
+
+**GUARDED:** `test:session-action-shell`, 57 cells. **MUTATION-PROVEN, seven
+mutations, each restored from a scratchpad backup:** `flexShrink`→`flex` (1 red),
+epoch key dropped (2), scroll view re-keyed by step (1), Back drawn
+unconditionally (1), one inline Cancel restored (1), Equipment rendering its own
+`Sheet` (2), and `cappedBody` dropped — which reds the WIDENED sliver gate (1),
+proving the widening still bites.
+
+**NOT COVERED, NAMED:** `injury_review` still has no Back — the step above it is
+the guided flow's LAST question, in a component that always restarts at `region`,
+so a Back landing there would not be "up one step". Cancel exits applying
+nothing, exactly as before. **That is a ruling nobody has given.**

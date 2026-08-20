@@ -1,8 +1,30 @@
+/**
+ * EQUIPMENT — the dated temporary fact, asked once for the open session.
+ *
+ * R-123: the sheet chrome (open/close, safe area, title, scrolling, Back,
+ * Cancel, reset-on-close, height) belongs to `SessionActionSheet`. What is left
+ * here is the one question this action asks and what its answer does — which is
+ * all this file ever had that was Equipment's.
+ *
+ * ⚠ **THE TICK SET NO LONGER RESETS ITSELF.** It used to, in a
+ * `useEffect(…, [visible])` of its own — and that effect was load-bearing,
+ * because RN's `Modal` keeps its children mounted through the whole dismiss
+ * animation on iOS (`_shouldShowModal` ORs `visible` with `state.isRendered`)
+ * and only drops them when `onDismiss` lands. Whether a reopen saw fresh state
+ * therefore depended on animation timing, and each of the three sheets had made
+ * its own arrangement about it. The shell keys the body by an epoch it mints on
+ * every open, so the remount is deterministic and there is one rule instead of
+ * three.
+ */
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
-import { Button, Sheet } from '../../components/ui';
+import { Button } from '../../components/ui';
+import {
+  SessionActionSheet,
+  useSessionActionStep,
+} from '../../components/SessionActionSheet';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { equipmentIconFor } from './EquipmentLimitationSheet';
 import type {
@@ -23,13 +45,36 @@ export function SessionEquipmentSheet({
   onClose,
   onApply,
 }: SessionEquipmentSheetProps) {
+  return (
+    <SessionActionSheet
+      visible={visible}
+      onClose={onClose}
+      testID="session-equipment-sheet"
+    >
+      <SessionEquipmentBody
+        requirements={requirements}
+        onClose={onClose}
+        onApply={onApply}
+      />
+    </SessionActionSheet>
+  );
+}
+
+/** THE ONE QUESTION. Equipment has a single step, so it declares no `onBack`. */
+function SessionEquipmentBody({
+  requirements,
+  onClose,
+  onApply,
+}: Omit<SessionEquipmentSheetProps, 'visible'>) {
   const [missing, setMissing] = React.useState<ReadonlySet<SessionEquipmentRequirementKey>>(
     () => new Set(),
   );
 
-  React.useEffect(() => {
-    if (visible) setMissing(new Set());
-  }, [visible]);
+  useSessionActionStep({
+    key: 'equipment',
+    title: 'Equipment for this session',
+    subtitle: 'Untick anything you don’t have today. We’ll replace affected exercises using equipment you still have.',
+  });
 
   const toggle = (key: SessionEquipmentRequirementKey) => {
     setMissing((current) => {
@@ -41,83 +86,55 @@ export function SessionEquipmentSheet({
   };
 
   return (
-    <Sheet
-      visible={visible}
-      onClose={onClose}
-      testID="session-equipment-sheet"
-      flexibleBody
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        <Text style={styles.title}>Equipment for this session</Text>
-        <Text style={styles.body}>
-          Untick anything you don’t have today. We’ll replace affected exercises using equipment you still have.
-        </Text>
+    <>
+      <View style={styles.list}>
+        {requirements.map((requirement) => {
+          const available = !missing.has(requirement.key);
+          return (
+            <Pressable
+              key={requirement.key}
+              onPress={() => toggle(requirement.key)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: available }}
+              accessibilityLabel={`${requirement.label}: ${available ? 'available' : 'unavailable'}`}
+              testID={`session-equipment-option-${requirement.key.replace(':', '-')}`}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
+              <View style={[styles.icon, !available && styles.iconMissing]}>
+                {equipmentIconFor(requirement.value as any, available ? '#C8FF00' : '#666666')}
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.label, !available && styles.missingText]}>
+                  {requirement.label}
+                </Text>
+                <Text style={styles.exerciseNames} numberOfLines={2}>
+                  {requirement.exerciseNames.join(', ')}
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name={available ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                size={22}
+                color={available ? '#C8FF00' : '#666666'}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
 
-        <View style={styles.list}>
-          {requirements.map((requirement) => {
-            const available = !missing.has(requirement.key);
-            return (
-              <Pressable
-                key={requirement.key}
-                onPress={() => toggle(requirement.key)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: available }}
-                accessibilityLabel={`${requirement.label}: ${available ? 'available' : 'unavailable'}`}
-                testID={`session-equipment-option-${requirement.key.replace(':', '-')}`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={[styles.icon, !available && styles.iconMissing]}>
-                  {equipmentIconFor(requirement.value as any, available ? '#C8FF00' : '#666666')}
-                </View>
-                <View style={styles.rowCopy}>
-                  <Text style={[styles.label, !available && styles.missingText]}>
-                    {requirement.label}
-                  </Text>
-                  <Text style={styles.exerciseNames} numberOfLines={2}>
-                    {requirement.exerciseNames.join(', ')}
-                  </Text>
-                </View>
-                <MaterialCommunityIcons
-                  name={available ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                  size={22}
-                  color={available ? '#C8FF00' : '#666666'}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text style={styles.profileNote}>
-          Permanent change? Update your equipment in Profile.
-        </Text>
-        <Button
-          label={missing.size > 0 ? 'Replace unavailable equipment' : 'Done'}
-          size="lg"
-          onPress={() => missing.size > 0 ? onApply(missing) : onClose()}
-          testID="session-equipment-apply"
-        />
-      </ScrollView>
-    </Sheet>
+      <Text style={styles.profileNote}>
+        Permanent change? Update your equipment in Profile.
+      </Text>
+      <Button
+        label={missing.size > 0 ? 'Replace unavailable equipment' : 'Done'}
+        size="lg"
+        onPress={() => missing.size > 0 ? onApply(missing) : onClose()}
+        testID="session-equipment-apply"
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.md },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  body: {
-    color: '#A0A0A0',
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: spacing.lg,
-  },
   list: {
     gap: spacing.sm,
   },

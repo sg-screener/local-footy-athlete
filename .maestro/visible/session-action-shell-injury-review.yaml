@@ -1,0 +1,89 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - the Injury questions and the Injury review are ONE sheet
+tags:
+  - e2e
+  - visible
+---
+# ⚠ **THE ROWS WITH AN UNDERSCORE IN THEIR ID ARE TAPPED BY THEIR WORD.**
+# `injury-region-lower_body`, `add-group-lower_body` and `add-leaf-lower_hinge`
+# are real ids the product really renders, but `test:maestro-element-contract`
+# builds its vocabulary from `[a-z0-9-]` shapes only, so an underscore id is
+# reported as a name no source can produce. Rather than grow that red list with
+# three false entries, this flow taps the LABEL — which for a `visible` flow is
+# the better selector anyway: it is the word the athlete reads.
+# ⚠ **THIS IS THE HANDOFF THE SHELL EXISTS FOR.** Injury's questions live in
+# `GuidedInjuryFlowSheet` and its review of what will change is a step of
+# `ExerciseEditSheet` — two different components, and before R-123 two different
+# modals with two different heights, two title styles and two Back rules. One
+# action, dismissing one sheet and presenting another mid-flow.
+#
+# The flow stops at the review and CANCELS. Applying it is `test:session-injury-review`'s
+# job (R-121/R-122, 13 regions x 4 bands); what is proven here is that the
+# athlete never leaves the one sheet, and that leaving it applies nothing.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- tapOn:
+    id: "session-change-injury"
+# ⚠ **NOT the title — `Where is the issue?` is the title of the region step AND
+# the area step, so waiting on it would pass on either. `Upper body` is a row
+# only the region step has.
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- tapOn:
+    id: "injury-area-knee"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-moderate"
+    timeout: 10000
+- tapOn:
+    id: "injury-severity-moderate"
+- extendedWaitUntil:
+    visible:
+      id: "injury-trigger-squatting-lunging"
+    timeout: 10000
+- tapOn:
+    id: "injury-trigger-squatting-lunging"
+- tapOn: "Apply training adjustment"
+# THE REVIEW — a different component, the same shell, no flash of a second modal.
+- extendedWaitUntil:
+    visible:
+      id: "exercise-edit-sheet"
+    timeout: 20000
+- takeScreenshot: artifacts/shell/40-injury-review-in-the-same-shell
+- assertVisible:
+    id: "session-action-cancel"
+# CANCEL APPLIES NOTHING — the session is exactly what it was.
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-1-vertical-jump"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertVisible:
+    id: "session-strength-position-1-vertical-jump"
+- assertVisible:
+    id: "session-strength-position-2-back-squat"
+- assertVisible:
+    id: "session-strength-position-4-single-leg-rdl"
+- takeScreenshot: artifacts/shell/41-injury-cancelled-session-unchanged
