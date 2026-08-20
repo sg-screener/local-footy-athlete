@@ -859,7 +859,12 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
     workToRest: '4:3 (1.33:1)',
     totalSessionTime: '28 min (hard work 16 min)',
     properties: [],
-    effortCue: 'Hard means honest pace, not a sprint you can\'t hold for 4 minutes — round 4 should match round 1.',
+    /* ⚠ **RE-SIGNED BY SAM, 2026-08-20, VERBATIM.** The previous cue said the
+     * same thing in one long clause joined by an em dash and starting
+     * lower-case mid-thought. These are his exact words, and they are the
+     * ONLY authored cue this pass changed — every other template's wording is
+     * untouched and only its PUNCTUATION is repaired at the projection. */
+    effortCue: 'Run hard, but do not sprint. Choose a pace you can repeat across all four rounds. Round 4 should match Round 1.',
     baseUnit: 'time',
     modalityNotes: 'All 5 modalities — 4 min is inside the 8 min erg cap; Air Bike is time-native.',
     frameworkCheck: 'IN BAND (1–5 min, 1:1–2:1)',

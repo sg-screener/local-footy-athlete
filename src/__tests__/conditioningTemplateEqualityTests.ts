@@ -193,6 +193,37 @@ const FIELD_EQUALITY: ReadonlyArray<readonly [string, keyof ConditioningTemplate
   ['Change Mark', 'changeMark'],
 ];
 
+/**
+ * ── FIELDS SAM RE-AUTHORED AFTER THE SNAPSHOT ─────────────────────────────
+ *
+ * The sheet mirror is `conditioning_templates_sam_state_2026-07-25.json` — his
+ * spreadsheet ON THAT DAY. When he re-authors a field in chat afterwards, the
+ * module must move and the snapshot must NOT: editing a file whose name is a
+ * date would make it a record of nothing.
+ *
+ * ⚠ **THIS IS AN OVERRIDE, NOT AN EXEMPTION.** Each row states the new text in
+ * full and cites the ruling that carries it, and the cell below asserts the
+ * module equals THAT string. A field listed here is held exactly as tightly as
+ * one held by the sheet — what changes is which authority it answers to. An
+ * empty override list is the normal state; a growing one means the snapshot is
+ * stale and wants retaking.
+ */
+const RE_AUTHORED: ReadonlyArray<{
+  readonly name: string;
+  readonly column: string;
+  readonly ruling: string;
+  readonly text: string;
+}> = [
+  {
+    name: 'Classic 4×4',
+    column: 'Effort Cue',
+    ruling: 'R-117, Sam 2026-08-20 — given verbatim in chat with the target card',
+    text: 'Run hard, but do not sprint. Choose a pace you can repeat across all four rounds. Round 4 should match Round 1.',
+  },
+];
+
+const reAuthored = new Map(RE_AUTHORED.map((r) => [`${r.name}::${r.column}`, r]));
+
 const missingFromCode: string[] = [];
 const fieldMismatches: string[] = [];
 
@@ -203,7 +234,8 @@ for (const { quality, record } of sheetRows) {
     continue;
   }
   for (const [column, field] of FIELD_EQUALITY) {
-    const authored = record[column] ?? '';
+    const override = reAuthored.get(`${record.Name}::${column}`);
+    const authored = override ? override.text : (record[column] ?? '');
     const shipped = String(template[field] ?? '');
     if (authored !== shipped) {
       fieldMismatches.push(
@@ -223,6 +255,20 @@ ok(
   'every authored field ships verbatim — no rewording, no rounding',
   fieldMismatches.length === 0,
   fieldMismatches.slice(0, 5).join('\n      '),
+);
+
+/* ⚠ NON-VACUITY FOR THE OVERRIDE ITSELF. An override whose text already equals
+ * the snapshot is asserting nothing, and an override naming a row or column that
+ * does not exist silently exempts a field forever. Both red here. */
+ok(
+  'every re-authored override actually overrides a real, differing field',
+  RE_AUTHORED.every((r) => {
+    const row = sheetRows.find((s2) => s2.record.Name === r.name);
+    if (!row) return false;
+    if (!FIELD_EQUALITY.some(([column]) => column === r.column)) return false;
+    return (row.record[r.column] ?? '') !== r.text;
+  }),
+  RE_AUTHORED.map((r) => `${r.name} · ${r.column} · ${r.ruling}`).join(' | '),
 );
 
 const sheetKeys = new Set(sheetRows.map(({ quality, record }) => `${quality}::${record.Name}`));

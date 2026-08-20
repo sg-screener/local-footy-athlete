@@ -129,7 +129,34 @@ export function signedCopyEntry(id: string): SignedCopyEntry | null {
 }
 
 /** A number or already-signed copy. Never a bare string — see `SignedCopyEntry.text`. */
-export type SignedCopyParam = number | SignedCopy;
+/**
+ * ── A FORMATTED FIGURE — SAM, 2026-08-20, FOR THE PACE LINE ────────────────
+ *
+ * A pace is a figure the app computed, exactly like `{minutes}` — but it is
+ * written `4:00`, and a bare `number` cannot carry the colon or the leading zero
+ * (`4:0` is not a pace). So the slot admits one more shape, and ONLY one:
+ * digits, colons and dots.
+ *
+ * ⚠ **THE GUARANTEE IS UNCHANGED, WHICH IS WHY THE PATTERN IS THIS TIGHT.** The
+ * law exists so athlete-facing WORDS come from the sheet; the pattern below
+ * cannot express a word, a space or punctuation that could join two clauses. A
+ * caller can produce `4:27`; it cannot produce `4:27 or just go easy`. Widening
+ * this to `.+` is what the paragraph above already records as a defect once.
+ */
+declare const DERIVED_NUMERIC_BRAND: unique symbol;
+export type DerivedNumericText = string & { readonly [DERIVED_NUMERIC_BRAND]: true };
+
+const DERIVED_NUMERIC_RE = /^[0-9]+(?:[:.][0-9]+)*$/;
+
+/** Brand a formatted figure. Throws on anything that is not one. */
+export function derivedNumericText(text: string): DerivedNumericText {
+  if (!DERIVED_NUMERIC_RE.test(text)) {
+    throw new UnsignedCopyError(`derived_numeric_text: ${text}`);
+  }
+  return text as DerivedNumericText;
+}
+
+export type SignedCopyParam = number | SignedCopy | DerivedNumericText;
 
 export class UnsignedCopyError extends Error {
   readonly code = 'unsigned_athlete_copy';

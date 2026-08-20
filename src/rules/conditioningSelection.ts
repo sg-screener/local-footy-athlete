@@ -34,6 +34,7 @@ import {
   type ConditioningQuality,
   type ConditioningTemplate,
 } from '../data/conditioningTemplates';
+import { conditioningDisplayText } from './conditioningDisplay';
 import {
   containsWorkRestRatio,
   doseDisplayText,
@@ -837,6 +838,12 @@ export interface ComposeOptions {
    * which is the honest answer rather than an invented one.
    */
   readonly authoredMinimumDose?: boolean;
+  /**
+   * The athlete's measured MAS in km/h, for the `Your pace` line. Optional and
+   * OMITTED rather than guessed: an athlete with no recorded time trial is told
+   * their intensity band and no pace at all.
+   */
+  readonly masKmh?: number | null;
 }
 
 /**
@@ -866,14 +873,14 @@ export function composeConditioningRows(
       base + rows.length,
       opts.authoredMinimumDose ? headlineSetsLow(template) : headlineSets(template),
       headlineRest(template),
-      joinNotes(
-        `Work: ${doseLineForDisplay(template.workPeriod)}`,
-        `Rest: ${doseLineForDisplay(template.restPeriod)}`,
-        `Sets: ${template.setsRounds}`,
-        `Intensity: ${template.intensity}`,
-        template.effortCue,
-        template.modalityNotes,
-      ),
+      /* ⚠ **THE SIX-FIELD PASTE IS GONE — SAM, 2026-08-20.** This built the
+       * athlete's coaching copy by concatenating authored FIELDS, which is how
+       * `Sets: 4 reps` reached an athlete counting rounds and how the sheet's
+       * own maintenance note — *"All 5 modalities … inside the 8 min erg cap;
+       * Air Bike is time-native"* — shipped as an instruction. The one
+       * structured projection owns it now, so a wording fix lands on every
+       * surface at once. */
+      conditioningDisplayText({ template, masKmh: opts.masKmh ?? null }),
     ),
   );
   return rows;

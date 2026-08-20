@@ -1187,6 +1187,8 @@ export function buildConditioningTemplate(
   dateStr: string,
   opts?: {
     combined?: boolean;
+    /** The athlete's measured MAS (km/h) for the `Your pace` line. */
+    masKmh?: number | null;
     /** Kept for callers; selection upstream owns modality/pairing now. */
     strengthRegion?: 'lower' | 'upper' | 'full';
     feel?: ConditioningFeel;
@@ -1220,6 +1222,7 @@ export function buildConditioningTemplate(
     return composeConditioningRows(template, dateStr, {
       omitWarmup: opts?.combined === true,
       authoredMinimumDose: true,
+      masKmh: opts?.masKmh ?? null,
     });
   }
   if (!template) {
@@ -1233,6 +1236,7 @@ export function buildConditioningTemplate(
   // rides after it without a structural warm-up row.
   return composeConditioningRows(template, dateStr, {
     omitWarmup: opts?.combined === true,
+    masKmh: opts?.masKmh ?? null,
   });
 }
 

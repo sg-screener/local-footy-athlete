@@ -40,9 +40,13 @@
  * re-deriving the percentage from the dose.
  */
 
+import { paceMinPerKm } from './conditioningDisplay';
 import { deriveMas } from '../data/twoKmTimeTrial';
 import type { ExperienceLevel, TwoKmTimeTrialAnswer } from '../types/domain';
-import { registerSignedCopy, signedCopy, type SignedCopy } from './signedCopy';
+import { registerSignedCopy, signedCopy, type SignedCopy,
+  derivedNumericText,
+  type DerivedNumericText,
+} from './signedCopy';
 
 /**
  * THE WORDS ARE THE TERMINAL'S AND THIS SAYS SO.
@@ -81,25 +85,31 @@ registerSignedCopy([
     id: MAS_PACE_COPY.measuredRange,
     source: 'derived_number',
     provenance: PROPOSED,
-    text: 'Your pace: {low}-{high} km/h',
+    /* ⚠ **km/h UNDER A PACE LABEL — SAM, 2026-08-20.** *"The pace must be
+     * calculated using `60 / kmh`, rounded to the nearest second. Do not
+     * relabel km/h values as min/km."* This line called a SPEED a pace and
+     * printed it in km/h with a hyphen; a footballer reading "Your pace:
+     * 13.5-15 km/h" is being handed the wrong quantity in the wrong unit with
+     * the wrong dash. Now `m:ss–m:ss min/km`, faster end first. */
+    text: 'Your pace: {fast}–{slow} min/km',
   },
   {
     id: MAS_PACE_COPY.measuredSingle,
     source: 'derived_number',
     provenance: PROPOSED,
-    text: 'Your pace: {speed} km/h',
+    text: 'Your pace: {pace} min/km',
   },
   {
     id: MAS_PACE_COPY.estimatedRange,
     source: 'derived_number',
     provenance: PROPOSED,
-    text: 'Estimated pace: {low}-{high} km/h',
+    text: 'Estimated pace: {fast}–{slow} min/km',
   },
   {
     id: MAS_PACE_COPY.estimatedSingle,
     source: 'derived_number',
     provenance: PROPOSED,
-    text: 'Estimated pace: {speed} km/h',
+    text: 'Estimated pace: {pace} min/km',
   },
 ]);
 
@@ -155,6 +165,18 @@ export function speedForPercent(masKmh: number, percent: number): number {
   return Math.round((masKmh * percent) / 10) / 10;
 }
 
+/**
+ * THE PACE AT A %MAS, AS THE ATHLETE RUNS IT — `60 / kmh`, to the nearest
+ * second, `m:ss`.
+ *
+ * Sam, 2026-08-20. `speedForPercent` above is a SPEED and stays one — the
+ * exposure engine and the legality checks read km/h. What reaches the athlete
+ * is the pace, because that is the number on their watch.
+ */
+export function paceForPercent(masKmh: number, percent: number): DerivedNumericText {
+  return derivedNumericText(paceMinPerKm(speedForPercent(masKmh, percent)));
+}
+
 export interface PersonalPaceArgs {
   /** The words already on the card — the row's notes, or a bare intensity. */
   readonly intensityText: string | null | undefined;
@@ -186,18 +208,20 @@ export function personalPaceLine(args: PersonalPaceArgs): SignedCopy | null {
   // above has already made non-null. The cast keeps the ladder in `deriveMas`
   // as the single owner of "what does a skipped trial get".
   const mas = deriveMas(args.answer, args.experienceLevel as ExperienceLevel);
-  const low = speedForPercent(mas.masKmh, band.lowPct);
-  const high = speedForPercent(mas.masKmh, band.highPct);
+  /* THE HIGHER %MAS IS THE FASTER PACE, so it leads the range: 90–100% MAS on a
+   * 15 km/h athlete reads `4:00–4:27 min/km`, not `4:27–4:00`. */
+  const slow = paceForPercent(mas.masKmh, band.lowPct);
+  const fast = paceForPercent(mas.masKmh, band.highPct);
   const estimated = mas.source === 'experience_default';
 
-  if (low === high) {
+  if (slow === fast) {
     return signedCopy(
       estimated ? MAS_PACE_COPY.estimatedSingle : MAS_PACE_COPY.measuredSingle,
-      { speed: low },
+      { pace: fast },
     );
   }
   return signedCopy(
     estimated ? MAS_PACE_COPY.estimatedRange : MAS_PACE_COPY.measuredRange,
-    { low, high },
+    { fast, slow },
   );
 }

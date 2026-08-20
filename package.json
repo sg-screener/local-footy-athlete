@@ -213,6 +213,7 @@
     "test:keyboard-convention": "sucrase-node src/__tests__/keyboardConventionContractTests.ts",
     "test:authored-cues": "TZ=Australia/Melbourne sucrase-node src/__tests__/authoredCueLibraryTests.ts",
     "test:conditioning-dose": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningDoseTests.ts",
+    "test:conditioning-copy-census": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningCopyCensusTests.ts",
     "test:conditioning-templates": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningTemplateEqualityTests.ts",
     "test:readiness-illness-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessIllnessLawTests.ts",
     "test:deload-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/deloadLawTests.ts",
