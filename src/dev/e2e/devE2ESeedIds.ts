@@ -20,6 +20,15 @@ export const DEV_E2E_SEED_IDS = [
   // the generator no longer produces. This seed exists so neither of them has
   // to be altered.
   'exercise-removal-restart',
+  /* ── DEV-ONLY, FOR THE R-116 LAYOUT EVIDENCE (Sam, 2026-08-20) ─────────────
+   * A session-layout showcase: TODAY carries Conditioning, Team Training and a
+   * genuinely long authored exercise name, so the three remaining screenshots
+   * can be taken without touching production programming or exercise content.
+   * Every component it shows is real — the conditioning block and the team
+   * commitment are lifted from days the SAME generated week already produced,
+   * and the long name is `Half-Kneeling Single-Arm Overhead Press`, 39
+   * characters and already in the authored pool. Nothing is invented. */
+  'session-layout-showcase',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -59,6 +68,7 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   // ("today", "this block") are read against it, and reusing it keeps this
   // seed's world comparable to `standard-in-season-week`'s.
   'exercise-removal-restart': '2026-07-13',
+  'session-layout-showcase': '2026-07-13',
 };
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {

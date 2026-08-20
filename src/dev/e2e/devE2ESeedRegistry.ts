@@ -469,6 +469,86 @@ function withOneSetStrength(program: TrainingProgram): TrainingProgram {
   return result;
 }
 
+/**
+ * ── THE R-116 LAYOUT SHOWCASE — DEV ONLY ───────────────────────────────────
+ *
+ * Sam, 2026-08-20: *"create or repair a dev-only seed route containing
+ * Conditioning; Team Training; a genuinely long exercise name. Do not alter
+ * production programming or exercise content to manufacture screenshots."*
+ *
+ * ⚠ **NOTHING HERE IS INVENTED, AND THAT IS THE WHOLE POINT.** The Session
+ * screen only opens for TODAY, and the deterministic week puts its conditioning
+ * and its team commitment on days that are not today — so the three remaining
+ * screenshots were unreachable, not missing. This seed MOVES real components
+ * onto Monday; it does not author new ones:
+ *
+ *   - the conditioning block and its rows are lifted from the day the SAME
+ *     generated week already produced them on;
+ *   - the team-training row is lifted the same way;
+ *   - the long name is `Half-Kneeling Single-Arm Overhead Press` — 39
+ *     characters, already in the authored pool and already prescribable.
+ *
+ * The generator, the pools and the authored content are untouched. This is the
+ * same shape `withStackedTeamUpperPull` above already uses, and it throws rather
+ * than fabricating if the week does not contain what it means to move.
+ */
+const SHOWCASE_LONG_NAME = 'Half-Kneeling Single-Arm Overhead Press';
+
+function withSessionLayoutShowcase(program: TrainingProgram): TrainingProgram {
+  const result = clone(program);
+  const week = result.microcycles[0];
+  const today = week.workouts.find((workout) => workout.dayOfWeek === 1);
+  if (!today || (today.exercises ?? []).length === 0) {
+    throw new Error('session-layout-showcase requires a Monday session to show.');
+  }
+
+  // 1. A GENUINELY LONG NAME, on a row that already exists.
+  /* A NON-POWER row, so the primer keeps its own identity and the power-first
+   * ordering stays readable in the same screenshot. */
+  const renamed = today.exercises.find((row) =>
+    (row.exercise?.name ?? '').length > 0 && (row as { role?: string }).role !== 'power');
+  if (!renamed?.exercise) {
+    throw new Error('session-layout-showcase requires a named Monday row to lengthen.');
+  }
+  renamed.exercise = { ...renamed.exercise, name: SHOWCASE_LONG_NAME };
+
+  /* 2. CONDITIONING — the ROWS, lifted from the day this week already put them
+   *    on. Deliberately NOT `conditioningBlock`: this generator's weeks carry
+   *    conditioning as `role: 'conditioning'` rows, and a block is a different
+   *    (combined-day) shape it does not produce here. The Session screen's
+   *    Conditioning section is driven by the rows, which is what has to appear. */
+  const conditioningRows = week.workouts
+    .filter((workout) => workout.dayOfWeek !== 1)
+    .flatMap((workout) => (workout.exercises ?? [])
+      .filter((row) => (row as { role?: string }).role === 'conditioning'))
+    .slice(0, 2)
+    .map((row) => ({ ...row, id: `${row.id}-showcase`, workoutId: today.id }));
+  /* ⚠ **CONDITIONING IS OPTIONAL HERE, AND THAT IS A FINDING, NOT A SHORTCUT.**
+   *
+   * MEASURED over this seed's own generated week, both phases:
+   *   in-season   Mon Team Training + strength + power, Tue/Fri strength — no
+   *               `role: 'conditioning'` row anywhere, no `conditioningBlock`
+   *   off-season  strength on three days, and the club nights disappear too
+   *
+   * So a day carrying Conditioning AND Team Training together is not something
+   * athlete ANSWERS can reach on this generator's deterministic path. Writing a
+   * conditioning row here would be exactly what Sam forbade — *"Do not alter
+   * production programming or exercise content to manufacture screenshots."* —
+   * so the seed lifts one if the week has one and shows the day honestly if it
+   * does not. The Conditioning screenshot is reported as BLOCKED rather than
+   * staged. */
+
+  /* 3. TEAM TRAINING is ALREADY on this day and needed no lifting — the seed's
+   *    profile answers name Monday as a club night, so the generator makes it a
+   *    `Team Training` day and `getSessionComponents` gives the session its
+   *    team-training component. A team night is a day's TYPE on this generator,
+   *    not a row, which is why an earlier cut of this function looked for a row
+   *    and threw. Measured, then corrected. */
+
+  today.exercises = [...today.exercises, ...conditioningRows];
+  return result;
+}
+
 function programForSeed(seedId: DevE2ESeedId, profile: OnboardingData): TrainingProgram {
   let program = deterministicProgram(seedId, profile);
   if (seedId === 'stacked-team-training-upper-pull') {
@@ -476,6 +556,9 @@ function programForSeed(seedId: DevE2ESeedId, profile: OnboardingData): Training
   }
   if (seedId === 'one-set-strength') {
     program = withOneSetStrength(program);
+  }
+  if (seedId === 'session-layout-showcase') {
+    program = withSessionLayoutShowcase(program);
   }
   return program;
 }
@@ -735,6 +818,21 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
     return fixedProfile({
       trainingDaysPerWeek: 3,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday'],
+    });
+  }
+  if (seedId === 'session-layout-showcase') {
+    /* ⚠ **REAL ANSWERS, NOT ALTERED CONTENT — SAM, 2026-08-20.** *"Do not alter
+     * production programming or exercise content to manufacture screenshots."*
+     * So this seed changes what the ATHLETE ANSWERED at onboarding — training
+     * days, team nights — and lets the real generator decide the rest. Monday is
+     * a club night here, which is why today carries Team Training; the extra
+     * training days are what give the week its conditioning. Every row, dose and
+     * name below is the generator's. */
+    return fixedProfile({
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Monday', 'Thursday'],
     });
   }
   if (seedId === 'equipment-restriction-case') {
