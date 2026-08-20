@@ -9,6 +9,76 @@
 import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import { injurySeverityRemovesRiskyWork } from './injurySeverityBands';
 
+/**
+ * ── THE LIMB THE INJURY IS IN ─────────────────────────────────────────────
+ *
+ * A `Record` over the closed `InjuryKey` union rather than a list, so a new
+ * region cannot be added without deciding which half of the body it is in.
+ */
+const LOWER_LIMB_BUCKET: Readonly<Record<InjuryKey, boolean>> = {
+  groin: true, hip: true, quad: true, hamstring: true, knee: true,
+  calf: true, 'ankle/foot': true,
+  ribs: false, lowerBack: false, neck: false, shoulder: false,
+  elbow: false, 'wrist/hand': false,
+};
+
+/**
+ * ── SAM'S RULING, 2026-08-21 (R-124): CARRIES ARE OUT FOR A 7/10 KNEE ──────
+ *
+ * *"Farmer and suitcase carries are OUT for a 7/10 knee. Loaded walking is not
+ * an appropriate fallback here. **Hold this in the shared safety authority, not
+ * as a screen-specific exception.**"*
+ *
+ * So it lives HERE, in the one classifier both questions read
+ * (`injuryPermitsExerciseAtSeverity` — may this be a replacement — and
+ * `injuryWithholdsExistingRow` — must this row come out), and not in the
+ * surface that happened to surface the defect.
+ *
+ * ⚠ **THIS DOES NOT WEAKEN SAM'S MATRIX; IT REFUSES SOMETHING THE MATRIX
+ * ALLOWS.** `Farmer Carry`, `Suitcase Carry`, `Bear Carry` and `Overhead Carry`
+ * are each rated `good` for knee, hip, quad, hamstring, calf and ankle/foot in
+ * his own sheet, which is why the ladder reached for them first: measured
+ * 2026-08-21, they were the ONLY patterns the athlete's week carried none of.
+ * The matrix rates the LOADING; it does not encode that all four are performed
+ * WALKING, which is the part that disqualifies them for a limb that cannot take
+ * a stride. The refusal is a second, narrower gate on top of an untouched
+ * sheet — the same shape as the hamstring heavy-hinge rule below it.
+ *
+ * It is identified from the DATA (`movement: 'carry'` is exactly those four),
+ * never from a name list.
+ *
+ * ⚠ **AND KNEELING, WHICH IS AN INFERENCE FROM SAM'S CONDITIONAL AND IS FLAGGED
+ * AS ONE.** *"Use … a safe non-kneeling dead-bug option instead of Ab Wheel if
+ * Ab Wheel requires kneeling."* It does — an ab-wheel rollout is performed from
+ * the knees — and the general form of that instruction is that kneeling on an
+ * injured lower limb is no safer than walking on it. Nothing in the tags
+ * records posture, so these are AUTHORED, with the reason beside them, and
+ * there are exactly two in the whole app. **If Sam rules that kneeling is fine,
+ * this half comes out and the carry half stays.**
+ */
+const KNEELING_POSITION_EXERCISES: readonly string[] = [
+  'ab wheel',
+  'woodchop (half kneeling)',
+];
+
+/**
+ * Does this exercise put the athlete's weight or load through a limb that
+ * cannot take it — walking under load, or kneeling on it — at a band that has
+ * already removed risky work? Read by `classifyExerciseRiskForBucket` only.
+ */
+function loadedThroughTheInjuredLimb(args: {
+  exerciseName: string;
+  bucket: InjuryKey;
+  severity: number | undefined;
+  movement: string;
+}): boolean {
+  if (args.severity === undefined) return false;
+  if (!injurySeverityRemovesRiskyWork(args.severity)) return false;
+  if (!LOWER_LIMB_BUCKET[args.bucket]) return false;
+  if (args.movement === 'carry') return true;
+  return KNEELING_POSITION_EXERCISES.includes(args.exerciseName.trim().toLowerCase());
+}
+
 export type InjuryExerciseRisk = 'avoid' | 'caution' | 'good' | 'unknown';
 
 export function classifyExerciseRiskForBucket(
@@ -46,6 +116,13 @@ export function classifyExerciseRiskForBucket(
 
   const rating = tags.injury[bucket];
   if (rating === 'avoid') return 'avoid';
+
+  /* R-124 — loaded walking and kneeling, on a lower limb, from 6-7 up. It sits
+   * ABOVE the `good` return below on purpose: these four carries are rated
+   * `good` and would otherwise be the ladder's first choice. */
+  if (loadedThroughTheInjuredLimb({ exerciseName, bucket, severity, movement: tags.movement })) {
+    return 'avoid';
+  }
 
   if (rating === 'caution') {
     const limitingHamstringHeavyHinge =

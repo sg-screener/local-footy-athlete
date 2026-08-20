@@ -42,6 +42,7 @@ import { finerPatternIdentityOf } from '../src/rules/injuryFallbackLadder';
 import { buildSessionInjuryReview } from '../src/utils/sessionInjuryReview';
 import { DEV_E2E_STANDARD_PROFILE } from '../src/dev/e2e/devE2EStandardProfile';
 import { legalAddCandidates } from '../src/utils/addExerciseCandidates';
+import { deriveInjurySessionAdjustment } from '../src/utils/injurySessionAdjustment';
 
 const INSTALL = '2026-07-13';
 const TODAY = process.env.PROBE_DATE ?? INSTALL;
@@ -267,6 +268,36 @@ function main(): void {
     const nonGood = entries.filter((e) => e.risk !== 'good');
     if (nonGood.length) console.log(`        (non-good admitted by the gate: ${nonGood.map((e) => `${e.name}:${e.risk}`).slice(0, 6).join(', ')})`);
   }
+
+  // ── R-124: WHAT THE SESSION-LEVEL BLOCK ACTUALLY CHOOSES ──────────────────
+  const weekNames: string[] = [];
+  for (const day of week as any[]) {
+    for (const r of (day.workout?.exercises ?? [])) {
+      const nm = String(r.exercise?.name ?? r.name ?? '').trim();
+      if (nm) weekNames.push(nm);
+    }
+  }
+  const kept = plan.untouched;
+  const keptSets = (workout?.exercises ?? [])
+    .filter((r: any) => kept.includes(String(r.exercise?.name ?? r.name ?? '').trim()))
+    .reduce((n: number, r: any) => n + (r.prescribedSets ?? 0), 0);
+  const adjustment = deriveInjurySessionAdjustment({
+    workout,
+    environment,
+    profile: useProfileStore.getState().onboardingData,
+    bodyPart: constraint.bodyPart,
+    weekExerciseNames: weekNames,
+    pausedRowNames: (plan as any).pausedRows,
+  });
+  const added = adjustment?.added ?? [];
+  console.log(`\n── R-124 SESSION-LEVEL BLOCK ──`);
+  console.log(`  paused (${(plan as any).pausedRows.length}): ${JSON.stringify((plan as any).pausedRows)}`);
+  console.log(`  kept   (${kept.length}): ${JSON.stringify(kept)}  [${keptSets} sets]`);
+  console.log(`  added  (${added.length}):`);
+  for (const a of added) console.log(`      ${a.name.padEnd(24)} ${a.sets} x ${a.repsMin}-${a.repsMax}`
+    + `${a.weightKg !== null ? ` @ ${a.weightKg}kg` : ''}${a.perSide ? ' per side' : ''}`
+    + `${a.prescriptionType ? `  (${a.prescriptionType})` : ''}`);
+  console.log(`  summary: "${adjustment?.summary ?? '(none)'}"`);
 
   // ── THE DOSE THE APP'S OWN ADD DOOR WOULD GIVE THESE, WITH THE INJURY LIVE ──
   console.log(`\n── ADD-DOOR DOSES (knee ${constraint.severity}/10 active) ──`);

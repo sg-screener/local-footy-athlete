@@ -1361,6 +1361,20 @@ export function resolveInjuryRecompositionInputs(args: {
   environment: TapSwapEnvironment;
   primaryInjury: TapSwapPrimaryInjury | null;
   trainingPaused: boolean;
+  /**
+   * R-124 — EVERY EXERCISE ANYWHERE IN THE ATHLETE'S WEEK, this day included.
+   *
+   * The session-level block may not offer something the week already carries,
+   * and the per-row loop it replaces could only ever see the current session —
+   * which is how it proposed `Band Pull-Apart` (already Tuesday's) and
+   * `Single-Arm DB Floor Press` (already Thursday's) on the same Monday.
+   *
+   * Read from the AUTHORED microcycle, not from a resolved week: this function
+   * is called from inside the resolver's own reach, and asking the resolver for
+   * the week here would be circular. Names are all the rule needs.
+   */
+  weekExerciseNames: string[];
+  profile: ReturnType<typeof useProfileStore.getState>['onboardingData'];
 } {
   /**
    * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
@@ -1395,7 +1409,25 @@ export function resolveInjuryRecompositionInputs(args: {
     readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
     primaryInjury,
   });
-  return { workout, environment, primaryInjury, trainingPaused };
+  const microcycle = useProgramStore.getState().currentMicrocycle;
+  const weekExerciseNames: string[] = [];
+  for (const day of microcycle?.workouts ?? []) {
+    for (const row of day.exercises ?? []) {
+      const name = String(
+        (row as { exercise?: { name?: string } }).exercise?.name
+        ?? (row as { name?: string }).name ?? '',
+      ).trim();
+      if (name) weekExerciseNames.push(name);
+    }
+  }
+  return {
+    workout,
+    environment,
+    primaryInjury,
+    trainingPaused,
+    weekExerciseNames,
+    profile: useProfileStore.getState().onboardingData,
+  };
 }
 
 /**
@@ -1416,7 +1448,7 @@ function recomposeSessionForInjury(args: {
   date: string;
   constraint: ActiveInjuryConstraint;
   source: ProgramControlAction['source'];
-}): { changed: boolean; message: string } {
+}): { changed: boolean; message: string; substitutedRowNames: string[] } {
   // The session, the environment and the exclusion boundary are assembled by
   // `resolveInjuryRecompositionInputs` above — the SAME call the review screen
   // makes, which is what makes the review a promise this door keeps.
@@ -1425,6 +1457,7 @@ function recomposeSessionForInjury(args: {
   if (!workout) {
     return {
       changed: false,
+      substitutedRowNames: [],
       message: trainingPaused
         ? 'Affected training is paused until you get medical or physio advice.'
         : 'Injury restrictions are active. There is no session on this day to change.',
@@ -1576,15 +1609,15 @@ function recomposeSessionForInjury(args: {
      * its load, the athlete sees why each one is unavailable, and clearing the
      * injury reveals the original session by doing nothing at all. They are
      * still reported as omissions here — the sentence must name them. */
-    for (const omission of stagePlan.omissions) {
-      if (!appliedOmissions.includes(omission)) appliedOmissions.push(omission);
+    for (const paused of stagePlan.pausedRows) {
+      if (!appliedOmissions.includes(paused)) appliedOmissions.push(paused);
     }
   }
 
   const plan: InjuryRecompositionPlan = {
     unsafeRows: Array.from(unsafeSeen),
     substitutions: appliedSubstitutions,
-    omissions: appliedOmissions,
+    pausedRows: appliedOmissions,
     untouched: [],
   };
   if (refused.length > 0) {
@@ -1600,10 +1633,13 @@ function recomposeSessionForInjury(args: {
   const applied: InjuryRecompositionPlan = {
     ...plan,
     substitutions: appliedSubstitutions,
-    omissions: appliedOmissions,
+    pausedRows: appliedOmissions,
   };
   return {
     changed: appliedSubstitutions.length > 0 || appliedOmissions.length > 0,
+    /* R-124 — the rows a rung 1-4 answer really did replace. Handed to
+     * `describeVisibleInjuryChange` so it never has to guess a pairing. */
+    substitutedRowNames: appliedSubstitutions.map((substitution) => substitution.from),
     message: injuryRecompositionMessage({ plan: applied, remainingUnsafe, trainingPaused }),
   };
 }
@@ -1750,6 +1786,7 @@ async function executeProgramControlActionDurablyWithinTrace(
         }),
       }) as string[],
       trainingPaused: action.payload.constraint!.adjustmentLevel === 'training_paused',
+      substitutedRowNames: recomposition.substitutedRowNames,
     });
     return {
       ok,

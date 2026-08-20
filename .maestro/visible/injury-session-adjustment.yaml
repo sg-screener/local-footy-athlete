@@ -1,0 +1,79 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - R-124, the review lists paused and added separately and the session shows one line
+tags:
+  - e2e
+  - visible
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- tapOn:
+    id: "session-change-injury"
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- tapOn:
+    id: "injury-area-knee"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-moderate"
+    timeout: 10000
+- tapOn:
+    id: "injury-severity-moderate"
+- extendedWaitUntil:
+    visible:
+      id: "injury-trigger-squatting-lunging"
+    timeout: 10000
+- tapOn:
+    id: "injury-trigger-squatting-lunging"
+- tapOn: "Apply training adjustment"
+# ── THE REVIEW: three sections, and the only arrows are rung 1-4 ──────────
+- extendedWaitUntil:
+    visible:
+      id: "injury-review-paused"
+    timeout: 20000
+- assertVisible:
+    id: "injury-review-added"
+- takeScreenshot: artifacts/shell/50-injury-review-paused-and-added
+- scrollUntilVisible:
+    element:
+      id: "injury-review-apply"
+    direction: DOWN
+    timeout: 10000
+- takeScreenshot: artifacts/shell/51-injury-review-added-block
+- tapOn:
+    id: "injury-review-apply"
+# ── THE ACTIVE SESSION: one line, no greyed-out cards ────────────────────
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 20000
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "session-injury-adjustment"
+    timeout: 15000
+- takeScreenshot: artifacts/shell/52-session-one-summary-line
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-1-vertical-jump"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- takeScreenshot: artifacts/shell/53-session-rows-after-adjustment

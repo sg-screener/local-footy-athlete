@@ -1743,6 +1743,29 @@ export default function DayWorkoutScreenV2() {
           </View>
         ) : null}
 
+        {/* ── R-124: ONE LINE, NOT FIVE GREYED-OUT CARDS ────────────────────
+          *
+          * Sam, 2026-08-21: *"The five paused exercises … disappear from the
+          * active workout after Apply. Do not show five greyed-out SKIP cards.
+          * On the active session, show one concise summary such as: '5
+          * lower-body exercises paused for your knee. Today's session has been
+          * adjusted to safe upper-body and core work.'"*
+          *
+          * ⚠ **THE SENTENCE IS DERIVED, NOT WRITTEN HERE.** Every word of it
+          * comes from `workout.injuryAdjustment.summary`, which
+          * `utils/injurySessionAdjustment` composes from what actually happened
+          * to the rows — the count, the half of the body, the athlete's own word
+          * for the area, and whether anything was really added. A line written
+          * on the glass would be a second, un-derived claim, which is the shape
+          * of defect this whole injury unit exists to delete. */}
+        {workout.injuryAdjustment ? (
+          <View style={styles.injuryAdjustmentNotice} testID="session-injury-adjustment">
+            <Text style={styles.injuryAdjustmentText}>
+              {workout.injuryAdjustment.summary}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Coach-authored attribution — ONE concise sentence at most, plus
             an optional "Show changes" disclosure for the audit log. The
             severity-aware tail comes from activeConstraints; the per-
@@ -3986,6 +4009,10 @@ function ExerciseEditBody({
             <Text style={styles.exerciseEditBody} testID="injury-review-headline">
               {review.headline}
             </Text>
+            {/* ── 1. REAL SWAPS, AND THE ONLY ARROWS ON THIS SCREEN ────────
+              * R-124, Sam: *"Do not show false arrows between unrelated
+              * exercises."* Every entry here came from rungs 1-4 and really is
+              * a replacement for the row it names. */}
             {review.changes.map((change) => (
               <View
                 key={`${change.kind}:${change.from}`}
@@ -3993,13 +4020,56 @@ function ExerciseEditBody({
                 testID={`injury-review-change-${change.kind}`}
               >
                 <Text style={styles.exerciseEditSuggestionName}>
-                  {change.to
-                    ? `${displayExerciseName(change.from)} \u2192 ${displayExerciseName(change.to)}`
-                    : `${displayExerciseName(change.from)} \u2014 left out`}
+                  {`${displayExerciseName(change.from)} \u2192 ${displayExerciseName(change.to!)}`}
                 </Text>
                 <Text style={styles.exerciseEditSuggestionMeta}>{change.explanation}</Text>
               </View>
             ))}
+            {/* ── 2. PAUSED — A LIST, WITH NOTHING ON THE OTHER SIDE OF IT ──
+              * *"List the paused work and the adjusted session separately."*
+              * These rows have no partner, so they are rendered in a section
+              * that structurally cannot draw one. */}
+            {review.paused.length > 0 ? (
+              <View style={styles.exerciseEditGroup} testID="injury-review-paused">
+                <Text style={styles.exerciseEditGroupLabel}>
+                  {`PAUSED \u2014 YOUR ${review.bodyPart.toUpperCase()}`}
+                </Text>
+                {review.paused.map((change) => (
+                  <View
+                    key={`paused:${change.from}`}
+                    style={styles.exerciseEditSuggestionCard}
+                    testID="injury-review-change-paused"
+                  >
+                    <Text style={styles.exerciseEditSuggestionName}>
+                      {displayExerciseName(change.from)}
+                    </Text>
+                    <Text style={styles.exerciseEditSuggestionMeta}>{change.explanation}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {/* ── 3. THE BLOCK THAT GOES IN THEIR PLACE, NAMED AGAINST NOTHING ── */}
+            {review.added.length > 0 ? (
+              <View style={styles.exerciseEditGroup} testID="injury-review-added">
+                <Text style={styles.exerciseEditGroupLabel}>ADDED INSTEAD</Text>
+                {review.added.map((candidate) => (
+                  <View
+                    key={`added:${candidate.name}`}
+                    style={styles.exerciseEditSuggestionCard}
+                    testID="injury-review-added-row"
+                  >
+                    <Text style={styles.exerciseEditSuggestionName}>
+                      {displayExerciseName(candidate.name)}
+                    </Text>
+                    <Text style={styles.exerciseEditSuggestionMeta}>
+                      {`${candidate.sets} x ${candidate.repsMin}-${candidate.repsMax}`
+                        + `${candidate.perSide ? ' per side' : ''}`
+                        + `${candidate.weightKg !== null ? ` \u00b7 ${candidate.weightKg}kg` : ''}`}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {/* R-103's partial-coverage disclosure, for the session as a whole. */}
             {review.untrainedInWords.length > 0 ? (
               <Text style={styles.exerciseEditBody} testID="injury-review-untrained">
@@ -4350,7 +4420,10 @@ function exerciseEditStepKey(step: Exclude<ExerciseEditStep, { kind: 'closed' }>
     case 'confirm_add':
       return `confirm_add:${step.suggestion.name}`;
     case 'confirm_swap':
-      return `confirm_swap:${step.suggestion.name}`;
+      /* `SuggestedSwap` is a union and only its `exercise` arm carries a name;
+       * the `rest` arm has none. The ROW is what identifies this step either
+       * way, and it is present on both. */
+      return `confirm_swap:${step.exercise.key}`;
     case 'choose_swap':
     case 'confirm_remove':
     case 'exclusion_scope':
@@ -5427,6 +5500,24 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#121212',
     ...shadows.none,
+  },
+
+  /* R-124's one line. Quiet by design — it is context for a session that has
+   * already been adjusted, not a warning and not a second prescription line. */
+  injuryAdjustmentNotice: {
+    marginTop: spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 127, 127, 0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 127, 127, 0.28)',
+  },
+  injuryAdjustmentText: {
+    color: '#E8B9B9',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
 
   /* The title, subtitle, Back, Cancel, scrolling and sheet padding these

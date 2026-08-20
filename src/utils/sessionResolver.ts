@@ -43,6 +43,10 @@ import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
 import {
+  applyInjurySessionAdjustment,
+  injurySessionAdjustmentForDay,
+} from './injurySessionAdjustment';
+import {
   applyExclusionsToAuthoredDay,
   type ExerciseExclusion,
 } from '../rules/exerciseExclusions';
@@ -910,9 +914,43 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
    * `state.temporarySourceFacts` is supplied by the VIEW doors, so a
    * canonicalising caller carries none and marks nothing. */
   const dayInjuryFacts = state.temporarySourceFacts ?? [];
-  const withhold = <T extends Workout | null>(workout: T): T => markInjuryWithheldRows({
-    workout, dateISO: date, facts: dayInjuryFacts,
+  /**
+   * ── R-124: THE PAUSED ROWS COME OFF AND THE BLOCK GOES ON, HERE ──────────
+   *
+   * Same door, same fact, same reason as the marking below it: this is a
+   * READ-TIME projection, `state.temporarySourceFacts` is supplied by the VIEW
+   * doors only, and a canonicalising caller therefore carries none and adjusts
+   * nothing. **That is the whole of Sam's eighth requirement** — *"Clearing the
+   * injury must restore the exact original session, including after restart"* —
+   * because the accepted week never learns about any of it.
+   *
+   * The week's names come from the AUTHORED microcycle, never from a resolved
+   * week: asking the resolver for the week from inside the resolver is circular,
+   * and names are all the "don't duplicate what the week already has" rule needs.
+   */
+  const weekExerciseNames: string[] = [];
+  for (const day of state.currentMicrocycle?.workouts ?? []) {
+    for (const row of day.exercises ?? []) {
+      const name = String(
+        (row as { exercise?: { name?: string } }).exercise?.name
+        ?? (row as { name?: string }).name ?? '',
+      ).trim();
+      if (name) weekExerciseNames.push(name);
+    }
+  }
+  const adjust = <T extends Workout | null>(workout: T): T => applyInjurySessionAdjustment({
+    workout,
+    adjustment: injurySessionAdjustmentForDay({
+      workout,
+      dateISO: date,
+      facts: dayInjuryFacts,
+      profile: state.athleteContext?.onboardingData ?? null,
+      weekExerciseNames,
+    }),
   });
+  const withhold = <T extends Workout | null>(workout: T): T => adjust(markInjuryWithheldRows({
+    workout, dateISO: date, facts: dayInjuryFacts,
+  }));
   const composedWorkout = withhold(applyExclusionsToAuthoredDay({
     workout: composed.workout,
     dateISO: date,

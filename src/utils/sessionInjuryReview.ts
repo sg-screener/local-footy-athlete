@@ -63,12 +63,20 @@ import {
   untrainedPatternsInWords,
 } from './injurySessionRecomposition';
 import type { TapSwapHierarchyTier } from './tapSwapHierarchy';
+import type { AddCandidate } from './addExerciseCandidates';
+import { deriveInjurySessionAdjustment } from './injurySessionAdjustment';
 
 /**
- * A ROW IS EITHER GETTING SOMETHING ELSE OR GETTING NOTHING. There is no third
- * kind, and there is deliberately no `'removed'` — see R-115 above.
+ * A ROW IS EITHER GETTING SOMETHING ELSE OR BEING PAUSED. There is no third
+ * kind, and there is deliberately no `'removed'` — see R-115 above: the
+ * accepted program keeps the row, only the view stops showing it.
+ *
+ * ⚠ **`'withheld'` IS NOW `'paused'`, AND THE RENAME IS THE RULING.** R-124:
+ * only rungs 1-4 may produce a `'substitution'`, so this kind no longer means
+ * "the whole ladder had nothing" — it means what Sam calls it, *"clearly state
+ * which lower-body patterns are paused"*.
  */
-export type SessionInjuryChangeKind = 'substitution' | 'withheld';
+export type SessionInjuryChangeKind = 'substitution' | 'paused';
 
 export interface SessionInjuryProposedChange {
   /** The row, in the name the session carries it under. */
@@ -96,8 +104,23 @@ export interface SessionInjuryReview {
   /** R-115's blocking case: 8-10 AND serious symptoms. */
   redFlag: boolean;
   trainingPaused: boolean;
-  /** Every proposed change, substitutions first, then withheld rows. */
+  /**
+   * ⚠ **SUBSTITUTIONS ONLY, AND THEY ARE THE ONLY THING DRAWN WITH AN ARROW.**
+   * R-124, Sam: *"Do not show false arrows between unrelated exercises. List the
+   * paused work and the adjusted session separately."* Every entry here came
+   * from rungs 1-4 and really is a replacement for the row it names.
+   */
   changes: SessionInjuryProposedChange[];
+  /** The rows the injury pauses. A LIST, not a column of arrows. */
+  paused: SessionInjuryProposedChange[];
+  /**
+   * R-124's session-level block — attached to the SESSION, named against
+   * nothing. Empty when nothing was paused, or when nothing safe was left to
+   * add.
+   */
+  added: AddCandidate[];
+  /** The one line the active session shows afterwards. `null` when nothing paused. */
+  adjustmentSummary: string | null;
   /** Rows this injury does not touch. Named so the review is of the SESSION. */
   untouched: string[];
   /** R-103's whole-session disclosure, in the athlete's register. */
@@ -132,8 +155,9 @@ export function buildSessionInjuryReview(args: {
   date: string;
   constraint: ActiveInjuryConstraint;
 }): SessionInjuryReview {
-  const { workout, environment, primaryInjury, trainingPaused } =
-    resolveInjuryRecompositionInputs(args);
+  const {
+    workout, environment, primaryInjury, trainingPaused, weekExerciseNames, profile,
+  } = resolveInjuryRecompositionInputs(args);
   const redFlag = isRedFlagInjurySeverity(
     args.constraint.seriousSymptoms,
     args.constraint.severity,
@@ -145,6 +169,9 @@ export function buildSessionInjuryReview(args: {
     redFlag,
     trainingPaused,
     changes: [] as SessionInjuryProposedChange[],
+    paused: [] as SessionInjuryProposedChange[],
+    added: [] as AddCandidate[],
+    adjustmentSummary: null as string | null,
     untouched: [] as string[],
     untrainedInWords: [] as string[],
     nothingChanges: true,
@@ -171,42 +198,78 @@ export function buildSessionInjuryReview(args: {
     /* ⚠ **WITHHELD, AND WORDED BY THE OWNER THAT WILL SHOW IT.** The athlete
      * approves this sentence here and reads the same sentence on the row
      * afterwards, because both come from `injuryWithholdingExplanation`. */
-    ...plan.omissions.map((name) => ({
-      from: name,
-      to: null,
-      kind: 'withheld' as const,
-      tier: null,
-      coversOriginalPattern: false,
-      explanation: injuryWithholdingExplanation({ exercise: name, bodyPart, redFlag }),
-    })),
   ];
+
+  /* ── PAUSED, AND KEPT OUT OF `changes` ON PURPOSE ──────────────────────────
+   * A paused row has no partner, so it cannot sit in the same list as the ones
+   * that do without the screen having to remember which entries get an arrow.
+   * Two lists, and the screen renders two sections. */
+  const paused: SessionInjuryProposedChange[] = plan.pausedRows.map((name) => ({
+    from: name,
+    to: null,
+    kind: 'paused' as const,
+    tier: null,
+    coversOriginalPattern: false,
+    explanation: injuryWithholdingExplanation({ exercise: name, bodyPart, redFlag }),
+  }));
+
+  /* ── AND THE BLOCK THAT GOES IN THEIR PLACE, DERIVED, NOT STORED ──────────
+   * The review promises exactly what the view door will derive, because both
+   * ask `chooseInjurySessionAdditions` with the same inputs from the same
+   * owner (`resolveInjuryRecompositionInputs`). */
+  /* ⚠ **THE SAME FUNCTION THE VIEW DOOR CALLS, WITH THE SAME INPUTS.** That is
+   * the only way a review can be a promise: the door does not re-decide, it
+   * re-derives, and both derivations are this one. */
+  const adjustment = deriveInjurySessionAdjustment({
+    workout,
+    environment,
+    profile,
+    bodyPart,
+    weekExerciseNames,
+    pausedRowNames: plan.pausedRows,
+  });
+  const added = adjustment?.added ? [...adjustment.added] : [];
 
   /* The rows the session would carry if this plan were applied — a substitution
    * puts its answer in, a withheld row stays on the session but is marked, so it
    * is NOT dropped from the "after" set. That is the R-115 distinction expressed
    * arithmetically: an omission is not a deletion. */
+  /* The rows the session would carry if this plan were applied. R-124 changed
+   * the arithmetic on one side of it: a paused row is no longer in the "after"
+   * set, because the athlete will not see it — Sam, 2026-08-21: *"The five
+   * paused exercises appear in the review, but disappear from the active
+   * workout after Apply."* The added block IS in it, so the untrained-pattern
+   * sentence cannot name a pattern the block put back. */
   const before = sessionRowNames(workout);
   const substituted = new Map(
     plan.substitutions.map((substitution) => [substitution.from, substitution.to.name!]),
   );
-  const after = before.map((name) => substituted.get(name) ?? name);
+  const pausedNames = new Set(plan.pausedRows);
+  const after = [
+    ...before.filter((name) => !pausedNames.has(name)).map((name) => substituted.get(name) ?? name),
+    ...added.map((candidate) => candidate.name),
+  ];
 
-  const nothingChanges = changes.length === 0;
+  const nothingChanges = changes.length === 0 && paused.length === 0;
+  const decisionCount = changes.length + paused.length;
   return {
     bodyPart,
     severity: args.constraint.severity,
     redFlag,
     trainingPaused,
     changes,
+    paused,
+    added,
+    adjustmentSummary: adjustment?.summary ?? null,
     untouched: plan.untouched,
     untrainedInWords: nothingChanges
       ? []
       : untrainedPatternsInWords({ before, after }),
     nothingChanges,
-    headline: reviewHeadline({ redFlag, nothingChanges, changes, bodyPart }),
+    headline: reviewHeadline({ redFlag, nothingChanges, changes, paused, added, bodyPart }),
     approveLabel: nothingChanges
       ? 'Save this injury'
-      : `Apply ${changes.length === 1 ? 'this change' : `these ${changes.length} changes`}`,
+      : `Apply ${decisionCount === 1 ? 'this change' : `these ${decisionCount} changes`}`,
   };
 }
 
@@ -222,6 +285,8 @@ function reviewHeadline(args: {
   redFlag: boolean;
   nothingChanges: boolean;
   changes: readonly SessionInjuryProposedChange[];
+  paused: readonly SessionInjuryProposedChange[];
+  added: readonly AddCandidate[];
   bodyPart: string;
 }): string {
   const area = args.bodyPart.toLowerCase();
@@ -234,15 +299,21 @@ function reviewHeadline(args: {
       : `Nothing on this session needs changing for your ${area}.`;
   }
   const swapped = args.changes.filter((change) => change.kind === 'substitution');
-  const withheld = args.changes.filter((change) => change.kind === 'withheld');
   const parts: string[] = [];
   if (swapped.length > 0) {
     parts.push(`swap ${listInWords(swapped.map((change) => change.from))} for `
       + `${listInWords(swapped.map((change) => change.to!))}`);
   }
-  if (withheld.length > 0) {
-    parts.push(`leave out ${listInWords(withheld.map((change) => change.from))} — `
-      + 'nothing safe was available');
+  /* ⚠ **THE PAUSED ROWS AND THE ADDED BLOCK ARE TWO CLAUSES, NEVER ONE.** The
+   * sentence this replaces read *"swap A, B, C, D and E for V, W, X, Y and Z"*
+   * over five pairings that had no relationship at all (R-124). It says what
+   * each side actually is now, and the added half is only claimed when
+   * something really was added. */
+  if (args.paused.length > 0) {
+    parts.push(`pause ${listInWords(args.paused.map((change) => change.from))}`);
+    parts.push(args.added.length > 0
+      ? `add ${listInWords(args.added.map((candidate) => candidate.name))} instead`
+      : 'add nothing in their place — there was nothing safe left to add');
   }
   const head = `For your ${area}, this would ${parts.join(', and ')}.`;
   return args.redFlag
