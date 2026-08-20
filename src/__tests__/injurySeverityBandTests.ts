@@ -55,10 +55,6 @@ import {
   type AdjustmentRequest,
 } from '../utils/programAdjustmentEngine';
 import { buildInjuryConstraint, severityToTier as exposureSeverityToTier } from '../utils/exposureEngine';
-import { severityToTier as progressionSeverityToTier } from '../utils/injuryProgression';
-import { severityToTier as trainAroundSeverityToTier } from '../utils/trainAroundEngine';
-import { applyInjuryFilterToWorkout } from '../utils/injuryWorkoutFilter';
-import { buildConstraintPlans } from '../utils/constraintPlan';
 import {
   buildGuidedInjuryConstraint,
   guidedInjuryBucketForArea,
@@ -202,15 +198,18 @@ ok('9/10 pauses affected training', injurySeverityPausesAffectedTraining(9));
 
 console.log('\n-- Migrated consumers --');
 
-eq('progression 2/10 tier', progressionSeverityToTier(2), 'light');
-eq('progression 4/10 tier', progressionSeverityToTier(4), 'relaxed');
-eq('progression 6/10 tier', progressionSeverityToTier(6), 'strict');
-eq('progression 9/10 tier', progressionSeverityToTier(9), 'severe');
+// THREE DOORS THIS SECTION USED TO WALK NO LONGER EXIST, and their rows went
+// with them rather than being kept pointing at nothing:
+//   `injuryProgression.severityToTier` and `trainAroundEngine.severityToTier`
+//   were removed by the 2026-08-19 burn — this suite had been DEAD AT IMPORT on
+//   `main` ever since, so those rows have not run in either case;
+//   `constraintPlan.buildConstraintPlans` was removed on 2026-08-21 with zero
+//   production execution.
+// The doors that remain are asserted below, and the shared scale is what the
+// section is for — not the number of doors that happen to exist.
 eq('exposure 4/10 tier', exposureSeverityToTier(4), 'moderate');
 eq('exposure 6/10 tier', exposureSeverityToTier(6), 'limiting');
 eq('exposure 9/10 tier', exposureSeverityToTier(9), 'severe');
-eq('train-around 6/10 tier', trainAroundSeverityToTier(6), 'moderate');
-eq('train-around 9/10 tier', trainAroundSeverityToTier(9), 'severe');
 // LR-27 convergence (Sam's ruling 2026-08-02): hip complaints take the HIP
 // profile at every door — the owner's sheet wins every row. (These two rows
 // previously expected an 'adductor' bucket no engine ever produced — they
@@ -229,16 +228,9 @@ eq('guided hip routes to the hip profile', guidedInjuryBucketForArea('Hip / groi
     JSON.stringify(c5.advice));
 }
 
-{
-  const plan6 = buildConstraintPlans([activeInjury('shoulder', 'shoulder', 6)])[0];
-  ok('constraint plan adds hard physio at 6/10',
-    plan6.advice.some((advice) => /assessed by a physio/i.test(advice)),
-    JSON.stringify(plan6.advice));
-  const plan5 = buildConstraintPlans([activeInjury('shoulder', 'shoulder', 5)])[0];
-  ok('constraint plan keeps soft advice at 5/10',
-    plan5.advice.some((advice) => /not improving/i.test(advice)),
-    JSON.stringify(plan5.advice));
-}
+// The constraint-plan pair that stood here made the SAME 6/10-hard-physio and
+// 5/10-soft-advice claim through the deleted plan builder. The live exposure
+// constraint above asserts it at the owner that still runs, so no claim is lost.
 
 {
   const g7 = buildGuidedInjuryConstraint(guided(7), { todayISO: FIXED_TODAY });
@@ -304,17 +296,12 @@ console.log('\n-- Program adjustment behaviour --');
     !result.events.some((event) => event.before === 'Bench Press'));
 }
 
-{
-  const filtered = applyInjuryFilterToWorkout(
-    workout('Fri Push', [ex('Bench Press'), ex('Goblet Squat')]),
-    { bodyPart: 'shoulder', bucket: 'shoulder', severity: 6, status: 'active' },
-  );
-  ok('resolver filter keeps limited pressing work at 6/10',
-    filtered.exercises.some((exercise) => exercise.exercise?.name === 'Bench Press'),
-    JSON.stringify(filtered.exercises.map((exercise) => exercise.exercise?.name)));
-  ok('resolver filter keeps safe unaffected work',
-    filtered.exercises.some((exercise) => exercise.exercise?.name === 'Goblet Squat'));
-}
+// `utils/injuryWorkoutFilter.applyInjuryFilterToWorkout` — the read-time injury
+// filter — was removed by the 2026-08-19 burn and has NO successor: the census
+// there recorded "injury / equipment row removal after authoring" on the rebuild
+// list, owned by the composer plus specialists. Its two rows are removed rather
+// than left importing a module that is not there. THIS IS AN UNCOVERED
+// CAPABILITY, not a covered one — it is on that rebuild list, not in this suite.
 
 console.log(`\ninjurySeverityBandTests: ${pass} passed, ${fail} failed`);
 

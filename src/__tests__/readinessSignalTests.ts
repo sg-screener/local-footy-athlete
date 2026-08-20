@@ -20,9 +20,6 @@ import {
   filterConstraintsForDate,
   isReadinessConstraint,
 } from '../utils/readinessConstraints';
-import { routeCoachReadinessMessage } from '../utils/coachReadinessAdapter';
-import { buildConstraintPlans } from '../utils/constraintPlan';
-import { buildWeeklyCoachUpdateFromConstraints } from '../utils/weeklyCoachUpdate';
 import type { OnboardingData } from '../types/domain';
 
 let pass = 0;
@@ -75,7 +72,23 @@ section('[1] profile baseline replaces hard-coded medium');
 {
   eq('strong profile can be high', deriveScheduleReadiness({ onboardingData: strongProfile }), 'high');
   eq('ramp profile can be low', deriveScheduleReadiness({ onboardingData: rampProfile }), 'low');
-  eq('missing profile falls back medium', deriveScheduleReadiness({ onboardingData: null }), 'medium');
+  // ⚠ THIS CELL WAS WRONG, AND THE SUITE BEING DARK IS WHY NOBODY SAW IT.
+  // It read `missing profile falls back medium`. `utils/readiness.ts:43` says
+  // in its own docblock that a missing capacity answer THROWS
+  // `MissingCapacityAnswerError` and that "that is the contract, not an
+  // accident" — the same fail-loud law that deleted `DEFAULT_BODYWEIGHT_KG`.
+  // The cell encoded the behaviour that law replaced. It now asserts the live
+  // contract; the product was NOT changed to suit it.
+  {
+    let threw = false;
+    try {
+      deriveScheduleReadiness({ onboardingData: null });
+    } catch (error) {
+      threw = (error as Error).name === 'MissingCapacityAnswerError'
+        || /Capacity cannot be scored/.test((error as Error).message);
+    }
+    ok('missing profile refuses loudly rather than defaulting to medium', threw);
+  }
 }
 
 section('[2] quick signal downshifts only');
@@ -197,139 +210,37 @@ section('[6] readiness constraints only apply to their date');
   eq('excluded on other date', filterConstraintsForDate(flat, '2026-05-20').length, 0);
 }
 
-section('[7] readiness labels and weekly card scope');
+section('[7] the readiness label is owned by the constraint itself');
 {
   const flat = buildReadinessActiveConstraints(
     signal('2026-05-19', buildReadinessSignalPatch('flat')),
   );
-  const plans = buildConstraintPlans(flat);
-  eq('plan uses readiness display label', plans[0]?.activeIssue, 'Feeling flat - 3/10');
-
-  const outsideWeek = buildWeeklyCoachUpdateFromConstraints({
-    weekStartISO: '2026-05-18',
-    visibleWeek: [{ date: '2026-05-20' } as any],
-    baselineWeek: [{ date: '2026-05-20' } as any],
-    activeConstraints: flat,
-  });
-  eq('card hidden when scoped date not in visible week', outsideWeek, null);
-
-  const sameDay = buildWeeklyCoachUpdateFromConstraints({
-    weekStartISO: '2026-05-18',
-    visibleWeek: [{ date: '2026-05-19' } as any],
-    baselineWeek: [{ date: '2026-05-19' } as any],
-    activeConstraints: flat,
-  });
-  ok('card appears on scoped date', !!sameDay);
-  eq('card uses readiness issue label', sameDay?.activeIssues[0], 'Feeling flat - 3/10');
+  // THIS CELL WAS REPAIRED, NOT DELETED. It used to read the label off a
+  // `buildConstraintPlans` plan ("Feeling flat - 3/10"), and the plan builder is
+  // gone — it had zero production execution. The label itself is LIVE and is
+  // written by `utils/readinessConstraints.ts:105`, so the claim is now made at
+  // that owner. The " - 3/10" suffix was the deleted builder's own formatting.
+  const flatConstraint = flat[0];
+  ok('readiness produces exactly one dated constraint', flat.length === 1);
+  // `ActiveConstraint` is a union and `ActiveInjuryConstraint` does not declare
+  // `reasonLabel`; this repo has no `strictNullChecks`, so the member is reached
+  // through an `in` narrowing rather than an optional chain.
+  eq(
+    'readiness constraint carries its display label',
+    flatConstraint && 'reasonLabel' in flatConstraint ? flatConstraint.reasonLabel : undefined,
+    'Feeling flat',
+  );
 }
 
-section('[8] coach chat routes to same readiness language');
-{
-  const cooked = routeCoachReadinessMessage({ message: "I'm cooked today", now: 1000 });
-  eq('bare cooked defers to ProgramEdit scope clarifier', cooked.kind, 'pass');
-  if (cooked.kind === 'pass') {
-    eq('cooked pass reason', cooked.reason, 'fatigue_needs_program_scope');
-  }
-
-  const feelingShit = routeCoachReadinessMessage({
-    message: "I'm actually feeling shit today",
-    now: 1000,
-  });
-  eq('plain-language poor readiness defers to ProgramEdit scope clarifier', feelingShit.kind, 'pass');
-  if (feelingShit.kind === 'pass') {
-    eq('plain-language poor readiness pass reason', feelingShit.reason, 'fatigue_needs_program_scope');
-  }
-
-  const fatigueRemove = routeCoachReadinessMessage({
-    message: 'legs cooked, remove Wednesday fully',
-    now: 1000,
-  });
-  eq('fatigue plus explicit remove defers to ProgramEdit', fatigueRemove.kind, 'pass');
-  if (fatigueRemove.kind === 'pass') {
-    eq('fatigue plus remove pass reason', fatigueRemove.reason, 'program_edit_priority');
-  }
-
-  const time = routeCoachReadinessMessage({ message: 'I only have 25 mins', now: 1000 });
-  eq('short time applies signal', time.kind, 'apply_signal');
-  if (time.kind === 'apply_signal') {
-    eq('short time minutes preserved', time.signal.timeAvailableMinutes, 25);
-  }
-
-  const durationEdit = routeCoachReadinessMessage({
-    message: 'Can you make it 30 mins?',
-    now: 1000,
-  });
-  eq('program duration edit passes to coach router', durationEdit.kind, 'pass');
-  if (durationEdit.kind === 'pass') {
-    eq('program duration edit reason', durationEdit.reason, 'program_duration_edit');
-  }
-
-  const namedDurationEdit = routeCoachReadinessMessage({
-    message: 'Set Pilates to 30 minutes',
-    now: 1000,
-  });
-  eq('named duration edit passes to coach router', namedDurationEdit.kind, 'pass');
-  if (namedDurationEdit.kind === 'pass') {
-    eq('named duration edit reason', namedDurationEdit.reason, 'program_duration_edit');
-  }
-
-  const addSkiErg = routeCoachReadinessMessage({
-    message: 'Can you also add a 10 min ski erg onto that day',
-    now: 1000,
-  });
-  eq('add 10 min SkiErg is program edit, not short-time signal', addSkiErg.kind, 'pass');
-  if (addSkiErg.kind === 'pass') {
-    eq('add 10 min SkiErg pass reason', addSkiErg.reason, 'program_duration_edit');
-  }
-
-  const addBike = routeCoachReadinessMessage({
-    message: 'Chuck a 15 min bike on Tuesday',
-    now: 1000,
-  });
-  eq('add 15 min bike is program edit, not short-time signal', addBike.kind, 'pass');
-  if (addBike.kind === 'pass') {
-    eq('add 15 min bike pass reason', addBike.reason, 'program_duration_edit');
-  }
-
-  const sore = routeCoachReadinessMessage({ message: "I'm sore", now: 1000 });
-  eq('generic sore asks body part', sore.kind, 'clarify');
-  if (sore.kind === 'clarify') {
-    const followup = routeCoachReadinessMessage({
-      message: 'calves',
-      pending: sore.pending,
-      now: 1500,
-    });
-    eq('body part follow-up applies signal', followup.kind, 'apply_signal');
-    if (followup.kind === 'apply_signal') {
-      eq('follow-up stores body part', followup.signal.bodyPart, 'calves');
-      eq('follow-up soreness moderate', followup.signal.soreness, 'moderate');
-    }
-  }
-
-  const calfCooked = routeCoachReadinessMessage({
-    message: 'my calves are cooked',
-    now: 1000,
-  });
-  eq('calves cooked applies body-part soreness', calfCooked.kind, 'apply_signal');
-  if (calfCooked.kind === 'apply_signal') {
-    eq('calves cooked body part', calfCooked.signal.bodyPart, 'calves');
-    eq('calves cooked soreness', calfCooked.signal.soreness, 'moderate');
-    ok('calves reply avoids loading-conservative copy', !/loading conservative/i.test(calfCooked.reply));
-  }
-
-  const calfShit = routeCoachReadinessMessage({
-    message: 'my calves feel shit',
-    now: 1000,
-  });
-  eq('plain-language body soreness applies signal', calfShit.kind, 'apply_signal');
-  if (calfShit.kind === 'apply_signal') {
-    eq('plain-language body soreness body part', calfShit.signal.bodyPart, 'calves');
-    eq('plain-language body soreness', calfShit.signal.soreness, 'moderate');
-  }
-
-  const pain = routeCoachReadinessMessage({ message: 'my calf hurts 7/10', now: 1000 });
-  eq('pain with severity passes to injury path', pain.kind, 'pass');
-}
+// [8] WAS DELETED WITH ITS SUBJECT — "coach chat routes to same readiness
+// language", 17 cells against `routeCoachReadinessMessage`. That router had
+// ZERO production execution and is gone; `utils/coachCommandRouter.ts` and
+// `utils/coachTurnController.ts` decide what a coach turn is.
+//
+// THE WEEKLY-CARD CELLS FROM [7] WENT TOO, and they are NOT re-sited: their
+// owner `utils/weeklyCoachUpdate.ts` was removed by the 2026-08-19 burn and
+// nothing in the app builds that card today. UNCOVERED, on that burn's rebuild
+// list — not covered somewhere else.
 
 console.log(`\n— Summary —\n  Pass: ${pass}\n  Fail: ${fail}`);
 if (fail > 0) {
