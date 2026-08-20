@@ -1750,29 +1750,59 @@ async function main(): Promise<void> {
     setJourneyClock(boundaryISO);
     rolloverIfDue(boundaryISO);
     followTheWeek(boundaryISO);
-    // THE CARD ITSELF — the screen's own producer, not a re-derivation.
+    /**
+     * THE CARD ITSELF — the surface's own producer, not a re-derivation.
+     *
+     * ⚠ **RE-AIMED 2026-08-20 FOR R-105**, by seat `finish-coach-product`. Sam:
+     * *"This should not be popping up on the main page - it should show up in
+     * the coaches chat with a notification"*. The offer left
+     * `deriveBlockBoundaryPrompts` for `rules/weeklyCommitmentConversation.ts`,
+     * reached through the Coach tab's own assembly. **The cell is re-aimed, not
+     * deleted** (`gate-must-watch-the-deleted-surface`): it still asks *"does
+     * the athlete's own surface really produce this offer here"*, at the new
+     * surface.
+     *
+     * The offer is a block-boundary offer: it returns null for `blockNumber < 2`
+     * because block 1 has no previous block to have found easy. So it is asked
+     * where the athlete would really meet it — standing in block 2, about the
+     * block they just finished.
+     */
     const prompts = quiet(() => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { deriveBlockBoundaryPrompts } = require('../screens/home/useBlockBoundaryPrompts');
+      const { deriveWeeklyCommitmentConversation } =
+        require('../rules/weeklyCommitmentConversation');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { coachWeeklyCommitmentInputs } =
+        require('../screens/coach/useCoachWeeklyCommitment');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { useDecisionLedgerStore } = require('../store/decisionLedgerStore');
-      // THE CARD IS A BLOCK-BOUNDARY CARD: `deriveExtraSession` returns null for
-      // `blockNumber < 2`, because block 1 has no previous block to have found
-      // easy. So it is asked where the athlete would really meet it — standing in
-      // block 2, about the block they just finished.
-      return deriveBlockBoundaryPrompts({
-        currentProgram: useProgramStore.getState().currentProgram,
+      const programState = useProgramStore.getState() as unknown as {
+        currentProgram: unknown;
+        sessionFeedback: Record<string, unknown>;
+        acceptedBlocks: Record<string, unknown>;
+        weightOverrides: Record<string, unknown>;
+        blockState: unknown;
+        acceptedMaterialContext: { markedDays: unknown; activeConstraints: unknown };
+      };
+      const outcome = deriveWeeklyCommitmentConversation(coachWeeklyCommitmentInputs({
+        currentProgram: programState.currentProgram,
         blockNumber: 2,
         blockStartISO: boundaryISO,
-        sessionFeedback: (useProgramStore.getState() as unknown as {
-          sessionFeedback: Record<string, unknown> }).sessionFeedback,
+        todayISO: boundaryISO,
+        sessionFeedback: programState.sessionFeedback,
+        acceptedBlocks: programState.acceptedBlocks,
         onboardingData: useProfileStore.getState().onboardingData,
         ledgerEntries: useDecisionLedgerStore.getState().entries ?? [],
-        weekOrder: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
-          'Saturday', 'Sunday'],
-        acceptedBlocks: (useProgramStore.getState() as unknown as {
-          acceptedBlocks: Record<string, unknown> }).acceptedBlocks,
-      } as never);
+        weightOverrides: programState.weightOverrides,
+        blockState: programState.blockState,
+        markedDays: programState.acceptedMaterialContext.markedDays,
+        activeConstraints: programState.acceptedMaterialContext.activeConstraints,
+      } as never)) as { value: { direction: string } | null };
+      return {
+        extraSession: outcome.value && outcome.value.direction === 'extra_session'
+          ? outcome.value
+          : null,
+      };
     }) as { extraSession?: unknown };
     const weekBefore = weekOf(mondayOf(boundaryISO));
     const daysBefore = gymDays(mondayOf(boundaryISO));
@@ -1979,10 +2009,10 @@ async function main(): Promise<void> {
   );
 
   ok(
-    'THE EXTRA-SESSION OFFER CARD IS VISIBLE — the screen\'s own producer returns it',
+    'THE EXTRA-SESSION OFFER IS VISIBLE — the COACH\'s own producer returns it (R-105)',
     accepted.cardOffer != null,
-    `deriveBlockBoundaryPrompts returned no extraSession card: ${
-      JSON.stringify(accepted.cardOffer)}`,
+    'the coach\'s own derivation returned no extra-session conversation: '
+    + `${JSON.stringify(accepted.cardOffer)}`,
   );
 
   const declined = await runOfferWorld('decline');

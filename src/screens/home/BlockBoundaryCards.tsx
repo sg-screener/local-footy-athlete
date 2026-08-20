@@ -1,5 +1,5 @@
 /**
- * THE TWO BLOCK-BOUNDARY CARDS.
+ * THE BLOCK-BOUNDARY NOTICE CARD.
  *
  * Extracted from `HomeScreenV2` so they can be DRIVEN — `HomeScreenV2` pulls in
  * navigation, gesture handling, SVG and three thousand lines of week logic, and
@@ -16,11 +16,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../components/ui';
 import { spacing } from '../../theme/spacing';
-import type {
-  BlockBoundaryNoticeModel,
-  ExtraSessionOfferModel,
-  WeeklyCommitmentPromptModel,
-} from './useBlockBoundaryPrompts';
+import type { BlockBoundaryNoticeModel } from './useBlockBoundaryPrompts';
 
 /** The Program surface's existing choice chip, shared by both cards. */
 function ChoiceChip({ testID, label, primary, onPress }: {
@@ -91,95 +87,24 @@ export function BlockBoundaryNoticeCard({ notice, onAcknowledge }: {
 }
 
 /**
- * THE MISSED-SESSION COMMITMENT QUESTION.
+ * ⚠ **TWO CARDS LEFT THIS FILE ON 2026-08-20 — R-105.**
  *
- * ⚠ **THE OPTIONS ARE THE DERIVATION'S, NOT THIS COMPONENT'S.** Every count
- * shown has been proven buildable for this athlete by the scheduler, and every
- * label is signed copy. A component that offered "how about 2?" on its own would
- * be offering a week the app may then refuse to build.
+ * `WeeklyCommitmentPromptCard` and `ExtraSessionOfferCard` rendered the
+ * missed-session commitment question and the extra-session offer on the Program
+ * surface. **Sam, 2026-08-19:** *"This should not be popping up on the main page
+ * - it should show up in the coaches chat with a notification"*.
+ *
+ * Both are now drawn by `screens/coach/CoachTabScreen.tsx`, in the keyboard-safe
+ * FOOTER beside the change card, from
+ * `rules/weeklyCommitmentConversation.ts`. Their words are the same signed
+ * entries; their answers go through the same door
+ * (`store/weeklyCommitmentAnswer.ts`). Nothing about the decision changed —
+ * only which surface holds the conversation.
+ *
+ * The notice above stays because it is a NOTICE about a decision already taken,
+ * not a negotiation, and R-105's subject is *"a surface that asks the athlete to
+ * renegotiate their week"*.
  */
-export function WeeklyCommitmentPromptCard({ prompt, onConfirm, onDecline }: {
-  prompt: WeeklyCommitmentPromptModel;
-  onConfirm: (sessionsPerWeek: number) => void | Promise<void>;
-  onDecline: () => void;
-}) {
-  return (
-    <Card
-      tone="outline"
-      padding="md"
-      radius="lg"
-      style={styles.card}
-      testID="home-weekly-commitment-prompt"
-    >
-      <Text style={styles.body} testID="home-weekly-commitment-question">
-        {String(prompt.sentence)}
-      </Text>
-      <View style={styles.actions}>
-        {prompt.options.map((option) => (
-          <ChoiceChip
-            key={option.sessionsPerWeek}
-            testID={`home-weekly-commitment-option-${option.sessionsPerWeek}`}
-            label={String(option.label)}
-            primary
-            onPress={() => { void onConfirm(option.sessionsPerWeek); }}
-          />
-        ))}
-        <ChoiceChip
-          testID="home-weekly-commitment-decline"
-          label="Keep it as is"
-          onPress={onDecline}
-        />
-      </View>
-    </Card>
-  );
-}
-
-
-/**
- * THE EXTRA-SESSION OFFER.
- *
- * ⚠ **TWO BUTTONS, ALWAYS, AND NEITHER OF THEM CHANGES ANYTHING BY ITSELF.**
- * The contract's *"Do not silently add a session"* is why this is a card with a
- * question and not a notice about something already done: `onAccept` goes
- * through the same commitment door the shrinking answer uses, and `onDecline`
- * writes one ledger entry and touches no program state at all.
- *
- * Every string is signed and arrives already rendered; this component cannot
- * reword the offer or invent a third choice.
- */
-export function ExtraSessionOfferCard({ model, onAccept, onDecline }: {
-  model: ExtraSessionOfferModel;
-  onAccept: (sessionsPerWeek: number) => void | Promise<void>;
-  onDecline: () => void;
-}) {
-  return (
-    <Card
-      tone="outline"
-      padding="md"
-      radius="lg"
-      style={styles.card}
-      testID="home-extra-session-offer"
-    >
-      <Text style={styles.body} testID="home-extra-session-offer-sentence">
-        {String(model.sentence)}
-      </Text>
-      <View style={styles.actions}>
-        <ChoiceChip
-          testID="home-extra-session-accept"
-          label={String(model.acceptLabel)}
-          primary
-          onPress={() => { void onAccept(model.offer.offeredSessionsPerWeek); }}
-        />
-        <ChoiceChip
-          testID="home-extra-session-decline"
-          label={String(model.declineLabel)}
-          onPress={onDecline}
-        />
-      </View>
-    </Card>
-  );
-}
-
 
 /**
  * ⚠ COPIED VERBATIM from `HomeScreenV2`'s missed-session card, not re-designed.

@@ -57,6 +57,7 @@
 import {
   registerSignedCopy,
   signedCopy,
+  joinSignedCopy,
   type SignedCopy,
   type SignedCopyEntry,
 } from './signedCopy';
@@ -94,6 +95,26 @@ export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBloc
 export const MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID = 'blockBoundary.commitmentQuestion';
 export const MISSED_SESSION_COMMITMENT_OPTION_COPY_ID = 'blockBoundary.commitmentOption';
 export const MISSED_SESSION_COMMITMENT_OPTION_ONE_COPY_ID = 'blockBoundary.commitmentOptionOne';
+export const MISSED_SESSION_COMMITMENT_DECLINE_COPY_ID = 'blockBoundary.commitmentDecline';
+/** R-105 — the coach's notification that the conversation is waiting. */
+export const COMMITMENT_CONVERSATION_NOTICE_COPY_ID = 'coach.commitment.notice';
+/** R-105/R-106 — how the previewed change arrives on the day. */
+export const COMMITMENT_PREVIEW_NEW_DAY_COPY_ID = 'coach.commitment.previewNewDay';
+export const COMMITMENT_PREVIEW_COMBINED_DAY_COPY_ID = 'coach.commitment.previewCombinedDay';
+export const COMMITMENT_PREVIEW_UNAVAILABLE_COPY_ID = 'coach.commitment.previewUnavailable';
+/** R-105 — what the coach says once the athlete has answered. */
+export const COMMITMENT_CONFIRMED_COPY_ID = 'coach.commitment.confirmed';
+export const COMMITMENT_DECLINED_COPY_ID = 'coach.commitment.declined';
+export const COMMITMENT_FAILED_COPY_ID = 'coach.commitment.failed';
+/** The calendar, signed so it can be a parameter of a signed sentence. */
+export const SHORT_DATE_COPY_ID = 'day.date.short';
+export function dayNameCopyId(day: import('../types/domain').DayOfWeek): string {
+  return `day.name.${day}`;
+}
+/** A session component's athlete-facing name. `part.headline.<kind>`, reused. */
+export function sessionComponentCopyId(kind: string): string {
+  return `part.headline.${kind}`;
+}
 export const EXTRA_SESSION_OFFER_COPY_ID = 'blockBoundary.extraSessionOffer';
 export const EXTRA_SESSION_OFFER_ACCEPT_COPY_ID = 'blockBoundary.extraSessionAccept';
 export const EXTRA_SESSION_OFFER_DECLINE_COPY_ID = 'blockBoundary.extraSessionDecline';
@@ -317,6 +338,183 @@ export function registerProjectionCopy(): void {
         + 'reading "1 sessions a week" is an option that lies, and one session '
         + 'a week is a legal answer for an athlete who has been completing none.',
       text: '{count} session a week',
+    },
+    // ⚠ ALREADY SHIPPING, AND IT WAS UNSIGNED. `BlockBoundaryCards.tsx` wrote
+    // the literal string "Keep it as is" into the card's decline chip, so the
+    // one control that must never be mistaken for the accept path was the one
+    // athlete-facing string on that card with no provenance. It is REGISTERED
+    // here as what already ships, not invented; the words are unchanged.
+    {
+      id: MISSED_SESSION_COMMITMENT_DECLINE_COPY_ID,
+      source: 'derived_number',
+      provenance: 'CAPTURED — the string this card has been shipping since '
+        + '2026-08-16, lifted out of `BlockBoundaryCards.tsx` where it was an '
+        + 'inline literal. NOT a new sentence and NOT a re-wording. Flagged for '
+        + "Sam's sign-off in the finish-coach-product question table.",
+      text: 'Keep it as is',
+    },
+    // ── THE CALENDAR, SIGNED ──
+    //
+    // ⚠ **REGISTERED BECAUSE `SignedCopyParam` IS `number | SignedCopy` AND THAT
+    // REFUSAL IS THE POINT.** A raw string parameter would let any surface post
+    // unsigned words into the middle of a signed sentence, which is the whole
+    // thing the sheet exists to stop. A weekday name and a d/m date are calendar
+    // facts rather than authored copy, so these entries CAPTURE the format the
+    // app already uses — they do not choose one.
+    //
+    // ⚠ **`day.date.short` MUST AGREE WITH `shortDayMonthLabel`**, which calls
+    // itself the single owner of the d/m display rule. Two formatters is the
+    // rival-authority defect, so `test:coach-weekly-reduction` pins them equal
+    // over a walk of dates rather than trusting the two strings to stay the
+    // same. If they ever diverge, that cell reds.
+    {
+      id: SHORT_DATE_COPY_ID,
+      source: 'derived_number',
+      provenance: 'CAPTURED 2026-08-20 (seat finish-coach-product). The format is '
+        + "`shortDayMonthLabel`'s, not a new choice; both are day/month, no "
+        + 'padding, AU order. Pinned equal to it by a cell.',
+      text: '{day}/{month}',
+    },
+    ...(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((day) => ({
+        id: `day.name.${day}`,
+        source: 'derived_number' as const,
+        provenance: 'CAPTURED 2026-08-20 (seat finish-coach-product). A weekday name '
+          + 'is a calendar fact. Registered only so it can be a parameter of a '
+          + 'signed sentence, which `SignedCopyParam` requires; the words are '
+          + "English's, not this file's.",
+        text: day,
+      }))),
+    // ── THE THREE SESSION COMPONENT KINDS WITH NO NAME YET ──
+    //
+    // `part.headline.<kind>` already names strength, conditioning, recovery,
+    // power, speed, support and team_training. These three complete the set so
+    // `sessionComponentName` cannot meet a kind it has no signed word for — and
+    // it THROWS rather than falling back, so an eleventh kind is a loud gap for
+    // Sam rather than a silent blank in a sentence.
+    {
+      id: 'part.headline.finisher',
+      source: 'derived_number',
+      provenance: 'CAPTURED 2026-08-20 (seat finish-coach-product) from '
+        + "`utils/sessionComponents.ts`, where this component's athlete-facing "
+        + 'label already ships unsigned. Word unchanged, capitalised to match its '
+        + 'six siblings above.',
+      text: 'Finisher',
+    },
+    {
+      id: 'part.headline.recovery_addon',
+      source: 'derived_number',
+      provenance: 'CAPTURED 2026-08-20 (seat finish-coach-product) from '
+        + '`utils/sessionComponents.ts`. Uses the same word `part.headline.recovery` '
+        + 'was REWORDED to in Batch 7 — the add-on\'s rows ARE mobility flows, and '
+        + 'two names for one kind of work is what that rewording fixed.',
+      text: 'Mobility',
+    },
+    {
+      id: 'part.headline.session',
+      source: 'derived_number',
+      provenance: 'CAPTURED 2026-08-20 (seat finish-coach-product) from '
+        + "`utils/sessionComponents.ts`'s last-resort component. Capitalised to "
+        + 'match its siblings.',
+      text: 'Session',
+    },
+    // ── R-105 — THE COACH'S NOTIFICATION ──
+    //
+    // Sam ruled the conversation moves to the coach chat AND that its arrival is
+    // announced by a notification. He did not give words for the notification,
+    // and the ruling says in as many words that what the notification IS must
+    // not be invented. So this is the smallest honest thing: it names the coach
+    // and states that there is something to decide. PROPOSED, in the question
+    // table, and it does not claim anything about the program.
+    {
+      id: COMMITMENT_CONVERSATION_NOTICE_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. R-105 rules THAT there is a '
+        + 'notification and deliberately does not rule what it says; this is the '
+        + 'wording he then approved. Claim-free by construction: it announces a '
+        + 'question and never an outcome.',
+      text: 'Your coach has something to ask about your week.',
+    },
+    // ── R-105 + R-106 — THE PREVIEW LINES ──
+    //
+    // ⚠ THESE DESCRIBE; THEY DO NOT ADVISE. Every value is read off the program
+    // acceptance publishes. R-106 is why the second one exists at all: a day
+    // that gains a component is ONE training day with TWO components, and a
+    // sentence calling it a new training day would be counting it twice.
+    {
+      id: COMMITMENT_PREVIEW_NEW_DAY_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. Only the day name, the date and '
+        + 'the component list are data; all three are copied from the regenerated '
+        + 'program, never predicted. R-106: this is the arm for a day the athlete '
+        + 'does not currently train on.',
+      text: '{day} {date} becomes a new training day: {components}.',
+    },
+    {
+      id: COMMITMENT_PREVIEW_COMBINED_DAY_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. R-106, verbatim: '
+        + '"do not call it two training days". This arm fires when the athlete '
+        + 'already trains that day and the work joins it.',
+      text: '{day} {date} keeps one training day and adds {added} to it: {components}.',
+    },
+    {
+      id: COMMITMENT_PREVIEW_UNAVAILABLE_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. The honest floor. A preview that '
+        + 'could not be taken says so; it never falls back to describing the '
+        + 'CURRENT week, which is the exact defect that got `codex/finish-product` '
+        + 'rejected (11 of 20 previews wrong).',
+      text: 'I could not build the changed week to show you, so I will not guess at it.',
+    },
+    // ── R-105 — AFTER THE ANSWER ──
+    //
+    // ⚠ **THE CONFIRMATION IS GATED ON THE TRANSACTION, NOT ON THE TAP.**
+    // `commitProfileProgramTransaction` returns `ok` AND `changedProgram`, and
+    // this sentence may only be spoken when both are true. A coach that says
+    // "your program is rebuilt" because a button was pressed is the false-Done
+    // class (L6), and it is the exact incident `verifiedCoachCommunication` was
+    // built for.
+    {
+      id: COMMITMENT_CONFIRMED_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. Only the count is data, and it is '
+        + 'the count the door REPORTS it committed, never the count that was '
+        + 'tapped. Spoken only when the transaction returned ok AND '
+        + 'changedProgram.',
+      text: 'Done. Your program is rebuilt around {count} sessions a week.',
+    },
+    {
+      id: COMMITMENT_DECLINED_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. It claims nothing happened, and '
+        + 'nothing did: `declineWeeklyCommitment` imports nothing that can write '
+        + 'a program. It also states that the question is finished, which is what '
+        + 'the ledger entry makes true.',
+      text: 'No problem — I have left your week as it is, and I will not ask again this block.',
+    },
+    {
+      id: COMMITMENT_FAILED_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. The honest floor when the '
+        + 'transaction refuses. It says the plan is untouched, which the '
+        + 'transaction guarantees by rolling back — never "try again", which '
+        + 'would be advice this module has no basis for.',
+      text: 'I could not rebuild your program just now, so nothing has changed.',
     },
     // ── THE EXTRA-SESSION OFFER — SIGNED, and the words are the ORDER'S. ──
     //
@@ -1476,6 +1674,131 @@ export function extraSessionOfferAcceptLabel(): SignedCopy {
 export function extraSessionOfferDeclineLabel(): SignedCopy {
   registerProjectionCopy();
   return signedCopy(EXTRA_SESSION_OFFER_DECLINE_COPY_ID);
+}
+
+/** *"Keep it as is"* — the shrinking direction's decline chip. */
+export function missedSessionCommitmentDeclineLabel(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(MISSED_SESSION_COMMITMENT_DECLINE_COPY_ID);
+}
+
+/** R-105's notification line. Announces a question; claims nothing. */
+export function commitmentConversationNoticeSentence(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(COMMITMENT_CONVERSATION_NOTICE_COPY_ID);
+}
+
+/**
+ * A WEEKDAY NAME AND A DATE, AS SIGNED VALUES.
+ *
+ * `SignedCopyParam` is `number | SignedCopy` — a raw string cannot be a
+ * parameter of a signed sentence, and that refusal is what stops a surface
+ * posting unsigned words into the middle of one. These two are how a calendar
+ * fact becomes a legal parameter.
+ */
+export function dayNameCopy(day: import('../types/domain').DayOfWeek): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(dayNameCopyId(day));
+}
+
+export function shortDateCopy(dateISO: string): SignedCopy {
+  registerProjectionCopy();
+  const [, month, day] = dateISO.slice(0, 10).split('-').map(Number);
+  return signedCopy(SHORT_DATE_COPY_ID, { day, month });
+}
+
+/**
+ * A SESSION COMPONENT'S NAME.
+ *
+ * ⚠ **IT THROWS ON AN UNKNOWN KIND, AND THAT IS DELIBERATE.** `signedCopy`
+ * refuses rather than falling back, because a fallback would be a second source
+ * of athlete-facing words. An eleventh `SessionComponentKind` therefore arrives
+ * as a loud gap for Sam at the moment it is first rendered, not as a blank in
+ * the middle of a sentence.
+ */
+export function sessionComponentName(kind: string): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(sessionComponentCopyId(kind));
+}
+
+/**
+ * ONE PREVIEWED DAY, AS THE ATHLETE READS IT.
+ *
+ * ⚠ **THE ARM IS CHOSEN BY THE PREVIEW'S OWN `arrival`, NOT BY THIS FUNCTION.**
+ * R-106 decides which sentence is true of a day, and that decision was already
+ * taken by `commitmentChangePreview` against the regenerated program. A copy
+ * function that re-decided it would be a second reader of the same fact.
+ *
+ * ⚠ **THE COMPONENT LIST IS JOINED BY `joinSignedCopy`, WITH SAM'S OWN " + ".**
+ * `copy.joiner.plus` is the separator he gave in the compound-bucket ruling —
+ * *"whatever the bucket is that day i.e. Strength or strength + conditioning"* —
+ * and it is the app's one way to name a day made of two kinds of work. A
+ * `.join()` here would be this file picking a separator, which is the exact
+ * thing `joinSignedCopy` exists to refuse.
+ */
+export function commitmentPreviewDaySentence(
+  day: import('./commitmentChangePreview').CommitmentPreviewDay,
+): SignedCopy {
+  registerProjectionCopy();
+  const components = joinSignedCopy(
+    day.components.map((kind) => sessionComponentName(kind)),
+    'copy.joiner.plus',
+  );
+  if (day.arrival === 'new_training_date') {
+    return signedCopy(COMMITMENT_PREVIEW_NEW_DAY_COPY_ID, {
+      day: dayNameCopy(day.dayOfWeek),
+      date: shortDateCopy(day.dateISO),
+      components,
+    });
+  }
+  // WHAT IS BEING ADDED, not what the day now holds — the athlete already knows
+  // the rest. Set difference against the day's own recorded prior components, so
+  // this cannot drift from what the preview measured against the rebuilt week.
+  const existing = new Set(day.existingComponents);
+  const addedKinds = day.components.filter((kind) => !existing.has(kind));
+  return signedCopy(COMMITMENT_PREVIEW_COMBINED_DAY_COPY_ID, {
+    day: dayNameCopy(day.dayOfWeek),
+    date: shortDateCopy(day.dateISO),
+    // A day whose components all already existed but whose CONTENT changed
+    // reports the whole list rather than an empty one — an empty "adds" clause
+    // would read as the app adding nothing while it rebuilt the day.
+    added: joinSignedCopy(
+      (addedKinds.length > 0 ? addedKinds : day.components)
+        .map((kind) => sessionComponentName(kind)),
+      'copy.joiner.plus',
+    ),
+    components,
+  });
+}
+
+/** The honest floor when no preview could be built. Never a fallback description. */
+export function commitmentPreviewUnavailableSentence(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(COMMITMENT_PREVIEW_UNAVAILABLE_COPY_ID);
+}
+
+/**
+ * *"Done."* — and the count is the DOOR's, not the tap's.
+ *
+ * `confirmWeeklyCommitment` returns `committed.sessionsPerWeek`, which is what
+ * was actually written. Rendering the requested count instead is how a receipt
+ * comes to describe a decision the app did not make.
+ */
+export function commitmentConfirmedSentence(committedSessionsPerWeek: number): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(COMMITMENT_CONFIRMED_COPY_ID, { count: committedSessionsPerWeek });
+}
+
+/** *"No problem"* — the decline, which changed nothing and says so. */
+export function commitmentDeclinedSentence(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(COMMITMENT_DECLINED_COPY_ID);
+}
+
+/** The transaction refused. The plan is untouched, because it rolled back. */
+export function commitmentFailedSentence(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(COMMITMENT_FAILED_COPY_ID);
 }
 
 export function blockBoundaryReducedSentence(

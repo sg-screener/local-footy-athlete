@@ -192,6 +192,36 @@ function applyProfileChange(
 }
 
 /**
+ * ⚠ **THE COACH LANE'S WARNING ABOUT THIS BUILDER — AND ITS PREMISE IS NOW
+ * SPENT. KEPT AS HISTORY, NOT AS A LIVE CLAIM (integrator, 2026-08-20).**
+ *
+ * Seat `finish-coach-product` wrote here that a preview must not use this
+ * builder, because it *"passes no `progressionHistory`"* and the program the
+ * athlete ends up on after a profile change disagreed with it in **40 of 90
+ * prescriptions**, every one a set count and a load. That was measured, and it
+ * was true of `main @ 9f081efa`, where both lanes branched from.
+ *
+ * **IT IS NOT TRUE OF THIS TREE.** Seat `finish-settings-persistence` made
+ * `statedProgressionInputs` the one projection of what a regenerating caller
+ * must state and routed this door through it — see the note inside
+ * `factFreeBase` below. The two lanes were then measured TOGETHER on one worn
+ * athlete through a real `confirmWeeklyCommitment`: preview vs accepted moved
+ * from **20 of 44 loads differing** to **0**, and the second publish stopped
+ * rewriting the first, **8 of 44 -> 0 of 44**.
+ *
+ * **THE PREVIEW STILL DOES NOT CALL THIS DOOR**, and that is deliberate rather
+ * than leftover: `utils/weekRebuild.generateProgramForProfile` is pure over the
+ * world it is handed, so a preview cannot silently answer about a different one
+ * than the conversation was derived from. The reason is now purity, not a
+ * missing input.
+ *
+ * The ownership question the Coach lane raised — WHICH producer should own the
+ * program after a profile change, given there are two generations per acceptance
+ * — is still open and is not this file's to answer.
+ * `docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md` carries it.
+ */
+
+/**
  * ⚠ **A TYPED REFUSAL IS CARRIED BY ITS CODE, NEVER BY ITS SENTENCE.**
  *
  * This transaction returns a `reason` STRING and the surfaces hand that string
@@ -227,6 +257,31 @@ function factFreeBase(args: {
   todayISO: string;
   now: string;
   sourceRevision: number;
+  /**
+   * ⚠ **`false` FOR A PREVIEW, AND IT IS NOT A DETAIL — IT IS THE DIFFERENCE
+   * BETWEEN A PREVIEW AND A CHANGE.**
+   *
+   * `'author'` APPENDS to the block-selection history, which is what makes the
+   * NEXT block rotate away from the exercises this one chose. A preview that
+   * authors therefore does two wrong things at once: it writes persisted state
+   * for a change the athlete has not agreed to, and it makes its own prediction
+   * false — the acceptance that follows reads the preview's record and rotates
+   * away from it.
+   *
+   * MEASURED 2026-08-20 before this argument existed, on a real walked athlete:
+   * the previewed Monday prescribed `Bulgarian Split Squats 3x8-10` and the
+   * ACCEPTED Monday prescribed `4x8-10`. Same profile, same day, same lift,
+   * different dose — because the first build had recorded itself. Both halves
+   * are held by `test:coach-weekly-reduction`: a disk fingerprint around the
+   * preview, and a prescription-for-prescription comparison of the previewed and
+   * the accepted program.
+   *
+   * ⚠ **IT CHANGES THE WRITE, NEVER THE OUTPUT.** The program is computed from
+   * the history that already exists; `recordSelections` only decides whether
+   * this build joins it. That is what makes suppressing it safe — and what makes
+   * the equality cell meaningful rather than tautological.
+   */
+  recordSelections?: 'author' | false;
 }): AcceptedCompositionBaseV1 {
   const state = useProgramStore.getState();
   let surfaces = normalizeAcceptedProgramSurfaces(state);
@@ -275,7 +330,8 @@ function factFreeBase(args: {
     const program = generateProgramLocally(args.profile, {
       // ONBOARDING / A PROFILE CHANGE AUTHORS THE BLOCK — the athlete just
       // restated who they are, and this door decides what that block selects.
-      recordSelections: 'author',
+      // A PREVIEW passes `false`; see the argument's own note.
+      recordSelections: args.recordSelections ?? 'author',
       // The athlete just changed their season phase / profile. Generation may
       // not veto that fact: unstated, this inherited `restoration` and THREW,
       // and the transaction reported "The profile change could not build a

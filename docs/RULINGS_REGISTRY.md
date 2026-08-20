@@ -2515,17 +2515,92 @@ is a **second change-interface beside the recorded one**, which is exactly what
 that ruling killed the standing bar and the confirm sheet for. **A surface that
 asks the athlete to renegotiate their week is change-talk by definition.**
 
-**OWNER: unassigned — NEXT MISSION.** Raised during the Remove slice's final
-session under a standing order not to open another surface, so it is recorded
-here rather than built. **NOT BUILT, NOT STARTED.**
+**⚠ THIS ID IS USED TWICE, AND SAM HAS RULED WHICH ROW KEEPS IT — 2026-08-20:**
+*"The weekly-reduction ruling keeps R-105. The duplicate power-pool ruling must
+receive the next unused ruling id during integration, after all concurrent
+branches are present."* **THIS ROW KEEPS `R-105`.** **The power-pool row below
+is now `R-118`**, renumbered by the integrator on 2026-08-20 once every
+concurrent branch was in one tree and the combined registry had been counted.
+Grep for the SEARCH WORDS, not the number.
 
-**WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
-coach-update mechanism or a new one, and whether the offer expires, are NOT
-ruled here and must not be invented.
+· **`BUILT` 2026-08-20 by seat `finish-coach-product`** —
+`rules/weeklyCommitmentConversation.ts` (the one derivation, moved out of
+`screens/home/useBlockBoundaryPrompts.ts`), `rules/commitmentChangePreview.ts`
+(the preview), `screens/coach/useCoachWeeklyCommitment.ts` (the Coach hook and
+the derived notification), `components/CommitmentCard.tsx`,
+`screens/coach/CoachTabScreen.tsx` (the bubbles and the footer card) and
+`navigation/AppNavigator.tsx` (the tab dot). **Guarded by
+`test:coach-weekly-reduction`** (62 assertions, in `test:bible`), which walks two
+real athletes through the production doors and compares what the athlete was
+SHOWN against what ARRIVED. Thirteen mutations, twelve seen red.
+
+**THE PROGRAM SURFACE NO LONGER DERIVES IT AT ALL**, which is what makes the
+ruling structural rather than a render that was switched off: the two derive
+functions and the two card components are gone from
+`screens/home/`, so the Day page cannot raise the offer again without importing
+a module it no longer imports.
+
+**HOW THE TWO OPEN QUESTIONS WERE ANSWERED, AND THEY ARE FOR SAM TO CONFIRM:**
+
+- **THE NOTIFICATION IS A DERIVED COACH-TAB DOT, NOT THE COACH-UPDATE
+  MECHANISM.** `coachUpdatesStore` is a PROGRAM-TAB card whose only writer is the
+  frozen `CoachScreen` — using it would have put the conversation's arrival back
+  on the surface this ruling removes it from, and it would have STORED a
+  derivation, which R-099 refuses in as many words. So `hasNotification` is
+  `conversation !== null`, computed from the same facts in the same pass: no
+  unread flag, no counter, nothing to clear, and a relaunch cannot resurrect a
+  notification for an answered question.
+- **THE OFFER DOES NOT EXPIRE, BECAUSE THERE IS NOTHING TO EXPIRE.** It is
+  re-derived from the facts every time; it stops being put when the athlete
+  answers (the ledger entry) or when the facts stop supporting it. A dated expiry
+  would be new stored state for a question that is not stored.
+
+**AND ONE THING THE RULING DID NOT ANTICIPATE, FOUND BY BUILDING IT, THEN RULED
+BY SAM ON 2026-08-20:** *"If the scheduler cannot actually place the additional
+session safely, do not offer it. The in-season Saturday-game athlete should
+receive no fourth-session offer unless the regenerated program genuinely contains
+it."*
+
+An offer gated on legality alone would have promised a session generation will
+not place. Measured on a real walked in-season athlete with a Saturday game —
+legal at four days, and the same two gym days either way (`[1,3]` and `[1,3]`).
+**The rebuild is the last gate**, which is exactly what he ruled, and it was
+already built when he ruled it. Registry row
+`LAW-an-offer-the-rebuild-will-not-keep-is-not-put`, guarded by
+`test:coach-weekly-reduction` section [10] — a second real athlete, cold-started
+and walked, whose every CHEAP gate opens and whose refusal names the REBUILD.
+
+**⚠ SAM ALSO RULED WHAT THE APP MUST NOT DO ABOUT THE LOADS — 2026-08-20:** *"Do
+not add a warning saying 60 of 90 loads may move. That is a transaction defect,
+not intended product behaviour. Existing exercises must retain progression from
+their own history; new exercises use their own history or authored starting
+estimate."* **The preview therefore claims STRUCTURE and never loads**, and no
+warning was added. The defect itself belongs to the settings/persistence lane:
+`docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md`. **A warning
+would have been the app apologising for a defect instead of fixing it**, and
+recording it as intended behaviour is how a defect becomes a feature.
+
+**THE SEVEN COACH SENTENCES ARE SIGNED — Sam, 2026-08-20:** *"I approve all seven
+proposed Coach sentences exactly as written."* Every one carries
+`source: 'sam_ruling'` and that provenance in `rules/projectionCopy.ts`; the
+words are unchanged from the draft he approved.
+
+**Search words:** weekly reduction, smaller weekly program, completing 0 of 5,
+coach notification, coach chat, extra session offer, optional session preview,
+add one session, keep it as is, program page card, day page popup, tab badge.
 
 ---
 
-**R-105** · *"Choose (c). Add more legitimate no-equipment explosive upper-body
+**⚠ RENUMBERED `R-105` -> `R-118` BY THE INTEGRATOR, 2026-08-20.** Sam ruled on
+2026-08-20: *"The weekly-reduction ruling keeps R-105. The duplicate power-pool
+ruling must receive the next unused ruling id during integration, after all
+concurrent branches are present."* All concurrent branches are now in one tree —
+Settings `88f17e2c`, Injury `da545333` and Product/Coach `18968818` — the
+combined registry was counted in both row formats, and `R-118` is the first id
+no tree uses (`R-114`/`R-115` went to Injury, `R-119` to Settings' combined-day
+ruling). **Anything citing `R-105` for the POWER-POOL ruling means this row.**
+
+**R-118** · *"Choose (c). Add more legitimate no-equipment explosive upper-body
 options. Until that pool exists, skip the power component rather than prescribe
 the identical exercise twice."* (Sam, 2026-08-20, answering `orchestrator`) ·
 **ONE EXERCISE APPEARS ONCE PER SESSION, AND POWER IS THE SIDE THAT GIVES WAY.**

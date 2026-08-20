@@ -323,7 +323,9 @@ on `main`, and it is proven on glass.
 
 # 2026-08-20 — SAM'S THREE RULINGS, AND WHAT EACH ONE COST
 
-All three are in `docs/RULINGS_REGISTRY.md` as **R-105**, **R-106**, **R-107**,
+All three are in `docs/RULINGS_REGISTRY.md` as **R-118** (renumbered from
+`R-105` by seat `finish-integration` on 2026-08-20, on Sam's ruling, because the
+unbuilt weekly-reduction row already held that id), **R-106**, **R-107**,
 added in the same commits that record them.
 
 ## R-107 — UNDO FOLLOWS THE ACTION · `4dc5339a` · MERGED
@@ -357,7 +359,7 @@ and still discarded — the original M3 mutant still dies there).
 Mutation-proven three ways, including the leak direction: copying the
 conditioning answer onto the strength quality reds the discriminating cell.
 
-## R-105 — THE PRIMER YIELDS, AND THE POOL MUST GROW · HALF BUILT
+## R-118 (was R-105) — THE PRIMER YIELDS, AND THE POOL MUST GROW · HALF BUILT
 
 **The half Sam ordered as the interim IS built** —
 `orchestrator/power-primer-yields` (`a1f91e27` skip, `276b3e39` guard rewrite).
@@ -378,12 +380,12 @@ athlete. For each new movement Sam supplies: the name, one primary cue, one
 secondary cue, and a demo URL. The wiring (pool entry, cues, tags, equipment
 requirement, vocabulary) is mechanical once those exist.
 
-⚠ **A REAL DEFECT SURFACED WHILE WRITING THAT GUARD, AND IT IS NOT R-105'S.**
+⚠ **A REAL DEFECT SURFACED WHILE WRITING THAT GUARD, AND IT IS NOT R-118'S.**
 The first cut asked "does any session name one exercise twice?" and reddened on
 a day reading `["Explosive Push-up", "Explosive Push-up"]` **with no power row
 on it** — two STRENGTH rows, one identity. That is the composer placing one
 movement in two slots: 52 occurrences corpus-wide (48 running-row, 4
-main/accessory), older and wider than R-105. The guard is narrowed to power and
+main/accessory), older and wider than R-118. The guard is narrowed to power and
 carries a DISCLOSURE cell so its green cannot be read as "no duplicates
 anywhere". **Composer-owned, unfixed, measured.**
 
