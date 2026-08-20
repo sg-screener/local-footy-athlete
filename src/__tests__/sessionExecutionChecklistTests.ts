@@ -882,6 +882,38 @@ ok('[10] sets x reps is ~14px medium/semibold italic',
 ok('[10] Form cues is 12-13px, REGULAR and muted — not italic, not bold',
   /cueToggleText:\s*\{[^}]*fontSize:\s*12(\.5)?\b[^}]*fontWeight:\s*'400'/.test(screen)
     && !/cueToggleText:\s*\{[^}]*fontStyle/.test(screen));
+/* ⚠ **THE ITALIC ACTUALLY RENDERS, AND THIS IS WHY IT DID NOT — R-116.**
+ *
+ * Proven on glass with three identical strings at `fontSize: 15, fontWeight:
+ * '600', fontStyle: 'italic'`: a raw `<Text>` came out ITALIC, the same raw
+ * `<Text>` plus `fontFamily: 'System'` came out UPRIGHT, and so did this app's
+ * shared `Text`. The family alone kills it — `'System'` resolves to a concrete
+ * face before the italic trait is applied.
+ *
+ * The shared component was NOT overwriting `fontStyle` and the screen was NOT
+ * failing to pass it; both were always correct. So the repair is in `Text` and
+ * is the narrowest one possible: the VARIANT's `fontFamily` is dropped for
+ * exactly the text that asks for italic and names no family itself. Every
+ * upright string in the app keeps `'System'`, because the condition is false
+ * for all of it. */
+const sharedText = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'common', 'Text.tsx'), 'utf8');
+ok('[10] the shared Text drops the family ONLY for italic that names no family',
+  /wantsItalic && typography\.fontFamily === 'System' && !callerStyle\.fontFamily/
+    .test(sharedText)
+    && /delete typography\.fontFamily/.test(sharedText));
+ok('[10] and it still NEVER overwrites the caller\'s fontStyle',
+  /style=\{\[styles\.default, textStyles, style, resolvedLineBox\]\}/.test(sharedText),
+  'the caller style is applied after the variant, as it always was');
+ok('[10] CONTROL — upright text is untouched: the family is still applied to it',
+  /fontFamily: typo\.fontFamily/.test(sharedText)
+    && !/delete typography\.fontFamily;\s*\n\s*\}\s*\n\s*delete/.test(sharedText),
+  'only the italic branch deletes it; every other variant keeps System');
+ok('[10] and the app-wide family was not removed or changed',
+  /fontFamily: 'System'/.test(fs.readFileSync(
+    path.resolve(__dirname, '..', 'theme', 'typography.ts'), 'utf8')),
+  'the theme still names System; only italic callers bypass it');
+
 ok('[10] and no new typeface was introduced — italic on the existing face',
   !/fontFamily/.test(strengthCard) && !/fontFamily:/.test(
     screen.slice(screen.indexOf('  exerciseName: {'), screen.indexOf('  exerciseName: {') + 300)),

@@ -77,12 +77,48 @@ export const Text = ({
     };
   };
 
+  const callerStyle = StyleSheet.flatten(style) ?? {};
+
+  /* ⚠ **`fontFamily: 'System'` CANNOT CARRY AN ITALIC ON iOS — MEASURED, NOT
+   * ASSUMED (Sam, 2026-08-20, R-116).**
+   *
+   * Three identical strings were rendered side by side on the simulator with
+   * the same `fontSize: 15, fontWeight: '600', fontStyle: 'italic'`:
+   *
+   * ```
+   *   1  raw <RNText>                          -> ITALIC
+   *   2  raw <RNText> + fontFamily: 'System'   -> UPRIGHT
+   *   3  this component                        -> UPRIGHT
+   * ```
+   *
+   * Line 2 is the whole diagnosis: the family alone kills it. This component
+   * was NOT overwriting `fontStyle` (the caller's style is applied after the
+   * variant's, and always has been) and the calling screen was NOT failing to
+   * pass it. `'System'` is resolved to a concrete face before the italic trait
+   * is applied, and the resolved face has no italic under that name.
+   *
+   * ⚠ **THE REPAIR IS THE NARROWEST ONE THAT IS CORRECT, AND IT TOUCHES NO
+   * UPRIGHT TEXT.** The app-wide family is NOT removed or changed — Sam:
+   * *"Do not remove or change the app-wide font family merely on suspicion."*
+   * The variant's `fontFamily` is dropped for EXACTLY the text that asks for
+   * italic and names no family of its own. Everything else — every heading,
+   * label, button and body string in the app — keeps `'System'` byte for byte,
+   * because the condition below is false for all of it.
+   *
+   * Omitting the family is what makes it work: React Native then uses the
+   * platform default face, which italicises. It is the same typeface the app
+   * already renders; nothing new is introduced. */
+  const typography = getTypography();
+  const wantsItalic = callerStyle.fontStyle === 'italic';
+  if (wantsItalic && typography.fontFamily === 'System' && !callerStyle.fontFamily) {
+    delete typography.fontFamily;
+  }
+
   const textStyles: TextStyle = {
     color,
     textAlign: align,
-    ...getTypography(),
+    ...typography,
   };
-  const callerStyle = StyleSheet.flatten(style) ?? {};
   const effectiveFontSize = typeof callerStyle.fontSize === 'number'
     ? callerStyle.fontSize
     : typeof textStyles.fontSize === 'number'
