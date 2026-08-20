@@ -89,8 +89,10 @@ believing the import would have preserved 130 lines of dead phrase-regex.
 | RUNTIME-reachable src files | 552 | **552** | unchanged |
 | `test:compile` `[product]` | 30 | **30** | identical |
 | `test:compile` `[devtools]` | 50 | **50** | identical |
-| `test:compile` `[tests]` | 593 | 595 | +2, both in suites ALREADY dead at import |
-| `test:compile` worse file/scope pairs | 77 | **76** | improved |
+| `test:compile` `[tests]` | 593 | **588** | **5 fewer — zero added** |
+| `test:compile` worse file/scope pairs | 77 | **74** | 3 files LEAVE the list, none joins |
+| `test:readiness` | **DEAD at import** | **33 / 0** | was reporting nothing on `main` |
+| `test:injury-severity-bands` | **DEAD at import** | **31 / 0** | was reporting nothing on `main` |
 | `test:scenarios` | 12 failed | 12 failed | **output byte-identical, paths normalised** |
 | `test:coach-truth-gate` | 61/0 | 59/0 | 4 subject cells out, 2 truth cells in |
 | `test:readiness-structure-law` | 100/100 | 88/88 | 2 dead census rows retired |
@@ -106,17 +108,45 @@ totals. Four suites die at import on BOTH trees and are not this branch's blast
 radius: `test:readiness`, `test:injury-severity-bands`, `test:midline`,
 `test:severity-scale`.
 
-**THE +2 COMPILE ERRORS, STATED PLAINLY.** `readinessSignalTests.ts` and
-`injurySeverityBandTests.ts` already carried dangling imports to modules the
-PREVIOUS burn deleted (`weeklyCoachUpdate`, `trainAroundEngine`,
-`injuryWorkoutFilter`), and already reported nothing. They now carry one and two
-more of the same kind. They were NOT deleted: their subject includes live
-`utils/readiness`/`readinessConstraints` and `rules/injurySeverityBands`, so
-they are not "a test that protects only an implementation being deleted", and
-seat `demolition` recorded 34 such suites as preserved on purpose for a rebuild
-phase.
+## SECOND PASS — THE TWO SUITES THAT GAINED DIAGNOSTICS, NAMED AND SETTLED
 
----
+The first pass left `readinessSignalTests.ts` and `injurySeverityBandTests.ts`
+carrying two more dangling imports and called it acceptable because both were
+ALREADY dead at import from the 2026-08-19 burn. Sam refused that: name them,
+decide per file, repair or delete, leave nothing dark. **Both hold live
+behaviour, both were repaired, and BOTH NOW RUN for the first time since that
+earlier burn.**
+
+| file | verdict | what happened |
+| --- | --- | --- |
+| `readinessSignalTests.ts` | **holds live behaviour** | sections [1]-[6] are `utils/readiness` + `utils/readinessConstraints`. [8] (17 cells against the deleted readiness router) deleted with its subject. [7] SPLIT: the label cell re-sited onto the live owner that writes it (`readinessConstraints.ts:105`), the two weekly-card cells removed and **not** re-sited. **DEAD → 33 / 0** |
+| `injurySeverityBandTests.ts` | **holds live behaviour** | the five severity doors that still exist are kept and asserted; three that do not (`injuryProgression.severityToTier`, `trainAroundEngine.severityToTier`, `buildConstraintPlans`) removed with their rows; the `injuryWorkoutFilter` pair removed and **not** re-sited. **DEAD → 31 / 0** |
+| `recoveryWiringTests.js` | **only the deleted implementation** | DELETED WHOLE (539 lines). All 17 sections verify "Pass 3 (recovery)" in the resolver — the pass that no longer exists — through `resolveRecovery`. It `require`s from a `/tmp/lfa-compiled/` build directory and **no npm script runs it** |
+
+**⚠ AND THE DARKNESS WAS HIDING A CELL THAT WAS SIMPLY WRONG.**
+`readinessSignalTests` asserted `missing profile falls back medium`.
+`utils/readiness.ts:43` says in its own docblock that a missing capacity answer
+**THROWS**, and that *"that is the contract, not an accident"* — the fail-loud
+law that deleted `DEFAULT_BODYWEIGHT_KG`. The cell encoded the behaviour that
+law replaced and had been unreadable since the burn. **The CELL was corrected to
+the live contract. The PRODUCT was not changed to suit the cell.**
+
+**TWO THINGS WERE DELIBERATELY NOT RE-SITED, AND THEY ARE UNCOVERED, NOT
+COVERED ELSEWHERE:** the weekly CoachUpdate card (`utils/weeklyCoachUpdate.ts`,
+no successor) and the read-time injury filter
+(`utils/injuryWorkoutFilter.applyInjuryFilterToWorkout`, no successor). Both are
+on the 2026-08-19 burn's rebuild list.
+
+**NO EXECUTABLE REFERENCE to anything this branch deleted remains anywhere in
+`src/`, `scripts/` or `App.tsx`.** Every remaining mention is a headstone
+comment. The last stale production claim — a docblock arrow in
+`utils/coachConstraintProducers.ts` still ending `-> buildConstraintPlans ->
+CoachUpdate card` — was corrected in the same commit.
+
+**STILL DEAD AT IMPORT ON BOTH TREES, AND NOT THIS BRANCH'S DOING:**
+`test:midline` (on `utils/blockAdjuster.ts`) and `test:severity-scale` (on
+`utils/trainAroundEngine.ts`) — both modules removed by the 2026-08-19 burn.
+Verified to fail with the identical ENOENT on the control tree.
 
 ## REMAINING LEGACY THAT COULD NOT BE PROVEN DEAD
 
@@ -142,8 +172,10 @@ phase.
    `rules/sessionTypeCharter.ts`, `data/timeTrialSession.ts`, `utils/masCopy.ts`,
    `rules/lawRegistry.ts`. A reachability-keyed pass deletes the mobility work
    Sam is angry is still missing.
-5. **The suites dead at import from the previous burn.** Four were met here;
-   seat `demolition` recorded 34. They are dark, not deleted, on purpose.
+5. **The suites still dead at import from the PREVIOUS burn.** Two of the four
+   met here were repaired and now run; `test:midline` and `test:severity-scale`
+   remain dark on `blockAdjuster` and `trainAroundEngine`. Seat `demolition`
+   recorded 34 such suites in total — the rest were not surveyed.
 
 ## MIGRATIONS — THERE WAS NOTHING LEFT TO DECIDE
 
@@ -175,7 +207,7 @@ except four test cells whose subject was deleted.
   athlete sees** — the scenario harness output is byte-identical to the control.
 - **No full 405-suite sweep** and no release matrix. Only the blast-radius set,
   the mandatory repository guards and `test:compile` were run, as ordered.
-- **The four suites already dead at import were not investigated or restored.**
+- **`test:midline` and `test:severity-scale` are still dead at import** — on modules the PREVIOUS burn removed. Named, verified identical on the control tree, not repaired: their subjects belong to that burn's rebuild list, not to this deletion pass.
 - **Sam's product notes were not read, investigated or acted on.**
 - **Nothing merged.** The candidate waits for Sam.
 
