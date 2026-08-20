@@ -8,6 +8,7 @@
   },
 };
 
+import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import type { TapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import {
@@ -259,9 +260,28 @@ console.log('\n-- Injury, readiness and equipment precedence --');
     firstKneeTags?.injury.knee === 'good'
       && firstKneeTags?.movement !== 'plyo',
     choices[0]);
-  ok('knee issue still offers easy conditioning below it',
-    choices.some((choice) => choice.hierarchyTier === 'recovery_easy_conditioning'),
-    choices.map((choice) => choice.hierarchyTier));
+  /* ⚠ **INVERTED 2026-08-20, NOT DELETED — SAM RULED THE OTHER WAY.**
+   *
+   * This asserted that easy conditioning is offered BELOW the strength answers
+   * for `Box Jumps`, on the strength of the Bible line quoted above
+   * (*"Jump/plyo -> controlled strength or bike or ski erg"*). Sam has since
+   * ruled the Strength slot closed: *"A Strength replacement must remain a legal
+   * Strength exercise. Mobility / Warm-up and Conditioning movements cannot be
+   * used to fill a Strength slot … If no safe Strength option exists after the
+   * full ladder, leave it unavailable rather than inserting recovery work."*
+   *
+   * `Box Jumps` is a Strength row (the `plyo` pool sits under Power & Jumps), so
+   * the bike is no longer an answer for it. **The replacement assertion is
+   * stricter than the one it replaces**: not merely "no recovery tier", but that
+   * EVERY option offered is in the same section as the row it would replace,
+   * which is the rule rather than one symptom of it. */
+  const kneeOffered = choices.map((choice) => choice.name).filter(Boolean) as string[];
+  ok('CONTROL: the ladder still answers a knee-injured Box Jumps at all',
+    kneeOffered.length > 0, kneeOffered);
+  ok('a Strength row is never offered recovery or conditioning — Sam, 2026-08-20',
+    choices.every((choice) => choice.hierarchyTier !== 'recovery_easy_conditioning')
+      && kneeOffered.every((name) => exerciseSessionFamily(name) === 'strength'),
+    kneeOffered.map((name) => `${name}:${exerciseSessionFamily(name)}`));
   ok('knee issue does not return knee-dominant, COD or jumping work',
     choices.every((choice) => !/jump|sprint|change of direction|cod/i.test(choice.name ?? '')),
     choices);

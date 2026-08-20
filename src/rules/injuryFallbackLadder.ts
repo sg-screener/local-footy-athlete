@@ -86,6 +86,10 @@ import {
   type MovementPattern,
 } from '../data/exerciseTags';
 import {
+  exerciseSessionFamily,
+  type ExerciseSessionFamily,
+} from './exerciseSessionFamily';
+import {
   STRENGTH_POOLS,
   patternToSlot,
   type PoolRole,
@@ -358,6 +362,48 @@ export interface InjuryFallbackRequest {
   isLegal: (name: string) => boolean;
   /** Names the session already carries, or has already been given. */
   avoidNames?: readonly string[];
+  /**
+   * ⚠ **THE SECTION THE ROW LIVES IN, AND THE ONLY SECTION ITS REPLACEMENT MAY
+   * COME FROM.** Sam, 2026-08-20: *"A Strength replacement must remain a legal
+   * Strength exercise. Mobility / Warm-up and Conditioning movements cannot be
+   * used to fill a Strength slot. 'Safe adjacent pattern' still means useful
+   * Strength work. If no safe Strength option exists after the full ladder,
+   * leave it unavailable rather than inserting recovery work."*
+   *
+   * ⚠ **DERIVED FROM `exercise` WHEN NOT PASSED, WHICH IS HOW EVERY PRODUCTION
+   * CALLER USES IT.** A boundary a caller has to remember to switch on is a
+   * boundary that will be off somewhere; this one defaults to ON. It is only
+   * accepted as an argument so a diagnostic can ask "what would this row be
+   * offered as a Strength row", and it is never used to widen the boundary.
+   *
+   * `rules/exerciseSessionFamily` owns the answer; this module never decides
+   * what section anything is in.
+   */
+  family?: ExerciseSessionFamily | null;
+  /**
+   * Optional, for the DIAGNOSTIC only: why a candidate was refused, in the
+   * safety owner's own words. `isLegal` answers yes/no and is what the ladder
+   * acts on; this only ever decorates an explanation.
+   */
+  explainLegality?: (name: string) => string;
+}
+
+/** Why a candidate did not become an option. One vocabulary, used by both outputs. */
+export type InjuryFallbackRejection =
+  | 'already_on_this_session'
+  | 'different_session_section'
+  | 'no_rung_matches'
+  | 'heavier_than_the_row_it_replaces'
+  | 'not_legal';
+
+export interface InjuryFallbackEvaluation {
+  name: string;
+  /** The rung it reached, or `null` when no rung matched at all. */
+  rung: InjuryFallbackRungId | null;
+  /** `null` means it was ACCEPTED and is an option. */
+  rejection: InjuryFallbackRejection | null;
+  /** Present for `not_legal` when the caller supplied `explainLegality`. */
+  detail?: string;
 }
 
 /**
@@ -551,8 +597,40 @@ function explanationFor(rung: InjuryFallbackRungId, from: string, to: string): s
 export function buildInjuryFallbackLadder(
   request: InjuryFallbackRequest,
 ): InjuryFallbackOption[] {
+  return walkInjuryFallbackLadder(request).options;
+}
+
+/**
+ * ── THE LADDER, RUNG BY RUNG, WITH EVERY REJECTION NAMED ────────────────────
+ *
+ * Sam, 2026-08-20: *"For every row currently being skipped, print which
+ * candidates each rung considered and why each candidate was rejected."*
+ *
+ * ⚠ **ONE TRAVERSAL PRODUCES BOTH ANSWERS, AND THAT IS THE WHOLE POINT.** A
+ * separate "explain" function walking its own copy of these rules would be a
+ * second authority on what the ladder does — free to disagree with the ladder
+ * the day either is edited, and most misleading exactly when somebody is using
+ * it to debug a disagreement. `buildInjuryFallbackLadder` is now a projection of
+ * this function, so an explanation that says a candidate was accepted is the
+ * same statement that put it in the list.
+ */
+export function walkInjuryFallbackLadder(request: InjuryFallbackRequest): {
+  options: InjuryFallbackOption[];
+  evaluations: InjuryFallbackEvaluation[];
+} {
+  const evaluations: InjuryFallbackEvaluation[] = [];
   const original = candidateFor(request.exercise);
-  if (!original) return [];
+  if (!original) return { options: [], evaluations };
+  /* ⚠ **AN UNPLACED ROW GETS NO BOUNDARY, NOT AN EMPTY LADDER.** A handful of
+   * names the app's own vocabulary does not place — `Breathing Reset` is the
+   * one Sam named, minted as a literal by the swap surface rather than drawn
+   * from a pool — would otherwise match no family and be refused every
+   * candidate, turning "we could not classify this row" into "there is nothing
+   * safe for it". Not knowing the section is a reason to leave the boundary
+   * off, never a reason to omit the row. */
+  const family = request.family !== undefined
+    ? request.family
+    : exerciseSessionFamily(request.exercise);
   const originalSlot = patternToSlot(original.tags.movement);
   const avoided = new Set([
     original.name.toLowerCase(),
@@ -561,21 +639,60 @@ export function buildInjuryFallbackLadder(
   const originalLoadRatio = original.pool?.loadRatio ?? null;
 
   const scored: Array<{ option: InjuryFallbackOption; sort: number[] }> = [];
+  const note = (
+    name: string,
+    rung: InjuryFallbackRungId | null,
+    rejection: InjuryFallbackRejection | null,
+    detail?: string,
+  ) => { evaluations.push({ name, rung, rejection, ...(detail ? { detail } : {}) }); };
+
   for (const candidate of ALL_CANDIDATES) {
-    if (avoided.has(candidate.name.toLowerCase())) continue;
+    if (avoided.has(candidate.name.toLowerCase())) {
+      note(candidate.name, null, 'already_on_this_session');
+      continue;
+    }
+    /* ⚠ **THE SECTION BOUNDARY IS ASKED FIRST, BEFORE ANY RUNG.** Sam's rule is
+     * not "prefer the same section" — a Mobility or Conditioning movement is
+     * NEVER a Strength answer, at any rung, however safe it is. Asking here
+     * rather than filtering the result is the same discipline R-103 already
+     * states for legality: the ladder must rank the space it is allowed to
+     * choose from, not rank everything and be corrected afterwards. */
+    if (family && exerciseSessionFamily(candidate.name) !== family) {
+      note(candidate.name, null, 'different_session_section');
+      continue;
+    }
     const rung: InjuryFallbackRungId | null = rungFor(original, originalSlot, candidate)
       ?? (original.tags.movement !== 'conditioning'
         && unaffectedBodyAreaCandidate(candidate, request.region)
         ? 'unaffected_body_area' : null)
-      ?? (recoveryCandidate(candidate, request.region) ? 'recovery_easy_conditioning' : null);
-    if (!rung) continue;
+      /* ⚠ **RUNG 6 IS NOT OFFERED TO A STRENGTH ROW.** Sam, 2026-08-20: *"If no
+       * safe Strength option exists after the full ladder, leave it unavailable
+       * rather than inserting recovery work."* Recovery conditioning is still
+       * the right last answer for a CONDITIONING row — that is where Sam's own
+       * *"Sprint Intervals -> Easy Bike"* lives — so the rung is scoped, not
+       * deleted. The section boundary above already refuses it for strength;
+       * this states the rule where the rung is chosen so it cannot be reached by
+       * a caller that omits `family`. */
+      ?? (family !== 'strength' && recoveryCandidate(candidate, request.region)
+        ? 'recovery_easy_conditioning' : null);
+    if (!rung) {
+      note(candidate.name, null, 'no_rung_matches');
+      continue;
+    }
     /* ⚠ **THE LOAD COMPARISON IS BETWEEN LIFTS, AND RUNG 6 IS NOT A LIFT.**
      * `Easy Bike` is `load: 'low'` and passes anyway today, but a conditioning
      * row's load tag is not on the same scale as a barbell's, so the comparison
      * is not made rather than made and happening to be right. */
     if (rung !== 'recovery_easy_conditioning'
-      && !notHeavierThanOriginal(original, candidate)) continue;
-    if (!request.isLegal(candidate.name)) continue;
+      && !notHeavierThanOriginal(original, candidate)) {
+      note(candidate.name, rung, 'heavier_than_the_row_it_replaces');
+      continue;
+    }
+    if (!request.isLegal(candidate.name)) {
+      note(candidate.name, rung, 'not_legal', request.explainLegality?.(candidate.name));
+      continue;
+    }
+    note(candidate.name, rung, null);
     const rating = candidate.tags.injury[request.region];
     const definition = RUNG_BY_ID.get(rung)!;
     scored.push({
@@ -623,7 +740,7 @@ export function buildInjuryFallbackLadder(
     });
   }
 
-  return scored
+  const options = scored
     .sort((left, right) => {
       for (let index = 0; index < left.sort.length; index += 1) {
         const difference = left.sort[index]! - right.sort[index]!;
@@ -632,6 +749,7 @@ export function buildInjuryFallbackLadder(
       return left.option.name.localeCompare(right.option.name);
     })
     .map((entry) => entry.option);
+  return { options, evaluations };
 }
 
 /**

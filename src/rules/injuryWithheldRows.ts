@@ -54,7 +54,7 @@
 import type { InjuryEpisodeV1 } from './injuryEpisode';
 import { injuryEpisodeIsActive } from './injuryEpisode';
 import { isInjurySourceFact, type TemporarySourceFact } from './temporarySourceFact';
-import { injuryPermitsExerciseAtSeverity } from './injuryExerciseRisk';
+import { injuryWithholdsExistingRow } from './injuryExerciseRisk';
 import { injurySeverityPausesAffectedTraining } from './injurySeverityBands';
 import type { InjuryKey } from '../data/exerciseTags';
 import type { Workout, WorkoutExercise } from '../types/domain';
@@ -86,8 +86,23 @@ export function activeInjuryFactsOn(
  * An ordinary injury does NOT block: it substitutes, and the athlete trains.
  */
 export function isRedFlagInjury(episode: InjuryEpisodeV1): boolean {
-  return episode.seriousSymptoms === true
-    && injurySeverityPausesAffectedTraining(episode.severity);
+  return isRedFlagInjurySeverity(episode.seriousSymptoms, episode.severity);
+}
+
+/**
+ * THE SAME PREDICATE, ASKED OF AN INJURY THAT IS NOT AN EPISODE YET.
+ *
+ * The Active Session review has to say whether the injury the athlete is
+ * declaring will block the session BEFORE it is stored, and at that moment it
+ * holds an `ActiveInjuryConstraint`, not an `InjuryEpisodeV1`. Rather than let
+ * the review re-state the rule in its own words — two owners of one edge, the
+ * defect class this repo fights — the rule lives here and both shapes ask it.
+ */
+export function isRedFlagInjurySeverity(
+  seriousSymptoms: boolean | undefined,
+  severity: number,
+): boolean {
+  return seriousSymptoms === true && injurySeverityPausesAffectedTraining(severity);
 }
 
 export interface InjuryWithholding {
@@ -108,19 +123,49 @@ function rowName(row: WorkoutExercise): string {
   ).trim();
 }
 
-function explanationFor(episode: InjuryEpisodeV1, exercise: string): string {
-  return isRedFlagInjury(episode)
-    ? `${exercise} is not safe with your ${episode.bodyPart} right now — leave it out `
+/**
+ * THE WORDS A WITHHELD ROW IS SHOWN UNDER — ONE OWNER, SO THE REVIEW PROMISES
+ * WHAT THE SESSION WILL ACTUALLY SAY.
+ *
+ * Sam, 2026-08-20: the review shows *"all proposed changes"*. If the review
+ * wrote its own sentence for a withheld row and the session screen wrote
+ * another, the athlete would approve one explanation and then read a different
+ * one — which is the same false-claim class as the deleted "safely recomposed".
+ */
+export function injuryWithholdingExplanation(args: {
+  exercise: string;
+  bodyPart: string;
+  redFlag: boolean;
+}): string {
+  return args.redFlag
+    ? `${args.exercise} is not safe with your ${args.bodyPart} right now — leave it out `
       + 'and get medical or physio advice before training it again.'
-    : `${exercise} is not safe with your ${episode.bodyPart} right now — skip it this session.`;
+    : `${args.exercise} is not safe with your ${args.bodyPart} right now — skip it this session.`;
+}
+
+function explanationFor(episode: InjuryEpisodeV1, exercise: string): string {
+  return injuryWithholdingExplanation({
+    exercise,
+    bodyPart: episode.bodyPart,
+    redFlag: isRedFlagInjury(episode),
+  });
 }
 
 /**
  * WHICH ROWS ON THIS DAY THE ACTIVE INJURIES WITHHOLD.
  *
- * The legality question is `injuryPermitsExerciseAtSeverity` — the same single
- * owner the fallback ladder and the tap surfaces use — so a row can never be
- * withheld here and offered there.
+ * The question is `injuryWithholdsExistingRow` — the same owner
+ * `injuryRequiresChange` asks, so a row can never be withheld here and left
+ * alone there.
+ *
+ * ⚠ **IT IS NOT `injuryPermitsExerciseAtSeverity`, AND THAT WAS A REAL DEFECT.**
+ * That one answers *"may this be a REPLACEMENT"*, where an unrated exercise is
+ * rightly refused because there is always another rung. Here there is no other
+ * rung — the row is struck off the athlete's session — and **70 of 90 pooled
+ * and conditioning names are unrated**, so every conditioning format in the app
+ * was being marked *"not safe with your <region> right now"* on the strength of
+ * a missing table row. Sam, on the screenshot that caught it: *"'Breathing Reset
+ * is unsafe with your hamstring' appears wrong."*
  */
 export function injuryWithholdingsOn(args: {
   workout: Workout | null | undefined;
@@ -136,7 +181,7 @@ export function injuryWithholdingsOn(args: {
     const canonical = resolveExerciseName(name);
     for (const episode of episodes) {
       if (!episode.bucket) continue;
-      if (injuryPermitsExerciseAtSeverity(canonical, episode.bucket as InjuryKey, episode.severity)) {
+      if (!injuryWithholdsExistingRow(canonical, episode.bucket as InjuryKey, episode.severity)) {
         continue;
       }
       out.push({

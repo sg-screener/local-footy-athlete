@@ -215,7 +215,13 @@ export type ProgramControlAction =
        * already renders as one line, so this adds a producer to an existing
        * reader rather than a second notice mechanism.
        */
-      substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
+      substitutedFrom?: {
+        /** What the athlete could SEE here. The only name ever rendered. */
+        baseExerciseName: string;
+        /** The authored exercise. Internal history — see `rules/injurySubstitutionSource`. */
+        originExerciseName?: string;
+        cause: 'injury' | 'kit_today';
+      };
     }>
   | ProgramControlActionBase<'add_exercise', {
       date: string;

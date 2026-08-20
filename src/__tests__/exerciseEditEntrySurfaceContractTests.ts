@@ -243,10 +243,29 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
   // four owners are pinned here by name. Re-pointing rather than deleting the
   // row is the rule: a gate that stops watching a surface because the surface
   // was renamed is a gate that has quietly stopped watching.
+  //
+  // ⚠ **THE TWO INJURY OWNERS WERE RE-POINTED ON 2026-08-20, BY THE SAME RULE
+  // THIS COMMENT STATES.** Sam: *"Ask for the injured body area or movement
+  // once. Find every affected exercise in the session … Show one review of all
+  // proposed changes. Apply the approved changes together."*
+  //
+  //   `openExerciseInjuryFlow`   -> `openSessionInjuryFlow`
+  //       It took an `EditableExercise`, because Injury used to make the athlete
+  //       pick a row first. There is no row to take now — the door opens from
+  //       the hub and the app finds every affected exercise itself.
+  //   `applyExerciseGuidedInjury` -> `reviewSessionInjury` + `applySessionInjuryReview`
+  //       It WROTE on completion and then offered a single-row swap afterwards.
+  //       The ruling splits that in two: propose, then apply on approval. Both
+  //       halves are pinned, because a review with no apply and an apply with no
+  //       review are each half a flow.
+  //
+  // The row is RE-POINTED, never dropped. A gate that stops watching a surface
+  // because the surface was renamed is a gate that has quietly stopped watching
+  // — which is the rule the paragraph above already states, applied to itself.
   const flowOwners = [
     'prepareSwap', 'openExerciseAdd', 'openAddFamily', 'openAddGroup', 'openAddLeaf',
-    'openExerciseInjuryFlow',
-    'applyExerciseGuidedInjury', 'applySwapToday',
+    'openSessionInjuryFlow',
+    'reviewSessionInjury', 'applySessionInjuryReview', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'suggestTapSwap',
   ];
@@ -326,13 +345,45 @@ console.log('\n[4b] Swap is ONE question: which exercise?');
     'the picker must call the swap preparer directly — anything else is a '
       + 'second question in front of the answer',
   );
+  /**
+   * ⚠ **INVERTED 2026-08-20, NOT DELETED — AND THE REPLACEMENT IS STRICTER.**
+   *
+   * This cell used to require that picking a row could route to Injury
+   * (`action === 'injury') onInjuryStart(exercise)`). Sam's ruling deletes that
+   * route outright: *"Ask for the injured body area or movement ONCE. Find EVERY
+   * affected exercise in the session."* Asking "which exercise?" first made the
+   * athlete do the finding, and then only ever fixed the row they named.
+   *
+   * So the assertion now pins the OPPOSITE, and pins more than it used to. The
+   * old cell only checked that a route existed; this one checks that the wrong
+   * route CANNOT exist — `ExercisePickAction` no longer has an `'injury'` member
+   * to route on — while still holding the half of the original that Sam has not
+   * moved: Equipment and Injury remain their own separate doors, neither folded
+   * into the other and neither folded into Swap or Remove.
+   */
   ok(
-    'Equipment and Injury still have their own doors',
-    /action === 'injury'\) onInjuryStart\(exercise\)/.test(source)
-      && /openSessionEquipment/.test(source),
-    'Sam: *"do not disturb the separate Equipment or Injury flows"* — removing '
-      + 'the reason list must not remove the two actions that replaced two of '
-      + 'its rows',
+    'Equipment and Injury still have their own doors, and Injury asks for no row',
+    /openSessionEquipment/.test(source)
+      && /openSessionInjuryFlow/.test(source)
+      && /type ExercisePickAction = 'swap' \| 'remove';/.test(source)
+      && !/action === 'injury'/.test(source)
+      && !/onInjuryStart/.test(source),
+    'Sam 2026-08-19: *"do not disturb the separate Equipment or Injury flows"*, '
+      + 'and Sam 2026-08-20: *"ask for the injured body area or movement ONCE"* — '
+      + 'Injury keeps its own door and that door must not open a row picker',
+  );
+  /**
+   * AND THE DOOR IT OPENS INSTEAD IS THE REVIEW. A flow that asks once but then
+   * writes without showing anything would satisfy the cell above and still miss
+   * the ruling, so the review step is pinned by name here.
+   */
+  ok(
+    'the Injury door leads to ONE review of ALL proposed changes',
+    /kind: 'injury_review'/.test(source)
+      && /case 'injury_review':/.test(source)
+      && /onApplyInjuryReview\(step\)/.test(source),
+    'Sam 2026-08-20: *"Show one review of all proposed changes. Apply the '
+      + 'approved changes together."* — one step, one apply, no per-row approve',
   );
 }
 

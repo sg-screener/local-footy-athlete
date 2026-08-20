@@ -32,7 +32,8 @@ import {
   type SafeTrainingFallbackTier,
 } from '../rules/conflictResolutionHierarchy';
 import { severityHasModerateEffect, severityIsLimiting } from '../rules/injurySeverityBands';
-import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
+import { injuryPermitsExerciseAtSeverity, injuryWithholdsExistingRow } from '../rules/injuryExerciseRisk';
+import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -247,8 +248,31 @@ export function resolveTapSwapEnvironment(args: {
     capacity,
     hasEquipmentConstraint: constraints.some((constraint) =>
       constraint.type === 'equipment'),
+    /**
+     * ⚠ **A PENDING INJURY STOPS TRAINING FOR THE SAME REASON A STORED ONE
+     * DOES.** `constraints` are the injuries already written down; `primaryInjury`
+     * is the one the athlete is declaring RIGHT NOW, which the Active Session
+     * review has to reason about BEFORE it is stored (Sam, 2026-08-20: *"show one
+     * review of all proposed changes"*, then apply). Reading only the stored half
+     * made the review and the write disagree about exactly one athlete — the one
+     * with serious symptoms — and a review that disagrees with its own write is
+     * the thing a review is for.
+     *
+     * ⚠ **THIS IS NOT A NEW OPINION, IT IS AN EXISTING ONE MOVED TO THE OWNER.**
+     * `getTapSwapChoices` already computed `environment.medicalStop ||
+     * primaryInjury?.seriousSymptoms === true` privately, so the CHOICES half of
+     * the app has always answered this way; `injuryRequiresChange` read the field
+     * raw and did not. One question, one answer, decided here.
+     *
+     * ⚠ **AND IT IS INERT FOR EVERY CALLER THAT EXISTED BEFORE IT.** Measured:
+     * no production caller passed `seriousSymptoms: true` — the guided sheet
+     * hard-codes `false` and the injury door hard-coded `false` — so this clause
+     * can only fire on a path that did not exist. `test:session-injury-review`
+     * section [1] carries that as a standing control.
+     */
     medicalStop: constraints.some((constraint) =>
-      constraint.type === 'injury' && constraint.seriousSymptoms === true),
+      constraint.type === 'injury' && constraint.seriousSymptoms === true)
+      || primaryInjury?.seriousSymptoms === true,
   };
 }
 
@@ -400,11 +424,36 @@ export function assessTapSwapCandidateSafety(
   const activeInjuryEntries = Object.entries(environment.injurySeverities) as Array<
     [InjuryKey, number]
   >;
-  if (activeInjuryEntries.length > 0 && !tags && !isRecoveryName(name)) {
+  /**
+   * ⚠ **AN UNRATED EXERCISE IS "SAFETY UNKNOWN", AND SAFETY UNKNOWN IS A NO.**
+   *
+   * Sam, 2026-08-20: *"An unrated exercise may only be offered if another
+   * explicit movement-pattern or body-area rule proves it safe. Otherwise reject
+   * it as 'safety unknown' and continue down the ladder."*
+   *
+   * ⚠ **RECOVERY NAMES USED TO SKIP BOTH CHECKS BELOW, AND THAT WAS THE ONE
+   * PLACE "MISSING" MEANT "SAFE".** `isRecoveryName` is a hard-coded pair —
+   * `Easy Bike` and `Breathing Reset` — and while it guarded these lines an
+   * unrated breathing drill was admitted as a replacement with NO rule proving
+   * it safe, under the sentence *"passes injury, readiness and equipment
+   * checks"* when no injury check had been run at all. **MEASURED at knee 9/10
+   * AND shoulder 9/10 — the most severe world the app has — `Breathing Reset`
+   * came back `safe=true`.** Every other unrated name was correctly refused;
+   * only the hard-coded exemption let it through.
+   *
+   * The exemption is gone. `Easy Bike` IS rated and is now judged on its
+   * ratings like everything else; `Breathing Reset` is not rated and is refused
+   * until somebody rates it **in the data**, which is what
+   * `classifyExerciseRiskForBucket`'s own comment already prescribes.
+   *
+   * ⚠ **THE EQUIPMENT EXEMPTION ABOVE IS A DIFFERENT QUESTION AND STAYS.**
+   * "Can this athlete perform it with today's kit" is not "is this safe for the
+   * injured area", and a bodyweight breathing drill genuinely needs no kit.
+   */
+  if (activeInjuryEntries.length > 0 && !tags) {
     return { safe: false, reason: 'The replacement cannot be verified against the active injury.' };
   }
   for (const [bucket, severity] of activeInjuryEntries) {
-    if (isRecoveryName(name)) continue;
     if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), bucket, severity)) {
       return { safe: false, reason: `The replacement still loads the active ${bucket} issue.` };
     }
@@ -459,7 +508,12 @@ export function injuryRequiresChange(
   for (const [region, severity] of Object.entries(environment.injurySeverities) as Array<
     [InjuryKey, number]
   >) {
-    if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), region, severity)) {
+    /* ⚠ **"MUST THIS ROW COME OUT" IS NOT "MAY THIS BE A REPLACEMENT".** The
+     * two used to share `injuryPermitsExerciseAtSeverity`, which refuses an
+     * exercise the injury sheet does not rate — right for a replacement, wrong
+     * here, where it struck every untagged row off the athlete's session for
+     * every injury. See `injuryWithholdsExistingRow`. */
+    if (injuryWithholdsExistingRow(resolveExerciseName(name), region, severity)) {
       return true;
     }
   }
@@ -735,16 +789,43 @@ export function getTapSwapChoices(args: {
     args.originalExercise,
     environment,
   );
+  /**
+   * ⚠ **RECOVERY IS NOT AN ANSWER FOR A STRENGTH ROW.**
+   *
+   * Sam, 2026-08-20: *"A Strength replacement must remain a legal Strength
+   * exercise. Mobility / Warm-up and Conditioning movements cannot be used to
+   * fill a Strength slot … If no safe Strength option exists after the full
+   * ladder, leave it unavailable rather than inserting recovery work."*
+   *
+   * **THIS IS THE SECOND PLACE RECOVERY GETS IN, AND FIXING ONLY THE LADDER
+   * MADE IT WORSE.** `recoveryChoice` is two hard-coded literals minted right
+   * here — `Easy Bike`, or `Breathing Reset` when there is no bike — and it is
+   * appended AFTER the ladder has spoken, so it never went through the ladder's
+   * section boundary at all. MEASURED the moment the ladder started refusing
+   * cross-section candidates: the pooled recovery option disappeared from the
+   * list, the `some(... recovery_easy_conditioning)` guard below stopped
+   * matching, and `Breathing Reset` was pushed onto a `Bench Press` menu that
+   * had never carried it before — caught by `test:tap-swap-hierarchy`'s R-114
+   * cell, not by reasoning.
+   *
+   * A strength row with nothing safe left gets `restChoice`, whose `name` is
+   * `null` — which every caller already reads as "no replacement", and which
+   * `planInjuryRecomposition` turns into an honest withholding.
+   */
+  const originalIsStrength = exerciseSessionFamily(args.originalExercise) === 'strength';
+  const recoveryAllowed = args.recoveryAllowed !== false && !originalIsStrength;
   if (choices.length > 0) {
     if (!choices.some((choice) => choice.hierarchyTier === 'recovery_easy_conditioning') &&
-        args.recoveryAllowed !== false &&
+        recoveryAllowed &&
         constraintJustifiesRegression(environment)) {
       choices.push(recoveryChoice(environment));
     }
     return dedupeChoices(choices);
   }
-  if (args.recoveryAllowed !== false) return [recoveryChoice(environment)];
-  return [restChoice('No safe useful training or recovery option remains.')];
+  if (recoveryAllowed) return [recoveryChoice(environment)];
+  return [restChoice(originalIsStrength
+    ? 'No safe Strength option remains, and recovery work cannot fill a Strength slot.'
+    : 'No safe useful training or recovery option remains.')];
 }
 
 /* ── SAM'S THREE GROUPS, AND THEY ARE THE LADDER'S OWN TIERS ────────────────

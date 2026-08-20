@@ -60,6 +60,15 @@ import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
 } from '../../utils/guidedInjuryControl';
+import {
+  buildSessionInjuryReview,
+  type SessionInjuryReview,
+} from '../../utils/sessionInjuryReview';
+import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
+import {
+  injurySubstitutionBadge,
+  type InjurySubstitutionSourceRef,
+} from '../../rules/injurySubstitutionSource';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
@@ -192,7 +201,18 @@ type SuggestedSwap =
  * question, so they all use the same step rather than three pickers that could
  * drift apart.
  */
-type ExercisePickAction = 'injury' | 'swap' | 'remove';
+/**
+ * ⚠ **`'injury'` LEFT THIS UNION ON 2026-08-20, AND THAT IS THE WHOLE POINT.**
+ *
+ * Sam: *"Ask for the injured body area or movement ONCE. Find EVERY affected
+ * exercise in the session."* An injury is a fact about the ATHLETE, not about
+ * one row — asking "which exercise?" first made the athlete do the app's job of
+ * finding the affected work, and then only ever fixed the one row they happened
+ * to name. Injury now opens the guided flow straight from the hub and reviews
+ * the whole session. Swap and Remove still need a row, because they genuinely
+ * are about one.
+ */
+type ExercisePickAction = 'swap' | 'remove';
 /**
  * ⚠ **FOUR OF THESE SIX WERE DELETED WITH THE REASON SCREEN (2026-08-19).**
  *
@@ -262,6 +282,24 @@ type FutureScopeStep =
 type ExerciseEditStep =
   | { kind: 'closed' }
   | { kind: 'pick_exercise'; action: ExercisePickAction }
+  /**
+   * ONE REVIEW OF EVERY CHANGE THE INJURY PROPOSES, BEFORE ANY OF THEM LAND.
+   *
+   * Sam, 2026-08-20: *"Show one review of all proposed changes. Apply the
+   * approved changes together."*
+   *
+   * ⚠ **THE `constraint` IS CARRIED, NOT REBUILT.** The review was computed from
+   * this exact constraint; approving hands the SAME object to
+   * `set_injury_modifier`, which rebuilds the plan from the same owner
+   * (`resolveInjuryRecompositionInputs`). Rebuilding the constraint at approve
+   * time would re-stamp `lastUpdatedAt` and re-ask the world, which is how a
+   * preview stops matching what it previewed.
+   */
+  | {
+      kind: 'injury_review';
+      review: SessionInjuryReview;
+      constraint: ActiveInjuryConstraint;
+    }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
   /**
    * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
@@ -580,8 +618,9 @@ export default function DayWorkoutScreenV2() {
     __DEV__ && getSmokeRuntimeSignal().flow === 'coach-bike-flow';
   const [exerciseEditStep, setExerciseEditStep] =
     React.useState<ExerciseEditStep>({ kind: 'closed' });
-  const [injuryFlowExercise, setInjuryFlowExercise] =
-    React.useState<EditableExercise | null>(null);
+  /* THE INJURY FLOW IS THE SESSION'S, NOT A ROW'S — it used to hold the
+   * `EditableExercise` the athlete had been made to pick first. */
+  const [injuryFlowOpen, setInjuryFlowOpen] = React.useState(false);
   const [sessionEquipmentVisible, setSessionEquipmentVisible] =
     React.useState(false);
   const [
@@ -781,9 +820,16 @@ export default function DayWorkoutScreenV2() {
     setSessionEquipmentVisible(true);
   }, [isTeamOnly, sessionEquipmentRequirements.length]);
 
-  const openExerciseInjuryPicker = React.useCallback(() => {
+  /**
+   * INJURY, ASKED ONCE, FROM THE TOP OF THE SESSION.
+   *
+   * No exercise is picked first. The athlete answers where it hurts and how
+   * bad; the app finds every affected row itself.
+   */
+  const openSessionInjuryFlow = React.useCallback(() => {
     if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'pick_exercise', action: 'injury' });
+    setExerciseEditStep({ kind: 'closed' });
+    setInjuryFlowOpen(true);
   }, [editableExercises.length, isTeamOnly]);
 
   const openExerciseSwapPicker = React.useCallback(() => {
@@ -811,11 +857,6 @@ export default function DayWorkoutScreenV2() {
     },
     [],
   );
-
-  const openExerciseInjuryFlow = React.useCallback((exercise: EditableExercise) => {
-    setExerciseEditStep({ kind: 'closed' });
-    setInjuryFlowExercise(exercise);
-  }, []);
 
   const suggestTapSwap = React.useCallback(
     (
@@ -888,7 +929,7 @@ export default function DayWorkoutScreenV2() {
       }
       setExerciseEditStep({ kind: 'choose_swap', exercise, reason, groups });
     },
-    [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
+    [date, dateLabel, editableExercises, showExerciseEditFallback],
   );
 
 
@@ -1120,93 +1161,77 @@ export default function DayWorkoutScreenV2() {
     });
   }, [date]);
 
-  const applyExerciseGuidedInjury = React.useCallback(
+  /**
+   * THE ATHLETE ANSWERED. NOW SHOW THEM EVERYTHING IT WOULD DO — AND WRITE
+   * NOTHING YET.
+   *
+   * Sam, 2026-08-20: *"Show one review of all proposed changes. Apply the
+   * approved changes together."*
+   *
+   * ⚠ **THIS HANDLER USED TO WRITE FIRST AND ASK AFTERWARDS.** It fired
+   * `set_injury_modifier` the moment the guided flow closed — which recomposed
+   * the whole day — and then offered a `confirm_swap` for the ONE exercise the
+   * athlete had been made to pick beforehand. So the session was already
+   * changed before any review existed, the review that did exist covered a
+   * single row out of however many the injury touched, and the row was often no
+   * longer on the session at all (the guard below it existed precisely to catch
+   * that). Nothing is written here now.
+   *
+   * ⚠ **THE REVIEW IS BUILT BY THE WRITE PATH'S OWN OWNER.**
+   * `buildSessionInjuryReview` calls `resolveInjuryRecompositionInputs`, which is
+   * the identical call `set_injury_modifier` makes when this review is approved.
+   * A second builder here would be the "preview disagreed with the delivered
+   * program in 40 of 90 prescriptions" shape, measured elsewhere in this repo on
+   * the same day this was written.
+   */
+  const reviewSessionInjury = React.useCallback(
     async (result: GuidedInjuryFlowResult) => {
-      const exercise = injuryFlowExercise;
-      if (!date || !exercise) return;
+      if (!date) return;
+      setInjuryFlowOpen(false);
       const constraint = buildGuidedInjuryConstraint(result, { todayISO: date });
-      const trainingPaused = constraint.adjustmentLevel === 'training_paused';
+      const review = buildSessionInjuryReview({ date, constraint });
+      setExerciseEditStep({ kind: 'injury_review', review, constraint });
+    },
+    [date],
+  );
+
+  /**
+   * APPROVED — APPLY THEM TOGETHER, THROUGH THE ONE DOOR.
+   *
+   * `set_injury_modifier` records the injury AND recomposes the day in a single
+   * durable action, so every change the athlete just approved lands in one pass
+   * or none of them does. There is no per-row apply and deliberately no partial
+   * state to be left in.
+   *
+   * ⚠ **THE SENTENCE THEY READ AFTERWARDS IS THE DOOR'S, NOT THE REVIEW'S.** The
+   * review said what WOULD happen; `injuryRecompositionMessage` says what DID,
+   * derived from the rows before and after. Echoing the review here would be
+   * exactly the false claim Sam's *"never claim the session was safely changed
+   * if nothing changed"* is about — a promise repeated back as a result.
+   */
+  const applySessionInjuryReview = React.useCallback(
+    async (step: Extract<ExerciseEditStep, { kind: 'injury_review' }>) => {
+      if (!date) return;
       const actionResult = await executeProgramControlActionDurably({
         type: 'set_injury_modifier',
-        source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+        source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
         scope: 'current_and_future',
-        payload: { constraint },
+        payload: { constraint: step.constraint },
         requiresRebuild: false,
         createsActiveModifier: true,
         oneOffOnly: false,
       }, { todayISO: date });
-      setInjuryFlowExercise(null);
-
-      if (trainingPaused || !actionResult.ok) {
-        setExerciseEditStep({
-          kind: 'result',
-          ok: actionResult.ok,
-          title: trainingPaused ? 'Training paused for injury' : 'Injury adjustment active',
-          message: trainingPaused
-            ? 'Affected training is paused until you get medical or physio advice.'
-            : 'Affected work will be avoided. Coach Notes will show this until you clear it.',
-        });
-        return;
-      }
-
-      /**
-       * ⚠ **THE INJURY PASS HAS ALREADY RECOMPOSED THE DAY. DO NOT OFFER IT AGAIN.**
-       *
-       * Sam, 2026-08-19: *"Fix the stale injury picker as part of this: it must
-       * not offer an exercise that the injury pass has already removed or
-       * replaced."*
-       *
-       * MEASURED ON GLASS the same day: the athlete flagged `Back Squat`, the
-       * injury pass substituted it for `Bench Press` on the way through, and
-       * this handler then offered *"Replace Back Squat with Bench Press"* for a
-       * row that was no longer on the session. Applying it answered
-       * **"Could not find 'Back Squat' on 2026-07-13."** The refusal was honest
-       * — nothing was corrupted — but the OFFER was already false when it was
-       * drawn, and an offer the app knows it cannot keep is a dead button.
-       *
-       * **READ LIVE, BECAUSE THIS CLOSURE IS STALE BY CONSTRUCTION.** `workout`
-       * and `editableExercises` were captured at the render that started the
-       * flow, which is BEFORE the door recomposed anything; testing against them
-       * would always say the row is still there. The lazy require is this file's
-       * existing dodge for reaching store-backed owners from a callback.
-       */
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { resolveDateWithConditioning } = require('../../utils/sessionResolver');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { buildScheduleStateImperative } = require('../../utils/coachWeekDiff');
-      const liveDay = resolveDateWithConditioning(date, buildScheduleStateImperative());
-      const liveNames: string[] = ((liveDay?.workout?.exercises ?? []) as {
-        exercise?: { name?: string };
-      }[]).map((row) => row.exercise?.name ?? '').filter(Boolean);
-      const stillOnTheDay = liveNames.some(
-        (name) => name.toLowerCase() === exercise.name.toLowerCase(),
-      );
-      if (!stillOnTheDay) {
-        setExerciseEditStep({
-          kind: 'result',
-          ok: true,
-          title: 'Injury adjustment active',
-          message: actionResult.message
-            ?? `${displayExerciseName(exercise.name)} has already been changed for this injury.`,
-        });
-        return;
-      }
-
-      const area = guidedAreaToExerciseArea(result.area);
-      const severity = guidedSeverityToExerciseSeverity(result);
-      const primaryInjury = constraint.bucket
-        ? { bucket: constraint.bucket as TapSwapPrimaryInjury['bucket'], severity: constraint.severity }
-        : null;
       setExerciseEditStep({
-        kind: 'confirm_swap',
-        exercise,
-        suggestion: suggestTapSwap(exercise, 'Injury / pain', primaryInjury),
-        reason: 'Injury / pain',
-        injuryArea: area,
-        injurySeverity: severity,
+        kind: 'result',
+        ok: actionResult.ok,
+        title: step.review.trainingPaused
+          ? 'Training paused for injury'
+          : 'Injury adjustment active',
+        message: actionResult.message
+          ?? 'Affected work will be avoided. Coach Notes will show this until you clear it.',
       });
     },
-    [date, injuryFlowExercise, suggestTapSwap],
+    [date],
   );
 
   /**
@@ -1896,7 +1921,7 @@ export default function DayWorkoutScreenV2() {
               ...(sessionEquipmentRequirements.length > 0
                 ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
                 : []),
-              { id: 'injury' as const, onPress: openExerciseInjuryPicker },
+              { id: 'injury' as const, onPress: openSessionInjuryFlow },
               { id: 'add' as const, onPress: openExerciseAdd },
               { id: 'remove' as const, onPress: openExerciseRemovePicker },
               { id: 'swap' as const, onPress: openExerciseSwapPicker },
@@ -1924,7 +1949,7 @@ export default function DayWorkoutScreenV2() {
         onClose={closeExerciseEditor}
         onStep={setExerciseEditStep}
         onSwapPick={prepareSwap}
-        onInjuryStart={openExerciseInjuryFlow}
+        onApplyInjuryReview={applySessionInjuryReview}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
@@ -1942,10 +1967,10 @@ export default function DayWorkoutScreenV2() {
         onApply={applySessionEquipment}
       />
       <GuidedInjuryFlowSheet
-        visible={injuryFlowExercise !== null}
-        onClose={() => setInjuryFlowExercise(null)}
-        onComplete={applyExerciseGuidedInjury}
-        titlePrefix={displayExerciseName(injuryFlowExercise?.name, 'Injury / pain')}
+        visible={injuryFlowOpen}
+        onClose={() => setInjuryFlowOpen(false)}
+        onComplete={reviewSessionInjury}
+        titlePrefix="Injury / pain"
       />
 
       {/* ── UNDO, ON THE SURFACE THE CHANGE WAS MADE ON (R-107) ────────────
@@ -2869,19 +2894,24 @@ function StrengthExerciseCard({
   // DIFFERENT IMPLEMENT** — if the athlete is looking at a lift the block did not
   // choose, that is what they need explained, and the implement is a detail of
   // the row that replaced it.
-  const substitution = (exercise as { substitutedFrom?: {
-    baseExerciseName: string; cause: 'excluded_today' | 'kit_today' | 'injury';
-  } })?.substitutedFrom;
-  const substitutionReason = substitution?.cause === 'kit_today'
-    ? 'equipment today'
-    : substitution?.cause === 'injury'
-      ? 'injury'
-      : substitution?.cause === 'excluded_today'
-        ? 'you left it out'
-        : null;
-  const substitutionBadgeText = substitution && substitutionReason
-    ? `Swapped from ${displayExerciseName(substitution.baseExerciseName)} — ${substitutionReason}`
-    : null;
+  /**
+   * ⚠ **THE SENTENCE AND THE NAME IN IT ARE BOTH THE DOMAIN'S, NOT THIS
+   * SCREEN'S** (Sam, 2026-08-20). This block used to pick the name and compose
+   * the words itself, which is how the row and the injury REVIEW came to name
+   * two different exercises for one change. `rules/injurySubstitutionSource` is
+   * the single owner now, and it is the same one the review reads.
+   *
+   * ⚠ **`originExerciseName` IS NOT READ HERE AND MUST NOT BE.** It is the
+   * authored exercise, kept as internal history per Sam's ruling and rendered
+   * nowhere — the owner refuses to consult it for exactly this reason.
+   */
+  const substitution = (exercise as {
+    substitutedFrom?: InjurySubstitutionSourceRef;
+  })?.substitutedFrom;
+  const substitutionBadgeText = injurySubstitutionBadge({
+    substitution,
+    displayName: (name) => displayExerciseName(name),
+  });
   // "Dumbbells today — no barbell". One line, only on the rows it explains.
   const implementBadgeText = !substitutionBadgeText && showImplementBadge && implementLabel
     ? (normalLabel ? `${implementLabel} today — no ${normalLabel.toLowerCase()}` : `${implementLabel} today`)
@@ -3717,7 +3747,7 @@ interface ExerciseEditSheetProps {
     leaf: AddLeafId,
     fromLeaf?: Extract<ExerciseEditStep, { kind: 'add_leaf' }>,
   ) => void;
-  onInjuryStart: (exercise: EditableExercise) => void;
+  onApplyInjuryReview: (step: Extract<ExerciseEditStep, { kind: 'injury_review' }>) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
   onRemoveToday: (exercise: EditableExercise) => void;
@@ -3735,7 +3765,7 @@ function ExerciseEditSheet({
   onClose,
   onStep,
   onSwapPick,
-  onInjuryStart,
+  onApplyInjuryReview,
   onApplySwapToday,
   onApplyAddToday,
   onRemoveToday,
@@ -3807,12 +3837,12 @@ function ExerciseEditSheet({
   // athlete leaves by answering, and every answer is reversible from My Status.
   const showBack = step.kind !== 'result' && step.kind !== 'exclusion_scope';
 
-  // TASK 8: the only door left in front of this picker starts from the
-  // TOP of the page, where there is no exercise context yet — the injury
-  // door (`onInjuryStart`, unchanged — the same function the
-  // old exercise_menu's "Something hurts" row called). `concern_reason`
-  // (the menu this collapses past) is retired along with `injury_area`/
-  // `injury_severity` below — none of the three has a live setter anymore.
+  // ⚠ **INJURY NO LONGER COMES THROUGH HERE (Sam, 2026-08-20).** It was the
+  // last door that reached this picker from the top of the page with no row
+  // context, and asking it "which exercise?" was the defect: an injury affects
+  // however many rows it affects, and only the app can know which. It opens the
+  // guided flow directly now and reviews the whole session. What is left is
+  // Swap and Remove, both of which really are about one row.
   const renderExercisePicker = (action: ExercisePickAction) => {
     if (editableExercises.length === 0) {
       return (
@@ -3844,16 +3874,13 @@ function ExerciseEditSheet({
         testID={
           action === 'swap'
             ? explorerTestId.componentSwapIngress(sessionId, exercise.targetId ?? exercise.key)
-            : action === 'remove'
-              ? explorerTestId.componentDeleteIngress(sessionId, exercise.targetId ?? exercise.key)
-              : explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)
+            : explorerTestId.componentDeleteIngress(sessionId, exercise.targetId ?? exercise.key)
         }
         onPress={() => {
-          if (action === 'injury') onInjuryStart(exercise);
           // SWAP MEANS ONLY "I WANT A DIFFERENT EXERCISE" (Sam, 2026-08-19), so
           // the pick goes STRAIGHT to the ranked alternatives. Equipment and
           // Injury are their own actions on the hub and ask their own questions.
-          else if (action === 'swap') onSwapPick(exercise);
+          if (action === 'swap') onSwapPick(exercise);
           else onStep({ kind: 'confirm_remove', exercise });
         }}
       />
@@ -3864,6 +3891,74 @@ function ExerciseEditSheet({
     switch (step.kind) {
       case 'pick_exercise':
         return <>{renderExercisePicker(step.action)}</>;
+      /**
+       * ONE REVIEW OF ALL PROPOSED CHANGES (Sam, 2026-08-20).
+       *
+       * Every affected row is listed, whatever the ladder answered for it, and
+       * the two outcomes are visibly different things: a row being SWAPPED names
+       * what it becomes, a row being WITHHELD says so in the same words the
+       * session itself will show it under afterwards.
+       *
+       * ⚠ **THERE IS NO PER-ROW APPROVE, AND THAT IS THE RULING.** *"Apply the
+       * approved changes together."* One button, one write, all of them or none.
+       *
+       * ⚠ **NO CLAIM IS COMPOSED HERE.** The headline and the button label are
+       * fields on the review, derived by `utils/sessionInjuryReview` from what it
+       * actually found — including the case where it found nothing. A cheerful
+       * line written on the glass would be a second, un-derived claim, which is
+       * the exact shape of *"never claim the session was safely changed if
+       * nothing changed"*.
+       */
+      case 'injury_review': {
+        const { review } = step;
+        return (
+          <>
+            <Text style={styles.exerciseEditBody} testID="injury-review-headline">
+              {review.headline}
+            </Text>
+            {review.changes.map((change) => (
+              <View
+                key={`${change.kind}:${change.from}`}
+                style={styles.exerciseEditSuggestionCard}
+                testID={`injury-review-change-${change.kind}`}
+              >
+                <Text style={styles.exerciseEditSuggestionName}>
+                  {change.to
+                    ? `${displayExerciseName(change.from)} \u2192 ${displayExerciseName(change.to)}`
+                    : `${displayExerciseName(change.from)} \u2014 left out`}
+                </Text>
+                <Text style={styles.exerciseEditSuggestionMeta}>{change.explanation}</Text>
+              </View>
+            ))}
+            {/* R-103's partial-coverage disclosure, for the session as a whole. */}
+            {review.untrainedInWords.length > 0 ? (
+              <Text style={styles.exerciseEditBody} testID="injury-review-untrained">
+                {`That means no ${review.untrainedInWords.join(', ')} this session.`}
+              </Text>
+            ) : null}
+            {review.untouched.length > 0 ? (
+              <Text style={styles.exerciseEditBody} testID="injury-review-untouched">
+                {`The rest of your session is unchanged: ${review.untouched
+                  .map((name) => displayExerciseName(name)).join(', ')}.`}
+              </Text>
+            ) : null}
+            <Button
+              label={review.approveLabel}
+              variant="primary"
+              size="md"
+              testID="injury-review-apply"
+              onPress={() => onApplyInjuryReview(step)}
+            />
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      }
       /* ⚠ **`add_kind` IS DELETED — 2026-08-19.**
        *
        * Seven hand-written labels over a table of TWELVE suggestions that asked
@@ -4275,9 +4370,9 @@ function ExerciseEditSheet({
 function exerciseEditTitle(step: ExerciseEditStep): string {
   switch (step.kind) {
     case 'pick_exercise':
-      return step.action === 'swap' ? 'Swap which exercise?'
-        : step.action === 'remove' ? 'Remove which exercise?'
-          : 'Which exercise?';
+      return step.action === 'swap' ? 'Swap which exercise?' : 'Remove which exercise?';
+    case 'injury_review':
+      return step.review.nothingChanges ? 'Nothing needs changing' : 'Review these changes';
     case 'add_family':
       return 'What do you want to add?';
     case 'add_group':
@@ -4315,6 +4410,10 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
   switch (step.kind) {
     case 'pick_exercise':
       return 'Team training entries are left alone.';
+    case 'injury_review':
+      /* The athlete's own answer echoed back, so the review is plainly the
+       * answer to the ONE question they were asked. */
+      return `${step.review.bodyPart} \u00b7 ${step.review.severity}/10`;
     case 'confirm_remove':
     case 'confirm_swap':
       return displayExerciseName(step.exercise.name);

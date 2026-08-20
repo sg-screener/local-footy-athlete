@@ -3474,3 +3474,203 @@ citing this row instead of quietly re-litigating it.
 
 **Search words:** accessories, duplicate label, leaf title, lower body
 accessories, upper body accessories, body area prefix, add menu title.
+
+---
+
+**R-121** · *"Use 'the one I can see'. The review and the applied session must
+both name the exercise currently visible to the athlete. Keep older substitution
+history internally, but do not show an older exercise as the source of this new
+Injury change."* (Sam, 2026-08-20) · **A SUBSTITUTION IS NAMED BY THE ROW IT
+REPLACED, NOT BY THE ROW THAT ONCE STOOD THERE.**
+
+**Search words:** swapped from, substitution source, chain head, double swap,
+second injury, older exercise, base exercise name, injury review names, which
+name is shown, substitutedFrom.
+
+**WHY IT WAS ORDERED, MEASURED.** Spotted on glass during the Active Session
+injury review's device pass and then reproduced headlessly — two injuries in
+sequence on one day:
+
+```
+knee 7/10      the athlete now sees   Chest-Supported DB Row  (was Leg Press)
+shoulder 7/10  the review promised    Chest-Supported DB Row -> Easy Bike
+               the session then said  "Swapped from Leg Press"
+```
+
+⚠ **IT WAS NOT A WORDING BUG, AND THE FIRST DIAGNOSIS OF IT WAS WRONG.** It was
+first reported to Sam as the session "preserving the head of the substitution
+chain". It is not preserving anything: **every injury settle rebuilds the day
+from the AUTHORED week and re-applies all active injuries in ONE pass**, so the
+second injury genuinely planned against `Leg Press` and had never seen the row
+the athlete had been looking at all week. The intermediate view is not stored
+anywhere and is not meant to be — it is a derivation.
+
+· `WORKING` — `rules/injurySubstitutionSource.ts` is the one owner of both the
+choice of name and the sentence, read by the row badge
+(`screens/home/DayWorkoutScreenV2`) and by the review
+(`utils/sessionInjuryReview`). The screen composed that string itself until this
+ruling, which is exactly how the two came to disagree.
+
+**THE NAME IS DERIVED, NOT REMEMBERED**, because a remembered one would not
+survive a restart — boot re-derives the day and would quietly revert to the
+authored name. `previouslyVisibleInjurySources` re-runs the same planner over
+every active injury EXCEPT the most recently declared one, which is a pure
+function of stored facts. **Which injury is "the new one" is derived too
+(`mostRecentlyDeclaredInjuryId`), never taken from whichever action is running**
+— the live door knows what the athlete just tapped and boot does not, and if the
+two disagreed the badge would reword on the first relaunch.
+
+**TWO NAMES, ONE SHOWN.** `substitutedFrom.baseExerciseName` is what the athlete
+could SEE and is the only one ever rendered; `originExerciseName` is the authored
+exercise, kept per Sam's *"keep older substitution history internally"* and
+written ONLY when it differs — an always-present field that is almost always
+equal to its neighbour is one readers start trusting for the wrong reason.
+`injurySubstitutionSourceName` refuses to consult it at all.
+
+⚠ **THIS DECIDES A NAME, NEVER AN OUTCOME.** The extra planner pass reads the
+previous view and nothing else; it cannot change which exercise the ladder
+chooses or which row is withheld. **With one injury the map is empty and nothing
+changes**, which is the overwhelmingly common case.
+
+⚠ **HALF OF THIS RULING IS NOT DONE, AND SAM HAS BEEN TOLD.** It holds for
+SUBSTITUTED rows. It does NOT hold for WITHHELD ones. **MEASURED**, two injuries
+in sequence: the review promises to leave out `Tricep Pushdown` and
+`Bicep Curl (Barbell)`, and the session withholds `Bulgarian Split Squats` and
+`Single-Leg RDL`. **THAT ONE IS NOT A NAME, IT IS THE ROW.** A substituted row
+can be relabelled because the row is whatever the ladder chose; a withheld row is
+the athlete's ORIGINAL exercise by R-115's design, and the settle's joint
+re-derivation reverts it to the AUTHORED one, so the first injury's replacement
+stops existing rather than being withheld in place. **The fix is a DERIVATION
+change** — injuries applied one on top of another in declaration order instead of
+jointly from the authored week — **which changes which exercise the athlete gets,
+not just what it is called.** That is Sam's ruling to make and was deliberately
+not taken. Pinned by the `⚠ OPEN` cell in `[9]`, which asserts the CURRENT
+behaviour so it cannot drift unnoticed — **that cell is a measurement, not an
+approval.**
+
+**GUARDED:** `test:session-injury-review` sections `[9]` and `[10]`, driven end
+to end through the real doors, including a restart. **The `[9]` cells are
+INVERTED, not deleted** — they used to PIN the divergence as a measured fact
+awaiting this ruling, and they now refuse it and assert more: that the authored
+name is still kept and still not shown. `[9]` carries the control that the second
+injury really does land on a row the FIRST one produced, without which every cell
+under it would be green and empty. Mutations: **M6** (the settle names the
+authored row again) reds 4, **M7** (the badge reaches for the older exercise)
+reds 3, **M8** (the internal history stops being written) reds 1.
+
+---
+
+**R-122** · *"The resulting session violates the approved Injury fallback ladder.
+'Skip' is the final option only after the app proves there is no safe
+alternative. … Breathing Reset must never appear inside Strength … A Strength
+replacement must remain a legal Strength exercise. Mobility / Warm-up and
+Conditioning movements cannot be used to fill a Strength slot. 'Safe adjacent
+pattern' still means useful Strength work. If no safe Strength option exists
+after the full ladder, leave it unavailable rather than inserting recovery
+work."* (Sam, 2026-08-20) · **A SECTION IS A BOUNDARY, AND SKIP IS THE LAST
+ANSWER, NOT AN EARLY ONE.**
+
+**Search words:** breathing reset strength, easy bike strength, recovery in
+strength slot, category boundary, session section, skipped work, unavailable
+today, unknown injury rating, unrated exercise unsafe, ladder exhausted.
+
+**WHY IT WAS ORDERED:** a stacked-injury session came back as a screen of
+skipped work with a breathing drill sitting in the Strength section.
+
+**THREE DEFECTS, MEASURED.**
+
+**D1 — THE LADDER HAD NO CONCEPT OF A SECTION.** It ranked the whole legal
+library by movement pattern and safety. The app already knew `Breathing Reset` is
+Mobility — the Add menu has known since R-120, through a TOTAL map from pool to
+leaf to family — but the injury path never asked. `rules/exerciseSessionFamily`
+now derives the family from those same maps and authors nothing of its own; a new
+category table would have been a second answer, free to disagree.
+
+**D2 — RECOVERY WAS INJECTED AFTER THE LADDER HAD SPOKEN.**
+`getTapSwapChoices` appends `recoveryChoice`, two hard-coded literals minted
+inside the swap surface (`Easy Bike`, or `Breathing Reset` when there is no
+bike), which never went through the ladder at all. **FIXING ONLY THE LADDER MADE
+THIS WORSE** — the pooled recovery option disappeared, the "already has a
+recovery tier" guard stopped matching, and `Breathing Reset` was pushed onto a
+`Bench Press` menu that had never carried it. Caught by `test:tap-swap-hierarchy`,
+not by reasoning.
+
+**D3 — THE CLASSIFICATION DEFECT SAM SUSPECTED FROM THE SCREENSHOT.**
+*"'Breathing Reset is unsafe with your hamstring' appears wrong and may expose a
+broader classification defect."* It did. **Two questions were sharing one
+predicate and they disagree on exactly one answer, `unknown`.** *May this be a
+REPLACEMENT?* rightly refuses an unrated exercise — there is always another rung.
+*Must this EXISTING row come out?* must NOT, because there is no other rung and
+the row is struck off the athlete's session. **70 of the 90 pooled and
+conditioning names have no entry in the injury sheet**, so every conditioning
+format in the app was being marked *"not safe with your <region> right now"* for
+every injury at every band. `injuryWithholdsExistingRow` is the second owner;
+`classifyExerciseRiskForBucket`'s own comment already stated the rule
+(*"DO NOT 'FIX' THIS BY MAKING `unknown` RISKY … close it in the DATA"*) and this
+was the caller breaking it.
+
+**AND THE STACKING RULE THAT CAME WITH IT** — *"Stacked injuries operate on the
+session the athlete could see before the newest injury."* The settle used to
+re-plan every active injury JOINTLY from the authored week, so a second injury
+planned against `Leg Press` and never saw the row the first had put there.
+Injuries are now applied **in declaration order, each against the result of the
+one before it**, and **stage k sees only the injuries that existed by stage k** —
+a full environment at every stage re-derived the first injury while already
+knowing the second, which is the same defect wearing a different hat. The final
+state is still checked against every active injury, because the last stage
+carries them all. R-121's naming falls out of this for free rather than needing a
+derivation bolted on, and R-121's withheld half — recorded as OPEN when it was
+ruled — is closed by it.
+
+· `WORKING` — `rules/exerciseSessionFamily` (the boundary),
+`rules/injuryFallbackLadder.walkInjuryFallbackLadder` (one traversal producing
+both the options and the rung-by-rung explanation, so no separate explainer can
+drift), `rules/injuryExerciseRisk.injuryWithholdsExistingRow`, and the ordered
+stages in `programControlActions.recomposeSessionForInjury`.
+
+**MEASURED AFTER, ordinary single injuries on a real generated week** — knee
+7/10: 4 unsafe rows, **4 Strength replacements, 0 skipped**; shoulder 6/10: 1
+row, 1 replacement, 0 skipped; hamstring 5/10: `RDLs -> Glute Bridge`, Sam's own
+Bible good swap, 0 skipped.
+
+**D4 — AND ONE PLACE WHERE "MISSING" STILL MEANT "SAFE", FOUND BY SAM'S OWN
+QUESTION.** *"When an exercise has no injury-safety rating, does the planner now
+treat it as safe? It must not."* Two of the three gates already refused it —
+`buildInjuryFallbackLadder` only ever considers rated exercises
+(`candidateFor` returns `null` without tags), and `assessTapSwapCandidateSafety`
+refuses an unrated name outright. **But `isRecoveryName` — a hard-coded pair,
+`Easy Bike` and `Breathing Reset` — skipped BOTH the unrated refusal and the
+per-region check.** MEASURED at knee 9/10 AND shoulder 9/10, the most severe
+world the app has: `Breathing Reset` came back **`safe=true`**, under the
+sentence *"passes injury, readiness and equipment checks"* when no injury check
+had run. Every other unrated name was correctly refused; only the exemption let
+it through. **The exemption is deleted.** `Easy Bike` is rated and is judged on
+its ratings like everything else; `Breathing Reset` is unrated and is refused as
+*"cannot be verified against the active injury"* until somebody rates it IN THE
+DATA. The EQUIPMENT exemption is a different question and stays — "can this
+athlete perform it with today's kit" is not "is this safe for the injured area".
+
+⚠ **ASKING `injuryPermitsExerciseAtSeverity` WOULD HAVE PASSED AND PROVED
+NOTHING** — that predicate always refused `unknown`. The hole was one layer out,
+in the function the ladder actually passes as `isLegal`. **Ask the gate, not the
+predicate.**
+
+**GUARDED:** `test:session-injury-review` `[11]` — the check Sam asked for by
+name, sweeping 13 regions x 4 bands **on top of an already-applied injury**.
+⚠ **THE FIRST VERSION OF THAT GATE WAS GREEN AND EMPTY**: with one injury the
+ladder almost never runs out, so removing the boundary from the planner, the
+ladder AND the recovery fallback reddened NOTHING. It sweeps a stacked world now
+and asserts it reached the state the boundary is about. Mutation **M13** (the
+planner and the recovery-fallback boundaries both off) reds 2 and reproduces
+`Chest-Supported DB Row -> Easy Bike` exactly. ⚠ **THE TWO BOUNDARIES ARE
+BELT-AND-BRACES — either alone holds, which is why single mutations do not bite.
+Do not delete one as redundant.** `npm run probe:injury-ladder` prints, for every
+skipped row, each rung's candidates and why each was rejected. `[11]` also sweeps
+EVERY unrated name against the real gate in the severe world and asserts none
+passes; restoring the `isRecoveryName` exemption reds it.
+
+**EVERY REPLACEMENT IN THE DEVICE PROOF IS ADMITTED BY AN EXPLICIT RATING, NOT
+BY A MISSING ONE** — for a 7/10 knee, `Band Pull-Apart`, `Chest-Supported DB
+Row`, `Explosive Landmine Press`, `Banded Bicep Curl` and `Single-Arm DB Floor
+Press` are each rated **`knee: good`** in Sam's ruled matrix (2026-07-28), and
+each is a Strength row by the Add menu's own family map.

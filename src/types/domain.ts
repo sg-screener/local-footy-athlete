@@ -1397,8 +1397,24 @@ export interface WorkoutExercise {
   };
 
   substitutedFrom?: {
-    /** The exercise the block actually selected, in its own authored name. */
+    /**
+     * **WHAT THE ATHLETE COULD SEE HERE WHEN THIS CHANGE WAS MADE**, and the
+     * only one of these two names that is ever rendered (Sam, 2026-08-20:
+     * *"do not show an older exercise as the source of this new Injury
+     * change"*). With one injury it IS the authored name; with a second injury
+     * landing on an already-recomposed row it is the row the first injury put
+     * there. `rules/injurySubstitutionSource` is the one owner of both the
+     * choice and the wording.
+     */
     readonly baseExerciseName: string;
+    /**
+     * The exercise the block originally selected. **INTERNAL HISTORY, NEVER
+     * RENDERED** — Sam's *"keep older substitution history internally"*.
+     * Written only when it differs from `baseExerciseName`; an always-present
+     * field that is almost always equal to its neighbour is one readers start
+     * trusting for the wrong reason.
+     */
+    readonly originExerciseName?: string;
     /**
      * Why it is not on the day. Kept apart because they end differently for the
      * athlete: a dated kit loss lifts itself, an exclusion ends when they
