@@ -64,7 +64,20 @@ import { executeProgramControlAction } from '../utils/programControlActions';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
-const TARGET = '2026-07-22';
+/**
+ * ⚠ **THE TARGET DAY IS DERIVED PER WORLD, NOT NAMED.**
+ *
+ * This was `const TARGET = '2026-07-22'` — the generated week's UPPER day — and
+ * every world below declares a LOWER-LIMB injury against it. So this suite's own
+ * CONTROL cells (*"the session really does carry unsafe work"*) have been RED on
+ * `main`, and every *"no unsafe rows left"* cell beneath them has been green over
+ * a session the injury never touched. A bind can be green and empty.
+ *
+ * `targetDayFor` asks the real generated week which day this particular injury
+ * has the most work to do on. A generation change can move the lower day; it
+ * cannot make this suite silently stop testing.
+ */
+const FALLBACK_TARGET = '2026-07-22';
 /** The Monday BEFORE the decision — a session that is already lived. */
 const PAST = '2026-07-20';
 
@@ -125,7 +138,8 @@ function install(): string {
     reason: 'exercise-removal-owner:generate',
   }));
   useProgramStore.setState({ currentMicrocycle: settled } as never);
-  setJourneyClock(TARGET);
+  // The clock is set by the CALLER once it has derived the day this world needs.
+  setJourneyClock(FALLBACK_TARGET);
   return weekStart;
 }
 
@@ -157,6 +171,30 @@ function daysCarrying(weekStart: string, name: string): string[] {
   return days;
 }
 
+/** The day in the generated fortnight this injury actually affects most. */
+function targetDayFor(weekStartISO: string, bucket: string, severity: number): string {
+  const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
+  const { unsafeRowsForInjury } = require('../utils/injurySessionRecomposition');
+  let best = FALLBACK_TARGET;
+  let bestCount = 0;
+  for (let i = 0; i < 14; i += 1) {
+    const date = addDaysISO(weekStartISO, i);
+    const week = quiet(() => resolveWeekWithConditioning(
+      mondayFor(date), buildScheduleStateImperative()));
+    const workout = (week.find((day) => day.date === date) as { workout?: Workout } | undefined)
+      ?.workout ?? null;
+    if (!workout) continue;
+    const environment = quiet(() => resolveTapSwapEnvironment({
+      date, profile: useProfileStore.getState().onboardingData,
+      activeConstraints: [], readinessSignal: null,
+      primaryInjury: { bucket, severity },
+    }));
+    const unsafe = quiet(() => unsafeRowsForInjury({ workout, environment })) as string[];
+    if (unsafe.length > bestCount) { best = date; bestCount = unsafe.length; }
+  }
+  return best;
+}
+
 function victimOn(dateISO: string): string {
   const rows = rowsOn(dateISO);
   return rows[0]!.split('@')[0]!;
@@ -184,13 +222,19 @@ function storedProgramCount(name: string): number {
 interface InjuryWorld {
   label: string;
   area: string;
+  region: string;
   severity: number;
 }
 
 const WORLDS: InjuryWorld[] = [
-  { label: 'knee, moderate', area: 'knee', severity: 6 },
-  { label: 'hamstring, training paused', area: 'hamstring', severity: 8 },
-  { label: 'shoulder, slight', area: 'shoulder', severity: 4 },
+  { label: 'knee, moderate', area: 'knee', region: 'lower_body', severity: 6 },
+  { label: 'hamstring, training paused', area: 'hamstring', region: 'lower_body', severity: 8 },
+  /* ⚠ **SEVERITY 4 IS THE BAND SAM KEEPS SAFE WORK IN**, so a `caution`-only day
+   * legitimately has nothing to do and the CONTROL below would be red for the
+   * right reason. The world that exercises the mild band is one whose row is
+   * `avoid`-rated: `RDLs` for a hamstring. */
+  { label: 'hamstring, mild', area: 'hamstring', region: 'lower_body', severity: 4 },
+  { label: 'shoulder, limiting', area: 'shoulder', region: 'upper_body', severity: 6 },
 ];
 
 async function main(): Promise<void> {
@@ -202,11 +246,14 @@ async function main(): Promise<void> {
 
   for (const world of WORLDS) {
     console.log(`\n[${world.label}]`);
-    install();
+    const weekStart = install();
+    const bucket = world.area === 'lower back' ? 'lowerBack' : world.area;
+    const TARGET = targetDayFor(weekStart, bucket, world.severity);
+    console.log(`    day: ${TARGET}`);
     setJourneyClock(TARGET);
     const before = rowsOn(TARGET);
     const constraint = buildGuidedInjuryConstraint({
-      region: 'lower_body', area: world.area, severity: world.severity,
+      region: world.region, area: world.area, severity: world.severity,
       severityBand: 'caution', adjustmentLevel: 'reduce_load',
       triggers: ['during'], seriousSymptoms: false,
     } as never, { todayISO: TARGET }) as
@@ -280,15 +327,17 @@ async function main(): Promise<void> {
   /* ═══════════════════════════════════════════════════════════════════════ */
   console.log('\n[4] THE LADDER IS THE APPROVED ONE, AND REST IS NOT A REPLACEMENT');
 
-  install();
-  setJourneyClock(TARGET);
+  const ladderWeekStart = install();
+  const LADDER_TARGET = targetDayFor(ladderWeekStart, 'knee', 6);
+  console.log(`    day: ${LADDER_TARGET}`);
+  setJourneyClock(LADDER_TARGET);
   const workout = (() => {
     const week = quiet(() => resolveWeekWithConditioning(
-      mondayFor(TARGET), buildScheduleStateImperative()));
-    return (week.find((d) => d.date === TARGET) as { workout?: Workout }).workout!;
+      mondayFor(LADDER_TARGET), buildScheduleStateImperative()));
+    return (week.find((d) => d.date === LADDER_TARGET) as { workout?: Workout }).workout!;
   })();
   const kneeEnv = quiet(() => resolveTapSwapEnvironment({
-    date: TARGET, profile: useProfileStore.getState().onboardingData,
+    date: LADDER_TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: [], readinessSignal: null,
     primaryInjury: { bucket: 'knee', severity: 6 },
   }));
@@ -322,7 +371,7 @@ async function main(): Promise<void> {
    * rest, so there was no rest choice to mis-count. A rest fallback is only
    * ever offered in a MEDICAL-STOP world, so the refusal is asked THERE. */
   const pausedEnv = quiet(() => resolveTapSwapEnvironment({
-    date: TARGET, profile: useProfileStore.getState().onboardingData,
+    date: LADDER_TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: [], readinessSignal: null,
     primaryInjury: { bucket: 'hamstring', severity: 8, seriousSymptoms: true },
   }));

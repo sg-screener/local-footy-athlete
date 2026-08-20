@@ -129,6 +129,27 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
     ],
   },
   {
+    /**
+     * SAM'S PRECEDENCE RULING, 2026-08-20. Added with the Bible line it quotes,
+     * in the same commit, because `test:bible-coverage` counts a rule line with
+     * no named enforcer as debt — and correctly reddened when the line landed
+     * without this entry.
+     */
+    id: 'injury_sheet_outranks_swap_examples',
+    section: 'Section 8 — Exercise swap hierarchy / WHICH AUTHORITY WINS',
+    quote: 'From 6-7 / 10 upward, never offer an exercise the sheet marks risky for that area, '
+      + 'even where a swap example in this section names it.',
+    states: [6, 7],
+    meaning: 'Which authority decides whether an exercise may be used with an injured area. '
+      + 'The typed injury matrix wins over the section\'s named swap examples from the 6-7 band '
+      + 'up, so hip thrust for a 6-7 knee and supported pulling for a 6-7 shoulder are '
+      + 'illustrations of the ORDER to walk, not licences for those exercises.',
+    sites: [
+      { file: 'rules/injuryExerciseRisk.ts', symbol: 'injuryPermitsExerciseAtSeverity' },
+      { file: 'rules/injuryFallbackLadder.ts', symbol: 'buildInjuryFallbackLadder' },
+    ],
+  },
+  {
     id: 'g_minus_1_optional_only',
     section: 'Section 2 — Weekly structure rules',
     quote: 'Rules around G-1: same as above, no heavy lfiting of any sort, no conditioning, '

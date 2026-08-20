@@ -1890,6 +1890,8 @@ Bad swap:
 Bench press hurts -> lighter bench press
 Better swap:
 Bench press hurts -> neutral-grip DB floor press, push-up, landmine press, or lower-body/midline if pressing is not tolerated
+WHICH AUTHORITY WINS (Sam, 2026-08-20)
+The typed injury-risk sheet is the authority for whether a given exercise may be used with a given injured area. From 6-7 / 10 upward, never offer an exercise the sheet marks risky for that area, even where a swap example in this section names it. The named examples below stay as illustrations of the ORDER to walk - same movement pattern, then similar muscle group, then unaffected body area, then recovery - and they do not license an exercise the sheet excludes. Walk down the ladder to the nearest legal option; if none exists, omit it honestly and say so. This retires the contradictory readings: hip thrust for a 6-7 knee, and supported pulling for a 6-7 shoulder, are both examples the sheet overrides.
 General severity rules
 1-3 / 10
 Mild issue.

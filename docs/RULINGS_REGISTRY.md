@@ -2961,6 +2961,84 @@ control that reds if its world stops being all-primer.
 
 ---
 
+**R-114** · *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
+Thrust—or any exercise—the sheet marks risky for that injured area, even if an
+older example says otherwise. Walk down the ladder to the nearest legal option;
+if none exists, omit honestly. Update or remove the contradictory example so
+there is one authority."* (2026-08-20) · **THE INJURY SHEET OUTRANKS THE BIBLE'S
+NAMED SWAP EXAMPLES.**
+**Search words:** hip thrust knee, chest supported row shoulder, caution rating,
+6-7 band, which authority wins, contradictory swap example, sheet vs bible.
+**WHY IT WAS ORDERED:** two things Sam authored disagreed. His knee section says
+*"Heavy knee-dominant work -> hip thrust"* and his shoulder section says *"some
+pulling if tolerated"*, while his ruled injury matrix (2026-07-28) rates
+`Hip Thrusts` `knee: 'caution'` and `Chest Supported Row` `shoulder: 'caution'`,
+and his 6-7 band removes risky work through the area. Three
+`test:tap-swap-hierarchy` cells had been RED on `main` ever since the matrix
+landed, because the code followed the matrix and the cells followed the prose.
+**A READING THAT WOULD HAVE RECONCILED THEM WAS TRIED AND REFUTED BY
+MEASUREMENT** — admitting `caution` work at 6-7 unless it is heavy shipped three
+of Sam's own bad swaps (`Broad Jumps` for a 7/10 knee, `Single-Leg RDL` for a
+7/10 hamstring, `Close Grip Bench` for a 6/10 shoulder) and took that suite from
+3 fails to 8.
+· `WORKING` — `injuryPermitsExerciseAtSeverity` (`rules/injuryExerciseRisk.ts`)
+is the one owner of the band question and was already correct; the RULING
+retired the rival authority. The Bible now carries a **WHICH AUTHORITY WINS**
+paragraph in Section 8 naming the precedence, anchored to that function through
+`bibleThresholdAnchors.injury_sheet_outranks_swap_examples`, so
+`test:bible-coverage` holds the new rule line to a named enforcer rather than
+counting it as debt. The three contradictory cells now assert the ruling.
+**GUARDED:** `test:tap-swap-hierarchy` — **16 ok / 3 fail and DYING on `main`
+-> 25 passed, 0 failed, running to completion** (its last fixture omitted both
+capacity answers, so `resolveTapSwapEnvironment` threw and the final cells never
+ran). Mutation **M17** — the sheet stops outranking the examples — reds 6.
+
+---
+
+**R-115** · *"An 8-10 injury with serious symptoms must NEVER write into the
+athlete's Remove list or permanently alter the accepted program. Preserve the
+original exercises. On that date, show them as unavailable/skip with the
+explicit injury safety explanation, or block the session if necessary. Clearing
+or resolving the injury must immediately reveal the original accepted session
+again, including after close/reopen. Remove remains exclusively athlete-authored
+Remove."* (2026-08-20) · **AN INJURY WITHHOLDS A ROW; IT DOES NOT REMOVE ONE.**
+**Search words:** injury omission, red flag, serious symptoms, empty session,
+remove list, exclusions written by injury, session cannot be completed,
+unavailable row, injury restore.
+**WHY IT WAS ORDERED, MEASURED:** an injury omission was written through
+`remove_exercise`, whose `today_only` scope lands in
+`athletePreferencesStore.exclusions` — the athlete's OWN decisions. A red-flag
+hamstring at 9/10 wrote **five exclusions the athlete never made**, and because
+Restore works by RE-DERIVING it replayed them, so `clear_injury_modifier`
+answered *"Injury resolved. Affected sessions were safely recomposed."* over a
+day that was **empty forever**.
+· `WORKING` — `rules/injuryWithheldRows.ts` is the owner. Nothing is written:
+`InjuryEpisodeV1` is already a `TemporarySourceFact` and
+`ScheduleState.temporarySourceFacts` is already fed by the two VIEW doors, so
+the withholding is a PURE DERIVATION applied at the same seam
+`applyExclusionsToAuthoredDay` sits at — and for the same stated reason, that a
+projection reaching a canonicaliser gets written down. The two projections sit
+side by side and do opposite things on purpose: an exclusion FILTERS a row out,
+an injury MARKS it (`WorkoutExercise.unavailableForInjury`). The refusal to
+record the day lands in `sessionOutcomeRecordableRefusal`, which already had two
+readers — the write door and `SessionFeedbackPanel` — so the UI needs no change
+to honour the ruling. **Only a RED FLAG blocks**; an ordinary injury substitutes
+and the athlete trains.
+**GUARDED:** `test:injury-fallback-journey` sections [10] and [11], 27 cells,
+driven end to end through the real doors. Mutations **M12** (the omission writes
+a Remove decision again) reds 6, **M13** (rows stop being marked) reds 1,
+**M14** (the day becomes recordable) reds 1, **M15** (an ordinary injury blocks
+too) reds 3, **M16** (an injury reaches back before its onset) reds 1.
+**⚠ HEADLESS, NOT GLASS — the device check is owed**, and
+`npm run seed:injury-fallback` prints the exact expected glass state.
+**⚠ ONE THING THE UI LANE STILL OWNS:** `projectVisibleDay` BLANKS the day
+outright while a red-flag constraint is active — measured identically on `main`
+`9f081efa`, so it predates this unit. Sam's ruling permits blocking the session,
+so nothing here fights it, but *"show them as unavailable/skip"* is only half
+delivered until that projection renders the marked rows.
+
+---
+
 **R-116** · *"Use Sam's attached mock only as a layout reference. Do not add the
 athlete photo, change the app's typeface, or introduce separate cards around
 every exercise … Add the approved calendar icon immediately before the date …

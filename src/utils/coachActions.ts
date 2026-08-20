@@ -753,6 +753,26 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     // claim to be standing in for whatever the last fact displaced. Absent
     // means "nobody's place", which is the truth for a tap.
     substitutedFrom: input.substitutedFrom,
+    /* ⚠ **AND NEITHER IS THE OUTGOING ROW'S INJURY MARKER INHERITED.**
+     *
+     * The paragraph directly above states this rule for `substitutedFrom` and
+     * `unavailableForInjury` was breaking it in exactly the same way, through
+     * the same `...found` spread. **MEASURED ON GLASS**, hamstring 8/10 without
+     * serious symptoms: the athlete was shown four SKIP markers on the safe
+     * REPLACEMENTS, each sentence naming a different exercise than the row it
+     * sat on — `Chest-Supported DB Row` warned about `Leg Press`.
+     *
+     * A REPLACEMENT IS THE LADDER'S ANSWER TO THE INJURY, NOT A CASUALTY OF IT.
+     * It was chosen BECAUSE it is safe, so it cannot also be the row the injury
+     * withheld — those are the two opposite outcomes of one ladder and no row is
+     * both. `injuryWithholdingsOn` over the final workout already agreed: it
+     * returned an EMPTY list while four rows carried marks.
+     *
+     * ⚠ **A WITHHELD ROW IS NOT AFFECTED, BECAUSE A WITHHELD ROW IS NEVER
+     * SWAPPED.** Withholding is what happens when the ladder has nothing safe to
+     * offer; this line is only reached when it did. The red-flag rows keep their
+     * own marker, explanation, dose and load — asserted, not assumed. */
+    unavailableForInjury: undefined,
     exercise: {
       id: replacementId,
       name: toExercise.name,
@@ -800,7 +820,34 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
    * question, and two owners of "may this write land" is the defect class this repo
    * fights. The root fix is the single owner; this is not kept as a backstop.
    */
-  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
+  /* ── THE MEDICAL-STOP GATE DOES NOT APPLY TO THE INJURY'S OWN ANSWER ──────
+   *
+   * `activeConstraintHardStops` refuses every write while a `training_paused`
+   * injury is active, and its own message says why: *"A serious injury or
+   * medical-stop constraint is active. **Do not treat this as a normal training
+   * edit.**"* That is right about an athlete deciding to move their squat day.
+   * It is exactly wrong about the write that makes the session safe, because
+   * that write IS the app's response to the constraint that raised the stop.
+   *
+   * **MEASURED, `npm run test:injury-fallback-journey`.** Declaring a hamstring
+   * injury at **8/10 — Sam's pause band** — left the athlete looking at
+   * `Leg Press, RDLs, Bulgarian Split Squats, Single-Leg RDL`, every one of them
+   * work the injury forbids, under the sentence *"could not be made safe. Skip
+   * those and check with a physio."* The ladder had four legal, unaffected-area
+   * answers ready; the gate refused all four. The same injury at 6/10 — where
+   * no hard stop is raised — recomposed correctly. **So the stronger the injury,
+   * the less the app did about it**, which inverts Sam's own bands: *"8-10/10 —
+   * Pause affected training. Use rest, recovery, or clearly unaffected training
+   * only."* Leaving the affected lifts on the day is not pausing them.
+   *
+   * The exemption is narrow and typed: `substitutedFrom.cause` is set ONLY by a
+   * FACT displacing a row (`injury`, `kit_today`), never by an athlete's own
+   * swap, so no ordinary edit can reach it. The gate is unchanged for everything
+   * else — this scopes it to its own stated subject rather than weakening it. */
+  const isInjuryFactWrite = input.substitutedFrom?.cause === 'injury';
+  const blocked = isInjuryFactWrite
+    ? null
+    : blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
   writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });
   return { success: true };
