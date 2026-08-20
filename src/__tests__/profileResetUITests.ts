@@ -744,6 +744,18 @@ section('[13] Sheets hosting a flexing body declare it');
     /contentFlexible:\s*\{[^}]*height:\s*'92%'/.test(sheetSrc)
       && !/contentFlexible:\s*\{[^}]*maxHeight/.test(sheetSrc),
   );
+  ok(
+    'the capped mode sets a CAP, not a definite height',
+    /contentCapped:\s*\{[^}]*maxHeight:\s*'92%'/.test(sheetSrc)
+      && !/contentCapped:\s*\{[^}]*[^x]height:\s*'92%'/.test(sheetSrc),
+    'a cap is the whole difference: it lets the sheet hug a two-line confirm '
+      + 'and still stop before the top of the screen',
+  );
+  ok(
+    'the capped style is actually applied to the content view',
+    /cappedBody && styles\.contentCapped/.test(sheetSrc),
+    'declaring the prop and defining the style is not wiring them together',
+  );
 
   // Co-occurrence in a FILE is not the defect — nesting inside the sheet is.
   // A first cut of this gate flagged DayWorkoutScreenV2 and HomeScreenV2,
@@ -784,7 +796,16 @@ section('[13] Sheets hosting a flexing body declare it');
     const text = stripComments(fs.readFileSync(file, 'utf8'));
     for (const body of sheetBodies(text)) {
       const flexes = /<KeyboardSafeArea[\s>]/.test(body) || /<ScrollView[\s>]/.test(body);
-      if (flexes && !/flexibleBody/.test(body)) {
+      // ⚠ **THERE ARE TWO SAFE ANSWERS NOW, AND THE SECOND IS NOT AN EXEMPTION.**
+      // `flexibleBody` gives a DEFINITE height, which is what a `flex: 1` child
+      // needs. `cappedBody` (R-123) hugs the content and stops at 92%, which is
+      // what a `flexShrink: 1` child needs — and which is what the session
+      // action shell uses so a two-line confirm does not open 92% tall. Both
+      // are declarations on the primitive; what this gate refuses, exactly as
+      // before, is a caller that nests a flexing body and declares NEITHER.
+      // The shrink half is held by `test:session-action-shell` [5], because
+      // whether the child says `flexShrink` or `flex` is not visible from here.
+      if (flexes && !/flexibleBody/.test(body) && !/cappedBody/.test(body)) {
         offenders.push(path.relative(srcRoot, file));
       }
     }

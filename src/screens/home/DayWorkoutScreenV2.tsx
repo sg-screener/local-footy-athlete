@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -11,7 +10,11 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { SessionDateLine } from '../../components/SessionDateLine';
 import { Text } from '../../components/common/Text';
-import { Card, Button, IconButton, Sheet } from '../../components/ui';
+import { Card, Button, IconButton } from '../../components/ui';
+import {
+  SessionActionSheet,
+  useSessionActionStep,
+} from '../../components/SessionActionSheet';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
 import { UndoToast } from '../../components/UndoToast';
@@ -3757,8 +3760,51 @@ interface ExerciseEditSheetProps {
   onExclusionScope: (exercise: EditableExercise, scope: ExerciseExclusionScope) => void;
 }
 
-function ExerciseEditSheet({
-  visible,
+/**
+ * ADD, REMOVE AND SWAP — plus the injury review, which is where the Injury
+ * action's answer lands. R-123: the sheet itself is `SessionActionSheet`; this
+ * component owns the steps and nothing about the chrome around them.
+ */
+/**
+ * THE STEPS THAT COME AFTER A CHANGE HAS ALREADY LANDED. On these the shell's
+ * exit says "Close", not "Cancel": the removal is done, the swap is done, and a
+ * word promising to undo it would be lying. Undo is `UndoToast`'s, on the
+ * screen behind, and it is untouched.
+ */
+const AFTER_THE_CHANGE_LANDED: ReadonlySet<ExerciseEditStep['kind']> = new Set([
+  'exclusion_scope', 'future_scope', 'result', 'coach_fallback',
+]);
+
+function ExerciseEditSheet(props: ExerciseEditSheetProps) {
+  const { visible, step, onClose } = props;
+  const open = visible && step.kind !== 'closed';
+
+  /**
+   * ⚠ **THE LAST OPEN STEP IS HELD SO THE SHEET CAN FADE OUT WITH ITS CONTENT
+   * STILL IN IT.** Closing sets the step to `closed`, and this component used
+   * to answer that by returning `null` — so Add, Remove and Swap SNAPPED shut
+   * while Equipment and Injury faded, which is the inconsistency R-123 names
+   * first. RN's `Modal` keeps its children mounted through the dismiss
+   * animation; what it cannot do is invent the content the screen has already
+   * thrown away.
+   */
+  const lastOpen = React.useRef<ExerciseEditStep>(step);
+  if (step.kind !== 'closed') lastOpen.current = step;
+  const shown = step.kind === 'closed' ? lastOpen.current : step;
+  if (shown.kind === 'closed') return null;
+
+  return (
+    <SessionActionSheet
+      visible={open}
+      onClose={shown.kind === 'future_scope' ? props.onTodayOnly : onClose}
+      testID="exercise-edit-sheet"
+    >
+      <ExerciseEditBody {...props} step={shown} />
+    </SessionActionSheet>
+  );
+}
+
+function ExerciseEditBody({
   sessionId,
   step,
   editableExercises,
@@ -3775,8 +3821,7 @@ function ExerciseEditSheet({
   onAddFamily,
   onAddGroup,
   onAddLeaf,
-}: ExerciseEditSheetProps) {
-  if (!visible || step.kind === 'closed') return null;
+}: Omit<ExerciseEditSheetProps, 'visible'> & { step: Exclude<ExerciseEditStep, { kind: 'closed' }> }) {
 
   // TASK 8 (ruling 12); RETIREMENT PASS (Sam's ruling on the reviewer's
   // finding): every step below used to have a menu, an exercise_menu, or
@@ -3787,20 +3832,44 @@ function ExerciseEditSheet({
   // (`onTodayOnly`, unchanged) and `confirm_add` keeps returning to
   // `add_kind` (that pairing survives untouched, since add was never routed
   // through exercise_menu or concern_reason).
-  const goBack = () => {
-    // A swap chosen from the menu has somewhere shallower to go now, and it is
-    // the menu. An injury-flow swap does not carry one and still closes.
-    if (step.kind === 'confirm_swap' && step.fromMenu) {
-      onStep(step.fromMenu);
-      return;
+  /**
+   * WHERE BACK GOES, OR `undefined` WHERE THERE IS NOWHERE SHALLOWER.
+   *
+   * ⚠ **`undefined` IS NOT "CLOSE". IT IS "DRAW NO BACK AT ALL".** This
+   * function used to fall through to `onClose()` on every step it had no
+   * answer for, so `pick_exercise`, `add_family`, `choose_swap`,
+   * `confirm_remove`, `coach_fallback` and `future_scope` all showed a Back
+   * button that was really an exit. Sam's acceptance is *"Back moves up
+   * exactly one step"*, and this app already refuses to draw a door that
+   * cannot act (`SessionChangeHub`). Cancel is the exit, on every step, drawn
+   * once by the shell.
+   *
+   * ⚠ **`choose_swap` AND `confirm_remove` GAIN THE BACK THEY SHOULD HAVE
+   * HAD.** Both are only ever reached from `pick_exercise` — `prepareSwap` has
+   * one caller and `confirm_remove` has one setter, both inside the picker —
+   * so the step above them is that picker, and closing the sheet was never it.
+   *
+   * `exclusion_scope` still has none, and that is not an oversight: behind it
+   * is a removal that has ALREADY HAPPENED, so going back would offer to remove
+   * an exercise that is no longer in the session. `result` and `coach_fallback`
+   * are outcomes, not questions. `future_scope` is asked AFTER the change
+   * landed; its old Back applied the today-only default and closed, which is
+   * exactly what Cancel does there now — one affordance instead of two that did
+   * the same thing.
+   */
+  const backTarget = (): (() => void) | undefined => {
+    // A swap chosen from the menu has somewhere shallower to go, and it is the
+    // menu. An injury-flow swap does not carry one.
+    if (step.kind === 'confirm_swap') {
+      const menu = step.fromMenu;
+      return menu ? () => onStep(menu) : undefined;
     }
     if (step.kind === 'confirm_add') {
       // The list it came from, when it came from one. `add_kind` — the seven
       // hand-written labels this replaced — is gone, so there is no shallower
       // step for an add that arrived any other way.
-      if (step.fromPick) onStep(step.fromPick);
-      else onClose();
-      return;
+      const pick = step.fromPick;
+      return pick ? () => onStep(pick) : undefined;
     }
     // ⚠ **EVERY ADD STEP CLIMBS TO THE LIST IT WAS ACTUALLY OPENED FROM.**
     //
@@ -3810,32 +3879,33 @@ function ExerciseEditSheet({
     // step on the other, and each carries whichever it was. Hard-coding either
     // would skip a level on one branch and invent one on the other.
     if (step.kind === 'add_pick') {
-      if (step.fromList) onStep(step.fromList);
-      else onClose();
-      return;
+      const list = step.fromList;
+      return list ? () => onStep(list) : undefined;
     }
     if (step.kind === 'add_leaf') {
-      if (step.fromGroup) onStep(step.fromGroup);
-      else onClose();
-      return;
+      const group = step.fromGroup;
+      return group ? () => onStep(group) : undefined;
     }
     if (step.kind === 'add_group') {
-      if (step.fromFamily) onStep(step.fromFamily);
-      else onClose();
-      return;
+      const family = step.fromFamily;
+      return family ? () => onStep(family) : undefined;
     }
-    if (step.kind === 'future_scope') {
-      onTodayOnly();
-      return;
+    if (step.kind === 'choose_swap') {
+      return () => onStep({ kind: 'pick_exercise', action: 'swap' });
     }
-    onClose();
+    if (step.kind === 'confirm_remove') {
+      return () => onStep({ kind: 'pick_exercise', action: 'remove' });
+    }
+    return undefined;
   };
 
-  // `exclusion_scope` HAS NO BACK, AND THAT IS NOT AN OVERSIGHT. Behind it is
-  // `confirm_remove` for a removal that has ALREADY HAPPENED — going "back"
-  // would offer to remove an exercise that is no longer in the session. The
-  // athlete leaves by answering, and every answer is reversible from My Status.
-  const showBack = step.kind !== 'result' && step.kind !== 'exclusion_scope';
+  useSessionActionStep({
+    key: exerciseEditStepKey(step),
+    title: exerciseEditTitle(step),
+    subtitle: exerciseEditSubtitle(step),
+    onBack: backTarget(),
+    cancelLabel: AFTER_THE_CHANGE_LANDED.has(step.kind) ? 'Close' : 'Cancel',
+  });
 
   // ⚠ **INJURY NO LONGER COMES THROUGH HERE (Sam, 2026-08-20).** It was the
   // last door that reached this picker from the top of the page with no row
@@ -3949,13 +4019,6 @@ function ExerciseEditSheet({
               testID="injury-review-apply"
               onPress={() => onApplyInjuryReview(step)}
             />
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
           </>
         );
       }
@@ -3989,13 +4052,6 @@ function ExerciseEditSheet({
                 onPress={() => onAddFamily(family.id, step)}
               />
             ))}
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
           </>
         );
       /* LEVEL 2 — Sam's headings. Every row carries its FAMILY'S glyph, which
@@ -4003,31 +4059,16 @@ function ExerciseEditSheet({
       case 'add_group':
         return (
           <>
-            <ScrollView
-              /* Keyed so the list opens at its first row rather than where the
-               * previous level was left — see the note on `add_pick` below. */
-              key={`group-${step.family}`}
-              style={styles.exerciseEditScrollList}
-              contentContainerStyle={styles.exerciseEditScrollContent}
-            >
-              {step.groups.map((group) => (
-                <ExerciseSheetOption
-                  key={group.id}
-                  label={group.label}
-                  sub={`${group.count} to choose from`}
-                  icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
-                  testID={`add-group-${group.id}`}
-                  onPress={() => onAddGroup(step.family, group.id, step)}
-                />
-              ))}
-            </ScrollView>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
+            {step.groups.map((group) => (
+              <ExerciseSheetOption
+                key={group.id}
+                label={group.label}
+                sub={`${group.count} to choose from`}
+                icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
+                testID={`add-group-${group.id}`}
+                onPress={() => onAddGroup(step.family, group.id, step)}
+              />
+            ))}
           </>
         );
       /* SAM'S EXTRA STEP — Hinge / Squat / Single leg / Accessories, and the
@@ -4036,74 +4077,44 @@ function ExerciseEditSheet({
       case 'add_leaf':
         return (
           <>
-            <ScrollView
-              key={`leaf-${step.group}`}
-              style={styles.exerciseEditScrollList}
-              contentContainerStyle={styles.exerciseEditScrollContent}
-            >
-              {step.leaves.map((leaf) => (
-                <ExerciseSheetOption
-                  key={leaf.id}
-                  label={leaf.label}
-                  sub={`${leaf.count} to choose from`}
-                  icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
-                  testID={`add-leaf-${leaf.id}`}
-                  onPress={() => onAddLeaf(step.family, leaf.id, step)}
-                />
-              ))}
-            </ScrollView>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
+            {step.leaves.map((leaf) => (
+              <ExerciseSheetOption
+                key={leaf.id}
+                label={leaf.label}
+                sub={`${leaf.count} to choose from`}
+                icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
+                testID={`add-leaf-${leaf.id}`}
+                onPress={() => onAddLeaf(step.family, leaf.id, step)}
+              />
+            ))}
           </>
         );
-      /* THE EXERCISES — *"exercise choices"*, all of them. The list SCROLLS:
-       * `Sheet` hugs its children, so an unbounded list of real exercise names
-       * would run off the bottom of the screen with no way to reach the last of
-       * them — which is what the flat 23-button menu did. */
+      /* THE EXERCISES — *"exercise choices"*, all of them.
+       *
+       * ⚠ **THE SCROLLING AND THE OPEN-AT-THE-TOP RULE BOTH MOVED TO THE SHELL
+       * (R-123).** Three add levels each kept a `maxHeight: 360` `ScrollView`
+       * of their own, keyed by their own coordinate — and `pick_exercise`,
+       * `choose_swap` and `injury_review`, whose lists are just as unbounded,
+       * had none at all and ran off the bottom of the screen. One scroll owner,
+       * keyed by `exerciseEditStepKey`, answers both. */
       case 'add_pick':
         return (
           <>
-            <ScrollView
-              /* ⚠ **THE KEY IS WHAT PUTS THE LIST BACK AT THE TOP, AND IT IS
-               * NOT DECORATION.** Every add level renders a `ScrollView` in the
-               * same position of the same tree, so React REUSES the instance
-               * across steps and it keeps its scroll offset. Measured on the
-               * simulator: scroll a heading list down, tap one, and the next
-               * level opens ALREADY SCROLLED — the first movements in it are
-               * above the fold and read as absent. Keying by the step's own
-               * identity remounts it, so every level opens at its first row. */
-              key={`pick-${step.leaf}`}
-              style={styles.exerciseEditScrollList}
-              contentContainerStyle={styles.exerciseEditScrollContent}
-            >
-              {step.options.map((option) => (
-                <Button
-                  key={option.name}
-                  label={`${option.name} — ${option.meta}`}
-                  variant="secondary"
-                  size="md"
-                  onPress={() => onStep({
-                    kind: 'confirm_add',
-                    addKind: 'Other',
-                    suggestion: option.suggestion,
-                    fromPick: step,
-                  })}
-                  style={styles.exerciseEditSecondaryButton}
-                />
-              ))}
-            </ScrollView>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
+            {step.options.map((option) => (
+              <Button
+                key={option.name}
+                label={`${option.name} — ${option.meta}`}
+                variant="secondary"
+                size="md"
+                onPress={() => onStep({
+                  kind: 'confirm_add',
+                  addKind: 'Other',
+                  suggestion: option.suggestion,
+                  fromPick: step,
+                })}
+                style={styles.exerciseEditSecondaryButton}
+              />
+            ))}
           </>
         );
       case 'confirm_remove':
@@ -4122,13 +4133,6 @@ function ExerciseEditSheet({
                 step.exercise.targetId ?? step.exercise.key,
               )}
             />
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
           </>
         );
       case 'choose_swap':
@@ -4140,35 +4144,28 @@ function ExerciseEditSheet({
             </Text>
             {step.groups.map((group) => (
               <View key={group.id} style={styles.exerciseEditGroup}>
-                {/* THE LABEL IS THE POINT. Six unlabelled options are a list;
-                    three labelled groups tell the athlete HOW FAR each option
-                    is from what they were given. */}
-                <Text style={styles.exerciseEditGroupLabel}>{group.label}</Text>
-                {group.options.map((option) => (
-                  <Button
-                    key={`${group.id}:${option.name}`}
-                    label={`${option.name} — ${option.meta}`}
-                    variant="secondary"
-                    size="md"
-                    onPress={() => onStep({
-                      kind: 'confirm_swap',
-                      exercise: step.exercise,
-                      suggestion: option.suggestion,
-                      reason: step.reason,
-                      fromMenu: step,
-                    })}
-                    style={styles.exerciseEditSecondaryButton}
-                  />
+              {/* THE LABEL IS THE POINT. Six unlabelled options are a list;
+                  three labelled groups tell the athlete HOW FAR each option
+                  is from what they were given. */}
+              <Text style={styles.exerciseEditGroupLabel}>{group.label}</Text>
+              {group.options.map((option) => (
+                <Button
+                  key={`${group.id}:${option.name}`}
+                  label={`${option.name} — ${option.meta}`}
+                  variant="secondary"
+                  size="md"
+                  onPress={() => onStep({
+                    kind: 'confirm_swap',
+                    exercise: step.exercise,
+                    suggestion: option.suggestion,
+                    reason: step.reason,
+                    fromMenu: step,
+                  })}
+                  style={styles.exerciseEditSecondaryButton}
+                />
                 ))}
               </View>
             ))}
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
           </>
         );
       case 'confirm_swap': {
@@ -4199,13 +4196,6 @@ function ExerciseEditSheet({
               size="md"
               onPress={() => onApplySwapToday(step)}
             />
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
-            />
           </>
         );
       }
@@ -4226,13 +4216,6 @@ function ExerciseEditSheet({
               variant="primary"
               size="md"
               onPress={() => onApplyAddToday(step)}
-            />
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="md"
-              onPress={onClose}
-              style={styles.exerciseEditSecondaryButton}
             />
           </>
         );
@@ -4342,29 +4325,39 @@ function ExerciseEditSheet({
     }
   };
 
-  return (
-    <Sheet
-      visible={visible}
-      onClose={onClose}
-      contentStyle={styles.exerciseEditSheet}
-      testID="exercise-edit-sheet"
-    >
-      {showBack ? (
-        <Pressable
-          onPress={goBack}
-          style={styles.exerciseEditBack}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={styles.exerciseEditBackText}>Back</Text>
-        </Pressable>
-      ) : null}
-      <Text style={styles.exerciseEditTitle}>{exerciseEditTitle(step)}</Text>
-      {exerciseEditSubtitle(step) ? (
-        <Text style={styles.exerciseEditSubtitle}>{exerciseEditSubtitle(step)}</Text>
-      ) : null}
-      <View style={styles.exerciseEditOptions}>{renderStep()}</View>
-    </Sheet>
-  );
+  return <View style={styles.exerciseEditOptions}>{renderStep()}</View>;
+}
+
+/**
+ * THE STEP'S SCROLL IDENTITY — what tells the shell this is a DIFFERENT list.
+ *
+ * `kind` alone is not enough: walking Lower body -> Hinge is two `add_group`
+ * steps in a row, and a shared key would leave the second one opening at the
+ * first one's scroll offset. That is the exact defect measured on the simulator
+ * while the Add hierarchy was built. Every level that carries a coordinate puts
+ * it in the key.
+ */
+function exerciseEditStepKey(step: Exclude<ExerciseEditStep, { kind: 'closed' }>): string {
+  switch (step.kind) {
+    case 'pick_exercise':
+      return `pick_exercise:${step.action}`;
+    case 'add_group':
+      return `add_group:${step.family}`;
+    case 'add_leaf':
+      return `add_leaf:${step.family}:${step.group}`;
+    case 'add_pick':
+      return `add_pick:${step.family}:${step.leaf}`;
+    case 'confirm_add':
+      return `confirm_add:${step.suggestion.name}`;
+    case 'confirm_swap':
+      return `confirm_swap:${step.suggestion.name}`;
+    case 'choose_swap':
+    case 'confirm_remove':
+    case 'exclusion_scope':
+      return `${step.kind}:${step.exercise.key}`;
+    default:
+      return step.kind;
+  }
 }
 
 function exerciseEditTitle(step: ExerciseEditStep): string {
@@ -5436,26 +5429,8 @@ const styles = StyleSheet.create({
     ...shadows.none,
   },
 
-  // ── Exercise edit sheet ──
-  exerciseEditSheet: {
-    paddingBottom: 36,
-  },
-  exerciseEditBack: {
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-    marginBottom: 2,
-  },
-  exerciseEditBackText: {
-    color: colors.accent.lime,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  exerciseEditTitle: {
-    color: '#FFFFFF',
-    fontSize: 21,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
+  /* The title, subtitle, Back, Cancel, scrolling and sheet padding these
+     styled are the shell's now (R-123). */
   // The affected-row equipment notice. Quiet by design — it is context for a
   // change, not a second prescription line.
   implementBadge: {
@@ -5464,16 +5439,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginLeft: 44,
   },
-  exerciseEditSubtitle: {
-    color: '#8A8A8A',
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 18,
-    marginTop: 5,
-  },
   exerciseEditOptions: {
     gap: 10,
-    marginTop: spacing.md,
+    /* NO `marginTop`: the shell already spaces its body from the step header,
+     * and keeping this one too doubled the gap to 32pt — visible on glass as a
+     * hole between "What would you rather do?" and the line under it, which
+     * Equipment (whose copy is the shell's subtitle) did not have. */
   },
   exerciseEditOption: {
     minHeight: 52,
@@ -5569,23 +5540,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  /**
-   * ⚠ **THE ADD LISTS SCROLL; THE CONFIRM STEPS STILL HUG.**
-   *
-   * `Sheet` is auto-height by design — it hugs its children, which is right for
-   * "Remove this exercise?" and is why `flexibleBody` exists as an opt-in.
-   * Sam's level 3 is *"legal final exercise choices"* — all of them — and
-   * Conditioning's tempo tier alone is nineteen. An unbounded column inside an
-   * auto-height sheet grows off the bottom of the screen and the last rows
-   * cannot be reached at all.
-   *
-   * A `maxHeight` (not `flex: 1`) is what a hugging parent can resolve: the
-   * list is its own height up to the cap, then scrolls. `flex: 1` here would
-   * resolve against a flex-basis of 0 inside an auto-height parent and collapse
-   * to nothing — the sliver-sheet defect this file's `Sheet` header records.
-   */
-  exerciseEditScrollList: { maxHeight: 360 },
-  exerciseEditScrollContent: { paddingBottom: 4 },
   exerciseEditSecondaryButton: {
     marginTop: 2,
   },

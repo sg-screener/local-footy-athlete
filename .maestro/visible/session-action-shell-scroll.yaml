@@ -1,0 +1,178 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - the deep Add and Injury lists scroll, and open at the top
+tags:
+  - e2e
+  - visible
+---
+# ⚠ **THE ROWS WITH AN UNDERSCORE IN THEIR ID ARE TAPPED BY THEIR WORD.**
+# `injury-region-lower_body`, `add-group-lower_body` and `add-leaf-lower_hinge`
+# are real ids the product really renders, but `test:maestro-element-contract`
+# builds its vocabulary from `[a-z0-9-]` shapes only, so an underscore id is
+# reported as a name no source can produce. Rather than grow that red list with
+# three false entries, this flow taps the LABEL — which for a `visible` flow is
+# the better selector anyway: it is the word the athlete reads.
+# R-123 acceptance 5: *"Deep Add and Injury flows scroll correctly and open at
+# the top."*
+#
+# ⚠ **"OPENS AT THE TOP" CANNOT BE ASSERTED WITH `assertNotVisible`.** Maestro's
+# hierarchy carries a `ScrollView`'s off-screen children with their real bounds,
+# so the last row of a scrolled-away list reports as visible. Measured here on
+# 2026-08-20: `injury-area-ankle-foot` passed `assertVisible` while it was below
+# the fold. **A flow written that way would report a scroll position it cannot
+# see.** So the offset is proven by PHOTOGRAPH instead — the same list is shot
+# on arrival and again after Back, and the two files are compared byte for byte
+# outside this flow. Identical bytes is the same list at the same offset.
+#
+# ⚠ **`INJURY_AREA_TEST_IDS` IS STALE ON `main` AND THIS FLOW WORKS AROUND IT,
+# IT DOES NOT HIDE IT.** The map still keys `'Hip / groin'` and `'Chest / ribs'`
+# while `GUIDED_INJURY_AREA_OPTIONS` splits them, so `Hip`, `Groin`, `Chest` and
+# `Ribs` each render `injury-area-undefined` — two pairs sharing one identifier.
+# Verified at `f2b76282` before this branch existed; named in
+# `docs/STATUS_SHEETSHELL.md`, not fixed here.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+
+# ── INJURY: leave a list, come back to it, and land at the top ─────────────
+- tapOn:
+    id: "session-change-injury"
+# ⚠ **NOT the title — `Where is the issue?` is the title of the region step AND
+# the area step, so waiting on it would pass on either. `Upper body` is a row
+# only the region step has.
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/20-injury-area-on-arrival
+- tapOn:
+    id: "injury-area-knee"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-mild"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/21-injury-severity-opens-at-top
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+# BYTE-IDENTICAL TO `20` IF AND ONLY IF THE LIST CAME BACK AT THE SAME OFFSET.
+- takeScreenshot: artifacts/shell/22-injury-area-after-back
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+
+# ── INJURY: the deepest step, and the one that used not to scroll at all ───
+# Thirteen trigger chips in a sheet with no scroll view of its own before R-123.
+- tapOn:
+    id: "session-change-injury"
+# ⚠ **NOT the title — `Where is the issue?` is the title of the region step AND
+# the area step, so waiting on it would pass on either. `Upper body` is a row
+# only the region step has.
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- tapOn:
+    id: "injury-area-knee"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-slight"
+    timeout: 10000
+- tapOn:
+    id: "injury-severity-slight"
+- extendedWaitUntil:
+    visible:
+      id: "injury-trigger-sprinting"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/23-injury-triggers-open-at-top
+- scrollUntilVisible:
+    element:
+      id: "session-action-body"
+    direction: DOWN
+    timeout: 10000
+- takeScreenshot: artifacts/shell/24-injury-triggers-scrolled
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+
+# ── ADD: the deepest branch — family -> group -> leaf -> exercises ─────────
+- tapOn:
+    id: "session-change-add"
+- extendedWaitUntil:
+    visible:
+      id: "add-family-strength"
+    timeout: 10000
+- tapOn:
+    id: "add-family-strength"
+- extendedWaitUntil:
+    visible: "Midline & Carries"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/25-add-groups-on-arrival
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible: "Hinge"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/26-add-leaf-opens-at-top
+- tapOn: "Hinge"
+- extendedWaitUntil:
+    visible:
+      id: "session-action-body"
+    timeout: 10000
+- takeScreenshot: artifacts/shell/27-add-exercises-open-at-top
+# BACK CLIMBS THE VARIABLE DEPTH ONE LEVEL AT A TIME.
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible: "Hinge"
+    timeout: 10000
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible: "Midline & Carries"
+    timeout: 10000
+# BYTE-IDENTICAL TO `25` IF THE GROUP LIST CAME BACK AT ITS OWN TOP.
+- takeScreenshot: artifacts/shell/28-add-groups-after-back
+- tapOn:
+    id: "session-action-back"
+- extendedWaitUntil:
+    visible:
+      id: "add-family-strength"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-action-back"
+- takeScreenshot: artifacts/shell/29-add-climbed-back-to-level-one
+- tapOn:
+    id: "session-action-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-change-hub"
+    timeout: 10000
+- assertVisible: "Equipment"
+- assertVisible: "Injury"
+- assertVisible: "Add"
+- assertVisible: "Remove"
+- assertVisible: "Swap"
+- takeScreenshot: artifacts/shell/30-hub-unshrunk-after-deep-walks

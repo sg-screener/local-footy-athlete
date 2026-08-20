@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
-import { Button, Sheet } from '../../components/ui';
+import { Button } from '../../components/ui';
+import {
+  SessionActionSheet,
+  useSessionActionStep,
+} from '../../components/SessionActionSheet';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import {
@@ -130,6 +134,37 @@ type FlowStep =
   | 'severity'
   | 'triggers';
 
+/**
+ * THE WORDS AT THE TOP OF EACH STEP, IN ONE TABLE.
+ *
+ * They were `<Text style={styles.title}>` literals scattered through
+ * `renderStep`, which is how `area` and `region` came to share a question and
+ * nothing said so. `Record` over the closed union, so a seventh step cannot be
+ * added without deciding what the athlete reads at the top of it.
+ */
+const STEP_TITLE: Record<FlowStep, string> = {
+  region: 'Where is the issue?',
+  area: 'Where is the issue?',
+  custom_area: 'What area is it?',
+  stop_training: 'Stop affected training',
+  severity: 'How much is it limiting you?',
+  triggers: 'What brings it on?',
+};
+
+/** The one grey line under the title. `stop_training`'s two safety paragraphs
+ *  are NOT here: they are the step's own copy, not a description of it. */
+const STEP_SUBTITLE: Record<FlowStep, string | null> = {
+  region: null,
+  /* SAM'S WORDS, from the 2026-07-30 ruling. The "Other upper body" and "Other
+     lower body" rows are gone because they resolved to no bucket, so the
+     athlete whose area is not listed needs telling what to do instead. */
+  area: GUIDED_INJURY_AREA_HINT,
+  custom_area: null,
+  stop_training: null,
+  severity: null,
+  triggers: 'Select up to 3 triggers',
+};
+
 interface GuidedInjuryFlowSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -139,14 +174,12 @@ interface GuidedInjuryFlowSheetProps {
   episodeId?: string;
 }
 
-export function GuidedInjuryFlowSheet({
-  visible,
-  onClose,
+function GuidedInjuryFlowBody({
   onComplete,
   initial,
   titlePrefix,
   episodeId,
-}: GuidedInjuryFlowSheetProps) {
+}: Omit<GuidedInjuryFlowSheetProps, 'visible' | 'onClose'>) {
   const [step, setStep] = useState<FlowStep>('region');
   const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
   const [area, setArea] = useState('');
@@ -156,8 +189,14 @@ export function GuidedInjuryFlowSheet({
   const [selectedSeverity, setSelectedSeverity] = useState(GUIDED_INJURY_SEVERITY_OPTIONS[1]);
   const [triggers, setTriggers] = useState<string[]>([]);
 
+  /**
+   * ⚠ **THIS NO LONGER WATCHES `visible`, AND IT IS NOT A RESET ANY MORE.** The
+   * shell remounts this body on every open (R-123), so "start at the first
+   * step" is structural. What is left is the one job the effect always also
+   * did: adopt an `initial` answer set that arrives or changes while the flow
+   * is open — the Coach tab's edit of an existing episode.
+   */
   useEffect(() => {
-    if (!visible) return;
     setStep('region');
     setRegion(initial?.region ?? null);
     setArea(initial?.region && initial.region !== 'other' ? initial.area ?? '' : '');
@@ -168,7 +207,6 @@ export function GuidedInjuryFlowSheet({
     ) ?? GUIDED_INJURY_SEVERITY_OPTIONS[1];
     setSelectedSeverity(severity);
   }, [
-    visible,
     initial?.area,
     initial?.region,
     initial?.severityBand,
@@ -198,10 +236,14 @@ export function GuidedInjuryFlowSheet({
     });
   };
 
+  /**
+   * ⚠ **`region` NO LONGER HAS A BACK AT ALL.** It is the flow's first step, so
+   * there is nothing shallower inside this action: the old `back()` closed the
+   * sheet from there, which is an exit wearing a Back label. Cancel is the exit
+   * now, on every step, drawn once by the shell (R-123).
+   */
   const back = () => {
-    if (step === 'region') {
-      onClose();
-    } else if (step === 'area' || step === 'custom_area') {
+    if (step === 'area' || step === 'custom_area') {
       setStep('region');
     } else if (step === 'stop_training') {
       setStep('severity');
@@ -212,11 +254,18 @@ export function GuidedInjuryFlowSheet({
     }
   };
 
+  useSessionActionStep({
+    key: step,
+    eyebrow: titlePrefix ?? null,
+    title: STEP_TITLE[step],
+    subtitle: STEP_SUBTITLE[step],
+    onBack: step === 'region' ? undefined : back,
+  });
+
   const renderStep = () => {
     if (step === 'region') {
       return (
         <>
-          <Text style={styles.title}>Where is the issue?</Text>
           {GUIDED_INJURY_REGION_OPTIONS.map((option) => (
             <FlowOption
               key={option.id}
@@ -241,13 +290,6 @@ export function GuidedInjuryFlowSheet({
     if (step === 'area' && region && region !== 'other') {
       return (
         <>
-          <Text style={styles.title}>Where is the issue?</Text>
-          {/*
-            SAM'S WORDS, from the 2026-07-30 ruling. The "Other upper body" and "Other
-            lower body" rows are gone because they resolved to no bucket, so the athlete
-            whose area is not listed needs telling what to do instead.
-          */}
-          <Text style={styles.body}>{GUIDED_INJURY_AREA_HINT}</Text>
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
             <FlowOption
               key={option}
@@ -263,7 +305,6 @@ export function GuidedInjuryFlowSheet({
               }}
             />
           ))}
-          <BackButton onPress={back} />
         </>
       );
     }
@@ -271,7 +312,6 @@ export function GuidedInjuryFlowSheet({
     if (step === 'custom_area') {
       return (
         <>
-          <Text style={styles.title}>What area is it?</Text>
           <AppTextInput
             value={customArea}
             onChangeText={(next: string) => {
@@ -312,7 +352,6 @@ export function GuidedInjuryFlowSheet({
               setStep('severity');
             }}
           />
-          <BackButton onPress={back} />
         </>
       );
     }
@@ -320,7 +359,6 @@ export function GuidedInjuryFlowSheet({
     if (step === 'stop_training') {
       return (
         <>
-          <Text style={styles.title}>Stop affected training</Text>
           <Text style={styles.body}>
             This is outside normal S&amp;C adjustment. LFA can't diagnose or rehab injuries.
             Stop affected training for now and get medical or physio advice.
@@ -335,13 +373,6 @@ export function GuidedInjuryFlowSheet({
             glow={false}
             onPress={() => submit(true)}
           />
-          <Button
-            label="Back"
-            variant="secondary"
-            glow={false}
-            onPress={back}
-            style={styles.secondaryButton}
-          />
         </>
       );
     }
@@ -349,7 +380,6 @@ export function GuidedInjuryFlowSheet({
     if (step === 'severity') {
       return (
         <>
-          <Text style={styles.title}>How much is it limiting you?</Text>
           {GUIDED_INJURY_SEVERITY_OPTIONS.map((option, index) => (
             <FlowOption
               key={option.label}
@@ -369,15 +399,12 @@ export function GuidedInjuryFlowSheet({
               }}
             />
           ))}
-          <BackButton onPress={back} />
         </>
       );
     }
 
     return (
       <>
-        <Text style={styles.title}>What brings it on?</Text>
-        <Text style={styles.body}>Select up to 3 triggers</Text>
         <View style={styles.triggerGrid}>
           {GUIDED_INJURY_TRIGGER_OPTIONS.map((trigger) => (
             <Pressable
@@ -411,22 +438,45 @@ export function GuidedInjuryFlowSheet({
           onPress={() => submit(isTrainingPaused)}
           style={styles.submitButton}
         />
-        <BackButton onPress={back} />
       </>
     );
   };
 
+  return <>{renderStep()}</>;
+}
+
+/**
+ * R-123 — THE CHROME BELONGS TO `SessionActionSheet`, THE QUESTIONS BELONG HERE.
+ *
+ * ⚠ **THIS FLOW IS ALSO THE DAY SCREEN'S "Injured" DOOR, the quick-action
+ * sheet's and the Coach tab's.** There is one guided injury flow, so all four
+ * entry points get the shared shell. Building a session-only copy to keep the
+ * other three on the old chrome would be the duplication the ruling exists to
+ * remove.
+ */
+export function GuidedInjuryFlowSheet({
+  visible,
+  onClose,
+  onComplete,
+  initial,
+  titlePrefix,
+  episodeId,
+}: GuidedInjuryFlowSheetProps) {
   return (
-    <Sheet
+    <SessionActionSheet
       visible={visible}
       onClose={onClose}
       testID={episodeId
         ? explorerTestId.injuryDetail(episodeId)
         : 'guided-injury-flow-sheet'}
     >
-      {titlePrefix ? <Text style={styles.prefix}>{titlePrefix}</Text> : null}
-      {renderStep()}
-    </Sheet>
+      <GuidedInjuryFlowBody
+        onComplete={onComplete}
+        initial={initial}
+        titlePrefix={titlePrefix}
+        episodeId={episodeId}
+      />
+    </SessionActionSheet>
   );
 }
 
@@ -490,34 +540,10 @@ function FlowOption({
   );
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="injury-flow-back"
-      style={({ pressed }) => [styles.back, pressed && { opacity: 0.72 }]}
-    >
-      <Text style={styles.backText}>Back</Text>
-    </Pressable>
-  );
-}
-
+/* `prefix`, `title`, `back`, `backText` and `secondaryButton` went with the
+ * chrome they styled — the shell draws the eyebrow, the title, Back and Cancel
+ * for all five actions now (R-123). */
 const styles = StyleSheet.create({
-  prefix: {
-    color: colors.accent.lime,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  },
-  title: {
-    color: colors.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: spacing.sm,
-  },
   body: {
     color: colors.text.secondary,
     fontSize: 14,
@@ -612,16 +638,5 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.lg,
-  },
-  secondaryButton: {
-    marginTop: spacing.md,
-  },
-  back: {
-    paddingVertical: spacing.md,
-  },
-  backText: {
-    color: colors.accent.lime,
-    fontSize: 15,
-    fontWeight: '800',
   },
 });
