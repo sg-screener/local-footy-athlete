@@ -3370,3 +3370,20 @@ reddened its own cell and only its own**: power moved to another family, a
 prompt label passed through to level 2, a count off by one, a pool dropped, and
 a hand-typed family label. `test:exercise-edit-entry-surface` re-points onto the
 three new step names rather than dropping the rows with the old ones.
+
+**⚠ SEEN ON GLASS, AND THE ONE DEFECT THAT ONLY GLASS COULD SEE.** The whole
+route was driven on the simulator through Program -> Start Session -> the
+five-action hub -> Add, on a build from the branch with a
+`standard-in-season-week` seed: level 1 shows the three families with the
+session screen's own glyphs, Strength opens on Power & jumps, and **Face Pull —
+the 21st name in its pool and unreachable under the old cap — was added, taking
+the session from 6 rows to 7**, landing at row 5 where the session template
+orders accessories. `assertNotVisible` passes on `Breathing reset`,
+`Tissue quality` and `Easy cardio (zone 1)` at level 1.
+
+**Level 3 opened ALREADY SCROLLED**, because both add levels render a
+`ScrollView` at the same position of the same tree and React reused the instance
+with its offset — so entering level 3 from the bottom of level 2 put the first
+movements above the fold, where they read as absent. **No headless cell can see
+that**: it is component identity, not data. Each list is now keyed to its own
+step so it remounts at its first row, re-verified on the device.

@@ -3817,6 +3817,16 @@ function ExerciseEditSheet({
         return (
           <>
             <ScrollView
+              /* ⚠ **THE KEY IS WHAT PUTS THE LIST BACK AT THE TOP, AND IT IS
+               * NOT DECORATION.** Both add levels render a `ScrollView` in the
+               * same position of the same tree, so React REUSES the instance
+               * across steps and it keeps its scroll offset. Measured on the
+               * simulator: scroll Strength's subcategories down to Prehab, tap
+               * one, and level 3 opens ALREADY SCROLLED — the first movements
+               * in the list are above the fold and read as absent. Keying by
+               * the step's own identity remounts it, so every level opens at
+               * its first row. */
+              key={`sub-${step.family}`}
               style={styles.exerciseEditScrollList}
               contentContainerStyle={styles.exerciseEditScrollContent}
             >
@@ -3848,6 +3858,9 @@ function ExerciseEditSheet({
         return (
           <>
             <ScrollView
+              /* Keyed for the same reason as level 2 above: a reused
+               * `ScrollView` opens where the previous list was left. */
+              key={`pick-${step.subcategory}`}
               style={styles.exerciseEditScrollList}
               contentContainerStyle={styles.exerciseEditScrollContent}
             >
