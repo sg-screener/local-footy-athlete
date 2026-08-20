@@ -231,12 +231,21 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
   // `prepareConcern` was, not an entry surface that moved.
   //
   // WHICH SIDE MOVED: the RULING, with a date. The replacement owners are
-  // `openExerciseAdd` and `openAddGroup` over
-  // `utils/addExerciseCandidates.legalAddCandidateGroups`, and they are pinned
-  // below in its place — a deletion that leaves nothing pinned is how a flow
-  // quietly stops existing.
+  // `openExerciseAdd`, `openAddFamily`, `openAddGroup` and `openAddLeaf` over
+  // `utils/addExerciseCandidates.legalAddFamilies` / `legalAddCandidates`, and
+  // they are pinned below in its place — a deletion that leaves nothing pinned
+  // is how a flow quietly stops existing.
+  //
+  // ⚠ **THE FLAT MENU'S SINGLE OWNER IS GONE (Sam, 2026-08-20).** It owned ONE
+  // level over the generation vocabulary's own 23 groups. Sam's hierarchy is
+  // Strength / Conditioning / Mobility-Warm-up, then a heading, then — under
+  // Lower body and Upper body ONLY — one more question, then the choices. All
+  // four owners are pinned here by name. Re-pointing rather than deleting the
+  // row is the rule: a gate that stops watching a surface because the surface
+  // was renamed is a gate that has quietly stopped watching.
   const flowOwners = [
-    'prepareSwap', 'openExerciseAdd', 'openAddGroup', 'openExerciseInjuryFlow',
+    'prepareSwap', 'openExerciseAdd', 'openAddFamily', 'openAddGroup', 'openAddLeaf',
+    'openExerciseInjuryFlow',
     'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'suggestTapSwap',
@@ -261,9 +270,13 @@ console.log('\n[4] Every step the guided flows land on still exists');
   // want to swap it?' step. Swap means only: I want a different exercise."* Its
   // replacement is no step at all — the pick lands straight on `choose_swap`,
   // which is asserted below and guarded as a ROUTE in [4b].
+  // The ONE flat add level is deleted in its turn (Sam, 2026-08-20). Its FOUR
+  // replacements are named here for the same reason `add_kind`'s were — and
+  // `add_leaf` is named even though it is reached from only two headings,
+  // because a step nothing pins is a step that can quietly stop existing.
   const survivingSteps = [
     'pick_exercise', 'confirm_remove', 'confirm_swap',
-    'choose_swap', 'add_group', 'add_pick',
+    'choose_swap', 'add_family', 'add_group', 'add_leaf', 'add_pick',
     'confirm_add', 'future_scope', 'coach_fallback', 'result',
   ];
   for (const step of survivingSteps) {

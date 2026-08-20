@@ -91,7 +91,16 @@ export function deriveSessionExecutionItemCompletion(
   return 'partial';
 }
 
-const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
+/**
+ * ⚠ **EXPORTED, BECAUSE THE ADD MENU NAMES THE SAME THINGS.**
+ *
+ * The Add flow's top level IS three of these sections — `strength`,
+ * `conditioning` and `mobility` — and an athlete who adds work under
+ * "Conditioning" must land in the section this screen calls Conditioning. Importing the table is what makes that true by construction;
+ * re-typing the three words here would be a second vocabulary for one question,
+ * free to drift the day either is reworded.
+ */
+export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   mobility: 'Mobility / Warm-up',
   strength: 'Strength',
   accessories: 'Accessories / Prehab',

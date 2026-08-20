@@ -3299,3 +3299,178 @@ forbids. Three cells: the club-night lifting is recorded, the same training
 earns the same credit, and both sides of the ratio count the same sessions,
 each preceded by an anti-vacuity cell. **⚠ NOT SEEN ON GLASS** — another lane
 owns the simulator; this is headless.
+
+**R-120** · *"Replace the Active Session Add action's random flat list with the
+approved hierarchy: 1. Strength / Conditioning / Mobility-Warm-up. 2. A relevant
+subcategory, such as upper/lower/movement pattern. 3. Legal final exercise
+choices. Never show athletes a mixed internal list containing options like
+'Breathing reset'."* (Sam, 2026-08-20) · **THE ADD MENU IS THREE LEVELS, AND ITS
+WORDS ARE THE ATHLETE'S.**
+
+**WHAT THE ATHLETE SAW, MEASURED ON GLASS AND HEADLESSLY.** Add opened one flat
+list of the GENERATION PROMPT's own groups — **23 buttons** on a full-kit
+off-season athlete: `Lower squat`, `Upper push horizontal`, `Upper pull
+vertical`, `Groin / adductors`, `Hamstring (light)`, `Lower prehab`, `Tissue
+quality`, `Easy cardio (zone 1)`, `Breathing reset`. The sheet is auto-height
+and does not scroll, so on the simulator the list **ran off the top of the
+screen past the status bar** and the first ten entries could not be reached at
+all. The NAMES behind it were already legal, already equipment- and
+injury-filtered, and already the athlete's; it was the MENU that was internal.
+
+**IT NOW READS `Strength (125)` / `Conditioning (94)` / `Mobility / Warm-up
+(30)`**, then a subcategory, then the choices.
+
+**⚠ NO NEW TAXONOMY — THREE JOINS ONTO OWNERS THAT ALREADY EXIST.** A fourth
+filing of "what kind of work is this" is the rival-authority shape this repo
+keeps paying for, so nothing here invents one:
+- **The families ARE session sections.** `AddFamilyId` is an `Extract` of
+  `SessionExecutionSectionId` and the labels are `SECTION_LABELS` itself, so
+  adding under "Conditioning" lands in the section the session screen calls
+  Conditioning — and the level-1 glyph is `SESSION_SECTION_ICON_KIND` (R-116's
+  one owner), not a lookalike.
+- **The strength subcategories ARE the pools.** The join is a new stable
+  `VocabularyGroup.id` — the pool key — never the prompt's label text. A
+  `label === 'Mobility'` join would break silently the day the prompt is
+  reworded.
+- **The conditioning subcategories ARE `ConditioningTier`.** Sam's own
+  session-intent classification already sorts all 90 formats into A / B-high /
+  B-low / C; they render as Sprints & speed, Hard intervals, Tempo & steady,
+  Easy & flush.
+
+**`REGISTRY-GREP: R-110`** — *"Power belongs inside the Strength section,
+generally as its first row."* It does here too: Power & jumps is Strength's
+FIRST subcategory and is not a family of its own, which is the same sentence
+applied to a menu. Guarded by name.
+
+**⚠ THE SIX-PER-GROUP CAP IS DELETED, AND THAT IS THE RULING, NOT A LIBERTY.**
+Its own stated reason was *"few enough that the sheet is a decision rather than
+a catalogue"* — a reason belonging to a screen that showed all 23 groups at
+once. The hierarchy is what makes it a decision now, so the cap had nothing left
+to do except hide movements: at six an athlete with a full rack could not reach
+Dips, Face Pull or the Z-Press at all. `REGISTRY-GREP: R-088` — *"a user should
+be able to add as many of their own things on top of it as they choose"*. Level
+3 shows every legal choice and SCROLLS, in a `maxHeight` list rather than
+`flex: 1`, which would collapse to zero inside an auto-height `Sheet`.
+
+**Search words:** add exercise, add menu, add flow, three levels, hierarchy,
+family, subcategory, breathing reset, tissue quality, easy cardio, flat list,
+internal label, movement pattern, conditioning tier, add candidates, six per
+group, ADD_CANDIDATES_PER_GROUP.
+
+· `BUILT src/utils/addExerciseCandidates.ts legalAddFamilies` /
+`legalAddCandidates` (replacing `legalAddCandidateGroups`), read by
+`screens/home/DayWorkoutScreenV2` through `openExerciseAdd` -> `openAddFamily`
+-> `openAddSubcategory`, whose steps are `add_family` / `add_subcategory` /
+`add_pick`. **Guarded by `test:exercise-add-candidates` case [5]** — 16 cells:
+three families in Sam's order, labels identical to `SECTION_LABELS`, R-110's
+power placement, every count equal to the list it opens, no measured internal
+label at level 1 or 2, and — the other half — that nothing legal fell out of the
+vocabulary on the way into the hierarchy. **Five mutations were run and each
+reddened its own cell and only its own**: power moved to another family, a
+prompt label passed through to level 2, a count off by one, a pool dropped, and
+a hand-typed family label. `test:exercise-edit-entry-surface` re-points onto the
+three new step names rather than dropping the rows with the old ones.
+
+**⚠ SEEN ON GLASS, AND THE ONE DEFECT THAT ONLY GLASS COULD SEE.** The whole
+route was driven on the simulator through Program -> Start Session -> the
+five-action hub -> Add, on a build from the branch with a
+`standard-in-season-week` seed: level 1 shows the three families with the
+session screen's own glyphs, Strength opens on Power & jumps, and **Face Pull —
+the 21st name in its pool and unreachable under the old cap — was added, taking
+the session from 6 rows to 7**, landing at row 5 where the session template
+orders accessories. `assertNotVisible` passes on `Breathing reset`,
+`Tissue quality` and `Easy cardio (zone 1)` at level 1.
+
+**Level 3 opened ALREADY SCROLLED**, because both add levels render a
+`ScrollView` at the same position of the same tree and React reused the instance
+with its offset — so entering level 3 from the bottom of level 2 put the first
+movements above the fold, where they read as absent. **No headless cell can see
+that**: it is component identity, not data. Each list is now keyed to its own
+step so it remounts at its first row, re-verified on the device.
+
+**R-120a** · *"Change the Strength hierarchy to this: 1. Power & Jumps ->
+exercise choices. 2. Lower body -> Hinge / Squat / Single leg / Accessories ->
+exercise choices. 3. Upper body -> Push / Pull / Arms & shoulders / Accessories
+-> exercise choices. 4. Midline & Carries -> exercise choices. This adds one
+extra step only where needed. Conditioning and Mobility / Warm-up can keep their
+current structure. Use these athlete-visible names exactly."* (Sam, 2026-08-20)
+· **THE DEPTH IS NOT UNIFORM, AND THAT IS THE RULING.**
+
+R-120's first cut gave Strength TEN flat headings. This groups them under four
+and pays for one more tap ONLY under Lower body and Upper body. **A heading
+therefore either owns its exercises or owns a further question, and
+`AddGroupSpec.leaves` is the single place that says which** — the screen reads
+how many leaves are legal and routes itself, so *"only where needed"* is data,
+not a branch somebody has to remember to write.
+
+**`Single leg` IS THE `unilateral` TAG, NOT A HAND-WRITTEN LIST.** Sam put it
+BESIDE Hinge and Squat, which means siblings PARTITION: it takes the unilateral
+movements out of those two rather than duplicating them, so a movement belongs
+to exactly one leaf and the two counts cannot double-count it.
+`EXERCISE_TAGS.unilateral` already decides this for the per-side dose. Measured
+on the live pools: **6 of 13 squat names and 1 of 7 hinge names, with nothing
+untagged**, so the rule never guesses. It applies to the two primary lower
+patterns ONLY — `Single-Leg Calf Raise` stays in `Accessories` with the other
+calf work, which is where an athlete looks for it.
+
+**Search words:** add hierarchy, strength headings, lower body, upper body,
+single leg, hinge squat accessories, push pull arms shoulders, midline carries,
+power and jumps, one extra step, variable depth, unilateral tag.
+
+· `BUILT` `ADD_GROUPS` / `ADD_LEAF_LABELS` / `LEAF_FOR_POOL` /
+`liftUnilateralToSingleLeg` in `src/utils/addExerciseCandidates.ts`, read by
+`DayWorkoutScreenV2` through `openExerciseAdd` -> `openAddFamily` ->
+`openAddGroup` -> (`openAddLeaf`) -> the exercises, whose steps are
+`add_family` / `add_group` / `add_leaf` / `add_pick`. **Guarded by
+`test:exercise-add-candidates` case [5], now 26 cells / 48 green**, including
+Sam's four headings asserted as an ORDERED list of exact strings, both extra
+questions asserted verbatim, *"only where needed"* asserted in BOTH directions
+(the two deep headings AND that every other heading is shallow), the partition
+(`Single leg` holds the unilateral names, Squat and Hinge no longer do, and
+**no exercise appears under two leaves anywhere in the tree**), and every label
+the athlete reads being one Sam declared. **Six mutations were run and each
+reddened its own cell and only its own**: an extra step where none was asked
+for, the partition disabled, the partition duplicating instead, the heading
+order changed, an internal label on a leaf, and a straight-through heading
+whose list title drifted from its button.
+
+**⚠ SEEN ON GLASS, INCLUDING BOTH BRANCHES AND EVERY EXIT.** Four Strength
+headings on one screen; Lower body -> Hinge / Squat / Single leg / Accessories,
+whose Single leg list is exactly the unilateral movements with per-side doses;
+Midline & Carries going STRAIGHT to its exercises and its Back climbing to the
+headings rather than to a step that was never shown; Back walking the full
+depth 4 -> 3 -> 2 -> 1; Cancel closing from the deepest level; and an add
+completed through the deep branch (Upper body -> Accessories -> Scap Pull Ups),
+taking the session from 6 rows to 7.
+
+**⚠ OBSERVED ON GLASS AND PROVEN NOT TO BE THIS CHANGE.** Adding a shoulder
+exercise also put a shoulder drill into the day's Mobility / Warm-up. That is
+`selectMobilityPrehabFlow` DERIVING the warm-up from the workout — the north
+star working — and it is untouched here: `programControlActions`,
+`mobilityPrehabFlow` and `sessionTemplate` are all outside this branch's diff,
+the same name was equally addable through the old flat menu's `Shoulder health`
+group, and a headless probe through the screen's own owners (with a non-zero
+warm-up as its positive control) returns byte-identical section counts in this
+branch and in a control worktree at `c12a058c`.
+
+**R-120b** · *"Keep the title as 'Accessories'. The previous step already makes
+the body area clear."* (Sam, 2026-08-20) · **THE PATH IS THE CONTEXT; THE TITLE
+IS NOT.**
+
+Raised BY the seat, not by Sam: Sam's names give both halves of the body a leaf
+called *"Accessories"*, so the exercise list opens titled `Accessories` with
+nothing on that screen saying which half. The seat offered to title it
+`Lower body — Accessories`. **Sam refused, and the reason is the ruling:** the
+athlete has just tapped `Lower body`, so the step behind them already answers
+it, and joining the two approved names would invent a third.
+
+⚠ **DO NOT "FIX" THIS.** The two `Accessories` leaves ARE different lists —
+19-20 movements of calves, isolation and lower prehab under Lower body, 3-4
+scap and cuff drills under Upper body — so the duplicate word looks like a
+defect on a screenshot and is not one. **Guarded by
+`test:exercise-add-candidates` case [5]**: the leaf title must be the bare leaf
+label, so a future seat that helpfully prefixes the body area reddens a cell
+citing this row instead of quietly re-litigating it.
+
+**Search words:** accessories, duplicate label, leaf title, lower body
+accessories, upper body accessories, body area prefix, add menu title.
