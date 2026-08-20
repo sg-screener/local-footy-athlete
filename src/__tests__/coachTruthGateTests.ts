@@ -46,7 +46,7 @@ import {
 import {
   buildFatigueConstraintFromIntent,
 } from '../utils/coachConstraintProducers';
-import { buildConstraintPlans } from '../utils/constraintPlan';
+import type { ConstraintPlan } from '../utils/constraintPlan';
 import type { CoachIntent } from '../utils/coachIntent';
 import type {
   ActiveConstraint,
@@ -146,7 +146,7 @@ section('[1] Fatigue, LLM-estimated severity (5), no visible diff — guidance o
 
   const verified = buildVerifiedCommunication({
     activeConstraints: [c],
-    plans: buildConstraintPlans([c]),
+    plans: [],
     visibleDiff: [],
   });
   eq('appliedChanges empty', verified.appliedChanges.length, 0);
@@ -186,6 +186,11 @@ section('[1] Fatigue, LLM-estimated severity (5), no visible diff — guidance o
   // additionally assert that any "bike/row" mention sits AFTER the
   // honest "Optional:" / "if adding work" prefix.
   ok('reply does NOT say "Sub in"', !/sub\s+in/i.test(reply), `reply was:\n${reply}`);
+  // The bike/row substitute text reached this reply ONLY through
+  // `plan.substituteWith`, and no production caller supplies a plan. The
+  // conditional cell that ordered it after the "Optional:" framing therefore
+  // fired only on the dead fixture; left as it was it would have gone silently
+  // vacuous. It is replaced by the production truth, which is not conditional.
   if (/\b(bike|row)\b/i.test(reply)) {
     const bikeIdx = reply.search(/\b(bike|row)\b/i);
     const optionalIdx = reply.search(/optional[:\s]|if\s+adding\s+work/i);
@@ -195,6 +200,11 @@ section('[1] Fatigue, LLM-estimated severity (5), no visible diff — guidance o
       `bikeIdx=${bikeIdx} optionalIdx=${optionalIdx}\nreply was:\n${reply}`,
     );
   }
+  ok(
+    'with no plan supplied the reply offers no bike/row substitute at all',
+    !/\b(bike|row)\b/i.test(reply),
+    `reply was:\n${reply}`,
+  );
 
   // The clarifier is the whole point — without it the user never gets
   // an honest path to actually triggering a mutation.
@@ -251,7 +261,7 @@ section('[2] Fatigue 8/10 explicit + Friday RDL removed — applied + reply may 
   const fridayDiff = diffEntryRemoved('2026-05-01', 'Lower Body Strength', 'Romanian Deadlift');
   const verified = buildVerifiedCommunication({
     activeConstraints: [c],
-    plans: buildConstraintPlans([c]),
+    plans: [],
     visibleDiff: [fridayDiff],
   });
   ok('canSayProgramUpdated = true', verified.canSayProgramUpdated === true);
@@ -314,8 +324,10 @@ section('[2] Fatigue 8/10 explicit + Friday RDL removed — applied + reply may 
 section('[3] Hammy 7/10 — Deadlift removed; activeGuidance carries policy; bike not subbed in');
 {
   const c = makeHammyConstraint(7);
-  const plans = buildConstraintPlans([c]);
-  ok('hammy plan built', plans.length === 1 && plans[0].type === 'injury');
+  // `buildConstraintPlans` had ZERO production callers and is deleted. The one
+  // production site that supplies this list — `utils/coachDispatchDeps.ts:113` —
+  // passes an empty array, so that is what these cells now pass.
+  const plans: ConstraintPlan[] = [];
 
   const fridayDiff = diffEntryRemoved('2026-05-01', 'Lower Body Strength', 'Trap Bar Deadlift');
   const verified = buildVerifiedCommunication({
@@ -332,20 +344,17 @@ section('[3] Hammy 7/10 — Deadlift removed; activeGuidance carries policy; bik
     `applied: ${JSON.stringify(verified.appliedChanges)}`,
   );
 
-  // Hammy policy includes sprinting/heavy hinge avoid lines from the
-  // exposure engine — they flow into activeGuidance via plan.avoid.
+  // DELETED WITH THEIR SUBJECT — 'hammy plan built', 'activeGuidance includes
+  // sprinting/jumping/hinge avoid' and 'optionalAdvice mentions bike or row
+  // option'. All three read lines that reach `buildVerifiedCommunication` only
+  // through `plan.avoid` / `plan.substituteWith`, and no production caller ever
+  // supplied a plan. They were green because the suite built one itself.
+  // The LIVE half of this section — what may be CLAIMED as applied, and the
+  // fabricated-reply rejection below — is unchanged and still asserted.
   ok(
-    'activeGuidance includes sprinting/jumping/hinge avoid',
-    verified.activeGuidance.some((g) => /sprint|jump|plyo|hinge/i.test(g)),
-    `guidance: ${JSON.stringify(verified.activeGuidance)}`,
-  );
-
-  // Optional substitutes (easy bike / row) are advisory — never claimed
-  // as applied. They live in optionalAdvice.
-  ok(
-    'optionalAdvice mentions bike or row option',
-    verified.optionalAdvice.some((o) => /bike|row/i.test(o)),
-    `optional: ${JSON.stringify(verified.optionalAdvice)}`,
+    'no guidance is invented when no plan is supplied',
+    verified.activeGuidance.length === 0 && verified.optionalAdvice.length === 0,
+    `guidance: ${JSON.stringify(verified.activeGuidance)} optional: ${JSON.stringify(verified.optionalAdvice)}`,
   );
 
   // A reply that fabricates "subbed in a bike" must be REJECTED by the
