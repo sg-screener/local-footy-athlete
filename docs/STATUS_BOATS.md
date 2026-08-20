@@ -6,6 +6,31 @@ behaviour. Sam is using the app separately; his product notes are explicitly
 NOT this mission, and the physical-phone acceptance pass is deferred.
 
 **Branch:** `demolition/final-boats`, cut from `main` @ `01306539`.
+
+## MERGED — `f7f732d8`, 2026-08-21. Rollback tag `pre-final-boats-2026-08-21` @ `01306539`.
+
+Sam approved on the second report, with two conditions: leave `test:midline` and
+`test:severity-scale` alone (done — both untouched, both still dead on the
+PREVIOUS burn's `blockAdjuster` / `trainAroundEngine`), and preserve every
+unrelated change (done — all 14 dirty files in the shared checkout, 11 modified
+and 3 untracked, verified BYTE-IDENTICAL by sha256 taken before and after the
+merge). No rebuild, no simulator, no release matrix.
+
+**VERIFIED ON MERGED `main`, not on the branch:**
+
+    files deleted           4 gone, 4 trimmed files at their intended length
+    executable references   ZERO anywhere to anything this branch deleted
+    runtime-reachable       552 — unchanged
+    test:compile [product]  30, [devtools] 50 — identical to pre-merge
+    test:compile [tests]    593 -> 588, worse pairs 77 -> 74
+    test:scenarios          output byte-identical to pre-merge
+    the three repo guards   identical failure TEXT to pre-merge
+    test:readiness          33 / 0     (was DEAD at import)
+    test:injury-severity-bands 31 / 0  (was DEAD at import)
+    coach-truth-gate 59/0 · readiness-structure-law 88/88 ·
+    coach-live-readiness-priority 152/0 · ladder-wide 14/14 ·
+    readiness-dose-sweep 105/0
+
 **Control:** `scratchpad/wt-ctl`, detached at `01306539`, never edited. Every
 number below is a comparison against it.
 **Uncommitted work in the shared checkout** (`docs/printed-weeks/*.md`, two
