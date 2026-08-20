@@ -36,7 +36,7 @@
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { legalAddCandidates, type AddCandidate, type AddLeafId } from './addExerciseCandidates';
 import { resolveTapSwapEnvironment, type TapSwapEnvironment } from './tapSwapHierarchy';
-import { activeInjuryFactsOn } from '../rules/injuryWithheldRows';
+import { activeInjuryFactsOn, isRedFlagInjury } from '../rules/injuryWithheldRows';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import { SET_CEILING } from '../rules/weeklyLegality';
@@ -173,6 +173,25 @@ export function chooseInjurySessionAdditions(args: {
   pausedRowNames: readonly string[];
   /** Every exercise name anywhere in the athlete's week, this session included. */
   weekExerciseNames: readonly string[];
+  /**
+   * ⚠ **THE ATHLETE'S OWN "LEAVE THIS OUT" DECISIONS — NEVER OFFERED BACK.**
+   *
+   * MEASURED by `test:session-change-sequence`: the athlete removed
+   * `Bench Press`, then declared a knee injury, and the block **added Bench
+   * Press straight back** — at the add door's starting load, 82.5kg, instead of
+   * the 107.5kg they had been lifting. Two defects in one row, and the same
+   * cause: *an injury adjustment may not undo an athlete's own decision.*
+   *
+   * The week list could not catch it. A removal that survives a restart does so
+   * by RE-AUTHORING the accepted week WITHOUT the row, so by the time this runs
+   * the exercise is genuinely absent from the microcycle and looks like a fresh,
+   * legal, unused candidate. The only place the decision still exists is the
+   * exclusion record, so that is what is read.
+   *
+   * Sam's boundary, 2026-08-20, stated from the other side: *"Injury and
+   * ordinary Remove must remain separate."*
+   */
+  excludedByAthlete: readonly string[];
   /** How many rows the injury paused — the block is never larger than the hole. */
   pausedCount: number;
   /** The session's ORIGINAL row count. Sam: *"never exceed the original session size"*. */
@@ -201,6 +220,7 @@ export function chooseInjurySessionAdditions(args: {
     ...args.weekExerciseNames,
     ...args.keptRowNames,
     ...args.pausedRowNames,
+    ...args.excludedByAthlete,
   ].map(normalise));
   const chosen: AddCandidate[] = [];
   let sets = args.keptSets;
@@ -234,7 +254,33 @@ export function chooseInjurySessionAdditions(args: {
   // pulling 2 (Barbell Row, Lat Pulldown), pressing 3 (Explosive Push-up,
   // Single-Arm DB Floor Press, DB Shoulder Press) — so pulling wins and the
   // block opens with a row.
-  const identityCount = (identities: readonly string[]): number => args.weekExerciseNames
+  /**
+   * ⚠ **COUNTED FROM THE REST OF THE WEEK, NOT FROM TODAY — AND THAT IS WHAT
+   * MAKES THE BLOCK STABLE.**
+   *
+   * MEASURED by `test:session-change-sequence`: with today's rows in the count,
+   * restoring an exercise the athlete had removed changed the PRESSING total by
+   * one, flipped the pull/press tie-break, and silently swapped the injury's
+   * added exercise from `Incline Bench` to `Chest Supported Row`. The athlete
+   * would have opened the same session and found different work in it, for a
+   * reason that had nothing to do with their injury.
+   *
+   * The question this is asking is *"what does the rest of the athlete's week
+   * already cover?"*, so today's own rows were never part of the answer. Taking
+   * them out makes the block immune to every edit made to the day it is
+   * adjusting — which is the property that was missing.
+   */
+  const todayNames = [...args.keptRowNames, ...args.pausedRowNames].map(normalise);
+  const restOfWeek: string[] = [];
+  const spent = new Map<string, number>();
+  for (const name of args.weekExerciseNames) {
+    const key = normalise(name);
+    const budget = todayNames.filter((entry) => entry === key).length;
+    const used = spent.get(key) ?? 0;
+    if (used < budget) { spent.set(key, used + 1); continue; }
+    restOfWeek.push(name);
+  }
+  const identityCount = (identities: readonly string[]): number => restOfWeek
     .filter((name) => identities.includes(String(finerPatternIdentityOf(name)))).length;
   const safeHalf: 'upper' | 'lower' = args.injuredHalf === 'upper' ? 'lower' : 'upper';
   const leaves = [...COMPOUND_LEAVES[safeHalf]];
@@ -373,8 +419,24 @@ export interface InjurySessionAdjustmentInputs {
   /** The athlete's own word for the area — theirs at review time, the worst
    *  active episode's at the view door. */
   bodyPart: string;
+  /**
+   * ⚠ **A RED FLAG GETS NO SESSION ADJUSTMENT AT ALL.**
+   *
+   * Sam, 2026-08-21: *"An 8-10 red flag continues through the existing full-stop
+   * rule."* That rule (R-115) leaves every row ON the session, marked, and
+   * refuses the day's completion while it is withholding something — and the
+   * whole point of it is that the athlete is told to stop and get advice, not
+   * handed a different session to do instead. MEASURED by
+   * `test:injury-fallback-journey`, which asserts in five cells that the athlete
+   * *"still sees those rows, not an emptied day"* and that the refusal *"blames
+   * the INJURY, not a missing session"*.
+   */
+  redFlag: boolean;
   /** Every exercise name in the athlete's authored week, this day included. */
   weekExerciseNames: readonly string[];
+  /** Exercises the athlete has removed. Never offered back — see the field of
+   *  the same name on `chooseInjurySessionAdditions`. */
+  excludedByAthlete: readonly string[];
   /** The rows this injury pauses, decided by the ladder, never re-decided here. */
   pausedRowNames: readonly string[];
 }
@@ -425,6 +487,8 @@ export function deriveInjurySessionAdjustment(
 ): InjurySessionAdjustment | null {
   const workout = args.workout;
   if (!workout || args.pausedRowNames.length === 0) return null;
+  // The full-stop rule owns a red flag, start to finish. See `redFlag` above.
+  if (args.redFlag) return null;
 
   const paused = new Set(args.pausedRowNames.map(normalise));
   const rows = workout.exercises ?? [];
@@ -451,6 +515,7 @@ export function deriveInjurySessionAdjustment(
     profile: args.profile,
     keptRowNames,
     weekExerciseNames: args.weekExerciseNames,
+    excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: args.pausedRowNames,
     pausedCount: args.pausedRowNames.length,
     originalRowCount: rows.length,
@@ -558,6 +623,7 @@ export function injurySessionAdjustmentForDay(args: {
   facts: readonly TemporarySourceFact[] | null | undefined;
   profile: OnboardingData | null | undefined;
   weekExerciseNames: readonly string[];
+  excludedByAthlete: readonly string[];
 }): InjurySessionAdjustment | null {
   if (!args.workout || (args.workout.exercises ?? []).length === 0) return null;
   const episodes = activeInjuryFactsOn(args.facts, args.dateISO);
@@ -566,6 +632,7 @@ export function injurySessionAdjustmentForDay(args: {
     dateISO: args.dateISO, profile: args.profile, facts: args.facts,
   });
   const worst = episodes.reduce((a, b) => (b.severity > a.severity ? b : a));
+  if (episodes.some((episode) => isRedFlagInjury(episode))) return null;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { planInjuryRecomposition } = require('./injurySessionRecomposition') as
     typeof import('./injurySessionRecomposition');
@@ -581,7 +648,9 @@ export function injurySessionAdjustmentForDay(args: {
     environment,
     profile: args.profile,
     bodyPart: worst.bodyPart,
+    redFlag: false,
     weekExerciseNames: args.weekExerciseNames,
+    excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: plan.pausedRows,
   });
 }

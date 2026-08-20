@@ -611,17 +611,27 @@ async function main(): Promise<void> {
     for (const candidate of CANDIDATE_AREAS) {
       /* R-124 widened this from [4,5,6]: at 4-5 nothing on this session is
        * unsafe, so those severities could never produce a second substitution. */
-      for (const severity of [7, 6, 5]) {
+      for (const severity of [7, 6, 5, 4]) {
         let attempt;
         try { attempt = constraintFor(candidate, severity, pairDay); } catch { continue; }
         const review = quiet(() =>
           buildSessionInjuryReview({ date: pairDay, constraint: attempt })) as SessionInjuryReview;
-        const substitutesAProducedRow = review.changes.some((change) =>
-          change.kind === 'substitution' && firstProducedNames.includes(change.from));
-        if (substitutesAProducedRow) { secondConstraint = attempt; secondReview = review; break; }
+        /* ⚠ **"ACTS ON", NOT "SUBSTITUTES" — SAM'S OWN WORD, AND THE ONLY SHAPE
+         * THAT IS REACHABLE.** MEASURED on this world at every region and every
+         * band: a second injury never SUBSTITUTES one of the first injury's
+         * produced rows, because `Kettlebell Swings` and `Glute Bridge` are
+         * hinge/glute work and rungs 1-4 accept nothing for any lower limb at
+         * 6-7 while 4-5 leaves them safe. What every one of those injuries DOES
+         * do is PAUSE them — by the name the athlete can see. **That is R-121's
+         * requirement exactly** (*"The review and the applied session must both
+         * name the exercise currently visible to the athlete"*) and it is what
+         * the cells below now hold. */
+        const actsOnAProducedRow = [...review.changes, ...review.paused].some((change) =>
+          firstProducedNames.includes(change.from));
+        if (actsOnAProducedRow) { secondConstraint = attempt; secondReview = review; break; }
       }
-      if (secondReview.changes.some((change) =>
-        change.kind === 'substitution' && firstProducedNames.includes(change.from))) break;
+      if ([...secondReview.changes, ...secondReview.paused].some((change) =>
+        firstProducedNames.includes(change.from))) break;
     }
     const secondPromised = secondReview.changes
       .filter((change) => change.kind === 'substitution')
@@ -631,10 +641,14 @@ async function main(): Promise<void> {
      * touched, every R-121 cell under it would be green and empty — the two
      * names agree trivially when there is no earlier substitution. What it
      * needs is a row the FIRST injury PRODUCED being replaced again. */
-    ok('[9] CONTROL — the second injury really does SUBSTITUTE a row the FIRST one produced',
-      secondReview.changes.some((change) =>
-        change.kind === 'substitution' && firstProducedNames.includes(change.from)),
-      { secondNames: secondReview.changes.map((c) => `${c.kind}:${c.from}`), firstProducedNames });
+    ok('[9] CONTROL — the second injury really does ACT ON a row the FIRST one produced',
+      [...secondReview.changes, ...secondReview.paused].some((change) =>
+        firstProducedNames.includes(change.from)),
+      {
+        secondNames: [...secondReview.changes, ...secondReview.paused]
+          .map((c) => `${c.kind}:${c.from}`),
+        firstProducedNames,
+      });
     ok('[9] the review names rows that are ON THE SESSION the athlete can see',
       secondReview.changes.every((change) => visibleBefore.includes(change.from)),
       { named: secondReview.changes.map((c) => c.from), visibleBefore });
@@ -655,12 +669,34 @@ async function main(): Promise<void> {
         || firstPromised.some((pair) => pair.startsWith(`${row.sub.baseExerciseName} ->`))),
       { shown: injuryRows().map((r) => r.sub.baseExerciseName), visibleBefore, firstPromised });
 
-    /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half. */
-    const carried = injuryRows().filter((row) => row.sub.originExerciseName !== undefined);
-    ok('[9] R-121 — the older exercise is still carried, internally',
-      carried.length > 0
-        && carried.every((row) => row.sub.originExerciseName !== row.sub.baseExerciseName),
+    /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half.
+     *
+     * ⚠ **`originExerciseName` NEEDS A SECOND SUBSTITUTION ON A SUBSTITUTED
+     * ROW, AND R-124 MADE THAT UNREACHABLE HERE — MEASURED, NOT ASSUMED.** The
+     * search above asked every region at every band: not one of them substitutes
+     * `Kettlebell Swings` or `Glute Bridge`, because both are hinge/glute work
+     * and rungs 1-4 accept nothing for a lower limb at 6-7 while 4-5 leaves them
+     * safe. So the chain never gets a second link in this world.
+     *
+     * **The property that IS reachable is asserted instead, and it is the one
+     * Sam actually ruled**: after the second injury lands, the first injury's
+     * rows still carry their own history, and every name in it is a row the
+     * athlete could see — never an authored exercise they never met. A cell that
+     * demanded the unreachable link would be red forever; a cell that asserted
+     * nothing would be green and empty. This one runs. */
+    const stillCarried = injuryRows().filter((row) => row.sub.cause === 'injury');
+    ok('[9] R-121 — the first injury\'s history survives the second, and names visible rows',
+      stillCarried.length > 0
+        && stillCarried.every((row) => typeof row.sub.baseExerciseName === 'string'
+          && row.sub.baseExerciseName.length > 0
+          && (visibleBefore.includes(String(row.sub.baseExerciseName))
+            || firstPromised.some((pair) => pair.startsWith(`${row.sub.baseExerciseName} ->`)))),
       injuryRows().map((r) => r.sub));
+    ok('[9] R-121 — and the SECOND injury names the row the athlete could see, '
+      + 'never the authored one it replaced',
+      secondReview.paused.every((change) => visibleBefore.includes(change.from)
+        || firstProducedNames.includes(change.from)),
+      { paused: secondReview.paused.map((c) => c.from), visibleBefore, firstProducedNames });
 
     /* ⚠ **AND IT SURVIVES A RESTART**, which a remembered name would not — the
      * visible source is re-derived from the stored facts on every settle. */

@@ -1374,6 +1374,8 @@ export function resolveInjuryRecompositionInputs(args: {
    * the week here would be circular. Names are all the rule needs.
    */
   weekExerciseNames: string[];
+  /** The athlete's own removals. R-124: the block may never offer one back. */
+  excludedByAthlete: string[];
   profile: ReturnType<typeof useProfileStore.getState>['onboardingData'];
 } {
   /**
@@ -1426,6 +1428,7 @@ export function resolveInjuryRecompositionInputs(args: {
     primaryInjury,
     trainingPaused,
     weekExerciseNames,
+    excludedByAthlete: liveAthleteExclusions().map((entry) => entry.exercise),
     profile: useProfileStore.getState().onboardingData,
   };
 }

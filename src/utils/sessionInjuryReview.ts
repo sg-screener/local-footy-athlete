@@ -156,7 +156,8 @@ export function buildSessionInjuryReview(args: {
   constraint: ActiveInjuryConstraint;
 }): SessionInjuryReview {
   const {
-    workout, environment, primaryInjury, trainingPaused, weekExerciseNames, profile,
+    workout, environment, primaryInjury, trainingPaused, weekExerciseNames,
+    excludedByAthlete, profile,
   } = resolveInjuryRecompositionInputs(args);
   const redFlag = isRedFlagInjurySeverity(
     args.constraint.seriousSymptoms,
@@ -225,7 +226,9 @@ export function buildSessionInjuryReview(args: {
     environment,
     profile,
     bodyPart,
+    redFlag,
     weekExerciseNames,
+    excludedByAthlete,
     pausedRowNames: plan.pausedRows,
   });
   const added = adjustment?.added ? [...adjustment.added] : [];

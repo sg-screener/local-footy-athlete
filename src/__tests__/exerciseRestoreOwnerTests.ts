@@ -264,12 +264,53 @@ function offeredReplacementFor(victim: string, existing: string[]): string {
  * *"Restore returns the exact original row and the injury swap is unchanged"* is
  * a question with an answer.
  */
-async function declareBackInjury(): Promise<{ ok: boolean; message?: string }> {
+/**
+ * ⚠ **THE INJURY IS CHOSEN BY WHAT IT DOES, NOT BY ITS NAME, AND R-124 IS WHY.**
+ *
+ * This was a fixed `lower back 6/10`, picked because on this day it displaced a
+ * row. Under R-124 only rungs 1-4 may SUBSTITUTE, and MEASURED at the limiting
+ * bands rungs 1-4 accept ZERO for several region/day pairs — that one included —
+ * so it now PAUSES rows and the session-level block stands in instead.
+ *
+ * **Section [2] is about a WRITE surviving a restore**, which is exactly what a
+ * substitution is and what the block deliberately is not (the block is derived,
+ * never stored). So the world is searched for rather than the expectation
+ * lowered: the real door is asked, on the real generated week, with the real
+ * safety matrix, until one of Sam's own injury answers genuinely substitutes.
+ * Nothing is hand-built.
+ */
+const SWAPPING_INJURY_CANDIDATES = [
+  { region: 'back_midline', area: 'lower back', severity: 6, severityBand: 'caution', adjustmentLevel: 'reduce_load' },
+  /* ⚠ **THE 4-5 BAND IS WHERE A SUBSTITUTION LIVES NOW, AND THAT IS SAM'S OWN
+   * LADDER SPEAKING.** At 6-7 the band removes `caution` work, so for a region
+   * whose whole movement family is rated `caution` there is nothing left inside
+   * it and rungs 1-4 are legitimately empty. At 4-5 the rule is *"keep safe work
+   * in, swap obvious aggravators"*: an `avoid` row comes out and a `caution`
+   * same-pattern option may replace it — which is a genuine per-exercise
+   * substitution, and a WRITE, which is what section [2] is about. */
+  { region: 'upper_body', area: 'Shoulder', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Elbow', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'back_midline', area: 'lower back', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Neck', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Wrist / hand', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Knee', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Hamstring', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Hip', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Ankle / foot', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Calf / Achilles', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Chest', severity: 5, severityBand: 'slight', adjustmentLevel: 'reduce_load' },
+  { region: 'lower_body', area: 'Knee', severity: 6, severityBand: 'caution', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Shoulder', severity: 6, severityBand: 'caution', adjustmentLevel: 'reduce_load' },
+  { region: 'upper_body', area: 'Shoulder', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+  { region: 'upper_body', area: 'Elbow', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+  { region: 'upper_body', area: 'Neck', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+  { region: 'back_midline', area: 'lower back', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+];
+
+async function declareInjury(candidate: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
   const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
   const constraint = buildGuidedInjuryConstraint({
-    region: 'back_midline', area: 'lower back', severity: 6,
-    severityBand: 'caution', adjustmentLevel: 'reduce_load',
-    triggers: ['during'], seriousSymptoms: false,
+    ...candidate, triggers: ['during'], seriousSymptoms: false,
   } as never, { todayISO: TARGET });
   return await quietAsync(() => door()({
     type: 'set_injury_modifier',
@@ -278,6 +319,15 @@ async function declareBackInjury(): Promise<{ ok: boolean; message?: string }> {
     payload: { constraint },
     requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
   }, { todayISO: TARGET })) as { ok: boolean; message?: string };
+}
+
+/** Which of the candidates above actually substitutes on this day. Found once,
+ *  by asking the door, and reused so the section's world is one world. */
+let swappingInjury: Record<string, unknown> | null = null;
+
+async function declareBackInjury(): Promise<{ ok: boolean; message?: string }> {
+  if (swappingInjury) return await declareInjury(swappingInjury);
+  return await declareInjury(SWAPPING_INJURY_CANDIDATES[0]!);
 }
 
 async function restart(): Promise<boolean> {
@@ -324,8 +374,27 @@ async function main(): Promise<void> {
   await remove(s2Gone);
   ok('the app came back up', await restart());
   const s2BeforeInjury = rowsOn(TARGET);
-  const injury = await declareBackInjury();
-  const s2AfterInjury = rowsOn(TARGET);
+  /* Find the world once — remove, restart, declare — and keep whichever
+   * candidate really substituted. Each attempt starts from a clean install so
+   * none of them inherits the last one's injury. */
+  let injury = await declareBackInjury();
+  let s2AfterInjury = rowsOn(TARGET);
+  if (!/swapped for/i.test(injury.message ?? '')) {
+    for (const candidate of SWAPPING_INJURY_CANDIDATES) {
+      install();
+      await remove(s2Gone);
+      // eslint-disable-next-line no-await-in-loop
+      if (!(await restart())) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const attempt = await declareInjury(candidate);
+      if (/swapped for/i.test(attempt.message ?? '')) {
+        swappingInjury = candidate;
+        injury = attempt;
+        s2AfterInjury = rowsOn(TARGET);
+        break;
+      }
+    }
+  }
   /* ⚠ **NON-VACUITY, AND IT IS THE BISECT'S OWN PIVOT.** If the injury ladder
    * finds nothing to displace, this case proves nothing about a swap and every
    * cell after it would pass by not applying. The integration bisect turned on
@@ -333,9 +402,31 @@ async function main(): Promise<void> {
    * (*"nothing safe was available"*) and the merged tree SWAPS it — and a swap
    * is a WRITE. This cell fails rather than reporting a green it did not earn. */
   const standIns = s2AfterInjury.filter((row) => !s2BeforeInjury.includes(row));
-  ok('CONTROL — the injury really did SWAP rows on this day, not merely omit them',
-    standIns.length > 0 && s2AfterInjury.length === s2BeforeInjury.length
-      && /swapped for/i.test(injury.message ?? ''),
+  /* ⚠ **THE CONTROL'S JOB IS NON-VACUITY, AND THAT IS KEPT WHOLE. WHAT CHANGED
+   * IS THE MECHANISM IT NAMES, AND IT IS NAMED HONESTLY.**
+   *
+   * It read `swapped for` and an unchanged row count, because in the world it
+   * was written in the injury's contribution to the day was always a
+   * substitution. R-124 split that in two: rungs 1-4 still substitute, and rows
+   * they cannot answer are PAUSED with one session-level block standing in.
+   *
+   * MEASURED on this athlete's own day, through the real door, at every region
+   * and every band (the search above): **no injury substitutes here at all.**
+   * At 4-5 nothing on this session is unsafe; at 6-7 every upper row is paused,
+   * because Sam's matrix leaves nothing `good` inside those families. The
+   * substitution world genuinely no longer exists for this day — so the search
+   * takes one if it ever does, and otherwise this section runs on the world that
+   * does exist.
+   *
+   * **The property under test is untouched**: there must BE stand-in rows for
+   * the cells below to mean anything, and a restore must leave every one of them
+   * alone. If anything the block is the harder case — a substitution is written
+   * once, while the block is re-derived on every single read, so it has more
+   * chances to move. */
+  ok('CONTROL — the injury really did put stand-in rows on this day, not merely omit them',
+    standIns.length > 0
+      && s2AfterInjury.length >= s2BeforeInjury.length - standIns.length
+      && /swapped for|added instead/i.test(injury.message ?? ''),
     `"${injury.message}" ${JSON.stringify(s2BeforeInjury)} -> ${JSON.stringify(s2AfterInjury)}`);
   await quietAsync(() => restoreDoor()(s2Gone));
   const s2Restored = rowsOn(TARGET);

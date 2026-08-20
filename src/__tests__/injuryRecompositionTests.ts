@@ -346,7 +346,7 @@ async function main(): Promise<void> {
   }) as {
     unsafeRows: string[];
     substitutions: { from: string; to: { name: string; hierarchyTier: string; kind: string } }[];
-    omissions: string[]; untouched: string[];
+    pausedRows: string[]; untouched: string[];
   };
   ok('CONTROL — the plan really has something to do', plan.unsafeRows.length > 0,
     JSON.stringify(plan.unsafeRows));
@@ -361,9 +361,13 @@ async function main(): Promise<void> {
     JSON.stringify(plan.substitutions.map((s) => s.to.kind)));
   ok('nothing safe is touched',
     plan.untouched.every((name) => !plan.unsafeRows.includes(name)));
-  ok('every unsafe row is either substituted or omitted — none is silently kept',
+  /* R-124 renamed `omissions` to `pausedRows`, and the rename is the ruling:
+   * the list no longer means "the whole ladder had nothing", it means "rungs 1-4
+   * had nothing and the row is paused". The property this cell asserts —
+   * every unsafe row is accounted for, none silently kept — is unchanged. */
+  ok('every unsafe row is either substituted or paused — none is silently kept',
     plan.unsafeRows.every((name) =>
-      plan.substitutions.some((s) => s.from === name) || plan.omissions.includes(name)),
+      plan.substitutions.some((s) => s.from === name) || plan.pausedRows.includes(name)),
     JSON.stringify(plan));
   /* ⚠ **THE REST CELL ABOVE WAS GREEN AND EMPTY AND A MUTATION SAID SO.**
    * Letting a rest fallback count as a substitution left all 30 cells green: in
@@ -385,7 +389,7 @@ async function main(): Promise<void> {
   /* CAUGHT, NOT LET FLY. The mutation that accepts a nameless choice makes the
    * planner dereference `null`, and a suite that dies reports zero cells rather
    * than the one that is wrong. A throw is a failure of THIS claim and says so. */
-  let pausedPlan: { substitutions: { to: { kind: string } }[]; omissions: string[]; unsafeRows: string[] };
+  let pausedPlan: { substitutions: { to: { kind: string } }[]; pausedRows: string[]; unsafeRows: string[] };
   try {
     pausedPlan = planInjuryRecomposition({
       workout, environment: pausedEnv,
@@ -393,13 +397,13 @@ async function main(): Promise<void> {
     }) as typeof pausedPlan;
   } catch (error) {
     ok('planning a medical-stop world does not throw', false, (error as Error).message);
-    pausedPlan = { substitutions: [{ to: { kind: 'threw' } }], omissions: [], unsafeRows: ['threw'] };
+    pausedPlan = { substitutions: [{ to: { kind: 'threw' } }], pausedRows: [], unsafeRows: ['threw'] };
   }
   ok('CONTROL — and the paused world has unsafe rows to answer for',
     pausedPlan.unsafeRows.length > 0, JSON.stringify(pausedPlan.unsafeRows));
   ok('in a medical-stop world NOTHING is substituted — every unsafe row is an omission',
     pausedPlan.substitutions.length === 0
-      && pausedPlan.omissions.length === pausedPlan.unsafeRows.length,
+      && pausedPlan.pausedRows.length === pausedPlan.unsafeRows.length,
     JSON.stringify(pausedPlan));
 
   ok('and no replacement duplicates something the session is already keeping',

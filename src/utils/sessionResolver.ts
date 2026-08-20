@@ -946,6 +946,10 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
       facts: dayInjuryFacts,
       profile: state.athleteContext?.onboardingData ?? null,
       weekExerciseNames,
+      /* The athlete's own removals — the block may never offer one back. Same
+       * field the exclusion boundary above reads, and supplied by the VIEW
+       * doors for the same reason. */
+      excludedByAthlete: (state.athleteExclusions ?? []).map((entry) => entry.exercise),
     }),
   });
   const withhold = <T extends Workout | null>(workout: T): T => adjust(markInjuryWithheldRows({
