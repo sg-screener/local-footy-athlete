@@ -3452,3 +3452,25 @@ the same name was equally addable through the old flat menu's `Shoulder health`
 group, and a headless probe through the screen's own owners (with a non-zero
 warm-up as its positive control) returns byte-identical section counts in this
 branch and in a control worktree at `c12a058c`.
+
+**R-120b** · *"Keep the title as 'Accessories'. The previous step already makes
+the body area clear."* (Sam, 2026-08-20) · **THE PATH IS THE CONTEXT; THE TITLE
+IS NOT.**
+
+Raised BY the seat, not by Sam: Sam's names give both halves of the body a leaf
+called *"Accessories"*, so the exercise list opens titled `Accessories` with
+nothing on that screen saying which half. The seat offered to title it
+`Lower body — Accessories`. **Sam refused, and the reason is the ruling:** the
+athlete has just tapped `Lower body`, so the step behind them already answers
+it, and joining the two approved names would invent a third.
+
+⚠ **DO NOT "FIX" THIS.** The two `Accessories` leaves ARE different lists —
+19-20 movements of calves, isolation and lower prehab under Lower body, 3-4
+scap and cuff drills under Upper body — so the duplicate word looks like a
+defect on a screenshot and is not one. **Guarded by
+`test:exercise-add-candidates` case [5]**: the leaf title must be the bare leaf
+label, so a future seat that helpfully prefixes the body area reddens a cell
+citing this row instead of quietly re-litigating it.
+
+**Search words:** accessories, duplicate label, leaf title, lower body
+accessories, upper body accessories, body area prefix, add menu title.

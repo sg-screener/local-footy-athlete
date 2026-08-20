@@ -550,6 +550,22 @@ async function main(): Promise<void> {
   ok('a heading that goes straight through titles its list with its OWN name',
     straightThroughDrift.length === 0, JSON.stringify(straightThroughDrift));
 
+  /* ⚠ **R-120b — `Accessories` STAYS `Accessories`.** Sam, 2026-08-20:
+   * *"Keep the title as 'Accessories'. The previous step already makes the body
+   * area clear."* Both halves of the body have a leaf with that name and they
+   * hold DIFFERENT lists, so the duplicate word looks like a defect on a
+   * screenshot and is not one. This cell exists so a future seat that helpfully
+   * prefixes the body area reddens here — citing the ruling — instead of
+   * quietly re-litigating something Sam has already refused. */
+  const accessoryTitles = allLeaves(fullKit)
+    .filter((leaf) => leaf.id === 'lower_accessories' || leaf.id === 'upper_accessories')
+    .map((leaf) => leaf.label);
+  ok('CONTROL — both halves of the body really do have an Accessories leaf',
+    accessoryTitles.length === 2, JSON.stringify(accessoryTitles));
+  ok('R-120b — the Accessories leaves are titled exactly "Accessories", unprefixed',
+    accessoryTitles.every((label) => label === 'Accessories'),
+    JSON.stringify(accessoryTitles));
+
   ok('every label the athlete reads is one Sam declared',
     shown.every((label) => declared.has(label)),
     JSON.stringify(shown.filter((label) => !declared.has(label))));
