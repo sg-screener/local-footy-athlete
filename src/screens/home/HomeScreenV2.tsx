@@ -43,8 +43,6 @@ import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import {
   BlockBoundaryNoticeCard,
-  ExtraSessionOfferCard,
-  WeeklyCommitmentPromptCard,
 } from './BlockBoundaryCards';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import {
@@ -133,13 +131,7 @@ export default function HomeScreenV2() {
     handleClearWeekReadiness,
     missedSessionPrompt,
     blockBoundaryNotice,
-    weeklyCommitmentPrompt,
-    extraSessionOffer,
     handleAcknowledgeBlockBoundaryNotice,
-    handleConfirmWeeklyCommitment,
-    handleDeclineWeeklyCommitment,
-    handleAcceptExtraSession,
-    handleDeclineExtraSession,
     handleLogMissedSession,
     handleSkipMissedSession,
     staleByDate,
@@ -981,30 +973,16 @@ export default function HomeScreenV2() {
           />
         )}
 
-        {/* ── The missed-session commitment question ──
-            DERIVED from the logged sessions and the commitment the block was
-            built on. Every option shown has been proven buildable by the
-            scheduler. Nothing changes until one is tapped. */}
-        {isNormal && weeklyCommitmentPrompt && (
-          <WeeklyCommitmentPromptCard
-            prompt={weeklyCommitmentPrompt}
-            onConfirm={handleConfirmWeeklyCommitment}
-            onDecline={handleDeclineWeeklyCommitment}
-          />
-        )}
-
-        {/* ── The extra-session offer ──
-            The ladder's third rung. Raised only when the block was completed,
-            recovered from and reported consistently easy, when load and sets
-            had nowhere left to go, and when generation has already built the
-            larger week. NOTHING is added until a button is tapped. */}
-        {isNormal && extraSessionOffer && (
-          <ExtraSessionOfferCard
-            model={extraSessionOffer}
-            onAccept={handleAcceptExtraSession}
-            onDecline={handleDeclineExtraSession}
-          />
-        )}
+        {/* ── R-105: THE WEEKLY-REDUCTION CONVERSATION IS NOT DRAWN HERE ──
+            Sam, 2026-08-19: *"This should not be popping up on the main page -
+            it should show up in the coaches chat with a notification"*. The
+            missed-session commitment question and the extra-session offer used
+            to render here. They are now the Coach tab's, derived by
+            `rules/weeklyCommitmentConversation.ts` and mounted by
+            `screens/coach/CoachTabScreen.tsx`. Their DERIVATION left this
+            surface's hook with them, so this is not a render that was switched
+            off — the Program screen cannot raise the offer again without
+            importing a module it no longer imports. */}
 
         {/* ── Missed-session follow-up ── */}
         {isNormal && missedSessionPrompt && (

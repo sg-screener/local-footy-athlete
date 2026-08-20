@@ -24,6 +24,12 @@
  * Run: npm run test:session-change-sequence
  */
 
+// TOTALS-OR-RED (Sam, 2026-08-03): armed at module top, cleared only by the
+// printed totals line. Added 2026-08-20 when this suite entered `test:bible` —
+// the chain reads a drained loop as green, and this suite awaits a boot.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
+
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const durable = new Map<string, string>();
 (globalThis as unknown as { window: unknown }).window = {
@@ -181,7 +187,7 @@ async function main(): Promise<void> {
   const { legalAddCandidateGroups } = require('../utils/addExerciseCandidates');
   const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
   const { unsafeRowsForInjury } = require('../utils/injurySessionRecomposition');
-  const { restoreExcludedExercise } = require('../utils/exerciseExclusionOwner');
+  const { restoreExcludedExerciseDurably } = require('../utils/exerciseExclusionOwner');
 
   console.log('\n[1] THE WALK — remove, then swap, then add, on ONE session');
 
@@ -363,7 +369,15 @@ async function main(): Promise<void> {
   console.log('\n[4] RESTORE, AT THE END OF ALL OF IT');
 
   const beforeRestore = rowsOn(TARGET);
-  quiet(() => restoreExcludedExercise(removed));
+  /* ⚠ **THE DOOR, NOT THE INNER FUNCTION.** `restoreExcludedExercise` writes the
+   * decision; `restoreExcludedExerciseDurably` is the act My Status' "Restore
+   * exercise" performs — it also annuls the outstanding ledger removal and
+   * settles the derived world. The distinction became load-bearing when a
+   * removal started reaching STORAGE at generation time (Sam, 2026-08-20,
+   * *"stored truth and visible truth must agree"*): the boot above has already
+   * re-authored this week WITHOUT the row, so there is nothing left to un-hide
+   * and only the re-derivation can bring the recorded lift back. */
+  await quietAsync(() => restoreExcludedExerciseDurably(removed));
   const afterRestore = rowsOn(TARGET);
   /* ⚠ THE CLAIM IS ABOUT THE REMOVAL, AND ONLY THE REMOVAL. The first cut also
    * asserted the ADD was still there, and it was not — the injury pass one case
@@ -402,10 +416,14 @@ async function main(): Promise<void> {
 
 function report(): void {
   console.log(`\n${'─'.repeat(72)}`);
-  if (failures.length === 0) { console.log(`ALL GREEN — ${passed} passed`); return; }
+  if (failures.length === 0) {
+    console.log(`ALL GREEN — ${passed} passed`);
+    totalsPrinted(0);
+    return;
+  }
   console.log(`FAILURES — ${passed} passed, ${failures.length} failed`);
   for (const failure of failures) console.log(`  ✗ ${failure}`);
-  process.exitCode = 1;
+  totalsPrinted(failures.length);
 }
 
 main().catch((error) => {

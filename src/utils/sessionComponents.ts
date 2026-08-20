@@ -740,6 +740,52 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   };
 }
 
+/**
+ * **DOES THIS DAY CARRY GYM WORK? — THE ONE ANSWER, AND IT IS COMPONENT-AWARE.**
+ *
+ * **Sam's ruling, 2026-08-20, verbatim:** *"A gym session completed on the same
+ * date as club training counts as a completed gym session. It remains one
+ * calendar training day with two components, but each completed component keeps
+ * its own credit. Club training must not erase the completed gym component from
+ * the commitment/completion denominator. Guard both sides of that ratio so
+ * generation and later block-history evaluation use the same component-aware
+ * count."*
+ *
+ * **WHAT IT REPLACES, AND IT WAS WRITTEN OUT THREE TIMES.** Three separate
+ * places asked *"does this day carry strength work"* by reading
+ * `workout.workoutType` and accepting only `Strength` or `Mixed`. On a day where
+ * the athlete's gym session shares a date with club training the app stores that
+ * day as `workoutType: 'Team Training'` — while `getSessionComponents` on the
+ * very same workout returns `["power","strength","team_training"]`. So the app
+ * knew the gym work was there and three readers could not see it:
+ *
+ *   - `strengthLogging.buildStrengthPerformanceLogs` returned `[]`, so **the
+ *     athlete's lifts on a club night were never recorded at all** — no load, no
+ *     set count, nothing for the block boundary to progress from;
+ *   - `readBlockHistory`'s NUMERATOR counts a day with strength logs, so it
+ *     missed the day as a consequence of the above;
+ *   - `blockBoundaryProgression.deriveAcceptedBlockStrengthRequirement`, the
+ *     DENOMINATOR, skipped it directly.
+ *
+ * **MEASURED on two worn athletes identical but for where the club night falls:**
+ * separated club nights recorded 8 required / 7 done; a club night on a gym day
+ * recorded **4 required / 4 done** — the same athlete, training in the gym twice
+ * a week, credited once. The ratio was self-consistent, which is exactly why it
+ * had survived: nothing looked wrong from either side alone.
+ *
+ * **THE ROWS, NOT THE TYPE.** `getSessionComponentRows` already separates the
+ * club session from the gym rows (`getTeamTrainingWorkoutState` +
+ * `isTeamTrainingItem`), and power and conditioning rows are already their own
+ * components. So this asks the question the athlete would answer — *is there
+ * lifting on this day* — rather than what the day is filed under.
+ */
+export function carriesStrengthComponent(
+  workout: Partial<Workout> | null | undefined,
+): boolean {
+  if (!workout) return false;
+  return getSessionComponentRows(workout).strengthRows.length > 0;
+}
+
 export function getSessionComponents(
   workout: Partial<Workout> | null | undefined,
 ): SessionComponent[] {

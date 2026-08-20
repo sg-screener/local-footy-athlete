@@ -400,15 +400,42 @@ async function main(): Promise<void> {
     visibleCountOf(BLOCK_2_START, SUBJECT) === 0,
     `the visible week still shows it ${visibleCountOf(BLOCK_2_START, SUBJECT)}x`);
   /* THE OTHER HALF OF THE SAME PROPERTY, AND IT IS NOT A WEAKER CLAIM.
-   * A boot REPLAY must rebuild the block the athlete actually has — including
-   * the row they excluded — or Restore has nothing to give back and the
-   * composer gets a chance to put something ELSE in the slot, which is the one
-   * thing Sam's Remove forbids. Measured before this cell existed: with the
-   * exclusion reaching the block selector on a replay, `Deadlift@77.5` walked
-   * into the hinge. */
-  ok('and the stored program KEPT the row, so Restore has something to give back',
-    countOf(useProgramStore.getState().currentProgram, SUBJECT) > 0,
-    `boot-regenerated program has ${countOf(useProgramStore.getState().currentProgram, SUBJECT)}`);
+   * A boot REPLAY must not let the composer put something ELSE in the emptied
+   * slot, which is the one thing Sam's Remove forbids. Measured before this cell
+   * existed: with the exclusion reaching the block selector on a replay,
+   * `Deadlift@77.5` walked into the hinge.
+   *
+   * ⚠ **THIS CELL USED TO ASSERT THE MECHANISM AND NOW ASSERTS THE PROPERTY,
+   * BECAUSE SAM CHANGED THE MECHANISM (2026-08-20).** It read *"the stored
+   * program KEPT the row, so Restore has something to give back"* — and his
+   * ruling is now *"a settings change must not re-add an excluded lift to the
+   * stored accepted program and rely on projection to hide it. Stored truth and
+   * visible truth must agree."*
+   *
+   * **THE OLD CELL'S PREMISE WAS ALSO REFUTED BY MEASUREMENT, SEPARATELY FROM
+   * THE RULING.** Restore does NOT need the row hoarded in the stored week: it
+   * returns `rebuildRequired: true`, the rebuild replays, and what gives the
+   * lift back is `blockSelectionHistoryStore` — the store built to remember
+   * which exercise a block chose. Walked end to end on a worn athlete:
+   * `STORED 4 -> 4 -> 0 (relaunch) -> 0 (restore) -> 4 (the rebuild restore
+   * asks for) -> 4 (next relaunch)`, with the visible week agreeing at every
+   * step. `activeProgramModifiers`' Restore control sets `rebuildRequired` for
+   * exactly this reason.
+   *
+   * So the two claims are asserted directly: storage and screen AGREE, and the
+   * composer did not re-decide the slot. */
+  ok('stored and visible AGREE — the row is not kept in storage and hidden on read',
+    countOf(useProgramStore.getState().currentProgram, SUBJECT)
+      === visibleCountOf(BLOCK_2_START, SUBJECT),
+    `stored ${countOf(useProgramStore.getState().currentProgram, SUBJECT)} `
+    + `vs visible ${visibleCountOf(BLOCK_2_START, SUBJECT)}`);
+  ok('and the composer did not put something ELSE in the emptied slot',
+    (require('../store/blockSelectionHistoryStore').blockSelectionHistory() as {
+      blockStartISO?: string; identity?: string;
+    }[]).some((entry) => canonicalExerciseName(String(entry.identity)) === canonicalExerciseName(SUBJECT)),
+    'the block\u2019s recorded selection no longer names the excluded exercise, so a '
+    + 'replay re-decided the slot instead of restoring what the block chose — the '
+    + '`Deadlift@77.5` defect');
 
   ok('IT SURVIVES BLOCK BOUNDARY 1',
     countOf(regenerate(BLOCK_3_START, 3), SUBJECT) === 0);

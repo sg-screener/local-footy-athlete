@@ -16,6 +16,7 @@ import { runCoachMutationTransaction } from './coachMutationTransaction';
 import {
   canonicaliseAcceptedStateCandidate,
   getBlockPositionForGeneration,
+  statedProgressionInputs,
   useProgramStore,
 } from './programStore';
 import { useProfileStore } from './profileStore';
@@ -529,6 +530,33 @@ function commitDerivingSourceFactScopedRegen(args: {
       blockStartISO: blockPosition.blockStart,
       previousProgram: currentProgram,
       seasonPhaseClock: currentProgram.seasonPhaseClock,
+      /**
+       * ⚠ **THE BLOCK'S HISTORY, NOT JUST ITS COORDINATES.**
+       *
+       * The two lines above already state WHERE in the grid this week sits, and
+       * the note beside them records why (stating only the NUMBER let generation
+       * work the START back out of `todayISO` and plan the wrong week's
+       * patterns). **What they did not state is WHAT THE ATHLETE HAS LIFTED**,
+       * so the authoring-time freeze ran on this door with the four empty
+       * arguments R-097 is about, and the regenerated week came back at the
+       * AUTHORED ESTIMATE.
+       *
+       * **MEASURED 2026-08-20, block 2, through the real session-equipment
+       * door:** ticking *"no barbell today"* took `RDLs` from the athlete's own
+       * progressed `82.5 kg` back to `80 kg` and `Incline DB Bench` and
+       * `Single-Leg Leg Press` from 4 sets to 3 — for the whole week, not just
+       * the day they answered about. **Closing and reopening the app put them
+       * back**, because `quiescentBoot` states these inputs and this door did
+       * not, so the athlete saw the wrong numbers on the card they were about to
+       * train off and the app disagreed with itself until a relaunch.
+       *
+       * A dated fact still AUTHORS NOTHING — `recordSelections: 'replay'` above
+       * is untouched and is the rule that keeps a temporary answer out of the
+       * permanent selection record. Reading the history is the opposite of
+       * authoring it: it is how this week comes back with the loads the athlete
+       * already earned instead of a fresh guess.
+       */
+      progressionHistory: statedProgressionInputs(state),
       activeConstraints: args.compatibility.activeConstraints.filter((constraint) =>
         isTemporarySourceFactConstraint(constraint)),
       temporarySourceFacts: args.normalizedFacts,

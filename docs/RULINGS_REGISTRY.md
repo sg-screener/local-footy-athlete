@@ -2515,17 +2515,92 @@ is a **second change-interface beside the recorded one**, which is exactly what
 that ruling killed the standing bar and the confirm sheet for. **A surface that
 asks the athlete to renegotiate their week is change-talk by definition.**
 
-**OWNER: unassigned — NEXT MISSION.** Raised during the Remove slice's final
-session under a standing order not to open another surface, so it is recorded
-here rather than built. **NOT BUILT, NOT STARTED.**
+**⚠ THIS ID IS USED TWICE, AND SAM HAS RULED WHICH ROW KEEPS IT — 2026-08-20:**
+*"The weekly-reduction ruling keeps R-105. The duplicate power-pool ruling must
+receive the next unused ruling id during integration, after all concurrent
+branches are present."* **THIS ROW KEEPS `R-105`.** **The power-pool row below
+is now `R-118`**, renumbered by the integrator on 2026-08-20 once every
+concurrent branch was in one tree and the combined registry had been counted.
+Grep for the SEARCH WORDS, not the number.
 
-**WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
-coach-update mechanism or a new one, and whether the offer expires, are NOT
-ruled here and must not be invented.
+· **`BUILT` 2026-08-20 by seat `finish-coach-product`** —
+`rules/weeklyCommitmentConversation.ts` (the one derivation, moved out of
+`screens/home/useBlockBoundaryPrompts.ts`), `rules/commitmentChangePreview.ts`
+(the preview), `screens/coach/useCoachWeeklyCommitment.ts` (the Coach hook and
+the derived notification), `components/CommitmentCard.tsx`,
+`screens/coach/CoachTabScreen.tsx` (the bubbles and the footer card) and
+`navigation/AppNavigator.tsx` (the tab dot). **Guarded by
+`test:coach-weekly-reduction`** (62 assertions, in `test:bible`), which walks two
+real athletes through the production doors and compares what the athlete was
+SHOWN against what ARRIVED. Thirteen mutations, twelve seen red.
+
+**THE PROGRAM SURFACE NO LONGER DERIVES IT AT ALL**, which is what makes the
+ruling structural rather than a render that was switched off: the two derive
+functions and the two card components are gone from
+`screens/home/`, so the Day page cannot raise the offer again without importing
+a module it no longer imports.
+
+**HOW THE TWO OPEN QUESTIONS WERE ANSWERED, AND THEY ARE FOR SAM TO CONFIRM:**
+
+- **THE NOTIFICATION IS A DERIVED COACH-TAB DOT, NOT THE COACH-UPDATE
+  MECHANISM.** `coachUpdatesStore` is a PROGRAM-TAB card whose only writer is the
+  frozen `CoachScreen` — using it would have put the conversation's arrival back
+  on the surface this ruling removes it from, and it would have STORED a
+  derivation, which R-099 refuses in as many words. So `hasNotification` is
+  `conversation !== null`, computed from the same facts in the same pass: no
+  unread flag, no counter, nothing to clear, and a relaunch cannot resurrect a
+  notification for an answered question.
+- **THE OFFER DOES NOT EXPIRE, BECAUSE THERE IS NOTHING TO EXPIRE.** It is
+  re-derived from the facts every time; it stops being put when the athlete
+  answers (the ledger entry) or when the facts stop supporting it. A dated expiry
+  would be new stored state for a question that is not stored.
+
+**AND ONE THING THE RULING DID NOT ANTICIPATE, FOUND BY BUILDING IT, THEN RULED
+BY SAM ON 2026-08-20:** *"If the scheduler cannot actually place the additional
+session safely, do not offer it. The in-season Saturday-game athlete should
+receive no fourth-session offer unless the regenerated program genuinely contains
+it."*
+
+An offer gated on legality alone would have promised a session generation will
+not place. Measured on a real walked in-season athlete with a Saturday game —
+legal at four days, and the same two gym days either way (`[1,3]` and `[1,3]`).
+**The rebuild is the last gate**, which is exactly what he ruled, and it was
+already built when he ruled it. Registry row
+`LAW-an-offer-the-rebuild-will-not-keep-is-not-put`, guarded by
+`test:coach-weekly-reduction` section [10] — a second real athlete, cold-started
+and walked, whose every CHEAP gate opens and whose refusal names the REBUILD.
+
+**⚠ SAM ALSO RULED WHAT THE APP MUST NOT DO ABOUT THE LOADS — 2026-08-20:** *"Do
+not add a warning saying 60 of 90 loads may move. That is a transaction defect,
+not intended product behaviour. Existing exercises must retain progression from
+their own history; new exercises use their own history or authored starting
+estimate."* **The preview therefore claims STRUCTURE and never loads**, and no
+warning was added. The defect itself belongs to the settings/persistence lane:
+`docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md`. **A warning
+would have been the app apologising for a defect instead of fixing it**, and
+recording it as intended behaviour is how a defect becomes a feature.
+
+**THE SEVEN COACH SENTENCES ARE SIGNED — Sam, 2026-08-20:** *"I approve all seven
+proposed Coach sentences exactly as written."* Every one carries
+`source: 'sam_ruling'` and that provenance in `rules/projectionCopy.ts`; the
+words are unchanged from the draft he approved.
+
+**Search words:** weekly reduction, smaller weekly program, completing 0 of 5,
+coach notification, coach chat, extra session offer, optional session preview,
+add one session, keep it as is, program page card, day page popup, tab badge.
 
 ---
 
-**R-105** · *"Choose (c). Add more legitimate no-equipment explosive upper-body
+**⚠ RENUMBERED `R-105` -> `R-118` BY THE INTEGRATOR, 2026-08-20.** Sam ruled on
+2026-08-20: *"The weekly-reduction ruling keeps R-105. The duplicate power-pool
+ruling must receive the next unused ruling id during integration, after all
+concurrent branches are present."* All concurrent branches are now in one tree —
+Settings `88f17e2c`, Injury `da545333` and Product/Coach `18968818` — the
+combined registry was counted in both row formats, and `R-118` is the first id
+no tree uses (`R-114`/`R-115` went to Injury, `R-119` to Settings' combined-day
+ruling). **Anything citing `R-105` for the POWER-POOL ruling means this row.**
+
+**R-118** · *"Choose (c). Add more legitimate no-equipment explosive upper-body
 options. Until that pool exists, skip the power component rather than prescribe
 the identical exercise twice."* (Sam, 2026-08-20, answering `orchestrator`) ·
 **ONE EXERCISE APPEARS ONCE PER SESSION, AND POWER IS THE SIDE THAT GIVES WAY.**
@@ -2961,6 +3036,84 @@ control that reds if its world stops being all-primer.
 
 ---
 
+**R-114** · *"At 6-7/10, the typed injury-risk sheet wins. Never offer Hip
+Thrust—or any exercise—the sheet marks risky for that injured area, even if an
+older example says otherwise. Walk down the ladder to the nearest legal option;
+if none exists, omit honestly. Update or remove the contradictory example so
+there is one authority."* (2026-08-20) · **THE INJURY SHEET OUTRANKS THE BIBLE'S
+NAMED SWAP EXAMPLES.**
+**Search words:** hip thrust knee, chest supported row shoulder, caution rating,
+6-7 band, which authority wins, contradictory swap example, sheet vs bible.
+**WHY IT WAS ORDERED:** two things Sam authored disagreed. His knee section says
+*"Heavy knee-dominant work -> hip thrust"* and his shoulder section says *"some
+pulling if tolerated"*, while his ruled injury matrix (2026-07-28) rates
+`Hip Thrusts` `knee: 'caution'` and `Chest Supported Row` `shoulder: 'caution'`,
+and his 6-7 band removes risky work through the area. Three
+`test:tap-swap-hierarchy` cells had been RED on `main` ever since the matrix
+landed, because the code followed the matrix and the cells followed the prose.
+**A READING THAT WOULD HAVE RECONCILED THEM WAS TRIED AND REFUTED BY
+MEASUREMENT** — admitting `caution` work at 6-7 unless it is heavy shipped three
+of Sam's own bad swaps (`Broad Jumps` for a 7/10 knee, `Single-Leg RDL` for a
+7/10 hamstring, `Close Grip Bench` for a 6/10 shoulder) and took that suite from
+3 fails to 8.
+· `WORKING` — `injuryPermitsExerciseAtSeverity` (`rules/injuryExerciseRisk.ts`)
+is the one owner of the band question and was already correct; the RULING
+retired the rival authority. The Bible now carries a **WHICH AUTHORITY WINS**
+paragraph in Section 8 naming the precedence, anchored to that function through
+`bibleThresholdAnchors.injury_sheet_outranks_swap_examples`, so
+`test:bible-coverage` holds the new rule line to a named enforcer rather than
+counting it as debt. The three contradictory cells now assert the ruling.
+**GUARDED:** `test:tap-swap-hierarchy` — **16 ok / 3 fail and DYING on `main`
+-> 25 passed, 0 failed, running to completion** (its last fixture omitted both
+capacity answers, so `resolveTapSwapEnvironment` threw and the final cells never
+ran). Mutation **M17** — the sheet stops outranking the examples — reds 6.
+
+---
+
+**R-115** · *"An 8-10 injury with serious symptoms must NEVER write into the
+athlete's Remove list or permanently alter the accepted program. Preserve the
+original exercises. On that date, show them as unavailable/skip with the
+explicit injury safety explanation, or block the session if necessary. Clearing
+or resolving the injury must immediately reveal the original accepted session
+again, including after close/reopen. Remove remains exclusively athlete-authored
+Remove."* (2026-08-20) · **AN INJURY WITHHOLDS A ROW; IT DOES NOT REMOVE ONE.**
+**Search words:** injury omission, red flag, serious symptoms, empty session,
+remove list, exclusions written by injury, session cannot be completed,
+unavailable row, injury restore.
+**WHY IT WAS ORDERED, MEASURED:** an injury omission was written through
+`remove_exercise`, whose `today_only` scope lands in
+`athletePreferencesStore.exclusions` — the athlete's OWN decisions. A red-flag
+hamstring at 9/10 wrote **five exclusions the athlete never made**, and because
+Restore works by RE-DERIVING it replayed them, so `clear_injury_modifier`
+answered *"Injury resolved. Affected sessions were safely recomposed."* over a
+day that was **empty forever**.
+· `WORKING` — `rules/injuryWithheldRows.ts` is the owner. Nothing is written:
+`InjuryEpisodeV1` is already a `TemporarySourceFact` and
+`ScheduleState.temporarySourceFacts` is already fed by the two VIEW doors, so
+the withholding is a PURE DERIVATION applied at the same seam
+`applyExclusionsToAuthoredDay` sits at — and for the same stated reason, that a
+projection reaching a canonicaliser gets written down. The two projections sit
+side by side and do opposite things on purpose: an exclusion FILTERS a row out,
+an injury MARKS it (`WorkoutExercise.unavailableForInjury`). The refusal to
+record the day lands in `sessionOutcomeRecordableRefusal`, which already had two
+readers — the write door and `SessionFeedbackPanel` — so the UI needs no change
+to honour the ruling. **Only a RED FLAG blocks**; an ordinary injury substitutes
+and the athlete trains.
+**GUARDED:** `test:injury-fallback-journey` sections [10] and [11], 27 cells,
+driven end to end through the real doors. Mutations **M12** (the omission writes
+a Remove decision again) reds 6, **M13** (rows stop being marked) reds 1,
+**M14** (the day becomes recordable) reds 1, **M15** (an ordinary injury blocks
+too) reds 3, **M16** (an injury reaches back before its onset) reds 1.
+**⚠ HEADLESS, NOT GLASS — the device check is owed**, and
+`npm run seed:injury-fallback` prints the exact expected glass state.
+**⚠ ONE THING THE UI LANE STILL OWNS:** `projectVisibleDay` BLANKS the day
+outright while a red-flag constraint is active — measured identically on `main`
+`9f081efa`, so it predates this unit. Sam's ruling permits blocking the session,
+so nothing here fights it, but *"show them as unavailable/skip"* is only half
+delivered until that projection renders the marked rows.
+
+---
+
 **R-116** · *"Use Sam's attached mock only as a layout reference. Do not add the
 athlete photo, change the app's typeface, or introduce separate cards around
 every exercise … Add the approved calendar icon immediately before the date …
@@ -3078,3 +3231,71 @@ ships Sam's 2026-07-25 spreadsheet byte for byte; form repairs live in the
 projection so it stays green. The one field Sam re-authored in chat is a CITED
 override with its own non-vacuity control — editing a snapshot named after a
 date would make it a record of nothing. 95/95 → 96/96.
+
+---
+
+**⚠ THIS ROW HAS MOVED TWICE: WRITTEN AS `R-112`, RENUMBERED TO `R-114` BY ITS
+OWN SEAT, AND RENUMBERED AGAIN TO `R-119` BY THE INTEGRATOR ON 2026-08-20.**
+Seat `finish-settings-persistence` branched from `9f081efa`, where `R-111` was
+the last row, and seat `sessionui` landed `R-112` and `R-113` on `main` while
+this branch was unmerged, so that seat moved its own unlanded row to `R-114`.
+**Seat `finish-injury` independently claimed `R-114` AND `R-115` for a matched
+pair on the same day** — the injury-matrix authority and the withholding it
+enables — and leaving that pair in place was measured to be the smaller move.
+So this row moved once more, to the first id no tree uses. **The landed rows are
+untouched; only unlanded rows moved.** Anything citing `R-112` or `R-114` for
+the combined-day ruling means this row.
+
+**R-119** · *"A gym session completed on the same date as club training counts
+as a completed gym session. It remains one calendar training day with two
+components, but each completed component keeps its own credit. Club training
+must not erase the completed gym component from the commitment/completion
+denominator. Guard both sides of that ratio so generation and later
+block-history evaluation use the same component-aware count."* (Sam,
+2026-08-20) · **A COMBINED DAY IS ONE DAY WITH TWO COMPONENTS, AND EACH
+COMPONENT IS CREDITED SEPARATELY.**
+
+**⚠ THE APP ERASED THE GYM COMPONENT IN THREE PLACES, ALL THE SAME LINE.** A
+gym session sharing a date with club training is stored as
+`workoutType: 'Team Training'`, while `getSessionComponents` on that very
+workout returns `["power","strength","team_training"]` — the app knew the
+lifting was there. Three readers asked `workoutType === 'Strength' || 'Mixed'`
+and could not see it:
+- `strengthLogging.buildStrengthPerformanceLogs:132` returned `[]`, so **the
+  athlete's lifts on a club night were never recorded at all** — no load, no set
+  count, and nothing for the block boundary to progress those lifts from;
+- `readBlockHistory`'s NUMERATOR counts days carrying strength logs, so it missed
+  the day as a consequence;
+- `deriveAcceptedBlockStrengthRequirement`, the DENOMINATOR, skipped it directly.
+
+**MEASURED BEFORE THE FIX, two worn athletes identical but for where the club
+night falls** (cold start through real onboarding, four weeks lived through the
+live outcome writer, one real miss): separated club nights **8 required / 7
+recorded**; a club night on a gym day **4 required / 4 recorded**, and **0 of 3
+club-night dates recorded any lifting**. The ratio was self-consistent, which is
+precisely why it survived — nothing looked wrong from either side alone.
+
+**AFTER: both athletes read 8 required / 7 recorded, and 3 of 3 club-night dates
+record the lifting.** The separated athlete is unchanged, and their pure club
+nights still record nothing, which is correct — those days carry no gym rows.
+
+**THE FIX IS ONE SHARED OWNER, NOT THREE EDITS.**
+`sessionComponents.carriesStrengthComponent` asks the component question — does
+this day carry gym rows, with `getSessionComponentRows` already separating the
+club session from them — and both sides of the ratio call it. A fourth reader
+cannot re-invent the `workoutType` answer without deleting the shared one.
+
+**Search words:** club night, team training, combined day, gym on a club night,
+completed component, completion denominator, commitment denominator, 75 percent,
+attendance, component-aware count, strength logs missing, workoutType gate.
+
+· `BUILT src/utils/sessionComponents.ts carriesStrengthComponent`, read by
+`strengthLogging.buildStrengthPerformanceLogs` and
+`blockBoundaryProgression.deriveAcceptedBlockStrengthRequirement`. **Guarded by
+`test:settings-persistence` stage 5**, which compares the TWO athlete shapes
+rather than asserting agreement — an earlier cut asserted only that the two
+sides agreed, and they agreed at 4 and 4 on exactly the app this ruling
+forbids. Three cells: the club-night lifting is recorded, the same training
+earns the same credit, and both sides of the ratio count the same sessions,
+each preceded by an anti-vacuity cell. **⚠ NOT SEEN ON GLASS** — another lane
+owns the simulator; this is headless.

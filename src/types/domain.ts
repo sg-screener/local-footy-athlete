@@ -1368,6 +1368,34 @@ export interface WorkoutExercise {
    * `DayWorkoutScreenV2`. TEST: `test:visible-surfaces` section [9], and
    * `.maestro/visible/implement-and-cues.yaml` on glass.
    */
+  /**
+   * ── THE ROW IS STILL HERE, AND THE ATHLETE MUST NOT DO IT ─────────────────
+   *
+   * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
+   * into the athlete's Remove list or permanently alter the accepted program.
+   * Preserve the original exercises. On that date, show them as unavailable/skip
+   * with the explicit injury safety explanation."*
+   *
+   * **PURELY DERIVED, NEVER STORED.** It is written by
+   * `rules/injuryWithheldRows.markInjuryWithheldRows` at the VIEW doors only —
+   * the same seam `applyExclusionsToAuthoredDay` sits at — so the accepted
+   * program keeps every row and its load, and clearing the injury reveals the
+   * original session by doing nothing at all. A canonicaliser never sees it.
+   *
+   * WRITER: `rules/injuryWithheldRows`. READERS: `store/sessionOutcomeTransaction`
+   * (`sessionOutcomeRecordableRefusal` — the injured date cannot be recorded as
+   * a normal session, and the feedback panel asks that same owner before
+   * offering "Save & Finish"), and the session screen.
+   */
+  unavailableForInjury?: {
+    readonly bodyPart: string;
+    readonly severity: number;
+    /** 8-10 with serious symptoms — the band that blocks the session outright. */
+    readonly redFlag: boolean;
+    /** Athlete-visible, plain words. */
+    readonly explanation: string;
+  };
+
   substitutedFrom?: {
     /** The exercise the block actually selected, in its own authored name. */
     readonly baseExerciseName: string;

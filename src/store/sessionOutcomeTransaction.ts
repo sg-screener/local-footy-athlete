@@ -20,6 +20,7 @@ import {
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
+import { resolveDateWithConditioning } from '../utils/sessionResolver';
 import { appDateNow, todayISOLocal } from '../utils/appDate';
 import {
   getSessionComponents,
@@ -28,6 +29,7 @@ import {
 import { deriveAggregateCompletion } from '../utils/sessionFeedbackForm';
 import { deriveSessionExecutionItemCompletion } from '../utils/sessionExecutionChecklist';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { injurySessionOutcomeRefusal } from '../rules/injuryWithheldRows';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
@@ -94,7 +96,54 @@ export function sessionOutcomeRecordableRefusal(
       message: 'Session outcomes can only be recorded for today or a past session.',
     };
   }
+  /* ── A RED-FLAG INJURY MAKES THE DAY UNCOMPLETABLE ───────────────────────
+   *
+   * Sam, 2026-08-20: *"the injured date cannot be completed as normal ... or
+   * block the session if necessary."* His Bible's serious-issue rule is the
+   * same sentence from the other end — *"the app should stop affected training
+   * and recommend physio/medical advice"* — and a session the athlete can tick
+   * off as done is not stopped.
+   *
+   * IT LANDS HERE AND NOWHERE ELSE **because this function already has two
+   * readers**: the write door below, and `SessionFeedbackPanel`, which asks it
+   * before offering "Save & Finish". Putting the rule anywhere else would give
+   * the panel a session it will offer and the door will refuse — the exact
+   * defect this function's own header records from 2026-08-06. It also means
+   * the UI lane needs no change to honour the ruling.
+   *
+   * Only a RED FLAG blocks. An ordinary injury substitutes and the athlete
+   * trains, so refusing there would stop training the app is meant to keep. */
+  const injuryRefusal = injurySessionOutcomeRefusal({
+    workout: visibleWorkoutForRefusal(date),
+    dateISO: date,
+    facts: useProgramStore.getState().acceptedMaterialContext?.temporarySourceFacts,
+  });
+  if (injuryRefusal) return injuryRefusal;
   return null;
+}
+
+/**
+ * The day the ACCEPTED PROGRAM plus the live injury fact describes.
+ *
+ * ⚠ **DELIBERATELY NOT `buildDayWorkoutProjectedDay`, AND MEASURED THAT WAY.**
+ * That owner runs `projectVisibleDay`, which BLANKS the session outright while a
+ * red-flag injury constraint is active — measured identically on `main`
+ * `9f081efa` and on this branch, so it is the visible-projection lane's
+ * behaviour and not this unit's. Asking it here made the refusal answer
+ * *"No visible session exists on 2026-07-20"* about a day that holds five
+ * exercises, which tells the athlete the wrong thing about the right outcome.
+ *
+ * `resolveDateWithConditioning` is the resolver those projections are built
+ * FROM, and under this unit it returns the accepted rows with the injury's
+ * marks on them — which is exactly the question this refusal asks.
+ */
+function visibleWorkoutForRefusal(date: string): Workout | null {
+  try {
+    return resolveDateWithConditioning(date, buildScheduleStateImperative()).workout ?? null;
+  } catch {
+    // A day that cannot be resolved is not a day this rule can speak about.
+    return null;
+  }
 }
 
 export function resolveSessionOutcomeTarget(

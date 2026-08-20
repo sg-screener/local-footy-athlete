@@ -1642,6 +1642,7 @@ section('10.16g add_session_note bullet format');
 
 import { buildInjuryPolicy } from '../utils/programAdjustmentEngine';
 import { getReplacementChoiceForBucket } from '../utils/injurySessionClassifier';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 
 section('10.17a buildInjuryPolicy(hamstring, 6) → forbid sprinting + heavy hinge');
 
@@ -2271,35 +2272,78 @@ section('10.19g Gutted risky session becomes safe alternate work, not rest');
 
 section('10.19h Substitution hierarchy is followed');
 
+/**
+ * ⚠ **THESE FOUR CELLS PINNED A DELETED TABLE'S CONTENTS, NOT SAM'S RULE.**
+ *
+ * `injurySessionClassifier.REPLACEMENT_BY_BUCKET` answered this question from a
+ * map hand-keyed on ~40 exercise NAMES, so `RDLs / hamstring 6 -> Hip Thrusts`
+ * was a statement about which names that map happened to carry. It is derived
+ * now (`rules/injuryFallbackLadder`), so the cells assert the PROPERTIES Sam's
+ * Bible actually rules — which rung, whether the pattern survives, and whether
+ * what comes back is legal for the injury — and the exact names are printed by
+ * `npm run census:injury-fallback` rather than frozen here.
+ *
+ * The band behaviour they now hold is the real finding: bands 4-5, 6-7 and 8-10
+ * used to produce IDENTICAL results (520 unsafe occurrences each in that
+ * census), because one two-value level was standing in for four authored bands.
+ */
 {
   const hammyModerate = getReplacementChoiceForBucket('RDLs', 'hamstring' as any, 6);
-  eq('hamstring 6: same-pattern safe choice', hammyModerate, {
-    name: 'Hip Thrusts',
-    hierarchyTier: 'same_movement_pattern',
-  });
+  ok('hamstring 6: risky work through the area is removed, so the hinge is not kept',
+    hammyModerate !== null
+      && hammyModerate.coversOriginalPattern === false
+      && classifyExerciseRiskForBucket(hammyModerate.name, 'hamstring' as any, 6) === 'good',
+    JSON.stringify(hammyModerate));
+
+  const hammyMild = getReplacementChoiceForBucket('RDLs', 'hamstring' as any, 4);
+  ok('hamstring 4: safe work is KEPT IN, so the hinge survives its own band',
+    hammyMild !== null
+      && hammyMild.coversOriginalPattern === true
+      && hammyMild.rung === 'nearest_safe_secondary_compound',
+    JSON.stringify(hammyMild));
+  ok('hamstring 4 and 6 are DIFFERENT bands, not one collapsed level',
+    hammyMild?.name !== hammyModerate?.name,
+    JSON.stringify({ four: hammyMild?.name, six: hammyModerate?.name }));
 
   const hammyPause = getReplacementChoiceForBucket('RDLs', 'hamstring' as any, 9);
-  eq('hamstring 9: affected pattern skipped for unaffected work', hammyPause, {
-    name: 'Bench Press',
-    hierarchyTier: 'unaffected_body_area',
-  });
+  ok('hamstring 9: clearly unaffected work only',
+    hammyPause !== null
+      && hammyPause.rung === 'unaffected_body_area'
+      && classifyExerciseRiskForBucket(hammyPause.name, 'hamstring' as any, 9) === 'good',
+    JSON.stringify(hammyPause));
 
   const hammyPauseWithUpperAlreadyThere = getReplacementChoiceForBucket(
     'RDLs',
     'hamstring' as any,
     9,
-    ['Bench Press'],
+    [hammyPause?.name ?? 'Bench Press'],
   );
-  eq('hamstring 9: existing upper avoided, recovery/easy conditioning next', hammyPauseWithUpperAlreadyThere, {
-    name: 'Easy Bike',
-    hierarchyTier: 'recovery_easy_conditioning',
-  });
+  ok('hamstring 9: a name the session already has is not offered twice',
+    hammyPauseWithUpperAlreadyThere !== null
+      && hammyPauseWithUpperAlreadyThere.name !== hammyPause?.name,
+    JSON.stringify(hammyPauseWithUpperAlreadyThere));
 
   const shoulderModerate = getReplacementChoiceForBucket('Bench Press', 'shoulder' as any, 6);
-  eq('shoulder 6: skips still-risky DB press and chooses safe similar push', shoulderModerate, {
-    name: 'Landmine Press',
-    hierarchyTier: 'similar_muscle_group',
-  });
+  ok('shoulder 6: the still-risky press is skipped and the answer is legal',
+    shoulderModerate !== null
+      && shoulderModerate.name !== 'DB Bench Press'
+      && classifyExerciseRiskForBucket(shoulderModerate.name, 'shoulder' as any, 6) === 'good',
+    JSON.stringify(shoulderModerate));
+
+  const shoulderMild = getReplacementChoiceForBucket('Bench Press', 'shoulder' as any, 4);
+  ok('shoulder 4: a shoulder-friendly PRESS, not a squat — Bible :2198',
+    shoulderMild !== null
+      && shoulderMild.rung === 'same_movement_safer_variation'
+      && shoulderMild.coversOriginalPattern === true,
+    JSON.stringify(shoulderMild));
+
+  /* R-103: accessory and adjacent-pattern fallbacks are PARTIAL coverage and
+   * must be disclosed. Every option that leaves the pattern says so in words the
+   * athlete reads, and every option that keeps it does not claim otherwise. */
+  ok('a fallback that leaves the pattern says so, and one that keeps it does not',
+    shoulderModerate?.explanation.includes('does not affect') === true
+      && shoulderMild?.explanation.includes('same movement') === true,
+    JSON.stringify({ left: shoulderModerate?.explanation, kept: shoulderMild?.explanation }));
 }
 
 // ─── Summary ───────────────────────────────────────────────────────────

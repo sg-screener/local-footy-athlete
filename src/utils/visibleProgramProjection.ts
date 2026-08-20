@@ -106,6 +106,37 @@ function collapseEmptyVisibleWorkoutShell(day: ResolvedDay): ResolvedDay {
   };
 }
 
+/**
+ * HAS THE INJURY OWNER ALREADY ANSWERED FOR THIS DAY?
+ *
+ * ⚠ **BOTH OF THE LADDER'S OUTCOMES COUNT, AND LEAVING ONE OUT WAS A REAL
+ * DEFECT THAT MEASUREMENT CAUGHT.** The ladder answers an injury in exactly two
+ * ways: it SUBSTITUTES a safe exercise (`substitutedFrom.cause === 'injury'`),
+ * or, when it has nothing safe to offer, it WITHHOLDS the row
+ * (`unavailableForInjury`). A first cut of this predicate read only the second,
+ * and the consequence was measured rather than reasoned about:
+ *
+ * ```
+ *   ORDINARY 8/10, no serious symptoms
+ *     resolver    5 rows  Chest-Supported DB Row, Single-Arm DB Floor Press, …
+ *     projection  workout NULL, source 'rest'      <- the substitutions vanished
+ * ```
+ *
+ * The athlete's day was replaced with safe work and then emptied on the way to
+ * the screen. It only LOOKED correct while a stale marker was riding on those
+ * substituted rows and tripping the withheld branch by accident — so fixing the
+ * marker at its source is what exposed it.
+ *
+ * ⚠ **NO INJURY RULE IS RE-DERIVED. TWO TYPED FIELDS, NEITHER INTERPRETED.**
+ * There is no severity band, no red-flag test and no body-part map in this file,
+ * and deliberately no call to `injuryWithholdingsOn()` — that would re-run the
+ * legality question at the view and make this a second opinion about it.
+ */
+function dayIsInjuryAdjudicated(workout: Workout | null | undefined): boolean {
+  return (workout?.exercises ?? []).some((row) => !!row.unavailableForInjury
+    || (row as { substitutedFrom?: { cause?: string } }).substitutedFrom?.cause === 'injury');
+}
+
 function alreadyHasInjuryNote(workout: Workout): boolean {
   const notes = workout.coachNotes ?? [];
   if (notes.length === 0) return false;
@@ -208,6 +239,53 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
     overrideContext?.intent === 'injury' &&
     alreadyHasInjuryNote(visibleDay.workout)
   ) {
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+  }
+
+  /* ══ THE INJURY OWNER HAS ALREADY ADJUDICATED THIS DAY — R-115 ══════════════
+   *
+   * **Sam, 2026-08-20:** *"An 8-10 injury with serious symptoms must NEVER write
+   * into the athlete's Remove list or permanently alter the accepted program.
+   * Preserve the original exercises. On that date, show them as unavailable/skip
+   * … Clearing or resolving the injury must immediately reveal the original
+   * accepted session again."*
+   *
+   * ⚠ **WHAT THIS PROJECTION WAS DOING, MEASURED ON THE REAL DOOR.** Hamstring
+   * 9/10 with serious symptoms on 2026-07-20. The resolver — the owner the
+   * Injury lane fixed — hands this function five rows at their own loads with
+   * four of them MARKED `unavailableForInjury`. Pass 1's exposure engine and
+   * Pass 2's validator sweep then FILTERED those four out as constraint
+   * violations, `collapseEmptyVisibleWorkoutShell` saw what was left and
+   * returned `workout: null, source: 'rest'`, and the athlete's day became a
+   * Rest day. The ruling's "preserve the original exercises" survived the
+   * domain and died at the view.
+   *
+   * ⚠ **THE SHORT-CIRCUIT IS THE SIBLING OF THE ONE DIRECTLY ABOVE, FOR THE
+   * SAME REASON.** That one skips a day whose injury edit has already been
+   * applied, so it is not applied twice. This one skips a day whose injury has
+   * already been applied AS A WITHHOLDING. Re-running the constraint engine over
+   * it cannot add information — the rows are already adjudicated, by the single
+   * legality owner (`injuryPermitsExerciseAtSeverity`) that the fallback ladder
+   * and every tap surface answer to — and it can only delete them.
+   *
+   * ⚠ **NO INJURY RULE IS RE-DERIVED HERE, WHICH WAS THE INSTRUCTION.** This
+   * reads one typed field the domain wrote. There is no severity band, no
+   * red-flag test, no body-part map and no classifier in this file; the decision
+   * arrived already made and this is the projection agreeing to it.
+   *
+   * ⚠ **AN ORDINARY INJURY IS UNAFFECTED, BY CONSTRUCTION.** A non-red-flag
+   * injury SUBSTITUTES: the ladder replaces the unsafe row, so the day the
+   * resolver hands over carries no `unavailableForInjury` mark at all and this
+   * branch is not taken. Measured: of the five seeded injury worlds only the
+   * red-flag one carries marks. */
+  if (dayIsInjuryAdjudicated(visibleDay.workout)) {
+    /* ⚠ THE VIEW WORKAROUND THAT STOOD HERE IS DELETED — SAM, 2026-08-20.
+     * *"Fix the stale injury mark at its source ... Do not leave a view-level
+     * plaster that hides incorrect domain data."* It stripped the marker off any
+     * row swapped BECAUSE of the injury. The marker is no longer written onto a
+     * replacement at all (`utils/coachActions`, where the outgoing row's fields
+     * were being inherited through a spread), so there is nothing left to strip
+     * and the view is back to passing the domain's answer through untouched. */
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 

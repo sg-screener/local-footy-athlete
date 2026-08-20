@@ -93,7 +93,7 @@ ok('the eligible power specialist stamps a positive phase-capped allowance',
   contract?.power?.eligible === true && budget === 2,
   { eligible: contract?.power?.eligible, budget,
     preferred: contract?.power?.preferredWeeklyRange });
-/* ── R-105 — ONE EXERCISE APPEARS ONCE PER SESSION ────────────────────────
+/* ── R-118 (renumbered from R-105, 2026-08-20) — ONE EXERCISE APPEARS ONCE PER SESSION ────────────────────────
  *
  * Sam, 2026-08-20: *"Add more legitimate no-equipment explosive upper-body
  * options. Until that pool exists, skip the power component rather than
@@ -111,7 +111,7 @@ ok('the eligible power specialist stamps a positive phase-capped allowance',
  * **The claim it was written for is not dropped; it moves to a world where it
  * is true** (`FULL_GYM_*` below, where no collision is possible), and here the
  * ruling's own property is asserted instead. */
-/** Sessions where a POWER row shares its identity with another row. R-105's. */
+/** Sessions where a POWER row shares its identity with another row. R-118's. */
 const powerCollisions = (candidateWorkouts: typeof workouts) =>
   candidateWorkouts.filter((workout) => {
     const all = workout.exercises ?? [];
@@ -120,7 +120,7 @@ const powerCollisions = (candidateWorkouts: typeof workouts) =>
     return powerNames.some((name) =>
       all.filter((row) => row.exercise?.name === name).length > 1);
   });
-ok('R-105 — no session carries a power row beside its own twin',
+ok('R-118 — no session carries a power row beside its own twin',
   powerCollisions(workouts).length === 0,
   powerCollisions(workouts).map((workout) => ({ day: workout.dayOfWeek,
     names: (workout.exercises ?? []).map((row) =>
@@ -156,7 +156,7 @@ ok('NO SESSION PRESCRIBES ONE EXERCISE TWICE — power or otherwise',
   anyDuplicateDays.map((workout) => ({ day: workout.dayOfWeek,
     names: (workout.exercises ?? []).map((row) => row.exercise?.name) })));
 
-ok('R-105 — power never exceeds the selected allowance',
+ok('R-118 — power never exceeds the selected allowance',
   rows.length <= budget && delivered.length <= budget,
   { budget, sessions: delivered.length, rows: rows.length });
 /* ⚠ **AND THE SHORTFALL IS A COLLISION, NOT A SILENT LOSS.** Without this a
@@ -167,7 +167,7 @@ ok('R-105 — power never exceeds the selected allowance',
 const shortfall = budget - rows.length;
 const strengthDaysWithoutPower = workouts.filter((workout) =>
   exerciseBudgetRows(workout).length > 0 && powerRows(workout).length === 0);
-ok('R-105 — every missing primer is explained by a collision',
+ok('R-118 — every missing primer is explained by a collision',
   shortfall === 0 || strengthDaysWithoutPower.some((workout) =>
     (workout.exercises ?? []).some((row) =>
       POWER_EXERCISE_POOL.some((entry) => entry.name === row.exercise?.name))),
@@ -299,7 +299,7 @@ const teamProgram = generateProgramLocally({
 } as never);
 const teamWorkouts = teamProgram.microcycles[0].workouts;
 const teamTuesday = visibleWeekFor(teamWorkouts).days.find((day) => day.date === '2026-07-14');
-/* ⚠ **THE CLUB-NIGHT CLAIM MOVED TO FULL GYM FOR THE SAME REASON (R-105).**
+/* ⚠ **THE CLUB-NIGHT CLAIM MOVED TO FULL GYM FOR THE SAME REASON (R-118).**
  * Its Tuesday is a Bodyweight strength day, so demanding a power part there is
  * demanding the duplicate. What the cell is really about — a club night does
  * not swallow the athlete's own composed rows — is unchanged and is asserted

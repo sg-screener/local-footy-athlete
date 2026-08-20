@@ -2271,6 +2271,12 @@ function SessionList({
               label={executionItem.label}
               completed={completedItemIds.has(executionItem.id)}
               onToggle={onToggleItem}
+              /* R-115 — the row's own typed withholding, straight off the
+                 projected workout. Nothing is looked up or re-decided here. */
+              withheld={withholdingOfTemplateItem(
+                executionItem.templateIndex === null
+                  ? undefined
+                  : items[executionItem.templateIndex])}
             >
               {(checkbox) => (executionItem.templateIndex === null
                 ? <Text style={styles.executionFallbackLabel}>{executionItem.label}</Text>
@@ -2286,6 +2292,21 @@ function SessionList({
       ))}
     </View>
   );
+}
+
+/**
+ * The typed injury withholding on a template item, or `null`.
+ *
+ * `SessionTemplateItem` is a union — a team-training banner and a conditioning
+ * choice carry no `row` — so the narrowing is done ONCE here rather than at each
+ * call site. It reads one field and interprets nothing (R-115).
+ */
+function withholdingOfTemplateItem(
+  item: SessionTemplateItem | undefined,
+): { explanation?: string } | null {
+  if (!item || item.kind !== 'exercise') return null;
+  return (item.row as { unavailableForInjury?: { explanation?: string } } | undefined)
+    ?.unavailableForInjury ?? null;
 }
 
 function SessionExecutionSection({ section, completedItemIds, children }: {
@@ -2360,12 +2381,27 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
  * dull treatment — and hands the tick down to the card, because only the card
  * knows where its stepper is. `renderCheckbox` is that handover: one function,
  * defined here, so there is still exactly ONE checkbox in the app.
+ *
+ * ⚠ **AND R-115 RIDES THE SAME HANDOVER.** A row the injury owner has withheld
+ * gets a static Skip marker INSTEAD of the tick, built here and handed down the
+ * identical way — so the withheld state travels with the control group Sam
+ * ruled onto the stepper line, and there is still exactly ONE place in the app
+ * that decides what sits at that position.
  */
-function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }: {
+function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, children }: {
   itemId: string;
   label: string;
   completed: boolean;
   onToggle: (itemId: string) => void;
+  /**
+   * ⚠ **THE TYPED WITHHOLDING, PASSED IN — NEVER DERIVED HERE (R-115).**
+   *
+   * `WorkoutExercise.unavailableForInjury`, written by
+   * `rules/injuryWithheldRows` and carried through the projection untouched.
+   * This component does not know what an injury IS: no severity, no band, no
+   * body part map. It is handed a decision and renders it.
+   */
+  withheld?: { explanation?: string } | null;
   children: (checkbox: React.ReactNode) => React.ReactNode;
 }) {
   /*
@@ -2388,7 +2424,31 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }
   /* SAME Pressable, same handler, same role, state, label and identity as when
      it sat on the name line — only its PLACE moved. `hitSlop` keeps the tap
      target at the practical minimum now that it sits beside the stepper. */
-  const checkbox = (
+  /*
+   * ⚠ **A WITHHELD ROW HAS NO CHECKBOX AT ALL — SAM, 2026-08-20 (R-115).**
+   *
+   * *"show them as unavailable/skip"*, and *"the injured date cannot be
+   * completed as normal."* A DISABLED checkbox would still be a checkbox: it
+   * says "you may tick this later", which is the opposite of what the ruling
+   * means. The tick is REPLACED by a static Skip marker, so there is no
+   * `onToggle` to reach and no `accessibilityRole="checkbox"` for a screen
+   * reader or a flow to find and press. Its own identity is kept so a guard can
+   * assert the SWAP happened rather than infer it from an absence.
+   *
+   * It is built HERE, into the same `checkbox` handover R-116 created, so a
+   * withheld row's marker lands exactly where the tick would have — on the
+   * control line beside the weight stepper — instead of at a second address.
+   */
+  const checkbox = withheld ? (
+    <View
+      style={styles.executionSkipMark}
+      accessibilityRole="text"
+      accessibilityLabel={`Skip: ${label}`}
+      testID={`session-execution-withheld-${stableTestIdToken(itemId)}`}
+    >
+      <Text style={styles.executionSkipText}>SKIP</Text>
+    </View>
+  ) : (
     <Pressable
       onPress={() => onToggle(itemId)}
       accessibilityRole="checkbox"
@@ -2690,6 +2750,8 @@ function StrengthExerciseCard({
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
+  /* R-115 — read, never decided. See the notice below. */
+  const injuryWithholding = exercise?.unavailableForInjury ?? null;
 
   return (
     <Card
@@ -2701,6 +2763,9 @@ function StrengthExerciseCard({
         styles.exerciseCard,
         isGrouped && styles.exerciseCardGrouped,
         isGrouped && isLastInGroup && styles.exerciseCardGroupedLast,
+        // Unavailable, not gone: the row keeps its name, its dose and its load
+        // — the ruling preserves them — and reads as work not to be done today.
+        !!injuryWithholding && styles.exerciseCardWithheld,
       ]}
     >
       {/* ══ THE ROW GRID — SAM, 2026-08-20, THIRD PASS ═══════════════════════
@@ -2818,6 +2883,33 @@ function StrengthExerciseCard({
             : `workout-exercise-implement-badge-${exerciseToken}`}
         >
           {affectedRowNotice}
+        </Text>
+      ) : null}
+      {/*
+        ⚠ **THE INJURY SENTENCE IS THE DOMAIN'S, RENDERED VERBATIM — R-115.**
+        *"The explanation names the active injury fact without inventing medical
+        advice."* Every word comes from `unavailableForInjury.explanation`, which
+        `rules/injuryWithheldRows.explanationFor` composes from the athlete's own
+        stored injury fact — the body part they reported and the exercise's own
+        name. **This screen authors NO part of it**, which is the same law that
+        deleted the keyword red-flag replies (R-108): athlete-facing words about
+        someone's body come from a stored fact, or they do not exist.
+
+        ⚠ **RE-SITED BY THE INTEGRATOR, 2026-08-20.** R-115 was written against
+        the pre-R-116 card, where this notice followed a copy of the affected-row
+        badge and the cue disclosure that R-116 has since MOVED into the grid's
+        text stack. Taking R-115's block verbatim would have restored that
+        superseded position and drawn the badge and the cue TWICE. It now sits
+        where the affected-row notice actually lives — last line of the text
+        stack, above the cue — so both notices read as one column and the
+        accepted R-116 grid is untouched.
+      */}
+      {injuryWithholding ? (
+        <Text
+          style={styles.injuryWithheldNotice}
+          testID={`workout-exercise-injury-withheld-${exerciseToken}`}
+        >
+          {injuryWithholding.explanation}
         </Text>
       ) : null}
       <CueDisclosure
@@ -4461,6 +4553,30 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   exerciseCardGroupedLast: {},
+  // R-115 — a withheld row is dimmed, never hidden and never deleted.
+  exerciseCardWithheld: { opacity: 0.55 },
+  injuryWithheldNotice: {
+    color: '#FF9A8B',
+    fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  // The Skip marker that REPLACES the checkbox on a withheld row. Same 22x22
+  // footprint and the same `marginTop` as `executionCheckbox`, so the row's
+  // right edge does not shift between an ordinary row and a withheld one.
+  executionSkipMark: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,154,139,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 3,
+  },
+  executionSkipText: { color: '#FF9A8B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.2 },
 
   // ── Exercise header row ──
   // Label (index) is now plain text, not a chip — the index is information,

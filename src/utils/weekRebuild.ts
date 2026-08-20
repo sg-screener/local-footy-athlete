@@ -51,6 +51,7 @@ import {
   generationAnchorForProgram,
   getCurrentBlockNumberForGeneration,
   recordAcceptedBlock,
+  statedProgressionInputs,
   useProgramStore,
 } from '../store/programStore';
 import {
@@ -418,6 +419,117 @@ export interface RebuildLocalWeekArgs {
  * Build + commit a deterministic week rebuild. Synchronous; throws
  * BEFORE any state mutation on failure (atomic by construction).
  */
+/**
+ * THE ATHLETE'S PROGRAM FOR A PROFILE, BUILT FROM THE STORE'S OWN INPUTS.
+ *
+ * ⚠ **EXTRACTED 2026-08-20 BECAUSE A PREVIEW HAD TO CALL IT, AND CALLING
+ * ANYTHING ELSE WAS MEASURABLY WRONG.** The body is `rebuildLocalWeek`'s step 1,
+ * moved without a single argument changing. It is exported so the Coach tab's
+ * optional-session preview builds with **the same inputs the athlete's program
+ * is actually built with**, rather than assembling a third set of its own.
+ *
+ * The measurement that forced it (seat `finish-coach-product`, on a real walked
+ * off-season athlete): a preview built through
+ * `profileProgramTransaction`'s own intermediate — which passes **no
+ * `progressionHistory`** — disagreed with the program the athlete ended up on in
+ * **40 of 90 prescriptions**, every one of them a set count and a load
+ * (`Bulgarian Split Squats 3x8-10 @25` previewed, `4x8-10 @25` delivered). A
+ * build with the store's history matched the delivered program **exactly**. So
+ * the history is not optional decoration on this path; it is most of the answer.
+ *
+ * ⚠ **`recordSelections` IS THE ONLY THING A PREVIEW CHANGES.** `'author'`
+ * appends to the block-selection history so the NEXT block rotates away from
+ * this one's exercises. A previewing build must pass `false`: it would otherwise
+ * write persisted state for a change nobody has agreed to, and make its own
+ * prediction false by rotating the acceptance away from it. The OUTPUT is
+ * unaffected — the program is computed from the history that already exists —
+ * and `test:coach-weekly-reduction` proves that with a three-way build
+ * comparison before it compares anything else.
+ */
+export function generateProgramForProfileFromStore(args: {
+  profile: OnboardingData;
+  todayISO: string;
+  blockNumber?: number;
+  recordSelections: 'author' | false;
+}): TrainingProgram {
+  const persistedState = useProgramStore.getState();
+  return generateProgramForProfile({
+    ...args,
+    previousProgram: persistedState.currentProgram,
+    markedDays: persistedState.acceptedMaterialContext.markedDays,
+    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+    // ⚠ **THE FOUR FIELDS WERE WRITTEN OUT HERE BY HAND, AND THAT IS THE EXACT
+    // SHAPE THAT PUT TWO OTHER DOORS ON THE ATHLETE'S OLD LOADS.**
+    // `statedProgressionInputs` (`programStore`) is the ONE projection of *"what
+    // a regenerating caller must state"*, for the same reason
+    // `projectProgramPersistedInputs` beside it is the one projection of what
+    // the store persists: a list written out by hand is a list the next door
+    // forgets. This extraction is its SIXTH caller. Nothing it states has
+    // changed — the same snapshot, the same four fields; only the authorship of
+    // the list moved. (Integrator, 2026-08-20, merging the Coach extraction onto
+    // the settings/persistence owner.)
+    progressionHistory: statedProgressionInputs(persistedState),
+  });
+}
+
+/**
+ * THE SAME BUILD, WITH EVERY INPUT STATED (L14).
+ *
+ * ⚠ **SPLIT OUT AFTER THE STORE-READING VERSION BROKE TWO SUITES, AND THE BREAK
+ * WAS THE POINT.** `test:block-two-extra-session` and `test:athlete-journey`
+ * drive worlds whose program is an ARGUMENT and not in the store, so a preview
+ * that reached for `useProgramStore.getState()` built against a world nobody was
+ * looking at. A production surface can hit the same shape any time it holds a
+ * program the store has not published yet.
+ *
+ * The Coach tab's preview calls THIS one, with the inputs its own hook already
+ * receives — so the preview is pure over the same world the conversation was
+ * derived from, and cannot silently answer about a different one.
+ */
+export function generateProgramForProfile(args: {
+  profile: OnboardingData;
+  todayISO: string;
+  blockNumber?: number;
+  recordSelections: 'author' | false;
+  previousProgram: TrainingProgram | null;
+  markedDays: Parameters<typeof resolveProfileTargetWeekAvailability>[0]['markedDays'];
+  activeConstraints: Parameters<
+    typeof resolveProfileTargetWeekAvailability>[0]['activeConstraints'];
+  progressionHistory: NonNullable<
+    Parameters<typeof generateProgramLocally>[1]>['progressionHistory'];
+}): TrainingProgram {
+  const targetWeekAvailability = resolveProfileTargetWeekAvailability({
+    profile: args.profile,
+    weekStart: getMondayForDate(args.todayISO),
+    markedDays: args.markedDays,
+    activeConstraints: args.activeConstraints,
+    // Generation input, NOT the persisted clock: this is the branch that
+    // rebuilds after a phase shift, and the persisted clock still holds the
+    // phase the athlete is leaving.
+    ownedPhase: ownSeasonPhaseForGeneration(args.profile),
+  });
+  const targetFixture = targetWeekAvailability.proposedFixtures[0];
+  return generateProgramLocally(args.profile, {
+    recordSelections: args.recordSelections,
+    // The rebuild's own publication declares `forward_decision` (R1.3, and the
+    // long note at `commitRebuiltProgram`). The GENERATION that produces it is
+    // the same decision one layer earlier and must say so, or the strict
+    // verdict simply throws before the publication is ever reached.
+    weekAcceptance: 'forward_decision',
+    todayISO: args.todayISO,
+    blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(args.todayISO),
+    previousProgram: args.previousProgram,
+    targetWeekAvailability,
+    targetFixtureDay: targetFixture ? dayNameForDate(targetFixture.date) : null,
+    // THE BLOCK-BOUNDARY OWNER'S INPUTS, STATED BY THE CALLER RATHER THAN
+    // FETCHED HERE. Generation no longer reaches into the store for them (Sam,
+    // product close) — same explicit inputs, same stored block, every time. The
+    // caller that owns the grid states them; `...FromStore` above is the one
+    // adapter that reads them off it.
+    progressionHistory: args.progressionHistory,
+  });
+}
+
 function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildResult {
   const todayISO = args.todayISO ?? todayISOLocal();
   const scope = args.scope ?? 'block';
@@ -625,47 +737,13 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   // 1. Candidate week from base programming rules (throws on failure —
   //    nothing has been committed yet).
   const generationDate = todayISO;
-  const persistedState = useProgramStore.getState();
-  const persistedProgram = persistedState.currentProgram;
-  const targetWeekAvailability = resolveProfileTargetWeekAvailability({
+  const program = generateProgramForProfileFromStore({
     profile,
-    weekStart: getMondayForDate(generationDate),
-    markedDays: persistedState.acceptedMaterialContext.markedDays,
-    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
-    // Generation input, NOT the persisted clock: this is the branch that
-    // rebuilds after a phase shift, and the persisted clock still holds the
-    // phase the athlete is leaving.
-    ownedPhase: ownSeasonPhaseForGeneration(profile),
-  });
-  const targetFixture = targetWeekAvailability.proposedFixtures[0];
-  const program = generateProgramLocally(profile, {
+    todayISO: generationDate,
+    blockNumber: args.blockNumber,
     // THE ROLLOVER AUTHORS THE NEW BLOCK — it is the door that decides what
     // the next block selects, so it may replace the block's rows.
     recordSelections: 'author',
-    // The rebuild's own publication declares `forward_decision` (R1.3, and the
-    // long note at `commitRebuiltProgram`). The GENERATION that produces it is
-    // the same decision one layer earlier and must say so, or the strict
-    // verdict simply throws before the publication is ever reached.
-    weekAcceptance: 'forward_decision',
-    todayISO: generationDate,
-    blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
-    previousProgram: persistedProgram,
-    targetWeekAvailability,
-    targetFixtureDay: targetFixture ? dayNameForDate(targetFixture.date) : null,
-    // THE BLOCK-BOUNDARY OWNER'S INPUTS, STATED HERE RATHER THAN FETCHED THERE.
-    // This is the caller that crosses a block boundary, so it is the caller that
-    // must hand generation the athlete's recorded history. Generation no longer
-    // reaches into the store for it (Sam, product close) — same explicit inputs,
-    // same stored block, every time.
-    progressionHistory: {
-      sessionFeedback: persistedState.sessionFeedback,
-      weightOverrides: persistedState.weightOverrides,
-      blockState: persistedState.blockState,
-      // EVERY ACCEPTED BLOCK'S RECORD — its identity and what it required. Stated
-      // by the caller that owns the grid, and it is the SAME map `quiescentBoot`
-      // states, so the rollover and a relaunch read identical values.
-      acceptedBlocks: persistedState.acceptedBlocks,
-    },
   });
 
   // 2. Canonical context + pure sweep decision.

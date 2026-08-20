@@ -41,6 +41,7 @@ import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
+import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
 import {
   applyExclusionsToAuthoredDay,
   type ExerciseExclusion,
@@ -896,17 +897,33 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // The canonicalisers build their own bare states and therefore compose the
   // week the app AUTHORED, which is the week that must be stored.
   const dayExclusions = state.athleteExclusions ?? [];
-  const composedWorkout = applyExclusionsToAuthoredDay({
+  /* ── AN INJURY MARKS A ROW; ONLY THE ATHLETE REMOVES ONE ──────────────────
+   *
+   * Sam, 2026-08-20: *"Preserve the original exercises. On that date, show them
+   * as unavailable/skip ... Remove remains exclusively athlete-authored
+   * Remove."* So the two projections sit side by side here and do OPPOSITE
+   * things on purpose: the exclusion FILTERS the row out, the injury MARKS it.
+   *
+   * It belongs at exactly this seam for exactly the reason written above about
+   * exclusions — `canonicaliseAcceptedBoundaryState` composes the stored week
+   * THROUGH this resolver, and a projection that reaches it gets written down.
+   * `state.temporarySourceFacts` is supplied by the VIEW doors, so a
+   * canonicalising caller carries none and marks nothing. */
+  const dayInjuryFacts = state.temporarySourceFacts ?? [];
+  const withhold = <T extends Workout | null>(workout: T): T => markInjuryWithheldRows({
+    workout, dateISO: date, facts: dayInjuryFacts,
+  });
+  const composedWorkout = withhold(applyExclusionsToAuthoredDay({
     workout: composed.workout,
     dateISO: date,
     exclusions: dayExclusions,
-  });
+  }));
   const constrainedWorkout = constrained
-    ? applyExclusionsToAuthoredDay({
+    ? withhold(applyExclusionsToAuthoredDay({
       workout: constrained.workout,
       dateISO: date,
       exclusions: dayExclusions,
-    })
+    }))
     : null;
 
   // ── The date override answers WITHOUT needing block data ──

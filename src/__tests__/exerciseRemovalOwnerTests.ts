@@ -28,6 +28,11 @@
  * Run: npm run test:exercise-removal-owner
  */
 
+// TOTALS-OR-RED (Sam, 2026-08-03): armed at module top, cleared only by the
+// printed totals line. Added 2026-08-20 when this suite entered `test:bible`.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
+
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const durable = new Map<string, string>();
 (globalThis as unknown as { window: unknown }).window = {
@@ -53,7 +58,11 @@ import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
-import { applyExerciseExclusionDecision, restoreExcludedExercise } from '../utils/exerciseExclusionOwner';
+import {
+  applyExerciseExclusionDecision,
+  restoreExcludedExercise,
+  restoreExcludedExerciseDurably,
+} from '../utils/exerciseExclusionOwner';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { executeProgramControlAction } from '../utils/programControlActions';
 
@@ -328,7 +337,15 @@ async function main(): Promise<void> {
    * Restore has nothing exact to give back. */
   ok('the stored program KEPT the row, so Restore stays exact',
     storedProgramCount(restartVictim) > 0, `stored=${storedProgramCount(restartVictim)}`);
-  quiet(() => restoreExcludedExercise(restartVictim));
+  /* ⚠ **THE DOOR, BECAUSE THE BOOT ABOVE ALREADY RE-AUTHORED THIS BLOCK.**
+   * `restoreExcludedExercise` writes the decision and stops there; the act My
+   * Status performs is `restoreExcludedExerciseDurably`, which also annuls the
+   * outstanding ledger removal and settles the derived world. Since Sam's
+   * 2026-08-20 *"stored truth and visible truth must agree"* the removal reaches
+   * STORAGE at generation, so after a relaunch there is no hidden row left to
+   * un-hide and only the re-derivation returns the recorded lift. This cell was
+   * red for exactly that reason. */
+  await quietAsync(() => restoreExcludedExerciseDurably(restartVictim));
   ok('and after a restart, Restore still returns every day',
     daysCarrying(weekStart, restartVictim).length === restartCarried.length,
     `${JSON.stringify(daysCarrying(weekStart, restartVictim))} vs ${JSON.stringify(restartCarried)}`);
@@ -383,11 +400,12 @@ function report(): void {
   console.log(`\n${'─'.repeat(72)}`);
   if (failures.length === 0) {
     console.log(`ALL GREEN — ${passed} passed`);
+    totalsPrinted(0);
     return;
   }
   console.log(`FAILURES — ${passed} passed, ${failures.length} failed`);
   for (const failure of failures) console.log(`  ✗ ${failure}`);
-  process.exitCode = 1;
+  totalsPrinted(failures.length);
 }
 
 main().catch((error) => {

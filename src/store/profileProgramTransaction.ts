@@ -14,7 +14,7 @@ import {
 } from './acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from './acceptedStateTransaction';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
-import { useProgramStore } from './programStore';
+import { statedProgressionInputs, useProgramStore } from './programStore';
 import { useProfileStore } from './profileStore';
 import { composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -191,19 +191,147 @@ function applyProfileChange(
   };
 }
 
+/**
+ * ⚠ **THE COACH LANE'S WARNING ABOUT THIS BUILDER — AND ITS PREMISE IS NOW
+ * SPENT. KEPT AS HISTORY, NOT AS A LIVE CLAIM (integrator, 2026-08-20).**
+ *
+ * Seat `finish-coach-product` wrote here that a preview must not use this
+ * builder, because it *"passes no `progressionHistory`"* and the program the
+ * athlete ends up on after a profile change disagreed with it in **40 of 90
+ * prescriptions**, every one a set count and a load. That was measured, and it
+ * was true of `main @ 9f081efa`, where both lanes branched from.
+ *
+ * **IT IS NOT TRUE OF THIS TREE.** Seat `finish-settings-persistence` made
+ * `statedProgressionInputs` the one projection of what a regenerating caller
+ * must state and routed this door through it — see the note inside
+ * `factFreeBase` below. The two lanes were then measured TOGETHER on one worn
+ * athlete through a real `confirmWeeklyCommitment`: preview vs accepted moved
+ * from **20 of 44 loads differing** to **0**, and the second publish stopped
+ * rewriting the first, **8 of 44 -> 0 of 44**.
+ *
+ * **THE PREVIEW STILL DOES NOT CALL THIS DOOR**, and that is deliberate rather
+ * than leftover: `utils/weekRebuild.generateProgramForProfile` is pure over the
+ * world it is handed, so a preview cannot silently answer about a different one
+ * than the conversation was derived from. The reason is now purity, not a
+ * missing input.
+ *
+ * The ownership question the Coach lane raised — WHICH producer should own the
+ * program after a profile change, given there are two generations per acceptance
+ * — is still open and is not this file's to answer.
+ * `docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md` carries it.
+ */
+
+/**
+ * ⚠ **A TYPED REFUSAL IS CARRIED BY ITS CODE, NEVER BY ITS SENTENCE.**
+ *
+ * This transaction returns a `reason` STRING and the surfaces hand that string
+ * to `classifyProgramMutationRefusal`, whose whole job is to turn a typed reason
+ * into the athlete's account of it. Every reason the door emits deliberately is
+ * a stable code (`accepted_revision_changed`, `no_change`, …) — but this catch
+ * used `error.message`, so an error that already KNEW what it was arrived as
+ * free prose and the classifier could only answer `unknown`.
+ *
+ * **MEASURED 2026-08-20 through the real Profile setup door.** An In-season
+ * athlete with two club nights and a Saturday game cut their gym days to one.
+ * The scheduler refused correctly and the whole change rolled back correctly —
+ * and the athlete was told *"Something went wrong. Please try again."* while the
+ * app was holding `Weekly schedule refused (not_enough_legal_gym_days: WC-142)`.
+ * That sentence is the exact one `rules/programMutationRefusal`'s header names
+ * as the disease it was written to cure; it survived here because the cure was
+ * applied to the reasons this door RETURNS and not to the errors it CATCHES.
+ *
+ * **IT READS `code`, NOT A LIST OF ERROR CLASSES**, so the next typed refusal
+ * thrown under this door is carried the same way without anybody remembering to
+ * add it. A code with no row in `REASON_KINDS` still lands in `unknown` — which
+ * is the honest answer, and `phaseShiftAtomicityTests`' fall-through cell is
+ * where a shipped code without copy is supposed to go red.
+ */
+function typedRefusalReason(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && code.length > 0) return code;
+  return error instanceof Error ? error.message : String(error);
+}
+
 function factFreeBase(args: {
   profile: OnboardingData;
   todayISO: string;
   now: string;
   sourceRevision: number;
+  /**
+   * ⚠ **`false` FOR A PREVIEW, AND IT IS NOT A DETAIL — IT IS THE DIFFERENCE
+   * BETWEEN A PREVIEW AND A CHANGE.**
+   *
+   * `'author'` APPENDS to the block-selection history, which is what makes the
+   * NEXT block rotate away from the exercises this one chose. A preview that
+   * authors therefore does two wrong things at once: it writes persisted state
+   * for a change the athlete has not agreed to, and it makes its own prediction
+   * false — the acceptance that follows reads the preview's record and rotates
+   * away from it.
+   *
+   * MEASURED 2026-08-20 before this argument existed, on a real walked athlete:
+   * the previewed Monday prescribed `Bulgarian Split Squats 3x8-10` and the
+   * ACCEPTED Monday prescribed `4x8-10`. Same profile, same day, same lift,
+   * different dose — because the first build had recorded itself. Both halves
+   * are held by `test:coach-weekly-reduction`: a disk fingerprint around the
+   * preview, and a prescription-for-prescription comparison of the previewed and
+   * the accepted program.
+   *
+   * ⚠ **IT CHANGES THE WRITE, NEVER THE OUTPUT.** The program is computed from
+   * the history that already exists; `recordSelections` only decides whether
+   * this build joins it. That is what makes suppressing it safe — and what makes
+   * the equality cell meaningful rather than tautological.
+   */
+  recordSelections?: 'author' | false;
 }): AcceptedCompositionBaseV1 {
   const state = useProgramStore.getState();
   let surfaces = normalizeAcceptedProgramSurfaces(state);
   if (state.currentProgram) {
+    /**
+     * ⚠ **WHICH BLOCK THE ATHLETE IS IN, AND WHAT THEY HAVE LIFTED — STATED, NOT
+     * LEFT FOR GENERATION TO GUESS.**
+     *
+     * **THE DEFECT THIS CLOSES, MEASURED 2026-08-20 THROUGH THE REAL DOORS.** An
+     * athlete four weeks into block 1, who had recorded nineteen days, typed their
+     * own loads and crossed a REAL rollover into block 2, changed their usual game
+     * day from Saturday to Sunday. Afterwards:
+     *
+     *     acceptedBlocks  {2026-07-13:1, 2026-08-10:2} -> {2026-07-13:1, 2026-08-10:1}
+     *     blockState      blockNumber 2 -> 1
+     *     Leg Press       113.5 kg -> 110 kg      (their own recorded 111 -> gone)
+     *     RDLs             82.5 kg ->  80 kg
+     *
+     * **and it survived the relaunch, so it was permanent.** Sam's ruling of
+     * 2026-08-18 — *"Once Block 2 is accepted, restart must never infer or reset
+     * them to Block 1"* — was held at boot and broken here, by the one door the
+     * athlete uses to change their setup.
+     *
+     * **THE CAUSE IS FOUR MISSING ARGUMENTS, WHICH IS R-097's SHAPE EXACTLY.** This
+     * call stated `previousProgram` and nothing else, so generation authored a
+     * BLOCK 1 with no history; `commitAcceptedStateTransaction` then derived
+     * `blockState` from that program and `recordAcceptedBlock` stamped
+     * `blockNumber: 1` over the athlete's own block-2 record — the only copy.
+     *
+     * **THE FIX IS THE PATTERN THE OTHER TWO REGENERATING DOORS ALREADY USE, NOT A
+     * NEW ONE.** `weekRebuild.ts:649` (the rollover) and `quiescentBoot.ts:566`
+     * (a relaunch) both say the same thing in their own comments: *"the caller
+     * that owns the grid STATES the inputs"*. This door owns the grid too — it is
+     * the third caller of `generateProgramLocally` that regenerates an accepted
+     * athlete's block — and it was the only one not saying so. Nothing is
+     * re-derived and no compatibility layer is added; the same four recorded facts
+     * are handed over, so a profile change, a rollover and a relaunch author the
+     * same block from the same inputs BY CONSTRUCTION.
+     *
+     * `statedProgressionInputs` is that shared owner — see its header in
+     * `programStore.ts` for why the list is a function and not a habit, and for
+     * why `blockState ?? currentAcceptedBlock` is two readings of ONE recorded
+     * fact rather than a fallback to a guess.
+     */
+    const progressionHistory = statedProgressionInputs(state);
     const program = generateProgramLocally(args.profile, {
       // ONBOARDING / A PROFILE CHANGE AUTHORS THE BLOCK — the athlete just
       // restated who they are, and this door decides what that block selects.
-      recordSelections: 'author',
+      // A PREVIEW passes `false`; see the argument's own note.
+      recordSelections: args.recordSelections ?? 'author',
       // The athlete just changed their season phase / profile. Generation may
       // not veto that fact: unstated, this inherited `restoration` and THREW,
       // and the transaction reported "The profile change could not build a
@@ -214,6 +342,12 @@ function factFreeBase(args: {
       previousProgram: state.currentProgram,
       activeConstraints: [],
       readinessSignal: null,
+      // ABSENT BLOCK STATE MEANS BLOCK 1 — the pre-existing default, and the
+      // truthful answer for an athlete who has not crossed a boundary yet.
+      ...(progressionHistory.blockState
+        ? { blockNumber: progressionHistory.blockState.blockNumber }
+        : {}),
+      progressionHistory,
     });
     const context = collectWeekRebuildContext({
       baseProfile: args.profile,
@@ -323,7 +457,7 @@ export async function commitProfileProgramTransaction(
       ok: false,
       changedProgram: false,
       message: 'The profile change could not build a valid accepted base, so nothing changed.',
-      reason: error instanceof Error ? error.message : String(error),
+      reason: typedRefusalReason(error),
     };
   }
   const compatibility = composeTemporarySourceFactCompatibility({

@@ -541,8 +541,16 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
   const sayCalls = [...screenCode.matchAll(/\bsay\(([\s\S]*?)\);/g)].map((m) => m[1].trim());
   ok(
     'every coach sentence in the screen is a rule call and there are some',
+    // ⚠ ENUMERATED, AND R-105 ADDED THREE NAMES TO THE LIST — NOT A WILDCARD.
+    // The weekly-reduction conversation moved onto this screen, so the coach can
+    // now also say what the transaction reported, that the athlete declined, and
+    // that the rebuild refused. All three are `rules/projectionCopy` renderers
+    // over SIGNED entries, so the property this cell holds — *the screen names
+    // the rule, never the words* — is unchanged. A ban on literals would have
+    // let them through without anyone naming them, which is why this is a list.
     sayCalls.length >= 3 && sayCalls.every((argument) =>
       /^(coachAnswer|coachChangeOutcome|coachChangeDeclined)\(/.test(argument)
+      || /^commitment(Confirmed|Declined|Failed)Sentence\(/.test(argument)
       || /^proposal\.text$/.test(argument)),
     sayCalls.join(' | '),
   );
