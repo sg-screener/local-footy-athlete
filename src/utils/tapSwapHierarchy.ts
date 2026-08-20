@@ -424,11 +424,36 @@ export function assessTapSwapCandidateSafety(
   const activeInjuryEntries = Object.entries(environment.injurySeverities) as Array<
     [InjuryKey, number]
   >;
-  if (activeInjuryEntries.length > 0 && !tags && !isRecoveryName(name)) {
+  /**
+   * ⚠ **AN UNRATED EXERCISE IS "SAFETY UNKNOWN", AND SAFETY UNKNOWN IS A NO.**
+   *
+   * Sam, 2026-08-20: *"An unrated exercise may only be offered if another
+   * explicit movement-pattern or body-area rule proves it safe. Otherwise reject
+   * it as 'safety unknown' and continue down the ladder."*
+   *
+   * ⚠ **RECOVERY NAMES USED TO SKIP BOTH CHECKS BELOW, AND THAT WAS THE ONE
+   * PLACE "MISSING" MEANT "SAFE".** `isRecoveryName` is a hard-coded pair —
+   * `Easy Bike` and `Breathing Reset` — and while it guarded these lines an
+   * unrated breathing drill was admitted as a replacement with NO rule proving
+   * it safe, under the sentence *"passes injury, readiness and equipment
+   * checks"* when no injury check had been run at all. **MEASURED at knee 9/10
+   * AND shoulder 9/10 — the most severe world the app has — `Breathing Reset`
+   * came back `safe=true`.** Every other unrated name was correctly refused;
+   * only the hard-coded exemption let it through.
+   *
+   * The exemption is gone. `Easy Bike` IS rated and is now judged on its
+   * ratings like everything else; `Breathing Reset` is not rated and is refused
+   * until somebody rates it **in the data**, which is what
+   * `classifyExerciseRiskForBucket`'s own comment already prescribes.
+   *
+   * ⚠ **THE EQUIPMENT EXEMPTION ABOVE IS A DIFFERENT QUESTION AND STAYS.**
+   * "Can this athlete perform it with today's kit" is not "is this safe for the
+   * injured area", and a bodyweight breathing drill genuinely needs no kit.
+   */
+  if (activeInjuryEntries.length > 0 && !tags) {
     return { safe: false, reason: 'The replacement cannot be verified against the active injury.' };
   }
   for (const [bucket, severity] of activeInjuryEntries) {
-    if (isRecoveryName(name)) continue;
     if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), bucket, severity)) {
       return { safe: false, reason: `The replacement still loads the active ${bucket} issue.` };
     }

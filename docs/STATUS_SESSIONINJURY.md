@@ -299,6 +299,40 @@ Landmine Press`, …), and the applied session carries all five at their own loa
 (25kg / 20kg / BW / 27.5kg), each naming the row it replaced — **no recovery
 work, no breathing drill, nothing skipped.**
 
+## D4 — "DOES MISSING MEAN SAFE?" — SAM'S QUESTION FOUND A REAL HOLE
+
+Two of the three gates already refused an unrated exercise. The ladder only ever
+considers rated ones, and the safety assessor refuses an unrated name outright.
+**But a hard-coded pair — `Easy Bike` and `Breathing Reset` — skipped BOTH the
+unrated refusal and the per-region check.**
+
+MEASURED at knee 9/10 AND shoulder 9/10, the most severe world the app has:
+
+```
+Breathing Reset   safe=TRUE   "passes injury, readiness and equipment checks"
+                              ...with no injury check performed at all
+```
+
+The exemption is deleted. `Easy Bike` is rated and is judged on its ratings;
+`Breathing Reset` is unrated and is now refused as *"cannot be verified against
+the active injury"*. **I did not invent a rating for it** — rating it is Sam's
+matrix to author, and the code's own comment already says to close such gaps in
+the data.
+
+⚠ **ASKING `injuryPermitsExerciseAtSeverity` WOULD HAVE PASSED AND PROVED
+NOTHING.** That predicate always refused `unknown`. The hole was one layer out,
+in the function the ladder actually passes as `isLegal`. **Ask the gate, not the
+predicate.** The new cell asks the gate and sweeps every unrated name.
+
+**THE PROOF FOR THE SCREENSHOTS** — every replacement is admitted by an explicit
+rating, none by a missing one. For the 7/10 knee: `Band Pull-Apart`,
+`Chest-Supported DB Row`, `Explosive Landmine Press`, `Banded Bicep Curl` and
+`Single-Arm DB Floor Press` are each rated **`knee: good`** in Sam's ruled matrix.
+
+Re-driven on the simulator after the fix: identical session, same five
+replacements, same loads. Ordinary cases unchanged — knee 7/10, shoulder 6/10,
+hamstring 5/10, lower back 6/10 and calf 7/10 all still skip nothing.
+
 ## LOG
 
 - 2026-08-20 — worktree off `da1dbf89`, baseline measured, defects named.

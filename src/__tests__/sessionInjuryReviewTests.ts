@@ -697,7 +697,8 @@ async function main(): Promise<void> {
    */
   console.log('\n[11] no Strength row is ever given Mobility or Conditioning work');
   {
-    const { exerciseSessionFamily } = require('../rules/exerciseSessionFamily');
+    const { exerciseSessionFamily, everyPlacedExerciseFamily } =
+      require('../rules/exerciseSessionFamily');
     const weekStart5 = install();
     const days5 = trainingDays(weekStart5);
     let strengthRowsSeen = 0;
@@ -782,6 +783,54 @@ async function main(): Promise<void> {
     ok('[11] CONTROL — a rated risky row is still withheld, so this is not blanket permission',
       injuryWithholdsExistingRow('Back Squat', 'knee', 9) === true,
       'Back Squat / knee 9');
+
+    /* ══ SAFETY UNKNOWN IS A NO — ASKED OF THE REAL GATE, NOT THE PREDICATE ══
+     *
+     * Sam, 2026-08-20: *"An unrated exercise may only be offered if another
+     * explicit movement-pattern or body-area rule proves it safe. Otherwise
+     * reject it as 'safety unknown' and continue down the ladder."*
+     *
+     * ⚠ **ASKING `injuryPermitsExerciseAtSeverity` WOULD HAVE PASSED AND PROVED
+     * NOTHING.** That predicate always refused `unknown`; the hole was one layer
+     * out, in `assessTapSwapCandidateSafety` — the function the ladder actually
+     * passes as `isLegal` — where a hard-coded `isRecoveryName` pair skipped the
+     * unrated refusal AND the per-region check. MEASURED at knee 9/10 AND
+     * shoulder 9/10, the most severe world the app has: `Breathing Reset` came
+     * back **safe=true**, under the sentence *"passes injury, readiness and
+     * equipment checks"* when no injury check had run. So this cell asks the
+     * GATE, and it sweeps every unrated name rather than sampling one.
+     */
+    const { assessTapSwapCandidateSafety } = require('../utils/tapSwapHierarchy');
+    const { EXERCISE_TAGS } = require('../data/exerciseTags');
+    const severeWorld = {
+      injurySeverities: { knee: 9, shoulder: 9 },
+      primaryInjury: { bucket: 'knee', severity: 9, seriousSymptoms: false },
+      availableEquipment: ['bodyweight', 'dumbbell', 'barbell', 'band', 'machine', 'cable'],
+      availableEquipmentTags: ['bodyweight', 'dumbbells', 'barbell', 'bands', 'machine', 'cables',
+        'bike_or_treadmill'],
+      capacity: 'normal', hasEquipmentConstraint: false, medicalStop: false,
+    };
+    const tagMap = EXERCISE_TAGS as Record<string, unknown>;
+    const unratedAdmitted = (Array.from(everyPlacedExerciseFamily().keys()) as string[])
+      .concat(['Breathing Reset'])
+      .filter((name) => {
+        const titled = name.replace(/\b\w/g, (c: string) => c.toUpperCase());
+        return !tagMap[titled] && !tagMap[name];
+      })
+      .filter((name) => assessTapSwapCandidateSafety(name, severeWorld).safe);
+    ok('[11] CONTROL — the severe world really does refuse rated risky work too',
+      assessTapSwapCandidateSafety('Back Squat', severeWorld).safe === false,
+      assessTapSwapCandidateSafety('Back Squat', severeWorld));
+    ok('[11] SAFETY UNKNOWN IS A NO — no unrated exercise passes the real gate',
+      unratedAdmitted.length === 0, unratedAdmitted.slice(0, 10));
+    ok('[11] and the hard-coded recovery pair is no longer exempt from it',
+      assessTapSwapCandidateSafety('Breathing Reset', severeWorld).safe === false
+        && /cannot be verified/.test(
+          assessTapSwapCandidateSafety('Breathing Reset', severeWorld).reason),
+      assessTapSwapCandidateSafety('Breathing Reset', severeWorld));
+    ok('[11] CONTROL — a RATED exercise is still judged on its rating, not blocked wholesale',
+      assessTapSwapCandidateSafety('Easy Bike', severeWorld).safe === true,
+      assessTapSwapCandidateSafety('Easy Bike', severeWorld));
   }
 
   /* ══ [1] THE INERTNESS CONTROL ON THE PENDING medicalStop CLAUSE ══════ */

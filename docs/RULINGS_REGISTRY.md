@@ -3633,6 +3633,28 @@ stages in `programControlActions.recomposeSessionForInjury`.
 row, 1 replacement, 0 skipped; hamstring 5/10: `RDLs -> Glute Bridge`, Sam's own
 Bible good swap, 0 skipped.
 
+**D4 — AND ONE PLACE WHERE "MISSING" STILL MEANT "SAFE", FOUND BY SAM'S OWN
+QUESTION.** *"When an exercise has no injury-safety rating, does the planner now
+treat it as safe? It must not."* Two of the three gates already refused it —
+`buildInjuryFallbackLadder` only ever considers rated exercises
+(`candidateFor` returns `null` without tags), and `assessTapSwapCandidateSafety`
+refuses an unrated name outright. **But `isRecoveryName` — a hard-coded pair,
+`Easy Bike` and `Breathing Reset` — skipped BOTH the unrated refusal and the
+per-region check.** MEASURED at knee 9/10 AND shoulder 9/10, the most severe
+world the app has: `Breathing Reset` came back **`safe=true`**, under the
+sentence *"passes injury, readiness and equipment checks"* when no injury check
+had run. Every other unrated name was correctly refused; only the exemption let
+it through. **The exemption is deleted.** `Easy Bike` is rated and is judged on
+its ratings like everything else; `Breathing Reset` is unrated and is refused as
+*"cannot be verified against the active injury"* until somebody rates it IN THE
+DATA. The EQUIPMENT exemption is a different question and stays — "can this
+athlete perform it with today's kit" is not "is this safe for the injured area".
+
+⚠ **ASKING `injuryPermitsExerciseAtSeverity` WOULD HAVE PASSED AND PROVED
+NOTHING** — that predicate always refused `unknown`. The hole was one layer out,
+in the function the ladder actually passes as `isLegal`. **Ask the gate, not the
+predicate.**
+
 **GUARDED:** `test:session-injury-review` `[11]` — the check Sam asked for by
 name, sweeping 13 regions x 4 bands **on top of an already-applied injury**.
 ⚠ **THE FIRST VERSION OF THAT GATE WAS GREEN AND EMPTY**: with one injury the
@@ -3643,4 +3665,12 @@ planner and the recovery-fallback boundaries both off) reds 2 and reproduces
 `Chest-Supported DB Row -> Easy Bike` exactly. ⚠ **THE TWO BOUNDARIES ARE
 BELT-AND-BRACES — either alone holds, which is why single mutations do not bite.
 Do not delete one as redundant.** `npm run probe:injury-ladder` prints, for every
-skipped row, each rung's candidates and why each was rejected.
+skipped row, each rung's candidates and why each was rejected. `[11]` also sweeps
+EVERY unrated name against the real gate in the severe world and asserts none
+passes; restoring the `isRecoveryName` exemption reds it.
+
+**EVERY REPLACEMENT IN THE DEVICE PROOF IS ADMITTED BY AN EXPLICIT RATING, NOT
+BY A MISSING ONE** — for a 7/10 knee, `Band Pull-Apart`, `Chest-Supported DB
+Row`, `Explosive Landmine Press`, `Banded Bicep Curl` and `Single-Arm DB Floor
+Press` are each rated **`knee: good`** in Sam's ruled matrix (2026-07-28), and
+each is a Strength row by the Add menu's own family map.
