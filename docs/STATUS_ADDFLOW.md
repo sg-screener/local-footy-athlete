@@ -1,5 +1,27 @@
 # STATUS — seat `addflow`
 
+## ⚠ MERGED TO `main` — 2026-08-20, `268fcbd1`. Rollback: `pre-addflow-merge-2026-08-20`.
+
+Sam: *"Change nothing else and merge the finished Add branch into main,
+preserving all unrelated changes."*
+
+`--no-ff` from `feat/add-flow-hierarchy`; `main` had not moved from `c12a058c`,
+so nothing was rebased and nothing was resolved. **The other seat's ELEVEN
+uncommitted `docs/printed-weeks/*` edits were checked for collision BEFORE the
+merge (none — this branch never touches that directory) and are present and
+unmodified after it.**
+
+Verified ON MERGED MAIN, not only on the branch: `test:exercise-add-candidates`
+50/0, `test:exercise-edit-entry-surface` 46/0, `test:session-change-sequence`
+22/0, `test:session-execution` 177 green / 1 red (its pre-existing one), and the
+`test:compile` error set byte-identical to pre-merge `main`. `git diff main
+feat/add-flow-hierarchy` is EMPTY, so the build on the simulator IS main's tree
+— re-seeded and re-walked there: the three families, Sam's four Strength
+headings, Lower body's extra question, the `Accessories` title unprefixed
+(R-120b), Back climbing the full depth, and an add through the deep route taking
+the session 6 -> 7.
+
+
 **One task, stated by Sam on 2026-08-20:** replace the Active Session Add
 action's random flat list with the approved hierarchy — Strength / Conditioning
 / Mobility-Warm-up, then a relevant subcategory, then the legal final choices —
