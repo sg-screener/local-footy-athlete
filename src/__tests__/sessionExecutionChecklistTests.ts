@@ -205,10 +205,14 @@ ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
  * plus exactly the `marginTop` this cell forbade. Inverted rather than deleted
  * (`gate-must-watch-the-deleted-surface`): the same coordinates are still
  * watched, they now name the ruled placement. */
-ok('every checkbox sits on the exercise-name line, not centred against the card',
-  /executionItem:\s*\{[^}]*alignItems:\s*'flex-start'/.test(screen)
-    && !/executionItem:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
-    && /executionCheckbox:\s*\{[^}]*\.\.\.sessionExecutionCheckbox[^}]*marginTop/.test(screen));
+/* ⚠ SUPERSEDED A SECOND TIME — R-116 third pass. This asserted the tick sat on
+ * the NAME line via `alignItems: 'flex-start'` + a `marginTop` on the box. Sam
+ * has moved it onto the control row beside the stepper, and that `marginTop` was
+ * the drift he then rejected. The wrapper now adds NO geometry at all, which is
+ * what this cell watches — the coordinates are the same, the claim is current. */
+ok('the checklist wrapper imposes no geometry on the row',
+  /executionItem:\s*\{\}/.test(screen)
+    && !/executionCheckbox:\s*\{[^}]*marginTop/.test(screen));
 ok('mobility movements use the same controlled checklist owner',
   /function MobilityExerciseList/.test(screen)
     && /completedItemIds\.has\(itemId\)/.test(screen)
@@ -691,14 +695,16 @@ ok('[10] the row reads name+Play, then sets x reps, then Form cues — in that o
   * asserted too, which is what the first cut missed. */
 ok('[10] the three lines are compressed materially — gaps AND row padding',
   /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen)
-    && /statsRow:\s*\{[^}]*marginTop:\s*1\b/.test(screen)
+    && /statsRow:\s*\{[^}]*marginTop:\s*[123]\b/.test(screen)
     && /cueContainer:\s*\{\s*marginTop:\s*1\s*\}/.test(screen)
     && /cueToggleRow:\s*\{[^}]*paddingVertical:\s*1\b/.test(screen)
-    && /exerciseCard:\s*\{[^}]*paddingTop:\s*2[^}]*paddingBottom:\s*2/.test(screen),
-  'gaps AND the card padding must both be cut, or it still reads as three rows');
+    // The card's padding is the CONTAINER's now (asserted in its own cell); what
+    // this one still owns is that the three LINES sit tight inside it.
+    && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen),
+  'the three lines must sit tight inside whatever padding the container has');
 ok('[10] and the separation BETWEEN exercises stays larger than the gaps inside one',
-  /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen),
-  'compressing a row must not make two exercises read as one');
+  /exerciseList:\s*\{\s*gap:\s*[56]\s*\}/.test(screen),
+  'the container now does the separating, so the gap can come down to 5-6');
 ok('[10] sets/reps is still the LEFT of the control row',
   /<View style=\{styles\.statsRow\}>\s*<View style=\{styles\.statsLeftColumn\}>\s*<Text/.test(screen));
 
@@ -708,33 +714,218 @@ const statsRowBlock = strengthCard.slice(
   strengthCard.indexOf('{/* ⚠ **POWER SHOWS NO REST LINE'));
 ok('[10] CONTROL — the control row block was found',
   statsRowBlock.length > 200, statsRowBlock.length);
-ok('[10] the stepper and the checkbox are ONE control group, not two columns',
-  /controlGroup:\s*\{[^}]*flexDirection:\s*'row'[^}]*gap:\s*9\b/.test(screen)
-    && /<View style=\{\[styles\.controlGroup[\s\S]{0,120}<View style=\{styles\.weightControl\}>/.test(statsRowBlock)
-    && /\{checkbox\}\s*<\/View>/.test(statsRowBlock),
-  statsRowBlock.slice(-500));
-ok('[10] and the gap between them is the ruled 8-10px, fixed — nothing can widen it',
-  /controlGroup:\s*\{[^}]*gap:\s*(8|9|10)\b[^}]*flexShrink:\s*0/.test(screen)
-    && !/controlRowCheckboxSlot/.test(screen),
-  'one fixed gap, and the old fixed-width slot is gone');
-ok('[10] and the checkbox comes IMMEDIATELY AFTER the stepper, not before it',
-  statsRowBlock.indexOf('styles.weightControl') >= 0
-    && statsRowBlock.indexOf('styles.weightControl') < statsRowBlock.indexOf('{checkbox}'),
-  { stepper: statsRowBlock.indexOf('styles.weightControl'),
-    checkbox: statsRowBlock.indexOf('{checkbox}') });
-ok('[10] a row with NO stepper keeps sensible checkbox alignment',
-  /controlGroupNoStepper:\s*\{\s*minHeight:\s*34\s*\}/.test(screen)
-    && /!carriesExternalLoad && styles\.controlGroupNoStepper/.test(screen)
-    && /recoveryControlRow:/.test(screen) && /addonCheckboxSlot:/.test(screen),
-  'the group keeps its height so the tick does not ride up when the stepper goes');
+/* ══ THE ROW GRID AND THE ONE CONTROL ROW — SAM, THIRD PASS ══════════════════
+ *
+ * *"one fixed-width number gutter; one left content column; … all three content
+ * lines must share the exact same left edge"* and *"The weight stepper and
+ * checkbox must be sibling children of one `controlsRow`."*
+ *
+ * ⚠ **HOW THE CENTRE-Y CLAIM IS PROVEN WITHOUT A RENDERER, SAID PLAINLY.**
+ * This repo ships no native renderer, so nothing here MEASURES pixels. What it
+ * does instead is check the PRECONDITIONS of the alignment theorem: in a flex
+ * row with `alignItems: 'center'`, two siblings' centre-Y coincide EXACTLY —
+ * unless one carries an independent offset. So the cells assert (a) the row is
+ * that row, (b) the two controls are siblings inside it with nothing between
+ * them, and (c) NEITHER carries a margin, top, position or transform that could
+ * move one without the other. Those three together make drift impossible by
+ * construction. The rendered proof is the screenshot with guides; this is what
+ * stops it regressing.
+ */
+const cardSource = strengthCard;
+const styleBlock = (name: string): string => {
+  const m = new RegExp(`\\n  ${name}: \\{[\\s\\S]*?\\n  \\},`).exec(screen);
+  return m ? m[0] : '';
+};
+const controlsRowStyle = styleBlock('controlsRow');
+const checkboxStyle = styleBlock('executionCheckbox');
+const weightStyle = styleBlock('weightControl');
+
+ok('[10] CONTROL — the three style blocks under test were all found',
+  !!controlsRowStyle && !!checkboxStyle && !!weightStyle,
+  { controlsRow: controlsRowStyle.length, checkbox: checkboxStyle.length,
+    weight: weightStyle.length });
+
+ok('[10] the stepper and the checkbox are SIBLINGS in one controlsRow',
+  /<View style=\{styles\.controlsRow\}>\s*<View style=\{styles\.weightControl\}>/.test(cardSource)
+    && /\{checkbox\}\s*<\/View>\s*<\/View>/.test(cardSource)
+    // nothing but a comment may sit between the two controls
+    && !/<\/View>\s*<View[\s\S]{0,80}\{checkbox\}/.test(cardSource),
+  cardSource.slice(cardSource.indexOf('styles.controlsRow'),
+    cardSource.indexOf('styles.controlsRow') + 200));
+ok('[10] that row is flexDirection row + alignItems center — the only thing aligning them',
+  /flexDirection:\s*'row'/.test(controlsRowStyle)
+    && /alignItems:\s*'center'/.test(controlsRowStyle),
+  controlsRowStyle);
+ok('[10] with the ruled 8-10px fixed gap and no shrink',
+  /gap:\s*(8|9|10)\b/.test(controlsRowStyle) && /flexShrink:\s*0/.test(controlsRowStyle),
+  controlsRowStyle);
+
+/* ⚠ THE DRIFT ITSELF: any independent offset on either control. */
+const OFFSETS = /(marginTop|marginBottom|marginVertical|top:|bottom:|transform|position:\s*'absolute'|alignSelf)/;
+/* COMMENTS STRIPPED: the style blocks NAME the properties they forbid, so a raw
+ * grep reads the documentation as the offset. Same trap the projection cell hit. */
+const codeOnly = (block: string): string => block
+  .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+ok('[10] CONTROL — stripping comments leaves the real declarations behind',
+  /borderRadius/.test(codeOnly(weightStyle))
+    && /sessionExecutionCheckbox/.test(codeOnly(checkboxStyle)));
+ok('[10] NEITHER control carries an independent vertical offset',
+  !OFFSETS.test(codeOnly(checkboxStyle)) && !OFFSETS.test(codeOnly(weightStyle)),
+  { checkbox: codeOnly(checkboxStyle), weight: codeOnly(weightStyle) });
+ok('[10] and the old `marginTop: 3` that caused the drift is gone for good',
+  !/executionCheckbox:\s*\{[^}]*marginTop/.test(screen),
+  'it nudged the tick onto the NAME line under R-111 and was never removed');
+ok('[10] nor does the shared checkbox recipe carry one',
+  !OFFSETS.test(fs.readFileSync(
+    path.resolve(__dirname, '..', 'theme', 'sessionExecutionCheckbox.ts'), 'utf8')),
+  'the recipe every surface shares must not offset it either');
+ok('[10] and the checklist wrapper adds no competing geometry',
+  /executionItem:\s*\{\}/.test(screen),
+  'a direction or gap here would fight the card for the row');
+
+/* SIX DIFFERENTLY SHAPED ROWS — every one reaches the SAME controlsRow, so the
+ * alignment cannot depend on the row's shape. The shapes are the ones that
+ * differ in height: they are what "drift down the list" was made of. */
+const ROW_SHAPES: Array<[string, boolean]> = [
+  ['bodyweight (BW, no editable load)', !/carriesExternalLoad \?[\s\S]{0,200}controlsRow/.test(cardSource)],
+  ['three-digit kilograms', /weightValueWrap/.test(cardSource)],
+  ['a long name that wraps to two lines', /numberOfLines=\{2\}/.test(headerRow)],
+  ['a row carrying an affected-row notice', /affectedRowNotice \?/.test(cardSource)],
+  ['a row with an expanded Form-cue', /<CueDisclosure/.test(cardSource)],
+  ['a superset member', /isGrouped && styles\.exerciseCardGrouped/.test(cardSource)],
+];
+for (const [shape, reached] of ROW_SHAPES) {
+  ok(`[10] ${shape} renders through the one controlsRow`, reached, shape);
+}
+ok('[10] and there is exactly ONE controlsRow in the card — no shape gets its own',
+  (cardSource.match(/styles\.controlsRow/g) ?? []).length === 1,
+  (cardSource.match(/styles\.controlsRow/g) ?? []).length);
+ok('[10] a row with no editable load keeps the column WITHOUT a fake stepper',
+  !/controlGroupNoStepper/.test(screen)
+    && /addonCheckboxSlot:\s*\{\s*flexDirection:\s*'row',\s*alignItems:\s*'center'\s*\}/.test(screen)
+    && !/position:\s*'absolute'/.test(styleBlock('addonCheckboxSlot')),
+  'no invented weight control, and no absolute positioning');
+
+/* THE GRID: one gutter, one content column, three lines sharing one left edge. */
+ok('[10] the row is a grid: fixed gutter, then one content column',
+  /exerciseRowGrid:\s*\{[^}]*flexDirection:\s*'row'/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*width:\s*26/.test(screen)
+    && /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen));
+ok('[10] the NUMBER lives in the gutter, not beside the name',
+  /<View style=\{styles\.exerciseNumberGutter\}>[\s\S]{0,160}exerciseLabelText/.test(cardSource)
+    && !/exerciseLabelBadge/.test(headerRow),
+  'the number as a sibling of the name is what put lines 2 and 3 under it');
+ok('[10] ALL THREE text lines are children of the ONE content column',
+  (() => {
+    const col = cardSource.indexOf('styles.exerciseContentColumn');
+    const close = cardSource.indexOf('</View>\n      </View>\n    </Card>');
+    const inside = cardSource.slice(col, close > col ? close : undefined);
+    return inside.indexOf('<ExerciseHeaderRow') > 0
+      && inside.indexOf('styles.statsRow') > inside.indexOf('<ExerciseHeaderRow')
+      && inside.indexOf('<CueDisclosure') > inside.indexOf('styles.statsRow');
+  })(),
+  'name line, dose line and cues must all sit inside the content column');
+ok('[10] a wrapping name cannot push the lower lines back into the gutter',
+  /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0/.test(screen)
+    && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen));
+
+/* THE VERTICAL RHYTHM — 1-3px between the three lines, and no more. */
+const gapOf = (re: RegExp): number => {
+  const m = re.exec(screen);
+  return m ? Number(m[1]) : NaN;
+};
+const RHYTHM = [
+  ['name -> dose', gapOf(/statsRow:\s*\{[^}]*marginTop:\s*(\d+)/)],
+  ['dose -> cues', gapOf(/cueContainer:\s*\{\s*marginTop:\s*(\d+)/)],
+] as const;
+for (const [label, value] of RHYTHM) {
+  ok(`[10] the ${label} gap is a compact 1-3px, not padding pretending to be one`,
+    value >= 1 && value <= 3, value);
+}
+ok('[10] the CONTROLS do not determine the text stack\'s height',
+  (() => {
+    const grid = cardSource.indexOf('styles.exerciseRowGrid');
+    const col = cardSource.indexOf('styles.exerciseContentColumn', grid);
+    const controls = cardSource.indexOf('styles.controlsRow', grid);
+    const stats = cardSource.indexOf('styles.statsRow', grid);
+    // the controls must come AFTER the content column closes, not inside statsRow
+    return controls > stats && controls > col
+      && !/statsRow\}>[\s\S]{0,3000}?styles\.controlsRow[\s\S]{0,200}?<\/View>\s*<\/View>\s*\{\/\* ⚠ \*\*POWER/.test(cardSource);
+  })(),
+  'the stepper is ~34px tall; inside the dose line it forced that line to 34px');
+ok('[10] and the grid centres them against the whole row',
+  /exerciseRowGrid:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*alignSelf:\s*'flex-start'/.test(screen),
+  'controls centre on the row; the gutter number stays on the name line');
+/* ══ THE SUBTLE CONTAINER — R-116 FINAL ═════════════════════════════════════
+ * *"each exercise should sit inside a subtle compact container … 1px
+ * low-contrast neutral border; extremely subtle background tint; 10-12px
+ * radius; ~6px vertical and 8px horizontal internal padding; ~5-6px between
+ * cards; no shadow."* */
+ok('[10] every exercise sits in one subtle container, to spec',
+  /exerciseCard:\s*\{[^}]*borderWidth:\s*StyleSheet\.hairlineWidth/.test(screen)
+    && /exerciseCard:\s*\{[^}]*borderRadius:\s*1[012]\b/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingTop:\s*6[^}]*paddingBottom:\s*6/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingLeft:\s*8[^}]*paddingRight:\s*8/.test(screen)
+    && /exerciseList:\s*\{\s*gap:\s*[56]\s*\}/.test(screen)
+    && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen));
+ok('[10] the border is NEUTRAL and the tint subtle — not an accent, not a panel',
+  /exerciseCard:\s*\{[^}]*backgroundColor:\s*'rgba\(255, 255, 255, 0\.0[123]\d*\)'/.test(screen)
+    && /exerciseCard:\s*\{[^}]*borderColor:\s*'rgba\(255, 255, 255, 0\.0\d+\)'/.test(screen)
+    && /exerciseCard:\s*\{[^}]*\.\.\.shadows\.none/.test(screen),
+  'a lime edge would read as selected; a shadow would read as a panel');
+ok('[10] and the container is NOT a button — no press on the card itself',
+  !/<Card[^>]*onPress/.test(cardSource),
+  'only the name/Play, the stepper and the tick are pressable');
+ok('[10] the container does not disturb the alignment it wraps',
+  /exerciseRowGrid:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
+    && /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen),
+  'padding is on the container; the grid keeps its own geometry');
 
 // ── THE ICONS.
-ok('[10] the calendar icon renders immediately before the date',
-  /session-header-calendar-icon[\s\S]{0,400}<Text style=\{styles\.headerSubtitle\}>/.test(screen)
-    && /name="calendar-blank-outline"/.test(screen),
-  'calendar then date, in that order');
+/* ══ THE DATE LINE'S OPTICAL CENTRE — SAM, FOURTH PASS ═══════════════════════
+ * *"The visible calendar glyph and date text must have centre-Y positions within
+ * one pixel … do not compensate with an unexplained screen-specific margin."*
+ * As with the control row, there is no renderer here, so these cells prove the
+ * ARITHMETIC that makes the centres equal: two boxes of identical height,
+ * centred in one row, with no margin on either, and a glyph whose visible ink is
+ * symmetric inside its own viewBox. The measured crop is the rendered proof. */
+const dateLine = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'SessionDateLine.tsx'), 'utf8');
+ok('[10] CONTROL — the shared date component was found',
+  /export function SessionDateLine/.test(dateLine) && dateLine.length > 500);
+ok('[10] the calendar renders immediately before the date, in ONE shared component',
+  /session-header-calendar-icon[\s\S]{0,200}<Text style=\{\[styles\.text/.test(dateLine)
+    && /<SessionDateLine label=\{combinedSubtitle\}/.test(screen),
+  'and the screen no longer builds the row itself');
+ok('[10] the icon box and the text share ONE height — this is the alignment',
+  /export const DATE_LINE_HEIGHT = (\d+)/.test(dateLine)
+    && /height: DATE_LINE_HEIGHT/.test(dateLine)
+    && /lineHeight: DATE_LINE_HEIGHT/.test(dateLine),
+  'equal heights centred in one row have equal centre-Y, by arithmetic');
+ok('[10] and NEITHER carries a margin that could move one centre and not the other',
+  !/(marginTop|marginBottom|marginVertical|top:|transform)/.test(
+    dateLine.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')),
+  'the date Text used to carry marginTop: 3, which is exactly this bug');
+ok('[10] the glyph is DRAWN, not typed — no font metric left to be wrong about',
+  /viewBox="0 0 24 24"/.test(dateLine) && !/calendar-blank-outline/.test(screen),
+  'an icon font puts its ink above the box centre; an svg path does not');
+ok('[10] and its visible ink is symmetric about the viewBox centre',
+  (() => {
+    const ys = [...dateLine.matchAll(/<Path d="M\d+ (\d+)(?:v(\d+))?/g)]
+      .flatMap((m) => [Number(m[1]), Number(m[1]) + Number(m[2] ?? 0)]);
+    const rect = /<Path d="M4 (\d+)h16v(\d+)H4z"/.exec(dateLine);
+    if (rect) ys.push(Number(rect[1]), Number(rect[1]) + Number(rect[2]));
+    const top = Math.min(...ys); const bottom = Math.max(...ys);
+    return ys.length > 0 && Math.abs((top + bottom) / 2 - 12) <= 0.5;
+  })(),
+  'ink extent must straddle y=12, the viewBox centre');
 ok('[10] the date row stays ONE accessibility element speaking the date, not the glyph',
-  /styles\.headerSubtitleRow[\s\S]{0,200}accessibilityLabel=\{combinedSubtitle\}/.test(screen));
+  /accessible\s*\n?\s*accessibilityLabel=\{label\}/.test(dateLine));
+ok('[10] and no screen can nudge the date line — the screen owns spacing only',
+  /headerSubtitleRow: \{ marginTop: 3 \}/.test(screen)
+    && !/headerSubtitleIcon/.test(screen),
+  'geometry lives in the component; the screen positions the block, not its parts');
 /* ⚠ **THE ICON GUARDS ARE NOW ABOUT ONE OWNER, NOT THREE NAMES — SAM,
  * 2026-08-20, second pass.** The first cut asserted that three glyphs existed
  * and said nothing about whether they were the DAY SCREEN'S glyphs. They were
@@ -852,9 +1043,9 @@ ok('[10] a long name wraps instead of pushing the controls off the row',
     && /numberOfLines=\{2\}/.test(headerRow)
     && /exerciseNameGroup:\s*\{[^}]*flex:\s*1/.test(screen),
   'the name shrinks and wraps; the control slot is fixed-width and cannot be squeezed');
-ok('[10] and larger text cannot overrun the control group',
+ok('[10] and larger text cannot overrun the control row',
   /statsLeftColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen)
-    && /controlGroup:\s*\{[^}]*flexShrink:\s*0/.test(screen),
+    && /controlsRow:\s*\{[^}]*flexShrink:\s*0/.test(screen),
   'the left column shrinks to zero before the controls give up a pixel');
 
 console.log(`\nsessionExecutionChecklistTests: ${pass} passed, ${fail} failed`);

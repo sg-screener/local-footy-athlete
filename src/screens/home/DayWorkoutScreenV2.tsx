@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
+import { SessionDateLine } from '../../components/SessionDateLine';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
@@ -1535,22 +1536,8 @@ export default function DayWorkoutScreenV2() {
             * "Mon 13/7 · 6 exercises" and never the glyph — an icon beside text
             * it merely decorates must not become a second thing to read. */}
           {combinedSubtitle ? (
-            <View
-              style={styles.headerSubtitleRow}
-              accessible
-              accessibilityLabel={combinedSubtitle}
-              testID="session-header-date-row"
-            >
-              <View style={styles.headerSubtitleIcon} testID="session-header-calendar-icon">
-                <MaterialCommunityIcons
-                  name="calendar-blank-outline"
-                  size={15}
-                  color={colors.text.tertiary}
-                />
-              </View>
-              <Text style={styles.headerSubtitle}>
-                {combinedSubtitle}
-              </Text>
+            <View style={styles.headerSubtitleRow}>
+              <SessionDateLine label={combinedSubtitle} color="#8A8A8A" />
             </View>
           ) : null}
           {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
@@ -2700,8 +2687,8 @@ function StrengthExerciseCard({
   return (
     <Card
       tone={isGrouped ? 'raised' : 'default'}
-      radius="xl"
-      padding="xs"
+      radius="md"
+      padding="none"
       testID={`workout-exercise-row-${exerciseToken}`}
       style={[
         styles.exerciseCard,
@@ -2709,17 +2696,34 @@ function StrengthExerciseCard({
         isGrouped && isLastInGroup && styles.exerciseCardGroupedLast,
       ]}
     >
+      {/* ══ THE ROW GRID — SAM, 2026-08-20, THIRD PASS ═══════════════════════
+        *
+        * *"Stop adjusting isolated margins — the row's underlying grid is wrong.
+        * The exercise name begins after the number gutter, but sets/reps and
+        * Form cues jump back left underneath the number."*
+        *
+        * ⚠ **THAT WAS STRUCTURAL AND NO MARGIN COULD HAVE FIXED IT.** The number
+        * badge was a sibling of the NAME, inside the header row — so the gutter
+        * existed on line one and nowhere else, and lines two and three started at
+        * the card's edge, under the number. Three lines, two different left
+        * edges, which is why the block read as three disconnected rows however
+        * tight the gaps were.
+        *
+        * The row is now an explicit grid: ONE fixed-width number gutter, ONE
+        * content column, and every text line a child of that column — so all
+        * three share one left edge BY CONSTRUCTION, and a wrapping name cannot
+        * push anything back into the gutter. */}
+      <View style={styles.exerciseRowGrid}>
+        <View style={styles.exerciseNumberGutter}>
+          {label ? <Text style={styles.exerciseLabelText}>{label}</Text> : null}
+        </View>
+        <View style={styles.exerciseContentColumn}>
       <ExerciseHeaderRow
-        label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
       />
 
-      {/*
-       * Pro mode stats — single horizontal line. Sets × Reps on the left
-       * as plain body text (no "SETS × REPS" label), weight control on
-       * the right. Reads left-to-right: "what am I doing, what load?".
-       */}
+      {/* Line two: the dose, and the controls that belong to it. */}
       <View style={styles.statsRow}>
         <View style={styles.statsLeftColumn}>
           <Text
@@ -2768,8 +2772,87 @@ function StrengthExerciseCard({
           style={{ width: 1, height: 1 }}
           testID={`session-strength-position-${label}-${stableTestIdToken(exerciseName)}`}
         />
-        {/* ⚠ ONE GROUP: stepper and tick, 9px apart, hard against each other. */}
-        <View style={[styles.controlGroup, !carriesExternalLoad && styles.controlGroupNoStepper]}>
+      </View>
+
+
+      {/* ⚠ **POWER SHOWS NO REST LINE — SAM, 2026-08-20 (R-116).** *"Power is
+          visually an ordinary Strength row. Remove its unique visible rest line
+          (`2:00 rest`). Do not give Power a separate row format or section."*
+          Power was the only role whose rest cleared the 90s threshold, so the
+          line WAS the special format — one row in the list wearing an extra
+          line nothing else had.
+
+          ⚠ **THIS HIDES A LINE; IT DELETES NO DATA.** *"hiding Power's rest line
+          must not delete its domain prescription."* `restSeconds` is untouched
+          on the row, still stored, still generated, still read by everything
+          that reads it — `restLabel` above is computed exactly as before and a
+          guard asserts the row still carries its rest. Only this Text is
+          gated. */}
+      {restLabel && exercise?.role !== 'power' ? (
+        <View style={styles.detailsRow}>
+          <Text style={styles.restHint}>{restLabel}</Text>
+        </View>
+      ) : null}
+
+      {/* Curated coaching cue, collapsed by default (Sam, run-7 ruling 2).
+          Generator per-exercise notes are still deliberately NOT rendered: the
+          curated layer owns every athlete-visible word; generation provides
+          structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
+      {/* ── THE ONE AFFECTED-ROW NOTICE ──────────────────────────────────
+          Sam, 2026-08-18: *"Only show equipment context when it explains a
+          temporary session change … one concise affected-row badge/notice."*
+          It renders on the rows today actually changed and nowhere else, so an
+          ordinary session carries none of these at all. */}
+      {affectedRowNotice ? (
+        <Text
+          style={styles.implementBadge}
+          testID={substitutionBadgeText
+            ? `workout-exercise-swapped-badge-${exerciseToken}`
+            : `workout-exercise-implement-badge-${exerciseToken}`}
+        >
+          {affectedRowNotice}
+        </Text>
+      ) : null}
+      <CueDisclosure
+        exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
+        cueText={cueText}
+        expandedCues={expandedCues}
+        toggleCue={toggleCue}
+      />
+        </View>
+        {/* ══ THE CONTROLS ARE A SIBLING OF THE TEXT STACK — FOURTH PASS ═══════
+          *
+          * *"The controls remain vertically centred against the row, NOT
+          * responsible for determining the text stack's height."*
+          *
+          * ⚠ **THEY WERE INSIDE THE DOSE LINE, AND THAT IS WHY THE RHYTHM STAYED
+          * LOOSE.** The stepper is ~34px tall; sitting it beside `2 × 3` forced
+          * that line to 34px, so Form cues could never sit 1-3px under the dose
+          * however small the margins were. Measured on glass: 25-27pt between
+          * lines that were supposed to be 1-3px apart. No margin could have
+          * fixed it — the control was the line's height.
+          *
+          * Out here the text stack is three text lines and nothing else, free to
+          * be genuinely compact, while the grid's `alignItems: 'center'` centres
+          * the controls against the whole row. With a compact stack the row's
+          * centre IS the dose line, which is what "align with the sets x reps
+          * line" asks for — and it holds however the name wraps, because the
+          * stack's height no longer depends on the controls. */}
+        {/* ══ ONE `controlsRow`, TWO SIBLINGS — SAM, 2026-08-20, THIRD PASS ═════
+          *
+          * *"Do not position them through separate parents, independent margins,
+          * absolute offsets or row-level centring. The weight stepper and
+          * checkbox must be sibling children of one `controlsRow`."*
+          *
+          * ⚠ **THE DRIFT HAD ONE CAUSE: `marginTop: 3` ON THE CHECKBOX.** It was
+          * added when the tick sat on the NAME line and needed nudging onto it.
+          * When the tick moved to the control line the nudge stayed, so every
+          * checkbox sat 3px low — and because rows differ in height, the error
+          * read as progressive drift down the list. It is DELETED, not
+          * compensated: the two controls are now siblings in one
+          * `alignItems: 'center'` row, so their centres coincide by construction
+          * and nothing can offset one without the other. */}
+        <View style={styles.controlsRow}>
         <View style={styles.weightControl}>
           <Pressable
             onPress={() => decrementWeight(exercise)}
@@ -2837,51 +2920,6 @@ function StrengthExerciseCard({
         {checkbox}
         </View>
       </View>
-
-      {/* ⚠ **POWER SHOWS NO REST LINE — SAM, 2026-08-20 (R-116).** *"Power is
-          visually an ordinary Strength row. Remove its unique visible rest line
-          (`2:00 rest`). Do not give Power a separate row format or section."*
-          Power was the only role whose rest cleared the 90s threshold, so the
-          line WAS the special format — one row in the list wearing an extra
-          line nothing else had.
-
-          ⚠ **THIS HIDES A LINE; IT DELETES NO DATA.** *"hiding Power's rest line
-          must not delete its domain prescription."* `restSeconds` is untouched
-          on the row, still stored, still generated, still read by everything
-          that reads it — `restLabel` above is computed exactly as before and a
-          guard asserts the row still carries its rest. Only this Text is
-          gated. */}
-      {restLabel && exercise?.role !== 'power' ? (
-        <View style={styles.detailsRow}>
-          <Text style={styles.restHint}>{restLabel}</Text>
-        </View>
-      ) : null}
-
-      {/* Curated coaching cue, collapsed by default (Sam, run-7 ruling 2).
-          Generator per-exercise notes are still deliberately NOT rendered: the
-          curated layer owns every athlete-visible word; generation provides
-          structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
-      {/* ── THE ONE AFFECTED-ROW NOTICE ──────────────────────────────────
-          Sam, 2026-08-18: *"Only show equipment context when it explains a
-          temporary session change … one concise affected-row badge/notice."*
-          It renders on the rows today actually changed and nowhere else, so an
-          ordinary session carries none of these at all. */}
-      {affectedRowNotice ? (
-        <Text
-          style={styles.implementBadge}
-          testID={substitutionBadgeText
-            ? `workout-exercise-swapped-badge-${exerciseToken}`
-            : `workout-exercise-implement-badge-${exerciseToken}`}
-        >
-          {affectedRowNotice}
-        </Text>
-      ) : null}
-      <CueDisclosure
-        exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
-        cueText={cueText}
-        expandedCues={expandedCues}
-        toggleCue={toggleCue}
-      />
     </Card>
   );
 }
@@ -2936,8 +2974,12 @@ function RecoveryBlock({
             testID={`workout-exercise-row-${exerciseToken}`}
             style={styles.exerciseCard}
           >
+            <View style={styles.exerciseRowGrid}>
+            <View style={styles.exerciseNumberGutter}>
+              <Text style={styles.exerciseLabelText}>{`${index + 1}`}</Text>
+            </View>
+            <View style={styles.exerciseContentColumn}>
             <ExerciseHeaderRow
-              label={`${index + 1}`}
               name={exerciseDisplayName}
               onPlay={() => onSelectExercise(exerciseName)}
             />
@@ -2968,7 +3010,9 @@ function RecoveryBlock({
                 toggleCue={toggleCue}
               />
               <View style={styles.controlRowSpacer} />
-              {checkbox}
+              <View style={styles.controlsRow}>{checkbox}</View>
+            </View>
+            </View>
             </View>
           </Card>
           )}
@@ -3239,24 +3283,19 @@ function TeamTrainingRow() {
  * fill intensifies) so the athlete gets visual confirmation of the tap.
  */
 interface ExerciseHeaderRowProps {
-  /** The row's index — "1", "2", "1a". Empty for rows that were never numbered. */
-  label?: string;
   name: string;
   onPlay: () => void;
 }
 function ExerciseHeaderRow({
-  label,
   name,
   onPlay,
 }: ExerciseHeaderRowProps) {
+  /* ⚠ **THE NUMBER LEFT THIS COMPONENT (third pass).** It is the row GRID's
+   * gutter now, not a sibling of the name — that is the whole fix for
+   * "sets/reps and Form cues jump back left underneath the number". */
   return (
     <>
       <View style={styles.exerciseHeaderRow}>
-        {label ? (
-          <View style={styles.exerciseLabelBadge}>
-            <Text style={styles.exerciseLabelText}>{label}</Text>
-          </View>
-        ) : null}
         <View style={styles.exerciseNameGroup}>
           <Pressable
             style={styles.exerciseNamePress}
@@ -4256,10 +4295,9 @@ const styles = StyleSheet.create({
   // separates one exercise from the next is whitespace alone: the list
   // gap opens up to 10px so the document reads as a training list
   // written on a dark page, not a stack of widgets.
-  // 10 -> 8: the SEPARATION between exercises stays clearly larger than the
-  // 1px between a row's own three lines, so compressing the stack does not
-  // make two exercises read as one.
-  exerciseList: { gap: 8 },
+  // 5-6px between cards (R-116 final). The container now does the separating,
+  // so the gap can come down without two exercises reading as one.
+  exerciseList: { gap: 6 },
   executionSections: { gap: spacing.sm },
   executionSection: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -4281,13 +4319,16 @@ const styles = StyleSheet.create({
   // its own line-height box, so the glyph sat high against it. The icon is
   // given the SAME line height as the text and centres inside it, which is
   // what makes the two share one optical centre rather than one row.
-  headerSubtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 3 },
-  headerSubtitleIcon: { height: 20, width: 16, alignItems: 'center', justifyContent: 'center' },
+  // Spacing below the title only. The date line's own geometry lives in
+  // `components/SessionDateLine`, so no screen can nudge it.
+  headerSubtitleRow: { marginTop: 3 },
   executionSectionIcon: { marginRight: 10 },
   // R-116 — rows with no stepper still reserve the right-side control slot.
   recoveryControlRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   controlRowSpacer: { flex: 1 },
-  addonCheckboxSlot: { position: 'absolute', right: 0, top: 0 },
+  // No absolute positioning (third pass): the add-on row uses the same
+  // sibling-in-one-row shape as every other control pair.
+  addonCheckboxSlot: { flexDirection: 'row', alignItems: 'center' },
   executionSectionHeading: { flex: 1, gap: 2 },
   executionSectionTitle: {
     color: colors.text.primary,
@@ -4309,11 +4350,16 @@ const styles = StyleSheet.create({
   // line (card padding 4 + half the 2px difference between the 20px name
   // line-height and the 22px box), which is exactly where the play button used
   // to sit. Centring is what put it level with the weight stepper instead.
-  executionItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  // The wrapper is a plain container now: the card owns the row's geometry, so
+  // this must not add a direction, an alignment or a gap that competes with it.
+  executionItem: {},
   executionItemComplete: { opacity: 0.42 },
+  // ⚠ `marginTop: 3` IS DELETED (third pass). It nudged the tick onto the NAME
+  // line under R-111; when R-116 moved it to the control line the nudge stayed
+  // and every checkbox sat 3px low, which read as drift down the list. The
+  // control row's `alignItems: 'center'` owns the alignment now, alone.
   executionCheckbox: {
     ...sessionExecutionCheckbox,
-    marginTop: 3,
   },
   executionCheckboxComplete: {
     ...sessionExecutionCheckboxChecked,
@@ -4327,15 +4373,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingVertical: spacing.sm,
   },
+  // ══ THE SUBTLE CONTAINER — SAM, 2026-08-20, R-116 FINAL ═══════════════════
+  //
+  // *"each exercise should sit inside a subtle compact container so its
+  // information reads as one unit … 1px low-contrast neutral border; extremely
+  // subtle background tint; 10-12px radius; ~6px vertical and 8px horizontal
+  // internal padding; ~5-6px between cards; no shadow, glow or heavy panel
+  // styling. Do not recreate the large padded cards from the reference."*
+  //
+  // ⚠ **THE BORDER IS NEUTRAL, NOT ACCENT.** A lime edge would read as a
+  // selected or actionable row, and *"the entire card must not become a
+  // misleading button"* — `Card` is a layout shell here with no `onPress`, and
+  // the only pressables inside it remain the name/Play, the stepper and the
+  // tick. Its tint is 2.5% white: enough to separate the block from the page,
+  // far below the contrast of anything the athlete can act on.
+  //
+  // ⚠ **AND IT WRAPS THE GRID WITHOUT TOUCHING IT.** The padding is on the
+  // container; the gutter, the text stack and the control group keep their own
+  // geometry, so the alignment proven above is unchanged.
   exerciseCard: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    borderWidth: 0,
-    // R-116 second pass — the Card primitive's own vertical padding was the last
-    // of the air making one exercise read as three rows. Horizontal padding is
-    // untouched, so nothing moves sideways.
-    paddingTop: 2,
-    paddingBottom: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.025)',
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 11,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 8,
+    paddingRight: 8,
     ...shadows.none,
   },
 
@@ -4490,32 +4554,46 @@ const styles = StyleSheet.create({
   // One horizontal line: sets × reps on the left, weight control on the
   // right. No column labels. Space-between gives the left text natural
   // breathing room without forced flex column widths.
-  // ⚠ **R-116, SECOND PASS — SAM REJECTED `space-between`.** *"Treat the weight
-  // stepper and checkbox as one right-side control group. Put them directly
-  // beside each other with a small fixed gap — approximately 8-10 px. Do not use
-  // `space-between` or separate screen columns."* The first cut spread the row
-  // edge to edge, so the tick floated at the screen margin with a gulf between it
-  // and the stepper it belongs to. The left text now simply takes the space it
-  // needs (`flex: 1`) and the control GROUP sits against it as one object.
+  // ⚠ **R-116, THIRD PASS — THE ROW IS A GRID, NOT A STACK OF MARGINS.**
+  //
+  // Sam: *"one fixed-width number gutter; one left content column; … all three
+  // content lines must share the exact same left edge; one right control
+  // group."* The number used to be a sibling of the NAME, so the gutter existed
+  // on line one only and the two lines below started under it.
+  exerciseRowGrid: { flexDirection: 'row', alignItems: 'center' },
+  // Fixed width — the gutter never changes size, so the content column's left
+  // edge is the same on every row of the session whatever the number is.
+  exerciseNumberGutter: {
+    width: 26,
+    alignItems: 'flex-start',
+    // The number belongs to the NAME line, so it holds the stack's top while the
+    // controls centre against the row. This is the gutter, not a control.
+    alignSelf: 'flex-start',
+    paddingTop: 2,
+  },
+  // Every text line lives in here, so they cannot disagree about their left
+  // edge. `minWidth: 0` lets a long name wrap INSIDE the column instead of
+  // widening it and shoving the controls off the row.
+  exerciseContentColumn: { flex: 1, minWidth: 0 },
+  // Line two. The dose takes the free width; the controls do not shrink.
+  // Line two is now TEXT ONLY — the controls left it, so its height is the
+  // text's own and the 1-3px rhythm is reachable.
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 1,
+    marginTop: 2,
   },
   statsLeftColumn: { flex: 1, minWidth: 0 },
-  // The group. `gap: 9` is the ruled 8-10px between stepper and tick, and it is
-  // the ONLY separation between them — no spacer, no justify, nothing that can
-  // widen with the screen.
-  controlGroup: {
+  // ⚠ **THE ONE CONTROL ROW.** Stepper and checkbox are SIBLINGS here — no
+  // wrapper between them, no independent margin, no absolute offset, no
+  // translation. `alignItems: 'center'` is what makes their centres coincide,
+  // and it is the only thing that decides it.
+  controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
     flexShrink: 0,
   },
-  // A row with NO stepper keeps the tick in the same column: the group is still
-  // the row's right-hand object, so the tick lands where a loaded row's tick
-  // lands rather than sliding left into the gap the stepper left behind.
-  controlGroupNoStepper: { minHeight: 34 },
   statsPrimary: {
     color: '#F2F2F2',
     fontSize: 15,
@@ -4539,7 +4617,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200, 255, 0, 0.12)',
     backgroundColor: 'rgba(200, 255, 0, 0.025)',
     overflow: 'hidden',
-    alignSelf: 'flex-start',
+    // ⚠ `alignSelf: 'flex-start'` DELETED (third pass) — it was a REAL cause of
+    // the drift Sam saw, not just the checkbox's `marginTop`. In a row that
+    // centres its children, this pinned the stepper to the TOP, so the two
+    // controls were aligned by two different rules. The controlsRow's
+    // `alignItems: 'center'` now decides for both, alone.
     ...shadows.none,
   },
   weightBtnLeft: {
