@@ -12,8 +12,13 @@
  *
  *   intent (LLM) → producer (this file) → upsertActiveConstraint →
  *   exposureEngine.Constraint via projection extraConstraints →
- *   visibleProgramProjection → V2 screens render coachNotes →
- *   buildConstraintPlans → CoachUpdate card
+ *   visibleProgramProjection → V2 screens render coachNotes
+ *
+ * The chain used to end "→ buildConstraintPlans → CoachUpdate card". Both of
+ * those are gone: the CoachUpdate card went with `utils/weeklyCoachUpdate.ts`
+ * in the 2026-08-19 burn, and `buildConstraintPlans` on 2026-08-21 with zero
+ * production execution. This arrow was the last thing in production still
+ * claiming otherwise.
  *
  * No new system. Just the producer step that wires the existing layers
  * together for non-injury constraints.

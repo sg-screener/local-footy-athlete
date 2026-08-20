@@ -155,20 +155,15 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
     disposition: 'Pauses PROGRESSION, not the exposure. The session is still prescribed, '
       + 'it simply does not get harder this week.',
   },
-  {
-    file: 'utils/recoveryRules.ts',
-    edges: 2,
-    verdict: 'dose',
-    what: 'Selects recovery category: passive / active / extended.',
-    disposition: 'Chooses the FORM of a session that exists regardless. No count moves.',
-  },
-  {
-    file: 'rules/recoveryAddonCoverage.ts',
-    edges: 1,
-    verdict: 'dose',
-    what: 'Widens optional recovery add-on recommendations on low readiness.',
-    disposition: 'Adds optional work, never removes required work — the permitted direction.',
-  },
+  // TWO ROWS DIED HERE, under this file's own rule that a census must be able to
+  // die when a file's last edge goes:
+  //   `utils/recoveryRules.ts` (2 dose edges) — the whole module is deleted. Its
+  //     only call site, the resolver's ninth recovery-placement pass, was removed
+  //     under the optional-placement law; nothing imported it afterwards.
+  //   `rules/recoveryAddonCoverage.ts` (1 dose edge) — `recommendRecoveryAddonCoverage`
+  //     is deleted; the module is now the focus-area union and nothing else, so
+  //     its actual edge count is 0.
+  // Neither was `structure_pending_removal`, so the debt baseline is untouched.
   {
     file: 'utils/tapSwapHierarchy.ts',
     edges: 1,

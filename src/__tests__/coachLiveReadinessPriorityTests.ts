@@ -21,7 +21,6 @@ import {
   interpretCoachMessageToProgramEdit,
   type ProgramEdit,
 } from '../utils/coachProgramEdit';
-import { routeCoachReadinessMessage } from '../utils/coachReadinessAdapter';
 import {
   extractVisibleProgramItemsFromWorkout,
 } from '../utils/visibleProgramReadModel';
@@ -250,25 +249,14 @@ function livePriorityRoute(message: string, options: {
     };
   }
 
-  const readiness = routeCoachReadinessMessage({
-    message,
-    now: 1000,
-  });
-  if (readiness.kind === 'apply_signal') {
-    useReadinessStore.getState().setReadinessSignal(TODAY, {
-      ...readiness.signal,
-      source: 'coach_message',
-    });
-    return {
-      branch: 'readiness',
-      edit,
-      reply: readiness.reply,
-    };
-  }
+  // The readiness leg of this helper used to call `routeCoachReadinessMessage`.
+  // That router had zero production execution and is deleted; neutering it to
+  // always-pass reddened none of these cells, so the helper falls straight
+  // through to the same 'pass' branch it always reached in practice.
   return {
     branch: 'pass',
     edit,
-    reply: readiness.kind === 'clarify' ? readiness.reply : '',
+    reply: '',
   };
 }
 
