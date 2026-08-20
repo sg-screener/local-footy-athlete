@@ -247,8 +247,31 @@ export function resolveTapSwapEnvironment(args: {
     capacity,
     hasEquipmentConstraint: constraints.some((constraint) =>
       constraint.type === 'equipment'),
+    /**
+     * ⚠ **A PENDING INJURY STOPS TRAINING FOR THE SAME REASON A STORED ONE
+     * DOES.** `constraints` are the injuries already written down; `primaryInjury`
+     * is the one the athlete is declaring RIGHT NOW, which the Active Session
+     * review has to reason about BEFORE it is stored (Sam, 2026-08-20: *"show one
+     * review of all proposed changes"*, then apply). Reading only the stored half
+     * made the review and the write disagree about exactly one athlete — the one
+     * with serious symptoms — and a review that disagrees with its own write is
+     * the thing a review is for.
+     *
+     * ⚠ **THIS IS NOT A NEW OPINION, IT IS AN EXISTING ONE MOVED TO THE OWNER.**
+     * `getTapSwapChoices` already computed `environment.medicalStop ||
+     * primaryInjury?.seriousSymptoms === true` privately, so the CHOICES half of
+     * the app has always answered this way; `injuryRequiresChange` read the field
+     * raw and did not. One question, one answer, decided here.
+     *
+     * ⚠ **AND IT IS INERT FOR EVERY CALLER THAT EXISTED BEFORE IT.** Measured:
+     * no production caller passed `seriousSymptoms: true` — the guided sheet
+     * hard-codes `false` and the injury door hard-coded `false` — so this clause
+     * can only fire on a path that did not exist. `test:session-injury-review`
+     * section [1] carries that as a standing control.
+     */
     medicalStop: constraints.some((constraint) =>
-      constraint.type === 'injury' && constraint.seriousSymptoms === true),
+      constraint.type === 'injury' && constraint.seriousSymptoms === true)
+      || primaryInjury?.seriousSymptoms === true,
   };
 }
 

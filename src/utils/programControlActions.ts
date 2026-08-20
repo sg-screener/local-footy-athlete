@@ -58,6 +58,7 @@ import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
+  type TapSwapEnvironment,
   type TapSwapPrimaryInjury,
 } from './tapSwapHierarchy';
 import type { PoorSleepPattern } from './readinessConstraints';
@@ -1244,6 +1245,85 @@ export async function executeProgramControlActionDurably(
 
 
 /**
+ * THE INJURY PASS'S INPUTS, ASSEMBLED ONCE — SO THE REVIEW AND THE WRITE CANNOT
+ * DISAGREE ABOUT WHAT THE INJURY DOES.
+ *
+ * Sam, 2026-08-20: the Active Session injury flow must *"show one review of all
+ * proposed changes"* and then *"apply the approved changes together"*. A review
+ * is a PROMISE, and the only way a promise is kept is if the thing that made it
+ * and the thing that keeps it ask the identical question of the identical world.
+ *
+ * ⚠ **A SECOND BUILDER IS THE DEFECT THIS FUNCTION EXISTS TO PREVENT.** Measured
+ * on 2026-08-20 in a different unit: a preview built from its own re-derived
+ * arguments disagreed with the delivered program in **40 of 90** prescriptions.
+ * So the review screen does not re-derive anything — it calls THIS, exactly as
+ * `recomposeSessionForInjury` does, and hands the plan it was shown straight
+ * back to the door.
+ *
+ * ⚠ **THE ONE THING THAT MOVES BETWEEN THE TWO CALLS IS THE FACT ITSELF.** The
+ * review runs BEFORE `set_injury_modifier` stores the constraint, the write runs
+ * AFTER, so `activeConstraints` differs by exactly this injury. That difference
+ * is closed by passing the pending constraint as `primaryInjury`:
+ * `resolveTapSwapEnvironment` folds it into `injurySeverities` (and, since this
+ * unit, into `medicalStop`) whether or not it is stored yet. Every OTHER injury
+ * on the athlete is stored in both worlds and reaches both calls identically.
+ *
+ * ⚠ **`seriousSymptoms` USED TO BE HARD-CODED `false` HERE.** That was harmless
+ * while this was the only caller — the stored constraint set `medicalStop` a
+ * line later anyway — but it is exactly the field the unstored review has no
+ * other way of learning, so it is read from the constraint now. For the write
+ * path this changes nothing: the same flag arrives from the stored constraint.
+ *
+ * WRITER: none, pure read of the live stores. READERS: `recomposeSessionForInjury`
+ * (the write) and `utils/sessionInjuryReview` (the review).
+ * TEST: `test:session-injury-review` section [1].
+ */
+export function resolveInjuryRecompositionInputs(args: {
+  date: string;
+  constraint: ActiveInjuryConstraint;
+}): {
+  workout: Workout | null;
+  environment: TapSwapEnvironment;
+  primaryInjury: TapSwapPrimaryInjury | null;
+  trainingPaused: boolean;
+} {
+  /**
+   * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
+   *
+   * `resolveWorkoutOnDate` returns the AUTHORED day, which still carries every
+   * row an exclusion is currently hiding — the filter is a READ-time projection
+   * and this is not a read door. Measured 2026-08-19 by
+   * `npm run test:session-change-sequence`: an athlete removed `RDLs`, then
+   * declared a knee injury, and the injury pass "made safe" the very row they
+   * had already taken out. **An injury pass had quietly consumed the athlete's
+   * own decision.** An exercise the athlete has removed is not unsafe — it is
+   * not there. Sam's *"Injury and ordinary Remove must remain separate"*
+   * (2026-08-20) is the same boundary stated from the other side.
+   */
+  const workout = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(args.date),
+    dateISO: args.date,
+    exclusions: liveAthleteExclusions(),
+  });
+  const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
+  const primaryInjury = args.constraint.bucket
+    ? {
+      bucket: args.constraint.bucket as TapSwapPrimaryInjury['bucket'],
+      severity: args.constraint.severity,
+      seriousSymptoms: args.constraint.seriousSymptoms === true,
+    }
+    : null;
+  const environment = resolveTapSwapEnvironment({
+    date: args.date,
+    profile: useProfileStore.getState().onboardingData,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+    primaryInjury,
+  });
+  return { workout, environment, primaryInjury, trainingPaused };
+}
+
+/**
  * APPLY THE INJURY PLAN TO THE ATHLETE'S OWN SESSION, AND REPORT WHAT HAPPENED.
  *
  * ⚠ **THE `remainingUnsafe` COUNT IS MEASURED AFTER THE WRITES, FROM THE REAL
@@ -1262,42 +1342,11 @@ function recomposeSessionForInjury(args: {
   constraint: ActiveInjuryConstraint;
   source: ProgramControlAction['source'];
 }): { changed: boolean; message: string } {
-  /**
-   * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
-   *
-   * `resolveWorkoutOnDate` returns the AUTHORED day, which still carries every
-   * row an exclusion is currently hiding — the filter is a READ-time projection
-   * and this is not a read door. Measured 2026-08-19 by
-   * `npm run test:session-change-sequence`: an athlete removed `RDLs`, then
-   * declared a knee injury, and the injury pass "made safe" the very row they
-   * had already taken out — swapping the hidden `RDLs` for `Bench Press`. The
-   * damage only surfaced at Restore, which then had nothing named `RDLs` to give
-   * back: **an injury pass had quietly consumed the athlete's own decision.**
-   *
-   * So the exclusions are applied here, through the same owner the screen uses,
-   * before anything is planned. An exercise the athlete has removed is not
-   * unsafe — it is not there.
-   */
-  const workout = applyExclusionsToAuthoredDay({
-    workout: resolveWorkoutOnDate(args.date),
-    dateISO: args.date,
-    exclusions: liveAthleteExclusions(),
-  });
-  const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
-  const primaryInjury = args.constraint.bucket
-    ? {
-      bucket: args.constraint.bucket as TapSwapPrimaryInjury['bucket'],
-      severity: args.constraint.severity,
-      seriousSymptoms: false,
-    }
-    : null;
-  const environment = resolveTapSwapEnvironment({
-    date: args.date,
-    profile: useProfileStore.getState().onboardingData,
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
-    primaryInjury,
-  });
+  // The session, the environment and the exclusion boundary are assembled by
+  // `resolveInjuryRecompositionInputs` above — the SAME call the review screen
+  // makes, which is what makes the review a promise this door keeps.
+  const { workout, environment, primaryInjury, trainingPaused } =
+    resolveInjuryRecompositionInputs(args);
   if (!workout) {
     return {
       changed: false,

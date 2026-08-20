@@ -86,8 +86,23 @@ export function activeInjuryFactsOn(
  * An ordinary injury does NOT block: it substitutes, and the athlete trains.
  */
 export function isRedFlagInjury(episode: InjuryEpisodeV1): boolean {
-  return episode.seriousSymptoms === true
-    && injurySeverityPausesAffectedTraining(episode.severity);
+  return isRedFlagInjurySeverity(episode.seriousSymptoms, episode.severity);
+}
+
+/**
+ * THE SAME PREDICATE, ASKED OF AN INJURY THAT IS NOT AN EPISODE YET.
+ *
+ * The Active Session review has to say whether the injury the athlete is
+ * declaring will block the session BEFORE it is stored, and at that moment it
+ * holds an `ActiveInjuryConstraint`, not an `InjuryEpisodeV1`. Rather than let
+ * the review re-state the rule in its own words — two owners of one edge, the
+ * defect class this repo fights — the rule lives here and both shapes ask it.
+ */
+export function isRedFlagInjurySeverity(
+  seriousSymptoms: boolean | undefined,
+  severity: number,
+): boolean {
+  return seriousSymptoms === true && injurySeverityPausesAffectedTraining(severity);
 }
 
 export interface InjuryWithholding {
@@ -108,11 +123,32 @@ function rowName(row: WorkoutExercise): string {
   ).trim();
 }
 
-function explanationFor(episode: InjuryEpisodeV1, exercise: string): string {
-  return isRedFlagInjury(episode)
-    ? `${exercise} is not safe with your ${episode.bodyPart} right now — leave it out `
+/**
+ * THE WORDS A WITHHELD ROW IS SHOWN UNDER — ONE OWNER, SO THE REVIEW PROMISES
+ * WHAT THE SESSION WILL ACTUALLY SAY.
+ *
+ * Sam, 2026-08-20: the review shows *"all proposed changes"*. If the review
+ * wrote its own sentence for a withheld row and the session screen wrote
+ * another, the athlete would approve one explanation and then read a different
+ * one — which is the same false-claim class as the deleted "safely recomposed".
+ */
+export function injuryWithholdingExplanation(args: {
+  exercise: string;
+  bodyPart: string;
+  redFlag: boolean;
+}): string {
+  return args.redFlag
+    ? `${args.exercise} is not safe with your ${args.bodyPart} right now — leave it out `
       + 'and get medical or physio advice before training it again.'
-    : `${exercise} is not safe with your ${episode.bodyPart} right now — skip it this session.`;
+    : `${args.exercise} is not safe with your ${args.bodyPart} right now — skip it this session.`;
+}
+
+function explanationFor(episode: InjuryEpisodeV1, exercise: string): string {
+  return injuryWithholdingExplanation({
+    exercise,
+    bodyPart: episode.bodyPart,
+    redFlag: isRedFlagInjury(episode),
+  });
 }
 
 /**
