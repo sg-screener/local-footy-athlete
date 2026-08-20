@@ -503,3 +503,32 @@ table is the harness's answer only.
 
 **NOT MEASURED:** whether the in-season zero is a selection refusal or an
 allowance of zero. That is the programming lane's question, not this task's.
+
+### HANDOFF-COND-REACH — Programming / QA lane · raised 2026-08-20 by `sessionui`
+
+**THE HEADLESS HARNESS AND THE PHONE DISAGREE ABOUT WHETHER CONDITIONING
+EXISTS.** Sam closed this UI slice before it was chased; it is written down here
+so the next lane starts from evidence rather than from scratch.
+
+**WHAT WAS SEEN, EXACTLY.**
+
+| world | `generateProgramLocally` (headless) | the simulator |
+| --- | --- | --- |
+| Pre-season, anchor 2026-07-13 | Classic 4×4 | Classic 4×4 — **agree** |
+| Pre-season, anchor 2026-08-03 | Steady Blocks (3×8 min or 4×6 min) | Strength + Conditioning on Mon 3/8, template not read |
+| Off-season, anchor 2026-07-27 | Steady Blocks · 30:30 Controlled Tempo Blocks | **a full week of Strength-only OPTIONAL days — no conditioning at all** |
+| In-season, 8 variants | NONE in every one | not run |
+
+**THE TWO QUESTIONS, IN ORDER.**
+
+1. **Which one is right about off-season?** A headless call and a booted app are
+   different worlds — boot REGENERATES with `previousProgram: null` — so this is
+   not automatically a harness bug. Whichever is wrong, one of them is lying to
+   whoever trusts it next.
+2. **Is the in-season zero a refusal or an allowance of zero?** An in-season
+   athlete is the app's main audience and reached no conditioning row in any of
+   the 8 headless variants measured. Not investigated.
+
+**WHAT THIS IS NOT.** Not a copy defect and not a projection defect — R-117's
+projection, census and renderer fix are all independent of it and are proven on
+the one world both agree about. **Do not reopen R-117 for this.**
