@@ -65,6 +65,10 @@ import {
   type SessionInjuryReview,
 } from '../../utils/sessionInjuryReview';
 import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
+import {
+  injurySubstitutionBadge,
+  type InjurySubstitutionSourceRef,
+} from '../../rules/injurySubstitutionSource';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
@@ -2890,19 +2894,24 @@ function StrengthExerciseCard({
   // DIFFERENT IMPLEMENT** — if the athlete is looking at a lift the block did not
   // choose, that is what they need explained, and the implement is a detail of
   // the row that replaced it.
-  const substitution = (exercise as { substitutedFrom?: {
-    baseExerciseName: string; cause: 'excluded_today' | 'kit_today' | 'injury';
-  } })?.substitutedFrom;
-  const substitutionReason = substitution?.cause === 'kit_today'
-    ? 'equipment today'
-    : substitution?.cause === 'injury'
-      ? 'injury'
-      : substitution?.cause === 'excluded_today'
-        ? 'you left it out'
-        : null;
-  const substitutionBadgeText = substitution && substitutionReason
-    ? `Swapped from ${displayExerciseName(substitution.baseExerciseName)} — ${substitutionReason}`
-    : null;
+  /**
+   * ⚠ **THE SENTENCE AND THE NAME IN IT ARE BOTH THE DOMAIN'S, NOT THIS
+   * SCREEN'S** (Sam, 2026-08-20). This block used to pick the name and compose
+   * the words itself, which is how the row and the injury REVIEW came to name
+   * two different exercises for one change. `rules/injurySubstitutionSource` is
+   * the single owner now, and it is the same one the review reads.
+   *
+   * ⚠ **`originExerciseName` IS NOT READ HERE AND MUST NOT BE.** It is the
+   * authored exercise, kept as internal history per Sam's ruling and rendered
+   * nowhere — the owner refuses to consult it for exactly this reason.
+   */
+  const substitution = (exercise as {
+    substitutedFrom?: InjurySubstitutionSourceRef;
+  })?.substitutedFrom;
+  const substitutionBadgeText = injurySubstitutionBadge({
+    substitution,
+    displayName: (name) => displayExerciseName(name),
+  });
   // "Dumbbells today — no barbell". One line, only on the rows it explains.
   const implementBadgeText = !substitutionBadgeText && showImplementBadge && implementLabel
     ? (normalLabel ? `${implementLabel} today — no ${normalLabel.toLowerCase()}` : `${implementLabel} today`)

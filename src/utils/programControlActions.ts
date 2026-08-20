@@ -55,6 +55,7 @@ import {
 } from './tapProgramModifiers';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
+import { mostRecentlyDeclaredInjuryId } from '../rules/injurySubstitutionSource';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
@@ -1324,6 +1325,62 @@ export function resolveInjuryRecompositionInputs(args: {
 }
 
 /**
+ * THE DAY AS IT WOULD BE WITHOUT THE INJURY JUST DECLARED — i.e. what the
+ * athlete was looking at when they declared it.
+ *
+ * Returns `authored name -> the name they could see`, and ONLY for rows where
+ * the two differ. An empty map is the normal, single-injury answer and means
+ * "the authored name is what they saw", which is true.
+ *
+ * ⚠ **WHICH INJURY IS "THE NEW ONE" IS DERIVED FROM THE FACTS, NOT FROM THE
+ * ACTION.** The live door knows what the athlete just tapped; boot does not, and
+ * if the two disagreed the badge would change wording on the first restart.
+ * Both call `mostRecentlyDeclaredInjuryId`, so both get the same answer forever.
+ *
+ * ⚠ **THIS DECIDES A NAME, NEVER AN OUTCOME.** It runs the same planner over a
+ * smaller fact set purely to read the previous view; nothing it returns can
+ * change which exercise is chosen or which row is withheld. That separation is
+ * why the fix carries no risk to the ladder's answers.
+ */
+function previouslyVisibleInjurySources(args: {
+  date: string;
+  workout: Workout | null;
+  constraint: ActiveInjuryConstraint;
+}): Map<string, string> {
+  const empty = new Map<string, string>();
+  if (!args.workout) return empty;
+  const constraints = useCoachUpdatesStore.getState().activeConstraints ?? [];
+  const newestId = mostRecentlyDeclaredInjuryId(constraints as never);
+  // Nothing older to have been seen: the authored row IS what they were looking at.
+  if (!newestId) return empty;
+  const older = constraints.filter(
+    (constraint) => (constraint as { id?: string }).id !== newestId,
+  );
+  if (older.length === 0) return empty;
+
+  const olderEnvironment = resolveTapSwapEnvironment({
+    date: args.date,
+    profile: useProfileStore.getState().onboardingData,
+    activeConstraints: older,
+    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+    // NO `primaryInjury` — the pending fact is precisely the one being excluded.
+    primaryInjury: null,
+  });
+  const olderPlan = planInjuryRecomposition({
+    workout: args.workout,
+    environment: olderEnvironment,
+    primaryInjury: null,
+  });
+  const seen = new Map<string, string>();
+  for (const substitution of olderPlan.substitutions) {
+    if (substitution.to.name && substitution.to.name !== substitution.from) {
+      seen.set(substitution.from, substitution.to.name);
+    }
+  }
+  return seen;
+}
+
+/**
  * APPLY THE INJURY PLAN TO THE ATHLETE'S OWN SESSION, AND REPORT WHAT HAPPENED.
  *
  * ⚠ **THE `remainingUnsafe` COUNT IS MEASURED AFTER THE WRITES, FROM THE REAL
@@ -1357,6 +1414,30 @@ function recomposeSessionForInjury(args: {
   }
   const plan = planInjuryRecomposition({ workout, environment, primaryInjury });
 
+  /**
+   * ⚠ **WHAT THE ATHLETE COULD SEE HERE A MOMENT AGO — DERIVED, NOT REMEMBERED.**
+   *
+   * Sam, 2026-08-20: *"The review and the applied session must both name the
+   * exercise currently visible to the athlete."*
+   *
+   * MEASURED, two injuries on one day: this settle rebuilds the day from the
+   * AUTHORED week and re-applies every active injury in ONE pass, so the second
+   * injury plans against `Leg Press` and never sees the `Chest-Supported DB Row`
+   * the athlete had been looking at. The intermediate view is not stored — it is
+   * a derivation, and this app derives rather than stores.
+   *
+   * **So it is derived again here**: the day as it would be with every active
+   * injury EXCEPT the most recently declared one. A pure function of stored
+   * facts, which is the whole reason it survives a restart — boot re-derives the
+   * identical answer instead of quietly reverting to the authored name.
+   *
+   * ⚠ **WITH ONE INJURY THIS MAP IS EMPTY AND NOTHING CHANGES**, which is the
+   * overwhelmingly common case and is asserted as a control.
+   */
+  const previouslyVisible = previouslyVisibleInjurySources({
+    date: args.date, workout, constraint: args.constraint,
+  });
+
   // WHAT ACTUALLY LANDED. A plan is not an outcome: each write goes through the
   // ordinary action owner and can be refused by it, and counting the PLAN would
   // be the same class of claim this whole unit exists to delete.
@@ -1382,7 +1463,18 @@ function recomposeSessionForInjury(args: {
         // used."* The outgoing name is carried even when it was the athlete's
         // OWN swap — especially then, because that is the case where a row they
         // deliberately chose has quietly become something else.
-        substitutedFrom: { baseExerciseName: substitution.from, cause: 'injury' },
+        /**
+         * THE NAME THE ATHLETE READS IS THE ONE THEY COULD SEE; the authored
+         * exercise rides along as internal history and is rendered nowhere.
+         * `rules/injurySubstitutionSource` owns both halves of that rule.
+         */
+        substitutedFrom: {
+          baseExerciseName: previouslyVisible.get(substitution.from) ?? substitution.from,
+          ...(previouslyVisible.has(substitution.from)
+            ? { originExerciseName: substitution.from }
+            : {}),
+          cause: 'injury',
+        },
       },
       requiresRebuild: false,
       createsActiveModifier: false,

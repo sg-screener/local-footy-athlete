@@ -458,56 +458,58 @@ async function main(): Promise<void> {
     }
   }
 
-  /* ══ [9] THE PAIRING, AND THE ONE PLACE THE ROW AND THE REVIEW USE
-   *      DIFFERENT NAMES FOR THE SAME THING ═════════════════════════════════
+  /* ══ [9] THE PAIRING, AND THE NAME BOTH SIDES USE ════════════════════════
    *
    * A review is only a promise if it promises the RIGHT PAIRS, not just the
    * right set. `[6]` asserts membership — every promised replacement arrives,
    * every replaced row leaves — which a shuffled mapping would satisfy. This
    * asserts `from -> to`, pair for pair, against what the session records.
    *
-   * ⚠ **AND IT IS EXACT ONLY UNTIL A ROW IS SUBSTITUTED TWICE.** MEASURED, with
-   * two injuries applied in sequence to one session:
+   * ⚠ **R-121 (Sam, 2026-08-20) IS THE SECOND HALF, AND THESE CELLS ARE
+   * INVERTED FROM THE ONES THAT SHIPPED BEFORE IT.** They used to PIN the
+   * divergence — *"the session's captions name the CHAIN HEAD instead"* — as a
+   * measured fact awaiting a ruling. Sam ruled: *"The review and the applied
+   * session must both name the exercise currently visible to the athlete. Keep
+   * older substitution history internally, but do not show an older exercise as
+   * the source of this new Injury change."* So the cell that recorded the
+   * disagreement now refuses it, and it asserts MORE than it used to: that the
+   * authored name is still kept, and still not shown.
    *
-   *   after a knee injury   the session records `Leg Press -> Chest-Supported DB Row`
-   *   then a shoulder one   the review says   `Chest-Supported DB Row -> Easy Bike`
-   *                         the session says  `Leg Press -> Easy Bike`
-   *
-   * **BOTH ARE TRUE AND NEITHER IS THIS UNIT'S DOING.** `substitutedFrom`
-   * preserves the HEAD of the substitution chain — the exercise the athlete
-   * originally lost — which is pre-existing behaviour on `main` and is the more
-   * useful fact for the athlete ("what happened to my Leg Press?"). The review
-   * names the row that is on the session in front of them, which is the only
-   * name they can act on. **They disagree only on a row that has already been
-   * substituted once, and the disagreement is a NAMING one, never a pairing
-   * one** — the same physical row is meant in both.
-   *
-   * ⚠ **THIS IS A QUESTION FOR SAM, NOT A DEFECT THIS SEAT SHOULD DECIDE.**
-   * Making them agree means either the review naming the chain head (and so
-   * naming a row the athlete cannot see) or the caption naming the intermediate
-   * (and so losing what was originally displaced). It is pinned here so it
-   * cannot drift silently while it is undecided.
+   * ⚠ **AND IT WAS NEVER A WORDING BUG.** The settle rebuilds the day from the
+   * AUTHORED week and re-applies every active injury in one pass, so the second
+   * injury genuinely planned against `Leg Press` and had never seen the row the
+   * athlete was looking at. The name is DERIVED back — the day as it would be
+   * without the newest injury — which is why `[7]`'s restart still holds.
    */
-  console.log('\n[9] the pairing is exact, and where the two names diverge');
+  console.log('\n[9] the pairing is exact, and both sides name the visible row');
   {
     const weekStart4 = install();
     const days4 = trainingDays(weekStart4);
     const pairDay = days4.find((d) => rowsOf(d, weekStart4).length >= 4)!;
     setJourneyClock(pairDay);
 
-    const injuryPairsOn = (): string[] => {
+    type Sub = { baseExerciseName?: string; originExerciseName?: string; cause?: string };
+    const injuryRows = (): Array<{ name: string; sub: Sub }> => {
       const week = quiet(() => resolveWeekWithConditioning(weekStart4, buildScheduleStateImperative()));
       const d = week.find((x: { date: string }) => x.date === pairDay) as { workout?: Workout } | undefined;
-      return ((d?.workout?.exercises ?? []) as Array<Record<string, unknown>>)
-        .map((row) => {
-          const sub = row.substitutedFrom as { baseExerciseName?: string; cause?: string } | undefined;
-          const name = (row.exercise as { name?: string } | undefined)?.name
-            ?? (row as { name?: string }).name;
-          return sub?.cause === 'injury' ? `${sub.baseExerciseName} -> ${name}` : null;
-        })
-        .filter((entry): entry is string => entry !== null);
+      return ((d?.workout?.exercises ?? []) as unknown as Array<Record<string, unknown>>)
+        .map((row) => ({
+          name: String((row.exercise as { name?: string } | undefined)?.name ?? ''),
+          sub: (row.substitutedFrom ?? {}) as Sub,
+        }))
+        .filter((row) => row.sub.cause === 'injury');
     };
+    const pairsOn = (): string[] =>
+      injuryRows().map((row) => `${row.sub.baseExerciseName} -> ${row.name}`).sort();
 
+    const declare = async (constraint: unknown) => quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: pairDay }));
+
+    /* ── ONE INJURY: the authored name IS what they saw, so nothing moves ── */
     const firstConstraint = constraintFor('Knee', 7, pairDay);
     const firstReview = quiet(() =>
       buildSessionInjuryReview({ date: pairDay, constraint: firstConstraint })) as SessionInjuryReview;
@@ -516,33 +518,150 @@ async function main(): Promise<void> {
       .map((change) => `${change.from} -> ${change.to}`).sort();
     ok('[9] CONTROL — the first injury really does propose substitutions',
       firstPromised.length >= 2, firstPromised);
+    await declare(firstConstraint);
+    ok('[9] one injury — the review\'s pairing is EXACT, pair for pair',
+      JSON.stringify(pairsOn()) === JSON.stringify(firstPromised),
+      { promised: firstPromised, landed: pairsOn() });
+    ok('[9] CONTROL — and no internal history is invented where none exists',
+      injuryRows().every((row) => row.sub.originExerciseName === undefined),
+      injuryRows().map((r) => r.sub));
 
-    await quietAsync(() => executeProgramControlActionDurably({
-      type: 'set_injury_modifier',
-      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
-      scope: 'current_and_future', payload: { constraint: firstConstraint },
-      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
-    }, { todayISO: pairDay }));
-
-    ok('[9] on a fresh session the review\'s pairing is EXACT, pair for pair',
-      JSON.stringify(injuryPairsOn().sort()) === JSON.stringify(firstPromised),
-      { promised: firstPromised, landed: injuryPairsOn().sort() });
-
-    /* THE SECOND INJURY — every row it touches has already been substituted. */
+    /* ── A SECOND INJURY ON ROWS THE FIRST ONE ALREADY REPLACED ─────────── */
+    const visibleBefore = rowsOf(pairDay, weekStart4);
     const secondConstraint = constraintFor('Shoulder', 7, pairDay);
     const secondReview = quiet(() =>
       buildSessionInjuryReview({ date: pairDay, constraint: secondConstraint })) as SessionInjuryReview;
-    const visibleRows = rowsOf(pairDay, weekStart4);
+    const secondPromised = secondReview.changes
+      .filter((change) => change.kind === 'substitution')
+      .map((change) => `${change.from} -> ${change.to}`).sort();
+    /* ⚠ **THE CELL BELOW IS THE WHOLE WORLD, SO IT IS ASSERTED, NOT ASSUMED.**
+     * If the second injury happened to land only on rows the first one never
+     * touched, every R-121 cell under it would be green and empty — the two
+     * names agree trivially when there is no earlier substitution. What it
+     * needs is a row the FIRST injury PRODUCED being replaced again. */
+    const firstProduced = firstPromised.map((pair) => pair.split(' -> ')[1]!);
+    ok('[9] CONTROL — the second injury really does land on rows the FIRST one produced',
+      secondReview.changes.some((change) => firstProduced.includes(change.from)),
+      { secondNames: secondReview.changes.map((c) => c.from), firstProduced });
     ok('[9] the review names rows that are ON THE SESSION the athlete can see',
-      secondReview.changes.every((change) => visibleRows.includes(change.from)),
-      { named: secondReview.changes.map((c) => c.from), visibleRows });
+      secondReview.changes.every((change) => visibleBefore.includes(change.from)),
+      { named: secondReview.changes.map((c) => c.from), visibleBefore });
 
-    const chainHeads = injuryPairsOn().map((pair) => pair.split(' -> ')[0]!);
-    ok('[9] MEASURED — and the session\'s captions name the CHAIN HEAD instead, '
-      + 'which is why the two disagree on an already-substituted row',
-      secondReview.changes.some((change) => !chainHeads.includes(change.from))
-        && chainHeads.some((head) => !visibleRows.includes(head)),
-      { reviewNames: secondReview.changes.map((c) => c.from), chainHeads, visibleRows });
+    await declare(secondConstraint);
+    ok('[9] R-121 — the applied session names the SAME visible row the review did',
+      JSON.stringify(pairsOn()) === JSON.stringify(secondPromised),
+      { promised: secondPromised, landed: pairsOn() });
+    ok('[9] R-121 — and never an older exercise the athlete cannot see',
+      injuryRows().every((row) => visibleBefore.includes(String(row.sub.baseExerciseName))),
+      { shown: injuryRows().map((r) => r.sub.baseExerciseName), visibleBefore });
+
+    /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half. */
+    const carried = injuryRows().filter((row) => row.sub.originExerciseName !== undefined);
+    ok('[9] R-121 — the older exercise is still carried, internally',
+      carried.length > 0
+        && carried.every((row) => row.sub.originExerciseName !== row.sub.baseExerciseName),
+      injuryRows().map((r) => r.sub));
+
+    /* ⚠ **AND IT SURVIVES A RESTART**, which a remembered name would not — the
+     * visible source is re-derived from the stored facts on every settle. */
+    await relaunchApp({ storage: localStorageData, todayISO: pairDay });
+    ok('[9] R-121 — and it still reads the same way after close and reopen',
+      JSON.stringify(pairsOn()) === JSON.stringify(secondPromised),
+      { promised: secondPromised, afterRelaunch: pairsOn() });
+
+    /* ══ R-121'S OTHER HALF IS NOT DONE, AND THIS IS WHERE IT IS RECORDED ═══
+     *
+     * ⚠ **THE CELL BELOW ASSERTS BEHAVIOUR SAM HAS ALREADY RULED AGAINST.** It
+     * is here so the gap is measured, durable and impossible to drift through
+     * unnoticed — NOT because it is right. Do not read it as approval.
+     *
+     * R-121 is satisfied for SUBSTITUTED rows above. It is NOT satisfied for
+     * WITHHELD ones. MEASURED, two injuries in sequence:
+     *
+     *   the review promises to leave out   Tricep Pushdown, Bicep Curl (Barbell)
+     *   the session actually withholds     Bulgarian Split Squats, Single-Leg RDL
+     *
+     * **AND THIS ONE IS NOT A NAME — IT IS THE ROW.** A substituted row can be
+     * relabelled, because the row itself is whatever the ladder chose. A
+     * withheld row is the athlete's ORIGINAL exercise by R-115's design
+     * ("preserve the original exercises ... show them as unavailable"), and the
+     * settle's joint re-derivation reverts it to the AUTHORED one — so the first
+     * injury's replacement stops existing rather than being withheld in place.
+     *
+     * **THE FIX IS A DERIVATION CHANGE, NOT A WORDING ONE**: injuries would have
+     * to be applied one on top of another in declaration order instead of jointly
+     * from the authored week. That changes WHICH EXERCISE THE ATHLETE GETS, not
+     * just what it is called, so it is Sam's ruling to make and is deliberately
+     * not taken here.
+     */
+    const withheldPromised = secondReview.changes
+      .filter((change) => change.kind === 'withheld').map((change) => change.from).sort();
+    const withheldActual = (() => {
+      const week = quiet(() => resolveWeekWithConditioning(weekStart4, buildScheduleStateImperative()));
+      const d = week.find((x: { date: string }) => x.date === pairDay) as { workout?: Workout } | undefined;
+      return ((d?.workout?.exercises ?? []) as unknown as Array<Record<string, unknown>>)
+        .filter((row) => row.unavailableForInjury)
+        .map((row) => String((row.exercise as { name?: string } | undefined)?.name ?? '')).sort();
+    })();
+    ok('[9] CONTROL — the second injury really does withhold some rows',
+      withheldPromised.length > 0 && withheldActual.length > 0,
+      { withheldPromised, withheldActual });
+    ok('[9] ⚠ OPEN — a WITHHELD row still reverts to the AUTHORED exercise, so the '
+      + 'review and the session name different rows (R-121 half-done, Sam to rule)',
+      JSON.stringify(withheldPromised) !== JSON.stringify(withheldActual),
+      { promised: withheldPromised, actual: withheldActual });
+  }
+
+  /* ══ [10] THE BADGE OWNER ITSELF — ONE SENTENCE, ONE NAME ════════════════
+   *
+   * R-121's *"do not show an older exercise as the source"* has to hold at the
+   * function that writes the words, not only at the data. The screen composed
+   * this string itself until 2026-08-20, which is how the row and the review
+   * came to disagree in the first place; a cell here is what stops a future
+   * reader "helpfully" reaching for the history field.
+   */
+  console.log('\n[10] the badge owner shows the visible name and only that');
+  {
+    const { injurySubstitutionBadge, injurySubstitutionSourceName, mostRecentlyDeclaredInjuryId } =
+      require('../rules/injurySubstitutionSource');
+    const withHistory = {
+      baseExerciseName: 'Chest-Supported DB Row',
+      originExerciseName: 'Leg Press',
+      cause: 'injury' as const,
+    };
+    const badge = injurySubstitutionBadge({
+      substitution: withHistory, displayName: (name: string) => name,
+    });
+    ok('[10] the badge names the VISIBLE exercise',
+      badge === 'Swapped from Chest-Supported DB Row — injury', badge);
+    ok('[10] and never the older one, even when it is right there to read',
+      !String(badge).includes('Leg Press'), badge);
+    ok('[10] the source resolver agrees, and reads the same field',
+      injurySubstitutionSourceName(withHistory) === 'Chest-Supported DB Row',
+      injurySubstitutionSourceName(withHistory));
+    ok('[10] no substitution, no sentence — a row nothing displaced says nothing',
+      injurySubstitutionBadge({ substitution: null, displayName: (n: string) => n }) === null
+        && injurySubstitutionSourceName(undefined) === null);
+    ok('[10] the other two causes keep their own words',
+      injurySubstitutionBadge({
+        substitution: { baseExerciseName: 'Back Squat', cause: 'kit_today' },
+        displayName: (n: string) => n,
+      }) === 'Swapped from Back Squat — equipment today'
+      && injurySubstitutionBadge({
+        substitution: { baseExerciseName: 'Back Squat', cause: 'excluded_today' },
+        displayName: (n: string) => n,
+      }) === 'Swapped from Back Squat — you left it out');
+    /* WHICH injury is "the new one" is derived from the facts so the live door
+     * and boot cannot disagree — otherwise the badge would reword on restart. */
+    ok('[10] the newest injury is derived from the facts, newest lastUpdatedAt first',
+      mostRecentlyDeclaredInjuryId([
+        { id: 'injury-knee', type: 'injury', status: 'active', lastUpdatedAt: '2026-08-01T00:00:00Z' },
+        { id: 'injury-shoulder', type: 'injury', status: 'active', lastUpdatedAt: '2026-08-20T00:00:00Z' },
+      ]) === 'injury-shoulder');
+    ok('[10] CONTROL — a resolved injury is not a candidate, and none means none',
+      mostRecentlyDeclaredInjuryId([
+        { id: 'injury-knee', type: 'injury', status: 'resolved', lastUpdatedAt: '2026-08-20T00:00:00Z' },
+      ]) === null && mostRecentlyDeclaredInjuryId([]) === null);
   }
 
   /* ══ [1] THE INERTNESS CONTROL ON THE PENDING medicalStop CLAUSE ══════ */

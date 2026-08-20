@@ -3474,3 +3474,86 @@ citing this row instead of quietly re-litigating it.
 
 **Search words:** accessories, duplicate label, leaf title, lower body
 accessories, upper body accessories, body area prefix, add menu title.
+
+---
+
+**R-121** · *"Use 'the one I can see'. The review and the applied session must
+both name the exercise currently visible to the athlete. Keep older substitution
+history internally, but do not show an older exercise as the source of this new
+Injury change."* (Sam, 2026-08-20) · **A SUBSTITUTION IS NAMED BY THE ROW IT
+REPLACED, NOT BY THE ROW THAT ONCE STOOD THERE.**
+
+**Search words:** swapped from, substitution source, chain head, double swap,
+second injury, older exercise, base exercise name, injury review names, which
+name is shown, substitutedFrom.
+
+**WHY IT WAS ORDERED, MEASURED.** Spotted on glass during the Active Session
+injury review's device pass and then reproduced headlessly — two injuries in
+sequence on one day:
+
+```
+knee 7/10      the athlete now sees   Chest-Supported DB Row  (was Leg Press)
+shoulder 7/10  the review promised    Chest-Supported DB Row -> Easy Bike
+               the session then said  "Swapped from Leg Press"
+```
+
+⚠ **IT WAS NOT A WORDING BUG, AND THE FIRST DIAGNOSIS OF IT WAS WRONG.** It was
+first reported to Sam as the session "preserving the head of the substitution
+chain". It is not preserving anything: **every injury settle rebuilds the day
+from the AUTHORED week and re-applies all active injuries in ONE pass**, so the
+second injury genuinely planned against `Leg Press` and had never seen the row
+the athlete had been looking at all week. The intermediate view is not stored
+anywhere and is not meant to be — it is a derivation.
+
+· `WORKING` — `rules/injurySubstitutionSource.ts` is the one owner of both the
+choice of name and the sentence, read by the row badge
+(`screens/home/DayWorkoutScreenV2`) and by the review
+(`utils/sessionInjuryReview`). The screen composed that string itself until this
+ruling, which is exactly how the two came to disagree.
+
+**THE NAME IS DERIVED, NOT REMEMBERED**, because a remembered one would not
+survive a restart — boot re-derives the day and would quietly revert to the
+authored name. `previouslyVisibleInjurySources` re-runs the same planner over
+every active injury EXCEPT the most recently declared one, which is a pure
+function of stored facts. **Which injury is "the new one" is derived too
+(`mostRecentlyDeclaredInjuryId`), never taken from whichever action is running**
+— the live door knows what the athlete just tapped and boot does not, and if the
+two disagreed the badge would reword on the first relaunch.
+
+**TWO NAMES, ONE SHOWN.** `substitutedFrom.baseExerciseName` is what the athlete
+could SEE and is the only one ever rendered; `originExerciseName` is the authored
+exercise, kept per Sam's *"keep older substitution history internally"* and
+written ONLY when it differs — an always-present field that is almost always
+equal to its neighbour is one readers start trusting for the wrong reason.
+`injurySubstitutionSourceName` refuses to consult it at all.
+
+⚠ **THIS DECIDES A NAME, NEVER AN OUTCOME.** The extra planner pass reads the
+previous view and nothing else; it cannot change which exercise the ladder
+chooses or which row is withheld. **With one injury the map is empty and nothing
+changes**, which is the overwhelmingly common case.
+
+⚠ **HALF OF THIS RULING IS NOT DONE, AND SAM HAS BEEN TOLD.** It holds for
+SUBSTITUTED rows. It does NOT hold for WITHHELD ones. **MEASURED**, two injuries
+in sequence: the review promises to leave out `Tricep Pushdown` and
+`Bicep Curl (Barbell)`, and the session withholds `Bulgarian Split Squats` and
+`Single-Leg RDL`. **THAT ONE IS NOT A NAME, IT IS THE ROW.** A substituted row
+can be relabelled because the row is whatever the ladder chose; a withheld row is
+the athlete's ORIGINAL exercise by R-115's design, and the settle's joint
+re-derivation reverts it to the AUTHORED one, so the first injury's replacement
+stops existing rather than being withheld in place. **The fix is a DERIVATION
+change** — injuries applied one on top of another in declaration order instead of
+jointly from the authored week — **which changes which exercise the athlete gets,
+not just what it is called.** That is Sam's ruling to make and was deliberately
+not taken. Pinned by the `⚠ OPEN` cell in `[9]`, which asserts the CURRENT
+behaviour so it cannot drift unnoticed — **that cell is a measurement, not an
+approval.**
+
+**GUARDED:** `test:session-injury-review` sections `[9]` and `[10]`, driven end
+to end through the real doors, including a restart. **The `[9]` cells are
+INVERTED, not deleted** — they used to PIN the divergence as a measured fact
+awaiting this ruling, and they now refuse it and assert more: that the authored
+name is still kept and still not shown. `[9]` carries the control that the second
+injury really does land on a row the FIRST one produced, without which every cell
+under it would be green and empty. Mutations: **M6** (the settle names the
+authored row again) reds 4, **M7** (the badge reaches for the older exercise)
+reds 3, **M8** (the internal history stops being written) reds 1.

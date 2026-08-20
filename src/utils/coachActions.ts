@@ -160,7 +160,11 @@ export interface ReplaceExerciseInput {
    * say whose place this row is taking. An athlete's own swap leaves it absent.
    * See the note on the `swap_exercise` payload.
    */
-  substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
+  substitutedFrom?: {
+    baseExerciseName: string;
+    originExerciseName?: string;
+    cause: 'injury' | 'kit_today';
+  };
   toExercise: {
     name: string;
     sets: number;

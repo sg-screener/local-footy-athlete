@@ -170,6 +170,65 @@ Making them agree means either the review naming a row the athlete cannot see,
 or the caption losing what was originally displaced. **That is a ruling, so it is
 pinned by `[9]` and left for Sam rather than decided here.**
 
+## R-121 — SAM RULED "THE ONE I CAN SEE" (2026-08-20)
+
+*"The review and the applied session must both name the exercise currently
+visible to the athlete. Keep older substitution history internally, but do not
+show an older exercise as the source of this new Injury change."*
+
+**MY FIRST DIAGNOSIS WAS WRONG AND THE FIX IS NOT THE ONE I DESCRIBED.** I
+reported this as the session "preserving the head of the substitution chain".
+It preserves nothing: **every injury settle rebuilds the day from the AUTHORED
+week and re-applies all active injuries in ONE pass**, so the second injury
+genuinely planned against `Leg Press` and had never seen the row the athlete was
+looking at. The intermediate view is not stored and is not meant to be.
+
+**SO THE NAME IS DERIVED BACK, NOT REMEMBERED** — the day as it would be with
+every active injury EXCEPT the most recently declared one
+(`previouslyVisibleInjurySources`). A pure function of stored facts, which is why
+it survives a restart; a remembered name would revert to the authored one on the
+first relaunch. **Which injury is "the new one" is derived too**
+(`mostRecentlyDeclaredInjuryId`), never taken from whichever action is running,
+so the live door and boot cannot disagree.
+
+`rules/injurySubstitutionSource.ts` is the shared wording owner Sam asked for,
+read by BOTH the row badge and the review. The screen composed that sentence
+itself until now — which is exactly how the two came to disagree.
+`substitutedFrom.originExerciseName` carries the authored exercise as internal
+history and is rendered nowhere; the source resolver refuses to consult it.
+
+**MUTATIONS:** M6 (settle names the authored row again) reds 4 · M7 (the badge
+reaches for the older exercise) reds 3 · M8 (history stops being written) reds 1.
+
+### ⚠ THE HALF THAT IS NOT DONE — SAM MUST RULE
+
+R-121 holds for SUBSTITUTED rows. **It does NOT hold for WITHHELD ones.**
+Measured, two injuries in sequence:
+
+```
+review promises to leave out   Tricep Pushdown, Bicep Curl (Barbell)
+session actually withholds     Bulgarian Split Squats, Single-Leg RDL
+```
+
+**THIS ONE IS NOT A NAME, IT IS THE ROW.** A substituted row can be relabelled
+because the row is whatever the ladder chose. A withheld row is the athlete's
+ORIGINAL exercise by R-115's design, and the joint re-derivation reverts it to
+the AUTHORED one — the first injury's replacement stops existing rather than
+being withheld in place. **The fix is a DERIVATION change** (apply injuries in
+declaration order, one on top of another, instead of jointly from the authored
+week), **which changes which exercise the athlete gets, not just its name.** Not
+taken. Pinned by the `⚠ OPEN` cell in `[9]` — a measurement, not an approval.
+
+## THE SECOND GLASS PASS (R-121)
+
+Same simulator, same seed, Metro :8097.
+
+| # | what happened |
+| --- | --- |
+| 41 | after ONE injury the row reads **"Swapped from Glute Bridge"** — it read *"Swapped from RDLs"* before R-121, because this seed's session already carried a substitution |
+| 42 | the SECOND review names only rows on the session now — Band Pull-Apart, Chest-Supported DB Row, Single-Arm DB Floor Press, Banded Bicep Curl, Tricep Pushdown, Band Pallof Press. **No older exercise anywhere** |
+| 43 | applied — and this is the screen that showed the open half: the withheld rows read `Single-Leg RDL`, `Cossack Squat`, `Band Pallof Press`, not the rows the review named |
+
 ## LOG
 
 - 2026-08-20 — worktree off `da1dbf89`, baseline measured, defects named.
