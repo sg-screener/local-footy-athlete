@@ -29,6 +29,14 @@ export const DEV_E2E_SEED_IDS = [
    * and the long name is `Half-Kneeling Single-Arm Overhead Press`, 39
    * characters and already in the authored pool. Nothing is invented. */
   'session-layout-showcase',
+  /* ── DEV-ONLY, THE CONDITIONING HALF OF THE SAME EVIDENCE ─────────────────
+   * Sam, 2026-08-20: *"Select a real authored conditioning template and pass it
+   * through the canonical production materialisation/projection path into a
+   * dev-only accepted week."* This seed answers onboarding as a PRE-SEASON
+   * full-gym athlete — the world the real generator does place conditioning in —
+   * and then does nothing else. The template, its name, its dose and its
+   * section all arrive through production code. */
+  'conditioning-showcase',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -69,6 +77,7 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   // seed's world comparable to `standard-in-season-week`'s.
   'exercise-removal-restart': '2026-07-13',
   'session-layout-showcase': '2026-07-13',
+  'conditioning-showcase': '2026-07-13',
 };
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {

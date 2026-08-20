@@ -835,6 +835,51 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
       teamTrainingDays: ['Monday', 'Thursday'],
     });
   }
+  if (seedId === 'conditioning-showcase') {
+    /* ⚠ **NOTHING IS ASSEMBLED HERE — THIS SEED ONLY ANSWERS ONBOARDING.**
+     *
+     * Sam: *"Do not hand-write an arbitrary display row. Select a real authored
+     * conditioning template and pass it through the canonical production
+     * materialisation/projection path."* So there is no `withConditioning...`
+     * transform below and there must never be one: these are a PRE-SEASON
+     * full-gym athlete's answers, and the production generator is what selects
+     * the authored template, materialises its row and projects its section.
+     *
+     * The world was found by measurement, not guessed: this shape is the one
+     * whose generated week places a conditioning row on the Monday. The
+     * `session-layout-showcase` athlete's in-season week reaches none, which is
+     * recorded as a programming-lane finding rather than papered over here. */
+    return fixedProfile({
+      seasonPhase: 'Pre-season',
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      /* ⚠ THE TEAM-TRAINING ANSWERS ARE INHERITED, NOT OVERRIDDEN. Setting them
+       * to zero/empty made the profile INCOMPLETE and the app refused the seed —
+       * it dropped the athlete back onto the Team Training Days step, which is
+       * the registry's own documented hazard: *"a profile the app would have
+       * turned away"*. The standard profile's answers are a real athlete's. */
+      conditioningLevel: 'Average',
+      recentTrainingLoad: 'Pretty consistent',
+      /* ⚠ THE CARDIO MODALITIES ARE THE WHOLE DIFFERENCE, AND IT WAS MEASURED.
+       * Without them the selector has no machine and no run to offer, so
+       * `conditioningFeasibility` falls back to `bodyweight_circuit` — a
+       * FALLBACK LABEL, not an authored template, which is exactly the
+       * "arbitrary display row" Sam forbade. Answering the equipment step the
+       * way an athlete with a gym would lets the real selector reach the
+       * authored `CONDITIONING_TEMPLATES`. */
+      equipmentAnswer: {
+        tags: {
+          barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+          bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+          foam_roller: 'have', plyo_box: 'have',
+        },
+        modalities: {
+          bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have',
+        },
+        answeredOn: '2026-07-13',
+      },
+    } as Partial<OnboardingData>);
+  }
   if (seedId === 'equipment-restriction-case') {
     // `'Bodyweight Only'`, NOT `'bodyweight'` — AND THAT IS THE SAME DEFECT AS
     // THE MISSING 2KM TIME, ONE FIELD OVER.

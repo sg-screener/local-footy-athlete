@@ -437,3 +437,34 @@ each with a control that reds if its world stops being all-primer:
 **66 suites re-run against the accepted tip `e3f7ba12`: ZERO lines of diff.**
 `test:compile` unchanged at 671 errors / 77 worse pairs, product scope 30.
 `test:power-primer-policy` 34 → **48 passed, 0 failed**.
+
+---
+
+# FINDING FOR THE PROGRAMMING LANE — CONDITIONING REACHABILITY
+
+**Not fixed here. Sam: *"Do not fix that reachability problem in this UI task."***
+
+Found while building the R-116 screenshot evidence, measured over generated weeks
+built from real onboarding answers through `generateProgramLocally`:
+
+| athlete answers | conditioning on any day? |
+| --- | --- |
+| in-season, 5 training days, 2 club nights, standard gym kit | **none** — no `role: 'conditioning'` row, no `conditioningBlock` |
+| off-season, same | **none**, and the club nights disappear too |
+| pre-season, 4 days, gym kit **without** cardio modalities | a row, but named `Bodyweight Conditioning Circuit` — the `conditioningFeasibility` FALLBACK LABEL, not an authored template |
+| pre-season, 4 days, gym kit **with** cardio modalities | **authored templates**: `Steady Blocks (3×8 min or 4×6 min)`, `Classic 4×4`, `10 m Acceleration Reps` |
+
+**THE FINDING IS THE THIRD ROW.** An athlete who answers the equipment step
+without a bike, rower, ski or treadmill gets a conditioning row whose name is a
+fallback id's label rather than anything in `CONDITIONING_TEMPLATES` — so the
+authored conditioning layer is unreachable for them, and the athlete reads a name
+Sam never signed. `data/conditioningTemplates.ts` carries 55 signed doses; a
+bodyweight athlete reaches none of them.
+
+**Second half of the finding:** the in-season worlds reach no conditioning at
+all. Whether that is correct programming or a gap is a question for the
+programming lane, not this one — it is recorded, not judged.
+
+**Where it was measured:** `profileForDevE2ESeed('conditioning-showcase')` in
+`src/dev/e2e/devE2ESeedRegistry.ts` documents the working answers beside the
+failing ones.
