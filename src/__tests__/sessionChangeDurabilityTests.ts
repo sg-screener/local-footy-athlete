@@ -239,15 +239,17 @@ function offeredAddFor(existing: string[]): string {
     date: TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: [], readinessSignal: null,
   }));
-  // SAM'S THREE LEVELS (2026-08-20): the first thing the athlete could actually
-  // tap through to — first family, first subcategory, first choice.
+  // SAM'S HIERARCHY (2026-08-20): the first thing the athlete could actually tap
+  // through to — first family, first heading, first leaf under it, first choice.
+  // The depth is not uniform, so this walks LEAVES rather than assuming a level.
   const args = {
     environment, existingExerciseNames: existing,
     profile: useProfileStore.getState().onboardingData,
   };
-  const families = legalAddFamilies(args) as { subcategories: { id: string }[] }[];
-  const subcategory = families[0]!.subcategories[0]!.id;
-  return (legalAddCandidates({ ...args, subcategory }) as { name: string }[])[0]!.name;
+  const families = legalAddFamilies(args) as
+    { groups: { leaves: { id: string }[] }[] }[];
+  const leaf = families[0]!.groups[0]!.leaves[0]!.id;
+  return (legalAddCandidates({ ...args, leaf }) as { name: string }[])[0]!.name;
 }
 
 async function restart(): Promise<boolean> {

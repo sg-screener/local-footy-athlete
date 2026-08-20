@@ -197,57 +197,65 @@ async function main(): Promise<void> {
   install();
   const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
   const {
-    legalAddFamilies, legalAddCandidates, ADD_SUBCATEGORIES, ADD_FAMILY_ORDER,
+    legalAddFamilies, legalAddCandidates, ADD_GROUPS, ADD_LEAF_LABELS,
   } = require('../utils/addExerciseCandidates');
   const profile = useProfileStore.getState().onboardingData;
   const fullKit = quiet(() => resolveTapSwapEnvironment({
     date: TARGET, profile, activeConstraints: [], readinessSignal: null,
   }));
 
-  type Sub = { id: string; label: string; count: number };
-  type Family = { id: string; label: string; count: number; subcategories: Sub[] };
+  type Leaf = { id: string; label: string; count: number };
+  type Group = { id: string; label: string; count: number; leaves: Leaf[] };
+  type Family = { id: string; label: string; count: number; groups: Group[] };
   const familiesOf = (env: unknown, existing?: string[]): Family[] =>
     legalAddFamilies({
       environment: env, profile,
       ...(existing ? { existingExerciseNames: existing } : {}),
     }) as Family[];
-  const leafOf = (env: unknown, subcategory: string, existing?: string[]) =>
+  const leafOf = (env: unknown, leaf: string, existing?: string[]) =>
     legalAddCandidates({
-      environment: env, profile, subcategory,
+      environment: env, profile, leaf,
       ...(existing ? { existingExerciseNames: existing } : {}),
     }) as { name: string; sets: number; weightKg: number | null }[];
+  /** Every leaf in the tree, whatever depth it sits at. */
+  const allLeaves = (env: unknown, existing?: string[]): Leaf[] =>
+    familiesOf(env, existing).flatMap((family) => family.groups.flatMap((group) => group.leaves));
   /** Every legal name on offer anywhere in the tree — the flat comparison set. */
   const everyNameIn = (env: unknown, existing?: string[]): Set<string> => {
     const names = new Set<string>();
-    for (const family of familiesOf(env, existing)) {
-      for (const sub of family.subcategories) {
-        for (const candidate of leafOf(env, sub.id, existing)) names.add(candidate.name);
-      }
+    for (const leaf of allLeaves(env, existing)) {
+      for (const candidate of leafOf(env, leaf.id, existing)) names.add(candidate.name);
     }
     return names;
   };
 
   const families = familiesOf(fullKit);
   for (const family of families) {
-    console.log(`    ${family.label} (${family.count}) — ${family.subcategories.map((sub) => `${sub.label}:${sub.count}`).join(', ')}`);
+    console.log(`    ${family.label} (${family.count})`);
+    for (const group of family.groups) {
+      const inner = group.leaves.length > 1
+        ? ` -> ${group.leaves.map((leaf) => `${leaf.label}:${leaf.count}`).join(' / ')}`
+        : '';
+      console.log(`        ${group.label} (${group.count})${inner}`);
+    }
   }
-  const groups = families.flatMap((family) => family.subcategories.map((sub) => ({
-    label: sub.label, candidates: leafOf(fullKit, sub.id),
-  })));
-  ok('CONTROL — the vocabulary really produced subcategories', groups.length > 3,
-    `${groups.length} subcategories`);
+  const groups = allLeaves(fullKit).map((leaf) => ({
+    label: leaf.label, candidates: leafOf(fullKit, leaf.id),
+  }));
+  ok('CONTROL — the vocabulary really produced leaves', groups.length > 3,
+    `${groups.length} leaves`);
   const labels = families.map((f) => f.label);
   ok('strength is offered', labels.includes('Strength'), JSON.stringify(labels));
   ok('mobility is offered', labels.includes('Mobility / Warm-up'), JSON.stringify(labels));
   ok('conditioning is offered', labels.includes('Conditioning'), JSON.stringify(labels));
-  ok('no subcategory is ever empty', groups.every((g) => g.candidates.length > 0));
+  ok('no leaf is ever empty', groups.every((g) => g.candidates.length > 0));
   /* ⚠ **THE 6-PER-GROUP CAP IS GONE, AND ITS CELL IS REPLACED BY ITS OPPOSITE.**
    * Sam's level 3 is *"legal final exercise choices"* and `REGISTRY-GREP: R-088`
    * is *"a user should be able to add as many of their own things on top of it
    * as they choose"*. At six the athlete could not reach Dips or the Z-Press at
    * all. So the cell that guarded the cap now proves it is not there: at least
    * one subcategory offers MORE than the old six. */
-  ok('a subcategory may now offer more than the old six-per-group cap',
+  ok('a leaf may now offer more than the old six-per-group cap',
     groups.some((g) => g.candidates.length > 6),
     JSON.stringify(groups.map((g) => `${g.label}:${g.candidates.length}`)));
   ok('every candidate carries a dose', groups.every((g) => g.candidates.every((c) => c.sets > 0)));
@@ -311,8 +319,7 @@ async function main(): Promise<void> {
     [...withExisting].every((name) => !onTheDay.includes(name)),
     JSON.stringify([...withExisting].filter((n) => onTheDay.includes(n))));
 
-  const firstFamily = familiesOf(fullKit, onTheDay)[0]!;
-  const chosen = leafOf(fullKit, firstFamily.subcategories[0]!.id, onTheDay)[0]!;
+  const chosen = leafOf(fullKit, allLeaves(fullKit, onTheDay)[0]!.id, onTheDay)[0]!;
   const added = quiet(() => executeProgramControlAction({
     type: 'add_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
@@ -343,8 +350,8 @@ async function main(): Promise<void> {
   let accepted = 0;
   let sawSeven = false;
   const onDayNow = rowsOn(TARGET).map((r) => r.split('@')[0]!);
-  for (const sub of familiesOf(fullKit, onDayNow).flatMap((f) => f.subcategories)) {
-    for (const candidate of leafOf(fullKit, sub.id, onDayNow)) {
+  for (const leaf of allLeaves(fullKit, onDayNow)) {
+    for (const candidate of leafOf(fullKit, leaf.id, onDayNow)) {
       const rowsNow = rowsOn(TARGET).length;
       if (rowsNow >= 7) sawSeven = true;
       const result = quiet(() => executeProgramControlAction({
@@ -365,12 +372,14 @@ async function main(): Promise<void> {
     rowsOn(TARGET).length > 7, `rows=${rowsOn(TARGET).length} accepted=${accepted}`);
 
   /* ═══════════════════════════════════════════════════════════════════════ */
-  console.log('\n[5] SAM\u2019S THREE LEVELS, AND NO INTERNAL LABEL AT ANY OF THEM');
+  console.log('\n[5] SAM\u2019S HIERARCHY, AND NO INTERNAL LABEL AT ANY LEVEL');
 
   install();
   const { selectableVocabularyGroups } = require('../data/selectableExerciseVocabulary');
   const { SECTION_LABELS } = require('../utils/sessionExecutionChecklist');
   const tree = familiesOf(fullKit);
+  const strength = tree.find((family) => family.id === 'strength')!;
+  const groupIn = (family: Family, id: string) => family.groups.find((g) => g.id === id);
 
   // ── LEVEL 1 — exactly Sam's three, in his order ──
   ok('level 1 is exactly three families',
@@ -386,80 +395,165 @@ async function main(): Promise<void> {
     tree.every((family) => family.label === SECTION_LABELS[family.id]),
     JSON.stringify(tree.map((f) => `${f.id}=${f.label}`)));
 
-  // ── LEVEL 2 — a real subcategory under every family ──
-  ok('every family offers at least one subcategory',
-    tree.every((family) => family.subcategories.length > 0),
-    JSON.stringify(tree.map((f) => `${f.label}:${f.subcategories.length}`)));
-  ok('CONTROL — at least one family really subdivides, so level 2 is not a pass-through',
-    tree.some((family) => family.subcategories.length > 1),
-    JSON.stringify(tree.map((f) => `${f.label}:${f.subcategories.length}`)));
-  ok('every subcategory belongs to the family it is listed under',
-    tree.every((family) => family.subcategories.every(
-      (sub) => ADD_SUBCATEGORIES[sub.id]?.family === family.id)),
-    JSON.stringify(tree.flatMap((f) => f.subcategories.map((s) => `${f.id}/${s.id}`))));
+  /* ── LEVEL 2 — SAM'S FOUR STRENGTH HEADINGS, VERBATIM AND IN HIS ORDER ────
+   *
+   * *"1. Power & Jumps. 2. Lower body. 3. Upper body. 4. Midline & Carries."*
+   * Asserted as an ORDERED LIST of exact strings, because he wrote both the
+   * names and the order and said to use them exactly. */
+  ok('Strength\u2019s headings are Sam\u2019s four, verbatim and in his order',
+    JSON.stringify(strength.groups.map((g) => g.label))
+      === JSON.stringify(['Power & Jumps', 'Lower body', 'Upper body', 'Midline & Carries']),
+    JSON.stringify(strength.groups.map((g) => g.label)));
   /* R-110 — *"Power belongs inside the Strength section, generally as its first
-   * row"*. A menu is where that ruling is easiest to break by accident: power
-   * has its own pool, so its own top-level button is the obvious wrong move. */
-  const strength = tree.find((family) => family.id === 'strength')!;
-  ok('R-110 — Power is INSIDE Strength, and it is Strength\u2019s first subcategory',
-    strength.subcategories[0]?.id === 'power',
-    JSON.stringify(strength.subcategories.map((s) => s.id)));
+   * row."* Sam's revision keeps it as Strength's first heading. */
+  ok('R-110 — Power & Jumps is INSIDE Strength and is its first heading',
+    strength.groups[0]?.id === 'power', JSON.stringify(strength.groups.map((g) => g.id)));
   ok('and Power is not a family of its own',
     !tree.some((family) => /power/i.test(family.label)),
     JSON.stringify(tree.map((f) => f.label)));
 
-  // ── LEVEL 3 — the count on a button is the list behind it ──
+  /* ── SAM'S EXTRA STEP EXISTS ONLY WHERE HE ASKED FOR IT ──────────────────
+   *
+   * *"This adds one extra step only where needed."* A heading with ONE leaf
+   * goes straight to the exercises; only Lower body and Upper body ask again.
+   * Both halves are asserted: a cell that only checked the two deep ones would
+   * stay green on a menu that had quietly grown a step everywhere. */
+  ok('Lower body asks Sam\u2019s extra question: Hinge / Squat / Single leg / Accessories',
+    JSON.stringify(groupIn(strength, 'lower_body')?.leaves.map((l) => l.label))
+      === JSON.stringify(['Hinge', 'Squat', 'Single leg', 'Accessories']),
+    JSON.stringify(groupIn(strength, 'lower_body')?.leaves.map((l) => l.label)));
+  ok('Upper body asks it too: Push / Pull / Arms & shoulders / Accessories',
+    JSON.stringify(groupIn(strength, 'upper_body')?.leaves.map((l) => l.label))
+      === JSON.stringify(['Push', 'Pull', 'Arms & shoulders', 'Accessories']),
+    JSON.stringify(groupIn(strength, 'upper_body')?.leaves.map((l) => l.label)));
+  const straightThrough = tree.flatMap((family) => family.groups)
+    .filter((group) => group.leaves.length === 1);
+  ok('Power & Jumps and Midline & Carries go STRAIGHT to the exercises',
+    ['power', 'midline_carries'].every((id) => straightThrough.some((g) => g.id === id)),
+    JSON.stringify(straightThrough.map((g) => g.id)));
+  ok('and so does every Conditioning and Mobility heading — the extra step is Strength-only',
+    tree.filter((f) => f.id !== 'strength')
+      .flatMap((f) => f.groups).every((group) => group.leaves.length === 1),
+    JSON.stringify(tree.filter((f) => f.id !== 'strength')
+      .flatMap((f) => f.groups).map((g) => `${g.label}:${g.leaves.length}`)));
+  ok('CONTROL — exactly two headings ask the extra question, so it is not everywhere',
+    tree.flatMap((f) => f.groups).filter((g) => g.leaves.length > 1).length === 2,
+    JSON.stringify(tree.flatMap((f) => f.groups)
+      .filter((g) => g.leaves.length > 1).map((g) => g.label)));
+
+  /* ── SIBLINGS PARTITION: `Single leg` TAKES FROM Hinge AND Squat ──────────
+   *
+   * Sam put it beside them, so a movement belongs to exactly one of the three.
+   * If it appeared in both, an athlete who added it from one list would still
+   * be offered it in the other, and the two counts would double-count it. */
+  const lowerLeaves = groupIn(strength, 'lower_body')!.leaves;
+  const namesInLeaf = (id: string) => leafOf(fullKit, id).map((c) => c.name);
+  const singleLeg = namesInLeaf('lower_single_leg');
+  ok('CONTROL — Single leg is not empty, so the partition really ran',
+    singleLeg.length > 0, JSON.stringify(singleLeg));
+  ok('and it holds the unilateral lower-body movements',
+    singleLeg.includes('Bulgarian Split Squats') && singleLeg.includes('Single-Leg RDL'),
+    JSON.stringify(singleLeg));
+  const squatNames = namesInLeaf('lower_squat');
+  const hingeNames = namesInLeaf('lower_hinge');
+  ok('Squat and Hinge no longer carry the movements Single leg took',
+    !squatNames.includes('Bulgarian Split Squats') && !hingeNames.includes('Single-Leg RDL'),
+    JSON.stringify({ squatNames, hingeNames }));
+  ok('CONTROL — Squat and Hinge still hold their bilateral lifts',
+    squatNames.includes('Back Squat') && hingeNames.includes('Deadlift'),
+    JSON.stringify({ squatNames, hingeNames }));
+  /* NOTHING may appear under two leaves anywhere in the tree — the general
+   * form of the property `Single leg` is the interesting case of. */
+  const seen = new Map<string, string[]>();
+  for (const leaf of allLeaves(fullKit)) {
+    for (const name of namesInLeaf(leaf.id)) {
+      seen.set(name, [...(seen.get(name) ?? []), leaf.label]);
+    }
+  }
+  const doubled = [...seen.entries()].filter(([, where]) => where.length > 1);
+  ok('no exercise appears under two different leaves',
+    doubled.length === 0, JSON.stringify(doubled.slice(0, 8)));
+  void lowerLeaves;
+
+  // ── COUNTS ARE THE LISTS THEY OPEN, AT EVERY LEVEL ──
   /* A count that is not the length of the list it opens is the shape that makes
-   * a menu lie: the athlete taps "Prehab (5)" and gets four. Both numbers come
-   * from one legality pass precisely so this can be asserted. */
-  const countMismatches = tree.flatMap((family) => family.subcategories
-    .filter((sub) => leafOf(fullKit, sub.id).length !== sub.count)
-    .map((sub) => `${sub.label}: says ${sub.count}, opens ${leafOf(fullKit, sub.id).length}`));
-  ok('every subcategory count is exactly the number of choices behind it',
-    countMismatches.length === 0, JSON.stringify(countMismatches));
-  ok('and a family\u2019s count is the sum of its subcategories\u2019',
+   * a menu lie: the athlete taps "Single leg (7)" and gets four. */
+  const leafMismatches = allLeaves(fullKit)
+    .filter((leaf) => leafOf(fullKit, leaf.id).length !== leaf.count)
+    .map((leaf) => `${leaf.label}: says ${leaf.count}, opens ${leafOf(fullKit, leaf.id).length}`);
+  ok('every leaf count is exactly the number of choices behind it',
+    leafMismatches.length === 0, JSON.stringify(leafMismatches));
+  ok('every heading\u2019s count is the sum of the leaves under it',
+    tree.flatMap((f) => f.groups).every((group) => group.count
+      === group.leaves.reduce((total, leaf) => total + leaf.count, 0)),
+    JSON.stringify(tree.flatMap((f) => f.groups).map((g) => `${g.label}:${g.count}`)));
+  ok('and a family\u2019s count is the sum of its headings\u2019',
     tree.every((family) => family.count
-      === family.subcategories.reduce((total, sub) => total + sub.count, 0)),
+      === family.groups.reduce((total, group) => total + group.count, 0)),
     JSON.stringify(tree.map((f) => `${f.label}:${f.count}`)));
 
   /* ── THE BAN — *"Never show athletes a mixed internal list containing options
-   * like 'Breathing reset'."*
+   * like 'Breathing reset'."* And *"do not expose internal category names."*
    *
-   * ⚠ **WHY THIS IS A PINNED LIST AND NOT SET ALGEBRA.** The first cut asserted
-   * that the shown labels and the prompt's labels are DISJOINT, and it reddened
-   * on `Carries` and `Midline` — two words the prompt and the athlete's menu
-   * genuinely agree on. Disjointness bans the right answer whenever an internal
-   * name happens to be plain English, and excusing those one at a time is a
-   * whitelist rotting into a hiding place.
+   * ⚠ **WHY THIS IS A PINNED LIST AND NOT SET ALGEBRA.** An earlier cut
+   * asserted that the shown labels and the prompt's labels are DISJOINT, and it
+   * reddened on `Carries` and `Midline` — words the prompt and the athlete's
+   * menu genuinely agree on. Disjointness bans the right answer whenever an
+   * internal name happens to be plain English, and excusing those one at a time
+   * is a whitelist rotting into a hiding place.
    *
-   * These twelve are the labels MEASURED on the flat menu before this change,
-   * with the one Sam quoted at the top. The CONTROL below is what stops the pin
-   * going stale: every banned string must still be a label the vocabulary
-   * really produces, so a rename reddens this cell instead of silently emptying
-   * it. And the structural half is the type system — `SUBCATEGORY_FOR_POOL` is
-   * a total `Record`, so a NEW pool cannot reach the athlete under its own
-   * prompt label without somebody first choosing where it goes. */
+   * These are the labels MEASURED on the flat menu before this change, with the
+   * one Sam quoted at the top. The CONTROL below is what stops the pin going
+   * stale: every banned string must still be a label the vocabulary really
+   * produces, so a rename reddens this cell instead of silently emptying it.
+   * And the structural half is the type system — `LEAF_FOR_POOL` is a total
+   * `Record`, so a NEW pool cannot reach the athlete under its own prompt label
+   * without somebody first choosing where it goes. */
   const MEASURED_INTERNAL_LABELS = [
     'Breathing reset', 'Tissue quality', 'Easy cardio (zone 1)', 'Hamstring (light)',
     'Groin / adductors', 'Lower prehab', 'Shoulder health', 'Upper push horizontal',
     'Upper push vertical', 'Upper pull horizontal', 'Upper pull vertical',
     'Lower plyometric', 'Accessories upper', 'Accessories lower', 'Arms \u2014 biceps',
+    'Lower squat', 'Lower hinge',
   ];
   const promptLabels: string[] = (selectableVocabularyGroups() as { label: string }[])
     .map((group) => group.label);
   const stalePins = MEASURED_INTERNAL_LABELS.filter((label) => !promptLabels.includes(label));
   ok('CONTROL — every banned label is still one the vocabulary really produces',
     stalePins.length === 0, `renamed or gone, so the pin no longer bans anything: ${JSON.stringify(stalePins)}`);
+  /* EVERY level, including Sam's new fourth one. */
   const shown = [
     ...tree.map((family) => family.label),
-    ...tree.flatMap((family) => family.subcategories.map((sub) => sub.label)),
+    ...tree.flatMap((family) => family.groups.map((group) => group.label)),
+    ...allLeaves(fullKit).map((leaf) => leaf.label),
   ];
   const leaked = shown.filter((label) => MEASURED_INTERNAL_LABELS.includes(label));
-  ok('NO internal vocabulary label is shown at level 1 or level 2',
+  ok('NO internal vocabulary label is shown at ANY level',
     leaked.length === 0, JSON.stringify(leaked));
   ok('and \u201cBreathing reset\u201d specifically is not a button the athlete sees',
     !shown.includes('Breathing reset'), JSON.stringify(shown));
-  /* THE OTHER HALF OF "mixed": the athlete's first screen is a choice between
+  /* Every label the athlete can read comes from one of the two tables Sam's
+   * words live in — nothing is assembled on the way to the screen. */
+  const declared = new Set<string>([
+    ...Object.values(SECTION_LABELS as Record<string, string>),
+    ...Object.values(ADD_GROUPS as Record<string, { label: string }>).map((spec) => spec.label),
+    ...Object.values(ADD_LEAF_LABELS as Record<string, string>),
+  ]);
+  /* ⚠ **ONE THING, ONE NAME.** A heading that goes straight to its exercises
+   * has its word written twice — once as the button in `ADD_GROUPS`, once as
+   * the list's title in `ADD_LEAF_LABELS`. Nothing shows them side by side, so
+   * they could drift into "tap Breathing & wind-down, land on Breathing reset"
+   * and no other cell would notice. Found while mutation-testing this suite. */
+  const straightThroughDrift = tree.flatMap((family) => family.groups)
+    .filter((group) => group.leaves.length === 1 && group.leaves[0]!.label !== group.label)
+    .map((group) => `${group.label} -> ${group.leaves[0]!.label}`);
+  ok('a heading that goes straight through titles its list with its OWN name',
+    straightThroughDrift.length === 0, JSON.stringify(straightThroughDrift));
+
+  ok('every label the athlete reads is one Sam declared',
+    shown.every((label) => declared.has(label)),
+    JSON.stringify(shown.filter((label) => !declared.has(label))));
+  /* THE OTHER HALF of "mixed": the athlete's first screen is a choice between
    * three kinds of work, not a scroll through the vocabulary's filing. */
   ok('level 1 is 3 buttons, not the 23 the flat menu opened with',
     tree.length === 3 && promptLabels.length > 20,
@@ -467,12 +561,11 @@ async function main(): Promise<void> {
 
   /* ⚠ **THE MENU HID NOTHING, AND THAT IS THE OTHER HALF.** A hierarchy that
    * quietly drops a pool would also pass every cell above. Every name the flat
-   * menu could reach must still be reachable — through three taps instead of
-   * two. Breathing reset's CONTENT is the named case. */
+   * menu could reach must still be reachable — deeper, but reachable. */
   const reachable = everyNameIn(fullKit);
   ok('the breathing work is still reachable — under Mobility / Warm-up',
     leafOf(fullKit, 'breathing').length > 0
-      && tree.find((f) => f.id === 'mobility')!.subcategories.some((s) => s.id === 'breathing'),
+      && tree.find((f) => f.id === 'mobility')!.groups.some((g) => g.id === 'breathing'),
     JSON.stringify(leafOf(fullKit, 'breathing').map((c) => c.name)));
   const everyLegalName = new Set<string>();
   for (const group of selectableVocabularyGroups() as { names: string[] }[]) {

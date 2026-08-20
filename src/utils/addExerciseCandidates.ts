@@ -39,8 +39,9 @@
  * `Breathing reset`. Sam: *"1. Strength / Conditioning / Mobility-Warm-up.
  * 2. A relevant subcategory … 3. Legal final exercise choices. Never show
  * athletes a mixed internal list containing options like 'Breathing reset'."*
- * `legalAddFamilies` answers levels 1 and 2, `legalAddCandidates` level 3, and
- * both read ONE legality pass so a count can never disagree with its list.
+ * `legalAddFamilies` answers every level except the exercises,
+ * `legalAddCandidates` answers those, and both read ONE legality pass so a
+ * count can never disagree with its list.
  *
  * WRITER: none, this stores nothing. READER: `screens/home/DayWorkoutScreenV2`.
  * TEST: `src/__tests__/exerciseAddCandidatesTests.ts`.
@@ -68,37 +69,44 @@ export interface AddCandidate {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * THE APPROVED HIERARCHY — Sam, 2026-08-20.
+ * THE APPROVED HIERARCHY — Sam, 2026-08-20, REVISED THE SAME DAY.
  *
- * *"1. Strength / Conditioning / Mobility-Warm-up. 2. A relevant subcategory,
- * such as upper/lower/movement pattern. 3. Legal final exercise choices. Never
- * show athletes a mixed internal list containing options like 'Breathing
- * reset'."*
+ * *"Strength: 1. Power & Jumps -> exercise choices. 2. Lower body -> Hinge /
+ * Squat / Single leg / Accessories -> exercise choices. 3. Upper body -> Push /
+ * Pull / Arms & shoulders / Accessories -> exercise choices. 4. Midline &
+ * Carries -> exercise choices. This adds one extra step only where needed.
+ * Conditioning and Mobility / Warm-up can keep their current structure."*
+ * And standing from the first ruling: *"Never show athletes a mixed internal
+ * list containing options like 'Breathing reset'."*
  *
- * ⚠ **WHAT THIS REPLACES, MEASURED.** Add opened on ONE flat list of the
- * vocabulary's own prompt groups. On a full-kit off-season athlete that is
- * **23 buttons** reading `Lower squat`, `Upper push horizontal`,
- * `Groin / adductors`, `Hamstring (light)`, `Tissue quality`, `Easy cardio
- * (zone 1)`, `Breathing reset` — the generation prompt's internal vocabulary,
- * shown to an athlete, in a sheet that does not scroll.
+ * ⚠ **THE DEPTH IS NOT UNIFORM, AND THAT IS THE RULING.** The first cut gave
+ * Strength TEN flat subcategories at level 2. Sam's revision groups them under
+ * four headings and pays for one more tap ONLY under Lower body and Upper body
+ * — Power & Jumps and Midline & Carries still go straight to their exercises.
+ * A group therefore either owns its exercises or owns a further question, and
+ * `AddGroupSpec.leaves` is the single place that says which.
  *
- * ── NO NEW TAXONOMY. THREE JOINS ONTO OWNERS THAT ALREADY EXIST ────────────
+ * ── NO NEW TAXONOMY. FOUR JOINS ONTO OWNERS THAT ALREADY EXIST ─────────────
  *
  * 1. **The families ARE session sections.** `AddFamilyId` is an `Extract` of
  *    `SessionExecutionSectionId`, and the labels are `SECTION_LABELS` itself.
  *    So "Conditioning" in Add is the same word, for the same work, as
  *    "Conditioning" on the session screen — by construction, not by agreement.
- * 2. **The strength subcategories ARE the pools.** The join is
- *    `VocabularyGroupId` — the pool key — never the prompt's label text.
- * 3. **The conditioning subcategories ARE `ConditioningTier`.** Sam's own
+ * 2. **Most leaves ARE the pools.** The join is `VocabularyGroupId` — the pool
+ *    key — never the prompt's label text.
+ * 3. **`Single leg` IS THE `unilateral` TAG**, not a hand-written list. Sam put
+ *    it beside Hinge and Squat, which means it TAKES the unilateral movements
+ *    OUT of those two rather than duplicating them — so a name appears in
+ *    exactly one leaf. `EXERCISE_TAGS.unilateral` already decides this for the
+ *    per-side dose below; measured on the live pools it partitions 13 squat
+ *    names into 7 + 6 and 7 hinge names into 6 + 1, with nothing untagged.
+ * 4. **The conditioning leaves ARE `ConditioningTier`.** Sam's own
  *    session-intent classification (A sprint-dominant, B-high high output,
- *    B-low moderate, C recovery/flush) already sorts all 90 formats. Inventing
- *    a fourth conditioning grouping to show the athlete would have been a rival
- *    authority nothing could tell apart from the real one.
+ *    B-low moderate, C recovery/flush) already sorts all 90 formats.
  *
- * `REGISTRY-GREP: R-110` — *"Power belongs inside the Strength section"*. It
- * does here too, and it is Strength's first subcategory, which is the same
- * sentence's *"generally as its first row"* applied to a menu.
+ * `REGISTRY-GREP: R-110` — *"Power belongs inside the Strength section,
+ * generally as its first row."* It does here too, and Sam's revision keeps it
+ * as Strength's FIRST heading.
  * ══════════════════════════════════════════════════════════════════════════ */
 
 /**
@@ -113,44 +121,87 @@ export type AddFamilyId = Extract<
 /** Sam's order, which is not `SECTION_ORDER`'s. He stated Strength first. */
 export const ADD_FAMILY_ORDER: readonly AddFamilyId[] = ['strength', 'conditioning', 'mobility'];
 
-export type AddSubcategoryId =
-  // Strength — movement pattern, which is what the pools already are.
-  | 'power' | 'squat' | 'hinge' | 'push' | 'pull' | 'carry'
-  | 'arms_shoulders' | 'legs_calves' | 'midline' | 'prehab'
-  // Conditioning — `ConditioningTier`, in the athlete's words.
+/** LEVEL 2 — the heading inside a family. */
+export type AddGroupId =
+  | 'power' | 'lower_body' | 'upper_body' | 'midline_carries'
   | 'sprints' | 'hard_intervals' | 'tempo' | 'easy_flush'
-  // Mobility / Warm-up.
   | 'mobility_drills' | 'tissue' | 'breathing';
 
-export interface AddSubcategorySpec {
+/**
+ * THE LIST OF EXERCISES. Reached at level 3, or at level 4 under Lower body and
+ * Upper body — the only two groups that ask a further question.
+ *
+ * `lower_` / `upper_` prefixes are not decoration: Sam's names give BOTH sides
+ * a leaf called *"Accessories"*, and two leaves sharing an id would silently
+ * merge two different lists of movements into one.
+ */
+export type AddLeafId =
+  | 'power'
+  | 'lower_hinge' | 'lower_squat' | 'lower_single_leg' | 'lower_accessories'
+  | 'upper_push' | 'upper_pull' | 'upper_arms_shoulders' | 'upper_accessories'
+  | 'midline_carries'
+  | 'sprints' | 'hard_intervals' | 'tempo' | 'easy_flush'
+  | 'mobility_drills' | 'tissue' | 'breathing';
+
+export interface AddGroupSpec {
   family: AddFamilyId;
-  /** What the ATHLETE reads. Never a pool key, never a prompt label. */
+  /** Sam's word, verbatim. Never a pool key, never a prompt label. */
   label: string;
+  /**
+   * ONE leaf means the group IS the list and no extra question is asked —
+   * *"this adds one extra step only where needed"*. Declaration order is menu
+   * order.
+   */
+  leaves: readonly AddLeafId[];
 }
 
-/**
- * Declaration order is menu order within each family, so this table is the only
- * place either the wording or the ordering is decided.
- */
-export const ADD_SUBCATEGORIES: Readonly<Record<AddSubcategoryId, AddSubcategorySpec>> = {
+/** Declaration order is menu order within each family. */
+export const ADD_GROUPS: Readonly<Record<AddGroupId, AddGroupSpec>> = {
   // R-110 — power opens Strength.
-  power: { family: 'strength', label: 'Power & jumps' },
-  squat: { family: 'strength', label: 'Lower body — squat' },
-  hinge: { family: 'strength', label: 'Lower body — hinge' },
-  push: { family: 'strength', label: 'Upper body — push' },
-  pull: { family: 'strength', label: 'Upper body — pull' },
-  carry: { family: 'strength', label: 'Carries' },
-  arms_shoulders: { family: 'strength', label: 'Arms & shoulders' },
-  legs_calves: { family: 'strength', label: 'Legs & calves' },
-  midline: { family: 'strength', label: 'Midline' },
-  prehab: { family: 'strength', label: 'Prehab' },
-  sprints: { family: 'conditioning', label: 'Sprints & speed' },
-  hard_intervals: { family: 'conditioning', label: 'Hard intervals' },
-  tempo: { family: 'conditioning', label: 'Tempo & steady' },
-  easy_flush: { family: 'conditioning', label: 'Easy & flush' },
-  mobility_drills: { family: 'mobility', label: 'Mobility & stretching' },
-  tissue: { family: 'mobility', label: 'Foam rolling & release' },
-  breathing: { family: 'mobility', label: 'Breathing & wind-down' },
+  power: { family: 'strength', label: 'Power & Jumps', leaves: ['power'] },
+  lower_body: {
+    family: 'strength',
+    label: 'Lower body',
+    leaves: ['lower_hinge', 'lower_squat', 'lower_single_leg', 'lower_accessories'],
+  },
+  upper_body: {
+    family: 'strength',
+    label: 'Upper body',
+    leaves: ['upper_push', 'upper_pull', 'upper_arms_shoulders', 'upper_accessories'],
+  },
+  midline_carries: { family: 'strength', label: 'Midline & Carries', leaves: ['midline_carries'] },
+  sprints: { family: 'conditioning', label: 'Sprints & speed', leaves: ['sprints'] },
+  hard_intervals: { family: 'conditioning', label: 'Hard intervals', leaves: ['hard_intervals'] },
+  tempo: { family: 'conditioning', label: 'Tempo & steady', leaves: ['tempo'] },
+  easy_flush: { family: 'conditioning', label: 'Easy & flush', leaves: ['easy_flush'] },
+  mobility_drills: { family: 'mobility', label: 'Mobility & stretching', leaves: ['mobility_drills'] },
+  tissue: { family: 'mobility', label: 'Foam rolling & release', leaves: ['tissue'] },
+  breathing: { family: 'mobility', label: 'Breathing & wind-down', leaves: ['breathing'] },
+};
+
+/**
+ * What the athlete reads on a leaf button. Sam's names, exactly as he wrote
+ * them — including the two called *"Accessories"*, which are never shown beside
+ * each other because each lives inside its own half of the body.
+ */
+export const ADD_LEAF_LABELS: Readonly<Record<AddLeafId, string>> = {
+  power: 'Power & Jumps',
+  lower_hinge: 'Hinge',
+  lower_squat: 'Squat',
+  lower_single_leg: 'Single leg',
+  lower_accessories: 'Accessories',
+  upper_push: 'Push',
+  upper_pull: 'Pull',
+  upper_arms_shoulders: 'Arms & shoulders',
+  upper_accessories: 'Accessories',
+  midline_carries: 'Midline & Carries',
+  sprints: 'Sprints & speed',
+  hard_intervals: 'Hard intervals',
+  tempo: 'Tempo & steady',
+  easy_flush: 'Easy & flush',
+  mobility_drills: 'Mobility & stretching',
+  tissue: 'Foam rolling & release',
+  breathing: 'Breathing & wind-down',
 };
 
 /**
@@ -166,32 +217,35 @@ export const ADD_SUBCATEGORIES: Readonly<Record<AddSubcategoryId, AddSubcategory
  * conditioning pool is the one group that does NOT map whole, because its 90
  * formats already carry Sam's own tier.
  */
-const SUBCATEGORY_FOR_POOL:
-  Readonly<Record<VocabularyGroupId, AddSubcategoryId | 'by_conditioning_tier'>> = {
-  squat: 'squat',
-  hinge: 'hinge',
-  horizontal_push: 'push',
-  vertical_push: 'push',
-  horizontal_pull: 'pull',
-  vertical_pull: 'pull',
+const LEAF_FOR_POOL:
+  Readonly<Record<VocabularyGroupId, AddLeafId | 'by_conditioning_tier'>> = {
+  // ⚠ These two are then re-read by `liftUnilateralToSingleLeg` below — Sam put
+  // `Single leg` BESIDE Hinge and Squat, so it takes from them.
+  squat: 'lower_squat',
+  hinge: 'lower_hinge',
   // Jumps and the power pool are one question to an athlete: explosive work.
   plyo: 'power',
   power: 'power',
-  carry: 'carry',
-  isolation_upper: 'arms_shoulders',
-  biceps: 'arms_shoulders',
-  triceps: 'arms_shoulders',
-  delts: 'arms_shoulders',
-  upper_back_pump: 'arms_shoulders',
-  isolation_lower: 'legs_calves',
-  calves: 'legs_calves',
-  hamstring_light: 'legs_calves',
-  trunk_anti_rotation: 'midline',
-  // Prehab is where an athlete looks for the joint they are protecting; the
-  // groin, knee and shoulder pools are all that question.
-  groin_adductors: 'prehab',
-  lower_prehab: 'prehab',
-  shoulder_health: 'prehab',
+  horizontal_push: 'upper_push',
+  vertical_push: 'upper_push',
+  horizontal_pull: 'upper_pull',
+  vertical_pull: 'upper_pull',
+  isolation_upper: 'upper_arms_shoulders',
+  biceps: 'upper_arms_shoulders',
+  triceps: 'upper_arms_shoulders',
+  delts: 'upper_arms_shoulders',
+  upper_back_pump: 'upper_arms_shoulders',
+  // Scap and cuff work is the upper body's accessory drawer.
+  shoulder_health: 'upper_accessories',
+  // The lower body's accessory drawer: isolation, calves, and the prehab pools
+  // an athlete opens when they are protecting a knee, groin or hamstring.
+  isolation_lower: 'lower_accessories',
+  calves: 'lower_accessories',
+  hamstring_light: 'lower_accessories',
+  lower_prehab: 'lower_accessories',
+  groin_adductors: 'lower_accessories',
+  trunk_anti_rotation: 'midline_carries',
+  carry: 'midline_carries',
   mobility: 'mobility_drills',
   tissue_quality: 'tissue',
   breathing_reset: 'breathing',
@@ -202,25 +256,58 @@ const SUBCATEGORY_FOR_POOL:
 };
 
 /** Sam's tier classification, in the words an athlete would use for it. */
-const SUBCATEGORY_FOR_TIER: Readonly<Record<ConditioningTier, AddSubcategoryId>> = {
+const LEAF_FOR_TIER: Readonly<Record<ConditioningTier, AddLeafId>> = {
   A: 'sprints',
   'B-high': 'hard_intervals',
   'B-low': 'tempo',
   C: 'easy_flush',
 };
 
-export interface AddSubcategoryOffer {
-  id: AddSubcategoryId;
+/**
+ * SAM PUT `Single leg` BESIDE `Hinge` AND `Squat`, SO IT TAKES FROM THEM.
+ *
+ * Siblings partition; they do not overlap. If Bulgarian Split Squats appeared
+ * under both Squat and Single leg, an athlete who added it from one list would
+ * still see it offered in the other — and the two counts would double-count the
+ * same movement.
+ *
+ * The fact is `EXERCISE_TAGS.unilateral`, which `bandFor` below already reads to
+ * decide whether a dose is per-side. Measured on the live pools: 6 of 13 squat
+ * names and 1 of 7 hinge names are unilateral, and NONE is untagged — so this
+ * rule never has to guess.
+ *
+ * ⚠ **IT APPLIES TO THE TWO PRIMARY LOWER PATTERNS ONLY.** `Single-Leg Calf
+ * Raise` is also unilateral and stays in `Accessories` with the other calf
+ * work, because that is where an athlete looks for it.
+ */
+function liftUnilateralToSingleLeg(leaf: AddLeafId, name: string): AddLeafId {
+  if (leaf !== 'lower_squat' && leaf !== 'lower_hinge') return leaf;
+  return getExerciseTags(resolveExerciseName(name))?.unilateral ? 'lower_single_leg' : leaf;
+}
+
+export interface AddLeafOffer {
+  id: AddLeafId;
   label: string;
   /** How many legal choices sit behind it, today, for this athlete. */
   count: number;
+}
+
+export interface AddGroupOffer {
+  id: AddGroupId;
+  label: string;
+  count: number;
+  /**
+   * One entry means tapping this group goes STRAIGHT to the exercises. More
+   * than one means it asks Sam's extra question first.
+   */
+  leaves: AddLeafOffer[];
 }
 
 export interface AddFamilyOffer {
   id: AddFamilyId;
   label: string;
   count: number;
-  subcategories: AddSubcategoryOffer[];
+  groups: AddGroupOffer[];
 }
 
 export interface AddCandidateArgs {
@@ -281,75 +368,89 @@ function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax
 }
 
 /**
- * EVERY LEGAL NAME THE ATHLETE MAY ADD TODAY, FILED UNDER SAM'S SUBCATEGORIES.
+ * EVERY LEGAL NAME THE ATHLETE MAY ADD TODAY, FILED UNDER SAM'S LEAVES.
  *
- * The ONE place legality is decided, so the three menu levels can never
- * disagree about what is behind a button: a count on level 1 is the length of
- * the list level 3 renders, because both read this.
+ * The ONE place legality is decided, so every menu level can agree about what
+ * is behind a button: a count on level 1 is the length of the list the last
+ * level renders, because all of them read this.
  *
  * A name already on the day is not offered — adding it would either duplicate
  * the row or invite a caller to overwrite it, and an Add that overwrites is a
  * Swap. Safety is `assessTapSwapCandidateSafety`, the same function the swap
  * ladder uses, so Add and Swap cannot disagree about what is safe today.
  */
-function legalNamesBySubcategory(args: AddCandidateArgs): Map<AddSubcategoryId, string[]> {
+function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
   const present = new Set(
     (args.existingExerciseNames ?? []).map((name) => resolveExerciseName(name).toLowerCase()),
   );
-  const filed = new Map<AddSubcategoryId, string[]>();
+  const filed = new Map<AddLeafId, string[]>();
   for (const group of selectableVocabularyGroups()) {
-    const target = SUBCATEGORY_FOR_POOL[group.id];
+    const target = LEAF_FOR_POOL[group.id];
     for (const name of group.names) {
       if (present.has(resolveExerciseName(name).toLowerCase())) continue;
       if (!assessTapSwapCandidateSafety(name, args.environment).safe) continue;
-      const subcategory = target === 'by_conditioning_tier'
-        ? SUBCATEGORY_FOR_TIER[CONDITIONING_META[name]?.tier ?? 'B-low']
-        : target;
-      const bucket = filed.get(subcategory);
+      const leaf = target === 'by_conditioning_tier'
+        ? LEAF_FOR_TIER[CONDITIONING_META[name]?.tier ?? 'B-low']
+        : liftUnilateralToSingleLeg(target, name);
+      const bucket = filed.get(leaf);
       if (bucket) bucket.push(name);
-      else filed.set(subcategory, [name]);
+      else filed.set(leaf, [name]);
     }
   }
   return filed;
 }
 
 /**
- * LEVEL 1 AND LEVEL 2 OF SAM'S MENU, IN ONE ANSWER.
+ * EVERY LEVEL OF SAM'S MENU EXCEPT THE EXERCISES, IN ONE ANSWER.
  *
  * Names only — no dose and no load. Those cost a call to the load owner per
- * movement, and the athlete standing on level 1 is choosing between three
- * words; there is nothing on that screen a weight could appear on. Level 3 asks
- * for its own, for the one subcategory it renders.
+ * movement, and an athlete standing on level 1 is choosing between three words;
+ * there is nothing on that screen a weight could appear on. The exercise list
+ * asks for its own, for the one leaf it renders.
  *
- * ⚠ **AN EMPTY FAMILY OR SUBCATEGORY IS ABSENT, NOT EMPTY** — the rule the flat
- * menu already followed, now at both levels. A category the athlete taps always
- * has something behind it, so the hierarchy can never dead-end.
+ * ⚠ **AN EMPTY FAMILY, GROUP OR LEAF IS ABSENT, NOT EMPTY** — the rule the flat
+ * menu already followed, now at every level. A heading the athlete taps always
+ * has something behind it, so the hierarchy can never dead-end. It also means
+ * **a group can lose its extra question**: if a bad knee leaves Lower body with
+ * only `Accessories` legal, that group drops to one leaf and goes straight to
+ * the exercises, which is the same *"only where needed"* rule answering a
+ * narrower day.
  */
 export function legalAddFamilies(args: AddCandidateArgs): AddFamilyOffer[] {
-  const filed = legalNamesBySubcategory(args);
+  const filed = legalNamesByLeaf(args);
   const families: AddFamilyOffer[] = [];
   for (const family of ADD_FAMILY_ORDER) {
-    const subcategories: AddSubcategoryOffer[] = [];
-    // Declaration order in ADD_SUBCATEGORIES is menu order.
-    for (const [id, spec] of Object.entries(ADD_SUBCATEGORIES) as [AddSubcategoryId, AddSubcategorySpec][]) {
+    const groups: AddGroupOffer[] = [];
+    // Declaration order in ADD_GROUPS is menu order.
+    for (const [id, spec] of Object.entries(ADD_GROUPS) as [AddGroupId, AddGroupSpec][]) {
       if (spec.family !== family) continue;
-      const names = filed.get(id);
-      if (!names || names.length === 0) continue;
-      subcategories.push({ id, label: spec.label, count: names.length });
+      const leaves: AddLeafOffer[] = [];
+      for (const leafId of spec.leaves) {
+        const names = filed.get(leafId);
+        if (!names || names.length === 0) continue;
+        leaves.push({ id: leafId, label: ADD_LEAF_LABELS[leafId], count: names.length });
+      }
+      if (leaves.length === 0) continue;
+      groups.push({
+        id,
+        label: spec.label,
+        count: leaves.reduce((total, leaf) => total + leaf.count, 0),
+        leaves,
+      });
     }
-    if (subcategories.length === 0) continue;
+    if (groups.length === 0) continue;
     families.push({
       id: family,
       label: SECTION_LABELS[family],
-      count: subcategories.reduce((total, entry) => total + entry.count, 0),
-      subcategories,
+      count: groups.reduce((total, group) => total + group.count, 0),
+      groups,
     });
   }
   return families;
 }
 
 /**
- * LEVEL 3 — *"legal final exercise choices"*.
+ * THE LAST LEVEL — *"exercise choices"*.
  *
  * ⚠ **EVERY legal choice, not a sample.** The flat menu capped each group at
  * six, and its own reason was *"few enough that the sheet is a decision rather
@@ -364,9 +465,9 @@ export function legalAddFamilies(args: AddCandidateArgs): AddFamilyOffer[] {
  * is the same refusal wearing a different coat.
  */
 export function legalAddCandidates(
-  args: AddCandidateArgs & { subcategory: AddSubcategoryId },
+  args: AddCandidateArgs & { leaf: AddLeafId },
 ): AddCandidate[] {
-  const names = legalNamesBySubcategory(args).get(args.subcategory) ?? [];
+  const names = legalNamesByLeaf(args).get(args.leaf) ?? [];
   return names.map((name) => ({
     name,
     ...bandFor(name),

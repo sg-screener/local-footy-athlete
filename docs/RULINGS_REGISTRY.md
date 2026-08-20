@@ -3387,3 +3387,68 @@ with its offset — so entering level 3 from the bottom of level 2 put the first
 movements above the fold, where they read as absent. **No headless cell can see
 that**: it is component identity, not data. Each list is now keyed to its own
 step so it remounts at its first row, re-verified on the device.
+
+**R-120a** · *"Change the Strength hierarchy to this: 1. Power & Jumps ->
+exercise choices. 2. Lower body -> Hinge / Squat / Single leg / Accessories ->
+exercise choices. 3. Upper body -> Push / Pull / Arms & shoulders / Accessories
+-> exercise choices. 4. Midline & Carries -> exercise choices. This adds one
+extra step only where needed. Conditioning and Mobility / Warm-up can keep their
+current structure. Use these athlete-visible names exactly."* (Sam, 2026-08-20)
+· **THE DEPTH IS NOT UNIFORM, AND THAT IS THE RULING.**
+
+R-120's first cut gave Strength TEN flat headings. This groups them under four
+and pays for one more tap ONLY under Lower body and Upper body. **A heading
+therefore either owns its exercises or owns a further question, and
+`AddGroupSpec.leaves` is the single place that says which** — the screen reads
+how many leaves are legal and routes itself, so *"only where needed"* is data,
+not a branch somebody has to remember to write.
+
+**`Single leg` IS THE `unilateral` TAG, NOT A HAND-WRITTEN LIST.** Sam put it
+BESIDE Hinge and Squat, which means siblings PARTITION: it takes the unilateral
+movements out of those two rather than duplicating them, so a movement belongs
+to exactly one leaf and the two counts cannot double-count it.
+`EXERCISE_TAGS.unilateral` already decides this for the per-side dose. Measured
+on the live pools: **6 of 13 squat names and 1 of 7 hinge names, with nothing
+untagged**, so the rule never guesses. It applies to the two primary lower
+patterns ONLY — `Single-Leg Calf Raise` stays in `Accessories` with the other
+calf work, which is where an athlete looks for it.
+
+**Search words:** add hierarchy, strength headings, lower body, upper body,
+single leg, hinge squat accessories, push pull arms shoulders, midline carries,
+power and jumps, one extra step, variable depth, unilateral tag.
+
+· `BUILT` `ADD_GROUPS` / `ADD_LEAF_LABELS` / `LEAF_FOR_POOL` /
+`liftUnilateralToSingleLeg` in `src/utils/addExerciseCandidates.ts`, read by
+`DayWorkoutScreenV2` through `openExerciseAdd` -> `openAddFamily` ->
+`openAddGroup` -> (`openAddLeaf`) -> the exercises, whose steps are
+`add_family` / `add_group` / `add_leaf` / `add_pick`. **Guarded by
+`test:exercise-add-candidates` case [5], now 26 cells / 48 green**, including
+Sam's four headings asserted as an ORDERED list of exact strings, both extra
+questions asserted verbatim, *"only where needed"* asserted in BOTH directions
+(the two deep headings AND that every other heading is shallow), the partition
+(`Single leg` holds the unilateral names, Squat and Hinge no longer do, and
+**no exercise appears under two leaves anywhere in the tree**), and every label
+the athlete reads being one Sam declared. **Six mutations were run and each
+reddened its own cell and only its own**: an extra step where none was asked
+for, the partition disabled, the partition duplicating instead, the heading
+order changed, an internal label on a leaf, and a straight-through heading
+whose list title drifted from its button.
+
+**⚠ SEEN ON GLASS, INCLUDING BOTH BRANCHES AND EVERY EXIT.** Four Strength
+headings on one screen; Lower body -> Hinge / Squat / Single leg / Accessories,
+whose Single leg list is exactly the unilateral movements with per-side doses;
+Midline & Carries going STRAIGHT to its exercises and its Back climbing to the
+headings rather than to a step that was never shown; Back walking the full
+depth 4 -> 3 -> 2 -> 1; Cancel closing from the deepest level; and an add
+completed through the deep branch (Upper body -> Accessories -> Scap Pull Ups),
+taking the session from 6 rows to 7.
+
+**⚠ OBSERVED ON GLASS AND PROVEN NOT TO BE THIS CHANGE.** Adding a shoulder
+exercise also put a shoulder drill into the day's Mobility / Warm-up. That is
+`selectMobilityPrehabFlow` DERIVING the warm-up from the workout — the north
+star working — and it is untouched here: `programControlActions`,
+`mobilityPrehabFlow` and `sessionTemplate` are all outside this branch's diff,
+the same name was equally addable through the old flat menu's `Shoulder health`
+group, and a headless probe through the screen's own owners (with a non-zero
+warm-up as its positive control) returns byte-identical section counts in this
+branch and in a control worktree at `c12a058c`.

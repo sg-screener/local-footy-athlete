@@ -38,11 +38,13 @@ import {
 } from '../../rules/exerciseExclusions';
 import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
 import {
-  ADD_SUBCATEGORIES,
+  ADD_GROUPS,
+  ADD_LEAF_LABELS,
   legalAddCandidates,
   legalAddFamilies,
   type AddFamilyId,
-  type AddSubcategoryId,
+  type AddGroupId,
+  type AddLeafId,
 } from '../../utils/addExerciseCandidates';
 import {
   executeProgramControlAction,
@@ -322,32 +324,56 @@ type ExerciseEditStep =
    * names behind it were already legal and already the athlete's; it was the
    * MENU that was internal.
    *
-   * `add_family` -> `add_subcategory` -> `add_pick` replace it. Levels 1 and 2
-   * come from `legalAddFamilies`, level 3 from `legalAddCandidates`, and both
-   * read one legality pass so a count can never disagree with the list behind
-   * it. A family or subcategory with nothing legal left is ABSENT, so the
-   * hierarchy can never dead-end on an empty screen.
+   * `add_family` -> `add_group` -> (`add_leaf`) -> `add_pick` replace it.
+   * Every level except the exercises comes from `legalAddFamilies` and the
+   * exercises from `legalAddCandidates`, both reading one legality pass so a
+   * count can never disagree with the list behind it. A family, group or leaf
+   * with nothing legal left is ABSENT, so the hierarchy can never dead-end on
+   * an empty screen.
    */
   | {
       kind: 'add_family';
       families: readonly { id: AddFamilyId; label: string; count: number }[];
     }
   | {
-      kind: 'add_subcategory';
+      kind: 'add_group';
       family: AddFamilyId;
       familyLabel: string;
-      subcategories: readonly { id: AddSubcategoryId; label: string; count: number }[];
+      groups: readonly { id: AddGroupId; label: string; count: number }[];
       /** The family list this came from, so Back climbs rather than closing. */
       fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>;
+    }
+  /**
+   * ⚠ **SAM'S EXTRA STEP, AND IT EXISTS ONLY WHERE HE ASKED FOR IT.**
+   *
+   * *"This adds one extra step only where needed."* Lower body and Upper body
+   * reach this; Power & Jumps, Midline & Carries and every Conditioning and
+   * Mobility heading go straight to their exercises. The screen does not decide
+   * that — `ADD_GROUPS[group].leaves` does, and a group whose legal leaves
+   * collapse to one for THIS athlete today loses the step with them.
+   */
+  | {
+      kind: 'add_leaf';
+      family: AddFamilyId;
+      group: AddGroupId;
+      groupLabel: string;
+      leaves: readonly { id: AddLeafId; label: string; count: number }[];
+      /** The group list this came from, so Back climbs one level. */
+      fromGroup?: Extract<ExerciseEditStep, { kind: 'add_group' }>;
     }
   | {
       kind: 'add_pick';
       family: AddFamilyId;
-      subcategory: AddSubcategoryId;
+      leaf: AddLeafId;
       label: string;
       options: readonly { name: string; meta: string; suggestion: SuggestedExercise }[];
-      /** The subcategory list this came from, so Back climbs one level. */
-      fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>;
+      /**
+       * THE LIST THIS CAME FROM — a leaf step under Lower/Upper body, or the
+       * GROUP step directly when that group asked no extra question. Back has
+       * to climb to whichever it actually was, or it would skip a level on one
+       * branch and invent one on the other.
+       */
+      fromList?: Extract<ExerciseEditStep, { kind: 'add_leaf' } | { kind: 'add_group' }>;
     }
   | {
       kind: 'confirm_add';
@@ -920,8 +946,7 @@ export default function DayWorkoutScreenV2() {
     showExerciseEditFallback, workoutLabel,
   ]);
 
-  /** LEVEL 2 — the subcategories of ONE family: movement pattern, or Sam's
-   * conditioning tiers, or the three kinds of mobility work. */
+  /** LEVEL 2 — the headings inside one family. */
   const openAddFamily = React.useCallback((
     family: AddFamilyId,
     fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>,
@@ -929,28 +954,32 @@ export default function DayWorkoutScreenV2() {
     const offer = legalAddFamilies(addCandidateArgs()).find((entry) => entry.id === family);
     if (!offer) return;
     setExerciseEditStep({
-      kind: 'add_subcategory',
+      kind: 'add_group',
       family: offer.id,
       familyLabel: offer.label,
-      subcategories: offer.subcategories,
+      groups: offer.groups.map((group) => ({
+        id: group.id, label: group.label, count: group.count,
+      })),
       ...(fromFamily ? { fromFamily } : {}),
     });
   }, [addCandidateArgs]);
 
-  /** LEVEL 3 — every legal choice in that subcategory, each carrying its own
-   * dose and this athlete's own load. */
-  const openAddSubcategory = React.useCallback((
+  /**
+   * THE EXERCISE LIST FOR ONE LEAF. Shared by both routes into it, so the two
+   * branches cannot drift in what a chosen movement carries.
+   */
+  const openAddLeafList = React.useCallback((
     family: AddFamilyId,
-    subcategory: AddSubcategoryId,
-    fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>,
+    leaf: AddLeafId,
+    fromList?: Extract<ExerciseEditStep, { kind: 'add_leaf' } | { kind: 'add_group' }>,
   ) => {
-    const candidates = legalAddCandidates({ ...addCandidateArgs(), subcategory });
+    const candidates = legalAddCandidates({ ...addCandidateArgs(), leaf });
     if (candidates.length === 0) return;
     setExerciseEditStep({
       kind: 'add_pick',
       family,
-      subcategory,
-      label: ADD_SUBCATEGORIES[subcategory].label,
+      leaf,
+      label: ADD_LEAF_LABELS[leaf],
       options: candidates.map((candidate) => {
         const suggestion: SuggestedExercise = {
           name: candidate.name,
@@ -967,13 +996,57 @@ export default function DayWorkoutScreenV2() {
           suggestion,
         };
       }),
-      ...(fromSubcategory ? { fromSubcategory } : {}),
+      ...(fromList ? { fromList } : {}),
     });
   }, [addCandidateArgs]);
 
+  /**
+   * A HEADING WAS TAPPED — AND WHETHER THAT ASKS ANOTHER QUESTION IS THE DATA'S
+   * ANSWER, NOT THIS FUNCTION'S.
+   *
+   * Sam: *"this adds one extra step only where needed"*. Lower body and Upper
+   * body have four leaves and land on `add_leaf`; Power & Jumps, Midline &
+   * Carries and every Conditioning and Mobility heading have one and go
+   * straight to the exercises. A group whose other leaves are all unsafe for
+   * THIS athlete today also has one, and correctly loses the step too — the
+   * athlete is never asked to choose from a list of one.
+   */
+  const openAddGroup = React.useCallback((
+    family: AddFamilyId,
+    group: AddGroupId,
+    fromGroup?: Extract<ExerciseEditStep, { kind: 'add_group' }>,
+  ) => {
+    const familyOffer = legalAddFamilies(addCandidateArgs()).find((entry) => entry.id === family);
+    const offer = familyOffer?.groups.find((entry) => entry.id === group);
+    if (!offer || offer.leaves.length === 0) return;
+    if (offer.leaves.length === 1) {
+      openAddLeafList(family, offer.leaves[0]!.id, fromGroup);
+      return;
+    }
+    setExerciseEditStep({
+      kind: 'add_leaf',
+      family,
+      group,
+      groupLabel: offer.label,
+      leaves: offer.leaves.map((leaf) => ({
+        id: leaf.id, label: leaf.label, count: leaf.count,
+      })),
+      ...(fromGroup ? { fromGroup } : {}),
+    });
+  }, [addCandidateArgs, openAddLeafList]);
+
+  /** THE EXTRA STEP'S ANSWER — Hinge / Squat / Single leg / Accessories. */
+  const openAddLeaf = React.useCallback((
+    family: AddFamilyId,
+    leaf: AddLeafId,
+    fromLeaf?: Extract<ExerciseEditStep, { kind: 'add_leaf' }>,
+  ) => {
+    openAddLeafList(family, leaf, fromLeaf);
+  }, [openAddLeafList]);
+
   /* `prepareAdd` DELETED with `suggestAddExercise` and the `add_kind` step
-   * (2026-08-19). `openExerciseAdd` -> `openAddFamily` -> `openAddSubcategory`
-   * is the whole route now, and its fallback is a real sentence about kit and
+   * (2026-08-19). `openExerciseAdd` -> `openAddFamily` -> `openAddGroup` ->
+   * (`openAddLeaf`) is the whole route now, and its fallback is a real sentence about kit and
    * injuries rather than "I need a bit more detail" for a table that had simply
    * run out of names. */
 
@@ -1856,7 +1929,8 @@ export default function DayWorkoutScreenV2() {
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
         onAddFamily={openAddFamily}
-        onAddSubcategory={openAddSubcategory}
+        onAddGroup={openAddGroup}
+        onAddLeaf={openAddLeaf}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
         onExclusionScope={applyExclusionScope}
@@ -3623,16 +3697,25 @@ interface ExerciseEditSheetProps {
   onStep: (step: ExerciseEditStep) => void;
   /** The athlete picked a row to swap. Goes straight to the ranked menu. */
   onSwapPick: (exercise: EditableExercise) => void;
-  /** LEVEL 1 -> LEVEL 2. Carries the family list so Back can climb to it. */
+  /** LEVEL 1 -> the headings. Carries the family list so Back can climb to it. */
   onAddFamily: (
     family: AddFamilyId,
     fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>,
   ) => void;
-  /** LEVEL 2 -> LEVEL 3. Carries the subcategory list for the same reason. */
-  onAddSubcategory: (
+  /**
+   * A HEADING -> either Sam's extra question or straight to the exercises. The
+   * screen does not choose; `openAddGroup` reads how many leaves are legal.
+   */
+  onAddGroup: (
     family: AddFamilyId,
-    subcategory: AddSubcategoryId,
-    fromSubcategory?: Extract<ExerciseEditStep, { kind: 'add_subcategory' }>,
+    group: AddGroupId,
+    fromGroup?: Extract<ExerciseEditStep, { kind: 'add_group' }>,
+  ) => void;
+  /** THE EXTRA QUESTION'S ANSWER -> the exercises. */
+  onAddLeaf: (
+    family: AddFamilyId,
+    leaf: AddLeafId,
+    fromLeaf?: Extract<ExerciseEditStep, { kind: 'add_leaf' }>,
   ) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
@@ -3660,7 +3743,8 @@ function ExerciseEditSheet({
   onTodayOnly,
   onExclusionScope,
   onAddFamily,
-  onAddSubcategory,
+  onAddGroup,
+  onAddLeaf,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -3688,16 +3772,24 @@ function ExerciseEditSheet({
       else onClose();
       return;
     }
-    // SAM'S THREE LEVELS CLIMB. Each add step carries the list it was opened
-    // from, so Back walks 3 -> 2 -> 1 -> closed rather than dropping the
-    // athlete out of the flow from level 3 — which is what `add_pick` did when
-    // there was only one level above it to return to.
+    // ⚠ **EVERY ADD STEP CLIMBS TO THE LIST IT WAS ACTUALLY OPENED FROM.**
+    //
+    // The depth is not uniform — Sam's extra question exists under Lower body
+    // and Upper body and nowhere else — so Back cannot be "go up one kind". The
+    // exercises are reached from a LEAF step on one branch and from the GROUP
+    // step on the other, and each carries whichever it was. Hard-coding either
+    // would skip a level on one branch and invent one on the other.
     if (step.kind === 'add_pick') {
-      if (step.fromSubcategory) onStep(step.fromSubcategory);
+      if (step.fromList) onStep(step.fromList);
       else onClose();
       return;
     }
-    if (step.kind === 'add_subcategory') {
+    if (step.kind === 'add_leaf') {
+      if (step.fromGroup) onStep(step.fromGroup);
+      else onClose();
+      return;
+    }
+    if (step.kind === 'add_group') {
       if (step.fromFamily) onStep(step.fromFamily);
       else onClose();
       return;
@@ -3778,8 +3870,8 @@ function ExerciseEditSheet({
        * nothing about the athlete's kit or their injuries, and offered whichever
        * of two names the session did not already contain. Sam: *"Add any legal
        * exercise, mobility or conditioning component. Respect equipment, injury
-       * and genuine session limits."* Sam's three levels — `add_family` /
-       * `add_subcategory` / `add_pick` — replace it, over the app's own
+       * and genuine session limits."* Sam's hierarchy — `add_family` /
+       * `add_group` / `add_leaf` / `add_pick` — replaces it, over the app's own
        * vocabulary. */
       /* LEVEL 1 — SAM'S THREE. The glyph is the SESSION SCREEN'S own, through
        * `SESSION_SECTION_ICON_KIND` (R-116's one owner), because these three
@@ -3811,33 +3903,26 @@ function ExerciseEditSheet({
             />
           </>
         );
-      /* LEVEL 2 — the subcategory. Every row carries its FAMILY'S glyph, which
+      /* LEVEL 2 — Sam's headings. Every row carries its FAMILY'S glyph, which
        * is the honest one: these are all Strength, or all Conditioning. */
-      case 'add_subcategory':
+      case 'add_group':
         return (
           <>
             <ScrollView
-              /* ⚠ **THE KEY IS WHAT PUTS THE LIST BACK AT THE TOP, AND IT IS
-               * NOT DECORATION.** Both add levels render a `ScrollView` in the
-               * same position of the same tree, so React REUSES the instance
-               * across steps and it keeps its scroll offset. Measured on the
-               * simulator: scroll Strength's subcategories down to Prehab, tap
-               * one, and level 3 opens ALREADY SCROLLED — the first movements
-               * in the list are above the fold and read as absent. Keying by
-               * the step's own identity remounts it, so every level opens at
-               * its first row. */
-              key={`sub-${step.family}`}
+              /* Keyed so the list opens at its first row rather than where the
+               * previous level was left — see the note on `add_pick` below. */
+              key={`group-${step.family}`}
               style={styles.exerciseEditScrollList}
               contentContainerStyle={styles.exerciseEditScrollContent}
             >
-              {step.subcategories.map((subcategory) => (
+              {step.groups.map((group) => (
                 <ExerciseSheetOption
-                  key={subcategory.id}
-                  label={subcategory.label}
-                  sub={`${subcategory.count} to choose from`}
+                  key={group.id}
+                  label={group.label}
+                  sub={`${group.count} to choose from`}
                   icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
-                  testID={`add-subcategory-${subcategory.id}`}
-                  onPress={() => onAddSubcategory(step.family, subcategory.id, step)}
+                  testID={`add-group-${group.id}`}
+                  onPress={() => onAddGroup(step.family, group.id, step)}
                 />
               ))}
             </ScrollView>
@@ -3850,17 +3935,54 @@ function ExerciseEditSheet({
             />
           </>
         );
-      /* LEVEL 3 — *"legal final exercise choices"*, all of them. The list
-       * SCROLLS: `Sheet` hugs its children, so an unbounded list of real
-       * exercise names would run off the bottom of the screen with no way to
-       * reach the last of them — which is what the flat 23-button menu did. */
+      /* SAM'S EXTRA STEP — Hinge / Squat / Single leg / Accessories, and the
+       * Upper body four. Reached ONLY from a heading with more than one legal
+       * leaf, which is what *"only where needed"* means in code. */
+      case 'add_leaf':
+        return (
+          <>
+            <ScrollView
+              key={`leaf-${step.group}`}
+              style={styles.exerciseEditScrollList}
+              contentContainerStyle={styles.exerciseEditScrollContent}
+            >
+              {step.leaves.map((leaf) => (
+                <ExerciseSheetOption
+                  key={leaf.id}
+                  label={leaf.label}
+                  sub={`${leaf.count} to choose from`}
+                  icon={<RowIcon kind={SESSION_SECTION_ICON_KIND[step.family]} size={18} />}
+                  testID={`add-leaf-${leaf.id}`}
+                  onPress={() => onAddLeaf(step.family, leaf.id, step)}
+                />
+              ))}
+            </ScrollView>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      /* THE EXERCISES — *"exercise choices"*, all of them. The list SCROLLS:
+       * `Sheet` hugs its children, so an unbounded list of real exercise names
+       * would run off the bottom of the screen with no way to reach the last of
+       * them — which is what the flat 23-button menu did. */
       case 'add_pick':
         return (
           <>
             <ScrollView
-              /* Keyed for the same reason as level 2 above: a reused
-               * `ScrollView` opens where the previous list was left. */
-              key={`pick-${step.subcategory}`}
+              /* ⚠ **THE KEY IS WHAT PUTS THE LIST BACK AT THE TOP, AND IT IS
+               * NOT DECORATION.** Every add level renders a `ScrollView` in the
+               * same position of the same tree, so React REUSES the instance
+               * across steps and it keeps its scroll offset. Measured on the
+               * simulator: scroll a heading list down, tap one, and the next
+               * level opens ALREADY SCROLLED — the first movements in it are
+               * above the fold and read as absent. Keying by the step's own
+               * identity remounts it, so every level opens at its first row. */
+              key={`pick-${step.leaf}`}
               style={styles.exerciseEditScrollList}
               contentContainerStyle={styles.exerciseEditScrollContent}
             >
@@ -4158,8 +4280,10 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
           : 'Which exercise?';
     case 'add_family':
       return 'What do you want to add?';
-    case 'add_subcategory':
+    case 'add_group':
       return step.familyLabel;
+    case 'add_leaf':
+      return step.groupLabel;
     case 'add_pick':
       return step.label;
     case 'confirm_remove':
@@ -4198,7 +4322,8 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
       return 'Add one exercise or small block, not another full session.';
     case 'add_family':
       return 'Add one exercise or small block, not another full session.';
-    case 'add_subcategory':
+    case 'add_group':
+    case 'add_leaf':
       return 'Pick the kind of work.';
     case 'add_pick':
       return 'Everything here is legal with today’s kit and injuries.';

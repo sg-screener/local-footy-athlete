@@ -44,7 +44,34 @@ whose labels exist to teach movement patterns to the model). The NAMES behind it
 were already legal, already equipment- and injury-filtered and already the
 athlete's — it was the MENU that was internal.
 
-## THE AFTER
+## THE AFTER — REVISED BY SAM THE SAME DAY (R-120a)
+
+His first cut of the hierarchy gave Strength TEN flat headings. He replaced it
+with four, paying for one more tap **only under Lower body and Upper body**:
+
+```
+Strength (125)
+    Power & Jumps (10)                  -> exercises
+    Lower body (40)   -> Hinge 6 / Squat 7 / Single leg 7 / Accessories 20
+    Upper body (55)   -> Push 16 / Pull 12 / Arms & shoulders 23 / Accessories 4
+    Midline & Carries (20)              -> exercises
+Conditioning (94)     Sprints & speed 39 · Hard intervals 18 · Tempo & steady 20 · Easy & flush 17
+Mobility / Warm-up (30)  Mobility & stretching 20 · Foam rolling & release 6 · Breathing & wind-down 4
+```
+
+**A heading either owns its exercises or owns a further question**, and
+`ADD_GROUPS[...].leaves` is the single place that says which — the screen reads
+how many leaves are LEGAL and routes itself, so *"only where needed"* is data
+rather than a branch somebody has to remember. It also means a heading whose
+other leaves are all unsafe for this athlete today correctly loses the step with
+them, instead of asking them to choose from a list of one.
+
+**`Single leg` is the `unilateral` TAG, not a hand-written list.** Sam put it
+beside Hinge and Squat, so siblings PARTITION: it takes those movements out of
+the other two rather than duplicating them. Measured on the live pools — 6 of 13
+squat names, 1 of 7 hinge names, nothing untagged.
+
+## THE FIRST CUT (superseded, kept because the before-measurement still stands)
 
 ```
 Strength (125)          Power & jumps 10 · Lower body — squat 13 · Lower body — hinge 7 ·

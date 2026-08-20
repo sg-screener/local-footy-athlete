@@ -245,19 +245,20 @@ async function main(): Promise<void> {
 
   // ── ADD, seeing what the first two left ────────────────────────────────
   const onTheDay = afterSwap.map((r) => r.split('@')[0]!);
-  // SAM'S THREE LEVELS (2026-08-20). The menu is walked the way the athlete
-  // walks it, and the "does not offer the replacement" check is asked of every
-  // LEAF, not of one flat list — a hierarchy could hide the collision in a
-  // subcategory nobody opened.
+  // SAM'S HIERARCHY (2026-08-20). The menu is walked the way the athlete walks
+  // it, and the "does not offer the replacement" check is asked of every LEAF,
+  // not of one flat list — a hierarchy could hide the collision in a branch
+  // nobody opened. Walking leaves also survives the depth being uneven.
   const addArgs = {
     environment, existingExerciseNames: onTheDay,
     profile: useProfileStore.getState().onboardingData,
   };
   const addFamilies = legalAddFamilies(addArgs) as
-    { subcategories: { id: string }[] }[];
-  const everyOffered = addFamilies.flatMap((family) => family.subcategories.flatMap(
-    (sub) => (legalAddCandidates({ ...addArgs, subcategory: sub.id }) as { name: string }[])
-      .map((candidate) => candidate.name)));
+    { groups: { leaves: { id: string }[] }[] }[];
+  const everyOffered = addFamilies.flatMap((family) => family.groups.flatMap(
+    (group) => group.leaves.flatMap(
+      (leaf) => (legalAddCandidates({ ...addArgs, leaf: leaf.id }) as { name: string }[])
+        .map((candidate) => candidate.name))));
   ok('CONTROL — the add menu is not empty after two changes', everyOffered.length > 0);
   ok('and it does not offer the replacement the swap just put on the day',
     !everyOffered.includes(replacement), replacement);
