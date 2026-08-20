@@ -281,7 +281,11 @@ async function injuryDeclared(): Promise<{ ok: boolean }> {
 }
 
 async function main(): Promise<void> {
-  const { restoreExcludedExercise } = require('../utils/exerciseExclusionOwner');
+  /* THE DOOR, NOT THE INNER FUNCTION — see the note in
+   * `sessionChangeSequenceTests` [4]. A removal now reaches storage at
+   * generation, so a restart destroys the row a plain restore would un-hide,
+   * and only the durable door's re-derivation returns the recorded lift. */
+  const { restoreExcludedExerciseDurably } = require('../utils/exerciseExclusionOwner');
   const { undoLastDecision } = require('../store/undoLastDecision');
 
   /* ═══ 1 ═══════════════════════════════════════════════════════════════ */
@@ -344,7 +348,7 @@ async function main(): Promise<void> {
   const s2After = rowsOn(TARGET);
   ok('the restarted session is IDENTICAL — nothing refilled, reselected or rotated',
     sameSession(s2After, s2Before), `${JSON.stringify(s2Before)} -> ${JSON.stringify(s2After)}`);
-  quiet(() => restoreExcludedExercise(s2Gone));
+  await quietAsync(() => restoreExcludedExerciseDurably(s2Gone));
   const s2Restored = rowsOn(TARGET);
   ok('RESTORE returns the EXACT original session — the row is back in its place at its load',
     sameSession(s2Restored, s2Start), `${JSON.stringify(s2Start)} -> ${JSON.stringify(s2Restored)}`);
@@ -367,7 +371,7 @@ async function main(): Promise<void> {
   const s3After = rowsOn(TARGET);
   ok('the restarted session is IDENTICAL',
     sameSession(s3After, s3Before), `${JSON.stringify(s3Before)} -> ${JSON.stringify(s3After)}`);
-  quiet(() => restoreExcludedExercise(s3Gone));
+  await quietAsync(() => restoreExcludedExerciseDurably(s3Gone));
   const s3Restored = rowsOn(TARGET);
   /* ⚠ THE CELL THE SECOND DEFECT LIVED IN. The swap's stored override used to be
    * built from a day the removal had already been filtered out of, so the

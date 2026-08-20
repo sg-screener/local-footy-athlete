@@ -155,6 +155,27 @@ export function applyExerciseExclusionDecision(
  * re-prescribe: the exercise becomes ELIGIBLE again and the next generation
  * chooses it or not on its ordinary merits. Forcing it back in would be the app
  * overruling an athlete who only said "stop leaving it out".
+ *
+ * ── A REMOVAL WRITES TWO FACTS, SO ITS REVERSAL CLEARS TWO ──────────────────
+ *
+ * The canonical exclusion in athlete preferences is one. The `remove_exercise`
+ * program-control action on the decision ledger is the other, and it keeps
+ * REPLAYING: every boot rebuilds the world from the ledger, so a reversal that
+ * clears only the exclusion is undone by the next re-derivation. Measured on
+ * device 2026-08-19 (exclusions `[]`, ledger still holding `remove_exercise`)
+ * and again headlessly 2026-08-20 — restoring, then settling, put the exclusion
+ * straight back and the row stayed off the day.
+ *
+ * `annulOutstandingRemovalFor` lived at ONE caller
+ * (`activeProgramModifiers`' Status control) and every other door through this
+ * owner got half a reversal. Sam's contract is *"changing or restoring must use
+ * the same canonical transaction owner"*, so both writes are reversed HERE, and
+ * no caller re-assembles the pair. It is the SAME reversal mechanism undo
+ * appends, aimed at a named entry — not a second undo authority — and a world
+ * with no outstanding removal (a coach-written exclusion, or an undo that has
+ * already appended its own reversal) appends nothing and returns false.
+ *
+ * WRITER: this file. READER: `store/quiescentBoot`'s replay set.
  */
 export function restoreExcludedExercise(
   exercise: string,
@@ -171,10 +192,83 @@ export function restoreExcludedExercise(
   }
   const previous = findExclusion(getAthleteExclusions(), identity);
   useAthletePreferencesStore.getState().removeExclusion(identity);
+  // Lazily required: `store/undoLastDecision` imports this module for the same
+  // reversal in the other direction, and a static import would close the cycle.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { annulOutstandingRemovalFor } = require('../store/undoLastDecision');
+  // The ledger stores the action VERBATIM, so its payload carries whatever the
+  // athlete's control named — which canonicalisation may have rewritten
+  // ("rdl" -> "RDLs"). Try the identity first, then the name as given; the
+  // annul is keyed on the ledger's own text and matches at most one entry.
+  const asNamed = String(exercise ?? '').trim();
+  if (!annulOutstandingRemovalFor(identity)
+    && asNamed && asNamed.toLowerCase() !== identity.toLowerCase()) {
+    annulOutstandingRemovalFor(asNamed);
+  }
   return {
     ok: true,
     exclusion: null,
     changedExistingDecision: Boolean(previous),
-    rebuildRequired: Boolean(previous) && previous!.scope !== 'today_only',
+    /**
+     * ⚠ **EVERY SCOPE NOW NEEDS THE WORLD RE-DERIVED, INCLUDING `today_only`.**
+     *
+     * This line read `previous!.scope !== 'today_only'`, and that was true while
+     * a removal was only ever a read-time filter: restoring un-hid a row the
+     * stored week still held, so nothing had to be rebuilt.
+     *
+     * **Sam, 2026-08-20 changed that premise:** *"A settings change must not
+     * re-add an excluded lift to the stored accepted program and rely on
+     * projection to hide it. Stored truth and visible truth must agree."*
+     * `generateProgram` now applies `applyExclusionsToAuthoredWeek` to the week
+     * it authors, so the FIRST generation after any removal — and boot
+     * regenerates on every launch — bakes it into storage, for all three
+     * scopes. There is then nothing left to un-hide, and a Restore that reports
+     * "no rebuild needed" reports success over an unchanged session.
+     *
+     * MEASURED 2026-08-20 (`test:session-change-durability` [2]): remove,
+     * restart, restore — the row did not come back, because this line said the
+     * world was already right.
+     */
+    rebuildRequired: Boolean(previous),
   };
+}
+
+/**
+ * RESTORE, WITH THE WORLD SETTLED ON RETURN — the door every surface takes.
+ *
+ * The exact mirror of `executeProgramControlActionDurably`, and the same shape
+ * for the same reason: the function above owns the DECISION, this owns the
+ * ACT. A caller that awaits this has a world already re-derived, so it never
+ * has to run a rebuild of its own.
+ *
+ * ⚠ **AND THE RE-DERIVATION IS THE ONLY INSTRUMENT THAT WORKS HERE.**
+ * `settleDerivedWorldAfterDecision` is `rebuildDerivedWorld` — generation under
+ * `recordSelections: 'replay'`, then the ledger replayed — so the composer
+ * RESTORES what the block recorded (`blockSelectionHistoryStore`) instead of
+ * deciding the emptied slot afresh, and the athlete's own later swaps and adds
+ * are re-applied on top of a day that has the row back. That is what returns
+ * the EXACT original item, in its place, at its load.
+ *
+ * The author-path rebuild a `rebuildRequired: true` used to buy is measurably
+ * the WRONG instrument for a restore: walked headlessly 2026-08-20 through the
+ * real Status control plus `generateProgramForProfileFromStore({
+ * recordSelections: 'author' })`, the restored lift went from 3 stored rows to
+ * **0** — re-authoring re-decides the slot, which is the one thing Sam's Remove
+ * contract forbids the app doing to a slot the athlete emptied.
+ *
+ * READER: `screens/coach/useCoachNoteActions` (My Status' "Restore exercise"),
+ * `__tests__/support/athleteJourney.restoreExercise`.
+ * TEST: `src/__tests__/exerciseRestoreOwnerTests.ts`.
+ */
+export async function restoreExcludedExerciseDurably(
+  exercise: string,
+): Promise<ExerciseExclusionTransactionResult> {
+  const result = restoreExcludedExercise(exercise);
+  if (!result.ok || !result.rebuildRequired) return result;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { settleDerivedWorldAfterDecision } = require('../store/quiescentBoot');
+  await settleDerivedWorldAfterDecision();
+  // The world IS settled. Reporting a rebuild still to come would send the
+  // caller into the author-path rebuild this door exists to keep it out of.
+  return { ...result, rebuildRequired: false };
 }

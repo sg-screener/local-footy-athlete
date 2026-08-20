@@ -221,6 +221,41 @@ export function createCoachNoteActions(input: CoachNoteActionsInput): CoachNoteA
     observeResult = true,
   ): Promise<void> => {
     const note = noteFor(noteId);
+    /**
+     * ── "RESTORE EXERCISE" TAKES THE EXCLUSION OWNER'S DURABLE DOOR ─────────
+     *
+     * The same shape the injury arm below already has, for the same reason: a
+     * clear whose world has to be RE-DERIVED cannot go through the synchronous
+     * `clear_active_modifier` route, because that route can only ASK for a
+     * rebuild and the rebuild it gets is `useProgramRebuild`'s author-path one.
+     *
+     * MEASURED 2026-08-20, walking the real control headlessly: the sync route
+     * cleared the exclusion, reported `rebuildRequired: true`, and the
+     * author-path rebuild then re-decided the emptied slot — the restored lift
+     * went from 3 stored rows to **0**, so the athlete tapped Restore and lost
+     * the exercise from their whole program. `restoreExcludedExerciseDurably`
+     * settles by re-derivation instead, which restores what the block recorded
+     * and re-applies the athlete's later swaps and adds on top of it.
+     *
+     * `excludedExercise` is the note's own field (`utils/activeCoachNotes`), so
+     * this reads the note rather than re-deriving which modifier it came from.
+     */
+    if (note?.excludedExercise) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { restoreExcludedExerciseDurably } = require('../../utils/exerciseExclusionOwner');
+      const restored = await restoreExcludedExerciseDurably(note.excludedExercise);
+      const result: ProgramControlActionResult = {
+        ok: restored.ok === true,
+        changedProgram: restored.changedExistingDecision === true,
+        // The door already settled. Asking for one more would be the
+        // author-path rebuild this route exists to avoid.
+        requiresRebuild: false,
+        fallbackToCoach: false,
+        route: 'guided_tap_flow',
+      };
+      await onResult(result);
+      return;
+    }
     if (note?.injuryEpisodeId) {
       const result = await executeProgramControlActionDurably({
         type: 'clear_injury_modifier',

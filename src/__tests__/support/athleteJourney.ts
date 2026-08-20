@@ -40,7 +40,7 @@
  * | session recorded | `commitSessionOutcomeTransaction` | `useHomeScreen.ts:1370`, `SessionFeedbackPanel.tsx:308` |
  * | a load typed in | `programStore.setWeightOverride` | `useDayWorkout.ts:218` |
  * | exercise left out | `applyExerciseExclusionDecision` | the day screen's Remove, My Status, the coach |
- * | exercise restored | `restoreExcludedExercise` | My Status' Restore |
+ * | exercise restored | `restoreExcludedExerciseDurably` | My Status' Restore |
  * | swap / remove / readiness | `executeProgramControlActionDurably` | every program-control surface |
  * | block rolled over | `rolloverProgramBlock` | `useHomeScreen`, on the day the block ends |
  * | app relaunched | `runQuiescentBoot` | `appHydrationGate.ts:190` |
@@ -83,7 +83,7 @@ import { project } from '../../rules/projectVisibleWeek';
 import { executeProgramControlActionDurably } from '../../utils/programControlActions';
 import {
   applyExerciseExclusionDecision,
-  restoreExcludedExercise,
+  restoreExcludedExerciseDurably,
 } from '../../utils/exerciseExclusionOwner';
 import {
   commitSessionOutcomeTransaction,
@@ -863,9 +863,18 @@ export function declineExtraSession(forBlockNumber: number): void {
   quiet(() => declineWeeklyCommitment({ forBlockNumber }));
 }
 
-/** "Put it back" — the same owner, the other direction. */
-export function putExerciseBack(exercise: string) {
-  return restoreExcludedExercise(exercise);
+/**
+ * "Put it back" — the same owner, the other direction, through the DOOR.
+ *
+ * `restoreExcludedExerciseDurably`, not `restoreExcludedExercise`: the plain
+ * function writes the decision, the door completes the act and settles the
+ * world. My Status' "Restore exercise" takes the door
+ * (`screens/coach/useCoachNoteActions`), so a harness that took the inner
+ * function was modelling half the control — and a removal baked into storage by
+ * any generation since is only recovered by the settle.
+ */
+export async function putExerciseBack(exercise: string) {
+  return await quietAsync(() => restoreExcludedExerciseDurably(exercise));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
