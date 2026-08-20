@@ -230,7 +230,12 @@ function injuryWithheldNamesOn(dateISO: string): string[] {
 function visibleExerciseNamesOn(dateISO: string): string[] {
   if (!dateISO) return [];
   const workout = applyExclusionsToAuthoredDay({
-    workout: resolveWorkoutOnDate(dateISO),
+    /* ⚠ **THE NAME IS THE CONTRACT: this is what the ATHLETE can see**, so it
+     * reads the visible day and not the planner's. Reading the planner's here
+     * made the before/after measurement blind to the session adjustment, the
+     * door reported "nothing changed", and the honest sentence lost its
+     * *"that means no squatting…"* tail (`test:injury-fallback-journey`). */
+    workout: visibleWorkoutOnDate(dateISO),
     dateISO,
     exclusions: liveAthleteExclusions(),
   });
@@ -240,9 +245,39 @@ function visibleExerciseNamesOn(dateISO: string): string[] {
 }
 
 /** The day as the athlete is seeing it, through the one resolver. */
+/**
+ * ⚠ **THE PLANNER'S READ, AND IT SUPPRESSES THE SESSION ADJUSTMENT (R-124).**
+ *
+ * Everything in this file that PLANS an injury reads the day through here, and
+ * what it needs is the day the athlete's own decisions and the earlier injuries
+ * left behind — not the day the screen draws. The adjustment removes paused rows
+ * and appends a block; letting a writer plan against that is how the second of
+ * two injuries came to pause `Leg Press` while the review had promised
+ * `Kettlebell Swings` (`test:session-injury-review` [9]).
+ *
+ * `visibleExerciseNamesOn` deliberately does NOT suppress it: that one is the
+ * honest before/after measurement of what the athlete can see, which is the
+ * opposite question.
+ */
 function resolveWorkoutOnDate(dateISO: string): Workout | null {
-  const state = buildScheduleStateImperative();
+  const state = { ...buildScheduleStateImperative(), suppressInjuryAdjustment: true };
   const resolved = resolveDateWithConditioning(dateISO, state);
+  return (resolved?.workout as Workout | undefined) ?? null;
+}
+
+/**
+ * ⚠ **THE HONESTY READ — THE DAY AS THE ATHLETE SEES IT, ADJUSTMENT AND ALL.**
+ *
+ * Its twin above is for PLANNING and suppresses the adjustment. This one is for
+ * CLAIMING, and must not: *"nothing unsafe is left under a claim that it is
+ * safe"* is a statement about the athlete's screen. MEASURED when the two were
+ * conflated — the refusal arm fired over a session whose unsafe rows the athlete
+ * could no longer see, and told them to *"skip those and check with a physio"*
+ * about work that was not on their session (`test:injury-fallback-journey`,
+ * five worlds).
+ */
+function visibleWorkoutOnDate(dateISO: string): Workout | null {
+  const resolved = resolveDateWithConditioning(dateISO, buildScheduleStateImperative());
   return (resolved?.workout as Workout | undefined) ?? null;
 }
 
@@ -1361,6 +1396,22 @@ export function resolveInjuryRecompositionInputs(args: {
   environment: TapSwapEnvironment;
   primaryInjury: TapSwapPrimaryInjury | null;
   trainingPaused: boolean;
+  /**
+   * R-124 — EVERY EXERCISE ANYWHERE IN THE ATHLETE'S WEEK, this day included.
+   *
+   * The session-level block may not offer something the week already carries,
+   * and the per-row loop it replaces could only ever see the current session —
+   * which is how it proposed `Band Pull-Apart` (already Tuesday's) and
+   * `Single-Arm DB Floor Press` (already Thursday's) on the same Monday.
+   *
+   * Read from the AUTHORED microcycle, not from a resolved week: this function
+   * is called from inside the resolver's own reach, and asking the resolver for
+   * the week here would be circular. Names are all the rule needs.
+   */
+  weekExerciseNames: string[];
+  /** The athlete's own removals. R-124: the block may never offer one back. */
+  excludedByAthlete: string[];
+  profile: ReturnType<typeof useProfileStore.getState>['onboardingData'];
 } {
   /**
    * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
@@ -1395,7 +1446,26 @@ export function resolveInjuryRecompositionInputs(args: {
     readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
     primaryInjury,
   });
-  return { workout, environment, primaryInjury, trainingPaused };
+  const microcycle = useProgramStore.getState().currentMicrocycle;
+  const weekExerciseNames: string[] = [];
+  for (const day of microcycle?.workouts ?? []) {
+    for (const row of day.exercises ?? []) {
+      const name = String(
+        (row as { exercise?: { name?: string } }).exercise?.name
+        ?? (row as { name?: string }).name ?? '',
+      ).trim();
+      if (name) weekExerciseNames.push(name);
+    }
+  }
+  return {
+    workout,
+    environment,
+    primaryInjury,
+    trainingPaused,
+    weekExerciseNames,
+    excludedByAthlete: liveAthleteExclusions().map((entry) => entry.exercise),
+    profile: useProfileStore.getState().onboardingData,
+  };
 }
 
 /**
@@ -1416,7 +1486,7 @@ function recomposeSessionForInjury(args: {
   date: string;
   constraint: ActiveInjuryConstraint;
   source: ProgramControlAction['source'];
-}): { changed: boolean; message: string } {
+}): { changed: boolean; message: string; substitutedRowNames: string[] } {
   // The session, the environment and the exclusion boundary are assembled by
   // `resolveInjuryRecompositionInputs` above — the SAME call the review screen
   // makes, which is what makes the review a promise this door keeps.
@@ -1425,6 +1495,7 @@ function recomposeSessionForInjury(args: {
   if (!workout) {
     return {
       changed: false,
+      substitutedRowNames: [],
       message: trainingPaused
         ? 'Affected training is paused until you get medical or physio advice.'
         : 'Injury restrictions are active. There is no session on this day to change.',
@@ -1576,23 +1647,24 @@ function recomposeSessionForInjury(args: {
      * its load, the athlete sees why each one is unavailable, and clearing the
      * injury reveals the original session by doing nothing at all. They are
      * still reported as omissions here — the sentence must name them. */
-    for (const omission of stagePlan.omissions) {
-      if (!appliedOmissions.includes(omission)) appliedOmissions.push(omission);
+    for (const paused of stagePlan.pausedRows) {
+      if (!appliedOmissions.includes(paused)) appliedOmissions.push(paused);
     }
   }
 
   const plan: InjuryRecompositionPlan = {
     unsafeRows: Array.from(unsafeSeen),
     substitutions: appliedSubstitutions,
-    omissions: appliedOmissions,
+    pausedRows: appliedOmissions,
     untouched: [],
   };
   if (refused.length > 0) {
     logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
   }
 
+  /* THE ATHLETE'S OWN SCREEN, not the planner's day — see `visibleWorkoutOnDate`. */
   const after = applyExclusionsToAuthoredDay({
-    workout: resolveWorkoutOnDate(args.date),
+    workout: visibleWorkoutOnDate(args.date),
     dateISO: args.date,
     exclusions: liveAthleteExclusions(),
   });
@@ -1600,10 +1672,13 @@ function recomposeSessionForInjury(args: {
   const applied: InjuryRecompositionPlan = {
     ...plan,
     substitutions: appliedSubstitutions,
-    omissions: appliedOmissions,
+    pausedRows: appliedOmissions,
   };
   return {
     changed: appliedSubstitutions.length > 0 || appliedOmissions.length > 0,
+    /* R-124 — the rows a rung 1-4 answer really did replace. Handed to
+     * `describeVisibleInjuryChange` so it never has to guess a pairing. */
+    substitutedRowNames: appliedSubstitutions.map((substitution) => substitution.from),
     message: injuryRecompositionMessage({ plan: applied, remainingUnsafe, trainingPaused }),
   };
 }
@@ -1731,7 +1806,8 @@ async function executeProgramControlActionDurablyWithinTrace(
       after: injuryRowsAfter,
       remainingUnsafe: unsafeRowsForInjury({
         workout: applyExclusionsToAuthoredDay({
-          workout: resolveWorkoutOnDate(injuryDate),
+          /* The claim is about the athlete's screen, so it reads the screen. */
+          workout: visibleWorkoutOnDate(injuryDate),
           dateISO: injuryDate,
           exclusions: liveAthleteExclusions(),
         }),
@@ -1750,6 +1826,7 @@ async function executeProgramControlActionDurablyWithinTrace(
         }),
       }) as string[],
       trainingPaused: action.payload.constraint!.adjustmentLevel === 'training_paused',
+      substitutedRowNames: recomposition.substitutedRowNames,
     });
     return {
       ok,

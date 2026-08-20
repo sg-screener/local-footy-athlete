@@ -74,16 +74,68 @@ export interface InjurySubstitution {
   to: TapSwapChoice;
 }
 
+/**
+ * ── R-124: THE FOUR RUNGS THAT MAY SPEAK FOR ONE EXERCISE ─────────────────
+ *
+ * Sam, 2026-08-21: *"Preserve the existing ordered ladder through: 1. same
+ * movement, 2. secondary compound, 3. accessory or isometric for the same
+ * muscles, 4. safe adjacent pattern. **Those remain per-exercise
+ * replacements.** If those stages find nothing safe, do not describe unrelated
+ * upper-body work as replacing that specific lower-body exercise."*
+ *
+ * Rungs 1-2 carry the tier `same_movement_pattern`, rungs 3-4
+ * `similar_muscle_group`. Rung 5 (`unaffected_body_area`) and rung 6
+ * (`recovery_easy_conditioning`) are still WALKED and still answer the question
+ * *"what is safe for this athlete today"* — they simply may no longer answer it
+ * **in the name of one particular exercise**, which is what an arrow claims.
+ *
+ * ⚠ **MEASURED BEFORE THE CHANGE (`npm run probe:injury-review-pairings`).**
+ * Knee 7/10, the athlete's real Monday: rungs 1-4 accepted **0 candidates for
+ * all five blocked rows** while rung 5 accepted 44-73, so every arrow on that
+ * screen was the loop handing each row the next unused name off one long list.
+ * `Back Squat -> Chest-Supported DB Row` and `RDLs -> Single-Arm DB Floor Press`
+ * would have swapped partners if the rows had been ordered differently, and two
+ * of the five were already elsewhere in the same week.
+ *
+ * ⚠ **AND RUNGS 1-4 ARE NOT DEAD — THEY ARE WHY THIS IS A NARROW CHANGE.** The
+ * same sweep at the same band: Lower back on Tue/Thu, Shoulder on Mon, Elbow on
+ * Tue and Neck on Thu all get real per-exercise answers from them, and those
+ * arrows are untouched. It is every LOWER-LIMB region on the lower-body day
+ * where they are structurally empty, because Sam's matrix rates 0 of 9 squats,
+ * 0 of 7 lunges and 0 of 8 hinges `good` for any lower limb.
+ */
+const PER_EXERCISE_TIERS: readonly TapSwapChoice['hierarchyTier'][] = [
+  'same_movement_pattern',
+  'similar_muscle_group',
+];
+
+export function isPerExerciseReplacementTier(
+  tier: TapSwapChoice['hierarchyTier'] | null | undefined,
+): boolean {
+  return !!tier && PER_EXERCISE_TIERS.includes(tier);
+}
+
 export interface InjuryRecompositionPlan {
   /** Rows the injury makes unsafe. Empty means the session was already safe. */
   unsafeRows: string[];
   substitutions: InjurySubstitution[];
   /**
-   * Unsafe rows the ladder had NOTHING legal for. Sam: *"honest omission ...
-   * when nothing safe exists"* — they come OFF the session and are named, they
-   * are not left on it under a sentence saying the session is safe.
+   * ── PAUSED (was `omissions`, and the rename is the ruling) ───────────────
+   *
+   * Unsafe rows that **rungs 1-4** had nothing legal for. Until R-124 this
+   * meant "the whole ladder had nothing", which almost never happened because
+   * rung 5 always had something — that is exactly how five arbitrary upper-body
+   * pairings got drawn as swaps. It now means what Sam calls it: *"clearly
+   * state which lower-body patterns are paused"*.
+   *
+   * ⚠ **STILL NOT A DELETION AND STILL NOTHING WRITTEN.** R-115's mechanism is
+   * unchanged: the accepted program keeps every row and its load, and the day
+   * the athlete sees is a read-time projection from the injury FACT. What
+   * changed is only how that projection PRESENTS them — Sam, 2026-08-21: *"The
+   * five paused exercises appear in the review, but disappear from the active
+   * workout after Apply. Do not show five greyed-out SKIP cards."*
    */
-  omissions: string[];
+  pausedRows: string[];
   /** Rows the injury does not touch. */
   untouched: string[];
 }
@@ -154,7 +206,7 @@ export function planInjuryRecomposition(args: {
     environment: args.environment,
   });
   const substitutions: InjurySubstitution[] = [];
-  const omissions: string[] = [];
+  const pausedRows: string[] = [];
   // Every row that is staying, so the ladder cannot offer something the session
   // already has — and so an earlier substitution's choice cannot be chosen twice.
   const taken = rows.filter((name) => !unsafeRows.includes(name));
@@ -208,17 +260,23 @@ export function planInjuryRecomposition(args: {
         // ("what is safe") separate from this one's ("what does THIS session
         // still need").
         && !taken.some((name) => name.toLowerCase() === candidate.name!.toLowerCase()));
-    if (choice?.name) {
+    /* ⚠ **THE TIER IS THE WHOLE TEST NOW.** A rung-5 or rung-6 answer is still
+     * a perfectly safe thing for this athlete to do today — it is simply not a
+     * replacement FOR THIS ROW, and writing it into `{ from, to }` is what drew
+     * the arrow. It reaches the athlete through the session-level adjustment
+     * instead (`rules/injurySessionAdjustment`), attached to the SESSION and
+     * named against nothing. */
+    if (choice?.name && isPerExerciseReplacementTier(choice.hierarchyTier)) {
       substitutions.push({ from: name, to: choice });
       taken.push(choice.name);
       continue;
     }
-    omissions.push(name);
+    pausedRows.push(name);
   }
   return {
     unsafeRows,
     substitutions,
-    omissions,
+    pausedRows,
     untouched: rows.filter((name) => !unsafeRows.includes(name)),
   };
 }
@@ -287,6 +345,12 @@ export function injuryRecompositionMessage(args: {
   plan: InjuryRecompositionPlan;
   remainingUnsafe: readonly string[];
   trainingPaused: boolean;
+  /**
+   * R-124's session-level block, by name. Supplied by the caller for the same
+   * reason `untrainedInWords` is: the plan describes rows that LEFT, and what
+   * ARRIVED is a property of the day, not of any row on it.
+   */
+  addedInWords?: readonly string[];
   /** R-103's partial-coverage disclosure, in the athlete's words. */
   untrainedInWords?: readonly string[];
 }): string {
@@ -321,10 +385,17 @@ export function injuryRecompositionMessage(args: {
       ? `${listInWords(from)} swapped for ${listInWords(to)}`
       : `${listInWords(from)} swapped for a safe option`);
   }
-  if (plan.omissions.length > 0) {
-    // NAMED, not counted. An omission is work the athlete is not doing, and
+  if (plan.pausedRows.length > 0) {
+    // NAMED, not counted. A paused row is work the athlete is not doing, and
     // "1 exercise removed" tells them nothing about what to make up.
-    parts.push(`${plan.omissions.join(', ')} left out — nothing safe was available`);
+    parts.push(`${listInWords(plan.pausedRows)} paused`);
+    /* ⚠ **THE ADDED BLOCK IS ITS OWN CLAUSE AND IS NEVER PAIRED WITH THEM.**
+     * R-124, Sam: *"Do not show false arrows between unrelated exercises."* An
+     * arrow in a sentence is still an arrow. */
+    const added = args.addedInWords ?? [];
+    parts.push(added.length > 0
+      ? `${listInWords(added)} added instead`
+      : 'nothing safe was available to add in their place');
   }
   const message = `Injury restrictions are active. ${parts.join('; ')}.`;
   /* ⚠ **THE UNTRAINED SET IS PASSED IN, NOT DERIVED FROM THE PLAN.**
@@ -364,30 +435,51 @@ export function describeVisibleInjuryChange(args: {
   after: readonly string[];
   remainingUnsafe: readonly string[];
   trainingPaused: boolean;
+  /**
+   * R-124 — the rows a rung 1-4 answer really did replace, by name. Anything
+   * else that left is PAUSED. Omitted means none, which is the truthful default:
+   * a caller that does not know the pairing must not have one invented for it.
+   */
+  substitutedRowNames?: readonly string[];
 }): { changed: boolean; message: string } {
   const before = [...args.before];
   const after = [...args.after];
   const gone = before.filter((name) => !after.includes(name));
   const arrived = after.filter((name) => !before.includes(name));
   const changed = gone.length > 0 || arrived.length > 0 || before.length !== after.length;
-  // A ROW THAT LEFT IS ONLY AN OMISSION IF NOTHING ARRIVED FOR IT. Pairing by
-  // count rather than by identity is deliberate: the ladder does not promise a
-  // one-to-one mapping and inventing one would name the wrong exercise.
-  const substitutionCount = Math.min(gone.length, arrived.length);
-  const omissions = gone.slice(substitutionCount);
+  /**
+   * ⚠ **THE COUNT-PAIRING IS GONE, AND DELETING IT IS HALF OF R-124.**
+   *
+   * This used to read `substitutionCount = min(gone, arrived)` and pair the
+   * first N departures with the first N arrivals *"deliberately … by count
+   * rather than by identity"*. That was a fair description of the world it was
+   * written in, where every arrival really had displaced a row. It is a false
+   * one now: the session-level block arrives for the SESSION, so pairing it by
+   * count would rebuild the exact arrows Sam had removed one layer up —
+   * *"5 gone, 3 arrived"* would print *"Vertical Jump swapped for Chest
+   * Supported Row"*, which is not true of anything.
+   *
+   * **A CALLER THAT KNOWS THE PAIRING PASSES IT.** `substitutedNames` is the
+   * rungs-1-4 set, which really is one-for-one; everything else that left is
+   * paused and everything else that arrived is the block.
+   */
+  const substitutedNames = new Set(args.substitutedRowNames ?? []);
+  const substitutions = gone
+    .filter((name) => substitutedNames.has(name))
+    .map((name) => ({ from: name, to: { name: null } as unknown as TapSwapChoice }));
+  const pausedRows = gone.filter((name) => !substitutedNames.has(name));
   return {
     changed,
     message: injuryRecompositionMessage({
       plan: {
         unsafeRows: gone,
-        substitutions: Array.from({ length: substitutionCount }, (_, index) => ({
-          from: gone[index]!,
-          to: { name: arrived[index]! } as unknown as TapSwapChoice,
-        })),
-        omissions,
-      } as InjuryRecompositionPlan,
+        substitutions,
+        pausedRows,
+        untouched: [],
+      },
       remainingUnsafe: args.remainingUnsafe,
       trainingPaused: args.trainingPaused,
+      addedInWords: arrived,
       // R-103's disclosure, from the REAL rows this function was handed.
       untrainedInWords: untrainedPatternsInWords({ before, after }),
     }),

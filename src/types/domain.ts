@@ -886,6 +886,31 @@ export interface AuthoredDayIdentity {
 }
 
 export interface Workout {
+  /**
+   * R-124 — THE SESSION-LEVEL INJURY ADJUSTMENT, DERIVED, NEVER STORED.
+   *
+   * Sam, 2026-08-21: *"The five paused exercises appear in the review, but
+   * disappear from the active workout after Apply … show one concise summary."*
+   *
+   * Written by `utils/injurySessionAdjustment.applyInjurySessionAdjustment` at
+   * the VIEW doors only — the same door and the same discipline as
+   * `unavailableForInjury` below. The accepted program carries none of it, so
+   * clearing the injury restores the original session by doing nothing.
+   *
+   * `paused` is carried even though those rows are no longer in `exercises`,
+   * because the red-flag completion refusal asks whether the injury is
+   * withholding anything and a hidden row is still withheld.
+   *
+   * WRITER: `utils/injurySessionAdjustment`. READERS: the session screen (the
+   * summary line) and `rules/injuryWithheldRows.injurySessionOutcomeRefusal`.
+   * TEST: `test:injury-session-adjustment`.
+   */
+  injuryAdjustment?: {
+    summary: string;
+    paused: string[];
+    added: string[];
+  };
+
   id: string;
   microcycleId: string;
   dayOfWeek: number; // 0-6 (Sunday-Saturday)

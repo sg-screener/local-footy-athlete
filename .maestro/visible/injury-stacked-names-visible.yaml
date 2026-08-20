@@ -1,0 +1,140 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - a second injury acts on the exercises the athlete can see
+tags:
+  - e2e
+  - visible
+---
+# R-121 + R-124, Sam 2026-08-21: *"the second injury reviews and changes the
+# exercises currently visible to the athlete, not the older originals
+# underneath."*
+#
+# The first injury really swaps rows. The second injury's review must then name
+# the rows the FIRST one produced — the ones on screen — and never the authored
+# exercises underneath them.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+
+# ── INJURY ONE — an upper-body injury, which this session CAN answer per row ──
+- tapOn:
+    id: "session-change-injury"
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Upper body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-shoulder"
+    timeout: 10000
+- tapOn:
+    id: "injury-area-shoulder"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-moderate"
+    timeout: 10000
+- tapOn:
+    id: "injury-severity-moderate"
+- extendedWaitUntil:
+    visible:
+      id: "injury-trigger-pressing"
+    timeout: 10000
+- tapOn:
+    id: "injury-trigger-pressing"
+- tapOn: "Apply training adjustment"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-edit-sheet"
+    timeout: 20000
+- takeScreenshot: artifacts/shell/60-first-injury-review
+- scrollUntilVisible:
+    element:
+      id: "injury-review-apply"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "injury-review-apply"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 20000
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-1-vertical-jump"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- takeScreenshot: artifacts/shell/61-session-after-first-injury
+# The strength list is open now, so the hub is below the fold — scroll to it
+# rather than tapping at a coordinate that used to work.
+- scrollUntilVisible:
+    element:
+      id: "session-change-injury"
+    direction: DOWN
+    timeout: 10000
+
+# ── INJURY TWO — the knee, on the session the first one left behind ──────────
+- tapOn:
+    id: "session-change-injury"
+- extendedWaitUntil:
+    visible: "Upper body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible:
+      id: "injury-area-knee"
+    timeout: 10000
+- tapOn:
+    id: "injury-area-knee"
+- extendedWaitUntil:
+    visible:
+      id: "injury-severity-moderate"
+    timeout: 10000
+- tapOn:
+    id: "injury-severity-moderate"
+- extendedWaitUntil:
+    visible:
+      id: "injury-trigger-squatting-lunging"
+    timeout: 10000
+- tapOn:
+    id: "injury-trigger-squatting-lunging"
+- tapOn: "Apply training adjustment"
+- extendedWaitUntil:
+    visible:
+      id: "injury-review-paused"
+    timeout: 20000
+# THE PROOF: the paused list here is the rows the FIRST injury put on the
+# session, by the names the athlete has been looking at.
+- takeScreenshot: artifacts/shell/62-second-injury-names-visible-rows
+- scrollUntilVisible:
+    element:
+      id: "injury-review-apply"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "injury-review-apply"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 20000
+- tapOn: "Done"
+# ⚠ **NO SUMMARY LINE IS ASSERTED HERE, AND THAT IS THE RULE WORKING.** With a
+# shoulder AND a knee at 7/10 there is nothing safe left to add, so the block is
+# empty — and an empty block means the rows STAY, marked, rather than the athlete
+# being left with a blank session. That is R-115's full-stop behaviour, kept
+# deliberately (`utils/injurySessionAdjustment.applyInjurySessionAdjustment`).
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- takeScreenshot: artifacts/shell/63-session-after-both-injuries

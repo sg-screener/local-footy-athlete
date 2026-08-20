@@ -476,7 +476,9 @@
     "test:injury-fallback-journey": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryFallbackJourneyTests.ts",
     "seed:injury-fallback": "TZ=Australia/Melbourne sucrase-node scripts/seed-injury-fallback.ts",
     "test:coach-weekly-reduction": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachWeeklyReductionTests.ts",
-    "test:session-action-shell": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionActionShellTests.ts"
+    "test:session-action-shell": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionActionShellTests.ts",
+    "probe:injury-review-pairings": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-review-pairings.ts",
+    "test:injury-session-adjustment": "TZ=Australia/Melbourne sucrase-node src/__tests__/injurySessionAdjustmentTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

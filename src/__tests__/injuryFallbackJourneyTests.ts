@@ -1020,30 +1020,65 @@ async function main(): Promise<void> {
        the inert-relaunch shape `test:settings-persistence` M8 was written for.
        Called the way this same file's sections [4] and [8] already call it. */
     await relaunchApp({ storage: localStorageData, todayISO: target });
-    const weekStart2 = install();
-    const ordinaryTarget = '2026-07-20';
-    setJourneyClock(ordinaryTarget);
-    await quietAsync(() => executeProgramControlActionDurably({
-      type: 'set_injury_modifier',
-      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
-      scope: 'current_and_future',
-      payload: { constraint: buildGuidedInjuryConstraint({
-        region: 'lower_body', area: 'hamstring', severity: 8,
-        severityBand: 'avoid', adjustmentLevel: 'training_paused',
-        triggers: ['during'], seriousSymptoms: false,
-      } as never, { todayISO: ordinaryTarget }) },
-      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
-    }, { todayISO: ordinaryTarget }));
-    const ordinaryWeek = quiet(() => buildProgramTabProjectedWeek({
-      mondayISO: weekStart2, todayISO: ordinaryTarget,
-      state: buildScheduleStateImperative(),
-      overrideContexts: (useProgramStore.getState() as unknown as {
-        overrideContexts?: Record<string, unknown> }).overrideContexts ?? {},
-    })) as Array<{ date: string; workout?: Workout | null }>;
-    const ordinaryRows = (ordinaryWeek.find((d) => d.date === ordinaryTarget)?.workout?.exercises
-      ?? []) as Array<{ exercise?: { name?: string };
-        unavailableForInjury?: { explanation?: string };
-        substitutedFrom?: { baseExerciseName?: string; cause?: string } }>;
+    /* ⚠ **THE ORDINARY INJURY IS SEARCHED FOR NOW, AND R-124 IS WHY.**
+     *
+     * It was a fixed `hamstring 8/10`, and the cells below need a world where an
+     * injury really does SUBSTITUTE a row — that is the whole subject of
+     * *"a substitution carries no withheld mark"*. Only rungs 1-4 may produce a
+     * substitution now, and MEASURED across every region at the limiting bands,
+     * rungs 1-4 accept ZERO for any LOWER-LIMB injury on a lower-body day: Sam's
+     * matrix rates 0 of 9 squats, 0 of 7 lunges and 0 of 8 hinges `good` for any
+     * lower limb. **The property is untouched and plenty of worlds still reach
+     * it** — upper-limb and midline regions get real per-exercise answers — so
+     * the world is found rather than the expectation lowered.
+     *
+     * Every attempt goes through the REAL door on a REAL generated week and
+     * re-installs first, so no attempt inherits the last one's injury. */
+    const ORDINARY_CANDIDATES = [
+      { region: 'lower_body', area: 'hamstring', severity: 8, severityBand: 'avoid', adjustmentLevel: 'training_paused' },
+      { region: 'upper_body', area: 'Shoulder', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+      { region: 'back_midline', area: 'Lower back', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+      { region: 'upper_body', area: 'Elbow', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+      { region: 'upper_body', area: 'Neck', severity: 7, severityBand: 'moderate', adjustmentLevel: 'moderate' },
+    ];
+    type OrdinaryRow = {
+      exercise?: { name?: string };
+      unavailableForInjury?: { explanation?: string };
+      substitutedFrom?: { baseExerciseName?: string; cause?: string };
+    };
+    let weekStart2 = install();
+    let ordinaryTarget = '2026-07-20';
+    let ordinaryRows: OrdinaryRow[] = [];
+    for (const candidate of ORDINARY_CANDIDATES) {
+      for (const offset of [0, 1, 2, 3, 4, 5, 6]) {
+        weekStart2 = install();
+        const day = addDaysISO(weekStart2, offset);
+        setJourneyClock(day);
+        await quietAsync(() => executeProgramControlActionDurably({
+          type: 'set_injury_modifier',
+          source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+          scope: 'current_and_future',
+          payload: { constraint: buildGuidedInjuryConstraint({
+            ...candidate, triggers: ['during'], seriousSymptoms: false,
+          } as never, { todayISO: day }) },
+          requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+        }, { todayISO: day }));
+        const week = quiet(() => buildProgramTabProjectedWeek({
+          mondayISO: weekStart2, todayISO: day,
+          state: buildScheduleStateImperative(),
+          overrideContexts: (useProgramStore.getState() as unknown as {
+            overrideContexts?: Record<string, unknown> }).overrideContexts ?? {},
+        })) as Array<{ date: string; workout?: Workout | null }>;
+        const rows = (week.find((d) => d.date === day)?.workout?.exercises ?? []) as OrdinaryRow[];
+        if (rows.some((row) => row.substitutedFrom?.cause === 'injury')) {
+          ordinaryTarget = day;
+          ordinaryRows = rows;
+          break;
+        }
+        if (ordinaryRows.length === 0) ordinaryRows = rows;
+      }
+      if (ordinaryRows.some((row) => row.substitutedFrom?.cause === 'injury')) break;
+    }
     ok('[11] CONTROL — an ordinary injury really did SUBSTITUTE on this day',
       ordinaryRows.some((r) => r.substitutedFrom?.cause === 'injury'),
       ordinaryRows.map((r) => `${r.exercise?.name}<-${r.substitutedFrom?.baseExerciseName ?? '-'}`));

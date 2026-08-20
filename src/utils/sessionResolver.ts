@@ -43,6 +43,10 @@ import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
 import {
+  applyInjurySessionAdjustment,
+  injurySessionAdjustmentForDay,
+} from './injurySessionAdjustment';
+import {
   applyExclusionsToAuthoredDay,
   type ExerciseExclusion,
 } from '../rules/exerciseExclusions';
@@ -136,6 +140,29 @@ export interface ScheduleState {
    * so the deriver can hand it on; nothing in this file applies it.
    */
   removalDecisions?: readonly UserRemovalConstraint[];
+  /**
+   * ── R-124: A PLANNER MUST SEE THE DAY AS IT IS, NOT AS IT IS DRAWN ────────
+   *
+   * The injury session adjustment REMOVES the paused rows and APPENDS a block,
+   * which is the one thing `markInjuryWithheldRows` has always refused to do
+   * ("MARK, NEVER FILTER") — and for exactly this reason: the injury
+   * recomposition owner reads the day back through this same resolver
+   * (`programControlActions.resolveWorkoutOnDate`), so a projection that
+   * reshapes the row list reshapes what the WRITER plans against.
+   *
+   * MEASURED by `test:session-injury-review` [9]: with two injuries, the review
+   * promised to pause `Kettlebell Swings` and `Glute Bridge` — the rows the
+   * athlete could see — while the session paused `Leg Press` and
+   * `Bulgarian Split Squats`, the authored rows underneath, because the first
+   * injury's substitutions were planned against a day the projection had
+   * already stripped. That is R-121 broken from a new direction.
+   *
+   * So the planner's read sets this and gets the day the athlete's decisions and
+   * the earlier injuries actually left behind. **The VIEW doors leave it unset**,
+   * exactly as they leave `temporarySourceFacts` set — one flag, one direction,
+   * and the asymmetry is the point.
+   */
+  suppressInjuryAdjustment?: boolean;
   /**
    * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
    *
@@ -910,9 +937,49 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
    * `state.temporarySourceFacts` is supplied by the VIEW doors, so a
    * canonicalising caller carries none and marks nothing. */
   const dayInjuryFacts = state.temporarySourceFacts ?? [];
-  const withhold = <T extends Workout | null>(workout: T): T => markInjuryWithheldRows({
+  /**
+   * ── R-124: THE PAUSED ROWS COME OFF AND THE BLOCK GOES ON, HERE ──────────
+   *
+   * Same door, same fact, same reason as the marking below it: this is a
+   * READ-TIME projection, `state.temporarySourceFacts` is supplied by the VIEW
+   * doors only, and a canonicalising caller therefore carries none and adjusts
+   * nothing. **That is the whole of Sam's eighth requirement** — *"Clearing the
+   * injury must restore the exact original session, including after restart"* —
+   * because the accepted week never learns about any of it.
+   *
+   * The week's names come from the AUTHORED microcycle, never from a resolved
+   * week: asking the resolver for the week from inside the resolver is circular,
+   * and names are all the "don't duplicate what the week already has" rule needs.
+   */
+  const weekExerciseNames: string[] = [];
+  for (const day of state.currentMicrocycle?.workouts ?? []) {
+    for (const row of day.exercises ?? []) {
+      const name = String(
+        (row as { exercise?: { name?: string } }).exercise?.name
+        ?? (row as { name?: string }).name ?? '',
+      ).trim();
+      if (name) weekExerciseNames.push(name);
+    }
+  }
+  const adjust = <T extends Workout | null>(workout: T): T => (
+    state.suppressInjuryAdjustment ? workout : applyInjurySessionAdjustment({
+    workout,
+    adjustment: injurySessionAdjustmentForDay({
+      workout,
+      dateISO: date,
+      facts: dayInjuryFacts,
+      profile: state.athleteContext?.onboardingData ?? null,
+      weekExerciseNames,
+      /* The athlete's own removals — the block may never offer one back. Same
+       * field the exclusion boundary above reads, and supplied by the VIEW
+       * doors for the same reason. */
+      excludedByAthlete: (state.athleteExclusions ?? []).map((entry) => entry.exercise),
+    }),
+    })
+  );
+  const withhold = <T extends Workout | null>(workout: T): T => adjust(markInjuryWithheldRows({
     workout, dateISO: date, facts: dayInjuryFacts,
-  });
+  }));
   const composedWorkout = withhold(applyExclusionsToAuthoredDay({
     workout: composed.workout,
     dateISO: date,
