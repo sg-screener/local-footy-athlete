@@ -4594,6 +4594,14 @@ const futureWeeksIcon = (color: string) => <LfaIcon name="future-weeks" color={c
 // Styles
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * The horizontal inset inside an exercise card — where its content starts and
+ * where its checkbox ends. Declared once because the "Select all" row has to
+ * land on exactly the same line (Sam, 2026-08-22), and a second copy of 13
+ * would drift the first time either is touched.
+ */
+const EXERCISE_CARD_INSET = 13;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   smokeContractMarkerRoot: {
@@ -4907,8 +4915,8 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     paddingTop: 16,
     paddingBottom: 16,
-    paddingLeft: 13,
-    paddingRight: 13,
+    paddingLeft: EXERCISE_CARD_INSET,
+    paddingRight: EXERCISE_CARD_INSET,
     ...shadows.none,
   },
 
@@ -5488,13 +5496,25 @@ const styles = StyleSheet.create({
    * on a `#0C0C0C` screen — six values apart at hairline width, which is to say
    * nothing at all — so removing it changes the spacing and not the picture.
    */
-  /* The row sits under the last exercise card and puts its tick on the same
-     right-hand line every row's tick uses, so the column reads as one column. */
+  /**
+   * ⚠ **IT SHARES THE CARD'S INSET, IT DOES NOT MATCH IT BY EYE.**
+   *
+   * Sam, 2026-08-22: *"make sure the check box lines up perfectly with the
+   * other check boxes - right now it's lined up inside the others"*. It was:
+   * this row carried `paddingHorizontal: spacing.md` (16) on top of
+   * `scrollContent`'s own 16, while an exercise tick sits inside a card whose
+   * inset is 13 — so every tick above it stood 3px further out.
+   *
+   * `EXERCISE_CARD_INSET` is now the one number both read. Two literals that
+   * happen to agree are two literals that stop agreeing; a shared constant is
+   * what makes "perfectly" survive the next edit to either.
+   */
   selectAllRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
+    paddingLeft: EXERCISE_CARD_INSET,
+    paddingRight: EXERCISE_CARD_INSET,
     paddingVertical: spacing.sm,
     marginTop: spacing.sm,
   },

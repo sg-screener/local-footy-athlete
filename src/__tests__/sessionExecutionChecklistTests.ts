@@ -938,7 +938,14 @@ ok('[10] every exercise sits in one comfortable container, to spec',
   /exerciseCard:\s*\{[^}]*borderWidth:\s*StyleSheet\.hairlineWidth/.test(screen)
     && /exerciseCard:\s*\{[^}]*borderRadius:\s*1[012]\b/.test(screen)
     && /exerciseCard:\s*\{[^}]*paddingTop:\s*16[^}]*paddingBottom:\s*16/.test(screen)
-    && /exerciseCard:\s*\{[^}]*paddingLeft:\s*1[234][^}]*paddingRight:\s*1[234]/.test(screen)
+    /* The inset is a NAMED CONSTANT since 2026-08-22 — the "Select all" row has
+       to land on exactly the same line as an exercise's checkbox, and two
+       literals that happen to agree are two literals that stop agreeing. The
+       spec is still pinned: the constant's own value must be 12-14, and the
+       card must read it rather than carry its own number. */
+    && /const EXERCISE_CARD_INSET = 1[234];/.test(screen)
+    && /exerciseCard:\s*\{[^}]*paddingLeft:\s*EXERCISE_CARD_INSET[^}]*paddingRight:\s*EXERCISE_CARD_INSET/.test(screen)
+    && /selectAllRow:\s*\{[^}]*paddingLeft:\s*EXERCISE_CARD_INSET[^}]*paddingRight:\s*EXERCISE_CARD_INSET/.test(screen)
     && /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen)
     && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen));
 
