@@ -695,8 +695,23 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     () => getConditioningLoggingConfig(workout),
     [workout],
   );
+  /**
+   * ⚠ **THE GYM FORM'S COMPONENTS ARE THE GYM'S — CLUB TRAINING IS FILTERED
+   * OUT** (Sam, 2026-08-21/22).
+   *
+   * `getSessionComponents` still returns `team_training` for a club night, and
+   * it must: the club form itself uses that entry to name what it is writing.
+   * But this form asking *"Did you complete team training?"* is the very thing
+   * the split removed, and worse — the gym save would then write a completion
+   * for a component the athlete answered in the OTHER form, overwriting it.
+   *
+   * Filtered HERE rather than in the owner, because the owner is right: the
+   * component exists. What changed is who asks about it.
+   */
   const sessionComponents = useMemo(
-    () => getSessionComponents(workout),
+    () => getSessionComponents(workout).filter(
+      (component) => component.kind !== 'team_training',
+    ),
     [workout],
   );
   const existingDraft = draftFromExistingFeedback(existing, sessionComponents);
