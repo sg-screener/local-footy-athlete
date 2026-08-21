@@ -25,7 +25,11 @@ import {
   isReintroducing,
   REINTRODUCTION_STEP,
 } from '../rules/injuryReintroduction';
-import { applyInjuryFilterToWorkout } from '../utils/injuryWorkoutFilter';
+import {
+  normalizeInjuryEpisode,
+  deriveInjuryConstraintFromEpisode,
+  deriveInjuryConstraintsFromEpisodes,
+} from '../rules/injuryEpisode';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -59,54 +63,34 @@ function ok(name: string, cond: boolean, detail?: string) {
   ok('isReintroducing false with no prior', !isReintroducing({ currentSeverity: 4 }));
 }
 
-// ── 2. Resolver filter — hamstring (tag-recognised triggers) ──
-function ex(name: string) {
-  return {
-    id: `we-${name}`, workoutId: 'wk', exerciseId: `ex-${name}`, exerciseOrder: 0,
-    prescribedSets: 3, prescribedRepsMin: 6, prescribedRepsMax: 6, restSeconds: 90,
-    exercise: { id: name, name, description: '', exerciseType: 'Compound', muscleGroups: [], equipmentRequired: [], difficultyLevel: 'Intermediate', createdAt: '', updatedAt: '' } as any,
-    createdAt: '', updatedAt: '',
-  };
-}
-function lowerWorkout() {
-  return {
-    id: 'wk', microcycleId: 'm', dayOfWeek: 1, name: 'Lower Body Strength', description: '',
-    durationMinutes: 60, intensity: 'Moderate', workoutType: 'Strength', sessionTier: 'core',
-    exercises: [ex('Deadlift'), ex('RDLs'), ex('Goblet Squat')],
-    createdAt: '', updatedAt: '',
-  } as unknown as Workout;
-}
-function names(w: Workout) { return w.exercises.map((e) => e.exercise?.name); }
-function ham(severity: number, priorSeverity?: number) {
-  return { bodyPart: 'hamstring', bucket: 'hamstring', severity, status: 'improving' as const, priorSeverity };
-}
+// ══ SECTION 2 IS DELETED WITH ITS VEHICLE — AND ITS CLAIM IS NOT COVERED ══
+//
+// It drove `applyInjuryFilterToWorkout`, the read-time injury filter the
+// 2026-08-19 burn removed. Sam ordered it NOT rebuilt and its behaviour measured
+// against the current owners instead. Three of the filter's four claims ARE
+// covered (see `injuryCanonicalisationTests`). THIS ONE IS NOT.
+//
+// MEASURED on the real doors, real week, real athlete
+// (`npm run probe:injury-filter-coverage`, lane REINTRODUCTION):
+//   9/10 then 4/10  -> visible ["Leg Press","Glute Bridge","Bulgarian Split
+//                      Squats","Single-Leg RDL","Band Pallof Press"], withheld 0
+//   a fresh 4/10    -> the SAME five rows, withheld 0
+//   differs: NO.
+//
+// The staged return does not happen. An athlete coming down from a severe
+// hamstring gets their full hinge work back the moment they report a 4, exactly
+// as if they had never been hurt.
+//
+// THE CAUSE, MEASURED: `rules/injuryReintroduction.ts` — the module the cells
+// below still exercise — has ZERO production callers.
+// `stageReintroductionSeverity` and `isReintroducing` are computed by nobody, so
+// no effective severity ever reaches the gates the module's own header says it
+// feeds. The rule is written and correct; it is simply not wired.
+//
+// THE CELLS BELOW ARE KEPT ON PURPOSE. They hold the staging rule itself, so
+// whoever wires it has a specification to wire it to. They do NOT prove the
+// athlete is protected — only the probe above can speak to that, and it says no.
 
-{
-  // Fresh moderate (4, no history): heavy hinge Deadlift is only 'caution' → kept.
-  const fresh4 = applyInjuryFilterToWorkout(lowerWorkout(), ham(4));
-  ok('fresh moderate keeps heavy hinge (Deadlift caution)', names(fresh4).includes('Deadlift'), names(fresh4).join(','));
-
-  // Reported 4 but jumped down from a severe 8: staged to effective 6 → Deadlift
-  // becomes 'avoid' and is removed. No jump straight back to heavy hinge.
-  const jumped = applyInjuryFilterToWorkout(lowerWorkout(), ham(4, 8));
-  ok('8→(reported 4) does NOT reintroduce heavy hinge (Deadlift removed)', !names(jumped).includes('Deadlift'), names(jumped).join(','));
-  ok('8→(reported 4) still removes RDLs (avoid)', !names(jumped).includes('RDLs'), names(jumped).join(','));
-  ok('8→(reported 4) keeps safe alternative (Goblet Squat)', names(jumped).includes('Goblet Squat'), names(jumped).join(','));
-
-  // Reported mild 2 but jumped from 8: staged to effective 6 → RDLs still out.
-  const mildFromSevere = applyInjuryFilterToWorkout(lowerWorkout(), ham(2, 8));
-  ok('8→(reported 2) does NOT reintroduce RDLs (held at effective 6)', !names(mildFromSevere).includes('RDLs'), names(mildFromSevere).join(','));
-
-  // Genuinely mild (2, no history) OR a gradual 4→2 step: mostly restored — RDLs kept.
-  const trulyMild = applyInjuryFilterToWorkout(lowerWorkout(), ham(2));
-  ok('genuinely mild keeps most training (RDLs present)', names(trulyMild).includes('RDLs'), names(trulyMild).join(','));
-  const gradual = applyInjuryFilterToWorkout(lowerWorkout(), ham(2, 4));
-  ok('gradual 4→2 mostly restores (RDLs present)', names(gradual).includes('RDLs'), names(gradual).join(','));
-
-  // 8→6 keeps risky hinge out.
-  const step86 = applyInjuryFilterToWorkout(lowerWorkout(), ham(6, 8));
-  ok('8→6 keeps Deadlift + RDLs out', !names(step86).includes('Deadlift') && !names(step86).includes('RDLs'), names(step86).join(','));
-}
 
 // ── 3. Generation-constraint staging — every body area ──
 function injuryConstraint(over: Partial<ActiveInjuryConstraint>): ActiveInjuryConstraint {
@@ -154,42 +138,56 @@ function ctxFor(over: Partial<ActiveInjuryConstraint>) {
   ok('staging never lowers below reported severity', stageReintroductionSeverity({ currentSeverity: 8, priorSeverity: 4 }) >= 8);
 }
 
-// ── 5. Store: priorSeverity population + cleared-injury ──
-function injuryState(bucket: string, severity: number): InjuryState {
-  return {
-    bodyPart: bucket, bucket: bucket as any, severity, initialSeverity: severity, status: 'active',
-    rules: [], startDate: '2026-07-01T00:00:00Z', lastUpdatedAt: '2026-07-01T00:00:00Z',
-    createdAt: '2026-07-01T00:00:00Z', history: [],
-  };
+// ── 5. priorSeverity survives the episode -> constraint derivation ──
+//
+// RE-SITED, NOT DELETED. This section drove the legacy single-slot
+// `useCoachUpdatesStore.setActiveInjury`, which no longer exists — the store now
+// keeps injury EPISODES and derives constraints from them, and this suite has
+// been dead at import on that call since the change. The two claims it made are
+// still live, so they are made at the owner that carries them now:
+// `rules/injuryEpisode.deriveInjuryConstraintFromEpisode`.
+function episode(bucket: string, severity: number, over: Record<string, unknown> = {}) {
+  return normalizeInjuryEpisode({
+    protocolVersion: 1,
+    episodeId: `injury-episode:v1:injury-${bucket}:1`,
+    bodyPart: bucket, region: 'other', bucket, severity,
+    status: 'improving', onsetOrReportedDate: '2026-07-01', updatedAt: '2026-07-01T00:00:00Z',
+    triggers: [], seriousSymptoms: false,
+    currentRestrictionPolicy: {
+      rules: [], safeFocus: [], advice: [],
+      severityBand: 'moderate', adjustmentLevel: 'moderate',
+    },
+    compatibility: { constraintId: `injury-${bucket}` },
+    ...over,
+  })!;
 }
-function currentInjuryConstraint(bucket: string): ActiveInjuryConstraint | undefined {
-  return useCoachUpdatesStore.getState().activeConstraints
-    .find((c): c is ActiveInjuryConstraint => c.type === 'injury' && c.id === `injury-${bucket}`);
-}
+
 {
-  const store = useCoachUpdatesStore.getState();
-  store.clearAllCoachUpdates();
+  const improving = episode('hamstring', 6, {
+    currentRestrictionPolicy: {
+      rules: [], safeFocus: [], advice: [],
+      severityBand: 'moderate', adjustmentLevel: 'moderate',
+      priorSeverity: 8,
+    },
+  });
+  const derived = deriveInjuryConstraintFromEpisode(improving);
+  ok('an improving episode carries priorSeverity through to its constraint',
+    derived?.priorSeverity === 8, JSON.stringify(derived?.priorSeverity));
 
-  // Report severe hamstring, then improve to 6 → constraint carries priorSeverity 8.
-  store.setActiveInjury(injuryState('hamstring', 8));
-  store.setActiveInjury(injuryState('hamstring', 6));
-  ok('improvement records priorSeverity (8)', currentInjuryConstraint('hamstring')?.priorSeverity === 8, JSON.stringify(currentInjuryConstraint('hamstring')));
-  ok('activeInjury state also carries priorSeverity', useCoachUpdatesStore.getState().activeInjury?.priorSeverity === 8);
+  const worsening = episode('hamstring', 8);
+  ok('an episode with no recorded peak carries no priorSeverity',
+    deriveInjuryConstraintFromEpisode(worsening)?.priorSeverity === undefined);
 
-  // Worsening does not set a (lenient) priorSeverity.
-  store.setActiveInjury(injuryState('hamstring', 8));
-  ok('worsening carries no priorSeverity', currentInjuryConstraint('hamstring')?.priorSeverity === undefined);
-
-  // Add an unrelated shoulder injury; clearing the hamstring must not touch it.
-  store.setActiveInjury(injuryState('shoulder', 5));
-  const hamState = injuryState('hamstring', 4);
-  store.setActiveInjury(hamState);
-  // Clear the hamstring (legacy single-slot points at the last-set injury).
-  store.setActiveInjury(null);
-  ok('cleared injury removes its constraint', currentInjuryConstraint('hamstring') === undefined);
-  ok('clearing did NOT remove the unrelated shoulder constraint', !!currentInjuryConstraint('shoulder'));
-  store.clearAllCoachUpdates();
+  // Resolving one episode must not touch an unrelated one.
+  const shoulder = episode('shoulder', 5);
+  const resolvedHamstring = episode('hamstring', 4, { status: 'resolved' });
+  const constraints = deriveInjuryConstraintsFromEpisodes([resolvedHamstring, shoulder]);
+  ok('a resolved episode yields no constraint',
+    !constraints.some((c) => c.id === 'injury-hamstring'), JSON.stringify(constraints.map((c) => c.id)));
+  ok('resolving one injury leaves an unrelated one standing',
+    constraints.some((c) => c.id === 'injury-shoulder'), JSON.stringify(constraints.map((c) => c.id)));
 }
+
 
 console.log(`\nInjury reintroduction tests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

@@ -476,7 +476,8 @@
     "test:coach-weekly-reduction": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachWeeklyReductionTests.ts",
     "test:session-action-shell": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionActionShellTests.ts",
     "probe:injury-review-pairings": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-review-pairings.ts",
-    "test:injury-session-adjustment": "TZ=Australia/Melbourne sucrase-node src/__tests__/injurySessionAdjustmentTests.ts"
+    "test:injury-session-adjustment": "TZ=Australia/Melbourne sucrase-node src/__tests__/injurySessionAdjustmentTests.ts",
+    "probe:injury-filter-coverage": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-filter-coverage.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -44,7 +44,6 @@ function loggedAny(needle: string): boolean {
 
 // ─── Resolver stub ───
 import * as sessionResolver from '../utils/sessionResolver';
-import { applyInjuryFilterToWorkout } from '../utils/injuryWorkoutFilter';
 import type { ResolvedDay } from '../utils/sessionResolver';
 
 const FIXED_TODAY = '2026-04-29';
@@ -69,9 +68,17 @@ let baseWeekDef: Record<number, any> = {};
     const wkDef = baseWeekDef[dow] ?? null;
     let wk = override ?? wkDef;
     const source = override ? 'manual' : wkDef ? 'template' : 'rest';
-    if (wk && state.activeInjury && source !== 'manual') {
-      wk = applyInjuryFilterToWorkout(wk, state.activeInjury);
-    }
+    /* THE RESOLVER HAS NO INJURY FILTER PASS ANY MORE. This stub used to mirror
+     * the real `applyInjuryFilterPass` here; the 2026-08-19 burn deleted both.
+     * Injury now reaches the athlete through the constraint pipeline these cells
+     * already drive (`activeConstraints` -> `projectVisibleDay`) and, for a
+     * red-flag injury, through withholding marks the domain writes — so a stub
+     * that still filtered here would be modelling a resolver that no longer
+     * exists. MEASURED on the real doors (`npm run probe:injury-filter-coverage`):
+     * applying an injury protects the session, clearing it restores every
+     * original row, and reopening protects again, in the ordinary, red-flag and
+     * unaffected-area lanes alike.
+     */
     out.push({
       date, dayOfWeek: dow, short: SHORT[dow], isToday: date === FIXED_TODAY,
       workout: wk, source, indicator: null,

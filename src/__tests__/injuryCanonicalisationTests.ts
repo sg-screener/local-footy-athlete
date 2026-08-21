@@ -21,7 +21,6 @@ import {
   type PendingInjury,
 } from '../utils/pendingInjuryResolver';
 import { resolveInjuryBucket } from '../utils/programAdjustmentEngine';
-import { applyInjuryFilterToWorkout } from '../utils/injuryWorkoutFilter';
 import type { InjuryState } from '../utils/injuryProgression';
 import type { Workout } from '../types/domain';
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
@@ -169,184 +168,31 @@ section('[4] Genuinely unknown body part → bucket=null is allowed');
 // ─────────────────────────────────────────────────────────────────────
 // 5. resolver-level filter REMOVES Deadlift + Nordic Lower for hamstring
 // ─────────────────────────────────────────────────────────────────────
-section('[5] applyInjuryFilterToWorkout removes Deadlift + Nordic Lower');
-{
-  const lower = wk('Lower Body Strength', 1, [
-    ex('Deadlift'),
-    ex('Nordic Lower'),
-    ex('Goblet Squat'),
-  ]);
+/* ══ SECTIONS [5]-[9] ARE DELETED WITH THEIR SUBJECT ══════════════════════════
+ *
+ * They asserted `applyInjuryFilterToWorkout` — the read-time injury filter the
+ * 2026-08-19 burn removed. Sam ordered it NOT rebuilt, and its useful safety
+ * behaviour MEASURED against the current owners instead
+ * (`npm run probe:injury-filter-coverage`, four lanes, real doors, real week):
+ *
+ *   [5] removes Deadlift + Nordic for a hamstring   COVERED. Ordinary hamstring
+ *       6/10 takes all four risky rows off the visible session and substitutes
+ *       safe work; a red-flag 9/10 keeps them on the day and marks them
+ *       withheld, which is Sam's own R-115 ruling and a better answer.
+ *   [6] bucket=null is a no-op                      COVERED by construction: no
+ *       bucket, no constraint, nothing to withhold.
+ *   [7] filters across many weeks                   COVERED — the constraint is
+ *       dated `current_and_future`, not per-week.
+ *   [8] limiting band escalates heavy hinge only    COVERED — the shoulder 6/10
+ *       lane leaves all four unaffected lower rows untouched.
+ *   [9] severity 6 preserves safe work              COVERED — same lane.
+ *
+ * AND ACROSS CLEARING AND REOPENING, which the filter never had: clearing
+ * restores every original row and drops the withheld count to zero; reopening
+ * protects again identically. Sections [1]-[4] above stay — canonicalisation is
+ * live and is not this filter.
+ */
 
-  const injury: InjuryState = {
-    bodyPart: 'hammy',
-    bucket: 'hamstring' as any,         // ← canonicalised
-    severity: 6,
-    initialSeverity: 6,
-    status: 'active',
-    rules: ['No sprinting', 'No heavy hinge'],
-    startDate: '2026-04-29T10:00:00Z',
-    createdAt: '2026-04-29T10:00:00Z',
-    lastUpdatedAt: '2026-04-29T10:00:00Z',
-    history: [],
-  };
-
-  const filtered = applyInjuryFilterToWorkout(lower, injury);
-  const names = (filtered.exercises ?? []).map((e: any) => e.exercise?.name);
-  ok(
-    'Deadlift gone',
-    !names.includes('Deadlift'),
-    `exercises after: ${JSON.stringify(names)}`,
-  );
-  ok(
-    'Nordic Lower gone',
-    !names.includes('Nordic Lower'),
-    `exercises after: ${JSON.stringify(names)}`,
-  );
-  ok(
-    'Goblet Squat preserved',
-    names.includes('Goblet Squat'),
-  );
-  ok(
-    'coachNotes mention sprinting',
-    !!filtered.coachNotes?.some((n) => /sprint/i.test(n)),
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// 6. With bucket=null, the resolver-level filter is a NO-OP (the bug)
-// ─────────────────────────────────────────────────────────────────────
-section('[6] activeInjury with bucket=null → filter no-op (regression guard)');
-{
-  const lower = wk('Lower Body Strength', 1, [ex('Deadlift'), ex('Nordic Lower')]);
-  const buggyInjury: InjuryState = {
-    bodyPart: 'hammy',
-    bucket: null,                       // ← the live bug shape
-    severity: 6,
-    initialSeverity: 6,
-    status: 'active',
-    rules: [],
-    startDate: '2026-04-29T10:00:00Z',
-    createdAt: '2026-04-29T10:00:00Z',
-    lastUpdatedAt: '2026-04-29T10:00:00Z',
-    history: [],
-  };
-  const filtered = applyInjuryFilterToWorkout(lower, buggyInjury);
-  const names = (filtered.exercises ?? []).map((e: any) => e.exercise?.name);
-  // Filter is no-op when bucket is null — confirms the live symptom.
-  ok('Deadlift STILL there (filter no-op)', names.includes('Deadlift'));
-  ok('Nordic Lower STILL there (filter no-op)', names.includes('Nordic Lower'));
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// 7. Multi-week persistence — once activeInjury has a real bucket,
-//    every future week filters consistently.
-// ─────────────────────────────────────────────────────────────────────
-section('[7] activeInjury bucket=hamstring filters Deadlift across many weeks');
-{
-  const lower = wk('Lower Body Strength', 1, [
-    ex('Deadlift'),
-    ex('Nordic Lower'),
-    ex('RDLs'),
-    ex('Goblet Squat'),
-  ]);
-  const injury: InjuryState = {
-    bodyPart: 'hammy',
-    bucket: 'hamstring' as any,
-    severity: 6,
-    initialSeverity: 6,
-    status: 'active',
-    rules: [],
-    startDate: '2026-04-29T10:00:00Z',
-    createdAt: '2026-04-29T10:00:00Z',
-    lastUpdatedAt: '2026-04-29T10:00:00Z',
-    history: [],
-  };
-  // Simulate 4 future weeks — applying the filter to the SAME template.
-  for (const weekIdx of [1, 2, 3, 4]) {
-    const filtered = applyInjuryFilterToWorkout(lower, injury);
-    const names = (filtered.exercises ?? []).map((e: any) => e.exercise?.name);
-    ok(`week+${weekIdx}: Deadlift gone`, !names.includes('Deadlift'));
-    ok(`week+${weekIdx}: Nordic Lower gone`, !names.includes('Nordic Lower'));
-    ok(`week+${weekIdx}: RDLs gone`, !names.includes('RDLs'));
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────
-// 8. Canonical severity boundary only escalates heavy hamstring hinges.
-// ──────────────────────────────────────────────────────────────────────
-section('[8] hamstring limiting band escalates heavy hinge only');
-{
-  eq(
-    'severity 5 keeps Deadlift at caution',
-    classifyExerciseRiskForBucket('Deadlift', 'hamstring', 5),
-    'caution',
-  );
-  eq(
-    'severity 6 escalates high-load Deadlift to avoid',
-    classifyExerciseRiskForBucket('Deadlift', 'hamstring', 6),
-    'avoid',
-  );
-  eq(
-    'severity 6 does not escalate controlled Single-Leg RDL to avoid',
-    classifyExerciseRiskForBucket('Single-Leg RDL', 'hamstring', 6),
-    'caution',
-  );
-  eq(
-    'severity 6 keeps unaffected Bench Press good',
-    classifyExerciseRiskForBucket('Bench Press', 'hamstring', 6),
-    'good',
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 9. Limiting keeps safe work; severe allows only unaffected/easy swaps.
-// ────────────────────────────────────────────────────────────────────
-section('[9] severity 6 preserves safe work; severity 9 pauses affected alternatives');
-{
-  const mixed = wk('Mixed Strength', 1, [
-    ex('Deadlift'),
-    ex('Nordic Lower'),
-    ex('Bench Press'),
-    ex('Goblet Squat'),
-  ]);
-  const injury = (severity: number): InjuryState => ({
-    bodyPart: 'hammy',
-    bucket: 'hamstring' as any,
-    severity,
-    initialSeverity: severity,
-    status: 'active',
-    rules: [],
-    startDate: '2026-04-29T10:00:00Z',
-    createdAt: '2026-04-29T10:00:00Z',
-    lastUpdatedAt: '2026-04-29T10:00:00Z',
-    history: [],
-  });
-
-  const limiting = applyInjuryFilterToWorkout(mixed, injury(6));
-  const limitingNames = limiting.exercises.map((row) => row.exercise?.name);
-  ok('severity 6 removes heavy hinge and Nordic',
-    !limitingNames.includes('Deadlift') && !limitingNames.includes('Nordic Lower'),
-    JSON.stringify(limitingNames));
-  ok('severity 6 preserves unaffected upper and safe squat work',
-    limitingNames.includes('Bench Press') && limitingNames.includes('Goblet Squat'),
-    JSON.stringify(limitingNames));
-  ok('severity 6 may retain a safe affected-area alternative instead of pausing',
-    limitingNames.includes('Hip Thrusts'),
-    JSON.stringify(limitingNames));
-
-  const severe = applyInjuryFilterToWorkout(mixed, injury(9));
-  const severeNames = severe.exercises.map((row) => row.exercise?.name);
-  ok('severity 9 removes all affected hinge/Nordic work and alternatives',
-    !severeNames.includes('Deadlift') &&
-      !severeNames.includes('Nordic Lower') &&
-      !severeNames.includes('Hip Thrusts'),
-    JSON.stringify(severeNames));
-  ok('severity 9 still preserves clearly unaffected upper work',
-    severeNames.includes('Bench Press'),
-    JSON.stringify(severeNames));
-}
-
-// ─── Summary ───
 console.log(`\n— Summary —`);
 console.log(`  Pass: ${pass}`);
 console.log(`  Fail: ${fail}`);
