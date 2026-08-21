@@ -2020,7 +2020,12 @@ run('the day card composes no name of its own', () => {
     'the secondary context line is back in HomeScreenV2.');
   // AND THE TITLE STILL COMES FROM THE PROJECTION. Deleting the line would also
   // "pass" if the whole title were deleted, so the surviving half is asserted.
-  assert(/cardLeadHeadline\(visibleDay\)/.test(home) && /visibleDayLeadHeadline/.test(home),
+  /* The call gained its second argument on 2026-08-22 — `dayShape` decides
+     whether the title covers the whole day (week row) or the programmed work
+     alone (day card, since club training moved to its own box). The rule this
+     cell protects is unchanged: the title still comes from the projection's one
+     lead-headline owner and is never composed in the screen. */
+  assert(/cardLeadHeadline\(visibleDay, dayShape\)/.test(home) && /visibleDayLeadHeadline/.test(home),
     'the row no longer takes its title from the projection\'s one lead-headline '
     + 'rule — which is the only thing keeping the card and the day screen from '
     + 'disagreeing about what a day is called');

@@ -1834,13 +1834,26 @@ function titleIconKind({
  * its workout resolved (reassessment §4, Task 5's ruling), so deleting the gate
  * would trade one traced regression for another.
  */
-function cardLeadHeadline(day: VisibleDay | undefined): string | null {
+/**
+ * ⚠ **`dayShape` DECIDES, AND GETTING THIS WRONG COST SAM A ROUND TRIP.**
+ *
+ * `DayRow` draws BOTH the day card and the week-list rows, so calling this with
+ * `programmedOnly` unconditionally stripped "+ Team Training" from the WEEK
+ * too: *"NO YOU REMOVED THE TEAM TRAINING FROM THE WEEK VIEW!!!! I JUST WANTED
+ * IT REMOVED FROM THE BOX ON THE DAY VIEW"* (2026-08-22). The commit that broke
+ * it claimed the week was untouched — checked against the OWNER's other
+ * callers, never against THIS function's own caller, which serves both.
+ *
+ * DAY CARD (`dayShape`): programmed work only — club training sits in its own
+ * box beside it, so naming it here would name something that box does not hold.
+ * WEEK ROW: the whole day, because that is what a week row describes.
+ */
+function cardLeadHeadline(
+  day: VisibleDay | undefined,
+  dayShape: boolean,
+): string | null {
   if (!day) return null;
-  /* PROGRAMMED WORK ONLY — this title sits on the box that holds the programmed
-     session, and club training moved to its own card (Sam, 2026-08-22). A
-     team-only day still reads "Team Training": with no programmed part left,
-     the owner falls back to the day's own headline, which is exactly right. */
-  return visibleDayLeadHeadline(day, { programmedOnly: true });
+  return visibleDayLeadHeadline(day, { programmedOnly: dayShape });
 }
 
 /**
@@ -2101,7 +2114,7 @@ function DayRow({
   // `day.headline` for rest and — deliberately, not merely "zero parts" — for
   // every fixture. It is `SignedCopy`, so this can only ever render an
   // authored string, and it is the only string this row shows about the work.
-  const title: string | null = cardLeadHeadline(visibleDay);
+  const title: string | null = cardLeadHeadline(visibleDay, dayShape);
   // THE GLYPH AND THE COLOUR KEY ON THE LEADING BUCKET, NOT ON THE TITLE, and
   // that is not a preference — it is what stops this ruling breaking them.
   // Both resolve by matching the day's name against a table of label
