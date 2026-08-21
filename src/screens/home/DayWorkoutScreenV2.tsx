@@ -10,7 +10,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { SessionDateLine } from '../../components/SessionDateLine';
 import { Text } from '../../components/common/Text';
-import { Card, Button, IconButton } from '../../components/ui';
+import { Card, Button, IconButton, Sheet, SheetHeader } from '../../components/ui';
 import {
   SessionActionSheet,
   useSessionActionStep,
@@ -611,6 +611,7 @@ export default function DayWorkoutScreenV2() {
     commitWeightEdit,
     handleBack,
     handleFinishWorkout,
+    handleCancelFeedback,
     handleFeedbackSaved,
     handleScrollBeginDrag,
     detail,
@@ -1871,18 +1872,12 @@ export default function DayWorkoutScreenV2() {
             />
           </View>
         ) : /* ── Post-finish: feedback → success moment → auto-dismiss ── */
-        isFinished && date ? (
+        isFinished && date && justSaved ? (
+          /* THE SUCCESS MOMENT STAYS IN PLACE. Only the FORM moved into a
+             sheet — the celebration is what the athlete lands back on when the
+             sheet closes, and it is what dismisses the screen a beat later. */
           <View style={styles.feedbackSection}>
-            {justSaved ? (
-              <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
-            ) : (
-              <SessionFeedbackPanel
-                date={date}
-                workout={workout}
-                executionSummary={executionSummary}
-                onSave={handleFeedbackSaved}
-              />
-            )}
+            <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
           </View>
         ) : null}
 
@@ -1922,6 +1917,33 @@ export default function DayWorkoutScreenV2() {
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
       </KeyboardSafeArea>
+
+      {/**
+        * THE SESSION FEEDBACK FORM IS A POP-UP — Sam, 2026-08-22: *"instead of
+        * opening up like it does currently it should be the same as the log
+        * team training pop up"*.
+        *
+        * It used to expand INLINE, pushing the session list up the scroll, so
+        * the athlete answered questions underneath the work they were
+        * answering about. Club training's form is a sheet; two feedback forms
+        * on the same day opening two different ways is the kind of difference
+        * nobody can justify later.
+        */}
+      <Sheet
+        visible={isFinished && !justSaved && !!date}
+        onClose={handleCancelFeedback}
+        testID="session-feedback-sheet"
+      >
+        <SheetHeader title="Log session" subtitle="A quick check-in - this tunes your next session." />
+        {date ? (
+          <SessionFeedbackPanel
+            date={date}
+            workout={workout}
+            executionSummary={executionSummary}
+            onSave={handleFeedbackSaved}
+          />
+        ) : null}
+      </Sheet>
 
       <ExerciseVideoModal
         visible={!!selectedExercise}
@@ -3594,7 +3616,7 @@ function CueDisclosure({
  * Finish-session CTA — the "ship it" moment.
  *
  * Pro mode: the button stands alone. No eyebrow label, no supporting
- * text — the label "Finish Session" says everything the athlete needs to
+ * text — the label "Log session" says everything the athlete needs to
  * know at this position in the scroll. The glow stays (per the app-wide
  * rule: glow is reserved for completion / success, and finishing a
  * session is exactly that completion moment).
@@ -3606,7 +3628,7 @@ function FinishMoment({ onPress }: FinishMomentProps) {
   return (
     <View style={styles.finishSection}>
       <Button
-        label="Finish Session"
+        label="Log session"
         size="lg"
         onPress={onPress}
         testID="finish-session-action"

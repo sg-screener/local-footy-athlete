@@ -358,6 +358,15 @@ export function useDayWorkout() {
     setIsFinished(true);
   }, []);
 
+  /* The feedback form is a SHEET now (Sam, 2026-08-22: *"instead of opening up
+     like it does currently it should be the same as the log team training pop
+     up"*), and a sheet needs a way to be dismissed without saving. Flipping the
+     same flag back is the whole of it — nothing was written, so there is
+     nothing to undo. */
+  const handleCancelFeedback = useCallback(() => {
+    setIsFinished(false);
+  }, []);
+
   /**
    * Called by feedback panel Save button. Instead of navigating back
    * immediately, flip `justSaved` so the V2/Classic render layers swap the
@@ -487,6 +496,7 @@ export function useDayWorkout() {
     // Handlers
     handleBack,
     handleFinishWorkout,
+    handleCancelFeedback,
     handleFeedbackSaved,
     handleScrollBeginDrag,
 
