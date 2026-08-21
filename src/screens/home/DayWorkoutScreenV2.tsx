@@ -1972,7 +1972,7 @@ export default function DayWorkoutScreenV2() {
         {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
           <SessionChangeHub
             testID="day-workout-change-hub"
-            subline="Change today's session."
+            subline="Update today's session using the buttons below"
             actions={[
               ...(sessionEquipmentRequirements.length > 0
                 ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
@@ -2596,7 +2596,20 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
   completedItemIds: ReadonlySet<string>;
   children: React.ReactNode;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
+  /**
+   * OPEN ON ARRIVAL — Sam, 2026-08-22: *"Opening S&C work = session view opens
+   * with the drop downs for the sections of the program already down"*.
+   *
+   * It opened collapsed, so an athlete walking into the gym had to tap every
+   * section before they could read a single prescription. The work is the
+   * reason the screen exists; hiding it behind a tap made the default state the
+   * least useful one.
+   *
+   * STILL COLLAPSIBLE, and this is still screen state — closing a section is
+   * where the athlete's thumb is, not a decision about their training, so it is
+   * never persisted and it resets with the screen.
+   */
+  const [expanded, setExpanded] = React.useState(true);
   const completedCount = section.items.filter((item) => completedItemIds.has(item.id)).length;
   return (
     <View style={styles.executionSection} testID={`session-execution-section-${section.id}`}>
