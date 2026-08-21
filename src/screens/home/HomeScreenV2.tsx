@@ -574,7 +574,6 @@ export default function HomeScreenV2() {
             entries={timelineEntries}
             mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
             onOpen={() => handleViewWorkout(day)}
-            onLogClubTraining={dayFirst ? () => setClubTrainingDate(day.date) : undefined}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />
         ) : null}
@@ -2450,24 +2449,36 @@ function TeamTrainingCard({
           )}
         </View>
         <View style={styles.timelinePartText}>
-          <Text style={styles.timelineHeadline} numberOfLines={1}>Team training</Text>
+          {/* THE LABEL IS THE QUESTION, THE LINE UNDER IT IS THE ANSWER (Sam,
+              2026-08-22): *"next to the icon it should say 'Session status' and
+              under that it should 'not logged yet' or 'logged' based on it's
+              status"*. It read "Team training" over the status, which restated
+              the card's own title one line below itself. */}
+          <Text style={styles.timelineHeadline} numberOfLines={1}>Session status</Text>
           <Text style={styles.timelinePartMeta}>
             {logged === null ? 'Not logged yet' : logged === 'skipped' ? 'Skipped' : 'Logged'}
           </Text>
         </View>
-        <Pressable
+        {/**
+          * THE SAME BUTTON AS "View summary", AT THE SIZE IT ALREADY WAS —
+          * *"the button should also be the same colour and style of the button
+          * above ... so it looks like a button - but kept as small as it is
+          * now"*. It was a bordered lime pill of this screen's own making; it is
+          * the shared `Button` now, so it cannot drift from the primary CTA it
+          * is meant to match.
+          *
+          * AND THE WORD FOLLOWS THE STATE: *"Once the session is logged it
+          * should say 'view summary'"*. The same tap opens the same form —
+          * which loads what was saved — so the label is the only thing that
+          * changes, and it is true in both directions.
+          */}
+        <Button
+          label={logged === null ? 'Log training' : 'View summary'}
+          size="sm"
+          glow={false}
           onPress={onLog}
           testID="day-timeline-log-club-training"
-          accessibilityRole="button"
-          accessibilityLabel="Log club training"
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.logClubTrainingButton,
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <Text style={styles.logClubTrainingLabel}>Log training</Text>
-        </Pressable>
+        />
       </View>
     </Card>
   );
@@ -2577,8 +2588,6 @@ function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripPro
 
 interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
-  /** Opens the club-training form. Only the `team_training` row uses it. */
-  onLogClubTraining?: () => void;
   /** Optional, non-load-bearing flow from the same owner the session screen uses. */
   mobilityFlow: MobilityPrehabFlow | null;
   onOpen: () => void;
@@ -2607,7 +2616,7 @@ interface DayTimelineProps {
  * `conditioning`. A list keyed by kind would silently drop one of them — work
  * the athlete has to do, missing from the only screen that shows it.
  */
-function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, presentation }: DayTimelineProps) {
+function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelineProps) {
   // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
   //
   // The north star's rule is "store only decisions, derive everything else", and
@@ -2823,33 +2832,12 @@ function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, present
                 </Text>
                 {meta ? <Text style={styles.timelinePartMeta}>{meta}</Text> : null}
               </View>
-              {/**
-                * ⚠ **THE TEAM-TRAINING ROW NEVER HAD A CHEVRON TO REPLACE.**
-                * Sam asked for the button *"instead of the chevron"*, and the
-                * comment on `canOpen` above says why there is none: club
-                * training carries no exercise rows, so the row opens onto
-                * nothing. The button takes that empty slot — the row stops
-                * being the one line on the card with no affordance at all.
-                *
-                * Sam, 2026-08-21: *"Add a 'log training' button on the day view
-                * next to the 'team training' ... which takes you to the feedback
-                * page for club training"*.
-                */}
-              {entry.kind === 'team_training' && onLogClubTraining ? (
-                <Pressable
-                  onPress={onLogClubTraining}
-                  testID="day-timeline-log-club-training"
-                  accessibilityRole="button"
-                  accessibilityLabel="Log club training"
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.logClubTrainingButton,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <Text style={styles.logClubTrainingLabel}>Log training</Text>
-                </Pressable>
-              ) : canOpen ? <TimelineChevron open={isOpen} /> : null}
+              {/* The club-training button lived HERE for one day. It moved to
+                  `TeamTrainingCard` when Sam gave club training its own box, and
+                  this loop no longer receives a `team_training` entry at all —
+                  so the branch that drew it was unreachable. Deleted rather than
+                  left as a condition that can never be true. */}
+              {canOpen ? <TimelineChevron open={isOpen} /> : null}
               {entry.completion ? (
                 <ExplorerRenderWitness
                   testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
@@ -4164,24 +4152,6 @@ const styles = StyleSheet.create({
   timeline: { gap: 0 },
   /* The club-training row's affordance, sized to sit where the chevron sits on
      every other row so the list keeps one right-hand rhythm. */
-  logClubTrainingButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(200,255,0,0.35)',
-    backgroundColor: 'rgba(200,255,0,0.10)',
-  },
-  logClubTrainingLabel: {
-    /* The same literal every other lime in this file uses — it has no `colors`
-       import, and adding one for a single style would be a second source of the
-       accent on a screen that already has one. */
-    color: '#C8FF00',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
   teamTrainingCard: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,
