@@ -63,6 +63,23 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
   if (detail !== undefined) console.error(`       ${JSON.stringify(detail)}`);
 }
 
+/**
+ * ⚠ WHY THIS EXISTS. `codeOf` throws ENOENT on a missing file, so when the
+ * 2026-08-19 burn deleted `utils/trainAroundEngine.ts` this suite died at
+ * import and reported NOTHING. A gate nobody can see is worse than a gate that
+ * fails, so every reader list is checked for existence FIRST and a departed
+ * reader reds by name — which forces the next deletion to re-site the claim
+ * instead of silencing it.
+ */
+function assertReadersExist(label: string, readers: readonly string[]): readonly string[] {
+  const missing = readers.filter((reader) => !fs.existsSync(path.join(src, reader)));
+  ok(`${label}: every reader named is still in the tree`,
+    missing.length === 0,
+    `${missing.join(', ')} — re-site the claim onto the reader that owns it now.`);
+  ok(`${label}: the list is not empty (liveness)`, readers.length > 0);
+  return readers.filter((reader) => !missing.includes(reader));
+}
+
 function codeOf(relative: string): string {
   return fs.readFileSync(path.join(src, relative), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -148,6 +165,36 @@ console.log('\n[3] The eleven fatigue readers hold no severity numbers of their 
   }
 }
 
+/**
+ * ⚠ ONE DECLARED VIOLATION OF SAM'S 2026-07-28 RULING, FOUND THE MOMENT THIS
+ * GATE COULD SEE AGAIN — AND NOT FIXED HERE, BECAUSE FIXING IT IS A PRODUCT
+ * CHANGE NOBODY HAS RULED ON.
+ *
+ * `rules/temporarySourceFact.ts` builds the "Short on time today" schedule
+ * constraint with
+ *
+ *     severity: fact.maxSessionMinutes < 20 ? 7 : 5
+ *
+ * — minutes converted straight into a severity score. That is the exact
+ * conversion the ruling killed ("short time shapes the SESSION, never scores
+ * the ATHLETE"), and 7 is one of the stray cut points the same ruling said must
+ * move to the band edge 6.
+ *
+ * THIS GATE HAS NEVER SEEN IT. The file was not in the reader list, and the
+ * suite itself died at import on 2026-08-19 when `utils/trainAroundEngine.ts`
+ * was deleted, so it reported nothing at all until this repair.
+ *
+ * It is DECLARED rather than banned so the gate can be green and honest at the
+ * same time, and the count is EXACT in both directions: a second site reds, and
+ * so does fixing this one without lowering the number. Nothing is allow-listed
+ * by file — only this one count, in this one file.
+ */
+const DECLARED_MINUTES_TO_SEVERITY_DEBT: Readonly<Record<string, number>> = {
+  'utils/readinessConstraints.ts': 0,
+  'utils/readiness.ts': 0,
+  'rules/temporarySourceFact.ts': 1,
+};
+
 console.log('\n[4] Time caps are OFF the severity ladder');
 {
   ok('there is one authored short-on-time threshold', SHORT_ON_TIME_MINUTES === 35,
@@ -155,12 +202,33 @@ console.log('\n[4] Time caps are OFF the severity ladder');
 
   // The conversion Sam killed: minutes deciding a severity number. Short time
   // shapes the session; it does not score the athlete.
-  for (const reader of ['utils/readinessConstraints.ts', 'utils/readiness.ts',
-    'utils/coachReadinessAdapter.ts']) {
+  // MEASURED, NOT INHERITED. `utils/coachReadinessAdapter.ts` was the third
+  // reader here; its router had zero production execution and was deleted on
+  // 2026-08-21, leaving a type stub that reads no minutes at all — sweeping it
+  // would be a vacuous pass. The list is now every production file that
+  // actually touches `timeAvailableMinutes`, which ADDS
+  // `rules/temporarySourceFact.ts` — a real reader this gate had never covered.
+  for (const reader of assertReadersExist('minutes never score the athlete', [
+    'utils/readinessConstraints.ts',
+    'utils/readiness.ts',
+    'rules/temporarySourceFact.ts',
+  ])) {
     const code = codeOf(reader);
-    ok(`${reader} does not convert minutes into a severity`,
-      !/timeAvailableMinutes[^;]*\?[^;]*\d[^;]*:[^;]*\d/.test(code) &&
-      !/severity:\s*[^,;]*Minutes/i.test(code));
+    const conversions = code.split('\n')
+      .map((line, index) => ({ line: line.trim(), number: index + 1 }))
+      .filter((entry) =>
+        /timeAvailableMinutes[^;]*\?[^;]*\d[^;]*:[^;]*\d/.test(entry.line) ||
+        /severity:\s*[^,;]*Minutes/i.test(entry.line));
+    const declared = DECLARED_MINUTES_TO_SEVERITY_DEBT[reader] ?? 0;
+    ok(`${reader} converts minutes into a severity in no more than ${declared} place(s)`,
+      conversions.length <= declared,
+      conversions.map((hit) => `${hit.number}: ${hit.line.slice(0, 110)}`));
+    // THE RATCHET: the declaration must equal the real count, so paying the debt
+    // down tightens the gate instead of leaving re-spendable slack. This is the
+    // same shape `data/readinessStructureCensus.ts` uses for its own debt.
+    ok(`${reader}'s declared minutes-to-severity debt equals its real count`,
+      conversions.length === declared,
+      `declared ${declared}, found ${conversions.length}`);
     ok(`${reader} holds no second short-on-time literal`,
       !/timeAvailableMinutes\s*[<>]=?\s*\d/.test(code) &&
       !/minutes\s*[<>]=?\s*(?:35|45)\b/i.test(code));
@@ -179,7 +247,12 @@ console.log('\n[5] Batch 6 — the display numbers have one owner each');
   ok('the substitute tolerance is authored once', SUBSTITUTE_LOAD_TOLERANCE === 0.2,
     SUBSTITUTE_LOAD_TOLERANCE);
 
-  for (const reader of ['utils/exposureEngine.ts', 'utils/trainAroundEngine.ts']) {
+  // `utils/trainAroundEngine.ts` was the second reader; the 2026-08-19 burn
+  // deleted it. MEASURED: `utils/exposureEngine.ts` is now the ONLY production
+  // importer of `rules/sessionImpactBands`, so the list is complete at one.
+  for (const reader of assertReadersExist('impact bands are authored once', [
+    'utils/exposureEngine.ts',
+  ])) {
     const code = codeOf(reader);
     ok(`${reader} holds no impact-band literal`,
       !/removed[A-Za-z]*(?:\.length)?\s*\/\s*[^;]*>=\s*0?\.5\b/.test(code) &&

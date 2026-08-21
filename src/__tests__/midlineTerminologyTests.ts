@@ -34,6 +34,7 @@ armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
+import { classifyExerciseRole, SESSION_ROLE_ORDER } from '../utils/sessionRoles';
 import {
   componentQuestionLabel,
   componentSkipReasonLabel,
@@ -117,10 +118,24 @@ console.log('\n[1] Athlete-facing copy says midline');
     'this label is read into the generation prompt, so the model echoes it back',
   );
 
-  const coverage = read('../src/rules/recoveryAddonCoverage.ts');
+  // RE-SITED, NOT DELETED. This cell used to read `label: 'Midline'` out of
+  // `rules/recoveryAddonCoverage.ts`'s FOCUS_DEFINITIONS table. That table went
+  // with `recommendRecoveryAddonCoverage` on 2026-08-21 — it had zero
+  // production execution, so the label it held was never on a screen. The claim
+  // is now made at the owners that DO reach the athlete, and behaviourally
+  // rather than by grepping a table:
+  //   `utils/sessionRoles.classifyExerciseRole` badges the row `midline`, and
+  //   `utils/sessionComponents` renders the words (already asserted above).
   ok(
-    'the recovery add-on focus-area label says Midline',
-    /label: 'Midline'/.test(coverage),
+    'the role vocabulary names the body region midline, never core or trunk',
+    SESSION_ROLE_ORDER.includes('midline')
+      && !SESSION_ROLE_ORDER.some((role) => /^(core|trunk)/.test(role)),
+    JSON.stringify(SESSION_ROLE_ORDER),
+  );
+  ok(
+    'an anti-rotation row is badged midline by the live classifier',
+    classifyExerciseRole('Band Pallof Press') === 'midline',
+    classifyExerciseRole('Band Pallof Press'),
   );
 
   // The flow-bundle module is retired (2026-07-30), and with it the one template
@@ -136,7 +151,10 @@ console.log('\n[2] Sweep — no rendered literal still says trunk');
   // Every file the spec's §5.1/§5.2 inventory names as reaching the athlete.
   const COPY_FILES = [
     'utils/sessionComponents.ts',
-    'utils/blockAdjuster.ts',
+    // `utils/blockAdjuster.ts` was here until the 2026-08-19 burn deleted it as
+    // a superseded module. The one athlete-facing string it carried was an
+    // inline exercise cue; curated cues are owned by `data/exerciseCues.ts`,
+    // which this same sweep reads two lines down. Nothing left the sweep.
     'utils/sessionExplanation.ts',
     'utils/constraintPlan.ts',
     'utils/exposureEngine.ts',
@@ -175,8 +193,30 @@ console.log('\n[2] Sweep — no rendered literal still says trunk');
     return INTERNAL_IDS.some((id) => literal.includes(id));
   }
 
+  // ⚠ NON-VACUITY, AND THE REASON THIS SUITE WENT DARK RATHER THAN RED.
+  // `read()` throws ENOENT on a missing file, so when the 2026-08-19 burn
+  // deleted `utils/blockAdjuster.ts` this whole suite died at import and
+  // reported NOTHING for two days — a sweep nobody could see is worse than a
+  // sweep that fails. A file that leaves the tree must now RED here, naming
+  // itself, so the next deletion re-sites its copy instead of silencing us.
+  const missing = COPY_FILES.filter(
+    (file) => !fs.existsSync(path.join(src, file)),
+  );
+  ok(
+    'every file this sweep claims to read is actually there',
+    missing.length === 0,
+    `${missing.join(', ')} — re-site the athlete copy onto its new owner and `
+    + 'update COPY_FILES; do not just drop the row.',
+  );
+  ok(
+    'the sweep reads more than a token number of files (liveness)',
+    COPY_FILES.length >= 10,
+    `${COPY_FILES.length} file(s)`,
+  );
+
   const offenders: string[] = [];
   for (const file of COPY_FILES) {
+    if (missing.includes(file)) continue;
     const source = read(file);
     for (const match of source.matchAll(/'((?:[^'\\\n]|\\.)*)'/g)) {
       const literal = match[1];
