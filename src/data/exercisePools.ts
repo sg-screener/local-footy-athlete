@@ -363,7 +363,7 @@ export const MOBILITY_POOL: PoolExercise[] = [
   // `filterPool` drops it for any athlete whose location lacks the tags, so
   // Home gym (dumbbells, no bench) and Outdoor never see it. `bench` is carried
   // because the cue requires one — Sam's ruling, 2026-07-28.
-  ex('db-pullovers',      'Dumbbell Pullovers',           2, 10, 10, 30, 'Hold each rep 10 seconds',               ['dumbbells', 'bench'], ['shoulder', 'ribs'], 'low', { prescriptionType: 'reps' }),
+  ex('db-pullovers',      'Dumbbell Pullovers',           2, 10, 10, 30, 'Hold each rep for 2-3 seconds',          ['dumbbells', 'bench'], ['shoulder', 'ribs'], 'low', { prescriptionType: 'reps' }),
 ];
 
 /**
@@ -380,7 +380,6 @@ export const EASY_CARDIO_POOL: PoolExercise[] = [
   ex('walk-or-bike',      'Light Walk or Stationary Bike', 1, 5, 10, 0, 'Conversational pace. Keep heart rate low.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
   ex('incline-walk',      'Incline Treadmill Walk',        1, 5, 10, 0, 'Low speed, moderate incline. Easy effort.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
   ex('outdoor-walk',      'Outdoor Walk',                  1, 5, 10, 0, 'Easy pace. Fresh air, clear head.',          ['bodyweight'],        [],                      'low', { prescriptionType: 'duration_minutes' }),
-  ex('light-skip',        'Light Skipping',                1, 5, 10, 0, 'Easy rhythm. Wakes up the ankles.',          ['bodyweight'],        ['ankle', 'calf', 'knee'], 'low', { prescriptionType: 'duration_minutes' }),
 ];
 
 export const BREATHING_RESET_POOL: PoolExercise[] = [

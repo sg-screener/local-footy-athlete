@@ -1608,15 +1608,6 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: '',
     flagged: false,
   },
-  {
-    exercise: 'Light Skipping',
-    pool: 'Easy cardio (zone 1)',
-    primary: ['Calves'],
-    secondary: [],
-    experienceGate: 'everyone',
-    note: '',
-    flagged: false,
-  },
 
   /* ── Breathing reset ── */
   {

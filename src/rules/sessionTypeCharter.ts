@@ -244,7 +244,9 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       source: 'data/exercisePools.ts TISSUE_QUALITY_POOL + MOBILITY_POOL + '
         + 'EASY_CARDIO_POOL + BREATHING_RESET_POOL, composed by '
         + "utils/sessionBuilder.ts buildDerivedSession('recovery')",
-      count: 34,
+      /* 34 -> 33 on 2026-08-21: `Light Skipping` deleted from the master sheet
+       and every reference (Sam). A no-bike athlete reaches `Outdoor Walk`. */
+    count: 33,
       sessionVariants: null,
     },
     ruling: "Sam's rulings 1 and 3, 2026-07-30: recovery counts toward nothing, "

@@ -814,7 +814,6 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Jefferson Curl',
   // Cardio / conditioning (recovery context)
   'Outdoor Walk',
-  'Light Skipping',
   // Breathing
   'Crocodile Breathing',
   '90-90 Breathing',
@@ -822,6 +821,100 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Box Breathing',
   "Child's Pose with Breathing",
 ]);
+
+/** The control the session row should offer for an exercise's real load. */
+export type LoadControlMode =
+  | 'kilograms'
+  | 'bodyweight_plus'
+  | 'band'
+  | 'bodyweight'
+  | 'none';
+
+export type BandResistance = 'thin' | 'medium' | 'thick';
+
+export const BAND_RESISTANCE_LEVELS: readonly BandResistance[] = [
+  'thin', 'medium', 'thick',
+];
+
+export function stepBandResistance(
+  current: BandResistance,
+  direction: -1 | 1,
+): BandResistance {
+  const currentIndex = BAND_RESISTANCE_LEVELS.indexOf(current);
+  const nextIndex = Math.max(
+    0,
+    Math.min(BAND_RESISTANCE_LEVELS.length - 1, currentIndex + direction),
+  );
+  return BAND_RESISTANCE_LEVELS[nextIndex];
+}
+
+/**
+ * Bodyweight movements where the athlete can add an external load without
+ * changing the exercise's identity.
+ */
+export const BODYWEIGHT_LOADABLE_EXERCISES = new Set([
+  'Dips',
+  'Pull-Ups',
+  'Chin-Ups',
+  'Push-ups',
+  'Inverted Row (Bodyweight)',
+  'Glute Bridge',
+  'Bosch Hold',
+  'Long-Lever Copenhagen',
+  'Seated Calf Raise',
+  'Single-Leg Calf Raise',
+]);
+
+/** Exercises whose resistance is described by band thickness, never kilos. */
+export const BAND_RESISTANCE_EXERCISES = new Set([
+  'Band Pull-Apart',
+  'Banded TKE',
+  'Spanish Squat Hold',
+  'Crab Walks',
+  'Side Plank Row',
+  'Banded Dead Bug',
+  'Band Pallof Press',
+  'Banded External Rotation',
+  'Banded Bicep Curl',
+  'Banded Tricep Pushdown',
+]);
+
+/**
+ * One UI answer for load controls. The selected implement is accepted because
+ * Woodchops can genuinely be performed with either a cable or a band.
+ */
+export function resolveLoadControlMode(
+  exerciseName: string,
+  selectedImplement?: string | null,
+): LoadControlMode {
+  const resolved = resolveExerciseName(exerciseName);
+  if (selectedImplement === 'bands' || BAND_RESISTANCE_EXERCISES.has(resolved)) {
+    return 'band';
+  }
+  if (BODYWEIGHT_LOADABLE_EXERCISES.has(resolved)) return 'bodyweight_plus';
+  if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) return 'none';
+  if (TRUE_BODYWEIGHT_EXERCISES.has(resolved)) return 'bodyweight';
+  return 'kilograms';
+}
+
+export function formatBandResistance(resistance: BandResistance): string {
+  return resistance.charAt(0).toUpperCase() + resistance.slice(1);
+}
+
+export function formatLoadControlLabel(
+  mode: LoadControlMode,
+  weightKg: number | null,
+  bandResistance: BandResistance = 'medium',
+): string {
+  if (mode === 'band') return formatBandResistance(bandResistance);
+  if (mode === 'bodyweight') return 'BW';
+  if (mode === 'none') return '';
+  if (mode === 'bodyweight_plus') {
+    return weightKg && weightKg > 0 ? `BW + ${weightKg}kg` : 'BW';
+  }
+  if (weightKg === null || weightKg === undefined || weightKg === 0) return '-';
+  return `${weightKg}kg`;
+}
 
 // ─── Rounding ───
 

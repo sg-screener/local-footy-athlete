@@ -27,7 +27,6 @@
  *   - Light Walk or Stationary Bike
  *   - Incline Treadmill Walk
  *   - Outdoor Walk
- *   - Light Skipping
  */
 
 export interface ExerciseLookupResult {

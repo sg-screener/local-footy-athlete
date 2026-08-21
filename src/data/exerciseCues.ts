@@ -608,10 +608,6 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Low intensity rounds, controlled transitions.',
     secondaryCue: 'This is recovery, not intensity.',
   },
-  'Light Skipping': {
-    primaryCue: 'Soft ground contacts, stay light.',
-    secondaryCue: 'Easy rhythm, not intensity.',
-  },
   'Light Walk or Stationary Bike': {
     primaryCue: 'Conversational effort, keep moving.',
     secondaryCue: 'This is blood flow, not training.',

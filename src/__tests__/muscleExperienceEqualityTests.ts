@@ -82,7 +82,12 @@ const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
 
 console.log('\n[1] THE SHEET — still reads as Sam signed it');
 
-ok('the sheet holds 199 exercise rows', sheetRows.length === 199, `found ${sheetRows.length}`);
+/* 199 -> 198 on 2026-08-21: `Light Skipping` was deleted from the master sheet
+   itself, on Sam's order — *"It can leave, just delete it from everywhere"* —
+   together with its pool entry, cue, tags, load list and vocabulary entry. The
+   number moves with the sheet; that is what makes this cell a ratchet rather
+   than a decoration. */
+ok('the sheet holds 198 exercise rows', sheetRows.length === 198, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -300,8 +305,9 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // takes no conditioning-templates row — but it still needs its sheet row, since
 // that is the enforced source for the cue and the muscle/experience gate.
 // `everyone` and not a regression (136 -> 137). Total 198 -> 199.
+// Then 137 -> 136 and 199 -> 198 on 2026-08-21 with the Light Skipping deletion.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 137,
+  everyone: 136,
   everyone_regression: 11,
   one_plus_years: 32,
   two_plus_years: 17,

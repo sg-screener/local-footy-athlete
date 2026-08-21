@@ -484,7 +484,10 @@ function main(): void {
       'Light Walk or Stationary Bike',
       'Incline Treadmill Walk',
       'Outdoor Walk',
-      'Light Skipping',
+      /* `Light Skipping` left this list with the exercise itself on
+         2026-08-21 — deleted from the master sheet and every reference on
+         Sam's order. A name kept in a by-design exemption after its exercise
+         is gone is a standing permission for it to come back. */
     ]);
     const withoutVideo = names
       .filter((name) => !ZONE_1_BY_DESIGN.has(name) && !CONDITIONING_META[name])

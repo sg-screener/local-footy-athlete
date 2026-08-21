@@ -44,6 +44,7 @@ no rewording. Where secondary is blank, store empty (render omits).
 - Clap Push-Ups ('no need if we have explosive push-ups')
 - Groin Squeeze (Band Adductor) (the generic Groin Squeeze stays — see the 2026-07-24 amendment)
 - MetCon (dead entry — Sam, 2026-07-24)
+- Light Skipping (Sam, 2026-08-21: *"change skipping to light bike or something"*, then *"It can leave, just delete it from everywhere"* — removed from the master sheet, the pools, cues, tags, load list and vocabulary in one commit)
 
 ## Pool additions (Sam-approved; conditioning names need NO pool action — already selectable via conditioning system)
 

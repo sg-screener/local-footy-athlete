@@ -136,7 +136,6 @@ const ZONE_1_RECOVERY = new Set<string>([
   'Light Walk or Stationary Bike',
   'Incline Treadmill Walk',
   'Outdoor Walk',
-  'Light Skipping',
 ]);
 
 /**
