@@ -38,11 +38,16 @@ import type {
 } from '../store/programStore';
 import {
   POOL_REGISTRY,
+  gunshowExercisesCanPair,
   type PoolExercise,
   type ExerciseCategory,
   type EquipmentTag,
   type InjuryTag,
 } from '../data/exercisePools';
+import {
+  injurySeverityReducesAffectedWork,
+  onboardingInjurySeverityScore,
+} from '../rules/injurySeverityBands';
 import { getAllTaggedExercises, EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
 import {
   resolveInjuryRegion,
@@ -67,6 +72,8 @@ import {
 import {
   MOBILITY_SESSION_MINUTES,
   composeMobilitySession,
+  mobilityRegionOf,
+  type MobilityRegion,
 } from '../rules/mobilitySessionComposition';
 
 // ─── Athlete Context ───
@@ -132,13 +139,31 @@ interface SessionSlot {
   category: ExerciseCategory;
   /** How many exercises to pick from this category. */
   count: number;
+  /**
+   * ONE PICK PER NAMED REGION, then the remainder free.
+   *
+   * SAM, 2026-08-21, on a recovery day that offered Toe Stretch AND Calf
+   * Stretch: *"i don't like the toe stretch and calf stretch either one or the
+   * other is fine, but not both, maybe it should be 1 hip, 1 upper body, and
+   * one extra"*. Two free picks from one pool can land twice in the same
+   * region, which is what he read.
+   *
+   * The regions are `mobilitySessionComposition`'s — Sam's own signed table,
+   * one region per movement, already used by the standalone Mobility session
+   * for its full-body spread. **No second opinion about what a region is.**
+   */
+  spread?: readonly MobilityRegion[];
 }
 
 // BIBLE_ANCHOR: gunshow_two_two_two
 const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
+  /* SAM'S SHAPE, 2026-08-21: *"2 soft tissues - 1 light cardio for 10 min and
+     breathing to finish"*, with the mobility picks spread *"1 hip, 1 upper
+     body, and one extra"*. The breathing row is last because he said "to
+     finish" and the rows render in slot order. */
   recovery: [
     { category: 'tissue_quality',   count: 2 },
-    { category: 'mobility',         count: 2 },
+    { category: 'mobility',         count: 3, spread: ['hips', 'upper'] },
     { category: 'easy_cardio',      count: 1 }, // Zone 1 / conversational pace only. No intervals or intensity.
     { category: 'breathing_reset',  count: 1 },
   ],
@@ -169,16 +194,11 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
   // 2 shoulder, and "shoulder" means the PUMP delts pool, not shoulder health.
   //
   // It used to be 2 + 2 + 1 delt + 1 UPPER BACK PUMP. That last slot is a
-  // CROSS-FAMILY TOP-UP — the app reaching outside the sixteen candidates Sam
+  // CROSS-FAMILY TOP-UP — the app reaching outside the candidates Sam had
   // signed to fill a sixth slot — and it is what put "Face Pull" (from
   // `UPPER_BACK_PUMP_POOL`) into a session whose signed shoulder family holds
-  // "Cable Face Pull". His ruling is explicit: under thin equipment a gunshow
-  // gets SMALLER, never padded; the app never invents to fill a quota. Found by
-  // `sessionTypeCharterTests` group D on its first run.
-  //
-  // Shrinking is already how `pickFromPool` behaves — it returns the whole pool
-  // when the pool is smaller than the slot count and never repeats to reach it —
-  // so removing the top-up is the entire fix.
+  // "Cable Face Pull". Gunshow is normal gym work, so its signed families have
+  // enough candidates to fill all six slots without a cross-family top-up.
   arms_pump: [
     { category: 'biceps',           count: 2 },
     { category: 'triceps',          count: 2 },
@@ -253,7 +273,14 @@ const SESSION_META: Record<DerivedSessionType, {
   // `:116` lets it sit on a rest day.
   mobility: {
     name: 'Mobility',
-    workoutType: 'Recovery',
+    /* ⚠ **`'Recovery'` STOOD HERE AND IT IS WHY THE CARD SAID RECOVERY.** Sam,
+     * 2026-08-21, on a session titled Mobility wearing a RECOVERY chip:
+     * *"there should be a specific mobility day and a specific recovery day"*.
+     * The session was always composed from `MOBILITY_POOL` — only its TYPE was
+     * borrowed. The TIER below is deliberately unchanged: it keeps the
+     * charter's counting (no load, never a hard day) and the blue badge Sam
+     * said could stay. */
+    workoutType: 'Mobility',
     sessionTier: 'recovery',
     durationMinutes: MOBILITY_SESSION_MINUTES,
     intensity: 'Light',
@@ -432,7 +459,13 @@ function filterPool(
     // Exclude if requires equipment the athlete doesn't have
     // (bodyweight exercises always pass — equipment array is empty or contains 'bodyweight')
     if (ex.equipment.length > 0) {
-      const hasEquipment = ex.equipment.every(e => e === 'bodyweight' || equipmentTags.has(e));
+      const hasRequirement = (requirement: (typeof ex.equipment)[number]): boolean => {
+        if (Array.isArray(requirement)) {
+          return requirement.some((tag) => tag === 'bodyweight' || equipmentTags.has(tag));
+        }
+        return requirement === 'bodyweight' || equipmentTags.has(requirement as EquipmentTag);
+      };
+      const hasEquipment = ex.equipment.every(hasRequirement);
       if (!hasEquipment) return false;
     }
     return true;
@@ -443,21 +476,95 @@ function filterPool(
  * Pick N exercises from a filtered pool, using dateHash for rotation.
  * If fewer than N are available after filtering, returns all available.
  */
+// BIBLE_ANCHOR: gunshow_two_two_two
 function pickFromPool(
   pool: PoolExercise[],
   count: number,
   seed: number,
+  canPair?: (left: PoolExercise, right: PoolExercise) => boolean,
 ): PoolExercise[] {
   if (pool.length === 0) return [];
-  if (pool.length <= count) return pool;
-
-  // Rotate the starting index based on seed
   const start = seed % pool.length;
+
+  // Preserve the established picker for every session without pair rules.
+  if (!canPair) {
+    if (pool.length <= count) return pool;
+    const picks: PoolExercise[] = [];
+    for (let index = 0; index < count; index++) {
+      picks.push(pool[(start + index) % pool.length]);
+    }
+    return picks;
+  }
+
+  const rotated = pool.map((_, index) => pool[(start + index) % pool.length]);
+  let best: PoolExercise[] = [];
+
+  const search = (from: number, picks: PoolExercise[]): boolean => {
+    if (picks.length > best.length) best = [...picks];
+    if (picks.length === count) return true;
+    for (let index = from; index < rotated.length; index++) {
+      const candidate = rotated[index];
+      if (!picks.every((picked) => canPair(picked, candidate))) continue;
+      picks.push(candidate);
+      if (search(index + 1, picks)) return true;
+      picks.pop();
+    }
+    return false;
+  };
+
+  search(0, []);
+  return best;
+}
+
+/**
+ * ONE PICK PER NAMED REGION FIRST, THEN FILL — Sam's *"1 hip, 1 upper body,
+ * and one extra"*.
+ *
+ * ⚠ **A NAMED REGION WITH NOTHING LEGAL IN IT IS SKIPPED, NOT PADDED.** An
+ * athlete whose kit or injuries empty the `upper` shelf gets the remaining
+ * picks from what IS legal rather than a short session or a refusal — the same
+ * "shrink rather than pad" rule the composed Mobility session already follows.
+ *
+ * Rotation is preserved: each region's own pick walks `seed`, so two
+ * consecutive recovery days do not open with the same hip stretch.
+ */
+function pickAcrossRegions(
+  pool: PoolExercise[],
+  count: number,
+  spread: readonly MobilityRegion[],
+  seed: number,
+): PoolExercise[] {
   const picks: PoolExercise[] = [];
-  for (let i = 0; i < count; i++) {
-    picks.push(pool[(start + i) % pool.length]);
+  const taken = new Set<string>();
+
+  spread.forEach((region, index) => {
+    if (picks.length >= count) return;
+    const shelf = pool.filter(
+      (entry) => mobilityRegionOf(entry) === region && !taken.has(entry.id),
+    );
+    if (shelf.length === 0) return;
+    const chosen = shelf[(seed + index * 31) % shelf.length];
+    picks.push(chosen);
+    taken.add(chosen.id);
+  });
+
+  // The remainder — "one extra" — from anything not already taken.
+  const rest = pool.filter((entry) => !taken.has(entry.id));
+  for (let index = 0; picks.length < count && index < rest.length; index++) {
+    picks.push(rest[(seed + index * 17) % rest.length]);
+    taken.add(rest[(seed + index * 17) % rest.length].id);
   }
   return picks;
+}
+
+function pairRuleFor(type: DerivedSessionType): ((
+  left: PoolExercise,
+  right: PoolExercise,
+) => boolean) | undefined {
+  if (type === 'arms_pump') {
+    return gunshowExercisesCanPair;
+  }
+  return undefined;
 }
 
 // ─── WorkoutExercise Builder ───
@@ -607,7 +714,9 @@ export function buildDerivedSession(
     const pool = POOL_REGISTRY[slot.category] || [];
     const filtered = filterPool(pool, injuryTags, equipmentSet);
     const slotSeed = seed + slotIndex * 7919; // prime offset for variety
-    const picks = pickFromPool(filtered, slot.count, slotSeed);
+    const picks = slot.spread
+      ? pickAcrossRegions(filtered, slot.count, slot.spread, slotSeed)
+      : pickFromPool(filtered, slot.count, slotSeed, pairRuleFor(type));
 
     for (const pe of picks) {
       // Recovery sessions already carry their identity in `workoutType`; the
@@ -1346,7 +1455,8 @@ export function buildConditioningSession(
   // Build active injuries map
   const activeInjuries: Record<string, 'caution' | 'avoid'> = {};
   for (const inj of athlete.injuries) {
-    const sev = (inj.severity?.toLowerCase() === 'mild') ? 'caution' as const : 'avoid' as const;
+    const sev = injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(inj))
+      ? 'avoid' as const : 'caution' as const;
     activeInjuries[inj.bodyArea] = sev;
   }
 

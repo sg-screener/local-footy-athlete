@@ -1,27 +1,6 @@
 /**
- * D13 — recovery-type days keep their own simple template (§6 item 3).
- *
- * Sam ruled recovery days OUT of the one-list redesign: no role badges, and no
- * collapsed Mobility & Prehab flow on top, because a whole recovery day would
- * make the flow redundant.
- *
- * "Keeps its own template" is a CONSERVATION claim, and conservation claims are
- * where refactors quietly lose things. The one-list rewrite moved four render
- * calls; a recovery day has to come out of it rendering everything it rendered
- * before and nothing it did not. So this suite does not just assert the mode
- * flag — it walks each thing the old screen put on a recovery day and checks it
- * still arrives:
- *
- *   - the recovery exercise rows           (RecoveryBlock, unchanged)
- *   - the optional add-on box              (RecoveryAddonSection, unchanged)
- *   - trunk/support rows                   (never rendered here — the component
- *                                           owner returns none for recovery)
- *
- * And one thing that must NOT arrive. The power primer used to render above the
- * branch split, so it reached recovery days by accident of layout. Stage 4
- * originally restored it on conservation grounds; Sam ruled on 2026-07-27 that
- * power work does not belong on a recovery day at all, so the legacy behaviour
- * was preserving a bug. §4 pins its absence.
+ * Standalone Mobility and Recovery are distinct low-load sessions which share
+ * the ordinary session template and exercise-card UI.
  *
  * Run: npm run test:recovery-template
  */
@@ -29,183 +8,186 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
-
-import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
-// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
-armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { buildDerivedSession, DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
+import { buildSessionTemplate, sessionListLabels } from '../utils/sessionTemplate';
+import { buildSessionExecutionPlan } from '../utils/sessionExecutionChecklist';
+import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
+import {
+  MOBILITY_REGIONS,
+  mobilityRegionOf,
+} from '../rules/mobilitySessionComposition';
+import {
+  BREATHING_RESET_POOL,
+  EASY_CARDIO_POOL,
+  MOBILITY_POOL,
+  TISSUE_QUALITY_POOL,
+} from '../data/exercisePools';
+import { formatLowLoadSetsReps } from '../screens/home/dayWorkoutHelpers';
+import { project } from '../rules/projectVisibleWeek';
+import type { ResolvedDay } from '../utils/sessionResolver';
 
-import { buildSessionTemplate } from '../utils/sessionTemplate';
-import { getSessionComponentRows } from '../utils/sessionComponents';
-import { selectMobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
-import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
-
-const src = path.resolve(__dirname, '..');
+armTotalsOrRed();
 
 let passed = 0;
 const failures: string[] = [];
 
-function ok(name: string, condition: unknown, detail?: string): void {
+function ok(name: string, condition: unknown, detail?: unknown): void {
   if (condition) {
     passed += 1;
     console.log(`  PASS ${name}`);
     return;
   }
   failures.push(name);
-  console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
+  console.error(`  FAIL ${name}${detail === undefined ? '' : `\n      ${JSON.stringify(detail)}`}`);
 }
 
-let rowSeq = 0;
-function row(name: string): any {
-  rowSeq += 1;
-  return {
-    id: `rec-${rowSeq}`,
-    exerciseId: `ex-${rowSeq}`,
-    exerciseOrder: rowSeq,
-    prescribedSets: 1,
-    prescribedRepsMin: 30,
-    prescribedRepsMax: 45,
-    restSeconds: 0,
-    prescriptionType: 'duration',
-    exercise: { id: `lib-${rowSeq}`, name },
-  };
-}
-
-function recoveryWorkout(overrides: Record<string, unknown> = {}): any {
-  return {
-    id: 'w-rec',
-    microcycleId: 'm1',
-    dayOfWeek: 0,
-    name: 'Recovery',
-    description: '',
-    durationMinutes: 30,
-    intensity: 'low',
-    workoutType: 'Recovery',
-    exercises: [row('Couch Stretch'), row('Cat-Cow'), row('90/90 Breathing')],
-    ...overrides,
-  };
-}
-
-const screen = fs.readFileSync(
-  path.join(src, 'screens/home/DayWorkoutScreenV2.tsx'),
-  'utf8',
+const DATE = '2026-08-21';
+const recovery = buildDerivedSession(
+  'recovery', DATE, 'microcycle', 'Recovery day', DEFAULT_ATHLETE_CONTEXT,
+);
+const mobility = buildDerivedSession(
+  'mobility', DATE, 'microcycle', 'Mobility day', DEFAULT_ATHLETE_CONTEXT,
 );
 
-/* ══ 1. A recovery day takes the recovery template ══ */
-
-console.log('\n[1] Recovery days route to their own template');
+console.log('\n[1] The two sessions keep distinct content identities');
 {
-  ok(
-    'workoutType Recovery takes the recovery mode',
-    buildSessionTemplate(recoveryWorkout()).mode === 'recovery',
-  );
-  ok(
-    'sessionTier recovery takes it too, whatever the workoutType says',
-    buildSessionTemplate(
-      recoveryWorkout({ workoutType: 'Conditioning', sessionTier: 'recovery' }),
-    ).mode === 'recovery',
-    'the AI can tag a recovery session as Conditioning; the tier is the tiebreak',
-  );
-  ok(
-    'a non-recovery day does NOT get the recovery template',
-    buildSessionTemplate({
-      ...recoveryWorkout(),
-      workoutType: 'Strength',
-      sessionTier: undefined,
-    } as any).mode === 'badged_list',
-  );
+  const recoveryComponents = getSessionComponents(recovery).map((component) => component.kind);
+  const mobilityComponents = getSessionComponents(mobility).map((component) => component.kind);
+  ok('Recovery owns a recovery component', recoveryComponents.join(',') === 'recovery', recoveryComponents);
+  ok('Mobility owns a mobility component', mobilityComponents.join(',') === 'mobility', mobilityComponents);
+
+  const recoveryRows = getSessionComponentRows(recovery);
+  const mobilityRows = getSessionComponentRows(mobility);
+  ok('Recovery rows never leak into Mobility',
+    recoveryRows.recoveryRows.length === recovery.exercises.length
+      && recoveryRows.mobilityRows.length === 0);
+  ok('Mobility rows never leak into Recovery',
+    mobilityRows.mobilityRows.length === mobility.exercises.length
+      && mobilityRows.recoveryRows.length === 0);
 }
 
-/* ══ 2. No badges, no flow ══ */
-
-console.log('\n[2] No badges and no flow on a recovery day');
+console.log('\n[2] Recovery is SAM\'S shape — 2 tissue, 3 spread mobility, cardio, breathing');
 {
-  const template = buildSessionTemplate(recoveryWorkout());
-  ok('the recovery template emits no badged items', template.items.length === 0);
-  ok(
-    'no flow is offered',
-    selectMobilityPrehabFlow({
-      workout: recoveryWorkout(),
-      seasonPhase: 'In-season',
-      isGameWeek: false,
-      athlete: DEFAULT_ATHLETE_CONTEXT,
-      date: '2026-07-30',
-    }) === null,
-  );
-  ok(
-    'the screen renders the plain RecoveryBlock on this branch',
-    /mode === 'recovery' \? \([\s\S]{0,900}<RecoveryBlock/.test(screen),
-  );
-  ok(
-    'the recovery rows carry no role badge',
-    !/<RecoveryBlock[\s\S]{0,400}SessionRoleBadge/.test(screen),
-  );
+  /**
+   * SAM, 2026-08-21, re-authoring the recipe on a day that gave him Toe Stretch
+   * AND Calf Stretch: *"i don't like the toe stretch and calf stretch either
+   * one or the other is fine, but not both, maybe it should be 1 hip, 1 upper
+   * body, and one extra / 2 soft tissues - 1 light cardio for 10 min and
+   * breathing to finish"*.
+   *
+   * ⚠ **THE SPREAD IS THE POINT, NOT THE COUNT.** "3 mobility rows" was true of
+   * the shape he rejected too — two of them just happened to be lower-body. So
+   * the cell below asserts one HIPS row and one UPPER row by his signed region
+   * table, which is the property that stops the pair he objected to.
+   */
+  const names = new Set(recovery.exercises.map((row) => row.exercise?.name));
+  const countFrom = (pool: readonly { name: string }[]) =>
+    pool.filter((entry) => names.has(entry.name)).length;
+  ok('Recovery has seven exercises', recovery.exercises.length === 7, recovery.exercises.length);
+  ok('Recovery has two soft-tissue rows', countFrom(TISSUE_QUALITY_POOL) === 2);
+  ok('Recovery has three mobility rows', countFrom(MOBILITY_POOL) === 3);
+
+  const pickedRegions = MOBILITY_POOL
+    .filter((entry) => names.has(entry.name))
+    .map((entry) => mobilityRegionOf(entry));
+  ok('one of them is a hip movement', pickedRegions.filter((r) => r === 'hips').length === 1,
+    pickedRegions);
+  ok('one of them is an upper-body movement', pickedRegions.filter((r) => r === 'upper').length === 1,
+    pickedRegions);
+  ok('and the third is neither — the "one extra"',
+    pickedRegions.filter((r) => r !== 'hips' && r !== 'upper').length === 1, pickedRegions);
+
+  ok('Recovery has one light-cardio row', countFrom(EASY_CARDIO_POOL) === 1);
+  ok('Recovery has one breathing row', countFrom(BREATHING_RESET_POOL) === 1);
+  ok('breathing finishes the session — Sam\'s "to finish"',
+    BREATHING_RESET_POOL.some((entry) =>
+      entry.name === recovery.exercises[recovery.exercises.length - 1]?.exercise?.name),
+    recovery.exercises[recovery.exercises.length - 1]?.exercise?.name);
+  ok('every recovery cardio option is authored at 5-10 minutes',
+    EASY_CARDIO_POOL.every((row) => row.repsMin === 5 && row.repsMax === 10),
+    EASY_CARDIO_POOL.map((row) => [row.name, row.repsMin, row.repsMax]));
 }
 
-/* ══ 3. Conservation — everything the old screen showed still arrives ══ */
-
-console.log('\n[3] Nothing a recovery day used to render was lost');
+console.log('\n[3] Mobility is mobility-only and full-body');
 {
-  const recoveryBranch = screen.slice(
-    screen.indexOf("sessionTemplate.mode === 'recovery' ? ("),
-    screen.indexOf(') : ('),
-  );
-
-  ok('the recovery branch was located in the source', recoveryBranch.length > 0);
-  ok(
-    'the recovery exercise rows still render',
-    /<RecoveryBlock/.test(recoveryBranch),
-  );
-  ok(
-    'the optional add-on box still renders',
-    /<RecoveryAddonSection/.test(recoveryBranch),
-  );
-  // Trunk/support was never shown on a recovery day: the shared component owner
-  // returns no support rows for one. Pinned so "we dropped the box" can never be
-  // mistaken for "we dropped content".
-  const rows = getSessionComponentRows(recoveryWorkout({
-    exercises: [row('Couch Stretch'), row('Dead Bug')],
-  }));
-  ok(
-    'the component owner returns no trunk/support rows for a recovery day',
-    rows.supportRows.length === 0,
-    'so retiring the Trunk / Support box cost a recovery day nothing',
-  );
-  ok(
-    'and it returns no strength rows either',
-    rows.strengthRows.length === 0,
-  );
+  const mobilityByName = new Map(MOBILITY_POOL.map((entry) => [entry.name, entry] as const));
+  const picked = mobility.exercises
+    .map((row) => mobilityByName.get(String(row.exercise?.name ?? '')))
+    .filter((entry): entry is NonNullable<typeof entry> => !!entry);
+  const regions = new Set(picked.map(mobilityRegionOf).filter(Boolean));
+  ok('Mobility contains only the mobility pool', picked.length === mobility.exercises.length);
+  ok('Mobility stays inside the signed 5-8 cap',
+    mobility.exercises.length >= 5 && mobility.exercises.length <= 8,
+    mobility.exercises.length);
+  ok('Mobility covers lower, hips, midline and upper',
+    MOBILITY_REGIONS.every((region) => regions.has(region)), [...regions]);
 }
 
-/* ══ 4. Power work does not belong on a recovery day ══ */
+console.log('\n[4] Both sessions use the ordinary template and checklist');
+for (const [name, workout, expectedPresentation, expectedSection] of [
+  ['Recovery', recovery, 'recovery', 'recovery'],
+  ['Mobility', mobility, 'mobility', 'mobility'],
+] as const) {
+  const template = buildSessionTemplate(workout);
+  const exerciseItems = template.items.filter((item) => item.kind === 'exercise');
+  const plan = buildSessionExecutionPlan({ workout, template, mobilityFlow: null });
+  ok(`${name} uses the normal list template`, template.mode === 'badged_list');
+  ok(`${name} carries every stored row into that list`, exerciseItems.length === workout.exercises.length);
+  ok(`${name} uses its own row presentation`,
+    exerciseItems.every((item) => item.kind === 'exercise' && item.presentation === expectedPresentation));
+  ok(`${name} numbers every exercise`, sessionListLabels(template.items).filter(Boolean).length === workout.exercises.length);
+  ok(`${name} checklist has one matching section`,
+    plan.sections.length === 1
+      && plan.sections[0].id === expectedSection
+      && plan.sections[0].items.length === workout.exercises.length,
+    plan.sections.map((section) => [section.id, section.items.length]));
+}
 
-console.log('\n[4] The power primer is gone from recovery days (Sam, 2026-07-27)');
+console.log('\n[5] Low-load doses use one high-end target');
 {
-  ok(
-    'the screen no longer renders a power primer anywhere',
-    !/PowerPrimerSection/.test(screen),
-    'it survived on recovery days only as a legacy of rendering above the old branch split',
-  );
+  ok('rep rows show the high target with no range',
+    formatLowLoadSetsReps({
+      prescribedSets: 2, prescribedRepsMin: 8, prescribedRepsMax: 10,
+      prescriptionType: 'reps', perSide: true, exercise: { name: 'Open Book Rotation' },
+    }) === '2 × 10 / side');
+  ok('cardio rows show the high target in minutes',
+    formatLowLoadSetsReps({
+      prescribedSets: 1, prescribedRepsMin: 5, prescribedRepsMax: 10,
+      prescriptionType: 'duration_minutes', exercise: { name: 'Outdoor Walk' },
+    }) === '1 × 10 min');
+}
 
-  // The owner never emitted a power item for a recovery day, so removing the
-  // render call leaves no path by which power can reach one.
-  const withPower = buildSessionTemplate(
-    recoveryWorkout({
-      powerBlock: {
-        id: 'pb1',
-        kind: 'primer',
-        title: 'Broad Jumps',
-        prescription: '3 x 3',
-        options: [],
-        notes: [],
-      },
-    }),
+console.log('\n[6] Day cards carry the same rows instead of an empty part');
+for (const [name, workout] of [['Recovery', recovery], ['Mobility', mobility]] as const) {
+  const day = { date: DATE, source: 'plan', workout } as unknown as ResolvedDay;
+  const visible = project({ week: [day], weekStart: DATE }).days[0];
+  const part = visible.parts[0];
+  ok(`${name} projects one low-load part`, visible.parts.length === 1 && part.kind === 'recovery');
+  ok(`${name} day card carries every exercise row`,
+    part.rows.length === workout.exercises.length,
+    { visible: part.rows.length, stored: workout.exercises.length });
+}
+
+console.log('\n[7] The screen has one shared exercise-card route');
+{
+  const screen = fs.readFileSync(
+    path.resolve(__dirname, '../screens/home/DayWorkoutScreenV2.tsx'), 'utf8',
   );
-  ok(
-    'a recovery day stays a recovery template — no items, power or otherwise',
-    withPower.items.length === 0,
-  );
+  const listStart = screen.indexOf('function SessionList');
+  const listEnd = screen.indexOf('function withholdingOfTemplateItem', listStart);
+  const list = listStart >= 0 && listEnd > listStart ? screen.slice(listStart, listEnd) : '';
+  ok('the shared SessionList region was found', list.length > 1000, list.length);
+  ok('Mobility and Recovery both route through StrengthExerciseCard',
+    /item\.presentation === 'mobility' \|\| item\.presentation === 'recovery'/.test(list)
+      && /<StrengthExerciseCard/.test(list));
+  ok('the old standalone RecoveryBlock is gone', !/function RecoveryBlock\b|<RecoveryBlock\b/.test(screen));
+  ok('the screen no longer branches on recovery template mode',
+    !/sessionTemplate\.mode === 'recovery'/.test(screen));
+  ok('the shared card receives the low-load dose formatter',
+    /prescriptionLabel=\{isLowLoad \? formatLowLoadSetsReps\(item\.row\) : undefined\}/.test(list));
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

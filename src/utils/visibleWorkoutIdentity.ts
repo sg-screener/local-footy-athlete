@@ -116,7 +116,16 @@ function hasVisibleConditioningContent(workout: Workout): boolean {
 }
 
 export function isConditioningOnlyWorkout(workout: Workout): boolean {
-  if (workout.workoutType === 'Recovery' || workout.workoutType === 'Game') return false;
+  /* `'Mobility'` JOINS THE TWO THAT WERE ALREADY HERE (2026-08-21). It split
+     off `'Recovery'` when Mobility became its own type, and this line is a
+     "never conditioning" guard — a mobility flow is no more conditioning-only
+     than a recovery flow was the day before. Leaving it out would have
+     re-typed every composed Mobility session as conditioning. */
+  if (
+    workout.workoutType === 'Recovery' ||
+    workout.workoutType === 'Mobility' ||
+    workout.workoutType === 'Game'
+  ) return false;
   if (
     workout.workoutType === 'Team Training' ||
     (workout as any).isTeamDay === true ||

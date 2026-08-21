@@ -144,6 +144,8 @@ export interface OnboardingInjury {
   bodyArea: string;
   description: string;
   severity?: InjurySeverity;
+  /** Exact answer on the shared 1-10 injury scale used inside the app. */
+  severityScore?: number;
   whenItHurts?: InjuryTiming;
   movementTriggers?: string[];
   notes?: string;
@@ -278,6 +280,19 @@ export type WorkoutType =
   | 'Conditioning'
   | 'Technical'
   | 'Recovery'
+  /**
+   * MOBILITY IS ITS OWN SESSION TYPE (Sam, 2026-08-21: *"if there is no
+   * mobility session type then fucking create one and link it to the button
+   * for when i add a session and tap on mobility"*).
+   *
+   * It existed as a composed session, a door and a label already — what it did
+   * NOT have was a type, so it was typed `'Recovery'` and the athlete's card
+   * said RECOVERY over a session called Mobility. Its TIER stays `recovery`:
+   * the charter's counting row is unchanged — no load, never a hard day, never
+   * breaks a rest day — and the tier is what draws the blue badge Sam asked to
+   * keep.
+   */
+  | 'Mobility'
   | 'Mixed'
   | 'Flush-Out'
   | 'Sprint-Intervals'
