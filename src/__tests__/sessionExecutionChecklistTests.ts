@@ -104,6 +104,33 @@ ok('a session is full when mobility and every other prescribed section are full'
     buildSessionExecutionSummary(plan, everyPrescribedItem),
   ) === 'full');
 
+const teamWorkout: any = {
+  id: 'team-session',
+  name: 'Strength + Team Training',
+  workoutType: 'Team Training',
+  exercises: [
+    row('press', 'Bench Press'),
+    {
+      id: 'club', exerciseId: 'exercise-club', workoutType: 'Team Training',
+      exercise: { id: 'library-club', name: 'Team Training' },
+    },
+  ],
+};
+const teamPlan = buildSessionExecutionPlan({
+  workout: teamWorkout,
+  template: buildSessionTemplate(teamWorkout),
+  mobilityFlow: null,
+});
+const clubItem = teamPlan.items.find((item) => item.sectionId === 'team_training');
+const clubCompleted = buildSessionExecutionSummary(
+  teamPlan,
+  new Set(clubItem ? [clubItem.id] : []),
+);
+ok('ticking Club session makes Team Training completed for the review',
+  clubItem !== undefined
+    && clubCompleted.sections.find((section) => section.sectionId === 'team_training')?.completion === 'full'
+    && clubCompleted.componentCompletions.team_training === 'full');
+
 console.log('\n[2b] The saved result keeps the item evidence and whole-session RPE');
 const checklistPayload = buildSessionFeedbackPayload({
   dateStr: '2026-08-11',
@@ -247,6 +274,16 @@ ok('Team Training expands as a plain checklist row, not an accent card',
 ok('the Team Training checklist row uses the ruled Club session label',
   /function TeamTrainingRow[\s\S]{0,500}signedCopy\('session\.team_training\.row'\)/.test(screen)
   && !/Club\/team field session/.test(screen));
+const teamTrainingRowStart = screen.indexOf('function TeamTrainingRow');
+const teamTrainingRowEnd = screen.indexOf('/**\n * Common exercise header', teamTrainingRowStart);
+const teamTrainingRow = teamTrainingRowStart >= 0 && teamTrainingRowEnd > teamTrainingRowStart
+  ? screen.slice(teamTrainingRowStart, teamTrainingRowEnd)
+  : '';
+ok('the Team Training row receives and renders its existing checklist checkbox',
+  teamTrainingRow.length > 0
+    && /<TeamTrainingRow key=\{key\} checkbox=\{checkbox\}/.test(screen)
+    && /checkbox\?: React\.ReactNode/.test(teamTrainingRow)
+    && /\{checkbox\}/.test(teamTrainingRow));
 ok('mobility has no optional wording in text or accessibility copy',
   !/\boptional\b/i.test(mobilityRenderer));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
@@ -572,6 +609,9 @@ ok('[7] the Power / Primer section is gone from the type, the labels and the ord
 const headerRow = screen.slice(
   screen.indexOf('function ExerciseHeaderRow'),
   screen.indexOf('function PlayButton'));
+const cueDisclosure = screen.slice(
+  screen.indexOf('function CueDisclosure'),
+  screen.indexOf('function FinishMoment'));
 const checklistItemWhole = screen.slice(
   screen.indexOf('function ExecutionChecklistItem'),
   screen.indexOf('function OptionalWorkHeader'));
@@ -587,16 +627,18 @@ ok('[7] CONTROL — the header owner and the checklist owner were both found',
   headerRow.length > 100 && checklistItemWhole.includes('accessibilityRole="checkbox"'),
   { headerRow: headerRow.length, checklistItem: checklistItemWhole.length });
 
-ok('[7] play sits immediately beside the exercise name, inside one group',
-  /exerciseNameGroup[\s\S]*?styles\.exerciseName[\s\S]*?<PlayButton/.test(headerRow),
+ok('[7] the name line no longer carries the play button',
+  !/<PlayButton/.test(headerRow) && /numberOfLines=\{2\}/.test(headerRow),
   headerRow);
-ok('[7] and the old full-width name — the thing that PUSHED play to the edge — is gone',
-  !/exerciseNameWrap/.test(headerRow)
-    && (headerRow.match(/<PlayButton/g) ?? []).length === 1,
-  headerRow);
-ok('[7] the name group takes the width so the pair stays hard left',
-  /exerciseNameGroup:\s*\{[^}]*flex:\s*1[^}]*flexDirection:\s*'row'/.test(screen)
-    && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen));
+ok('[7] play sits beside Form cues in the shared cue row',
+  /styles\.cueActionRow[\s\S]*?styles\.cueToggleRow[\s\S]*?<PlayButton/.test(cueDisclosure)
+    && /cueActionRow:\s*\{[^}]*flexDirection:\s*'row'[^}]*alignItems:\s*'center'/.test(screen),
+  cueDisclosure);
+ok('[7] moving play gives the exercise name the full header width',
+  /<View style=\{styles\.exerciseNameWrap\}>/.test(headerRow)
+    && /exerciseNameWrap:\s*\{[^}]*flex:\s*1/.test(screen)
+    && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen)
+    && !/<PlayButton/.test(headerRow));
 
 /* ⚠ **SUPERSEDED BY R-116 — SAM, 2026-08-20, IN HIS OWN WORDS.**
  *
@@ -623,10 +665,11 @@ ok('[7] the checkbox keeps its toggle, its state and its identity',
 ok('[7] the checkbox keeps its spoken label',
   /accessibilityLabel=\{`\$\{completed \? 'Completed' : 'Mark complete'\}: \$\{label\}`\}/
     .test(checklistItemWhole));
-ok('[7] both the name and the play button still speak the exercise, and still play it',
-  (headerRow.match(/accessibilityLabel=\{`Play \$\{name\} demo`\}/g) ?? []).length === 2
-    && (headerRow.match(/onPress=\{onPlay\}|onPress=\{onPlay\}/g) ?? []).length >= 1
-    && /<PlayButton onPress=\{onPlay\}/.test(headerRow));
+ok('[7] both the name and the moved play button still speak the exercise and play it',
+  /accessibilityLabel=\{`Play \$\{name\} demo`\}/.test(headerRow)
+    && /onPress=\{onPlay\}/.test(headerRow)
+    && /<PlayButton onPress=\{onPlay\}/.test(cueDisclosure)
+    && /accessibilityLabel=\{playAccessibilityLabel\}/.test(cueDisclosure));
 
 // ── SETS/REPS LOWER LEFT, WEIGHT LOWER RIGHT — UNMOVED.
 /* ⚠ `space-between` WAS REJECTED — SAM, 2026-08-20, second pass on R-116:
@@ -677,18 +720,18 @@ ok('[7] and StrengthExerciseCard has exactly one header, so no row can differ',
  * ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[10] the tightened session row — Sam\'s mock, R-116');
 
-// ── PLAY STAYS BESIDE THE NAME (R-111's surviving half).
-ok('[10] Play is still immediately beside the exercise name',
-  /exerciseNameGroup[\s\S]*?styles\.exerciseName[\s\S]*?<PlayButton/.test(headerRow)
-    && /exerciseNameGroup:\s*\{[^}]*flexDirection:\s*'row'/.test(screen),
-  headerRow);
+// ── PLAY MOVES TO THE FIXED CUE LINE, SO LONG TITLES CANNOT MOVE IT.
+ok('[10] Play is aligned beside Form cues, not attached to the exercise title',
+  !/<PlayButton/.test(headerRow)
+    && /styles\.cueActionRow[\s\S]*?<PlayButton/.test(cueDisclosure),
+  { headerRow, cueDisclosure });
 
 // ── THE COMPACT LEFT COLUMN: name/Play, then sets x reps, then Form cues.
 const cardOrder = ['<ExerciseHeaderRow', 'styles.statsRow', '<CueDisclosure']
   .map((needle) => strengthCard.indexOf(needle));
 ok('[10] CONTROL — all three blocks were found in the card',
   cardOrder.every((index) => index >= 0), cardOrder);
-ok('[10] the row reads name+Play, then sets x reps, then Form cues — in that order',
+ok('[10] the row reads name, then sets x reps, then Form cues + Play — in that order',
   cardOrder[0] < cardOrder[1] && cardOrder[1] < cardOrder[2], cardOrder);
 /* SECOND PASS: *"compress … MATERIALLY … so these read as one compact unit,
   * not three separate rows."* Gaps alone were not enough — the ROW PADDING is
@@ -739,6 +782,11 @@ const styleBlock = (name: string): string => {
 const controlsRowStyle = styleBlock('controlsRow');
 const checkboxStyle = styleBlock('executionCheckbox');
 const weightStyle = styleBlock('weightControl');
+const controlsRowStart = cardSource.indexOf('<View style={styles.controlsRow}>');
+const controlsRowCheckbox = cardSource.indexOf('{checkbox}', controlsRowStart);
+const controlsRowSource = controlsRowStart >= 0 && controlsRowCheckbox > controlsRowStart
+  ? cardSource.slice(controlsRowStart, controlsRowCheckbox + '{checkbox}'.length)
+  : '';
 
 ok('[10] CONTROL — the three style blocks under test were all found',
   !!controlsRowStyle && !!checkboxStyle && !!weightStyle,
@@ -746,12 +794,12 @@ ok('[10] CONTROL — the three style blocks under test were all found',
     weight: weightStyle.length });
 
 ok('[10] the stepper and the checkbox are SIBLINGS in one controlsRow',
-  /<View style=\{styles\.controlsRow\}>\s*<View style=\{styles\.weightControl\}>/.test(cardSource)
-    && /\{checkbox\}\s*<\/View>\s*<\/View>/.test(cardSource)
-    // nothing but a comment may sit between the two controls
-    && !/<\/View>\s*<View[\s\S]{0,80}\{checkbox\}/.test(cardSource),
-  cardSource.slice(cardSource.indexOf('styles.controlsRow'),
-    cardSource.indexOf('styles.controlsRow') + 200));
+  controlsRowSource.length > 0
+    && /styles\.weightControl/.test(controlsRowSource)
+    && /\{checkbox\}$/.test(controlsRowSource.trim())
+    && !/<View[^>]*>[\s\S]*\{checkbox\}[\s\S]*<\/View>/.test(
+      controlsRowSource.slice(controlsRowSource.indexOf('styles.weightControl'))),
+  controlsRowSource.slice(0, 500));
 ok('[10] that row is flexDirection row + alignItems center — the only thing aligning them',
   /flexDirection:\s*'row'/.test(controlsRowStyle)
     && /alignItems:\s*'center'/.test(controlsRowStyle),
@@ -805,16 +853,31 @@ ok('[10] a row with no editable load keeps the column WITHOUT a fake stepper',
     && /addonCheckboxSlot:\s*\{\s*flexDirection:\s*'row',\s*alignItems:\s*'center'\s*\}/.test(screen)
     && !/position:\s*'absolute'/.test(styleBlock('addonCheckboxSlot')),
   'no invented weight control, and no absolute positioning');
+ok('[10] band rows use the same stepper for thinner and thicker resistance',
+  /loadControlMode === 'band'[\s\S]{0,180}decrementBandResistance/.test(cardSource)
+    && /loadControlMode === 'band'[\s\S]{0,180}incrementBandResistance/.test(cardSource)
+    && /Band resistance, \$\{displayedWeight\}/.test(cardSource));
+ok('[10] unloaded rows cannot accidentally gain a kilogram control',
+  /loadControlMode === 'none' \? null/.test(cardSource)
+    && /loadControlMode === 'bodyweight'[\s\S]{0,500}\sBW\s[\s\S]{0,80}<\/Text>/.test(cardSource));
 
 /* THE GRID: one gutter, one content column, three lines sharing one left edge. */
 ok('[10] the row is a grid: fixed gutter, then one content column',
   /exerciseRowGrid:\s*\{[^}]*flexDirection:\s*'row'/.test(screen)
-    && /exerciseNumberGutter:\s*\{[^}]*width:\s*26/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*width:\s*32/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*marginLeft:\s*-13/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*marginRight:\s*13/.test(screen)
     && /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen));
 ok('[10] the NUMBER lives in the gutter, not beside the name',
   /<View style=\{styles\.exerciseNumberGutter\}>[\s\S]{0,160}exerciseLabelText/.test(cardSource)
     && !/exerciseLabelBadge/.test(headerRow),
   'the number as a sibling of the name is what put lines 2 and 3 under it');
+ok('[10] the number is centred beside a subtle lime separator',
+  /exerciseNumberGutter:\s*\{[^}]*alignItems:\s*'center'[^}]*justifyContent:\s*'center'[^}]*alignSelf:\s*'stretch'/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*borderRightWidth:\s*StyleSheet\.hairlineWidth/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*borderRightColor:\s*'rgba\(200, 255, 0, 0\.35\)'/.test(screen)
+    && /exerciseLabelText:\s*\{[^}]*width:\s*'100%'[^}]*textAlign:\s*'center'/.test(screen),
+  'the gutter includes the card padding, so the number centres between the visible edge and divider');
 ok('[10] ALL THREE text lines are children of the ONE content column',
   (() => {
     const col = cardSource.indexOf('styles.exerciseContentColumn');
@@ -855,8 +918,8 @@ ok('[10] the CONTROLS do not determine the text stack\'s height',
   'the stepper is ~34px tall; inside the dose line it forced that line to 34px');
 ok('[10] and the grid centres them against the whole row',
   /exerciseRowGrid:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
-    && /exerciseNumberGutter:\s*\{[^}]*alignSelf:\s*'flex-start'/.test(screen),
-  'controls centre on the row; the gutter number stays on the name line');
+    && /exerciseNumberGutter:\s*\{[^}]*alignSelf:\s*'stretch'/.test(screen),
+  'controls centre on the row; the gutter stretches so its number can centre vertically');
 /* ══ THE SUBTLE CONTAINER — R-116 FINAL ═════════════════════════════════════
  * *"each exercise should sit inside a subtle compact container … 1px
  * low-contrast neutral border; extremely subtle background tint; 10-12px
@@ -872,13 +935,14 @@ ok('[10] every exercise sits in one comfortable container, to spec',
     && /exerciseList:\s*\{\s*gap:\s*8\s*\}/.test(screen)
     && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen));
 
-/* ── TYPOGRAPHY (R-116 final). The app's own System italic, no new family. ── */
-ok('[10] the exercise name is ~15px semibold italic',
-  /exerciseName:\s*\{[^}]*fontSize:\s*15\b[^}]*fontWeight:\s*'600'[^}]*fontStyle:\s*'italic'/
-    .test(screen));
-ok('[10] sets x reps is ~14px medium/semibold italic',
-  /statsPrimary:\s*\{[^}]*fontSize:\s*14\b[^}]*fontWeight:\s*'[56]00'[^}]*fontStyle:\s*'italic'/
-    .test(screen));
+/* ── TYPOGRAPHY — current review: upright names; dose matches Form cues. ── */
+ok('[10] exercise names are upright in every shared session row',
+  /exerciseName:\s*\{[^}]*fontSize:\s*15\b[^}]*fontWeight:\s*'600'/.test(screen)
+    && !/exerciseName:\s*\{[^}]*fontStyle/.test(screen));
+ok('[10] sets x reps matches the Form cues type size, weight and line height',
+  /statsPrimary:\s*\{[^}]*fontSize:\s*12\.5\b[^}]*fontWeight:\s*'400'[^}]*lineHeight:\s*16/.test(screen)
+    && !/statsPrimary:\s*\{[^}]*fontStyle/.test(screen)
+    && /cueToggleText:\s*\{[^}]*fontSize:\s*12\.5\b[^}]*fontWeight:\s*'400'[^}]*lineHeight:\s*16/.test(screen));
 ok('[10] Form cues is 12-13px, REGULAR and muted — not italic, not bold',
   /cueToggleText:\s*\{[^}]*fontSize:\s*12(\.5)?\b[^}]*fontWeight:\s*'400'/.test(screen)
     && !/cueToggleText:\s*\{[^}]*fontStyle/.test(screen));
@@ -914,19 +978,34 @@ ok('[10] and the app-wide family was not removed or changed',
     path.resolve(__dirname, '..', 'theme', 'typography.ts'), 'utf8')),
   'the theme still names System; only italic callers bypass it');
 
-ok('[10] and no new typeface was introduced — italic on the existing face',
+ok('[10] and no new typeface was introduced for the upright session rows',
   !/fontFamily/.test(strengthCard) && !/fontFamily:/.test(
     screen.slice(screen.indexOf('  exerciseName: {'), screen.indexOf('  exerciseName: {') + 300)),
-  'fontStyle italic on System, as HomeScreenV2 and CoachTabScreen already do');
+  'the session rows keep the app\'s existing face');
+
+ok('[10] Play is visually the same scale as the Form cues line',
+  /playBtn:\s*\{[^}]*width:\s*16[^}]*height:\s*16[^}]*borderRadius:\s*8/.test(screen)
+    && /<Svg width=\{7\} height=\{7\}/.test(screen),
+  '16px ring with a 7px triangle beside a 16px text line');
 ok('[10] the three lines stay 2-4px apart inside that comfortable card',
   /statsRow:\s*\{[^}]*marginTop:\s*[234]\b/.test(screen)
     && /cueContainer:\s*\{\s*marginTop:\s*[234]\s*\}/.test(screen),
   'generous space AROUND the exercise, tight grouping WITHIN it');
-ok('[10] the checkbox is drawn ~22px but stays a 44x44 tap target',
-  /width:\s*22/.test(fs.readFileSync(
+ok('[10] the reduced checkbox is drawn 18px but stays a 44x44 tap target',
+  /width:\s*18/.test(fs.readFileSync(
     path.resolve(__dirname, '..', 'theme', 'sessionExecutionCheckbox.ts'), 'utf8'))
-    && /hitSlop=\{\{ top: 11, bottom: 11, left: 11, right: 11 \}\}/.test(checklistItemWhole),
-  '22 + 11 + 11 = 44 on both axes, symmetric so the tappable centre is the drawn centre');
+    && /hitSlop=\{\{ top: 13, bottom: 13, left: 13, right: 13 \}\}/.test(checklistItemWhole),
+  '18 + 13 + 13 = 44 on both axes, symmetric so the tappable centre is the drawn centre');
+ok('[10] the weight control matches the sets/reps type scale',
+  /weightControl:\s*\{[^}]*height:\s*22/.test(screen)
+    && /weightValueText:\s*\{[^}]*fontSize:\s*12\.5[^}]*lineHeight:\s*16/.test(screen)
+    && /weightBtnLeft:\s*\{[^}]*width:\s*22/.test(screen)
+    && /weightBtnRight:\s*\{[^}]*width:\s*22/.test(screen));
+ok('[10] every weight value slot is Medium-width and centres shorter labels',
+  /weightValueWrap:\s*\{[^}]*width:\s*60[^}]*alignItems:\s*'center'/.test(screen)
+    && /weightInput:\s*\{[^}]*width:\s*60[^}]*textAlign:\s*'center'/.test(screen)
+    && /weightValueText:\s*\{[^}]*width:\s*'100%'[^}]*textAlign:\s*'center'/.test(screen)
+    && /staticLoadControl:\s*\{[^}]*width:\s*60/.test(screen));
 ok('[10] the border is NEUTRAL and the tint subtle — not an accent, not a panel',
   /exerciseCard:\s*\{[^}]*backgroundColor:\s*'rgba\(255, 255, 255, 0\.0[123]\d*\)'/.test(screen)
     && /exerciseCard:\s*\{[^}]*borderColor:\s*'rgba\(255, 255, 255, 0\.0\d+\)'/.test(screen)
@@ -1083,23 +1162,23 @@ ok('[10] Conditioning still renders its own choice row, untouched by this slice'
 ok('[10] every checklist call site hands the checkbox down — none dropped it',
   (screen.match(/<ExecutionChecklistItem/g) ?? []).length
     === (screen.match(/\{\(checkbox\) => \(/g) ?? []).length
-    && (screen.match(/<ExecutionChecklistItem/g) ?? []).length >= 4,
+    && (screen.match(/<ExecutionChecklistItem/g) ?? []).length >= 2,
   { sites: (screen.match(/<ExecutionChecklistItem/g) ?? []).length,
     handlers: (screen.match(/\{\(checkbox\) => \(/g) ?? []).length });
 
 // ── INDEPENDENTLY TAPPABLE, AND NOT OVERLAPPING.
 ok('[10] the checkbox and Play are separate Pressables with their own handlers',
   /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItemWhole)
-    && /<PlayButton onPress=\{onPlay\}/.test(headerRow)
-    && !/onPlay[\s\S]{0,60}onToggle/.test(headerRow));
+    && /<PlayButton onPress=\{onPlay\}/.test(cueDisclosure)
+    && !/onPlay[\s\S]{0,60}onToggle/.test(cueDisclosure));
 ok('[10] both keep a practical tap target — neither shrank to fit the tighter row',
-  /hitSlop=\{\{ top: 11, bottom: 11, left: 11, right: 11 \}\}/.test(checklistItemWhole)
-    && /hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/.test(screen),
-  'checkbox 44x44, PlayButton unchanged');
+  /hitSlop=\{\{ top: 13, bottom: 13, left: 13, right: 13 \}\}/.test(checklistItemWhole)
+    && /hitSlop=\{\{ top: 14, bottom: 14, left: 14, right: 14 \}\}/.test(screen),
+  'both controls keep a 44x44 tap target even though Play is drawn smaller');
 ok('[10] a long name wraps instead of pushing the controls off the row',
   /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen)
     && /numberOfLines=\{2\}/.test(headerRow)
-    && /exerciseNameGroup:\s*\{[^}]*flex:\s*1/.test(screen),
+    && /exerciseNameWrap:\s*\{[^}]*flex:\s*1/.test(screen),
   'the name shrinks and wraps; the control slot is fixed-width and cannot be squeezed');
 ok('[10] and larger text cannot overrun the control row',
   /statsLeftColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen)

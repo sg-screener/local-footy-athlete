@@ -40,6 +40,7 @@ import {
   deriveEquipmentVocabulary,
   derivedEquipmentChecklistTags,
   derivedConditioningModalityQuestions,
+  EQUIPMENT_TAG_LABELS,
   formatEquipmentProfileSummary,
   UNMAPPABLE_REQUIREMENTS_PENDING_RULING,
 } from '../rules/equipmentVocabulary';
@@ -61,6 +62,17 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
 const vocabulary = deriveEquipmentVocabulary();
 const demandedTags = new Set(vocabulary.requiredTags.map((demand) => demand.tag));
 const checklist = derivedEquipmentChecklistTags();
+
+ok(
+  'the shared sandbag label keeps both recognised equipment names',
+  EQUIPMENT_TAG_LABELS.sandbag === 'Sand bag / dead ball',
+  EQUIPMENT_TAG_LABELS.sandbag,
+);
+ok(
+  'the shared barbell label names plates rather than the separately asked rack',
+  EQUIPMENT_TAG_LABELS.barbell === 'Barbell and plates',
+  EQUIPMENT_TAG_LABELS.barbell,
+);
 
 /* ── Typed exhaustiveness pin ─────────────────────────────────────────────
  * Adding a member to `EquipmentTag` fails COMPILATION here until the author

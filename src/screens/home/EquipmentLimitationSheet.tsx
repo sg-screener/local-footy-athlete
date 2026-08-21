@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
-import { Sheet } from '../../components/ui';
+import { Sheet, SheetDescription, SheetHeader } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -34,10 +34,8 @@ const glyph = (color: string, children: React.ReactNode) => (
   </Svg>
 );
 export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => React.ReactNode> = {
-  /** Barbell — rectangular end plates on a straight bar. */
-  barbell: (color) => glyph(color, (
-    <><Path d="M4 9v6" /><Path d="M7 7v10" /><Path d="M17 7v10" /><Path d="M20 9v6" /><Path d="M7 12h10" /></>
-  )),
+  /** Barbell and plates — Sam's supplied stacked-plate trace. */
+  barbell: (color) => <LfaIcon name="barbell-plates" color={color} />,
   /** Dumbbells — the same dumbbell mark used throughout the app. */
   dumbbells: (color) => <LfaIcon name="dumbbell" color={color} />,
   /** Cable machine — the previous upright selector/cable station trace. */
@@ -57,10 +55,8 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   /** Plyo box — Sam's approved three-face box with grip chevrons. */
   plyo_box: (color) => <LfaIcon name="plyo-box" color={color} />,
   // ── Item 46/47, 2026-08-13 — the seven newly askable tags. ──
-  // Drawn with the inline `glyph` primitive, NOT with new `LfaIcon` names:
-  // the LfaIcon set is Sam's approved traced artwork and adding a name there
-  // is his call, not mine. These are plain marks in the same stroke language,
-  // and they are placeholders he can replace without touching this map's keys.
+  // Most remain inline placeholders. Dip bars, the back-extension bench, the
+  // ab wheel and the sand bag / dead ball now use Sam's approved traces.
   /** Squat rack — two uprights carrying a bar. */
   rack: (color) => glyph(color, (
     <><Path d="M5 4v16" /><Path d="M19 4v16" /><Path d="M5 9h14" /><Path d="M3 20h4" /><Path d="M17 20h4" /></>
@@ -71,26 +67,18 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   )),
   /** Swiss ball — a plain sphere. */
   swiss_ball: (color) => glyph(color, <Path d="M12 3a9 9 0 100 18 9 9 0 100-18" />),
-  /** Ab wheel — a wheel on a through-handle. */
-  ab_wheel: (color) => glyph(color, (
-    <><Path d="M12 6a6 6 0 100 12 6 6 0 100-12" /><Path d="M3 12h3" /><Path d="M18 12h3" /></>
-  )),
-  /** 45° back extension — the angled pad on its frame. */
-  back_extension_bench: (color) => glyph(color, (
-    <><Path d="M4 18L16 6" /><Path d="M12 20v-4" /><Path d="M8 20h8" /><Path d="M14 4h5" /></>
-  )),
-  /** Dip bars — two parallel rails on uprights. */
-  dip_bars: (color) => glyph(color, (
-    <><Path d="M4 8h16" /><Path d="M4 14h16" /><Path d="M6 8v10" /><Path d="M18 14v4" /></>
-  )),
+  /** Ab wheel — Sam's supplied twin-wheel perspective trace. */
+  ab_wheel: (color) => <LfaIcon name="ab-wheel" color={color} />,
+  /** 45° back extension — Sam's supplied split-pad machine trace. */
+  back_extension_bench: (color) => <LfaIcon name="back-extension" color={color} />,
+  /** Dip bars — Sam's supplied curved rails, centre brace and round feet. */
+  dip_bars: (color) => <LfaIcon name="dip-bars" color={color} />,
   /** Rings / TRX — two straps dropping to a pair of rings. */
   rings_trx: (color) => glyph(color, (
     <><Path d="M4 4h16" /><Path d="M8 4v8" /><Path d="M16 4v8" /><Path d="M8 15a3 3 0 100 6 3 3 0 100-6" /><Path d="M16 15a3 3 0 100 6 3 3 0 100-6" /></>
   )),
-  /** Sandbag — a slumped bag with its two carry handles. */
-  sandbag: (color) => glyph(color, (
-    <><Path d="M4 11c0-2 2-3 8-3s8 1 8 3v4c0 2-2 3-8 3s-8-1-8-3z" /><Path d="M9 8V6" /><Path d="M15 8V6" /></>
-  )),
+  /** Sand bag / dead ball — Sam's supplied round stitched-bag trace. */
+  sandbag: (color) => <LfaIcon name="sandbag-dead-ball" color={color} />,
 };
 export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
   /** Bike erg — Sam's approved traced machine. */
@@ -242,10 +230,11 @@ export function EquipmentLimitationSheet({
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet">
       <View>
-        <Text style={styles.title}>
-          {span ? 'What will you be without?' : 'Missing equipment this week?'}
-        </Text>
-        <Text style={styles.body}>
+        <SheetHeader
+          title="Equipment"
+          subtitle={span ? 'What will you be without?' : 'Missing equipment this week?'}
+        />
+        <SheetDescription>
           {activeFactId
             ? 'A restriction is active. Mark what is missing, or clear it below.'
             : kitIsEmpty
@@ -253,7 +242,7 @@ export function EquipmentLimitationSheet({
               : span
                 ? `Mark what you won't have while you're away. Your sessions work around it until ${shortDayMonthLabel(span.until)}.`
                 : "Mark what you won't have this week. Your program works around it."}
-        </Text>
+        </SheetDescription>
         {activeFactId ? (
           <ExplorerRenderWitness testID={explorerTestId.equipmentActive(activeFactId)} />
         ) : null}

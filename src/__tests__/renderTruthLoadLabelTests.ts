@@ -41,12 +41,17 @@ import path from 'path';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import {
   ATHLETE_CHOSEN_LOAD_EXERCISES,
+  BAND_RESISTANCE_EXERCISES,
+  BODYWEIGHT_LOADABLE_EXERCISES,
   EXERCISE_LOAD_MAP,
   TRUE_BODYWEIGHT_EXERCISES,
   estimateStartingWeight,
+  formatLoadControlLabel,
   formatLoadLabel,
   isTrueBodyweightExercise,
+  resolveLoadControlMode,
   resolveLoadAuthority,
+  stepBandResistance,
 } from '../utils/loadEstimation';
 import type { OnboardingData } from '../types/domain';
 import { stripComments } from './support/sourceText';
@@ -203,6 +208,47 @@ console.log('\n[6] The authored sets still hold their own members');
 
   ok('Dumbbell Pullovers is still athlete-chosen (the original ruling)',
     resolveLoadAuthority('Dumbbell Pullovers').kind === 'athlete_chosen');
+}
+
+console.log('\n[7] Session controls use the exercise\'s real resistance type');
+{
+  const loadableBodyweight = [
+    'Dips', 'Pull-Ups', 'Chin-Ups', 'Push-ups', 'Inverted Row (Bodyweight)',
+    'Glute Bridge', 'Bosch Hold', 'Long-Lever Copenhagen', 'Seated Calf Raise',
+    'Single-Leg Calf Raise',
+  ];
+  okEmpty('every agreed loadable bodyweight exercise uses BW + kg',
+    loadableBodyweight.filter((name) =>
+      !BODYWEIGHT_LOADABLE_EXERCISES.has(name)
+      || resolveLoadControlMode(name) !== 'bodyweight_plus'));
+
+  okEmpty('every explicitly banded exercise uses thin / medium / thick',
+    [...BAND_RESISTANCE_EXERCISES]
+      .filter((name) => resolveLoadControlMode(name) !== 'band'));
+
+  ok('Side Plank Row uses band resistance, not kilograms',
+    resolveLoadControlMode('Side Plank Row') === 'band');
+  ok('a band-selected Woodchop uses band resistance',
+    resolveLoadControlMode('Woodchop (Standing)', 'bands') === 'band');
+  ok('a cable-selected Woodchop keeps kilograms',
+    resolveLoadControlMode('Woodchop (Standing)', 'cables') === 'kilograms');
+  ok('ordinary unloaded bodyweight work cannot gain fake kilograms',
+    resolveLoadControlMode('Bodyweight Squat') === 'bodyweight');
+  ok('mobility and tissue work has no load control',
+    resolveLoadControlMode('Open Book Thoracic Rotation') === 'none');
+
+  ok('band labels are plain thickness words',
+    formatLoadControlLabel('band', null, 'thin') === 'Thin'
+      && formatLoadControlLabel('band', null, 'medium') === 'Medium'
+      && formatLoadControlLabel('band', null, 'thick') === 'Thick');
+  ok('band controls step through the three levels and stop at each end',
+    stepBandResistance('thin', -1) === 'thin'
+      && stepBandResistance('thin', 1) === 'medium'
+      && stepBandResistance('medium', 1) === 'thick'
+      && stepBandResistance('thick', 1) === 'thick');
+  ok('loadable bodyweight labels keep BW and add only the external kilos',
+    formatLoadControlLabel('bodyweight_plus', null) === 'BW'
+      && formatLoadControlLabel('bodyweight_plus', 10) === 'BW + 10kg');
 }
 
 const total = passed + failures.length;

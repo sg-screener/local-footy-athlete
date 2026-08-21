@@ -47,7 +47,9 @@ import {
   injurySeverityRecommendsPhysio,
   injurySeverityReducesAffectedWork,
   injurySeverityRemovesRiskyWork,
+  onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
+import { resolveRestrictedMainStrengthPatterns } from '../rules/weeklyExposureContractBuilders';
 import {
   applyProgramAdjustment,
   buildInjuryPolicy,
@@ -195,6 +197,28 @@ ok('6/10 removes risky work', injurySeverityRemovesRiskyWork(6));
 ok('6/10 recommends physio', injurySeverityRecommendsPhysio(6));
 ok('7/10 does not pause affected training', !injurySeverityPausesAffectedTraining(7));
 ok('9/10 pauses affected training', injurySeverityPausesAffectedTraining(9));
+
+eq('onboarding keeps the exact 1-10 answer',
+  onboardingInjurySeverityScore({ severity: 'Severe', severityScore: 9 }), 9);
+eq('an older named Severe answer keeps its limiting behaviour without inventing a pause',
+  onboardingInjurySeverityScore({ severity: 'Severe' }), 7);
+
+const limitingShoulder = resolveRestrictedMainStrengthPatterns({
+  activeInjuries: [],
+  profileInjuries: [{
+    bodyArea: 'Shoulder', description: '', severity: 'Severe', severityScore: 7,
+  }],
+});
+ok('onboarding 6-7 shoulder severity removes risky pushing but keeps pulling',
+  limitingShoulder.has('push') && !limitingShoulder.has('pull'));
+const pausedShoulder = resolveRestrictedMainStrengthPatterns({
+  activeInjuries: [],
+  profileInjuries: [{
+    bodyArea: 'Shoulder', description: '', severity: 'Severe', severityScore: 9,
+  }],
+});
+ok('onboarding 8-10 shoulder severity pauses both affected upper patterns',
+  pausedShoulder.has('push') && pausedShoulder.has('pull'));
 
 console.log('\n-- Migrated consumers --');
 

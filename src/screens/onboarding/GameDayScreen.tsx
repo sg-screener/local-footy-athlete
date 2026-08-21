@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Text, SelectableTile } from '../../components/common';
+import { Text } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { DayOfWeek } from '../../types/domain';
-import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
+import { DayGrid } from '../../components/onboarding/DayGrid';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -27,9 +27,8 @@ type GameDayScreenProps = NativeStackScreenProps<
  * day. The list is `DAYS_OF_WEEK` from the game-anchor owner, so the picker and
  * everything that reads the answer cannot disagree about what a day is.
  *
- * Visuals come from the shared <SelectableTile /> primitive so the picker
- * matches every other selection surface (lime border + lime fill + corner
- * checkmark).
+ * Visuals come from the shared 3-3-1 <DayGrid /> used by the other onboarding
+ * day pickers. This screen remains single-select and advances immediately.
  */
 
 export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
@@ -64,27 +63,10 @@ export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
         </Text>
       </View>
 
-      <View style={styles.cardsContainer}>
-        {DAYS_OF_WEEK.map((day) => {
-          const isSelected = selectedGameDay === day;
-          return (
-            <SelectableTile
-              key={day}
-              isSelected={isSelected}
-              onPress={() => handleSelect(day)}
-              style={styles.card}
-            >
-              <Text
-                variant="body"
-                color={colors.text.primary}
-                style={styles.cardText}
-              >
-                {day}
-              </Text>
-            </SelectableTile>
-          );
-        })}
-      </View>
+      <DayGrid
+        selectedDays={selectedGameDay ? [selectedGameDay] : []}
+        onToggleDay={handleSelect}
+      />
     </OnboardingLayout>
   );
 };
@@ -95,15 +77,5 @@ const styles = StyleSheet.create({
   },
   title: {
     ...headingXL,
-  },
-  cardsContainer: {
-    gap: 10,
-  },
-  card: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-  },
-  cardText: {
-    fontWeight: '600',
   },
 });

@@ -532,9 +532,13 @@ mobility pick must be non-competing; dose is the authored warm-up dose; picks
 come from the signed pool; the standalone Mobility session is unchanged. ·
 `BUILT` — producer exists; validator no longer caps at one pair.
 
-**R-016** · **Reps are prescribed as a range, shown as a SINGLE MIDDLE NUMBER**
-(Bible `:770`, `:4936`) · *"3x8-12 is written as 3x10"*. · `BUILT` — the athlete
-sees one number.
+**R-016** · **Reps are prescribed as a range, shown as one APPROVED REP TARGET**
+(Bible `:770`, `:4936`) · The only visible rep targets are **3, 4, 5, 6, 8,
+10, 15 and 20**; timed prescriptions are unchanged. The nearest target to the
+range midpoint is used and an equal-distance tie goes lower, so `3x8-12` is
+written as `3x10` and `3x15-20` as `3x15`. Assume-prescribed logging uses the
+same target the athlete saw. · `BUILT` — one shared owner serves the screen,
+projection and workload fallback.
 
 ## READINESS, AWAY, EQUIPMENT
 
@@ -1146,33 +1150,33 @@ rested, and the week reports both.** · `BUILT` — the rest floor
 (`weeklyExposureContractV2` `required: 1` on all four rows, `afd07164`).
 
 **R-052** · GUNSHOW COMPOSITION (§20.3), signed · **2 biceps + 2 triceps + 2
-pump delts at 2-3 sets.** Supersedes the app's 2+2+1+1 shape whose fourth slot
-reached outside the sixteen signed candidates. **Shrink-never-pad.** ·
+pump delts at 2-3 sets.** The current signed pools are **8 biceps + 7 triceps +
+8 shoulders (23 candidates)**, with the Section 20.3 do-not-pair list applied
+inside each two-exercise family. Supersedes the app's 2+2+1+1 shape whose fourth
+slot reached outside the earlier sixteen signed candidates. Gunshow is normal
+gym work with a complete authored six-movement shape. ·
 `BUILT` — `sessionBuilder.ts` `arms_pump` is literally
 `[{biceps, 2}, {triceps, 2}, {delts, 2}]`, and **TWO suites name the composition
 and assert it**: `optionalTopUpTests.ts:499` (*"R1. the G-1 Gunshow is Sam's
 SIGNED 2 biceps + 2 triceps + 2 pump delts"*, 27/0) and
 `mobilityAccessoryDoorTests.ts:149` (*"A1. a Gunshow is 2 biceps + 2 triceps + 2
 shoulder"*, asserting `counts.biceps === 2 && counts.triceps === 2 &&
-counts.delts === 2`, 28/0). Shrink-never-pad is `pickFromPool`'s own behaviour.
+counts.delts === 2`, 28/0).
 **⚠ THIS ROW READ `UNENFORCED — no suite named for the composition` WHILE TWO
 SUITES NAMED IT.** Corrected 2026-08-13 by the desktop after opening the
 enforcers and finding them PRESENT and GREEN — gate rule 2 run backwards. **The
 row was not describing the code; it was describing a search nobody had redone.**
-**⚠ AND THE COUNTS WERE NEVER THE WHOLE ROW — "AT 2-3 SETS" WAS UNHELD UNTIL
-2026-08-13, seat `arms`.** A1/A2/R1 assert the six exercises and their pools;
-**no cell in the repo had ever read `prescribedSets` on this session**, so the
-dose shipped correctly only because all sixteen signed rows happen to be authored
-at 2 or 3. **And `A3`, the cell carrying shrink-never-pad, reads POOL SIZES and
-builds nothing** — it stayed green through a mutation that padded a thin kit back
-to six rows. Both closed and mutation-proven: `test:mobility-accessory-doors`
-`[A4]` *"every Gunshow row carries Sam's AUTHORED 2-3 sets"* (band on the signed
-rows AND the built session carrying the pool's own number) and `[A5]` *"a thin
-kit really does shrink it — built, not inferred"*, **30/0**. **Measured across
-four kits: gym 6 rows, dumbbells 5, bands 2, and BODYWEIGHT-ONLY ZERO — an empty
-session card.** That last one is lawful under §20.3 alone and is what **R-083**
-(*say the kit cannot train it, do not quietly shrink*) rules against; it is
-SEAT_INBOX item 48, `OWNED BY terminal`, and is **not pinned green anywhere.**
+**2026-08-21 UPDATE:** Sam replaced the three candidate pools and added eight
+forbidden pairings. `test:mobility-accessory-doors` now pins the exact 8/7/8
+lists and drives 730 deterministic dates, requiring every candidate to appear
+and every forbidden pair to remain absent.
+
+**2026-08-21 EQUIPMENT-SCOPE CORRECTION:** reduced-equipment Gunshows were an
+invalid composition test world. Dumbbell-only and band-only are away equipment
+states, not the normal gym context in which Gunshow is prescribed. The old
+thin-kit A5 cell and shrink-never-pad wording are retired. A3 now guards that
+every signed normal-gym family is deep enough to fill its two slots. A4 still
+guards the authored 2-3 sets on both the pools and the built session.
 
 **R-053** · MOBILITY COMPOSED FROM THE POOL (§20.4), signed. **The ten
 `MOBILITY_FLOW_TEMPLATES` bundles are NOT recognised** — no ruling cited, no

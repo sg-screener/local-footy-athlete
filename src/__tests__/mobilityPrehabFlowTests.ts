@@ -39,7 +39,11 @@ import fs from 'fs';
 import path from 'path';
 
 import type { OnboardingInjury, SeasonPhase } from '../types/domain';
-import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
+import {
+  flowSlotCandidates,
+  mobilityFlowMovementDose,
+  selectMobilityPrehabFlow,
+} from '../utils/mobilityPrehabFlow';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import {
   EXERCISE_MUSCLE_METADATA,
@@ -163,6 +167,18 @@ function authoredShapeIncludes(dayType: string, category: string): boolean {
 
 console.log("\n[1] Sam's D17 menus — the counts are law, the app picks which");
 {
+  ok(
+    'mobility rep ranges display the high target only',
+    mobilityFlowMovementDose({
+      sets: 2, repsMin: 8, repsMax: 10, perSide: true,
+    } as any) === '2 × 10 / side',
+  );
+  ok(
+    'mobility duration ranges also display the high target only',
+    mobilityFlowMovementDose({
+      sets: 2, repsMin: 20, repsMax: 30, perSide: true, prescriptionType: 'duration',
+    } as any) === '2 × 30s / side',
+  );
   const upper = flowFor(workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] }));
   const squat = flowFor(workoutOf({ exercises: [row('Back Squat'), row('Bulgarian Split Squat')] }));
   const hinge = flowFor(workoutOf({ exercises: [row('Romanian Deadlift'), row('Barbell Hip Thrust')] }));
@@ -475,7 +491,7 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
     'utf8',
   );
 
-  const mobilityOwnerAt = screen.indexOf("filter((section) => section.id === 'mobility')");
+  const mobilityOwnerAt = screen.indexOf("section.id === 'mobility'");
   const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilityOwnerAt);
   const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
   const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
@@ -530,8 +546,12 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
       screen.indexOf('<MobilityExerciseList') < screen.indexOf('<SessionList'),
   );
   ok(
-    'the flow is not rendered on the recovery-template branch',
-    !/mode === 'recovery' \? \([\s\S]{0,400}MobilityExerciseList/.test(screen),
+    'standalone low-load sessions do not restore a recovery-template branch',
+    !/sessionTemplate\.mode === 'recovery'/.test(screen),
+  );
+  ok(
+    'the external warm-up flow alone is withheld from SessionList',
+    /section\.id === 'mobility'[\s\S]{0,120}section\.items\.every\(\(item\) => item\.source === 'mobility'\)/.test(screen),
   );
   ok(
     'the flow never gates the Finish action',

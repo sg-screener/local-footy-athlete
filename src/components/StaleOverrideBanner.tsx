@@ -13,7 +13,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from './common/Text';
-import { Button, Sheet } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useProgramStore } from '../store/programStore';
@@ -113,10 +113,10 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
         onClose={() => setReviewVisible(false)}
         testID="stale-override-review-sheet"
       >
-        <Text style={styles.sheetTitle}>Review this change</Text>
-        <Text style={styles.sheetBody}>
+        <SheetHeader title="Program change" subtitle="Review this change" />
+        <SheetDescription>
           This change may no longer match your current program.
-        </Text>
+        </SheetDescription>
         <Button label="Keep this change" variant="secondary" glow={false} onPress={handleKeep} />
         <Button
           label="Clear this change"
@@ -142,13 +142,13 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
         onClose={() => setDetailVisible(false)}
         testID="stale-override-detail-sheet"
       >
-        <Text style={styles.sheetTitle}>I need a bit more detail</Text>
+        <SheetHeader title="Program change" subtitle="More detail needed" />
         {/* PROPOSED COPY, UNSIGNED — R5.7. This sheet's only action was
             "Ask Coach". It now says what is true and closes rather than
             leaving the athlete somewhere with nothing to press. */}
-        <Text style={styles.sheetBody}>
+        <SheetDescription>
           {'This one needs more context than we can gather here, so nothing has changed. Keep the session or clear it from the options above.'}
-        </Text>
+        </SheetDescription>
         <Button
           label="Close"
           variant="ghost"

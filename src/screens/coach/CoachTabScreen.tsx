@@ -626,7 +626,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         onClose={coachNoteActions.closeInjuryFlow}
         initial={coachNoteActions.injuryInitial}
         episodeId={coachNoteActions.injuryNote?.injuryEpisodeId}
-        titlePrefix="Update injury"
+        titlePrefix="Injury"
         onComplete={async (result) => {
           await coachNoteActions.applyGuidedInjury(
             result,

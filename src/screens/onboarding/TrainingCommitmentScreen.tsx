@@ -75,7 +75,7 @@ export const TrainingCommitmentScreen: React.FC<
           color={colors.text.primary}
           style={styles.sectionTitle}
         >
-          How many days each week can you get to a gym or your usual strength equipment?
+          How many days each week can you get to a gym?
         </Text>
         <Text
           variant="bodySmall"

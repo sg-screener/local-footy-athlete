@@ -228,9 +228,9 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   // offers.
   //
   // "Gunshow" is Sam's own word and is already the session's athlete-facing name, so
-  // the label is his; the sub describes the signed structure without quoting counts,
-  // because a session that shrinks under thin equipment must not promise six. Still
-  // PROPOSED, NOT YET SIGNED (docs/COPY_SHEET_RULINGS_2026-07-30.md §6-II-c).
+  // the label is his; the sub describes the signed structure without cluttering the
+  // menu with its six-exercise count. Still PROPOSED, NOT YET SIGNED
+  // (docs/COPY_SHEET_RULINGS_2026-07-30.md §6-II-c).
   gunshow: {
     label: 'Gunshow',
     sub: 'Arms and delts - light pump work',

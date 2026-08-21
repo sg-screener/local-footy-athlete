@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
-import { Button, Sheet } from '../../components/ui';
+import { Button, Sheet, SheetHeader } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import { menuRowFor } from './planChangeTypeMenu';
 import { useProgramStore } from '../../store';
@@ -199,9 +200,12 @@ interface PlanChangeSheetProps {
   visible: boolean;
   date: string | null;
   weekDays: ResolvedDay[];
-  initialAction?: 'actions' | 'move';
+  initialAction?: PlanChangeInitialAction;
+  fromWeek?: boolean;
   onClose: () => void;
 }
+
+export type PlanChangeInitialAction = 'actions' | 'add' | 'move' | 'swap' | 'remove';
 
 function weekdayLabel(dateISO: string): string {
   const day = new Date(`${dateISO}T12:00:00`);
@@ -209,7 +213,7 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, initialAction = 'actions', onClose,
+  visible, date, weekDays, initialAction = 'actions', fromWeek = false, onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
@@ -302,10 +306,47 @@ export function PlanChangeSheet({
     setStep({ kind: 'pick_move_scope' });
   };
 
-  // A missed-session handoff enters the SAME move owner as the visible menu
-  // row. It does not choose a destination, copy its policy, or mutate a day.
+  // External entry points choose only the action and date. From there they
+  // enter the SAME next step as the four visible rows below — no copied move,
+  // add, swap or remove sequence. The daily route keeps `actions`, while the
+  // Week picker supplies one of the four direct actions after its day tap.
   useEffect(() => {
-    if (visible && initialAction === 'move') startMove();
+    if (!visible || initialAction === 'actions' || !options || options.locked !== null) return;
+    if (initialAction === 'add') {
+      startAdd();
+      return;
+    }
+    if (initialAction === 'move') {
+      startMove();
+      return;
+    }
+    if (initialAction === 'swap') {
+      if (options.canSwap) {
+        setStep({ kind: 'pick_type', mode: 'swap' });
+      } else {
+        setStep({
+          kind: 'block_warning',
+          reasons: [options.hasSession
+            ? 'Nothing on this day can be swapped.'
+            : "There's nothing on this day yet."],
+          backStep: { kind: 'actions' },
+        });
+      }
+      return;
+    }
+    if (options.canRemove) {
+      startBin();
+    } else {
+      setStep({
+        kind: 'block_warning',
+        reasons: ["There's nothing on this day yet."],
+        backStep: { kind: 'actions' },
+      });
+    }
+    // `options` deliberately is not a dependency. This is an entry transition,
+    // not a watcher: after a successful edit the visible week changes, and
+    // re-entering the chosen action then would overwrite its result screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, date, initialAction]);
 
   if (!date) return null;
@@ -558,9 +599,10 @@ export function PlanChangeSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
-      <Text style={styles.title}>
-        {weekdayLabel(date)}
-      </Text>
+      <SheetHeader
+        title={fromWeek ? weekdayLabel(date) : 'Plan change'}
+        subtitle={fromWeek ? 'What do you want to do with it?' : weekdayLabel(date)}
+      />
 
       {options?.locked === 'outside_horizon' && (
         <Text style={styles.lockedText}>
@@ -583,6 +625,37 @@ export function PlanChangeSheet({
       {options && options.locked === null && step.kind === 'actions' && (
         <View>
           <MenuOption
+            label="Add to this day"
+            // NAMES NO TYPE. It read "Add extra strength or conditioning work to
+            // this day", which named two of the five behind it (ruling 9) — and
+            // that sub-line has now rotted twice, once when accessories split
+            // and once when mobility arrived. The five rows are one tap away and
+            // name themselves; see Batch 6a, where the enumerating alternative
+            // is written out for Sam.
+            sub="Put another session on this day"
+            icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color={options.canAdd ? '#5BD98A' : MUTED} />}
+            neutralIconChip
+            disabled={!options.canAdd}
+            testID="plan-change-add"
+            onPress={startAdd}
+          />
+          <MenuOption
+            label="Move this session"
+            // The move refusal is the producer's own sentence, and it is the
+            // most specific thing anyone can say about this day — so the
+            // disabled row says it rather than a generic line.
+            sub={options.move.refusal
+              ? options.move.refusal.message
+              : 'Move it to another day or trade places'}
+            icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : '#67D7FF'} />}
+            neutralIconChip
+            disabled={!!options.move.refusal}
+            testID={selectedWorkout
+              ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
+              : undefined}
+            onPress={() => startMove()}
+          />
+          <MenuOption
             label="Swap this session"
             // WHY IT IS OFF, NOT A GENERIC LINE — and selected by a typed fact
             // the projection owns, never by guessing. `canSwap` is false for two
@@ -596,39 +669,11 @@ export function PlanChangeSheet({
               : options.hasSession
                 ? 'Nothing on this day can be swapped.'
                 : "There's nothing on this day yet."}
-            icon={swapIcon(options.canSwap ? ACCENT : MUTED)}
+            icon={<MaterialCommunityIcons name="swap-horizontal" size={18} color={options.canSwap ? '#B9A7FF' : MUTED} />}
+            neutralIconChip
             disabled={!options.canSwap}
             testID="plan-change-swap"
             onPress={() => setStep({ kind: 'pick_type', mode: 'swap' })}
-          />
-          <MenuOption
-            label="Add to this day"
-            // NAMES NO TYPE. It read "Add extra strength or conditioning work to
-            // this day", which named two of the five behind it (ruling 9) — and
-            // that sub-line has now rotted twice, once when accessories split
-            // and once when mobility arrived. The five rows are one tap away and
-            // name themselves; see Batch 6a, where the enumerating alternative
-            // is written out for Sam.
-            sub="Put another session on this day"
-            icon={addIcon(options.canAdd ? ACCENT : MUTED)}
-            disabled={!options.canAdd}
-            testID="plan-change-add"
-            onPress={startAdd}
-          />
-          <MenuOption
-            label="Move this session"
-            // The move refusal is the producer's own sentence, and it is the
-            // most specific thing anyone can say about this day — so the
-            // disabled row says it rather than a generic line.
-            sub={options.move.refusal
-              ? options.move.refusal.message
-              : 'Move it to another day or trade places'}
-            icon={moveIcon(options.move.refusal ? MUTED : ACCENT)}
-            disabled={!!options.move.refusal}
-            testID={selectedWorkout
-              ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
-              : undefined}
-            onPress={() => startMove()}
           />
           {/* THE REMOVE ROW'S THREE SENTENCES.
 
@@ -650,7 +695,8 @@ export function PlanChangeSheet({
               : removeEmptiesTheDay(options)
                 ? 'Remove it — the day becomes rest.'
                 : 'Remove it — anything else on the day stays.'}
-            icon={removeIcon(options.canRemove ? DANGER : MUTED)}
+            icon={<MaterialCommunityIcons name="delete-outline" size={18} color={options.canRemove ? '#FF7A85' : MUTED} />}
+            neutralIconChip
             disabled={!options.canRemove}
             testID={selectedWorkout
               ? explorerTestId.sessionDeleteIngress(selectedWorkout.id)
@@ -658,7 +704,14 @@ export function PlanChangeSheet({
             danger
             onPress={startBin}
           />
-          <BackRow onPress={onClose} />
+          <Button
+            label="Back"
+            variant="ghost"
+            size="md"
+            glow={false}
+            onPress={onClose}
+            style={{ marginTop: 8 }}
+          />
         </View>
       )}
 
@@ -1203,11 +1256,12 @@ export function PlanChangeSheet({
  * handler at all, `accessibilityState` set — because a row that looks dead and
  * still fires is worse than either.
  */
-function MenuOption({ label, sub, icon, danger, disabled, onPress, testID }: {
+function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, onPress, testID }: {
   label: string;
   sub?: string;
   icon?: React.ReactNode;
   danger?: boolean;
+  neutralIconChip?: boolean;
   disabled?: boolean;
   onPress: () => void;
   testID?: string;
@@ -1250,8 +1304,8 @@ function MenuOption({ label, sub, icon, danger, disabled, onPress, testID }: {
         <>
           <View style={[
             styles.optionIcon,
-            danger && !disabled && { backgroundColor: 'rgba(244, 67, 54, 0.12)' },
-            !danger && !disabled && { backgroundColor: 'rgba(200, 255, 0, 0.12)' },
+            danger && !disabled && !neutralIconChip && { backgroundColor: 'rgba(244, 67, 54, 0.12)' },
+            !danger && !disabled && !neutralIconChip && { backgroundColor: 'rgba(200, 255, 0, 0.12)' },
           ]}>
             {icon}
           </View>
@@ -1322,10 +1376,8 @@ const gunshowIcon = (color: string) => <LfaIcon name="flexed-arm" color={color} 
 const mobilityIcon = (color: string) => <LfaIcon name="mobility" color={color} />;
 /** Accessories / prehab — the shared medical shield. */
 const prehabIcon = (color: string) => <LfaIcon name="medical-shield" color={color} />;
-/** Recovery — a refresh loop: the "easy" scope Move/the day can carry. */
-const recoveryIcon = (color: string) => glyph(color, (
-  <><Path d="M3 12a9 9 0 1 1 3 6.7" /><Path d="M3 16v-4h4" /></>
-));
+/** Recovery — a full battery: restored capacity rather than another action arrow. */
+const recoveryIcon = (color: string) => <LfaIcon name="full-energy" color={color} />;
 /** Team — two people: the anchor Bin's "team" scope removes. */
 const teamIcon = (color: string) => glyph(color, (
   <><Circle cx="9" cy="8" r="3" /><Path d="M3.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" />

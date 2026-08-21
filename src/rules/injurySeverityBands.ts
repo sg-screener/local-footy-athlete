@@ -97,6 +97,24 @@ export function injurySeverityRecommendsPhysio(severity: number): boolean {
   return classifyBibleInjurySeverity(severity).recommendPhysio;
 }
 
+/**
+ * Lift an onboarding injury onto the same numeric scale used by the in-app
+ * injury flow. New answers carry `severityScore`; the named fallback preserves
+ * the behaviour of profiles created before that field existed.
+ */
+export function onboardingInjurySeverityScore(injury: {
+  severityScore?: number;
+  severity?: 'Mild' | 'Moderate' | 'Severe';
+}): number {
+  if (Number.isFinite(injury.severityScore)) {
+    return Math.min(10, Math.max(1, Math.round(injury.severityScore as number)));
+  }
+  if (injury.severity === 'Mild') return 2;
+  if (injury.severity === 'Moderate') return 5;
+  if (injury.severity === 'Severe') return 7;
+  return 0;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    ONE SCALE, RULED DELIBERATELY (Sam, 2026-07-28, Batch 4)
    ══════════════════════════════════════════════════════════════════════════ */

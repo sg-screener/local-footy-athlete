@@ -51,7 +51,16 @@ export type SessionSlot =
   | 'horizontal_pull'
   | 'vertical_push'
   | 'vertical_pull'
-  | 'arm_or_shoulder';
+  | 'arm_or_shoulder'
+  | 'push_accessory_1'
+  | 'push_accessory_2'
+  | 'pull_accessory_1'
+  | 'pull_accessory_2'
+  | 'biceps'
+  | 'triceps'
+  | 'shoulders'
+  | 'traps'
+  | 'core';
 
 /**
  * Which slot list a day answers to. Power is never a slot — it rides on top.
@@ -97,10 +106,12 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
 ];
 
 /**
- * A push-ONLY or pull-ONLY day. His words: *"if you upper body pull or upper
- * body push then it just becomes horizontal movement, vertical movement, more
- * arm work, more accessory work"* — so the DIRECTION collapses and the two
- * PLANES remain. Expressed as "a horizontal and a vertical of that direction".
+ * A push-ONLY or pull-ONLY day. Sam clarified the complete shapes on
+ * 2026-08-21: both keep one horizontal and one vertical main movement, then
+ * receive two direction-matched accessory opportunities, their own arm work,
+ * their own shoulder-girdle work, and core. Seven is the ceiling; a slot that
+ * equipment or an injury makes impossible is disclosed and dropped by the
+ * composer rather than replaced with work from the opposite direction.
  *
  * **⚠ THERE ARE TWO OF THESE, AND HAVING ONE WAS A DEFECT IN THIS ORACLE.**
  * `UPPER_SPLIT_SLOTS` used to be a single constant holding the PUSH direction,
@@ -117,11 +128,15 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  * built on this one would have tried to add bench press to a pull day.
  */
 export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
-  'horizontal_push', 'vertical_push', 'arm_or_shoulder',
+  'horizontal_push', 'vertical_push',
+  'push_accessory_1', 'push_accessory_2',
+  'triceps', 'shoulders', 'core',
 ];
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
-  'horizontal_pull', 'vertical_pull', 'arm_or_shoulder',
+  'horizontal_pull', 'vertical_pull',
+  'pull_accessory_1', 'pull_accessory_2',
+  'biceps', 'traps', 'core',
 ];
 
 /**
@@ -331,6 +346,35 @@ function isUpperAccessory(name: string): boolean {
   return classifyPoolSlot(canonicalExerciseName(name))?.role === 'accessory';
 }
 
+/** Exact authored pool membership, with the same canonical-name join as tags. */
+function authoredPoolMembership(name: string): {
+  readonly slot: string;
+  readonly role: string;
+  readonly group: string | null;
+} | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { findPoolEntry } = require('../data/exercisePoolsStrength') as {
+    findPoolEntry: (n: string) => {
+      slot: string; role: string; entry: { group?: string };
+    } | null;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+    canonicalExerciseName: (raw: string) => string;
+  };
+  const membership = findPoolEntry(name) ?? findPoolEntry(canonicalExerciseName(name));
+  return membership
+    ? { slot: membership.slot, role: membership.role, group: membership.entry.group ?? null }
+    : null;
+}
+
+function appendUpperGroupSlot(out: SessionSlot[], group: string | null | undefined): void {
+  if (group === 'bicep') out.push('biceps');
+  if (group === 'tricep') out.push('triceps');
+  if (group === 'shoulder') out.push('shoulders');
+  if (group === 'trap') out.push('traps');
+}
+
 export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   // Power, conditioning, team training and mobility are not strength slots.
   // They are exempt from counting for the same reason they cannot fill a slot.
@@ -412,14 +456,33 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
     case 'vertical_pull': {
       const plane = tag.movement as SessionSlot;
       out.push(plane);
-      if (isUpperAccessory(name)) out.push('arm_or_shoulder');
+      if (isUpperAccessory(name)) {
+        out.push('arm_or_shoulder');
+        const membership = authoredPoolMembership(name);
+        if (membership?.role === 'accessory'
+          && (membership.slot === 'horizontal_push' || membership.slot === 'vertical_push')) {
+          out.push('push_accessory_1', 'push_accessory_2');
+        }
+        if (membership?.role === 'accessory'
+          && (membership.slot === 'horizontal_pull' || membership.slot === 'vertical_pull')) {
+          out.push('pull_accessory_1', 'pull_accessory_2');
+        }
+        appendUpperGroupSlot(out, membership?.group);
+      }
       break;
     }
-    case 'isolation_upper': out.push('arm_or_shoulder'); break;
+    case 'isolation_upper': {
+      out.push('arm_or_shoulder');
+      const group = authoredPoolMembership(name)?.group;
+      appendUpperGroupSlot(out, group);
+      break;
+    }
     case 'isolation_lower':
-    case 'core':
     case 'carry':
       out.push('accessory_or_core');
+      break;
+    case 'core':
+      out.push('accessory_or_core', 'core');
       break;
     default:
       break;

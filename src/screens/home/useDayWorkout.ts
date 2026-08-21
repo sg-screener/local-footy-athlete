@@ -8,10 +8,13 @@ import { useProfileStore } from '../../store/profileStore';
 import { useCoachContextStateStore } from '../../store/coachContextStateStore';
 import { extractModalitiesFromSession } from '../../utils/coachReferenceResolver';
 import {
-  formatLoadLabel,
+  formatLoadControlLabel,
   isTrueBodyweightExercise,
-  resolveLoadAuthority,
+  resolveLoadControlMode,
+  stepBandResistance as nextBandResistance,
   startingWeightForAthlete,
+  type BandResistance,
+  type LoadControlMode,
 } from '../../utils/loadEstimation';
 import { logger } from '../../utils/logger';
 import {
@@ -112,6 +115,12 @@ export function useDayWorkout() {
     date ? s.weightOverrides[date] : undefined,
   );
   const setWeightOverride = useProgramStore((s: any) => s.setWeightOverride);
+  const bandResistanceOverrides = useProgramStore((s: any) =>
+    date ? s.bandResistanceOverrides[date] : undefined,
+  );
+  const setBandResistanceOverride = useProgramStore(
+    (s: any) => s.setBandResistanceOverride,
+  );
   // A persisted session-outcome receipt for this date means the session was
   // already finished and saved. Reopening it must show a read-only completed
   // view, not "Finish Session" again (WORKOUT_2026-07-21 row 2.1 / GROUPB
@@ -130,11 +139,23 @@ export function useDayWorkout() {
   // Onboarding data for render-time load estimation (catches pre-existing programs).
   const onboardingData = useProfileStore((s: any) => s.onboardingData);
 
-  /** Is this exercise a true bodyweight exercise? */
+  const getLoadControlMode = useCallback(
+    (exercise: any, selectedImplement?: string | null): LoadControlMode =>
+      resolveLoadControlMode(exercise.exercise?.name || '', selectedImplement),
+    [],
+  );
+
+  /** Is this exercise able to return to an unloaded bodyweight state? */
   const isBWExercise = useCallback((exercise: any): boolean => {
     const name = exercise.exercise?.name || '';
-    return isTrueBodyweightExercise(name);
+    return resolveLoadControlMode(name) === 'bodyweight_plus';
   }, []);
+
+  const getBandResistance = useCallback(
+    (exercise: any): BandResistance =>
+      bandResistanceOverrides?.[exercise.exerciseId] ?? 'medium',
+    [bandResistanceOverrides],
+  );
 
   /**
    * Get the display weight for an exercise:
@@ -202,22 +223,28 @@ export function useDayWorkout() {
    * `formatLoadLabel` takes both from one resolution, so they cannot.
    */
   const formatWeight = useCallback(
-    (exercise: any): string => formatLoadLabel(
-      resolveLoadAuthority(exercise.exercise?.name || ''),
-      getDisplayWeight(exercise),
-    ),
-    [getDisplayWeight],
+    (exercise: any, selectedImplement?: string | null): string => {
+      const mode = getLoadControlMode(exercise, selectedImplement);
+      return formatLoadControlLabel(
+        mode,
+        getDisplayWeight(exercise),
+        getBandResistance(exercise),
+      );
+    },
+    [getBandResistance, getDisplayWeight, getLoadControlMode],
   );
 
   /** Increment weight by 2.5kg. BW → BW + 2.5kg. */
   const incrementWeight = useCallback(
-    (exercise: any) => {
+    (exercise: any, selectedImplement?: string | null) => {
       if (!date) return;
+      const mode = getLoadControlMode(exercise, selectedImplement);
+      if (mode !== 'kilograms' && mode !== 'bodyweight_plus') return;
       const current = getDisplayWeight(exercise);
       const next = (current ?? 0) + 2.5;
       setWeightOverride(date, exercise.exerciseId, next);
     },
-    [date, getDisplayWeight, setWeightOverride],
+    [date, getDisplayWeight, getLoadControlMode, setWeightOverride],
   );
 
   /**
@@ -227,10 +254,12 @@ export function useDayWorkout() {
    * Never wraps, never resets to estimated default.
    */
   const decrementWeight = useCallback(
-    (exercise: any) => {
+    (exercise: any, selectedImplement?: string | null) => {
       if (!date) return;
+      const mode = getLoadControlMode(exercise, selectedImplement);
+      if (mode !== 'kilograms' && mode !== 'bodyweight_plus') return;
       const current = getDisplayWeight(exercise);
-      const isBW = isBWExercise(exercise);
+      const isBW = mode === 'bodyweight_plus';
 
       if (isBW) {
         if (current === null || current <= 0) return;
@@ -242,7 +271,29 @@ export function useDayWorkout() {
         setWeightOverride(date, exercise.exerciseId, next);
       }
     },
-    [date, getDisplayWeight, isBWExercise, setWeightOverride],
+    [date, getDisplayWeight, getLoadControlMode, setWeightOverride],
+  );
+
+  const changeBandResistance = useCallback(
+    (exercise: any, direction: -1 | 1) => {
+      if (!date) return;
+      setBandResistanceOverride(
+        date,
+        exercise.exerciseId,
+        nextBandResistance(getBandResistance(exercise), direction),
+      );
+    },
+    [date, getBandResistance, setBandResistanceOverride],
+  );
+
+  const incrementBandResistance = useCallback(
+    (exercise: any) => changeBandResistance(exercise, 1),
+    [changeBandResistance],
+  );
+
+  const decrementBandResistance = useCallback(
+    (exercise: any) => changeBandResistance(exercise, -1),
+    [changeBandResistance],
   );
 
   /** Start manual weight editing for an exercise. */
@@ -411,9 +462,13 @@ export function useDayWorkout() {
     setEditingWeightText,
     formatWeight,
     getDisplayWeight,
+    getLoadControlMode,
+    getBandResistance,
     isBWExercise,
     incrementWeight,
     decrementWeight,
+    incrementBandResistance,
+    decrementBandResistance,
     startEditingWeight,
     commitWeightEdit,
 

@@ -457,7 +457,7 @@ console.log('\n[2b] THE REFUSAL, PROVEN OVER THE REAL MODEL AFTER THE SIGNING');
 
 console.log('\n[3] STREAM MEASUREMENT — prescribed, actual, and the honest nulls');
 {
-  ok('tonnage is sets x mid-rep-range x kg from the prescribed snapshot',
+  ok('tonnage is sets x approved rep target x kg from the prescribed snapshot',
     liftTonnageKg(lift()) === 3 * 5 * 100, liftTonnageKg(lift()));
 
   ok('real logged sets and reps WIN over the prescription',
@@ -563,7 +563,7 @@ console.log('\n[5] RATIO SPACE — the normal, and when the comparison is REFUSE
   ok('a week at twice its normal reads as a ratio of 2',
     stream !== null && Math.abs(stream.ratio - 2) < 1e-9, stream);
   ok('and the normal is the mean of the four-week window, in the stream\'s own unit',
-    stream !== null && stream.normal === 400 && stream.weeksUsed === 4, stream);
+    stream !== null && stream.normal === 1200 && stream.weeksUsed === 4, stream);
 
   // RAW UNITS NEVER CROSS STREAMS (the ruling's law). The conditioning stream of
   // a strength-only week has nothing to compare, and the strength stream is
@@ -591,7 +591,7 @@ console.log('\n[5] RATIO SPACE — the normal, and when the comparison is REFUSE
   });
   const windowed = olderThanTheWindow.strengthStream.value;
   ok('a week OLDER than the window does not move the normal',
-    windowed !== null && windowed.normal === 400 && windowed.weeksUsed === 4,
+    windowed !== null && windowed.normal === 1200 && windowed.weeksUsed === 4,
     windowed);
 
   // THE WINDOW IS CALENDAR WEEKS, NOT "THE LAST FOUR WEEKS I LOGGED IN". This
@@ -734,9 +734,9 @@ console.log('\n[7] REGION LAYER — observation, never diagnosis');
   // Back Squat's SIGNED row: primary Quads + Glutes, secondary Hips, Midline,
   // Low back. The numbers come from the sheet, not from this file.
   ok('a primary muscle carries the session\'s whole load',
-    squat.regions.Quads === 100 && squat.regions.Glutes === 100, squat.regions);
+    squat.regions.Quads === 300 && squat.regions.Glutes === 300, squat.regions);
   ok('and a secondary carries the proposed share of it',
-    squat.regions.Hips === 100 * JOURNAL_LOAD_CONSTANTS.regionSecondaryShare.value,
+    squat.regions.Hips === 300 * JOURNAL_LOAD_CONSTANTS.regionSecondaryShare.value,
     squat.regions);
   ok('a muscle the sheet does not name gets nothing',
     squat.regions.Chest === undefined);

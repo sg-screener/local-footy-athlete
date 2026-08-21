@@ -129,7 +129,7 @@ ok(
   'availability, team and game-day steps share the same seven-day chip grid',
   /step === 'availability'[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet)
     && /step === 'teamDays'[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet)
-    && /Usual game day[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet),
+    && /title="Game day" subtitle="Which day do you usually play\?"[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet),
 );
 ok(
   'seven day chips wrap as four then three, centred rather than six plus one',
@@ -205,7 +205,7 @@ ok(
 ok(
   'the full equipment editor is a scrollable flexible sheet that starts with its title reachable',
   /<Sheet[\s\S]*?flexibleBody[\s\S]*?testID="profile-equipment-editor-sheet"/.test(profileEquipmentEditor)
-    && /<ScrollView[\s\S]*?>[\s\S]*?<Text style=\{styles\.title\}>Your equipment<\/Text>/.test(profileEquipmentEditor),
+    && /<ScrollView[\s\S]*?>[\s\S]*?<SheetHeader title="Equipment" subtitle="What do you have access to\?"/.test(profileEquipmentEditor),
 );
 {
   const setupStart = src.indexOf('{/* Program setup */}');
@@ -251,7 +251,7 @@ ok(
 section('[1c] Guided setup update sheet');
 ok(
   'setup sheet title and subtitle present',
-  /Update program setup/.test(src)
+  /title="Program setup" subtitle="Review your setup"/.test(src)
     && /Change the details your program is built around\./.test(src),
 );
 ok(
@@ -262,10 +262,10 @@ ok(
 );
 ok(
   'setup sheet includes LFA and team day selectors',
-  /What days can you train\?/.test(src)
+    /What days can you train\?/.test(src)
     && /We.ll build your LFA work around these days\./.test(src)
-    && /Team training days/.test(src)
-    && /Which days does your team train\? We.ll work your program around these\./.test(src),
+    && /title="Team training" subtitle="Which days does your team train\?"/.test(src)
+    && /We.ll work your program around these days\./.test(src),
 );
 ok(
   'program details edit opens a batched structured setup flow',
@@ -697,7 +697,8 @@ ok(
 );
 ok(
   'session sheet asks only about this session and points permanent edits to Profile',
-  /Equipment for this session/.test(sessionEquipmentSheet)
+  /eyebrow: 'Equipment'/.test(sessionEquipmentSheet)
+    && /title: 'What are you missing\?'/.test(sessionEquipmentSheet)
     && /requirements\.map/.test(sessionEquipmentSheet)
     && /Permanent change\? Update your equipment in Profile\./.test(sessionEquipmentSheet)
     && !/ownedEquipmentKit\(\)/.test(sessionEquipmentSheet),

@@ -62,7 +62,7 @@ async function main(): Promise<void> {
 const currentOptions: Array<[string, readonly string[]]> = [
   ['Full Gym', FULL_GYM_EQUIPMENT],
   ['Home Gym', ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell']],
-  ['Barbell & Rack', ['bodyweight', 'barbell']],
+  ['Barbell and plates', ['bodyweight', 'barbell']],
   ['Dumbbells Only', ['bodyweight', 'dumbbells']],
   ['Bodyweight Only', ['bodyweight']],
   ['Resistance Bands', ['bodyweight', 'bands']],
@@ -113,6 +113,14 @@ section('2. Fallback and bodyweight invariants');
   assert(legacy.includes('cables'), 'legacy cable_machine checklist value maps to cables');
   assert(legacy.includes('machine'), 'legacy machine-specific checklist value maps to machine');
   assert(legacy.includes('bands'), 'legacy bands checklist value maps to bands');
+
+  const retiredCombinedBarbell = resolveEquipmentAvailability({
+    equipment: ['Barbell & Rack'],
+  });
+  assert(
+    sameSet(retiredCombinedBarbell, ['bodyweight', 'barbell', 'rack']),
+    'retired Barbell & Rack answer keeps both capabilities without remaining an active label',
+  );
 
   const legacyCommercial = resolveEquipmentCapabilities({
     equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],

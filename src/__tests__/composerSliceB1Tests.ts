@@ -64,6 +64,25 @@ const UPPER_FULL_DAY: ComposerPlannedDay = {
   workoutType: 'Team Training',
   sessionTier: 'core',
 };
+const UPPER_PUSH_DAY: ComposerPlannedDay = {
+  ...UPPER_FULL_DAY,
+  planEntryId: 'w1:tuesday:none:upper-push',
+  strengthIntent: {
+    archetype: 'upper', primaryPattern: 'push',
+    plannedPatterns: ['push'], effectivePatterns: ['push'],
+  },
+  name: 'Team Training + Upper Push',
+};
+const UPPER_PULL_DAY: ComposerPlannedDay = {
+  ...UPPER_FULL_DAY,
+  dayOfWeek: 4,
+  planEntryId: 'w1:thursday:none:upper-pull',
+  strengthIntent: {
+    archetype: 'upper', primaryPattern: 'pull',
+    plannedPatterns: ['pull'], effectivePatterns: ['pull'],
+  },
+  name: 'Team Training + Upper Pull',
+};
 const LOWER_DAY: ComposerPlannedDay = {
   dayOfWeek: 1,
   isTeamDay: false,
@@ -189,6 +208,27 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
     lower.rows.filter((row) => row.slot === 'hinge').length === 1
     && new Set(lower.rows.map((row) => row.slot)).size === lower.rows.length,
     JSON.stringify(lower.rows.map((row) => `${row.slot}:${row.identity}`)));
+
+  const split = composeWeek(inputs({ plannedDays: [UPPER_PUSH_DAY, UPPER_PULL_DAY] }));
+  const splitPush = split.days.find((candidate) => candidate.kind === 'upper_split_push');
+  const splitPull = split.days.find((candidate) => candidate.kind === 'upper_split_pull');
+  ok('[SAM] a full-gym split PUSH authors the ruled seven-row shape',
+    JSON.stringify(splitPush?.rows.map((row) => row.slot)) === JSON.stringify([
+      'horizontal_push', 'vertical_push', 'push_accessory_1', 'push_accessory_2',
+      'triceps', 'shoulders', 'core',
+    ]), JSON.stringify(splitPush?.rows.map((row) => `${row.slot}:${row.identity}`)));
+  ok('[SAM] a full-gym split PULL authors the ruled seven-row shape',
+    JSON.stringify(splitPull?.rows.map((row) => row.slot)) === JSON.stringify([
+      'horizontal_pull', 'vertical_pull', 'pull_accessory_1', 'pull_accessory_2',
+      'biceps', 'traps', 'core',
+    ]), JSON.stringify(splitPull?.rows.map((row) => `${row.slot}:${row.identity}`)));
+  ok('[SAM] split upper sessions never exceed seven rows',
+    split.days.every((candidate) => candidate.rows.length <= 7),
+    JSON.stringify(split.days.map((candidate) => `${candidate.kind}:${candidate.rows.length}`)));
+  ok('[non-vacuity] each split row is a distinct exercise',
+    split.days.every((candidate) => new Set(candidate.rows.map((row) => row.identity)).size
+      === candidate.rows.length),
+    JSON.stringify(split.days.map((candidate) => candidate.rows.map((row) => row.identity))));
 }
 
 // ── CLAUSE (d) — session counts honest ─────────────────────────────────────

@@ -37,6 +37,7 @@ const read = (relative: string) => fs.readFileSync(path.join(src, relative), 'ut
 
 const SHELL_PATH = 'components/SessionActionSheet.tsx';
 const shell = read(SHELL_PATH);
+const sheet = read('components/ui/Sheet.tsx');
 const screen = read('screens/home/DayWorkoutScreenV2.tsx');
 const equipment = read('screens/home/SessionEquipmentSheet.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
@@ -145,6 +146,17 @@ console.log('\n[3] The shell owns Back, and a first step has none');
     /key: 'equipment',/.test(equipment) && !/onBack:/.test(equipment),
     'the assertion is on the PROP, not the word — the file names `onBack` in a '
       + 'comment explaining why it has none',
+  );
+  ok(
+    'Equipment gives its explanation 14px above and 18px below',
+    !/subtitle: 'Untick anything/.test(equipment)
+      && /<SheetDescription>/.test(equipment)
+      && /header:\s*\{[^}]*marginBottom:\s*14/.test(sheet)
+      && /description:\s*\{[^}]*marginBottom:\s*18/.test(sheet),
+  );
+  ok(
+    'Equipment asks what is missing beneath its lime category title',
+    /eyebrow: 'Equipment',[\s\S]*title: 'What are you missing\?'/.test(equipment),
   );
   ok(
     'the two steps that were reached from the picker now climb back to it',

@@ -18,6 +18,7 @@ import {
   injurySeverityPausesAffectedTraining,
   injurySeverityReducesAffectedWork,
   injurySeverityRemovesRiskyWork,
+  onboardingInjurySeverityScore,
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
 import { deriveIllnessWeekDirective } from '../rules/illnessRecoveryWeekMode';
@@ -255,7 +256,7 @@ export function applyGenerationConstraintsToProfile(
     const key = injuryKey(bodyArea);
     const current = merged.get(key);
     const next = onboardingInjuryForGenerationConstraint(injury, bodyArea);
-    if (!current || onboardingSeverityRank(next.severity) >= onboardingSeverityRank(current.severity)) {
+    if (!current || onboardingInjurySeverityScore(next) >= onboardingInjurySeverityScore(current)) {
       merged.set(key, current ? { ...current, ...next } : next);
     }
   }
@@ -423,6 +424,7 @@ function onboardingInjuryForGenerationConstraint(
     bodyArea,
     description: `${injury.bodyPart} active issue ${injury.severity}/10`,
     severity: injury.onboardingSeverity,
+    severityScore: injury.severity,
     whenItHurts: timingFromTriggers(injury.triggers),
     movementTriggers: injury.triggers.length > 0 ? injury.triggers : undefined,
     notes: classifyBibleInjurySeverity(injury.severity).programResponse,
@@ -463,13 +465,6 @@ function onboardingSeverityForNumeric(severity: number): InjurySeverity {
   if (band === 'avoid_trigger_1_3') return 'Mild';
   if (band === 'reduce_affected_4_5') return 'Moderate';
   return 'Severe';
-}
-
-function onboardingSeverityRank(severity: InjurySeverity | undefined): number {
-  if (severity === 'Severe') return 3;
-  if (severity === 'Moderate') return 2;
-  if (severity === 'Mild') return 1;
-  return 0;
 }
 
 function injuryKey(value: string): string {

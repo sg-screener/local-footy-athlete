@@ -58,6 +58,39 @@ eq(
 eq('handles null defensively', formatExerciseDisplayName(null), '');
 eq('handles blank defensively', formatExerciseDisplayName('   '), '');
 
+const shorterDisplayNames = [
+  ['Single-Leg Squat (to Box)', 'Single-Leg Box Squat'],
+  ['Single-Arm DB Bench Press', '1-Arm DB Bench Press'],
+  ['Single-Arm DB Floor Press', '1-Arm DB Floor Press'],
+  ['Half-Kneeling Single-Arm Overhead Press', 'Half-Kneeling 1-Arm Press'],
+  ['Inverted Row (Bodyweight)', 'Inverted Row'],
+  ['Single-Arm Lat Pulldown', '1-Arm Lat Pulldown'],
+  ['Banded Tricep Pushdown', 'Band Tricep Pushdown'],
+  ['Chin-Up Negative (Slow)', 'Slow Chin-Up Negative'],
+  ['Bicep Curl (Barbell)', 'Barbell Bicep Curl'],
+  ['Bicep Curl (Dumbbell)', 'Dumbbell Bicep Curl'],
+  ['Copenhagen Plank (Half)', 'Half Copenhagen'],
+  ['Woodchop (Half Kneeling)', 'Half-Kneeling Woodchop'],
+  ['Banded External Rotation', 'Band External Rotation'],
+  ['Swiss Ball Hamstring Curl', 'Swiss Ball Ham Curl'],
+  ['Foam Roll — Hip Flexor, Quad, Adductors', 'Foam Roll: Thighs'],
+  ['Foam Roll — Calves & Outer Shins', 'Foam Roll: Calves & Shins'],
+  ['Lacrosse Ball Glute Release', 'Glute Ball Release'],
+  ['Open Book Thoracic Rotation', 'Open Book Rotation'],
+  ['Chest / Pec Stretch (Doorway)', 'Doorway Pec Stretch'],
+  ['Pissing Dog Against Wall', 'Wall Hip Opener'],
+  ['Light Walk or Stationary Bike', 'Light Walk / Bike'],
+  ["Child's Pose with Breathing", "Child's Pose + Breathing"],
+] as const;
+
+for (const [canonicalName, displayName] of shorterDisplayNames) {
+  eq(
+    `uses shorter display name for ${canonicalName}`,
+    formatExerciseDisplayName(canonicalName),
+    displayName,
+  );
+}
+
 if (fail > 0) {
   console.error(`\nexerciseDisplayTests failed: ${fail}`);
   console.error(failures.join('\n'));

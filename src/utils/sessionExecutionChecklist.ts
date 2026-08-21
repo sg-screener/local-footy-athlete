@@ -150,6 +150,12 @@ function componentForTemplateItem(
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') {
     return ids.has('conditioning') ? 'conditioning' : ids.has('finisher') ? 'finisher' : 'session';
   }
+  if (item.kind === 'exercise' && item.presentation === 'mobility') {
+    return ids.has('mobility') ? 'mobility' : 'session';
+  }
+  if (item.kind === 'exercise' && item.presentation === 'recovery') {
+    return ids.has('recovery') ? 'recovery' : 'session';
+  }
   if (item.role === 'power') return ids.has('power') ? 'power' : 'strength';
   if (item.kind === 'exercise' && item.optional && ids.has('recovery_addon')) return 'recovery_addon';
   if (item.role === 'midline' && ids.has('support')) return 'support';
@@ -162,6 +168,8 @@ function sectionForTemplateItem(item: SessionTemplateItem): SessionExecutionSect
   if (item.kind === 'team_training') return 'team_training';
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') return 'conditioning';
   if (item.kind === 'exercise' && item.optional) return 'optional';
+  if (item.kind === 'exercise' && item.presentation === 'mobility') return 'mobility';
+  if (item.kind === 'exercise' && item.presentation === 'recovery') return 'recovery';
   // R-110 — power is Strength's first row, not its own section. The ROLE is
   // still what routes it; only the destination changed.
   if (item.role === 'power') return 'strength';
@@ -223,26 +231,7 @@ export function buildSessionExecutionPlan(args: {
     });
   }
 
-  if (args.template.mode === 'recovery') {
-    for (const [index, row] of (args.workout.exercises ?? []).entries()) {
-      items.push({
-        id: `exercise:${rowIdentity(row, String(index))}`,
-        sectionId: 'recovery', componentId: 'recovery',
-        label: rowLabel(row, `Exercise ${index + 1}`), templateIndex: null, source: 'recovery',
-      });
-    }
-    for (const addon of args.workout.recoveryAddons ?? []) {
-      for (const exercise of addon.exercises ?? []) {
-        items.push({
-          id: `exercise:${rowIdentity(exercise, addon.id)}`,
-          sectionId: 'optional', componentId: 'recovery_addon',
-          label: rowLabel(exercise, addon.label), templateIndex: null, source: 'recovery',
-        });
-      }
-    }
-  } else {
-    args.template.items.forEach((item, index) => items.push(itemFromTemplate(item, index, components)));
-  }
+  args.template.items.forEach((item, index) => items.push(itemFromTemplate(item, index, components)));
 
   // A typed component can exist without an ordinary row (speed blocks and a
   // team commitment are examples). It still gets one visible, checkable unit.
@@ -251,6 +240,7 @@ export function buildSessionExecutionPlan(args: {
     items.push({
       id: `component:${component.id}`,
       sectionId: component.kind === 'recovery' ? 'recovery'
+        : component.kind === 'mobility' ? 'mobility'
         : component.kind === 'conditioning' || component.kind === 'finisher' ? 'conditioning'
         : component.kind === 'team_training' ? 'team_training'
         // R-110 — a rowless power component opens Strength, same as a row does.

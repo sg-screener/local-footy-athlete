@@ -54,6 +54,7 @@ import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
+  findPoolEntry,
   type ComposedDoseCategory,
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
@@ -366,6 +367,19 @@ const POOL_SLOT_FOR_LADDER_SLOT: Partial<Record<SessionSlot, PoolSlotKey>> = {
 };
 
 /**
+ * The pool that authored the selected row. Split-upper accessory slots span
+ * both planes, so their pool cannot be known from the slot name alone; the row
+ * identity supplies it. This keeps dose and load resolution on the same pool
+ * metadata as every other composed row.
+ */
+function poolSlotForSelectedRow(
+  slot: SessionSlot,
+  identity: ComposedExerciseIdentity,
+): PoolSlotKey | null {
+  return POOL_SLOT_FOR_LADDER_SLOT[slot] ?? findPoolEntry(identity)?.slot ?? null;
+}
+
+/**
  * ⚠ ANCHORS FIRST, THEN THE REST — AND THE FALLBACK IS THE WHOLE POINT.
  *
  * A main lift comes off the slot's ANCHOR bench because that is where Sam put
@@ -514,6 +528,11 @@ const MAIN_BILATERAL_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
   'horizontal_pull', 'vertical_pull',
 ]);
 
+const SPLIT_UPPER_ACCESSORY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
+  'push_accessory_1', 'push_accessory_2',
+  'pull_accessory_1', 'pull_accessory_2',
+]);
+
 function hingePriorityFirst(
   slot: SessionSlot,
   candidates: readonly ComposedExerciseIdentity[],
@@ -600,6 +619,10 @@ const PATTERN_FOR_SLOT: Partial<Record<SessionSlot, MainStrengthPattern>> = {
   vertical_push: 'push',
   horizontal_pull: 'pull',
   vertical_pull: 'pull',
+  push_accessory_1: 'push',
+  push_accessory_2: 'push',
+  pull_accessory_1: 'pull',
+  pull_accessory_2: 'pull',
 };
 
 const ALL_SLOTS = Object.keys(PATTERN_FOR_SLOT) as SessionSlot[];
@@ -1423,8 +1446,13 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       ) ?? null;
       /* The base candidate list narrows to the day's variety preferences only
        * for slots outside the main/secondary budget, exactly as before. */
+      const distinctSplitAccessoryCandidates = SPLIT_UPPER_ACCESSORY_SLOTS.has(slot)
+        ? baseLegal.filter((id) => !identitiesThisDay.has(id))
+        : baseLegal;
       const baseCandidates = countsTowardBudget
-        ? baseLegal
+        ? (distinctSplitAccessoryCandidates.length > 0
+          ? distinctSplitAccessoryCandidates
+          : baseLegal)
         : baseLegal.filter((id) => basePreferred.includes(id) || basePreferred.length === 0);
       const selection = decideExerciseForBlock({
         phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
@@ -1515,10 +1543,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       // owns the row — a main lift's phase scheme, U-1's loaded band, U-3's
       // unloaded compounds, U-4's ballistic swings — the ruling wins.
       const authoredFallback = doseFor(kind, slot, rows.length);
+      const selectedPoolSlot = poolSlotForSelectedRow(slot, identity);
       const dose = resolveComposedDose({
         identity,
         isMainLift,
-        poolSlot: POOL_SLOT_FOR_LADDER_SLOT[slot] ?? null,
+        poolSlot: selectedPoolSlot,
         seasonPhase: inputs.seasonPhase,
         offseasonSubphase: inputs.offseasonSubphase,
         authoredFallback,
@@ -1542,7 +1571,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         load: resolveComposedLoad({
           identity,
           isMainLift,
-          poolSlot: POOL_SLOT_FOR_LADDER_SLOT[slot] ?? null,
+          poolSlot: selectedPoolSlot,
           seasonPhase: inputs.seasonPhase,
           offseasonSubphase: inputs.offseasonSubphase,
           profile: inputs.profile,

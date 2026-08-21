@@ -6,7 +6,7 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
-import { PlanChangeSheet } from './PlanChangeSheet';
+import { PlanChangeSheet, type PlanChangeInitialAction } from './PlanChangeSheet';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -17,7 +17,7 @@ import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { ModifiersSheet } from '../../components/ModifiersSheet';
-import { Button, Card, Sheet, Badge } from '../../components/ui';
+import { Button, Card, Sheet, SheetDescription, SheetHeader, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import {
   PART_ICON_KIND,
@@ -72,6 +72,35 @@ import {
   PHASE_SHIFT_MESSAGES,
   type PhaseShiftStep,
 } from './homeScreenConstants';
+
+type WeekSessionEditAction = Exclude<PlanChangeInitialAction, 'actions'>;
+type DayPickerMode = 'normal' | 'moveGame' | 'addGame'
+  | 'sessionAdd' | 'sessionMove' | 'sessionSwap' | 'sessionRemove';
+
+const WEEK_SESSION_PICKER_MODE: Record<WeekSessionEditAction, DayPickerMode> = {
+  add: 'sessionAdd',
+  move: 'sessionMove',
+  swap: 'sessionSwap',
+  remove: 'sessionRemove',
+};
+
+const WEEK_SESSION_PICKER_COPY: Record<WeekSessionEditAction, {
+  banner: string;
+  row: string;
+}> = {
+  add: { banner: 'Tap the day you want to add to', row: 'Tap to add here' },
+  move: { banner: 'Tap the session day you want to move', row: 'Tap to move' },
+  swap: { banner: 'Tap the session day you want to swap', row: 'Tap to swap' },
+  remove: { banner: 'Tap the session day you want to remove', row: 'Tap to remove' },
+};
+
+function weekSessionActionForPickerMode(mode: DayPickerMode): WeekSessionEditAction | null {
+  if (mode === 'sessionAdd') return 'add';
+  if (mode === 'sessionMove') return 'move';
+  if (mode === 'sessionSwap') return 'swap';
+  if (mode === 'sessionRemove') return 'remove';
+  return null;
+}
 
 /**
  * HomeScreenV2 — one visible week, two deliberate screen shapes.
@@ -135,7 +164,6 @@ export default function HomeScreenV2() {
     handleLogMissedSession,
     handleSkipMissedSession,
     staleByDate,
-    showAddFixtureCTA,
     currentPhase,
     coachNotes,
     programModifiers,
@@ -164,6 +192,7 @@ export default function HomeScreenV2() {
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
+    handleSetByeWeek,
     rebuildModalVisible,
     isRebuilding,
     rebuildError,
@@ -176,7 +205,9 @@ export default function HomeScreenV2() {
     handleConfirmRebuild,
   } = useHomeScreen();
 
-  const isNormal = mode.type === 'normal';
+  const [weekSessionEditAction, setWeekSessionEditAction] =
+    useState<WeekSessionEditAction | null>(null);
+  const isNormal = mode.type === 'normal' && weekSessionEditAction === null;
   /* ── ITEM 19: THE ADD-FIXTURE CONTROL NAMES THE PHASE AND NOTHING ELSE ──
      Sam, 2026-08-12: *"a user should be able to have as many games as needed in
      their week"*.
@@ -196,8 +227,11 @@ export default function HomeScreenV2() {
      that already works and is per-fixture rather than first-fixture. This
      control's job is adding, so it only ever adds. */
   const addFixtureLabel = currentPhase === 'Pre-season'
-    ? 'Add a pre-season practice match'
+    ? 'Add a practice match'
     : 'Add a game';
+  const weekHasFixture = weekDays.some(
+    (day) => day.indicator === 'game' || day.workout?.workoutType === 'Game',
+  );
 
   // ── Day-first vs week (Sam's day-first direction, 2026-08-01) ──
   //
@@ -279,8 +313,10 @@ export default function HomeScreenV2() {
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetEntry, setChangeSheetEntry] = useState<{
     date: string;
-    initialAction: 'actions' | 'move';
+    initialAction: PlanChangeInitialAction;
+    origin?: 'week';
   } | null>(null);
+  const [weekEditVisible, setWeekEditVisible] = useState(false);
   // ── ITEM 28: THE AWAY FLOW'S THREE ANSWERS ──
   // The sheet owns the two dates; this screen owns only what survives it — the
   // SPAN, which is the input the equipment question needs. `null` span means
@@ -428,7 +464,7 @@ export default function HomeScreenV2() {
    * still whole without it); in the day-first view the row is what the screen is
    * about, so tapping it re-selects rather than emptying the screen. Game days
    * keep their action sheet in both.
-   */
+  */
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const isSelected = dayFirst ? true : isNormal
       ? idx === expandedWeekIdx
@@ -436,7 +472,10 @@ export default function HomeScreenV2() {
     const hasWorkout = !!day.workout;
     const isGame = day.workout?.workoutType === 'Game';
     const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
-    const isPickerMode = mode.type === 'moveGame' || mode.type === 'addGame';
+    const pickerMode: DayPickerMode = weekSessionEditAction
+      ? WEEK_SESSION_PICKER_MODE[weekSessionEditAction]
+      : mode.type;
+    const isPickerMode = pickerMode !== 'normal';
     const isMoveTarget = isPickerMode && !isMoveSource;
     // The projection's answer for this date — the card's ONE source for
     // its title/context words. `visibleWeek` and `weekDays` are the same
@@ -453,10 +492,16 @@ export default function HomeScreenV2() {
         isSelected={isSelected}
         isMoveSource={isMoveSource}
         isMoveTarget={isMoveTarget}
-        pickerMode={mode.type}
+        pickerMode={pickerMode}
         hasWorkout={hasWorkout}
         isGame={!!isGame}
         onPress={() => {
+          if (weekSessionEditAction) {
+            const initialAction = weekSessionEditAction;
+            setWeekSessionEditAction(null);
+            setChangeSheetEntry({ date: day.date, initialAction, origin: 'week' });
+            return;
+          }
           if (dayFirst && !isGame) return;
           if (!dayFirst && isNormal && !isGame) {
             setExpandedWeekIdx((current) => (current === idx ? -1 : idx));
@@ -672,6 +717,12 @@ export default function HomeScreenV2() {
             onCancel={handleCancelMove}
           />
         )}
+        {weekSessionEditAction && (
+          <MoveBanner
+            text={WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner}
+            onCancel={() => setWeekSessionEditAction(null)}
+          />
+        )}
 
         {/* ONLY WEEK'S COMPACT DATE NAV SITS BETWEEN THE TOGGLE AND THE WEEK.
             Today still puts its card directly under the control. On Week, Sam's
@@ -807,6 +858,19 @@ export default function HomeScreenV2() {
               count={modifierCount}
               onPress={() => setModifiersSheetOpen(true)}
             />
+            <Pressable
+              onPress={() => setWeekEditVisible(true)}
+              testID="edit-week-button"
+              accessibilityRole="button"
+              accessibilityLabel="Edit this week"
+              style={({ pressed }) => [
+                styles.editWeekButton,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <MaterialCommunityIcons name="pencil-outline" size={18} color="#C8FF00" />
+              <Text style={styles.editWeekButtonText}>Edit this week</Text>
+            </Pressable>
             {weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
@@ -1097,89 +1161,8 @@ export default function HomeScreenV2() {
           <ExplorerRenderWitness key={testID} testID={testID} />
         ))}
 
-        {/* ── ITEM 19: ONE ADD-FIXTURE CONTROL, BOTH PHASES, NO CAP ──
-            THE TWO CARDS THAT STOOD HERE ARE THIS ONE. An in-season "No game
-            this week - add one" card gated on the week having no game, and a
-            pre-season practice-match card that became a label once a fixture
-            existed. They were one control with two spellings and two ways of
-            saying "one game per week is all you get".
-
-            THE PLUS ICON AND ITS COPY WENT WITH THEM, and that is Sam's order
-            rather than a preference: the label follows the PHASE now ("Add a
-            game" / "Add a pre-season practice match"), so "No game this week"
-            could not survive — it is a sentence that is false on exactly the
-            weeks this control now has to appear on.
-
-            NO CAP, BY EXPLICIT RULING. No two-game limit, no warning at three,
-            no confirm. If a week gets ugly the contract discloses it; a button
-            that refuses is a button deciding the athlete's season for them.
-
-            WEEK SHAPE ONLY — SAM, 2026-08-13, ON SEEING IT ON THE DAY SCREEN:
-            *"add a game button should only be on week screen - not day screen
-            and then you select what day you need to add it too"*.
-
-            AND THE RULING MATCHES WHAT THE CONTROL ALREADY DOES. Tapping it
-            enters the add-game picker, and a picker FORCES the week shape
-            because the athlete is choosing among seven days. So on the day
-            screen this button's only possible next act was to leave the day
-            screen — it asked a question the shape it sat in could not answer.
-            The day screen is about ONE day; "which day?" is a week question. */}
-        {isNormal && !dayFirst && showAddFixtureCTA && (
-          <Pressable
-            onPress={handleAddGameMode}
-            testID={explorerTestId.fixtureIngress('add', weekAnchorISO)}
-            accessibilityRole="button"
-            accessibilityLabel={addFixtureLabel}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-          >
-            {/* Same treatment as the busy/away card — only the icon, tint and
-                label differ. Reuses the busyAway* styles so the cards cannot
-                drift apart. */}
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.practiceMatchIconTint]}>
-                  <RowIcon kind="game" size={14} color={DAY_ROW_ACCENT.game} />
-                </View>
-                <Text style={styles.busyAwayText}>{addFixtureLabel}</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
-        {/* ── ITEM 28: AWAY IS A WEEK-SHAPE CONTROL ──
-            Sam, 2026-08-13: *"I think the away button should live on the weekly
-            screen, it should say 'when do you leave?' then 'when do you return'
-            thhe leave button should be limited to that week in dates, but the
-            return date can be any date in the future / then you are asked about
-            the equipment stuff"*.
-
-            IT IS THE SAME MOVE AS ADD-A-GAME, FOR THE SAME REASON. A trip is a
-            SPAN — it starts on one day and ends on another, and the ten-day
-            version of it does not fit inside the week the athlete is looking
-            at. The day screen could not ask that question; it was only ever
-            able to tick training days inside the visible week, which is why
-            "away for ten days" was unsayable in this app until now. */}
-        {isNormal && !dayFirst && (
-          <Pressable
-            onPress={() => { setScheduleAck(null); setAwayVisible(true); }}
-            testID="home-away-entry"
-            accessibilityRole="button"
-            accessibilityLabel="Away"
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.awayIconTint]}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#B9A7FF" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
-                    <Circle cx={12} cy={10} r={2} />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>Away</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
+        {/* Add fixture and Away now live under the Week-only Edit this week
+            menu above. Their existing pickers and writers are unchanged. */}
 
         {/* ── ITEM 31 PART 5: THE APP ASKS ABOUT THE CHRISTMAS BREAK ──
             Sam, 2026-08-13: *"maybe around the 10th of December … an athlete
@@ -1299,7 +1282,31 @@ export default function HomeScreenV2() {
         date={changeSheetEntry?.date ?? null}
         weekDays={weekDays}
         initialAction={changeSheetEntry?.initialAction}
+        fromWeek={changeSheetEntry?.origin === 'week'}
         onClose={() => setChangeSheetEntry(null)}
+      />
+
+      <WeekEditSheet
+        visible={weekEditVisible}
+        phase={currentPhase}
+        hasFixture={weekHasFixture}
+        addFixtureLabel={addFixtureLabel}
+        onClose={() => setWeekEditVisible(false)}
+        onBye={handleSetByeWeek}
+        onAddFixture={() => {
+          setWeekEditVisible(false);
+          handleAddGameMode();
+        }}
+        onAway={() => {
+          setWeekEditVisible(false);
+          setScheduleAck(null);
+          setAwayVisible(true);
+        }}
+        onEditSession={(action) => {
+          setWeekEditVisible(false);
+          setExpandedWeekIdx(-1);
+          setWeekSessionEditAction(action);
+        }}
       />
 
       <GameDaySheet
@@ -1490,7 +1497,7 @@ interface DayRowProps {
   isSelected: boolean;
   isMoveSource: boolean;
   isMoveTarget: boolean;
-  pickerMode: 'normal' | 'moveGame' | 'addGame';
+  pickerMode: DayPickerMode;
   hasWorkout: boolean;
   isGame: boolean;
   normal: boolean;
@@ -1797,7 +1804,7 @@ interface WeekDayCardHeaderProps {
   isCompleted: boolean;
   isMoveSource: boolean;
   isMoveTarget: boolean;
-  pickerMode: 'normal' | 'moveGame' | 'addGame';
+  pickerMode: DayPickerMode;
   rowCount: number;
   canExpand: boolean;
   isExpanded: boolean;
@@ -1834,6 +1841,7 @@ function WeekDayCardHeader({
   compactStatus,
   dayToken,
 }: WeekDayCardHeaderProps) {
+  const weekPickerAction = weekSessionActionForPickerMode(pickerMode);
   // Rest and fixtures are status rows, not empty training rows. Only reserve
   // the category tier when the row can actually render one; otherwise that
   // invisible line makes these two cards look needlessly tall.
@@ -1893,7 +1901,9 @@ function WeekDayCardHeader({
 
         {isMoveTarget ? (
           <Text style={[styles.moveTargetLabel, styles.weekCardPickerLabel]}>
-            {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
+            {weekPickerAction
+              ? WEEK_SESSION_PICKER_COPY[weekPickerAction].row
+              : pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
           </Text>
         ) : rowCount > 0 ? (
           <Text style={styles.weekCardMeta} testID={`day-row-${dayToken}-count`}>
@@ -1938,6 +1948,7 @@ function DayRow({
   feedbackReceipts, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
+  const weekPickerAction = weekSessionActionForPickerMode(pickerMode);
   const showRowBadges = emphasized;
   // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout, and now
   // exactly ONE word. `cardLeadHeadline` gives the day's BUCKET (Strength,
@@ -2112,7 +2123,9 @@ function DayRow({
       radius="lg"
       onPress={cardCanPress ? onPress : undefined}
       testID={isMoveTarget
-        ? explorerTestId.fixtureTarget(day.date)
+        ? weekPickerAction
+          ? `edit-week-${weekPickerAction}-day-${day.date}`
+          : explorerTestId.fixtureTarget(day.date)
         : `day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${title ? ` ${title}` : ''}`}
       accessible={!exposesNestedControls}
@@ -2176,7 +2189,7 @@ function DayRow({
               <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
             ) : isOptionalSession ? (
               <>
-                <Text style={styles.expandedMeta}>Optional this week — only if you're up to it. Nothing's required.</Text>
+                <Text style={styles.expandedMeta}>This session is optional - only if you feel like it.</Text>
                 <Button label="Start optional session" variant="secondary" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
               </>
             ) : (
@@ -2635,6 +2648,132 @@ interface GameDaySheetProps {
   onMove: () => void;
   onRemove: () => void;
 }
+
+interface WeekEditSheetProps {
+  visible: boolean;
+  phase: SeasonPhase;
+  hasFixture: boolean;
+  addFixtureLabel: string;
+  onClose: () => void;
+  onBye: () => Promise<boolean>;
+  onAddFixture: () => void;
+  onAway: () => void;
+  onEditSession: (action: WeekSessionEditAction) => void;
+}
+
+function WeekEditSheet({
+  visible,
+  phase,
+  hasFixture,
+  addFixtureLabel,
+  onClose,
+  onBye,
+  onAddFixture,
+  onAway,
+  onEditSession,
+}: WeekEditSheetProps) {
+  const [step, setStep] = React.useState<'actions' | 'session_action'>('actions');
+  const [savingBye, setSavingBye] = React.useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setStep('actions');
+      setSavingBye(false);
+    }
+  }, [visible]);
+
+  const applyBye = async () => {
+    if (!hasFixture || savingBye) return;
+    setSavingBye(true);
+    const applied = await onBye();
+    setSavingBye(false);
+    if (applied) onClose();
+  };
+
+  return (
+    <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet">
+      <SheetHeader
+        title="Edit this week"
+        subtitle={step === 'actions'
+          ? 'What do you want to change?'
+          : 'What do you want to do?'}
+      />
+
+      {step === 'actions' ? (
+        <View>
+          {phase === 'In-season' ? (
+            <SheetOption
+              label="I have a bye"
+              sub={hasFixture
+                ? savingBye ? 'Updating this week…' : 'Remove this week’s games'
+                : 'This week is already a bye'}
+              icon={<MaterialCommunityIcons name="calendar-remove-outline" size={18} color={hasFixture ? '#67D7FF' : '#666666'} />}
+              disabled={!hasFixture || savingBye}
+              onPress={() => { void applyBye(); }}
+              testID="edit-week-bye"
+            />
+          ) : null}
+          {(phase === 'In-season' || phase === 'Pre-season') ? (
+            <SheetOption
+              label={addFixtureLabel}
+              icon={<MaterialCommunityIcons name="trophy-outline" size={18} color="#FFC247" />}
+              onPress={onAddFixture}
+              testID="edit-week-add-fixture"
+            />
+          ) : null}
+          <SheetOption
+            label="I’m going away"
+            icon={<MaterialCommunityIcons name="airplane" size={18} color="#B9A7FF" />}
+            onPress={onAway}
+            testID="edit-week-away"
+          />
+          <SheetOption
+            label="Add, move, swap or remove a session"
+            icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
+            onPress={() => setStep('session_action')}
+            testID="edit-week-session"
+          />
+        </View>
+      ) : (
+        <View>
+          <SheetOption
+            label="Add a session"
+            icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#5BD98A" />}
+            onPress={() => onEditSession('add')}
+            testID="edit-week-action-add"
+          />
+          <SheetOption
+            label="Move a session"
+            icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color="#67D7FF" />}
+            onPress={() => onEditSession('move')}
+            testID="edit-week-action-move"
+          />
+          <SheetOption
+            label="Swap a session"
+            icon={<MaterialCommunityIcons name="swap-horizontal" size={18} color="#B9A7FF" />}
+            onPress={() => onEditSession('swap')}
+            testID="edit-week-action-swap"
+          />
+          <SheetOption
+            label="Remove a session"
+            icon={<MaterialCommunityIcons name="delete-outline" size={18} color="#FF7A85" />}
+            onPress={() => onEditSession('remove')}
+            testID="edit-week-action-remove"
+          />
+          <Button
+            label="Back"
+            variant="ghost"
+            size="md"
+            glow={false}
+            onPress={() => setStep('actions')}
+            style={{ marginTop: spacing.sm }}
+          />
+        </View>
+      )}
+    </Sheet>
+  );
+}
+
 function GameDaySheet({
   visible,
   onClose,
@@ -2649,7 +2788,7 @@ function GameDaySheet({
       onClose={onClose}
       testID={explorerTestId.fixtureActions(fixtureId)}
     >
-      <Text style={styles.sheetTitle}>{label}</Text>
+      <SheetHeader title="Game day" subtitle={label} />
       <View style={styles.sheetCurrentBadge}>
         <View style={styles.sheetCurrentDot} />
         <Text style={styles.sheetCurrentText}>Game day</Text>
@@ -2681,15 +2820,20 @@ interface SheetOptionProps {
   sub?: string;
   accent?: boolean;
   danger?: boolean;
+  disabled?: boolean;
   onPress: () => void;
   testID?: string;
 }
-function SheetOption({ label, icon, sub, accent, danger, onPress, testID }: SheetOptionProps) {
+function SheetOption({
+  label, icon, sub, accent, danger, disabled = false, onPress, testID,
+}: SheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       testID={testID}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       /* R-109 (Sam, 2026-08-20): *"fix the six accessibility labels so athletes hear
          exercise names, not internal IDs."* The row is ONE accessibility leaf
          (`accessibilityRole="button"`), so its label is the whole of what a
@@ -2698,7 +2842,11 @@ function SheetOption({ label, icon, sub, accent, danger, onPress, testID }: Shee
          `accessibilityIdentifier`, which is what Maestro's `id:` and the
          explorer match on.** Only the SPOKEN name changes. */
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.sheetOption, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [
+        styles.sheetOption,
+        disabled && { opacity: 0.45 },
+        pressed && !disabled && { opacity: 0.7 },
+      ]}
     >
       <View style={[
         styles.sheetOptionIcon,
@@ -2882,11 +3030,11 @@ function WeekReadinessSheet({
       )}
       {lighterDayOffer && (
         <View testID="home-week-readiness-lighter-offer">
-          <Text style={styles.sheetTitle}>Make today lighter?</Text>
-          <Text style={styles.busyAwayEmpty}>
+          <SheetHeader title="Readiness" subtitle="Make today lighter?" />
+          <SheetDescription>
             I'll keep your main lift but trim the volume, drop any finisher, and ease hard conditioning.
             Nothing permanent — you can undo it anytime.
-          </Text>
+          </SheetDescription>
           <SheetOption
             label="Yes — make today lighter"
             testID="readiness-lighter-accept"
@@ -2905,11 +3053,11 @@ function WeekReadinessSheet({
       )}
       {justConfirmed && acknowledgment && (
         <View testID="home-week-readiness-confirmed">
-          <Text style={styles.sheetTitle}>{active?.title ?? "Got it"}</Text>
+          <SheetHeader title="Readiness" subtitle={active?.title ?? 'Got it'} />
           {/* The authored disclosure the commit returned — not a second string
               written here. For a severe illness that is "Rest up — nothing's
               required this week…". */}
-          <Text style={styles.busyAwayEmpty}>{acknowledgment.message}</Text>
+          <SheetDescription>{acknowledgment.message}</SheetDescription>
           <Button
             label="Done"
             variant="secondary"
@@ -2923,11 +3071,11 @@ function WeekReadinessSheet({
 
       {!showOptions && !lighterDayOffer && !justConfirmed && active && (
         <View>
-          <Text style={styles.sheetTitle}>{active.title}</Text>
-          <Text style={styles.busyAwayEmpty}>
+          <SheetHeader title="Readiness" subtitle={active.title} />
+          <SheetDescription>
             {active.scope === 'today' ? 'Today is' : 'This week is'} adjusted around how you said you're feeling. Clear
             the adjustment when you're good again.
-          </Text>
+          </SheetDescription>
           <SheetOption
             label="Update — how I'm feeling changed"
             testID={explorerTestId.readinessUpdate(active.id)}
@@ -2951,7 +3099,7 @@ function WeekReadinessSheet({
 
       {showOptions && bucket === 'flat' && (
         <View>
-          <Text style={styles.sheetTitle}>Feeling flat — what's closest?</Text>
+          <SheetHeader title="Fatigue" subtitle="What’s closest?" />
           <SheetOption
             label="Bit tired today"
             testID={explorerTestId.readinessOption('tired_today')}
@@ -2977,7 +3125,7 @@ function WeekReadinessSheet({
 
       {showOptions && bucket === 'sick' && (
         <View>
-          <Text style={styles.sheetTitle}>Sick — how bad?</Text>
+          <SheetHeader title="Sick" subtitle="How bad?" />
           <SheetOption
             label="A bit off"
             sub="Log it — I'll offer to soften today if you want"
@@ -3068,11 +3216,11 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
       <View>
         {step === 'leave' && (
           <>
-            <Text style={styles.sheetTitle}>When do you leave?</Text>
+            <SheetHeader title="Away" subtitle="When do you leave?" />
             {leaveCandidates.length === 0 ? (
-              <Text style={styles.busyAwayEmpty} testID="home-away-leave-empty">
+              <SheetDescription testID="home-away-leave-empty">
                 This week is already behind you. Move to next week to set a trip.
-              </Text>
+              </SheetDescription>
             ) : leaveCandidates.map((date) => (
               <Pressable
                 key={date}
@@ -3090,11 +3238,11 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
 
         {step === 'return' && leaveISO !== null && (
           <>
-            <Text style={styles.sheetTitle}>When do you return?</Text>
-            <Text style={styles.busyAwayEmpty}>
+            <SheetHeader title="Away" subtitle="When do you return?" />
+            <SheetDescription>
               Leaving {shortDayMonthLabel(leaveISO)}. Pick any day — it can be
               weeks away.
-            </Text>
+            </SheetDescription>
             <AwayReturnCalendar
               minISO={addDaysISO(leaveISO, 1)}
               onPick={setReturnISO}
@@ -3111,10 +3259,10 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
 
         {step === 'equipment' && leaveISO !== null && returnISO !== null && (
           <>
-            <Text style={styles.sheetTitle}>Do you have your normal equipment?</Text>
-            <Text style={styles.busyAwayEmpty}>
+            <SheetHeader title="Away" subtitle="Do you have your normal equipment?" />
+            <SheetDescription>
               Away {shortDayMonthLabel(leaveISO)} to {shortDayMonthLabel(returnISO)}.
-            </Text>
+            </SheetDescription>
             {/* YES IS A REAL ANSWER AND IT STORES NOTHING. Sam: *"if yes, follow
                 same program"*. */}
             <Button
@@ -3307,14 +3455,15 @@ function ChristmasBreakSheet({ visible, ask, onClose, onDone }: ChristmasBreakSh
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-christmas-break-sheet">
       <View>
-        <Text style={styles.sheetTitle}>
-          {asking ? 'When is your last team training?' : 'When does team training go back?'}
-        </Text>
-        <Text style={styles.busyAwayEmpty}>
+        <SheetHeader
+          title="Christmas break"
+          subtitle={asking ? 'When is your last team training?' : 'When does team training go back?'}
+        />
+        <SheetDescription>
           {asking
             ? 'Pick the last night your club trains. Everything after it comes off until you tell us it is back.'
             : 'Pick the first night your club trains again. It can be a day that has already passed.'}
-        </Text>
+        </SheetDescription>
         <AwayReturnCalendar
           minISO={minISO}
           // OPEN ON THE MONTH THE ANSWER IS IN, not on the floor's month.
@@ -3602,6 +3751,22 @@ const styles = StyleSheet.create({
   // Seven instances of one card structure. Selection opens details inside the
   // card; it does not replace the head or import the day screen's actions.
   dayList: { gap: spacing.sm, marginTop: spacing.sm },
+  editWeekButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#1A1E18',
+  },
+  editWeekButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
 
   // THE WEEK'S ONE CARD SHAPE (Sam, 2026-08-11). Every day uses these layout
   // pieces; today differs only through Card's existing selected treatment and

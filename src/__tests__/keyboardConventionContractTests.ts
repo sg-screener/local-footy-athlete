@@ -239,7 +239,6 @@ console.log('\n[4] Every onboarding text step uses the convention');
     'screens/onboarding/NameScreen.tsx',
     'screens/onboarding/BodyMeasurementsScreen.tsx',
     'screens/onboarding/MotivationScreen.tsx',
-    'screens/onboarding/InjuriesScreen.tsx',
   ];
   for (const screen of inputScreens) {
     const source = read(screen);
@@ -249,6 +248,10 @@ console.log('\n[4] Every onboarding text step uses the convention');
       !/(?<![\w.])<TextInput[\s/>]/.test(source),
     );
   }
+  const injurySetup = read('screens/onboarding/InjuriesScreen.tsx');
+  ok('InjuriesScreen is selection-only and renders no text input',
+    !/<AppTextInput[\s>]/.test(injurySetup)
+      && !/(?<![\w.])<TextInput[\s/>]/.test(injurySetup));
 }
 
 console.log('\n[5] The Done bar only mounts where a keyboard can be raised (L10)');

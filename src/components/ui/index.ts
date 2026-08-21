@@ -16,8 +16,8 @@ export type { V2ButtonVariant, V2ButtonSize, V2ButtonProps } from './Button';
 export { Card } from './Card';
 export type { V2CardTone, V2CardProps } from './Card';
 
-export { Sheet } from './Sheet';
-export type { V2SheetProps } from './Sheet';
+export { Sheet, SheetHeader, SheetDescription } from './Sheet';
+export type { V2SheetProps, V2SheetHeaderProps, V2SheetDescriptionProps } from './Sheet';
 
 export { Badge } from './Badge';
 export type { V2BadgeTone, V2BadgeSize, V2BadgeProps } from './Badge';

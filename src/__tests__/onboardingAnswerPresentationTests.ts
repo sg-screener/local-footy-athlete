@@ -352,6 +352,17 @@ console.log('\n[12] The Review screen renders the owner rather than a second lis
     /buildReviewSections/.test(review),
     'hand-listed rows are what let a step ship without one');
 
+  ok('the final action uses the same button as every earlier onboarding step',
+    /<OnboardingContinueButton/.test(review)
+      && /<OnboardingContinueButton/.test(
+        read('src/components/onboarding/OnboardingLayout.tsx'),
+      ),
+    'the final action has drifted onto a separate button style');
+
+  ok('Review does not introduce a step count absent from the earlier screens',
+    !/stepLabel/.test(review),
+    'Step 20 of 20 should not appear on the final review');
+
   // The formatters moved to the owner with the rows. A copy left behind on the
   // screen is a second answer to "what does this value say".
   ok('the screen no longer carries its own value formatters',
@@ -361,6 +372,21 @@ console.log('\n[12] The Review screen renders the owner rather than a second lis
   ok('the 2km answer is reachable from Review',
     /TwoKmTimeTrial/.test(read('src/screens/onboarding/reviewRows.ts')),
     'the row must route back to the step that owns the answer');
+
+  const reviewRows = read('src/screens/onboarding/reviewRows.ts');
+  const equipmentRow = reviewRows.slice(reviewRows.indexOf("label: 'Equipment'"));
+  ok('the Equipment row shows the selected gym location, not the full kit list',
+    equipmentRow.length > 100
+      && /value: \(data\) => present\(data\.trainingLocation\)/.test(equipmentRow.slice(0, 220)),
+    'the final review should say Commercial gym, Club gym or Home gym');
+
+  const reviewedEquipment = (trainingLocation: 'Commercial gym' | 'Club gym' | 'Home gym') =>
+    allRows({ ...COMPLETE_IN_SEASON, trainingLocation } as OnboardingData)
+      .find((row) => row.step === 'Equipment')?.value;
+  ok('all three gym choices reach Review unchanged',
+    reviewedEquipment('Commercial gym') === 'Commercial gym'
+      && reviewedEquipment('Club gym') === 'Club gym'
+      && reviewedEquipment('Home gym') === 'Home gym');
 }
 
 console.log('\n[13] Training availability asks about gym access, not total training days');
@@ -370,9 +396,9 @@ console.log('\n[13] Training availability asks about gym access, not total train
   const steps = read('src/utils/onboardingSteps.ts');
   const reviewRows = read('src/screens/onboarding/reviewRows.ts');
 
-  ok('the commitment question asks about gym or usual strength-equipment access',
+  ok('the commitment question ends at gym',
     commitment.includes(
-      'How many days each week can you get to a gym or your usual strength equipment?',
+      'How many days each week can you get to a gym?',
     ));
   ok('the helper explicitly permits lifting on a club-training day',
     commitment.includes(

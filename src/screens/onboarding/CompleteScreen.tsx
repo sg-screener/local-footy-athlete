@@ -90,7 +90,7 @@ const LONG_WAIT_MESSAGE =
 const MESSAGE_INTERVAL = 5000; // ~5s per status line (in the 4–6s window)
 const FADE_DURATION = 175;      // crossfade between messages
 const LONG_WAIT_THRESHOLD = 50000; // inject long-wait line once at ~50s
-const MIN_DISPLAY_MS = 2000;    // floor so loading never flickers past
+const MIN_DISPLAY_MS = 20_000;  // deliberate build experience after fast local generation
 
 export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) => {
   const [phase, setPhase] = useState<'generating' | 'ready' | 'error'>('generating');
@@ -585,7 +585,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
               <EducationCard
                 icon="refresh-cw"
                 title="It adapts with you"
-                body="Miss a session? Busy week? Feeling sore? Message your AI coach and your plan can adjust with you."
+                body="Miss a session? Busy week? Feeling sore? Your program can adjust with you."
               />
             </Animated.View>
             <Animated.View style={{ opacity: card3Opacity, transform: [{ translateY: card3TranslateY }] }}>
@@ -602,7 +602,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
         <View style={styles.footer}>
           {phase === 'generating' && (
             <Text variant="bodySmall" color={colors.text.tertiary} align="center" style={styles.footerHint}>
-              Usually takes 30-60 seconds
+              This takes about 20 seconds
             </Text>
           )}
           <Animated.View style={{ opacity: buttonOpacity }}>

@@ -4,6 +4,7 @@ import { SelectableTile } from '../common/SelectableTile';
 import { Text } from '../common/Text';
 import { colors } from '../../theme/colors';
 import { DayOfWeek } from '../../types/domain';
+import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 
 /**
  * Canonical day-of-week grid used across onboarding (PreferredTrainingDays,
@@ -22,15 +23,10 @@ import { DayOfWeek } from '../../types/domain';
  * across every consumer — no per-screen special casing.
  */
 
-const DAYS: { id: DayOfWeek; label: string }[] = [
-  { id: 'Monday', label: 'Mon' },
-  { id: 'Tuesday', label: 'Tue' },
-  { id: 'Wednesday', label: 'Wed' },
-  { id: 'Thursday', label: 'Thu' },
-  { id: 'Friday', label: 'Fri' },
-  { id: 'Saturday', label: 'Sat' },
-  { id: 'Sunday', label: 'Sun' },
-];
+const DAYS: { id: DayOfWeek; label: string }[] = DAYS_OF_WEEK.map((day) => ({
+  id: day,
+  label: day.slice(0, 3),
+}));
 
 export interface DayGridProps {
   /** Currently selected days. */

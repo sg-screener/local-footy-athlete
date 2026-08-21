@@ -3,9 +3,9 @@ import { colors } from './colors';
 
 /** One checkbox shape for every row in the live session checklist. */
 export const sessionExecutionCheckbox: ViewStyle = {
-  width: 22,
-  height: 22,
-  borderRadius: 6,
+  width: 18,
+  height: 18,
+  borderRadius: 5,
   borderWidth: 1,
   borderColor: '#666666',
   alignItems: 'center',
@@ -20,6 +20,6 @@ export const sessionExecutionCheckboxChecked: ViewStyle = {
 
 export const sessionExecutionCheckmark: TextStyle = {
   color: colors.accent.lime,
-  fontSize: 13,
+  fontSize: 11,
   fontWeight: '900',
 };

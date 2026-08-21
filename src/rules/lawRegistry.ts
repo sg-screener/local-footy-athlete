@@ -142,6 +142,28 @@ export interface LawRow {
 export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
+    id: 'LAW-gunshow-pools-and-pairing',
+    law: 'The authored normal-gym Gunshow is 2 biceps + 2 triceps + 2 shoulders at 2-3 sets, draws only from the exact signed 8/7/8 pools, and never selects a forbidden same-pattern pair.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-052 and docs/LFA_PROGRAMMING_BIBLE.md Section 20.3; Sam 2026-08-21 supplied the replacement pools and the do-not-pair list.',
+    guard: {
+      state: 'guarded',
+      by: 'test:mobility-accessory-doors',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-21 in A0, A1-A4 and A6 of src/__tests__/mobilityAccessoryDoorTests.ts. A0 pins the exact three ordered pools. A1-A4 hold the complete 2+2+2 normal-gym shape, no cross-family top-up and authored 2-3 sets. A6 pins the exact eight forbidden pairs, drives 730 deterministic Gunshows through the real athlete door, requires all 23 candidates to rotate in, and rejects every forbidden co-selection. MUTATION: bypassing pairRuleFor at the picker red A6 on 2026-01-02, naming Dumbbell Skull Crusher + Skull Crushers; restoring the pair-aware call returned the focused suite to green.',
+    },
+  },
+  {
+    id: 'LAW-athlete-reps-use-approved-targets',
+    law: 'Rep ranges remain the programming source, but every athlete-visible rep prescription and its assume-prescribed workload use the same target from 3, 4, 5, 6, 8, 10, 15 or 20; timed prescriptions are unchanged, and a midpoint tie chooses the lower target.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-016 and docs/LFA_PROGRAMMING_BIBLE.md line 770; Sam 2026-08-21: "the only reps that should come up ... is 3,4,5,6,8,10,15,20" and approved the nearest-target/lower-tie implementation.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-template',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-21 in A3 of src/__tests__/sessionTemplateOneListTests.ts. The cell asserts the exact eight-value vocabulary, checks the old 7/9/11/18 midpoint outputs with 6-8, 8-10, 10-12 and 15-20 ranges, checks fixed arbitrary values cannot leak, drives liftTonnageKg to prove assume-prescribed workload reads the same resolved target, and proves a 30-60 second duration range remains unchanged. MUTATION: restoring Math.round(midpoint) red 3 cells with the forbidden values verbatim; restoring the target resolver returned 78/0.',
+    },
+  },
+  {
     id: 'LAW-0-registry',
     // AUDITED 2026-08-10 (batch 2). The text used to end "...or an explicit
     // UNENFORCED row with a reason." Sam withdrew that clause the same day —
@@ -577,6 +599,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:session-execution-checklist',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED (LAW ZERO), UPDATED WITH SAM\'S 2026-08-11 MOBILITY, SHARED-SECTION, SQUARE-CHECKBOX, FULL-ROW-PARITY AND CLUB-SESSION COPY RULINGS. TWO OPTIONS COMPARED: keep styling the lightweight Mobility row until it resembled Strength, or delete that parallel renderer and adapt each derived movement into StrengthExerciseCard. The second removes the owner that produced both the circle/square drift and the missing prescription controls. WHAT THE CELLS HOLD: the pure plan groups accessory/prehab items into Strength while retaining stable item and component evidence; Mobility is wrapped by the same SessionExecutionSection, each movement uses the same ExecutionChecklistItem and StrengthExerciseCard as programmed strength, and its authored duration/per-side dose plus curated pool note are passed into that shared card; prescription, form-cue disclosure, load controls and video are therefore owned once. The shared execution row aligns its square checkbox to the centre of the complete card and carries no top-margin guess. Derived Mobility deliberately does not receive stored-workout swap/remove mutation callbacks; this prevents copied dead controls. Team Training is a plain exercise-card row and reads Club session through signed copy; all sections retain full/partial/skipped derivation; unticked mobility remains prescribed; Optional Work remains outside it. FIRST RUN: the session gate stopped because it read the deleted parallel component, the Mobility gate required that component, and the week gate explicitly required the rejected small dimensions; each was reported, then replaced with ownership and geometry cells. The copy extension then red on the old literal before the signed Club session entry landed. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, VoiceOver traversal order, a product decision that promotes derived Mobility into stored workout rows with swap/remove mutation rights, or analytics/recommendations consuming the evidence.',
+    },
+  },
+  {
+    id: 'LAW-standalone-mobility-recovery-session-parity',
+    law: 'Mobility and Recovery are separate standalone low-load sessions. Mobility is mobility-only, contains 5-8 drills and covers lower, hips, midline and upper whenever those authored regions remain eligible. Recovery is six rows: two soft-tissue, two mobility, one easy-cardio effort at 5-10 minutes, and one breathing drill. Both route every stored row through the ordinary numbered session list, shared exercise card, sets-and-reps line, cues, video and completion checklist; the recovery tier may keep them load-neutral but may not select a separate UI. Their visible dose is one high-end target, never a range.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-21 in this Codex task: "mobility should be it\'s own session - focusing purely on mobility drills"; "recovery should be it\'s own session, including foam rolling or soft tissue, some mobility, some light cardio for 5-10 min and breathing"; "they should both have the same session set-ups and UI as the other sessions"; and "the wider the spread the better" for full-body Mobility. This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:recovery-template',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-21. TWO OPTIONS COMPARED: add another screen-only recovery exception for Mobility, or separate athlete-facing low-load identity from load accounting and send both stored session types through the existing list/card owner. The second landed. WHAT THE CELLS HOLD: distinct Mobility and Recovery components and row populations; Recovery\'s exact 2 tissue + 2 mobility + 1 cardio + 1 breathing recipe; every easy-cardio candidate at 5-10 minutes; Mobility only from the signed mobility pool, inside the 5-8 cap and covering all four signed regions; both templates carry every stored row, number every exercise and build one correctly named checklist section; low-load rep, second and minute doses collapse to one high-end target; both day-card projections carry every stored row; and the screen routes both presentations through StrengthExerciseCard with the old RecoveryBlock and recovery-mode render branch absent. MUTATION-PROVEN: changing Light Walk / Bike from 5-10 to 6-10 red only the cardio-dose cell with the exact offending row, then restoring it returned the suite to green. NOT COVERED: Sam\'s physical iPhone, VoiceOver traversal, or eligibility worlds in which an active injury legitimately empties one mobility region.',
     },
   },
   {

@@ -12,6 +12,8 @@
 
 **Strength**
 
+- Vertical Jump — 2 × 3
+  - Every rep fast and sharp. Land soft in athletic stance. Stop if reps get slow.
 - Back Squat — 3 × 3
   - Sit into the hips, chest up. Own the bottom position.
 - RDLs — 3 × 3
@@ -38,6 +40,8 @@
 
 **Strength**
 
+- Explosive Push-up — 2 × 3
+  - Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box.
 - Barbell Row — 3 × 5
   - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
 - Lat Pulldown — 3 × 9

@@ -8,6 +8,8 @@ import {
   StyleProp,
 } from 'react-native';
 import { spacing } from '../../theme/spacing';
+import { colors } from '../../theme/colors';
+import { Text } from '../common/Text';
 
 /**
  * V2 Sheet primitive — bottom-anchored modal with rounded top corners,
@@ -71,6 +73,54 @@ export interface V2SheetProps {
    * the cap bites, which is exactly the behaviour wanted here.
    */
   cappedBody?: boolean;
+}
+
+export interface V2SheetHeaderProps {
+  /** Small uppercase category label, e.g. INJURY. */
+  title: React.ReactNode;
+  /** Larger white question or heading beneath the category label. */
+  subtitle: React.ReactNode;
+  centered?: boolean;
+  titleTestID?: string;
+  subtitleTestID?: string;
+}
+
+export interface V2SheetDescriptionProps {
+  children: React.ReactNode;
+  centered?: boolean;
+  testID?: string;
+}
+
+/** The one title/subtitle hierarchy for every athlete-facing popup. */
+export function SheetHeader({
+  title,
+  subtitle,
+  centered = false,
+  titleTestID,
+  subtitleTestID,
+}: V2SheetHeaderProps) {
+  return (
+    <View style={[styles.header, centered && styles.headerCentered]}>
+      <Text style={styles.headerTitle} testID={titleTestID}>{title}</Text>
+      <Text style={styles.headerSubtitle} testID={subtitleTestID}>{subtitle}</Text>
+    </View>
+  );
+}
+
+/** Explanatory copy between a popup heading and its controls/content. */
+export function SheetDescription({
+  children,
+  centered = false,
+  testID,
+}: V2SheetDescriptionProps) {
+  return (
+    <Text
+      style={[styles.description, centered && styles.descriptionCentered]}
+      testID={testID}
+    >
+      {children}
+    </Text>
+  );
 }
 
 export function Sheet({
@@ -156,8 +206,38 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3A3A3A',
+    backgroundColor: colors.accent.lime,
     alignSelf: 'center',
     marginBottom: spacing.md,
+  },
+  header: {
+    marginBottom: 14,
+  },
+  headerCentered: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: colors.accent.lime,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  headerSubtitle: {
+    color: colors.text.primary,
+    fontSize: 21,
+    fontWeight: '800',
+    lineHeight: 26,
+    letterSpacing: -0.2,
+  },
+  description: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  descriptionCentered: {
+    textAlign: 'center',
   },
 });

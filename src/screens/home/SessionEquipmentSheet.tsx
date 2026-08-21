@@ -20,7 +20,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
-import { Button } from '../../components/ui';
+import { Button, SheetDescription } from '../../components/ui';
 import {
   SessionActionSheet,
   useSessionActionStep,
@@ -72,8 +72,8 @@ function SessionEquipmentBody({
 
   useSessionActionStep({
     key: 'equipment',
-    title: 'Equipment for this session',
-    subtitle: 'Untick anything you don’t have today. We’ll replace affected exercises using equipment you still have.',
+    eyebrow: 'Equipment',
+    title: 'What are you missing?',
   });
 
   const toggle = (key: SessionEquipmentRequirementKey) => {
@@ -87,6 +87,9 @@ function SessionEquipmentBody({
 
   return (
     <>
+      <SheetDescription>
+        Untick anything you don’t have today. We’ll replace affected exercises using equipment you still have.
+      </SheetDescription>
       <View style={styles.list}>
         {requirements.map((requirement) => {
           const available = !missing.has(requirement.key);

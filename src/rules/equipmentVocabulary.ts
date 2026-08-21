@@ -197,12 +197,17 @@ export function deriveEquipmentVocabulary(): DerivedEquipmentVocabulary {
 
   for (const [category, pool] of Object.entries(POOL_REGISTRY)) {
     for (const exercise of pool) {
-      for (const tag of exercise.equipment) {
-        demandTag(tag, {
-          source: 'pool_registry',
-          exercise: `${category}: ${exercise.name}`,
-          requirement: tag,
-        });
+      for (const requirement of exercise.equipment) {
+        const tags = Array.isArray(requirement)
+          ? requirement
+          : [requirement as EquipmentTag];
+        for (const tag of tags) {
+          demandTag(tag, {
+            source: 'pool_registry',
+            exercise: `${category}: ${exercise.name}`,
+            requirement: tag,
+          });
+        }
       }
     }
   }
@@ -367,7 +372,7 @@ export type AskableEquipmentTag = Exclude<EquipmentTag, 'bodyweight' | 'bike_or_
  * cannot ship unlabelled — it fails compilation here instead.
  */
 export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>> = {
-  barbell: 'Barbell & rack',
+  barbell: 'Barbell and plates',
   dumbbells: 'Dumbbells',
   cables: 'Cable machine',
   machine: 'Weight machines',
@@ -377,8 +382,7 @@ export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>>
   kettlebell: 'Kettlebell',
   foam_roller: 'Foam roller',
   plyo_box: 'Plyo box',
-  // Item 46/47, 2026-08-13. `barbell` above keeps the label 'Barbell & rack'
-  // ONLY as the checklist option's name; the rack is its own question now.
+  // Rack stays separate: owning a barbell and plates does not imply one.
   rack: 'Squat rack',
   trap_bar: 'Trap bar',
   swiss_ball: 'Swiss ball',
@@ -386,9 +390,8 @@ export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>>
   back_extension_bench: '45° back extension',
   dip_bars: 'Dip bars',
   rings_trx: 'Rings or TRX',
-  // Sam's own sheet wording is "sand bag / dead ball"; the label keeps the half
-  // an athlete would recognise on a gym floor.
-  sandbag: 'Sandbag',
+  // Sam's own sheet wording, kept intact everywhere this shared label renders.
+  sandbag: 'Sand bag / dead ball',
 };
 
 export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipmentModality, string>> = {

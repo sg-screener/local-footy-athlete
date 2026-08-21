@@ -39,7 +39,7 @@ import {
  * before. D13: "internal counting fences are unchanged."
  */
 
-export type SessionTemplateMode = 'badged_list' | 'recovery';
+export type SessionTemplateMode = 'badged_list';
 
 /**
  * `'d2'` — power → main → accessory → midline → prehab → conditioning (§3.1).
@@ -61,7 +61,7 @@ export type SessionTemplateItem =
       kind: 'exercise';
       role: SessionRole;
       /** Which row shape the renderer should use — the data differs, the badge does not. */
-      presentation: 'strength' | 'conditioning_phase' | 'addon';
+      presentation: 'strength' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon';
       row: any;
       /** Kept as a small in-list pairing indicator, never a badge (§2 item 4a). */
       superset: SessionSupersetTag | null;
@@ -97,10 +97,6 @@ const CONDITIONING_ONLY_TYPES: ReadonlySet<string> = new Set([
   '6x1km',
   'Tempo-Run',
 ]);
-
-function isRecoveryWorkout(workout: any): boolean {
-  return workout?.workoutType === 'Recovery' || workout?.sessionTier === 'recovery';
-}
 
 function rowName(row: any): string {
   return String(row?.exercise?.name ?? row?.name ?? '').trim();
@@ -278,7 +274,7 @@ function supersetTagsFor(rows: any[]): Map<any, SessionSupersetTag> {
 
 function exerciseItem(
   row: any,
-  presentation: 'strength' | 'conditioning_phase' | 'addon',
+  presentation: 'strength' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon',
   options: { role?: SessionRole; superset?: SessionSupersetTag | null; optional?: boolean } = {},
 ): SessionTemplateItem {
   return {
@@ -299,19 +295,14 @@ function exerciseItem(
 /**
  * Build the one list for a day.
  *
- * Recovery-type days short-circuit to `mode: 'recovery'` with no items: Sam
- * ruled (§6 item 3) they keep their own simple template — no badges, and no
- * Mobility & Prehab flow, since a whole recovery day would make the flow
- * redundant.
+ * Mobility and Recovery use this same list and row template as every other
+ * stored session. Their load-neutral tier remains a programming fact, not a
+ * presentation switch.
  */
 export function buildSessionTemplate(
   workout: Partial<Workout> | null | undefined,
 ): SessionTemplate {
   if (!workout) return { mode: 'badged_list', ordering: 'd2', items: [] };
-  if (isRecoveryWorkout(workout)) {
-    return { mode: 'recovery', ordering: 'd2', items: [] };
-  }
-
   const teamState = getTeamTrainingWorkoutState(workout);
   const componentRows = getSessionComponentRows(workout);
   const isConditioningOnly =
@@ -319,6 +310,16 @@ export function buildSessionTemplate(
     CONDITIONING_ONLY_TYPES.has(String(workout.workoutType ?? ''));
 
   const items: SessionTemplateItem[] = [];
+
+  // Standalone Mobility and Recovery retain distinct typed populations while
+  // sharing the ordinary exercise-card route. Force one common role so their
+  // authored order is preserved instead of being rearranged by name inference.
+  for (const row of componentRows.mobilityRows) {
+    items.push(exerciseItem(row, 'mobility', { role: 'prehab' }));
+  }
+  for (const row of componentRows.recoveryRows) {
+    items.push(exerciseItem(row, 'recovery', { role: 'prehab' }));
+  }
 
   // Strength and trunk/support rows are one population here. The shared
   // component owner splits them for counting purposes, but a superset can pair
@@ -433,7 +434,10 @@ export function sessionListLabels(
   let counter = 0;
 
   return items.map((item) => {
-    if (item.kind !== 'exercise' || item.presentation !== 'strength') return null;
+    if (
+      item.kind !== 'exercise' ||
+      !['strength', 'mobility', 'recovery'].includes(item.presentation)
+    ) return null;
 
     if (!item.superset) {
       counter += 1;

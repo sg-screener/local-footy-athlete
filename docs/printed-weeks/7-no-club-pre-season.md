@@ -12,6 +12,8 @@
 
 **Strength**
 
+- Lateral Bounds — 3 × 3
+  - Push off outside leg. Stick each landing before the next.
 - Back Squat — 3 × 5
   - Sit into the hips, chest up. Own the bottom position.
 - RDLs — 3 × 5
@@ -47,6 +49,8 @@
 
 **Strength**
 
+- Explosive Push-up — 3 × 3
+  - Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box.
 - Bench Press — 3 × 5
   - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
 - Barbell Row — 3 × 6

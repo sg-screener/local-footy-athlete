@@ -910,5 +910,7 @@ export function slotCountsTowardSetBudget(slot: string | null | undefined): bool
   return slot === 'squat' || slot === 'hinge'
     || slot === 'single_leg_knee' || slot === 'single_leg_hip'
     || slot === 'horizontal_push' || slot === 'vertical_push'
-    || slot === 'horizontal_pull' || slot === 'vertical_pull';
+    || slot === 'horizontal_pull' || slot === 'vertical_pull'
+    || slot === 'push_accessory_1' || slot === 'push_accessory_2'
+    || slot === 'pull_accessory_1' || slot === 'pull_accessory_2';
 }

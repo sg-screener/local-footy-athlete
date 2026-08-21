@@ -9,7 +9,10 @@ import type {
 import type { SessionAllocation } from '../utils/coachingEngine';
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import type { ResolvedEquipmentCapabilities } from '../utils/equipmentAvailability';
-import { injurySeverityReducesAffectedWork } from './injurySeverityBands';
+import {
+  injurySeverityReducesAffectedWork,
+  onboardingInjurySeverityScore,
+} from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { Section18ConditioningStress, Section18EquipmentPolicyState } from './weeklyExposureContractV2';
@@ -118,7 +121,8 @@ function upperLimbRestriction(
   constraints?: GenerationConstraintContext,
 ): boolean {
   return (profile?.injuries ?? []).some((injury) =>
-    injury.severity !== 'Mild' && /shoulder|elbow|wrist|upper arm|pec/i.test(injury.bodyArea)) ||
+    injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(injury))
+      && /shoulder|elbow|wrist|upper arm|pec/i.test(injury.bodyArea)) ||
     !!constraints?.injuries.some((injury) =>
       injurySeverityReducesAffectedWork(injury.severity) &&
       injury.region === 'upper_body');
@@ -129,7 +133,7 @@ function lowerLimbRestriction(
   constraints?: GenerationConstraintContext,
 ): boolean {
   return (profile?.injuries ?? []).some((injury) =>
-    injury.severity !== 'Mild' &&
+    injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(injury)) &&
     /foot|ankle|achilles|calf|shin|knee|quad|hamstring|groin|hip|lower back|back/i.test(injury.bodyArea)) ||
     !!constraints?.injuries.some((injury) =>
       injurySeverityReducesAffectedWork(injury.severity) &&

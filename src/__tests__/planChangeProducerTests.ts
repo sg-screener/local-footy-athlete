@@ -832,12 +832,21 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] a disabled Move row renders the producer\'s own refusal sentence',
     /options\.move\.refusal\s*\?\s*options\.move\.refusal\.message/.test(actionsBlock));
   ok('[9] every action row carries an icon and the danger row is the destructive one',
-    /icon=\{swapIcon\(/.test(actionsBlock)
-      && /icon=\{addIcon\(/.test(actionsBlock)
-      && /icon=\{moveIcon\(/.test(actionsBlock)
-      && /icon=\{removeIcon\(/.test(actionsBlock)
+    /name="plus-circle-outline"[\s\S]{0,100}'#5BD98A'/.test(actionsBlock)
+      && /name="arrow-right-bold-outline"[\s\S]{0,120}'#67D7FF'/.test(actionsBlock)
+      && /name="swap-horizontal"[\s\S]{0,100}'#B9A7FF'/.test(actionsBlock)
+      && /name="delete-outline"[\s\S]{0,100}'#FF7A85'/.test(actionsBlock)
+      && (actionsBlock.match(/neutralIconChip/g) ?? []).length === 4
       && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
+  ok('[9] Day uses the same Add, Move, Swap, Remove visual order as Week',
+    actionsBlock.indexOf('label="Add to this day"')
+      < actionsBlock.indexOf('label="Move this session"')
+      && actionsBlock.indexOf('label="Move this session"')
+        < actionsBlock.indexOf('label="Swap this session"')
+      && actionsBlock.indexOf('label="Swap this session"')
+        < actionsBlock.indexOf('label="Remove this session"')
+      && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(actionsBlock));
   ok('[9] swap category no longer offers Rest day because remove owns rest',
     !/label="Rest day"|Clear the day - same as binning the session/.test(sheet));
   ok('[9] the first step reuses the existing swap/add/move/remove routes',

@@ -563,8 +563,8 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   isolation_upper: {
     anchor: {
       slot: 'isolation_upper', role: 'anchor', entries: [
-        { name: 'Shrugs',         loadRatio: 1.00 },
-        { name: 'Skull Crushers', loadRatio: 0.35 },
+        { name: 'Shrugs',         loadRatio: 1.00, group: 'trap' },
+        { name: 'Skull Crushers', loadRatio: 0.35, group: 'tricep' },
       ],
     },
     accessory: {
@@ -584,15 +584,16 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Dumbbell Skull Crusher',    loadRatio: 0.25, group: 'tricep' },
         { name: 'Dumbbell Kickback',         loadRatio: 0.15, group: 'tricep' },
         { name: 'Tricep Circuit (Dirty 30)', loadRatio: 0.20, group: 'tricep' },
-        // Shoulder / trap block
+        // Shoulder block
         { name: 'Lateral Raise',    loadRatio: 0.20, group: 'shoulder' },
         { name: 'Incline Y Raise',  loadRatio: 0.15, group: 'shoulder' },
-        { name: 'Single-Arm Shrug', loadRatio: 0.60, group: 'shoulder' },
         // R-076, Sam 2026-08-13: "face pull is shoulder work for sure". Moved
         // here from horizontal_pull/accessory, with its two rear-delt siblings.
         { name: 'Face Pull',        loadRatio: 0.20, group: 'shoulder' },
         { name: 'Rear Delt Fly',    loadRatio: 0.15, group: 'shoulder' },
         { name: 'Band Pull-Apart',  loadRatio: 0.10, group: 'shoulder' },
+        // Trap block
+        { name: 'Single-Arm Shrug', loadRatio: 0.60, group: 'trap' },
         // Same ruling, same reasoning: a cable face pull is a face pull.
         { name: 'Cable Face Pull',  loadRatio: 0.20, group: 'shoulder' },
       ],

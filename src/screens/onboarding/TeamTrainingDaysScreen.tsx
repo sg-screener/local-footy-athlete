@@ -18,10 +18,9 @@ type TeamTrainingDaysScreenProps = NativeStackScreenProps<
 >;
 
 /**
- * Multi-select day-of-week picker. Layout is delegated to the shared
- * <DayGrid /> component so this screen reads identically to
- * PreferredTrainingDaysScreen — Mon–Sat in a 3-up grid, Sunday centered
- * underneath. No per-screen grid styles.
+ * Multi-select day-of-week picker using the shared 3-3-1 grid. This screen
+ * keeps its explicit Continue behaviour while matching the other onboarding
+ * day pickers.
  */
 export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
   navigation,
@@ -105,7 +104,7 @@ function feedbackForCount(count: number): string {
 
 const styles = StyleSheet.create({
   titleSection: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   title: {
     ...headingXL,

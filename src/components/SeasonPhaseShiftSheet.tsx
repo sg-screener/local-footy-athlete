@@ -36,7 +36,7 @@ import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from './common/Text';
 import { SelectableTile } from './common';
-import { Button, Sheet } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { BuildingState } from './RebuildSheet';
 import { borderRadius, spacing } from '../theme/spacing';
 import {
@@ -125,10 +125,10 @@ export function SeasonPhaseShiftSheet({
         />
       ) : step === 'confirm' ? (
         <>
-          <Text style={styles.sheetTitle}>{signedCopy('phase.review.title')}</Text>
-          <Text style={styles.sheetBody}>
+          <SheetHeader title="Season phase" subtitle={signedCopy('phase.review.title')} />
+          <SheetDescription>
             {signedCopy('phase.review.body')}
-          </Text>
+          </SheetDescription>
           <View style={styles.phaseOptions}>
             {(['In-season', 'Pre-season', 'Off-season'] as const).map((phase) => {
               const selected = targetPhase === phase;
@@ -182,10 +182,10 @@ export function SeasonPhaseShiftSheet({
         // Availability re-confirmation. See useHomeScreen for why we always
         // re-ask instead of reusing onboarding data.
         <>
-          <Text style={styles.sheetTitle}>What days can you train?</Text>
-          <Text style={styles.sheetBody}>
+          <SheetHeader title="Availability" subtitle="What days can you train?" />
+          <SheetDescription>
             We'll plan your {targetPhase.toLowerCase()} week around these days. Update them if your schedule has changed.
-          </Text>
+          </SheetDescription>
           <View style={styles.chipGrid}>
             {WEEK_DAYS.map((day) => {
               const selected = pendingPreferredDays.includes(day);
@@ -230,10 +230,10 @@ export function SeasonPhaseShiftSheet({
         </>
       ) : step === 'teamDays' ? (
         <>
-          <Text style={styles.sheetTitle}>Team training days</Text>
-          <Text style={styles.sheetBody}>
-            Which days does your team train? We'll keep heavy lower-body and sprint work off these days.
-          </Text>
+          <SheetHeader title="Team training" subtitle="Which days does your team train?" />
+          <SheetDescription>
+            We'll keep heavy lower-body and sprint work off these days.
+          </SheetDescription>
           <View style={styles.chipGrid}>
             {WEEK_DAYS.map((day) => {
               const selected = pendingTeamDays.includes(day);
@@ -272,10 +272,10 @@ export function SeasonPhaseShiftSheet({
         </>
       ) : (
         <>
-          <Text style={styles.sheetTitle}>Usual game day</Text>
-          <Text style={styles.sheetBody}>
-            Which day do you usually play? We'll anchor weekly scheduling around it (arms pump the day before, recovery after).
-          </Text>
+          <SheetHeader title="Game day" subtitle="Which day do you usually play?" />
+          <SheetDescription>
+            We'll anchor weekly scheduling around it, with arms the day before and recovery after.
+          </SheetDescription>
           <View style={styles.chipGrid}>
             {WEEK_DAYS.map((day) => {
               const selected = pendingGameDay === day;

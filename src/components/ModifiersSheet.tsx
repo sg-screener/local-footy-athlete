@@ -46,7 +46,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
-import { Button, Sheet } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { signedCopy } from '../rules/signedCopy';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
 import type { ActiveProgramModifierEffect } from '../utils/activeProgramModifiers';
@@ -94,10 +94,12 @@ export function ModifiersSheet({
 }: ModifiersSheetProps) {
   return (
     <Sheet visible={visible} onClose={onClose} testID="modifiers-sheet">
-      <Text style={styles.title} testID="modifiers-sheet-title">
-        {signedCopy('modifiers.sheet.title')}
-      </Text>
-      <Text style={styles.body}>{signedCopy('modifiers.sheet.body')}</Text>
+      <SheetHeader
+        title="Program"
+        subtitle={signedCopy('modifiers.sheet.title')}
+        subtitleTestID="modifiers-sheet-title"
+      />
+      <SheetDescription>{signedCopy('modifiers.sheet.body')}</SheetDescription>
 
       <View style={styles.list}>
         {modifiers.filter(isShownOnProgram).map((note) => (

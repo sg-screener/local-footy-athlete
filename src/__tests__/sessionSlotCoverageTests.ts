@@ -17,6 +17,8 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   LOWER_SLOTS,
   UPPER_FULL_SLOTS,
+  UPPER_SPLIT_PULL_SLOTS,
+  UPPER_SPLIT_PUSH_SLOTS,
   patternsCompletingLadder,
   slotDayKindForPatterns,
   sessionSlotCoverage,
@@ -119,6 +121,42 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ok('[SAM] an upper day covering both planes and directions is COMPLETE',
     upperCov.missing.length === 0 && upperCov.filled.length === UPPER_FULL_SLOTS.length,
     `missing=${JSON.stringify(upperCov.missing)}`);
+
+  const completePush = [
+    row('Bench Press'), row('Overhead Press'),
+    row('DB Bench Press'), row('Half-Kneeling Single-Arm Overhead Press'),
+    row('Tricep Pushdown'), row('Lateral Raise'), row('Ab Wheel'),
+  ];
+  const pushCov = sessionSlotCoverage(completePush, 'upper_split_push');
+  ok('[SAM] split PUSH is horizontal + vertical + 2 accessories + triceps + shoulders + core',
+    pushCov.missing.length === 0
+      && pushCov.filled.length === UPPER_SPLIT_PUSH_SLOTS.length
+      && UPPER_SPLIT_PUSH_SLOTS.length === 7,
+    `missing=${JSON.stringify(pushCov.missing)} filled=${JSON.stringify(pushCov.filled)}`);
+
+  const completePull = [
+    row('Barbell Row'), row('Pull-Ups'),
+    row('Seated Cable Row'), row('Neutral-Grip Pulldown'),
+    row('Bicep Curl (Dumbbell)'), row('Shrugs'), row('Ab Wheel'),
+  ];
+  const pullCov = sessionSlotCoverage(completePull, 'upper_split_pull');
+  ok('[SAM] split PULL is horizontal + vertical + 2 accessories + biceps + traps + core',
+    pullCov.missing.length === 0
+      && pullCov.filled.length === UPPER_SPLIT_PULL_SLOTS.length
+      && UPPER_SPLIT_PULL_SLOTS.length === 7,
+    `missing=${JSON.stringify(pullCov.missing)} filled=${JSON.stringify(pullCov.filled)}`);
+
+  const pushWithoutTriceps = completePush.filter(
+    (exercise) => exercise.exercise?.name !== 'Tricep Pushdown');
+  ok('[SAM] shoulder work cannot stand in for the required triceps row',
+    sessionSlotCoverage(pushWithoutTriceps, 'upper_split_push').missing.includes('triceps'));
+  const pullWithoutTraps = completePull.filter((exercise) => exercise.exercise?.name !== 'Shrugs');
+  ok('[SAM] biceps work cannot stand in for the required traps row',
+    sessionSlotCoverage(pullWithoutTraps, 'upper_split_pull').missing.includes('traps'));
+  ok('[SAM] shoulder isolation is not misused as a pull accessory',
+    !slotsFilledByRow(row('Band Pull-Apart')).includes('pull_accessory_1')
+      && slotsFilledByRow(row('Band Pull-Apart')).includes('shoulders'),
+    JSON.stringify(slotsFilledByRow(row('Band Pull-Apart'))));
 }
 
 console.log('\n[4] Power and conditioning ride on top — they fill NO slot');

@@ -171,7 +171,7 @@ function visibleDays(week: string): readonly VisibleDay[] {
 
 /** Every component id the app can emit — the closed union, spelled out. */
 const COMPONENT_IDS: readonly SessionComponentKind[] = [
-  'power', 'strength', 'support', 'conditioning', 'team_training',
+  'power', 'strength', 'mobility', 'support', 'conditioning', 'team_training',
   'speed', 'finisher', 'recovery_addon', 'recovery', 'session',
 ];
 
@@ -880,8 +880,8 @@ run('the status circles sit in a card with words above them', () => {
     'the Away map-pin is back in the day-screen chip row — Sam moved that '
     + 'control to the weekly screen, and two live copies is the duplicate this '
     + 'file exists to catch');
-  assert(/awayIconTint:\s*\{[^}]*rgba\(185,\s*167,\s*255,\s*0\.12\)/.test(home),
-    'the Away chip no longer carries its matching circle tint');
+  assert(home.includes('testID="edit-week-away"'),
+    'Away did not move into the Week-only Edit this week menu');
 });
 
 /**
@@ -898,15 +898,12 @@ run('the status circles sit in a card with words above them', () => {
  */
 run('Away is a week-shape control, and it asks leave, return, then equipment', () => {
   const home = homeScreenSource();
-  const entryAt = home.indexOf('testID="home-away-entry"');
+  const entryAt = home.indexOf('testID="edit-week-away"');
   assert(entryAt > 0,
-    'there is no away entry on the Program screen at all. It left the day-screen '
-    + 'chip row by Sam\'s ruling; if it did not land on the week shape, the '
-    + 'athlete cannot say they are away.');
-  const gateAt = home.lastIndexOf('{isNormal && !dayFirst && (', entryAt);
-  assert(gateAt >= 0 && entryAt - gateAt < 900,
-    'the away entry is not rendered under `isNormal && !dayFirst` — it is either '
-    + 'back on the day screen or on both shapes at once');
+    'there is no away entry inside Edit this week');
+  assert(home.includes('testID="edit-week-button"')
+    && home.includes('onPress={() => setWeekEditVisible(true)}'),
+  'the weekly edit button no longer opens the menu that owns Away');
 
   const sheetAt = home.indexOf('interface AwaySheetProps');
   assert(sheetAt >= 0, 'the away sheet is gone; the entry opens nothing');
@@ -961,7 +958,8 @@ run('Tired and Sick enter one readiness sheet at their own options', () => {
     'the removed flat/sick chooser still exists inside the readiness sheet');
   assert(!/Something hurts/.test(sheet) && !/onInjury/.test(sheet),
     'injury is still nested under readiness instead of living only behind Injured');
-  assert(/Feeling flat — what's closest\?/.test(sheet) && /Sick — how bad\?/.test(sheet),
+  assert(/title="Fatigue" subtitle="What’s closest\?"/.test(sheet)
+    && /title="Sick" subtitle="How bad\?"/.test(sheet),
     'one of the two existing option groups was lost while removing the chooser');
   const flatStart = sheet.indexOf("{showOptions && bucket === 'flat'");
   const sickStart = sheet.indexOf("{showOptions && bucket === 'sick'", flatStart);
@@ -1402,43 +1400,16 @@ run('the old status bars did not survive alongside their own chips', () => {
   // pinned by name rather than the treatment being banned outright: a SECOND
   // survivor is a bar that was missed, and this reds on it.
   //
-  // RE-COUNTED 2026-08-13 (SEAT_INBOX item 28): TWO, AND BOTH ARE NAMED. Away
-  // moved to the week shape by Sam's ruling, and it is a week-level control
-  // exactly like add-a-game — same shape, same treatment, deliberately. The
-  // property this cell holds is unchanged and is not the number: it is that
-  // every survivor is NAMED, so a life-fact bar cannot creep back in wearing
-  // the treatment. Both names are asserted below.
+  // RE-COUNTED 2026-08-21: ZERO. Away and add-fixture are still week-level
+  // controls, but they now live as rows inside the one Edit this week menu.
+  // Neither needs the old icon-and-sentence card treatment in the scroll body.
   const barIcons = body.match(/styles\.busyAwayIcon\b/g) ?? [];
-  assert(barIcons.length === 2,
-    `${barIcons.length} card(s) still use the old 28pt bar icon treatment; exactly `
-    + 'two may — the add-fixture CTA and the away entry, both week-shape controls. '
-    + 'The five life-fact bars that used it are the chip row now.');
-  const awayEntryAt = body.indexOf('testID="home-away-entry"');
-  assert(awayEntryAt >= 0,
-    'the away entry is not in the Program screen body at all, so the second card '
-    + 'allowed to keep the old bar treatment cannot be identified');
-  assert(body.slice(awayEntryAt, awayEntryAt + 600).includes('styles.busyAwayIcon'),
-    'the second card allowed to keep the old bar treatment is not the away entry '
-    + '— something else inherited it, which is the leftover this cell exists to '
-    + 'find.');
-  // RE-AIMED 2026-08-13 (SEAT_INBOX item 19). The survivor used to be pinned by
-  // `showPracticeMatchCTA`, a flag that no longer exists: the pre-season
-  // practice-match card and the in-season add-game card merged into ONE
-  // phase-labelled add-fixture control, which is now the single card carrying
-  // the old bar treatment. The property is unchanged — exactly one survivor,
-  // named — only its name moved.
-  // BOUNDED, because there is a second survivor now: an unbounded slice would
-  // let the AWAY card satisfy this assertion and the add-fixture card could
-  // quietly lose its icon with nothing red.
-  const addFixtureAt = body.indexOf('showAddFixtureCTA');
-  assert(addFixtureAt >= 0,
-    'the add-fixture control is gone from the Program screen body, so the one '
-    + 'card allowed to keep the old bar treatment cannot be identified at all');
-  const addFixture = body.slice(addFixtureAt, addFixtureAt + 900);
-  assert(addFixture.includes('styles.busyAwayIcon'),
-    'the one card allowed to keep the old bar treatment is no longer the '
-    + 'add-fixture CTA — something else inherited it, which is the leftover '
-    + 'this cell exists to find.');
+  assert(barIcons.length === 0,
+    `${barIcons.length} old icon-and-sentence week card(s) remain. Add fixture and `
+    + 'Away now belong inside the one Edit this week menu.');
+  assert(!body.includes('testID="home-away-entry"')
+    && !body.includes('showAddFixtureCTA'),
+  'a separate Away or add-fixture card survived beside Edit this week');
 });
 
 // ── ITEM 19: AS MANY GAMES AS THE WEEK NEEDS ────────────────────────────────
@@ -1454,16 +1425,18 @@ run('the old status bars did not survive alongside their own chips', () => {
 // these cells hold the cap down rather than holding a third card up.
 run('the add-fixture control never caps the week at one game', () => {
   const home = homeScreenSource();
-  const body = home.slice(home.indexOf('function HomeScreenV2'));
-  assert(/isNormal && !dayFirst && showAddFixtureCTA &&/.test(body),
-    'the add-fixture control is not gated on exactly `isNormal`, the WEEK shape '
-    + 'and the phase. Sam ruled it is week-only ("not day screen"), and any '
-    + 'condition BEYOND those three is a cap on how many games a week may hold, '
-    + 'which he ruled out in the same breath.');
-  assert(!/weekHasGame/.test(body),
-    'the Program screen reads weekHasGame again — that is the exact gate that '
-    + 'made the control disappear once the week had one game');
-  assert(!/practiceMatchDay/.test(body),
+  const sheetStart = home.indexOf('function WeekEditSheet');
+  const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);
+  assert(sheetStart >= 0 && sheetEnd > sheetStart,
+    'the Edit this week sheet could not be bounded');
+  const sheet = home.slice(sheetStart, sheetEnd);
+  assert(/phase === 'In-season' \|\| phase === 'Pre-season'/.test(sheet)
+    && sheet.includes('testID="edit-week-add-fixture"'),
+  'the add-fixture row is no longer available in both competitive phases');
+  assert(!/hasFixture[\s\S]{0,160}edit-week-add-fixture/.test(sheet),
+    'the add-fixture row is gated on whether the week already has a fixture — '
+    + 'that silently restores the one-game cap');
+  assert(!/practiceMatchDay/.test(home),
     'the screen has re-grown a `find`-the-first-fixture binding. A week may hold '
     + 'several fixtures; the first of a set is how the one-game assumption gets '
     + 'back in, and it is what made the control become a label.');
@@ -1481,36 +1454,109 @@ run('the add-fixture control never caps the week at one game', () => {
 run('the add-fixture control is on the WEEK shape only', () => {
   const home = homeScreenSource();
   const body = home.slice(home.indexOf('function HomeScreenV2'));
-  const mount = body.slice(body.indexOf('showAddFixtureCTA &&'));
-  assert(body.includes('!dayFirst && showAddFixtureCTA'),
-    'the add-fixture control is no longer gated on the week shape. It sits in '
-    + 'the scroll body that BOTH shapes draw, so without `!dayFirst` it is back '
-    + 'on the day screen — and a day screen is about ONE day, so "which day?" '
-    + 'is a question it cannot answer.');
-  assert(mount.indexOf('fixtureIngress(\'add\', weekAnchorISO)') > -1,
-    'the week-only add control no longer carries the add-ingress identity the '
-    + 'explorer resolves it by');
+  const entryAt = body.indexOf('testID="edit-week-button"');
+  const weekBranchAt = body.lastIndexOf('<ModifiersStrip', entryAt);
+  assert(entryAt > 0 && weekBranchAt > 0
+    && body.slice(weekBranchAt, entryAt).includes('surface="week"'),
+  'Edit this week is no longer mounted in the Week branch');
+  assert(body.split('testID="edit-week-button"').length - 1 === 1,
+    'Edit this week has more than one visible entry, so it may have leaked onto Day');
 });
 
 run('the add-fixture control shows in BOTH competitive phases, labelled by phase', () => {
-  const hook = fs.readFileSync(
-    path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
-  assert(/currentPhase === 'In-season' \|\| currentPhase === 'Pre-season'/.test(hook),
-    'the add-fixture control no longer shows in both competitive phases — in '
-    + 'season is the half Sam found missing, and pre-season is the half that '
-    + 'already worked');
-  assert(!/showPracticeMatchCTA|showAddGameCTA/.test(hook),
+  const home = homeScreenSource();
+  assert(!/showPracticeMatchCTA|showAddGameCTA|showAddFixtureCTA/.test(home),
     'the two old CTA flags are back. They were one decision wearing two names, '
     + 'and two names is how the two cards drifted into disagreeing about '
     + 'whether a week may have a second game.');
-  const home = homeScreenSource();
-  assert(/'Add a pre-season practice match'/.test(home) && /'Add a game'/.test(home),
+  assert(/'Add a practice match'/.test(home) && /'Add a game'/.test(home),
     'the control no longer carries both phase labels; the order is that the '
     + 'label follows the phase, matching the picker banner that already branches');
   assert(!/No game this week/.test(home),
     'the old in-season copy is back. "No game this week - add one" is FALSE on '
     + 'exactly the weeks this control now has to appear on — the ones that '
     + 'already have a game.');
+});
+
+run('Week gets one edit menu while the existing Day edit door stays', () => {
+  const home = homeScreenSource();
+  const hook = fs.readFileSync(
+    path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
+  const plan = fs.readFileSync(
+    path.join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'), 'utf8');
+
+  assert(home.includes('<Text style={styles.editWeekButtonText}>Edit this week</Text>')
+    && home.includes('name="pencil-outline"')
+    && home.includes('testID="edit-week-button"'),
+  'the Week-only pen button is missing');
+  assert(/editWeekButton:\s*\{[\s\S]*?justifyContent:\s*'flex-start'[\s\S]*?backgroundColor:\s*'#1A1E18'/.test(home),
+    'Edit this week is no longer a subtly distinct, left-aligned button');
+  assert(home.includes('Want to change something?')
+    && home.includes('testID="make-change-link"')
+    && home.includes("setChangeSheetEntry({ date: day.date, initialAction: 'actions' })"),
+  'the existing Day edit door was changed or removed');
+
+  const sheetStart = home.indexOf('function WeekEditSheet');
+  const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);
+  assert(sheetStart >= 0 && sheetEnd > sheetStart,
+    'the Week edit sheet could not be bounded');
+  const sheet = home.slice(sheetStart, sheetEnd);
+  assert(sheet.includes('label="I have a bye"')
+    && /phase === 'In-season'/.test(sheet),
+  'the bye row is missing or is not limited to In-season');
+  assert(sheet.includes('label="I’m going away"')
+    && sheet.includes('label="Add, move, swap or remove a session"'),
+  'the Away or session-edit row is missing from Edit this week');
+  assert(sheet.indexOf('label="Add, move, swap or remove a session"')
+    > sheet.indexOf('label="I’m going away"'),
+  'session editing is no longer the bottom option in Edit this week');
+  assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
+    && sheet.includes('name="trophy-outline" size={18} color="#FFC247"')
+    && sheet.includes('name="airplane" size={18} color="#B9A7FF"')
+    && sheet.includes('name="pencil-outline" size={18} color="#5BD98A"'),
+  'the Week edit rows no longer use the signed bye, game, away and session icon treatment');
+  assert(sheet.includes("setStep('session_action')")
+    && sheet.includes("'What do you want to do?'")
+    && ['Add a session', 'Move a session', 'Swap a session', 'Remove a session']
+      .every((label) => sheet.includes(`label="${label}"`))
+    && ["onEditSession('add')", "onEditSession('move')", "onEditSession('swap')", "onEditSession('remove')"]
+      .every((route) => sheet.includes(route)),
+  'the weekly session flow does not choose Add, Move, Swap or Remove first');
+  assert(home.includes('setWeekSessionEditAction(action)')
+    && home.includes('WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner')
+    && home.includes('const isPickerMode = pickerMode !== \'normal\'')
+    && home.includes('WEEK_SESSION_PICKER_COPY[weekPickerAction].row'),
+  'the chosen action does not turn the Week cards into the day picker');
+  assert(home.includes("setChangeSheetEntry({ date: day.date, initialAction, origin: 'week' })")
+    && home.includes("fromWeek={changeSheetEntry?.origin === 'week'}"),
+  'the selected weekly day and action do not enter the existing PlanChangeSheet');
+  assert(plan.includes("export type PlanChangeInitialAction = 'actions' | 'add' | 'move' | 'swap' | 'remove'")
+    && plan.includes("if (initialAction === 'add')")
+    && plan.includes("if (initialAction === 'move')")
+    && plan.includes("if (initialAction === 'swap')")
+    && ['Swap this session', 'Add to this day', 'Move this session', 'Remove this session']
+      .every((label) => plan.includes(`label="${label}"`)),
+  'the weekly route does not enter the same four action owners as Day');
+  assert(plan.includes('name="plus-circle-outline" size={18} color={options.canAdd ? \'#5BD98A\' : MUTED}')
+    && plan.includes('name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : \'#67D7FF\'}')
+    && plan.includes('name="swap-horizontal" size={18} color={options.canSwap ? \'#B9A7FF\' : MUTED}')
+    && plan.includes('name="delete-outline" size={18} color={options.canRemove ? \'#FF7A85\' : MUTED}'),
+  'the Day action menu no longer matches the Week icon and colour system');
+  const dayActions = plan.slice(
+    plan.indexOf("step.kind === 'actions'"),
+    plan.indexOf("step.kind === 'add_blocked_max_sessions'"),
+  );
+  assert(dayActions.indexOf('label="Add to this day"') < dayActions.indexOf('label="Move this session"')
+    && dayActions.indexOf('label="Move this session"') < dayActions.indexOf('label="Swap this session"')
+    && dayActions.indexOf('label="Swap this session"') < dayActions.indexOf('label="Remove this session"')
+    && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(dayActions),
+  'the Day action menu no longer matches the Week order and centred Back treatment');
+
+  assert(/const handleSetByeWeek = async \(\): Promise<boolean> =>/.test(hook)
+    && /fixtureDates[\s\S]{0,500}rebuildForGameChange\(null, \{ targetDate: fixtureDate \}\)/.test(hook),
+  'the bye row is not reusing the existing durable fixture-removal path');
+  assert(home.includes('setAwayVisible(true)') && home.includes('testID="edit-week-away"'),
+    'the weekly Away row no longer opens the existing Away flow');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

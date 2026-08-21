@@ -28,6 +28,7 @@ import {
   type StoredProgramBlockState,
 } from '../utils/programBlockState';
 import type { SessionComponentKind } from '../utils/sessionComponents';
+import type { BandResistance } from '../utils/loadEstimation';
 
 /**
  * ONE RECORD PER ACCEPTED BLOCK — its identity and what it asked of the athlete.
@@ -264,6 +265,7 @@ registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
           || (inputs.injuryEpisodes as unknown[] ?? []).length > 0
           || Object.keys(inputs.sessionFeedback as Record<string, unknown> ?? {}).length > 0
           || Object.keys(inputs.weightOverrides as Record<string, unknown> ?? {}).length > 0
+          || Object.keys(inputs.bandResistanceOverrides as Record<string, unknown> ?? {}).length > 0
           || inputs.generationAnchorISO != null
           || inputs.seasonPhaseClock != null;
       }
@@ -357,6 +359,7 @@ export function projectProgramPersistedInputs(
       ?? state.hydratedSeasonPhaseClock ?? null,
     sessionFeedback: state.sessionFeedback ?? {},
     weightOverrides: state.weightOverrides ?? {},
+    bandResistanceOverrides: state.bandResistanceOverrides ?? {},
     // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
     // The program is not persisted — boot REGENERATES — so if this is not
     // here it is gone by the first relaunch, and the boundary silently
@@ -1350,6 +1353,9 @@ export interface ProgramState {
    */
   weightOverrides: Record<string, Record<string, number | null>>;
 
+  /** Per-session band thickness selected by the athlete. */
+  bandResistanceOverrides: Record<string, Record<string, BandResistance>>;
+
   /**
    * THE STRENGTH SESSIONS EACH ACCEPTED BLOCK REQUIRED, KEYED BY BLOCK START.
    *
@@ -1436,6 +1442,12 @@ export interface ProgramState {
   setWeightOverride: (date: string, exerciseId: string, weightKg: number | null) => void;
   /** Remove a weight override for an exercise on a date */
   removeWeightOverride: (date: string, exerciseId: string) => void;
+  /** Set the selected band thickness for one exercise on one date. */
+  setBandResistanceOverride: (
+    date: string,
+    exerciseId: string,
+    resistance: BandResistance,
+  ) => void;
 
   clear: () => void;
 }
@@ -1460,6 +1472,7 @@ export const useProgramStore = create<ProgramState>()(
       exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
+      bandResistanceOverrides: {},
       acceptedBlocks: {},
 
       // Override lifecycle is NOT owned by this setter (2026-07-08).
@@ -1701,6 +1714,17 @@ export const useProgramStore = create<ProgramState>()(
           return { weightOverrides: allOverrides };
         }),
 
+      setBandResistanceOverride: (date, exerciseId, resistance) =>
+        set((state) => ({
+          bandResistanceOverrides: {
+            ...state.bandResistanceOverrides,
+            [date]: {
+              ...(state.bandResistanceOverrides[date] || {}),
+              [exerciseId]: resistance,
+            },
+          },
+        })),
+
       dismissStaleWarning: (date) =>
         set((state) => ({
           // Write a 'dismissed' context so neither structured nor heuristic
@@ -1877,6 +1901,7 @@ export const useProgramStore = create<ProgramState>()(
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
+          bandResistanceOverrides: {},
           acceptedBlocks: {},
           });
           recordProgramOverrideWrite({
@@ -1928,6 +1953,7 @@ export const useProgramStore = create<ProgramState>()(
             seasonPhaseClock?: unknown;
             sessionFeedback?: Record<string, unknown>;
             weightOverrides?: Record<string, unknown>;
+            bandResistanceOverrides?: Record<string, unknown>;
             acceptedBlocks?: Record<string, AcceptedBlockRecord>;
             temporarySourceFacts?: unknown[];
             injuryEpisodes?: unknown[];
@@ -1938,6 +1964,8 @@ export const useProgramStore = create<ProgramState>()(
           ...current,
           sessionFeedback: (inputs.sessionFeedback ?? {}) as ProgramState['sessionFeedback'],
           weightOverrides: (inputs.weightOverrides ?? {}) as ProgramState['weightOverrides'],
+          bandResistanceOverrides: (inputs.bandResistanceOverrides ?? {}) as
+            ProgramState['bandResistanceOverrides'],
           acceptedBlocks: inputs.acceptedBlocks ?? {},
           generationAnchorISO: inputs.generationAnchorISO ?? null,
           hydratedSeasonPhaseClock: (inputs.seasonPhaseClock ?? null) as ProgramState['hydratedSeasonPhaseClock'],

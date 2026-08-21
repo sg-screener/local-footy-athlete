@@ -64,8 +64,7 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Full Gym': FULL_GYM_EQUIPMENT,
   'Home Gym': ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell'],
-  // One tick, two capabilities — the option NAMES the rack, so it grants it.
-  'Barbell & Rack': ['barbell', 'rack'],
+  'Barbell and plates': ['barbell'],
   'Dumbbells Only': ['dumbbells'],
   'Bodyweight Only': ['bodyweight'],
   'Resistance Bands': ['bands'],
@@ -87,6 +86,9 @@ const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Cardio Equipment': ['bike_or_treadmill'],
   'Pullup Bar': ['pullup_bar'],
   'Pull-up bar': ['pullup_bar'],
+  // Hidden migration alias for the retired combined answer. It still grants
+  // both capabilities so an existing athlete never loses their saved rack.
+  'Barbell & Rack': ['barbell', 'rack'],
   barbell: ['barbell'],
   dumbbells: ['dumbbells'],
   // A stored `squat_rack` selection is an athlete who has BOTH; it predates
@@ -250,11 +252,11 @@ export function equipmentTagsForRequirement(
   // `['Barbell', 'Rack']` — two requirements — so the rack half was silently
   // answered by the barbell tick.
   //
-  // `Barbell & Rack` is the CHECKLIST OPTION (one tick, two capabilities) and
-  // still yields both. `Rack` and `Trap Bar` are REQUIREMENTS and now yield
-  // only themselves, so each must be ticked to be satisfied.
+  // `Barbell & Rack` survives only as a stored-value migration alias and still
+  // yields both. The active `Barbell and plates` option and authored `Barbell`
+  // requirement yield only the barbell capability; rack remains separate.
   if (/^(barbell_and_rack)$/.test(normalized)) return ['barbell', 'rack'];
-  if (/^(barbell)$/.test(normalized)) return ['barbell'];
+  if (/^(barbell|barbell_and_plates)$/.test(normalized)) return ['barbell'];
   if (/^(rack|squat_rack|power_rack)$/.test(normalized)) return ['rack'];
   if (/^(trap_bar|hex_bar)$/.test(normalized)) return ['trap_bar'];
   if (/^(swiss_ball|stability_ball|physio_ball)$/.test(normalized)) return ['swiss_ball'];

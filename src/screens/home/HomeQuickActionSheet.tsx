@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/common/Text';
-import { Button, Sheet } from '../../components/ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type { HomeQuickAction } from './homeScreenConstants';
@@ -50,7 +50,7 @@ export function HomeQuickActionSheet({
 
   const detailFallback = (
     <View>
-      <Text style={styles.title}>I need a bit more detail</Text>
+      <SheetHeader title="Program change" subtitle="More detail needed" />
       {/*
         PROPOSED COPY, UNSIGNED — R5.7. This sheet's only action was "Ask
         Coach", so the beta cut leaves it with nothing to do. It must not read
@@ -62,9 +62,9 @@ export function HomeQuickActionSheet({
       {/* SIGNED (batch 11-a). One unbroken line: the copy-binding gate
           equality-matches the rulings file exactly, and JSX line-wrapping
           inside a sentence hides it from that match. */}
-      <Text style={styles.body}>
+      <SheetDescription>
         {'This one needs more context than the menu can give, so nothing has changed. Use the day or session controls to make the change yourself.'}
-      </Text>
+      </SheetDescription>
       <Button
         label="Close"
         variant="ghost"
@@ -81,7 +81,7 @@ export function HomeQuickActionSheet({
       <GuidedInjuryFlowSheet
         visible={visible}
         onClose={onClose}
-        titlePrefix="Injury / pain"
+        titlePrefix="Injury"
         onComplete={async (result) => {
           await onApplyGuidedInjury(result);
           onClose();
@@ -101,7 +101,7 @@ export function HomeQuickActionSheet({
   if (action.id === 'missed_session' || action.id === 'training_cancelled') {
     return (
       <Sheet visible={visible} onClose={onClose} testID="home-missed-session-sheet">
-        <Text style={styles.title}>Missed a session?</Text>
+        <SheetHeader title="Missed session" subtitle="What would you like to do?" />
         <QuickOption
           label="Move it to another day"
           sub="Use the day controls to pick the new slot"
@@ -124,7 +124,7 @@ export function HomeQuickActionSheet({
   if (action.id === 'busy_week') {
     return (
       <Sheet visible={visible} onClose={onClose} testID="home-busy-week-sheet">
-        <Text style={styles.title}>Busy week?</Text>
+        <SheetHeader title="Busy week" subtitle="What would you like to change?" />
         <QuickOption
           label="Reduce this week"
           sub="Adds an active schedule adjustment"
@@ -145,7 +145,7 @@ export function HomeQuickActionSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-what-changed-sheet">
-      <Text style={styles.title}>What changed?</Text>
+      <SheetHeader title="Program change" subtitle="What changed?" />
       <QuickOption
         label="Program setup"
         sub="Update phase, training days, team days or game day"

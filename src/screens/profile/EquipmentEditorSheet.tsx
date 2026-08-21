@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/common/Text';
-import { Sheet } from '../../components/ui';
+import { Sheet, SheetDescription, SheetHeader } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type {
@@ -114,12 +114,12 @@ export function EquipmentEditorSheet({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Your equipment</Text>
-        <Text style={styles.body}>
+        <SheetHeader title="Equipment" subtitle="What do you have access to?" />
+        <SheetDescription>
           Tap once for what you have. Tap again for gear you'll never use — we'll stop
           offering it. Leave the rest blank.
-        </Text>
-        <Text style={styles.groupHeading}>Gym equipment</Text>
+        </SheetDescription>
+        <Text style={[styles.groupHeading, styles.firstGroupHeading]}>Gym equipment</Text>
         {askableTags.map((tag) =>
           renderItem(tag, EQUIPMENT_TAG_LABELS[tag], tags[tag], () =>
             setTags((previous) => ({ ...previous, [tag]: cycle(previous[tag]) }))))}
@@ -170,6 +170,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: spacing.sm,
     marginBottom: 4,
+  },
+  firstGroupHeading: {
+    marginTop: 0,
   },
   item: {
     flexDirection: 'row',

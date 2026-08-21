@@ -24,7 +24,7 @@
 import React from 'react';
 import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
-import { Button, Sheet } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { borderRadius, spacing } from '../theme/spacing';
 import { REBUILD_MESSAGES } from '../screens/home/homeScreenConstants';
 
@@ -39,7 +39,7 @@ export function BuildingState({ title, msgIdx, msgOpacity, messages }: BuildingS
   return (
     <View style={styles.building}>
       <ActivityIndicator size="large" color="#C8FF00" style={styles.buildingSpinner} />
-      <Text style={styles.sheetTitle}>{title}</Text>
+      <SheetHeader title="Program" subtitle={title} centered />
       <Text style={styles.sheetSubtext}>This can take up to 1 minute</Text>
       <Animated.View style={{ opacity: msgOpacity }}>
         <Text style={styles.buildingMsg}>{messages[msgIdx]}</Text>
@@ -73,10 +73,10 @@ export function RebuildSheet({
         />
       ) : (
         <>
-          <Text style={styles.sheetTitle}>Rebuild this week?</Text>
-          <Text style={styles.sheetBody}>
+          <SheetHeader title="Program" subtitle="Rebuild this week?" centered />
+          <SheetDescription centered>
             Fresh exercise content will be generated from your current profile.
-          </Text>
+          </SheetDescription>
           <View style={styles.noteBlock}>
             <Text style={styles.notePreserved}>✓ Game days and logged workouts are preserved</Text>
             <Text style={styles.noteWiped}>✗ Any custom exercise swaps will be lost</Text>

@@ -12,6 +12,8 @@
 
 **Strength**
 
+- Vertical Jump — 2 × 3
+  - Every rep fast and sharp. Land soft in athletic stance. Stop if reps get slow.
 - Back Squat — 3 × 3
   - Sit into the hips, chest up. Own the bottom position.
 - RDLs — 2 × 9
@@ -27,6 +29,17 @@
 
 ### Training Day
 
+**Strength**
+
+- Explosive Push-up — 2 × 3
+  - Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box.
+- Barbell Row — 3 × 5
+  - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
+- Lat Pulldown — 3 × 9
+  - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
+- Band Pull-Apart — 2 × 9
+  - Squeeze the shoulder blades together. Elbows straight, controlled return.
+
 **Team Training**
 
 _(the club runs this one — the app lists nothing for it)_
@@ -37,10 +50,10 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
-- Leg Press — 3 × 7
-  - Full depth without lower back rounding. Push through the whole foot.
 - RDLs — 3 × 3
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Leg Press — 3 × 7
+  - Full depth without lower back rounding. Push through the whole foot.
 - Bulgarian Split Squats — 3 × 7
   - Slight lean forward. Control the descent, no bouncing.
 - Single-Leg RDL — 3 × 7
@@ -52,15 +65,18 @@ _(the club runs this one — the app lists nothing for it)_
 
 ### Training Day
 
-**Conditioning**
+**Strength**
 
-- Warm-up
-- Continuous Aerobic Run
-  - Work: 30–50 min continuous (duration menu: 30 / 40 / 50 / 60 min — Sam's D12 convention preserved)
-  - Rest: none (continuous)
-  - Sets: 1 block
-  - Takes about: 30–60 min
-  - Steady the whole way — if you're racing the last 10 minutes, you started too easy. 65–80% MAS; 70–85% HRmax; conversational
+- Bench Press — 3 × 4
+  - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
+- DB Shoulder Press — 3 × 9
+  - Start at the shoulders, press to lockout. No arching through the lower back.
+- Banded External Rotation — 2 × 9
+  - Elbow at 90 degrees, rotate against the band. Slow and controlled arc.
+
+**Team Training**
+
+_(the club runs this one — the app lists nothing for it)_
 
 ## Friday 14 August
 
@@ -70,17 +86,9 @@ _(nothing on this day)_
 
 ## Saturday 15 August
 
-### Training Day
+### Rest Day
 
-**Conditioning**
-
-- Warm-up
-- 30 m Repeats
-  - Work: ≈4.5 s (30 m)
-  - Rest: ≈21–26 s (depart every 25–30 s)
-  - Sets: 2 sets × 6 reps, 4 min between sets
-  - Takes about: ≈10 min (work ≈54 s)
-  - Recovery is the walk, not a rest — keep moving between reps. (Cue held identical to the 20 m session per Sam.). Maximal repeat efforts on incomplete recovery
+_(nothing on this day)_
 
 ## Sunday 16 August
 

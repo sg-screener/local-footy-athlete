@@ -1,11 +1,11 @@
 /**
- * THE PRESCRIPTION-DISPLAY LAW — one middle number, not a range.
+ * THE PRESCRIPTION-DISPLAY LAW — one approved rep target, not a range.
  *
  * Sam's law, `LFA_PROGRAMMING_BIBLE.md:4936` (Section 5, source D9): *"ranges
- * remain the generation source, the athlete sees a single middle number, logging
- * assumes it."* His own example at `:770`: **"3x8-12 is written as 3x10"**. It
- * supersedes the older top-of-range vs floor-of-range question — he closed that
- * by choosing the middle.
+ * remain the generation source, the athlete sees a single approved rep target,
+ * logging assumes it."* His own example at `:770`: **"3x8-12 is written as
+ * 3x10"**. Arbitrary midpoint values were superseded on 2026-08-21 by the
+ * approved target vocabulary below.
  *
  * ## What the app did instead
  *
@@ -18,22 +18,34 @@
  * ## Why this is its own owner
  *
  * The law binds two surfaces — what the athlete READS and what logging ASSUMES —
- * so the number has to be computed in one place or the two will drift. The
- * journal's own `midpointReps` is deliberately UNROUNDED because it is doing
- * arithmetic over load; this returns the number a human is shown, which must be
- * whole. **They agree on the midpoint and differ only in rounding, and that
- * difference is stated rather than left to be discovered.**
+ * so the number has to be computed in one place or the two will drift.
  */
 
-/** The single number the athlete is shown for a rep range. Whole, always. */
+/** Sam's complete athlete-visible rep vocabulary. Timed prescriptions bypass this owner. */
+export const APPROVED_REP_TARGETS = [3, 4, 5, 6, 8, 10, 15, 20] as const;
+
+/**
+ * The single number the athlete is shown for a rep range.
+ *
+ * Pick the approved target nearest the authored midpoint. Prefer a target that
+ * stays inside the authored range; if two are equally close, the lower target
+ * wins so formatting never quietly adds volume. A malformed range containing
+ * no approved value still snaps to the closest approved target rather than
+ * leaking an arbitrary number onto the athlete surface.
+ */
 export function displayReps(min: number | null | undefined, max: number | null | undefined): number | null {
   const lo = typeof min === 'number' && Number.isFinite(min) && min > 0 ? min : null;
   const hi = typeof max === 'number' && Number.isFinite(max) && max > 0 ? max : null;
   if (lo === null && hi === null) return null;
-  if (lo === null) return hi;
-  if (hi === null) return lo;
-  // Round HALF UP so an 8-11 range reads 10 rather than 9 — the athlete is shown
-  // the more demanding of two equally-central numbers, which matches his
-  // "3x8-12 -> 3x10" example sitting at the true middle.
-  return Math.round((lo + hi) / 2);
+  const lower = Math.min(lo ?? hi!, hi ?? lo!);
+  const upper = Math.max(lo ?? hi!, hi ?? lo!);
+  const midpoint = (lower + upper) / 2;
+  const insideRange = APPROVED_REP_TARGETS.filter((target) => target >= lower && target <= upper);
+  const candidates = insideRange.length > 0 ? insideRange : APPROVED_REP_TARGETS;
+
+  return candidates.reduce((best, target) => {
+    const targetDistance = Math.abs(target - midpoint);
+    const bestDistance = Math.abs(best - midpoint);
+    return targetDistance < bestDistance ? target : best;
+  });
 }

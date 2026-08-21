@@ -10,9 +10,9 @@ npm run print:week
 
 ## What the run found
 
-**8 weeks printed.**
+**10 weeks printed.**
 
-**The app had words for everything — 0 blanks across all 8 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
+**The app had words for everything — 0 blanks across all 10 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
 
 **0 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
 
@@ -22,14 +22,16 @@ It cannot tell whether the training is any GOOD. That is the reading.
 
 | | Week | What it is testing | Problems |
 | --- | --- | --- | --- |
-| 1 | [Deep pre-season](2-deep-pre-season.md) | six weeks in, three club nights, full gym | 0 |
-| 2 | [In-season](3-in-season-two-team-nights.md) | Saturday game, Tuesday and Thursday at the club | 0 |
-| 3 | [In-season bye](4-bye-week.md) | no game this Saturday | 0 |
-| 4 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 0 |
-| 5 | [Away all week with dumbbells and a bench](10-dumbbell-away.md) | the kit gap week | 0 |
-| 6 | [Pre-season, NO club training](7-no-club-pre-season.md) | the app supplies all four exposures | 0 |
-| 7 | [In-season, NO club training](8-no-club-in-season.md) | sprint at G-3, nothing hard near the game | 0 |
-| 8 | [Later off-season](9-later-off-season.md) | the hard running comes back | 0 |
+| 1 | [Early off-season](1-early-off-season.md) | week 1 back, no club, full gym | 0 |
+| 2 | [Deep pre-season](2-deep-pre-season.md) | six weeks in, three club nights, full gym | 0 |
+| 3 | [In-season](3-in-season-two-team-nights.md) | Saturday game, Tuesday and Thursday at the club | 0 |
+| 4 | [In-season bye](4-bye-week.md) | no game this Saturday | 0 |
+| 5 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 0 |
+| 6 | [In-season with nothing but a floor](6-bodyweight-only.md) | no gym at all | 0 |
+| 7 | [Away all week with dumbbells and a bench](10-dumbbell-away.md) | the kit gap week | 0 |
+| 8 | [Pre-season, NO club training](7-no-club-pre-season.md) | the app supplies all four exposures | 0 |
+| 9 | [In-season, NO club training](8-no-club-in-season.md) | sprint at G-3, nothing hard near the game | 0 |
+| 10 | [Later off-season](9-later-off-season.md) | the hard running comes back | 0 |
 
 Read 3 first — it is the week most athletes get most weeks. Then read 3
 and 5 side by side, and 3 and 4 side by side; those pairs are the same

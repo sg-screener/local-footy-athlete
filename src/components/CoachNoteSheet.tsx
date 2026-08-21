@@ -24,7 +24,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
-import { Button, Sheet } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { explorerTestId } from '../utils/stableTestId';
 import { signedCopy } from '../rules/signedCopy';
 import { spacing } from '../theme/spacing';
@@ -138,6 +138,13 @@ export function CoachNoteSheet({
   const reversibleAdjustmentId = state.note.reversibleAdjustmentId;
   const sourceFactId = state.note.temporarySourceFactIds?.[0] ?? state.note.constraintId;
   const isEquipmentFact = equipmentFactIds.has(sourceFactId);
+  const headerTitle = injuryEpisodeId
+    ? 'Injury'
+    : isEquipmentFact
+      ? 'Equipment'
+      : isStatusUpdate
+        ? 'Readiness'
+        : 'Program change';
 
   return (
     <Sheet
@@ -149,8 +156,8 @@ export function CoachNoteSheet({
           ? explorerTestId.adjustmentRestore(reversibleAdjustmentId)
           : `coach-note-detail-${sourceFactId}`}
     >
-      <Text style={styles.sheetTitle}>{copy.title}</Text>
-      <Text style={styles.sheetBody}>{copy.body}</Text>
+      <SheetHeader title={headerTitle} subtitle={copy.title} />
+      <SheetDescription>{copy.body}</SheetDescription>
       {state.mode === 'clear' ? (
         <>
           <Button

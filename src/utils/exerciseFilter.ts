@@ -16,6 +16,10 @@ import {
   type ExerciseTag,
   type InjuryRating,
 } from '../data/exerciseTags';
+import {
+  injurySeverityReducesAffectedWork,
+  onboardingInjurySeverityScore,
+} from '../rules/injurySeverityBands';
 
 // ─── Context Types ───
 
@@ -242,7 +246,8 @@ export function buildFilterContext(
   // Build active injuries map
   const activeInjuries: Record<string, 'caution' | 'avoid'> = {};
   for (const inj of injuries) {
-    const sev = (inj.severity?.toLowerCase() === 'mild') ? 'caution' : 'avoid';
+    const sev = injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(inj))
+      ? 'avoid' : 'caution';
     activeInjuries[inj.bodyArea] = sev;
   }
 

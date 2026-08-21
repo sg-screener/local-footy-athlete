@@ -60,13 +60,14 @@ a total — a total can stay right while two pools move in opposite directions):
 
 - **Prehab: 36 across exactly 6 pools.** Groin/adductors 5, calves 2, lower
   prehab 6, trunk anti-rotation 17, shoulder health 5, hamstring light 1.
-- **Gunshow: 16 candidates.** Biceps 5, triceps 5, delts 6.
+- **Gunshow: 23 candidates (updated 2026-08-21).** Biceps 8, triceps 7,
+  shoulders 8.
 
 **Gunshow "shoulders" means `DELTS_POOL`** — pump work. Shoulder health
 (external rotation, scap work) stays with Accessories, inside the 36.
 
-**Under thin equipment a gunshow gets SMALLER, never padded.** No cross-family
-top-ups. The app never invents to fill a quota.
+**Gunshow is normal gym work with a complete authored 2 + 2 + 2 shape.** No
+cross-family top-ups. The app never invents a fourth family to fill a quota.
 
 ---
 

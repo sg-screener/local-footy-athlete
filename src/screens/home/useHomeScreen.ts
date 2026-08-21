@@ -1520,6 +1520,25 @@ export function useHomeScreen() {
     });
   };
 
+  /**
+   * Week-level bye entry. A bye means the accepted week has no fixtures, so
+   * every fixture shown in that week goes through the same durable remove
+   * transaction as the existing Game Day action.
+   */
+  const handleSetByeWeek = async (): Promise<boolean> => {
+    if (currentPhase !== 'In-season') return false;
+    const fixtureDates = weekDays
+      .filter((day) => day.indicator === 'game' || day.workout?.workoutType === 'Game')
+      .map((day) => day.date);
+    if (fixtureDates.length === 0) return true;
+
+    for (const fixtureDate of fixtureDates) {
+      const removed = await rebuildForGameChange(null, { targetDate: fixtureDate });
+      if (!removed) return false;
+    }
+    return true;
+  };
+
   const handleCancelMove = () => {
     setMode({ type: 'normal' });
   };
@@ -1561,11 +1580,6 @@ export function useHomeScreen() {
    * the copy is not this hook's business: the screen already knows the phase and
    * picks the words, the way the picker banner above the days already does.
    */
-  const showAddFixtureCTA = useMemo(
-    () => currentPhase === 'In-season' || currentPhase === 'Pre-season',
-    [currentPhase],
-  );
-
   const handleAddGameMode = () => {
     setMode({ type: 'addGame' });
   };
@@ -1637,7 +1651,6 @@ export function useHomeScreen() {
     staleByDate,
 
     // Week context / derived
-    showAddFixtureCTA,
     currentPhase,
     coachNotes,
     programModifiers,
@@ -1664,6 +1677,7 @@ export function useHomeScreen() {
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
+    handleSetByeWeek,
 
     // Season-phase skew disclosure + its one repair path
     seasonPhaseSkew,

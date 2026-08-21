@@ -12,6 +12,8 @@
 
 **Strength**
 
+- Lateral Bounds — 3 × 4
+  - Push off outside leg. Stick each landing before the next.
 - Back Squat — 3 × 7
   - Sit into the hips, chest up. Own the bottom position.
 - RDLs — 2 × 9
@@ -38,6 +40,8 @@
 
 **Strength**
 
+- Explosive Push-up — 3 × 4
+  - Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box.
 - Barbell Row — 3 × 9
   - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
 - Lat Pulldown — 3 × 9
@@ -66,10 +70,10 @@ _(nothing on this day)_
 
 **Strength**
 
-- Leg Press — 3 × 9
-  - Full depth without lower back rounding. Push through the whole foot.
 - RDLs — 3 × 7
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Leg Press — 3 × 9
+  - Full depth without lower back rounding. Push through the whole foot.
 - Bulgarian Split Squats — 3 × 9
   - Slight lean forward. Control the descent, no bouncing.
 - Single-Leg RDL — 3 × 9

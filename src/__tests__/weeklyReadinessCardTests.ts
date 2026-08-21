@@ -489,7 +489,8 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // minimum. Re-pinned to the law, not weakened: the bucket count is unchanged
   // and every leaf is still asserted.
   ok('sheet keeps both readiness option groups without an intermediate chooser',
-    src.includes("Feeling flat — what's closest?") &&
+    src.includes('title="Fatigue" subtitle="What’s closest?"') &&
+    src.includes('title="Sick" subtitle="How bad?"') &&
     src.includes('A bit off') && src.includes('Properly sick') &&
     src.includes("Can't get out of bed") &&
     src.includes('Pretty flat') && src.includes('Bit tired today') &&
@@ -564,14 +565,14 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
 
   // Device finding #3: the illness_recovery week keeps its sessions (sessionTier
   // 'optional') rather than clearing to Rest, so the day card must surface an
-  // optional-tier session as OPTIONAL (de-emphasised, "only if you're up to it"),
+  // optional-tier session as OPTIONAL (de-emphasised, "only if you feel like it"),
   // not the prominent "Start Session" CORE treatment — the same visibly-optional
   // framing cooked's Rest day already gets.
   ok('an optional-tier session surfaces as optional, not prominent Start Session (finding #3)',
     /isOptionalSession\b/.test(src) &&
     /sessionTier === 'optional'/.test(src) &&
     /Start optional session/.test(src) &&
-    /only if you're up to it/i.test(src));
+    /This session is optional - only if you feel like it\./.test(src));
   // A4 (L10 device finding 2026-07-24): this assertion used to REQUIRE the
   // hardcoded labels in HomeScreenV2 — and passed precisely BECAUSE the card
   // ignored its own owner. `resolveVisibleReadinessState` computed

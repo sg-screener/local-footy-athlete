@@ -45,7 +45,6 @@ import type {
 import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
 import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
-import { formatEquipmentAnswerSummary } from '../../rules/equipmentVocabulary';
 import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
@@ -289,7 +288,7 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     section: 'Training',
     label: 'Equipment',
     step: 'Equipment',
-    value: formatEquipmentAnswerSummary,
+    value: (data) => present(data.trainingLocation),
   },
   {
     section: 'Physical',

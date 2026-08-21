@@ -8,7 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text } from '../../components/common/Text';
-import { Button } from '../../components/common/Button';
+import { OnboardingContinueButton } from '../../components/onboarding/OnboardingLayout';
 import { colors } from '../../theme/colors';
 import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -20,6 +20,7 @@ import {
   onboardingIncompleteMessage,
 } from '../../utils/onboardingCompleteness';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
+import { classifyBibleInjurySeverity } from '../../rules/injurySeverityBands';
 import {
   buildReviewSections,
   type ReviewRowData,
@@ -31,7 +32,7 @@ type ReviewScreenProps = NativeStackScreenProps<
 >;
 
 export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
-  const { label: stepLabel, progressPercent } = useOnboardingProgress('Review');
+  const { progressPercent } = useOnboardingProgress('Review');
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const insets = useSafeAreaInsets();
 
@@ -71,9 +72,6 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
               {'<'} Back
             </Text>
           </Pressable>
-          <Text variant="caption" color={colors.text.tertiary}>
-            {stepLabel}
-          </Text>
         </View>
 
         <View style={styles.progressTrack}>
@@ -136,13 +134,11 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
               {onboardingIncompleteMessage(completeness)}
             </Text>
           )}
-          <Button
-            title={completeness.complete
+          <OnboardingContinueButton
+            label={completeness.complete
               ? 'Generate My Program'
               : `Add ${completeness.missingSteps[0].answerLabel}`}
             onPress={handleGenerateProgram}
-            size="lg"
-            fullWidth
           />
         </View>
       </View>
@@ -219,8 +215,13 @@ const InjuryDetail: React.FC<{ injuries?: OnboardingInjury[] }> = ({ injuries })
 const InjurySummary: React.FC<{ injury: OnboardingInjury }> = ({ injury }) => (
   <View style={styles.injurySummary}>
     <Text style={styles.injuryTitle}>{injury.bodyArea}</Text>
-    {injury.severity ? (
-      <SummaryLine label="Severity" value={injury.severity} />
+    {injury.severityScore || injury.severity ? (
+      <SummaryLine
+        label="Severity"
+        value={injury.severityScore
+          ? classifyBibleInjurySeverity(injury.severityScore).label
+          : injury.severity ?? ''}
+      />
     ) : null}
     {injury.movementTriggers && injury.movementTriggers.length > 0 ? (
       <SummaryLine label="Triggers" value={injury.movementTriggers.join(', ')} />

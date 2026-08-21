@@ -91,6 +91,7 @@ import {
   type SelectedImplement,
 } from '../../rules/selectedImplement';
 import type { EquipmentTag } from '../../data/exercisePools';
+import type { LoadControlMode } from '../../utils/loadEstimation';
 
 /**
  * The typed implement for a row PLUS whether today's kit changed it. Sam's UI
@@ -107,7 +108,6 @@ import {
   missingSessionEquipmentValues,
   type SessionEquipmentRequirementKey,
 } from '../../utils/sessionEquipment';
-import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import {
@@ -132,8 +132,7 @@ import {
   cueForImplement,
   cleanNotes,
   formatRest,
-  inferRecoveryPrescriptionType,
-  formatRecoveryPrescription,
+  formatLowLoadSetsReps,
   formatStrengthSetsReps,
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
@@ -333,7 +332,7 @@ type ExerciseEditStep =
       groups: readonly {
         id: string;
         label: string;
-        options: readonly { name: string; meta: string; suggestion: SuggestedSwap }[];
+        options: readonly { name: string; suggestion: SuggestedSwap }[];
       }[];
     }
   | {
@@ -407,7 +406,7 @@ type ExerciseEditStep =
       family: AddFamilyId;
       leaf: AddLeafId;
       label: string;
-      options: readonly { name: string; meta: string; suggestion: SuggestedExercise }[];
+      options: readonly { name: string; suggestion: SuggestedExercise }[];
       /**
        * THE LIST THIS CAME FROM — a leaf step under Lower/Upper body, or the
        * GROUP step directly when that group asked no extra question. Back has
@@ -603,8 +602,11 @@ export default function DayWorkoutScreenV2() {
     editingWeightText,
     setEditingWeightText,
     formatWeight,
+    getLoadControlMode,
     incrementWeight,
     decrementWeight,
+    incrementBandResistance,
+    decrementBandResistance,
     startEditingWeight,
     commitWeightEdit,
     handleBack,
@@ -913,9 +915,6 @@ export default function DayWorkoutScreenV2() {
           const suggestion = suggestedSwapFromChoice(exercise, choice);
           return {
             name: displayExerciseName(choice.name ?? ''),
-            meta: suggestion.kind === 'exercise'
-              ? suggestionPrescription(suggestion.suggestion)
-              : choice.reason,
             suggestion,
           };
         }),
@@ -1036,7 +1035,6 @@ export default function DayWorkoutScreenV2() {
         } as SuggestedExercise;
         return {
           name: displayExerciseName(candidate.name),
-          meta: suggestionPrescription(suggestion),
           suggestion,
         };
       }),
@@ -1612,9 +1610,7 @@ export default function DayWorkoutScreenV2() {
   // list that renders them (`sessionListLabels` numbers exactly those). It used
   // to be a fourth answer to "what kind of day is this", which is how a combined
   // day counted its strength rows and a conditioning day counted nothing.
-  const metaCount = sessionTemplate.mode === 'recovery'
-    ? 0
-    : sessionListLabels(sessionTemplate.items).filter(Boolean).length;
+  const metaCount = sessionListLabels(sessionTemplate.items).filter(Boolean).length;
 
   // Combined "Fri 3/7 · 6 exercises" subtitle. All fragments are merged into a
   // single line of plain body text — no stacked labels, no uppercase chips.
@@ -1808,53 +1804,14 @@ export default function DayWorkoutScreenV2() {
           This is why team training can no longer go missing on a conditioning
           day (spec §2 item 4c): there is no branch left that could swallow it.
 
-          Recovery-type days are the one ruled exception (§6 item 3) — they keep
-          their own simple template, badge-free, with the add-on box intact.
+          Standalone Mobility and Recovery rows use this same composition and
+          card owner. Their load-neutral classification does not select a
+          different visual template.
         */}
-        {sessionTemplate.mode === 'recovery' ? (
-          <>
-            {/*
-              No power primer here. It used to reach recovery days only because
-              it rendered ABOVE the old branch split — an accident of layout,
-              not a prescription. Sam ruled 2026-07-27 that power work does not
-              belong on a recovery day, so the legacy behaviour was preserving a
-              bug rather than conserving content.
-            */}
-            {executionPlan?.sections.filter((section) => section.id === 'recovery').map((section) => (
-              <SessionExecutionSection
-                key={section.id}
-                section={section}
-                completedItemIds={completedExerciseIds}
-              >
-                <RecoveryBlock
-                  exercises={workout.exercises ?? []}
-                  expandedCues={expandedCues}
-                  toggleCue={toggleCue}
-                  onSelectExercise={setSelectedExercise}
-                  completedItemIds={completedExerciseIds}
-                  onToggleItem={toggleExerciseComplete}
-                />
-              </SessionExecutionSection>
-            ))}
-            {executionPlan?.sections.filter((section) => section.id === 'optional').map((section) => (
-              <SessionExecutionSection
-                key={section.id}
-                section={section}
-                completedItemIds={completedExerciseIds}
-              >
-                <RecoveryAddonSection
-                  addons={workout.recoveryAddons ?? []}
-                  expandedCues={expandedCues}
-                  toggleCue={toggleCue}
-                  completedItemIds={completedExerciseIds}
-                  onToggleItem={toggleExerciseComplete}
-                />
-              </SessionExecutionSection>
-            ))}
-          </>
-        ) : (
-          <>
-            {executionPlan?.sections.filter((section) => section.id === 'mobility').map((section) => (
+        <>
+            {executionPlan?.sections.filter((section) =>
+              section.id === 'mobility'
+              && section.items.every((item) => item.source === 'mobility')).map((section) => (
               <SessionExecutionSection
                 key={section.id}
                 section={section}
@@ -1870,8 +1827,11 @@ export default function DayWorkoutScreenV2() {
                   editingWeightText={editingWeightText}
                   setEditingWeightText={setEditingWeightText}
                   formatWeight={formatWeight}
+                  getLoadControlMode={getLoadControlMode}
                   incrementWeight={incrementWeight}
                   decrementWeight={decrementWeight}
+                  incrementBandResistance={incrementBandResistance}
+                  decrementBandResistance={decrementBandResistance}
                   startEditingWeight={startEditingWeight}
                   commitWeightEdit={commitWeightEdit}
                   onSelectExercise={setSelectedExercise}
@@ -1890,14 +1850,16 @@ export default function DayWorkoutScreenV2() {
               editingWeightText={editingWeightText}
               setEditingWeightText={setEditingWeightText}
               formatWeight={formatWeight}
+              getLoadControlMode={getLoadControlMode}
               incrementWeight={incrementWeight}
               decrementWeight={decrementWeight}
+              incrementBandResistance={incrementBandResistance}
+              decrementBandResistance={decrementBandResistance}
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
             />
-          </>
-        )}
+        </>
 
         {/* ── Reopen of a completed session → read-only summary ── */}
         {isAlreadyComplete && date ? (
@@ -1996,7 +1958,7 @@ export default function DayWorkoutScreenV2() {
         visible={injuryFlowOpen}
         onClose={() => setInjuryFlowOpen(false)}
         onComplete={reviewSessionInjury}
-        titlePrefix="Injury / pain"
+        titlePrefix="Injury"
       />
 
       {/* ── UNDO, ON THE SURFACE THE CHANGE WAS MADE ON (R-107) ────────────
@@ -2259,9 +2221,12 @@ interface SessionListProps {
   editingWeightId: string | null;
   editingWeightText: string;
   setEditingWeightText: (s: string) => void;
-  formatWeight: (ex: any) => string;
-  incrementWeight: (ex: any) => void;
-  decrementWeight: (ex: any) => void;
+  formatWeight: (ex: any, selectedImplement?: string | null) => string;
+  getLoadControlMode: (ex: any, selectedImplement?: string | null) => LoadControlMode;
+  incrementWeight: (ex: any, selectedImplement?: string | null) => void;
+  decrementWeight: (ex: any, selectedImplement?: string | null) => void;
+  incrementBandResistance: (ex: any) => void;
+  decrementBandResistance: (ex: any) => void;
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
@@ -2285,8 +2250,11 @@ function MobilityExerciseList({
   editingWeightText,
   setEditingWeightText,
   formatWeight,
+  getLoadControlMode,
   incrementWeight,
   decrementWeight,
+  incrementBandResistance,
+  decrementBandResistance,
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
@@ -2299,9 +2267,12 @@ function MobilityExerciseList({
   editingWeightId: string | null;
   editingWeightText: string;
   setEditingWeightText: (value: string) => void;
-  formatWeight: (exercise: any) => string;
-  incrementWeight: (exercise: any) => void;
-  decrementWeight: (exercise: any) => void;
+  formatWeight: (exercise: any, selectedImplement?: string | null) => string;
+  getLoadControlMode: (exercise: any, selectedImplement?: string | null) => LoadControlMode;
+  incrementWeight: (exercise: any, selectedImplement?: string | null) => void;
+  decrementWeight: (exercise: any, selectedImplement?: string | null) => void;
+  incrementBandResistance: (exercise: any) => void;
+  decrementBandResistance: (exercise: any) => void;
   startEditingWeight: (exercise: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
@@ -2351,8 +2322,11 @@ function MobilityExerciseList({
               editingWeightText={editingWeightText}
               setEditingWeightText={setEditingWeightText}
               formatWeight={formatWeight}
+              getLoadControlMode={getLoadControlMode}
               incrementWeight={incrementWeight}
               decrementWeight={decrementWeight}
+              incrementBandResistance={incrementBandResistance}
+              decrementBandResistance={decrementBandResistance}
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={onSelectExercise}
@@ -2377,8 +2351,11 @@ function SessionList({
   editingWeightText,
   setEditingWeightText,
   formatWeight,
+  getLoadControlMode,
   incrementWeight,
   decrementWeight,
+  incrementBandResistance,
+  decrementBandResistance,
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
@@ -2392,7 +2369,9 @@ function SessionList({
   const renderItem = (
     item: SessionTemplateItem, key: string, index: number, checkbox?: React.ReactNode,
   ) => {
-    if (item.kind === 'team_training') return <TeamTrainingRow key={key} />;
+    if (item.kind === 'team_training') {
+      return <TeamTrainingRow key={key} checkbox={checkbox} />;
+    }
     if (item.kind === 'conditioning_choice') {
       return (
         <ConditioningChoiceRow
@@ -2419,6 +2398,7 @@ function SessionList({
         />
       );
     }
+    const isLowLoad = item.presentation === 'mobility' || item.presentation === 'recovery';
     return (
       <StrengthExerciseCard
         key={key}
@@ -2427,6 +2407,10 @@ function SessionList({
         selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
+        prescriptionLabel={isLowLoad ? formatLowLoadSetsReps(item.row) : undefined}
+        cueTextOverride={item.presentation === 'mobility'
+          ? cleanNotes(item.row?.notes ?? item.row?.exercise?.description)
+          : undefined}
         isLastInGroup={
           !item.superset || item.superset.index === item.superset.size - 1
         }
@@ -2436,8 +2420,11 @@ function SessionList({
         editingWeightText={editingWeightText}
         setEditingWeightText={setEditingWeightText}
         formatWeight={formatWeight}
+        getLoadControlMode={getLoadControlMode}
         incrementWeight={incrementWeight}
         decrementWeight={decrementWeight}
+        incrementBandResistance={incrementBandResistance}
+        decrementBandResistance={decrementBandResistance}
         startEditingWeight={startEditingWeight}
         commitWeightEdit={commitWeightEdit}
         onSelectExercise={onSelectExercise}
@@ -2446,7 +2433,7 @@ function SessionList({
   };
 
   const sections = executionPlan.sections.filter((section) =>
-    section.id !== 'mobility' && section.id !== 'recovery');
+    !(section.id === 'mobility' && section.items.every((item) => item.source === 'mobility')));
   return (
     <View style={styles.executionSections}>
       {sections.map((section) => (
@@ -2646,14 +2633,14 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, 
       accessibilityState={{ checked: completed }}
       accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
       testID={`session-execution-check-${stableTestIdToken(itemId)}`}
-      /* ⚠ **22x22 DRAWN, 44x44 TAPPABLE — SAM, R-116 FINAL.** *"Make the
-         checkbox visually slightly smaller … approximately 22 x 22 px — but
+      /* ⚠ **18x18 DRAWN, 44x44 TAPPABLE.** The checkbox now follows the
+         smaller weight control while keeping the same accessible target.
          preserve a minimum 44 x 44 accessible tap target using its
-         wrapper/hit slop."* 22 + 11 + 11 = 44 on BOTH axes, so the box can be
+         wrapper/hit slop. 18 + 13 + 13 = 44 on BOTH axes, so the box can be
          small without the target being. Symmetric on purpose: an uneven slop
          would move the tappable centre away from the drawn centre, which is the
          same class of defect as the margin that caused the drift. */
-      hitSlop={{ top: 11, bottom: 11, left: 11, right: 11 }}
+      hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
       style={({ pressed }) => [
         styles.executionCheckbox,
         completed && styles.executionCheckboxComplete,
@@ -2850,9 +2837,12 @@ interface StrengthExerciseCardProps {
   editingWeightId: string | null;
   editingWeightText: string;
   setEditingWeightText: (s: string) => void;
-  formatWeight: (ex: any) => string;
-  incrementWeight: (ex: any) => void;
-  decrementWeight: (ex: any) => void;
+  formatWeight: (ex: any, selectedImplement?: string | null) => string;
+  getLoadControlMode: (ex: any, selectedImplement?: string | null) => LoadControlMode;
+  incrementWeight: (ex: any, selectedImplement?: string | null) => void;
+  decrementWeight: (ex: any, selectedImplement?: string | null) => void;
+  incrementBandResistance: (ex: any) => void;
+  decrementBandResistance: (ex: any) => void;
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
@@ -2872,8 +2862,11 @@ function StrengthExerciseCard({
   editingWeightText,
   setEditingWeightText,
   formatWeight,
+  getLoadControlMode,
   incrementWeight,
   decrementWeight,
+  incrementBandResistance,
+  decrementBandResistance,
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
@@ -2903,7 +2896,9 @@ function StrengthExerciseCard({
   // sees comes from `formatWeight`, which resolves the athlete's own weight
   // OVERRIDE first. A guard that reads a different field from the display it is
   // guarding is not guarding it. Caught on the simulator, not by a cell.
-  const displayedWeight = String(formatWeight(exercise) ?? '').trim();
+  const selectedImplementKind = selectedImplement?.implement ?? null;
+  const loadControlMode = getLoadControlMode(exercise, selectedImplementKind);
+  const displayedWeight = String(formatWeight(exercise, selectedImplementKind) ?? '').trim();
   const carriesExternalLoad = displayedWeight !== '' && !/^bw$/i.test(displayedWeight);
   const implementIsHonest = !(selectedImplement?.implement === 'bodyweight' && carriesExternalLoad);
   const showImplementBadge = !!selectedImplement?.changedToday && implementIsHonest;
@@ -3113,6 +3108,8 @@ function StrengthExerciseCard({
         cueText={cueText}
         expandedCues={expandedCues}
         toggleCue={toggleCue}
+        onPlay={() => onSelectExercise(exerciseName)}
+        playAccessibilityLabel={`Play ${exerciseDisplayName} demo`}
       />
         </View>
         {/* ══ THE CONTROLS ARE A SIBLING OF THE TEXT STACK — FOURTH PASS ═══════
@@ -3148,30 +3145,65 @@ function StrengthExerciseCard({
           * `alignItems: 'center'` row, so their centres coincide by construction
           * and nothing can offset one without the other. */}
         <View style={styles.controlsRow}>
-        <View style={styles.weightControl}>
-          <Pressable
-            onPress={() => decrementWeight(exercise)}
-            style={styles.weightBtnLeft}
-            hitSlop={{ top: 8, bottom: 8, left: 8 }}
-            accessibilityLabel="Decrease weight"
+        {loadControlMode === 'none' ? null : loadControlMode === 'bodyweight' ? (
+          <View
+            style={[styles.weightControl, styles.staticLoadControl]}
+            testID={`workout-exercise-load-${exerciseToken}`}
+            accessibilityLabel="Bodyweight"
           >
-            <Text style={styles.weightBtnText}>−</Text>
-          </Pressable>
-          {isEditing ? (
-            <AppTextInput
-              style={styles.weightInput}
-              value={editingWeightText}
-              onChangeText={setEditingWeightText}
-              onBlur={commitWeightEdit}
-              onSubmitEditing={commitWeightEdit}
-              placeholder="BW"
-              placeholderTextColor="#5A5A5A"
-              keyboardType="decimal-pad"
-              autoFocus
-              selectTextOnFocus
-              returnKeyType="done"
-            />
-          ) : (
+            <Text
+              style={styles.weightValueText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              BW
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.weightControl}>
+            <Pressable
+              onPress={() => loadControlMode === 'band'
+                ? decrementBandResistance(exercise)
+                : decrementWeight(exercise, selectedImplementKind)}
+              style={styles.weightBtnLeft}
+              hitSlop={{ top: 8, bottom: 8, left: 8 }}
+              accessibilityLabel={loadControlMode === 'band'
+                ? 'Decrease band resistance'
+                : 'Decrease weight'}
+            >
+              <Text style={styles.weightBtnText}>−</Text>
+            </Pressable>
+            {isEditing && loadControlMode !== 'band' ? (
+              <AppTextInput
+                style={styles.weightInput}
+                value={editingWeightText}
+                onChangeText={setEditingWeightText}
+                onBlur={commitWeightEdit}
+                onSubmitEditing={commitWeightEdit}
+                placeholder={loadControlMode === 'bodyweight_plus' ? 'BW' : 'kg'}
+                placeholderTextColor="#5A5A5A"
+                keyboardType="decimal-pad"
+                autoFocus
+                selectTextOnFocus
+                returnKeyType="done"
+              />
+            ) : loadControlMode === 'band' ? (
+              <View
+                style={styles.weightValueWrap}
+                testID={`workout-exercise-load-${exerciseToken}`}
+                accessibilityLabel={`Band resistance, ${displayedWeight}`}
+              >
+                <Text
+                  style={styles.weightValueText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                >
+                  {displayedWeight}
+                </Text>
+              </View>
+            ) : (
             /**
              * ⚠ **THE LOAD IS SPOKEN AND ADDRESSABLE, NOT JUST DRAWN.**
              *
@@ -3194,20 +3226,32 @@ function StrengthExerciseCard({
               onPress={() => startEditingWeight(exercise)}
               style={styles.weightValueWrap}
               testID={`workout-exercise-load-${exerciseToken}`}
-              accessibilityLabel={`Edit weight, ${formatWeight(exercise)}`}
+              accessibilityLabel={`Edit weight, ${displayedWeight}`}
             >
-              <Text style={styles.weightValueText}>{formatWeight(exercise)}</Text>
+              <Text
+                style={styles.weightValueText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {displayedWeight}
+              </Text>
             </Pressable>
-          )}
-          <Pressable
-            onPress={() => incrementWeight(exercise)}
-            style={styles.weightBtnRight}
-            hitSlop={{ top: 8, bottom: 8, right: 8 }}
-            accessibilityLabel="Increase weight"
-          >
-            <Text style={styles.weightBtnText}>+</Text>
-          </Pressable>
-        </View>
+            )}
+            <Pressable
+              onPress={() => loadControlMode === 'band'
+                ? incrementBandResistance(exercise)
+                : incrementWeight(exercise, selectedImplementKind)}
+              style={styles.weightBtnRight}
+              hitSlop={{ top: 8, bottom: 8, right: 8 }}
+              accessibilityLabel={loadControlMode === 'band'
+                ? 'Increase band resistance'
+                : 'Increase weight'}
+            >
+              <Text style={styles.weightBtnText}>+</Text>
+            </Pressable>
+          </View>
+        )}
         {/* ⚠ **IMMEDIATELY RIGHT OF THE STEPPER — SAM, 2026-08-20 (R-116),
             SUPERSEDING R-111's NAME-LINE CLAUSE.** Load and done are one
             movement of the hand, so they are one object with one small fixed
@@ -3216,191 +3260,6 @@ function StrengthExerciseCard({
         </View>
       </View>
     </Card>
-  );
-}
-
-/**
- * Recovery branch — structured prescription + integrated play button.
- */
-interface RecoveryBlockProps {
-  exercises: any[];
-  expandedCues: Record<string, boolean>;
-  toggleCue: (exerciseId: string) => void;
-  onSelectExercise: (name: string) => void;
-  completedItemIds: ReadonlySet<string>;
-  onToggleItem: (itemId: string) => void;
-}
-function RecoveryBlock({
-  exercises,
-  expandedCues,
-  toggleCue,
-  onSelectExercise,
-  completedItemIds,
-  onToggleItem,
-}: RecoveryBlockProps) {
-  return (
-    <View style={styles.exerciseList}>
-      {exercises.map((exercise, index) => {
-        const exerciseName = exercise.exercise?.name || `Exercise ${index + 1}`;
-        const exerciseDisplayName = displayExerciseName(exerciseName, `Exercise ${index + 1}`);
-        const pType = inferRecoveryPrescriptionType(exercise, exerciseName);
-        const prescriptionLabel = formatRecoveryPrescription(exercise, pType);
-        const setsPrefix =
-          exercise.prescribedSets > 1 ? `${exercise.prescribedSets} × ` : '';
-        const restLabel = formatRest(exercise.restSeconds);
-        const cueText = buildCueText(exerciseName);
-        const componentId = exercise.id || exercise.exerciseId;
-        const exerciseToken = stableTestIdToken(componentId);
-
-        const executionItemId = `exercise:${componentId}`;
-        return (
-          <ExecutionChecklistItem
-            key={exercise.id}
-            itemId={executionItemId}
-            label={exerciseDisplayName}
-            completed={completedItemIds.has(executionItemId)}
-            onToggle={onToggleItem}
-          >
-          {(checkbox) => (
-          <Card
-            tone="default"
-            radius="xl"
-            padding="md"
-            testID={`workout-exercise-row-${exerciseToken}`}
-            style={styles.exerciseCard}
-          >
-            <View style={styles.exerciseRowGrid}>
-            <View style={styles.exerciseNumberGutter}>
-              <Text style={styles.exerciseLabelText}>{`${index + 1}`}</Text>
-            </View>
-            <View style={styles.exerciseContentColumn}>
-            <ExerciseHeaderRow
-              name={exerciseDisplayName}
-              onPlay={() => onSelectExercise(exerciseName)}
-            />
-
-            <View style={styles.recoveryPrescriptionRow}>
-              <Text
-                style={styles.recoveryPrescription}
-                testID={`workout-exercise-prescription-${exerciseToken}`}
-              >
-                {setsPrefix}
-                {prescriptionLabel}
-              </Text>
-              {restLabel ? (
-                <Text style={styles.recoveryRest}>{restLabel}</Text>
-              ) : null}
-            </View>
-
-            {/* Curated cue only, collapsed by default (run-7 ruling 2);
-                generator notes are not rendered (Stage 3 ownership: the
-                curated layer owns the words). */}
-            {/* R-116 — a recovery row has no stepper, so the reserved control
-                position is the row's own right edge. */}
-            <View style={styles.recoveryControlRow}>
-              <CueDisclosure
-                exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
-                cueText={cueText}
-                expandedCues={expandedCues}
-                toggleCue={toggleCue}
-              />
-              <View style={styles.controlRowSpacer} />
-              <View style={styles.controlsRow}>{checkbox}</View>
-            </View>
-            </View>
-            </View>
-          </Card>
-          )}
-          </ExecutionChecklistItem>
-        );
-      })}
-    </View>
-  );
-}
-
-/**
- * Recovery days keep their own simple template (§6 item 3), so the add-on box
- * survives here where it died in the badged list. What it does NOT keep is its
- * own vocabulary for a shared idea: it mounts the same `OptionalWorkHeader` as
- * the list branch, and the per-card "Optional" pill is gone — it was the same
- * per-row label ruling 1 retired, wearing a different shape.
- */
-interface RecoveryAddonSectionProps {
-  addons: RecoveryAddonBlock[];
-  expandedCues: Record<string, boolean>;
-  toggleCue: (exerciseId: string) => void;
-  completedItemIds: ReadonlySet<string>;
-  onToggleItem: (itemId: string) => void;
-}
-function RecoveryAddonSection({
-  addons,
-  expandedCues,
-  toggleCue,
-  completedItemIds,
-  onToggleItem,
-}: RecoveryAddonSectionProps) {
-  if (addons.length === 0) return null;
-
-  return (
-    <View style={styles.recoveryAddonSection}>
-      <OptionalWorkHeader />
-      {addons.map((addon) => (
-        <Card
-          key={addon.id}
-          tone="default"
-          radius="lg"
-          padding="md"
-          style={styles.recoveryAddonCard}
-        >
-          <View style={styles.recoveryAddonHeader}>
-            <View style={styles.recoveryAddonTitleWrap}>
-              <Text style={styles.recoveryAddonEyebrow}>{addon.label}</Text>
-              <Text style={styles.recoveryAddonTitle}>{addon.durationMinutes} min support work</Text>
-            </View>
-          </View>
-          {addon.placementNote ? (
-            <Text style={styles.recoveryAddonMeta}>{addon.placementNote}</Text>
-          ) : null}
-          <View style={styles.recoveryAddonExercises}>
-            {addon.exercises.map((exercise) => {
-              const itemId = `exercise:${exercise.id}`;
-              return (
-                <ExecutionChecklistItem
-                  key={exercise.id}
-                  itemId={itemId}
-                  label={exercise.name}
-                  completed={completedItemIds.has(itemId)}
-                  onToggle={onToggleItem}
-                >
-                  {(checkbox) => (
-                  <View
-                    style={styles.recoveryAddonExercise}
-                    testID={`workout-exercise-row-${stableTestIdToken(exercise.id)}`}
-                  >
-                    <View style={styles.addonCheckboxSlot}>{checkbox}</View>
-                    <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
-                    <Text
-                      style={styles.recoveryAddonPrescription}
-                      testID={`workout-exercise-prescription-${stableTestIdToken(exercise.id)}`}
-                    >
-                      {exercise.prescription}
-                    </Text>
-                    <CueDisclosure
-                      exerciseId={String(exercise.id ?? '')}
-                      cueText={buildCueText(exercise.name)}
-                      expandedCues={expandedCues}
-                      toggleCue={toggleCue}
-                    />
-                  </View>
-                  )}
-                </ExecutionChecklistItem>
-              );
-            })}
-          </View>
-          <Text style={styles.recoveryAddonSkip}>Skip with no penalty if it adds fatigue.</Text>
-        </Card>
-      ))}
-    </View>
   );
 }
 
@@ -3539,27 +3398,28 @@ function ConditioningRow({
  * Its section header already carries the meaning; repeating it in an accent
  * card created a second visual system inside the same execution checklist.
  */
-function TeamTrainingRow() {
+function TeamTrainingRow({ checkbox }: { checkbox?: React.ReactNode }) {
   return (
     <View style={styles.exerciseCard} testID="team-training-section">
-      <Text style={styles.exerciseName}>{signedCopy('session.team_training.row')}</Text>
+      <View style={styles.exerciseHeaderRow}>
+        <View style={styles.exerciseNameWrap}>
+          <Text style={styles.exerciseName}>{signedCopy('session.team_training.row')}</Text>
+        </View>
+        {checkbox}
+      </View>
     </View>
   );
 }
 
 /**
- * Common exercise header: [label] Name [▶] ................ (checkbox)
+ * Common exercise header: [label] Name
  *
- * ⚠ **THE PLAY TARGET MOVED TO THE NAME — SAM, 2026-08-20 (R-111).**
+ * ⚠ **THE VISIBLE PLAY BUTTON MOVED TO THE FORM-CUES LINE — SAM, 2026-08-21.**
  *
- * *"Put the play/demo button immediately beside the exercise name. Put the
- * completion checkbox at the far right where the play button currently sits."*
- * The two controls had swapped jobs by accident of layout: the far-right end of
- * a row is where a list puts its state, and play is not state — it belongs to
- * the name, because the thing it plays IS the name. The checkbox now owns the
- * right edge (`ExecutionChecklistItem`), and the two never trade places again
- * on one surface and not the other, because BOTH live in components every row
- * shares — Mobility, Power and Strength alike.
+ * Long names wrapped around the button and moved it to a different horizontal
+ * position on every row. The name keeps its existing demo tap target, while the
+ * visible button is rendered by `CueDisclosure` beside the fixed "Form cues"
+ * label. Mobility, Power, Strength and Recovery therefore share one alignment.
  *
  * **Neither behaviour changed.** Same `onPlay`, same handler, same
  * `Play <name> demo` label on both the name and the button; the checkbox keeps
@@ -3591,7 +3451,7 @@ function ExerciseHeaderRow({
   return (
     <>
       <View style={styles.exerciseHeaderRow}>
-        <View style={styles.exerciseNameGroup}>
+        <View style={styles.exerciseNameWrap}>
           <Pressable
             style={styles.exerciseNamePress}
             onPress={onPlay}
@@ -3602,7 +3462,6 @@ function ExerciseHeaderRow({
               {name}
             </Text>
           </Pressable>
-          <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
         </View>
       </View>
     </>
@@ -3646,7 +3505,7 @@ function PlayButton({ onPress, accessibilityLabel }: PlayButtonProps) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
       style={({ pressed }) => [
         styles.playBtn,
         pressed && styles.playBtnActive,
@@ -3690,31 +3549,43 @@ interface CueDisclosureProps {
   exerciseId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
+  onPlay?: () => void;
+  playAccessibilityLabel?: string;
 }
 function CueDisclosure({
   cueText,
   exerciseId,
   expandedCues,
   toggleCue,
+  onPlay,
+  playAccessibilityLabel,
 }: CueDisclosureProps) {
-  if (!cueText) return null;
+  const hasPlay = !!onPlay && !!playAccessibilityLabel;
+  if (!cueText && !hasPlay) return null;
   const expanded = !!expandedCues[exerciseId];
   return (
     <View style={styles.cueContainer}>
-      <Pressable
-        onPress={() => toggleCue(exerciseId)}
-        hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
-        style={styles.cueToggleRow}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        accessibilityLabel={expanded ? 'Hide form cues' : 'Show form cues'}
-        testID={`exercise-cue-toggle-${stableTestIdToken(exerciseId)}`}
-      >
-        <Text style={styles.cueToggleText}>
-          {expanded ? '▾ Form cues' : '▸ Form cues'}
-        </Text>
-      </Pressable>
-      {expanded ? <Text style={styles.cueText}>{cueText}</Text> : null}
+      <View style={styles.cueActionRow}>
+        {cueText ? (
+          <Pressable
+            onPress={() => toggleCue(exerciseId)}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+            style={styles.cueToggleRow}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            accessibilityLabel={expanded ? 'Hide form cues' : 'Show form cues'}
+            testID={`exercise-cue-toggle-${stableTestIdToken(exerciseId)}`}
+          >
+            <Text style={styles.cueToggleText}>
+              {expanded ? '▾ Form cues' : '▸ Form cues'}
+            </Text>
+          </Pressable>
+        ) : null}
+        {hasPlay ? (
+          <PlayButton onPress={onPlay} accessibilityLabel={playAccessibilityLabel} />
+        ) : null}
+      </View>
+      {cueText && expanded ? <Text style={styles.cueText}>{cueText}</Text> : null}
     </View>
   );
 }
@@ -3924,6 +3795,7 @@ function ExerciseEditBody({
 
   useSessionActionStep({
     key: exerciseEditStepKey(step),
+    eyebrow: 'Session edit',
     title: exerciseEditTitle(step),
     subtitle: exerciseEditSubtitle(step),
     onBack: backTarget(),
@@ -4176,7 +4048,7 @@ function ExerciseEditBody({
             {step.options.map((option) => (
               <Button
                 key={option.name}
-                label={`${option.name} — ${option.meta}`}
+                label={option.name}
                 variant="secondary"
                 size="md"
                 onPress={() => onStep({
@@ -4224,7 +4096,7 @@ function ExerciseEditBody({
               {group.options.map((option) => (
                 <Button
                   key={`${group.id}:${option.name}`}
-                  label={`${option.name} — ${option.meta}`}
+                  label={option.name}
                   variant="secondary"
                   size="md"
                   onPress={() => onStep({
@@ -4576,11 +4448,11 @@ function ChevronLeft() {
 }
 
 function PlayIcon() {
-  // Small solid play triangle, lime-on-dark. Sized to match the 22×22
+  // Small solid play triangle, lime-on-dark. Sized to match the 16×16
   // outline ring — the triangle sits centered with comfortable inner
   // padding so the affordance remains tappable but visually quiet.
   return (
-    <Svg width={10} height={10} viewBox="0 0 12 12">
+    <Svg width={7} height={7} viewBox="0 0 12 12">
       <Polygon points="3,2 3,10 10,6" fill="#C8FF00" />
     </Svg>
   );
@@ -5047,30 +4919,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.2,
+    width: '100%',
+    textAlign: 'center',
   },
   exerciseNameWrap: {
     flex: 1,
   },
-  // R-111: name and play travel together. The group takes the free width so
-  // the pair stays hard left; `flexShrink` on the name is what lets a long
-  // exercise name wrap to its two lines WITHOUT pushing the play button off
-  // the row — the button never leaves the name's side.
-  exerciseNameGroup: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  // The visible Play control now lives on the fixed Form-cues line, so the name
+  // gets the full content width and wraps independently of every row control.
   exerciseNamePress: {
     flexShrink: 1,
   },
-  // R-116 final: ~15px, semibold ITALIC — `fontStyle: 'italic'` on the System
-  // face the app already uses (`HomeScreenV2`, `CoachTabScreen`). No new family.
+  // Session exercise names share one upright treatment across Mobility,
+  // Strength, Power and Recovery.
   exerciseName: {
     color: '#F2F2F2',
     fontSize: 15,
     fontWeight: '600',
-    fontStyle: 'italic',
     letterSpacing: -0.1,
     lineHeight: 19,
   },
@@ -5097,15 +4962,15 @@ const styles = StyleSheet.create({
   },
 
   // Muted play target — outline affordance, no resting fill at all.
-  // Pushed one more step down: 22×22 ring at opacity 0.45 with a faint
+  // Pushed one more step down: 16×16 ring at opacity 0.45 with a faint
   // ring (alpha 0.22). At this weight the play icon is a secondary tool
   // the athlete can reach for — it never pulls focus from the exercise
   // title beside it. Pressed state still snaps the ring to full lime as
   // tactile feedback (fill + border brighten, opacity → 1).
   playBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(200, 255, 0, 0.22)',
@@ -5131,14 +4996,17 @@ const styles = StyleSheet.create({
   // on line one only and the two lines below started under it.
   exerciseRowGrid: { flexDirection: 'row', alignItems: 'center' },
   // Fixed width — the gutter never changes size, so the content column's left
-  // edge is the same on every row of the session whatever the number is.
+  // edge is the same on every row. It stretches to the card height so the
+  // number centres vertically and its right border becomes one quiet divider.
   exerciseNumberGutter: {
-    width: 26,
-    alignItems: 'flex-start',
-    // The number belongs to the NAME line, so it holds the stack's top while the
-    // controls centre against the row. This is the gutter, not a control.
-    alignSelf: 'flex-start',
-    paddingTop: 2,
+    width: 32,
+    marginLeft: -13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: 'rgba(200, 255, 0, 0.35)',
+    marginRight: 13,
   },
   // Every text line lives in here, so they cannot disagree about their left
   // edge. `minWidth: 0` lets a long name wrap INSIDE the column instead of
@@ -5163,14 +5031,14 @@ const styles = StyleSheet.create({
     gap: 9,
     flexShrink: 0,
   },
-  // ~14px, medium/semibold italic — the dose reads as the name's own second line.
+  // The dose uses the Form-cues type recipe so the two secondary lines read at
+  // one scale. It stays brighter because it is still the prescribed work.
   statsPrimary: {
     color: '#F2F2F2',
-    fontSize: 14,
-    fontWeight: '600',
-    fontStyle: 'italic',
+    fontSize: 12.5,
+    fontWeight: '400',
     letterSpacing: 0.2,
-    lineHeight: 18,
+    lineHeight: 16,
   },
 
   // ── Weight segmented control ──
@@ -5178,12 +5046,12 @@ const styles = StyleSheet.create({
   // Further quieted for the continuous-list treatment. Border alpha drops
   // ~25% (0.16 → 0.12), divider lines on the ± buttons drop to match
   // (0.10 → 0.075). Explicit shadows.none guarantees no elevation or
-  // glow. Footprint shrinks one more step: button cells 30 → 28, value
-  // wrap padding 10 → 8 / 52 → 48 min-width. Functionality is untouched
-  // — same handlers, same edit flow, just less visual footprint.
+  // glow. The full control is 22px tall, with the value using the same 12.5px /
+  // 16px line box as sets and reps. Functionality is untouched.
   weightControl: {
     flexDirection: 'row',
     alignItems: 'stretch',
+    height: 22,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: 'rgba(200, 255, 0, 0.12)',
@@ -5196,15 +5064,20 @@ const styles = StyleSheet.create({
     // `alignItems: 'center'` now decides for both, alone.
     ...shadows.none,
   },
+  staticLoadControl: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   weightBtnLeft: {
-    width: 28,
+    width: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderRightWidth: 1,
     borderRightColor: 'rgba(200, 255, 0, 0.075)',
   },
   weightBtnRight: {
-    width: 28,
+    width: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: 1,
@@ -5212,30 +5085,32 @@ const styles = StyleSheet.create({
   },
   weightBtnText: {
     color: colors.accent.lime,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 16,
     opacity: 0.8,
   },
   weightValueWrap: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    width: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 48,
   },
   weightValueText: {
     color: '#F2F2F2',
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '600',
+    lineHeight: 16,
+    width: '100%',
+    textAlign: 'center',
   },
   weightInput: {
     color: '#F2F2F2',
-    fontSize: 13.5,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    minWidth: 48,
+    fontSize: 12.5,
+    fontWeight: '600',
+    lineHeight: 16,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    width: 60,
     textAlign: 'center',
   },
 
@@ -5266,6 +5141,11 @@ const styles = StyleSheet.create({
   // R-116 — Form cues sit DIRECTLY below sets x reps. 6 -> 1: the disclosure
   // keeps its own `paddingVertical` tap area, so the target does not shrink.
   cueContainer: { marginTop: 3 },
+  cueActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cueToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -216,6 +216,12 @@ console.log('\n[onboarding generation] transient failures get exactly one automa
       /runOnboardingProgramGeneration\(/.test(complete),
       'one owner decides copy + retry; the screen only renders the outcome');
 
+    ok('the local build experience remains visible for 20 seconds',
+      /const MIN_DISPLAY_MS = 20_000/.test(complete)
+        && /Math\.max\(0, MIN_DISPLAY_MS - elapsed\)/.test(complete)
+        && /This takes about 20 seconds/.test(complete),
+      'fast local generation should still feel like a deliberate program build');
+
     ok('the Try Again affordance is gated on canRetry',
       /canRetry/.test(complete),
       'a non-retryable failure (e.g. unauthorized) must not offer a pointless retry');

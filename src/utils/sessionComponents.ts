@@ -21,6 +21,7 @@ import { hasPowerRow, isPowerRow } from '../rules/sessionRowCounting';
 export type SessionComponentKind =
   | 'power'
   | 'strength'
+  | 'mobility'
   | 'support'
   | 'conditioning'
   | 'team_training'
@@ -538,8 +539,28 @@ function workoutTypeHasConditioning(workout: Partial<Workout>): boolean {
   return CONDITIONING_TYPES.has(String(workout.workoutType ?? ''));
 }
 
+/**
+ * The athlete-facing identity of a standalone low-load session.
+ *
+ * Mobility deliberately keeps the recovery tier for load accounting, but that
+ * tier is not its presentation identity. The typed optional marker therefore
+ * wins before the neutral Recovery fallback. Keeping this answer here stops
+ * the component, template and checklist layers from each interpreting the
+ * recovery tier differently.
+ */
+export function standaloneLowLoadSessionKind(
+  workout: Partial<Workout> | null | undefined,
+): 'mobility' | 'recovery' | null {
+  if (!workout) return null;
+  if ((workout as Workout).composedOptionalKind === 'mobility') return 'mobility';
+  if (workout.workoutType === 'Recovery' || (workout as any).sessionTier === 'recovery') {
+    return 'recovery';
+  }
+  return null;
+}
+
 function isRecoveryWorkout(workout: Partial<Workout>): boolean {
-  return workout.workoutType === 'Recovery' || (workout as any).sessionTier === 'recovery';
+  return standaloneLowLoadSessionKind(workout) !== null;
 }
 
 function isStandaloneConditioningWorkout(workout: Partial<Workout>): boolean {
@@ -662,6 +683,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   strengthRows: any[];
   supportRows: any[];
   conditioningRows: any[];
+  mobilityRows: any[];
+  recoveryRows: any[];
   teamTrainingRows: any[];
 } {
   if (!workout) {
@@ -671,6 +694,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
       strengthRows: [],
       supportRows: [],
       conditioningRows: [],
+      mobilityRows: [],
+      recoveryRows: [],
       teamTrainingRows: [],
     };
   }
@@ -681,6 +706,7 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   );
   const powerRows = allRenderable.filter(isPowerRow);
   const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
+  const lowLoadKind = standaloneLowLoadSessionKind(workout);
 
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
   const legacyConditioningIds = blockConditioningIds.size > 0
@@ -736,6 +762,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     strengthRows,
     supportRows,
     conditioningRows,
+    mobilityRows: lowLoadKind === 'mobility' ? renderableRows : [],
+    recoveryRows: lowLoadKind === 'recovery' ? renderableRows : [],
     teamTrainingRows: teamState.teamTrainingItems ?? [],
   };
 }
@@ -867,7 +895,17 @@ export function getSessionComponents(
     });
   }
 
-  if (components.length === 0 && isRecoveryWorkout(workout)) {
+  const lowLoadKind = standaloneLowLoadSessionKind(workout);
+  if (components.length === 0 && lowLoadKind === 'mobility') {
+    components.push({
+      id: 'mobility',
+      kind: 'mobility',
+      label: 'mobility',
+      completionPolicy: 'required',
+    });
+  }
+
+  if (components.length === 0 && lowLoadKind === 'recovery') {
     components.push({
       id: 'recovery',
       kind: 'recovery',
@@ -906,6 +944,7 @@ export function componentQuestionLabel(
       ? 'Did you complete it?'
       : 'Did you complete the strength work?';
   }
+  if (component.kind === 'mobility') return 'Did you complete the mobility work?';
   if (component.kind === 'power') return 'Did you complete the power work?';
   if (component.kind === 'support') return 'Did you complete the midline work?';
   if (component.kind === 'conditioning') return 'Did you complete the conditioning?';
@@ -920,6 +959,7 @@ export function componentQuestionLabel(
 function componentReasonSubject(component: SessionComponent): string {
   if (component.kind === 'power') return 'the power work';
   if (component.kind === 'strength') return 'the strength work';
+  if (component.kind === 'mobility') return 'the mobility work';
   if (component.kind === 'support') return 'the midline work';
   if (component.kind === 'conditioning') return 'the conditioning';
   if (component.kind === 'team_training') return 'team training';

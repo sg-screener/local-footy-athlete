@@ -121,6 +121,7 @@ const COMPONENT_TO_PART: Readonly<Record<string, VisiblePartKind>> = {
   speed: 'speed',
   support: 'support',
   team_training: 'team_training',
+  mobility: 'recovery',
   recovery: 'recovery',
   recovery_addon: 'recovery',
   session: 'strength',
@@ -365,7 +366,7 @@ export function partHoldsTheDayDown(part: {
  * ## R-016 REACHES THIS SURFACE (2026-08-17, projection cleanup)
  *
  * Sam's prescription-display law — *"ranges remain the generation source, the
- * athlete sees a single middle number"*, Bible `:770`/`:4936`, registry R-016 —
+ * athlete sees a single approved rep target"*, Bible `:770`/`:4936`, registry R-016 —
  * was marked `BUILT`, and it WAS: in `dayWorkoutHelpers.formatStrengthSetsReps`,
  * which calls `rules/prescriptionDisplay.displayReps`. **This projection never
  * got it.** So the day-detail screen said `3 × 5` and the one canonical
@@ -659,6 +660,12 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): Visibl
   // (`getSessionComponentRows`, via `composeDayDetail`), which is what makes
   // this a re-file rather than a second decomposition of the day.
   if (kind === 'speed') return toVisibleRows(composed.speedExercises);
+  if (kind === 'recovery') {
+    return toVisibleRows([
+      ...composed.mobilityExercises,
+      ...composed.recoveryExercises,
+    ]);
+  }
   return [];
 }
 

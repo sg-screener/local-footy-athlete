@@ -9,8 +9,8 @@
  *                supersession the same day retired the pre-built flow bundles:
  *                he does not recognise them, and the provenance trace agrees.
  *   ACCESSORIES— prehab pools, with a per-region shape. Athlete-add only.
- *   GUNSHOW    — 2 biceps + 2 triceps + 2 pump delts. Under thin equipment it
- *                gets SMALLER, never padded. No cross-family top-ups.
+ *   GUNSHOW    — 2 biceps + 2 triceps + 2 pump delts from its normal-gym pools.
+ *                No cross-family top-ups.
  *
  *   All three: never hard, invisible to load, never break rest.
  *
@@ -18,7 +18,7 @@
  * the charter gate made on its first run live here, and both were composition
  * defects that every other gate in the repo was blind to:
  *
- *   - the Gunshow reached OUTSIDE Sam's signed sixteen for a sixth exercise,
+ *   - the Gunshow reached OUTSIDE Sam's then-signed sixteen for a sixth exercise,
  *     drawing "Face Pull" from `UPPER_BACK_PUMP_POOL` while the signed shoulder
  *     family holds "Cable Face Pull". Every gate that checks "is this exercise
  *     authored?" passed it, because it IS authored — just not for this session.
@@ -88,6 +88,7 @@ import {
   BICEPS_POOL,
   TRICEPS_POOL,
   DELTS_POOL,
+  GUNSHOW_DO_NOT_PAIR_IDS,
   UPPER_BACK_PUMP_POOL,
   GROIN_ADDUCTORS_POOL,
   CALVES_POOL,
@@ -146,6 +147,47 @@ const GUNSHOW_FAMILIES = {
   delts: canonical(DELTS_POOL),
 };
 
+run('A0. Gunshow uses Sam\'s exact 8 biceps / 7 triceps / 8 shoulder pools', () => {
+  const actual = {
+    biceps: BICEPS_POOL.map((entry) => entry.name),
+    triceps: TRICEPS_POOL.map((entry) => entry.name),
+    shoulders: DELTS_POOL.map((entry) => entry.name),
+  };
+  const expected = {
+    biceps: [
+      'Hammer Curl',
+      'Incline Dumbbell Curl',
+      'Banded Bicep Curl',
+      'Concentration Curl',
+      'Chin-Up Negative (Slow)',
+      'Bicep Curl (Barbell)',
+      'Bicep Curl (Dumbbell)',
+      'Lying Dumbbell Curl',
+    ],
+    triceps: [
+      'Tricep Pushdown',
+      'Overhead Tricep Extension',
+      'Dumbbell Kickback',
+      'Banded Tricep Pushdown',
+      'Dumbbell Skull Crusher',
+      'Skull Crushers',
+      'Tricep Circuit (Dirty 30)',
+    ],
+    shoulders: [
+      'Lateral Raise',
+      'Cable Face Pull',
+      'Rear Delt Fly',
+      'Shrugs',
+      'Single-Arm Shrug',
+      'Incline Y Raise',
+      'Face Pull',
+      'Band Pull-Apart',
+    ],
+  };
+  assert(JSON.stringify(actual) === JSON.stringify(expected),
+    `Gunshow pool drifted:\n${JSON.stringify(actual, null, 2)}`);
+});
+
 run('A1. a Gunshow is 2 biceps + 2 triceps + 2 shoulder', () => {
   const workout = built('accessories_pump');
   assert(workout, 'the Gunshow builds nothing');
@@ -159,7 +201,7 @@ run('A1. a Gunshow is 2 biceps + 2 triceps + 2 shoulder', () => {
     `Sam signed 2 + 2 + 2 and the session is ${JSON.stringify(counts)}: ${rows.join(', ')}`);
 });
 
-run('A2. NO CROSS-FAMILY TOP-UPS — nothing outside the signed sixteen', () => {
+run('A2. NO CROSS-FAMILY TOP-UPS — nothing outside the signed 23', () => {
   // THE DEFECT THIS CLOSES. The slot table ended `{ delts: 1 }, { upper_back_pump: 1 }`,
   // so the sixth exercise came from a pool Sam did not sign for this session —
   // "Face Pull" from the upper-back pump pool, beside a signed shoulder family
@@ -171,24 +213,22 @@ run('A2. NO CROSS-FAMILY TOP-UPS — nothing outside the signed sixteen', () => 
   ]);
   const strangers = names(workout).filter((n) => !signed.has(canonicalExerciseName(n)));
   assert(strangers.length === 0,
-    `the Gunshow prescribes ${strangers.join(', ')}, outside the sixteen Sam signed. `
-    + 'Under thin equipment a gunshow gets SMALLER, never padded.');
+    `the Gunshow prescribes ${strangers.join(', ')}, outside the 23 Sam signed.`);
   // NON-VACUITY, and specific: the pool the top-up came from is still a real
   // pool with real entries, so this cell is not passing because it is empty.
   assert(UPPER_BACK_PUMP_POOL.length > 0,
     'the upper-back pump pool is empty, so "no cross-family top-up" proves nothing');
 });
 
-run('A3. thin equipment SHRINKS the Gunshow rather than padding it', () => {
-  // The behaviour behind the ruling, asserted at the picker: a family with fewer
-  // entries than its slot asks for contributes what it has. Nothing repeats and
-  // nothing is borrowed. Read off the pool sizes, which are Sam's signed census.
+run('A3. every normal-gym Gunshow family has enough signed candidates', () => {
+  // Gunshow is prescribed as gym work. Its signed census must be deep enough to
+  // fill all three two-exercise slots without repetition or a cross-family top-up.
   const requested = { biceps: 2, triceps: 2, delts: 2 };
   for (const [family, count] of Object.entries(requested)) {
     const pool = GUNSHOW_FAMILIES[family as keyof typeof GUNSHOW_FAMILIES];
     assert(pool.size >= count,
       `${family} has ${pool.size} signed candidates for a ${count}-exercise slot — `
-      + 'the session would have to shrink, which is correct, but Sam signed enough');
+      + 'the normal-gym Gunshow cannot fill its signed shape');
   }
 });
 
@@ -196,7 +236,7 @@ run('A4. every Gunshow row carries Sam\'s AUTHORED 2-3 sets', () => {
   // THE HALF OF §20.3 NOTHING HELD. A1 and A2 assert the six exercises and where
   // they come from; the law's other clause is the DOSE — "2 biceps + 2 triceps +
   // 2 shoulder, 2-3 SETS EACH" — and no cell anywhere read `prescribedSets` on
-  // this session. It ships correctly today because all sixteen signed rows are
+  // this session. It ships correctly today because all 23 signed rows are
   // authored at 2 or 3; a seventeenth authored at 4, or any writer that edits the
   // dose on the way to the athlete, would have shipped a shape Sam did not sign
   // and nothing would have said a word.
@@ -218,7 +258,7 @@ run('A4. every Gunshow row carries Sam\'s AUTHORED 2-3 sets', () => {
   rows.forEach((row) => {
     const name = canonicalExerciseName((row as { exercise?: { name?: string } }).exercise?.name ?? '');
     const source = bySets.get(name);
-    assert(source, `${name} is not one of the sixteen signed rows`);
+    assert(source, `${name} is not one of the 23 signed rows`);
     const sets = (row as { prescribedSets?: number }).prescribedSets;
     assert(sets === source.sets,
       `${name} ships ${sets} sets and Sam authored ${source.sets}`);
@@ -227,56 +267,40 @@ run('A4. every Gunshow row carries Sam\'s AUTHORED 2-3 sets', () => {
   });
 });
 
-run('A5. a thin kit really does shrink it — built, not inferred', () => {
-  // A3 makes the shrink claim by reading POOL SIZES. It never builds anything, so
-  // it stayed green while the composition was mutated back to the old
-  // 2+2+1+1 shape — a bind that cannot fail is not holding the law. This cell
-  // drives the real door on a real thin kit and reads the session it hands back.
-  //
-  // The claim is SHRINK, NEVER PAD: fewer rows than the full kit, every row still
-  // inside the signed sixteen, and nothing repeated to reach a quota.
-  // THE KIT IS SET ON THE ATHLETE, then put back EXACTLY as the header set it —
-  // not from a captured `getState()`, which restored a shape the later ledger
-  // cells could not build a strength session from and turned D2 red.
-  const seedKit = (tags: Record<string, 'have'>): void => {
-    useProfileStore.setState({
-      onboardingData: {
-        ...samExport8Profile(),
-        equipmentAnswer: {
-          ...samExport8EquipmentAnswerThroughTheDoor(),
-          tags,
-        },
-      },
-      isOnboardingComplete: true,
-    } as never);
-  };
-  const restoreKit = (): void => {
-    useProfileStore.setState({
-      onboardingData: {
-        ...samExport8Profile(),
-        equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
-      },
-      isOnboardingComplete: true,
-    } as never);
-  };
-  try {
-    seedKit({ dumbbells: 'have' });
-    const thin = built('accessories_pump');
-    assert(thin, 'the Gunshow builds nothing on a dumbbells-only kit');
-    const rows = names(thin).map(canonicalExerciseName);
-    const signed = new Set([
-      ...GUNSHOW_FAMILIES.biceps, ...GUNSHOW_FAMILIES.triceps, ...GUNSHOW_FAMILIES.delts,
-    ]);
-    assert(rows.length < 6,
-      `a dumbbells-only kit still produced ${rows.length} rows — it did not shrink, `
-      + 'so either the filter is inert or the session was padded');
-    assert(rows.every((name) => signed.has(name)),
-      `the thin-kit Gunshow reaches outside the signed sixteen: ${rows.join(', ')}`);
-    assert(new Set(rows).size === rows.length,
-      `the thin-kit Gunshow repeats a row to fill its quota: ${rows.join(', ')}`);
-  } finally {
-    restoreKit();
+run('A6. every Gunshow candidate rotates in, and forbidden pairs never do', () => {
+  const expectedPairs = [
+    ['lying-db-curl', 'incline-db-curl'],
+    ['tricep-pushdown', 'band-pushdown'],
+    ['skull-crusher-db', 'skull-crushers'],
+    ['skull-crusher-db', 'dirty-30'],
+    ['shrugs', 'single-arm-shrug'],
+    ['face-pull', 'cable-face-pull'],
+    ['face-pull', 'band-pull-apart'],
+    ['dumbbell-bicep-curl', 'hammer-curl'],
+  ].map((pair) => [...pair].sort().join('|')).sort();
+  const actualPairs = GUNSHOW_DO_NOT_PAIR_IDS
+    .map((pair) => [...pair].sort().join('|')).sort();
+  assert(JSON.stringify(actualPairs) === JSON.stringify(expectedPairs),
+    `Gunshow do-not-pair list drifted: ${actualPairs.join(', ')}`);
+
+  const seen = new Set<string>();
+  for (let day = 0; day < 730; day++) {
+    const date = new Date(Date.UTC(2026, 0, 1 + day)).toISOString().slice(0, 10);
+    const workout = quiet(() => buildCoachRevisionTemplateWorkout('accessories_pump', date));
+    assert(workout, `the Gunshow builds nothing on ${date}`);
+    const ids = new Set((workout.exercises ?? []).map((row) => row.exerciseId));
+    ids.forEach((id) => seen.add(id));
+    for (const [left, right] of GUNSHOW_DO_NOT_PAIR_IDS) {
+      assert(!(ids.has(left) && ids.has(right)),
+        `${date} paired ${left} with ${right}: ${names(workout).join(', ')}`);
+    }
   }
+
+  const expectedIds = [...BICEPS_POOL, ...TRICEPS_POOL, ...DELTS_POOL]
+    .map((entry) => entry.id);
+  const missing = expectedIds.filter((id) => !seen.has(id));
+  assert(missing.length === 0,
+    `these signed Gunshow candidates never rotate in: ${missing.join(', ')}`);
 });
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -5,7 +5,11 @@ import type {
   WeekKind,
 } from '../types/domain';
 import { resolveWeekIntensityMultiplier } from './deloadWeekRules';
-import { injurySeverityRemovesRiskyWork } from './injurySeverityBands';
+import {
+  injurySeverityPausesAffectedTraining,
+  injurySeverityRemovesRiskyWork,
+  onboardingInjurySeverityScore,
+} from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
@@ -253,9 +257,14 @@ export function resolveRestrictedMainStrengthPatterns(
     if (keys.has('knee')) restricted.add('squat');
   }
   for (const injury of input.profileInjuries ?? []) {
-    if (injury.severity !== 'Severe') continue;
+    const severity = onboardingInjurySeverityScore(injury);
+    if (!injurySeverityRemovesRiskyWork(severity)) continue;
+    const paused = injurySeverityPausesAffectedTraining(severity);
     const text = `${injury.bodyArea} ${injury.description ?? ''}`.toLowerCase();
-    if (/shoulder|elbow|wrist|hand|pec|upper/.test(text)) restricted.add('push');
+    if (/shoulder|elbow|wrist|hand|pec|upper/.test(text)) {
+      restricted.add('push');
+      if (paused) restricted.add('pull');
+    }
     if (/hip|knee|ankle|hamstring|groin|calf|achilles|lower back|lumbar|leg/.test(text)) {
       restricted.add('squat');
       restricted.add('hinge');

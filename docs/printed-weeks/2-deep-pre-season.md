@@ -10,6 +10,17 @@
 
 ### Training Day
 
+**Strength**
+
+- Explosive Push-up — 2 × 3
+  - Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box.
+- Barbell Row — 3 × 6
+  - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
+- Lat Pulldown — 3 × 9
+  - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
+- Band Pull-Apart — 2 × 9
+  - Squeeze the shoulder blades together. Elbows straight, controlled return.
+
 **Team Training**
 
 _(the club runs this one — the app lists nothing for it)_
@@ -20,6 +31,8 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
+- Lateral Bounds — 3 × 3
+  - Push off outside leg. Stick each landing before the next.
 - Back Squat — 3 × 5
   - Sit into the hips, chest up. Own the bottom position.
 - RDLs — 2 × 9
@@ -43,6 +56,15 @@ _(the club runs this one — the app lists nothing for it)_
 ## Wednesday 12 August
 
 ### Training Day
+
+**Strength**
+
+- Bench Press — 3 × 5
+  - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
+- DB Shoulder Press — 3 × 9
+  - Start at the shoulders, press to lockout. No arching through the lower back.
+- Banded External Rotation — 2 × 9
+  - Elbow at 90 degrees, rotate against the band. Slow and controlled arc.
 
 **Team Training**
 
@@ -68,10 +90,10 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
-- Leg Press — 3 × 8
-  - Full depth without lower back rounding. Push through the whole foot.
 - RDLs — 3 × 5
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Leg Press — 3 × 8
+  - Full depth without lower back rounding. Push through the whole foot.
 - Bulgarian Split Squats — 3 × 8
   - Slight lean forward. Control the descent, no bouncing.
 - Single-Leg RDL — 3 × 8

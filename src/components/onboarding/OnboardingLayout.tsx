@@ -49,6 +49,39 @@ interface OnboardingLayoutProps {
 
 const DEFAULT_SCROLL_BOTTOM_PADDING = 40;
 
+interface OnboardingContinueButtonProps {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  saving?: boolean;
+}
+
+/** The one primary action used at the bottom of every onboarding step. */
+export const OnboardingContinueButton: React.FC<OnboardingContinueButtonProps> = ({
+  label,
+  onPress,
+  disabled = false,
+  saving = false,
+}) => (
+  <Pressable
+    onPress={onPress}
+    disabled={disabled || saving}
+    style={({ pressed }) => [
+      styles.ctaButton,
+      (disabled || saving) && styles.ctaDisabled,
+      pressed && !disabled && !saving && styles.ctaPressed,
+    ]}
+  >
+    <Text
+      variant="button"
+      color={disabled || saving ? colors.text.disabled : colors.text.inverse}
+      align="center"
+    >
+      {saving ? 'Saving…' : label}
+    </Text>
+  </Pressable>
+);
+
 /**
  * Onboarding screen shell.
  *
@@ -115,23 +148,12 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       ) : footerHelperText ? (
         <Text style={styles.footerHelper}>{footerHelperText}</Text>
       ) : null}
-      <Pressable
+      <OnboardingContinueButton
+        label={continueLabel}
         onPress={onContinue}
-        disabled={continueDisabled || saving}
-        style={({ pressed }) => [
-          styles.ctaButton,
-          (continueDisabled || saving) && styles.ctaDisabled,
-          pressed && !continueDisabled && !saving && styles.ctaPressed,
-        ]}
-      >
-        <Text
-          variant="button"
-          color={continueDisabled || saving ? colors.text.disabled : colors.text.inverse}
-          align="center"
-        >
-          {saving ? 'Saving…' : continueLabel}
-        </Text>
-      </Pressable>
+        disabled={continueDisabled}
+        saving={saving}
+      />
     </Animated.View>
   );
 

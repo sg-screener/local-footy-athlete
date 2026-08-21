@@ -68,6 +68,8 @@ export interface ComposedDayDetail {
   strengthExercises: any[];
   speedExercises: any[];
   supportExercises: any[];
+  mobilityExercises: any[];
+  recoveryExercises: any[];
   conditioningExercises: any[];
   conditioningOptions: ResolvedConditioningOption[];
   conditioningRowCount: number;
@@ -89,6 +91,8 @@ export function composeDayDetail(
       strengthExercises: [] as any[],
       speedExercises: [] as any[],
       supportExercises: [] as any[],
+      mobilityExercises: [] as any[],
+      recoveryExercises: [] as any[],
       conditioningExercises: [] as any[],
       conditioningOptions: [] as ResolvedConditioningOption[],
       conditioningRowCount: 0,
@@ -157,6 +161,8 @@ export function composeDayDetail(
   // reason `strengthExercises` is not recomputed from the exercise list.
   const speedExercises = order(componentRows.speedRows);
   const supportExercises = order(componentRows.supportRows);
+  const mobilityExercises = order(componentRows.mobilityRows);
+  const recoveryExercises = order(componentRows.recoveryRows);
   const conditioningExercises = componentRows.conditioningRows;
   let conditioningOptions: ResolvedConditioningOption[] = [];
 
@@ -202,6 +208,8 @@ export function composeDayDetail(
     strengthExercises,
     speedExercises,
     supportExercises,
+    mobilityExercises,
+    recoveryExercises,
     conditioningExercises,
     conditioningOptions,
     conditioningRowCount,

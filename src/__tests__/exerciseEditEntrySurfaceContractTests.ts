@@ -421,6 +421,22 @@ console.log('\n[5] The orphaned callback is deleted, not left as dead code');
   );
 }
 
+console.log('\n[6] Add and swap exercise choices show names only');
+{
+  const nameOnlyChoiceLabels = source.match(/label=\{option\.name\}/g) ?? [];
+  ok(
+    'both add and swap candidate rows render only the exercise name',
+    nameOnlyChoiceLabels.length === 2
+      && !source.includes('label={`${option.name} — ${option.meta}`}'),
+    'the add picker and swap picker must not append sets/reps to their exercise names',
+  );
+  ok(
+    'the chosen add and swap options still carry their full suggestion forward',
+    (source.match(/suggestion: option\.suggestion/g) ?? []).length === 2,
+    'hiding prescription text in the picker must not discard the prescription applied after selection',
+  );
+}
+
 console.log(`\nExercise-edit entry-surface totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {

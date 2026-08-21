@@ -106,6 +106,9 @@ function aWorldWithEveryInputAnswered(): void {
       '2026-07-13': { blockNumber: 1, requiredStrengthSessions: 8 },
     },
   } as never);
+  useProgramStore.getState().setBandResistanceOverride(
+    '2026-07-14', 'side-plank-row', 'thick',
+  );
 }
 
 async function run(): Promise<void> {
@@ -161,6 +164,12 @@ async function run(): Promise<void> {
     JSON.stringify(live.acceptedBlocks) === '{"2026-07-13":{"blockNumber":1,"requiredStrengthSessions":8}}',
     JSON.stringify(live.acceptedBlocks),
   );
+  check(
+    "the athlete's chosen band thickness is in the LIVE input projection",
+    JSON.stringify(live.bandResistanceOverrides)
+      === '{"2026-07-14":{"side-plank-row":"thick"}}',
+    JSON.stringify(live.bandResistanceOverrides),
+  );
 
   const raw = localStorageData.get('program-store');
   const onDisk = raw
@@ -172,6 +181,13 @@ async function run(): Promise<void> {
       && JSON.stringify(onDisk.acceptedBlocks)
         === '{"2026-07-13":{"blockNumber":1,"requiredStrengthSessions":8}}',
     JSON.stringify(onDisk?.acceptedBlocks),
+  );
+  check(
+    "the athlete's chosen band thickness reached DISK down the persist route",
+    onDisk !== null
+      && JSON.stringify(onDisk.bandResistanceOverrides)
+        === '{"2026-07-14":{"side-plank-row":"thick"}}',
+    JSON.stringify(onDisk?.bandResistanceOverrides),
   );
   check(
     'the two sides carry the SAME KEYS — a new input cannot reach one route only',

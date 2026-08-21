@@ -23,6 +23,35 @@ const home = read('screens/home/HomeScreenV2.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
 const equipment = read('screens/home/EquipmentLimitationSheet.tsx');
 const witness = read('components/ExplorerRenderWitness.tsx');
+const popupHeaderConsumers: Record<string, number> = {
+  'components/CoachNoteSheet.tsx': 1,
+  'components/ModifiersSheet.tsx': 1,
+  'components/RebuildSheet.tsx': 2,
+  'components/SeasonPhaseShiftSheet.tsx': 4,
+  'components/SessionActionSheet.tsx': 1,
+  'components/StaleOverrideBanner.tsx': 2,
+  'screens/home/EquipmentLimitationSheet.tsx': 1,
+  'screens/home/HomeQuickActionSheet.tsx': 4,
+  'screens/home/HomeScreenV2.tsx': 10,
+  'screens/home/PlanChangeSheet.tsx': 1,
+  'screens/profile/EquipmentEditorSheet.tsx': 1,
+  'screens/profile/ProfileScreen.tsx': 11,
+};
+const popupDescriptionConsumers: Record<string, number> = {
+  'components/CoachNoteSheet.tsx': 1,
+  'components/ModifiersSheet.tsx': 1,
+  'components/RebuildSheet.tsx': 1,
+  'components/SeasonPhaseShiftSheet.tsx': 4,
+  'components/SessionActionSheet.tsx': 1,
+  'components/StaleOverrideBanner.tsx': 2,
+  'screens/home/EquipmentLimitationSheet.tsx': 1,
+  'screens/home/GuidedInjuryFlowSheet.tsx': 1,
+  'screens/home/HomeQuickActionSheet.tsx': 1,
+  'screens/home/HomeScreenV2.tsx': 7,
+  'screens/home/SessionEquipmentSheet.tsx': 1,
+  'screens/profile/EquipmentEditorSheet.tsx': 1,
+  'screens/profile/ProfileScreen.tsx': 6,
+};
 
 let pass = 0;
 let fail = 0;
@@ -53,9 +82,10 @@ function openingTag(source: string, element: string, marker: string): string {
 
 section('[1] Sheet keeps its identifier without becoming an accessible parent');
 {
-  const rootTag = openingTag(sheet, 'View', 'testID={testID}');
-  const backdropTag = openingTag(sheet, 'Pressable', 'onPress={handleClose}');
-  const contentTag = openingTag(sheet, 'View', 'accessibilityViewIsModal');
+  const sheetComponent = sheet.slice(sheet.indexOf('export function Sheet('));
+  const rootTag = openingTag(sheetComponent, 'View', 'testID={testID}');
+  const backdropTag = openingTag(sheetComponent, 'Pressable', 'onPress={handleClose}');
+  const contentTag = openingTag(sheetComponent, 'View', 'accessibilityViewIsModal');
 
   ok('sheet testID remains on a native container', /testID=\{testID\}/.test(rootTag));
   ok('sheet container does not group descendants', /accessible=\{false\}/.test(rootTag));
@@ -66,6 +96,43 @@ section('[1] Sheet keeps its identifier without becoming an accessible parent');
   ok('backdrop is excluded from accessibility focus', /accessible=\{false\}/.test(backdropTag));
   ok('sheet content is not a grouping accessibility node', /accessible=\{false\}/.test(contentTag));
   ok('sheet content retains modal VoiceOver scope', /accessibilityViewIsModal/.test(contentTag));
+  ok('every shared bottom sheet receives the lime popup accent',
+    /handle:\s*\{[^}]*backgroundColor:\s*colors\.accent\.lime/.test(sheet));
+  ok('the shared popup header keeps the title lime and subtitle white',
+    /function SheetHeader\([\s\S]*styles\.headerTitle[\s\S]*styles\.headerSubtitle/.test(sheet)
+      && /headerTitle:\s*\{[^}]*color:\s*colors\.accent\.lime/.test(sheet)
+      && /headerSubtitle:\s*\{[^}]*color:\s*colors\.text\.primary/.test(sheet));
+
+  // Unit: SheetHeader opening tags. Denominator: all 39 popup-header sites in
+  // the 12 current Sheet consumers. Pinning each file's count catches a caller
+  // that quietly falls back to an unstructured one-line heading.
+  const popupHeaderMismatches = Object.entries(popupHeaderConsumers).filter(([file, expected]) => {
+    const actual = read(file).match(/<SheetHeader\b/g)?.length ?? 0;
+    return actual !== expected;
+  });
+  ok('all 39 shared-sheet popups use the two-line header',
+    popupHeaderMismatches.length === 0,
+    popupHeaderMismatches.map(([file, expected]) => `${file}: expected ${expected}`).join(', '));
+
+  ok('shared popup explanations use 14px above and 18px below',
+    /header:\s*\{[^}]*marginBottom:\s*14/.test(sheet)
+      && /description:\s*\{[^}]*marginBottom:\s*18/.test(sheet));
+  // Unit: SheetDescription opening tags. Denominator: the 28 explanatory-text
+  // sites in the current popup surfaces.
+  const popupDescriptionMismatches = Object.entries(popupDescriptionConsumers)
+    .filter(([file, expected]) => (read(file).match(/<SheetDescription\b/g)?.length ?? 0) !== expected);
+  ok('all 28 popup explanations use the shared spacing treatment',
+    popupDescriptionMismatches.length === 0,
+    popupDescriptionMismatches.map(([file, expected]) => `${file}: expected ${expected}`).join(', '));
+
+  ok('injury keeps INJURY lime above the white question',
+    /title=\{step\?\.eyebrow \?\? 'Session'\}[\s\S]*subtitle=\{step\?\.title \?\? ''\}/.test(read('components/SessionActionSheet.tsx'))
+      && /eyebrow: titlePrefix \?\? 'Injury'/.test(injury)
+      && /region: 'Where is the issue\?'/.test(injury));
+
+  ok('the standalone demo popup keeps DEMO lime and its exercise title white',
+    /eyebrow:\s*\{[^}]*color:\s*colors\.accent\.lime/.test(read('components/ExerciseVideoModal.tsx'))
+      && /title:\s*\{[^}]*color:\s*'#FFFFFF'/.test(read('components/ExerciseVideoModal.tsx')));
 }
 
 section('[2] Button exposes one stable actionable leaf');
@@ -114,7 +181,7 @@ section('[4] Required sheet titles and child controls remain independently expos
 {
   ok(
     'Plan Change title remains visible accessibility text inside Sheet',
-    /<Sheet[^>]*testID="plan-change-sheet">[\s\S]*?<Text style=\{styles\.title\}>/.test(planChangeSheet),
+    /<Sheet[^>]*testID="plan-change-sheet">[\s\S]*?<SheetHeader title="Plan change" subtitle=\{weekdayLabel\(date\)\}/.test(planChangeSheet),
   );
   ok(
     'Plan Change actions keep their identifiers on MenuOption',
@@ -133,7 +200,7 @@ section('[4] Required sheet titles and child controls remain independently expos
   );
   ok(
     'Fixture sheet title remains visible accessibility text inside Sheet',
-    /<Sheet[\s\S]*?testID=\{explorerTestId\.fixtureActions\(fixtureId\)\}[\s\S]*?<Text style=\{styles\.sheetTitle\}>/.test(home),
+    /<Sheet[\s\S]*?testID=\{explorerTestId\.fixtureActions\(fixtureId\)\}[\s\S]*?<SheetHeader title="Game day" subtitle=\{label\}/.test(home),
   );
   ok(
     'Fixture move action keeps its identifier on SheetOption',

@@ -17,6 +17,7 @@ export type LfaIconName =
   | 'medical-shield'
   | 'no-energy'
   | 'half-energy'
+  | 'full-energy'
   | 'totally-cooked'
   | 'severe-illness'
   | 'move-right'
@@ -29,10 +30,15 @@ export type LfaIconName =
   | 'no-equipment'
   | 'thumbs-down'
   | 'dumbbell'
+  | 'barbell-plates'
   | 'kettlebell'
   | 'footy'
   | 'pull-up-bar'
   | 'plyo-box'
+  | 'dip-bars'
+  | 'back-extension'
+  | 'ab-wheel'
+  | 'sandbag-dead-ball'
   | 'foam-roller'
   | 'cable-machine'
   | 'weight-machine'
@@ -60,6 +66,7 @@ const MCI_ICON: Partial<Record<LfaIconName, MciName>> = {
   'medical-shield': 'shield-plus-outline',
   'no-energy': 'battery-low',
   'half-energy': 'battery-50',
+  'full-energy': 'battery',
   'totally-cooked': 'skull-crossbones-outline',
   'severe-illness': 'emoticon-dead-outline',
   'move-right': 'arrow-right',
@@ -87,12 +94,17 @@ const TRACED_ICON = {
 } as const;
 
 export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
+  // Traced artwork contains more internal whitespace than preset glyphs. Give
+  // it a slightly larger optical box while library icons retain `size` exactly.
+  const tracedSize = size * 1.2;
+
   if (name === 'flexed-arm' || name === 'upper-body') {
+    const flexedArmSize = tracedSize * 1.2;
     return (
-      <Svg width={size} height={size} viewBox="60 55 230 245" fill="none">
+      <Svg width={flexedArmSize} height={flexedArmSize} viewBox="60 55 230 245" fill="none">
         <G
           stroke={color}
-          strokeWidth={7}
+          strokeWidth={8.5}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -111,22 +123,22 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   if (name === 'footy') {
     return (
-      <Svg width={size} height={size} viewBox="0 0 550 550" fill="none">
+      <Svg width={tracedSize} height={tracedSize} viewBox="0 0 550 550" fill="none">
         <Path
           d="M327 28 C276 17 221 45 175 94 C125 147 96 218 93 302 C90 388 119 461 168 506 C196 532 228 539 261 534 C338 522 409 442 443 353 C476 267 464 166 430 99 C403 47 365 25 327 28Z"
           stroke={color}
-          strokeWidth={24}
+          strokeWidth={29}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <Path
           d="M327 29 C290 57 265 108 239 166 C211 229 197 302 192 374 C188 438 191 491 210 529"
           stroke={color}
-          strokeWidth={15}
+          strokeWidth={18}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <G stroke={color} strokeWidth={13} strokeLinecap="butt">
+        <G stroke={color} strokeWidth={16} strokeLinecap="butt">
           <Path d="M207 212L241 213" />
           <Path d="M202 231L237 233" />
           <Path d="M198 250L232 253" />
@@ -141,14 +153,15 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   const outlined = OUTLINED_TRACED_ICON[name as keyof typeof OUTLINED_TRACED_ICON];
   if (outlined) {
+    const outlinedTracedSize = name === 'weight-machine' ? tracedSize * 1.2 : tracedSize;
     return (
       <Svg
-        width={size}
-        height={size}
+        width={outlinedTracedSize}
+        height={outlinedTracedSize}
         viewBox={outlined.viewBox}
         fill="none"
         stroke={color}
-        strokeWidth={9}
+        strokeWidth={12}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -159,8 +172,9 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   const traced = TRACED_ICON[name as keyof typeof TRACED_ICON];
   if (traced) {
+    const renderedTracedSize = name === 'row-erg' ? tracedSize * 1.2 : tracedSize;
     return (
-      <Svg width={size} height={size} viewBox={traced.viewBox} fill={color}>
+      <Svg width={renderedTracedSize} height={renderedTracedSize} viewBox={traced.viewBox} fill={color}>
         <Path d={traced.d} fill={color} fillRule="evenodd" />
       </Svg>
     );
@@ -168,10 +182,10 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   if (name === 'foam-roller') {
     return (
-      <Svg width={size} height={size} viewBox="50 50 240 190" fill="none">
+      <Svg width={tracedSize} height={tracedSize} viewBox="50 50 240 190" fill="none">
         <G
           stroke={color}
-          strokeWidth={5.5}
+          strokeWidth={7}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -192,14 +206,14 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
   if (name === 'pull-up-bar') {
     return (
       <Svg
-        width={size}
-        height={size}
+        width={tracedSize}
+        height={tracedSize}
         viewBox="65 35 210 235"
         fill="none"
       >
         <G
           stroke={color}
-          strokeWidth={5}
+          strokeWidth={6.5}
           strokeLinecap="butt"
           strokeLinejoin="miter"
         >
@@ -217,10 +231,10 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   if (name === 'plyo-box') {
     return (
-      <Svg width={size} height={size} viewBox="40 35 240 175" fill="none">
+      <Svg width={tracedSize} height={tracedSize} viewBox="40 35 240 175" fill="none">
         <G
           stroke={color}
-          strokeWidth={7}
+          strokeWidth={8.5}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -238,19 +252,200 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
     );
   }
 
+  if (name === 'dip-bars') {
+    return (
+      <Svg
+        width={tracedSize}
+        height={tracedSize}
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        {/* Traced from Sam's front-on dip-bar reference: two curved rails,
+            the centre brace and the separate round feet. */}
+        <G
+          stroke={color}
+          strokeWidth={1.85}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M9 4H7.4C5.1 4 3.4 5.8 3.4 8.1V16.2" />
+          <Path d="M15 4H16.6C18.9 4 20.6 5.8 20.6 8.1V16.2" />
+        </G>
+        <Path d="M10 3.2H14V5.3H10Z" fill={color} />
+        <Circle cx={3.4} cy={19.2} r={1.55} fill={color} />
+        <Circle cx={20.6} cy={19.2} r={1.55} fill={color} />
+      </Svg>
+    );
+  }
+
+  if (name === 'back-extension') {
+    return (
+      <Svg
+        width={tracedSize}
+        height={tracedSize}
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        {/* Simplified from Sam's 45-degree bench reference: split hip pads,
+            diagonal chassis, paired ankle rollers and stabilising feet. */}
+        <G
+          stroke={color}
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M7.4 6.2L18.1 19.6" />
+          <Path d="M13.3 13.5L7.7 20.1" />
+          <Path d="M2.5 20.1H9.4" />
+          <Path d="M16.3 20.1H22" />
+          <Path d="M16.6 13.2L21 11" />
+        </G>
+        <G
+          stroke={color}
+          strokeWidth={2.9}
+          strokeLinecap="round"
+        >
+          <Path d="M16.3 11.7L18.4 10.7" />
+          <Path d="M19 10.3L20.7 9.5" />
+        </G>
+        <Path
+          d="M4.4 3.9C4.2 3.5 4.5 3.1 4.9 3.1H7.4C7.8 3.1 8.1 3.3 8.3 3.6L10.6 7.1C10.8 7.5 10.6 7.9 10.2 8L8.6 8.4C8.2 8.5 7.9 8.3 7.7 8L4.4 3.9Z"
+          fill={color}
+        />
+        <Path
+          d="M8.6 3.3C8.4 2.9 8.7 2.5 9.1 2.5H11.5C11.9 2.5 12.2 2.7 12.4 3.1L14.4 6.8C14.6 7.2 14.4 7.6 14 7.7L12.4 8C12 8.1 11.7 7.9 11.5 7.6L8.6 3.3Z"
+          fill={color}
+        />
+      </Svg>
+    );
+  }
+
+  if (name === 'ab-wheel') {
+    return (
+      <Svg
+        width={tracedSize}
+        height={tracedSize}
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        {/* Simplified from Sam's perspective reference: the long through-axle
+            sits behind two offset wheels, with the front rim kept visible. */}
+        <G
+          stroke={color}
+          strokeWidth={2.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M2.4 7.2L8.7 9.6" />
+          <Path d="M15.1 13.8L21.7 16.3" />
+        </G>
+        <Path
+          d="M11.3 3.3C8.7 3.9 7.1 7.5 7.1 11.8C7.1 16.3 8.8 19.8 11.4 20.5"
+          stroke={color}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+        />
+        <Path
+          d="M13 3.4C10.3 3.5 8.4 7.2 8.4 11.9C8.4 16.7 10.3 20.4 13 20.6C15.7 20.4 17.6 16.7 17.6 11.9C17.6 7.2 15.7 3.5 13 3.4Z"
+          stroke={color}
+          strokeWidth={1.8}
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M13.2 6.3C11.8 6.5 10.8 8.9 10.8 11.9C10.8 15 11.8 17.4 13.2 17.7C14.6 17.4 15.6 15 15.6 11.9C15.6 8.9 14.6 6.5 13.2 6.3Z"
+          stroke={color}
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+        />
+        <Circle cx={13.3} cy={12} r={1.25} fill={color} />
+      </Svg>
+    );
+  }
+
+  if (name === 'sandbag-dead-ball') {
+    return (
+      <Svg
+        width={tracedSize}
+        height={tracedSize}
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        {/* Simplified from Sam's supplied mark: a round dead-ball body around
+            the central sand-bag panel, stitched seam and lower reinforcing line. */}
+        <G
+          stroke={color}
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M16.8 3.6C12.6 1.4 7.3 2.6 4.3 6.4C1.4 10.2 1.8 15.7 5.1 19.1C8.6 22.7 14.5 22.7 18.3 19.4C22 16.1 22.4 10.6 19.4 6.6" />
+          <Path d="M6.6 8.5C7.1 7.5 16.9 7.5 17.4 8.5C18.2 10.7 18.2 14.2 17.4 16C16.9 17.1 7.1 17.2 6.5 16C5.8 13.8 5.8 10.7 6.6 8.5Z" />
+          <Path d="M5.5 7.7L6.7 8.6" />
+          <Path d="M17.3 8.6L19.4 6.9" />
+          <Path d="M6.1 16L4.8 17" />
+          <Path d="M17.8 16L19.2 17" />
+          <Path d="M8.1 12H15.9" />
+          <Path d="M9.3 14.4H14.7" />
+        </G>
+        <G stroke={color} strokeWidth={1.4} strokeLinecap="round">
+          <Path d="M9 11.4L9.4 12.6" />
+          <Path d="M10.6 11.4L11 12.6" />
+          <Path d="M12.2 11.4L12.6 12.6" />
+          <Path d="M13.8 11.4L14.2 12.6" />
+          <Path d="M15.4 11.4L15.8 12.6" />
+        </G>
+      </Svg>
+    );
+  }
+
+  if (name === 'barbell-plates') {
+    const barbellWidth = tracedSize * 1.35;
+    return (
+      <Svg
+        width={barbellWidth}
+        height={tracedSize}
+        viewBox="0 0 32 24"
+        fill="none"
+      >
+        {/* Traced from Sam's straight-on reference: the exposed shaft is much
+            longer than a dumbbell, with the plates clustered near both ends. */}
+        <Path
+          d="M1.4 12H30.6"
+          stroke={color}
+          strokeWidth={1.55}
+          strokeLinecap="square"
+        />
+        <G stroke={color} strokeLinecap="round">
+          <Path d="M4.1 10.3V13.7" strokeWidth={2.25} />
+          <Path d="M6.4 7.3V16.7" strokeWidth={2.9} />
+          <Path d="M8.9 7.3V16.7" strokeWidth={2.9} />
+          <Path d="M23.1 7.3V16.7" strokeWidth={2.9} />
+          <Path d="M25.6 7.3V16.7" strokeWidth={2.9} />
+          <Path d="M27.9 10.3V13.7" strokeWidth={2.25} />
+        </G>
+      </Svg>
+    );
+  }
+
   if (name === 'lower-body') {
     return (
       <Svg
-        width={size}
-        height={size}
+        width={tracedSize}
+        height={tracedSize}
         viewBox="0 0 24 24"
         fill="none"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={1.85}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <Path d="M8 3.5h8l-1 7.5 2.5 9.5H14L12 13l-2 7.5H6.5L9 11z" />
+        {/* Traced from Sam's lower-body reference: one leg/foot silhouette,
+            with the thigh and calf contours retained at icon scale. */}
+        <Path d="M16.8 2.2C13.8 2.1 12.2 2.7 10 3.8L8.8 4.4C7.6 4.6 7 5.5 7 6.8V13.4C7 15.7 7.5 17.5 7.7 19.1C7.8 20.2 7.1 21 6 21.5C5.2 21.9 4.2 22.2 3.2 22.4C2.8 22.5 2.8 23.2 3.3 23.2H8.4C8.8 23.2 9 22.9 9.4 23.2C9.9 23.6 10.6 23.3 11 22.9C11.6 22.2 11.2 21.4 10.7 20.9C10.3 20.4 9.8 20.1 9.8 19.8L10.3 15.3C11.1 14.1 11.6 12.2 11.6 10.3C11.6 8.8 11.2 7.7 10.7 6.9" />
+        <Path d="M11.2 5.7C12.2 5 13.2 4.7 14.5 4.5" />
+        <Path d="M15.5 4.5L16.3 4.6" />
+        <Path d="M12.4 7.2C14.1 7.3 15.6 7.1 17.1 6.6" />
+        <Path d="M8.7 8.6C8.5 10 8.7 11.4 9.5 12.5" />
       </Svg>
     );
   }
@@ -258,17 +453,37 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
   if (name === 'spine') {
     return (
       <Svg
-        width={size}
-        height={size}
+        width={tracedSize}
+        height={tracedSize}
         viewBox="0 0 24 24"
         fill="none"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
       >
-        <Path d="M12 2.5c-2 2-2 4 0 5s2 3 0 4-2 3 0 4 2 3 0 6" />
-        <Path d="M9 5h6M9 9h6M9 13h6M9 17h6M9.5 21h5" />
+        {/* Traced from Sam's back-pain reference. The figure, pain mark and
+            radiating lines share the caller's single colour. */}
+        <G
+          stroke={color}
+          strokeWidth={1.65}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Circle cx={18.3} cy={4.5} r={2.25} />
+          <Path d="M10.2 4.8L14.8 6.6C16.5 7.2 17 8.2 16.2 9.6L14.5 12C13.8 13 12.7 14 11.2 14.9" />
+          <Path d="M10.4 6.1L8.5 8C7.7 8.8 6.8 8.7 6.1 8.1" />
+          <Path d="M9.1 6.8L10.7 7.5L9.6 9.1" />
+          <Path d="M8.1 11.4C7.1 12.5 7.2 14 8.1 15.2L11.3 19.2L11.6 22.4C11.7 23.4 13.4 23.6 13.7 22.6L13.4 18.5L11.2 15" />
+          <Path d="M7.9 14.7L7.7 17.8L5.2 21.5C4.5 22.5 3.2 21.8 3.9 20.7L6.7 16.9L6.8 15.2" />
+        </G>
+        <Circle cx={9.3} cy={10.4} r={1.15} fill={color} />
+        <G
+          stroke={color}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M5.2 3.6L5.8 5.5L6.5 4.8L7.1 6.5" />
+          <Path d="M2.2 7.3L4.1 8.6L4.4 7.7L5.8 8.7" />
+          <Path d="M2.7 11.8L4.7 11.2L4.2 10.4L5.8 10" />
+        </G>
       </Svg>
     );
   }

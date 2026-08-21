@@ -53,6 +53,7 @@ import { conditioningSessionMuscles } from '../data/conditioningMuscleMetadata';
 import { getExerciseTags } from '../data/exerciseTags';
 import { muscleMetadataFor, type MuscleGroup } from '../data/muscleExperienceMetadata';
 import { JOURNAL_LOAD_WEIGHTS } from './journalWeek';
+import { displayReps } from './prescriptionDisplay';
 import {
   STRENGTH_PATTERN_ORDER,
   mainPatternForExerciseMovement,
@@ -488,15 +489,6 @@ function positive(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function midpointReps(min: number, max: number): number | null {
-  const lo = positive(min);
-  const hi = positive(max);
-  if (lo === null && hi === null) return null;
-  if (lo === null) return hi;
-  if (hi === null) return lo;
-  return (lo + hi) / 2;
-}
-
 /**
  * One main lift's tonnage — sets x reps x kg, from what was actually recorded.
  *
@@ -522,7 +514,7 @@ export function liftTonnageKg(lift: StrengthExercisePerformanceLog): number | nu
   if (sets === null) return null;
 
   const reps = positive(lift.actualReps)
-    ?? midpointReps(lift.prescribedRepsMin, lift.prescribedRepsMax);
+    ?? displayReps(lift.prescribedRepsMin, lift.prescribedRepsMax);
   if (reps === null) return null;
 
   return sets * reps * weight;
@@ -694,7 +686,7 @@ function upperOrLowerForExerciseName(name: string): 'upper' | 'lower' | null {
 function plannedLiftTonnageKg(lift: PlannedLift): number | null {
   const weight = positive(lift.weightKg);
   const sets = positive(lift.sets);
-  const reps = midpointReps(lift.repsMin, lift.repsMax);
+  const reps = displayReps(lift.repsMin, lift.repsMax);
   if (weight === null || sets === null || reps === null) return null;
   return sets * reps * weight;
 }
@@ -995,8 +987,9 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
       // is two representations of one fact, and the second one to be written is
       // the one that goes stale. The line this feeds ("biggest week for X in
       // the last N weeks") stays true a fortiori under a stricter test.
-      if (previousBest > 0
-        && load >= previousBest * JOURNAL_LOAD_CONSTANTS.regionHotRatio.value) {
+      const hotThreshold = previousBest * JOURNAL_LOAD_CONSTANTS.regionHotRatio.value;
+      const comparisonTolerance = Number.EPSILON * Math.max(Math.abs(load), Math.abs(hotThreshold), 1);
+      if (previousBest > 0 && load + comparisonTolerance >= hotThreshold) {
         observations.push({
           region: muscle as MuscleGroup,
           thisWeek: load,

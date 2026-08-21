@@ -56,7 +56,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Sheet } from './ui';
+import { Sheet, SheetDescription, SheetHeader } from './ui';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
@@ -294,9 +294,12 @@ export function SessionActionSheet({
         </Pressable>
       </View>
 
-      {step?.eyebrow ? <Text style={styles.eyebrow}>{step.eyebrow}</Text> : null}
-      <Text style={styles.title} testID={SESSION_ACTION_TITLE_TEST_ID}>{step?.title ?? ''}</Text>
-      {step?.subtitle ? <Text style={styles.subtitle}>{step.subtitle}</Text> : null}
+      <SheetHeader
+        title={step?.eyebrow ?? 'Session'}
+        subtitle={step?.title ?? ''}
+        subtitleTestID={SESSION_ACTION_TITLE_TEST_ID}
+      />
+      {step?.subtitle ? <SheetDescription>{step.subtitle}</SheetDescription> : null}
 
       {/* ── THE ONE SCROLL OWNER ───────────────────────────────────────────
         * ⚠ **`flexShrink: 1`, NOT `flex: 1`.** The sheet HUGS its content up to
@@ -344,26 +347,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'right',
   },
-  eyebrow: {
-    color: colors.accent.lime,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 21,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  subtitle: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 4,
-  },
-  body: { flexShrink: 1, marginTop: spacing.md },
+  body: { flexShrink: 1 },
   bodyContent: { paddingBottom: spacing.xs },
 });

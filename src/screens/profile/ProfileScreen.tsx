@@ -37,7 +37,7 @@ import { todayISOLocal } from '../../utils/appDate';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
-import { Button as V2Button, Sheet } from '../../components/ui';
+import { Button as V2Button, Sheet, SheetDescription, SheetHeader } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
 import { WEEK_DAYS, DAY_SHORT, REBUILD_MSG_INTERVAL_MS } from '../home/homeScreenConstants';
 import { storedGameAnchor } from '../../rules/gameAnchor';
@@ -1062,7 +1062,7 @@ function SetupUpdateSheet({
     />
   ) : step === 'playerName' ? (
     <>
-      <Text style={styles.sheetTitle}>What should I call you?</Text>
+      <SheetHeader title="Player details" subtitle="What should I call you?" />
       <View style={styles.playerInputCard}>
         <Feather name="user" size={19} color={colors.text.tertiary} />
         <AppTextInput
@@ -1097,7 +1097,7 @@ function SetupUpdateSheet({
     </>
   ) : step === 'playerPosition' ? (
     <>
-      <Text style={styles.sheetTitle}>What footy role fits you best?</Text>
+      <SheetHeader title="Player details" subtitle="What footy role fits you best?" />
       <View style={styles.playerOptionGrid}>
         {ROLE_BUCKET_OPTIONS.map((option) => {
           const selected = draftPosition === option.id;
@@ -1131,7 +1131,7 @@ function SetupUpdateSheet({
     </>
   ) : step === 'playerExperience' ? (
     <>
-      <Text style={styles.sheetTitle}>What’s your training experience?</Text>
+      <SheetHeader title="Player details" subtitle="What’s your training experience?" />
       <View style={styles.playerExperienceStack}>
         {EXPERIENCE_OPTIONS.map((option) => {
           const selected = draftExperience === option.id;
@@ -1168,10 +1168,10 @@ function SetupUpdateSheet({
        onboarding, same ingress, same refusal sentence. The ruled numbers are
        not restated here: whatever `validateTwoKmTime` says is what shows. */
     <>
-      <Text style={styles.sheetTitle}>What’s your recent 2km time?</Text>
-      <Text style={styles.sheetHint}>
+      <SheetHeader title="Running" subtitle="What’s your recent 2km time?" />
+      <SheetDescription>
         Sets your running paces. Leave it blank if you haven’t tested.
-      </Text>
+      </SheetDescription>
       <View style={styles.twoKmRow}>
         <View style={styles.twoKmField}>
           <Text style={styles.twoKmLabel}>Minutes</Text>
@@ -1226,7 +1226,7 @@ function SetupUpdateSheet({
     </>
   ) : step === 'programPhase' ? (
     <>
-      <Text style={styles.sheetTitle}>What phase are you in?</Text>
+      <SheetHeader title="Program setup" subtitle="What phase are you in?" />
       <View style={styles.programOptionStack}>
         {SEASON_PHASE_OPTIONS.map((option) => {
           const selected = draftSeasonPhase === option;
@@ -1259,10 +1259,10 @@ function SetupUpdateSheet({
     </>
   ) : step === 'programLfaDays' ? (
     <>
-      <Text style={styles.sheetTitle}>What days can you train?</Text>
-      <Text style={styles.sheetSubtitle}>
+      <SheetHeader title="Program setup" subtitle="What days can you train?" />
+      <SheetDescription>
         We’ll build your LFA work around these days.
-      </Text>
+      </SheetDescription>
       <DayChipGrid
         days={WEEK_DAYS}
         selectedDays={draftPreferredDays}
@@ -1287,10 +1287,10 @@ function SetupUpdateSheet({
     </>
   ) : step === 'programTeamDays' ? (
     <>
-      <Text style={styles.sheetTitle}>Team training days</Text>
-      <Text style={styles.sheetSubtitle}>
-        Which days does your team train? We’ll work your program around these.
-      </Text>
+      <SheetHeader title="Team training" subtitle="Which days does your team train?" />
+      <SheetDescription>
+        We’ll work your program around these days.
+      </SheetDescription>
       <DayChipGrid
         days={WEEK_DAYS}
         selectedDays={draftTeamDays}
@@ -1320,10 +1320,10 @@ function SetupUpdateSheet({
     </>
   ) : step === 'programGameDay' ? (
     <>
-      <Text style={styles.sheetTitle}>Usual game day</Text>
-      <Text style={styles.sheetSubtitle}>
+      <SheetHeader title="Game day" subtitle="Which day do you usually play?" />
+      <SheetDescription>
         We’ll keep your week built around match day.
-      </Text>
+      </SheetDescription>
       <DayChipGrid
         days={WEEK_DAYS}
         selectedDays={draftGameDay ? [draftGameDay] : []}
@@ -1345,10 +1345,10 @@ function SetupUpdateSheet({
     </>
   ) : step === 'confirm' ? (
     <>
-      <Text style={styles.sheetTitle}>Update your program?</Text>
-      <Text style={styles.sheetSubtitle}>
+      <SheetHeader title="Program setup" subtitle="Update your program?" />
+      <SheetDescription>
         Your program will rebuild around your updated setup.
-      </Text>
+      </SheetDescription>
       <View style={styles.setupNoteBlock}>
         <Text style={styles.setupNotePreserved}>✓ Setup changes saved</Text>
         <Text style={styles.setupNotePreserved}>✓ Team and game days preserved where possible</Text>
@@ -1370,10 +1370,10 @@ function SetupUpdateSheet({
     </>
   ) : (
     <>
-      <Text style={styles.sheetTitle}>Update program setup</Text>
-      <Text style={styles.sheetSubtitle}>
+      <SheetHeader title="Program setup" subtitle="Review your setup" />
+      <SheetDescription>
         Change the details your program is built around.
-      </Text>
+      </SheetDescription>
 
       <View style={styles.sheetSection}>
         <Text style={styles.sheetSectionTitle}>PLAYER DETAILS</Text>
@@ -1573,7 +1573,7 @@ function SetupUpdateBuildingState({
         size="large"
         style={styles.setupBuildingSpinner}
       />
-      <Text style={styles.setupBuildingTitle}>Updating your program...</Text>
+      <SheetHeader title="Program setup" subtitle="Updating your program…" centered />
       <Text style={styles.setupBuildingSubtext}>This can take up to 1 minute</Text>
       <Animated.View style={[styles.setupBuildingMsgSlot, { opacity: msgOpacity }]}>
         <Text style={styles.setupBuildingMsg} numberOfLines={1}>

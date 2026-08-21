@@ -36,6 +36,31 @@ const LOWERCASE_UNIT_SUFFIXES = new Set([
   'secs',
 ]);
 
+const EXERCISE_DISPLAY_ALIASES: Readonly<Record<string, string>> = {
+  'single-leg squat (to box)': 'Single-Leg Box Squat',
+  'single-arm db bench press': '1-Arm DB Bench Press',
+  'single-arm db floor press': '1-Arm DB Floor Press',
+  'half-kneeling single-arm overhead press': 'Half-Kneeling 1-Arm Press',
+  'inverted row (bodyweight)': 'Inverted Row',
+  'single-arm lat pulldown': '1-Arm Lat Pulldown',
+  'banded tricep pushdown': 'Band Tricep Pushdown',
+  'chin-up negative (slow)': 'Slow Chin-Up Negative',
+  'bicep curl (barbell)': 'Barbell Bicep Curl',
+  'bicep curl (dumbbell)': 'Dumbbell Bicep Curl',
+  'copenhagen plank (half)': 'Half Copenhagen',
+  'woodchop (half kneeling)': 'Half-Kneeling Woodchop',
+  'banded external rotation': 'Band External Rotation',
+  'swiss ball hamstring curl': 'Swiss Ball Ham Curl',
+  'foam roll — hip flexor, quad, adductors': 'Foam Roll: Thighs',
+  'foam roll — calves & outer shins': 'Foam Roll: Calves & Shins',
+  'lacrosse ball glute release': 'Glute Ball Release',
+  'open book thoracic rotation': 'Open Book Rotation',
+  'chest / pec stretch (doorway)': 'Doorway Pec Stretch',
+  'pissing dog against wall': 'Wall Hip Opener',
+  'light walk or stationary bike': 'Light Walk / Bike',
+  "child's pose with breathing": "Child's Pose + Breathing",
+};
+
 function formatExerciseToken(token: string): string {
   if (!/[A-Za-z]/.test(token)) return token;
 
@@ -60,6 +85,9 @@ function formatExerciseToken(token: string): string {
 export function formatExerciseDisplayName(name: string | null | undefined): string {
   const raw = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
   if (!raw) return '';
+
+  const displayAlias = EXERCISE_DISPLAY_ALIASES[raw.toLowerCase()];
+  if (displayAlias) return displayAlias;
 
   return raw.replace(/[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g, formatExerciseToken);
 }

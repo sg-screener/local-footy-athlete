@@ -22,6 +22,10 @@ export const TEMPLATE_ITEM_KIND: Record<string, string> = {
   // conditioning-only day, are both the day's conditioning work.
   conditioning_choice: 'conditioning',
   conditioning_phase: 'conditioning',
+  // Mobility is a distinct session presentation while remaining a load-neutral
+  // recovery part in the canonical projection.
+  mobility: 'recovery',
+  recovery: 'recovery',
   // Add-on rows: `recoveryAddons`, rendered as ordinary optional rows since D13.
   addon: 'recovery',
   // The team-training banner.
@@ -63,13 +67,6 @@ export const TITLE_ONLY_PART_KINDS: ReadonlySet<string> = new Set(['game']);
 export function sessionTemplateKinds(workout: unknown): string[] {
   const template = buildSessionTemplate((workout ?? null) as never);
   const kinds = new Set<string>();
-  if (template.mode === 'recovery') {
-    // Sam's §6 item 3 exception: a recovery day keeps its own simple template —
-    // `RecoveryBlock` over the workout's rows plus `RecoveryAddonSection`. No
-    // items, and the whole day is recovery work.
-    kinds.add('recovery');
-    return [...kinds].sort();
-  }
   for (const item of template.items as SessionTemplateItem[]) {
     if (item.kind === 'team_training') { kinds.add(TEMPLATE_ITEM_KIND.team_training); continue; }
     if (item.kind === 'conditioning_choice') {

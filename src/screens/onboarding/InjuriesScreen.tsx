@@ -1,297 +1,108 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text } from '../../components/common/Text';
-import { colors } from '../../theme/colors';
-import { spacing, borderRadius, shadows } from '../../theme/spacing';
-import { OnboardingStackParamList } from '../../types/navigation';
-import { OnboardingInjury, InjurySeverity, InjuryCategory } from '../../types/domain';
+import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
+import { headingXL } from '../../components/onboarding/onboardingStyles';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
-import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { AppTextInput } from '../../components/keyboard/AppTextInput';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import { colors } from '../../theme/colors';
+import { OnboardingStackParamList } from '../../types/navigation';
+import type { InjurySeverity, OnboardingInjury } from '../../types/domain';
+import {
+  GUIDED_INJURY_AREA_HINT,
+  GUIDED_INJURY_AREA_OPTIONS,
+  GUIDED_INJURY_REGION_OPTIONS,
+  GUIDED_INJURY_SEVERITY_OPTIONS,
+  type GuidedInjuryRegion,
+  type GuidedInjurySeverityBand,
+} from '../../utils/guidedInjuryControl';
 
 type InjuriesScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'Injuries'
 >;
 
-// ─── Body area config ───
+type InternalStep = 'question' | 'region' | 'area' | 'severity' | 'more';
 
-const BODY_AREAS = [
-  'Groin',
-  'Hamstring',
-  'Knee',
-  'Ankle',
-  'Hip',
-  'Lower back',
-  'Shoulder',
-  'Other area',
-];
-
-function getInjuryCategory(area: string): InjuryCategory {
-  const lower = area.toLowerCase();
-  if (lower === 'lower back') return 'lower-back';
-  if (['shoulder'].includes(lower)) return 'upper-body';
-  if (['groin', 'hamstring', 'knee', 'ankle', 'hip'].includes(lower)) return 'lower-body';
-  return 'other';
-}
-
-// ─── Severity ───
-
-const SEVERITY_OPTIONS: { value: InjurySeverity; label: string; subtext: string }[] = [
-  { value: 'Mild', label: 'MILD', subtext: 'I can train through it' },
-  { value: 'Moderate', label: 'MODERATE', subtext: 'It limits some movements' },
-  { value: 'Severe', label: 'SEVERE', subtext: 'I need to train around it' },
-];
-
-// ─── Context-aware movement triggers ───
-
-const LOWER_BODY_TRIGGERS = [
-  'Sprinting',
-  'Change of direction',
-  'Kicking',
-  'Heavy lifting',
-  'Light running',
-  'Always there',
-];
-
-const UPPER_BODY_TRIGGERS = [
-  'Pressing (bench, push-ups)',
-  'Overhead movements',
-  'Pulling (rows, pull-ups)',
-  'Contact / impact',
-  'Always there',
-];
-
-const LOWER_BACK_TRIGGERS = [
-  'Bending / hinging',
-  'Heavy lifting',
-  'Running',
-  'Change of direction',
-  'Sitting / stiffness',
-  'Always there',
-];
-
-const OTHER_TRIGGERS = [
-  'During training',
-  'During games',
-  'Sprinting',
-  'Change of direction',
-  'Bending / twisting',
-  'Heavy lifting',
-  'Always there',
-];
-
-function getTriggersForArea(area: string): string[] {
-  const category = getInjuryCategory(area);
-  switch (category) {
-    case 'lower-body': return LOWER_BODY_TRIGGERS;
-    case 'upper-body': return UPPER_BODY_TRIGGERS;
-    case 'lower-back': return LOWER_BACK_TRIGGERS;
-    default: return OTHER_TRIGGERS;
-  }
-}
-
-function getSeverityQuestion(area?: string): string {
-  if (!area || area.toLowerCase() === 'other area') {
-    return 'HOW MUCH IS THIS LIMITING YOU?';
-  }
-  return `HOW MUCH IS YOUR ${area.toUpperCase()} LIMITING YOU?`;
-}
-
-function isOtherArea(area?: string): boolean {
-  return area?.toLowerCase() === 'other area';
-}
-
-function getFirstDetailStep(area?: string): InternalStep {
-  return isOtherArea(area) ? 'customArea' : 'severity';
-}
-
-function getAreaLabel(area: string | undefined, detail?: InjuryDetail): string {
-  if (!area) return '';
-  if (!isOtherArea(area)) return area;
-  return detail?.customArea?.trim() || 'Other area';
-}
-
-const MAX_TRIGGERS = 3;
 const INJURY_BOTTOM_SCROLL_PADDING = 48;
 
-// ─── Internal types ───
-
-type InternalStep = 'question' | 'areas' | 'customArea' | 'severity' | 'triggers' | 'notes';
-
-interface InjuryDetail {
-  customArea?: string;
-  severity?: InjurySeverity;
-  movementTriggers: string[];
-  notes: string;
+function onboardingSeverity(band: GuidedInjurySeverityBand): InjurySeverity {
+  if (band === 'mild') return 'Mild';
+  if (band === 'slight') return 'Moderate';
+  return 'Severe';
 }
 
-// ─── Component ───
-
-export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
-  navigation,
-}) => {
+export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState<InternalStep>('question');
-  const [hasInjuries, setHasInjuries] = useState<boolean | null>(null);
-  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
-  const [injuryDetails, setInjuryDetails] = useState<{ [key: string]: InjuryDetail }>({});
-  const [currentInjuryIndex, setCurrentInjuryIndex] = useState(0);
+  const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
+  const [area, setArea] = useState('');
+  const [severityBand, setSeverityBand] = useState<GuidedInjurySeverityBand | null>(null);
+  const [injuries, setInjuries] = useState<OnboardingInjury[]>([]);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Injuries');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const currentArea = selectedAreas[currentInjuryIndex];
-  const currentDetail: InjuryDetail = injuryDetails[currentArea] || { movementTriggers: [], notes: '' };
-  const currentAreaLabel = getAreaLabel(currentArea, currentDetail);
-  const totalInjuries = selectedAreas.length;
-
-  const toggleArea = (area: string) => {
-    setSelectedAreas((prev) =>
-      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
-    );
-  };
-
-  const ensureDetail = (area: string): InjuryDetail => {
-    return injuryDetails[area] || { movementTriggers: [], notes: '' };
-  };
-
-  const updateSeverity = (area: string, severity: InjurySeverity) => {
-    setInjuryDetails((prev) => ({
-      ...prev,
-      [area]: { ...ensureDetail(area), severity },
-    }));
-  };
-
-  const updateCustomArea = (area: string, customArea: string) => {
-    setInjuryDetails((prev) => ({
-      ...prev,
-      [area]: { ...ensureDetail(area), customArea },
-    }));
-  };
-
-  const toggleTrigger = (area: string, trigger: string) => {
-    setInjuryDetails((prev) => {
-      const detail = ensureDetail(area);
-      const current = detail.movementTriggers;
-      if (current.includes(trigger)) {
-        return { ...prev, [area]: { ...detail, movementTriggers: current.filter((t) => t !== trigger) } };
-      }
-      if (current.length >= MAX_TRIGGERS) {
-        // Replace oldest selection
-        return { ...prev, [area]: { ...detail, movementTriggers: [...current.slice(1), trigger] } };
-      }
-      return { ...prev, [area]: { ...detail, movementTriggers: [...current, trigger] } };
-    });
-  };
-
-  const updateNotes = (area: string, notes: string) => {
-    setInjuryDetails((prev) => ({
-      ...prev,
-      [area]: { ...ensureDetail(area), notes },
-    }));
-  };
-
-  // ─── Navigation handlers ───
-
-  const handleYes = () => {
-    setHasInjuries(true);
-    setStep('areas');
-  };
-
-  const handleNo = () => {
-    setHasInjuries(false);
+  const saveNoIssues = () => {
     void commitAndAdvance({ injuries: [] }, () => navigation.navigate('Review'));
   };
 
-  const handleNoIssuesAfterAll = () => {
-    setHasInjuries(false);
-    setSelectedAreas([]);
-    setInjuryDetails({});
-    setCurrentInjuryIndex(0);
-    void commitAndAdvance({ injuries: [] }, () => navigation.navigate('Review'));
+  const chooseRegion = (nextRegion: GuidedInjuryRegion) => {
+    setRegion(nextRegion);
+    setArea('');
+    setSeverityBand(null);
+    setStep('area');
   };
 
-  const handleAreasSelected = () => {
-    if (selectedAreas.length > 0) {
-      setCurrentInjuryIndex(0);
-      setStep(getFirstDetailStep(selectedAreas[0]));
-    }
-  };
-
-  const handleCustomAreaNext = () => {
+  const chooseArea = (nextArea: string) => {
+    setArea(nextArea);
+    setSeverityBand(null);
     setStep('severity');
   };
 
-  const handleSeverityNext = () => {
-    setStep('triggers');
+  const addCurrentInjury = () => {
+    const option = GUIDED_INJURY_SEVERITY_OPTIONS.find(
+      (candidate) => candidate.severityBand === severityBand,
+    );
+    if (!region || !area || !option) return;
+
+    const injury: OnboardingInjury = {
+      bodyArea: area,
+      description: `${option.label} - ${option.sub}`,
+      severity: onboardingSeverity(option.severityBand),
+      severityScore: option.severity,
+    };
+    setInjuries((current) => [...current, injury]);
+    setStep('more');
   };
 
-  const handleTriggersNext = () => {
-    setStep('notes');
+  const addAnotherInjury = () => {
+    setRegion(null);
+    setArea('');
+    setSeverityBand(null);
+    setStep('region');
   };
 
-  const handleNotesNext = () => {
-    if (currentInjuryIndex < totalInjuries - 1) {
-      const nextIndex = currentInjuryIndex + 1;
-      setCurrentInjuryIndex(nextIndex);
-      setStep(getFirstDetailStep(selectedAreas[nextIndex]));
-    } else {
-      // All injuries done — save and navigate
-      const injuries: OnboardingInjury[] = selectedAreas.map((area) => {
-        const detail = injuryDetails[area] || { movementTriggers: [], notes: '' };
-        const bodyArea = getAreaLabel(area, detail);
-        const parts: string[] = [];
-        if (detail.severity) parts.push(detail.severity);
-        if (detail.movementTriggers.length > 0) parts.push(`Triggers: ${detail.movementTriggers.join(', ')}`);
-        if (detail.notes) parts.push(detail.notes);
-        return {
-          bodyArea,
-          description: parts.join(' - ') || '',
-          severity: detail.severity,
-          movementTriggers: detail.movementTriggers,
-          notes: detail.notes || undefined,
-        };
-      });
-      void commitAndAdvance({ injuries }, () => navigation.navigate('Review'));
-    }
+  const editLastInjury = () => {
+    const lastInjury = injuries[injuries.length - 1];
+    const previousRegion = Object.entries(GUIDED_INJURY_AREA_OPTIONS).find(
+      ([, options]) => options.includes(lastInjury?.bodyArea ?? ''),
+    )?.[0] as GuidedInjuryRegion | undefined;
+    const previousSeverity = GUIDED_INJURY_SEVERITY_OPTIONS.find(
+      (option) => option.severity === lastInjury?.severityScore,
+    )?.severityBand;
+    if (!lastInjury || !previousRegion || !previousSeverity) return;
+
+    setRegion(previousRegion);
+    setArea(lastInjury.bodyArea);
+    setSeverityBand(previousSeverity);
+    setInjuries((current) => current.slice(0, -1));
+    setStep('severity');
   };
 
-  const handleBack = () => {
-    if (step === 'notes') {
-      setStep('triggers');
-    } else if (step === 'triggers') {
-      setStep('severity');
-    } else if (step === 'severity') {
-      if (isOtherArea(currentArea)) {
-        setStep('customArea');
-        return;
-      }
-      if (currentInjuryIndex > 0) {
-        setCurrentInjuryIndex((prev) => prev - 1);
-        setStep('notes');
-      } else {
-        setStep('areas');
-      }
-    } else if (step === 'customArea') {
-      if (currentInjuryIndex > 0) {
-        setCurrentInjuryIndex((prev) => prev - 1);
-        setStep('notes');
-      } else {
-        setStep('areas');
-      }
-    }
+  const finishInjuries = () => {
+    void commitAndAdvance({ injuries }, () => navigation.navigate('Review'));
   };
 
-  const isLastInjury = currentInjuryIndex === totalInjuries - 1;
-
-  // ─── Step 1: Do you have injuries? ───
   if (step === 'question') {
     return (
       <OnboardingLayout
@@ -303,435 +114,189 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         onContinue={() => {}}
         hideFooter
       >
-        <View style={styles.titleSection}>
-          <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            Are you dealing with any injuries right now?
-          </Text>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            So we can adjust your training safely.
-          </Text>
-        </View>
-
-        <View style={styles.choiceContainer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.choiceCard,
-              hasInjuries === true && styles.choiceCardSelected,
-              pressed && styles.choiceCardPressed,
-            ]}
-            onPress={handleYes}
-          >
-            <View>
-              <Text style={styles.choiceLabel}>YES</Text>
-              <Text style={styles.choiceSubtext}>I need training adjusted</Text>
-            </View>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.choiceCard,
-              hasInjuries === false && styles.choiceCardSelected,
-              pressed && styles.choiceCardPressed,
-            ]}
-            onPress={handleNo}
-          >
-            <View>
-              <Text style={styles.choiceLabel}>NO</Text>
-              <Text style={styles.choiceSubtext}>No current issues</Text>
-            </View>
-          </Pressable>
+        <Title
+          title="ARE YOU DEALING WITH ANY INJURIES RIGHT NOW?"
+          subtitle="So we can adjust your training safely."
+        />
+        <View style={styles.optionList}>
+          <OptionCard
+            label="YES"
+            subtext="I need training adjusted"
+            onPress={() => setStep('region')}
+          />
+          <OptionCard
+            label="NO"
+            subtext="No current issues"
+            onPress={saveNoIssues}
+          />
         </View>
       </OnboardingLayout>
     );
   }
 
-  // ─── Step 2: Select body areas ───
-  if (step === 'areas') {
+  if (step === 'region') {
     return (
       <OnboardingLayout
         stepLabel={stepLabel}
         progressPercent={progressPercent}
-        onBack={() => setStep('question')}
-        onContinue={handleAreasSelected}
-        continueDisabled={selectedAreas.length === 0}
-        continueLabel="Next"
+        onBack={() => setStep(injuries.length > 0 ? 'more' : 'question')}
+        saving={saving}
+        saveError={saveError}
+        onContinue={() => {}}
+        hideFooter
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
-        <View style={styles.titleSection}>
-          <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            WHERE ARE YOU FEELING ISSUES?
-          </Text>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            Select all that apply.
-          </Text>
+        <Title title="WHERE IS THE ISSUE?" />
+        <View style={styles.optionList}>
+          {GUIDED_INJURY_REGION_OPTIONS.map((option) => (
+            <OptionCard
+              key={option.id}
+              label={option.label}
+              selected={region === option.id}
+              onPress={() => chooseRegion(option.id)}
+            />
+          ))}
+          <OptionCard
+            label={injuries.length > 0 ? 'No more injuries' : 'No issues after all'}
+            muted
+            onPress={injuries.length > 0 ? finishInjuries : saveNoIssues}
+          />
         </View>
+      </OnboardingLayout>
+    );
+  }
 
-        <View style={styles.chipsContainer}>
-          {BODY_AREAS.map((area) => (
-            <Pressable
-              key={area}
-              style={({ pressed }) => [
-                styles.chip,
-                selectedAreas.includes(area) && styles.chipSelected,
-                pressed && !selectedAreas.includes(area) && styles.choiceCardPressed,
-              ]}
-              onPress={() => toggleArea(area)}
-            >
-              <Text
-                variant="bodySmall"
-                color={selectedAreas.includes(area) ? colors.text.inverse : colors.text.primary}
-                style={styles.chipText}
-              >
-                {area}
-              </Text>
-            </Pressable>
+  if (step === 'area' && region) {
+    return (
+      <OnboardingLayout
+        stepLabel={stepLabel}
+        progressPercent={progressPercent}
+        onBack={() => setStep('region')}
+        saving={saving}
+        saveError={saveError}
+        onContinue={() => {}}
+        hideFooter
+        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
+      >
+        <Title title="WHERE IS THE ISSUE?" subtitle={GUIDED_INJURY_AREA_HINT} />
+        <View style={styles.optionList}>
+          {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
+            <OptionCard
+              key={option}
+              label={option}
+              selected={area === option}
+              onPress={() => chooseArea(option)}
+            />
           ))}
         </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.nothingMajor,
-            pressed && styles.choiceCardPressed,
-          ]}
-          onPress={handleNoIssuesAfterAll}
-        >
-          <Text style={styles.nothingMajorText}>No issues after all</Text>
-        </Pressable>
       </OnboardingLayout>
     );
   }
 
-  // ─── Shared progress indicator for detail steps ───
-  const progressIndicator = (
-    <View style={styles.progressRow}>
-      <Text style={styles.progressText}>
-        {currentAreaLabel} - {currentInjuryIndex + 1} of {totalInjuries}
-      </Text>
-      <View style={styles.dotRow}>
-        {selectedAreas.map((_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, i <= currentInjuryIndex && styles.dotActive]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-
-  // ─── Step 2b: Label custom "Other area" injuries ───
-  if (step === 'customArea') {
-    return (
-      <OnboardingLayout
-        stepLabel={stepLabel}
-        progressPercent={progressPercent}
-        onBack={handleBack}
-        onContinue={handleCustomAreaNext}
-        continueLabel="Next"
-        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
-      >
-        {progressIndicator}
-
-        <View style={styles.titleSection}>
-          <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            WHAT AREA IS IT?
-          </Text>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            So we know what to adjust.
-          </Text>
-        </View>
-
-        <AppTextInput
-          style={styles.areaInput}
-          placeholder="e.g. calf, wrist, elbow"
-          placeholderTextColor={colors.text.tertiary}
-          value={currentDetail.customArea || ''}
-          onChangeText={(text) => updateCustomArea(currentArea, text)}
-          returnKeyType="done"
-        />
-      </OnboardingLayout>
-    );
-  }
-
-  // ─── Step 3: Severity ───
   if (step === 'severity') {
     return (
       <OnboardingLayout
         stepLabel={stepLabel}
         progressPercent={progressPercent}
-        onBack={handleBack}
-        onContinue={handleSeverityNext}
-        continueDisabled={!currentDetail.severity}
-        continueLabel="Next"
+        onBack={() => setStep('area')}
+        onContinue={addCurrentInjury}
+        continueDisabled={!severityBand}
+        continueLabel="Continue"
+        saving={saving}
+        saveError={saveError}
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
-        {progressIndicator}
-
-        <View style={styles.titleSection}>
-          <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            {getSeverityQuestion(currentAreaLabel)}
-          </Text>
-        </View>
-
+        <Title title={`HOW SEVERE IS YOUR ${area.toUpperCase()} ISSUE?`} />
         <View style={styles.optionList}>
-          {SEVERITY_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              style={({ pressed }) => [
-                styles.optionCard,
-                currentDetail.severity === opt.value && styles.optionCardSelected,
-                pressed && styles.choiceCardPressed,
-              ]}
-              onPress={() => updateSeverity(currentArea, opt.value)}
-            >
-              <View style={styles.optionContent}>
-                <Text
-                  style={[
-                    styles.optionLabel,
-                    currentDetail.severity === opt.value && styles.optionLabelSelected,
-                  ]}
-                >
-                  {opt.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.optionSubtext,
-                    currentDetail.severity === opt.value && styles.optionSubtextSelected,
-                  ]}
-                >
-                  {opt.subtext}
-                </Text>
-              </View>
-            </Pressable>
+          {GUIDED_INJURY_SEVERITY_OPTIONS.map((option) => (
+            <OptionCard
+              key={option.severityBand}
+              label={option.label}
+              subtext={option.sub}
+              selected={severityBand === option.severityBand}
+              onPress={() => setSeverityBand(option.severityBand)}
+            />
           ))}
         </View>
       </OnboardingLayout>
     );
   }
 
-  // ─── Step 4: Movement triggers (context-aware) ───
-  if (step === 'triggers') {
-    const triggers = getTriggersForArea(currentArea);
-    const selectedTriggers = currentDetail.movementTriggers;
-    const atMax = selectedTriggers.length >= MAX_TRIGGERS;
-
-    return (
-      <OnboardingLayout
-        stepLabel={stepLabel}
-        progressPercent={progressPercent}
-        onBack={handleBack}
-        onContinue={handleTriggersNext}
-        continueDisabled={selectedTriggers.length === 0}
-        continueLabel="Next"
-        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
-      >
-        {progressIndicator}
-
-        <View style={styles.titleSection}>
-          <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            WHAT BRINGS IT ON?
-          </Text>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            Select up to {MAX_TRIGGERS} triggers
-          </Text>
-          {atMax && (
-            <Text style={styles.maxText}>Max {MAX_TRIGGERS} selected</Text>
-          )}
-        </View>
-
-        <View style={styles.triggerList}>
-          {triggers.map((trigger) => {
-            const isSelected = selectedTriggers.includes(trigger);
-            const isDimmed = atMax && !isSelected;
-            return (
-              <Pressable
-                key={trigger}
-                style={({ pressed }) => [
-                  styles.triggerChip,
-                  isSelected && styles.triggerChipSelected,
-                  pressed && !isSelected && styles.choiceCardPressed,
-                  isDimmed && styles.triggerChipDimmed,
-                ]}
-                onPress={() => toggleTrigger(currentArea, trigger)}
-              >
-                <Text
-                  style={[
-                    styles.triggerChipText,
-                    isSelected && styles.triggerChipTextSelected,
-                    isDimmed && styles.triggerChipTextDimmed,
-                  ]}
-                >
-                  {trigger}
-                </Text>
-                {isSelected && (
-                  <View style={styles.checkBadge}>
-                    <Text style={styles.checkMark}>✓</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      </OnboardingLayout>
-    );
-  }
-
-  // ─── Step 5: Optional notes ───
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
-      onBack={handleBack}
-      onContinue={handleNotesNext}
-      continueDisabled={false}
-      continueLabel={isLastInjury ? 'Continue' : 'Next injury'}
-      scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
+      onBack={editLastInjury}
+      onContinue={() => {}}
+      saving={saving}
+      saveError={saveError}
+      hideFooter
     >
-      {progressIndicator}
-
-      <View style={styles.titleSection}>
-        <Text variant="h1" color={colors.text.primary} style={styles.title}>
-          ANYTHING ELSE?
-        </Text>
-        <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-          Optional
-        </Text>
+      <Title title="ANY MORE INJURIES?" />
+      <View style={styles.optionList}>
+        <OptionCard label="YES" subtext="Add another injury" onPress={addAnotherInjury} />
+        <OptionCard label="NO" subtext="That’s everything" onPress={finishInjuries} />
       </View>
-
-      <AppTextInput
-        style={styles.notesInput}
-        placeholder="e.g. Had surgery 6 months ago, avoiding heavy lifts"
-        placeholderTextColor={colors.text.tertiary}
-        multiline
-        numberOfLines={4}
-        value={currentDetail.notes}
-        onChangeText={(text) => updateNotes(currentArea, text)}
-        textAlignVertical="top"
-      />
     </OnboardingLayout>
   );
 };
 
+function Title({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={styles.titleSection}>
+      <Text variant="h1" color={colors.text.primary} style={styles.title}>
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function OptionCard({
+  label,
+  subtext,
+  selected = false,
+  muted = false,
+  onPress,
+}: {
+  label: string;
+  subtext?: string;
+  selected?: boolean;
+  muted?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.optionCard,
+        selected && styles.optionCardSelected,
+        muted && styles.optionCardMuted,
+        pressed && styles.optionCardPressed,
+      ]}
+      onPress={onPress}
+    >
+      <Text style={[styles.optionLabel, selected && styles.optionLabelSelected, muted && styles.mutedText]}>
+        {label}
+      </Text>
+      {subtext ? <Text style={styles.optionSubtext}>{subtext}</Text> : null}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  // ── Shared ──
   titleSection: {
-    marginBottom: spacing.xl,
+    marginBottom: 24,
   },
   title: {
     ...headingXL,
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
   subtitle: {
     lineHeight: 20,
-  },
-
-  // ── Step 1: Question ──
-  choiceContainer: {
-    gap: 10,
-  },
-  choiceCard: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-  },
-  choiceCardSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  choiceCardPressed: {
-    backgroundColor: colors.surface.tertiary,
-  },
-  choiceLabel: {
-    color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  choiceSubtext: {
-    color: colors.text.tertiary,
-    fontSize: 13,
-    fontWeight: '400',
-  },
-
-  // ── Step 2: Area chips ──
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  chip: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-    ...shadows.xs,
-  },
-  chipSelected: {
-    backgroundColor: colors.accent.lime,
-    borderColor: colors.accent.lime,
-  },
-  chipText: {
-    fontWeight: '500',
-  },
-  nothingMajor: {
-    marginTop: spacing.xl,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 46,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    borderRadius: 15,
-    backgroundColor: colors.surface.secondary,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  nothingMajorText: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  // ── Progress indicator ──
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  progressText: {
-    color: colors.accent.lime,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  dotRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.surface.tertiary,
-  },
-  dotActive: {
-    backgroundColor: colors.accent.lime,
-  },
-
-  // ── Severity cards ──
-  sectionLabel: {
-    color: colors.text.secondary,
-    fontSize: 15,
-    fontWeight: '600',
   },
   optionList: {
     gap: 10,
@@ -740,7 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.secondary,
     borderRadius: 14,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 17,
     borderWidth: 1.5,
     borderColor: colors.surface.tertiary,
   },
@@ -748,15 +313,16 @@ const styles = StyleSheet.create({
     borderColor: colors.accent.lime,
     backgroundColor: 'rgba(200, 255, 0, 0.04)',
   },
-  optionContent: {
-    flexDirection: 'column',
+  optionCardMuted: {
+    marginTop: 6,
+  },
+  optionCardPressed: {
+    backgroundColor: colors.surface.tertiary,
   },
   optionLabel: {
     color: colors.text.primary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 3,
   },
   optionLabelSelected: {
     color: colors.accent.lime,
@@ -764,87 +330,10 @@ const styles = StyleSheet.create({
   optionSubtext: {
     color: colors.text.tertiary,
     fontSize: 13,
-    fontWeight: '400',
+    lineHeight: 18,
+    marginTop: 4,
   },
-  optionSubtextSelected: {
+  mutedText: {
     color: colors.text.secondary,
-  },
-
-  // ── Movement triggers ──
-  maxText: {
-    color: colors.accent.lime,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  triggerList: {
-    gap: 10,
-  },
-  triggerChip: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  triggerChipSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  triggerChipDimmed: {
-    opacity: 0.35,
-  },
-  triggerChipText: {
-    color: colors.text.primary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  triggerChipTextSelected: {
-    color: colors.accent.lime,
-  },
-  triggerChipTextDimmed: {},
-  checkBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.accent.lime,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkMark: {
-    color: colors.text.inverse,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  // ── Notes input ──
-  areaInput: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    color: colors.text.primary,
-    fontSize: 15,
-    fontWeight: '400',
-    minHeight: 56,
-  },
-  notesInput: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    color: colors.text.primary,
-    fontSize: 15,
-    fontWeight: '400',
-    minHeight: 120,
-    lineHeight: 22,
   },
 });

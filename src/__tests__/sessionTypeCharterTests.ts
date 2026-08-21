@@ -619,24 +619,22 @@ run('D2. Sam\'s two signed censuses are exactly as delivered', () => {
   // He signed these numbers off by hand. They are pinned per-pool, not as a
   // total, because a total can stay right while two pools move in opposite
   // directions — and the pools are what the sessions draw from.
-  assert(BICEPS_POOL.length === 5, `biceps ${BICEPS_POOL.length}, signed 5`);
-  assert(TRICEPS_POOL.length === 5, `triceps ${TRICEPS_POOL.length}, signed 5`);
-  assert(DELTS_POOL.length === 6, `delts ${DELTS_POOL.length}, signed 6`);
+  assert(BICEPS_POOL.length === 8, `biceps ${BICEPS_POOL.length}, signed 8`);
+  assert(TRICEPS_POOL.length === 7, `triceps ${TRICEPS_POOL.length}, signed 7`);
+  assert(DELTS_POOL.length === 8, `shoulders ${DELTS_POOL.length}, signed 8`);
   assert(PREHAB_POOLS.length === 6, `prehab draws on ${PREHAB_POOLS.length} pools, signed 6`);
   const prehabTotal = PREHAB_POOLS.reduce((total, pool) => total + pool.length, 0);
   assert(prehabTotal === 36, `prehab census ${prehabTotal}, signed 36`);
 });
 
-run('D3. shoulder health is prehab\'s, and pump delts are the gunshow\'s', () => {
-  // Sam's ruling of 2026-07-30, as a boundary rather than a comment: the two
-  // shoulder pools do different jobs and neither may quietly become the other.
+run('D3. shoulder health remains available to prehab after the Gunshow pool expands', () => {
+  // Sam's 2026-08-21 Gunshow list deliberately includes Band Pull-Apart, which
+  // also remains legal shoulder-health work. The SESSION sources stay distinct
+  // even though an exercise may now be authored for both uses.
   const health = new Set(SHOULDER_HEALTH_POOL.map((entry) => entry.name));
   const pump = new Set(DELTS_POOL.map((entry) => entry.name));
-  const overlap = Array.from(health).filter((name) => pump.has(name));
-  assert(overlap.length === 0,
-    `${overlap.join(', ')} is in both the shoulder-health pool and the pump delts `
-    + 'pool. Sam ruled gunshow "shoulders" means DELTS_POOL and shoulder health '
-    + 'stays with Accessories; an exercise in both erases the distinction.');
+  assert(health.has('Band Pull-Apart') && pump.has('Band Pull-Apart'),
+    'Band Pull-Apart must remain legal in both authored session contexts');
   assert(PREHAB_POOLS.includes(SHOULDER_HEALTH_POOL),
     'shoulder health left the prehab census');
 });

@@ -17,9 +17,8 @@
  * conditioning days" as a special case, but "the list is built once, from the
  * whole workout, for every day type".
  *
- * Recovery-type days are the one deliberate exception (§6 item 3) — they keep
- * their own simple template, so the owner reports `mode: 'recovery'` and the
- * screen renders what it always did.
+ * Recovery and standalone Mobility now use this same template too. Their
+ * low-load tier remains a programming fact and no longer selects another UI.
  *
  * Run: npm run test:session-template
  */
@@ -114,8 +113,12 @@ function names(items: SessionTemplateItem[]): string[] {
  */
 import { ROLES_EXEMPT_FROM_COUNTING } from '../rules/sessionRowCounting';
 
-import { formatStrengthSetsReps } from '../screens/home/dayWorkoutHelpers';
-import { displayReps } from '../rules/prescriptionDisplay';
+import {
+  formatConditioningRowPrescription,
+  formatStrengthSetsReps,
+} from '../screens/home/dayWorkoutHelpers';
+import { APPROVED_REP_TARGETS, displayReps } from '../rules/prescriptionDisplay';
+import { liftTonnageKg } from '../rules/journalLoad';
 
 const NON_COUNTING_EXTRAS = new Set(['team_training', 'mobility']);
 
@@ -492,9 +495,9 @@ console.log('\n[7] The Recovery Add-on box splits into ordinary badged rows');
   );
 }
 
-/* ══ 8. Recovery days keep their simple template ══ */
+/* ══ 8. Recovery days use the same exercise-list template ══ */
 
-console.log('\n[8] Recovery-type days are the deliberate exception (§6 item 3)');
+console.log('\n[8] Recovery-type days use the shared list');
 {
   const recovery = buildSessionTemplate(
     workoutOf({
@@ -503,18 +506,21 @@ console.log('\n[8] Recovery-type days are the deliberate exception (§6 item 3)'
       exercises: [strengthRow('Couch Stretch'), strengthRow('Cat-Cow')],
     }),
   );
-  ok('a recovery day reports the recovery template mode', recovery.mode === 'recovery');
+  ok('a recovery day reports the ordinary list mode', recovery.mode === 'badged_list');
   ok(
-    'the recovery template emits no badged rows — the screen keeps what it had',
-    recovery.items.length === 0,
+    'the recovery template carries every prescribed row',
+    recovery.items.length === 2
+      && recovery.items.every((item) => item.kind === 'exercise'
+        && item.presentation === 'recovery'),
   );
 
   const tierRecovery = buildSessionTemplate(
     workoutOf({ workoutType: 'Strength', sessionTier: 'recovery', exercises: [strengthRow('Cat-Cow')] }),
   );
   ok(
-    'a recovery SESSION TIER also takes the recovery template',
-    tierRecovery.mode === 'recovery',
+    'a recovery SESSION TIER also takes the shared template',
+    tierRecovery.mode === 'badged_list'
+      && tierRecovery.items.length === 1,
   );
 }
 
@@ -774,11 +780,11 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
   );
 }
 
-// ── A3: ONE MIDDLE NUMBER, NOT A RANGE ────────────────────────────────────
+// ── A3: ONE APPROVED REP TARGET, NOT A RANGE ──────────────────────────────
 //
-// Sam's prescription-display law, Bible :4936 (Section 5, source D9): "ranges
-// remain the generation source, the athlete sees a single middle number, logging
-// assumes it." His example at :770: "3x8-12 is written as 3x10".
+// Sam's prescription-display law, Bible :770: ranges remain the generation
+// source, while the athlete and assume-prescribed logging use one approved rep
+// target. His example remains "3x8-12 is written as 3x10".
 //
 // The renderer showed the RANGE, so the athlete picked a number themselves —
 // the exact ambiguity the law exists to end — while the journal scored their
@@ -788,21 +794,42 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
   const ex = (min: number, max: number, sets = 3) =>
     formatStrengthSetsReps({ prescribedSets: sets, prescribedRepsMin: min, prescribedRepsMax: max });
 
-  ok('a rep RANGE is shown as a single middle number (Bible :4936)',
+  ok('a rep RANGE is shown as one approved target (Bible :770)',
     ex(8, 12) === '3 × 10',
     `his own example reads "${ex(8, 12)}", not "3 × 10"`);
 
-  ok('a range with no exact middle still shows ONE number, never a range',
-    !ex(8, 10).includes('-') && ex(8, 10) === '3 × 9', ex(8, 10));
+  ok('the approved rep vocabulary is exactly Sam\'s eight values',
+    JSON.stringify(APPROVED_REP_TARGETS) === JSON.stringify([3, 4, 5, 6, 8, 10, 15, 20]),
+    APPROVED_REP_TARGETS);
+
+  ok('arbitrary midpoints snap to approved targets, with equal distances going lower',
+    ex(6, 8) === '3 × 6'
+    && ex(8, 10) === '3 × 8'
+    && ex(10, 12) === '3 × 10'
+    && ex(15, 20) === '3 × 15',
+    [ex(6, 8), ex(8, 10), ex(10, 12), ex(15, 20)]);
 
   ok('a fixed prescription is unchanged — nothing to collapse',
     ex(6, 6, 4) === '4 × 6', ex(6, 6, 4));
 
-  ok('the displayed number is always whole — an athlete cannot do 9.5 reps',
-    ([[8, 11], [5, 8], [10, 15], [3, 4]] as Array<[number, number]>).every(([a, b]) => {
+  ok('every rep range resolves to the approved vocabulary',
+    ([[8, 11], [5, 8], [10, 15], [3, 4], [11, 11], [18, 18]] as Array<[number, number]>).every(([a, b]) => {
       const n = displayReps(a, b);
-      return n !== null && Number.isInteger(n);
+      return n !== null && (APPROVED_REP_TARGETS as readonly number[]).includes(n);
     }));
+
+  ok('assumed-completion workload uses the same rep target the athlete reads',
+    liftTonnageKg({
+      exerciseId: 'ex-curl', workoutExerciseId: 'we-curl', exerciseName: 'Hammer Curl',
+      prescribedSets: 3, prescribedRepsMin: 10, prescribedRepsMax: 12,
+      weightKg: 20, completion: 'full',
+    }) === 3 * 10 * 20);
+
+  ok('timed prescriptions retain their authored range',
+    formatConditioningRowPrescription({
+      prescriptionType: 'duration', prescribedSets: 1,
+      prescribedRepsMin: 30, prescribedRepsMax: 60,
+    }) === '30-60 sec');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

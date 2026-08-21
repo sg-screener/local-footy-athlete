@@ -93,10 +93,10 @@ export interface MobilityPrehabFlowContext {
   date: string;
 }
 
-function movementRange(min: number | undefined, max: number | undefined): string {
+function movementHighTarget(min: number | undefined, max: number | undefined): string {
   const low = Number(min ?? 0);
   const high = Number(max ?? low);
-  return low === high ? `${low}` : `${low}-${high}`;
+  return `${high}`;
 }
 
 /**
@@ -108,7 +108,7 @@ export function mobilityFlowMovementDose(movement: PoolExercise): string {
   const sets = movement.sets > 1 ? `${movement.sets} × ` : '';
   const side = movement.perSide ? ' / side' : '';
   const unit = movement.prescriptionType === 'duration' ? 's' : '';
-  return `${sets}${movementRange(movement.repsMin, movement.repsMax)}${unit}${side}`;
+  return `${sets}${movementHighTarget(movement.repsMin, movement.repsMax)}${unit}${side}`;
 }
 
 const CONDITIONING_ONLY_TYPES: ReadonlySet<string> = new Set([

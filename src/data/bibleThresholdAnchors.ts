@@ -289,13 +289,17 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
     section: 'Section 20.3 — Gunshow',
     quote: 'A gunshow is 2 biceps + 2 triceps + 2 shoulder, 2-3 sets each. "Shoulder" means '
       + 'the pump delts pool, not shoulder health — shoulder health stays with Accessories. '
-      + 'Under restricted equipment a gunshow gets smaller, never padded. There are no '
-      + 'cross-family top-ups: the app never invents to fill a quota.',
-    states: [2, 3],
-    meaning: 'The signed gunshow structure. Six movements from three named pools, and under '
-      + 'thin equipment FEWER — never a substitute drawn from a fourth pool.',
+      + 'Gunshow is normal gym work and its authored composition has all six movements. There are no '
+      + 'cross-family top-ups. Its 23 candidates are '
+      + '8 biceps, 7 triceps and 8 shoulders, and the signed do-not-pair list prevents '
+      + 'same-pattern pairings inside those families.',
+    states: [2, 3, 7, 8, 23],
+    meaning: 'The signed normal-gym Gunshow structure: six movements from three exact '
+      + 'pools with pair-aware selection and no fourth-pool top-up.',
     sites: [
       { file: 'utils/sessionBuilder.ts', symbol: 'SESSION_SLOTS' },
+      { file: 'utils/sessionBuilder.ts', symbol: 'pickFromPool' },
+      { file: 'data/exercisePools.ts', symbol: 'GUNSHOW_DO_NOT_PAIR_IDS' },
     ],
   },
   {

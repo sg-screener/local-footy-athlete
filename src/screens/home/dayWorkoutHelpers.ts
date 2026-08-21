@@ -248,6 +248,24 @@ export function formatRecoveryPrescription(
 }
 
 /**
+ * The ordinary exercise-card dose for standalone Mobility and Recovery rows.
+ * These sessions share the strength card, but their units can be seconds or
+ * minutes. The athlete sees one target — the high end of the authored mobility
+ * or recovery range — rather than being asked to choose inside a range.
+ */
+export function formatLowLoadSetsReps(exercise: any): string {
+  const exerciseName = String(exercise?.exercise?.name ?? exercise?.name ?? '');
+  const pType = inferRecoveryPrescriptionType(exercise, exerciseName);
+  const sets = Math.max(1, Number(exercise?.prescribedSets ?? 1));
+  const target = Number(exercise?.prescribedRepsMax ?? exercise?.prescribedRepsMin ?? 0);
+  const perSide = exercise?.perSide ? ' / side' : '';
+  if (pType === 'duration_minutes') return `${sets} × ${target} min${perSide}`;
+  if (pType === 'duration') return `${sets} × ${target}s${perSide}`;
+  if (pType === 'distance') return `${sets} × ${target}m${perSide}`;
+  return `${sets} × ${target}${perSide}`;
+}
+
+/**
  * Build display labels for a list of exercises, handling supersets:
  *   standalone → "1", "2"
  *   superset   → "1a", "1b"
@@ -295,9 +313,9 @@ export function groupStrengthExercises(exercises: any[]): StrengthGroup[] {
 /**
  * Format a "sets × reps" prescription string for strength exercises.
  *
- * ONE MIDDLE NUMBER, NOT A RANGE — Sam's prescription-display law, Bible
- * `:4936`: *"ranges remain the generation source, the athlete sees a single
- * middle number, logging assumes it."* His example, `:770`: "3x8-12 is written
+ * ONE APPROVED REP TARGET, NOT A RANGE — Sam's prescription-display law, Bible
+ * `:770`: *"ranges remain the generation source, the athlete sees a single
+ * approved rep target, logging assumes it."* His example: "3x8-12 is written
  * as 3x10". This rendered the RANGE, so the athlete picked a number themselves —
  * the exact ambiguity the law exists to end (census A3).
  *

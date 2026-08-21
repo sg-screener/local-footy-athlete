@@ -495,18 +495,18 @@ run('the owner has no way to grow a cycle back into the app', () => {
 });
 
 run('both game-day pickers offer the whole week', () => {
-  // COUNT IS NOT THE ASSERTION (AGENTS.md). Each cell locates the region that
-  // RUNS the picker and proves the collection it iterates is the seven-day list,
-  // because a hardcoded three-entry array and a seven-entry one look identical
-  // to a scan that only counts `<SelectableTile`.
+  // COUNT IS NOT THE ASSERTION (AGENTS.md). The screen must render the shared
+  // grid, and the grid must derive its entries from the canonical seven-day
+  // list. A hardcoded three-entry array and a seven-entry one otherwise look
+  // identical to a scan that only finds a picker component.
   const onboarding = read('screens/onboarding/GameDayScreen.tsx');
-  assert(/DAYS_OF_WEEK/.test(onboarding),
-    'the onboarding picker does not iterate the canonical week');
+  assert(/<DayGrid/.test(onboarding),
+    'the onboarding picker does not render the shared day grid');
   assert(!/'Friday', *'Saturday', *'Sunday'/.test(onboarding),
     'the onboarding picker still hardcodes the weekend');
-  assert(/DAYS_OF_WEEK\.map\(/.test(onboarding),
-    'the onboarding picker names the seven-day list but does not render from it — '
-    + 'a list nothing iterates offers nothing');
+  const onboardingGrid = read('components/onboarding/DayGrid.tsx');
+  assert(/DAYS_OF_WEEK\.map\(/.test(onboardingGrid),
+    'the shared onboarding grid does not render from the canonical week');
 
   const profileScreen = read('screens/profile/ProfileScreen.tsx');
   const gameDaySheet = profileScreen.slice(profileScreen.indexOf("step === 'programGameDay'"));
