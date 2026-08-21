@@ -417,20 +417,24 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
   );
   ok(
     'HomeScreenV2 only shows session tier badge when row badges are enabled',
-    /showRowBadges && hasWorkout && day\.workout\.sessionTier[\s\S]{0,120}<SessionTierBadge/.test(HOME_V2),
+    /showRowBadges && hasWorkout && !isGame && day\.workout\.sessionTier[\s\S]{0,120}<SessionTierBadge/.test(HOME_V2),
+  );
+  // ⚠ **THE GAME BADGE IS RETIRED — Sam, 2026-08-22: *"we don't need the game
+  // badge at all any more"*.** Two cells here asserted it existed and that it
+  // outranked the tier chip; both are inverted rather than deleted, because the
+  // question they were really asking survives the removal: **a fixture must not
+  // wear a tier chip.** Dropping the game arm alone would have done exactly
+  // that — a fixture can carry a sessionTier, so CORE would have appeared on
+  // game day, which is the badge returning under a different word.
+  ok(
+    'HomeScreenV2 draws no GAME badge at all',
+    !/function GameBadge/.test(HOME_V2)
+      && !/<GameBadge/.test(HOME_V2)
+      && !/<Badge label="Game"/.test(HOME_V2),
   );
   ok(
-    'HomeScreenV2 uses local amber GameBadge instead of lime outline GAME badge',
-    /function GameBadge/.test(HOME_V2)
-      && /showRowBadges && hasWorkout && isGame[\s\S]{0,80}<GameBadge \/>/.test(HOME_V2)
-      && !/<Badge label="Game" tone="outline"/.test(HOME_V2),
-  );
-  const v2GameBadgeIdx = HOME_V2.indexOf('showRowBadges && hasWorkout && isGame');
-  const v2TierBadgeIdx = HOME_V2.indexOf('showRowBadges && hasWorkout && day.workout.sessionTier');
-  ok(
-    'HomeScreenV2 gives GAME visual badge precedence over session tier badge',
-    v2GameBadgeIdx >= 0 && v2TierBadgeIdx > v2GameBadgeIdx,
-    `indices game=${v2GameBadgeIdx} tier=${v2TierBadgeIdx}`,
+    'HomeScreenV2 gives a fixture NO badge rather than falling through to the tier chip',
+    /!isGame && day\.workout\.sessionTier/.test(HOME_V2),
   );
 }
 

@@ -1729,14 +1729,6 @@ function getDayRowAccentColor({
   return DAY_ROW_ACCENT.core;
 }
 
-function GameBadge() {
-  return (
-    <View style={styles.gameBadge}>
-      <Text style={styles.gameBadgeText}>GAME</Text>
-    </View>
-  );
-}
-
 /* `RowIconKind`, `rowIconColor`, `RowIcon` and `rowIconPaths` MOVED to
  * `components/icons/SectionIcon` on 2026-08-20 (R-116), unchanged — the Session
  * screen must draw the same glyph and colour for the same work, and two tables
@@ -2228,13 +2220,19 @@ function DayRow({
     <>
       {showRowBadges && day.isToday && !dayShape
         && <Badge label="Today" tone="accent" testID="day-today-badge" />}
+      {/* ── NO GAME BADGE — Sam, 2026-08-22: *"we don't need the game badge at
+          all any more"* ──
+          A game day is called "Game Day" in the title beside this slot, so the
+          badge was the second thing on one line saying the one word. `!isGame`
+          rather than a fall-through, because a fixture may still carry a
+          sessionTier and dropping the arm alone would put CORE on game day —
+          which is the badge coming back wearing a different word. The WEEK card
+          already drew nothing here for a fixture; the two shapes now agree. */}
       {isMoveSource
         ? <Badge label="Moving" tone="outline" />
-        : showRowBadges && hasWorkout && isGame
-          ? <GameBadge />
-          : showRowBadges && hasWorkout && day.workout.sessionTier
-            ? <SessionTierBadge compact={dayShape} tier={day.workout.sessionTier} />
-            : null}
+        : showRowBadges && hasWorkout && !isGame && day.workout.sessionTier
+          ? <SessionTierBadge compact={dayShape} tier={day.workout.sessionTier} />
+          : null}
     </>
   );
   // Always `title` now — no `hasWorkout` branch, no hardcoded "Rest"
@@ -4349,21 +4347,9 @@ const styles = StyleSheet.create({
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.6, minWidth: 32,
   },
-  gameBadge: {
-    backgroundColor: 'rgba(255, 194, 71, 0.15)',
-    borderColor: 'rgba(255, 194, 71, 0.45)',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    alignSelf: 'flex-start',
-  },
-  gameBadgeText: {
-    color: '#FFC247',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.9,
-  },
+  /* The amber GAME badge's two styles went with the badge — Sam removed it on
+     2026-08-22. The amber itself is NOT retired: `DAY_ROW_ACCENT.game` still
+     tints the fixture's row icon, which is the fixture's remaining mark. */
   /* The head's left half is the TITLE now (Sam, 2026-08-22), and a title is as
      long as the day's name. It shrinks; the badge beside it does not. */
   selectedTitleLead: { flexShrink: 1 },

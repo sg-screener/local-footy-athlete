@@ -705,8 +705,21 @@ run('the day card leads with the TITLE — no eyebrow, no date, no Today badge',
     && /\{selectedTitle\}/.test(head),
     'the day card head no longer leads with the session title, which is what '
     + 'Sam put in the space the date left.');
-  // AND THE BADGE STAYS GONE. `!dayShape`, not "no eyebrow": the old condition
-  // would have re-summoned the badge the moment the eyebrow was deleted.
+  // AND NO GAME BADGE EITHER — Sam, 2026-08-22: *"we don't need the game badge
+  // at all any more"*. The day is CALLED "Game Day" in the title beside this
+  // slot, so the badge was the second thing on one line saying the one word.
+  // THE REAL RISK IS THE FALL-THROUGH: a fixture can carry a sessionTier, so
+  // removing the game arm alone would put CORE on game day — the badge back
+  // under a different word. `!isGame` is what stops that, and it is what this
+  // cell asserts; the week card has always drawn nothing there.
+  assert(!/function GameBadge/.test(home) && !/<GameBadge/.test(home),
+    'the GAME badge is back on the day card');
+  assert(/showRowBadges && hasWorkout && !isGame && day\.workout\.sessionTier/.test(home),
+    'a fixture now falls through to the session tier chip. Sam removed the GAME '
+    + 'badge; a game day wearing CORE is that badge returning as another word.');
+
+  // AND THE TODAY BADGE STAYS GONE. `!dayShape`, not "no eyebrow": the old
+  // condition would have re-summoned it the moment the eyebrow was deleted.
   assert(/showRowBadges && day\.isToday && !dayShape/.test(home),
     'the "Today" badge is no longer scoped away from the day shape. Ruling 5 '
     + 'removed it from the day card; if it is deleted outright instead, the '
