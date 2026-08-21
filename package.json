@@ -477,7 +477,9 @@
     "test:session-action-shell": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionActionShellTests.ts",
     "probe:injury-review-pairings": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-review-pairings.ts",
     "test:injury-session-adjustment": "TZ=Australia/Melbourne sucrase-node src/__tests__/injurySessionAdjustmentTests.ts",
-    "probe:injury-filter-coverage": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-filter-coverage.ts"
+    "probe:injury-filter-coverage": "TZ=Australia/Melbourne sucrase-node scripts/probe-injury-filter-coverage.ts",
+    "census:short-on-time-route": "TZ=Australia/Melbourne sucrase-node scripts/census-short-on-time-route.ts",
+    "probe:totally-cooked": "TZ=Australia/Melbourne sucrase-node scripts/probe-totally-cooked.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
