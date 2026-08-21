@@ -437,6 +437,34 @@ Agent: boats
 
 # SESSION 4 — SAM RULES: THE LATEST NUMBER IS THE AUTHORITY (R-128)
 
+## MERGED — `74045cc1`, 2026-08-21. Rollback tag `pre-cleanup-merge-2026-08-21` @ `3821af21`.
+
+Sam approved after the rework, with three conditions: preserve all unrelated
+files (done — **all 14 verified byte-identical by sha256 taken before and after**),
+verify only the relevant checks on merged main (done, below), and **do not start
+the simulator or phone builds in this chat** (none started).
+
+**VERIFIED ON MERGED `main`, not on the branch:**
+
+    files             timeAvailabilityPolicy, injuryReintroduction and its suite GONE;
+                      the two new guards and three probes PRESENT
+    executable refs   ZERO to anything this branch deleted, anywhere
+    compile           [product] 30, [devtools] 50 — IDENTICAL to pre-merge
+                      [tests] 588 -> 574, worse pairs 74 -> 70
+    runtime-reachable 552 -> 550 — the two deleted modules, exactly
+    test:scenarios    BYTE-IDENTICAL to pre-merge
+    the three repo guards   IDENTICAL failure TEXT to pre-merge
+
+    injury-latest-severity 48/0 · short-on-time-absent 8/0 · midline 23/0 ·
+    severity-scale 35/0 · coach-live-path-v2 58/0 · injury-canonicalisation 36/0 ·
+    program-control-durable 11/0 · readiness 28/0 · fatigue-abolition 8/8 ·
+    injury-severity-bands 31/0 · conditioning-templates 96/96 ·
+    coach-truth-gate 59/0 · readiness-structure-law 88/88
+
+    unchanged reds, identical to pre-merge: injury-authority 5/20,
+    preseason-exposure 88/22, exposure-engine 150, rules-kernel 121/1
+
+
 **Sam, 2026-08-21: *"Trust the athlete's latest reported injury number
 immediately. Do not stage the return."*** Ruled and built. **NOT MERGED.**
 
