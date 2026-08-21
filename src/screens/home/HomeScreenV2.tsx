@@ -1836,7 +1836,11 @@ function titleIconKind({
  */
 function cardLeadHeadline(day: VisibleDay | undefined): string | null {
   if (!day) return null;
-  return visibleDayLeadHeadline(day);
+  /* PROGRAMMED WORK ONLY — this title sits on the box that holds the programmed
+     session, and club training moved to its own card (Sam, 2026-08-22). A
+     team-only day still reads "Team Training": with no programmed part left,
+     the owner falls back to the day's own headline, which is exactly right. */
+  return visibleDayLeadHeadline(day, { programmedOnly: true });
 }
 
 /**

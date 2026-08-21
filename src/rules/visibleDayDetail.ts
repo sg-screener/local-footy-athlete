@@ -120,8 +120,11 @@ export interface VisibleDayDetail {
  * IT IS STILL NOT A COMPOSITION. Every word is a sheet entry and so is the
  * separator (`joinSignedCopy`); nothing here authors a character.
  */
-export function visibleDayLeadHeadline(day: VisibleDay): SignedCopy {
-  const buckets = dayBuckets(day);
+export function visibleDayLeadHeadline(
+  day: VisibleDay,
+  options?: { readonly programmedOnly?: boolean },
+): SignedCopy {
+  const buckets = dayBuckets(day, options);
   if (buckets.length === 0) return day.headline;
   if (buckets.length === 1) return buckets[0];
   return joinSignedCopy(buckets, DAY_NAME_JOINER);
@@ -172,11 +175,20 @@ export function visibleDayLeadBucket(day: VisibleDay): SignedCopy {
  * A FIXTURE HAS NO BUCKETS HERE, on purpose: its title is its fixture whatever
  * its workout resolved, and that gate is traced in this function's caller.
  */
-function dayBuckets(day: VisibleDay): readonly SignedCopy[] {
+function dayBuckets(
+  day: VisibleDay,
+  options?: { readonly programmedOnly?: boolean },
+): readonly SignedCopy[] {
   if (day.kind === 'game') return [];
   const seen = new Set<string>();
   const buckets: SignedCopy[] = [];
   for (const part of day.parts) {
+    /* CLUB TRAINING IS NOT PROGRAMMED WORK (Sam, 2026-08-22). The day card's
+       box holds the programmed session only, so its title must not name a part
+       that box no longer shows — *"no longer needs + team training as this box
+       is only for programmed work now"*. Every other caller still gets the
+       whole day, which is what a WEEK row is describing. */
+    if (options?.programmedOnly && part.kind === 'team_training') continue;
     if (seen.has(part.bucket)) continue;
     seen.add(part.bucket);
     buckets.push(part.bucket);
