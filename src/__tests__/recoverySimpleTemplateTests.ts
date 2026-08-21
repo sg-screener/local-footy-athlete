@@ -178,6 +178,11 @@ console.log('\n[7] The screen has one shared exercise-card route');
   );
   const listStart = screen.indexOf('function SessionList');
   const listEnd = screen.indexOf('function withholdingOfTemplateItem', listStart);
+  /* An `indexOf` that misses returns -1, and `slice(-1, …)` reads from the END
+     of the file — the cell would then assert something true about the wrong
+     region and PASS. Proven found before either is used as a bound. */
+  ok('the session-list function is findable', listStart >= 0 && listEnd >= 0,
+    `${listStart} ${listEnd}`);
   const list = listStart >= 0 && listEnd > listStart ? screen.slice(listStart, listEnd) : '';
   ok('the shared SessionList region was found', list.length > 1000, list.length);
   ok('Mobility and Recovery both route through StrengthExerciseCard',

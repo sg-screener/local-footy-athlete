@@ -271,11 +271,13 @@ ok('injury regions use the approved bicep, lower-body and spine families',
    now. The cell's SUBJECT is unchanged: the area rows are text-only. */
 const areaStepStart = injury.indexOf("if (step === 'area' && region)");
 const customAreaStepStart = injury.indexOf("if (step === 'stop_training')", areaStepStart);
-const areaStepSource = areaStepStart >= 0 && customAreaStepStart > areaStepStart
+const areaStepSource = areaStepStart >= 0 && customAreaStepStart >= 0
+  && customAreaStepStart > areaStepStart
   ? injury.slice(areaStepStart, customAreaStepStart)
   : '';
 ok('injury category rows keep icons while follow-up body-area rows are text-only',
   areaStepStart >= 0
+  && customAreaStepStart >= 0
   && customAreaStepStart > areaStepStart
   && areaStepSource.length > 300
   && areaStepSource.includes('GUIDED_INJURY_AREA_OPTIONS[region].map')
