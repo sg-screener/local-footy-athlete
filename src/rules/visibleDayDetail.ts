@@ -202,12 +202,24 @@ function dayBuckets(
  * `null` for a day the projection does not carry — the screen has its own
  * "workout not found" state for that and does not need words invented for it.
  */
-export function projectDayDetail(day: VisibleDay | null | undefined): VisibleDayDetail | null {
+/**
+ * ⚠ **`programmedOnly` IS THE CALLER'S TO ASK FOR, AND THE DEFAULT IS THE WHOLE
+ * DAY.** I filtered club training out of this function unconditionally first,
+ * and `dayTimeline` reads it — so the day card's own club box, which finds its
+ * entry in that timeline, would have disappeared with it. The SESSION screen is
+ * the caller that wants the programmed session; nothing else does.
+ */
+export function projectDayDetail(
+  day: VisibleDay | null | undefined,
+  options?: { readonly programmedOnly?: boolean },
+): VisibleDayDetail | null {
   if (!day) return null;
   return {
     date: day.date,
-    headline: visibleDayLeadHeadline(day),
-    sections: day.parts.map((part): VisibleDayDetailSection => ({
+    headline: visibleDayLeadHeadline(day, options),
+    sections: day.parts
+      .filter((part) => !(options?.programmedOnly && part.kind === 'team_training'))
+      .map((part): VisibleDayDetailSection => ({
       partId: part.id,
       kind: part.kind,
       headline: part.headline,

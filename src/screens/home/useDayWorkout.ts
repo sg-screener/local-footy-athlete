@@ -425,7 +425,19 @@ export function useDayWorkout() {
   // `dayDetailCompositionOwnershipTests` pins the consequence — `composeDayDetail`
   // has exactly ONE production caller now, `rules/projectVisibleWeek.ts`, and this
   // hook is not it.
-  const detail = useMemo(() => projectDayDetail(visibleDay), [visibleDay]);
+  /* PROGRAMMED WORK ONLY — this is the SESSION screen (Sam, 2026-08-22).
+     Club training has its own card and its own form on the day view, so the
+     session's title, its section list and its feedback form must not name it:
+     *"we no longer need reference to team training ... and the title of the
+     page still says 'strength + team training'"*.
+
+     The option is asked for HERE rather than set in the owner, because
+     `dayTimeline` reads the same owner and the day card's club box finds its
+     entry in that timeline — filtering there made the box vanish. */
+  const detail = useMemo(
+    () => projectDayDetail(visibleDay, { programmedOnly: true }),
+    [visibleDay],
+  );
 
   // The team-training state read the input layer needs: `isTeamOnly` gates the
   // "Edit exercises" door and `buildEditableExercises`, both of which act on raw

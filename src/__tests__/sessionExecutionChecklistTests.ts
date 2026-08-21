@@ -121,15 +121,22 @@ const teamPlan = buildSessionExecutionPlan({
   template: buildSessionTemplate(teamWorkout),
   mobilityFlow: null,
 });
+/**
+ * ⚠ **RE-AIMED 2026-08-22 — THE CLUB TICK IS GONE ON PURPOSE.** Sam: *"inside
+ * the session view - we no longer need reference to team training so remove the
+ * box with the chevron drop down saying team training ... and remove the team
+ * training area of the session feedback form"*. Club training has its own card
+ * and its own feedback form on the day view; this plan is the GYM session's
+ * checklist and must not offer a second place to answer the same question.
+ *
+ * The cell now holds the ABSENCE, so a club item creeping back into the gym
+ * checklist reds rather than passing quietly.
+ */
 const clubItem = teamPlan.items.find((item) => item.sectionId === 'team_training');
-const clubCompleted = buildSessionExecutionSummary(
-  teamPlan,
-  new Set(clubItem ? [clubItem.id] : []),
-);
-ok('ticking Club session makes Team Training completed for the review',
-  clubItem !== undefined
-    && clubCompleted.sections.find((section) => section.sectionId === 'team_training')?.completion === 'full'
-    && clubCompleted.componentCompletions.team_training === 'full');
+ok('the gym checklist carries no Club session item — club training has its own form',
+  clubItem === undefined);
+ok('and a club night still has its programmed work to tick',
+  teamPlan.items.some((item) => item.sectionId !== 'team_training'));
 
 console.log('\n[2b] The saved result keeps the item evidence and whole-session RPE');
 const checklistPayload = buildSessionFeedbackPayload({

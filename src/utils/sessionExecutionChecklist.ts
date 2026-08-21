@@ -217,7 +217,24 @@ export function buildSessionExecutionPlan(args: {
   template: SessionTemplate;
   mobilityFlow: MobilityPrehabFlow | null;
 }): SessionExecutionPlan {
-  const components = getSessionComponents(args.workout);
+  /**
+   * ⚠ **CLUB TRAINING IS NOT PART OF THE SESSION THE ATHLETE IS EXECUTING**
+   * (Sam, 2026-08-22: *"inside the session view - we no longer need reference
+   * to team training so remove the box with the chevron drop down saying team
+   * training ... and remove the team training area of the session feedback
+   * form"*).
+   *
+   * Removing the template row was not enough on its own: the loop below gives
+   * every COMPONENT without a row its own checkable unit — that is what a
+   * rowless speed block or team commitment relies on — so club training came
+   * straight back as a `TEAM TRAINING 0/1` section and as a line in the
+   * feedback form's completed list.
+   *
+   * It has its own card and its own form on the day view. This plan is the gym
+   * session's checklist, and the two must not both claim it.
+   */
+  const components = getSessionComponents(args.workout)
+    .filter((component) => component.kind !== 'team_training');
   const items: SessionExecutionItem[] = [];
 
   for (const movement of args.mobilityFlow?.movements ?? []) {
