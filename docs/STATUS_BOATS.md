@@ -432,3 +432,93 @@ cells — and all three findings above, which only exist because the suites star
 speaking again.
 
 Agent: boats
+
+---
+
+# SESSION 4 — SAM RULES: THE LATEST NUMBER IS THE AUTHORITY (R-128)
+
+**Sam, 2026-08-21: *"Trust the athlete's latest reported injury number
+immediately. Do not stage the return."*** Ruled and built. **NOT MERGED.**
+
+## ⚠ I WAS WRONG ABOUT THE ONE FACT THAT MADE THIS A PRODUCT CHANGE
+
+Session 3 reported that `rules/injuryReintroduction.ts` had **zero production
+callers**. **It had one.** `utils/generationConstraints.ts:331` called
+`stageReintroductionSeverity` on every injury constraint it built. I had grepped
+for `isReintroducing` and `peakSeverity` — **two of the module's three exports** —
+and generalised to the module.
+
+**So the staging was LIVE, and this is a behaviour change, not a dead-code
+deletion.** Stated plainly: an athlete who reported 8 and now reports 4 is
+restricted as a **4**. Before this commit they were restricted as a **6**.
+
+## WHAT WENT
+
+| deleted | why |
+| --- | --- |
+| `rules/injuryReintroduction.ts` | the one-band-per-step lever, whole file |
+| `effectiveSeverity` on the generation constraint | it existed ONLY to carry the staged answer; with staging gone it was an exact alias of `severity` — a second severity with no reason to differ |
+| **`priorSeverity`, everywhere** | written in FIVE places, consumed in exactly ONE — the staging call. With that gone it had no reader at all. Removed from the episode, the transaction, the store type and `injuryProgression` |
+| `rules/index.ts` barrel export, `injuryReintroductionTests` | with their subject |
+
+## THE GUARD — `test:injury-latest-severity`, 48 cells, in the bible chain
+
+It holds the **behaviour**, not the absence of a file: nine severities each get
+exactly the gates that number earns; a reported 4 after a 9 is identical to a
+fresh 4 across five buckets and **on every gate at once**; the one-band steps
+8→6, 6→4, 4→2, 10→8 each match their fresh equivalent; improvement AND worsening
+land immediately; and a stored constraint still carrying the retired
+`priorSeverity` is **ignored rather than honoured**.
+
+**⚠ MUTATION-PROVEN, AFTER A HALF-MUTATION PROVED NOTHING.** Restoring the
+staging alone reddened **ZERO** cells — the caller no longer forwards the input,
+so the restored lever had nothing to read. Restoring **both** halves kills **16**.
+And the headline cell's first cut compared `status: 'improving'` against
+`'active'`; staging never keyed on status, so it was **unkillable**. The stepped
+side now carries the peak.
+
+**⚠ AND ONE CELL I WROTE COULD NEVER FAIL** — `severityBand === injurySeverityRemovesRiskyWork(2)`
+compared a band string to a boolean. It now asserts the band from the band owner.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **574 — 14 fewer, zero added** |
+| worse file/scope pairs | 74 | **70** — four files LEAVE, none joins |
+| runtime-reachable src files | 552 | **550** — the two deleted modules, exactly |
+| `test:scenarios` | — | **byte-identical** |
+| `test:injury-authority` | 5/20 | **5/20 — identical** |
+| `test:preseason-exposure` | 88/22 | **88/22 — identical** |
+| `test:exposure-engine` | 150 | **150 — identical** |
+| `test:rules-kernel` | 121/1 | **121/1 — identical** |
+| `test:fatigue-abolition`, `test:injury-severity-bands`, `test:conditioning-templates`, `test:coach-truth-gate`, `test:readiness-structure-law` | — | **unchanged** |
+| the three repo guards | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+
+**Green on this branch that were dead or failing on main:**
+`injury-latest-severity` 48/0 (new), `short-on-time-absent` 8/0 (new),
+`midline` 23/0, `severity-scale` 35/0, `coach-live-path-v2` 58/0,
+`injury-canonicalisation` 36/0, `program-control-durable` **11/0** (was 18/**2**).
+
+## NOT COVERED
+
+- No rebuild, no simulator, no device, no release matrix. Headless only.
+- **NOT-VISIBLE on the generated week:** `test:scenarios` is byte-identical, so
+  no scenario in the harness exercises an injury that had a recorded peak. **The
+  behaviour change is real and is proven by the guard, not by the harness** — an
+  athlete whose injury improves is the case that moves, and no scenario walks
+  one.
+- **Nothing merged.**
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) keep `effectiveSeverity` and set it equal to `severity`** — a one-line
+change, no readers touched, and the field is there if staging ever returns.
+**(b) delete the field and point every gate at `severity`.** **(b)**: a second
+severity that can never differ is a duplicate authority waiting to drift, and
+Sam's ruling names the reported number as *the* authority — one number, one
+owner. The same argument retired `priorSeverity`.
+
+Agent: boats
