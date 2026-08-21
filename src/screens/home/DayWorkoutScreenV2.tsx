@@ -1972,6 +1972,12 @@ export default function DayWorkoutScreenV2() {
         {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
           <SessionChangeHub
             testID="day-workout-change-hub"
+            /* THE 16 THAT WAS INSIDE THE COMPONENT, NOW SAID HERE. Sam's
+               2026-08-22 ruling on this screen is that the gap under the box
+               matches the gap above it, and `finishSection` below carries the
+               same `spacing.md`. The Day screen spaces its boxes at 8, so the
+               shared card stopped holding either number. */
+            style={styles.changeHub}
             subline="Update today's session using the buttons below"
             actions={[
               ...(sessionEquipmentRequirements.length > 0
@@ -5545,6 +5551,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  changeHub: { marginTop: spacing.md },
   finishSection: {
     marginTop: spacing.md,
     ...shadows.none,

@@ -1081,6 +1081,14 @@ export default function HomeScreenV2() {
         {isNormal && dayFirst && (
           <SessionChangeHub
             testID="home-change-card"
+            /* ── ONE GAP FOR THE WHOLE DAY SCREEN ──
+               Sam, 2026-08-22: *"make them all the same gap as the gap between
+               the 1 active modifier and the strength box"*. That gap is
+               `dayFirst`'s own `gap: spacing.sm` (8), so 8 is the number every
+               box on this screen sits at. This card is a SIBLING of that
+               container rather than a child of it, so it does not inherit the
+               gap and has to say it. */
+            style={styles.changeHub}
             /* THE ROW KEEPS ITS OWN ID. `home-life-fact-chips` is the
                coordinate five Maestro flows and the day-first gate reach this
                row by; a card that renamed it would silently break every one. */
@@ -4094,6 +4102,10 @@ const styles = StyleSheet.create({
 
   // ── Day-first view ──
   dayFirst: { gap: spacing.sm, marginTop: spacing.sm },
+  /* THE DAY SCREEN'S ONE GAP, PAID BY THE ONE BOX THAT SITS OUTSIDE THE
+     CONTAINER THAT PAYS IT FOR EVERYTHING ELSE. Same `spacing.sm` as
+     `dayFirst`'s `gap` above, and it is the same number on purpose. */
+  changeHub: { marginTop: spacing.sm },
   // THE STATE-LEAF WELL — where the explorer's witnesses live so that LAYOUT
   // CANNOT SEE THEM. `position: 'absolute'` is the property doing the work: an
   // absolutely-positioned child is out of the flex flow, so `dayFirst`'s `gap`
@@ -4152,8 +4164,13 @@ const styles = StyleSheet.create({
   timeline: { gap: 0 },
   /* The club-training row's affordance, sized to sit where the chevron sits on
      every other row so the list keeps one right-hand rhythm. */
+  /* NO `marginTop` — Sam, 2026-08-22: *"make them all the same gap as the gap
+     between the 1 active modifier and the strength box"*. This card is a child
+     of `dayFirst`, whose `gap: spacing.sm` already puts 8 between it and the
+     session card above; the `spacing.md` that used to be here was ADDED to that
+     gap, which is why the space above this box was 24 while the space below it
+     was 16. Both are 8 now, and so is the strip-to-session gap they match. */
   teamTrainingCard: {
-    marginTop: spacing.md,
     paddingVertical: spacing.md,
   },
   teamTrainingTitle: {

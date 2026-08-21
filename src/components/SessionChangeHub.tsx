@@ -53,6 +53,7 @@
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Card } from './ui';
@@ -228,6 +229,7 @@ export function SessionChangeHub({
   testID = 'session-change-hub',
   rowTestID,
   subline,
+  style,
 }: {
   actions: readonly SessionChangeAction[];
   testID?: string;
@@ -235,10 +237,23 @@ export function SessionChangeHub({
   rowTestID?: string;
   /** Defaults to the signed sub-line. The session surface narrows it to today. */
   subline?: string;
+  /**
+   * ⚠ **THE GAP ABOVE THIS CARD IS THE SURFACE'S, NOT THIS COMPONENT'S** —
+   * Sam, 2026-08-22, on the Day view: *"make them all the same gap as the gap
+   * between the 1 active modifier and the strength box"*.
+   *
+   * It carried `marginTop: spacing.md` (16) for both surfaces, and the two now
+   * want different numbers: Day spaces every box on the screen at 8, while the
+   * session screen's box is ruled to sit 16 from the section above it AND 16
+   * from the Log button below it. A shared component holding one of those two
+   * numbers makes the other surface wrong, so neither is held here — each
+   * caller passes its own.
+   */
+  style?: StyleProp<ViewStyle>;
 }) {
   if (actions.length === 0) return null;
   return (
-    <Card tone="default" padding="lg" radius="lg" style={styles.card} testID={testID}>
+    <Card tone="default" padding="lg" radius="lg" style={style} testID={testID}>
       {/* ⚠ **THE WORDS COME FROM THE SHEET, NOT FROM HERE.** They were literals
           in this file for one day and that is a word Sam could never re-word;
           `day.change_card.*` are the signed rows and moving the panel must not
@@ -287,7 +302,6 @@ export function SessionChangeHub({
 
 /* The Day screen's own values, moved here with the component they style. */
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.md },
   heading: { color: '#F5F5F5', fontSize: 15, fontWeight: '700' },
   subline: { color: '#8A8A8A', fontSize: 13, lineHeight: 18, marginTop: 2 },
   row: {
