@@ -64,6 +64,10 @@ export interface SessionExecutionSummary {
     sectionId: SessionExecutionSectionId;
     label: string;
     completion: FeedbackCompletion;
+    /** How many of this section's items were ticked, and how many there were.
+     *  Sam, 2026-08-22: the review says "Partially 3/4", not just "Partially". */
+    completedCount: number;
+    totalCount: number;
   }>;
   items: SessionExecutionItemResult[];
 }
@@ -309,6 +313,12 @@ export function buildSessionExecutionSummary(
       sectionId: section.id,
       label: section.label,
       completion: completionForItems(section.items),
+      /* THE SAME TWO NUMBERS `completionForItems` ALREADY COUNTS to decide the
+         word. Derived here rather than recounted at the surface, so the word
+         and the numbers beside it can never disagree — "Fully 6/7" is exactly
+         the kind of sentence a second count produces. */
+      completedCount: section.items.filter((item) => completedItemIds.has(item.id)).length,
+      totalCount: section.items.length,
     })),
     items: plan.items.map((item) => ({
       itemId: item.id,

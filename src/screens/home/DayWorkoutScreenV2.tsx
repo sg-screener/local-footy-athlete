@@ -10,7 +10,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { SessionDateLine } from '../../components/SessionDateLine';
 import { Text } from '../../components/common/Text';
-import { Card, Button, IconButton, Sheet, SheetHeader } from '../../components/ui';
+import { Card, Button, IconButton, Sheet } from '../../components/ui';
 import {
   SessionActionSheet,
   useSessionActionStep,
@@ -2007,7 +2007,16 @@ export default function DayWorkoutScreenV2() {
         onClose={handleCancelFeedback}
         testID="session-feedback-sheet"
       >
-        <SheetHeader title="Log session" subtitle="A quick check-in - this tunes your next session." />
+        {/**
+          * NO SHEET HEADER — Sam, 2026-08-22: *"The subtitle under 'log session'
+          * in this pop up can be removed as well"*.
+          *
+          * `SheetHeader` is a two-line contract by design (small category label
+          * + the heading beneath it), so there is no "title without subtitle"
+          * to ask for — and the duplication was the whole header, not just its
+          * second line: the panel below opens with its own heading and the very
+          * same sentence. One heading, drawn by the thing that owns the form.
+          */}
         {date ? (
           <SessionFeedbackPanel
             date={date}

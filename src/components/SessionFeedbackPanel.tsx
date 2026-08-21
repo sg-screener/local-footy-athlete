@@ -1302,7 +1302,17 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
               <View key={section.sectionId} style={styles.checklistSummaryRow}>
                 <Text style={styles.checklistSummaryLabel}>{section.label}</Text>
                 <Text style={styles.checklistSummaryValue}>
-                  {section.completion}
+                  {/* SAM, 2026-08-22: *"next to those words should be the
+                      number of exercises I did ... Mobility / Warm-up
+                      Partially 3/4"*. The word came from the raw completion
+                      value with `textTransform: 'capitalize'` doing the work,
+                      which gave "Partial" rather than the "Partially" the
+                      athlete taps three lines further up. It reads the SAME
+                      `COMPLETION_OPTIONS` labels that door uses, so the review
+                      and the answer cannot word the same state differently. */}
+                  {COMPLETION_OPTIONS.find((option) => option.key === section.completion)?.label
+                    ?? section.completion}
+                  {` ${section.completedCount}/${section.totalCount}`}
                 </Text>
               </View>
             ))}
