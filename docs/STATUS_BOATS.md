@@ -237,3 +237,83 @@ except four test cells whose subject was deleted.
 - **Nothing merged.** The candidate waits for Sam.
 
 Agent: boats
+
+---
+
+# SESSION 2 — MIDLINE, SEVERITY-SCALE, THE CARD, AND THE FILTER MEASUREMENT
+
+**Branch `cleanup/midline-severity-card`, cut from `main` @ `3821af21`. Control
+`wt2-ctl`, detached at the same commit, never edited. NOT MERGED.**
+
+## FIVE SUITES WERE DEAD AT IMPORT AND ARE NOW GREEN
+
+| suite | before | after | what it took |
+| --- | --- | --- | --- |
+| `test:midline` | DEAD | **23 / 0** | `blockAdjuster` off the copy sweep; the `label: 'Midline'` cell re-sited onto `SESSION_ROLE_ORDER` + `classifyExerciseRole`; a missing file now REDS by name instead of throwing ENOENT |
+| `test:severity-scale` | DEAD | **47 / 0** | `assertReadersExist` for every reader list; impact-band readers measured down to the one that remains; the minutes list re-measured, ADDING `rules/temporarySourceFact.ts` |
+| `test:coach-live-path-v2` | DEAD | **60 / 0** | the weekly card retired out of it — 23 blocks across 9 sections |
+| `test:injury-canonicalisation` | DEAD | **36 / 0** | the filter's sections [5]-[9] deleted with their subject |
+| `test:injury-reintroduction` | DEAD | **31 / 0** | the filter section deleted; section 5 re-sited onto `deriveInjuryConstraintFromEpisode` |
+
+## THREE FINDINGS THE DARKNESS WAS HIDING
+
+**1. A LIVE VIOLATION OF SAM'S OWN SEVERITY RULING.**
+`rules/temporarySourceFact.ts:1070` — `severity: fact.maxSessionMinutes < 20 ? 7 : 5`.
+Minutes converted into a severity, which the 2026-07-28 Batch 4 ruling killed,
+and `7` is a stray cut point the same ruling said moves to `6`. The gate had
+never read this file. **DECLARED as an exact count, mutation-proven both ways;
+no product code changed.**
+
+**2. A SAFETY GAP: THE APP CAUTIONS WORK IT STILL PRESCRIBES.**
+At fatigue 7/10, Friday's `Flying 30m Sprints` and `Box Jumps` are still on the
+session, with `Caution:` notes naming them. The post-composer safety rewrite that
+removed them is on the 2026-08-19 rebuild list. **PINNED, not fixed.**
+
+**3. THE STAGED INJURY RETURN IS NOT WIRED.**
+9/10 then 4/10 gives byte-identically the same session as a fresh 4/10.
+`rules/injuryReintroduction.ts` is written and correct and has **zero production
+callers**. **REPORTED, not fixed** — Sam asked for exactly this before any
+product change.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **576 — 12 fewer, zero added** |
+| worse file/scope pairs | 74 | **72** — two files LEAVE, none joins |
+| `test:scenarios` | — | **byte-identical** |
+| `test:law-registry` / `test:repo-law-guards` / `test:ruling-registry` | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+| `test:readiness`, `test:injury-severity-bands`, `test:coach-truth-gate`, `test:readiness-structure-law` | 33/0, 31/0, 59/0, 88/88 | **unchanged** |
+
+## STILL DARK — NAMED, NOT HIDDEN, AND NOT THIS BRANCH'S SUBJECT
+
+| suite | cause | subject |
+| --- | --- | --- |
+| `test:coach-orchestration` | `useCoachUpdatesStore.setActiveInjury` removed with the single-slot API — 8 call sites | coach orchestration |
+| `test:coach-live-wiring` | same, 6 call sites | coach live wiring |
+| `test:strength-intent` | `blockAdjuster.recomputeWeekOverrides` deleted, no drop-in successor; ONE call site | G-2 moderation, which IS live in `sessionResolver`'s game-proximity rules |
+
+Each has a LIVE subject and a deleted vehicle — the same shape as the five
+repaired above, and ready for the same treatment on the word.
+
+## NOT COVERED
+
+- **No rebuild, no simulator, no device, no release matrix.** Headless only.
+  **NOT-VISIBLE: nothing on this branch changes what the athlete sees** — the
+  scenario harness output is byte-identical to the control.
+- **No product code was changed anywhere**, which is why all three findings above
+  are reported rather than closed.
+- **Nothing merged.** The candidate waits for Sam.
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) delete the dark suites** — they report nothing, so deleting them costs no
+signal today and clears the compile debt fastest. **(b) repair each against the
+owner that holds its claim now.** **(b) was taken**: every one of the five had a
+LIVE subject behind a deleted vehicle, and (a) would have thrown away 197 working
+cells — and all three findings above, which only exist because the suites started
+speaking again.
+
+Agent: boats
