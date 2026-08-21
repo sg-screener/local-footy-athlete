@@ -921,10 +921,19 @@ async function runGameFeedbackInvariants(): Promise<void> {
   ok('scheduled games and practice matches share the game feedback classification',
     classifyDaySessions(GAME_WORKOUT).some((unit) => unit.category === 'game')
       && classifyDaySessions(practiceMatchWorkout).some((unit) => unit.category === 'game'));
+  // ⚠ **TWO OF THE FOUR WERE RE-WORDED ON SIGHT — Sam, 2026-08-22**, reading the
+  // form in its new pop-up: *"'how hard was the game' instead of on your body"*
+  // and *"make it how did you feel? not how do you feel"*. Batch 18-b-i-A. The
+  // cell still asks its own question — **all four are asked, and the sheet is
+  // where their words come from** — so the two sentences are updated rather
+  // than the cell weakened. The retired pair is asserted ABSENT below, which is
+  // the half that stops a stale copy of the form surviving beside the new one.
   ok('the match form asks all four ruled questions',
     ['Did you play the whole game?', 'Rough time on ground',
-      'How hard was the game on your body?', 'How do you feel?']
+      'How hard was the game?', 'How did you feel?']
       .every((question) => gameCopySource.includes(question))
+      && !gameCopySource.includes('How hard was the game on your body?')
+      && !gameCopySource.includes('How do you feel?')
       && /GAME_FEEDBACK_COPY\.wholeQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.durationQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeQuestion/.test(panelSource)

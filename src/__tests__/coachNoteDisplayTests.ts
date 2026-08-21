@@ -352,10 +352,13 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
     /isSelected && isGame && normal[\s\S]{0,260}label="Log Game"[\s\S]{0,120}onPress=\{onLogGame\}/.test(HOME_V2)
       && /testID="log-game-button"/.test(HOME_V2)
       && /testID="move-remove-game-link"[\s\S]{0,160}<Text style=\{styles\.makeChangeText\}>Move or remove game day<\/Text>/.test(HOME_V2)
-      && /onLogGame=\{\(\) => handleLogGame\(day\.date\)\}/.test(HOME_V2)
-      && /onGameDayActions=\{\(\) => handleOpenGameDayActions\(day\.date\)\}/.test(HOME_V2)
-      && /const handleLogGame = \(dateOverride\?: unknown\)/.test(USE_HOME_SCREEN)
-      && /const targetDate = typeof dateOverride === 'string' \? dateOverride : gameModalDate/.test(USE_HOME_SCREEN),
+      // ⚠ **LOG GAME OPENS A POP-UP, NOT A SCREEN — Sam, 2026-08-22.** This
+      // clause read `handleLogGame(day.date)`, the hook handler that navigated
+      // to DayWorkout with `startFinished`. The card's OWN doors — the button,
+      // its id, the move/remove link — are what this cell is for and they are
+      // unchanged; only where the button goes moved.
+      && /onLogGame=\{\(\) => setGameFeedbackDate\(day\.date\)\}/.test(HOME_V2)
+      && /onGameDayActions=\{\(\) => handleOpenGameDayActions\(day\.date\)\}/.test(HOME_V2),
   );
   ok(
     'HomeScreenV2 Game Day sheet is move/remove only',

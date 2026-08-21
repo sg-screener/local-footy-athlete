@@ -1281,6 +1281,34 @@ run('the week card keeps her proportions — large date, compact badges', () => 
   'the tiny Today badge shrank its font but kept the normal 24pt text line-height');
 });
 
+run('logging a game is a POP-UP on the day screen, not a session view', () => {
+  const home = homeScreenSource();
+  // Sam, 2026-08-22: *"Fix the game feedback form - it now takes you inside a
+  // session view that doesn't need to be there - it should just be a pop up
+  // like it is for team training"*.
+  assert(/onLogGame=\{\(\) => setGameFeedbackDate\(day\.date\)\}/.test(home),
+    'Log Game no longer opens the game form in place');
+  assert(!/handleLogGame/.test(home),
+    'the day screen still calls the navigating handler. That is the session '
+    + 'view Sam removed — its header, its list and its change box around four '
+    + 'questions.');
+  assert(/visible=\{gameFeedbackDate !== null\}[\s\S]{0,200}testID="game-feedback-sheet"/.test(home),
+    'the game form is not mounted in a sheet of its own');
+
+  // IT IS THE CLUB FORM'S TWIN, which is the whole of what Sam asked for: the
+  // same container, the same open/close shape, the same one-date state.
+  assert(/<Sheet[\s\S]{0,200}testID="club-training-feedback-sheet"/.test(home)
+    && /const \[gameFeedbackDate, setGameFeedbackDate\] = useState<string \| null>\(null\)/.test(home),
+    'the game pop-up and the club pop-up no longer have the same shape');
+
+  // THE PANEL IS NAMED, NOT DISPATCHED. A fixture may carry no workout, and
+  // `SessionFeedbackPanel` picks its presentation by classifying one — an
+  // absent workout would land the athlete on the TRAINING questions.
+  assert(/<GameSessionFeedbackPanel/.test(home) && !/<SessionFeedbackPanel/.test(home),
+    'the day screen reaches the game form through the classifying dispatcher, '
+    + 'so a fixture with no workout gets the training questions');
+});
+
 run('the day navigator says TODAY for today and a date for every other day', () => {
   const home = homeScreenSource();
   // Sam, 2026-08-22: *"make it say 'today' in between the arrows at the top for

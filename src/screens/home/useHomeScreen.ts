@@ -1472,6 +1472,14 @@ export function useHomeScreen() {
   // for the game itself. Game days don't carry a workout, so they still
   // route through `startFinished: true` and land directly on
   // SessionFeedbackPanel. Team Training no longer uses this shortcut.
+  //
+  // ⚠ **THE LIVE PROGRAM SCREEN NO LONGER CALLS THIS.** Sam ruled on 2026-08-22
+  // that logging a game is a POP-UP, not a screen, so `HomeScreenV2` opens the
+  // game panel in a sheet of its own — the club form's twin. This handler's one
+  // remaining caller is `HomeScreenClassic`, which `DESIGN_VERSION = 'v2'` does
+  // not mount. It is left intact rather than deleted because that screen is a
+  // documented fallback and nothing here is what made the old flow wrong: the
+  // defect was the SCREEN it navigated to, not the navigation.
   const handleLogGame = (dateOverride?: unknown) => {
     const targetDate = typeof dateOverride === 'string' ? dateOverride : gameModalDate;
     if (!targetDate) return;

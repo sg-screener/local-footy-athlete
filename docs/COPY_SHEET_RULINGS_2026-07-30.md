@@ -1534,8 +1534,31 @@ games and practice matches. The new form asks:
 | --- | --- |
 | Participation | "Did you play the whole game?" |
 | Duration | "Rough time on ground" — hours + minutes |
-| Effort | "How hard was the game on your body?" — 1–5, very easy to very hard |
-| Subjective response | "How do you feel?" |
+| Effort | see 18-b-i-A — the wording was shortened on 2026-08-22 |
+| Subjective response | see 18-b-i-A — put in the past tense on 2026-08-22 |
+
+**18-b-i-A. THE FORM'S WORDING, RE-RULED ON SIGHT — SAM, 2026-08-22.** He read
+the form in its new pop-up and ruled three things in one message: *"'did you
+play the whole game?' = yes or no buttons, not whole or part"*, *"'how hard was
+the game' instead of on your body"*, and *"how did you feel buttons should fit
+on 1 line"*.
+
+Three replacements, and they are written here in PROSE rather than in a table on
+purpose: the binding gate reads every quoted string in a TABLE row as a live
+proposal, so a retirement recorded in a table proposes the retired words again
+in the same breath. It reads `REPLACED:` from anywhere in the file.
+
+- REPLACED: "Whole game" → **"Yes"**
+- REPLACED: "Part of the game" → **"No"**
+- REPLACED: "How hard was the game on your body?" → **"How hard was the game?"**
+- REPLACED: "How do you feel?" → **"How did you feel?"** — Sam, in a fourth
+  message the same minute: *"make it how did you feel? not how do you feel"*.
+  The form is filled in after the final siren, so every other question on it is
+  already in the past tense; this one was the exception.
+
+The two participation chips restated the question instead of answering it, and
+being the widest chips on the form was the visible symptom. The third ruling is
+layout, not wording — the five feel labels are unchanged and now share one row.
 
 The five labels now read, in athlete-facing order: **Flying / Good / Normal /
 Bad / Heavy**. Stored values remain 5 / 4 / 3 / 2 / 1 respectively. This

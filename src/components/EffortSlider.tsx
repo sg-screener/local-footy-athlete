@@ -119,15 +119,26 @@ export function EffortSlider({ value, onChange, testID, style }: EffortSliderPro
 const THUMB_SIZE = 28;
 
 const styles = StyleSheet.create({
+  /* ── THE READOUT SITS AT THE QUESTION'S SIZE — Sam, 2026-08-22 ──
+     *"that slide to rate looks out of place - make it smaller or something - to
+     match the side of the 'how hard was the game' size"*.
+     It was 16pt under an 11pt `SectionLabel`, so the PROMPT was half the size
+     of the hint below it and the un-answered state read as a heading of its
+     own. 11pt is the section label's own size, to the point; the answered state
+     keeps the primary colour and gains the weight, so the value still reads as
+     the answer rather than as another label. */
   readout: {
     color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    marginBottom: 10,
   },
   readoutEmpty: {
     color: colors.text.secondary,
     fontWeight: '400',
+    letterSpacing: 1.2,
   },
   track: {
     height: THUMB_SIZE,

@@ -26,7 +26,7 @@ import {
   type RowIconKind,
 } from '../../components/icons/SectionIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
-import { ClubTrainingFeedbackPanel } from '../../components/SessionFeedbackPanel';
+import { ClubTrainingFeedbackPanel, GameSessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -190,7 +190,6 @@ export default function HomeScreenV2() {
     gameModalLabel,
     closeGameModal,
     handleOpenGameDayActions,
-    handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
     handleSetByeWeek,
@@ -265,6 +264,10 @@ export default function HomeScreenV2() {
   /* The day whose CLUB TRAINING form is open, or null. Screen state, never
      persisted — which sheet is open is not a decision about training. */
   const [clubTrainingDate, setClubTrainingDate] = useState<string | null>(null);
+  /* The day whose GAME form is open, or null — the club form's twin, and
+     deliberately the same shape. Sam, 2026-08-22: *"it should just be a pop up
+     like it is for team training"*. Screen state, never persisted. */
+  const [gameFeedbackDate, setGameFeedbackDate] = useState<string | null>(null);
   const dayFirst = preferredProgramView === 'today' && isNormal;
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
@@ -552,7 +555,19 @@ export default function HomeScreenV2() {
         }}
         onViewWorkout={() => handleViewWorkout(day)}
         onFinishTeam={() => handleFinishTeamSession(day)}
-        onLogGame={() => handleLogGame(day.date)}
+        /* ── LOG GAME IS A POP-UP, NOT A SCREEN — Sam, 2026-08-22 ──
+           *"Fix the game feedback form - it now takes you inside a session view
+           that doesn't need to be there - it should just be a pop up like it is
+           for team training"*.
+
+           It used to `navigate('DayWorkout', { startFinished: true })`, which
+           opened the whole session screen — its header, its exercise list, its
+           change box — around a form with four questions. A game has no
+           exercises to show, so every part of that screen except the form was
+           furniture. **The route is not deleted**: `handleLogMissedSession`
+           still uses `startFinished` to reopen a missed SESSION, which is a day
+           that really does have a list. */
+        onLogGame={() => setGameFeedbackDate(day.date)}
         onGameDayActions={() => handleOpenGameDayActions(day.date)}
         onMakeChange={() => setChangeSheetEntry({ date: day.date, initialAction: 'actions' })}
         staleWarning={staleByDate[day.date]}
@@ -1540,6 +1555,52 @@ export default function HomeScreenV2() {
             onSave={() => setClubTrainingDate(null)}
           />
         ) : null}
+      </Sheet>
+
+      {/**
+        * THE GAME FORM — the club form's twin, Sam 2026-08-22: *"it should just
+        * be a pop up like it is for team training"*.
+        *
+        * **NO `SheetHeader` HERE, AND THAT IS NOT AN OVERSIGHT.** This panel
+        * draws its own eyebrow, title and sub-line — "GAME COMPLETE", "Game
+        * feedback", "A quick match check-in." — and all three are SIGNED rows
+        * (`rules/gameFeedback.ts`, batch 18-b-i). A sheet header repeating the
+        * title would say it twice; a sheet header REPLACING it would drop a
+        * signed string out of the app, which `test:copy-rulings-binding`
+        * watches for in so many words. The club form has no header of its own,
+        * which is why that one wears the sheet's.
+        *
+        * **IT WRITES THROUGH THE SAME DOOR IT ALWAYS DID.** Only the container
+        * changed: the panel, its transaction, its receipt and its testIDs are
+        * the session screen's, unmoved.
+        */}
+      <Sheet
+        visible={gameFeedbackDate !== null}
+        onClose={() => setGameFeedbackDate(null)}
+        testID="game-feedback-sheet"
+        /* ⚠ **THE FORM IS TALLER THAN THE SHEET, AND IT WAS CUT OFF ON THE
+           FIRST RUN.** Four questions and a Save button do not fit in an
+           auto-height sheet on a 402x874 screen: the club form does, which is
+           why that one needs neither of these. `cappedBody` is the primitive's
+           own hug-but-stop-at-92% mode and the ScrollView below is what makes
+           the rest reachable. Seen on the simulator, not reasoned about — the
+           Save button was simply below the fold with no way to scroll to it. */
+        cappedBody
+      >
+        <ScrollView
+          style={styles.gameFeedbackBody}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          {gameFeedbackDate ? (
+            <GameSessionFeedbackPanel
+              date={gameFeedbackDate}
+              workout={weekDays.find((d) => d.date === gameFeedbackDate)?.workout ?? null}
+              onSave={() => setGameFeedbackDate(null)}
+            />
+          ) : null}
+        </ScrollView>
       </Sheet>
 
       <AwaySheet
@@ -4350,6 +4411,11 @@ const styles = StyleSheet.create({
   /* The amber GAME badge's two styles went with the badge — Sam removed it on
      2026-08-22. The amber itself is NOT retired: `DAY_ROW_ACCENT.game` still
      tints the fixture's row icon, which is the fixture's remaining mark. */
+  /* `flexShrink: 1` with an AUTO basis, the same value `SessionActionSheet`
+     uses for the same job: the body measures its content first and gives space
+     back when the sheet's 92% cap binds. `flex: 1` would resolve to zero height
+     here — the sliver-sheet defect written up in `ui/Sheet`. */
+  gameFeedbackBody: { flexShrink: 1 },
   /* The head's left half is the TITLE now (Sam, 2026-08-22), and a title is as
      long as the day's name. It shrinks; the badge beside it does not. */
   selectedTitleLead: { flexShrink: 1 },

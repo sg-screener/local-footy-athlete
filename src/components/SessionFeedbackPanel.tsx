@@ -474,7 +474,20 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
   );
 };
 
-const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
+/**
+ * ⚠ **EXPORTED 2026-08-22 SO THE PROGRAM SCREEN CAN POP IT UP.** Sam: *"Fix the
+ * game feedback form - it now takes you inside a session view that doesn't need
+ * to be there - it should just be a pop up like it is for team training"*.
+ *
+ * The Program screen mounts THIS panel rather than `SessionFeedbackPanel`,
+ * which chooses between the game and training presentations by classifying the
+ * workout it is handed. **A fixture may carry no workout at all** — the old
+ * route had a branch for exactly that case — and an unclassifiable day would
+ * fall to the TRAINING form, which is the wrong questions on a match day. The
+ * day view already knows it is a game; naming the panel says so, instead of
+ * asking a shared dispatcher to re-derive it from data that may be missing.
+ */
+export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
   const existing = useProgramStore((state: any) => state.sessionFeedback[date]) as
     | SessionFeedback
     | undefined;
@@ -645,7 +658,15 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
       />
 
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.feelQuestion}</SectionLabel>
-      <View style={styles.row}>
+      {/* ── FIVE ON ONE LINE — Sam, 2026-08-22: *"how did you feel buttons
+          should fit on 1 line"*. They wrapped, so "Heavy" sat alone on a second
+          row and read like a different question's answer.
+          `fillRow` IS NOT NEW — the chip has always had it and nothing used it:
+          each chip takes an equal fifth of the row, the row stops wrapping, and
+          the label shrinks a fraction rather than truncating. "Normal" is the
+          word that decides the width, and at five chips on a 402pt screen it
+          needs about 0.85 of its size. */}
+      <View style={[styles.row, styles.feelRow]}>
         {[...GAME_FEEL_OPTIONS].reverse().map((option) => (
           <FeedbackChip
             key={option.key}
@@ -654,6 +675,7 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
             selected={gameFeel === option.key}
             selectedColor={colors.accent.lime}
             onPress={() => setGameFeel(option.key)}
+            fillRow
           />
         ))}
       </View>
@@ -1795,6 +1817,13 @@ const FeedbackChip: React.FC<FeedbackChipProps> = ({
         styles.chipText,
         selected && { color: selectedColor, fontWeight: '700' },
       ] as unknown as TextStyle}
+      /* A ROW-FILLING CHIP HAS A FIXED SHARE OF THE ROW, so its label must fit
+         that share rather than set it. One line, shrink-to-fit, never a
+         hyphenated break — the same treatment the change-hub chips get for the
+         same reason. Left alone for an ordinary chip, which sizes to its word. */
+      numberOfLines={fillRow ? 1 : undefined}
+      adjustsFontSizeToFit={fillRow}
+      minimumFontScale={fillRow ? 0.8 : undefined}
     >
       {label}
     </Text>
@@ -1992,6 +2021,16 @@ const styles = StyleSheet.create({
   chipFill: {
     flex: 1,
     alignItems: 'center',
+    /* The chip's own 14 is for a chip that hugs its word. A fifth of the row is
+       56pt on a 402pt screen and 28 of those cannot be padding. */
+    paddingHorizontal: 4,
+  },
+  /* Five answers, one line (Sam, 2026-08-22). `flexWrap` is the whole of it —
+     the shared `row` wraps, which is right for every other chip group on this
+     form, so the feel row says otherwise for itself rather than changing them. */
+  feelRow: {
+    flexWrap: 'nowrap',
+    gap: 6,
   },
   chipText: {
     color: colors.text.secondary,
