@@ -703,7 +703,82 @@ export default function HomeScreenV2() {
                 </Svg>
               </Pressable>
             </View>
-          ) : null}
+          ) : (
+            /**
+             * THE DAY VIEW GETS THE WEEK VIEW'S NAVIGATOR — Sam, 2026-08-21:
+             * *"can you add a daily toggle following the same ui padding and
+             * text font sizing etc as the weekly view - just write like
+             * Fri 21/8 instead of 17 - 23 Aug"*.
+             *
+             * ⚠ **THE SAME STYLES, NOT A MATCHING SET.** It reuses
+             * `compactWeekNav*` verbatim, so the padding, the 40x40 hit areas,
+             * the 13pt uppercase label and the disabled opacity cannot drift
+             * from the week view's the way two copies would.
+             *
+             * `setPreferredDayIdx` already existed and had NO caller — the day
+             * the athlete sees was fixed at today. This is its first reader.
+             * It walks WITHIN the shown week and stops at its edges, exactly as
+             * the week navigator stops at its own bounds; the middle tap
+             * returns to today, mirroring the week's return-to-this-week.
+             */
+            <View style={styles.compactWeekNav} testID="program-day-navigation">
+              <Pressable
+                onPress={dayFirstIdx > 0
+                  ? () => setPreferredDayIdx(dayFirstIdx - 1)
+                  : undefined}
+                disabled={dayFirstIdx <= 0}
+                accessibilityRole="button"
+                accessibilityLabel="Previous day"
+                accessibilityState={{ disabled: dayFirstIdx <= 0 }}
+                testID="program-day-previous"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.compactWeekNavButton,
+                  dayFirstIdx <= 0 && styles.compactWeekNavButtonDisabled,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M15 18l-6-6 6-6" />
+                </Svg>
+              </Pressable>
+              <Pressable
+                style={styles.compactWeekNavCurrent}
+                onPress={todayIdx >= 0 && dayFirstIdx !== todayIdx
+                  ? () => setPreferredDayIdx(todayIdx)
+                  : undefined}
+                accessibilityRole="button"
+                accessibilityLabel={dayFirstIdx === todayIdx ? 'Today' : 'Return to today'}
+                testID="program-day-current"
+              >
+                <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
+                  {dayFirstDay
+                    ? `${dayFirstDay.short} ${shortDayMonthLabel(dayFirstDay.date)}`
+                    : ''}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={dayFirstIdx < weekDays.length - 1
+                  ? () => setPreferredDayIdx(dayFirstIdx + 1)
+                  : undefined}
+                disabled={dayFirstIdx >= weekDays.length - 1}
+                accessibilityRole="button"
+                accessibilityLabel="Next day"
+                accessibilityState={{ disabled: dayFirstIdx >= weekDays.length - 1 }}
+                testID="program-day-next"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.compactWeekNavButton,
+                  dayFirstIdx >= weekDays.length - 1 && styles.compactWeekNavButtonDisabled,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M9 18l6-6-6-6" />
+                </Svg>
+              </Pressable>
+            </View>
+          )}
 
         </View>
 
