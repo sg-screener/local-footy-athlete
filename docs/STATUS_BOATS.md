@@ -240,6 +240,121 @@ Agent: boats
 
 ---
 
+---
+
+# SESSION 3 — SAM'S CORRECTION, AND WHAT IT CHANGED
+
+**Sam, 2026-08-21: *"You have mixed current contracts with old-app
+expectations."* He was right on every count.** Session 2's report carried three
+"findings"; **one was real, one was a defect that does not exist, and one was
+scored against a deleted authority as if it were a standard.**
+
+| session 2 said | session 3, after Sam's correction |
+| --- | --- |
+| a live violation of the severity ruling, DECLARED as a debt | **the debt entry is DELETED.** It pinned a line on the COACH's live time-cap path under a DEAD feature's section. Gating live code under a retired feature was the error |
+| a safety gap: "the app cautions max-effort work it still prescribes" | **WITHDRAWN. The defect does not exist.** It came from a legacy dispatcher inside a suite fixture. Through the real Tired button the week is RECOMPOSED |
+| a gap: staged injury return is missing | **REFRAMED as an OPEN Sam decision.** The deleted filter's behaviour is not a standard |
+
+## 1. SHORT ON TIME — PROVEN DEAD, THEN DELETED (R-126)
+
+`npm run census:short-on-time-route`, **8 cells, 0 failures**: the fact was gated
+on `today_only`; **all three athlete dispatches use `current_week`**; and
+`buildReadinessSignalPatch` has zero production callers.
+
+**⚠ THE REPO ALREADY KNEW, IN TWO PLACES I SHOULD HAVE READ FIRST.**
+`LAW-day-readiness-doors-are-direct` says "the dead Time action ... do not
+exist", and `programControlDurableOwnershipTests` carried **two PASSING cells
+asserting the Time door stays absent** — while nine cells beside them drove that
+door through a `today_only` helper the suite built itself. **A suite was testing
+a door its own neighbours said was gone, and I repaired it instead of reading
+them.**
+
+Deleted: `rules/timeAvailabilityPolicy.ts` whole, the readiness quick option, the
+readiness constraint, the control-action branch, the helper and nine cells
+(**18/2 → 11/0**, two of the nine already failing), and my debt entry.
+**Kept:** the coach's time-cap fact — a different, live feature that shared only
+a type.
+
+## 2. "TOTALLY COOKED" — RE-MEASURED THROUGH THE REAL BUTTON (R-127)
+
+`npm run probe:totally-cooked` drives the Tired sheet's third option through the
+real durable executor on a real generated in-season week:
+
+| day | sets before → after | rows dropped |
+| --- | --- | --- |
+| Mon | `2,3,3,3,3,2,1` → `1,2,2,2,1` | Single-Leg RDL, Band Pallof Press |
+| Tue | `2,3,3,2,13` → `1,3,2,13` | Band Pull-Apart |
+| Wed | `3,3,2` → `2,2` | Banded External Rotation |
+
+`ok=true`, `changedProgram=true`, **warnings on every day: 0.** The week is
+recomposed, not annotated. **No defect. Nothing asks for the deleted rewrite
+system back.**
+
+## 3. STAGED INJURY RETURN — OPEN, AND NOT A GAP (R-128)
+
+What is simply true: 9/10 then 4/10 and a fresh 4/10 give the same five rows,
+withheld 0; and `rules/injuryReintroduction.ts` has zero production callers.
+**Whether a return should be staged is Sam's to rule.** The staging cells stay so
+either ruling has a specification. No product code changed.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **575 — 13 fewer, zero added** |
+| worse file/scope pairs | 74 | **71** — three files LEAVE, none joins |
+| runtime-reachable src files | 552 | **551** — exactly the one deleted module |
+| `test:scenarios` | — | **byte-identical** |
+| `test:midline` | DEAD | **23 / 0** |
+| `test:severity-scale` | DEAD | **35 / 0** |
+| `test:coach-live-path-v2` | DEAD | **58 / 0** |
+| `test:injury-canonicalisation` | DEAD | **36 / 0** |
+| `test:injury-reintroduction` | DEAD | **31 / 0** |
+| `test:program-control-durable` | 18 / **2 failed** | **11 / 0** |
+| `test:readiness` | 33 / 0 | 28 / 0 (5 short_time cells deleted) |
+| `test:accepted-state-transactions`, `test:weekly-readiness`, `test:injury-severity-bands`, `test:coach-truth-gate`, `test:readiness-structure-law` | — | **unchanged** |
+| the three repo guards | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+
+## STILL DARK — NAMED, NOT HIDDEN, NOT THIS BRANCH'S SUBJECT
+
+`test:coach-orchestration` and `test:coach-live-wiring`
+(`useCoachUpdatesStore.setActiveInjury`, removed with the single-slot API),
+`test:strength-intent` (`blockAdjuster.recomputeWeekOverrides`, no successor),
+`test:coach-note-display` (`screens/home/TodayWorkoutCard.tsx`, deleted screen).
+Each has a live subject behind a deleted vehicle.
+
+## THE LESSON, WRITTEN DOWN
+
+**A repaired test is a CLAIM about a current contract.** Session 2 revived five
+suites and then reported what those suites' OLD expectations implied, as if the
+old app were the standard. Two of three findings did not survive being measured
+at a control the athlete can actually press. **Measure at the athlete's door, or
+do not report it as a defect.**
+
+## NOT COVERED
+
+- No rebuild, no simulator, no device, no release matrix. Headless only.
+  **NOT-VISIBLE: nothing here changes what the athlete sees** — scenario output
+  is byte-identical and the only deleted production module was unreachable.
+- **No product code was changed** beyond deleting the proven-dead short-on-time
+  implementation.
+- **Nothing merged.**
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) keep the short-on-time implementation and gate its severity line**, which
+is what session 2 did — cheap, and it keeps a guard. **(b) prove the feature has
+no athlete route and delete it whole.** **(b), on Sam's instruction and on the
+census**: a gate over a door nobody can open is a gate that will be maintained
+forever for nothing, and the line it was guarding turned out to belong to a
+different, live feature.
+
+Agent: boats
+
+---
+
 # SESSION 2 — MIDLINE, SEVERITY-SCALE, THE CARD, AND THE FILTER MEASUREMENT
 
 **Branch `cleanup/midline-severity-card`, cut from `main` @ `3821af21`. Control
