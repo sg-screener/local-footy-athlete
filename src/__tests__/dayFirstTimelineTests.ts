@@ -664,29 +664,53 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
 // false once already.
 // ─────────────────────────────────────────────────────────────────────────────
 
-run('the day card leads with the eyebrow, and the Today badge is gone from it', () => {
+/**
+ * ⚠ **THIS CELL IS INVERTED, NOT DELETED — Sam, 2026-08-22.**
+ *
+ * *"we no longer need todays session or the date in the top left hand corner of
+ * the S&C box - the date is now between the arrows at the top of screen - so
+ * that can be removed and the title of the session i.e. game day, or strength
+ * or whatever can take its place"*.
+ *
+ * It used to hold ruling 5: the eyebrow ("TODAY'S SESSION - MON 10/8") is the
+ * words, and the Today BADGE is gone because the words say it. The eyebrow is
+ * now gone too — the date nav above the card says the date on every day, not
+ * only today — and the ruling that mattered survives the change: **the day card
+ * carries the date ONCE, and it is not the card that carries it.**
+ *
+ * THE BADGE MUST STILL NOT COME BACK. That is the half of ruling 5 a careless
+ * removal would have undone, because its old condition was "no eyebrow".
+ */
+run('the day card leads with the TITLE — no eyebrow, no date, no Today badge', () => {
   const home = homeScreenSource();
-  // THE WORDS ARE THE SHEET'S. The literal must NOT be in the screen — that is
-  // the style law's shape applied to copy: forbid the literal, assert the id is
-  // read. `stripComments` above means a docblock quoting it cannot pass this.
   assert(!/TODAY'S SESSION/.test(home),
-    'the eyebrow\'s words are hardcoded in HomeScreenV2. They are a sheet entry '
-    + '(`day.card.eyebrow.today`, batch 32) — a surface authoring them is the '
-    + 'class SignedCopy exists to make impossible.');
-  assert(/signedCopy\('day\.card\.eyebrow\.today'\)/.test(home)
-    && /signedCopy\('day\.card\.eyebrow\.date_separator'\)/.test(home),
-    'the day card no longer reads the signed eyebrow — ruling 5 put the "today" '
-    + 'fact into words, and this is where the words come from.');
-  // AND THE BADGE IS GONE PRECISELY WHERE THE WORDS ARRIVE. Not deleted
-  // outright: the week list keeps its own today marker, which is hers too.
-  assert(/showRowBadges && day\.isToday && !showTodayEyebrow/.test(home),
-    'the "Today" badge is no longer conditioned on the eyebrow\'s absence. '
-    + 'Ruling 5 removed it because the eyebrow says it; if the two can render '
-    + 'together the ruling is undone, and if the badge is deleted outright the '
+    'the eyebrow\'s words are back in HomeScreenV2, hardcoded');
+  assert(!/day-card-eyebrow/.test(home) && !/showTodayEyebrow/.test(home),
+    'the day card still draws the eyebrow Sam removed');
+  assert(!/signedCopy\('day\.card\.eyebrow\./.test(home),
+    'the day card still reads the retired eyebrow rows from the sheet');
+
+  const dayHeaderAt = home.indexOf('const dayCardHeader =');
+  const weekHeaderAt = home.indexOf('const weekCardHeader =', dayHeaderAt);
+  assert(dayHeaderAt > 0 && weekHeaderAt > dayHeaderAt,
+    'the day card header region could not be found');
+  const head = home.slice(dayHeaderAt, weekHeaderAt);
+  // THE DATE IS THE THING REMOVED, so the cell names the date, not the markup
+  // that happened to draw it. `shortDayMonthLabel` is how this screen writes a
+  // date; the head must not call it, whatever element it would put it in.
+  assert(!/shortDayMonthLabel/.test(head) && !/day\.short/.test(head),
+    'the day card head is dating itself again. The date lives between the '
+    + 'arrows above the card, and Sam removed the card\'s copy of it.');
+  assert(/testID="day-card-title"/.test(head)
+    && /\{selectedTitle\}/.test(head),
+    'the day card head no longer leads with the session title, which is what '
+    + 'Sam put in the space the date left.');
+  // AND THE BADGE STAYS GONE. `!dayShape`, not "no eyebrow": the old condition
+  // would have re-summoned the badge the moment the eyebrow was deleted.
+  assert(/showRowBadges && day\.isToday && !dayShape/.test(home),
+    'the "Today" badge is no longer scoped away from the day shape. Ruling 5 '
+    + 'removed it from the day card; if it is deleted outright instead, the '
     + 'week list silently loses its today marker.');
-  assert(/showTodayEyebrow = dayShape && emphasized && day\.isToday/.test(home),
-    'the eyebrow is no longer scoped to the day shape and to today. It says '
-    + '"TODAY\'S SESSION": on any other day, or in the week list, it lies.');
 });
 
 run('the day card lists each part\'s exercises, name and prescription', () => {
@@ -757,8 +781,9 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert(/<SessionTierBadge\s+compact=\{dayShape\}/.test(home),
     'the day header still uses the oversized category badge');
 
-  assert(/dayEyebrow:\s*\{[^}]*fontSize:\s*10[^}]*lineHeight:\s*13/.test(home),
-    'the eyebrow no longer matches Renee\'s 10pt session eyebrow');
+  assert(!/dayEyebrow:\s*\{/.test(home),
+    'the retired eyebrow\'s style is back in the screen. Sam removed the '
+    + 'element on 2026-08-22; a style with no element is a value nobody can date.');
   assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*19[^}]*lineHeight:\s*23/.test(home),
     'the day session title does not match Renee\'s 19pt headline');
   assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
@@ -1241,6 +1266,36 @@ run('the week card keeps her proportions — large date, compact badges', () => 
   assert(/fontSize: s\.font, lineHeight: s\.line/.test(uiBadge)
     && /case 'xxs':[\s\S]{0,180}font:\s*8, line:\s*10/.test(uiBadge),
   'the tiny Today badge shrank its font but kept the normal 24pt text line-height');
+});
+
+run('the day navigator says TODAY for today and a date for every other day', () => {
+  const home = homeScreenSource();
+  // Sam, 2026-08-22: *"make it say 'today' in between the arrows at the top for
+  // todays date ... tomorrow will be unchanged ie. SUN 23/8 or yesterday would
+  // still say FRI 21/8"*.
+  const navAt = home.indexOf('testID="program-day-navigation"');
+  const navEnd = home.indexOf('testID="program-day-next"', navAt);
+  assert(navAt > 0 && navEnd > navAt, 'the day navigator could not be found');
+  const nav = home.slice(navAt, navEnd);
+
+  assert(/navIsToday\s*\?\s*signedCopy\('day\.navigator\.today'\)/.test(nav),
+    'the navigator no longer says the signed word on today');
+  assert(!/'Today'/.test(nav) && !/"Today"/.test(nav),
+    'the navigator authors the word "Today" itself. It is a signed row '
+    + '(`day.navigator.today`) — a surface writing it is what SignedCopy exists '
+    + 'to make impossible.');
+  // THE OTHER DAYS ARE UNCHANGED, which is half of what Sam asked for and the
+  // half a careless read would drop.
+  assert(/dayFirstDay\.short\}\s*\$\{shortDayMonthLabel\(dayFirstDay\.date\)/.test(nav),
+    'the navigator stopped dating the days that are not today. Sam: "tomorrow '
+    + 'will be unchanged ie. SUN 23/8".');
+  // ONE READ OF "IS THIS TODAY?", so the visible word and the spoken label can
+  // never disagree — the screen reader used to answer this question separately.
+  assert(/const navIsToday = dayFirstDay\?\.isToday === true;/.test(home),
+    'the navigator no longer derives today once from the projection\'s own flag');
+  assert((nav.match(/navIsToday/g) ?? []).length === 2,
+    'the navigator\'s label and its accessibility label are no longer driven by '
+    + 'the same answer — one of them can now say TODAY while the other says a date');
 });
 
 run('a logged day shows DONE INSTEAD of its tier, at the tier chip\'s own size', () => {

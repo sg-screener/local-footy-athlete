@@ -2174,9 +2174,27 @@ the exact string quoted back to him: **`TODAY'S SESSION - MON 10/8`**.
 wording would come with the batch rather than alone; he ruled it immediately. The
 string is therefore SIGNED, not PROPOSED, and slice 2 may ship it.
 
+**STATUS AS OF 2026-08-22: WITHDRAWN BY SAM.** *"we no longer need todays
+session or the date in the top left hand corner of the S&C box - the date is now
+between the arrows at the top of screen - so that can be removed and the title
+of the session i.e. game day, or strength or whatever can take its place"*.
+
+The eyebrow is gone from the day card, and so is the card's own weekday+date
+cluster: the date navigator directly above the card names the day being viewed,
+on every day rather than only on today, so the card was repeating its own
+header. **The signature is not being overturned — the SURFACE it was signed for
+no longer exists**, which is a withdrawal, not a re-ruling. The two registry
+rows were deleted from `src/rules/projectionCopy.ts` in the same change, because
+a signed string with no renderer is one the next surface would ship believing
+Sam had just approved it.
+
+The separator row stays as signed rather than withdrawn: " - " is a punctuation
+joiner, not a sentence, and it is not this batch's to retire from the several
+other places the app joins with it.
+
 | Where | SIGNED string |
 | --- | --- |
-| The day card's eyebrow, fixed half | "TODAY'S SESSION" |
+| The day card's eyebrow, fixed half | WITHDRAWN: "TODAY'S SESSION" — the eyebrow was removed from the day card on 2026-08-22 (see the status note above); the title took its place |
 | The eyebrow's separator before the date | " - " |
 
 **32-a. ONLY TWO THINGS HERE ARE NEW CHARACTERS, AND THE DATE IS NOT ONE OF THEM.**

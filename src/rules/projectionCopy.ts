@@ -616,37 +616,20 @@ export function registerProjectionCopy(): void {
       text: "There's nothing to change on this day.",
     },
 
-    // ── The day card's eyebrow, and the drop-downs' meta line. ──
+    // ── The day card's eyebrow — WITHDRAWN 2026-08-22, and the rows go with it ──
     //
-    // UI MERGE SLICE 2, rulings 2 + 5. Sam's ruling 5 removes the "Today" badge
-    // from the day screen and folds the same fact into the heading; his own
-    // wording for the heading, signed on sight 2026-08-10 (*"yes thats the better
-    // heading"*), is `TODAY'S SESSION - MON 10/8`.
+    // Batch 32 registered "TODAY'S SESSION" and its " - " separator for the day
+    // card's eyebrow (ruling 5: the badge became words). Sam removed the eyebrow
+    // AND the card's own date on 2026-08-22 — *"the date is now between the
+    // arrows at the top of screen - so that can be removed and the title of the
+    // session ... can take its place"* — so nothing renders these two rows.
     //
-    // **THE DATE IS NOT REGISTERED HERE AND THAT IS DELIBERATE.** `MON` and
-    // `10/8` are the card's EXISTING values — `day.short` and
-    // `shortDayMonthLabel(day.date)`, rendered side by side at the top-left of
-    // this same card before this slice. The eyebrow MOVES them; it does not
-    // re-format them and it does not author a new date vocabulary. Registering
-    // a date template here would create a SECOND way the app says what day it
-    // is, which is the defect this module exists to stop.
-    {
-      id: 'day.card.eyebrow.today',
-      source: 'signed_sentence',
-      provenance: 'SIGNED — Sam, 2026-08-10, batch 32 of '
-        + 'docs/COPY_SHEET_RULINGS_2026-07-30.md: "yes thats the better heading", '
-        + 'answering the exact string quoted to him, "TODAY\'S SESSION - MON 10/8".',
-      text: "TODAY'S SESSION",
-    },
-    {
-      id: 'day.card.eyebrow.date_separator',
-      source: 'signed_sentence',
-      provenance: 'SIGNED — Sam, 2026-08-10, batch 32. The hyphen is HIS: the string '
-        + 'he read and signed used "-", not the em dash this sheet uses elsewhere, '
-        + 'and a signature is over the characters he saw.',
-      text: ' - ',
-      joiner: true,
-    },
+    // **A SIGNED ROW WITH NO RENDERER IS NOT ARCHIVE, IT IS A TRAP.** The next
+    // surface that needs an eyebrow would find a signed string waiting and ship
+    // it as though Sam had just approved it, when what he did was take it off
+    // the screen. The withdrawal is recorded where withdrawals are read — batch
+    // 32 of `docs/COPY_SHEET_RULINGS_2026-07-30.md`, whose WITHDRAWN form
+    // `test:copy-rulings-binding` asserts is ABSENT from the app.
     // The drop-down row's meta line. `derived_number`: the SHAPE is authored,
     // the count is data — the same treatment the prescription templates below
     // get. PROPOSED, not signed: Sam signed the eyebrow, not this.
@@ -766,6 +749,21 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-22: "this finish session button should be '
         + '\'log session\'".',
       text: 'Log session',
+    },
+    {
+      /* THE ONE DAY THE NAVIGATOR NAMES IN WORDS RATHER THAN IN NUMBERS.
+         Sam, 2026-08-22: *"make it say 'today' in between the arrows at the top
+         for todays date ... tomorrow will be unchanged ie. SUN 23/8 or yesterday
+         would still say FRI 21/8"*. The DATE is not registered here and that is
+         deliberate — `SAT 22/8` is the day's own two values, formatted the way
+         this screen already formats a date. Registering a date template would
+         be a second way the app says what day it is. */
+      id: 'day.navigator.today',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "it should just say today", for the '
+        + 'day navigator\'s label when the day being viewed is today. It is also '
+        + 'what a screen reader says there, from this same row.',
+      text: 'Today',
     },
     {
       id: 'day.navigator.return_to_today',

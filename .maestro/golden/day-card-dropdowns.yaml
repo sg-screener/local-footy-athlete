@@ -26,9 +26,15 @@ tags:
 # ── COLLAPSED: the parts are listed, no exercise is showing ────────────────
 - assertVisible:
     id: "day-timeline"
+# THE TITLE LEADS THE CARD (Sam, 2026-08-22). The eyebrow and the card's own
+# date were removed when the date navigator above the card took that job; the
+# session title moved into the space they left, so the title is what this flow
+# now asserts is at the head of the card.
 - assertVisible:
-    id: "day-card-eyebrow"
-# RULING 5 LANDED: the eyebrow carries "today", so the badge does not.
+    id: "day-card-title"
+# RULING 5 STILL HOLDS: the day card does not carry a Today badge. It is scoped
+# away from the day shape now rather than away from the eyebrow, so removing the
+# eyebrow could not quietly bring it back.
 # BY ID, NOT BY TEXT. The first version of this line read `text: "Today"` and
 # failed on its own first run — the Today/Week TOGGLE says the word too, so the
 # assertion could never have passed and would have been "fixed" by deleting it.

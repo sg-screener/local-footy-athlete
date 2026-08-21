@@ -268,6 +268,20 @@ export default function HomeScreenV2() {
   const dayFirst = preferredProgramView === 'today' && isNormal;
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+  /* ── THE NAVIGATOR SAYS "TODAY" FOR TODAY, AND A DATE FOR EVERY OTHER DAY ──
+     Sam, 2026-08-22: *"make it say 'today' in between the arrows at the top for
+     todays date i.e. today is Sat 22 Aug instead of saying SAT 22/8 it should
+     just say today and tomorrow will be unchanged ie. SUN 23/8 or yesterday
+     would still say FRI 21/8"*.
+
+     ONE ANSWER FOR THE WORD AND FOR THE SPOKEN LABEL. The row already decided
+     "is this today?" twice — once for what a screen reader says, once for
+     whether tapping returns to today — and now the visible word depends on it
+     too. Three reads of the same fact is three chances for the label to say
+     "TODAY" while the voice-over reads out a date. `isToday` is the projection's
+     own flag, so a week that does not contain today has no day carrying it and
+     the navigator simply keeps showing dates. */
+  const navIsToday = dayFirstDay?.isToday === true;
 
   const reviewAthlete = useAthleteContext();
   const mobilityFlowByDate = useMemo(() => {
@@ -786,13 +800,21 @@ export default function HomeScreenV2() {
                   ? () => setPreferredDayIdx(todayIdx)
                   : undefined}
                 accessibilityRole="button"
-                accessibilityLabel={dayFirstIdx === todayIdx ? 'Today' : signedCopy('day.navigator.return_to_today')}
+                accessibilityLabel={navIsToday
+                  ? signedCopy('day.navigator.today')
+                  : signedCopy('day.navigator.return_to_today')}
                 testID="program-day-current"
               >
+                {/* THE WORD IS THE SHEET'S, THE DATE IS THE CALENDAR'S. "Today"
+                    is a word Sam chose, so it is a signed row; `SAT 22/8` is
+                    the day's own two values, formatted the one way this screen
+                    formats a date. The style upper-cases both. */}
                 <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
-                  {dayFirstDay
-                    ? `${dayFirstDay.short} ${shortDayMonthLabel(dayFirstDay.date)}`
-                    : ''}
+                  {navIsToday
+                    ? signedCopy('day.navigator.today')
+                    : dayFirstDay
+                      ? `${dayFirstDay.short} ${shortDayMonthLabel(dayFirstDay.date)}`
+                      : ''}
                 </Text>
               </Pressable>
               <Pressable
@@ -4275,12 +4297,10 @@ const styles = StyleSheet.create({
   weekSessionExercisePrescription: {
     color: '#E1E3E1', fontSize: 11, lineHeight: 14, fontVariant: ['tabular-nums'],
   },
-  // ── THE DAY CARD'S EYEBROW (ruling 5) ──
-  // Small, muted, letter-spaced — the same treatment `coachNotesTitle` gives an
-  // eyebrow already, minus the lime, because ruling 2 spends the accent once.
-  dayEyebrow: {
-    color: '#989C98', fontSize: 10, lineHeight: 13, fontWeight: '700', letterSpacing: 0.75,
-  },
+  // ── THE DAY CARD'S EYEBROW (ruling 5) — RETIRED 2026-08-22 ──
+  // The style goes with the element: Sam removed the eyebrow and the card-level
+  // date when the date nav above the card took that job. Keeping a style whose
+  // only element is gone is how a screen accumulates values nobody can date.
   // ── THE CALM DAY CARD (ruling 2) ──
   // What it does NOT set is the point: no `borderColor`, no `shadow*`, no
   // `elevation`. A dark card on black, exactly as hers is.
@@ -4317,12 +4337,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  selectedDateCluster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 0,
-  },
   selectedBadgeCluster: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4334,18 +4348,6 @@ const styles = StyleSheet.create({
   dayLabel: {
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.6, minWidth: 32,
-  },
-  // Selected weekday steps up a size — the "you are here" marker.
-  dayLabelSelected: {
-    fontSize: 13,
-  },
-  // Calendar date beside the weekday — one step dimmer, lighter weight,
-  // no tracking. "MON" is the anchor, "3/7" is the detail.
-  dayDate: {
-    color: '#4A4A4A', fontSize: 11, fontWeight: '600',
-  },
-  dayDateSelected: {
-    fontSize: 13, color: '#6A6A6A',
   },
   gameBadge: {
     backgroundColor: 'rgba(255, 194, 71, 0.15)',
