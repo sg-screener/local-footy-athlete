@@ -438,7 +438,16 @@ export const LITERAL_EXEMPTIONS: Record<string, LiteralExemptionKind> = {
   // ── Conditioning prescriptions (free-text dose) ──
   '3 x 8min zone 2 Rower': 'conditioning_prescription',
   '3 x 8min zone 2 SkiErg': 'conditioning_prescription',
-  'Breathing Reset': 'recovery_flow',
+
+  /* `'Breathing Reset': 'recovery_flow'` WAS HERE AND IS DELETED (Sam,
+   * 2026-08-21: *"delete those 4 things so they never show up again"*).
+   *
+   * ⚠ **REMOVING THE EXEMPTION IS THE HALF THAT MAKES IT PERMANENT.** The two
+   * places that minted the name are gone, but an exemption left behind is a
+   * standing permission for the next writer to mint it again and stay green.
+   * With the row deleted, the lock now REFUSES `Breathing Reset` — Sam's own
+   * `Box Breathing`, `Crocodile Breathing`, `90/90 Breathing` and `Child's Pose
+   * with Breathing` are what the app has, and they resolve. */
 
   // ── REAL exercise names that do not resolve. Sam's ruling owed. ──
   // EMPTY as of 2026-07-25 — Sam ruled all six the lock surfaced. Emptiness is

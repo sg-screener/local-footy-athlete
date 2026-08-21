@@ -44,7 +44,7 @@ import path from 'path';
 import {
   GUIDED_INJURY_AREA_HINT,
   GUIDED_INJURY_AREA_OPTIONS,
-  GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL,
+  GUIDED_INJURY_REGION_OPTIONS,
   buildGuidedInjuryConstraint,
   guidedInjuryAreaIsProgrammable,
   guidedInjuryBucketForArea,
@@ -103,6 +103,9 @@ console.log('\n[1] FORWARD — every row the menu offers resolves to a bucket');
 
   // THE NECK RULING, landed: "Neck" reaches the NECK column, not shoulder.
   ok('"Neck" reaches Sam\'s neck matrix column', guidedInjuryBucketForArea('Neck') === 'neck');
+  ok('"Neck" is offered once, under Back / midline only',
+    !GUIDED_INJURY_AREA_OPTIONS.upper_body.includes('Neck')
+    && GUIDED_INJURY_AREA_OPTIONS.back_midline.filter((area) => area === 'Neck').length === 1);
   // And Quad reaches quad rather than being proxied to knee.
   ok('"Quad" reaches the quad column, not knee',
     guidedInjuryBucketForArea('Quad') === 'quad');
@@ -136,12 +139,13 @@ console.log('\n[2] REVERSE — every bucket the exercise tags filter on is reach
     + 'unreachable one means a row was removed or the routing owner changed.');
 }
 
-console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never stored');
+console.log('\n[3] THE WRITER STILL REFUSES — an unprogrammable area cannot be stored');
 {
-  // The words are Sam's, quoted from the ruling.
-  ok('the refusal says what the athlete should do instead',
-    /pick the closest area|ask the coach/i.test(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL),
-    GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL);
+  /* THE REFUSAL COPY IS GONE, AND THAT IS THE POINT (Sam, 2026-08-21). Its cell
+     used to read `GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL`, shown when free text
+     resolved to nothing. There is no free text at this door now, so the constant
+     went and the hint below is the ONLY thing standing between an athlete whose
+     exact area is unlisted and a wrong answer. Section [4] holds the absence. */
   ok('the area step tells them to pick the closest one',
     GUIDED_INJURY_AREA_HINT.length > 0);
 
@@ -166,7 +170,7 @@ console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never st
   let threw = false;
   try {
     buildGuidedInjuryConstraint({
-      region: 'other', area: 'jaw', severity: 6, severityBand: 'moderate',
+      region: 'lower_body', area: 'jaw', severity: 6, severityBand: 'moderate',
       adjustmentLevel: 'moderate', triggers: [], seriousSymptoms: false,
     } as never, { todayISO: '2026-07-30' });
   } catch {
@@ -184,18 +188,116 @@ console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never st
   ok('a real area still builds a real constraint', good.bucket === 'hamstring', good.bucket);
 }
 
-console.log('\n[4] THE SHEET refuses at the point of answering');
+console.log('\n[4] THE SHEET HAS NO TYPED-AREA DOOR AT ALL');
 {
   const sheet = fs.readFileSync(
     path.join(src, 'screens/home/GuidedInjuryFlowSheet.tsx'), 'utf8');
-  ok('the sheet asks the shared predicate rather than its own',
-    /guidedInjuryAreaIsProgrammable\(/.test(sheet),
-    'a second answer to "can the app program around this" is how the door and the '
-    + 'writer come to disagree');
-  ok('it shows the refusal instead of advancing',
-    /setAreaRefusal\(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL\)/.test(sheet));
-  ok('and it does not advance in the same branch',
-    /setAreaRefusal\(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL\);\s*\n\s*return;/.test(sheet));
+  const onboarding = fs.readFileSync(
+    path.join(src, 'screens/onboarding/InjuriesScreen.tsx'), 'utf8');
+  /**
+   * ⚠ **THIS SECTION USED TO HOLD THE REFUSAL. IT NOW HOLDS THE ABSENCE, WHICH
+   * IS THE STRONGER PROPERTY** (Sam, 2026-08-21: *"i reckon we just remove the
+   * option for other - they're prompted to select the closest match anyway"*).
+   *
+   * A refusal has to be RE-ASSERTED for every path that reaches the field. An
+   * absent field has no paths. So the cells below assert what is NOT there —
+   * no `Other` row, no typed-area step, no text input — and section [2]'s
+   * reverse direction is what makes that safe to do: all thirteen buckets stay
+   * reachable from the rows that remain, so nothing became unreportable.
+   */
+  ok('the region menu offers exactly Upper body, Lower body and Back / midline',
+    GUIDED_INJURY_REGION_OPTIONS.map((option) => option.id).join(',')
+      === 'upper_body,lower_body,back_midline',
+    GUIDED_INJURY_REGION_OPTIONS.map((option) => option.label));
+  ok('no region row is an "Other"',
+    !GUIDED_INJURY_REGION_OPTIONS.some((option) => /other/i.test(option.label)
+      || /other/i.test(option.id)));
+  /* The STEP, not the word: the sheet still names `custom_area` in the comment
+     recording that it was removed, and a cell that reds on its own tombstone
+     teaches the next reader to delete the history. */
+  ok('the sheet has no typed-area step left',
+    !/step === 'custom_area'/.test(sheet) && !/setStep\('custom_area'\)/.test(sheet),
+    'the step the Other row led to');
+  ok('the sheet renders no text input of any kind',
+    !/<AppTextInput/.test(sheet) && !/<TextInput/.test(sheet),
+    'a free-text area is the one answer this door cannot program around');
+  ok('and it carries no refusal copy, because there is nothing left to refuse',
+    !/areaRefusal|UNRESOLVABLE_AREA_REFUSAL/.test(sheet));
+  ok('the in-app flow applies a non-paused severity immediately without a trigger step',
+    sheet.includes('submit(false, option);')
+    && !sheet.includes("setStep('triggers')")
+    && !sheet.includes('GUIDED_INJURY_TRIGGER_OPTIONS')
+    && !sheet.includes('injury-trigger-'));
+  ok('updating in-app preserves trigger context originally saved elsewhere',
+    sheet.includes('setPreservedTriggers(initial?.triggers ?? [])')
+    && sheet.includes('triggers: trainingPaused ? [] : preservedTriggers'));
+  ok('onboarding stops after the shared severity scale, then asks whether to repeat',
+    onboarding.includes("type InternalStep = 'question' | 'region' | 'area' | 'severity' | 'more'")
+    && !onboarding.includes("setStep('triggers')")
+    && !onboarding.includes("setStep('notes')")
+    && !onboarding.includes('movementTriggers'));
+}
+
+console.log('\n[5] SETUP ASKS FROM THE SAME LIST — the second door is closed too');
+{
+  /**
+   * SAM, 2026-08-21: *"do the set up one"* — the first-time setup questions had
+   * the SAME `Other area` free-text answer, and worse.
+   *
+   * **MEASURED BEFORE THE CHANGE.** Setup offered seven rows (Groin, Hamstring,
+   * Knee, Ankle, Hip, Lower back, Shoulder) plus `Other area`. The seven all
+   * routed. `Other area` routed to NOTHING — the stored-but-filters-nothing
+   * state — and six body parts the app can fully program around (quad, calf,
+   * neck, elbow, wrist/hand, ribs) **could not be reported at setup at all**,
+   * which is what made the text box necessary in the first place.
+   *
+   * ⚠ **THE FIX IS ONE LIST, NOT TWO LISTS THAT AGREE.** A second copy that
+   * happens to match today is the divergence this door has already paid for
+   * once (LR-27, five copies of the body-part map). So the cell asserts the
+   * screen READS the owner — a copied-and-pasted array would pass a
+   * set-equality check and fail this one.
+   */
+  const setup = fs.readFileSync(
+    path.join(src, 'screens/onboarding/InjuriesScreen.tsx'), 'utf8');
+
+  ok('setup renders its top-level regions FROM the injury flow\'s menu',
+    setup.includes('GUIDED_INJURY_REGION_OPTIONS.map((option) =>'));
+  ok('setup drills into the selected region through the shared area menu',
+    setup.includes('GUIDED_INJURY_AREA_OPTIONS[region].map((option) =>'));
+  ok('setup renders the same four-band severity scale as the in-app flow',
+    setup.includes('GUIDED_INJURY_SEVERITY_OPTIONS.map((option) =>')
+    && setup.includes('severityScore: option.severity'));
+  ok('setup offers no "Other area" row', !/'Other area'/.test(setup));
+  ok('setup has no typed-area step',
+    !/step === 'customArea'/.test(setup) && !/setStep\('customArea'\)/.test(setup));
+  ok('setup renders no text inputs, trigger step or notes step',
+    !/<AppTextInput/.test(setup)
+    && !/movementTriggers|WHAT BRINGS IT ON|ANYTHING ELSE/.test(setup));
+  ok('setup offers No issues after all initially and No more injuries when repeating',
+    setup.includes("injuries.length > 0 ? 'No more injuries' : 'No issues after all'"));
+  ok('setup asks whether there are more injuries after each severity answer',
+    setup.includes('title="ANY MORE INJURIES?"')
+    && setup.includes('setStep(\'more\')'));
+  ok('Yes repeats the region and area process; No saves every collected injury',
+    setup.includes('const addAnotherInjury = () =>')
+    && setup.includes("setStep('region')")
+    && setup.includes('const finishInjuries = () =>')
+    && setup.includes('commitAndAdvance({ injuries }'));
+  ok('back from the repeat question edits rather than duplicates the last injury',
+    setup.includes('const editLastInjury = () =>')
+    && setup.includes('current.slice(0, -1)')
+    && setup.includes("setStep('severity')"));
+
+  // The property that actually matters to the athlete, asked of the list the
+  // screen now uses: nothing offerable is unprogrammable.
+  const offered = Array.from(new Set(Object.values(GUIDED_INJURY_AREA_OPTIONS).flat()));
+  const dead = offered.filter((row) => !guidedInjuryAreaIsProgrammable(row));
+  ok('every area setup offers resolves to a bucket', dead.length === 0, dead);
+  // And the six that used to be unreportable now are — named, because the
+  // shortness of the old list is the finding, not a detail.
+  for (const area of ['Quad', 'Calf / Achilles', 'Neck', 'Elbow', 'Wrist / hand', 'Ribs']) {
+    ok(`"${area}" can now be reported at setup`, offered.includes(area));
+  }
 }
 
 console.log(`\nGuided injury menu totality: ${passed} passed, ${failures.length} failed`);

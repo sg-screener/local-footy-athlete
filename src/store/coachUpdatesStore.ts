@@ -220,7 +220,18 @@ export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata
   startDate: string;
   lastUpdatedAt: string;
   source?: 'coach' | 'uae' | 'tap' | 'guided_injury_flow';
-  region?: 'upper_body' | 'lower_body' | 'back_midline' | 'other';
+  /**
+   * `'other'` left THIS union with the menu row on 2026-08-21 (Sam) — no
+   * installed base, so no stored constraint can carry it.
+   *
+   * ⚠ **IT IS STILL LEGAL FURTHER DOWN, AND THAT IS NOT AN OVERSIGHT.**
+   * `GenerationInjuryRegion` keeps `'other'` because `inferRegion` still
+   * returns it for a body part it cannot classify — and the ONBOARDING
+   * injuries screen, which still has its own "Other area" free-text answer,
+   * feeds exactly that path. Narrowing the generation side too was tried and
+   * reverted: it broke two real assignment sites.
+   */
+  region?: 'upper_body' | 'lower_body' | 'back_midline';
   severityBand?: 'mild' | 'slight' | 'moderate' | 'avoid';
   adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
   triggers?: string[];

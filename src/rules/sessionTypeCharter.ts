@@ -347,12 +347,11 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    * GUNSHOW — the Bible names it in all three ideal weekly structures.
    *
    * Sam's structure: 2 biceps + 2 triceps + 2 shoulder, 2-3 sets each, drawn
-   * from 16 candidates he signed as delivered. "Shoulder" is the PUMP delts
+   * from the 23 candidates he signed on 2026-08-21. "Shoulder" is the PUMP delts
    * pool, not shoulder health.
    *
-   * And the rule that makes it honest under restriction: under thin equipment a
-   * gunshow gets SMALLER, never padded. No cross-family top-ups — the app never
-   * invents to fill a quota.
+   * Gunshow is normal gym work. Its signed families author all six movements;
+   * no cross-family top-up is permitted.
    */
   gunshow: {
     id: 'gunshow',
@@ -361,13 +360,14 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
-      source: 'data/exercisePools.ts BICEPS_POOL (5) + TRICEPS_POOL (5) + DELTS_POOL (6), '
+      source: 'data/exercisePools.ts BICEPS_POOL (8) + TRICEPS_POOL (7) + DELTS_POOL (8), '
         + 'composed 2 + 2 + 2 by utils/sessionBuilder.ts SESSION_SLOTS.arms_pump',
-      count: 16,
+      count: 23,
       sessionVariants: null,
     },
-    ruling: 'Sam signed the candidate list as delivered, 2026-07-30, with '
-      + 'DELTS_POOL as the shoulder family and shrink-never-pad under thin equipment.',
+    ruling: 'Sam signed the 2 + 2 + 2 shape on 2026-07-30 and replaced its pools '
+      + 'and added do-not-pair rules on 2026-08-21; DELTS_POOL remains the shoulder '
+      + 'family, and its authored composition is a complete normal-gym session.',
   },
 };
 
@@ -403,17 +403,21 @@ export interface CharterDebtEntry {
 export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
   // ── Rest: a residue until stage 2 gives it an owner ──
 
-  // ── Recovery: the survey's finding 4, and the whole of stage 2 ──
-  {
-    type: 'recovery',
-    question: 'composition',
-    deviation: 'contents are INVENTED — the four rows of RECOVERY_FLOW_ROWS in '
-      + 'coachRevisionTemplates.ts are hand-typed names that appear in no authored '
-      + 'pool, so the recovery DOOR composes from nothing Sam wrote even though '
-      + "buildDerivedSession('recovery') composes from the four recovery pools",
-    paidBy: 'the recovery door composes from the recovery pools, as the Mobility '
-      + 'door now composes from MOBILITY_POOL',
-  },
+  // ── Recovery: the survey's finding 4 — PAID 2026-08-21 ──
+  //
+  // The entry that stood here described this defect exactly and named its own
+  // remedy: *"the four rows of RECOVERY_FLOW_ROWS … are hand-typed names that
+  // appear in no authored pool"*, paid by *"the recovery door composes from the
+  // recovery pools, as the Mobility door now composes from MOBILITY_POOL"*.
+  //
+  // ⚠ **IT WAS PAID ONLY WHEN SAM OPENED THE SESSION AND READ IT.** The debt
+  // was accurate, the fix was written down, and the four names went on shipping
+  // — *"a mobility flow which i have never prescribed … a breathing reset —
+  // again i have zero Idea what that is"* (2026-08-21). A debt entry is a
+  // record that something is wrong, not a reason it may stay wrong.
+  //
+  // `recovery`'s ceiling drops 1 -> 0 below, in this same commit, per ratchet
+  // direction 4.
 
   // ── Mobility: authored, and unreachable ──
   {
@@ -457,7 +461,10 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
 
 export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   rest: 0,
-  recovery: 1,
+  // 1 -> 0 on 2026-08-21 with the four invented recovery rows. Lowered in the
+  // same commit that paid the debt — a ceiling left at 1 over a paid debt is
+  // slack the next invented list could hide in, which is how these four lasted.
+  recovery: 0,
   strength: 0,
   conditioning: 1,
   mobility: 1,

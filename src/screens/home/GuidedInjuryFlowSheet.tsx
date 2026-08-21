@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
-import { Button } from '../../components/ui';
+import { Button, SheetDescription } from '../../components/ui';
 import {
   SessionActionSheet,
   useSessionActionStep,
@@ -13,49 +13,36 @@ import {
   GUIDED_INJURY_AREA_OPTIONS,
   GUIDED_INJURY_REGION_OPTIONS,
   GUIDED_INJURY_SEVERITY_OPTIONS,
-  GUIDED_INJURY_TRIGGER_OPTIONS,
   type GuidedInjuryFlowResult,
   type GuidedInjuryRegion,
   GUIDED_INJURY_AREA_HINT,
-  GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL,
-  guidedInjuryAreaIsProgrammable,
 } from '../../utils/guidedInjuryControl';
 import { explorerTestId } from '../../utils/stableTestId';
-import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 
 // ── Icons (ruling 10) ──────────────────────────────────────────────────────
 // Inline stroked SVG, the house pattern (`HomeScreenV2`'s `svg` helper /
-// `PlanChangeSheet`'s `glyph` helper). One recognisable shape per region, and
-// areas REUSE their region's glyph (the brief's own instruction) rather than
-// inventing seventeen more — an area is a subdivision of the region an
-// athlete already picked, not a new concept.
+// `PlanChangeSheet`'s `glyph` helper). One recognisable shape per top-level
+// region. The next body-area step is deliberately a plain text list.
+const REGION_ICON_COLOR = colors.accent.lime;
 const REGION_COLOR: Record<GuidedInjuryRegion, string> = {
-  upper_body: '#1EA7FF',
-  lower_body: '#FFC247',
-  back_midline: '#7CC4FF',
-  other: '#8A94A6',
+  upper_body: REGION_ICON_COLOR,
+  lower_body: REGION_ICON_COLOR,
+  back_midline: REGION_ICON_COLOR,
 };
-const glyph = (color: string, children: React.ReactNode) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </Svg>
-);
-/** Upper body — an injured person rather than a generic shoulders silhouette. */
-const upperBodyIcon = (color: string) => <LfaIcon name="upper-body-injury" color={color} />;
+/** Upper body — the simple bicep mark used elsewhere in the app. */
+const upperBodyIcon = (color: string) => <LfaIcon name="flexed-arm" color={color} />;
 /** Lower body — a dedicated legs mark. */
 const lowerBodyIcon = (color: string) => <LfaIcon name="lower-body" color={color} />;
 /** Back / midline — the shared curved spine mark. */
 const backMidlineIcon = (color: string) => <LfaIcon name="spine" color={color} />;
-/** Other — a question mark. The region has no shape of its own to draw. */
-const otherRegionIcon = (color: string) => glyph(color, (
-  <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
-));
+/* The `Other` region — a question-mark glyph, and the `glyph()` helper drawn
+ * only for it — went with the row on 2026-08-21 (Sam). Three regions, three
+ * authored marks, and no shape standing in for "somewhere else". */
 const REGION_ICON: Record<GuidedInjuryRegion, (color: string) => React.ReactNode> = {
   upper_body: upperBodyIcon,
   lower_body: lowerBodyIcon,
   back_midline: backMidlineIcon,
-  other: otherRegionIcon,
 };
 /**
  * Severity — ascending bars, like a signal-strength meter: N bars lit for
@@ -80,16 +67,6 @@ const severityBarsIcon = (level: number, color: string) => {
     </Svg>
   );
 };
-/** Triggers — a shared spark, deliberately identical on all 13 chips. Thirteen
- * distinct trigger glyphs (sprinting vs. kicking vs. pressing vs. "always
- * there"...) would be noise nobody reads at chip size; the spark marks "this
- * is a cause", the label still says which one. */
-const triggerSparkIcon = (color: string) => (
-  <Svg width={10} height={10} viewBox="0 0 24 24" fill={color} stroke="none">
-    <Path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z" />
-  </Svg>
-);
-
 const INJURY_AREA_TEST_IDS: Record<string, string> = {
   Neck: 'neck',
   Shoulder: 'shoulder',
@@ -110,29 +87,15 @@ const INJURY_AREA_TEST_IDS: Record<string, string> = {
   'Other midline': 'other-midline',
 };
 
-const INJURY_TRIGGER_TEST_IDS: Record<string, string> = {
-  Sprinting: 'sprinting',
-  'Change of direction': 'change-of-direction',
-  Kicking: 'kicking',
-  Running: 'running',
-  'Jumping / landing': 'jumping-landing',
-  'Heavy lifting': 'heavy-lifting',
-  'Squatting / lunging': 'squatting-lunging',
-  'Hinging / bending': 'hinging-bending',
-  Pressing: 'pressing',
-  Pulling: 'pulling',
-  'Contact / games': 'contact-games',
-  'Always there': 'always-there',
-  Other: 'other',
-};
-
+/* `custom_area` — the typed-area step behind the `Other` region — is GONE
+ * (Sam, 2026-08-21). Every body part the app can program around is on the
+ * area list, so the only answers that step could take were ones already on the
+ * menu, or ones it had to refuse. */
 type FlowStep =
   | 'region'
   | 'area'
-  | 'custom_area'
   | 'stop_training'
-  | 'severity'
-  | 'triggers';
+  | 'severity';
 
 /**
  * THE WORDS AT THE TOP OF EACH STEP, IN ONE TABLE.
@@ -145,24 +108,21 @@ type FlowStep =
 const STEP_TITLE: Record<FlowStep, string> = {
   region: 'Where is the issue?',
   area: 'Where is the issue?',
-  custom_area: 'What area is it?',
   stop_training: 'Stop affected training',
   severity: 'How much is it limiting you?',
-  triggers: 'What brings it on?',
 };
 
 /** The one grey line under the title. `stop_training`'s two safety paragraphs
  *  are NOT here: they are the step's own copy, not a description of it. */
 const STEP_SUBTITLE: Record<FlowStep, string | null> = {
   region: null,
-  /* SAM'S WORDS, from the 2026-07-30 ruling. The "Other upper body" and "Other
-     lower body" rows are gone because they resolved to no bucket, so the
-     athlete whose area is not listed needs telling what to do instead. */
+  /* SAM'S WORDS, from the 2026-07-30 ruling — and now the ONLY thing the
+     athlete whose exact area is not listed is told, since the `Other` escape
+     hatch was removed on 2026-08-21. It has to carry that weight alone, which
+     is why it stays on the step rather than becoming a one-off refusal. */
   area: GUIDED_INJURY_AREA_HINT,
-  custom_area: null,
   stop_training: null,
   severity: null,
-  triggers: 'Select up to 3 triggers',
 };
 
 interface GuidedInjuryFlowSheetProps {
@@ -183,11 +143,8 @@ function GuidedInjuryFlowBody({
   const [step, setStep] = useState<FlowStep>('region');
   const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
   const [area, setArea] = useState('');
-  const [customArea, setCustomArea] = useState('');
-  /** Sam's refusal, shown when the typed area is one the app cannot program around. */
-  const [areaRefusal, setAreaRefusal] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState(GUIDED_INJURY_SEVERITY_OPTIONS[1]);
-  const [triggers, setTriggers] = useState<string[]>([]);
+  const [preservedTriggers, setPreservedTriggers] = useState<string[]>([]);
 
   /**
    * ⚠ **THIS NO LONGER WATCHES `visible`, AND IT IS NOT A RESET ANY MORE.** The
@@ -199,9 +156,8 @@ function GuidedInjuryFlowBody({
   useEffect(() => {
     setStep('region');
     setRegion(initial?.region ?? null);
-    setArea(initial?.region && initial.region !== 'other' ? initial.area ?? '' : '');
-    setCustomArea(initial?.region === 'other' ? initial.area ?? '' : '');
-    setTriggers(initial?.triggers ?? []);
+    setArea(initial?.region ? initial.area ?? '' : '');
+    setPreservedTriggers(initial?.triggers ?? []);
     const severity = GUIDED_INJURY_SEVERITY_OPTIONS.find(
       (option) => option.severityBand === initial?.severityBand,
     ) ?? GUIDED_INJURY_SEVERITY_OPTIONS[1];
@@ -213,26 +169,33 @@ function GuidedInjuryFlowBody({
     initial?.triggers,
   ]);
 
-  const selectedArea = (area || customArea).trim();
-  const isTrainingPaused = selectedSeverity.adjustmentLevel === 'training_paused';
+  const selectedArea = area.trim();
 
-  const submit = (trainingPaused: boolean) => {
+  const submit = (
+    trainingPaused: boolean,
+    severityOption = selectedSeverity,
+  ) => {
+    /**
+     * ⚠ **THE TWO FALLBACKS THAT USED TO SIT ON THESE LINES WERE
+     * `region ?? 'other'` AND `area || 'unknown'`, AND BOTH ARE GONE.**
+     *
+     * Neither was reachable — severity is only ever reached by tapping a region
+     * and then an area — but `'unknown'` resolves to no bucket, so if anything
+     * ever HAD reached it, `buildGuidedInjuryConstraint` would have THROWN in
+     * the athlete's face rather than refused. A structurally impossible state
+     * now stops the submit instead of inventing an answer to send onward.
+     */
+    if (!region || !selectedArea) return;
     void onComplete({
-      region: region ?? 'other',
-      area: selectedArea || 'unknown',
-      severity: selectedSeverity.severity,
-      severityBand: selectedSeverity.severityBand,
-      adjustmentLevel: trainingPaused ? 'training_paused' : selectedSeverity.adjustmentLevel,
-      triggers: trainingPaused ? [] : triggers,
+      region,
+      area: selectedArea,
+      severity: severityOption.severity,
+      severityBand: severityOption.severityBand,
+      adjustmentLevel: trainingPaused ? 'training_paused' : severityOption.adjustmentLevel,
+      // The in-app flow no longer asks this question. Keep a value originally
+      // supplied during onboarding or an earlier saved episode when updating.
+      triggers: trainingPaused ? [] : preservedTriggers,
       seriousSymptoms: false,
-    });
-  };
-
-  const toggleTrigger = (trigger: string) => {
-    setTriggers((current) => {
-      if (current.includes(trigger)) return current.filter((item) => item !== trigger);
-      if (current.length >= 3) return current;
-      return [...current, trigger];
     });
   };
 
@@ -243,20 +206,18 @@ function GuidedInjuryFlowBody({
    * now, on every step, drawn once by the shell (R-123).
    */
   const back = () => {
-    if (step === 'area' || step === 'custom_area') {
+    if (step === 'area') {
       setStep('region');
     } else if (step === 'stop_training') {
       setStep('severity');
     } else if (step === 'severity') {
-      setStep(region === 'other' ? 'custom_area' : 'area');
-    } else {
-      setStep('severity');
+      setStep('area');
     }
   };
 
   useSessionActionStep({
     key: step,
-    eyebrow: titlePrefix ?? null,
+    eyebrow: titlePrefix ?? 'Injury',
     title: STEP_TITLE[step],
     subtitle: STEP_SUBTITLE[step],
     onBack: step === 'region' ? undefined : back,
@@ -275,11 +236,7 @@ function GuidedInjuryFlowBody({
               selected={region === option.id}
               onPress={() => {
                 setRegion(option.id);
-                if (option.id === 'other') {
-                  setStep('custom_area');
-                } else {
-                  setStep('area');
-                }
+                setStep('area');
               }}
             />
           ))}
@@ -287,7 +244,7 @@ function GuidedInjuryFlowBody({
       );
     }
 
-    if (step === 'area' && region && region !== 'other') {
+    if (step === 'area' && region) {
       return (
         <>
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
@@ -295,9 +252,6 @@ function GuidedInjuryFlowBody({
               key={option}
               testID={`injury-area-${INJURY_AREA_TEST_IDS[option]}`}
               label={option}
-              // Areas reuse their region's glyph family (Sam's brief) — the
-              // area step never left the region the athlete already picked.
-              icon={REGION_ICON[region](REGION_COLOR[region])}
               selected={area === option}
               onPress={() => {
                 setArea(option);
@@ -309,60 +263,13 @@ function GuidedInjuryFlowBody({
       );
     }
 
-    if (step === 'custom_area') {
-      return (
-        <>
-          <AppTextInput
-            value={customArea}
-            onChangeText={(next: string) => {
-              setCustomArea(next);
-              // The refusal clears as soon as they change the answer — a refusal that
-              // outlives the answer it refused reads as a broken field.
-              if (areaRefusal) setAreaRefusal(null);
-            }}
-            placeholder="e.g. calf, wrist, elbow"
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            style={styles.input}
-            autoCapitalize="none"
-            testID="injury-area-custom-input"
-            accessibilityLabel="injury-area-custom-input"
-          />
-          {areaRefusal ? (
-            <Text style={styles.safetyNote} testID="injury-area-custom-refusal">
-              {areaRefusal}
-            </Text>
-          ) : null}
-          <Button
-            label="Continue"
-            testID="injury-area-custom-continue"
-            glow={false}
-            disabled={customArea.trim().length === 0}
-            onPress={() => {
-              // HONESTLY REFUSED AT THE POINT OF ANSWERING (Sam's ruling, 2026-07-30).
-              //
-              // The app used to accept anything here, store it, change the week's dose
-              // through the severity answer, and filter no movement — so it looked like
-              // it had listened. It had, about the dose. It was still programming the
-              // movement that hurt.
-              if (!guidedInjuryAreaIsProgrammable(customArea)) {
-                setAreaRefusal(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL);
-                return;
-              }
-              setAreaRefusal(null);
-              setStep('severity');
-            }}
-          />
-        </>
-      );
-    }
-
     if (step === 'stop_training') {
       return (
         <>
-          <Text style={styles.body}>
+          <SheetDescription>
             This is outside normal S&amp;C adjustment. LFA can't diagnose or rehab injuries.
             Stop affected training for now and get medical or physio advice.
-          </Text>
+          </SheetDescription>
           <Text style={styles.safetyNote}>
             If you had a sudden pop, numbness/tingling, chest pain, dizziness,
             head/neck symptoms, or can't walk normally, get proper medical advice.
@@ -391,10 +298,9 @@ function GuidedInjuryFlowBody({
               onPress={() => {
                 setSelectedSeverity(option);
                 if (option.adjustmentLevel === 'training_paused') {
-                  setTriggers([]);
                   setStep('stop_training');
                 } else {
-                  setStep('triggers');
+                  submit(false, option);
                 }
               }}
             />
@@ -403,43 +309,7 @@ function GuidedInjuryFlowBody({
       );
     }
 
-    return (
-      <>
-        <View style={styles.triggerGrid}>
-          {GUIDED_INJURY_TRIGGER_OPTIONS.map((trigger) => (
-            <Pressable
-              key={trigger}
-              testID={`injury-trigger-${INJURY_TRIGGER_TEST_IDS[trigger]}`}
-              accessibilityRole="button"
-              accessibilityLabel={`injury-trigger-${INJURY_TRIGGER_TEST_IDS[trigger]}`}
-              onPress={() => toggleTrigger(trigger)}
-              style={({ pressed }) => [
-                styles.triggerChip,
-                triggers.includes(trigger) && styles.triggerChipSelected,
-                pressed && { opacity: 0.75 },
-              ]}
-            >
-              {triggerSparkIcon(triggers.includes(trigger) ? colors.accent.lime : colors.text.secondary)}
-              <Text
-                style={[
-                  styles.triggerText,
-                  triggers.includes(trigger) && styles.triggerTextSelected,
-                ]}
-              >
-                {trigger}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Button
-          label="Apply training adjustment"
-          testID={explorerTestId.injuryIngress(episodeId ? 'update' : 'set', episodeId)}
-          glow={false}
-          onPress={() => submit(isTrainingPaused)}
-          style={styles.submitButton}
-        />
-      </>
-    );
+    return null;
   };
 
   return <>{renderStep()}</>;
@@ -481,13 +351,9 @@ export function GuidedInjuryFlowSheet({
 }
 
 /**
- * One region/area/severity row, with an icon chip (Sam's design ruling 10 —
- * every option row carries a meaningful icon). Same fixed 38x38 round chip as
- * `HomeScreenV2`'s `SheetOption` / `PlanChangeSheet`'s `MenuOption`, so this
- * sheet reads as the same app as the ones either side of it. `icon` is
- * optional in the type only because `BackButton` and the confirmation
- * buttons below never went through `FlowOption` at all — every live call
- * site now passes one.
+ * Shared region/area/severity row. Top-level regions and severity choices can
+ * carry the same 38x38 icon chip used by neighbouring sheets; body-area rows
+ * intentionally omit it and render as a clean text list.
  */
 function FlowOption({
   testID,
@@ -544,12 +410,6 @@ function FlowOption({
  * chrome they styled — the shell draws the eyebrow, the title, Back and Cancel
  * for all five actions now (R-123). */
 const styles = StyleSheet.create({
-  body: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
   safetyNote: {
     color: colors.status.warning,
     fontSize: 13,
@@ -597,46 +457,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-  input: {
-    minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    color: colors.text.primary,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
-    marginBottom: spacing.lg,
-  },
-  triggerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  triggerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  triggerChipSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200,255,0,0.12)',
-  },
-  triggerText: {
-    color: colors.text.secondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  triggerTextSelected: {
-    color: colors.accent.lime,
-  },
-  submitButton: {
-    marginTop: spacing.lg,
-  },
+  /* `input` — the typed-area field's box — went with the step it styled
+   * (Sam, 2026-08-21). This sheet has no text field left. */
 });

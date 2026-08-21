@@ -1128,9 +1128,25 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
  */
 function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
   const lower = `${entry.focus ?? ''}`.toLowerCase();
+  /**
+   * ⚠ **`Mobility Flow` STOOD HERE AS A ONE-ROW PLACEHOLDER AND IS DELETED**
+   * (Sam, 2026-08-21, on being shown it: *"yes delete this too"* — the fifth
+   * name of the same family as the four invented recovery rows).
+   *
+   * It read `{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15 }`, so
+   * a mobility or recovery day the composer had not filled shipped a single row
+   * whose name is in no pool, with a rep range nobody authored, on a session
+   * type that is supposed to carry 5-8 real movements.
+   *
+   * The comment above already says what these branches are: a LABEL for a day
+   * whose content *"belongs to the retained conditioning and mobility
+   * adapters"*. A label does not need a fake exercise inside it — so the list
+   * is empty and the adapter fills the day. An uncovered day now shows as
+   * EMPTY, which is visible, rather than as one invented movement, which reads
+   * like a prescription.
+   */
   if (entry.tier === 'recovery' || /mobility|recovery|foam|flush/i.test(lower)) {
-    return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15,
-      notes: 'Easy mobility and recovery work' }];
+    return [];
   }
   if (entry.conditioningFlavour || /conditioning|aerobic|tempo|sprint|interval/i.test(lower)) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];

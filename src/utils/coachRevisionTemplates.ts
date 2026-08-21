@@ -193,11 +193,26 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'recovery_flow',
     label: 'Recovery Flow',
-    description:
-      '30min restorative: foam rolling, hip & ankle mobility, easy spin, breathing reset. Restore - never load.',
+    /**
+     * ⚠ **THE OLD SENTENCE NAMED THE FOUR DELETED ROWS.** It read *"30min
+     * restorative: foam rolling, hip & ankle mobility, easy spin, breathing
+     * reset"* — a description of `RECOVERY_FLOW_ROWS`, and the line Sam was
+     * reading on the card above content he did not recognise. With the rows
+     * composed from the pools it would have been a signed sentence that lies,
+     * which the Mobility description note next door forbids by name.
+     *
+     * No list and no count, for the same reason Mobility carries neither: a
+     * composed session SHRINKS with the athlete's equipment rather than padding.
+     *
+     * PROPOSED, NOT SIGNED — it goes to Sam with the copy batch.
+     */
+    description: 'Restorative work only - restore, never load.',
     category: 'recovery',
     byeOnly: false,
     durationMinutes: 30,
+    // Content varies by date now that it is composed, so the validation policy
+    // must sign per-date signatures for it — exactly as it does for Mobility.
+    dynamic: true,
   },
   // ── Strength: ALL SEVEN, derived from the authored set ──
   //
@@ -249,42 +264,10 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   },
 ];
 
-/** Fixed rows for the recovery_flow template. Deterministic content — the
- *  same flow every time, matching the registry principle that advertised
- *  and materialized workouts agree byte-exactly. Row keys become
- *  `template:recovery_flow:<key>` ids so templateIdFromRevisedWorkout
- *  recognises the workout as registry-owned. */
-const RECOVERY_FLOW_ROWS: Array<{
-  key: string;
-  name: string;
-  minutes: number;
-  notes: string;
-}> = [
-  {
-    key: 'roll',
-    name: 'Foam Roll - Full Body',
-    minutes: 8,
-    notes: 'Quads, glutes, calves, upper back. Slow passes, keep breathing.',
-  },
-  {
-    key: 'mobility',
-    name: 'Mobility Flow - Hips & Ankles',
-    minutes: 10,
-    notes: 'Deep lunge holds, 90/90s, ankle rocks. Easy ranges only.',
-  },
-  {
-    key: 'spin',
-    name: 'Easy Spin or Walk',
-    minutes: 10,
-    notes: 'Zone 1, fully conversational. Any erg or a walk outside.',
-  },
-  {
-    key: 'breathe',
-    name: 'Breathing Reset',
-    minutes: 5,
-    notes: 'Box breathing 4-4-4-4, lying down. Switch off.',
-  },
-];
+/* `RECOVERY_FLOW_ROWS` — the fixed four — is DELETED (Sam, 2026-08-21:
+ * *"delete those 4 things so they never show up again"*). The rows this
+ * template places now come from the authored recovery pools; see
+ * `buildRecoveryTemplateWorkout` below for what they were and why they went. */
 
 export function listCoachRevisionTemplates(): CoachRevisionTemplateDefinition[] {
   return TEMPLATE_DEFINITIONS;
@@ -317,7 +300,10 @@ export const COACH_REVISION_TEMPLATE_ROW_NAMES: readonly string[] = Array.from(
     ...TEMPLATE_DEFINITIONS
       .filter((def) => def.category === 'flush' || def.category === 'work_capacity')
       .flatMap((def) => conditioningRowsForTemplate(def).map((row) => row.name)),
-    ...RECOVERY_FLOW_ROWS.map((row) => row.name),
+    /* The recovery rows are NOT listed here any more, for the reason the note
+     * above already gives about mobility and strength: they now come from the
+     * authored pools, which `projectionCopy.ts` registers in bulk. The four
+     * literals that used to be spread in here were the whole defect. */
   ]),
 );
 
@@ -497,17 +483,66 @@ function buildMobilityTemplateWorkout(
   } as Workout;
 }
 
-/** Recovery templates carry real multi-row content (the flow's steps) so
- *  the session screen renders them with the recovery treatment
- *  (workoutType 'Recovery' + sessionTier 'recovery'). Same registry
- *  guarantees: fixed content, template-owned row ids, byte-exact
- *  round-trip through the shared projection. */
+/**
+ * RECOVERY IS COMPOSED FROM SAM'S POOLS — **the same repair Mobility got, one
+ * function above, applied to the template that was left behind.**
+ *
+ * SAM, 2026-08-21, on opening a recovery session: *"there is only 1 soft
+ * tissue, a mobility flow which i have never prescribed - i literally have no
+ * idea what that is - and a breathing reset ... I've never added that."* Then:
+ * *"delete those 4 things so they never show up again."*
+ *
+ * ## WHAT STOOD HERE, AND WHY IT WAS NOT HIS
+ *
+ * A fixed four-row list — `Foam Roll - Full Body`, `Mobility Flow - Hips &
+ * Ankles`, `Easy Spin or Walk`, `Breathing Reset` — the same four every time.
+ * **None of the four appear anywhere in the authored pools.** His recovery
+ * library names foam rolls by body part (`Foam Roll — T-Spine`, `— IT Band`,
+ * `— Calves & Outer Shins` …) and his breathing drills are `Box Breathing`,
+ * `Crocodile Breathing`, `90/90 Breathing` and `Child's Pose with Breathing`.
+ * Not one of the four had a demo video either, while every authored row does,
+ * so all four carried a play button that went nowhere.
+ *
+ * **AND THE NUMBERS WERE MINUTES IN THE REPS FIELD.** `prescribedRepsMin/Max`
+ * were set from `row.minutes`, so 8 minutes of rolling rendered as `1 × 8` —
+ * eight reps of full-body foam rolling. Only `Easy Spin or Walk` escaped, and
+ * by accident: the display guesses the unit with a regex over the NAME, and
+ * "walk" is on its minute-hint list while 8 and 5 fall under its 20-second
+ * threshold for `roll` and `breath`.
+ *
+ * ## WHY THE FIX IS A DELEGATION AND NOT A NEW LIST
+ *
+ * The comment on the Mobility template records this exact defect being caught
+ * once already: nine mobility bundles *"Sam does not recognise"*, whose
+ * *"exercises are his, the GROUPINGS arrived in a single commit with no ruling
+ * cited"*. Mobility was repaired by composing from `MOBILITY_POOL`. **This
+ * template sat directly beneath it and was not touched.** Writing a better
+ * four rows here would be the same mistake a third time, so there is no list:
+ * `buildDerivedSession('recovery')` is what `sessionTypeCharter` already names
+ * as the composer for this session type, drawing on all four recovery pools.
+ * One composer, one answer, and the athlete's own library.
+ */
 function buildRecoveryTemplateWorkout(
   def: CoachRevisionTemplateDefinition,
   date: string,
-): Workout {
+): Workout | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildDerivedSession } = require('./sessionBuilder');
+  const ctx = getCoachRevisionTemplateContext();
+  const composed: Workout | null = buildDerivedSession(
+    'recovery',
+    date,
+    'coach-template',
+    'Athlete-added session',
+    ctx.athlete,
+  );
+  if (!composed || (composed.exercises ?? []).length === 0) return null;
+
   const workoutId = `template-${def.templateId}`;
   return {
+    ...composed,
     id: workoutId,
     microcycleId: 'coach-template',
     dayOfWeek: isoDateToDayOfWeek(date),
@@ -518,35 +553,11 @@ function buildRecoveryTemplateWorkout(
     workoutType: 'Recovery',
     sessionTier: 'recovery',
     hasCombinedConditioning: false,
-    exercises: RECOVERY_FLOW_ROWS.map((row, index) => {
-      const rowId = `template:${def.templateId}:${row.key}`;
-      return {
-        id: rowId,
-        workoutId,
-        exerciseId: rowId,
-        exerciseOrder: index,
-        prescribedSets: 1,
-        prescribedRepsMin: row.minutes,
-        prescribedRepsMax: row.minutes,
-        restSeconds: 0,
-        notes: row.notes,
-        exercise: {
-          id: rowId,
-          name: row.name,
-          description: row.notes,
-          exerciseType: 'Flexibility',
-          muscleGroups: [],
-          equipmentRequired: [],
-          difficultyLevel: 'Beginner',
-          createdAt: '',
-          updatedAt: '',
-        },
-        createdAt: '',
-        updatedAt: '',
-      } as any;
-    }),
-    createdAt: '',
-    updatedAt: '',
+    exercises: (composed.exercises ?? []).map((row: any, index: number) => ({
+      ...row,
+      id: `template:${def.templateId}:${index}`,
+      workoutId,
+    })),
   } as Workout;
 }
 

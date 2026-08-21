@@ -298,9 +298,29 @@ function recoveryChoice(environment: TapSwapEnvironment): TapSwapChoice {
       },
     };
   }
+  /**
+   * ⚠ **`Breathing Reset` STOOD HERE AND IT WAS NOT AN EXERCISE.**
+   *
+   * SAM, 2026-08-21: *"a breathing reset - again i have zero Idea what that is
+   * - i prescribed box breathing, and crocodile breathing and some other
+   * breathing drills but never a breathing reset"*, and then *"delete those 4
+   * things so they never show up again."*
+   *
+   * It was a bare literal minted at this line: no pool entry, no tags, no cues
+   * and **no demo video**, so the swap menu could hand an athlete a name that
+   * existed nowhere else in the app and a play button that went nowhere.
+   *
+   * `Box Breathing` replaces it because it is the same job done with an
+   * authored row — Sam's own, first in `BREATHING_RESET_POOL`, bodyweight, and
+   * it carries cues and a video. The prescription is quoted FROM that pool
+   * entry (1 × 5) rather than re-invented here.
+   *
+   * `Easy Bike` above is left alone: it IS registered — tags (`tier: 'C'`,
+   * bike, low impact), cues and muscle-experience metadata all exist for it.
+   */
   return {
     kind: 'recovery',
-    name: 'Breathing Reset',
+    name: 'Box Breathing',
     hierarchyTier: 'recovery_easy_conditioning',
     source: 'recovery_fallback',
     reason: 'No useful safe training substitute remains, so use equipment-free recovery.',
@@ -309,7 +329,7 @@ function recoveryChoice(environment: TapSwapEnvironment): TapSwapChoice {
       repsMin: 5,
       repsMax: 5,
       weight: 0,
-      prescriptionType: 'duration_minutes',
+      prescriptionType: 'reps',
       restSeconds: 0,
     },
   };
@@ -325,8 +345,12 @@ function restChoice(reason: string): TapSwapChoice {
   };
 }
 
+/** The two names `recoveryChoice` above can mint. `Breathing Reset` was the
+ *  second until 2026-08-21; `Box Breathing` — authored, pooled, with a video —
+ *  replaced it. Kept as one predicate so the minting site and the readers
+ *  cannot drift apart. */
 function isRecoveryName(name: string): boolean {
-  return name === 'Easy Bike' || name === 'Breathing Reset';
+  return name === 'Easy Bike' || name === 'Box Breathing';
 }
 
 /**

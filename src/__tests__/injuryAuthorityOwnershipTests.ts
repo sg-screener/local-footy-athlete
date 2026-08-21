@@ -93,7 +93,9 @@ const AREA_FOR_REGION: Record<GuidedInjuryRegion, string> = {
   upper_body: 'Shoulder',
   lower_body: 'Hamstring',
   back_midline: 'Lower back',
-  other: 'Other',
+  /* `other: 'Other'` went with the region (Sam, 2026-08-21). It was never
+     exercised — no invariant below iterates it — and it could not have been:
+     "Other" resolves to no bucket, so the writer would have thrown on it. */
 };
 
 async function reportInjury(region: GuidedInjuryRegion, severity: number) {

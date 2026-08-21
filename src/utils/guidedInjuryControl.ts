@@ -8,7 +8,36 @@ import {
 } from '../rules/injurySeverityBands';
 import { todayISOLocal } from './appDate';
 
-export type GuidedInjuryRegion = 'upper_body' | 'lower_body' | 'back_midline' | 'other';
+/**
+ * THE THREE REGIONS THE FLOW OFFERS — AND `'other'` IS NO LONGER ONE OF THEM.
+ *
+ * SAM, 2026-08-21: *"i reckon we just remove the option for other - they're
+ * prompted to select the closest match anyway."*
+ *
+ * ⚠ **REMOVING IT COST NO COVERAGE, AND THAT IS CHECKED, NOT ASSERTED.** The
+ * three regions' rows already reach ALL THIRTEEN of Sam's authored injury
+ * regions — which is exactly what `guidedInjuryMenuTotality`'s reverse
+ * direction has gated since 2026-07-30. So the `Other` row could only ever end
+ * in one of two places: a DUPLICATE of a row already on the menu (typing
+ * "calf" reached the same bucket as tapping `Calf / Achilles`), or the
+ * REFUSAL — an athlete who typed something unroutable, was told to go back and
+ * pick the closest area, and had spent the typing for nothing.
+ *
+ * **THIS SUPERSEDES THE UI HALF OF THE 2026-07-30 RULING, AND SATISFIES IT
+ * MORE STRONGLY.** That ruling's option 3 was *"free text that cannot resolve
+ * is HONESTLY REFUSED at the point of answering, never stored-and-pretended."*
+ * There is now no free text to refuse. The WRITER half stands untouched:
+ * `buildGuidedInjuryConstraint` still throws on an area that resolves to no
+ * bucket, because a UI convention the next caller can bypass is not a boundary.
+ *
+ * **AND `'other'` IS GONE FROM THE STORED SHAPE TOO, NOT JUST FROM THE MENU.**
+ * A translation for episodes recorded under the old row was built and then
+ * DELETED on Sam's instruction the same day: *"this isn't necessary - the app
+ * is not out yet."* There is no installed base, so there are no such episodes,
+ * and compatibility code for data that cannot exist is a reader of a state
+ * nobody can be in. `ActiveInjuryConstraint.region` narrowed with this type.
+ */
+export type GuidedInjuryRegion = 'upper_body' | 'lower_body' | 'back_midline';
 export type GuidedInjurySeverityBand = 'mild' | 'slight' | 'moderate' | 'avoid';
 export type GuidedInjuryAdjustmentLevel =
   | 'minimal'
@@ -32,7 +61,6 @@ export const GUIDED_INJURY_REGION_OPTIONS: Array<{ id: GuidedInjuryRegion; label
   { id: 'upper_body', label: 'Upper body' },
   { id: 'lower_body', label: 'Lower body' },
   { id: 'back_midline', label: 'Back / midline' },
-  { id: 'other', label: 'Other' },
 ];
 
 /**
@@ -71,24 +99,21 @@ export const GUIDED_INJURY_REGION_OPTIONS: Array<{ id: GuidedInjuryRegion; label
  * so in Sam's own words — or asks the coach. `guidedInjuryMenuTotality` below is the gate,
  * and it holds in both directions.
  */
-export const GUIDED_INJURY_AREA_OPTIONS: Record<Exclude<GuidedInjuryRegion, 'other'>, string[]> = {
-  upper_body: ['Neck', 'Shoulder', 'Chest', 'Ribs', 'Elbow', 'Wrist / hand'],
+export const GUIDED_INJURY_AREA_OPTIONS: Record<GuidedInjuryRegion, string[]> = {
+  upper_body: ['Shoulder', 'Chest', 'Ribs', 'Elbow', 'Wrist / hand'],
   lower_body: ['Hip', 'Groin', 'Hamstring', 'Quad', 'Knee', 'Calf / Achilles', 'Ankle / foot'],
   back_midline: ['Lower back', 'Upper back', 'Neck'],
 };
 
-/**
- * The refusal, at the point of answering (Sam's ruling, option 3).
- *
- * SAM-AUTHORED, quoted from the ruling. A free-text area the app cannot program around
- * is refused HERE rather than stored and pretended about: a stored answer that filters
- * nothing was the worst of the three outcomes on the table, and it is the one the app
- * used to produce.
- */
-export const GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL =
-  "I can't program around that one — pick the closest area or ask the coach";
+/* `GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL` — Sam's *"I can't program around
+ * that one"* line — WENT WITH THE TYPED-AREA STEP on 2026-08-21. It was the
+ * copy shown when free text resolved to no bucket, and there is no free text at
+ * this door any more, so it had no reader left. The refusal it expressed did
+ * not go anywhere: `buildGuidedInjuryConstraint` still THROWS on an
+ * unresolvable area, which is the half that a caller cannot talk its way past.
+ * A constant kept alive by its own test is the dead weight the charter names. */
 
-/** Sam's instruction on the area step, quoted from the same ruling. */
+/** Sam's instruction on the area step, quoted from the 2026-07-30 ruling. */
 export const GUIDED_INJURY_AREA_HINT = 'Pick the closest area';
 
 /**
@@ -279,12 +304,23 @@ function rulesFor(result: GuidedInjuryFlowResult): string[] {
   return rules.map((rule) => `avoid ${rule}`);
 }
 
+/**
+ * ⚠ **A `Record`, NOT AN `if` LADDER WITH A TRAILING `return`.** That trailing
+ * return was the `'other'` arm — *"Unaffected training only"*, the vaguest
+ * advice the card could carry — and with the row gone it would have become a
+ * line no region reaches, sitting there looking like a default. A total
+ * `Record` over the three regions cannot grow a fourth silently: adding a
+ * region stops compiling until someone decides what the athlete reads.
+ */
+const SAFE_FOCUS: Record<GuidedInjuryRegion, string[]> = {
+  upper_body: ['Lower body training where suitable', 'Easy conditioning', 'Unaffected midline work'],
+  lower_body: ['Upper body training where suitable', 'Low-impact conditioning', 'Unaffected midline work'],
+  back_midline: ['Supported upper body work', 'Easy conditioning', 'Unaffected low-risk work'],
+};
+
 function safeFocusFor(region: GuidedInjuryRegion, serious: boolean): string[] {
   if (serious) return ['Stop affected training', 'Seek medical or physio advice'];
-  if (region === 'upper_body') return ['Lower body training where suitable', 'Easy conditioning', 'Unaffected midline work'];
-  if (region === 'lower_body') return ['Upper body training where suitable', 'Low-impact conditioning', 'Unaffected midline work'];
-  if (region === 'back_midline') return ['Supported upper body work', 'Easy conditioning', 'Unaffected low-risk work'];
-  return ['Unaffected training only', 'Recovery work'];
+  return SAFE_FOCUS[region];
 }
 
 function modifierBody(result: GuidedInjuryFlowResult): string {
@@ -301,18 +337,20 @@ export function buildGuidedInjuryConstraint(
 ): ActiveInjuryConstraint {
   const now = new Date().toISOString();
   const bucket = guidedInjuryBucketForArea(result.area);
-  // UNREPRESENTABLE, not merely refused upstream (Sam's ruling, 2026-07-30).
+  // UNREPRESENTABLE, not merely unreachable from the UI (Sam's ruling, 2026-07-30).
   //
-  // The sheet refuses an unprogrammable area at the point of answering, and this is the
-  // second half of the same boundary: a null bucket cannot become a stored constraint
-  // through this builder at all. Without it, the refusal would be a UI convention that
-  // the next caller of this function could quietly bypass — and the state it produced
-  // (stored, dose-changing, filtering nothing) is the one Sam called the worst outcome.
+  // ⚠ **THIS IS NOW THE ONLY HALF OF THAT BOUNDARY, AND IT MATTERS MORE, NOT LESS.**
+  // The other half used to be the sheet refusing typed free text; since 2026-08-21 the
+  // athlete can only pick from the menu, and every menu row resolves. So this throw
+  // guards the callers — a stored constraint with a null bucket changes the week's DOSE
+  // through its severity while filtering NO movement, which is the state Sam called the
+  // worst outcome: the app looking like it listened while still programming the movement
+  // that hurt.
   if (!bucket) {
     throw new Error(
       `Guided injury area "${result.area}" resolves to no injury bucket, so no exercise `
-      + 'filter could act on it. The area step must refuse it instead: see '
-      + 'GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL.',
+      + 'filter could act on it. Every row of GUIDED_INJURY_AREA_OPTIONS resolves — '
+      + 'this area did not come from the menu.',
     );
   }
   const key = bucket;

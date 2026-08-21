@@ -61,7 +61,13 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
 import { buildSessionInjuryReview, type SessionInjuryReview } from '../utils/sessionInjuryReview';
-import { buildGuidedInjuryConstraint, type GuidedInjuryFlowResult } from '../utils/guidedInjuryControl';
+import {
+  GUIDED_INJURY_AREA_OPTIONS,
+  buildGuidedInjuryConstraint,
+  guidedInjuryBucketForArea,
+  type GuidedInjuryFlowResult,
+  type GuidedInjuryRegion,
+} from '../utils/guidedInjuryControl';
 import { resolveInjuryRecompositionInputs } from '../utils/programControlActions';
 import { unsafeRowsForInjury } from '../utils/injurySessionRecomposition';
 import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
@@ -158,10 +164,32 @@ function ok(name: string, condition: boolean, detail?: unknown): void {
   console.log(`  FAIL ${name}${detail === undefined ? '' : `\n         ${JSON.stringify(detail)}`}`);
 }
 
+/**
+ * Which region's list offers this body part — the harness's own lookup, kept
+ * HERE rather than in the product, because the product has no reader for it.
+ * A three-line derivation over the real menu; it cannot drift from what the
+ * athlete is actually offered.
+ */
+function regionOffering(area: string): GuidedInjuryRegion | undefined {
+  const bucket = guidedInjuryBucketForArea(area);
+  return (Object.keys(GUIDED_INJURY_AREA_OPTIONS) as GuidedInjuryRegion[]).find(
+    (region) => GUIDED_INJURY_AREA_OPTIONS[region]
+      .some((row) => guidedInjuryBucketForArea(row) === bucket),
+  );
+}
+
 /** The athlete's answer, turned into the constraint the door will store. */
 function constraintFor(area: string, severity: number, todayISO: string, seriousSymptoms = false) {
+  /* THE REGION IS DERIVED FROM THE MEASURED AREA, NOT NAMED (2026-08-21).
+     It used to read `region: 'other'`, which the flow can no longer produce —
+     and since this suite MEASURES its area rather than hard-coding one, naming
+     a region here could have contradicted the area it was paired with. The
+     `?? 'lower_body'` is unreachable: an area with no bucket throws one line
+     down, inside the builder. */
   const result: GuidedInjuryFlowResult = {
-    region: 'other', area, severity,
+    region: regionOffering(area) ?? 'lower_body',
+    area,
+    severity,
     severityBand: 'moderate', adjustmentLevel: 'moderate',
     triggers: [], seriousSymptoms,
   };

@@ -81,6 +81,8 @@ export type InjuryTag =
   | 'neck'
   | 'ribs';
 
+export type PoolEquipmentRequirement = EquipmentTag | readonly EquipmentTag[];
+
 export type ExerciseCategory =
   // Arms / Pump
   | 'biceps'
@@ -113,7 +115,7 @@ export interface PoolExercise {
   /** True if prescription is per side (e.g. "30s per side"). */
   perSide?: boolean;
   /** Equipment needed. Empty = bodyweight only. */
-  equipment: EquipmentTag[];
+  equipment: PoolEquipmentRequirement[];
   /** Injury areas that make this exercise unsafe. */
   contraindications: InjuryTag[];
   /** Fatigue cost. Derived sessions should stay low/moderate. */
@@ -135,7 +137,7 @@ function ex(
   repsMax: number,
   restSeconds: number,
   notes: string,
-  equipment: EquipmentTag[] = [],
+  equipment: PoolEquipmentRequirement[] = [],
   contraindications: InjuryTag[] = [],
   fatigue: FatigueLevel = 'low',
   opts?: ExOptions,
@@ -151,12 +153,22 @@ function ex(
 // ARMS / PUMP pools
 // ═══════════════════════════════════════════════════════════════
 
+const BAND_PULL_APART = ex('band-pull-apart', 'Band Pull-Apart', 3, 15, 20, 20,
+  'Squeeze shoulder blades together. Good for posture.', ['bands'], []);
+const FACE_PULL = ex('face-pull', 'Face Pull', 3, 15, 20, 30,
+  'Pull high, open hands out. Great for posture.', ['cables'], []);
+const INCLINE_Y_RAISE = ex('incline-y-raise', 'Incline Y Raise', 3, 10, 12, 30,
+  'Face-down on incline bench. Thumbs up, arms out.', ['dumbbells', 'bench'], ['shoulder']);
+
 export const BICEPS_POOL: PoolExercise[] = [
   ex('hammer-curl',       'Hammer Curl',                2, 10, 12, 45, 'Neutral grip. Works the forearms too.',       ['dumbbells'], ['elbow', 'wrist']),
   ex('incline-db-curl',   'Incline Dumbbell Curl',      3, 10, 12, 45, '30° incline. Big stretch at the bottom.',     ['dumbbells', 'bench'], ['shoulder', 'elbow']),
   ex('band-curl',         'Banded Bicep Curl',          3, 15, 20, 30, 'Peak tension at top. Good pump finisher.',    ['bands'],     ['elbow']),
   ex('concentration-curl','Concentration Curl',         2, 12, 15, 30, 'Seated, elbow on inner thigh. Slow negatives.', ['dumbbells'], ['elbow']),
   ex('bw-chin-curl',      'Chin-Up Negative (Slow)',    2, 4,  6,  60, '5-second lowering phase. Biceps and back.',   ['pullup_bar'],['shoulder', 'elbow']),
+  ex('barbell-bicep-curl','Bicep Curl (Barbell)',       3, 10, 12, 45, 'Keep elbows still. Curl without leaning back.', ['barbell'],  ['elbow', 'wrist']),
+  ex('dumbbell-bicep-curl','Bicep Curl (Dumbbell)',     3, 10, 12, 45, 'Keep elbows still. Control both directions.',  ['dumbbells'],['elbow', 'wrist']),
+  ex('lying-db-curl',     'Lying Dumbbell Curl',        2, 10, 12, 45, 'Lie flat. Let the arms stretch at the bottom.', ['dumbbells'],['shoulder', 'elbow']),
 ];
 
 export const TRICEPS_POOL: PoolExercise[] = [
@@ -165,23 +177,51 @@ export const TRICEPS_POOL: PoolExercise[] = [
   ex('kickback',          'Dumbbell Kickback',          2, 12, 15, 30, 'Hinge forward, lock elbow. Squeeze at top.',  ['dumbbells'], ['elbow']),
   ex('band-pushdown',     'Banded Tricep Pushdown',     3, 15, 20, 30, 'Anchor band overhead. Constant tension.',     ['bands'],     ['elbow']),
   ex('skull-crusher-db',  'Dumbbell Skull Crusher',     3, 10, 12, 45, 'Lying on bench. Lower toward temples, press up.', ['dumbbells', 'bench'], ['elbow', 'shoulder']),
+  ex('skull-crushers',    'Skull Crushers',             3, 10, 12, 45, 'Lower beside the head. Keep the elbows in place.', [['dumbbells', 'barbell']], ['elbow', 'shoulder']),
+  ex('dirty-30',          'Tricep Circuit (Dirty 30)',  2, 30, 30, 45, 'Move through all three positions without rest.', ['barbell'], ['elbow', 'shoulder']),
 ];
 
 export const DELTS_POOL: PoolExercise[] = [
   ex('lateral-raise',     'Lateral Raise',              3, 12, 15, 45, 'Light weight, strict form. No momentum.',     ['dumbbells'], ['shoulder']),
   ex('cable-face-pull',   'Cable Face Pull',            3, 15, 20, 30, 'Pull to forehead, open hands out at the top.', ['cables'],    []),
-  ex('seated-db-press',   'Seated DB Press',            3, 8,  12, 45, 'Seated, back supported. Press to lockout.',   ['dumbbells', 'bench'], ['shoulder']),
   ex('rear-delt-fly',     'Rear Delt Fly',              3, 12, 15, 30, 'Bent over or machine. Pinch shoulder blades.',['dumbbells'], ['shoulder', 'lower_back']),
   ex('shrugs',            'Shrugs',                     3, 10, 12, 45, 'Straight up, pause at the top. No rolling.',  ['dumbbells'], ['wrist', 'lower_back']),
   ex('single-arm-shrug',  'Single-Arm Shrug',           3, 10, 12, 45, 'One side at a time. Full range, slight pause at top.', ['dumbbells'], ['wrist', 'lower_back']),
+  INCLINE_Y_RAISE,
+  FACE_PULL,
+  BAND_PULL_APART,
 ];
 
+/**
+ * Gunshow movements that are too similar to prescribe together.
+ * IDs are used because display aliases may change without changing exercise identity.
+ */
+// BIBLE_ANCHOR: gunshow_two_two_two
+export const GUNSHOW_DO_NOT_PAIR_IDS: ReadonlyArray<readonly [string, string]> = [
+  ['lying-db-curl', 'incline-db-curl'],
+  ['tricep-pushdown', 'band-pushdown'],
+  ['skull-crusher-db', 'skull-crushers'],
+  ['skull-crusher-db', 'dirty-30'],
+  ['shrugs', 'single-arm-shrug'],
+  ['face-pull', 'cable-face-pull'],
+  ['face-pull', 'band-pull-apart'],
+  ['dumbbell-bicep-curl', 'hammer-curl'],
+];
+
+const GUNSHOW_DO_NOT_PAIR_KEYS = new Set(
+  GUNSHOW_DO_NOT_PAIR_IDS.map(([left, right]) => [left, right].sort().join('|')),
+);
+
+export function gunshowExercisesCanPair(left: PoolExercise, right: PoolExercise): boolean {
+  return !GUNSHOW_DO_NOT_PAIR_KEYS.has([left.id, right.id].sort().join('|'));
+}
+
 export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
-  ex('band-pull-apart',   'Band Pull-Apart',            3, 15, 20, 20, 'Squeeze shoulder blades together. Good for posture.', ['bands'],     []),
-  ex('face-pull',         'Face Pull',                  3, 15, 20, 30, 'Pull high, open hands out. Great for posture.',['cables'],    []),
+  BAND_PULL_APART,
+  FACE_PULL,
   ex('chest-supported-row','Chest-Supported DB Row',     3, 10, 12, 45, 'Light weight. Squeeze shoulder blades back.', ['dumbbells', 'bench'], ['lower_back']),
   ex('bw-inv-row',        'Inverted Row (Bodyweight)',   3, 8,  12, 45, 'Underhand or overhand. Scale with angle.',    ['pullup_bar'],['shoulder']),
-  ex('incline-y-raise',   'Incline Y Raise',            3, 10, 12, 30, 'Face-down on incline bench. Thumbs up, arms out.', ['dumbbells', 'bench'], ['shoulder']),
+  INCLINE_Y_RAISE,
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -337,16 +377,16 @@ export const MOBILITY_POOL: PoolExercise[] = [
  *   - This is NOT conditioning. It is a recovery modality.
  */
 export const EASY_CARDIO_POOL: PoolExercise[] = [
-  ex('walk-or-bike',      'Light Walk or Stationary Bike', 1, 15, 20, 0, 'Conversational pace. Keep heart rate low.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
-  ex('incline-walk',      'Incline Treadmill Walk',        1, 10, 15, 0, 'Low speed, moderate incline. Easy effort.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
-  ex('outdoor-walk',      'Outdoor Walk',                  1, 15, 20, 0, 'Easy pace. Fresh air, clear head.',          ['bodyweight'],        [],                      'low', { prescriptionType: 'duration_minutes' }),
-  ex('light-skip',        'Light Skipping',                1, 3,  5,  0, 'Easy rhythm. Wakes up the ankles.',          ['bodyweight'],        ['ankle', 'calf', 'knee'], 'low', { prescriptionType: 'duration_minutes' }),
+  ex('walk-or-bike',      'Light Walk or Stationary Bike', 1, 5, 10, 0, 'Conversational pace. Keep heart rate low.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
+  ex('incline-walk',      'Incline Treadmill Walk',        1, 5, 10, 0, 'Low speed, moderate incline. Easy effort.',  ['bike_or_treadmill'], [],                      'low', { prescriptionType: 'duration_minutes' }),
+  ex('outdoor-walk',      'Outdoor Walk',                  1, 5, 10, 0, 'Easy pace. Fresh air, clear head.',          ['bodyweight'],        [],                      'low', { prescriptionType: 'duration_minutes' }),
+  ex('light-skip',        'Light Skipping',                1, 5, 10, 0, 'Easy rhythm. Wakes up the ankles.',          ['bodyweight'],        ['ankle', 'calf', 'knee'], 'low', { prescriptionType: 'duration_minutes' }),
 ];
 
 export const BREATHING_RESET_POOL: PoolExercise[] = [
   ex('90-90-breathing',   '90/90 Breathing',             1, 8,  10, 0, 'Inhale through nose 4 sec, exhale 8 sec. Ribs down.', ['bodyweight'], [], 'low', { prescriptionType: 'reps' }),
   ex('crocodile-breath',  'Crocodile Breathing',         1, 8,  10, 0, 'Prone. Breathe into belly against floor.',            ['bodyweight'], [], 'low', { prescriptionType: 'reps' }),
-  ex('box-breathing',     'Box Breathing',               1, 5,  5,  0, '4-sec inhale, 4-sec hold, 4-sec exhale, 4-sec hold.', ['bodyweight'], [], 'low', { prescriptionType: 'reps' }),
+  ex('box-breathing',     'Box Breathing',               1, 10, 10, 0, '4-sec inhale, 4-sec hold, 4-sec exhale, 4-sec hold.', ['bodyweight'], [], 'low', { prescriptionType: 'reps' }),
   ex('child-pose-breath', "Child's Pose with Breathing", 1, 60, 90, 0, 'Deep belly breaths. Relax everything.',               ['bodyweight'], [], 'low', { prescriptionType: 'duration' }),
 ];
 
