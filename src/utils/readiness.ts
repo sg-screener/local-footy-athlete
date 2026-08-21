@@ -1,11 +1,18 @@
 import type { OnboardingData, CapacityBand } from '../types/domain';
 import { MissingCapacityAnswerError, capacityFor } from '../data/capacityRubric';
-import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export type ReadinessEnergy = 'low' | 'okay' | 'good';
 export type ReadinessSoreness = 'none' | 'mild' | 'moderate' | 'high';
 export type ReadinessSource = 'quick_check' | 'coach_message' | 'session_feedback';
-export type ReadinessQuickOption = 'good' | 'flat' | 'sore' | 'short_time';
+/**
+ * THE `short_time` OPTION IS GONE (Sam, 2026-08-21). It had no athlete-facing
+ * route: the only thing that could put minutes on a readiness signal was
+ * `buildReadinessSignalPatch`, and that has zero production callers. Proven by
+ * `npm run census:short-on-time-route`. The coach's "only got 40 minutes on
+ * Wednesdays" answer is a DIFFERENT, LIVE feature — it writes a typed time-cap
+ * fact and never touches a readiness signal.
+ */
+export type ReadinessQuickOption = 'good' | 'flat' | 'sore';
 
 export interface ReadinessSignal {
   date: string;
@@ -136,14 +143,6 @@ export function buildReadinessSignalPatch(
         painFlag: false,
         timeAvailableMinutes: undefined,
       };
-    case 'short_time':
-      return {
-        energy: 'okay',
-        soreness: undefined,
-        flatToday: false,
-        painFlag: false,
-        timeAvailableMinutes: 25,
-      };
   }
 }
 
@@ -154,6 +153,5 @@ export function getReadinessQuickOption(
   if (signal.energy === 'good' && signal.soreness === 'none' && !signal.flatToday) return 'good';
   if (signal.flatToday || signal.energy === 'low') return 'flat';
   if (signal.soreness === 'moderate' || signal.soreness === 'high') return 'sore';
-  if (isShortOnTime(signal.timeAvailableMinutes)) return 'short_time';
   return null;
 }

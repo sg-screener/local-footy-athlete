@@ -38,7 +38,6 @@ import {
   severityIsLimiting,
   severityPausesTraining,
 } from '../rules/injurySeverityBands';
-import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import {
   HIGH_IMPACT_REMOVED_SHARE,
   MODERATE_IMPACT_REMOVED_COUNT,
@@ -165,75 +164,28 @@ console.log('\n[3] The eleven fatigue readers hold no severity numbers of their 
   }
 }
 
-/**
- * ⚠ ONE DECLARED VIOLATION OF SAM'S 2026-07-28 RULING, FOUND THE MOMENT THIS
- * GATE COULD SEE AGAIN — AND NOT FIXED HERE, BECAUSE FIXING IT IS A PRODUCT
- * CHANGE NOBODY HAS RULED ON.
+/* ══ SECTION [4] IS DELETED WITH ITS SUBJECT — "SHORT ON TIME" ════════════════
  *
- * `rules/temporarySourceFact.ts` builds the "Short on time today" schedule
- * constraint with
+ * Sam, 2026-08-21: *"Short-on-time has no current athlete-facing route. Prove
+ * that, then delete its remaining implementation, tests and debt entry. Do not
+ * repair it."*
  *
- *     severity: fact.maxSessionMinutes < 20 ? 7 : 5
+ * PROVEN by `npm run census:short-on-time-route` (8 cells): all three athlete
+ * dispatches of `set_schedule_modifier` use `current_week` and the fact was
+ * gated on `today_only`; and `buildReadinessSignalPatch`, the only thing that
+ * could put minutes on a readiness signal, had zero production callers.
+ * `rules/timeAvailabilityPolicy.ts` is deleted, with the readiness quick option,
+ * the readiness constraint and the control-action branch.
  *
- * — minutes converted straight into a severity score. That is the exact
- * conversion the ruling killed ("short time shapes the SESSION, never scores
- * the ATHLETE"), and 7 is one of the stray cut points the same ruling said must
- * move to the band edge 6.
- *
- * THIS GATE HAS NEVER SEEN IT. The file was not in the reader list, and the
- * suite itself died at import on 2026-08-19 when `utils/trainAroundEngine.ts`
- * was deleted, so it reported nothing at all until this repair.
- *
- * It is DECLARED rather than banned so the gate can be green and honest at the
- * same time, and the count is EXACT in both directions: a second site reds, and
- * so does fixing this one without lowering the number. Nothing is allow-listed
- * by file — only this one count, in this one file.
+ * ⚠ AND THE DECLARED DEBT I PUT HERE EARLIER IS DELETED TOO, NOT SATISFIED.
+ * It pinned `severity: fact.maxSessionMinutes < 20 ? 7 : 5` in
+ * `rules/temporarySourceFact.ts` as a violation of the 2026-07-28 ruling. That
+ * line is NOT short-on-time code — it is on the COACH's live time-cap path
+ * ("only got 40 minutes on Wednesdays"), which is a different feature that was
+ * never in question. Gating a live coach line under a dead feature's section
+ * was the error; it is recorded as an open coach-path observation in
+ * `docs/STATUS_BOATS.md` instead of being re-gated here.
  */
-const DECLARED_MINUTES_TO_SEVERITY_DEBT: Readonly<Record<string, number>> = {
-  'utils/readinessConstraints.ts': 0,
-  'utils/readiness.ts': 0,
-  'rules/temporarySourceFact.ts': 1,
-};
-
-console.log('\n[4] Time caps are OFF the severity ladder');
-{
-  ok('there is one authored short-on-time threshold', SHORT_ON_TIME_MINUTES === 35,
-    SHORT_ON_TIME_MINUTES);
-
-  // The conversion Sam killed: minutes deciding a severity number. Short time
-  // shapes the session; it does not score the athlete.
-  // MEASURED, NOT INHERITED. `utils/coachReadinessAdapter.ts` was the third
-  // reader here; its router had zero production execution and was deleted on
-  // 2026-08-21, leaving a type stub that reads no minutes at all — sweeping it
-  // would be a vacuous pass. The list is now every production file that
-  // actually touches `timeAvailableMinutes`, which ADDS
-  // `rules/temporarySourceFact.ts` — a real reader this gate had never covered.
-  for (const reader of assertReadersExist('minutes never score the athlete', [
-    'utils/readinessConstraints.ts',
-    'utils/readiness.ts',
-    'rules/temporarySourceFact.ts',
-  ])) {
-    const code = codeOf(reader);
-    const conversions = code.split('\n')
-      .map((line, index) => ({ line: line.trim(), number: index + 1 }))
-      .filter((entry) =>
-        /timeAvailableMinutes[^;]*\?[^;]*\d[^;]*:[^;]*\d/.test(entry.line) ||
-        /severity:\s*[^,;]*Minutes/i.test(entry.line));
-    const declared = DECLARED_MINUTES_TO_SEVERITY_DEBT[reader] ?? 0;
-    ok(`${reader} converts minutes into a severity in no more than ${declared} place(s)`,
-      conversions.length <= declared,
-      conversions.map((hit) => `${hit.number}: ${hit.line.slice(0, 110)}`));
-    // THE RATCHET: the declaration must equal the real count, so paying the debt
-    // down tightens the gate instead of leaving re-spendable slack. This is the
-    // same shape `data/readinessStructureCensus.ts` uses for its own debt.
-    ok(`${reader}'s declared minutes-to-severity debt equals its real count`,
-      conversions.length === declared,
-      `declared ${declared}, found ${conversions.length}`);
-    ok(`${reader} holds no second short-on-time literal`,
-      !/timeAvailableMinutes\s*[<>]=?\s*\d/.test(code) &&
-      !/minutes\s*[<>]=?\s*(?:35|45)\b/i.test(code));
-  }
-}
 
 console.log('\n[5] Batch 6 — the display numbers have one owner each');
 {

@@ -70,7 +70,6 @@ import {
   isInjurySourceFact,
   type TemporaryScheduleFact,
 } from '../rules/temporarySourceFact';
-import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -449,18 +448,31 @@ async function main(): Promise<void> {
 
   /** The one door, with the scope the button declares. `onDate` is the day the
    *  athlete taps it (defaults to the tape's today). */
-  const shortOnTimeAction = (
-    scope: 'today_only' | 'current_week',
-    onDate: string = TODAY,
-  ): ProgramControlAction => ({
-    type: 'set_schedule_modifier',
-    source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
-    scope,
-    payload: { date: onDate, todayISO: onDate },
-    requiresRebuild: false,
-    createsActiveModifier: true,
-    oneOffOnly: false,
-  } as ProgramControlAction);
+  /* ══ THE "SHORT ON TIME TODAY" CELLS ARE DELETED WITH THEIR DOOR ═══════════
+   *
+   * Sam, 2026-08-21: *"Short-on-time has no current athlete-facing route. Prove
+   * that, then delete its remaining implementation, tests and debt entry. Do
+   * not repair it."*
+   *
+   * ⚠ THIS SUITE ALREADY CONTAINED THE PROOF, IN TWO OF ITS OWN CELLS — "the
+   * removed Time door stays absent" and "the removed short-on-time handler
+   * stays absent", both still below and both still PASSING. Nine cells beside
+   * them went on driving that door through a `shortOnTimeAction` helper the
+   * suite manufactured itself at `scope: 'today_only'` — a scope no athlete
+   * control dispatches (`npm run census:short-on-time-route`, 8 cells). The
+   * suite was asserting a door its own neighbours said did not exist.
+   *
+   * DELETED: the helper and nine cells — the one-day horizon, the today-scoped
+   * fact, the deriving compression, the cap owner's cut, the byte-exact restore,
+   * and the four fixture/game-day inert lanes. TWO OF THEM WERE ALREADY FAILING
+   * at base.
+   *
+   * KEPT: every door an athlete can still open — the G-1 ask, durable/synchronous
+   * parity, the move, the week-scoped fact, Away, equipment, the refusal
+   * acknowledgement, the two absence guards, the unruled busy constraint, and the
+   * coach/tap parity wrapper.
+   */
+
 
   /** The away door's action, field for field what `useHomeScreen` builds. */
   const awayAction = (dates: string[]): ProgramControlAction => ({
@@ -493,31 +505,6 @@ async function main(): Promise<void> {
       sourceSurface: 'busy_this_week',
     });
 
-  await run('the door gives a "today" request a one-day horizon, at the ruled 35-minute cap', async () => {
-    // THE DECISION THIS DOOR OWNS, asserted through the real executor: the fact
-    // it commits IS the ruling — a time-cap fact, dates [today], capped by the
-    // one 35-minute owner. Building the fact by hand here would let the door
-    // drift from the cell that pins it.
-    reachHisWorldByActing({ withMarks: false });
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
-    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
-    const facts = normalizeAcceptedMaterialContext(
-      useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
-    const fact = facts.find((candidate) => !isInjurySourceFact(candidate) &&
-      candidate.factKind === 'time_cap');
-    assert(fact && !isInjurySourceFact(fact) && fact.factKind === 'time_cap',
-      `the door committed no time-cap fact — facts: ${JSON.stringify(facts.map((f) =>
-        isInjurySourceFact(f) ? 'injury' : f.factKind))}`);
-    assert(fact.maxSessionMinutes === SHORT_ON_TIME_MINUTES,
-      `the door invented its own minutes (${fact.maxSessionMinutes}) instead of the `
-      + `ruled owner's ${SHORT_ON_TIME_MINUTES}`);
-    assert(fact.scope.kind === 'date' && fact.effectiveFrom === TODAY && fact.effectiveUntil === TODAY,
-      `a today_only request took a ${fact.scope.kind} horizon `
-      + `${fact.effectiveFrom}..${fact.effectiveUntil} under copy that says "today"`);
-    assert(fact.targetKind === 'dates' && fact.dates.length === 1 && fact.dates[0] === TODAY,
-      `the cap targets ${JSON.stringify(fact.dates)} (${fact.targetKind}), not today alone`);
-  });
 
   /**
    * The days the projection would let this constraint touch.
@@ -532,17 +519,6 @@ async function main(): Promise<void> {
       buildScheduleStateImperative().activeConstraints ?? [], date,
     ).some((constraint: { id?: string }) => constraint.id === constraintId));
 
-  await run('a today-scoped time-cap fact reaches today and no other day', async () => {
-    reachHisWorldByActing({ withMarks: false });
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
-    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
-    const factId = result.createdModifierIds?.[0];
-    assert(factId, 'the door reported ok with no created fact id');
-    const reached = daysReachedBy(`source-fact:time-cap:${factId}`);
-    assert(reached.length === 1 && reached[0] === TODAY,
-      `a fact that says "today" is offered to ${reached.length} day(s): ${reached.join(', ')}`);
-  });
 
   await run('a week-scoped schedule fact reaches the whole week', async () => {
     // NON-VACUITY, and the proof that the HORIZON is what decides. If a
@@ -725,157 +701,8 @@ async function main(): Promise<void> {
       + 'not been built yet is not substituting.');
   });
 
-  await run('a deriving short-on-time commit compresses today and touches no other day', async () => {
-    // DECLARED RED 2's payment, ruled half — "the real law: today lightens, the
-    // other six days are untouched", exactly as the old cell said it must be
-    // written when the red paid. The ruled effect (Sam 2026-08-02): the
-    // COMPRESSED session — main lift kept, cut to essentials, under the
-    // existing 35-minute owner — delivered by scoped regen, the illness
-    // precedent, with a fact-linked adjustment for the undo half below.
-    // The tap day is the Friday of his week — a PLAIN strength day (Lower
-    // Hinge). His literal today is a TEAM NIGHT, which the compression law
-    // deliberately never content-cuts (the club's session is not ours to
-    // shorten), so a cell tapping there would assert nothing about the trim.
-    const tapDay = '2026-07-31';
-    reachHisWorldByActing({ withMarks: false });
-    const before = dayFingerprints(projectedWeek(WEEK, tapDay));
-    assert(before[tapDay] !== undefined && before[tapDay] !== 'REST',
-      `the tap day (${tapDay}) holds nothing — this cell would be vacuous`);
-    const mainLiftBefore = (projectedWeek(WEEK, tapDay).find((day) => day.date === tapDay)?.workout
-      ?.exercises ?? [])[0]?.exercise?.name ?? null;
 
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only', tapDay), { todayISO: tapDay }));
-    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
-    assert(result.changedProgram === true,
-      'the ruled door reported no program change over an occupied today — the '
-      + 'compressed session never landed');
-    // §7's mixed-case honesty pin: a PLAIN day keeps deriving the compressed
-    // session and never carries the fixture-day inert reason.
-    assert(result.inertReason === undefined,
-      `a plain-day tap carries inertReason "${String(result.inertReason)}" — `
-      + 'the fixture-day rule is over-reaching');
 
-    const todayAfter = projectedWeek(WEEK, tapDay).find((day) => day.date === tapDay);
-    assert(todayAfter?.workout, 'the compressed day lost its session entirely');
-    const statedMinutes = todayAfter.workout.durationMinutes ?? 0;
-    assert(statedMinutes > 0 && statedMinutes <= SHORT_ON_TIME_MINUTES,
-      `today states ${todayAfter.workout.durationMinutes} minutes against the `
-      + `${SHORT_ON_TIME_MINUTES}-minute cap (zero = the cap never landed)`);
-    const after = dayFingerprints(projectedWeek(WEEK, tapDay));
-    assert(after[tapDay] !== before[tapDay],
-      'today reads byte-identical — the cap changed a number and cut nothing');
-    for (const date of Object.keys(before)) {
-      if (date === tapDay) continue;
-      assert(before[date] === after[date],
-        `a today-scoped fact changed ${date}: "${before[date]}" -> "${after[date]}"`);
-    }
-    if (mainLiftBefore) {
-      const namesAfter = (todayAfter.workout.exercises ?? [])
-        .map((row) => row.exercise?.name ?? '');
-      assert(namesAfter.includes(mainLiftBefore),
-        `the main lift ("${mainLiftBefore}") did not survive the compression — `
-        + `rows after: ${namesAfter.join(', ')}`);
-    }
-
-    // The deriving lane's ledger half: the adjustment is fact-linked, so the
-    // clear cell below cascade-reverts through the generic sourceFactId path.
-    const factId = result.createdModifierIds?.[0];
-    assert(factId, 'the door reported ok with no created fact id');
-    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
-      (adjustment) => adjustment.kind === 'deriving_source_fact' &&
-        adjustment.sourceFactId === factId && adjustment.status === 'active'),
-      'the deriving commit minted no fact-linked adjustment — nothing owns the undo');
-  });
-
-  await run('the cap owner CUTS the session, not just the number (main lift kept, essentials only)', async () => {
-    // THE COMPRESSION LAW AT ITS OWNER, over deterministic input — the
-    // end-to-end cell above proves the lane delivers a changed day, but a
-    // regenerated week can differ from the base for its own reasons, so only
-    // this cell can catch the trim being deleted while the cap keeps stamping
-    // durations (found by mutation testing: that exact mutation survived the
-    // end-to-end cell). Shape per Sam's ruling via the Bible §9 authored trim:
-    // main lift byte-identical, accessory sets halved, hard finisher dropped,
-    // duration states the cap.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { validateWorkoutAgainstActiveConstraints } =
-      require('../utils/postGenerationConstraintValidation') as
-        typeof import('../utils/postGenerationConstraintValidation');
-    const capConstraint = {
-      id: 'source-fact:time-cap:cell', type: 'schedule' as const, severity: 5,
-      status: 'active' as const, startDate: TODAY, lastUpdatedAt: TODAY,
-      reasonLabel: 'Temporary 35-minute cap', source: 'tap' as const,
-      temporarySourceFactIds: ['cell-fact'], scheduleKind: 'time_cap' as const,
-      maxSessionMinutes: SHORT_ON_TIME_MINUTES, timeCapDates: [TODAY],
-      rules: [], safeFocus: [], advice: [],
-    };
-    const workout = {
-      id: 'cap-cell-workout', microcycleId: 'cap-cell-week', dayOfWeek: 3,
-      name: 'Lower Squat', description: '', durationMinutes: 0,
-      intensity: 'Moderate', workoutType: 'Strength', sessionTier: 'core',
-      hasCombinedConditioning: true,
-      conditioningBlock: { attachedKind: 'finisher', intent: 'high-intensity' },
-      exercises: [
-        { id: 'r1', workoutId: 'cap-cell-workout', exerciseId: 'back-squat', orderIndex: 0,
-          prescribedSets: 4, prescribedReps: '5', prescribedWeightKg: 100,
-          exercise: { id: 'back-squat', name: 'Back Squat' } },
-        { id: 'r2', workoutId: 'cap-cell-workout', exerciseId: 'split-squat', orderIndex: 1,
-          prescribedSets: 4, prescribedReps: '8',
-          exercise: { id: 'split-squat', name: 'Split Squat' } },
-        { id: 'r3', workoutId: 'cap-cell-workout', exerciseId: 'leg-curl', orderIndex: 2,
-          prescribedSets: 3, prescribedReps: '10',
-          exercise: { id: 'leg-curl', name: 'Leg Curl' } },
-      ],
-      createdAt: '', updatedAt: '',
-    };
-    const validated = quiet(() => validateWorkoutAgainstActiveConstraints({
-      workout: workout as never,
-      date: TODAY,
-      todayISO: TODAY,
-      activeConstraints: [capConstraint as never],
-      profile: samExport8Profile(),
-    })).workout;
-    assert(validated, 'the cap collapsed the session to rest');
-    assert(validated.durationMinutes === SHORT_ON_TIME_MINUTES,
-      `the capped session states ${validated.durationMinutes} minutes, not the cap`);
-    const rows = Object.fromEntries((validated.exercises ?? []).map((row) =>
-      [row.exercise?.name ?? row.exerciseId, row.prescribedSets]));
-    assert(rows['Back Squat'] === 4,
-      `the main lift moved (${rows['Back Squat']} sets) — it must be kept byte-identical`);
-    assert((rows['Split Squat'] ?? 0) < 4 || (rows['Leg Curl'] ?? 0) < 3,
-      'no accessory was cut — the compression changed a number and nothing else '
-      + `(rows: ${JSON.stringify(rows)})`);
-    assert(!validated.conditioningBlock,
-      'the hard finisher survived the compression');
-  });
-
-  await run('clearing the short-on-time fact restores today byte-exact', async () => {
-    // The illness precedent's other half: fact-linked undo. Clearing the fact
-    // cascade-reverts the overlay through the stored prior state, never a
-    // re-derivation.
-    const tapDay = '2026-07-31';
-    reachHisWorldByActing({ withMarks: false });
-    const before = dayFingerprints(projectedWeek(WEEK, tapDay));
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only', tapDay), { todayISO: tapDay }));
-    assert(result.ok === true && result.createdModifierIds?.[0],
-      `precondition: the deriving commit landed (ok=${result.ok})`);
-    const factId = result.createdModifierIds[0];
-    assert(JSON.stringify(dayFingerprints(projectedWeek(WEEK, tapDay))) !== JSON.stringify(before),
-      'precondition: the commit changed the week');
-
-    const cleared = await quietAsync(() => executeProgramControlActionDurably({
-      type: 'clear_fatigue_status',
-      source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
-      scope: 'today_only',
-      payload: { modifierId: factId, date: tapDay },
-      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
-    } as ProgramControlAction, { todayISO: tapDay }));
-    assert(cleared.ok === true, `the clear was refused: "${cleared.message}"`);
-    const after = dayFingerprints(projectedWeek(WEEK, tapDay));
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'clearing the fact did not restore the week byte-exact');
-  });
 
   // ────────────────────────────────────────────────────────────────────────
   // GAME DAY: NOTHING TO SHORTEN (Sam's §7 answer, 2026-08-03 — sentence
@@ -886,165 +713,9 @@ async function main(): Promise<void> {
   // The fact records; the coach keeps the context; the athlete gets the truth.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('short on time on a MARKED fixture commits inert: fact recorded, program byte-unchanged, the fixture truth', async () => {
-    // Sam's 2026-08-01 tape tap was exactly this coordinate: "Short on time
-    // today" ON the fixture day. Before the §7 answer, the deriving regen of
-    // this marked world refused honestly; now the classifier reads the date
-    // through the fixture owner and the commit is inert BY RULING.
-    reachHisWorldByActing();
-    const gameDay = '2026-08-01';
-    assert(SAM_EXPORT_8_MARKED_DAYS[gameDay] === 'game',
-      'precondition: 2026-08-01 is no longer his marked game — this cell targets the wrong day');
-    const before = dayFingerprints(projectedWeek(WEEK, gameDay));
-    const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {});
-    const ledgerBefore = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length;
 
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only', gameDay), { todayISO: gameDay }));
-    assert(result.ok === true,
-      `the fixture-day tap is still refused ("${result.message}") — the §7 inert lane never landed`);
-    assert(result.changedProgram === false,
-      'a fixture-day cap claims a program change — there is nothing to shorten');
-    assert(result.inertReason === 'fixture_day',
-      `the committed result does not say WHY nothing changed (inertReason: ${
-        String(result.inertReason)}) — the ack owner would have to guess from the door`);
 
-    // The fact + constraint land where inert schedule facts already surface —
-    // the coach keeps the context (the existing inert lane's own property).
-    const accepted = normalizeAcceptedMaterialContext(
-      useProgramStore.getState().acceptedMaterialContext);
-    const fact = accepted.temporarySourceFacts.find((candidate) =>
-      !isInjurySourceFact(candidate) && candidate.factKind === 'time_cap');
-    assert(fact && !isInjurySourceFact(fact) && fact.factKind === 'time_cap' &&
-      fact.dates.length === 1 && fact.dates[0] === gameDay,
-      'the fixture-day time-cap fact did not land in the accepted context');
-    assert(accepted.activeConstraints.some((constraint) =>
-      constraint.type === 'schedule' &&
-      (constraint as { scheduleKind?: string }).scheduleKind === 'time_cap'),
-      'the inert fact composed no constraint — the coach lost the context');
 
-    const after = dayFingerprints(projectedWeek(WEEK, gameDay));
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'a fixture-day inert cap changed the visible week');
-    assert(after[gameDay] === before[gameDay],
-      'the fixture day itself changed — the anchor law broke');
-    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
-      'a fixture-day inert cap authored a week overlay');
-    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,
-      'a fixture-day inert cap minted a reversible adjustment');
-
-    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-    assert(ack.tone === 'success' &&
-      ack.message === "It's a practice match — nothing to shorten. Go play.",
-      // §10 RE-POINT (Sam, 2026-08-03): this world is Sam's real export —
-      // Pre-season — so its card reads "Practice Match" (6-IV-4) and the
-      // signed sentence is the practice-match variant. The cell asserted the
-      // game-day wording when only one sentence existed; the ruling changed
-      // the premise, not the behaviour under test. In-season marked coverage
-      // is the cell added directly below, so both variants stay pinned.
-      `the athlete does not hear the signed sentence for THIS fixture's kind — got "${ack.message}"`);
-  });
-
-  await run('short on time on a VIRTUAL game day (in-season usualGameDay, no marks) takes the same inert lane', async () => {
-    // The fixture owner resolves virtual fixtures too — an in-season athlete
-    // with a usualGameDay and no calendar marks still has a game on Saturday.
-    // The classifier must ask the owner, never re-derive virtual-game logic.
-    reachHisWorldByActing({
-      withMarks: false,
-      profile: {
-        ...samExport8Profile(),
-        seasonPhase: 'In-season',
-        usualGameDay: 'Saturday',
-        gameDay: 'Saturday',
-      } as ReturnType<typeof samExport8Profile>,
-      selectedPhase: 'In-season',
-    });
-    const virtualGameDay = '2026-08-01'; // the Saturday of his week, unmarked
-    assert(Object.keys(useCalendarStore.getState().markedDays ?? {}).length === 0,
-      'precondition: this world must hold NO calendar marks — the fixture is virtual');
-    const before = dayFingerprints(projectedWeek(WEEK, virtualGameDay));
-
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(
-        shortOnTimeAction('today_only', virtualGameDay), { todayISO: virtualGameDay }));
-    assert(result.ok === true,
-      `the virtual-fixture tap was refused ("${result.message}")`);
-    assert(result.changedProgram === false && result.inertReason === 'fixture_day',
-      `the virtual game day did not take the inert lane (changedProgram=${
-        result.changedProgram}, inertReason=${String(result.inertReason)}) — the `
-      + 'classifier is not asking the fixture owner about virtual fixtures');
-    const after = dayFingerprints(projectedWeek(WEEK, virtualGameDay));
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'a virtual-fixture inert cap changed the visible week');
-    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-    assert(ack.message === "It's game day — there's nothing to shorten. Go play.",
-      `virtual game day: the athlete does not hear the signed sentence — got "${ack.message}"`);
-  });
-
-  await run('short on time on an IN-SEASON MARKED game says game day, not practice match', async () => {
-    // The other half of §10's pair, and the reason the marked cell above could
-    // be re-pointed honestly: a MARKED fixture in an IN-SEASON world is a game,
-    // its card says so, and the sentence must match. Without this cell the
-    // re-point would have traded coverage for agreement.
-    reachHisWorldByActing({
-      profile: {
-        ...samExport8Profile(),
-        seasonPhase: 'In-season',
-        usualGameDay: 'Saturday',
-        gameDay: 'Saturday',
-      } as ReturnType<typeof samExport8Profile>,
-      selectedPhase: 'In-season',
-    });
-    const gameDay = '2026-08-01';
-    assert(SAM_EXPORT_8_MARKED_DAYS[gameDay] === 'game',
-      'precondition: this cell targets his marked fixture day');
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(
-        shortOnTimeAction('today_only', gameDay), { todayISO: gameDay }));
-    assert(result.ok === true, `the in-season marked tap was refused ("${result.message}")`);
-    assert(result.inertReason === 'fixture_day' && result.inertFixtureVariant === 'game',
-      `an in-season marked fixture is not a game to the owner (variant=${
-        String(result.inertFixtureVariant)})`);
-    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-    assert(ack.message === "It's game day — there's nothing to shorten. Go play.",
-      `in-season marked: the athlete hears the wrong signed sentence — got "${ack.message}"`);
-  });
-
-  await run('short on time on a PRE-SEASON fixture says practice match, not game day', async () => {
-    // §10 (Sam, 2026-08-03): the sentence variant is selected by the SAME
-    // `FixtureAvailabilityKind` that picks the day's card label (6-IV-4), so
-    // the card and the sentence can never disagree about what the day is. The
-    // same world as the virtual cell, one answer different: Pre-season.
-    reachHisWorldByActing({
-      withMarks: false,
-      profile: {
-        ...samExport8Profile(),
-        seasonPhase: 'Pre-season',
-        usualGameDay: 'Saturday',
-        gameDay: 'Saturday',
-      } as ReturnType<typeof samExport8Profile>,
-      selectedPhase: 'Pre-season',
-    });
-    const fixtureDay = '2026-08-01'; // the Saturday of his week, unmarked
-    const before = dayFingerprints(projectedWeek(WEEK, fixtureDay));
-
-    const result = await quietAsync(() =>
-      executeProgramControlActionDurably(
-        shortOnTimeAction('today_only', fixtureDay), { todayISO: fixtureDay }));
-    assert(result.ok === true, `the pre-season fixture tap was refused ("${result.message}")`);
-    assert(result.changedProgram === false && result.inertReason === 'fixture_day',
-      `a pre-season fixture did not take the inert lane (inertReason=${
-        String(result.inertReason)})`);
-    assert(result.inertFixtureVariant === 'practice_match',
-      `the fixture's own kind did not travel with the result — got ${
-        String(result.inertFixtureVariant)}; the card label owner says practice_match`);
-    const after = dayFingerprints(projectedWeek(WEEK, fixtureDay));
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'a practice-match inert cap changed the visible week');
-    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-    assert(ack.message === "It's a practice match — nothing to shorten. Go play.",
-      `pre-season: the athlete hears the wrong signed sentence — got "${ack.message}"`);
-  });
 
   await run('a refused schedule tap is acknowledged to the athlete, in the athlete\'s words', async () => {
     // THE LAW THE FIRST DRAFT OF THIS FILE ASSERTED ONE LAYER TOO LOW.
