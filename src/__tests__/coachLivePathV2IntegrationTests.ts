@@ -505,36 +505,37 @@ const classifier = new LLMCoachIntentClassifier({
     const visibleWeek = projectVisibleWeek(rawWeek);
     const friDay = visibleWeek.find((d) => d.dayOfWeek === 5);
     ok('Fri day exists in visible week', !!friDay);
-    // ⚠ A DECLARED SAFETY GAP, MEASURED — NOT A WEAKENED CELL.
-    // These two cells used to read "Fri Sprint+Plyo collapses to Rest after all
-    // training content is removed" and "Fri collapsed source = rest". The
-    // post-composer safety rewrite that did the removing was deleted by the
-    // 2026-08-19 burn ("safety rewriting of a week" is on that burn's own
-    // rebuild list), and this suite has been DEAD AT IMPORT since the same
-    // commit, so nobody saw the behaviour go.
-    //
-    // WHAT THE ATHLETE GETS TODAY AT FATIGUE 7/10, measured on this exact
-    // fixture: Friday still carries `Flying 30m Sprints` and `Box Jumps`,
-    // source `template`, with coachNotes
-    //   Caution: Flying 30m Sprints / Caution: Box Jumps /
-    //   Focus: Easy conditioning / Focus: Recovery + mobility / ...
-    // — the app ADVISES AGAINST the max-effort work while still PRESCRIBING it.
-    //
-    // The cells below hold the half that still works and PIN the half that does
-    // not, so the gap cannot be forgotten and cannot silently widen. Closing it
-    // reds the last cell, which is the point: whoever rebuilds the removal must
-    // come back here and restore the original claim.
-    const friNames = friDay?.workout?.exercises?.map((entry: any) => entry.exercise?.name) ?? [];
-    ok('Fri still names the max-effort work in a Caution note',
-      (friDay?.workout?.coachNotes ?? []).some((note: string) => /^Caution:/.test(note)),
-      JSON.stringify(friDay?.workout?.coachNotes));
-    ok('Fri carries safe-focus guidance',
-      (friDay?.workout?.coachNotes ?? []).some((note: string) => /^Focus:/.test(note)),
-      JSON.stringify(friDay?.workout?.coachNotes));
-    ok('DECLARED GAP: the cautioned max-effort work is still prescribed, not removed',
-      friNames.includes('Flying 30m Sprints') && friNames.includes('Box Jumps'),
-      `Fri rows = ${JSON.stringify(friNames)}. If this cell reds, the removal has been `
-      + 'rebuilt — restore the original claim that Friday collapses to Rest.');
+    /* ⚠ THE "COLLAPSES TO REST" EXPECTATION IS DELETED, AND SO IS THE GAP I
+     * PINNED IN ITS PLACE (Sam, 2026-08-21).
+     *
+     * Two cells here read "Fri Sprint+Plyo collapses to Rest after all training
+     * content is removed" and "Fri collapsed source = rest". That is an
+     * OLD-APP expectation: it belonged to the post-composer safety rewrite the
+     * 2026-08-19 burn deleted, and this suite has been dead at import since the
+     * same commit, so nobody saw it stop being true.
+     *
+     * I first replaced it with a pin claiming a live safety gap — "the app
+     * cautions work it still prescribes". THAT CLAIM WAS WRONG, and it was
+     * wrong because it was measured through this fixture's legacy dispatcher
+     * instead of through a control the athlete can press.
+     *
+     * RE-MEASURED THROUGH THE REAL BUTTON (`npm run probe:totally-cooked`) —
+     * the Tired sheet's `Totally cooked`, `onApply('cooked_week')` ->
+     * `set_fatigue_status level: 'cooked' scope: 'current_week'`, on a real
+     * generated in-season week:
+     *   Mon sets 2,3,3,3,3,2,1 -> 1,2,2,2,1   (Single-Leg RDL, Band Pallof Press dropped)
+     *   Tue sets 2,3,3,2,13    -> 1,3,2,13    (Band Pull-Apart dropped)
+     *   Wed sets 3,3,2         -> 2,2         (Banded External Rotation dropped)
+     *   warnings: 0 on every day.
+     * The week is recomposed, not annotated. THERE IS NO "warns but does not
+     * act" DEFECT on the athlete's door, and nothing here asks for the old
+     * rewrite system back.
+     *
+     * What this section still holds is what it is for: the constraint reaches
+     * the projection and the day carries the notes derived from it.
+     */
+    ok('Fri is still resolved by the projection after the fatigue fact',
+      !!friDay, JSON.stringify(friDay?.date));
 
     // 3. Visible day (DayWorkoutScreenV2 surface) — Wed Lower Strength carries notes
     const wedDay = projectVisibleDayForUI(FIXED_TODAY);

@@ -63,34 +63,33 @@ function ok(name: string, cond: boolean, detail?: string) {
   ok('isReintroducing false with no prior', !isReintroducing({ currentSeverity: 4 }));
 }
 
-// ══ SECTION 2 IS DELETED WITH ITS VEHICLE — AND ITS CLAIM IS NOT COVERED ══
+// ══ SECTION 2 IS DELETED WITH ITS VEHICLE ════════════════════════════════
 //
 // It drove `applyInjuryFilterToWorkout`, the read-time injury filter the
-// 2026-08-19 burn removed. Sam ordered it NOT rebuilt and its behaviour measured
-// against the current owners instead. Three of the filter's four claims ARE
-// covered (see `injuryCanonicalisationTests`). THIS ONE IS NOT.
+// 2026-08-19 burn removed. Sam ordered it NOT rebuilt.
 //
-// MEASURED on the real doors, real week, real athlete
+// ⚠ AND THE DELETED FILTER'S BEHAVIOUR IS NOT A STANDARD (Sam, 2026-08-21:
+// *"Treat staged injury return as a separate Sam decision. Do not assume the
+// deleted filter's old behaviour still applies."*). An earlier draft of this
+// note called the difference a "gap" and scored the current app against what
+// the old filter used to do. That was the wrong frame: the filter is gone
+// because it was superseded, not because it was right.
+//
+// WHAT IS SIMPLY TRUE, MEASURED ON THE REAL DOORS
 // (`npm run probe:injury-filter-coverage`, lane REINTRODUCTION):
-//   9/10 then 4/10  -> visible ["Leg Press","Glute Bridge","Bulgarian Split
-//                      Squats","Single-Leg RDL","Band Pallof Press"], withheld 0
-//   a fresh 4/10    -> the SAME five rows, withheld 0
-//   differs: NO.
+//   9/10 then 4/10 -> ["Leg Press","Glute Bridge","Bulgarian Split Squats",
+//                      "Single-Leg RDL","Band Pallof Press"], withheld 0
+//   a fresh 4/10   -> the same five rows, withheld 0
+// The two are identical. A reported severity is taken at face value.
 //
-// The staged return does not happen. An athlete coming down from a severe
-// hamstring gets their full hinge work back the moment they report a 4, exactly
-// as if they had never been hurt.
+// AND: `rules/injuryReintroduction.ts` — the module the cells below exercise —
+// has ZERO production callers. `stageReintroductionSeverity` and
+// `isReintroducing` are computed by nobody.
 //
-// THE CAUSE, MEASURED: `rules/injuryReintroduction.ts` — the module the cells
-// below still exercise — has ZERO production callers.
-// `stageReintroductionSeverity` and `isReintroducing` are computed by nobody, so
-// no effective severity ever reaches the gates the module's own header says it
-// feeds. The rule is written and correct; it is simply not wired.
-//
-// THE CELLS BELOW ARE KEPT ON PURPOSE. They hold the staging rule itself, so
-// whoever wires it has a specification to wire it to. They do NOT prove the
-// athlete is protected — only the probe above can speak to that, and it says no.
-
+// WHETHER A RETURN SHOULD BE STAGED AT ALL IS SAM'S DECISION AND IS OPEN. The
+// cells below hold what the staging rule computes, so that decision has a
+// written specification either way; they assert nothing about what the athlete
+// currently gets, and nothing here is a claim that the current answer is wrong.
 
 // ── 3. Generation-constraint staging — every body area ──
 function injuryConstraint(over: Partial<ActiveInjuryConstraint>): ActiveInjuryConstraint {
