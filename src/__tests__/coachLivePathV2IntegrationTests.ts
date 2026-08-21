@@ -10,8 +10,13 @@
  *   → projectAndLog with extraConstraints from buildExtraConstraints
  *     (matches useResolvedDay/useResolvedWeek behaviour)
  *   → workout.coachNotes (consumed by HomeScreenV2 + DayWorkoutScreenV2)
- *   → buildWeeklyCoachUpdateFromConstraints
- *     (consumed by HomeScreenV2's CoachUpdateCard via useHomeScreen)
+ *
+ * THE CHAIN USED TO END AT A FIFTH LINK, `buildWeeklyCoachUpdateFromConstraints`
+ * -> HomeScreenV2's weekly CoachUpdate card. THAT CARD IS PERMANENTLY RETIRED
+ * (Sam, 2026-08-21): Status owns that information now. Its module went in the
+ * 2026-08-19 burn, and this suite has been DEAD AT IMPORT ever since, so the
+ * four links above have not been checked either. They are what this suite is
+ * for, and they are all still here.
  *
  * Strategy: stub the resolver + getMondayStr so each scenario runs against
  * a deterministic week. Mock global fetch so /coach-intent returns the
@@ -26,13 +31,10 @@
  *   2. The visible-day workout (DayWorkoutScreenV2 surface) carries
  *      coachNotes derived from the constraint (Removed / Caution / Focus).
  *   3. The visible-week workouts (HomeScreenV2 surface) carry the same.
- *   4. buildWeeklyCoachUpdateFromConstraints({ activeConstraints,
- *      visibleWeek, baselineWeek }) produces the expected card fields:
- *      activeIssues, avoid, substituteWith, keep, advice, ctaPrefill.
  *
  * Any wiring break — useSchedule lacks the constraint subscription, the
  * projection ignores extraConstraints, the producer doesn't write the
- * store, the card derivation drops a constraint — fails this test.
+ * store — fails this test.
  *
  * Run: npm run test:coach-live-path-v2
  */
@@ -114,7 +116,6 @@ import {
   buildMissedSessionConstraint,
 } from '../utils/exposureEngine';
 import { bucketToRegion } from '../utils/coachConstraintProducers';
-import { buildWeeklyCoachUpdateFromConstraints } from '../utils/weeklyCoachUpdate';
 import {
   createTemporaryFatigueFact,
   createTemporaryScheduleFact,
@@ -454,7 +455,7 @@ const classifier = new LLMCoachIntentClassifier({
   ]);
 
   // ─────────────────────────────────────────────────────────────────────
-  // [1] Fatigue 7/10 → canonical fact, mirrors, coachNotes, card fields
+  // [1] Fatigue 7/10 → canonical fact, mirrors, coachNotes
   // ─────────────────────────────────────────────────────────────────────
   section('[1] fatigue 7/10 → full V2 chain populated');
   {
@@ -504,8 +505,36 @@ const classifier = new LLMCoachIntentClassifier({
     const visibleWeek = projectVisibleWeek(rawWeek);
     const friDay = visibleWeek.find((d) => d.dayOfWeek === 5);
     ok('Fri day exists in visible week', !!friDay);
-    ok('Fri Sprint+Plyo collapses to Rest after all training content is removed', !friDay?.workout);
-    eq('Fri collapsed source = rest', friDay?.source, 'rest' as any);
+    // ⚠ A DECLARED SAFETY GAP, MEASURED — NOT A WEAKENED CELL.
+    // These two cells used to read "Fri Sprint+Plyo collapses to Rest after all
+    // training content is removed" and "Fri collapsed source = rest". The
+    // post-composer safety rewrite that did the removing was deleted by the
+    // 2026-08-19 burn ("safety rewriting of a week" is on that burn's own
+    // rebuild list), and this suite has been DEAD AT IMPORT since the same
+    // commit, so nobody saw the behaviour go.
+    //
+    // WHAT THE ATHLETE GETS TODAY AT FATIGUE 7/10, measured on this exact
+    // fixture: Friday still carries `Flying 30m Sprints` and `Box Jumps`,
+    // source `template`, with coachNotes
+    //   Caution: Flying 30m Sprints / Caution: Box Jumps /
+    //   Focus: Easy conditioning / Focus: Recovery + mobility / ...
+    // — the app ADVISES AGAINST the max-effort work while still PRESCRIBING it.
+    //
+    // The cells below hold the half that still works and PIN the half that does
+    // not, so the gap cannot be forgotten and cannot silently widen. Closing it
+    // reds the last cell, which is the point: whoever rebuilds the removal must
+    // come back here and restore the original claim.
+    const friNames = friDay?.workout?.exercises?.map((entry: any) => entry.exercise?.name) ?? [];
+    ok('Fri still names the max-effort work in a Caution note',
+      (friDay?.workout?.coachNotes ?? []).some((note: string) => /^Caution:/.test(note)),
+      JSON.stringify(friDay?.workout?.coachNotes));
+    ok('Fri carries safe-focus guidance',
+      (friDay?.workout?.coachNotes ?? []).some((note: string) => /^Focus:/.test(note)),
+      JSON.stringify(friDay?.workout?.coachNotes));
+    ok('DECLARED GAP: the cautioned max-effort work is still prescribed, not removed',
+      friNames.includes('Flying 30m Sprints') && friNames.includes('Box Jumps'),
+      `Fri rows = ${JSON.stringify(friNames)}. If this cell reds, the removal has been `
+      + 'rebuilt — restore the original claim that Friday collapses to Rest.');
 
     // 3. Visible day (DayWorkoutScreenV2 surface) — Wed Lower Strength carries notes
     const wedDay = projectVisibleDayForUI(FIXED_TODAY);
@@ -518,42 +547,11 @@ const classifier = new LLMCoachIntentClassifier({
       );
     }
 
-    // 4. CoachUpdate card derivation
     const baselineWeek = rawWeek;
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek,
-      activeConstraints: constraints as any,
-    });
-    ok('card derived (non-null)', !!card);
-    if (card) {
-      ok(
-        'card.activeIssues mentions Fatigue 7/10',
-        card.activeIssues.some((i) => /Fatigue/i.test(i) && /7/.test(i)),
-        `activeIssues=${JSON.stringify(card.activeIssues)}`,
-      );
-      ok(
-        'card.avoid is non-empty (fatigue blocks max-effort etc.)',
-        card.avoid.length > 0,
-        `avoid=${JSON.stringify(card.avoid)}`,
-      );
-      ok(
-        'card.keep mentions easy aerobic / recovery',
-        card.keep.some((k) => /aerobic|recovery|easy/i.test(k)),
-        `keep=${JSON.stringify(card.keep)}`,
-      );
-      eq('card.ctaPrefill is fatigue prefill', card.ctaPrefill, 'Update on how I’m feeling: ');
-      ok(
-        'card.sessionsChanged includes Fri',
-        card.sessionsChanged.some((s) => /Fri/.test(s)),
-        `sessionsChanged=${JSON.stringify(card.sessionsChanged)}`,
-      );
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [2] Soreness quads 6/10 → bucket=knee, regional limits, card fields
+  // [2] Soreness quads 6/10 → bucket=knee, regional limits
   // ─────────────────────────────────────────────────────────────────────
   section('[2] soreness quads 6/10 → knee bucket reaches V2 surfaces');
   {
@@ -608,25 +606,6 @@ const classifier = new LLMCoachIntentClassifier({
       );
     }
 
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek: rawWeek,
-      activeConstraints: constraints as any,
-    });
-    ok('card derived', !!card);
-    if (card) {
-      ok(
-        'card.activeIssues mentions quads soreness 6/10',
-        card.activeIssues.some((i) => /quads/i.test(i) && /soreness/i.test(i) && /6/.test(i)),
-        `activeIssues=${JSON.stringify(card.activeIssues)}`,
-      );
-      eq(
-        'card.ctaPrefill threads quads body part',
-        card.ctaPrefill,
-        'Update on my quads soreness: ',
-      );
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -669,26 +648,6 @@ const classifier = new LLMCoachIntentClassifier({
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeek = projectVisibleWeek(rawWeek);
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek: rawWeek,
-      activeConstraints: constraints as any,
-    });
-    ok('card derived', !!card);
-    if (card) {
-      ok(
-        'card.activeIssues mentions canonical Busy week level',
-        card.activeIssues.some((i) => /Busy week/i.test(i) && /5/.test(i)),
-        `activeIssues=${JSON.stringify(card.activeIssues)}`,
-      );
-      eq('card.ctaPrefill is busy-week prefill', card.ctaPrefill, 'Update on my week: ');
-      ok(
-        'card.keep includes short / targeted',
-        card.keep.some((k) => /short|targeted|skill/i.test(k)),
-        `keep=${JSON.stringify(card.keep)}`,
-      );
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -717,19 +676,12 @@ const classifier = new LLMCoachIntentClassifier({
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeek = projectVisibleWeek(rawWeek);
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek: rawWeek,
-      activeConstraints: constraints as any,
-    });
-    ok('no Coach Note is derived from attendance feedback', !card);
   }
 
   // ─────────────────────────────────────────────────────────────────────
   // [5] Multi-constraint coexistence: fatigue + soreness compose
   // ─────────────────────────────────────────────────────────────────────
-  section('[5] fatigue 6 + soreness quads 5 stack into one card + visible week');
+  section('[5] fatigue 6 + soreness quads 5 stack into one visible week');
   {
     resetAll();
     resetFetchSpy();
@@ -782,22 +734,6 @@ const classifier = new LLMCoachIntentClassifier({
     const fri = visibleWeek.find((d) => d.dayOfWeek === 5);
     ok('Fri visible has coachNotes from constraints', (fri?.workout?.coachNotes?.length ?? 0) > 0);
 
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek: rawWeek,
-      activeConstraints: constraints as any,
-    });
-    ok('card derived for multi-constraint', !!card);
-    if (card) {
-      eq('card carries 2 plans', card.plans.length, 2);
-      ok(
-        'card.activeIssues mentions both Fatigue and quads soreness',
-        card.activeIssues.some((i) => /Fatigue/i.test(i)) &&
-          card.activeIssues.some((i) => /quads/i.test(i)),
-        `activeIssues=${JSON.stringify(card.activeIssues)}`,
-      );
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -823,9 +759,9 @@ const classifier = new LLMCoachIntentClassifier({
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [7] Resolved canonical fact disappears from card + projection
+  // [7] Resolved canonical fact disappears from the projection
   // ─────────────────────────────────────────────────────────────────────
-  section('[7] resolved canonical fatigue → projection no-op, card returns null');
+  section('[7] resolved canonical fatigue → projection no-op');
   {
     resetAll();
     resetFetchSpy();
@@ -852,19 +788,12 @@ const classifier = new LLMCoachIntentClassifier({
     const fri = visibleWeek.find((d) => d.dayOfWeek === 5);
     const friNames = exNames(fri?.workout ?? null);
     ok('Sprint kept now that fatigue is resolved', friNames.includes('Flying 30m Sprints'), `names=${JSON.stringify(friNames)}`);
-    const card = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek,
-      baselineWeek: rawWeek,
-      activeConstraints: useCoachUpdatesStore.getState().activeConstraints as any,
-    });
-    eq('card returns null when no active constraints', card, null);
   }
 
   // ─────────────────────────────────────────────────────────────────────
   // [8] Canonical fatigue resolution preserves independent source facts
   // ─────────────────────────────────────────────────────────────────────
-  section('[8] canonical fatigue resolution is surgical + Program card agrees');
+  section('[8] canonical fatigue resolution is surgical');
   {
     resetAll();
     resetFetchSpy();
@@ -879,17 +808,6 @@ const classifier = new LLMCoachIntentClassifier({
 
     const rawWeekWithFatigue = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeekWithFatigue = projectVisibleWeek(rawWeekWithFatigue);
-    const fatigueCard = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek: visibleWeekWithFatigue,
-      baselineWeek: rawWeekWithFatigue,
-      activeConstraints: afterFatigue as any,
-    });
-    ok(
-      'Program card initially shows Fatigue — 5/10',
-      !!fatigueCard && fatigueCard.activeIssues.includes('Fatigue — 5/10'),
-      JSON.stringify(fatigueCard?.activeIssues ?? []),
-    );
 
     // Add independent canonical facts to prove fatigue resolution is surgical.
     const calfId = await commitSoreness({
@@ -929,27 +847,8 @@ const classifier = new LLMCoachIntentClassifier({
 
     const rawWeekAfterResolution = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeekAfterResolution = projectVisibleWeek(rawWeekAfterResolution);
-    const cardAfterResolution = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek: visibleWeekAfterResolution,
-      baselineWeek: rawWeekAfterResolution,
-      activeConstraints: afterResolution as any,
-    });
-    ok(
-      'Program card no longer shows Fatigue — 5/10',
-      !cardAfterResolution?.activeIssues.some((issue) => /Fatigue\s+—\s+5\/10/i.test(issue)),
-      JSON.stringify(cardAfterResolution?.activeIssues ?? []),
-    );
-    ok(
-      'Program card still shows remaining soreness constraints',
-      !!cardAfterResolution &&
-        cardAfterResolution.activeIssues.some((issue) => /calves/i.test(issue)) &&
-        cardAfterResolution.activeIssues.some((issue) => /shoulder/i.test(issue)),
-      JSON.stringify(cardAfterResolution?.activeIssues ?? []),
-    );
 
     // Now clear the other constraints too; with no active constraints,
-    // HomeScreenV2's derived card path returns null immediately.
     await transactTemporarySourceFact({
       operation: 'resolve',
       factId: calfId,
@@ -962,13 +861,6 @@ const classifier = new LLMCoachIntentClassifier({
       todayISO: FIXED_TODAY,
       now: '2026-04-29T11:10:00.000Z',
     });
-    const cardWithNoActiveConstraints = buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO: FIXED_MONDAY,
-      visibleWeek: projectVisibleWeek(rawWeekAfterResolution),
-      baselineWeek: rawWeekAfterResolution,
-      activeConstraints: useCoachUpdatesStore.getState().activeConstraints as any,
-    });
-    eq('Program card disappears when no active constraints remain', cardWithNoActiveConstraints, null);
   }
 
   section('[9] fixture_change is owned before generic Coach paths');
