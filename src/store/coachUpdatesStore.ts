@@ -216,7 +216,6 @@ export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata
   bucket: InjuryState['bucket'];
   severity: number;
   /** Immediately-previous severity when improving — drives staged reintroduction. */
-  priorSeverity?: number;
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;

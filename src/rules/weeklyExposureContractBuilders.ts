@@ -52,7 +52,6 @@ export interface WeeklyExposureContractInput {
     region: 'lower_body' | 'upper_body' | 'back_midline' | 'other';
     pauseAffectedTraining: boolean;
     removeRiskyWork?: boolean;
-    effectiveSeverity?: number;
     /** Compatibility projection used by GenerationConstraintContext. */
     severity?: number;
     triggers?: readonly string[];
@@ -239,7 +238,7 @@ export function resolveRestrictedMainStrengthPatterns(
     // This site used to restate it as a bare `< 6` — a second representation of
     // an already-ruled fact, and the kind that drifts without anyone noticing.
     if (!injury.pauseAffectedTraining &&
-        !injurySeverityRemovesRiskyWork(injury.effectiveSeverity ?? injury.severity ?? 0)) continue;
+        !injurySeverityRemovesRiskyWork(injury.severity ?? 0)) continue;
     const keys = new Set(injury.injuryKeys ?? []);
     if (injury.region === 'upper_body') {
       restricted.add('push');

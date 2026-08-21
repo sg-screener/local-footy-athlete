@@ -38,7 +38,6 @@ import {
   severityIsLimiting,
   severityPausesTraining,
 } from '../rules/injurySeverityBands';
-import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import {
   HIGH_IMPACT_REMOVED_SHARE,
   MODERATE_IMPACT_REMOVED_COUNT,
@@ -61,6 +60,23 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
   failures.push(name);
   console.error(`  FAIL ${name}`);
   if (detail !== undefined) console.error(`       ${JSON.stringify(detail)}`);
+}
+
+/**
+ * ⚠ WHY THIS EXISTS. `codeOf` throws ENOENT on a missing file, so when the
+ * 2026-08-19 burn deleted `utils/trainAroundEngine.ts` this suite died at
+ * import and reported NOTHING. A gate nobody can see is worse than a gate that
+ * fails, so every reader list is checked for existence FIRST and a departed
+ * reader reds by name — which forces the next deletion to re-site the claim
+ * instead of silencing it.
+ */
+function assertReadersExist(label: string, readers: readonly string[]): readonly string[] {
+  const missing = readers.filter((reader) => !fs.existsSync(path.join(src, reader)));
+  ok(`${label}: every reader named is still in the tree`,
+    missing.length === 0,
+    `${missing.join(', ')} — re-site the claim onto the reader that owns it now.`);
+  ok(`${label}: the list is not empty (liveness)`, readers.length > 0);
+  return readers.filter((reader) => !missing.includes(reader));
 }
 
 function codeOf(relative: string): string {
@@ -148,24 +164,28 @@ console.log('\n[3] The eleven fatigue readers hold no severity numbers of their 
   }
 }
 
-console.log('\n[4] Time caps are OFF the severity ladder');
-{
-  ok('there is one authored short-on-time threshold', SHORT_ON_TIME_MINUTES === 35,
-    SHORT_ON_TIME_MINUTES);
-
-  // The conversion Sam killed: minutes deciding a severity number. Short time
-  // shapes the session; it does not score the athlete.
-  for (const reader of ['utils/readinessConstraints.ts', 'utils/readiness.ts',
-    'utils/coachReadinessAdapter.ts']) {
-    const code = codeOf(reader);
-    ok(`${reader} does not convert minutes into a severity`,
-      !/timeAvailableMinutes[^;]*\?[^;]*\d[^;]*:[^;]*\d/.test(code) &&
-      !/severity:\s*[^,;]*Minutes/i.test(code));
-    ok(`${reader} holds no second short-on-time literal`,
-      !/timeAvailableMinutes\s*[<>]=?\s*\d/.test(code) &&
-      !/minutes\s*[<>]=?\s*(?:35|45)\b/i.test(code));
-  }
-}
+/* ══ SECTION [4] IS DELETED WITH ITS SUBJECT — "SHORT ON TIME" ════════════════
+ *
+ * Sam, 2026-08-21: *"Short-on-time has no current athlete-facing route. Prove
+ * that, then delete its remaining implementation, tests and debt entry. Do not
+ * repair it."*
+ *
+ * PROVEN by `npm run test:short-on-time-absent` (8 cells): all three athlete
+ * dispatches of `set_schedule_modifier` use `current_week` and the fact was
+ * gated on `today_only`; and `buildReadinessSignalPatch`, the only thing that
+ * could put minutes on a readiness signal, had zero production callers.
+ * `rules/timeAvailabilityPolicy.ts` is deleted, with the readiness quick option,
+ * the readiness constraint and the control-action branch.
+ *
+ * ⚠ AND THE DECLARED DEBT I PUT HERE EARLIER IS DELETED TOO, NOT SATISFIED.
+ * It pinned `severity: fact.maxSessionMinutes < 20 ? 7 : 5` in
+ * `rules/temporarySourceFact.ts` as a violation of the 2026-07-28 ruling. That
+ * line is NOT short-on-time code — it is on the COACH's live time-cap path
+ * ("only got 40 minutes on Wednesdays"), which is a different feature that was
+ * never in question. Gating a live coach line under a dead feature's section
+ * was the error; it is recorded as an open coach-path observation in
+ * `docs/STATUS_BOATS.md` instead of being re-gated here.
+ */
 
 console.log('\n[5] Batch 6 — the display numbers have one owner each');
 {
@@ -179,7 +199,12 @@ console.log('\n[5] Batch 6 — the display numbers have one owner each');
   ok('the substitute tolerance is authored once', SUBSTITUTE_LOAD_TOLERANCE === 0.2,
     SUBSTITUTE_LOAD_TOLERANCE);
 
-  for (const reader of ['utils/exposureEngine.ts', 'utils/trainAroundEngine.ts']) {
+  // `utils/trainAroundEngine.ts` was the second reader; the 2026-08-19 burn
+  // deleted it. MEASURED: `utils/exposureEngine.ts` is now the ONLY production
+  // importer of `rules/sessionImpactBands`, so the list is complete at one.
+  for (const reader of assertReadersExist('impact bands are authored once', [
+    'utils/exposureEngine.ts',
+  ])) {
     const code = codeOf(reader);
     ok(`${reader} holds no impact-band literal`,
       !/removed[A-Za-z]*(?:\.length)?\s*\/\s*[^;]*>=\s*0?\.5\b/.test(code) &&

@@ -120,7 +120,7 @@ function upperLimbRestriction(
   return (profile?.injuries ?? []).some((injury) =>
     injury.severity !== 'Mild' && /shoulder|elbow|wrist|upper arm|pec/i.test(injury.bodyArea)) ||
     !!constraints?.injuries.some((injury) =>
-      injurySeverityReducesAffectedWork(injury.effectiveSeverity) &&
+      injurySeverityReducesAffectedWork(injury.severity) &&
       injury.region === 'upper_body');
 }
 
@@ -132,7 +132,7 @@ function lowerLimbRestriction(
     injury.severity !== 'Mild' &&
     /foot|ankle|achilles|calf|shin|knee|quad|hamstring|groin|hip|lower back|back/i.test(injury.bodyArea)) ||
     !!constraints?.injuries.some((injury) =>
-      injurySeverityReducesAffectedWork(injury.effectiveSeverity) &&
+      injurySeverityReducesAffectedWork(injury.severity) &&
       (injury.region === 'lower_body' || injury.region === 'back_midline'));
 }
 

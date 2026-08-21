@@ -738,7 +738,11 @@ run('regression', '22 constraint/program transaction has no observable intermedi
     date: WEDNESDAY,
     source: 'quick_check',
     updatedAt: NOW,
-    ...buildReadinessSignalPatch('short_time'),
+    // WAS `short_time`, which is deleted (Sam, 2026-08-21 — no athlete route).
+    // The option is incidental here: this regression is about the transaction
+    // having no observable intermediate state, and any option that yields a
+    // constraint exercises it. `sore` does.
+    ...buildReadinessSignalPatch('sore'),
   };
   const constraint = buildReadinessActiveConstraints(signal)[0];
   let badObservation = false;
@@ -864,7 +868,7 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
 
 run('property', 'no structural readiness change can bypass the gateway', async () => {
   const value = profile('Pre-season');
-  for (const option of ['flat', 'sore', 'short_time', 'good'] as const) {
+  for (const option of ['flat', 'sore', 'good'] as const) {
     seed(value);
     if (option === 'flat') {
       await createCanonicalReadinessFact('fatigue', WEDNESDAY);

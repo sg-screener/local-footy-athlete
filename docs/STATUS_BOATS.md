@@ -237,3 +237,288 @@ except four test cells whose subject was deleted.
 - **Nothing merged.** The candidate waits for Sam.
 
 Agent: boats
+
+---
+
+---
+
+# SESSION 3 — SAM'S CORRECTION, AND WHAT IT CHANGED
+
+**Sam, 2026-08-21: *"You have mixed current contracts with old-app
+expectations."* He was right on every count.** Session 2's report carried three
+"findings"; **one was real, one was a defect that does not exist, and one was
+scored against a deleted authority as if it were a standard.**
+
+| session 2 said | session 3, after Sam's correction |
+| --- | --- |
+| a live violation of the severity ruling, DECLARED as a debt | **the debt entry is DELETED.** It pinned a line on the COACH's live time-cap path under a DEAD feature's section. Gating live code under a retired feature was the error |
+| a safety gap: "the app cautions max-effort work it still prescribes" | **WITHDRAWN. The defect does not exist.** It came from a legacy dispatcher inside a suite fixture. Through the real Tired button the week is RECOMPOSED |
+| a gap: staged injury return is missing | **REFRAMED as an OPEN Sam decision.** The deleted filter's behaviour is not a standard |
+
+## 1. SHORT ON TIME — PROVEN DEAD, THEN DELETED (R-126)
+
+`npm run test:short-on-time-absent`, **8 cells, 0 failures**: the fact was gated
+on `today_only`; **all three athlete dispatches use `current_week`**; and
+`buildReadinessSignalPatch` has zero production callers.
+
+**⚠ THE REPO ALREADY KNEW, IN TWO PLACES I SHOULD HAVE READ FIRST.**
+`LAW-day-readiness-doors-are-direct` says "the dead Time action ... do not
+exist", and `programControlDurableOwnershipTests` carried **two PASSING cells
+asserting the Time door stays absent** — while nine cells beside them drove that
+door through a `today_only` helper the suite built itself. **A suite was testing
+a door its own neighbours said was gone, and I repaired it instead of reading
+them.**
+
+Deleted: `rules/timeAvailabilityPolicy.ts` whole, the readiness quick option, the
+readiness constraint, the control-action branch, the helper and nine cells
+(**18/2 → 11/0**, two of the nine already failing), and my debt entry.
+**Kept:** the coach's time-cap fact — a different, live feature that shared only
+a type.
+
+## 2. "TOTALLY COOKED" — RE-MEASURED THROUGH THE REAL BUTTON (R-127)
+
+`npm run probe:totally-cooked` drives the Tired sheet's third option through the
+real durable executor on a real generated in-season week:
+
+| day | sets before → after | rows dropped |
+| --- | --- | --- |
+| Mon | `2,3,3,3,3,2,1` → `1,2,2,2,1` | Single-Leg RDL, Band Pallof Press |
+| Tue | `2,3,3,2,13` → `1,3,2,13` | Band Pull-Apart |
+| Wed | `3,3,2` → `2,2` | Banded External Rotation |
+
+`ok=true`, `changedProgram=true`, **warnings on every day: 0.** The week is
+recomposed, not annotated. **No defect. Nothing asks for the deleted rewrite
+system back.**
+
+## 3. STAGED INJURY RETURN — OPEN, AND NOT A GAP (R-128)
+
+What is simply true: 9/10 then 4/10 and a fresh 4/10 give the same five rows,
+withheld 0; and `rules/injuryReintroduction.ts` has zero production callers.
+**Whether a return should be staged is Sam's to rule.** The staging cells stay so
+either ruling has a specification. No product code changed.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **575 — 13 fewer, zero added** |
+| worse file/scope pairs | 74 | **71** — three files LEAVE, none joins |
+| runtime-reachable src files | 552 | **551** — exactly the one deleted module |
+| `test:scenarios` | — | **byte-identical** |
+| `test:midline` | DEAD | **23 / 0** |
+| `test:severity-scale` | DEAD | **35 / 0** |
+| `test:coach-live-path-v2` | DEAD | **58 / 0** |
+| `test:injury-canonicalisation` | DEAD | **36 / 0** |
+| `test:injury-reintroduction` | DEAD | **31 / 0** |
+| `test:program-control-durable` | 18 / **2 failed** | **11 / 0** |
+| `test:readiness` | 33 / 0 | 28 / 0 (5 short_time cells deleted) |
+| `test:accepted-state-transactions`, `test:weekly-readiness`, `test:injury-severity-bands`, `test:coach-truth-gate`, `test:readiness-structure-law` | — | **unchanged** |
+| the three repo guards | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+
+## STILL DARK — NAMED, NOT HIDDEN, NOT THIS BRANCH'S SUBJECT
+
+`test:coach-orchestration` and `test:coach-live-wiring`
+(`useCoachUpdatesStore.setActiveInjury`, removed with the single-slot API),
+`test:strength-intent` (`blockAdjuster.recomputeWeekOverrides`, no successor),
+`test:coach-note-display` (`screens/home/TodayWorkoutCard.tsx`, deleted screen).
+Each has a live subject behind a deleted vehicle.
+
+## THE LESSON, WRITTEN DOWN
+
+**A repaired test is a CLAIM about a current contract.** Session 2 revived five
+suites and then reported what those suites' OLD expectations implied, as if the
+old app were the standard. Two of three findings did not survive being measured
+at a control the athlete can actually press. **Measure at the athlete's door, or
+do not report it as a defect.**
+
+## NOT COVERED
+
+- No rebuild, no simulator, no device, no release matrix. Headless only.
+  **NOT-VISIBLE: nothing here changes what the athlete sees** — scenario output
+  is byte-identical and the only deleted production module was unreachable.
+- **No product code was changed** beyond deleting the proven-dead short-on-time
+  implementation.
+- **Nothing merged.**
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) keep the short-on-time implementation and gate its severity line**, which
+is what session 2 did — cheap, and it keeps a guard. **(b) prove the feature has
+no athlete route and delete it whole.** **(b), on Sam's instruction and on the
+census**: a gate over a door nobody can open is a gate that will be maintained
+forever for nothing, and the line it was guarding turned out to belong to a
+different, live feature.
+
+Agent: boats
+
+---
+
+# SESSION 2 — MIDLINE, SEVERITY-SCALE, THE CARD, AND THE FILTER MEASUREMENT
+
+**Branch `cleanup/midline-severity-card`, cut from `main` @ `3821af21`. Control
+`wt2-ctl`, detached at the same commit, never edited. NOT MERGED.**
+
+## FIVE SUITES WERE DEAD AT IMPORT AND ARE NOW GREEN
+
+| suite | before | after | what it took |
+| --- | --- | --- | --- |
+| `test:midline` | DEAD | **23 / 0** | `blockAdjuster` off the copy sweep; the `label: 'Midline'` cell re-sited onto `SESSION_ROLE_ORDER` + `classifyExerciseRole`; a missing file now REDS by name instead of throwing ENOENT |
+| `test:severity-scale` | DEAD | **47 / 0** | `assertReadersExist` for every reader list; impact-band readers measured down to the one that remains; the minutes list re-measured, ADDING `rules/temporarySourceFact.ts` |
+| `test:coach-live-path-v2` | DEAD | **60 / 0** | the weekly card retired out of it — 23 blocks across 9 sections |
+| `test:injury-canonicalisation` | DEAD | **36 / 0** | the filter's sections [5]-[9] deleted with their subject |
+| `test:injury-reintroduction` | DEAD | **31 / 0** | the filter section deleted; section 5 re-sited onto `deriveInjuryConstraintFromEpisode` |
+
+## THREE FINDINGS THE DARKNESS WAS HIDING
+
+**1. A LIVE VIOLATION OF SAM'S OWN SEVERITY RULING.**
+`rules/temporarySourceFact.ts:1070` — `severity: fact.maxSessionMinutes < 20 ? 7 : 5`.
+Minutes converted into a severity, which the 2026-07-28 Batch 4 ruling killed,
+and `7` is a stray cut point the same ruling said moves to `6`. The gate had
+never read this file. **DECLARED as an exact count, mutation-proven both ways;
+no product code changed.**
+
+**2. A SAFETY GAP: THE APP CAUTIONS WORK IT STILL PRESCRIBES.**
+At fatigue 7/10, Friday's `Flying 30m Sprints` and `Box Jumps` are still on the
+session, with `Caution:` notes naming them. The post-composer safety rewrite that
+removed them is on the 2026-08-19 rebuild list. **PINNED, not fixed.**
+
+**3. THE STAGED INJURY RETURN IS NOT WIRED.**
+9/10 then 4/10 gives byte-identically the same session as a fresh 4/10.
+`rules/injuryReintroduction.ts` is written and correct and has **zero production
+callers**. **REPORTED, not fixed** — Sam asked for exactly this before any
+product change.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **576 — 12 fewer, zero added** |
+| worse file/scope pairs | 74 | **72** — two files LEAVE, none joins |
+| `test:scenarios` | — | **byte-identical** |
+| `test:law-registry` / `test:repo-law-guards` / `test:ruling-registry` | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+| `test:readiness`, `test:injury-severity-bands`, `test:coach-truth-gate`, `test:readiness-structure-law` | 33/0, 31/0, 59/0, 88/88 | **unchanged** |
+
+## STILL DARK — NAMED, NOT HIDDEN, AND NOT THIS BRANCH'S SUBJECT
+
+| suite | cause | subject |
+| --- | --- | --- |
+| `test:coach-orchestration` | `useCoachUpdatesStore.setActiveInjury` removed with the single-slot API — 8 call sites | coach orchestration |
+| `test:coach-live-wiring` | same, 6 call sites | coach live wiring |
+| `test:strength-intent` | `blockAdjuster.recomputeWeekOverrides` deleted, no drop-in successor; ONE call site | G-2 moderation, which IS live in `sessionResolver`'s game-proximity rules |
+
+Each has a LIVE subject and a deleted vehicle — the same shape as the five
+repaired above, and ready for the same treatment on the word.
+
+## NOT COVERED
+
+- **No rebuild, no simulator, no device, no release matrix.** Headless only.
+  **NOT-VISIBLE: nothing on this branch changes what the athlete sees** — the
+  scenario harness output is byte-identical to the control.
+- **No product code was changed anywhere**, which is why all three findings above
+  are reported rather than closed.
+- **Nothing merged.** The candidate waits for Sam.
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) delete the dark suites** — they report nothing, so deleting them costs no
+signal today and clears the compile debt fastest. **(b) repair each against the
+owner that holds its claim now.** **(b) was taken**: every one of the five had a
+LIVE subject behind a deleted vehicle, and (a) would have thrown away 197 working
+cells — and all three findings above, which only exist because the suites started
+speaking again.
+
+Agent: boats
+
+---
+
+# SESSION 4 — SAM RULES: THE LATEST NUMBER IS THE AUTHORITY (R-128)
+
+**Sam, 2026-08-21: *"Trust the athlete's latest reported injury number
+immediately. Do not stage the return."*** Ruled and built. **NOT MERGED.**
+
+## ⚠ I WAS WRONG ABOUT THE ONE FACT THAT MADE THIS A PRODUCT CHANGE
+
+Session 3 reported that `rules/injuryReintroduction.ts` had **zero production
+callers**. **It had one.** `utils/generationConstraints.ts:331` called
+`stageReintroductionSeverity` on every injury constraint it built. I had grepped
+for `isReintroducing` and `peakSeverity` — **two of the module's three exports** —
+and generalised to the module.
+
+**So the staging was LIVE, and this is a behaviour change, not a dead-code
+deletion.** Stated plainly: an athlete who reported 8 and now reports 4 is
+restricted as a **4**. Before this commit they were restricted as a **6**.
+
+## WHAT WENT
+
+| deleted | why |
+| --- | --- |
+| `rules/injuryReintroduction.ts` | the one-band-per-step lever, whole file |
+| `effectiveSeverity` on the generation constraint | it existed ONLY to carry the staged answer; with staging gone it was an exact alias of `severity` — a second severity with no reason to differ |
+| **`priorSeverity`, everywhere** | written in FIVE places, consumed in exactly ONE — the staging call. With that gone it had no reader at all. Removed from the episode, the transaction, the store type and `injuryProgression` |
+| `rules/index.ts` barrel export, `injuryReintroductionTests` | with their subject |
+
+## THE GUARD — `test:injury-latest-severity`, 48 cells, in the bible chain
+
+It holds the **behaviour**, not the absence of a file: nine severities each get
+exactly the gates that number earns; a reported 4 after a 9 is identical to a
+fresh 4 across five buckets and **on every gate at once**; the one-band steps
+8→6, 6→4, 4→2, 10→8 each match their fresh equivalent; improvement AND worsening
+land immediately; and a stored constraint still carrying the retired
+`priorSeverity` is **ignored rather than honoured**.
+
+**⚠ MUTATION-PROVEN, AFTER A HALF-MUTATION PROVED NOTHING.** Restoring the
+staging alone reddened **ZERO** cells — the caller no longer forwards the input,
+so the restored lever had nothing to read. Restoring **both** halves kills **16**.
+And the headline cell's first cut compared `status: 'improving'` against
+`'active'`; staging never keyed on status, so it was **unkillable**. The stepped
+side now carries the peak.
+
+**⚠ AND ONE CELL I WROTE COULD NEVER FAIL** — `severityBand === injurySeverityRemovesRiskyWork(2)`
+compared a band string to a boolean. It now asserts the band from the band owner.
+
+## CHECKS — CANDIDATE vs CONTROL @ `3821af21`
+
+| instrument | control | candidate |
+| --- | --- | --- |
+| `test:compile` `[product]` | 30 | **30 — identical** |
+| `test:compile` `[devtools]` | 50 | **50 — identical** |
+| `test:compile` `[tests]` | 588 | **574 — 14 fewer, zero added** |
+| worse file/scope pairs | 74 | **70** — four files LEAVE, none joins |
+| runtime-reachable src files | 552 | **550** — the two deleted modules, exactly |
+| `test:scenarios` | — | **byte-identical** |
+| `test:injury-authority` | 5/20 | **5/20 — identical** |
+| `test:preseason-exposure` | 88/22 | **88/22 — identical** |
+| `test:exposure-engine` | 150 | **150 — identical** |
+| `test:rules-kernel` | 121/1 | **121/1 — identical** |
+| `test:fatigue-abolition`, `test:injury-severity-bands`, `test:conditioning-templates`, `test:coach-truth-gate`, `test:readiness-structure-law` | — | **unchanged** |
+| the three repo guards | 12/2, 53/10, 6/2 | **identical failure TEXT** |
+
+**Green on this branch that were dead or failing on main:**
+`injury-latest-severity` 48/0 (new), `short-on-time-absent` 8/0 (new),
+`midline` 23/0, `severity-scale` 35/0, `coach-live-path-v2` 58/0,
+`injury-canonicalisation` 36/0, `program-control-durable` **11/0** (was 18/**2**).
+
+## NOT COVERED
+
+- No rebuild, no simulator, no device, no release matrix. Headless only.
+- **NOT-VISIBLE on the generated week:** `test:scenarios` is byte-identical, so
+  no scenario in the harness exercises an injury that had a recorded peak. **The
+  behaviour change is real and is proven by the guard, not by the harness** — an
+  athlete whose injury improves is the case that moves, and no scenario walks
+  one.
+- **Nothing merged.**
+
+## THE TWO OPTIONS WEIGHED
+
+**(a) keep `effectiveSeverity` and set it equal to `severity`** — a one-line
+change, no readers touched, and the field is there if staging ever returns.
+**(b) delete the field and point every gate at `severity`.** **(b)**: a second
+severity that can never differ is a duplicate authority waiting to drift, and
+Sam's ruling names the reported number as *the* authority — one number, one
+owner. The same argument retired `priorSeverity`.
+
+Agent: boats

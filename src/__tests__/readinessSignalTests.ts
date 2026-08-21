@@ -5,6 +5,14 @@
  *   - missing readiness input keeps the plan intact
  *
  * Run: npm run test:readiness
+//
+// ⚠ THE `short_time` CELLS ARE DELETED, NOT REPAIRED (Sam, 2026-08-21).
+// "Short on time" had no athlete-facing route — `buildReadinessSignalPatch` had
+// zero production callers and the other door was gated on a `today_only` scope
+// nothing dispatches. Proven by `npm run test:short-on-time-absent`. The
+// option, the policy module, the readiness constraint and the control-action
+// branch are all deleted. `weeklyReadinessCardTests` keeps the cell asserting
+// the option is ABSENT from the sheet, which now enforces the deletion.
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
@@ -110,14 +118,6 @@ section('[2] quick signal downshifts only');
     'low',
   );
   eq(
-    'short-time signal trims high to medium',
-    deriveScheduleReadiness({
-      onboardingData: strongProfile,
-      signal: signal('2026-05-19', buildReadinessSignalPatch('short_time')),
-    }),
-    'medium',
-  );
-  eq(
     'good signal never upshifts low profile',
     deriveScheduleReadiness({
       onboardingData: rampProfile,
@@ -132,24 +132,14 @@ section('[3] quick option detection');
   eq('detect good', getReadinessQuickOption(signal('2026-05-19', buildReadinessSignalPatch('good'))), 'good');
   eq('detect flat', getReadinessQuickOption(signal('2026-05-19', buildReadinessSignalPatch('flat'))), 'flat');
   eq('detect sore', getReadinessQuickOption(signal('2026-05-19', buildReadinessSignalPatch('sore'))), 'sore');
-  eq(
-    'detect short time',
-    getReadinessQuickOption(signal('2026-05-19', buildReadinessSignalPatch('short_time'))),
-    'short_time',
-  );
 }
 
 section('[4] quick patches clear stale fields');
 {
   ok(
-    'good clears short-time minutes',
+    'good clears stale minutes',
     !('timeAvailableMinutes' in buildReadinessSignalPatch('good')) ||
       buildReadinessSignalPatch('good').timeAvailableMinutes === undefined,
-  );
-  ok(
-    'short-time clears soreness',
-    !('soreness' in buildReadinessSignalPatch('short_time')) ||
-      buildReadinessSignalPatch('short_time').soreness === undefined,
   );
 }
 
@@ -188,12 +178,6 @@ section('[5] readiness builds date-scoped active constraints');
   eq('body-part soreness emits soreness constraint', calf[0]?.type, 'soreness');
   eq('body-part soreness preserves body part', (calf[0] as any)?.bodyPart, 'calves');
   eq('body-part soreness display label', (calf[0] as any)?.reasonLabel, 'Calves soreness');
-
-  const short = buildReadinessActiveConstraints(
-    signal('2026-05-19', buildReadinessSignalPatch('short_time')),
-  );
-  eq('short time type schedule', short[0]?.type, 'schedule');
-  eq('short time display label', (short[0] as any)?.reasonLabel, 'Short time');
 
   const good = buildReadinessActiveConstraints(
     signal('2026-05-19', buildReadinessSignalPatch('good')),

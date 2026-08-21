@@ -35,7 +35,6 @@ export interface PreseasonExposureContractInput {
     region: 'lower_body' | 'upper_body' | 'back_midline' | 'other';
     pauseAffectedTraining: boolean;
     removeRiskyWork?: boolean;
-    effectiveSeverity?: number;
     triggers?: readonly string[];
     injuryKeys?: readonly string[];
   }>;

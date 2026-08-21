@@ -7,7 +7,6 @@ import type {
 import type { ReadinessSignal } from './readiness';
 import { resolveInjuryBucket } from './programAdjustmentEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
-import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export const READINESS_CONSTRAINT_PREFIX = 'readiness:';
 
@@ -152,49 +151,21 @@ export function buildReadinessActiveConstraints(
     }
   }
 
-  if (isShortOnTime(signal.timeAvailableMinutes)) {
-    // TIME IS A SESSION FACT, NOT A READINESS STATE (Sam, 2026-07-27).
-    //
-    // "Short on time" used to ride the readiness ladder: it produced an untyped
-    // schedule constraint whose SEVERITY was read as a readiness magnitude, so a
-    // 25-minute Wednesday could deload the athlete's whole week — and at the top
-    // of the ladder would have made every session optional. Having 25 minutes on
-    // one day says nothing about how recovered someone is.
-    //
-    // It is now a typed, DATE-SCOPED time cap. The affected session shrinks to
-    // fit through the existing cap path; every other day is untouched; the week
-    // is not deloaded and no exposure COUNT changes, so there is nothing for a
-    // count reduction to record. `insufficient_availability` remains the typed
-    // reason for genuine availability-driven exposure reductions, which come
-    // from how many days the athlete has, not from how long one session is.
-    //
-    // What a proper 25-minute session KEEPS is Sam-authored content and belongs
-    // to execution-order step 5; this routes the existing shrink honestly rather
-    // than inventing that answer here.
-    const shortTime: ActiveScheduleConstraint = {
-      ...baseFields(signal, 'short-time', 'Short time'),
-      type: 'schedule',
-      // THE MINUTES->SEVERITY CONVERSION IS DEAD (Sam, 2026-07-28, Batch 4).
-      //
-      // This read `minutes < 20 ? 7 : 5` — a calendar fact scored onto the
-      // injury/fatigue ladder, where 7 means "limiting" and carries program
-      // consequences a busy Tuesday must never carry. The comment above already
-      // said time is a session fact and not a readiness state; the severity
-      // field was the last place it still behaved like one.
-      //
-      // The cap now carries the MINUTES, which is the whole fact. Severity is
-      // the floor of the shared scale: recorded, never scoring the athlete.
-      severity: 1,
-      scheduleKind: 'time_cap',
-      maxSessionMinutes: signal.timeAvailableMinutes,
-      timeCapDates: [signal.date.slice(0, 10)],
-      rules: ['long accessory blocks', 'extra optional work'],
-      safeFocus: ['Main lift / main conditioning stimulus', '1-2 key accessories', 'Short warm-up + exit'],
-      advice: [],
-      maxSessionsThisWeek: undefined,
-    };
-    constraints.push(shortTime);
-  }
+  /* THE "SHORT ON TIME" READINESS CONSTRAINT IS DELETED (Sam, 2026-08-21).
+   *
+   * It only ever fired on `signal.timeAvailableMinutes`, and NOTHING WRITES
+   * THAT — the one producer, `buildReadinessSignalPatch`, has zero production
+   * callers, and no athlete control dispatches the `today_only` schedule
+   * modifier the other door needed. Proven by
+   * `npm run test:short-on-time-absent`, 8 cells.
+   *
+   * The comment that stood here was already right that time is a session fact
+   * and not a readiness state — it was describing a door the athlete could no
+   * longer open. The live time answer is the COACH's typed time-cap fact
+   * (`createTemporaryTimeCapFact`, `sourceSurface: 'coach_chat'`), which does
+   * not come through this function at all.
+   */
+
 
   return constraints;
 }
