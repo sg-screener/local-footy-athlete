@@ -363,7 +363,7 @@ export const MOBILITY_POOL: PoolExercise[] = [
   // `filterPool` drops it for any athlete whose location lacks the tags, so
   // Home gym (dumbbells, no bench) and Outdoor never see it. `bench` is carried
   // because the cue requires one — Sam's ruling, 2026-07-28.
-  ex('db-pullovers',      'Dumbbell Pullovers',           2, 3,  3,  30, 'Hold each rep 10 seconds',               ['dumbbells', 'bench'], ['shoulder', 'ribs'], 'low', { prescriptionType: 'reps' }),
+  ex('db-pullovers',      'Dumbbell Pullovers',           2, 10, 10, 30, 'Hold each rep 10 seconds',               ['dumbbells', 'bench'], ['shoulder', 'ribs'], 'low', { prescriptionType: 'reps' }),
 ];
 
 /**
