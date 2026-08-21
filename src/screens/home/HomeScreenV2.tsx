@@ -2477,11 +2477,10 @@ function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripPro
  * and the athlete said one of them. There is no second completion dot beside
  * the icon — Sam removed that duplicate marker on 2026-08-11.
  */
-const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
-  full: '#5BD98A',
-  partial: '#FFC247',
-  skipped: '#5E6268',
-};
+/* `TIMELINE_COMPLETION_COLOR` IS DELETED (Sam, 2026-08-22). It tinted a part's
+   own icon by completion — `partial: '#FFC247'` is the amber he objected to —
+   and the row draws a green tick instead now. A palette kept alive after its
+   only reader goes is the next amber waiting to happen. */
 
 interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
@@ -2618,9 +2617,6 @@ function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, present
       ) : null}
       {entries.map((entry) => {
         const iconKind = PART_ICON_KIND[entry.kind];
-        const completionColor = entry.completion
-          ? TIMELINE_COMPLETION_COLOR[entry.completion]
-          : null;
         const isOpen = openParts.has(entry.partId);
         // A PART WITH NO ROWS HAS NOTHING TO OPEN, and it does not pretend to.
         // Her own week view carries the same rule — rest and game days render as
@@ -2682,12 +2678,31 @@ function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, present
                 entry.completion ? ` — ${entry.completion}` : ''}`}
               style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
             >
+              {/**
+                * ⚠ **A LOGGED PART SHOWS A GREEN TICK. NOTHING ON THIS ROW IS
+                * AMBER ANY MORE.** Sam, 2026-08-22: *"They should not be amber
+                * - they should be a green tick once they are logged"*.
+                *
+                * It used to TINT the part's own icon by completion, and
+                * `TIMELINE_COMPLETION_COLOR.partial` is `#FFC247` — so a part
+                * logged as partly done wore an amber dumbbell, which reads as a
+                * warning rather than as work recorded.
+                *
+                * THE TICK MEANS THE ATHLETE DID IT — full or partial. A SKIPPED
+                * part keeps its ordinary grey icon and gets NO tick: a tick over
+                * work they told us they did not do would be the surface lying to
+                * them, and that is the one thing this screen must never do.
+                */}
               <View style={styles.timelineIconMarker}>
-                <RowIcon
-                  kind={iconKind}
-                  size={13}
-                  color={completionColor ?? rowIconColor(iconKind)}
-                />
+                {entry.completion === 'full' || entry.completion === 'partial' ? (
+                  <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+                ) : (
+                  <RowIcon
+                    kind={iconKind}
+                    size={13}
+                    color={rowIconColor(iconKind)}
+                  />
+                )}
               </View>
               <View style={styles.timelinePartText}>
                 {/* THE CAPS ARE A STYLE, NOT THE STRING. `entry.headline` is

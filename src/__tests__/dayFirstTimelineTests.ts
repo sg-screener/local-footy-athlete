@@ -719,8 +719,21 @@ run('the day timeline uses each session icon as its only marker and matches her 
     'the interactive day rows could not be isolated from the flat Week branch');
   assert(!/timelineRail|timelineNode|timelineConnector/.test(interactive),
     'the day timeline still draws a hollow dot or connector beside its session icon');
-  assert(/timelineIconMarker[\s\S]{0,180}<RowIcon[\s\S]{0,120}completionColor \?\? rowIconColor\(iconKind\)/.test(interactive),
-    'the session icon is not the row\'s one marker, including saved completion colour');
+  /**
+   * ⚠ **RE-AIMED 2026-08-22 — SAM CHANGED WHAT A LOGGED ROW LOOKS LIKE.**
+   * *"They should not be amber - they should be a green tick once they are
+   * logged"*. The row used to TINT its session icon by completion, and
+   * `partial` was `#FFC247`; the marker is a green check now, and the tinting
+   * map is deleted.
+   *
+   * The cell's SUBJECT is unchanged and still one-marker-per-row: exactly one
+   * of the two is drawn, never both, and the unlogged case is still the
+   * session's own icon in its own colour.
+   */
+  assert(/timelineIconMarker[\s\S]{0,900}<MaterialCommunityIcons name="check"[\s\S]{0,200}<RowIcon/.test(interactive),
+    'a logged row no longer shows the green tick, or the unlogged row lost its session icon');
+  assert(!/completionColor/.test(interactive),
+    'the completion tint is back — amber on a part icon is what Sam removed');
 
   const dayHeaderAt = home.indexOf('const dayCardHeader =');
   const weekHeaderAt = home.indexOf('const weekCardHeader =', dayHeaderAt);
