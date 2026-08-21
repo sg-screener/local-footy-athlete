@@ -3911,25 +3911,46 @@ The two obsolete cells are deleted, and so is the pin I put in their place.
 
 ---
 
-**R-128** · *"Treat staged injury return as a separate Sam decision. Do not
-assume the deleted filter's old behaviour still applies."* · Sam, 2026-08-21 ·
-seat `boats`. **OPEN — awaiting Sam.**
+**R-128** · *"Trust the athlete's latest reported injury number immediately. Do
+not stage the return. Remove the unused staged-reintroduction rule, its obsolete
+tests and any dead supporting fields that have no other live purpose. Add a guard
+proving the latest reported severity is the current authority."* · Sam,
+2026-08-21 · seat `boats`. **RULED AND BUILT.**
 
-The read-time injury filter used to stage a return (a reported 4 that had been an
-8 was held at an effective 6). **That is not a standard**; the filter is gone
-because it was superseded. R-126's earlier draft scored the current app against
-it and called the difference a gap. Corrected.
+⚠ **AND MY REPORT THAT RAISED THE QUESTION WAS WRONG ABOUT ONE FACT.** I said
+`rules/injuryReintroduction.ts` had zero production callers.
+**`utils/generationConstraints.ts:331` called it on every injury constraint it
+built.** I had grepped for two of its three exports and generalised to the
+module. The staging was LIVE at generation time, so this is a product change, not
+a dead-code deletion.
 
-**WHAT IS SIMPLY TRUE, MEASURED** (`npm run probe:injury-filter-coverage`):
-9/10 then 4/10 and a fresh 4/10 produce the **same five rows, withheld 0** — a
-reported severity is taken at face value. And `rules/injuryReintroduction.ts` has
-**zero production callers**.
+**WHAT THE ATHLETE GETS NOW.** Report 8, then report 4 → restricted as a **4**.
+Before this, restricted as a **6** — the lever relaxed at most one band per
+report, so improving faster than the app expected bought no relief.
 
-**THE QUESTION FOR SAM, AND IT IS NOT LEADING:** should a return after a severe
-injury be staged, or should a reported number be taken at face value? The staging
-rule keeps its cells either way, so whichever he rules has a written
-specification. **No product code was changed.**
+**DELETED:** the rule module whole; `effectiveSeverity`, which existed only to
+carry the staged answer and became an exact alias of `severity`;
+**`priorSeverity` everywhere** — written in five places and consumed in exactly
+one, the staging call, so with that gone it had no reader at all; the barrel
+export; and the staging suite.
 
-**COVERED AND NOT IN QUESTION** — measured across three lanes, applying an injury
-protects the session, clearing it restores every original row with withheld back
-to 0, and reopening protects again identically.
+**THE GUARD — `test:injury-latest-severity`, 48 cells, in the bible chain.** It
+holds the BEHAVIOUR, not the absence of a file: nine severities each get exactly
+the gates that number earns; a reported 4 after a 9 is identical to a fresh 4
+across five buckets and every gate at once; the one-band steps 8→6, 6→4, 4→2,
+10→8 each match their fresh equivalent; improvement AND worsening land
+immediately; and a stored constraint still carrying the retired `priorSeverity`
+is ignored rather than honoured.
+
+⚠ **MUTATION-PROVEN AFTER A HALF-MUTATION PROVED NOTHING.** Restoring the staging
+alone reddened ZERO cells, because the caller no longer forwarded the input.
+Restoring BOTH halves kills **16**. The headline cell's first cut compared
+`status: 'improving'` against `'active'` — staging never keyed on status, so it
+was unkillable; the stepped side now carries the peak.
+
+**MEASURED vs control at `3821af21`:** `[product]` 30 and `[devtools]` 50
+identical; `[tests]` 588 → 574 with four files LEAVING the worse list and none
+joining; runtime-reachable 551 → 550; **`test:scenarios` byte-identical**; and
+`test:injury-authority`, `test:fatigue-abolition`, `test:preseason-exposure`,
+`test:exposure-engine`, `test:injury-severity-bands`,
+`test:conditioning-templates` and `test:rules-kernel` every one unchanged.
