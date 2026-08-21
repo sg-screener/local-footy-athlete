@@ -64,8 +64,13 @@ check('completed day card is driven by the persisted feedback receipt',
   /const isCompleted = hasWorkout && feedbackReceipts\.length > 0;/.test(home) &&
   /isCompleted \? \(/.test(home) &&
   /label="View summary"/.test(home));
+// The MARKER is what this cell is for, not the component that draws it. Sam
+// ruled on 2026-08-22 that Done replaces the day's tier chip rather than
+// standing beside it, so the marker moved into `SessionTierBadge` — same slot,
+// same size as CORE. Asserting the old `<Badge label="Done">` would now be
+// asserting the shape the ruling removed.
 check('completed sessions show a Done marker in the week list',
-  /function WeekDayCardHeader[\s\S]*?isCompleted \? <Badge label="Done" tone="success" size="xxs"/.test(home));
+  /function WeekDayCardHeader[\s\S]*?isCompleted \? \(\s*<SessionTierBadge compact tier="done" \/>/.test(home));
 check('reopening a completed session shows a read-only summary, not Finish again',
   /isAlreadyComplete && date \?/.test(workout) &&
   /headline="Session complete"/.test(workout) &&

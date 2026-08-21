@@ -2040,14 +2040,30 @@ function WeekDayCardHeader({
       <View style={[styles.weekCardMain, compactStatus && styles.weekCardMainCompact]}>
         {showsCategory ? (
           <View style={styles.weekCardCategoryRow}>
+            {/* ── ONE BADGE, AND DONE TAKES THE SLOT ──
+                Sam, 2026-08-22: *"once it's same size and a session is logged
+                it should replace the badge for that day. i.e. done should
+                replace core or optional and so on"*.
+
+                DONE used to sit BESIDE the tier, so a finished day carried two
+                chips saying two different kinds of thing. It is the same badge
+                component now — see `SessionTierBadge`, which is where the size
+                Sam is comparing lives — and it is an `else` arm, so a row can
+                never draw both.
+
+                MOVING STILL WINS, and that is not an exception to the ruling:
+                it is the picker's transient state, it already replaced the tier
+                the same way, and it lasts exactly as long as the athlete is
+                choosing where a session goes. */}
             {isMoveSource ? (
               <Badge label="Moving" tone="outline" size="xxs" />
+            ) : isCompleted ? (
+              <SessionTierBadge compact tier="done" />
             ) : isGame ? (
               null
             ) : hasWorkout && day.workout.sessionTier ? (
               <SessionTierBadge compact tier={day.workout.sessionTier} />
             ) : null}
-            {isCompleted ? <Badge label="Done" tone="success" size="xxs" /> : null}
           </View>
         ) : null}
 

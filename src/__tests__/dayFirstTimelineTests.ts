@@ -1243,6 +1243,50 @@ run('the week card keeps her proportions — large date, compact badges', () => 
   'the tiny Today badge shrank its font but kept the normal 24pt text line-height');
 });
 
+run('a logged day shows DONE INSTEAD of its tier, at the tier chip\'s own size', () => {
+  const home = homeScreenSource();
+  const componentAt = home.indexOf('function WeekDayCardHeader(');
+  const dayRowAt = home.indexOf('function DayRow(');
+  assert(componentAt > 0 && dayRowAt > componentAt,
+    'the WeekDayCardHeader region could not be found');
+  const component = home.slice(componentAt, dayRowAt);
+
+  // Sam, 2026-08-22: *"Done badge is bigger than the core badge on weekly view
+  // — make it the same size — then ... it should replace the badge for that
+  // day. i.e. done should replace core or optional and so on"*.
+  assert(/<SessionTierBadge compact tier="done" \/>/.test(component),
+    'the week card no longer draws DONE with the same badge as CORE, so the two '
+    + 'chips can differ in size again — which is exactly what Sam reported');
+  assert(!/label="Done"/.test(component),
+    'the week card still draws DONE with the shared ui/Badge. That badge adds a '
+    + '1px border at its success tone, which is the height difference itself');
+
+  // REPLACES, not accompanies: the completed arm must be an `else` of the tier
+  // arm. A cell that only checked both strings exist would pass on the two-chip
+  // row the ruling removed.
+  const categoryRowAt = component.indexOf('styles.weekCardCategoryRow');
+  const categoryRowEnd = component.indexOf('styles.weekCardTitleLine', categoryRowAt);
+  const categoryRow = categoryRowAt >= 0 && categoryRowEnd > categoryRowAt
+    ? component.slice(categoryRowAt, categoryRowEnd)
+    : '';
+  assert(categoryRow.length > 200, 'the week card category row could not be read');
+  assert(/isCompleted \? \([\s\S]{0,200}tier="done"[\s\S]{0,200}\) : isGame \?/.test(categoryRow),
+    'DONE is not the branch BEFORE the tier — a finished day can still carry '
+    + 'two chips, which is the shape Sam asked to be replaced');
+  assert((categoryRow.match(/<SessionTierBadge/g) ?? []).length === 2,
+    'the category row draws something other than exactly the two badge arms '
+    + '(done, tier) — one of them may have gained a second, unreachable copy');
+
+  // THE SIZE IS ONE TABLE ENTRY, NOT A SECOND STYLE. If DONE ever grows its own
+  // geometry inside the badge, this is where it shows up.
+  const tierBadge = fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'common', 'SessionTierBadge.tsx'), 'utf8');
+  assert(/done:\s*\{[^}]*label:\s*'DONE'/.test(tierBadge),
+    'DONE is not a row of the badge\'s own label table');
+  assert(!/done[\s\S]{0,200}paddingVertical|doneBadge:/.test(tierBadge),
+    'DONE grew its own box style inside the badge, so it can drift from CORE again');
+});
+
 run('week Game Day and Rest are shorter status cards with centred titles', () => {
   const home = homeScreenSource();
   const componentAt = home.indexOf('function WeekDayCardHeader(');
