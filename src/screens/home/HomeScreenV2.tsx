@@ -487,6 +487,26 @@ export default function HomeScreenV2() {
     // this find is always a hit; `undefined` only guards a render before
     // the two have settled together.
     const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
+    /**
+     * ⚠ **"COMPLETE" IS THE DAY'S OWN WORK BEING LOGGED, NOT A RECEIPT
+     * EXISTING.** `isCompleted` read `feedbackReceipts.length > 0`, so ANY saved
+     * feedback for the date finished the day — and once club training got its
+     * own form, logging it alone did exactly that. Sam, on his phone,
+     * 2026-08-21: *"By filling in only the team training - i couldn't then log
+     * the gym session"*.
+     *
+     * Derived from the same timeline the card draws, so the tick and the rows
+     * cannot disagree: every component that is NOT club training must carry a
+     * recorded completion. A club-only day has no such component, so its one
+     * row decides — which is the same rule, not an exception to it.
+     */
+    const timelineEntries = visibleDay
+      ? dayTimeline(visibleDay, sessionFeedback[day.date])
+      : [];
+    const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
+    const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;
+    const sessionLogged = decidingRows.length > 0
+      && decidingRows.every((entry) => entry.completion !== null);
 
     return (
       <DayRow
@@ -521,6 +541,7 @@ export default function HomeScreenV2() {
         staleWarning={staleByDate[day.date]}
         normal={isNormal}
         feedbackReceipts={receiptIdsForDate(day.date)}
+        sessionLogged={sessionLogged}
         progressionReceipts={progressionReceiptsForDate(day.date)}
         /* THE COMPONENT TIMELINE — day-first only, and it is a READ.
            `dayTimeline` folds the athlete's SAVED outcome onto the projection's
@@ -547,7 +568,7 @@ export default function HomeScreenV2() {
            prototype's `noExpand` is a property this app gets by construction. */
         timeline={visibleDay ? (
           <DayTimeline
-            entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
+            entries={timelineEntries}
             mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
             onOpen={() => handleViewWorkout(day)}
             onLogClubTraining={dayFirst ? () => setClubTrainingDate(day.date) : undefined}
@@ -1612,6 +1633,8 @@ interface DayRowProps {
   onMakeChange: () => void;
   staleWarning: any;
   feedbackReceipts: string[];
+  /** The day's OWN work is logged — see the note at the call site. */
+  sessionLogged?: boolean;
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
   /**
    * The day's component timeline, rendered inside the expanded block above the
@@ -1844,6 +1867,8 @@ function dayStateToken({
 interface DayStateLeavesProps {
   day: any;
   feedbackReceipts: string[];
+  /** The day's OWN work is logged — see the note at the call site. */
+  sessionLogged?: boolean;
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
   stateToken: string;
 }
@@ -2048,7 +2073,7 @@ function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning,
-  feedbackReceipts, progressionReceipts, timeline, dayShape = false,
+  feedbackReceipts, sessionLogged, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const weekPickerAction = weekSessionActionForPickerMode(pickerMode);
@@ -2100,7 +2125,7 @@ function DayRow({
   // and saved feedback — the day is complete. Drives the read-only completed
   // CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
-  const isCompleted = hasWorkout && feedbackReceipts.length > 0;
+  const isCompleted = hasWorkout && (sessionLogged ?? feedbackReceipts.length > 0);
   // ── RULING 5: THE "TODAY" BADGE GOES FROM THE DAY SCREEN ──
   //
   // Sam, 2026-08-10, on his own screen next to hers: *"the today badge is still

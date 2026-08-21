@@ -325,16 +325,46 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
     if (!canSave || completion === null) return;
     setSaveRefusal(null);
     try {
+      /**
+       * ⚠ **THE SESSION COMPLETION IS FANNED OUT TO EVERY COMPONENT WHEN THE
+       * RECORD CARRIES NO PER-COMPONENT ANSWERS** — `sessionOutcomeTransaction`
+       * falls back to `target.components.map(... completion: feedback.completion)`.
+       *
+       * MEASURED ON SAM'S PHONE, 2026-08-21, and it is the defect he reported:
+       * logging only club training wrote `partial` onto the STRENGTH and
+       * MOBILITY components too. Their icons turned amber — *"the logos changed
+       * from the grey to amber"* — and the day read as finished, so he
+       * *"couldn't then log the gym session"*.
+       *
+       * So this save names its ONE component. Everything already recorded for
+       * the other components is carried through untouched, and the gym halves
+       * of a first-time save stay UNANSWERED rather than being claimed.
+       */
+      const teamComponent = getSessionComponents(workout ?? null)
+        .find((component) => component.kind === 'team_training');
       const feedback: SessionFeedback = {
         ...(existing ?? {}),
         dateStr: date,
-        // The record's own completion is untouched when one exists; a first
-        // save says PARTIAL because only the club half has been answered.
-        completion: existing?.completion ?? 'partial',
+        completion: existing?.completion ?? completion,
+        components: [
+          ...(existing?.components ?? []).filter(
+            (entry: { componentId: string }) => entry.componentId !== teamComponent?.id,
+          ),
+          ...(teamComponent
+            ? [{
+              componentId: teamComponent.id,
+              kind: teamComponent.kind,
+              label: teamComponent.label,
+              completion,
+              partialReason: null,
+              skipReason: null,
+            }]
+            : []),
+        ],
         ...(attended && duration.valid && isSessionEffortRating(effort)
           ? { teamTraining: { durationMinutes: duration.totalMinutes, effort } }
           : { teamTraining: undefined }),
-      };
+      } as SessionFeedback;
       const result = await commitSessionOutcomeTransaction(
         createRecordSessionOutcomeIntentFromFeedback({
           date,
