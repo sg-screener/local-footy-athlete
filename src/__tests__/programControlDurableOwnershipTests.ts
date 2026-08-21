@@ -459,7 +459,7 @@ async function main(): Promise<void> {
    * stays absent", both still below and both still PASSING. Nine cells beside
    * them went on driving that door through a `shortOnTimeAction` helper the
    * suite manufactured itself at `scope: 'today_only'` — a scope no athlete
-   * control dispatches (`npm run census:short-on-time-route`, 8 cells). The
+   * control dispatches (`npm run test:short-on-time-absent`, 8 cells). The
    * suite was asserting a door its own neighbours said did not exist.
    *
    * DELETED: the helper and nine cells — the one-day horizon, the today-scoped

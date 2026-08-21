@@ -2122,7 +2122,7 @@ async function executeProgramControlActionDurablyWithinTrace(
      *
      * The branch that stood here built a today-scoped time-cap fact at
      * `SHORT_ON_TIME_MINUTES`, and it was gated on `action.scope ===
-     * 'today_only'`. MEASURED (`npm run census:short-on-time-route`): all three
+     * 'today_only'`. MEASURED (`npm run test:short-on-time-absent`): all three
      * athlete dispatches of `set_schedule_modifier` use `current_week`, and no
      * screen, component or hook pairs this action with `today_only` at all —
      * the athlete has no route to it, so the fact was never written from here.

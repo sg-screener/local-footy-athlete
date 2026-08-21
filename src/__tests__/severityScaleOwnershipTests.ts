@@ -170,7 +170,7 @@ console.log('\n[3] The eleven fatigue readers hold no severity numbers of their 
  * that, then delete its remaining implementation, tests and debt entry. Do not
  * repair it."*
  *
- * PROVEN by `npm run census:short-on-time-route` (8 cells): all three athlete
+ * PROVEN by `npm run test:short-on-time-absent` (8 cells): all three athlete
  * dispatches of `set_schedule_modifier` use `current_week` and the fact was
  * gated on `today_only`; and `buildReadinessSignalPatch`, the only thing that
  * could put minutes on a readiness signal, had zero production callers.

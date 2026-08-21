@@ -3852,7 +3852,7 @@ visible day → visible week — are what the suite is for, and they all still r
 delete its remaining implementation, tests and debt entry. Do not repair it."* ·
 Sam, 2026-08-21 · seat `boats`.
 
-**PROVEN FIRST** — `npm run census:short-on-time-route`, 8 cells, 0 failures:
+**PROVEN FIRST** — `npm run test:short-on-time-absent`, 8 cells, 0 failures:
 
 - the fact was written only inside a branch gated on `action.scope === 'today_only'`;
 - **all three athlete dispatches of `set_schedule_modifier` use `current_week`**,

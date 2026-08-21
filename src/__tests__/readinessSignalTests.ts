@@ -9,7 +9,7 @@
 // ⚠ THE `short_time` CELLS ARE DELETED, NOT REPAIRED (Sam, 2026-08-21).
 // "Short on time" had no athlete-facing route — `buildReadinessSignalPatch` had
 // zero production callers and the other door was gated on a `today_only` scope
-// nothing dispatches. Proven by `npm run census:short-on-time-route`. The
+// nothing dispatches. Proven by `npm run test:short-on-time-absent`. The
 // option, the policy module, the readiness constraint and the control-action
 // branch are all deleted. `weeklyReadinessCardTests` keeps the cell asserting
 // the option is ABSENT from the sheet, which now enforces the deletion.

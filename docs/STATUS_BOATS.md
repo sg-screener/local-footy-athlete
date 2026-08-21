@@ -257,7 +257,7 @@ scored against a deleted authority as if it were a standard.**
 
 ## 1. SHORT ON TIME — PROVEN DEAD, THEN DELETED (R-126)
 
-`npm run census:short-on-time-route`, **8 cells, 0 failures**: the fact was gated
+`npm run test:short-on-time-absent`, **8 cells, 0 failures**: the fact was gated
 on `today_only`; **all three athlete dispatches use `current_week`**; and
 `buildReadinessSignalPatch` has zero production callers.
 

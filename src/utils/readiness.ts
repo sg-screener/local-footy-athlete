@@ -8,7 +8,7 @@ export type ReadinessSource = 'quick_check' | 'coach_message' | 'session_feedbac
  * THE `short_time` OPTION IS GONE (Sam, 2026-08-21). It had no athlete-facing
  * route: the only thing that could put minutes on a readiness signal was
  * `buildReadinessSignalPatch`, and that has zero production callers. Proven by
- * `npm run census:short-on-time-route`. The coach's "only got 40 minutes on
+ * `npm run test:short-on-time-absent`. The coach's "only got 40 minutes on
  * Wednesdays" answer is a DIFFERENT, LIVE feature — it writes a typed time-cap
  * fact and never touches a readiness signal.
  */

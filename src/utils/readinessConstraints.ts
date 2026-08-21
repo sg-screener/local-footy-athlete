@@ -157,7 +157,7 @@ export function buildReadinessActiveConstraints(
    * THAT — the one producer, `buildReadinessSignalPatch`, has zero production
    * callers, and no athlete control dispatches the `today_only` schedule
    * modifier the other door needed. Proven by
-   * `npm run census:short-on-time-route`, 8 cells.
+   * `npm run test:short-on-time-absent`, 8 cells.
    *
    * The comment that stood here was already right that time is a session fact
    * and not a readiness state — it was describing a door the athlete could no
