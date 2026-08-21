@@ -775,6 +775,45 @@ export default function DayWorkoutScreenV2() {
       : undefined,
     [completedExerciseIds, executionPlan],
   );
+
+  /**
+   * SELECT ALL — Sam, 2026-08-22: *"this would select/unselect all the boxes
+   * for people that completed the entire session = in case they don't check
+   * them as they are going"*.
+   *
+   * ⚠ **A WITHHELD ROW IS NEVER SELECTED, AND THAT IS R-115, NOT A DETAIL.**
+   * Those rows show `SKIP` instead of a checkbox because the injury owner
+   * withheld them — *"the injured date cannot be completed as normal"*. A
+   * select-all that ticked them would do by one tap exactly what removing their
+   * checkbox exists to prevent.
+   *
+   * It MIRRORS rather than always-selects: if every selectable row is already
+   * ticked the tap clears them, which is the "unselect all" half of the ask and
+   * the only behaviour that makes one control honest in both directions.
+   */
+  const selectableItemIds = React.useMemo(() => {
+    const items = sessionTemplate?.items ?? [];
+    return (executionPlan?.items ?? [])
+      .filter((item) => !withholdingOfTemplateItem(
+        item.templateIndex === null ? undefined : items[item.templateIndex],
+      ))
+      .map((item) => item.id);
+  }, [executionPlan, sessionTemplate]);
+  const allSelected = selectableItemIds.length > 0
+    && selectableItemIds.every((id) => completedExerciseIds.has(id));
+  const toggleSelectAll = React.useCallback(() => {
+    setCompletedExerciseIds((current) => {
+      const everySelected = selectableItemIds.length > 0
+        && selectableItemIds.every((id) => current.has(id));
+      if (everySelected) {
+        const next = new Set(current);
+        for (const id of selectableItemIds) next.delete(id);
+        return next;
+      }
+      return new Set([...current, ...selectableItemIds]);
+    });
+  }, [selectableItemIds]);
+
   React.useEffect(() => {
     if (!pendingComponentDeletionObservation) return;
     const targetStillRendered = editableExercises.some((exercise) =>
@@ -1860,6 +1899,40 @@ export default function DayWorkoutScreenV2() {
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
             />
+            {/**
+              * SELECT ALL — Sam, 2026-08-22: *"There should be a Select all
+              * button on session view - just below the last exercise box for
+              * the day ... with the check box in line with the other check
+              * boxes of the session but just below them all"*.
+              *
+              * So it is a ROW, not a button: the same 18x18 box with the same
+              * 44x44 target, on the same right-hand line every row's tick sits
+              * on, reading the same tick when it is on. A pill or a text link
+              * here would be a different control claiming to do the same job.
+              */}
+            {selectableItemIds.length > 0 ? (
+              <Pressable
+                onPress={toggleSelectAll}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: allSelected }}
+                accessibilityLabel={allSelected ? 'Clear all' : 'Select all'}
+                testID="session-execution-select-all"
+                style={({ pressed }) => [
+                  styles.selectAllRow,
+                  pressed && { opacity: 0.65 },
+                ]}
+              >
+                <Text style={styles.selectAllLabel}>Select all</Text>
+                <View
+                  style={[
+                    styles.executionCheckbox,
+                    allSelected && styles.executionCheckboxComplete,
+                  ]}
+                >
+                  {allSelected ? <Text style={styles.executionCheckmark}>✓</Text> : null}
+                </View>
+              </Pressable>
+            ) : null}
         </>
 
         {/* ── Reopen of a completed session → read-only summary ── */}
@@ -5415,6 +5488,21 @@ const styles = StyleSheet.create({
    * on a `#0C0C0C` screen — six values apart at hairline width, which is to say
    * nothing at all — so removing it changes the spacing and not the picture.
    */
+  /* The row sits under the last exercise card and puts its tick on the same
+     right-hand line every row's tick uses, so the column reads as one column. */
+  selectAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  selectAllLabel: {
+    color: '#8A8A8A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   finishSection: {
     marginTop: spacing.md,
     ...shadows.none,
