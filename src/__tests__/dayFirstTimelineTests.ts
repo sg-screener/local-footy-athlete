@@ -86,6 +86,19 @@ import type { SessionFeedback } from '../store/programStore';
 import { samExport8Profile, SAM_EXPORT_8_TODAY_ISO, SAM_EXPORT_8_CURRENT_WEEK } from './support/samDeviceExport8Fixture';
 import { stripComments } from './support/sourceText';
 
+/**
+ * THE ANCHOR FOR THE PROJECTED-ENTRY LOOP, in one place.
+ *
+ * It was the literal `{entries.map((entry) => {` in two cells, and both missed
+ * silently the day the loop learned to filter: club training left the session
+ * box for its own card on 2026-08-22 (Sam), so the loop reads
+ * `entries.filter(...).map(...)`. Two copies of an anchor are two chances to
+ * point at nothing — `.indexOf` returning -1 is what the repo's own
+ * unproven-anchor law is about.
+ */
+const PROJECTED_ENTRY_LOOP = '{entries.filter((entry) => entry.kind !== \'team_training\').map((entry) => {';
+
+
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }
 function run(name: string, body: () => void): void {
@@ -678,8 +691,8 @@ run('the day card leads with the eyebrow, and the Today badge is gone from it', 
 
 run('the day card lists each part\'s exercises, name and prescription', () => {
   const home = homeScreenSource();
-  const projectedEntriesAt = home.indexOf('{entries.map((entry) => {');
-  assert(projectedEntriesAt > 0,
+  const projectedEntriesAt = home.indexOf(PROJECTED_ENTRY_LOOP);
+  assert(projectedEntriesAt >= 0,
     'the projected timeline-entry loop could not be found');
   const rowsStart = home.indexOf('day-timeline-rows-${entry.componentId}', projectedEntriesAt);
   assert(rowsStart > 0,
@@ -793,10 +806,22 @@ run('the front review includes the owned mobility warm-up before all projected p
     && /mobilityFlow\.movements\.map/.test(timeline)
     && /RowIcon kind="mobility" size=\{13\} color=\{rowIconColor\('mobility'\)\}/.test(timeline),
   'the mobility warm-up is not a real review row with its owned movements');
-  assert(timeline.indexOf('day-timeline-part-mobility-warmup') < timeline.indexOf('entries.map'),
+  /* `'entries.map'` was the anchor here and it stopped existing when the loop
+     learned to filter (2026-08-22) — `indexOf` returned -1 and the comparison
+     silently became false. Both ends are proven found before they are compared,
+     which is what the repo's unproven-anchor law asks for. */
+  const warmupAt = timeline.indexOf('day-timeline-part-mobility-warmup');
+  const partsAt = timeline.indexOf(PROJECTED_ENTRY_LOOP);
+  assert(warmupAt >= 0 && partsAt >= 0 && warmupAt < partsAt,
     'the mobility warm-up no longer precedes the projected session parts');
-  assert(/entries\.map\(\(entry\) =>/.test(timeline),
+  /* Re-aimed with the anchor above: the loop renders every projected part
+     EXCEPT club training, which moved to its own card (Sam, 2026-08-22). The
+     exclusion is asserted rather than assumed, so the card cannot quietly
+     start dropping something else. */
+  assert(partsAt >= 0,
     'the review stopped rendering every projected part, including conditioning when present');
+  assert(/entry\.kind !== 'team_training'/.test(timeline),
+    'club training is back inside the programmed-work box');
 });
 
 run('Start Session sits inside the card, below the drop-downs', () => {
@@ -1051,8 +1076,8 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
   assert(timelineAt > 0 && chevronAt > timelineAt,
     'the DayTimeline render region could not be found');
   const timeline = home.slice(timelineAt, chevronAt);
-  const projectedEntriesAt = timeline.indexOf('{entries.map((entry) => {');
-  assert(projectedEntriesAt > 0,
+  const projectedEntriesAt = timeline.indexOf(PROJECTED_ENTRY_LOOP);
+  assert(projectedEntriesAt >= 0,
     'the projected timeline-entry loop could not be found');
   const flatAt = timeline.indexOf("presentation === 'flat'", projectedEntriesAt);
   const interactiveAt = timeline.indexOf('<Pressable', flatAt);

@@ -508,7 +508,10 @@ export default function HomeScreenV2() {
     const sessionLogged = decidingRows.length > 0
       && decidingRows.every((entry) => entry.completion !== null);
 
+    const clubEntry = timelineEntries.find((entry) => entry.kind === 'team_training');
+
     return (
+      <React.Fragment key={day.date}>
       <DayRow
         key={day.date}
         day={day}
@@ -576,6 +579,16 @@ export default function HomeScreenV2() {
           />
         ) : null}
       />
+      {/* ITS OWN BOX, BELOW THE SESSION'S — day view only. The week list is a
+          list of days, not a day's detail, and Sam's change is about the day
+          card's CTA. */}
+      {dayFirst && clubEntry ? (
+        <TeamTrainingCard
+          logged={clubEntry.completion}
+          onLog={() => setClubTrainingDate(day.date)}
+        />
+      ) : null}
+      </React.Fragment>
     );
   };
 
@@ -2380,6 +2393,69 @@ function DayRow({
   );
 }
 
+/**
+ * CLUB TRAINING'S OWN BOX — Sam, 2026-08-22.
+ *
+ * *"I want to put team training in its own box on day view ... then there
+ * should be another box like this ... keep icons the same and button the
+ * same"*.
+ *
+ * ⚠ **THE REASON IS THE CTA, NOT THE LAYOUT.** The session card ends in
+ * "View summary", and that summary covers the PROGRAMMED work only — so a club
+ * row sitting above it made the button claim something it does not cover:
+ * *"it looks like you're looking at a summary of all the sessions - but really
+ * it's only a summary of the programmed sessions"*.
+ *
+ * The mock carried two explanatory lines — "Separate feedback form" and
+ * "Complete team training feedback separately" — and Sam struck both:
+ * *"don't have to write the shit like 'separate team training form' and
+ * stuff"*. The separation is the box; it does not need narrating.
+ *
+ * Same people icon and the same "Log training" button as the row it replaces.
+ */
+function TeamTrainingCard({
+  logged,
+  onLog,
+}: {
+  /** Straight off the timeline entry — no second opinion about what logged means. */
+  logged: DayTimelineEntry['completion'];
+  onLog: () => void;
+}) {
+  return (
+    <Card style={styles.teamTrainingCard} testID="day-team-training-card">
+      <Text style={styles.teamTrainingTitle}>Team Training</Text>
+      <View style={styles.teamTrainingRow}>
+        <View style={styles.timelineIconMarker}>
+          {logged === 'full' || logged === 'partial' ? (
+            <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+          ) : (
+            <RowIcon kind="team" size={13} color={rowIconColor('team')} />
+          )}
+        </View>
+        <View style={styles.timelinePartText}>
+          <Text style={styles.timelineHeadline} numberOfLines={1}>Team training</Text>
+          <Text style={styles.timelinePartMeta}>
+            {logged === null ? 'Not logged yet' : logged === 'skipped' ? 'Skipped' : 'Logged'}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onLog}
+          testID="day-timeline-log-club-training"
+          accessibilityRole="button"
+          accessibilityLabel="Log club training"
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.logClubTrainingButton,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={styles.logClubTrainingLabel}>Log training</Text>
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
 interface WeekStripProps {
   weekDays: any[];
   visibleWeek: VisibleWeek;
@@ -2615,7 +2691,17 @@ function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, present
           </View>
         )
       ) : null}
-      {entries.map((entry) => {
+      {/**
+        * ⚠ **CLUB TRAINING IS NOT IN THIS LIST ANY MORE** (Sam, 2026-08-22:
+        * *"This box here should only include the programmed work i.e. strength,
+        * conditioning, mobility, recovery whatever..."*).
+        *
+        * His reason is about what the CTA underneath claims: *"the view summary
+        * button ... looks like you're looking at a summary of all the sessions -
+        * but really it's only a summary of the programmed sessions"*. A row the
+        * button does not cover should not sit above it.
+        */}
+      {entries.filter((entry) => entry.kind !== 'team_training').map((entry) => {
         const iconKind = PART_ICON_KIND[entry.kind];
         const isOpen = openParts.has(entry.partId);
         // A PART WITH NO ROWS HAS NOTHING TO OPEN, and it does not pretend to.
@@ -4078,6 +4164,21 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  teamTrainingCard: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  teamTrainingTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
+  teamTrainingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   timelineRow: {
     minHeight: 52,
