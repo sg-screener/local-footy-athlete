@@ -5399,11 +5399,24 @@ const styles = StyleSheet.create({
   // separation registers as "the session ends here" without adding any
   // new surface contrast to the screen.
   feedbackSection: { marginTop: spacing.lg },
+  /**
+   * THE GAP UNDER "Need to make a change?" MATCHES THE GAP ABOVE IT — Sam,
+   * 2026-08-22: *"reduce the gap between the bottom of the need to make a
+   * change box, and the log session button so it's the same as the gap between
+   * the top of the need to make a change box and the strength drop down box"*.
+   *
+   * MEASURED, not eyeballed: the box's own `card` carries `marginTop:
+   * spacing.md` (16), and this carried `spacing.xxl` + `spacing.lg` — 72 —
+   * so the button sat four and a half times further from the box than the box
+   * sat from the session. `spacing.md` is not a new number; it is the one
+   * already on the other side of the same box.
+   *
+   * The hairline went with the padding it was spacing for. It drew `#121212`
+   * on a `#0C0C0C` screen — six values apart at hairline width, which is to say
+   * nothing at all — so removing it changes the spacing and not the picture.
+   */
   finishSection: {
-    marginTop: spacing.xxl,
-    paddingTop: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#121212',
+    marginTop: spacing.md,
     ...shadows.none,
   },
 
