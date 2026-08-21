@@ -3825,3 +3825,71 @@ measurement.
 block — the block's environment carries the permanent kit and the injuries, and
 projecting equipment facts into it is `composeTemporarySourceFactCompatibility`'s
 territory, not this unit's.
+
+---
+
+**R-125** · *"Permanently retire the weekly coach card because Status owns that
+information now. Delete its remaining tests and stale rebuild references."* ·
+Sam, 2026-08-21 · seat `boats`.
+
+`utils/weeklyCoachUpdate.ts` was deleted by the 2026-08-19 burn and carried on
+the rebuild list from that day. **It is now RETIRED, not pending.** The seat that
+deleted it had already named the successor in its own E/G/H table —
+`CoachStatusScreen` ("My Status"), which `useCoachNoteActions` says "owns the
+program modifiers now".
+
+**WHAT WENT WITH IT.** `coachLivePathV2IntegrationTests` was the last suite
+holding the card: 23 blocks across 9 sections, every `buildWeeklyCoachUpdateFromConstraints`
+call and every assertion on `card.activeIssues` / `avoid` / `keep` / `ctaPrefill`
+/ `sessionsChanged`. **The suite had been DEAD AT IMPORT since the burn**, so
+none of it had run. The four links of the chain that are NOT the card —
+constraint → projection → visible day → visible week — are what the suite is
+for, and they are all still asserted. **DEAD → 60 passed / 0 failed.**
+
+**⚠ AND BRINGING IT BACK TO LIFE FOUND A SAFETY GAP NOBODY COULD SEE.** Two of
+its cells said Friday's `Flying 30m Sprints` + `Box Jumps` collapse to Rest at
+fatigue 7/10. Measured on that exact fixture today: **both rows are still
+prescribed**, source `template`, with `Caution: Flying 30m Sprints`,
+`Caution: Box Jumps` and three `Focus:` lines. **The app advises against the
+max-effort work while still prescribing it.** The post-composer safety rewrite
+that used to remove it is on the 2026-08-19 burn's own rebuild list. NOT FIXED —
+the cells now pin the gap so it cannot widen or be forgotten, and closing it reds
+the pin.
+
+---
+
+**R-126** · *"Do not rebuild the old read-time injury filter. Measure whether the
+current Injury and Status owners cover its useful safety behaviour across
+reopening and clearing an injury."* · Sam, 2026-08-21 · seat `boats`.
+
+`utils/injuryWorkoutFilter.applyInjuryFilterToWorkout` was deleted by the
+2026-08-19 burn. **MEASURED, not reviewed** — `npm run probe:injury-filter-coverage`
+drives `set_injury_modifier` / `clear_injury_modifier` on a real generated week
+and reads the day as the athlete sees it.
+
+| the filter's claim | verdict |
+| --- | --- |
+| risky work for the injured area comes off the session | **COVERED** — ordinary hamstring 6/10 takes all four risky rows off and substitutes safe work; red-flag 9/10 keeps them on the day and marks them withheld, which is R-115 and a better answer |
+| limited-but-permitted work survives at moderate severity | **COVERED** — shoulder 6/10 withholds only `Band Pallof Press` |
+| safe unaffected work is untouched | **COVERED** — the four unaffected lower rows survive the shoulder lane |
+| clearing restores the original session | **COVERED** — every original row returns, withheld count 0, in all three lanes |
+| reopening protects again | **COVERED** — identical to the first application |
+| **a reintroduction is staged, not snapped back** | **NOT COVERED** |
+
+**THE EXACT MISSING BEHAVIOUR.** An athlete who reports 9/10 and later reports
+4/10 gets `["Leg Press","Glute Bridge","Bulgarian Split Squats","Single-Leg
+RDL","Band Pallof Press"]`, withheld 0 — **byte-identical to an athlete who only
+ever reported 4/10.** The staged return does not happen; full hinge work comes
+back the moment the number drops.
+
+**THE CAUSE.** `rules/injuryReintroduction.ts` exists and is correct — one lever,
+`effective = max(current, prior - 2)`, so the highest-risk work returns last. It
+has **ZERO production callers.** `stageReintroductionSeverity` and
+`isReintroducing` are computed by nobody, so no effective severity reaches the
+gates the module's own header says it feeds.
+
+**NO PRODUCT CODE WAS CHANGED**, per the order. The staging rule keeps its cells
+(`test:injury-reintroduction`, DEAD → 31 / 0) so whoever wires it has a
+specification; the filter's own sections are deleted with their subject.
+**OPEN FOR SAM: wire the staging rule, or rule that a reported number is taken at
+face value.**
