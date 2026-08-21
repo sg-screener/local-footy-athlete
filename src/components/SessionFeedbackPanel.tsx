@@ -252,6 +252,195 @@ export const SessionFeedbackPanel: React.FC<Props> = (props) => {
     : <TrainingSessionFeedbackPanel {...props} />;
 };
 
+/**
+ * CLUB TRAINING IS ITS OWN FORM — Sam, 2026-08-21: *"Add a 'log training'
+ * button on the day view next to the 'team training' ... which takes you to the
+ * feedback page for club training - remove the club training from the other
+ * view ... so it is two separate feedback forms"*.
+ *
+ * ## WHY IT IS A SEPARATE FORM AND NOT A SEPARATE FACT
+ *
+ * Sam, on the same message: *"two forms saved together to be calculated in the
+ * one place"*. So this writes `teamTraining` onto the SAME day record the gym
+ * form writes, through the SAME transaction door. `journalLoad.teamTrainingSRPE`
+ * keeps reading it exactly where it always has — no new fact, no new reader, no
+ * second load path to keep in step.
+ *
+ * ## THE THREE QUESTIONS, AND WHY ONLY THREE
+ *
+ * Load is `effort x minutes` for every session type in this app — strength
+ * (`strengthSRPE`), team training (`teamTrainingSRPE`) and games (`gameSRPE`)
+ * all land in the same unit. Nothing downstream reads anything else about club
+ * training. So the form asks what was done, how long, and how hard, and stops.
+ *
+ * ⚠ **IT PRESERVES THE GYM'S OWN ANSWERS RATHER THAN CLAIMING THEM.**
+ * `GameSessionFeedbackPanel` above can write `completion: 'full'` because on a
+ * game day the game IS the session. A club night is not: Tuesday is "Strength +
+ * Team Training", one record with two halves. Writing `'full'` from here would
+ * mark a gym session the athlete may not have done. The existing record is
+ * spread first and only the club half is set, so logging club training before
+ * the gym leaves the gym exactly as it was — and `'partial'` is the honest
+ * completion for a record that now says one half happened.
+ */
+export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
+  const existing = useProgramStore((state: any) => state.sessionFeedback[date]) as
+    | SessionFeedback
+    | undefined;
+  const initial = existing?.teamTraining;
+  const [completion, setCompletion] = useState<FeedbackCompletion | null>(
+    initial ? 'full' : null,
+  );
+  const [hours, setHours] = useState(
+    initial ? String(Math.floor(initial.durationMinutes / 60)) : '',
+  );
+  const [minutes, setMinutes] = useState(
+    initial ? String(initial.durationMinutes % 60) : '',
+  );
+  const [effort, setEffort] = useState<number | null>(
+    isSessionEffortRating(initial?.effort) ? initial!.effort : null,
+  );
+  const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
+
+  useEffect(() => {
+    const team = existing?.teamTraining;
+    setCompletion(team ? 'full' : null);
+    setHours(team ? String(Math.floor(team.durationMinutes / 60)) : '');
+    setMinutes(team ? String(team.durationMinutes % 60) : '');
+    setEffort(isSessionEffortRating(team?.effort) ? team!.effort : null);
+    setSaveRefusal(null);
+  }, [date, existing]);
+
+  const duration = parseHoursMinutes(hours, minutes);
+  const attended = completion === 'full' || completion === 'partial';
+  const recordableRefusal = sessionOutcomeRecordableRefusal(date);
+  /* A SKIP NEEDS NO NUMBERS. "I did not go" is a complete answer, and demanding
+     a duration for it is the coupling this split exists to remove. */
+  const canSave = !recordableRefusal && (
+    completion === 'skipped'
+      ? true
+      : attended && duration.valid && isSessionEffortRating(effort)
+  );
+
+  const handleSave = useCallback(async () => {
+    if (!canSave || completion === null) return;
+    setSaveRefusal(null);
+    try {
+      const feedback: SessionFeedback = {
+        ...(existing ?? {}),
+        dateStr: date,
+        // The record's own completion is untouched when one exists; a first
+        // save says PARTIAL because only the club half has been answered.
+        completion: existing?.completion ?? 'partial',
+        ...(attended && duration.valid && isSessionEffortRating(effort)
+          ? { teamTraining: { durationMinutes: duration.totalMinutes, effort } }
+          : { teamTraining: undefined }),
+      };
+      const result = await commitSessionOutcomeTransaction(
+        createRecordSessionOutcomeIntentFromFeedback({
+          date,
+          feedback,
+          workout,
+          source: {
+            entryPoint: 'tap',
+            surface: 'club_training_feedback_panel',
+          },
+        }),
+      );
+      if (!result.ok) {
+        setSaveRefusal('reason' in result
+          ? result.reason
+          : "Something went wrong saving that. Nothing was recorded — please try again.");
+        return;
+      }
+      onSave?.(result.receipt);
+    } catch (error) {
+      logger.error('[ClubTrainingFeedbackPanel] the save threw', { date, error });
+      setSaveRefusal("Something went wrong saving that. Nothing was recorded — please try again.");
+    }
+  }, [attended, canSave, completion, date, duration.totalMinutes, duration.valid,
+    effort, existing, onSave, workout]);
+
+  return (
+    <View testID="club-training-feedback-panel">
+      <SectionLabel style={styles.section}>Did you get to club training?</SectionLabel>
+      <View style={styles.row}>
+        {COMPLETION_OPTIONS.map((opt) => (
+          <FeedbackChip
+            key={opt.key}
+            testID={`club-training-completion-${opt.key}`}
+            label={opt.label}
+            selected={completion === opt.key}
+            selectedColor={colors.accent.lime}
+            onPress={() => setCompletion(completion === opt.key ? null : opt.key)}
+          />
+        ))}
+      </View>
+
+      {attended ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {TEAM_TRAINING_FEEDBACK_COPY.durationQuestion}
+          </SectionLabel>
+          <View style={styles.gameDurationRow}>
+            <View style={styles.gameDurationField}>
+              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
+              <AppTextInput
+                testID="club-training-feedback-hours"
+                style={styles.gameDurationInput}
+                value={hours}
+                onChangeText={setHours}
+                placeholder="1"
+                placeholderTextColor={colors.text.tertiary}
+                keyboardType="numeric"
+                maxLength={2}
+              />
+            </View>
+            <View style={styles.gameDurationField}>
+              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
+              <AppTextInput
+                testID="club-training-feedback-minutes"
+                style={styles.gameDurationInput}
+                value={minutes}
+                onChangeText={setMinutes}
+                placeholder="30"
+                placeholderTextColor={colors.text.tertiary}
+                keyboardType="numeric"
+                maxLength={2}
+              />
+            </View>
+          </View>
+          {(hours.trim() || minutes.trim()) && !duration.valid ? (
+            <Text style={styles.inputError}>
+              {TEAM_TRAINING_FEEDBACK_COPY.durationRefusal}
+            </Text>
+          ) : null}
+
+          <SectionLabel style={styles.section}>
+            {TEAM_TRAINING_FEEDBACK_COPY.effortQuestion}
+          </SectionLabel>
+          <Text style={styles.rpeHint}>{TEAM_TRAINING_FEEDBACK_COPY.effortHint}</Text>
+          <EffortSlider
+            testID="club-training-feedback-effort-grid"
+            value={effort}
+            onChange={setEffort}
+          />
+        </>
+      ) : null}
+
+      {saveRefusal ? <Text style={styles.inputError}>{saveRefusal}</Text> : null}
+      {recordableRefusal ? <Text style={styles.inputError}>{recordableRefusal.message}</Text> : null}
+
+      <Button
+        label="Save"
+        testID="club-training-feedback-save"
+        disabled={!canSave}
+        onPress={handleSave}
+        style={styles.section}
+      />
+    </View>
+  );
+};
+
 const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
   const existing = useProgramStore((state: any) => state.sessionFeedback[date]) as
     | SessionFeedback
@@ -540,19 +729,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const [strengthMinutes, setStrengthMinutes] = useState(
     existing?.actualMinutes ? String(existing.actualMinutes % 60) : '',
   );
-  const [teamTrainingHours, setTeamTrainingHours] = useState(
-    existing?.teamTraining
-      ? String(Math.floor(existing.teamTraining.durationMinutes / 60))
-      : '',
-  );
-  const [teamTrainingMinutes, setTeamTrainingMinutes] = useState(
-    existing?.teamTraining ? String(existing.teamTraining.durationMinutes % 60) : '',
-  );
-  const [teamTrainingEffort, setTeamTrainingEffort] = useState<number | null>(
-    isSessionEffortRating(existing?.teamTraining?.effort)
-      ? existing!.teamTraining!.effort
-      : null,
-  );
 
   // Re-sync local state when navigating to a different date
   useEffect(() => {
@@ -581,15 +757,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     setAveragePace(conditioning?.averagePace ?? '');
     setConditioningRpe(textFromNumber(conditioning?.rpe));
     setSessionRpe(isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null);
-    setTeamTrainingHours(existing?.teamTraining
-      ? String(Math.floor(existing.teamTraining.durationMinutes / 60))
-      : '');
-    setTeamTrainingMinutes(existing?.teamTraining
-      ? String(existing.teamTraining.durationMinutes % 60)
-      : '');
-    setTeamTrainingEffort(isSessionEffortRating(existing?.teamTraining?.effort)
-      ? existing!.teamTraining!.effort
-      : null);
   }, [date, existing, sessionComponents, conditioningConfig.suggestedMode]);
 
   const feedbackDraft: FeedbackFormDraft = {
@@ -632,22 +799,21 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const strengthActualMinutes = strengthAnswered && strengthDuration.valid
     ? strengthDuration.totalMinutes
     : undefined;
-  const teamTrainingDuration = parseHoursMinutes(teamTrainingHours, teamTrainingMinutes);
-  const teamTrainingOutcome: TeamTrainingSessionOutcome | undefined =
-    teamTrainingWasPerformed
-    && teamTrainingDuration.valid
-    && isSessionEffortRating(teamTrainingEffort)
-      ? {
-        durationMinutes: teamTrainingDuration.totalMinutes,
-        effort: teamTrainingEffort,
-      }
-      : undefined;
   const baseDraftIsComplete = executionSummary
     ? activeCompletion !== null &&
       (activeCompletion === 'skipped' || isSessionEffortRating(sessionRpeValue))
     : canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
-  const draftIsComplete = baseDraftIsComplete
-    && (!teamTrainingWasPerformed || teamTrainingOutcome !== undefined);
+  /**
+   * ⚠ **THE GYM FORM NO LONGER WAITS ON CLUB TRAINING, AND THAT WAS A LIVE BUG.**
+   *
+   * This read `&& (!teamTrainingWasPerformed || teamTrainingOutcome !== undefined)`,
+   * so on a club night the gym feedback COULD NOT BE SAVED AT ALL until the
+   * club duration and effort were both filled in. An athlete who lifted in the
+   * morning and had not been to training yet was simply stuck.
+   *
+   * Splitting the forms is what removes it: each door now saves what it asked.
+   */
+  const draftIsComplete = baseDraftIsComplete;
   // THE DOOR'S OWN RULE, ASKED — never re-implemented here (finding 4). A
   // control offered for an act its door will refuse is a dead control, and the
   // athlete taps it and nothing happens.
@@ -913,7 +1079,19 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
       // whether the question is ASKED decides whether the answer is SENT.
       actualMinutes: executionSummary ? strengthActualMinutes : undefined,
       executionItems: executionSummary?.items,
-      teamTraining: teamTrainingOutcome,
+      /**
+       * ⚠ **CARRIED FORWARD, NOT RE-COLLECTED — AND OMITTING IT WOULD HAVE
+       * ERASED IT.** The feedback payload is rebuilt from scratch on every
+       * save, so with the club questions gone from this form, passing the
+       * (now always empty) local state would drop a club answer the athlete
+       * had already logged the moment they saved their gym session.
+       *
+       * `ClubTrainingFeedbackPanel` owns collecting it; this form's job is to
+       * hand the stored value straight back so one door cannot silently undo
+       * the other. Both write the same record — Sam: *"two forms saved
+       * together to be calculated in the one place"*.
+       */
+      teamTraining: existing?.teamTraining,
       conditioning,
       strength,
     });
@@ -990,7 +1168,9 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     onSave,
     executionSummary,
     sessionRpeValue,
-    teamTrainingOutcome,
+    /* `teamTrainingOutcome` left this list with the questions it came from. The
+       save now reads `existing?.teamTraining`, and `existing` is already a
+       dependency above. */
   ]);
 
   const renderComponentReasonGroup = useCallback((component: SessionComponent) => {
@@ -1443,57 +1623,12 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         </>
       )}
 
-      {teamTrainingWasPerformed ? (
-        <View testID="team-training-feedback-fields">
-          <SectionLabel style={styles.section}>
-            {TEAM_TRAINING_FEEDBACK_COPY.durationQuestion}
-          </SectionLabel>
-          <View style={styles.gameDurationRow}>
-            <View style={styles.gameDurationField}>
-              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
-              <AppTextInput
-                testID="team-training-feedback-hours"
-                style={styles.gameDurationInput}
-                value={teamTrainingHours}
-                onChangeText={setTeamTrainingHours}
-                placeholder="1"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType="numeric"
-                maxLength={2}
-              />
-            </View>
-            <View style={styles.gameDurationField}>
-              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
-              <AppTextInput
-                testID="team-training-feedback-minutes"
-                style={styles.gameDurationInput}
-                value={teamTrainingMinutes}
-                onChangeText={setTeamTrainingMinutes}
-                placeholder="30"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType="numeric"
-                maxLength={2}
-              />
-            </View>
-          </View>
-          {(teamTrainingHours.trim() || teamTrainingMinutes.trim())
-            && !teamTrainingDuration.valid ? (
-              <Text style={styles.inputError}>
-                {TEAM_TRAINING_FEEDBACK_COPY.durationRefusal}
-              </Text>
-            ) : null}
-
-          <SectionLabel style={styles.section}>
-            {TEAM_TRAINING_FEEDBACK_COPY.effortQuestion}
-          </SectionLabel>
-          <Text style={styles.rpeHint}>{TEAM_TRAINING_FEEDBACK_COPY.effortHint}</Text>
-          <EffortSlider
-            testID="team-training-feedback-effort-grid"
-            value={teamTrainingEffort}
-            onChange={setTeamTrainingEffort}
-          />
-        </View>
-      ) : null}
+      {/* CLUB TRAINING'S TWO QUESTIONS MOVED OUT (Sam, 2026-08-21: *"remove the
+          club training from the other view ... so it is two separate feedback
+          forms"*). They live in `ClubTrainingFeedbackPanel`, reached from the
+          day card's own "Log training" button, and they write the SAME
+          `teamTraining` fact through the same door — so the load calculation
+          did not move with them. */}
 
       {/* Notes toggle + input */}
       {hasSection('notes') ? (

@@ -26,6 +26,7 @@ import {
   type RowIconKind,
 } from '../../components/icons/SectionIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
+import { ClubTrainingFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -261,6 +262,9 @@ export default function HomeScreenV2() {
   // one persistent presentation preference, not a rule that another week may
   // silently reinterpret.
   const [preferredDayIdx, setPreferredDayIdx] = useState(todayIdx >= 0 ? todayIdx : 0);
+  /* The day whose CLUB TRAINING form is open, or null. Screen state, never
+     persisted — which sheet is open is not a decision about training. */
+  const [clubTrainingDate, setClubTrainingDate] = useState<string | null>(null);
   const dayFirst = preferredProgramView === 'today' && isNormal;
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
@@ -546,6 +550,7 @@ export default function HomeScreenV2() {
             entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
             mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
             onOpen={() => handleViewWorkout(day)}
+            onLogClubTraining={dayFirst ? () => setClubTrainingDate(day.date) : undefined}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />
         ) : null}
@@ -1447,6 +1452,29 @@ export default function HomeScreenV2() {
           setReadinessInjuryVisible(false);
         }}
       />
+
+      {/**
+        * THE CLUB-TRAINING FORM — Sam's second feedback form, 2026-08-21.
+        *
+        * It writes the SAME `teamTraining` fact the gym form used to collect,
+        * through the same transaction door, so the load calculation reads it
+        * where it always has: *"two forms saved together to be calculated in
+        * the one place"*.
+        */}
+      <Sheet
+        visible={clubTrainingDate !== null}
+        onClose={() => setClubTrainingDate(null)}
+        testID="club-training-feedback-sheet"
+      >
+        <SheetHeader title="Club training" subtitle="How did it go?" />
+        {clubTrainingDate ? (
+          <ClubTrainingFeedbackPanel
+            date={clubTrainingDate}
+            workout={weekDays.find((d) => d.date === clubTrainingDate)?.workout ?? null}
+            onSave={() => setClubTrainingDate(null)}
+          />
+        ) : null}
+      </Sheet>
 
       <AwaySheet
         visible={awayVisible}
@@ -2432,6 +2460,8 @@ const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
 
 interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
+  /** Opens the club-training form. Only the `team_training` row uses it. */
+  onLogClubTraining?: () => void;
   /** Optional, non-load-bearing flow from the same owner the session screen uses. */
   mobilityFlow: MobilityPrehabFlow | null;
   onOpen: () => void;
@@ -2460,7 +2490,7 @@ interface DayTimelineProps {
  * `conditioning`. A list keyed by kind would silently drop one of them — work
  * the athlete has to do, missing from the only screen that shows it.
  */
-function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelineProps) {
+function DayTimeline({ entries, mobilityFlow, onOpen, onLogClubTraining, presentation }: DayTimelineProps) {
   // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
   //
   // The north star's rule is "store only decisions, derive everything else", and
@@ -2650,7 +2680,33 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
                 </Text>
                 {meta ? <Text style={styles.timelinePartMeta}>{meta}</Text> : null}
               </View>
-              {canOpen ? <TimelineChevron open={isOpen} /> : null}
+              {/**
+                * ⚠ **THE TEAM-TRAINING ROW NEVER HAD A CHEVRON TO REPLACE.**
+                * Sam asked for the button *"instead of the chevron"*, and the
+                * comment on `canOpen` above says why there is none: club
+                * training carries no exercise rows, so the row opens onto
+                * nothing. The button takes that empty slot — the row stops
+                * being the one line on the card with no affordance at all.
+                *
+                * Sam, 2026-08-21: *"Add a 'log training' button on the day view
+                * next to the 'team training' ... which takes you to the feedback
+                * page for club training"*.
+                */}
+              {entry.kind === 'team_training' && onLogClubTraining ? (
+                <Pressable
+                  onPress={onLogClubTraining}
+                  testID="day-timeline-log-club-training"
+                  accessibilityRole="button"
+                  accessibilityLabel="Log club training"
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.logClubTrainingButton,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.logClubTrainingLabel}>Log training</Text>
+                </Pressable>
+              ) : canOpen ? <TimelineChevron open={isOpen} /> : null}
               {entry.completion ? (
                 <ExplorerRenderWitness
                   testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
@@ -3963,6 +4019,26 @@ const styles = StyleSheet.create({
 
   // The component timeline inside the selected day's expanded block.
   timeline: { gap: 0 },
+  /* The club-training row's affordance, sized to sit where the chevron sits on
+     every other row so the list keeps one right-hand rhythm. */
+  logClubTrainingButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(200,255,0,0.35)',
+    backgroundColor: 'rgba(200,255,0,0.10)',
+  },
+  logClubTrainingLabel: {
+    /* The same literal every other lime in this file uses — it has no `colors`
+       import, and adding one for a single style would be a second source of the
+       accent on a screen that already has one. */
+    color: '#C8FF00',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   timelineRow: {
     minHeight: 52,
     flexDirection: 'row',

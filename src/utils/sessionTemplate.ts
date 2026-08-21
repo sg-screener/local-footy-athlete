@@ -381,7 +381,28 @@ export function buildSessionTemplate(
     }
   }
 
-  if (teamState.hasTeamTraining) {
+  /**
+   * ⚠ **CLUB TRAINING IS NOT A ROW IN THE GYM SESSION ANY MORE** (Sam,
+   * 2026-08-21: *"remove the club training from the other view of strength /
+   * mobility / conditioning days - so it is two separate feedback forms"*).
+   *
+   * It used to push a `team_training` item, which the session screen drew as a
+   * TEAM TRAINING section holding one "Club session" tick — a checkbox for
+   * something that happens at the club, sitting inside the checklist for the
+   * work done in the gym. Its own door is the day card's "Log training" button,
+   * and its own form is `ClubTrainingFeedbackPanel`.
+   *
+   * The FACT is untouched: `teamTraining` is still written to the same day
+   * record and still read by `journalLoad.teamTrainingSRPE`. Only the row moved.
+   *
+   * ⚠ **EXCEPT ON A TEAM-ONLY DAY, WHERE IT IS THE WHOLE SESSION.** Sam's words
+   * name the days it leaves — *"the other view of strength / mobility /
+   * conditioning days"*. A Tuesday with no gym work is not one of those: strip
+   * the row there and the session screen renders NOTHING, which
+   * `sessionTemplateOneListTests`' *"a team-only day is just the banner"* has
+   * been guarding all along. So the row goes only when it had company.
+   */
+  if (teamState.hasTeamTraining && items.length === 0) {
     items.push({ kind: 'team_training', role: null });
   }
 

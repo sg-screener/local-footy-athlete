@@ -421,24 +421,31 @@ console.log('\n[6] Team training renders by construction, on every applicable da
     }),
   );
 
+  /**
+   * ⚠ **THESE CELLS HELD THE OPPOSITE RULE UNTIL 2026-08-21, AND THE RULE
+   * CHANGED — SAM CHANGED IT.**
+   *
+   * *"remove the club training from the other view of strength / mobility /
+   * conditioning days - so it is two separate feedback forms"*. Club training
+   * now has its own door (the day card's "Log training" button) and its own
+   * form, so a gym session no longer carries a TEAM TRAINING section holding a
+   * single "Club session" tick.
+   *
+   * The cells are re-aimed rather than deleted: the same two days are built,
+   * and the assertion is inverted so a re-add is a red rather than a silence.
+   */
   ok(
-    'team training renders on a strength day',
-    strengthDay.items.some((item) => item.kind === 'team_training'),
+    'club training does NOT ride inside a strength day any more',
+    !strengthDay.items.some((item) => item.kind === 'team_training'),
+    'it has its own form now — a gym session should not carry a club checkbox',
   );
   ok(
-    'team training ALSO renders on a conditioning day — the spec\'s found bug',
-    conditioningDay.items.some((item) => item.kind === 'team_training'),
-    'today TeamTrainingBlock only mounts inside the strength branch, so this day rendered none of it',
+    'nor inside a conditioning day',
+    !conditioningDay.items.some((item) => item.kind === 'team_training'),
   );
   ok(
-    'team training carries NO role badge (§6 item 2 — inline banner)',
-    [...strengthDay.items, ...conditioningDay.items]
-      .filter((item) => item.kind === 'team_training')
-      .every((item) => item.role === null),
-  );
-  ok(
-    'team training sits at the end of the list',
-    strengthDay.items[strengthDay.items.length - 1].kind === 'team_training',
+    'and the gym day ends on its own work, not a club banner',
+    strengthDay.items[strengthDay.items.length - 1].kind !== 'team_training',
   );
 
   const teamOnly = buildSessionTemplate(
@@ -731,9 +738,13 @@ console.log('\n[11] Optional work is ONE contiguous cluster at the end of the li
         .some((item) => item.role === 'conditioning'),
     `got ${JSON.stringify(names(items))}`,
   );
+  /* Re-aimed with the four in section [6] (Sam, 2026-08-21): a gym day carries
+     no club banner at all now, so "absolute last" became "absent". The ordering
+     rule it protected — context sorts below work — has nothing left to order on
+     this day, and the cells below still hold the optional cluster's own order. */
   ok(
-    'the team-training banner stays absolute last — it is context, not work',
-    items[items.length - 1].kind === 'team_training',
+    'no club banner rides this gym day at all',
+    !items.some((item) => item.kind === 'team_training'),
     `got ${JSON.stringify(names(items))}`,
   );
   ok(
