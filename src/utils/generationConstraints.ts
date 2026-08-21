@@ -20,7 +20,6 @@ import {
   injurySeverityRemovesRiskyWork,
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
-import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
 import { deriveIllnessWeekDirective } from '../rules/illnessRecoveryWeekMode';
 import {
   READINESS_TIERS,
@@ -69,7 +68,6 @@ export interface GenerationInjuryConstraint {
    * the athlete is improving from a higher recent severity, in which case
    * staged reintroduction holds it one band above the reported value.
    */
-  effectiveSeverity: number;
   severityBand: BibleInjurySeverityBand;
   onboardingSeverity: InjurySeverity;
   triggers: string[];
@@ -172,7 +170,7 @@ export function buildGenerationConstraintContext(args: {
   const readiness = strongestReadinessConstraint(live);
   const activeInjuryKeys = Array.from(new Set(
     injuries
-      .filter((injury) => injurySeverityReducesAffectedWork(injury.effectiveSeverity))
+      .filter((injury) => injurySeverityReducesAffectedWork(injury.severity))
       .flatMap((injury) => injury.injuryKeys),
   ));
 
@@ -292,7 +290,6 @@ function injuryFromConstraint(
       bodyPart: constraint.bodyPart,
       bucket: constraint.bucket,
       severity: constraint.severity,
-      priorSeverity: constraint.priorSeverity,
       region: constraint.region,
       triggers: constraint.triggers ?? triggerTextFromConstraint(constraint),
     });
@@ -320,19 +317,22 @@ function buildInjuryLikeConstraint(args: {
   bodyPart: string;
   bucket?: string;
   severity: number;
-  priorSeverity?: number;
   region?: ActiveInjuryConstraint['region'];
   triggers: string[];
 }): GenerationInjuryConstraint {
+  /* THE LATEST REPORTED SEVERITY IS THE AUTHORITY (Sam, 2026-08-21):
+   * *"Trust the athlete's latest reported injury number immediately. Do not
+   * stage the return."*
+   *
+   * A staged reintroduction stood here: while improving, restrictions were
+   * computed from an EFFECTIVE severity that relaxed at most one band per step,
+   * so an athlete who reported 4 after an 8 was still restricted as a 6. The
+   * rule module, the `effectiveSeverity` field it produced and the
+   * `priorSeverity` input it read are all deleted — `severity` is the single
+   * number every gate below now answers to, and it is the one the athlete just
+   * gave. */
   const severity = clampSeverity(args.severity);
-  // Staged reintroduction: while improving, restrictions are computed from an
-  // effective severity that relaxes at most one band per step. No prior
-  // severity ⇒ effective === reported (exact no-op for fresh injuries).
-  const effectiveSeverity = clampSeverity(stageReintroductionSeverity({
-    currentSeverity: severity,
-    priorSeverity: args.priorSeverity,
-  }));
-  const band = classifyBibleInjurySeverity(effectiveSeverity).band;
+  const band = classifyBibleInjurySeverity(severity).band;
   const bodyPart = normaliseBodyPart(args.bodyPart || args.bucket || 'injury');
   const bucket = args.bucket ? String(args.bucket) : undefined;
   return {
@@ -342,13 +342,12 @@ function buildInjuryLikeConstraint(args: {
     bucket,
     region: args.region ?? inferRegion(bodyPart, bucket),
     severity,
-    effectiveSeverity,
     severityBand: band,
-    onboardingSeverity: onboardingSeverityForNumeric(effectiveSeverity),
+    onboardingSeverity: onboardingSeverityForNumeric(severity),
     triggers: Array.from(new Set(args.triggers.map((trigger) => trigger.trim()).filter(Boolean))),
-    reduceAffectedWork: injurySeverityReducesAffectedWork(effectiveSeverity),
-    removeRiskyWork: injurySeverityRemovesRiskyWork(effectiveSeverity),
-    pauseAffectedTraining: injurySeverityPausesAffectedTraining(effectiveSeverity),
+    reduceAffectedWork: injurySeverityReducesAffectedWork(severity),
+    removeRiskyWork: injurySeverityRemovesRiskyWork(severity),
+    pauseAffectedTraining: injurySeverityPausesAffectedTraining(severity),
     injuryKeys: injuryKeysFor(bodyPart, bucket),
   };
 }

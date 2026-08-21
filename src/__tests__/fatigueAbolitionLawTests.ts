@@ -187,7 +187,7 @@ console.log('\n[3] The control — an INJURY still restricts, and still may bloc
   const injured = canon({
     ...world,
     activeInjuries: [{
-      region: 'lower_body', pauseAffectedTraining: true, effectiveSeverity: 8, severity: 8,
+      region: 'lower_body', pauseAffectedTraining: true, severity: 8,
       injuryKeys: ['knee'],
     }],
   });
@@ -198,7 +198,7 @@ console.log('\n[3] The control — an INJURY still restricts, and still may bloc
   const contract = buildWeeklyExposureContract({
     ...world,
     activeInjuries: [{
-      region: 'lower_body', pauseAffectedTraining: true, effectiveSeverity: 8, severity: 8,
+      region: 'lower_body', pauseAffectedTraining: true, severity: 8,
       injuryKeys: ['knee'],
     }],
   }) as any;

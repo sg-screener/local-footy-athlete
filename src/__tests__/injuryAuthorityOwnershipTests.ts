@@ -196,7 +196,6 @@ function injuryConstraints(
       bodyPart: region === 'upper_body' ? 'Shoulder' : 'Hamstring',
       region,
       severity: 9,
-      effectiveSeverity: 9,
       severityBand: 'avoid',
       onboardingSeverity: 'Severe',
       triggers: [],
@@ -564,7 +563,7 @@ function registerScenarios(): void {
       contract: JSON.parse(JSON.stringify(before)),
       generationConstraints: {
         injuries: [{
-          region: 'upper_body', injuryKeys: ['shoulder'], severity: 9, effectiveSeverity: 9,
+          region: 'upper_body', injuryKeys: ['shoulder'], severity: 9, 
           pauseAffectedTraining: true, removeRiskyWork: true,
         }],
       } as never,
@@ -642,7 +641,6 @@ function registerScenarios(): void {
               region,
               injuryKeys: [],
               severity,
-              effectiveSeverity: severity,
               pauseAffectedTraining: severity >= 8,
               removeRiskyWork: severity >= 6,
             }],

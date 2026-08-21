@@ -36,7 +36,6 @@ export interface InjuryState {
    * this value rather than snapping to the new (lower) severity. Absent on a
    * fresh report or when severity is stable/worsening.
    */
-  priorSeverity?: number;
   status: InjuryStatus;
   /** Snapshot of `buildInjuryPolicy(...).globalRules`. */
   rules: string[];

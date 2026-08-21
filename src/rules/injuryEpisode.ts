@@ -18,7 +18,6 @@ export interface InjuryRestrictionPolicyV1 {
   advice: string[];
   severityBand?: ActiveInjuryConstraint['severityBand'];
   adjustmentLevel?: ActiveInjuryConstraint['adjustmentLevel'];
-  priorSeverity?: number;
 }
 
 export interface InjuryEpisodeTransitionV1 {
@@ -150,9 +149,6 @@ export function normalizeInjuryEpisode(value: unknown): InjuryEpisodeV1 | null {
       advice: strings(policy.advice),
       severityBand: policy.severityBand as InjuryRestrictionPolicyV1['severityBand'],
       adjustmentLevel: policy.adjustmentLevel as InjuryRestrictionPolicyV1['adjustmentLevel'],
-      priorSeverity: typeof policy.priorSeverity === 'number'
-        ? policy.priorSeverity
-        : undefined,
     },
     legacyMigrationStatus: value.legacyMigrationStatus === 'legacy_after_state_only'
       ? 'legacy_after_state_only'
@@ -200,7 +196,6 @@ export function deriveInjuryConstraintFromEpisode(
     region: episode.region,
     bucket: episode.bucket,
     severity: episode.severity,
-    priorSeverity: episode.currentRestrictionPolicy.priorSeverity,
     status: episode.status === 'improving' ? 'improving' : 'active',
     startDate: episode.onsetOrReportedDate,
     lastUpdatedAt: episode.updatedAt,

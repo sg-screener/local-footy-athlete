@@ -297,7 +297,6 @@ function episodeFromConstraint(args: {
         advice: [...args.constraint.advice],
         severityBand: args.constraint.severityBand,
         adjustmentLevel: args.constraint.adjustmentLevel,
-        priorSeverity: args.constraint.priorSeverity,
       },
       compatibility: {
         ...args.existing.compatibility,
@@ -339,7 +338,6 @@ function episodeFromConstraint(args: {
       advice: [...args.constraint.advice],
       severityBand: args.constraint.severityBand,
       adjustmentLevel: args.constraint.adjustmentLevel,
-      priorSeverity: args.constraint.priorSeverity,
     },
     legacyMigrationStatus: 'native_v1',
     compatibility: { constraintId: args.constraint.id },
@@ -574,7 +572,6 @@ export async function transactExactInjuryEpisode(
           rules: [],
           safeFocus: [],
           advice: [],
-          priorSeverity: existing.severity,
         },
       };
     }
@@ -745,7 +742,6 @@ async function updateInjuryEpisodeWithinTrace(
       ...constraint,
       severity: input.severity,
       status: input.status,
-      priorSeverity: input.severity < episode.severity ? episode.severity : undefined,
       lastUpdatedAt: now,
     },
     sourceActor: input.sourceActor,
