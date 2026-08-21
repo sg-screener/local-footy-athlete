@@ -3838,58 +3838,98 @@ deleted it had already named the successor in its own E/G/H table —
 `CoachStatusScreen` ("My Status"), which `useCoachNoteActions` says "owns the
 program modifiers now".
 
-**WHAT WENT WITH IT.** `coachLivePathV2IntegrationTests` was the last suite
-holding the card: 23 blocks across 9 sections, every `buildWeeklyCoachUpdateFromConstraints`
-call and every assertion on `card.activeIssues` / `avoid` / `keep` / `ctaPrefill`
-/ `sessionsChanged`. **The suite had been DEAD AT IMPORT since the burn**, so
-none of it had run. The four links of the chain that are NOT the card —
-constraint → projection → visible day → visible week — are what the suite is
-for, and they are all still asserted. **DEAD → 60 passed / 0 failed.**
-
-**⚠ AND BRINGING IT BACK TO LIFE FOUND A SAFETY GAP NOBODY COULD SEE.** Two of
-its cells said Friday's `Flying 30m Sprints` + `Box Jumps` collapse to Rest at
-fatigue 7/10. Measured on that exact fixture today: **both rows are still
-prescribed**, source `template`, with `Caution: Flying 30m Sprints`,
-`Caution: Box Jumps` and three `Focus:` lines. **The app advises against the
-max-effort work while still prescribing it.** The post-composer safety rewrite
-that used to remove it is on the 2026-08-19 burn's own rebuild list. NOT FIXED —
-the cells now pin the gap so it cannot widen or be forgotten, and closing it reds
-the pin.
+`coachLivePathV2IntegrationTests` was the last suite holding it: 23 blocks across
+9 sections, every `buildWeeklyCoachUpdateFromConstraints` call and every
+assertion on `card.activeIssues` / `avoid` / `keep` / `ctaPrefill` /
+`sessionsChanged`. **The suite had been DEAD AT IMPORT since the burn**, so none
+of it had run. The four links that are NOT the card — constraint → projection →
+visible day → visible week — are what the suite is for, and they all still run.
+**DEAD → 58 passed / 0 failed.**
 
 ---
 
-**R-126** · *"Do not rebuild the old read-time injury filter. Measure whether the
-current Injury and Status owners cover its useful safety behaviour across
-reopening and clearing an injury."* · Sam, 2026-08-21 · seat `boats`.
+**R-126** · *"Short-on-time has no current athlete-facing route. Prove that, then
+delete its remaining implementation, tests and debt entry. Do not repair it."* ·
+Sam, 2026-08-21 · seat `boats`.
 
-`utils/injuryWorkoutFilter.applyInjuryFilterToWorkout` was deleted by the
-2026-08-19 burn. **MEASURED, not reviewed** — `npm run probe:injury-filter-coverage`
-drives `set_injury_modifier` / `clear_injury_modifier` on a real generated week
-and reads the day as the athlete sees it.
+**PROVEN FIRST** — `npm run census:short-on-time-route`, 8 cells, 0 failures:
 
-| the filter's claim | verdict |
-| --- | --- |
-| risky work for the injured area comes off the session | **COVERED** — ordinary hamstring 6/10 takes all four risky rows off and substitutes safe work; red-flag 9/10 keeps them on the day and marks them withheld, which is R-115 and a better answer |
-| limited-but-permitted work survives at moderate severity | **COVERED** — shoulder 6/10 withholds only `Band Pallof Press` |
-| safe unaffected work is untouched | **COVERED** — the four unaffected lower rows survive the shoulder lane |
-| clearing restores the original session | **COVERED** — every original row returns, withheld count 0, in all three lanes |
-| reopening protects again | **COVERED** — identical to the first application |
-| **a reintroduction is staged, not snapped back** | **NOT COVERED** |
+- the fact was written only inside a branch gated on `action.scope === 'today_only'`;
+- **all three athlete dispatches of `set_schedule_modifier` use `current_week`**,
+  and no screen, component or hook pairs that action with `today_only` at all;
+- the only thing that could put minutes on a readiness signal,
+  `buildReadinessSignalPatch`, had **zero production callers**.
 
-**THE EXACT MISSING BEHAVIOUR.** An athlete who reports 9/10 and later reports
-4/10 gets `["Leg Press","Glute Bridge","Bulgarian Split Squats","Single-Leg
-RDL","Band Pallof Press"]`, withheld 0 — **byte-identical to an athlete who only
-ever reported 4/10.** The staged return does not happen; full hinge work comes
-back the moment the number drops.
+**DELETED:** `rules/timeAvailabilityPolicy.ts` whole; the `short_time` quick
+option, its patch case and its detector in `utils/readiness.ts`; the short-time
+constraint branch in `utils/readinessConstraints.ts`; the door branch in
+`utils/programControlActions.ts`; nine cells and the `today_only` helper in
+`programControlDurableOwnershipTests` (**18/2 → 11/0** — two of the deleted cells
+were already failing); the `short_time` cells in `readinessSignalTests`; section
+[4] of `severityScaleOwnershipTests`.
 
-**THE CAUSE.** `rules/injuryReintroduction.ts` exists and is correct — one lever,
-`effective = max(current, prior - 2)`, so the highest-risk work returns last. It
-has **ZERO production callers.** `stageReintroductionSeverity` and
-`isReintroducing` are computed by nobody, so no effective severity reaches the
-gates the module's own header says it feeds.
+⚠ **AND THE DECLARED DEBT I HAD ADDED IS DELETED, NOT SATISFIED.** It pinned
+`severity: fact.maxSessionMinutes < 20 ? 7 : 5` in `rules/temporarySourceFact.ts`
+as a live violation of the 2026-07-28 ruling. **That line is not short-on-time
+code** — it is on the COACH's time-cap path ("only got 40 minutes on
+Wednesdays"), a different and live feature. Gating a live coach line under a dead
+feature's section was the error.
 
-**NO PRODUCT CODE WAS CHANGED**, per the order. The staging rule keeps its cells
-(`test:injury-reintroduction`, DEAD → 31 / 0) so whoever wires it has a
-specification; the filter's own sections are deleted with their subject.
-**OPEN FOR SAM: wire the staging rule, or rule that a reported number is taken at
-face value.**
+**NOT DELETED, AND THE DISTINCTION IS THE POINT:** `createTemporaryTimeCapFact`,
+`TemporaryTimeCapFact` and `timeCapProjection` stay. The coach still writes a
+time-cap fact with `sourceSurface: 'coach_chat'`. **The two answers shared a fact
+type and nothing else.** `programControlDurableOwnershipTests` also keeps its two
+cells asserting the Time door stays ABSENT, which now enforce this ruling.
+
+---
+
+**R-127** · *"Delete the obsolete expectation that fatigue 7/10 collapses the
+session to Rest. Re-measure 'Totally cooked' through the current visible Tired
+button on a real generated session."* · Sam, 2026-08-21 · seat `boats`.
+
+⚠ **THE DEFECT I REPORTED ON 2026-08-21 DOES NOT EXIST, AND THE ERROR WAS THE
+DOOR I MEASURED THROUGH.** I reported that "the app cautions max-effort work it
+still prescribes", from a legacy dispatcher inside a suite fixture.
+
+**RE-MEASURED THROUGH THE CONTROL THE ATHLETE PRESSES** — the Tired sheet's third
+option `Totally cooked`, `onApply('cooked_week')` →
+`readinessActionForKind` → `set_fatigue_status`, `level: 'cooked'`,
+`scope: 'current_week'`, through the real durable executor on a real generated
+in-season week (`npm run probe:totally-cooked`):
+
+| day | sets before → after | rows dropped |
+| --- | --- | --- |
+| Mon | `2,3,3,3,3,2,1` → `1,2,2,2,1` | Single-Leg RDL, Band Pallof Press |
+| Tue | `2,3,3,2,13` → `1,3,2,13` | Band Pull-Apart |
+| Wed | `3,3,2` → `2,2` | Banded External Rotation |
+
+`ok=true, changedProgram=true`. **Warnings on every day: 0.** The week is
+RECOMPOSED, not annotated. There is no "warns but does not act" defect on the
+athlete's door, and **nothing asks for the deleted rewrite system back.**
+
+The two obsolete cells are deleted, and so is the pin I put in their place.
+
+---
+
+**R-128** · *"Treat staged injury return as a separate Sam decision. Do not
+assume the deleted filter's old behaviour still applies."* · Sam, 2026-08-21 ·
+seat `boats`. **OPEN — awaiting Sam.**
+
+The read-time injury filter used to stage a return (a reported 4 that had been an
+8 was held at an effective 6). **That is not a standard**; the filter is gone
+because it was superseded. R-126's earlier draft scored the current app against
+it and called the difference a gap. Corrected.
+
+**WHAT IS SIMPLY TRUE, MEASURED** (`npm run probe:injury-filter-coverage`):
+9/10 then 4/10 and a fresh 4/10 produce the **same five rows, withheld 0** — a
+reported severity is taken at face value. And `rules/injuryReintroduction.ts` has
+**zero production callers**.
+
+**THE QUESTION FOR SAM, AND IT IS NOT LEADING:** should a return after a severe
+injury be staged, or should a reported number be taken at face value? The staging
+rule keeps its cells either way, so whichever he rules has a written
+specification. **No product code was changed.**
+
+**COVERED AND NOT IN QUESTION** — measured across three lanes, applying an injury
+protects the session, clearing it restores every original row with withheld back
+to 0, and reopening protects again identically.
