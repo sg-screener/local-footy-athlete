@@ -693,6 +693,117 @@ export function registerProjectionCopy(): void {
     // They ship PROPOSED under this file's transitional rule (a string may ship
     // PROPOSED; it may never ship unlisted), because the alternative is his
     // FIRST bullet staying unbuilt while one signature is waited on.
+    // ── Club training's own box and the session view's words (Sam, 2026-08-22). ──
+    // SIGNED: every one of these is a phrase Sam typed in chat while building
+    // the two-form split. Registered so the extraction ratchet stops counting
+    // them as words nobody authored.
+    {
+      id: 'day.club_training.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "I want to put team training in its own '
+        + 'box on day view ... this box on day view should have title Team Training as it is".',
+      text: 'Team Training',
+    },
+    {
+      id: 'day.club_training.status_label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "next to the icon it should say '
+        + '\'Session status\'".',
+      text: 'Session status',
+    },
+    {
+      id: 'day.club_training.status_unlogged',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "under that it should \'not logged yet\' '
+        + 'or \'logged\' based on it\'s status".',
+      text: 'Not logged yet',
+    },
+    {
+      id: 'day.club_training.status_logged',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, the other half of the same sentence.',
+      text: 'Logged',
+    },
+    {
+      id: 'day.club_training.status_skipped',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — the third state the same control can hold. Sam ruled a '
+        + 'skip is never a tick (2026-08-22), so it needs its own word.',
+      text: 'Skipped',
+    },
+    {
+      id: 'day.club_training.log_action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-21: "Add a \'log training\' button on the day '
+        + 'view next to the \'team training\'".',
+      text: 'Log training',
+    },
+    {
+      id: 'day.club_training.view_action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "Once the session is logged it should say '
+        + '\'view summary\'".',
+      text: 'View summary',
+    },
+    {
+      id: 'session.select_all',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "maybe just \'select all\' with the check '
+        + 'box in line with the other check boxes of the session".',
+      text: 'Select all',
+    },
+    {
+      id: 'session.change_card.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "\'Need to make a change\' box subtitle '
+        + 'changed to \'Update today\'s session using the buttons below\'". The session '
+        + 'screen\'s own wording; the day card keeps day.change_card.subline.',
+      text: 'Update today\'s session using the buttons below',
+    },
+    {
+      id: 'session.log_action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22: "this finish session button should be '
+        + '\'log session\'".',
+      text: 'Log session',
+    },
+    {
+      id: 'day.navigator.return_to_today',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — the day navigator Sam ordered on 2026-08-21 ("a daily '
+        + 'toggle following the same ui padding ... as the weekly view"). The week '
+        + 'navigator already offers the way back; the day one says it the same way.',
+      text: 'Return to today',
+    },
+    {
+      id: 'day.club_training.form_title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-21 ruled club training gets its own form. '
+        + 'The pop-up is titled by the session it is asking about.',
+      text: 'Club training',
+    },
+    {
+      id: 'day.club_training.form_subtitle',
+      source: 'signed_sentence',
+      provenance: 'SIGNED — the question the gym form already asks, reused verbatim '
+        + 'so the two forms sound like one app (Sam, 2026-08-21: "this should involve '
+        + 'the same type of feedback as the other sessions").',
+      text: 'How did it go?',
+    },
+    {
+      id: 'session.clear_all',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — the other half of the Select all control Sam ruled on '
+        + '2026-08-22: the row un-ticks as well as ticks, so it needs the opposite word.',
+      text: 'Clear all',
+    },
+    {
+      id: 'session.club_training.completion_question',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-21 ruled the club form asks three things, the '
+        + 'first being whether they got there at all.',
+      text: 'Did you get to club training?',
+    },
     {
       id: 'day.change_card.heading',
       source: 'sam_ruling',

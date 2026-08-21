@@ -1915,14 +1915,14 @@ export default function DayWorkoutScreenV2() {
                 onPress={toggleSelectAll}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: allSelected }}
-                accessibilityLabel={allSelected ? 'Clear all' : 'Select all'}
+                accessibilityLabel={allSelected ? signedCopy('session.clear_all') : signedCopy('session.select_all')}
                 testID="session-execution-select-all"
                 style={({ pressed }) => [
                   styles.selectAllRow,
                   pressed && { opacity: 0.65 },
                 ]}
               >
-                <Text style={styles.selectAllLabel}>Select all</Text>
+                <Text style={styles.selectAllLabel}>{signedCopy('session.select_all')}</Text>
                 <View
                   style={[
                     styles.executionCheckbox,
@@ -1978,7 +1978,7 @@ export default function DayWorkoutScreenV2() {
                same `spacing.md`. The Day screen spaces its boxes at 8, so the
                shared card stopped holding either number. */
             style={styles.changeHub}
-            subline="Update today's session using the buttons below"
+            subline={signedCopy('session.change_card.subline')}
             actions={[
               ...(sessionEquipmentRequirements.length > 0
                 ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
@@ -3729,7 +3729,7 @@ function FinishMoment({ onPress }: FinishMomentProps) {
   return (
     <View style={styles.finishSection}>
       <Button
-        label="Log session"
+        label={signedCopy('session.log_action')}
         size="lg"
         onPress={onPress}
         testID="finish-session-action"

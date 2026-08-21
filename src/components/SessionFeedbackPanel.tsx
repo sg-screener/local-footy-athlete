@@ -111,6 +111,7 @@ import {
   type SessionExecutionSummary,
 } from '../utils/sessionExecutionChecklist';
 import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
+import { signedCopy } from '../rules/signedCopy';
 import { STRENGTH_FEEDBACK_COPY } from '../rules/strengthSessionFeedback';
 
 interface Props {
@@ -392,7 +393,9 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
 
   return (
     <View testID="club-training-feedback-panel">
-      <SectionLabel style={styles.section}>Did you get to club training?</SectionLabel>
+      <SectionLabel style={styles.section}>
+        {signedCopy('session.club_training.completion_question')}
+      </SectionLabel>
       <View style={styles.row}>
         {COMPLETION_OPTIONS.map((opt) => (
           <FeedbackChip

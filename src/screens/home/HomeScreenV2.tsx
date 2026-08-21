@@ -786,7 +786,7 @@ export default function HomeScreenV2() {
                   ? () => setPreferredDayIdx(todayIdx)
                   : undefined}
                 accessibilityRole="button"
-                accessibilityLabel={dayFirstIdx === todayIdx ? 'Today' : 'Return to today'}
+                accessibilityLabel={dayFirstIdx === todayIdx ? 'Today' : signedCopy('day.navigator.return_to_today')}
                 testID="program-day-current"
               >
                 <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
@@ -1507,7 +1507,10 @@ export default function HomeScreenV2() {
         onClose={() => setClubTrainingDate(null)}
         testID="club-training-feedback-sheet"
       >
-        <SheetHeader title="Club training" subtitle="How did it go?" />
+        <SheetHeader
+          title={signedCopy('day.club_training.form_title')}
+          subtitle={signedCopy('day.club_training.form_subtitle')}
+        />
         {clubTrainingDate ? (
           <ClubTrainingFeedbackPanel
             date={clubTrainingDate}
@@ -2179,27 +2182,29 @@ function DayRow({
   // CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
   const isCompleted = hasWorkout && (sessionLogged ?? feedbackReceipts.length > 0);
-  // ── RULING 5: THE "TODAY" BADGE GOES FROM THE DAY SCREEN ──
+  // ── RULING 5, AND WHERE THE "TODAY" FACT LIVES NOW ──
   //
   // Sam, 2026-08-10, on his own screen next to hers: *"the today badge is still
-  // there but the 'todays session' part has not been changed yet"*. Hers has no
-  // badge because the eyebrow already says it, and two things saying "today" is
-  // what the ruling removed.
+  // there but the 'todays session' part has not been changed yet"*. Two things
+  // saying "today" is what that ruling removed, and the badge was the one that
+  // went: the card's eyebrow said it in words instead.
   //
-  // **IT IS RE-HOMED, NOT DELETED, AND THE LEDGER ROW IS THE EYEBROW BELOW.**
-  // The same fact moves from a badge to words — "TODAY'S SESSION - MON 10/8" —
-  // in this same commit, which is Sam's binding line that a removal ships the
-  // same day its replacement does.
+  // **THE EYEBROW IS GONE TOO NOW, AND THE FACT MOVED UP THE SCREEN, NOT OUT OF
+  // IT.** Sam, 2026-08-22: *"we no longer need todays session or the date in the
+  // top left hand corner of the S&C box — the date is now between the arrows at
+  // the top of screen"*. The date nav directly above the card carries the day
+  // being viewed, on EVERY day rather than only on today, so a card-level
+  // repeat is the same duplication the first ruling removed, one layer up.
   //
-  // **IT SURVIVES IN THE WEEK LIST, AND THAT IS NOT AN OVERSIGHT.** Her week
-  // view marks today's card too; the badge his ruling removed was the DAY
-  // screen's. `showTodayEyebrow` is the exact condition under which the eyebrow
-  // replaces it, so the badge is gone precisely where the words arrive and
-  // nowhere else — the surface never loses the fact.
-  const showTodayEyebrow = dayShape && emphasized && day.isToday;
+  // **THE BADGE DOES NOT COME BACK WHEN THE WORDS LEAVE.** The condition below
+  // reads `!dayShape` rather than "no eyebrow" precisely so that deleting the
+  // eyebrow cannot re-summon the badge ruling 5 removed. **IT SURVIVES IN THE
+  // WEEK LIST, AND THAT IS NOT AN OVERSIGHT**: the week has seven rows and one
+  // date nav that names the whole week, so its today marker is the only thing
+  // telling those rows apart.
   const rowBadges = (
     <>
-      {showRowBadges && day.isToday && !showTodayEyebrow
+      {showRowBadges && day.isToday && !dayShape
         && <Badge label="Today" tone="accent" testID="day-today-badge" />}
       {isMoveSource
         ? <Badge label="Moving" tone="outline" />
@@ -2228,50 +2233,44 @@ function DayRow({
   const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
   const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
 
+  /* ── THE TITLE LEADS THE CARD ──
+     Sam, 2026-08-22: *"we no longer need todays session or the date in the top
+     left hand corner of the S&C box ... the date is now between the arrows at
+     the top of screen - so that can be removed and the title of the session
+     i.e. game day, or strength or whatever can take its place"*.
+
+     TWO LINES BECAME ONE. The head used to be a meta row (eyebrow on today, a
+     lime weekday + date on any other day) with the title beneath it. Both said
+     the date, and the date nav directly above the card says it too — so the
+     card was repeating its own header's header. The title moves INTO the row it
+     used to sit under, and the tier/game badge keeps the right-hand end of that
+     row exactly where it already was.
+
+     THE TITLE STILL SHRINKS BEFORE THE BADGE DOES. `selectedTitleLead` is the
+     `flexShrink` that used to be unnecessary while the row's left half was two
+     short tokens; a long name ("Strength + Team Training") wraps to its two
+     lines rather than pushing CORE off the card. */
   const dayCardHeader = (
     <View style={styles.selectedHeader}>
       <View style={styles.selectedMetaRow}>
-        {showTodayEyebrow ? (
-          /* THE EYEBROW — ruling 5's replacement for the badge. */
-          <Text style={styles.dayEyebrow} testID="day-card-eyebrow">
-            {signedCopy('day.card.eyebrow.today')}
-            {signedCopy('day.card.eyebrow.date_separator')}
-            {day.short} {shortDayMonthLabel(day.date)}
-          </Text>
-        ) : (
-          <View style={styles.selectedDateCluster}>
+        <View style={[styles.selectedTitleBlock, styles.selectedTitleLead]}>
+          <View style={styles.selectedTitleLine}>
             <Text
+              testID="day-card-title"
               style={[
-                styles.dayLabel,
-                styles.dayLabelSelected,
-                { color: '#C8FF00' },
+                hasWorkout ? styles.workoutTitle : styles.restLabel,
+                hasWorkout ? styles.workoutTitleSelected : styles.restLabelSelected,
+                styles.selectedWorkoutTitle,
+                isMoveSource && { opacity: 0.4 },
               ]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
-              {day.short}
-            </Text>
-            <Text style={[styles.dayDate, styles.dayDateSelected]}>
-              {shortDayMonthLabel(day.date)}
+              {selectedTitle}
             </Text>
           </View>
-        )}
-        <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
-      </View>
-
-      <View style={styles.selectedTitleBlock}>
-        <View style={styles.selectedTitleLine}>
-          <Text
-            style={[
-              hasWorkout ? styles.workoutTitle : styles.restLabel,
-              hasWorkout ? styles.workoutTitleSelected : styles.restLabelSelected,
-              styles.selectedWorkoutTitle,
-              isMoveSource && { opacity: 0.4 },
-            ]}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {selectedTitle}
-          </Text>
         </View>
+        <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
       </View>
     </View>
   );
@@ -2364,7 +2363,13 @@ function DayRow({
                   />
                   <Text style={styles.sessionCompleteText}>Session complete</Text>
                 </View>
-                <Button label="View summary" size="lg" glow={false} onPress={onViewWorkout} testID="view-completed-session-button" />
+                <Button
+                  label={signedCopy('day.club_training.view_action')}
+                  size="lg"
+                  glow={false}
+                  onPress={onViewWorkout}
+                  testID="view-completed-session-button"
+                />
               </>
             ) : isTeamOnly ? (
               <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
@@ -2463,7 +2468,7 @@ function TeamTrainingCard({
 }) {
   return (
     <Card style={styles.teamTrainingCard} testID="day-team-training-card">
-      <Text style={styles.teamTrainingTitle}>Team Training</Text>
+      <Text style={styles.teamTrainingTitle}>{signedCopy('day.club_training.title')}</Text>
       <View style={styles.teamTrainingRow}>
         <View style={styles.timelineIconMarker}>
           {logged === 'full' || logged === 'partial' ? (
@@ -2478,9 +2483,15 @@ function TeamTrainingCard({
               under that it should 'not logged yet' or 'logged' based on it's
               status"*. It read "Team training" over the status, which restated
               the card's own title one line below itself. */}
-          <Text style={styles.timelineHeadline} numberOfLines={1}>Session status</Text>
+          <Text style={styles.timelineHeadline} numberOfLines={1}>
+            {signedCopy('day.club_training.status_label')}
+          </Text>
           <Text style={styles.timelinePartMeta}>
-            {logged === null ? 'Not logged yet' : logged === 'skipped' ? 'Skipped' : 'Logged'}
+            {logged === null
+              ? signedCopy('day.club_training.status_unlogged')
+              : logged === 'skipped'
+                ? signedCopy('day.club_training.status_skipped')
+                : signedCopy('day.club_training.status_logged')}
           </Text>
         </View>
         {/**
@@ -2497,7 +2508,9 @@ function TeamTrainingCard({
           * changes, and it is true in both directions.
           */}
         <Button
-          label={logged === null ? 'Log training' : 'View summary'}
+          label={logged === null
+            ? signedCopy('day.club_training.log_action')
+            : signedCopy('day.club_training.view_action')}
           size="sm"
           glow={false}
           onPress={onLog}
@@ -4349,6 +4362,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.9,
   },
+  /* The head's left half is the TITLE now (Sam, 2026-08-22), and a title is as
+     long as the day's name. It shrinks; the badge beside it does not. */
+  selectedTitleLead: { flexShrink: 1 },
   selectedTitleBlock: {
     alignItems: 'flex-start',
     gap: 4,
