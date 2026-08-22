@@ -138,8 +138,11 @@ registerSignedCopy([
   {
     id: 'team_training.feedback.duration_question',
     source: 'sam_ruling',
-    provenance: 'Sam, 2026-08-11 — verbatim team-training feedback question.',
-    text: 'How long was team training?',
+    provenance: 'SIGNED — Sam, 2026-08-22, one shape for the same question on all '
+      + 'three feedback forms: the game asks for rough time on ground and the gym for '
+      + 'rough time in the gym, so this one no longer asks a differently-shaped '
+      + 'question. Supersedes the 2026-08-11 wording (batch 18-b-i-A).',
+    text: 'Rough time at training',
   },
   {
     id: 'team_training.feedback.effort_question',

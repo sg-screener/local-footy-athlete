@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   Pressable,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -10,7 +11,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { SessionDateLine } from '../../components/SessionDateLine';
 import { Text } from '../../components/common/Text';
-import { Card, Button, IconButton, Sheet } from '../../components/ui';
+import { Card, Button, IconButton, Sheet, SheetHeader } from '../../components/ui';
 import {
   SessionActionSheet,
   useSessionActionStep,
@@ -2012,25 +2013,44 @@ export default function DayWorkoutScreenV2() {
         visible={isFinished && !justSaved && !!date}
         onClose={handleCancelFeedback}
         testID="session-feedback-sheet"
+        /* Longest of the three forms and the only one that could not scroll:
+           a full checklist summary, an effort slider, a duration, a note and a
+           Save button. The game form proved this on the simulator — its button
+           sat below the fold with no way to reach it. */
+        cappedBody
       >
         {/**
-          * NO SHEET HEADER — Sam, 2026-08-22: *"The subtitle under 'log session'
-          * in this pop up can be removed as well"*.
+          * ⚠ **THE HEADER IS THE SHEET'S — AND THIS IS THE RULING THAT SAID SO,
+          * NOT A REVERSAL OF IT.** Sam, 2026-08-22: *"The subtitle under 'log
+          * session' in this pop up can be removed as well"*, then *"make sure
+          * that the team training feedback, game feedback, and programmed
+          * session feedback pop ups are all the same style"*.
           *
-          * `SheetHeader` is a two-line contract by design (small category label
-          * + the heading beneath it), so there is no "title without subtitle"
-          * to ask for — and the duplication was the whole header, not just its
-          * second line: the panel below opens with its own heading and the very
-          * same sentence. One heading, drawn by the thing that owns the form.
+          * There were TWO headings, and removing this one left the panel's own
+          * — an eyebrow, a title and the same grey sentence, authored as
+          * literals in the panel. The panel's is the one that has now gone, so
+          * the athlete still sees exactly one heading, and it is the same
+          * heading the other two forms wear, from the same signed rows.
           */}
-        {date ? (
-          <SessionFeedbackPanel
-            date={date}
-            workout={workout}
-            executionSummary={executionSummary}
-            onSave={handleFeedbackSaved}
-          />
-        ) : null}
+        <SheetHeader
+          title={signedCopy('feedback.sheet.label_session')}
+          subtitle={signedCopy('feedback.sheet.question')}
+        />
+        <ScrollView
+          style={styles.feedbackSheetBody}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          {date ? (
+            <SessionFeedbackPanel
+              date={date}
+              workout={workout}
+              executionSummary={executionSummary}
+              onSave={handleFeedbackSaved}
+            />
+          ) : null}
+        </ScrollView>
       </Sheet>
 
       <ExerciseVideoModal
@@ -5552,6 +5572,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   changeHub: { marginTop: spacing.md },
+  /* The feedback sheet's scrolling body — `flexShrink: 1` with an auto basis,
+     so it measures its content and gives space back when the sheet's cap binds.
+     `flex: 1` collapses to nothing here (the sliver-sheet defect in `ui/Sheet`). */
+  feedbackSheetBody: { flexShrink: 1 },
   finishSection: {
     marginTop: spacing.md,
     ...shadows.none,

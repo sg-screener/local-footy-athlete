@@ -665,6 +665,13 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-11 in the Codex app task: "in the session '
         + 'view under team training it says club/field session it should just say '
         + 'Club session".',
+      /* ⚠ **NOT RENAMED ON 2026-08-22, AND THAT IS DELIBERATE.** Sam's answer
+         that day ("Team training", not "Club training") was about the FEEDBACK
+         POP-UPS' header and questions. This row is a different ruling he made
+         by name on 2026-08-11 — *"in the session view under team training it
+         says club/field session it should just say Club session"* — and it is
+         held by a law-registry row that quotes the words. A settled ruling is
+         not re-decided as a side effect of a consistency pass; it is raised. */
       text: 'Club session',
     },
 
@@ -773,21 +780,13 @@ export function registerProjectionCopy(): void {
         + 'navigator already offers the way back; the day one says it the same way.',
       text: 'Return to today',
     },
-    {
-      id: 'day.club_training.form_title',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-21 ruled club training gets its own form. '
-        + 'The pop-up is titled by the session it is asking about.',
-      text: 'Club training',
-    },
-    {
-      id: 'day.club_training.form_subtitle',
-      source: 'signed_sentence',
-      provenance: 'SIGNED — the question the gym form already asks, reused verbatim '
-        + 'so the two forms sound like one app (Sam, 2026-08-21: "this should involve '
-        + 'the same type of feedback as the other sessions").',
-      text: 'How did it go?',
-    },
+    /* ── THE CLUB FORM'S OWN TITLE PAIR — RETIRED 2026-08-22 ──
+       `day.club_training.form_title` ("Club training") and
+       `day.club_training.form_subtitle` ("How did it go?") were this one form's
+       header. Both jobs are now done by rows every form shares:
+       `feedback.sheet.label_team_training` carries the name Sam chose, and
+       `feedback.sheet.question` carries the heading all three ask. A per-form
+       copy of a shared sentence is three places for one question to drift. */
     {
       id: 'session.clear_all',
       source: 'sam_ruling',
@@ -795,12 +794,62 @@ export function registerProjectionCopy(): void {
         + '2026-08-22: the row un-ticks as well as ticks, so it needs the opposite word.',
       text: 'Clear all',
     },
+    /* ── THE THREE FEEDBACK FORMS SHARE ONE HEADER AND ONE BUTTON ──
+       Sam, 2026-08-22: *"can you make sure that the team training feedback,
+       game feedback, and programmed session feedback pop ups are all the same
+       style, fonts, and generally consistent"*, and on the two open questions:
+       the button says "Save & Finish" on all three, and the thing is called
+       TEAM training, not club training.
+
+       ONE QUESTION FOR ALL THREE FORMS. Each sheet's header is a small label
+       naming what is being logged, over this one heading — so the heading is
+       one row, not three that can drift apart. The labels are the three rows
+       below it. */
+    {
+      id: 'feedback.sheet.question',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-21 wording ("How did it go?"), promoted on '
+        + '2026-08-22 to the one heading all three feedback pop-ups share.',
+      text: 'How did it go?',
+    },
+    {
+      id: 'feedback.sheet.label_team_training',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, choosing "Team training" over "Club '
+        + 'training" so one thing has one name: the day card already says it.',
+      text: 'Team training',
+    },
+    {
+      id: 'feedback.sheet.label_game',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22. The label names what is being logged, in '
+        + 'the same shape as the other two. Supersedes the old eyebrow + title pair.',
+      text: 'Game',
+    },
+    {
+      id: 'feedback.sheet.label_session',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22. Same shape as the other two; the session '
+        + 'form used to author its own heading in the screen, unsigned.',
+      text: 'Session',
+    },
+    {
+      id: 'feedback.save_action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, asked which of the three words the forms '
+        + 'should share and chose this one, the session form\'s own label. The two it '
+        + 'supersedes are recorded in batch 18-b-i-A of the copy sheet; naming them '
+        + 'here would keep a retired string alive in a file the gate reads.',
+      text: 'Save & Finish',
+    },
     {
       id: 'session.club_training.completion_question',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-21 ruled the club form asks three things, the '
         + 'first being whether they got there at all.',
-      text: 'Did you get to club training?',
+      /* "Team", not "club" — Sam, 2026-08-22. The form said club in its header
+         and in this question, then team in the two below it. */
+      text: 'Did you get to team training?',
     },
     {
       id: 'day.change_card.heading',

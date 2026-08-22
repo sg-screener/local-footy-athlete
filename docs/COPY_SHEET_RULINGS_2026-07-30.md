@@ -1560,6 +1560,46 @@ The two participation chips restated the question instead of answering it, and
 being the widest chips on the form was the visible symptom. The third ruling is
 layout, not wording — the five feel labels are unchanged and now share one row.
 
+**18-b-i-B. ONE SHELL FOR THE THREE FEEDBACK POP-UPS — SAM, 2026-08-22.** *"can
+you make sure that the team training feedback, game feedback, and programmed
+session feedback pop ups are all the same style, fonts, and generally
+consistent"*, and, asked to choose between the versions in front of him: the
+button says **"Save & Finish"** on all three, and the thing is called **team**
+training, not club training.
+
+The header stopped being each form's own. Every pop-up now shows a small label
+naming what is being logged, over the one question all three ask — so these
+retire, and the strings that replace them are shared rows rather than three
+copies:
+
+- REPLACED: "GAME COMPLETE" → **"Game"**
+- REPLACED: "Game feedback" → **"How did it go?"**
+- WITHDRAWN: "A quick match check-in." — the grey third line. Team training's
+  form never had one, and Sam had already had the same line removed from the
+  session pop-up's header on the same day.
+- REPLACED: "Save game" → **"Save & Finish"**
+- REPLACED: "How long was team training?" → **"Rough time at training"** — the
+  same question shape as the game's "Rough time on ground" and the gym's "Rough
+  time in the gym".
+- REPLACED: "Did you get to club training?" → **"Did you get to team
+  training?"**
+
+**"Club training" is NOT recorded as a retired string**, though the form's title
+now reads "Team training". The words survive legitimately elsewhere — the sprint
+question tells the athlete "Club training counts if you sprint there" — so a
+retirement marker here would demand the removal of a sentence nobody ruled on.
+The title row itself is gone; the form reads the shared label.
+
+**AND THE SESSION SCREEN'S "Club session" ROW IS UNTOUCHED.** Sam ruled that one
+by name on 2026-08-11 (*"in the session view under team training it says
+club/field session it should just say Club session"*) and a law-registry row
+quotes it. Today's answer was about the pop-ups' header and questions; a settled
+ruling does not get re-decided as a side effect of a consistency pass.
+
+The session pop-up's own three header lines — "SESSION COMPLETE", "Session
+feedback" and "A quick check-in - this tunes your next session." — were never
+signed. They were literals in the panel, and they are gone with the same header.
+
 The five labels now read, in athlete-facing order: **Flying / Good / Normal /
 Bad / Heavy**. Stored values remain 5 / 4 / 3 / 2 / 1 respectively. This
 supersedes "Empty / Heavy / Okay / Good / Flying" and specifically replaces

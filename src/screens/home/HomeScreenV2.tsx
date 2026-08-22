@@ -1543,36 +1543,47 @@ export default function HomeScreenV2() {
         visible={clubTrainingDate !== null}
         onClose={() => setClubTrainingDate(null)}
         testID="club-training-feedback-sheet"
+        /* THE CAP AND THE SCROLL ARE NOT THIS FORM'S NEED, THEY ARE THE SHELL'S
+           (Sam, 2026-08-22: the three pop-ups are one style). Three questions
+           fit today — but a refusal line, a keyboard, or one more question is
+           all it takes to put a Save button under the bottom of the screen,
+           which is exactly what the game form did on its first run. */
+        cappedBody
       >
         <SheetHeader
-          title={signedCopy('day.club_training.form_title')}
-          subtitle={signedCopy('day.club_training.form_subtitle')}
+          title={signedCopy('feedback.sheet.label_team_training')}
+          subtitle={signedCopy('feedback.sheet.question')}
         />
-        {clubTrainingDate ? (
-          <ClubTrainingFeedbackPanel
-            date={clubTrainingDate}
-            workout={weekDays.find((d) => d.date === clubTrainingDate)?.workout ?? null}
-            onSave={() => setClubTrainingDate(null)}
-          />
-        ) : null}
+        <ScrollView
+          style={styles.feedbackSheetBody}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          {clubTrainingDate ? (
+            <ClubTrainingFeedbackPanel
+              date={clubTrainingDate}
+              workout={weekDays.find((d) => d.date === clubTrainingDate)?.workout ?? null}
+              onSave={() => setClubTrainingDate(null)}
+            />
+          ) : null}
+        </ScrollView>
       </Sheet>
 
       {/**
         * THE GAME FORM — the club form's twin, Sam 2026-08-22: *"it should just
-        * be a pop up like it is for team training"*.
+        * be a pop up like it is for team training"*, and then *"make sure ...
+        * all the same style, fonts, and generally consistent"*.
         *
-        * **NO `SheetHeader` HERE, AND THAT IS NOT AN OVERSIGHT.** This panel
-        * draws its own eyebrow, title and sub-line — "GAME COMPLETE", "Game
-        * feedback", "A quick match check-in." — and all three are SIGNED rows
-        * (`rules/gameFeedback.ts`, batch 18-b-i). A sheet header repeating the
-        * title would say it twice; a sheet header REPLACING it would drop a
-        * signed string out of the app, which `test:copy-rulings-binding`
-        * watches for in so many words. The club form has no header of its own,
-        * which is why that one wears the sheet's.
+        * **IT WEARS THE SHEET'S HEADER NOW.** It used to draw its own eyebrow,
+        * title and grey sub-line inside a raised Card — a box in a box, with
+        * its questions 48pt from the screen edge against the club form's 24,
+        * and a third header line the club form never had. The old three strings
+        * are retired in batch 18-b-i-A of the copy sheet; the label and the
+        * question below are rows all three forms read.
         *
-        * **IT WRITES THROUGH THE SAME DOOR IT ALWAYS DID.** Only the container
-        * changed: the panel, its transaction, its receipt and its testIDs are
-        * the session screen's, unmoved.
+        * **IT WRITES THROUGH THE SAME DOOR IT ALWAYS DID.** The panel, its
+        * transaction, its receipt and its testIDs are unmoved.
         */}
       <Sheet
         visible={gameFeedbackDate !== null}
@@ -1587,8 +1598,12 @@ export default function HomeScreenV2() {
            Save button was simply below the fold with no way to scroll to it. */
         cappedBody
       >
+        <SheetHeader
+          title={signedCopy('feedback.sheet.label_game')}
+          subtitle={signedCopy('feedback.sheet.question')}
+        />
         <ScrollView
-          style={styles.gameFeedbackBody}
+          style={styles.feedbackSheetBody}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -4414,8 +4429,10 @@ const styles = StyleSheet.create({
   /* `flexShrink: 1` with an AUTO basis, the same value `SessionActionSheet`
      uses for the same job: the body measures its content first and gives space
      back when the sheet's 92% cap binds. `flex: 1` would resolve to zero height
-     here — the sliver-sheet defect written up in `ui/Sheet`. */
-  gameFeedbackBody: { flexShrink: 1 },
+     here — the sliver-sheet defect written up in `ui/Sheet`. ONE style for both
+     feedback sheets on this screen; the session screen's third one reads its
+     own copy of the same two lines because it is a different file. */
+  feedbackSheetBody: { flexShrink: 1 },
   /* The head's left half is the TITLE now (Sam, 2026-08-22), and a title is as
      long as the day's name. It shrinks; the badge beside it does not. */
   selectedTitleLead: { flexShrink: 1 },

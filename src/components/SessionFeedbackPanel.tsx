@@ -11,14 +11,16 @@
  * Feedback feeds into the progression context on subsequent sessions
  * via feelingToRPE(), soreness-based adaptation, and deriveCompletionQuality().
  *
- * ## V2 presentation
- * Wrapped in a V2 `Card` with a darker-raised surface so it reads as a
- * distinct post-session moment. Heading steps up to a bolder scale with a
- * small uppercase eyebrow ("SESSION COMPLETE"). Chip rows use the same
- * semantic colours as Classic but with softer fill/border treatment that
- * matches the rest of the V2 design language (rounded `lg` radius, subtle
- * selected glow). Save button uses the V2 primary `Button` with built-in
- * accent glow so the "ship it" moment feels earned.
+ * ## PRESENTATION — ONE SHELL, THREE FORMS (Sam, 2026-08-22)
+ * Every form in this file is a plain body inside a `Sheet`: the sheet draws the
+ * header (a small label naming what is being logged, over the one question all
+ * three ask) and the body draws the questions. **No form wraps itself in a
+ * Card and no form titles itself** — the game and session forms did both, which
+ * put their questions 48pt from the screen edge against club training's 24 and
+ * gave two of the three a grey sub-line the other never had.
+ * Chip rows keep the softer fill/border treatment; the save button is the V2
+ * primary `Button`, the same size and the same word on all three, on screen
+ * from the start and greyed until the answers are in.
  *
  * Prop contract is unchanged; Classic and V2 DayWorkout layers both render
  * this without modification.
@@ -32,7 +34,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { Text } from './common/Text';
-import { Card, Button, SectionLabel } from './ui';
+import { Button, SectionLabel } from './ui';
 import { stableTestIdToken } from '../utils/stableTestId';
 import { colors } from '../theme/colors';
 import { EffortSlider } from './EffortSlider';
@@ -463,13 +465,20 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
       {saveRefusal ? <Text style={styles.inputError}>{saveRefusal}</Text> : null}
       {recordableRefusal ? <Text style={styles.inputError}>{recordableRefusal.message}</Text> : null}
 
-      <Button
-        label="Save"
-        testID="club-training-feedback-save"
-        disabled={!canSave}
-        onPress={handleSave}
-        style={styles.section}
-      />
+      {/* The button that set the pattern, now wearing the shared label and the
+          shared size. It was 48pt tall and said "Save" while the other two were
+          56 and said two other things. */}
+      <View style={styles.saveRow}>
+        <Button
+          label={signedCopy('feedback.save_action')}
+          testID="club-training-feedback-save"
+          disabled={!canSave}
+          onPress={handleSave}
+          variant="primary"
+          size="lg"
+          fullWidth
+        />
+      </View>
     </View>
   );
 };
@@ -587,17 +596,17 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
   ]);
 
   return (
-    <Card
-      tone="raised"
-      padding="lg"
-      radius="xl"
-      style={styles.panel}
-      testID="game-feedback-panel"
-    >
-      <Text style={styles.eyebrow}>{GAME_FEEDBACK_COPY.eyebrow}</Text>
-      <Text style={styles.heading}>{GAME_FEEDBACK_COPY.title}</Text>
-      <Text style={styles.subheading}>{GAME_FEEDBACK_COPY.subtitle}</Text>
-
+    /* ── ONE SHELL FOR ALL THREE FEEDBACK FORMS — Sam, 2026-08-22 ──
+       *"can you make sure that the team training feedback, game feedback, and
+       programmed session feedback pop ups are all the same style, fonts, and
+       generally consistent"*.
+       THE CARD IS GONE. This form drew a raised, rounded Card INSIDE the sheet
+       — a box in a box — so its questions started 48pt from the screen edge
+       while club training's started at 24. The club form is the shape all three
+       take now: a plain body on the sheet's own surface, with the sheet's
+       header above it. Same for the heading: it is `SheetHeader`'s job on every
+       one of the three, so the form no longer titles itself. */
+    <View testID="game-feedback-panel">
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.wholeQuestion}</SectionLabel>
       <View style={styles.row}>
         <FeedbackChip
@@ -690,19 +699,24 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
           <Text style={styles.saveRefusalText}>{recordableRefusal.message}</Text>
         </View>
       ) : null}
-      {canSave ? (
-        <View style={styles.saveRow}>
-          <Button
-            label={GAME_FEEDBACK_COPY.save}
-            testID={explorerTestId.feedbackSave(workout?.id ?? date)}
-            onPress={handleSave}
-            variant="primary"
-            size="lg"
-            fullWidth
-          />
-        </View>
-      ) : null}
-    </Card>
+      {/* ── ONE SAVE BUTTON, ALWAYS ON SCREEN — Sam, 2026-08-22 ──
+          He chose the club form's behaviour for all three: the button is there
+          from the start and greyed until the answers are in, rather than
+          appearing out of nowhere when the last question is answered. It cannot
+          be pressed while `canSave` is false, so the door is still never
+          offered an act it would refuse — and the refusal above says why. */}
+      <View style={styles.saveRow}>
+        <Button
+          label={signedCopy('feedback.save_action')}
+          testID={explorerTestId.feedbackSave(workout?.id ?? date)}
+          onPress={handleSave}
+          disabled={!canSave}
+          variant="primary"
+          size="lg"
+          fullWidth
+        />
+      </View>
+    </View>
   );
 };
 
@@ -1300,19 +1314,12 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   ]);
 
   return (
-    <Card
-      tone="raised"
-      padding="lg"
-      radius="xl"
-      style={styles.panel}
-      testID="session-feedback-panel"
-    >
-      <Text style={styles.eyebrow}>SESSION COMPLETE</Text>
-      <Text style={styles.heading}>Session feedback</Text>
-      <Text style={styles.subheading}>
-        A quick check-in - this tunes your next session.
-      </Text>
-
+    /* THE SAME SHELL AS THE OTHER TWO (Sam, 2026-08-22) — see the note on the
+       game panel above. This form's own eyebrow, heading and grey sub-line are
+       gone: three lines of chrome the club form never had, and the last of them
+       was the "subtitle under 'log session'" Sam had already removed once, from
+       the sheet header, while the panel kept drawing its own copy. */
+    <View testID="session-feedback-panel">
       {executionSummary ? (
         <>
           <View style={styles.checklistSummary} testID="session-feedback-checklist-summary">
@@ -1750,20 +1757,20 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         </View>
       )}
 
-      {/* Save button - only when required fields for this path are selected */}
-      {canSave && (
-        <View style={styles.saveRow}>
-          <Button
-            label="Save & Finish"
-            testID={explorerTestId.feedbackSave(workout?.id ?? date)}
-            onPress={handleSave}
-            variant="primary"
-            size="lg"
-            fullWidth
-          />
-        </View>
-      )}
-    </Card>
+      {/* THE SAME BUTTON THE OTHER TWO FORMS DRAW — always on screen, greyed
+          until the answers this path needs are in. See the game panel's note. */}
+      <View style={styles.saveRow}>
+        <Button
+          label={signedCopy('feedback.save_action')}
+          testID={explorerTestId.feedbackSave(workout?.id ?? date)}
+          onPress={handleSave}
+          disabled={!canSave}
+          variant="primary"
+          size="lg"
+          fullWidth
+        />
+      </View>
+    </View>
   );
 };
 
@@ -1777,8 +1784,10 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
  *
  * Kept local to this file because it's a one-off recipe for this panel;
  * the global selection primitive (<SelectableTile />) renders against the
- * page surface, but here the parent is a raised Card and we need a
- * lighter, translucent chip to read as elevated above it.
+ * page surface, and this chip's translucent fill was drawn to read as elevated
+ * above the raised Card these forms used to sit in. The Card went (2026-08-22);
+ * the chip reads the same against the sheet's own surface, so the recipe stayed
+ * — a look that survives its stated reason is worth saying so about.
  */
 interface FeedbackChipProps {
   testID?: string;
@@ -1864,30 +1873,12 @@ function ConditioningMetricInput({
 }
 
 const styles = StyleSheet.create({
-  panel: {
-    marginBottom: spacing.md,
-  },
-  eyebrow: {
-    color: colors.accent.lime,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  heading: {
-    color: colors.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    marginTop: 4,
-  },
-  subheading: {
-    color: colors.text.tertiary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
-    lineHeight: 18,
-  },
+  /* ── NO `panel`, `eyebrow`, `heading` OR `subheading` ANY MORE ──
+     Sam, 2026-08-22 put the three feedback forms in one shell: the sheet draws
+     the header, so a form no longer titles itself, and no form draws a Card of
+     its own inside the sheet. The four styles those two elements used went with
+     them rather than waiting in the file for a fifth form to re-inherit the
+     shape this change removed. */
   section: {
     marginTop: spacing.md,
     marginBottom: spacing.sm,

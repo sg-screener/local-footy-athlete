@@ -1,11 +1,18 @@
 import { registerSignedCopy, signedCopy } from './signedCopy';
 import type { FeedbackGameFeel } from '../types/sessionOutcome';
 
-/** Sam's complete match-feedback wording, ruled 2026-08-11. */
+/**
+ * Sam's complete match-feedback wording, ruled 2026-08-11.
+ *
+ * ⚠ **FOUR ROWS LEFT ON 2026-08-22 AND NONE OF THEM WAS RE-WORDED** — they
+ * stopped being this form's to own. Sam put the three feedback pop-ups in one
+ * shell: the sheet draws the header, so "GAME COMPLETE", "Game feedback" and
+ * "A quick match check-in." are replaced by rows every form shares
+ * (`feedback.sheet.label_game`, `feedback.sheet.question`), and "Save game" by
+ * the one button word he chose for all three (`feedback.save_action`). The
+ * retirements are recorded in batch 18-b-i-A of the copy sheet.
+ */
 registerSignedCopy([
-  { id: 'game.feedback.eyebrow', source: 'sam_ruling', provenance: 'Sam 2026-08-11; docs/COPY_SHEET_RULINGS_2026-07-30.md §18-b-i', text: 'GAME COMPLETE' },
-  { id: 'game.feedback.title', source: 'sam_ruling', provenance: 'Sam 2026-08-11; game-feedback order', text: 'Game feedback' },
-  { id: 'game.feedback.subtitle', source: 'sam_ruling', provenance: 'Sam 2026-08-11; game-feedback order', text: 'A quick match check-in.' },
   { id: 'game.feedback.whole_question', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim', text: 'Did you play the whole game?' },
   // A YES/NO QUESTION TAKES YES/NO ANSWERS — Sam, 2026-08-22: *"'did you play
   // the whole game?' = yes or no buttons, not whole or part"*. The chips used
@@ -31,13 +38,9 @@ registerSignedCopy([
   { id: 'game.feedback.feel_normal', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim scale', text: 'Normal' },
   { id: 'game.feedback.feel_good', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim scale', text: 'Good' },
   { id: 'game.feedback.feel_flying', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim scale', text: 'Flying' },
-  { id: 'game.feedback.save', source: 'sam_ruling', provenance: 'Sam 2026-08-11; complete game form save', text: 'Save game' },
 ]);
 
 export const GAME_FEEDBACK_COPY = {
-  eyebrow: signedCopy('game.feedback.eyebrow'),
-  title: signedCopy('game.feedback.title'),
-  subtitle: signedCopy('game.feedback.subtitle'),
   wholeQuestion: signedCopy('game.feedback.whole_question'),
   wholeYes: signedCopy('game.feedback.whole_yes'),
   wholeNo: signedCopy('game.feedback.whole_no'),
@@ -48,7 +51,6 @@ export const GAME_FEEDBACK_COPY = {
   rpeQuestion: signedCopy('game.feedback.rpe_question'),
   rpeHint: signedCopy('game.feedback.rpe_hint'),
   feelQuestion: signedCopy('game.feedback.feel_question'),
-  save: signedCopy('game.feedback.save'),
 } as const;
 
 export const GAME_FEEL_OPTIONS: ReadonlyArray<{

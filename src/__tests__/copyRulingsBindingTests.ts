@@ -157,6 +157,17 @@ const AUTHORING_MODULES = [
   // is looking and Sam cannot review it by using the app — so this gate is the
   // only reader it has other than the provenance gate in the module itself.
   'rules/journalReminderCopy.ts',
+  // THE PROJECTION SHEET AND THE TEAM-NIGHT SHEET, added 2026-08-22 by the
+  // feedback-shell unit — and it is the SAME hatch opening for the seventh and
+  // eighth time, for the reason already written out above: **words are authored
+  // where the feature's decision lives.** `rules/gameFeedback.ts` has been on
+  // this list since it was written; its two sibling registries were not, so a
+  // string signed into either of them was invisible here. Found the moment
+  // three forms started sharing one header: the new wording was recorded as
+  // SIGNED, lived in `projectionCopy`, and this gate reported it "not in the
+  // app" while it was on the screen.
+  'rules/projectionCopy.ts',
+  'rules/teamNightSize.ts',
 ];
 
 /**

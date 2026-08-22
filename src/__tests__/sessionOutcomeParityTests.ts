@@ -909,6 +909,67 @@ async function runGameFeedbackInvariants(): Promise<void> {
     join(__dirname, '..', 'rules', 'gameFeedback.ts'),
     'utf8',
   );
+  /**
+   * ── THREE FORMS, ONE SHELL — Sam, 2026-08-22 ──
+   *
+   * *"can you make sure that the team training feedback, game feedback, and
+   * programmed session feedback pop ups are all the same style, fonts, and
+   * generally consistent"*.
+   *
+   * **THIS IS A PARITY CELL, WHICH IS WHY IT LIVES HERE.** It does not assert
+   * that any one form looks a particular way — it asserts the three cannot
+   * DIFFER. What was found when it was written: two of the three wrapped
+   * themselves in a raised Card inside the sheet (questions 48pt from the screen
+   * edge against the third's 24), two titled themselves with an eyebrow, a
+   * heading and a grey sub-line the third never had, the save button wore three
+   * words and two heights, and only one of the three sheets could scroll — so
+   * the longest form of the three could hide its own Save button.
+   */
+  const homeSource = readFileSync(
+    join(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  const sessionScreenSource = readFileSync(
+    join(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
+  const feedbackSheets = [
+    { what: 'team training', source: homeSource, id: 'club-training-feedback-sheet', label: 'label_team_training' },
+    { what: 'game', source: homeSource, id: 'game-feedback-sheet', label: 'label_game' },
+    { what: 'session', source: sessionScreenSource, id: 'session-feedback-sheet', label: 'label_session' },
+  ];
+  for (const sheet of feedbackSheets) {
+    const at = sheet.source.indexOf(`testID="${sheet.id}"`);
+    // The shell is everything from the testID to the end of that Sheet.
+    const body = at >= 0 ? sheet.source.slice(at, sheet.source.indexOf('</Sheet>', at)) : '';
+    ok(`the ${sheet.what} form's pop-up is the shared shell`,
+      body.length > 0
+        // Capped and scrollable, so no form can hide its own Save button.
+        && /cappedBody/.test(body)
+        && /<ScrollView/.test(body)
+        && /style=\{styles\.feedbackSheetBody\}/.test(body)
+        // One header shape: the label names what is being logged, the question
+        // is the ONE row all three read.
+        && new RegExp(`signedCopy\\('feedback\\.sheet\\.${sheet.label}'\\)`).test(body)
+        && /signedCopy\('feedback\.sheet\.question'\)/.test(body),
+      `${sheet.id} shell`);
+  }
+  ok('no feedback form titles itself or draws a card inside the sheet',
+    !/styles\.panel\b/.test(panelSource)
+      && !/styles\.eyebrow\b/.test(panelSource)
+      && !/styles\.heading\b/.test(panelSource)
+      && !/styles\.subheading\b/.test(panelSource)
+      && !/<Card/.test(panelSource)
+      // …and each form's body is the plain View that replaced its Card.
+      && /<View testID="game-feedback-panel">/.test(panelSource)
+      && /<View testID="session-feedback-panel">/.test(panelSource)
+      && /<View testID="club-training-feedback-panel">/.test(panelSource));
+  ok('all three save buttons are one word, one size, and never appear mid-form',
+    // THE COUNT IS THE POINT: three call sites, one label row, one size, and
+    // three `disabled` gates. A form that goes back to `{canSave && <Button` is
+    // a button that materialises under the athlete's thumb.
+    (panelSource.match(/signedCopy\('feedback\.save_action'\)/g) ?? []).length === 3
+      && (panelSource.match(/disabled=\{!canSave\}/g) ?? []).length === 3
+      && (panelSource.match(/size="lg"/g) ?? []).length === 3
+      && !/canSave &&\s*\(?\s*<View style=\{styles\.saveRow\}/.test(panelSource)
+      && !/canSave \? \(\s*<View style=\{styles\.saveRow\}/.test(panelSource));
+
   ok('one panel selects the match form through the shared game taxonomy',
     /classifyDaySessions\(props\.workout\)[\s\S]{0,160}GameSessionFeedbackPanel/.test(panelSource),
     panelSource.length);
