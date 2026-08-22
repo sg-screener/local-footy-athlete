@@ -158,7 +158,7 @@ export default function HomeScreenV2() {
     handleDismissChristmasBreakAsk,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
-    missedSessionPrompt,
+    missedSessionNotices,
     blockBoundaryNotice,
     handleAcknowledgeBlockBoundaryNotice,
     handleLogMissedSession,
@@ -905,6 +905,41 @@ export default function HomeScreenV2() {
             in this same commit rather than deleted — the ruling moved, so the
             pin moves with it. */}
 
+        {/* ── THE MISSED-SESSION NOTICES — TOP OF THE SCREEN, BOTH SHAPES ──
+            Sam, 2026-08-22: *"Notifications at top of screen above or below
+            active modifiers: Did you do Thursday X and Y?"*.
+
+            ONE MOUNT, ABOVE BOTH SHAPES, and that is deliberate: the day view
+            and the week view each mount their own `ModifiersStrip` inside their
+            own branch, and a notice mounted twice is two places for it to
+            differ. Sitting above the branch puts it directly under the date
+            navigator on both — "above active modifiers", which is one of the
+            two positions he named. */}
+        {isNormal && missedSessionNotices.length > 0 && (
+          <MissedSessionNotices
+            notices={missedSessionNotices}
+            visibleWeek={visibleWeek}
+            onLog={(missed) => {
+              switch (missed.kind) {
+                case 'team_training':
+                  setClubTrainingDate(missed.date);
+                  break;
+                case 'game':
+                  setGameFeedbackDate(missed.date);
+                  break;
+                default:
+                  /* THE SESSION VIEW, NOT ITS FEEDBACK FORM: the athlete ticks
+                     what they actually did, then Save & Finish opens the form.
+                     Sam's words, and the reason the old route's
+                     `startFinished` had to go. */
+                  handleLogMissedSession(missed);
+                  break;
+              }
+            }}
+            onSkip={(missed) => { void handleSkipMissedSession(missed); }}
+          />
+        )}
+
         {/* ── The week ──
             ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
             place a day is drawn at full size; the day-first view calls it once
@@ -1222,28 +1257,12 @@ export default function HomeScreenV2() {
             off — the Program screen cannot raise the offer again without
             importing a module it no longer imports. */}
 
-        {/* ── Missed-session follow-up ── */}
-        {isNormal && missedSessionPrompt && (
-          <MissedSessionPrompt
-            missed={missedSessionPrompt}
-            onRespond={(response) => {
-              switch (response) {
-                case 'did_it':
-                  handleLogMissedSession(missedSessionPrompt);
-                  break;
-                case 'skipped_it':
-                  void handleSkipMissedSession(missedSessionPrompt);
-                  break;
-                case 'move_forward':
-                  setChangeSheetEntry({
-                    date: missedSessionPrompt.date,
-                    initialAction: 'move',
-                  });
-                  break;
-              }
-            }}
-          />
-        )}
+        {/* ── THE MISSED-SESSION FOLLOW-UP IS AT THE TOP OF THE SCREEN NOW ──
+            Sam, 2026-08-22: *"right now it pops up at the bottom of the screen
+            ... Notifications at top of screen above or below active
+            modifiers"*. It renders above the day card and the week list — see
+            `MissedSessionNotices` at the head of the scroll body. Nothing about
+            what an answer DOES moved with it. */}
 
         {/* ── Season-phase skew disclosure ──
             Stored state that is already wrong. The profile and the program
@@ -3279,12 +3298,46 @@ function SheetOption({
 }
 
 // ── Missed-session follow-up card ──
-interface MissedSessionPromptProps {
-  missed: MissedSession;
-  onRespond: (response: MissedSessionResponse) => void;
+interface MissedSessionNoticesProps {
+  /** Every unlogged past commitment in the visible week, most recent first. */
+  notices: readonly MissedSession[];
+  /** The projection of the week on screen, for the day's own programmed name. */
+  visibleWeek: VisibleWeek;
+  onLog: (missed: MissedSession) => void;
+  onSkip: (missed: MissedSession) => void;
 }
-function MissedSessionPrompt({ missed, onRespond }: MissedSessionPromptProps) {
-  const sessionLabel = missed.sessionName ? ` (${missed.sessionName})` : '';
+/**
+ * ── THE MISSED-SESSION NOTICES — SAM, 2026-08-22 ──
+ *
+ * *"Notifications at top of screen above or below active modifiers: Did you do
+ * Thursday X and Y? i.e. Did you do Thursday strength? little notification.
+ * 'Yes, log it' (then taken to the session view screen and the athlete can then
+ * tick the boxes for what they did and hit save & finish and the pop up pops up
+ * to fill in feedback) or 'no, skip it' and the session is skipped."*
+ *
+ * ## WHAT THIS REPLACED, AND WHY EACH PIECE WENT
+ *
+ * A card at the BOTTOM of the screen, below the day, offering THREE answers to
+ * one day: "Did it", "Skipped it", "Move it forward".
+ *
+ * - **The place**: bottom of the scroll, under everything. A question about
+ *   whether yesterday happened is the first thing to answer, not the last.
+ * - **"Move it forward"** was not a third answer, it was a different question —
+ *   a plan edit about the future, which the change sheet owns and still owns.
+ *   Answering "did you do it" with "move it" left the day unanswered, so the
+ *   card came straight back.
+ * - **One card per DAY** could not serve a Thursday that holds a gym session and
+ *   a club night: they are logged through two doors and skipped independently,
+ *   so one yes/no cannot answer both. One row per THING now.
+ *
+ * ## THE WORDS ARE THE SHEET'S, INCLUDING THE WEEKDAY
+ *
+ * `SignedCopyParam` refuses a bare string, which is what makes this safe: the
+ * weekday comes from `day.name.<Weekday>` (signed since 2026-08-20 for exactly
+ * this) and the session word is the day's own bucket, which is signed copy
+ * already. This component composes no character of what the athlete reads.
+ */
+function MissedSessionNotices({ notices, visibleWeek, onLog, onSkip }: MissedSessionNoticesProps) {
   return (
     <Card
       tone="outline"
@@ -3293,18 +3346,64 @@ function MissedSessionPrompt({ missed, onRespond }: MissedSessionPromptProps) {
       style={styles.missedCard}
       testID="home-missed-session-prompt"
     >
-      <Text style={styles.missedTitle}>Did you do {missed.weekdayLabel}?</Text>
-      <Text style={styles.missedBody}>
-        {missed.weekdayLabel}&apos;s session{sessionLabel} wasn&apos;t logged. Let the coach
-        know so your plan stays accurate.
-      </Text>
-      <View style={styles.missedActions}>
-        <MissedChip testID="missed-session-did-it" label="Did it" primary onPress={() => onRespond('did_it')} />
-        <MissedChip testID="missed-session-skipped-it" label="Skipped it" onPress={() => onRespond('skipped_it')} />
-        <MissedChip testID="missed-session-move-forward" label="Move it forward" onPress={() => onRespond('move_forward')} />
-      </View>
+      {notices.map((missed) => (
+        <View key={`${missed.date}:${missed.kind}`} style={styles.missedRow}>
+          <Text style={styles.missedTitle} testID={`missed-session-question-${missed.date}-${missed.kind}`}>
+            {missedQuestion(missed, visibleWeek)}
+          </Text>
+          <View style={styles.missedActions}>
+            <MissedChip
+              testID={`missed-session-did-it-${missed.date}-${missed.kind}`}
+              label={signedCopy('missed.prompt.yes')}
+              primary
+              onPress={() => onLog(missed)}
+            />
+            <MissedChip
+              testID={`missed-session-skipped-it-${missed.date}-${missed.kind}`}
+              label={signedCopy('missed.prompt.no')}
+              onPress={() => onSkip(missed)}
+            />
+          </View>
+        </View>
+      ))}
     </Card>
   );
+}
+
+/**
+ * The one sentence, chosen by the door and filled from signed parameters.
+ *
+ * `{session}` is the day's PROGRAMMED name — the same `cardLeadHeadline` the
+ * card above it shows, so the notice and the card cannot call one day two
+ * things. A day with no resolvable name falls back to the generic session word
+ * rather than to a blank left standing.
+ */
+function missedQuestion(missed: MissedSession, visibleWeek: VisibleWeek): string {
+  const weekday = signedCopy(`day.name.${weekdayNameForISO(missed.date)}`);
+  if (missed.kind === 'team_training') {
+    return signedCopy('missed.prompt.team_training', { weekday });
+  }
+  if (missed.kind === 'game') {
+    return signedCopy('missed.prompt.game', { weekday });
+  }
+  const visibleDay = visibleWeek.days.find((day) => day.date === missed.date);
+  /* `programmedOnly`, the same read the card above uses, so the notice and the
+     card cannot call one day two things. `visibleDayLeadHeadline` returns
+     SIGNED copy — which is what lets it be a parameter at all. */
+  const session = visibleDay
+    ? visibleDayLeadHeadline(visibleDay, { programmedOnly: true })
+    : signedCopy('part.headline.session');
+  return signedCopy('missed.prompt.session', { weekday, session });
+}
+
+const WEEKDAY_NAMES = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+] as const;
+
+/** The calendar's answer, for the signed row that carries the word. */
+function weekdayNameForISO(dateISO: string): string {
+  const parsed = new Date(`${dateISO}T12:00:00`);
+  return WEEKDAY_NAMES[Number.isNaN(parsed.getTime()) ? 0 : parsed.getDay()];
 }
 
 function MissedChip({ testID, label, primary, onPress }: {
@@ -4064,7 +4163,14 @@ const styles = StyleSheet.create({
   awayCalendarDay: { color: '#FFFFFF', fontSize: 15 },
   awayCalendarDayDisabled: { color: 'rgba(255,255,255,0.22)' },
 
-  missedCard: { marginTop: spacing.sm },
+  /* One row per missed thing; the gap is the card's own rhythm, not a divider.
+     A day with two doors shows two rows and reads as one notice. */
+  missedRow: { gap: 10 },
+  /* `gap` is what separates one question from the next — seen on the simulator,
+     where three rows ran together and the second question read as a caption for
+     the first one's buttons. `spacing.sm` above it is the day screen's one gap
+     (Sam, 2026-08-22), so the notice sits in the same rhythm as every box. */
+  missedCard: { marginTop: spacing.sm, gap: 16 },
   missedTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 4 },
   missedBody: {
     color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 19,

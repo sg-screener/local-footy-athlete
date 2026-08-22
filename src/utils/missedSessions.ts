@@ -3,21 +3,45 @@
  * sessions (audit gap: a day that simply passes un-opened is invisible to
  * the app, so its picture of the week silently drifts from reality).
  *
- * A session counts as "missed" when ALL of these hold for a visible day:
- *   - the date is strictly in the past (date < todayISO)
- *   - it carried a real trainable session (not a rest day, not a game,
- *     not a pure recovery flow — those aren't worth chasing)
- *   - the athlete never logged it (no SessionFeedback for that date)
+ * ## ONE ITEM PER MISSED THING, NOT PER DAY — SAM, 2026-08-22
  *
- * The Program tab surfaces the most recent such day with a single
- * follow-up ("Did you do Tuesday?"). Every response routes through the
- * existing feedback / producer pipeline — no Coach chat.
+ * *"this will be needed for any session that is skipped including games team
+ * training and core programmed sessions ... Did you do Thursday strength? ...
+ * Also should be Did you complete team training yesterday?"*
+ *
+ * A Thursday can hold a gym session AND a club night. They are logged through
+ * two different doors and skipped independently — the club form has carried
+ * that asymmetry since 2026-08-21 — so a single "Did you do Thursday?" cannot
+ * be answered: yes to one half is no to the other. This module now emits one
+ * `MissedSession` per unlogged COMPONENT KIND, and each carries the door it
+ * belongs to.
+ *
+ * A thing counts as "missed" when ALL of these hold:
+ *   - the date is strictly in the past (date < todayISO)
+ *   - the day carried a real commitment (not a rest day)
+ *   - the athlete never answered for THAT KIND — a saved club night does not
+ *     mark the gym session logged, and vice versa
+ *
+ * ⚠ **GAMES ARE CHASED NOW, AND RECOVERY DAYS ARE TOO.** They were both
+ * excluded as "not worth chasing"; Sam's ruling is *"any session that is
+ * skipped"*, and both are sessions the athlete either did or did not do. A REST
+ * day is still never chased — there is nothing to have done.
  *
  * Pure + input-driven so it unit-tests without stores.
  */
 
 import type { ResolvedDay } from './sessionResolver';
 import type { SessionFeedback } from '../store/programStore';
+import { getSessionComponents } from './sessionComponents';
+
+/**
+ * WHICH DOOR ANSWERS IT. Not a presentation detail: each kind has its own form,
+ * its own skip payload and its own idea of what "already logged" means.
+ *   - `session`        the programmed work — opens the session view to be ticked
+ *   - `team_training`  the club night — opens the club form in place
+ *   - `game`           the fixture — opens the game form in place
+ */
+export type MissedSessionKind = 'session' | 'team_training' | 'game';
 
 export interface MissedSession {
   date: string;
@@ -25,25 +49,50 @@ export interface MissedSession {
   weekdayLabel: string;
   /** Session name as shown on the plan, when available. */
   sessionName: string | null;
-  /** True when the day is a team-training-only commitment (no gym rows). */
+  /** The door this item is answered through. */
+  kind: MissedSessionKind;
+  /** True when this item IS the club night. Kept as the flag older callers read. */
   isTeamTraining: boolean;
 }
 
-function isRestOrRecovery(day: ResolvedDay): boolean {
+/**
+ * A REST DAY, WHICH IS THE ONLY THING THAT IS NEVER CHASED. Recovery SESSIONS
+ * (a Mobility day with seven movements) used to be filtered out here with rest;
+ * they are a session the athlete did or did not do, and Sam's ruling is "any
+ * session that is skipped". A day with no workout, or one named rest, is not.
+ */
+function isRestDay(day: ResolvedDay): boolean {
   const workout = day.workout;
   if (!workout) return true;
   const name = String(workout.name ?? '').toLowerCase();
-  return (
-    workout.workoutType === 'Recovery' ||
-    workout.sessionTier === 'recovery' ||
-    name === 'rest' ||
-    name === 'rest day' ||
-    name === 'recovery'
-  );
+  return name === 'rest' || name === 'rest day';
 }
 
 function isGame(day: ResolvedDay): boolean {
   return day.workout?.workoutType === 'Game';
+}
+
+/**
+ * HAS THIS KIND BEEN ANSWERED? Per COMPONENT, never per day.
+ *
+ * The forms write per-component answers and carry the others through untouched
+ * (`ClubTrainingFeedbackPanel`'s own note records why: a club save that claimed
+ * the gym's components made Sam's day read as finished and locked him out of
+ * logging the gym). Reading the day's single `completion` here would undo that
+ * on the way back in — the club night would silence the gym's prompt.
+ *
+ * A record with no `components` at all is a legacy or whole-day answer, and its
+ * `completion` speaks for everything.
+ */
+function componentAnswered(
+  record: SessionFeedback | undefined,
+  match: (componentId: string) => boolean,
+): boolean {
+  if (!record) return false;
+  const components = (record as { components?: readonly { componentId: string; completion?: unknown }[] })
+    .components;
+  if (!components || components.length === 0) return record.completion != null;
+  return components.some((entry) => match(entry.componentId) && entry.completion != null);
 }
 
 function weekdayLabelForDate(dateISO: string): string {
@@ -75,22 +124,41 @@ export function detectMissedSessions(args: {
     if (day.date >= todayISO) continue; // today + future are not "missed" yet
     if (args.programHistoryBeforeISO && day.date < args.programHistoryBeforeISO) continue;
     if (!day.workout) continue;
-    if (isGame(day) || isRestOrRecovery(day)) continue;
-    if (sessionFeedback[day.date]) continue; // already logged → handled
-    // Team-training-only days have no gym rows but are still a real
-    // commitment worth acknowledging.
+    if (isRestDay(day)) continue;
+    const record = sessionFeedback[day.date];
     const name = day.workout.name ?? null;
-    const isTeamTraining =
-      (day.workout.exercises?.length ?? 0) === 0 &&
-      /team|field|training/i.test(String(name ?? ''));
-    out.push({
+    const base = {
       date: day.date,
       weekdayLabel: weekdayLabelForDate(day.date),
       sessionName: name,
-      isTeamTraining,
-    });
+    };
+
+    // A FIXTURE IS ONE THING AND ONLY ONE. Its form asks about the match; a
+    // game day carries no gym components to ask about separately.
+    if (isGame(day)) {
+      if (!componentAnswered(record, () => true)) {
+        out.push({ ...base, kind: 'game', isTeamTraining: false });
+      }
+      continue;
+    }
+
+    const components = getSessionComponents(day.workout as Parameters<typeof getSessionComponents>[0]);
+    const hasTeam = components.some((component) => component.kind === 'team_training');
+    const hasProgrammed = components.some((component) => component.kind !== 'team_training');
+
+    // THE PROGRAMMED HALF, and it is asked about even when the club half is
+    // already logged — which is the whole reason this loop stopped keying on
+    // the day.
+    if (hasProgrammed && !componentAnswered(record, (id) => id !== 'team_training')) {
+      out.push({ ...base, kind: 'session', isTeamTraining: false });
+    }
+    if (hasTeam && !componentAnswered(record, (id) => id === 'team_training')) {
+      out.push({ ...base, kind: 'team_training', isTeamTraining: true });
+    }
   }
-  return out.sort((a, b) => a.date.localeCompare(b.date));
+  return out.sort((a, b) => (a.date === b.date
+    ? a.kind.localeCompare(b.kind)
+    : a.date.localeCompare(b.date)));
 }
 
 /** The single day to prompt about (most recent missed), or null. */
@@ -109,6 +177,43 @@ export function mostRecentMissedSession(args: {
  * Melbourne is still Wednesday in UTC, so slicing the raw ISO instant would
  * exempt one day too few.
  */
+/**
+ * ⚠ **THE BOUNDARY CANNOT COME FROM THE PROGRAM OBJECT, AND THAT IS WHY NOTHING
+ * WAS EVER PROMPTED — FOUND 2026-08-22.**
+ *
+ * `programHistoryBoundaryFromCreatedAt` below is the E6 rule: days from before
+ * the program existed are display context, never chased. Its input was
+ * `currentProgram.createdAt` — and this app REGENERATES the program on every
+ * launch, so that timestamp is always a few milliseconds old. The boundary was
+ * therefore always TODAY, every past day was "history", and the prompt could
+ * not fire for anyone. It had been dead in the live app for as long as the app
+ * has regenerated at boot.
+ *
+ * MEASURED, NOT REASONED: Sam's own device had two unlogged past days in the
+ * visible week and showed no prompt, with `currentProgram` absent from the
+ * persisted store entirely — nothing but a fresh object to date it from.
+ *
+ * **THE DURABLE ANSWER IS A DECISION, NOT AN OBJECT.** An accepted block is
+ * stored, keyed by the Monday it starts, and it exists because the athlete
+ * accepted it — so the earliest one is the earliest date this program provably
+ * existed. It survives boot, which is the whole property `createdAt` lacked.
+ *
+ * ⚠ **WHAT IT DOES NOT KNOW IS THE SIGNUP DAY.** An athlete who signed up on a
+ * Wednesday has a block starting that Monday, so Monday and Tuesday can be
+ * asked about. Dating that precisely needs a stored first-run date — a new
+ * persisted fact, and a unit of its own. Named here rather than invented.
+ */
+export function programHistoryBoundaryFromAcceptedBlocks(
+  acceptedBlockStarts: readonly string[],
+): string | null {
+  let earliest: string | null = null;
+  for (const start of acceptedBlockStarts) {
+    if (typeof start !== 'string' || !start.trim()) continue;
+    if (!earliest || start < earliest) earliest = start;
+  }
+  return earliest;
+}
+
 export function programHistoryBoundaryFromCreatedAt(
   createdAt: string | undefined | null,
 ): string | null {
@@ -121,10 +226,71 @@ export function programHistoryBoundaryFromCreatedAt(
   return `${y}-${m}-${d}`;
 }
 
-export type MissedSessionResponse = 'did_it' | 'skipped_it' | 'move_forward';
+/**
+ * TWO ANSWERS, NOT FOUR — Sam, 2026-08-22: *"'Yes, log it' ... or 'no, skip it'
+ * and the session is skipped"*, on a prompt that had offered "Did it",
+ * "Skipped it" and "Move it forward".
+ *
+ * **"Move it forward" went, and it was not a fourth opinion — it was a
+ * different question.** Moving a session that has already been missed is a
+ * PLAN edit about the future; it lives on the change sheet, where every other
+ * move does, and the athlete reaches it the same way. Answering "did you do it"
+ * with "move it" left the original day unanswered either way, so the prompt
+ * came straight back.
+ */
+export type MissedSessionResponse = 'did_it' | 'skipped_it';
 
-/** A skipped prompt response records attendance only. "Did it" must go through
- *  the real survey so the app never invents effort or readiness answers. */
-export function missedSessionSkippedFeedback(date: string): SessionFeedback {
-  return { dateStr: date, completion: 'skipped' };
+/**
+ * A skipped answer records attendance only. "Yes, log it" must go through the
+ * real form so the app never invents effort or readiness answers.
+ *
+ * ⚠ **IT NAMES THE COMPONENTS IT IS ANSWERING FOR, AND CARRIES THE REST
+ * THROUGH.** `sessionOutcomeTransaction` fans a bare day-level completion out
+ * to EVERY component, so a whole-day `{ completion: 'skipped' }` from this
+ * prompt would mark a club night skipped because the gym session was — the
+ * mirror image of the defect Sam reported on 2026-08-21, when a club save
+ * claimed the gym's components. This is the same recipe
+ * `ClubTrainingFeedbackPanel` uses, pointed at the other half.
+ */
+export function missedSessionSkippedFeedback(
+  date: string,
+  options?: {
+    readonly kind?: MissedSessionKind;
+    readonly components?: readonly { id: string; kind: string; label: string }[];
+    readonly existing?: SessionFeedback | null;
+  },
+): SessionFeedback {
+  const kind = options?.kind;
+  const components = options?.components;
+  const existing = options?.existing ?? null;
+  // No component list to answer for — the day-level answer is the honest one,
+  // and it is what a game day and every legacy caller writes.
+  if (!kind || !components || components.length === 0) {
+    return { ...(existing ?? {}), dateStr: date, completion: 'skipped' } as SessionFeedback;
+  }
+  const answering = components.filter((component) => (kind === 'team_training'
+    ? component.kind === 'team_training'
+    : component.kind !== 'team_training'));
+  if (answering.length === 0) {
+    return { ...(existing ?? {}), dateStr: date, completion: 'skipped' } as SessionFeedback;
+  }
+  const answeringIds = new Set(answering.map((component) => component.id));
+  const carried = ((existing as { components?: readonly { componentId: string }[] } | null)
+    ?.components ?? []).filter((entry) => !answeringIds.has(entry.componentId));
+  return {
+    ...(existing ?? {}),
+    dateStr: date,
+    completion: existing?.completion ?? 'skipped',
+    components: [
+      ...carried,
+      ...answering.map((component) => ({
+        componentId: component.id,
+        kind: component.kind,
+        label: component.label,
+        completion: 'skipped',
+        partialReason: null,
+        skipReason: null,
+      })),
+    ],
+  } as SessionFeedback;
 }

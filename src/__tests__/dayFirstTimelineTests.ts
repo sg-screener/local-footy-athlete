@@ -621,16 +621,22 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
   //
   // THE SPINE IS SHORTER AGAIN: My Status now owns Coach Notes, so Program ends
   // its primary sequence after the four working status controls.
+  // ⚠ **THE FOLLOW-UP MOVED TO THE FRONT — SAM, 2026-08-22:** *"right now it
+  // pops up at the bottom of the screen ... Notifications at top of screen above
+  // or below active modifiers"*. It used to be the LAST landmark on this spine,
+  // and this cell held it there. A question about whether yesterday happened is
+  // the first thing to answer, not the last — so the assertion is inverted at
+  // that one link and the rest of the sequence is untouched.
   const toggle = at('testID="program-view-toggle"');
+  const followUp = at('<MissedSessionNotices');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
   const chips = at('rowTestID="home-life-fact-chips"');
-  const followUp = at('{isNormal && missedSessionPrompt');
-  assert(toggle < card && card < changeCard && changeCard < chips && chips < followUp,
+  assert(toggle < followUp && followUp < card && card < changeCard && changeCard < chips,
     'the Program screen is no longer in the order Sam ruled '
-    + `(toggle ${toggle} → card ${card} → change card ${changeCard} → `
-    + `chips ${chips}). The sequence is Today/Week, today's card directly under `
-    + 'it, then the change card holding the four status circles.');
+    + `(toggle ${toggle} → missed-session notices ${followUp} → card ${card} → `
+    + `change card ${changeCard} → chips ${chips}). The sequence is Today/Week, `
+    + "the notices, today's card, then the change card holding the status circles.");
   // THE STRIP STAYS GONE. Ruling 3 removed it and the removal has a home (the
   // week shape); a re-inserted strip would keep the order above and still be the
   // thing he ruled out. Asserted on the SPINE, not the file — `WeekStrip` the

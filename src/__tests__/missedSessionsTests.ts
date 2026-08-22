@@ -68,7 +68,13 @@ console.log('[1] detects a past unlogged strength session');
   ok('logged day is not counted', !missed.some((m) => m.date === '2026-07-07'));
 }
 
-console.log('[2] games, rest and recovery are never "missed"');
+// ⚠ **INVERTED 2026-08-22, NOT DELETED.** Sam: *"this will be needed for any
+// session that is skipped including games team training and core programmed
+// sessions"*. Games and recovery sessions were both filtered out here as "not
+// worth chasing" — they are sessions the athlete either did or did not do, and
+// an unanswered one leaves the log wrong in the same way. A REST day is still
+// never chased, which is the half of this cell that survives unchanged.
+console.log('[2] a rest day is never chased; a game and a recovery session are');
 {
   const week = [
     day('2026-07-05', game),
@@ -76,7 +82,40 @@ console.log('[2] games, rest and recovery are never "missed"');
     day('2026-07-07', recovery),
   ];
   const missed = detectMissedSessions({ weekDays: week, todayISO: TODAY, sessionFeedback: {} });
-  ok('nothing chased', missed.length === 0, missed);
+  ok('rest day not chased', !missed.some((m) => m.date === '2026-07-06'), missed);
+  ok('the game is chased, as a game', missed.find((m) => m.date === '2026-07-05')?.kind === 'game');
+  ok('the recovery session is chased', missed.some((m) => m.date === '2026-07-07'));
+}
+
+console.log('[2b] a day with two doors asks two questions');
+{
+  // A club night beside a gym session: two components, two forms, two skips.
+  // Cast, so this fixture adds no new error to the file's documented typecheck
+  // baseline — every fixture above it is a loose literal of the same shape.
+  const combined = {
+    id: 'w-combined', name: 'Strength + Team Training', workoutType: 'Strength',
+    sessionTier: 'core', isTeamDay: true, exercises: [{}, {}],
+  } as any;
+  const week = [day('2026-07-06', combined)];
+  const both = detectMissedSessions({ weekDays: week, todayISO: TODAY, sessionFeedback: {} });
+  ok('two items for one day', both.length === 2, both.map((m) => m.kind));
+  ok('one of them is the programmed half', both.some((m) => m.kind === 'session'));
+  ok('the other is the club night', both.some((m) => m.kind === 'team_training'));
+
+  // AND THE ONE THAT IS ANSWERED STOPS ASKING, ALONE. This is the whole reason
+  // the detector stopped keying on the day: reading the day-level completion
+  // would silence both halves the moment either one was saved.
+  const clubLogged: Record<string, SessionFeedback> = {
+    '2026-07-06': {
+      dateStr: '2026-07-06',
+      completion: 'partial',
+      components: [{ componentId: 'team_training', kind: 'team_training', label: 'team training', completion: 'full' }],
+      teamTraining: { durationMinutes: 80, effort: 7 },
+    } as SessionFeedback,
+  };
+  const after = detectMissedSessions({ weekDays: week, todayISO: TODAY, sessionFeedback: clubLogged });
+  ok('the club night stops asking', !after.some((m) => m.kind === 'team_training'), after);
+  ok('the gym session keeps asking', after.some((m) => m.kind === 'session'), after);
 }
 
 console.log('[3] most recent missed is the last one');
@@ -101,6 +140,32 @@ console.log('[5] skipped prompt response records attendance without invented eff
   const skipped = missedSessionSkippedFeedback('2026-07-06');
   ok('response → skipped', skipped.completion === 'skipped');
   ok('response has no fabricated feeling', !('feeling' in skipped));
+}
+
+console.log('[6] a skip answers ONE half and carries the other through');
+{
+  // The transaction fans a bare day-level completion out to every component, so
+  // a whole-day skip from this prompt would mark the club night skipped because
+  // the gym was — the mirror image of the 2026-08-21 defect Sam reported.
+  const components = [
+    { id: 'strength', kind: 'strength', label: 'strength work' },
+    { id: 'team_training', kind: 'team_training', label: 'team training' },
+  ];
+  const existing = {
+    dateStr: '2026-07-06',
+    completion: 'partial',
+    components: [{ componentId: 'team_training', kind: 'team_training', label: 'team training', completion: 'full' }],
+    teamTraining: { durationMinutes: 80, effort: 7 },
+  } as SessionFeedback;
+  const gymSkip = missedSessionSkippedFeedback('2026-07-06', { kind: 'session', components, existing });
+  const entries = (gymSkip as any).components as { componentId: string; completion: string }[];
+  ok('the gym half is skipped', entries.find((e) => e.componentId === 'strength')?.completion === 'skipped');
+  ok('the club night is untouched', entries.find((e) => e.componentId === 'team_training')?.completion === 'full');
+  ok('the club measurement survives', (gymSkip as any).teamTraining?.effort === 7);
+
+  const clubSkip = missedSessionSkippedFeedback('2026-07-06', { kind: 'team_training', components, existing: null });
+  const clubEntries = (clubSkip as any).components as { componentId: string }[];
+  ok('a club skip names only the club', clubEntries.length === 1 && clubEntries[0].componentId === 'team_training');
 }
 
 console.log(`\nmissedSessionsTests: ${pass} passed, ${fail} failed`);

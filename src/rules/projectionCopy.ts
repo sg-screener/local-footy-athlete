@@ -805,6 +805,53 @@ export function registerProjectionCopy(): void {
        naming what is being logged, over this one heading — so the heading is
        one row, not three that can drift apart. The labels are the three rows
        below it. */
+    /* ── THE MISSED-SESSION NOTICE — SAM, 2026-08-22 ──
+       *"Notifications at top of screen above or below active modifiers: Did you
+       do Thursday X and Y? i.e. Did you do Thursday strength? little
+       notification. 'Yes, log it' ... or 'no, skip it' and the session is
+       skipped. Also should be Did you complete team training yesterday?"*
+
+       ONE SENTENCE PER DOOR, because the three doors are three different acts:
+       a gym session is DONE, a club night is COMPLETED, a game is PLAYED. The
+       weekday is a parameter, not part of the sentence — `day.name.<Weekday>`
+       has been a signed row since 2026-08-20 for exactly this, and `{session}`
+       is filled with the day's own bucket word, which is signed copy too. No
+       surface composes a character of this. */
+    {
+      id: 'missed.prompt.session',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, verbatim shape: "Did you do Thursday '
+        + 'strength?". The weekday and the session word are parameters.',
+      text: 'Did you do {weekday} {session}?',
+    },
+    {
+      id: 'missed.prompt.team_training',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, verbatim shape: "Did you complete team '
+        + 'training yesterday?". The app says which day rather than "yesterday", '
+        + 'because the notice can be about any past day of the week.',
+      text: 'Did you complete {weekday} team training?',
+    },
+    {
+      id: 'missed.prompt.game',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22 ruled games are chased too ("any session '
+        + 'that is skipped including games"). The verb is the one his own game form '
+        + 'already uses — a game is played, not done.',
+      text: 'Did you play the {weekday} game?',
+    },
+    {
+      id: 'missed.prompt.yes',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, verbatim.',
+      text: 'Yes, log it',
+    },
+    {
+      id: 'missed.prompt.no',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-22, verbatim.',
+      text: 'No, skip it',
+    },
     {
       id: 'feedback.sheet.question',
       source: 'sam_ruling',

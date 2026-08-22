@@ -47,11 +47,13 @@ import {
   type GuidedInjuryFlowResult,
 } from '../../utils/guidedInjuryControl';
 import {
-  mostRecentMissedSession,
+  detectMissedSessions,
   missedSessionSkippedFeedback,
+  programHistoryBoundaryFromAcceptedBlocks,
   programHistoryBoundaryFromCreatedAt,
   type MissedSession,
 } from '../../utils/missedSessions';
+import { getSessionComponents } from '../../utils/sessionComponents';
 import {
   commitSessionOutcomeTransaction,
   createRecordSessionOutcomeIntentFromFeedback,
@@ -272,6 +274,10 @@ export function useHomeScreen() {
   // Program store — currentProgram is read up here so the season-phase
   // derivation below can source the phase from its clock (single source of truth).
   const currentProgram = useProgramStore((s) => s.currentProgram);
+  /* The stored blocks the athlete has accepted, keyed by the Monday each one
+     starts. Read here for the missed-session history boundary — a date that has
+     to survive a launch, which `currentProgram.createdAt` does not. */
+  const acceptedBlocks = useProgramStore((s) => s.acceptedBlocks);
 
   // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
   // that used to sit here claimed the clock was "the single source of truth
@@ -667,24 +673,32 @@ export function useHomeScreen() {
     setPendingRestorationObservation(null);
   }, [acceptedRevision, pendingRestorationObservation, reversibleAdjustments, weekDays]);
 
-  // ── Missed-session prompt ──
-  // The most recent past, unlogged trainable day in the visible week.
-  // Surfaced as a single "Did you do <day>?" follow-up; every answer
-  // routes through the feedback / producer pipeline (see
-  // handleMissedSessionResponse). No Coach chat.
-  const missedSessionPrompt = useMemo(
+  // ── Missed-session notices ──
+  // EVERY past, unlogged commitment in the visible week — one per thing, not
+  // one per day (Sam, 2026-08-22). It was `mostRecentMissedSession`, a single
+  // prompt for the latest day: with two doors on a Thursday and games now
+  // chased as well, showing one and hiding the rest leaves the athlete's log
+  // wrong in exactly the places they cannot see. Every answer routes through
+  // the feedback / producer pipeline. No Coach chat.
+  const missedSessionNotices = useMemo(
     () =>
-      mostRecentMissedSession({
+      detectMissedSessions({
         weekDays,
         todayISO: todayISOLocal(),
         sessionFeedback,
-        // E6: days before the program existed are history — display context,
-        // never prompted, never counted missed.
-        programHistoryBeforeISO: programHistoryBoundaryFromCreatedAt(
-          currentProgram?.createdAt,
-        ),
-      }),
-    [weekDays, sessionFeedback, currentProgram?.createdAt],
+        /* E6: days before the program existed are history — display context,
+           never prompted, never counted missed. THE DATE COMES FROM AN ACCEPTED
+           BLOCK, not from `currentProgram.createdAt`: the program is rebuilt on
+           every launch, so that timestamp was always today and this rule was
+           quietly excluding every past day there is. See the note on
+           `programHistoryBoundaryFromAcceptedBlocks`. The old derivation is the
+           fallback for an athlete who has accepted nothing yet — there, a fresh
+           program IS the whole history. */
+        programHistoryBeforeISO:
+          programHistoryBoundaryFromAcceptedBlocks(Object.keys(acceptedBlocks ?? {}))
+          ?? programHistoryBoundaryFromCreatedAt(currentProgram?.createdAt),
+      }).reverse(),
+    [weekDays, sessionFeedback, acceptedBlocks, currentProgram?.createdAt],
   );
 
 
@@ -1401,20 +1415,48 @@ export function useHomeScreen() {
   // The prompt does not own a parallel survey or move engine. It exposes the
   // existing visible owners for those two decisions; this hook owns only the
   // two real operations it can perform without another athlete choice.
+  /**
+   * "YES, LOG IT" FOR THE PROGRAMMED HALF — Sam, 2026-08-22: *"then taken to the
+   * session view screen and the athlete can then tick the boxes for what they
+   * did and hit save & finish and the pop up pops up to fill in feedback"*.
+   *
+   * ⚠ **`startFinished` IS GONE FROM THIS ROUTE, AND THAT IS THE RULING.** It
+   * opened the session already finished — straight into the feedback form, past
+   * the checklist — so an athlete answering "yes, I did Thursday" could not say
+   * WHICH of it they did. The ticks are the completion evidence this app
+   * derives from; skipping them was the prompt inventing an answer the athlete
+   * never gave. The flag itself stays for nothing here: no caller sets it now,
+   * and the screen still honours it.
+   *
+   * The other two kinds do not come through here at all — the club night and
+   * the game open their own forms in place, which is what those doors are.
+   */
   const handleLogMissedSession = useCallback((missed: MissedSession) => {
     const workout = weekDays.find((day) => day.date === missed.date)?.workout;
     if (!workout) return;
     navigation.navigate('DayWorkout', {
       workoutId: workout.id,
       date: missed.date,
-      startFinished: true,
     });
   }, [navigation, weekDays]);
 
+  /**
+   * "NO, SKIP IT" — and it skips ONE THING, not the day.
+   *
+   * The payload names the components this answer is for and carries the rest
+   * through untouched. A bare day-level `skipped` is fanned out to every
+   * component by the transaction, so skipping the gym would have marked the
+   * club night skipped beside it — the mirror image of the defect Sam reported
+   * when a club save claimed the gym's components.
+   */
   const handleSkipMissedSession = useCallback(async (missed: MissedSession) => {
     const todayISO = todayISOLocal();
     const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
-    const feedback = missedSessionSkippedFeedback(missed.date);
+    const feedback = missedSessionSkippedFeedback(missed.date, {
+      kind: missed.kind,
+      components: getSessionComponents(workout),
+      existing: sessionFeedback[missed.date] ?? null,
+    });
     const result = await commitSessionOutcomeTransaction(
       createRecordSessionOutcomeIntentFromFeedback({
         date: missed.date,
@@ -1656,7 +1698,7 @@ export function useHomeScreen() {
     handleDismissChristmasBreakAsk,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
-    missedSessionPrompt,
+    missedSessionNotices,
     blockBoundaryNotice,
     handleAcknowledgeBlockBoundaryNotice,
     handleLogMissedSession,
