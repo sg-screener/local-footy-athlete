@@ -20,7 +20,11 @@ registerSignedCopy([
   // answering it, which also made them the two widest chips on the form.
   { id: 'game.feedback.whole_yes', source: 'sam_ruling', provenance: 'SIGNED — Sam, 2026-08-22, ruling the answers to the whole-game question: yes or no buttons. Supersedes the 2026-08-11 pair, retired in batch 18-b-i-A of docs/COPY_SHEET_RULINGS_2026-07-30.md.', text: 'Yes' },
   { id: 'game.feedback.whole_no', source: 'sam_ruling', provenance: 'SIGNED — Sam, 2026-08-22, the same ruling and the same batch row. The chips answer the question now rather than restating it.', text: 'No' },
-  { id: 'game.feedback.duration_question', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim', text: 'Rough time on ground' },
+  // ⚠ **THE WORD "ESTIMATE" IS THE POINT OF THIS QUESTION** — Sam, 2026-08-22:
+  // *"Make it time on ground (estimate)"*. "Rough" was doing that job in an
+  // adjective nobody reads; saying it in brackets is what stops an athlete
+  // leaving the box empty because they do not know the exact number.
+  { id: 'game.feedback.duration_question', source: 'sam_ruling', provenance: 'SIGNED — Sam, 2026-08-22, verbatim. Supersedes the 2026-08-11 wording (batch 18-b-i-C).', text: 'Time on ground (estimate)' },
   { id: 'game.feedback.hours', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input', text: 'Hours' },
   { id: 'game.feedback.minutes', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input', text: 'Minutes' },
   { id: 'game.feedback.duration_refusal', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input validation', text: 'Enter a time, with minutes between 0 and 59.' },

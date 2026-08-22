@@ -24,9 +24,14 @@ registerSignedCopy([
   {
     id: 'strength.feedback.duration_question',
     source: 'sam_ruling',
-    provenance: 'Sam, 2026-08-13 — chose this wording for the strength-session '
-      + 'duration question (seat item 18, option (a)).',
-    text: 'Rough time in the gym',
+    /* THE GYM ASKS THE SAME QUESTION AS TEAM TRAINING, IN THE SAME WORDS — Sam,
+       2026-08-22 gave two lines for three forms: the game asks for time on
+       ground, and training asks for time spent training. A gym session and a
+       club night are both training, so both ask it the same way; if he wants
+       the gym named separately, this row is the one line that changes. */
+    provenance: 'SIGNED — Sam, 2026-08-22: "Time spent training (estimate)". Supersedes '
+      + 'his 2026-08-13 wording (seat item 18, option (a)); recorded in batch 18-b-i-C.',
+    text: 'Time spent training (estimate)',
   },
 ]);
 

@@ -138,11 +138,11 @@ registerSignedCopy([
   {
     id: 'team_training.feedback.duration_question',
     source: 'sam_ruling',
-    provenance: 'SIGNED — Sam, 2026-08-22, one shape for the same question on all '
-      + 'three feedback forms: the game asks for rough time on ground and the gym for '
-      + 'rough time in the gym, so this one no longer asks a differently-shaped '
-      + 'question. Supersedes the 2026-08-11 wording (batch 18-b-i-A).',
-    text: 'Rough time at training',
+    provenance: 'SIGNED — Sam, 2026-08-22, verbatim: "Time spent training (estimate)". '
+      + 'One shape for the same question on all three forms, and the bracket is what '
+      + 'tells the athlete a guess is an answer. Supersedes both the 2026-08-11 '
+      + 'wording and the same-day one it briefly had (batch 18-b-i-A / -C).',
+    text: 'Time spent training (estimate)',
   },
   {
     id: 'team_training.feedback.effort_question',

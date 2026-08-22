@@ -1533,7 +1533,7 @@ games and practice matches. The new form asks:
 | Where | RULING |
 | --- | --- |
 | Participation | "Did you play the whole game?" |
-| Duration | "Rough time on ground" — hours + minutes |
+| Duration | see 18-b-i-C — re-worded on 2026-08-22 |
 | Effort | see 18-b-i-A — the wording was shortened on 2026-08-22 |
 | Subjective response | see 18-b-i-A — put in the past tense on 2026-08-22 |
 
@@ -1578,9 +1578,11 @@ copies:
   form never had one, and Sam had already had the same line removed from the
   session pop-up's header on the same day.
 - REPLACED: "Save game" → **"Save & Finish"**
-- REPLACED: "How long was team training?" → **"Rough time at training"** — the
-  same question shape as the game's "Rough time on ground" and the gym's "Rough
-  time in the gym".
+- REPLACED: "How long was team training?" → the shape the other two used. **The
+  target of this one is 18-b-i-C's wording, not the one it briefly had**: Sam
+  re-ruled all three duration questions the same afternoon, and a record whose
+  target is a string that never survived the day would send the next reader
+  looking for it in the app.
 - REPLACED: "Did you get to club training?" → **"Did you get to team
   training?"**
 
@@ -1595,6 +1597,22 @@ by name on 2026-08-11 (*"in the session view under team training it says
 club/field session it should just say Club session"*) and a law-registry row
 quotes it. Today's answer was about the pop-ups' header and questions; a settled
 ruling does not get re-decided as a side effect of a consistency pass.
+
+**18-b-i-C. THE DURATION QUESTIONS SAY "(ESTIMATE)" — SAM, 2026-08-22.** *"Make
+it time on ground (estimate) / Time spent training (estimate)"*.
+
+- REPLACED: "Rough time on ground" → **"Time on ground (estimate)"**
+- REPLACED: "Rough time in the gym" → **"Time spent training (estimate)"**
+- REPLACED: "Rough time at training" → **"Time spent training (estimate)"**
+
+"Rough" was carrying the meaning in an adjective nobody reads; the bracket says
+it outright, and what it buys is an answer instead of an empty box from an
+athlete who does not know the exact number.
+
+**TWO LINES FOR THREE FORMS.** He named the game's and training's. A gym session
+and a club night are both training, so both ask it in the same words —
+`strength.feedback.duration_question` is the one row to change if he wants the
+gym named separately.
 
 The session pop-up's own three header lines — "SESSION COMPLETE", "Session
 feedback" and "A quick check-in - this tunes your next session." — were never

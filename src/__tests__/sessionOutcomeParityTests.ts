@@ -990,11 +990,16 @@ async function runGameFeedbackInvariants(): Promise<void> {
   // than the cell weakened. The retired pair is asserted ABSENT below, which is
   // the half that stops a stale copy of the form surviving beside the new one.
   ok('the match form asks all four ruled questions',
-    ['Did you play the whole game?', 'Rough time on ground',
+    ['Did you play the whole game?', 'Time on ground (estimate)',
       'How hard was the game?', 'How did you feel?']
       .every((question) => gameCopySource.includes(question))
       && !gameCopySource.includes('How hard was the game on your body?')
       && !gameCopySource.includes('How do you feel?')
+      // Sam, 2026-08-22, batch 18-b-i-C: *"Make it time on ground (estimate)"*.
+      // The bracket is the ruling — "Rough" was the same meaning in a word
+      // nobody reads — so the retired adjective is asserted gone, not just the
+      // new sentence present.
+      && !gameCopySource.includes('Rough time on ground')
       && /GAME_FEEDBACK_COPY\.wholeQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.durationQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeQuestion/.test(panelSource)
