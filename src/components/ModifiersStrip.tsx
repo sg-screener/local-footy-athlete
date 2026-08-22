@@ -108,8 +108,13 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
         </>
       ) : (
         <>
+          {/* 21pt, not 16 — Sam, 2026-08-22: *"MAYBE INCREASE SIZE OF BOTH ICONS
+              BY 30% OR SO - THEY LOOK A BIT SMALL"*, of this glyph and the
+              missed-session box's question mark beside it. The CHEVRON below
+              stays at 16: it is a direction, not a subject, and growing it
+              would make the doorway shout louder than the notice. */}
           <View style={styles.icon}>
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+            <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
               stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Circle cx="12" cy="12" r="9" />
               <Path d="M12 16v-5" />
@@ -181,7 +186,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  icon: { width: 16, alignItems: 'center' },
+  icon: { width: 21, alignItems: 'center' },
   text: { flex: 1, gap: 1 },
   count: { color: '#E8EAED', fontSize: 14, fontWeight: '700' },
   subline: { color: '#8A8A8A', fontSize: 12, lineHeight: 16 },

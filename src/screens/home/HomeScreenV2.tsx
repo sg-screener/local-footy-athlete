@@ -3367,7 +3367,7 @@ function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip }: MissedSessi
           `ModifiersStrip` owns a count and a doorway, not a question — sharing
           the component would mean giving it a second job to do. */}
       <View style={styles.missedIcon}>
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+        <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
           stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <Circle cx="12" cy="12" r="9" />
           <Path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.5.2-.8.7-.8 1.2v.4" />
@@ -4217,9 +4217,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1F1F1F',
   },
-  /* The strip's own 16pt gutter, so the two glyphs sit on one vertical line —
-     and nothing here pushes the glyph up or down: the row centres it. */
-  missedIcon: { width: 16, alignItems: 'center' },
+  /* The strip's own gutter, so the two glyphs sit on one vertical line — 21pt
+     since Sam, 2026-08-22 (*"INCREASE SIZE OF BOTH ICONS BY 30% OR SO"*), and
+     it has to move in step with `ModifiersStrip`'s `icon` or the two boxes stop
+     lining up. Nothing here pushes the glyph up or down: the row centres it. */
+  missedIcon: { width: 21, alignItems: 'center' },
   /* The strip's `count` line, to the value: 14/700 on #E8EAED. It was 16pt
      white, which made a question louder than the day's own title. */
   missedTitle: { color: '#E8EAED', fontSize: 14, fontWeight: '700', lineHeight: 19 },
