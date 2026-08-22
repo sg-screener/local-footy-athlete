@@ -4202,6 +4202,13 @@ const styles = StyleSheet.create({
   missedCard: {
     marginTop: spacing.sm,
     flexDirection: 'row',
+    /* CENTRED, like the modifier box's `i` — Sam, 2026-08-22: *"THE LITTLE
+       QUESTION MARK ICON SHOULD BE ON THE SIDE AND CENTRED NOT AT THE TOP"*.
+       `alignItems: 'center'` is `strip`'s own line, and it was the one value
+       not copied across: the glyph was pinned to the first text line instead,
+       which put it level with the question while the modifier's sits level with
+       its whole box. */
+    alignItems: 'center',
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -4210,10 +4217,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1F1F1F',
   },
-  /* The strip's own 16pt gutter, so the two glyphs sit on one vertical line.
-     `paddingTop` and not `alignItems: center`: this box is two lines tall and
-     the glyph belongs beside the FIRST of them. */
-  missedIcon: { width: 16, alignItems: 'center', paddingTop: 1 },
+  /* The strip's own 16pt gutter, so the two glyphs sit on one vertical line —
+     and nothing here pushes the glyph up or down: the row centres it. */
+  missedIcon: { width: 16, alignItems: 'center' },
   /* The strip's `count` line, to the value: 14/700 on #E8EAED. It was 16pt
      white, which made a question louder than the day's own title. */
   missedTitle: { color: '#E8EAED', fontSize: 14, fontWeight: '700', lineHeight: 19 },
