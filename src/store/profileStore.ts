@@ -11,6 +11,7 @@ import {
   emitAthleteActionEvent,
 } from '../utils/athleteActionDiagnostics';
 import { logger } from '../utils/logger';
+import { todayISOLocal } from '../utils/appDate';
 import { canScoreCapacity } from '../data/capacityRubric';
 import {
   assessOnboardingCompleteness,
@@ -39,6 +40,32 @@ export interface OnboardingCompletionOutcome {
 interface ProfileState {
   onboardingData: OnboardingData;
   isOnboardingComplete: boolean;
+  /**
+   * ── THE DAY THE ATHLETE SIGNED UP — SAM, 2026-08-22: *"yes it should save
+   * sign up day"* ──
+   *
+   * **WRITER:** `completeOnboarding`, once, on the accepted path only.
+   * **READER:** the missed-session history boundary (`useHomeScreen`) — days
+   * before this are days the athlete could not have trained, so they are never
+   * chased. **TEST:** `test:missed-signup`.
+   *
+   * ⚠ **IT IS A FACT, NOT A DERIVATION, WHICH IS WHY IT HAS TO BE STORED.**
+   * The boundary was read from `currentProgram.createdAt` — and the program is
+   * rebuilt on every launch, so that date was always today and the follow-up
+   * could never fire. Nothing else in the app remembers when this athlete
+   * arrived: the block start is the MONDAY of their first week, so a Wednesday
+   * signup would be asked about the Monday before it.
+   *
+   * A LOCAL CALENDAR DATE, not an instant. A Thursday-morning signup in
+   * Melbourne is still Wednesday in UTC, and slicing the raw ISO instant would
+   * exempt one day too few — the same trap
+   * `programHistoryBoundaryFromCreatedAt` documents.
+   *
+   * MONOTONIC ONCE SET. Completing onboarding a second time (the capacity
+   * repair path reaches it) must not re-date an athlete who has been training
+   * for a month. A RESET clears it, because that athlete is starting again.
+   */
+  signupDateISO: string | null;
   isLoading: boolean;
   error: string | null;
   updateOnboardingData: (data: Partial<OnboardingData>) => void;
@@ -268,6 +295,10 @@ export function mergePersistedProfileState(
     // carries `false` rather than nothing, so a nullish check would not see it.
     isOnboardingComplete:
       !!currentState.isOnboardingComplete || !!persisted?.isOnboardingComplete,
+    // THE EARLIEST ONE WINS, for the same reason completion is monotonic: disk
+    // holds the day this athlete actually arrived, and a live store that has
+    // just stamped today must not overwrite it.
+    signupDateISO: persisted?.signupDateISO ?? currentState.signupDateISO ?? null,
   };
 }
 
@@ -276,6 +307,7 @@ export const useProfileStore = create<ProfileState>()(
     (set, get) => ({
       onboardingData: initialOnboardingData,
       isOnboardingComplete: false,
+      signupDateISO: null,
       isLoading: false,
       error: null,
 
@@ -352,7 +384,14 @@ export const useProfileStore = create<ProfileState>()(
             message: "I still need your conditioning and recent training before I can build your program.",
           };
         }
-        set({ isOnboardingComplete: true });
+        // ⚠ `??`, NOT AN ASSIGNMENT: this path is reachable twice (the capacity
+        // repair card completes onboarding again), and a second stamp would
+        // re-date an athlete who has been training for a month — moving the
+        // missed-session boundary forward over days they really did train.
+        set({
+          isOnboardingComplete: true,
+          signupDateISO: get().signupDateISO ?? todayISOLocal(),
+        });
         record('accepted', []);
         return { ok: true, missingAnswers: [], message: '' };
       },
@@ -556,6 +595,12 @@ export function applyProfileOnboardingWrite(args: {
   const isOnboardingComplete = args.writer === 'reset'
     ? false
     : args.isOnboardingComplete;
+  /* AND A RESET CLEARS THE SIGNUP DAY, for the same reason and on the same
+     line: an athlete starting again signs up again, and a date left behind
+     would tell the missed-session prompt to chase days from a program that no
+     longer exists. Every other writer leaves it exactly as it is — it is
+     stamped once, by `completeOnboarding`. */
+  const clearsSignupDate = args.writer === 'reset';
   const silence = args.silenceMirrorFence ?? args.writer !== 'onboarding_step';
   if (silence) acceptedProfileMirrorPublicationInProgress = true;
   const priorPersistenceWriter = activeProfilePersistenceWriter;
@@ -566,6 +611,7 @@ export function applyProfileOnboardingWrite(args: {
       ...(isOnboardingComplete === undefined
         ? {}
         : { isOnboardingComplete }),
+      ...(clearsSignupDate ? { signupDateISO: null } : {}),
     });
   } finally {
     activeProfilePersistenceWriter = priorPersistenceWriter;

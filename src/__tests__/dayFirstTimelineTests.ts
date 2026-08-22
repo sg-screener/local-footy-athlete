@@ -628,7 +628,7 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
   // the first thing to answer, not the last — so the assertion is inverted at
   // that one link and the rest of the sequence is untouched.
   const toggle = at('testID="program-view-toggle"');
-  const followUp = at('<MissedSessionNotices');
+  const followUp = at('<MissedSessionNotice');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
   const chips = at('rowTestID="home-life-fact-chips"');

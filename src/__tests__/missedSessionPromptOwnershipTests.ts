@@ -37,7 +37,7 @@ const model = read('utils', 'missedSessions.ts');
 
 console.log('\n[1] Exactly two answers, and they are the signed words');
 {
-  const start = home.indexOf('function MissedSessionNotices');
+  const start = home.indexOf('function MissedSessionNotice(');
   const end = home.indexOf('function missedQuestion', start);
   ok('notice region found', start >= 0 && end > start);
   const prompt = start >= 0 && end > start ? home.slice(start, end) : '';
@@ -55,14 +55,32 @@ console.log('\n[1] Exactly two answers, and they are the signed words');
   ok('the weekday is a signed parameter', /signedCopy\(`day\.name\.\$\{weekdayNameForISO/.test(home));
 }
 
+console.log('\n[2] It is at the TOP of the screen, above both shapes — and ONE at a time');
+{
+  // Sam, 2026-08-22: *"they should come up one at a time - not all at once.
+  // start with most recent first"*. The hook derives the whole list — answering
+  // one writes an outcome and the next takes its place — and the screen shows
+  // its head, which the hook has already ordered newest-first.
+  ok('the screen renders the head of the list', /notice=\{missedSessionNotices\[0\]\}/.test(home));
+  ok('and does not stack them', !/notices=\{missedSessionNotices\}/.test(home));
+  // TWO FACTS, NOT ONE WINDOWED REGEX: the memo between them carries the
+  // three-fact boundary chain and is long enough that any character window is a
+  // guess about prose length rather than a claim about behaviour.
+  const noticesMemo = hook.slice(
+    hook.indexOf('const missedSessionNotices = useMemo('),
+    hook.indexOf('// ── THE BLOCK-BOUNDARY NOTICE ──'),
+  );
+  ok('the list is ordered newest-first by the owner',
+    noticesMemo.includes('detectMissedSessions(') && noticesMemo.includes('.reverse()'));
+}
 console.log('\n[2] It is at the TOP of the screen, above both shapes');
 {
-  const noticeAt = home.indexOf('<MissedSessionNotices');
+  const noticeAt = home.indexOf('<MissedSessionNotice');
   const weekAt = home.indexOf('{dayFirst ? (');
   const dayCardAt = home.indexOf('{dayFirstDay ? renderDayRow');
   ok('mounted before the day/week branch', noticeAt > 0 && weekAt > noticeAt);
   ok('and therefore before the day card', dayCardAt > noticeAt);
-  ok('exactly one mount for both shapes', (home.match(/<MissedSessionNotices/g) ?? []).length === 1);
+  ok('exactly one mount for both shapes', (home.match(/<MissedSessionNotice\b/g) ?? []).length === 1);
 }
 
 console.log('\n[3] Yes routes to the door that owns each kind');

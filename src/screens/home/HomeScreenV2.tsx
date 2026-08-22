@@ -915,9 +915,17 @@ export default function HomeScreenV2() {
             differ. Sitting above the branch puts it directly under the date
             navigator on both — "above active modifiers", which is one of the
             two positions he named. */}
+        {/* ⚠ **ONE AT A TIME, MOST RECENT FIRST — Sam, 2026-08-22:** *"they should
+            come up one at a time - not all at once. start with most recent
+            first"*. Three questions stacked at the top of the screen is a wall
+            to clear before the day itself; one is a question.
+            THE LIST IS STILL DERIVED IN FULL and that is not waste: answering
+            this one writes an outcome, the list recomputes without it, and the
+            next-most-recent takes its place. `missedSessionNotices` is already
+            ordered newest-first by the hook, so the head IS the most recent. */}
         {isNormal && missedSessionNotices.length > 0 && (
-          <MissedSessionNotices
-            notices={missedSessionNotices}
+          <MissedSessionNotice
+            notice={missedSessionNotices[0]}
             visibleWeek={visibleWeek}
             onLog={(missed) => {
               switch (missed.kind) {
@@ -3298,9 +3306,9 @@ function SheetOption({
 }
 
 // ── Missed-session follow-up card ──
-interface MissedSessionNoticesProps {
-  /** Every unlogged past commitment in the visible week, most recent first. */
-  notices: readonly MissedSession[];
+interface MissedSessionNoticeProps {
+  /** The most recent unlogged commitment. One question on screen at a time. */
+  notice: MissedSession;
   /** The projection of the week on screen, for the day's own programmed name. */
   visibleWeek: VisibleWeek;
   onLog: (missed: MissedSession) => void;
@@ -3330,6 +3338,13 @@ interface MissedSessionNoticesProps {
  *   a club night: they are logged through two doors and skipped independently,
  *   so one yes/no cannot answer both. One row per THING now.
  *
+ * ## ONE QUESTION ON SCREEN, AND THE NEXT ONE FOLLOWS IT
+ *
+ * Sam, 2026-08-22: *"they should come up one at a time - not all at once. start
+ * with most recent first"*. The screen hands this the head of a list that is
+ * ordered newest-first; answering it writes an outcome, the list recomputes
+ * without that item, and the next question takes its place in the same card.
+ *
  * ## THE WORDS ARE THE SHEET'S, INCLUDING THE WEEKDAY
  *
  * `SignedCopyParam` refuses a bare string, which is what makes this safe: the
@@ -3337,36 +3352,47 @@ interface MissedSessionNoticesProps {
  * this) and the session word is the day's own bucket, which is signed copy
  * already. This component composes no character of what the athlete reads.
  */
-function MissedSessionNotices({ notices, visibleWeek, onLog, onSkip }: MissedSessionNoticesProps) {
+function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip }: MissedSessionNoticeProps) {
   return (
-    <Card
-      tone="outline"
-      padding="md"
-      radius="lg"
-      style={styles.missedCard}
-      testID="home-missed-session-prompt"
-    >
-      {notices.map((missed) => (
-        <View key={`${missed.date}:${missed.kind}`} style={styles.missedRow}>
-          <Text style={styles.missedTitle} testID={`missed-session-question-${missed.date}-${missed.kind}`}>
-            {missedQuestion(missed, visibleWeek)}
-          </Text>
-          <View style={styles.missedActions}>
-            <MissedChip
-              testID={`missed-session-did-it-${missed.date}-${missed.kind}`}
-              label={signedCopy('missed.prompt.yes')}
-              primary
-              onPress={() => onLog(missed)}
-            />
-            <MissedChip
-              testID={`missed-session-skipped-it-${missed.date}-${missed.kind}`}
-              label={signedCopy('missed.prompt.no')}
-              onPress={() => onSkip(missed)}
-            />
-          </View>
+    <View style={styles.missedCard} testID="home-missed-session-prompt">
+      {/* ── THE ACTIVE-MODIFIER BOX'S OWN SHAPE — Sam, 2026-08-22: *"MAKE THE POP
+          UP MORE LIKE THE STYLE OF THE ACTIVE MODIFIER BOX"* ──
+          Same quiet surface, same border, same 16pt glyph in the same 16pt
+          gutter, same 14/700 line. It read as a loud outlined card with a 16pt
+          white headline and two big pills — a second kind of notice, two boxes
+          apart from the one directly above it.
+          THE GLYPH IS A QUESTION MARK, not the modifier's info `i`: this box
+          ASKS something, and the two circles would otherwise be one shape
+          saying two things. It is drawn here rather than imported because
+          `ModifiersStrip` owns a count and a doorway, not a question — sharing
+          the component would mean giving it a second job to do. */}
+      <View style={styles.missedIcon}>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+          stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Circle cx="12" cy="12" r="9" />
+          <Path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.5.2-.8.7-.8 1.2v.4" />
+          <Path d="M12 17h.01" />
+        </Svg>
+      </View>
+      <View style={styles.missedRow}>
+        <Text style={styles.missedTitle} testID={`missed-session-question-${notice.date}-${notice.kind}`}>
+          {missedQuestion(notice, visibleWeek)}
+        </Text>
+        <View style={styles.missedActions}>
+          <MissedChip
+            testID={`missed-session-did-it-${notice.date}-${notice.kind}`}
+            label={signedCopy('missed.prompt.yes')}
+            primary
+            onPress={() => onLog(notice)}
+          />
+          <MissedChip
+            testID={`missed-session-skipped-it-${notice.date}-${notice.kind}`}
+            label={signedCopy('missed.prompt.no')}
+            onPress={() => onSkip(notice)}
+          />
         </View>
-      ))}
-    </Card>
+      </View>
+    </View>
   );
 }
 
@@ -4163,26 +4189,46 @@ const styles = StyleSheet.create({
   awayCalendarDay: { color: '#FFFFFF', fontSize: 15 },
   awayCalendarDayDisabled: { color: 'rgba(255,255,255,0.22)' },
 
-  /* One row per missed thing; the gap is the card's own rhythm, not a divider.
-     A day with two doors shows two rows and reads as one notice. */
-  missedRow: { gap: 10 },
-  /* `gap` is what separates one question from the next — seen on the simulator,
-     where three rows ran together and the second question read as a caption for
-     the first one's buttons. `spacing.sm` above it is the day screen's one gap
-     (Sam, 2026-08-22), so the notice sits in the same rhythm as every box. */
-  missedCard: { marginTop: spacing.sm, gap: 16 },
-  missedTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  /* The strip's `text` column: it takes the rest of the row. */
+  missedRow: { flex: 1, gap: 10 },
+  /* ⚠ **THESE ARE `ModifiersStrip`'S OWN VALUES, TO THE NUMBER** — Sam,
+     2026-08-22: *"MAKE THE POP UP MORE LIKE THE STYLE OF THE ACTIVE MODIFIER
+     BOX"*. Surface, border, radius and padding are that box's `strip`; the row
+     below is its `text` and `count`. They are written here rather than imported
+     because the two boxes are different components, and a shared style object
+     for "a notice at the top of Program" is the abstraction to make WHEN there
+     is a third — not before. If either moves, this comment is the pointer.
+     `spacing.sm` above it is the day screen's one gap. */
+  missedCard: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: '#101010',
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  /* The strip's own 16pt gutter, so the two glyphs sit on one vertical line.
+     `paddingTop` and not `alignItems: center`: this box is two lines tall and
+     the glyph belongs beside the FIRST of them. */
+  missedIcon: { width: 16, alignItems: 'center', paddingTop: 1 },
+  /* The strip's `count` line, to the value: 14/700 on #E8EAED. It was 16pt
+     white, which made a question louder than the day's own title. */
+  missedTitle: { color: '#E8EAED', fontSize: 14, fontWeight: '700', lineHeight: 19 },
   missedBody: {
     color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 19,
     marginBottom: spacing.sm,
   },
   missedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  /* Smaller than they were, to sit inside a quiet box rather than fill a card. */
   missedChip: {
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999,
+    borderWidth: 1, borderColor: '#2A2A2A',
   },
   missedChipPrimary: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
-  missedChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  missedChipText: { color: '#C9CCC9', fontSize: 12, fontWeight: '700' },
   missedChipPrimaryText: { color: '#0B0B0B' },
 
   // Active Coach Notes — compact control-panel cards derived from typed

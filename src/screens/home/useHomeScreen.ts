@@ -278,6 +278,9 @@ export function useHomeScreen() {
      starts. Read here for the missed-session history boundary — a date that has
      to survive a launch, which `currentProgram.createdAt` does not. */
   const acceptedBlocks = useProgramStore((s) => s.acceptedBlocks);
+  /* The day this athlete signed up — stamped once by `completeOnboarding` and
+     the most precise history boundary there is. READER: the memo below. */
+  const signupDateISO = useProfileStore((s) => s.signupDateISO);
 
   // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
   // that used to sit here claimed the clock was "the single source of truth
@@ -694,11 +697,24 @@ export function useHomeScreen() {
            `programHistoryBoundaryFromAcceptedBlocks`. The old derivation is the
            fallback for an athlete who has accepted nothing yet — there, a fresh
            program IS the whole history. */
+        /* THREE FACTS, MOST PRECISE FIRST, AND EACH ONE IS STORED.
+           1. THE SIGNUP DAY (Sam, 2026-08-22: *"yes it should save sign up
+              day"*) — the exact day the athlete arrived, so a Wednesday signup
+              is never asked about the Monday before it.
+           2. The earliest ACCEPTED BLOCK, for the athletes who signed up before
+              the app started remembering — its Monday is the closest stored
+              date to their arrival.
+           3. The program's `createdAt`, for an athlete who has accepted nothing
+              yet: a fresh program IS their whole history. It cannot be first —
+              the program is rebuilt on every launch, so that date is always
+              today, which is what made this rule exclude every past day there
+              is and left the follow-up unable to fire at all. */
         programHistoryBeforeISO:
-          programHistoryBoundaryFromAcceptedBlocks(Object.keys(acceptedBlocks ?? {}))
+          signupDateISO
+          ?? programHistoryBoundaryFromAcceptedBlocks(Object.keys(acceptedBlocks ?? {}))
           ?? programHistoryBoundaryFromCreatedAt(currentProgram?.createdAt),
       }).reverse(),
-    [weekDays, sessionFeedback, acceptedBlocks, currentProgram?.createdAt],
+    [weekDays, sessionFeedback, signupDateISO, acceptedBlocks, currentProgram?.createdAt],
   );
 
 

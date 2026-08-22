@@ -101,6 +101,61 @@ const TODAY_FRIDAY = '2026-07-24';
     programHistoryBoundaryFromCreatedAt(thursdayMorningAEST));
 }
 
+// ── E6.6 — THE SIGNUP DAY IS STORED, AND IT IS WHAT THE BOUNDARY READS ──
+//
+// Sam, 2026-08-22: *"yes it should save sign up day"*.
+//
+// ⚠ **THE RULE ABOVE WAS UNREACHABLE UNTIL THIS EXISTED.** Its input was
+// `currentProgram.createdAt`, and this app rebuilds the program on every launch
+// — so the boundary was always TODAY, every past day was "history", and the
+// follow-up could not fire for anyone. Measured on Sam's device: two unlogged
+// past days in the visible week, nothing drawn, and no `currentProgram` in the
+// persisted store at all.
+//
+// WRITER, READER, TEST — the three this field owed on arrival.
+{
+  const { useProfileStore } = require('../store/profileStore');
+  const store = useProfileStore.getState();
+  ok('E6.6 a fresh athlete has no signup day yet', store.signupDateISO === null,
+    String(store.signupDateISO));
+
+  // WRITER: completing onboarding stamps it, once. The guard refuses an empty
+  // profile, so this cell asserts the SHAPE of the write rather than driving 40
+  // answers through a store that has its own suite for that.
+  const source = require('fs').readFileSync(
+    require('path').resolve(__dirname, '..', 'store', 'profileStore.ts'), 'utf8');
+  ok('E6.6 the writer is completeOnboarding, and only on the accepted path',
+    /set\(\{\s*isOnboardingComplete: true,\s*signupDateISO: get\(\)\.signupDateISO \?\? todayISOLocal\(\),/.test(source));
+  ok('E6.6 a second completion cannot re-date an athlete',
+    /signupDateISO: get\(\)\.signupDateISO \?\?/.test(source));
+  ok('E6.6 a reset clears it', /clearsSignupDate \? \{ signupDateISO: null \}/.test(source));
+  ok('E6.6 the earliest of disk and memory wins on hydration',
+    /signupDateISO: persisted\?\.signupDateISO \?\? currentState\.signupDateISO/.test(source));
+
+  // READER: the boundary prefers it over both fallbacks.
+  const hook = require('fs').readFileSync(
+    require('path').resolve(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
+  ok('E6.6 the boundary reads the signup day FIRST',
+    /programHistoryBeforeISO:\s*\n\s*signupDateISO\s*\n\s*\?\? programHistoryBoundaryFromAcceptedBlocks/.test(hook));
+  ok('E6.6 and the regenerated program is its LAST resort, never its first',
+    /\?\? programHistoryBoundaryFromCreatedAt\(currentProgram\?\.createdAt\),/.test(hook)
+      && !/programHistoryBeforeISO: programHistoryBoundaryFromCreatedAt/.test(hook));
+}
+
+// E6.7 — and the DETECTOR still honours whatever boundary it is handed, which
+// is the half of this that is behaviour rather than wiring.
+{
+  const missed = detectMissedSessions({
+    weekDays: WEEK,
+    todayISO: TODAY_FRIDAY,
+    sessionFeedback: {},
+    programHistoryBeforeISO: SIGNUP_THURSDAY,
+  });
+  ok('E6.7 a Wednesday signup is never asked about the Monday before it',
+    missed.every((entry) => entry.date >= SIGNUP_THURSDAY),
+    JSON.stringify(missed.map((entry) => entry.date)));
+}
+
 console.log(`\nMissed-session signup boundary: ${pass} passing, ${fail} failing`);
 totalsPrinted(fail);
 if (fail > 0) {
