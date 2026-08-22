@@ -1087,8 +1087,15 @@ export function useHomeScreen() {
     }
   };
 
-  /** Team-training-only days still open the detail screen; the shared
-   * session CTA owns logging from there. */
+  /**
+   * ⚠ **THE LIVE PROGRAM SCREEN NO LONGER CALLS THIS** — Sam, 2026-08-22:
+   * *"the log session button left over - should just be a pop up like the game
+   * day one = not take you inside session view"*. A team-only day's button
+   * opens the club training form in place now, the same way logging a game
+   * does. Kept for `HomeScreenClassic`, which `DESIGN_VERSION = 'v2'` does not
+   * mount — and, like `handleLogGame` above it, nothing here was the defect:
+   * the screen it navigated to was.
+   */
   const handleFinishTeamSession = (day: typeof weekDays[0]) => {
     if (day.workout) {
       navigation.navigate('DayWorkout', {

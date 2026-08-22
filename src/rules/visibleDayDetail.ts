@@ -125,9 +125,20 @@ export function visibleDayLeadHeadline(
   options?: { readonly programmedOnly?: boolean },
 ): SignedCopy {
   const buckets = dayBuckets(day, options);
-  if (buckets.length === 0) return day.headline;
-  if (buckets.length === 1) return buckets[0];
-  return joinSignedCopy(buckets, DAY_NAME_JOINER);
+  /* ── A DAY WITH NOTHING PROGRAMMED IS STILL THE DAY IT IS — Sam, 2026-08-22 ──
+     *"If it is only a team training day - the Title should be 'Team Training'
+     not 'Training Day'"*.
+     `programmedOnly` filters club training out of the day card's title, which
+     is right on a Strength + Team Training day: the box beside it holds the
+     programmed session. On a TEAM-ONLY day it filtered out the only part there
+     was, and the empty list fell through to `day.headline` — the generic word
+     for "a day that holds work", which is how a club night came to be called
+     "Training Day". The fall-back is the day's OWN buckets: the filter decides
+     what to LEAD with, never whether the day gets to be named. */
+  const named = buckets.length > 0 ? buckets : dayBuckets(day);
+  if (named.length === 0) return day.headline;
+  if (named.length === 1) return named[0];
+  return joinSignedCopy(named, DAY_NAME_JOINER);
 }
 
 /** Sam's own separator, quoted from the ruling. See `projectionCopy.ts`. */

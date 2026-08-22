@@ -1309,6 +1309,37 @@ run('logging a game is a POP-UP on the day screen, not a session view', () => {
     + 'so a fixture with no workout gets the training questions');
 });
 
+run('a team-only day is CALLED team training, and logs it in one place', () => {
+  const home = homeScreenSource();
+  // Sam, 2026-08-22, looking at a day whose strength session he had removed:
+  // *"If it is only a team training day - the Title should be 'Team Training'
+  // not 'Training Day' ... and the bottom section should be removed from view -
+  // but the log session button left over - should just be a pop up like the
+  // game day one = not take you inside session view"*.
+
+  // ONE DOOR. The separate club box is what the card's own button replaced, so
+  // a team-only day must not draw both — two buttons for one act, on a card
+  // already titled Team Training.
+  assert(/clubEntry && !isTeamTrainingOnlyWorkout\(day\.workout\)/.test(home),
+    'the club box is back on a team-only day, beside a card that already says '
+    + 'the same words and offers the same act');
+  assert(/onFinishTeam=\{[\s\S]{0,600}setClubTrainingDate\(day\.date\)\}/.test(home),
+    'the team-only day\'s button no longer opens the club form in place. It '
+    + 'used to open the SESSION view — a list, a change box and a summary, all '
+    + 'about programmed work, for a day that has none.');
+  assert(!/handleFinishTeamSession/.test(home),
+    'the day screen still holds the navigating handler');
+
+  // AND THE DAY GETS ITS NAME BACK. The title owner is a rule, not the screen,
+  // so this half is asserted where it lives.
+  const detail = fs.readFileSync(
+    path.join(__dirname, '..', 'rules', 'visibleDayDetail.ts'), 'utf8');
+  assert(/const named = buckets\.length > 0 \? buckets : dayBuckets\(day\);/.test(detail),
+    'a day whose only part is filtered out by `programmedOnly` falls through to '
+    + 'the generic headline again — which is how a club night came to be called '
+    + '"Training Day" on Sam\'s phone.');
+});
+
 run('the day navigator says TODAY for today and a date for every other day', () => {
   const home = homeScreenSource();
   // Sam, 2026-08-22: *"make it say 'today' in between the arrows at the top for

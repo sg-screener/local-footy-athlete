@@ -150,7 +150,6 @@ export default function HomeScreenV2() {
     handleCancelMove,
     handleAddGameMode,
     handleViewWorkout,
-    handleFinishTeamSession,
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
     handleApplyAwayEquipment,
@@ -554,7 +553,15 @@ export default function HomeScreenV2() {
           return isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx);
         }}
         onViewWorkout={() => handleViewWorkout(day)}
-        onFinishTeam={() => handleFinishTeamSession(day)}
+        /* ── LOG SESSION IS THE CLUB FORM, IN PLACE — Sam, 2026-08-22 ──
+           *"the log session button left over - should just be a pop up like the
+           game day one = not take you inside session view"*.
+           This is the team-ONLY day's button, and it used to open the session
+           view: a screen whose list, change box and summary are all about
+           programmed work, for a day that has none. It opens the same club
+           training form the box's own button opened, so removing that box cost
+           the athlete no door. */
+        onFinishTeam={() => setClubTrainingDate(day.date)}
         /* ── LOG GAME IS A POP-UP, NOT A SCREEN — Sam, 2026-08-22 ──
            *"Fix the game feedback form - it now takes you inside a session view
            that doesn't need to be there - it should just be a pop up like it is
@@ -609,8 +616,17 @@ export default function HomeScreenV2() {
       />
       {/* ITS OWN BOX, BELOW THE SESSION'S — day view only. The week list is a
           list of days, not a day's detail, and Sam's change is about the day
-          card's CTA. */}
-      {dayFirst && clubEntry ? (
+          card's CTA.
+
+          ⚠ **NOT ON A TEAM-ONLY DAY — Sam, 2026-08-22.** The box exists to keep
+          club training OUT of the programmed session's card, because that
+          card's summary covers programmed work only. On a day whose only
+          session IS club training there is nothing to separate it from: the
+          card above is already titled "Team Training", so the box repeated it
+          and gave the athlete two buttons for one act. *"the bottom section
+          should be removed from view - but the log session button left over -
+          should just be a pop up"*. */}
+      {dayFirst && clubEntry && !isTeamTrainingOnlyWorkout(day.workout) ? (
         <TeamTrainingCard
           logged={clubEntry.completion}
           onLog={() => setClubTrainingDate(day.date)}
