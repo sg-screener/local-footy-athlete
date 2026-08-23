@@ -51,6 +51,11 @@ function hasRetiredRuntimeImport(body: string): boolean {
   return /from\s+['"][^'"]*(?:coachTurnController|coachCommandRouter|coachIntentDispatcher|coachStore|coachMemoryStore|pendingCoachClarifierStore|coachContextStateStore)['"]/.test(runtime);
 }
 
+function registeredCoachFunctions(config: string): readonly string[] {
+  return [...config.matchAll(/^\[functions\.(coach-[^\]]+)\]$/gm)]
+    .map((match) => match[1]);
+}
+
 const retired = [
   'src/screens/coach/CoachScreen.tsx',
   'src/utils/coachTurnController.ts',
@@ -138,7 +143,12 @@ console.log('\n[3] NOTHING SHIPPED CAN REACH THE RETIRED SYSTEMS');
   }
 
   const config = source('supabase', 'config.toml');
-  ok('Supabase registers no retired Coach function', !/\[functions\.coach-/.test(config));
+  const registeredCoach = registeredCoachFunctions(config);
+  ok('Supabase registers only the fresh isolated Coach Lab function',
+    registeredCoach.length === 1 && registeredCoach[0] === 'coach-lab', registeredCoach);
+  ok('the function-name checker reds on a fabricated retired registration',
+    registeredCoachFunctions('[functions.coach-chat]\nverify_jwt = true')[0] === 'coach-chat'
+      && registeredCoachFunctions('[functions.coach-lab]\nverify_jwt = true')[0] === 'coach-lab');
 
   const product = filesUnder(SRC)
     .filter((file) => /\.(?:ts|tsx)$/.test(file))

@@ -126,13 +126,57 @@ not a generic benchmark, and it cannot change the athlete's program.
 - Compile remains red on the shared baseline. The Lab's one new dev/test error
   was found and cleared; direct dev/test compilers now name no Coach Lab file.
 
+## Fresh OpenAI Coach Lab connection
+
+Two connection shapes were compared:
+
+1. Revive or modify one of the old deployed Coach functions because it already
+   knows how to reach an AI provider.
+2. Reuse only the existing Supabase-held `OPENAI_API_KEY`, while building a new
+   isolated endpoint, prompt, Snapshot payload, strict output contract and Lab
+   evaluator from a blank source file.
+
+Selected option 2. The credential and provider account were never the legacy
+problem; the old brain and orchestration were. No deleted Coach handler, prompt,
+store or mutation path returned.
+
+- Supabase still held the existing `OPENAI_API_KEY`. A new authenticated
+  `coach-lab` Edge Function is deployed separately and is the only registered
+  Coach function in local configuration. It fixes the benchmark model, bounds
+  request size, disables OpenAI response storage and returns no provider error
+  details to the caller.
+- The full Lab brain pack reads the current LFA Programming Bible, active
+  Rulings Registry and four canonical exercise/conditioning sources. Athlete
+  data is restricted to the one live Coach Snapshot; account, email, user and
+  athlete identifiers are absent.
+- The structured response schema cannot contain a program action. It records
+  answer mode, basis, exact Snapshot fields used, cited LFA sources, labelled
+  judgement and provider diagnostics before the existing Lab evaluator sees it.
+- The first end-to-end request used synthetic rules and the synthetic fixture
+  only. The existing key successfully reached OpenAI and returned a 2,036-token
+  structured answer with `athlete_snapshot` plus labelled coaching judgement,
+  zero actions and verdict `needs_owner_review`.
+- The first provider request found one real incompatibility: OpenAI's strict
+  schema subset rejects `uniqueItems`. It was removed. A new guard then proved
+  live by reintroducing the keyword and turning the OpenAI Lab suite red 35/1;
+  restoring the supported schema returns it to 36/36.
+- Final focused gates: Coach Snapshot 43/43, populated Snapshot 15/15, OpenAI
+  Coach Lab 36/36 and Coach clean-room 59/59. The clean-room guard now permits
+  exactly `coach-lab` and mutation-proves that a retired `coach-chat`
+  registration remains forbidden.
+- The repo-law guard still reports its ten pre-existing shared-checkout failures;
+  none names a file in this connection slice.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
   on the simulator. The earlier honest empty state remains covered by its prior
   receipt.
 - Sam accepted the populated Coach dashboard in this task on 2026-08-24.
-- The Coach Lab runner and baseline are covered. A visual review/editor,
-  Bible-grounded candidate and provider comparison are not built yet.
+- The Coach Lab runner, Bible-grounded OpenAI candidate, isolated endpoint and
+  synthetic end-to-end provider connection are covered. A visual review/editor
+  and provider comparison are not built yet.
+- Canonical private LFA sources and a real Snapshot-derived athlete payload were
+  not sent to OpenAI; that data-sharing boundary awaits Sam's explicit approval.
 - No answer is approved yet; Sam has not supplied the ideal answer set.
 - No program-change path is added or altered by the dashboard.

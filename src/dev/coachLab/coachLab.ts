@@ -71,6 +71,14 @@ export interface CoachLabCandidate {
   }): CoachLabResponseV1;
 }
 
+export interface AsyncCoachLabCandidate {
+  readonly id: string;
+  answer(input: {
+    readonly labCase: CoachLabCase;
+    readonly snapshot: CoachSnapshot;
+  }): Promise<CoachLabResponseV1>;
+}
+
 export interface CoachLabAutomaticChecks {
   readonly schemaValid: boolean;
   readonly useful: boolean;
@@ -182,6 +190,36 @@ export function runCoachLab(args: {
       ...evaluation,
     };
   });
+
+  return {
+    candidateId: args.candidate.id,
+    results,
+    summary: {
+      cases: results.length,
+      automaticFail: results.filter((entry) => entry.verdict === 'automatic_fail').length,
+      needsOwnerReview: results.filter((entry) => entry.verdict === 'needs_owner_review').length,
+      approved: results.filter((entry) => entry.verdict === 'approved').length,
+    },
+  };
+}
+
+export async function runCoachLabAsync(args: {
+  readonly cases: readonly CoachLabCase[];
+  readonly snapshot: CoachSnapshot;
+  readonly candidate: AsyncCoachLabCandidate;
+}): Promise<CoachLabReport> {
+  const results: CoachLabResult[] = [];
+  for (const labCase of args.cases) {
+    const startedAt = Date.now();
+    const response = await args.candidate.answer({ labCase, snapshot: args.snapshot });
+    results.push({
+      caseId: labCase.id,
+      athleteMessage: labCase.athleteMessage,
+      response,
+      latencyMs: Date.now() - startedAt,
+      ...evaluateCoachLabResponse(labCase, response),
+    });
+  }
 
   return {
     candidateId: args.candidate.id,
