@@ -238,7 +238,10 @@ export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
 export const GROIN_ADDUCTORS_POOL: PoolExercise[] = [
   ex('copenhagen-plank',  'Copenhagen Plank (Half)',           3, 20, 30, 45, 'Builds inner thigh strength.',                ['bodyweight'],['groin', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
   ex('copenhagen-long',   'Long-Lever Copenhagen',             3, 15, 25, 45, 'Full lever. Hips high, no dropping.',         ['bodyweight'],['groin', 'knee'], 'moderate', { prescriptionType: 'duration', perSide: true }),
-  ex('groin-squeeze',     'Groin Squeeze',                     3, 10, 12, 30, 'Ball or fists between the knees. Squeeze and hold.', [],            ['groin'],         'low', { prescriptionType: 'reps' }),
+  // R-133 (Sam, 2026-08-23): *"i noticed groin squeeze had reps - they should
+  // be timed"*. 3 × 20-30s is the seat's PROPOSED dose for his verbatim unit
+  // ruling — adjust the numbers on his word, never the unit.
+  ex('groin-squeeze',     'Groin Squeeze',                     3, 20, 30, 30, 'Ball or fists between the knees. Squeeze and hold.', [],            ['groin'],         'low', { prescriptionType: 'duration' }),
   ex('cossack-squat',     'Cossack Squat',                     3, 6,  8,  45, 'Sit onto one leg, other leg straight. Hold a rack if needed.', ['bodyweight'], ['groin', 'knee'], 'moderate', { prescriptionType: 'reps', perSide: true }),
   ex('lateral-lunge',     'Lateral Lunge',                     3, 8,  10, 45, 'Big step sideways, sit into that hip.',        ['bodyweight'], ['groin', 'knee'], 'moderate', { prescriptionType: 'reps', perSide: true }),
 ];
@@ -299,7 +302,8 @@ export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
   ex('side-plank-row',    'Side Plank Row',             2, 8,  10, 30, 'Row the band in, resist rolling forward.',    ['bands'],     ['shoulder'],            'low', { prescriptionType: 'reps', perSide: true }),
   ex('woodchop-standing', 'Woodchop (Standing)',        2, 10, 12, 45, 'Cable or band, high to low. Rotate from torso.', ['cables', 'bands'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('woodchop-hk',       'Woodchop (Half Kneeling)',   2, 10, 12, 45, 'Half-kneeling. Controlled rotation. Light weight.', ['cables', 'bands'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
-  ex('suitcase-carry',    'Suitcase Carry',             2, 30, 40, 45, 'Stay tall, don\'t lean.',                     ['dumbbells'], ['lower_back', 'wrist'],'low', { prescriptionType: 'distance', perSide: true }),
+  // R-133 (Sam, 2026-08-23): *"carries all timed"* — metres became seconds.
+  ex('suitcase-carry',    'Suitcase Carry',             2, 30, 40, 45, 'Stay tall, don\'t lean.',                     ['dumbbells'], ['lower_back', 'wrist'],'low', { prescriptionType: 'duration', perSide: true }),
 ];
 
 export const SHOULDER_HEALTH_POOL: PoolExercise[] = [

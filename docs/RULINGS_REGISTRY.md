@@ -4283,3 +4283,39 @@ He floated play glyph or underline and left the treatment open; the pill is
 the app's existing button language rather than a new one, and the play glyph
 is his first suggestion honoured. Running/paused states keep their quiet text
 form — his note was about Start only.
+
+**R-133** · *"carries all timed / butterfly stretch - what does the
+description say for them because they could be either / side plan and the
+breathing are all reps - i noticed groin squeeze had reps - they should be
+timed"* (Sam, 2026-08-23, answering the unit census his "whats the best way
+to go about making sure all of them are correct?" ordered) · **UNITS, RULED
+NAME BY NAME.**
+
+**Carries — ALL timed, in seconds.** The strength carry pool authors no
+doses, so the timed prescriptions live in `TIMED_CARRY_PRESCRIPTIONS` beside
+the pool, consulted through the same authored-unit lookup as the prehab holds
+(R-131). Suitcase Carry's metres (registered under R-131's extension the same
+day) became seconds under this ruling — no carry prescribes distance any
+more, and no composed row does either. **The SECONDS are seat-proposed under
+his unit ruling, open to his adjustment:** Farmer 2×30-40s, Bear 2×30-40s,
+Overhead 2×20-30s per side, Suitcase 2×30-40s per side.
+
+**Groin Squeeze — timed.** His verbatim. Was 3×10-12 reps; now 3×20-30s
+(seconds seat-proposed, unit his).
+
+**Side plank and the breathing drills — reps stand.** His verbatim: rep
+counts of held/breathed repetitions are deliberate, not unit defects. The
+same shape covers the squeeze-cue accessories (Pallof, TKE, Band Pull-Apart,
+Weighted Dead Bug, Ab Wheel and kin): reps with a hold inside the rep.
+
+**Butterfly Stretch — HIS CALL PENDING.** He asked what its description
+says: the authored entry reads 2×6-10 with dose note *"Hold each rep 6–10
+seconds"* — reps of held stretches. Pissing Dog Against Wall (2×6, "Hold
+each rep 5 seconds") and Dumbbell Pullovers (2×10, "Hold each rep for 2-3
+seconds") share the exact shape and await the same call. Until he rules,
+all three stay authored reps.
+
+· `WORKING` — carries: the R-133 pool-walk cells in `test:pools` (every
+carry pool entry must resolve to a duration dose); Groin Squeeze + Bear
+Carry: the Stage-B differential golden (both female worlds moved exactly
+there; the male 15 byte-frozen). Seat `pathway`.

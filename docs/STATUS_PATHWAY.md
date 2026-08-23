@@ -519,3 +519,48 @@ PRE-EXISTING undeclared keys: `profile-store.signupDateISO`,
 `program-store.inputs.bandResistanceOverrides` — other seats'); charter 44/0;
 differential 3/0; binding 9/0. **OWED:** the duration prefill seen inside a
 fully ticked session on glass (logic is one seeded line, panel path traced).
+
+## 2026-08-23 — R-133: the unit rulings land (carries + Groin Squeeze)
+
+**Sam's verbatim (registered R-133):** *"carries all timed / butterfly stretch
+- what does the description say for them because they could be either / side
+plan and the breathing are all reps - i noticed groin squeeze had reps - they
+should be timed / anything else"*.
+
+**BUILT + WORKING:**
+- **Groin Squeeze** `3×10-12 reps → 3×20-30s` (`prescriptionType: 'duration'`
+  on its authored entry). Seconds seat-proposed, unit his.
+- **Carries all timed:** `TIMED_CARRY_PRESCRIPTIONS` authored beside the
+  strength carry pool (the pool authors no doses — same R-131 authored-unit
+  lookup, second authored source): Farmer 2×30-40s, Bear 2×30-40s, Overhead
+  2×20-30s per side. **Suitcase Carry's metres → seconds** (2×30-40s per
+  side): "all timed" outranks yesterday's distance registration, so the
+  `'distance'` arm left `authoredTimedHoldFor` and both composed-path unions
+  with it (its one other writer — the Primer's Acceleration — writes
+  `prescriptionType` directly in `sessionBuilder`, outside this path; the
+  renderer's distance branches stay for it).
+- **WORKING:** R-133 pool-walk cells in `test:pools` — every carry pool entry
+  must resolve to `duration`/`authored_timed_hold`, so a fifth carry reds
+  until its seconds are authored. Pools 481/1 (the 1 = the pre-existing
+  pinned-Box-Squat red, unchanged).
+
+**Golden:** PREDICTED movement measured exact — only `female-offseason`
+(Bear Carry + Groin Squeeze rows) and `female-inseason-game-week` (Groin
+Squeeze row) moved; the male 15 byte-frozen. Differential 3/0 after
+regeneration.
+
+**Instrument findings, NOT this channel (all proven identical on control at
+`8395154d` in the wt-control worktree):**
+- `test:compile` is RED ON MAIN — 76 file/scope breaches + 13 improvements vs
+  baseline, breach sets byte-identical control vs candidate (`breach-ctrl.txt`
+  = `breach-cand.txt` in scratchpad). My 4-file change adds zero errors.
+- `test:composer-severance` DIES (`inputs.selectionHistory` undefined →
+  composeWeek.ts:1460 filter throw) at fe79e73b, b55eb7e9, b9785811,
+  8395154d — pre-dates this seat's whole stretch. Task chip spawned.
+- `test:workout-canonicalisation` DIES identically on control.
+- `test:session-classification` 38/2 — the documented pre-existing pair.
+- render-truth 0, exercise-display 0 on candidate.
+
+**PENDING SAM:** Butterfly Stretch either/or (description says reps of 6-10s
+holds); same call covers Pissing Dog Against Wall + Dumbbell Pullovers; my
+proposed carry/groin seconds open to adjustment.

@@ -667,6 +667,28 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   },
 };
 
+/**
+ * R-133 (Sam, 2026-08-23): *"carries all timed"*. The strength pools author no
+ * doses — the composer's rep ladder was dosing carries in reps, which is the
+ * exact defect R-131 closed for the prehab holds. This table is the authored
+ * timed dose for every carry in the pool above; `resolveComposedDose` consults
+ * it through the same authored-unit lookup the prehab pools feed. (`Suitcase
+ * Carry` is not here — its authored entry lives in the trunk pool and carries
+ * its own unit.) **The seconds are the seat's PROPOSED numbers under Sam's
+ * verbatim unit ruling — adjust them on his word, never the unit.**
+ */
+export const TIMED_CARRY_PRESCRIPTIONS: readonly {
+  readonly name: string;
+  readonly sets: number;
+  readonly secondsMin: number;
+  readonly secondsMax: number;
+  readonly perSide?: boolean;
+}[] = [
+  { name: 'Farmer Carry',   sets: 2, secondsMin: 30, secondsMax: 40 },
+  { name: 'Bear Carry',     sets: 2, secondsMin: 30, secondsMax: 40 },
+  { name: 'Overhead Carry', sets: 2, secondsMin: 20, secondsMax: 30, perSide: true },
+];
+
 // ─── Classification ───
 
 /**

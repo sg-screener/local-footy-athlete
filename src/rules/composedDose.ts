@@ -25,6 +25,7 @@
  */
 import {
   STRENGTH_POOLS,
+  TIMED_CARRY_PRESCRIPTIONS,
   type ComposedDoseCategory,
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
@@ -46,9 +47,11 @@ export interface ComposedDose {
    * Sam, 2026-08-23 (slice 5): an isometric filling a strength seat keeps its
    * authored UNIT — `repsMin/repsMax` are SECONDS (or minutes) when this is
    * set, exactly as the authored pool entry states them. Absent means reps,
-   * which is every other row unchanged.
+   * which is every other row unchanged. ('distance' left this union with
+   * R-133 — *"carries all timed"* — when Suitcase Carry's metres became
+   * seconds; the Primer's Acceleration keeps distance outside this path.)
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes' | 'distance';
+  readonly prescriptionType?: 'duration' | 'duration_minutes';
   readonly perSide?: boolean;
 }
 
@@ -96,12 +99,8 @@ function authoredTimedHoldFor(identity: string): ComposedDose | null {
     const built = new Map<string, ComposedDose>();
     for (const entries of Object.values(POOL_REGISTRY)) {
       for (const entry of entries) {
-        // 'distance' joined 2026-08-23 (the unit census): `Suitcase Carry` is
-        // authored in METRES in the trunk pool and was rep-laddered by the
-        // strength carry slot — the same authored-unit law, one more unit.
         if (entry.prescriptionType !== 'duration'
-          && entry.prescriptionType !== 'duration_minutes'
-          && entry.prescriptionType !== 'distance') continue;
+          && entry.prescriptionType !== 'duration_minutes') continue;
         const key = composedIdentityFor(entry.name);
         if (built.has(key)) continue;
         built.set(key, {
@@ -113,6 +112,23 @@ function authoredTimedHoldFor(identity: string): ComposedDose | null {
           ...(entry.perSide ? { perSide: true } : {}),
         });
       }
+    }
+    // R-133 (Sam, 2026-08-23): *"carries all timed"*. The strength pools author
+    // no doses, so the carries' timed prescriptions live in their own authored
+    // table beside the carry pool — same law, second authored source. (The
+    // 'distance' arm this loop briefly carried left with Suitcase Carry's
+    // metres; the Primer's Acceleration row keeps distance without this module.)
+    for (const carry of TIMED_CARRY_PRESCRIPTIONS) {
+      const key = composedIdentityFor(carry.name);
+      if (built.has(key)) continue;
+      built.set(key, {
+        sets: carry.sets,
+        repsMin: carry.secondsMin,
+        repsMax: carry.secondsMax,
+        category: 'authored_timed_hold',
+        prescriptionType: 'duration',
+        ...(carry.perSide ? { perSide: true } : {}),
+      });
     }
     timedHoldByIdentity = built;
   }

@@ -1226,6 +1226,35 @@ section('Muscle-group data on pool entries');
 }
 
 // ─────────────────────────────────────────────────────────────────
+// R-133 (Sam, 2026-08-23): "carries all timed"
+// ─────────────────────────────────────────────────────────────────
+//
+// EVERY carry in the strength carry pool must resolve to a DURATION dose —
+// through the same authored-unit lookup the prehab holds use. The cell walks
+// the POOL, not a name list, so a fifth carry added tomorrow reds here until
+// someone authors its seconds.
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { resolveComposedDose } = require('../rules/composedDose');
+  for (const role of ['anchor', 'accessory'] as const) {
+    for (const entry of STRENGTH_POOLS.carry[role].entries) {
+      const dose = resolveComposedDose({
+        identity: entry.name,
+        isMainLift: false,
+        poolSlot: 'carry',
+        seasonPhase: 'In-season',
+        offseasonSubphase: null,
+        authoredFallback: [2, 8, 12],
+      });
+      assert(dose.prescriptionType === 'duration',
+        `R-133: ${entry.name} must be dosed in seconds, got ${dose.prescriptionType ?? 'reps'}`);
+      assert(dose.category === 'authored_timed_hold',
+        `R-133: ${entry.name}'s dose must come from an authored timed source, got ${dose.category}`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Summary
 // ─────────────────────────────────────────────────────────────────
 console.log(`\n${'='.repeat(60)}`);

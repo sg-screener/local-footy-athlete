@@ -206,9 +206,10 @@ export interface ComposedRow {
    * Slice 5 (Sam, 2026-08-23): set when the dose owner returned an authored
    * ISOMETRIC dose — `repsMin/repsMax` are then seconds (or minutes), exactly
    * as the pool entry authors them, carried to the stored row so no surface
-   * can re-read a hold as reps.
+   * can re-read a hold as reps. ('distance' left with R-133: no composed row
+   * prescribes metres any more.)
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes' | 'distance';
+  readonly prescriptionType?: 'duration' | 'duration_minutes';
   readonly perSide?: boolean;
   /**
    * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base
