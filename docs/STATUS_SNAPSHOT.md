@@ -265,6 +265,29 @@ immediately afterwards, and a post-run synthetic probe returned
   that the retrieved `Sore` / `Slight reduction` rules support. No cheaper-model
   comparison should obscure that prompt-quality question.
 
+### Practical-before-triage correction and rerun
+
+Sam *"completeky agree[d]"* with that quality verdict. R-135 now binds the
+general answer contract: ordinary fatigue/soreness gets practical LFA-backed
+training guidance first; injury triage remains brief and proportionate; one
+follow-up cannot hide a scale plus symptom checklist. The old prompt was seen
+red against the new cell before the corrected prompt returned it green.
+
+One same-case Sol rerun followed the committed correction. The spend switch was
+true for that request only, false immediately afterwards, and a post-run
+synthetic probe again returned `503 coach_lab_disabled` before OpenAI.
+
+- The 72-word answer leads with `Don’t skip automatically`, then gives the
+  retrieved LFA shape: warm up and reassess, reduce lower-body volume, avoid
+  extra sets/grinders, and keep the main lift only while movement is good. The
+  pain/physio boundary is one final sentence rather than the answer's subject.
+- Measured request: 7,444 input tokens, 0 cached-input tokens, 7,441 cache-write
+  tokens, 391 output tokens including 150 reasoning tokens, and 7,835 total in
+  9,645 ms. That remains 96.3% below the 213,109-token full-source benchmark.
+- All seven automatic boundaries pass. It remains `needs_owner_review` pending
+  Sam's direct judgement of this corrected answer; the model and seat do not
+  approve his voice for him.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
