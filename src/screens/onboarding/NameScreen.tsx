@@ -28,7 +28,8 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
   const handleContinue = () => {
     const trimmed = name.trim();
     if (trimmed.length > 0) {
-      void commitAndAdvance({ firstName: trimmed }, () => navigation.navigate('BodyMeasurements'));
+      // R-130: the gender question sits directly after the name.
+      void commitAndAdvance({ firstName: trimmed }, () => navigation.navigate('Gender'));
     }
   };
 
