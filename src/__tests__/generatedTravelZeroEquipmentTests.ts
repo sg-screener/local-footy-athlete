@@ -43,6 +43,8 @@ function quietly<T>(run: () => T): T {
 }
 
 const BASE = {
+  // R-130: refused at the generation door with no default; male ≙ pre-R-130.
+  gender: 'male',
   trainingLocation: 'Commercial gym',
   equipmentSelectionCompleteness: 'complete',
   recentTrainingLoad: 'Pretty consistent',

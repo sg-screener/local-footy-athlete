@@ -505,6 +505,30 @@ export function generationSeasonPhaseOrThrow(
 }
 
 /**
+ * The athlete's gender, or a refusal — R-130's field applied the same way as
+ * seasonPhase. *"No it can't be changed after onboarding"*, *"there are no
+ * existing athletes"* — the answer is REQUIRED and has NO DEFAULT, so a profile
+ * without one is refused rather than silently generated as male. The flow's
+ * required Gender step means no athlete reaches generation in this state
+ * through the app; this door exists so a dev seed, a test fixture or a future
+ * writer cannot manufacture a default-for-the-unrecorded.
+ */
+export function generationGenderOrThrow(
+  profile: OnboardingData,
+): NonNullable<OnboardingData['gender']> {
+  if (profile.gender !== 'male' && profile.gender !== 'female') {
+    throw new ProgramGenError(
+      'missing_required_profile',
+      'I still need to know your gender before I can build your program.',
+      'generation refused: onboarding never collected gender (R-130)',
+      false,
+      { missingRequired: missingRequiredProfileFields(profile) },
+    );
+  }
+  return profile.gender;
+}
+
+/**
  * The athlete's equipment input, or a refusal — the seasonPhase rule applied
  * to equipment (Sam's ruling 2, 2026-07-31: generation does not run without an
  * equipment answer).
@@ -538,6 +562,8 @@ function generationPhaseResolution(
   options: GenerateProgramFromProfileOptions,
 ): SeasonPhaseClockResolution {
   const selectedPhase = generationSeasonPhaseOrThrow(profile);
+  // R-130: refused at the same door, for the same reason, in the same breath.
+  generationGenderOrThrow(profile);
   const previousProgram = currentPersistedProgram(options);
   return resolveSeasonPhaseClock({
     selectedPhase,
@@ -673,6 +699,9 @@ function coachingInputsToSchedulerInputs(
     // `CoachingInputs` can say "first fixture ever", so nothing here claims it.
     fixtureRecurrence: 'recurring' as const,
     age: ageFromRange((inputs as { ageRange?: never }).ageRange),
+    // R-130: carried verbatim from CoachingInputs (which carried it verbatim
+    // from the profile) — translation, not a decision.
+    athleteGender: inputs.gender,
     readiness: {
       lowReadiness: inputs.generationConstraints?.readiness?.deloaded === true,
       highReadiness: false, lowFatigue: false, consistentlyCompletesThree: false,

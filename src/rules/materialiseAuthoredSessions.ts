@@ -64,6 +64,8 @@ export interface MaterialisedSession {
   readonly clubTraining: boolean;
   readonly game: boolean;
   readonly optional: boolean;
+  /** R-130: the scheduler's composed-optional offer, copied verbatim. */
+  readonly composedOptional?: 'primer';
   /** The scheduler's clause, carried so a session can name who authorised it. */
   readonly clauseId: string;
   /** Specialist content. Null when the day authorises none. */
@@ -141,6 +143,10 @@ export function materialiseAuthoredSessions(args: {
       clubTraining: intention.clubTraining,
       game: intention.game,
       optional: intention.optional,
+      // R-130: copied, never decided — the day is not ours to repurpose.
+      ...(intention.composedOptional
+        ? { composedOptional: intention.composedOptional }
+        : {}),
       clauseId: intention.clauseId,
     };
 

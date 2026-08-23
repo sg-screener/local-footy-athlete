@@ -17,6 +17,7 @@
 import type {
   AuthoredDayIdentity,
   SeasonPhase,
+  AthleteGender,
   CapacityBand,
   SessionTier,
   OnboardingData,
@@ -192,6 +193,14 @@ export interface CoachingInputs {
    * as a default). Consumed only by the small deterministic role/goal bias.
    */
   role?: string;
+  /**
+   * R-130's one switch. Optional in the TYPE because non-generation callers
+   * (coach reads over partial profiles) can reach this converter — but the
+   * generation path is gated by `generationGenderOrThrow`, so a program is
+   * never built without it. Consumers branch ONLY on `'female'`: the male path
+   * is the absence of the female branch, never a defaulted value.
+   */
+  gender?: AthleteGender;
   hasGame: boolean;
   gameDay?: string;
   weekNumber?: number;
@@ -337,7 +346,10 @@ export interface SessionAllocation {
    * are deleted rather than marked — the need-based top-up pass owns their
    * placement now, and it composes through the same builders.
    */
-  composedOptionalKind?: 'gunshow' | 'prehab';
+  // 'primer' joined on R-130: the female G−1 offer, stamped by the live
+  // scheduler-connector path (`scheduleToCoachingPlan`), composed by the same
+  // `buildDerivedSession('primer')` the athlete's add door uses.
+  composedOptionalKind?: 'gunshow' | 'prehab' | 'primer';
   /** When true, this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;
   /** Finisher vs proper conditioning component for attached S+C work. */
@@ -7642,6 +7654,8 @@ export function onboardingToCoachingInputs(
     // goals, so neither copy can drift from the other any more.
     goals: motivationBiasTokens(resolveMotivation(data)),
     role: data.position,
+    // R-130: carried verbatim; the scheduler's female G−1 placement reads it.
+    gender: data.gender,
     // hasGame means "a specific game is scheduled this week" — it must NOT be
     // a proxy for "phase has team-level context". Previously this was
     // `seasonPhase === 'In-season' || seasonPhase === 'Pre-season'` which made

@@ -32,6 +32,9 @@ const WEEK_MONDAY = '2026-08-10';
 
 const profile = {
   ageRange: '26-30',
+  // R-130: gender is refused at the generation door with no default; a world
+  // without it is an athlete the app would have refused. Male ≙ pre-R-130.
+  gender: 'male',
   experienceLevel: 'Intermediate',
   trainingLocation: 'Commercial gym',
   equipmentSelectionCompleteness: 'complete',

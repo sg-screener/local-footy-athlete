@@ -465,13 +465,19 @@ run('D2. exactly one template builds it, and it names the composer', () => {
     `the Primer template sits under category "${templates[0].category}"`);
 });
 
-run('D3. the charter says the ATHLETE places it, and the generator does not', () => {
+run('D3. the charter: males athlete-only (R-129), females generator too (R-130)', () => {
+  // THE FUTURE ORDER LANDED. This cell used to pin the female flip as "a
+  // FUTURE order, not this one" — R-130 (2026-08-23) is that order, so it now
+  // pins BOTH columns: the male answer R-129 ruled stays athlete-alone, and
+  // the female column carries the generator claim R-130 added.
   const row = SESSION_TYPE_CHARTER.primer;
   assert(!!row, 'no charter row for primer');
-  assert(row.placedBy.length === 1 && row.placedBy[0] === 'athlete',
-    `the charter says [${row.placedBy.join(', ')}] may place a Primer. R-129: "for now `
-    + '- it\'s only available to be added by player or swapped by a player … so default '
-    + 'to gunshow". The female-pathway default flip is a FUTURE order, not this one');
+  assert(row.placedBy.male.length === 1 && row.placedBy.male[0] === 'athlete',
+    `the charter says [${row.placedBy.male.join(', ')}] may place a male Primer. `
+    + 'R-129 rules the male path athlete-only, and R-130a keeps males exactly as they are');
+  assert(row.placedBy.female.includes('generator') && row.placedBy.female.includes('athlete'),
+    `the charter says [${row.placedBy.female.join(', ')}] may place a female Primer. `
+    + 'R-130: the generator places it on G−1 as optional, and she may still add one');
   assert(row.counting.countsTowardLoad === false
     && row.counting.canBeHardDay === false
     && row.counting.required === false,

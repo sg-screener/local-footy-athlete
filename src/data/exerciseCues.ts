@@ -184,6 +184,15 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Roll out only as far as you can control.',
     secondaryCue: 'Ribs down, slightly rounded back, no sagging at hips.',
   },
+  // R-129's authored Primer row, in Sam's own dose words: *"3 accelerations
+  // for 15m at 90%"*. The name lives in no selectable pool (deliberately — see
+  // the signed-copy entry in `projectionCopy`), so no pool row could carry the
+  // cue; without this entry a GENERATOR-placed Primer (R-130's female G−1)
+  // refuses at the curated-cue contract, which the athlete-add door never runs.
+  'Acceleration': {
+    primaryCue: 'Build up to 90% effort over the 15m.',
+    secondaryCue: '',
+  },
   'ATG Split Squat': {
     primaryCue: 'Elevate front foot, body stays upright, drive hips to front heel, go slow and pause at bottom.',
     secondaryCue: '',

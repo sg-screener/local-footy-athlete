@@ -88,6 +88,7 @@ import {
   charterClaimedCategories,
   charterDebtCovers,
   charterDebtFor,
+  placedByFor,
   type CharterQuestion,
   type SessionTypeId,
 } from '../rules/sessionTypeCharter';
@@ -167,10 +168,12 @@ run('A1. the charter covers Sam\'s eight, and only his eight', () => {
     'the charter record has rows the id list does not name');
 });
 
-run('A2. (a) every type names who may place it', () => {
+run('A2. (a) every type names who may place it — on BOTH paths (R-130)', () => {
   for (const id of SESSION_TYPE_IDS) {
-    assert(SESSION_TYPE_CHARTER[id].placedBy.length > 0,
-      `"${id}" names nobody who may place it — a type nothing can place cannot exist`);
+    assert(SESSION_TYPE_CHARTER[id].placedBy.male.length > 0,
+      `"${id}" names nobody who may place it for males — a type nothing can place cannot exist`);
+    assert(SESSION_TYPE_CHARTER[id].placedBy.female.length > 0,
+      `"${id}" names nobody who may place it for females — a type nothing can place cannot exist`);
   }
 });
 
@@ -743,6 +746,12 @@ function charterTypesOf(workout: Workout): {
   // `ambiguous` has no producer left.
   if (categories.has('gunshow')) types.push('gunshow');
   if (categories.has('prehab')) types.push('prehab');
+  // R-130: the female G−1 placement. The taxonomy names it off the TYPED
+  // marker (`composedOptionalKind === 'primer'`), never the name — a
+  // generator-placed Primer without this branch would land in
+  // `unclassifiable` and red E3, which is exactly what happened to the
+  // pre-split accessory types.
+  if (categories.has('primer')) types.push('primer');
   const anchor = categories.has('game') || categories.has('team_training');
   return { types, anchor, ambiguous: false, named: types.length > 0 || anchor };
 }
@@ -775,27 +784,94 @@ const inSeasonProgram = quiet(() => generateProgramLocally({
   },
 })) as TrainingProgram;
 
-const placedTypes = new Set<SessionTypeId>();
+/**
+ * A THIRD PLACEMENT SAMPLE — THE FEMALE PATH (R-130).
+ *
+ * `placedBy` answers per path now, so placement is observed per path: one
+ * profile, one switch flipped, otherwise identical to the male in-season
+ * sample. This is the program that must contain the generator-placed G−1
+ * Primer — and must NOT contain a gunshow.
+ */
+const femaleInSeasonProgram = quiet(() => generateProgramLocally({
+  ...samExport8Profile(),
+  equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+  gender: 'female',
+  seasonPhase: 'In-season',
+  usualGameDay: 'Saturday',
+  gameDay: 'Saturday',
+} as never, {
+  todayISO: '2026-07-13',
+  previousProgram: null,
+  seasonPhaseClock: {
+    protocolVersion: 1,
+    selectedPhase: 'In-season',
+    phaseEntryWeekStartISO: '2026-07-13',
+    originProvenance: 'explicit_user_phase_change',
+    persistenceProvenance: 'preserved_persisted_state',
+  },
+})) as TrainingProgram;
+
+/**
+ * And the female PRE-SEASON sample, so the female observation has the same
+ * breadth as the male one — the conditioning claim's subject lives in the
+ * pre-season program (the in-season game week carries its conditioning as
+ * components of strength days), and a female column judged on a narrower
+ * sample than the male one would red claims the male column earns.
+ */
+const femalePreSeasonProgram = quiet(() => generateProgramLocally({
+  ...samExport8Profile(),
+  equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+  gender: 'female',
+} as never, {
+  todayISO: '2026-07-13',
+  previousProgram: null,
+  seasonPhaseClock: {
+    protocolVersion: 1,
+    selectedPhase: 'Pre-season',
+    phaseEntryWeekStartISO: '2026-07-13',
+    originProvenance: 'explicit_user_phase_change',
+    persistenceProvenance: 'preserved_persisted_state',
+  },
+})) as TrainingProgram;
+
+const CHARTER_PATHS = ['male', 'female'] as const;
+type CharterPath = (typeof CHARTER_PATHS)[number];
+const placedTypesByPath: Record<CharterPath, Set<SessionTypeId>> = {
+  male: new Set<SessionTypeId>(),
+  female: new Set<SessionTypeId>(),
+};
 let ambiguousPlacements = 0;
 const unclassifiable: string[] = [];
-for (const microcycle of [...program.microcycles, ...inSeasonProgram.microcycles]) {
-  for (const workout of microcycle.workouts ?? []) {
-    const seen = charterTypesOf(workout as Workout);
-    if (seen.ambiguous) ambiguousPlacements += 1;
-    for (const type of seen.types) placedTypes.add(type);
-    if (!seen.named) unclassifiable.push(workout.name ?? '(unnamed)');
+const observeProgramPlacement = (cycles: TrainingProgram['microcycles'], path: CharterPath) => {
+  for (const microcycle of cycles) {
+    for (const workout of microcycle.workouts ?? []) {
+      const seen = charterTypesOf(workout as Workout);
+      if (seen.ambiguous) ambiguousPlacements += 1;
+      for (const type of seen.types) placedTypesByPath[path].add(type);
+      if (!seen.named) unclassifiable.push(workout.name ?? '(unnamed)');
+    }
+    // REST IS PLACED BY ABSENCE, and that is the ruled shape rather than a gap.
+    //
+    // A stored rest session would be a stored DERIVED OUTPUT, which
+    // docs/NORTH_STAR.md presumes wrong — so the generator expresses "nothing is
+    // required of you today" by requiring nothing, and the Rest law's quota reads
+    // it. The observation has to match: a generated week that leaves a day free
+    // IS the generator placing rest, and looking for a rest WORKOUT would report
+    // a correctly-converged design as a defect.
+    const occupied = new Set((microcycle.workouts ?? []).map((workout) => workout.dayOfWeek));
+    if ([0, 1, 2, 3, 4, 5, 6].some((day) => !occupied.has(day))) {
+      placedTypesByPath[path].add('rest');
+    }
   }
-  // REST IS PLACED BY ABSENCE, and that is the ruled shape rather than a gap.
-  //
-  // A stored rest session would be a stored DERIVED OUTPUT, which
-  // docs/NORTH_STAR.md presumes wrong — so the generator expresses "nothing is
-  // required of you today" by requiring nothing, and the Rest law's quota reads
-  // it. The observation has to match: a generated week that leaves a day free
-  // IS the generator placing rest, and looking for a rest WORKOUT would report
-  // a correctly-converged design as a defect.
-  const occupied = new Set((microcycle.workouts ?? []).map((workout) => workout.dayOfWeek));
-  if ([0, 1, 2, 3, 4, 5, 6].some((day) => !occupied.has(day))) placedTypes.add('rest');
-}
+};
+observeProgramPlacement(program.microcycles, 'male');
+observeProgramPlacement(inSeasonProgram.microcycles, 'male');
+observeProgramPlacement(femalePreSeasonProgram.microcycles, 'female');
+observeProgramPlacement(femaleInSeasonProgram.microcycles, 'female');
+// The union, for the cells whose question is path-independent (E0, E3).
+const placedTypes = new Set<SessionTypeId>([
+  ...placedTypesByPath.male, ...placedTypesByPath.female,
+]);
 
 /**
  * Prehab and Gunshow are TWO classifications, and that is a fact about the code
@@ -826,28 +902,49 @@ run('E0. the placement sample is real', () => {
     'the generator placed fewer than two distinguishable types — the classifier is not classifying');
 });
 
-run('E1. the generator places nothing the charter says it may not', () => {
-  const violations = Array.from(placedTypes).filter(
-    (type) => !SESSION_TYPE_CHARTER[type].placedBy.includes('generator')
-      && !charterDebtCovers(type, 'placement'),
-  );
+run('E1. the generator places nothing the charter says it may not — per path (R-130)', () => {
+  const violations: string[] = [];
+  for (const path of CHARTER_PATHS) {
+    for (const type of placedTypesByPath[path]) {
+      if (placedByFor(type, path).includes('generator')) continue;
+      if (charterDebtCovers(type, 'placement', path)) continue;
+      violations.push(`${type} (${path})`);
+    }
+  }
   assert(violations.length === 0,
     `the generator placed ${violations.join(', ')}, which the charter says only the `
-    + 'athlete may choose, and no placement debt is declared');
+    + 'athlete may choose on that path, and no placement debt covers it');
 });
 
-run('E2. every "the generator places it" claim is earned', () => {
+run('E2. every "the generator places it" claim is earned — per path (R-130)', () => {
   // An unfalsified claim is not a true one. A type the charter says the generator
-  // places, that no generated week contains, is a claim nothing supports.
-  const unearned = SESSION_TYPE_IDS.filter(
-    (type) => SESSION_TYPE_CHARTER[type].placedBy.includes('generator')
-      && !placedTypes.has(type)
-      && !charterDebtCovers(type, 'placement'),
-  );
+  // places, that no generated week on that path contains, is a claim nothing
+  // supports. This is the cell that holds the female G−1 Primer: the female
+  // column claims `generator`, so a female in-season program that carries no
+  // Primer reds here.
+  const unearned: string[] = [];
+  for (const path of CHARTER_PATHS) {
+    for (const type of SESSION_TYPE_IDS) {
+      if (!placedByFor(type, path).includes('generator')) continue;
+      if (placedTypesByPath[path].has(type)) continue;
+      if (charterDebtCovers(type, 'placement', path)) continue;
+      unearned.push(`${type} (${path})`);
+    }
+  }
   assert(unearned.length === 0,
     `the charter says the generator places ${unearned.join(', ')} and no generated `
-    + 'week contains one. Either the claim is wrong or the observation cannot see it — '
-    + 'both are answers the charter owes.');
+    + 'week on that path contains one. Either the claim is wrong or the observation '
+    + 'cannot see it — both are answers the charter owes.');
+});
+
+run('E2b. the female G−1 Primer never appears for males, and no gunshow for females (R-130)', () => {
+  // The two directions R-130 rules directly, asserted against the OBSERVED
+  // programs rather than the charter rows, so a placement leak cannot hide
+  // behind a correct-looking table.
+  assert(!placedTypesByPath.male.has('primer'),
+    'a generated MALE program contains a primer — R-129 rules the male path athlete-only');
+  assert(!placedTypesByPath.female.has('gunshow'),
+    'a generated FEMALE program contains a gunshow — R-130: "never program gunshow for females"');
 });
 
 run('E3. every session the generator places has a charter type', () => {
@@ -868,10 +965,14 @@ run('E4. prehab and gunshow are SEPARATE classifications', () => {
     + 'collapse is back, and with it the unattributable placement it caused.');
   assert(ambiguousPlacements === 0,
     `${ambiguousPlacements} placed sessions are still classified ambiguously`);
-  for (const type of ['prehab', 'gunshow'] as const) {
-    assert(!charterDebtCovers(type, 'placement'),
-      `"${type}" still declares placement debt, but the split that caused it is paid`);
-  }
+  // THE NO-DEBT CLAUSE IS GONE, CONSCIOUSLY (2026-08-23, R-130 build). It
+  // asserted neither type may declare placement debt, because the debt it was
+  // guarding against was the ATTRIBUTION collapse — one category for two
+  // types. Both types declare placement debt again today for a DIFFERENT
+  // observed fact (their generator placers died with the demolished planner;
+  // gunshow's male rebuild is R-130a's stated later order). The collapse
+  // itself is still held by the two assertions above: contributions carry
+  // both keys, and no placement classifies ambiguously.
 });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -880,8 +981,13 @@ run('E4. prehab and gunshow are SEPARATE classifications', () => {
 
 console.log('\n-- F. the debt ratchet --');
 
-/** Does the code deviate from the ruling on this (type, question)? */
-function deviates(type: SessionTypeId, question: CharterQuestion): boolean {
+/**
+ * Does the code deviate from the ruling on this (type, question)?
+ *
+ * R-130: placement is judged per path (`path` is set for placement rows and
+ * absent otherwise) — a male-only deviation must not read as a female one.
+ */
+function deviates(type: SessionTypeId, question: CharterQuestion, path?: CharterPath): boolean {
   const row = SESSION_TYPE_CHARTER[type];
   switch (question) {
     case 'chooser': {
@@ -908,9 +1014,10 @@ function deviates(type: SessionTypeId, question: CharterQuestion): boolean {
       if (!ACCESSORY_TYPES_SPLIT && (type === 'prehab' || type === 'gunshow')) return true;
       // Mobility has no door and no builder, so nothing can place it at all.
       if (type === 'mobility') return true;
-      const claimsGenerator = row.placedBy.includes('generator');
-      if (claimsGenerator) return !placedTypes.has(type);
-      return placedTypes.has(type);
+      const placementPath: CharterPath = path ?? 'male';
+      const claimsGenerator = placedByFor(type, placementPath).includes('generator');
+      if (claimsGenerator) return !placedTypesByPath[placementPath].has(type);
+      return placedTypesByPath[placementPath].has(type);
     }
     case 'composition': {
       const untraced = UNTRACED[type];
@@ -922,9 +1029,18 @@ function deviates(type: SessionTypeId, question: CharterQuestion): boolean {
   }
 }
 
-const observedDeviations: Array<{ type: SessionTypeId; question: CharterQuestion }> = [];
+const observedDeviations: Array<{
+  type: SessionTypeId; question: CharterQuestion; path?: CharterPath;
+}> = [];
 for (const type of SESSION_TYPE_IDS) {
   for (const question of CHARTER_QUESTIONS) {
+    if (question === 'placement') {
+      // R-130: one observation per path — a deviation names WHOSE week it is.
+      for (const path of CHARTER_PATHS) {
+        if (deviates(type, question, path)) observedDeviations.push({ type, question, path });
+      }
+      continue;
+    }
     if (deviates(type, question)) observedDeviations.push({ type, question });
   }
 }
@@ -934,7 +1050,9 @@ run('F1. every declared debt is still real', () => {
   // been fixed keeps excusing a cell that no longer needs excusing, so the next
   // regression in that cell passes silently.
   const stale = CHARTER_DEBT.filter((entry) => !observedDeviations.some(
-    (deviation) => deviation.type === entry.type && deviation.question === entry.question,
+    (deviation) => deviation.type === entry.type && deviation.question === entry.question
+      && (entry.path === undefined || deviation.path === undefined
+        || entry.path === deviation.path),
   ));
   assert(stale.length === 0,
     `these debts are PAID and still declared — delete them and lower the ceiling in `
@@ -943,11 +1061,12 @@ run('F1. every declared debt is still real', () => {
 
 run('F2. every observed deviation is declared', () => {
   const undeclared = observedDeviations.filter(
-    (deviation) => !charterDebtCovers(deviation.type, deviation.question),
+    (deviation) => !charterDebtCovers(deviation.type, deviation.question, deviation.path),
   );
   assert(undeclared.length === 0,
     `the code deviates from the charter here and nothing says so:\n      `
-    + undeclared.map((d) => `${d.type}/${d.question}`).join('\n      '));
+    + undeclared.map((d) => `${d.type}/${d.question}${d.path ? ` (${d.path})` : ''}`)
+      .join('\n      '));
 });
 
 run('F3. every debt entry names the stage that pays it', () => {
@@ -975,10 +1094,10 @@ run('F4. per-type ceilings hold with EQUALITY', () => {
   }
 });
 
-run('F5. no (type, question) is declared twice', () => {
+run('F5. no (type, question, path) is declared twice', () => {
   const seen = new Set<string>();
   for (const entry of CHARTER_DEBT) {
-    const key = `${entry.type}/${entry.question}`;
+    const key = `${entry.type}/${entry.question}/${entry.path ?? 'both'}`;
     assert(!seen.has(key), `${key} is declared twice — the ceiling would count it twice`);
     seen.add(key);
   }

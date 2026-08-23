@@ -72,6 +72,7 @@
  */
 
 import type { PlanChangeCategoryId } from '../utils/planChangeTypes';
+import type { AthleteGender } from '../types/domain';
 
 /**
  * Sam's programmable vocabulary. EIGHT, and only these eight.
@@ -182,8 +183,19 @@ export interface CompositionAnswer {
 
 export interface SessionTypeCharterRow {
   readonly id: SessionTypeId;
-  /** (a) Non-empty by charter rule — something must be allowed to place it. */
-  readonly placedBy: readonly PlacementAuthority[];
+  /**
+   * (a) Non-empty by charter rule — something must be allowed to place it.
+   *
+   * **PER PATH SINCE R-130** (Sam, 2026-08-23: *"It's one switch. Male or
+   * Female."*). The placement answer was ONE list per type for the whole app;
+   * the female path needed gunshow and primer to answer differently by WHO THE
+   * ATHLETE IS, and the brief's own instruction was to make that shape change
+   * HERE, in the charter — never as `if (female)` sprinkled through an engine.
+   * Both columns are written out for every type, explicitly: six of eight are
+   * identical on purpose, and an identical pair is still two ruled answers,
+   * not one answer copied.
+   */
+  readonly placedBy: Readonly<Record<AthleteGender, readonly PlacementAuthority[]>>;
   /** (b) */
   readonly chosenBy: ChooserAnswer;
   /** (c) */
@@ -214,7 +226,10 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   rest: {
     id: 'rest',
-    placedBy: ['generator', 'athlete', 'fact'],
+    placedBy: {
+      male: ['generator', 'athlete', 'fact'],
+      female: ['generator', 'athlete', 'fact'],
+    },
     chosenBy: {
       categories: [],
       otherDoor: 'Remove — the athlete rests a day by taking the work off it, '
@@ -241,7 +256,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   recovery: {
     id: 'recovery',
-    placedBy: ['athlete'],
+    placedBy: { male: ['athlete'], female: ['athlete'] },
     chosenBy: { categories: ['recovery'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
@@ -268,7 +283,10 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   strength: {
     id: 'strength',
-    placedBy: ['generator', 'athlete'],
+    placedBy: {
+      male: ['generator', 'athlete'],
+      female: ['generator', 'athlete'],
+    },
     chosenBy: {
       categories: ['strength_upper', 'strength_lower', 'strength_full'],
       otherDoor: null,
@@ -289,7 +307,10 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
   /** CONDITIONING — 55 signed templates, two doors, counts as load. */
   conditioning: {
     id: 'conditioning',
-    placedBy: ['generator', 'athlete'],
+    placedBy: {
+      male: ['generator', 'athlete'],
+      female: ['generator', 'athlete'],
+    },
     chosenBy: {
       categories: ['conditioning_light', 'conditioning_hard'],
       otherDoor: null,
@@ -314,7 +335,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   mobility: {
     id: 'mobility',
-    placedBy: ['athlete'],
+    placedBy: { male: ['athlete'], female: ['athlete'] },
     chosenBy: { categories: ['mobility'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
@@ -338,7 +359,10 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   prehab: {
     id: 'prehab',
-    placedBy: ['generator', 'athlete'],
+    placedBy: {
+      male: ['generator', 'athlete'],
+      female: ['generator', 'athlete'],
+    },
     chosenBy: { categories: ['prehab'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
@@ -366,7 +390,15 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    */
   gunshow: {
     id: 'gunshow',
-    placedBy: ['generator', 'athlete'],
+    // R-130: *"never program gunshow for females … if they really want to do
+    // it then they can add it"*. The Add menu still offers her one — that is
+    // the `athlete` authority, kept. The MALE `generator` claim is the ruled
+    // state awaiting its rebuild (R-130a: *"bring gunshow back later"*) and is
+    // carried as declared placement debt below until that order lands.
+    placedBy: {
+      male: ['generator', 'athlete'],
+      female: ['athlete'],
+    },
     chosenBy: { categories: ['gunshow'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
@@ -385,21 +417,20 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
    * PRIMER — R-129, signed 2026-08-23. Sam's words for what it is FOR:
    * *"a little 20 min session the day before their game to feel good"*.
    *
-   * ⚠ **`placedBy` IS `athlete` ALONE, AND THE OMISSION OF `generator` IS THE
-   * RULING, NOT AN OVERSIGHT.** *"for now - it's only available to be added by
-   * player or swapped by a player … so default to gunshow"*. G-1 keeps the
-   * Gunshow; nothing places a Primer uninvited.
-   *
-   * ⚠ **AND THE DEFAULT IS ALREADY SCHEDULED TO CHANGE.** Same message: *"when I
-   * add in the female pathway, the primer will become the default - but don't
-   * worry about that"*. That is a STATED FUTURE ORDER and it is recorded here so
-   * the next reader does not mistake today's answer for a permanent one — but
-   * building generator placement now would be running ahead of the ruling, and
-   * this charter says `athlete` until the pathway lands.
+   * **THE STATED FUTURE ORDER LANDED THE SAME DAY.** R-129 recorded *"when I
+   * add in the female pathway, the primer will become the default"* as a
+   * future order; R-130 is that order. The FEMALE path places it on G−1 as
+   * optional, *"if no other sessions exist there"*, never in a multi-game
+   * week — the scheduler's R-130 pass (`weeklyScheduler`), composed through
+   * the same `buildDerivedSession('primer')` the athlete's door uses. The
+   * MALE column stays `athlete` alone, exactly as R-129 ruled it.
    */
   primer: {
     id: 'primer',
-    placedBy: ['athlete'],
+    placedBy: {
+      male: ['athlete'],
+      female: ['generator', 'athlete'],
+    },
     chosenBy: { categories: ['primer'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
@@ -439,6 +470,11 @@ export const CHARTER_QUESTIONS = ['placement', 'chooser', 'counting', 'compositi
 export interface CharterDebtEntry {
   readonly type: SessionTypeId;
   readonly question: CharterQuestion;
+  /**
+   * R-130: a placement deviation can be one path's alone (the male gunshow
+   * debt). Absent means the deviation holds on both paths.
+   */
+  readonly path?: AthleteGender;
   /** What the code does today, in terms the gate can observe. */
   readonly deviation: string;
   /** The stage that closes it, or an explicit statement that none does. */
@@ -500,6 +536,60 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
   // `sessionTypeCharterTests` E4 now asserts the split from the other side, so the
   // collapse cannot return quietly.
 
+  // ── Recovery: the generator places it uninvited, and the owner is untraced ──
+  //
+  // Observed by this gate's own E1 on `main` (recorded at R-129's registry
+  // entry as pre-existing, confirmed after the 2026-08-23 game-anchor fix):
+  // generated weeks contain sessions that classify as recovery which no
+  // athlete chose. The dead planner's eight recovery sites are gone, so the
+  // placer is somewhere on the live scheduler→connector→builder path and has
+  // not been traced. Declared rather than left as a bare red so the ratchet
+  // can hold everything else while the trace is owed.
+  {
+    type: 'recovery',
+    question: 'placement',
+    deviation: 'generated weeks contain recovery-classified sessions the '
+      + 'athlete did not choose; the live-path placer is untraced',
+    paidBy: 'nothing is scoped to this yet — tracing the live recovery placer '
+      + 'is unowned work, and saying so here is the only honest entry',
+  },
+
+  // ── Gunshow: the MALE generator claim awaits its ruled rebuild ──
+  //
+  // The G−1 Gunshow auto-placement was demolished on 2026-08-19 ("reading must
+  // not author") with the rebuild assigned to the weekly scheduler, and it has
+  // not been rebuilt: no generated week contains a generator-placed gunshow
+  // (the stage-b golden records gunshowSessions: 0 throughout). Sam ruled the
+  // sequence on 2026-08-23 (R-130a): *"bring gunshow back later"* — males stay
+  // exactly as they are for the female-path job, and the restoration is its
+  // own later order. The scheduler's R-130 primer pass makes it a small flip
+  // when that order comes.
+  {
+    type: 'gunshow',
+    question: 'placement',
+    path: 'male',
+    deviation: 'the male charter claims generator placement and no generated '
+      + 'week contains a generator-placed gunshow — the G−1 placement died '
+      + 'with the 2026-08-19 demolition and its rebuild is a stated later order',
+    paidBy: "R-130a item 1, Sam's 'bring gunshow back later' order — "
+      + 'unscheduled, deliberately, so the female-path job cannot move males',
+  },
+
+  // ── Prehab: the generator claim has no living placer either ──
+  //
+  // The adjacency repair that stamped `composedOptionalKind: 'prehab'` lived
+  // inside the demolished planner. Same observation as gunshow (E2), no
+  // restoration order exists for it.
+  {
+    type: 'prehab',
+    question: 'placement',
+    deviation: 'the charter claims generator placement and no generated week '
+      + 'contains a generator-placed prehab session — its placer died with '
+      + 'the demolished planner',
+    paidBy: 'nothing is scoped to this yet — no ruling has ordered a prehab '
+      + 'placement rebuild',
+  },
+
   // ── Strength and conditioning: authored, placed, counted — and still owed ──
   {
     type: 'conditioning',
@@ -513,18 +603,19 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
 
 export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   rest: 0,
-  // 1 -> 0 on 2026-08-21 with the four invented recovery rows. Lowered in the
-  // same commit that paid the debt — a ceiling left at 1 over a paid debt is
-  // slack the next invented list could hide in, which is how these four lasted.
-  recovery: 0,
+  // 0 -> 1 on 2026-08-23 (R-130 build): the uninvited recovery placement E1
+  // has observed on `main` is DECLARED above rather than left as a bare red.
+  // Raised in the same commit as the entry, per ratchet direction 4.
+  recovery: 1,
   strength: 0,
   conditioning: 1,
   mobility: 1,
-  // Both 1 -> 0 on 2026-07-30 with the prehab/gunshow split. Lowered in the same
-  // commit that paid the debt, which is the whole of ratchet direction 4: a ceiling
-  // left at 1 over a paid debt is slack a future regression could hide in.
-  prehab: 0,
-  gunshow: 0,
+  // Both 0 -> 1 on 2026-08-23 (R-130 build): the demolished G−1/adjacency
+  // placers left both generator claims unearned (E2's standing red). Gunshow's
+  // entry is male-path debt awaiting R-130a's restoration order; prehab's has
+  // no owner and says so. Raised in the same commit as the entries.
+  prehab: 1,
+  gunshow: 1,
   // PRIMER IS BORN AT ZERO, AND THAT IS A CLAIM, NOT A COURTESY. It arrives with
   // all four answers signed in one message (R-129), so there is nothing for a
   // debt entry to excuse — and a new type given slack "to start with" is slack
@@ -533,14 +624,33 @@ export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   primer: 0,
 };
 
+/** The placement answer for one athlete path — R-130's one switch, read here. */
+export function placedByFor(
+  type: SessionTypeId,
+  gender: AthleteGender,
+): readonly PlacementAuthority[] {
+  return SESSION_TYPE_CHARTER[type].placedBy[gender];
+}
+
 /** Debt entries for one type. */
 export function charterDebtFor(type: SessionTypeId): readonly CharterDebtEntry[] {
   return CHARTER_DEBT.filter((entry) => entry.type === type);
 }
 
-/** Is this (type, question) pair currently excused? */
-export function charterDebtCovers(type: SessionTypeId, question: CharterQuestion): boolean {
-  return CHARTER_DEBT.some((entry) => entry.type === type && entry.question === question);
+/**
+ * Is this (type, question) pair currently excused?
+ *
+ * R-130: placement deviations are per-path, so a caller observing one path
+ * passes it — an entry scoped to the OTHER path does not excuse this one. A
+ * path-less entry excuses both paths; a path-less query matches any entry.
+ */
+export function charterDebtCovers(
+  type: SessionTypeId,
+  question: CharterQuestion,
+  path?: AthleteGender,
+): boolean {
+  return CHARTER_DEBT.some((entry) => entry.type === type && entry.question === question
+    && (entry.path === undefined || path === undefined || entry.path === path));
 }
 
 /**

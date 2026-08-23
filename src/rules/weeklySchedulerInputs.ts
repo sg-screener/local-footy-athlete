@@ -259,6 +259,11 @@ export function weeklySchedulerInputsFrom(args: {
         ]),
       ]))
     : undefined;
+  // R-130: read off the profile, one field, no derivation. Only 'female'
+  // changes anything downstream (the scheduler's G−1 Primer pass).
+  const athleteGender = profile.gender === 'male' || profile.gender === 'female'
+    ? profile.gender
+    : undefined;
   const club = clubInputsAfterTravel({
     weekStartISO: args.weekStartISO,
     clubNights: offSeason ? [] : dayNumbers(profile.teamTrainingDays),
@@ -284,6 +289,7 @@ export function weeklySchedulerInputsFrom(args: {
     // claiming it is precisely how Lower landed on G+1.
     fixtureRecurrence: 'recurring' as const,
     age: ageFromRange(profile.ageRange),
+    athleteGender,
     readiness,
     unavailableDays: [...unavailableDays],
     releasedFixtureDays: args.targetWeekAvailability?.days

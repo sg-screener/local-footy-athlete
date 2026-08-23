@@ -256,7 +256,12 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     const components: AuthoredDayIdentity['components'] = [
       ...(isStrength ? ['strength' as const] : []),
       ...(template || session.sprintTemplate ? ['conditioning' as const] : []),
-      ...(session.owner === 'rest_or_recovery' ? ['recovery' as const] : []),
+      // R-130: a composed-optional day's part is STRENGTH (the Primer's ruled
+      // component identity, R-129), not the rest-class recovery its owner
+      // would imply. Copied off the scheduler's marker — still a translation.
+      ...(session.owner === 'rest_or_recovery'
+        ? [session.composedOptional ? 'strength' as const : 'recovery' as const]
+        : []),
     ];
     const authoredDay: AuthoredDayIdentity = {
       anchor: session.game ? 'game' : session.clubTraining ? 'club_training' : null,
@@ -274,6 +279,12 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
         || session.clubTraining,
       planEntryId: `sched:${schedule.weekStartISO}:${session.dayOfWeek}:${purpose ?? session.owner}`,
       isTeamDay: session.clubTraining,
+      // R-130: the typed marker the builder composes from — the same field the
+      // athlete's own add door stamps, so generator and door cannot prescribe
+      // different work under one name (Sam's composed-optional class ruling).
+      ...(session.composedOptional
+        ? { composedOptionalKind: session.composedOptional }
+        : {}),
       ...(effects.length > 0 ? { deterministicCoachNoteEffects: effects } : {}),
     } as SessionAllocation;
 

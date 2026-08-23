@@ -2438,7 +2438,12 @@ export function buildWorkoutsFromCoach(
       : null;
     if (composedOptional) {
       const composed = buildDerivedSession(
-        composedOptional === 'gunshow' ? 'arms_pump' : 'prehab_accessories',
+        // Three markers, three signed compositions. The binary ternary that
+        // stood here would have built PREHAB for a primer marker — the R-130
+        // audit's named trap.
+        composedOptional === 'gunshow' ? 'arms_pump'
+          : composedOptional === 'primer' ? 'primer'
+            : 'prehab_accessories',
         syntheticDateStr(cw.dayOfWeek),
         microcycleId,
         planEntry.focus,
