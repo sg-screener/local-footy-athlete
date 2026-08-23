@@ -7,7 +7,13 @@ import {
   type CoachLabKnowledgeFile,
 } from '../src/dev/coachLab/coachLabBrainPack';
 import { COACH_LAB_CASES, coachLabFixtureSnapshot } from '../src/dev/coachLab/coachLabCases';
-import { runCoachLabAsync } from '../src/dev/coachLab/coachLab';
+import {
+  runCoachLabAsync,
+  type AsyncCoachLabCandidate,
+  type CoachLabCase,
+  type CoachLabReport,
+} from '../src/dev/coachLab/coachLab';
+import type { CoachSnapshot } from '../src/rules/liveAthleteSnapshot';
 import { createOpenAICoachLabCandidate } from '../src/dev/coachLab/openAICoachLabCandidate';
 import {
   retrieveCoachLabKnowledge,
@@ -56,6 +62,34 @@ function canonicalSources(): readonly CanonicalCoachKnowledgeSource[] {
       content: read(path),
     })),
   ];
+}
+
+async function runCasesWithPaidCheckpoints(args: {
+  readonly cases: readonly CoachLabCase[];
+  readonly snapshot: CoachSnapshot;
+  readonly candidate: AsyncCoachLabCandidate;
+}): Promise<CoachLabReport> {
+  const results: CoachLabReport['results'][number][] = [];
+  for (const labCase of args.cases) {
+    const single = await runCoachLabAsync({
+      cases: [labCase],
+      snapshot: args.snapshot,
+      candidate: args.candidate,
+    });
+    const result = single.results[0];
+    results.push(result);
+    console.error(`COACH LAB PAID CHECKPOINT ${JSON.stringify(result)}`);
+  }
+  return {
+    candidateId: args.candidate.id,
+    results,
+    summary: {
+      cases: results.length,
+      automaticFail: results.filter((entry) => entry.verdict === 'automatic_fail').length,
+      needsOwnerReview: results.filter((entry) => entry.verdict === 'needs_owner_review').length,
+      approved: results.filter((entry) => entry.verdict === 'approved').length,
+    },
+  };
 }
 
 async function main(): Promise<void> {
@@ -110,7 +144,7 @@ async function main(): Promise<void> {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
     anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   });
-  const report = await runCoachLabAsync({
+  const report = await runCasesWithPaidCheckpoints({
     cases,
     snapshot,
     candidate: createOpenAICoachLabCandidate({

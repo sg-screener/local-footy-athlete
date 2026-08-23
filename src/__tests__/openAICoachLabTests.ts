@@ -287,6 +287,9 @@ async function main(): Promise<void> {
       /DEFAULT_CASE_ID/.test(runner) && /--all/.test(runner));
     ok('the pending-only bench cannot rebuy an already approved case',
       /--pending/.test(runner) && /ownerReview\.status === 'pending'/.test(runner));
+    ok('a later provider failure cannot erase earlier paid-case receipts',
+      /for \(const labCase of cases\)/.test(runner)
+        && /COACH LAB PAID CHECKPOINT/.test(runner));
     ok('retrieval is the default and a full-source benchmark is explicit',
       /retrieveCoachLabKnowledge/.test(runner)
         && /--full-source/.test(runner));
