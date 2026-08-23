@@ -21,7 +21,7 @@ import {
   resolveWeekWithConditioning,
 } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
-import { verifyVisibleDatesChanged } from './coachVisibleDomainVerifier';
+import { verifyVisibleDatesChanged } from './visibleDatesChangeVerifier';
 import { strengthComponentDisplayName } from './sessionNaming';
 import type { OverrideContext, UserRemovalScope, Workout } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';

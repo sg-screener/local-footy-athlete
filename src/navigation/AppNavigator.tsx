@@ -4,14 +4,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 import { logger } from '../utils/logger';
-import { disableJournalReminder } from '../services/journalReminderService';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
-import CoachScreen from '../screens/coach/CoachScreen';
 import CoachTabScreen from '../screens/coach/CoachTabScreen';
 import { useCoachWeeklyCommitment } from '../screens/coach/useCoachWeeklyCommitment';
 import { commitmentConversationNoticeSentence } from '../rules/projectionCopy';
-import JournalScreen from '../screens/journal/JournalScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import FAQScreen from '../screens/profile/FAQScreen';
 import { PrivacyScreen } from '../screens/profile/PrivacyScreen';
@@ -24,10 +21,6 @@ type ProgramStackParamList = {
   };
 };
 
-type CoachStackParamList = {
-  Coach: { prefill?: string } | undefined;
-};
-
 type ProfileStackParamList = {
   Profile: undefined;
   FAQ: undefined;
@@ -38,13 +31,11 @@ type ProfileStackParamList = {
 export type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
   CoachTab: { status?: 'open' } | undefined;
-  JournalTab: undefined;
   ProfileTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const ProgramStack = createNativeStackNavigator<ProgramStackParamList>();
-const CoachStack = createNativeStackNavigator<CoachStackParamList>();
 const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
 
 function ProgramIcon({ color, size }: { color: string; size: number }) {
@@ -66,17 +57,6 @@ function CoachIcon({ color, size }: { color: string; size: number }) {
   );
 }
 
-function JournalIcon({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
-      <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
-      <Path d="M9 7h7" />
-      <Path d="M9 11h7" />
-    </Svg>
-  );
-}
-
 function ProfileIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -92,14 +72,6 @@ function ProgramStackNavigator() {
       <ProgramStack.Screen name="Home" component={HomeScreen} />
       <ProgramStack.Screen name="DayWorkout" component={DayWorkoutScreen} />
     </ProgramStack.Navigator>
-  );
-}
-
-function CoachStackNavigator() {
-  return (
-    <CoachStack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
-      <CoachStack.Screen name="Coach" component={CoachScreen} />
-    </CoachStack.Navigator>
   );
 }
 
@@ -156,38 +128,10 @@ export default function AppNavigator() {
 
   /*
     THE JOURNAL IS HIDDEN (Sam, 2026-08-09, after his eye pass) — AND THE OS
-    STILL HOLDS WHAT THE SURFACE PUT THERE.
-
-    The ruling reads "unreachable = nothing can ever fire". That is true of
-    every FUTURE schedule — the opt-in tap lives on a screen no tab reaches
-    any more, so nothing can arm the reminder again. It is NOT true of a
-    schedule already handed to the notification centre. The reminder unit's own
-    design says so in as many words: **the OS is the store**. A weekly trigger
-    accepted before today keeps firing every Monday whether this app is opened
-    or not, and hiding the surface does not reach into that store.
-
-    So the hide has two halves, and this is the second one. It cancels by the
-    reminder's stable identifier through the service's own door, on every
-    launch: stateless, idempotent, and no "have I cancelled yet" flag to store.
-
-    THE TAP DOOR IS GONE WITH THE TAB, and that is the same removal R5.7 made
-    for the coach cut — the entry surface and every door that targeted it. It
-    also has to go: the old handler navigated to a tab that no longer exists,
-    and navigating to a name the navigator does not know throws. A crash on
-    tapping a notification is the worst place in the app to have one, and a
-    notification delivered from before the cancel is exactly the case that
-    would have found it.
-
-    WHAT THIS CANNOT REACH: an athlete who never opens the app again. Their
-    phone keeps the schedule the OS accepted. Nothing inside a binary can
-    cancel a notification for a binary that is never run.
+    The old Journal surface and its reminder system have now been retired. The
+    Journal's pure calculations and recorded inputs remain for the Coach
+    snapshot; no hidden screen or notification code is kept alive.
   */
-  React.useEffect(() => {
-    void disableJournalReminder().then((outcome) => {
-      logger.info(`[journal-hidden] reminder cancelled: ${outcome?.kind ?? 'ok'}`);
-    });
-  }, []);
-
   return (
     <View style={{ flex: 1 }} testID="main-tabs-root" accessibilityLabel="Main tabs">
       <Tab.Navigator
@@ -228,36 +172,10 @@ export default function AppNavigator() {
           listeners={{ tabPress: () => logger.info('[tab-press] program') }}
         />
         {/*
-          R5.7 — THE BETA COACH CUT (§6, decision C(a), signed; Sam's
-          "MAKE THE CUT" 2026-08-07). The free-text coach entry point does not
-          appear in the beta build, and the boundary is the FULL cut: zero
-          paths to a chat surface, not a reachable screen with its input
-          removed. The tab is gone and all three navigation doors that
-          targeted it are gone with it.
-
-          The wording above is deliberate: `coachEntrySurfaceContractTests`
-          section [4] greps product sources for the literal call, and prose
-          containing it reads to that gate as a door. A note is output, never
-          evidence — so the note yields, not the gate.
-
-          LR-6 HOLDS: `CoachStackNavigator`, `CoachScreen` and the pipeline stay
-          in the tree, FROZEN. This is a scope cut, not a retirement — §6's own
-          words. Restoring the tab is one `Tab.Screen` block.
-
-          AND THE TAB IS BACK, 2026-08-09 — BUT NOT THE SURFACE THAT WAS CUT.
-          Sam approved docs/COACH_TAB_MOCK_2026-08-09.html and
-          docs/COACH_REBUILD_KICKOFF_2026-08-09.md opened SLICE 1. The block
-          below mounts `CoachTabScreen`, which is the rebuild: read-only, zero
-          mutation paths, its words derived from the same projection the Program
-          tab renders.
-
-          `CoachScreen` and `CoachStackNavigator` above are UNCHANGED and
-          UNREACHED. The beta chat surface C(a) cut stays cut — this is not its
-          restoration, and `coachEntrySurfaceContractTests` section [4] was
-          re-aimed at exactly that distinction rather than deleted. The frozen
-          root is retired by SUPERSESSION when S1-S3 have replaced its every
-          reachable duty, which is the kickoff's own answer to the parked
-          question of what to do with 41,220 unreachable lines.
+          The frozen beta chat root and its parallel mutation pipeline were
+          retired before the clean-room Coach rebuild. This tab is the current
+          simple Coach and remains the only mounted Coach surface until its
+          read-only replacement is proven in Coach Lab.
         */}
         <Tab.Screen
           name="CoachTab"
@@ -297,28 +215,6 @@ export default function AppNavigator() {
           }}
           listeners={{ tabPress: () => logger.info('[tab-press] coach') }}
         />
-        {/*
-          THE JOURNAL IS HIDDEN — Sam, 2026-08-09, after his own eye pass:
-          "i'd like all the journal stuff hidden for now - keep the data behind
-          the scenses because it might be useful for the coach."
-          Ruling: docs/JOURNAL_HIDDEN_RULING_2026-08-09.md
-
-          ONE HIDE AT THE NAVIGATION OWNER, not a scatter of conditionals, and
-          it is the R5.7 shape exactly: ENTRY SURFACE GONE, MACHINERY FROZEN
-          NOT DELETED. The tab block and the notification's tap door are the
-          only two things removed. `JournalScreen` stays imported above and
-          every derivation, store and suite behind it stays alive in the chain,
-          because the record they keep is the input the coach rebuild is going
-          to read. Restoring the surface is one Tab.Screen block.
-
-          It was NOT a retirement, so nothing here is deleted and no word is
-          withdrawn from the copy sheet: batches 15-28 stay signed against a
-          screen that still exists and no longer renders.
-
-          `journalHiddenContractTests` is the ratchet that keeps it hidden —
-          the gate must watch the deleted surface, or one restored line brings
-          a screen Sam has ruled on back with nothing noticing.
-        */}
         <Tab.Screen
           name="ProfileTab"
           component={ProfileStackNavigator}

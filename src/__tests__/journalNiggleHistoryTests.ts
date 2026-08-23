@@ -300,45 +300,7 @@ console.log('\n[5] OWNERSHIP AND THE SURFACE');
       { all: mixed.regions.map((r) => r.region), flagged: flagged.map((r) => r.region) });
   }
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the screen source was read', screen.length > 4000, screen.length);
-  ok('the screen builds the history rather than joining episodes itself',
-    /\bbuildJournalNiggleHistory\s*\(/.test(screen));
-  ok('the screen renders `journal-niggle-resurfaced`',
-    /testID="journal-niggle-resurfaced"/.test(screen));
 
-  // ── `journal-niggles-none` IS RETIRED, AND THE CELL IS RE-POINTED ──
-  //
-  // Sam's UI ruling (2026-08-09): "NIGGLE HISTORY surfaces only with an active
-  // issue or repeat flag — never standing furniture." So "No niggles recorded."
-  // is gone: an athlete with nothing wrong sees no niggle surface at all.
-  //
-  // THE CELL ASSERTS THE STRONGER LAW RATHER THAN DISAPPEARING WITH THE STRING.
-  // A cell quietly deleted because its own unit made it red is how a gate stops
-  // meaning anything — the same move slice 2 made for slice 1's "no writer"
-  // cell. What replaces it is BEHAVIOURAL, which the old one was not: the
-  // predicate moved out of the JSX into `flaggedNiggleRegions`, so "a healed
-  // single episode is not shown" is now proven by calling it.
-  // COMMENTS ARE STRIPPED FIRST, AND THIS CELL EARNED THAT ON ITS FIRST RUN: it
-  // went red on the screen's own header comment, which documents the retirement
-  // by QUOTING the retired sentence. The claim is "an athlete cannot see this
-  // string", and a comment is the one place the string can appear without being
-  // visible to anyone. Stripping is not loosening — a live literal still reds.
-  const screenCode = screen
-    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-  ok('the stripped screen source is substantial, not an empty slice',
-    screenCode.length > 4000, screenCode.length);
-  ok('the retired empty state is gone from the screen entirely',
-    !/journal-niggles-none/.test(screenCode) && !/No niggles recorded/.test(screenCode),
-    screenCode.match(/No niggles recorded[^\n]*/g));
-  ok('and the screen asks the derivation which regions are worth showing',
-    /\bflaggedNiggleRegions\s*\(/.test(screen));
-
-  // A ZUSTAND SELECTOR THAT MINTS A NEW ARRAY RE-RENDERS FOREVER. `?? []` inline
-  // compares unequal every time; the frozen constant is the fix.
-  ok('the episodes selector uses a stable empty array, not an inline `?? []`',
-    /EMPTY_EPISODES/.test(screen) && !/injuryEpisodes \?\? \[\]\s*,\s*\n?\s*\)/.test(screen));
 }
 
 console.log(`\njournalNiggleHistoryTests: ${pass} passed, ${fail} failed`);

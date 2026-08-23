@@ -10,7 +10,7 @@ import {
 } from './sessionResolver';
 import { projectVisibleDay } from './visibleProgramProjection';
 import { buildScheduleStateImperative } from './coachWeekDiff';
-import { bucketToRegion } from './coachConstraintProducers';
+import { bucketToRegion } from './injuryConstraintRegion';
 import { logger } from './logger';
 import { filterConstraintsForDate } from './readinessConstraints';
 import {

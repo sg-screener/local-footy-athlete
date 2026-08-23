@@ -67,7 +67,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useDecisionLedgerStore, decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
@@ -141,7 +140,6 @@ function reachWorldByActing(): void {
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
   // The profile is authored through its two doors and nothing else — the
   // one-door census reaches TEST sources, and it caught the sibling tape on its
   // first full chain. Debt paid rather than declared.

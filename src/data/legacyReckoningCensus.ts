@@ -169,16 +169,6 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'acts, behaviour identical. The refusal guards the bare-wipe class.',
   },
   {
-    file: 'store/coachMutationHistoryStore.ts',
-    persistKey: 'coach-mutation-history-store',
-    owner: 'applyCoachMutationHistoryWrite',
-    taped: true,
-    caveat: 'AGENTS.md requires mutation history for follow-up target resolution — '
-      + 'which is why losing `entries` silently was Tier-1 debt. Armoured 2026-08-03 '
-      + '(store-armour fleet); store-ownership work only (LR-6): what the executor '
-      + 'records and the undo engine reverts is unchanged.',
-  },
-  {
     file: 'store/coachPreferencesStore.ts',
     persistKey: 'coach-preferences-store',
     owner: 'applyCoachModalityPrefsWrite',
@@ -217,26 +207,6 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
     persistKey: 'athlete-preferences-store',
     owner: 'applyAthletePrefsWrite',
     taped: true,
-  },
-  {
-    file: 'store/coachStore.ts',
-    persistKey: 'coach-store',
-    owner: 'applyCoachStoreWrite',
-    taped: true,
-    caveat: 'Armoured 2026-08-03 (store-armour fleet, wave 2a). Store-ownership '
-      + 'work only (LR-6): the door owns HOW the chat history is written; what '
-      + 'any coach path says or decides is unchanged. `activeConversation` rides '
-      + 'through the door but is presentation, never material.',
-  },
-  {
-    file: 'store/coachMemoryStore.ts',
-    persistKey: 'coach-memory-store',
-    owner: 'applyCoachMemoryWrite',
-    taped: true,
-    caveat: 'Armoured 2026-08-03 (store-armour fleet, wave 2a). Store-ownership '
-      + 'work only (LR-6): the door owns HOW the notes are written; what the '
-      + 'pipeline decides to remember is unchanged. Removing the last note is a '
-      + 'named erasure, not the wipe (recipe lesson 11).',
   },
   // store/uiStore.ts and store/authStore.ts RETIRED WHOLE 2026-08-03 (Sam's
   // §6 ruling, PARKED_QUESTIONS_2026-08-01): both persisted only never-written
@@ -511,16 +481,16 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'double refusal; the one real athlete residual was the active-removal re-add '
       + '(restoration), whose un-pinning only the legacy writer knew how to do.',
     size: 'M',
-    status: 'scheduled',
+    status: 'retired',
     sequence: 'ATHLETE SHARE PAID (Stage B stage 1, 2026-08-03): the re-add restoration '
       + 'is typed (stageAthleteSessionAdditionTransaction flips the bin to '
       + "restored/'explicit_re_add' in the staged proposal), the defer-sets and both "
       + 'planChangeProducer call sites are deleted, and no athlete surface reaches the '
-      + 'legacy writer. The two coachTurnController call sites remain: coach-owned, '
-      + "retire with the coach units under LR-6's boundary. See "
+      + 'legacy writer. The frozen Coach call sites were deleted by Sam\'s 2026-08-24 '
+      + 'clean-room ruling. See '
       + 'docs/STAGE_B_STAGE0_DATEOVERRIDES_IDENTITY_2026-08-03.md §4 Option C.',
     detector: 'legacyOverrideWriterRefs',
-    declared: 2,
+    declared: 0,
     foundingCount: 4,
   },
   {
@@ -893,20 +863,6 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     detector: null,
     whyNotDetectable: 'A red suite is found by running it — LR-14 is the unit that does '
       + 'that systematically; this is its largest single instance.',
-  },
-  {
-    id: 'LR-23',
-    title: 'Coach clarifier and context stores are in-memory',
-    tier: 3,
-    laws: ['L-B3', 'L-C1'],
-    blastRadius: 'honesty',
-    founding: 'pendingCoachClarifierStore and coachContextStateStore have no persist(...), '
-      + 'so a clarifier spent across a relaunch and coach context rebuilt from nothing are '
-      + 'both silent.',
-    size: 'S',
-    status: 'scheduled',
-    detector: null,
-    whyNotDetectable: 'Diagnosis first, as with LR-18.',
   },
   {
     id: 'LR-24',

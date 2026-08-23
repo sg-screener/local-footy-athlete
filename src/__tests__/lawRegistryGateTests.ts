@@ -291,7 +291,7 @@ const RULE_ID_PATTERN = /\b(LR-\d+|L-C\d+|L-[A-Z]\d+|L1[0-6])\b/g;
 const RULE_IDS_WITHOUT_A_ROW: readonly string[] = [
   'L-P0', 'L-P1', 'L-P2', 'L-P3', 'L-P4', 'L-P5', 'L-P7', 'L-P8',
   'LR-1', 'LR-2', 'LR-3', 'LR-4', 'LR-8', 'LR-10', 'LR-13', 'LR-14',
-  'LR-23', 'LR-26', 'LR-27', 'LR-29',
+  'LR-26', 'LR-27', 'LR-29',
 ];
 
 /** Every rule identifier named by a suite the chain actually runs. */

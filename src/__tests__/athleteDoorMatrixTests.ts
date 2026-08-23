@@ -83,7 +83,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -234,7 +233,6 @@ function seedStores(program: TrainingProgram, extraMarkedDays: Record<string, st
   useCalendarStore.setState({ markedDays, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
   useProgramStore.setState({
     currentProgram: program,
     currentMicrocycle: program.microcycles.find(

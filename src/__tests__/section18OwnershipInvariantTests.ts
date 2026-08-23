@@ -43,7 +43,6 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { seedManualOverride } from './support/programOverrideHarness';
 import { executeProgramControlAction } from '../utils/programControlActions';
-import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -333,40 +332,6 @@ run('4 disclosed-repair: binning TUE strength names every day it changes', () =>
   assert(undisclosed.length === 0,
     `days changed but not disclosed in "${result.message}": ` +
     `${JSON.stringify(undisclosed.map((d) => DAY_NAMES[d]))}`);
-});
-
-// Invariant 5 — cross-door equivalence + no false "Done".
-run('5 cross-door: tap and coach produce the same swap, with no false "Done"', () => {
-  seed();
-  tapSwapSquatToStepUps();
-  const tapMon = exerciseIds(acceptedByDay().get(1)).sort();
-
-  seed();
-  const coach = executeCoachCommand({
-    command: {
-      mode: 'mutate',
-      operation: 'replace_exercise',
-      target: { kind: 'date', date: WEEK },
-      payload: { operation: 'replace_exercise', fromExercise: 'Back Squat', toExercise: 'Step Ups' },
-      scope: 'one_off',
-      confidence: 1,
-      needsClarification: false,
-      reason: 'athlete_requested_exercise_swap',
-    } as never,
-    todayISO: WEEK,
-    referenceResolution: null,
-    userMessage: 'swap back squat for step ups',
-  });
-  const coachApplied = (coach as { kind?: string }).kind === 'mutated' &&
-    (coach as { applied?: boolean }).applied === true;
-  const coachMon = exerciseIds(acceptedByDay().get(1)).sort();
-  const squatSurvived = coachMon.some((id) => /ex-squat/.test(id));
-  // No false "Done": if the coach claimed it applied, the squat must be gone.
-  assert(!(coachApplied && squatSurvived),
-    `coach claimed applied="${coachApplied}" but Back Squat survived (${JSON.stringify(coachMon)})`);
-  // Same logical change, same visible result across doors.
-  assert(JSON.stringify(tapMon) === JSON.stringify(coachMon),
-    `tap and coach diverged:\n  tap  =${JSON.stringify(tapMon)}\n  coach=${JSON.stringify(coachMon)}`);
 });
 
 // Invariant 6 — pure projection: reading the week must not recompute loads.

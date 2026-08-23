@@ -14,7 +14,6 @@
 import { useProfileStore } from './profileStore';
 import { useProgramStore } from './programStore';
 import { useWorkoutLogStore } from './workoutLogStore';
-import { useCoachStore } from './coachStore';
 import { useAthletePreferencesStore, getAthletePrefs } from './athletePreferencesStore';
 import { useReadinessStore } from './readinessStore';
 
@@ -22,7 +21,6 @@ export {
   useProfileStore,
   useProgramStore,
   useWorkoutLogStore,
-  useCoachStore,
   useAthletePreferencesStore,
   getAthletePrefs,
   useReadinessStore,
@@ -35,14 +33,12 @@ export function clearAllStores() {
   const { clear: clearProfile } = useProfileStore.getState();
   const { clear: clearProgram } = useProgramStore.getState();
   const { clear: clearWorkoutLog } = useWorkoutLogStore.getState();
-  const { clear: clearCoach } = useCoachStore.getState();
   const { clear: clearAthletePrefs } = useAthletePreferencesStore.getState();
   const { clear: clearReadiness } = useReadinessStore.getState();
 
   clearProfile();
   clearProgram();
   clearWorkoutLog();
-  clearCoach();
   clearAthletePrefs();
   clearReadiness();
 }

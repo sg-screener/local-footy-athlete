@@ -19,7 +19,6 @@ import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import type { DayOfWeek, OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
-import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { canonicaliseAcceptedStateCandidate, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
@@ -484,33 +483,6 @@ async function main(): Promise<void> {
     assert(byDay(accepted(NEXT_WEEK)).get(1)?.sessionTier === 'recovery',
       'valid Sunday G+1 dependency was lost during injury repair');
     useCoachUpdatesStore.getState().setActiveInjury(null);
-  });
-
-  await run('3 live remove-session relocates accepted Saturday hard conditioning', () => {
-    reset();
-    removeGame();
-    assert(byDay().get(6)?.name === 'Hard Conditioning', 'Saturday hard conditioning precondition missing');
-    const result = executeCoachCommand({
-      command: {
-        mode: 'mutate',
-        operation: 'remove_session',
-        target: { kind: 'date', date: SATURDAY, sessionName: 'Hard Conditioning' },
-        payload: { operation: 'remove_session', reason: 'Saturday unavailable' },
-        scope: 'one_off',
-        confidence: 1,
-        needsClarification: false,
-        reason: 'required_core_date_removal',
-      },
-      todayISO: WEEK,
-      referenceResolution: null,
-      userMessage: 'Remove Saturday hard conditioning',
-    });
-    const week = accepted();
-    assert(result.kind === 'mutated' && result.applied, JSON.stringify(result));
-    assert(!byDay(week).has(6), 'Saturday still has a workout');
-    assert(week.evaluation.ledger.conditioning.coreCount === 3, 'conditioning fell below C3');
-    assert(week.evaluation.ledger.conditioning.credits.some((credit) =>
-      credit.source === 'app' && credit.dayOfWeek !== 6), 'app conditioning was not relocated');
   });
 
   await run('4 permanent Saturday unavailability rebases the current accepted bye', () => {

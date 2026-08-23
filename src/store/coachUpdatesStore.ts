@@ -5,10 +5,9 @@
  * card when the entry is missing or `active === false`.
  *
  * WRITE PATH
- *   CoachScreen.handleSend writes here ONLY after applyAdjustmentEvents
- *   reports applied.length > 0 AND the visible-diff verifier confirms
- *   the user-facing surface actually moved. So if the card is rendered,
- *   the program tab MUST have a corresponding visible change.
+ *   Current deterministic program transactions can publish an update only
+ *   after the accepted-state owner commits a corresponding visible change.
+ *   The retired conversational Coach is not a writer.
  *
  * READ PATH
  *   HomeScreen calls `getActiveCoachUpdate(weekStartISO)`. If null →
@@ -16,7 +15,7 @@
  *   changes / "Update coach" button.
  *
  * LIFECYCLE
- *   - upsertCoachUpdate(weekStartISO, payload)  — coach made changes
+ *   - upsertCoachUpdate(weekStartISO, payload)  — accepted change summary
  *   - deactivateCoachUpdate(weekStartISO)       — athlete dismissed it
  *     OR a follow-up turn replaces the prior entry
  *   - clearAllCoachUpdates                       — nuke (test/reset use)

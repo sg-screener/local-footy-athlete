@@ -61,9 +61,6 @@ const {
   dismissActiveCoachNote,
 } = require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes');
 const {
-  detectConstraintResolution,
-} = require('../utils/constraintResolutionDetector') as typeof import('../utils/constraintResolutionDetector');
-const {
   semanticFingerprint,
 } = require('../utils/programSemanticSnapshot') as typeof import('../utils/programSemanticSnapshot');
 const {
@@ -471,10 +468,6 @@ async function main(): Promise<void> {
     sourceSurface: 'test_guided_flow',
     todayISO: date,
   });
-  const allGood = detectConstraintResolution('all good now', normalizeAcceptedMaterialContext(
-    useProgramStore.getState().acceptedMaterialContext).activeConstraints);
-  check('generic all-good with multiple facts requires clarification', allGood.ambiguous &&
-    allGood.constraintIdsToResolve.length === 0, allGood);
   await resolveInjuryEpisode(third.episodeId!, { todayISO: date });
   check('resolving injury preserves unrelated constraint', normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).activeConstraints.some((constraint) =>

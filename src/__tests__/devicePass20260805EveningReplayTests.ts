@@ -94,7 +94,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -228,7 +227,6 @@ function reachHisWorldByActing(): void {
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
   useProfileStore.setState({ onboardingData: {}, isOnboardingComplete: false } as never);
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());

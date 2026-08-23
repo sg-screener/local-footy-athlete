@@ -36,8 +36,8 @@
  *   - THE RUNG CAN CREEP INTO THE RATIO. [6] asserts the fallback weight never
  *     becomes a term in a comparison, which is the boundary the plan doc §2b
  *     had to rule on.
- *   - THE SURFACE CAN READ AROUND THE DOOR. [9] requires the screen reach every
- *     derived value through `signedValue` and never through `.value`.
+ *   - WEEK IDENTITY CAN DRIFT. [9] pins Monday/Sunday ownership so any future
+ *     dashboard reads the same week the load model calculated.
  *
  * Run: npm run test:journal-load
  */
@@ -329,9 +329,8 @@ console.log('\n[2] PROVENANCE PROPAGATION — the mechanism, in both directions'
   ok('and the completed pattern SHARES still stand signed — no constant feeds them',
     model.patternSharesDone.provenance === 'signed');
 
-  // THE HEADLINE EXISTS, AND IT NOW REACHES THE SURFACE. The old form of this
-  // cell asserted the number was computed BEHIND the refusal; today the same
-  // number comes back through the door.
+  // THE HEADLINE EXISTS, AND IT CAN PASS THE PROVENANCE DOOR. The former Journal
+  // UI was retired; the future Coach dashboard must still use this release path.
   ok('the headline IS computed, and the value is the ratio it always was',
     model.headline.value !== null && Math.abs(model.headline.value.ratio - 1) < 1e-9,
     model.headline.value);
@@ -919,75 +918,19 @@ console.log('\n[8] PATTERN BALANCE — plan vs done, from the existing pattern o
   // AND IT IS LIT NOW, which is what the threshold's first signature bought.
   // The identity check is deliberate: `signedValue` must hand back the SAME
   // object the model computed, not a truthy stand-in.
-  ok('the balance verdict is SIGNED, so its card renders — the first reader, lit',
+  ok('the balance verdict is SIGNED, so a future reader can receive it',
     signedValue(drifted.patternBalance) === drifted.patternBalance.value
     && drifted.patternBalance.value !== null);
 }
 
-// ─── [9] Week identity, and the surface's one door ───────────────────────
+// ─── [9] Week identity ───────────────────────────────────────────────────
 
-console.log('\n[9] WEEK IDENTITY, AND THE SURFACE READS ONLY THROUGH THE DOOR');
+console.log('\n[9] WEEK IDENTITY');
 {
   ok('a Monday is its own week start', journalWeekStartOf('2026-08-10') === '2026-08-10');
   ok('a Sunday belongs to the Monday before it', journalWeekStartOf('2026-08-16') === '2026-08-10');
   ok('and an unparseable date is null rather than a wrong week',
     journalWeekStartOf('not-a-date') === null);
-
-  const screenPath = join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx');
-  const screen = readFileSync(screenPath, 'utf8');
-  ok('the screen source was actually read', screen.length > 4000, screen.length);
-
-  ok('the screen builds the load model rather than deriving load itself',
-    /\bbuildJournalLoadModel\s*\(/.test(screen));
-  ok('and it reads derived values through `signedValue`',
-    /\bsignedValue\s*\(/.test(screen));
-
-  // THE DOOR IS THE POINT. Reading `.value` off a derived value is how an
-  // unsigned number reaches the athlete, and it is the one move this whole
-  // mechanism exists to make impossible.
-  const loadRegionStart = screen.indexOf('function LoadSection');
-  const loadRegionEnd = screen.indexOf('// ─── The note');
-  ok('the Load section was located in the screen',
-    loadRegionStart > 0 && loadRegionEnd > loadRegionStart,
-    { loadRegionStart, loadRegionEnd });
-  const loadRegion = screen.slice(loadRegionStart, loadRegionEnd);
-  ok('and the located region is substantial, not an empty slice',
-    loadRegion.length > 300, loadRegion.length);
-  ok('the Load section never reads `.value` off a derived value',
-    !/\bload\.[A-Za-z]+\.value\b/.test(loadRegion), loadRegion.match(/\b\w+\.value\b/g));
-
-  // THE COVERAGE SENTENCE HAS THREE FORMS, and the third is the one that would
-  // otherwise ship a visibly broken number. `sessionsPlanned` counts the days
-  // the projection asks work of; `sessionsMeasured` counts dates the athlete
-  // logged detail on. They answer different questions, so measured CAN exceed
-  // planned — and "6 of 5" on the one line that actually ships would cost trust
-  // in every other number on the screen. The denominator is DROPPED there, not
-  // clamped: clamping states a falsehood quietly instead of loudly.
-  const evidenceStart = screen.indexOf('function loadEvidenceLine');
-  const evidenceEnd = screen.indexOf('\n}', evidenceStart);
-  ok('the evidence line builder was located',
-    evidenceStart > 0 && evidenceEnd > evidenceStart, { evidenceStart, evidenceEnd });
-  const evidence = screen.slice(evidenceStart, evidenceEnd);
-  ok('and the located builder is substantial, not an empty slice',
-    evidence.length > 200, evidence.length);
-  ok('it drops the denominator when measured exceeds planned',
-    /sessionsMeasured\s*>\s*coverage\.sessionsPlanned/.test(evidence));
-  ok('and it never clamps the count to hide the case',
-    !/Math\.(min|max)/.test(evidence));
-
-  // THE HONEST STATES ARE RENDERED, not merely derivable — anchored by testID
-  // so an on-device explorer can find them.
-  for (const testId of ['journal-load-evidence', 'journal-load-building']) {
-    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
-  }
-
-  // THE SIGNED-ONLY LINES EXIST IN CODE so that Sam's signature alone ships
-  // them. A screen with no headline line at all would pass every "it is hidden"
-  // cell above and still need a code change on the day he signs.
-  ok('the headline line exists behind the refusal, ready for the signature',
-    /testID="journal-load-headline"/.test(screen));
-  ok('the region observation line exists behind the refusal too',
-    /testID="journal-load-region"/.test(screen));
 }
 
 // ── THE TEAM NIGHT'S OWN LOAD (seat item 6, 2026-08-12) ───────────────────
@@ -1073,19 +1016,6 @@ ok('a day that was not a game produces no number', gameSRPE(null) === null);
     both.gameSRPE === 720 && both.teamTrainingSRPE === 450,
     `${both.gameSRPE} / ${both.teamTrainingSRPE}`);
 
-  // A READER THAT STOPS AT `deriveSessionLoad` IS THE DEFECT ITEM 10 EXISTS TO
-  // CATCH — and it is exactly how both halves of a game sat validated and unread
-  // for as long as they did. The derivation above is worth nothing if the screen
-  // never hands it the game, so the PRODUCER is asserted too. A source scan
-  // because the wiring is the claim: the input the screen builds must carry the
-  // field, not merely be capable of carrying it.
-  const producer = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the journal producer was actually read', producer.length > 4000, producer.length);
-  ok('the journal producer hands the game to the load model',
-    /game:\s*feedback\?\.game\s*\?\?\s*null/.test(producer),
-    'JournalScreen builds JournalLoadSessionInput without `game` — the number is '
-    + 'computed and never fed, which is the defect this item names');
 }
 
 // ── THE STRENGTH SESSION'S OWN DURATION (seat item 18, Sam ruled 2026-08-12) ──
@@ -1116,13 +1046,6 @@ ok('a zero duration is not an answer', strengthSRPE(7, 0) === null);
   });
   ok('effort alone does not make a session measured',
     halfAnswered.strengthSRPE === null && halfAnswered.measured === false);
-  // THE FOUR ARE INDEPENDENT.
-  const producer = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the journal producer hands BOTH strength halves to the load model',
-    /difficulty:\s*feedback\?\.difficulty\s*\?\?\s*null/.test(producer)
-    && /actualMinutes:\s*feedback\?\.actualMinutes\s*\?\?\s*null/.test(producer),
-    'JournalScreen builds JournalLoadSessionInput without the strength halves');
 }
 
 // ALL FOUR KINDS ARE REAL — the sentence item 6 has been reaching for since it
@@ -1141,10 +1064,9 @@ totalsPrinted(fail);
 console.log('  DEPTH (L13): 0 — a unit sweep over the pure derivation with hand-built '
   + 'session records. It does NOT walk an athlete through five real weeks, and no cell '
   + 'here mounts a surface.');
-console.log('  NOT COVERED: the effort tap on strength sessions is NOT built (the '
-  + 'modulation constant defaults OFF, so it would change no visible number — it lands '
-  + 'with the "felt different" slice). Charts are layer 5 and deferred to the monthly '
-  + 'review by the ruling. The fallback rung is proven WHOLE for the current week and '
+console.log('  NOT COVERED: no current screen consumes this model; the retired Journal '
+  + 'UI is gone and the Coach dashboard is not built yet. The fallback rung is proven '
+  + 'WHOLE for the current week and '
   + 'proven ABSENT from ratio space; whether it should ever enter ratio space is Sam\'s '
   + 'open question (docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md §2b). No cell asserts '
   + 'what the athlete SEES on a device.');

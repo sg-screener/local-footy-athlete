@@ -64,10 +64,6 @@ import {
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
 import type { ReadinessSignal } from '../../utils/readiness';
 import type { EquipmentTag } from '../../data/exercisePools';
-import {
-  getClientEnvConfig,
-  logMissingClientEnv,
-} from '../../config/env';
 import { logger } from '../../utils/logger';
 import {
   resolveEquipmentAvailability,
@@ -2348,8 +2344,8 @@ export function getProgramGenerationProfileFieldDiagnostics(data: OnboardingData
 export function buildProgramGenerationRequestDiagnostics(
   onboardingData: OnboardingData,
   plan?: CoachingPlan,
-  message?: string,
-  env: ReturnType<typeof getClientEnvConfig> = getClientEnvConfig(),
+  _retiredMessage?: string,
+  _retiredRemoteConfig?: unknown,
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(onboardingData),
   resolvedConditioningModalities: readonly ConditioningEquipmentModality[] =
     resolveEquipmentCapabilities(onboardingData).conditioningModalities,
@@ -2374,41 +2370,13 @@ export function buildProgramGenerationRequestDiagnostics(
     todayISO,
     seasonPhaseClock: diagnosticsClock,
   });
-  const derivedMessage = message ?? buildGenerationPrompt(
-    generationProfile,
-    derivedPlan,
-    resolvedEquipmentTags,
-    resolvedConditioningModalities,
-  );
   const roleContext = buildRoleContext(generationProfile);
   const profileFields = Object.keys(generationProfile).sort();
   const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(generationProfile);
-  const payloadShape = {
-    messages: [{ role: 'user', content: '[generation prompt omitted from log]' }],
-    athleteProfile: '[onboarding profile object]',
-    roleContext: '[selected role + programming bias]',
-    coachingPlan: '[coaching constraints object]',
-    mode: 'generate',
-  };
-  const payloadForSize = buildProgramGenerationEdgePayload({
-    generationProfile,
-    message: derivedMessage,
-    coachingPlan: derivedPlan.constraints,
-    resolvedEquipmentTags,
-    resolvedConditioningModalities,
-  });
 
   return {
-    endpoint: env.coachChatEndpoint || '(missing)',
-    functionName: 'coach-chat',
-    mode: 'generate',
-    payloadShape,
-    request: {
-      messageCount: 1,
-      promptWords: derivedMessage.split(/\s+/).filter(Boolean).length,
-      promptPreview: previewBody(derivedMessage, 240),
-      approxPayloadBytes: JSON.stringify(payloadForSize).length,
-    },
+    owner: 'local-program-composer',
+    mode: 'local',
     profile: {
       presentFields: profileFields,
       missingRequired: profileFieldDiagnostics.missingRequired,

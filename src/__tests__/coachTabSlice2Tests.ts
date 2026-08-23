@@ -60,7 +60,6 @@ const questionSource = read('rules', 'coachQuestion.ts');
 const questionCode = stripComments(questionSource);
 const answerSource = read('rules', 'coachAnswer.ts');
 const answerCode = stripComments(answerSource);
-const intentSource = read('utils', 'coachIntent.ts');
 
 let passed = 0;
 const failures: string[] = [];
@@ -135,50 +134,24 @@ console.log('\n[0] The subjects were found — nothing below is claimed about an
   ok('and its stripped code is substantial, not comment-only', questionCode.length > 1500, questionCode.length);
   ok('the answer source was read', answerSource.length > 4000, answerSource.length);
   ok('and its stripped code is substantial', answerCode.length > 1500, answerCode.length);
-  ok('the salvage intent module was read', intentSource.length > 10000, intentSource.length);
 }
 
-// ─── [1] THE VOCABULARY IS THE SALVAGE LAYER'S ───────────────────────────────
+// ─── [1] THE VOCABULARY BELONGS TO THE CLEAN-ROOM READER ─────────────────────
 
-console.log('\n[1] RE-POINTED, NOT REWRITTEN — the question kinds are the frozen union\'s');
+console.log('\n[1] CLEAN-ROOM VOCABULARY — read-only and independent of the frozen Coach');
 {
-  // TYPE-LEVEL, and it is the strongest cell in this section even though it
-  // prints nothing at runtime: this assignment only compiles while
-  // `CoachAnswerableKind` really is a subset of the frozen union. Delete the
-  // `Extract` and widen the type, and `tsc` reds.
   const narrowed: CoachAnswerableKind = 'program_explanation';
   ok('the narrowed kind is inhabited', narrowed === 'program_explanation');
 
   ok(
-    'the narrowing is an Extract over the salvage union, not a fresh literal set',
-    /Extract<\s*CoachIntentKind/.test(questionCode)
-      && /import type \{ CoachIntentKind \} from '\.\.\/utils\/coachIntent'/.test(questionCode),
-    'three matching literals satisfy "re-pointed" on day one and stop being '
-      + 'true the day somebody renames one upstream',
+    'the reader declares exactly its three read-only outcomes',
+    /export type CoachAnswerableKind\s*=\s*\|\s*'program_explanation'\s*\|\s*'session_mismatch_question'\s*\|\s*'general_question'\s*;/.test(questionCode),
+    questionCode.match(/export type CoachAnswerableKind[\s\S]{0,220}?;/)?.[0],
   );
-
-  // AND THE UPSTREAM UNION REALLY DECLARES THEM. The type is erased at runtime,
-  // so this is a source scan — and it is anchored before it counts, because a
-  // `slice` between two markers that both missed returns something a regex is
-  // happy to pass over.
-  const unionStart = intentSource.indexOf('export type CoachIntentKind =');
-  const unionEnd = intentSource.indexOf(';', unionStart);
-  const union = unionStart >= 0 && unionEnd > unionStart
-    ? intentSource.slice(unionStart, unionEnd)
-    : '';
   ok(
-    'the CoachIntentKind declaration was located and holds its whole union',
-    union.length > 200 && /general_question/.test(union) && union.split('|').length >= 15,
-    `${union.length} chars, ${union.split('|').length - 1} members`,
+    'and it imports no retired Coach intent vocabulary',
+    !/coachIntent|CoachIntentKind/.test(questionCode),
   );
-  for (const kind of ['program_explanation', 'session_mismatch_question', 'general_question']) {
-    ok(
-      `the frozen union still declares '${kind}'`,
-      new RegExp(`\\|\\s*'${kind}'`).test(union),
-      'the narrowing names it; if the union stops declaring it the type is a '
-        + 'lie the compiler catches, and this cell says which one moved',
-    );
-  }
 
   // THE TARGET IS A DATE, AND NOTHING ELSE. `decisionLedger.ts:9-11`.
   ok(
@@ -529,7 +502,7 @@ console.log('\n[5] READ-ONLY — the answering layer cannot reach a writer eithe
     { pattern: /programControlActions/, why: 'the door S3 will use, behind the change card' },
     { pattern: /decisionLedger/, why: 'appending a decision is a mutation that reads like a log' },
     { pattern: /Transaction/, why: 'accepted-state transactions are the write path' },
-    { pattern: /coachActions|coachTurnController|coachCommand|coachProgramEdit/, why: 'the frozen beta pipeline (LR-6)' },
+    { pattern: /coachActions|coachTurnController|coachCommand|coachProgramEdit/, why: 'the retired beta pipeline' },
     { pattern: /applyProgramAdjustment|weekRebuild|generateProgram/, why: 'generation and adjustment writers' },
     { pattern: /AsyncStorage|persist/, why: 'slice 2 stores nothing — an answer is not a record' },
   ];

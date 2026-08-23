@@ -70,7 +70,6 @@ export type OnboardingStackParamList = {
 export type AppTabParamList = {
   HomeStack: undefined;
   ProgramStack: undefined;
-  JournalStack: undefined;
   CoachStack: undefined;
   ProfileStack: undefined;
 };
@@ -128,29 +127,6 @@ export type ProgramStackParamList = {
   ExerciseLibrary: undefined;
   CustomizeWorkout: {
     workoutId: string;
-  };
-};
-
-/**
- * Journal Stack
- * Workout logging and history
- */
-export type JournalStackParamList = {
-  JournalHome: undefined;
-  LogWorkout: {
-    workoutId: string;
-  };
-  WorkoutHistory: undefined;
-  WorkoutHistoryDetail: {
-    loggedWorkoutId: string;
-  };
-  PersonalRecords: undefined;
-  ProgressCharts: undefined;
-  ExerciseHistory: {
-    exerciseId: string;
-  };
-  WeeklyReview: {
-    microcycleId: string;
   };
 };
 
@@ -290,12 +266,6 @@ export enum DeepLinkPath {
   PROGRAM_DETAIL = '/programs/:programId',
   CREATE_PROGRAM = '/programs/create',
 
-  // Journal
-  JOURNAL = '/journal',
-  LOG_WORKOUT = '/journal/log/:workoutId',
-  WORKOUT_HISTORY = '/journal/history',
-  PERSONAL_RECORDS = '/journal/records',
-
   // Coach
   COACH = '/coach',
   COACH_CHAT = '/coach/chat/:conversationId',
@@ -327,7 +297,6 @@ export type WorkoutStackParamList = {
 export type AppStackParamList =
   | HomeStackParamList
   | ProgramStackParamList
-  | JournalStackParamList
   | CoachStackParamList
   | ProfileStackParamList
   | WorkoutStackParamList;

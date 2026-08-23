@@ -620,22 +620,9 @@ async function main(): Promise<void> {
       __dirname,
       '../screens/home/useHomeScreen.ts',
     ), 'utf8');
-    const coachSource = fs.readFileSync(path.join(
-      __dirname,
-      '../screens/coach/CoachScreen.tsx',
-    ), 'utf8');
-    const coachControllerSource = fs.readFileSync(path.join(
-      __dirname,
-      '../utils/coachTurnController.ts',
-    ), 'utf8');
     assert(
       /useResolvedWeek\(\)/.test(homeSource) && !/\btodayWorkout\b/.test(homeSource),
       'Home card stopped using the canonical resolved-week projection',
-    );
-    assert(
-      /useResolvedWeek\(\)/.test(coachSource) && !/\btodayWorkout\b/.test(coachSource) &&
-        /buildProgramTabProjectedWeek\(/.test(coachControllerSource),
-      'Coach today-session resolution stopped using the canonical visible projection',
     );
   });
 

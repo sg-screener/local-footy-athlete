@@ -26,11 +26,8 @@ import { useProfileStore } from '../../store/profileStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../../store/coachMutationHistoryStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
-import { useCoachStore } from '../../store/coachStore';
-import { useCoachMemoryStore } from '../../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../../rules/reversibleAdjustmentLedger';
 import type { OnboardingData } from '../../types/domain';
 
@@ -41,20 +38,10 @@ export function resetStoresToFreshInstall(reason: string): void {
   });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachMutationHistoryStore.getState().clearAll();
   // Through the stores' own reset doors — the armour refuses a raw default
   // write over answered prefs, and a fresh install must not bypass the owners.
   useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
-  useCoachStore.getState().clear();
-  useCoachMemoryStore.getState().clearNotes();
-  // The LR-23 in-memory stores: reset through their own actions. (The
-  // `getCoachRevisionTemplateContext` module singleton is a third confirmed
-  // carrier with no reset API — DECLARED in the day-shift log, not reset here.)
-  require('../../store/pendingCoachClarifierStore')
-    .usePendingCoachClarifierStore.getState().reset();
-  require('../../store/coachContextStateStore')
-    .useCoachContextStateStore.getState().clearCoachContext();
   // R-132: the session stopwatch — a fresh install has timed nothing. The
   // write also gives the store its persistence envelope, which is what the
   // persisted-inputs schema measures declarations against.
@@ -130,9 +117,9 @@ export function resetStoresToFreshInstall(reason: string): void {
   // the SOURCE of. Hence the order, and hence the check below — a reset that
   // does not hold must say so rather than hand the next walk a different
   // athlete.
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
+  useCoachUpdatesStore.setState({ activeConstraints: [] } as never);
   const leaked = useCoachUpdatesStore.getState().activeConstraints;
-  if (leaked.length > 0 || useCoachUpdatesStore.getState().activeInjury) {
+  if (leaked.length > 0) {
     throw new Error(
       `A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL (${reason}): the `
       + `coach-updates reset did not hold — ${leaked.length} constraint(s) `

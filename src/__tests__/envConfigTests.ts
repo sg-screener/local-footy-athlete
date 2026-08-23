@@ -1,278 +1,60 @@
-/**
- * envConfigTests - release config guardrails.
- *
- * Run: npm run test:env-config
- */
+/** Release client configuration guardrails after the Coach clean-room cut. */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  COACH_REVISION_PROPOSAL_FUNCTION_NAME,
-  COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
   buildMailto,
   describeMissingClientEnv,
   getClientEnvConfig,
-  shouldCreateCoachRevisionProposalAdapter,
-  shouldCreateSemanticProgramEditDraftAdapter,
 } from '../config/env';
 
-let pass = 0;
-let fail = 0;
-const failures: string[] = [];
+let passed = 0;
+let failed = 0;
 
-function ok(name: string, cond: boolean, detail?: string) {
-  if (cond) {
-    pass++;
+function check(name: string, condition: unknown): void {
+  if (condition) {
+    passed += 1;
     console.log(`  PASS ${name}`);
-  } else {
-    fail++;
-    failures.push(name);
-    console.log(`  FAIL ${name}${detail ? '\n      ' + detail : ''}`);
+    return;
   }
+  failed += 1;
+  console.error(`  FAIL ${name}`);
 }
 
-function section(label: string) {
-  console.log(`\n${label}`);
-}
+const normal = getClientEnvConfig({
+  EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co/',
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+});
+check('required public configuration is ready', normal.isReady);
+check('Supabase URL is normalised', normal.supabaseUrl === 'https://project.supabase.co');
+check('the generic functions base remains available',
+  normal.supabaseFunctionsBaseUrl === 'https://project.supabase.co/functions/v1');
+check('the public anon key is read', normal.supabaseAnonKey === 'anon-key');
 
-section('[1] Reads required Supabase public env');
-{
-  const config = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co/',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-  });
+const alias = getClientEnvConfig({
+  EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+  EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL: 'https://edge.example.com/functions/v1/',
+});
+check('the publishable-key alias remains supported', alias.supabaseAnonKey === 'publishable-key');
+check('a custom functions base is normalised',
+  alias.supabaseFunctionsBaseUrl === 'https://edge.example.com/functions/v1');
 
-  ok('config is ready', config.isReady);
-  ok('trims Supabase URL slash', config.supabaseUrl === 'https://project.supabase.co');
-  ok(
-    'coach-chat endpoint derived',
-    config.coachChatEndpoint === 'https://project.supabase.co/functions/v1/coach-chat',
-  );
-  ok(
-    'coach-intent endpoint derived',
-    config.coachIntentEndpoint === 'https://project.supabase.co/functions/v1/coach-intent',
-  );
-  ok(
-    'semantic ProgramEditDraft endpoint derived',
-    config.coachSemanticProgramEditDraftEndpoint ===
-      'https://project.supabase.co/functions/v1/coach-semantic-program-edit-draft',
-  );
-  ok(
-    'semantic ProgramEditDraft function name exposed',
-    config.coachSemanticProgramEditDraftFunctionName ===
-      COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
-  );
-  ok(
-    'CoachRevisionProposal endpoint derived',
-    config.coachRevisionProposalEndpoint ===
-      'https://project.supabase.co/functions/v1/coach-revision-proposal',
-  );
-  ok(
-    'CoachRevisionProposal function name exposed',
-    config.coachRevisionProposalFunctionName ===
-      COACH_REVISION_PROPOSAL_FUNCTION_NAME,
-  );
-  ok('semantic ProgramEditDraft mode defaults off', config.semanticProgramEditDraftMode === 'off');
-  ok('CoachRevisionProposal mode defaults off', config.coachRevisionProposalMode === 'off');
-  ok('anon key read', config.supabaseAnonKey === 'anon-key');
-}
+const missing = getClientEnvConfig({});
+check('missing required values keep configuration unready', !missing.isReady);
+check('missing configuration names both required public values',
+  describeMissingClientEnv(missing).includes('EXPO_PUBLIC_SUPABASE_URL') &&
+  describeMissingClientEnv(missing).includes('EXPO_PUBLIC_SUPABASE_ANON_KEY'));
 
-section('[2] Supports publishable key alias and custom functions base');
-{
-  const config = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
-    EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL: 'https://edge.example.com/functions/v1/',
-  });
+check('mailto subjects are encoded',
+  buildMailto('support@example.com', 'LFA feedback & help') ===
+    'mailto:support@example.com?subject=LFA%20feedback%20%26%20help');
 
-  ok('publishable alias read', config.supabaseAnonKey === 'publishable-key');
-  ok(
-    'custom functions base used',
-    config.coachIntentEndpoint === 'https://edge.example.com/functions/v1/coach-intent',
-  );
-  ok(
-    'semantic ProgramEditDraft endpoint uses custom functions base',
-    config.coachSemanticProgramEditDraftEndpoint ===
-      'https://edge.example.com/functions/v1/coach-semantic-program-edit-draft',
-  );
-  ok(
-    'CoachRevisionProposal endpoint uses custom functions base',
-    config.coachRevisionProposalEndpoint ===
-      'https://edge.example.com/functions/v1/coach-revision-proposal',
-  );
-}
+const source = fs.readFileSync(path.resolve(__dirname, '..', 'config', 'env.ts'), 'utf8');
+check('the client configuration contains no private AI key names',
+  !/ANTHROPIC|OPENAI/.test(source));
+check('the client configuration exposes no retired Coach endpoint or mode',
+  !/coachChat|coachIntent|semanticProgramEdit|coachRevisionProposal/i.test(source));
 
-section('[3] Missing env produces clear error copy');
-{
-  const config = getClientEnvConfig({});
-  const message = describeMissingClientEnv(config);
-
-  ok('config not ready', !config.isReady);
-  ok('missing URL named', message.includes('EXPO_PUBLIC_SUPABASE_URL'));
-  ok('missing key named', message.includes('EXPO_PUBLIC_SUPABASE_ANON_KEY'));
-}
-
-section('[4] Client config does not reference private AI keys');
-{
-  const envPath = path.resolve(__dirname, '..', 'config', 'env.ts');
-  const src = fs.readFileSync(envPath, 'utf8');
-  ok('no ANTHROPIC string in client env module', !/ANTHROPIC/i.test(src));
-  ok('no OPENAI string in client env module', !/OPENAI/i.test(src));
-}
-
-section('[5] Support mailto helper is encoded');
-{
-  ok(
-    'mailto subject encoded',
-    buildMailto('support@example.com', 'LFA - Speak to a Human') ===
-      'mailto:support@example.com?subject=LFA%20-%20Speak%20to%20a%20Human',
-  );
-}
-
-section('[6] Semantic ProgramEditDraft mode is dev-active gated');
-{
-  const defaultMode = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-  });
-  const shadow = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE: ' shadow ',
-  });
-  const legacyShadow = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE: ' shadow ',
-  });
-  const activeWithoutFlag = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE: 'active',
-  }, { isDev: true });
-  const activeOutsideDev = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE: 'active',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE: '1',
-  }, { isDev: false });
-  const activeInDev = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE: ' active ',
-    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE: '1',
-  }, { isDev: true });
-
-  ok('default mode resolves off', defaultMode.semanticProgramEditDraftMode === 'off');
-  ok('shadow mode can be enabled for diagnostics', shadow.semanticProgramEditDraftMode === 'shadow');
-  ok('legacy shadow env still works', legacyShadow.semanticProgramEditDraftMode === 'shadow');
-  ok('active without dev-active flag resolves off', activeWithoutFlag.semanticProgramEditDraftMode === 'off');
-  ok('active with dev-active flag outside dev resolves off', activeOutsideDev.semanticProgramEditDraftMode === 'off');
-  ok('active with dev-active flag in dev resolves active', activeInDev.semanticProgramEditDraftMode === 'active');
-  ok('raw semantic mode is exposed for diagnostics', activeInDev.semanticProgramEditDraftRawMode === 'active');
-  ok('activeAllowed diagnostic true only in dev-active mode', activeInDev.semanticProgramEditDraftActiveAllowed);
-  ok('production active path remains impossible', !activeOutsideDev.semanticProgramEditDraftActiveAllowed);
-  ok('adapter is not created for off mode', !shouldCreateSemanticProgramEditDraftAdapter('off'));
-  ok('adapter is created for shadow mode', shouldCreateSemanticProgramEditDraftAdapter('shadow'));
-  ok('adapter is created for dev active mode', shouldCreateSemanticProgramEditDraftAdapter('active'));
-}
-
-section('[7] CoachScreen passes resolved semantic mode wiring');
-{
-  const coachScreenPath = path.resolve(__dirname, '..', 'screens', 'coach', 'CoachScreen.tsx');
-  const coachScreen = fs.readFileSync(coachScreenPath, 'utf8');
-
-  ok(
-    'CoachScreen creates semantic adapter through resolved-mode helper',
-    /shouldCreateSemanticProgramEditDraftAdapter\(clientEnv\.semanticProgramEditDraftMode\)/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes resolved semantic mode to controller',
-    /semanticProgramEditDraftMode:\s*clientEnv\.semanticProgramEditDraftMode/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes raw semantic mode diagnostics to controller',
-    /semanticProgramEditDraftRawMode:\s*clientEnv\.semanticProgramEditDraftRawMode/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes active gate diagnostics to controller',
-    /semanticProgramEditDraftActiveAllowed:\s*clientEnv\.semanticProgramEditDraftActiveAllowed/.test(coachScreen),
-  );
-}
-
-section('[8] CoachRevisionProposal mode is dev-active gated');
-{
-  const defaultMode = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-  });
-  const shadow = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: ' shadow ',
-  });
-  const activeWithoutFlag = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: 'active',
-  }, { isDev: true });
-  const activeOutsideDev = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: 'active',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_DEV_ACTIVE: '1',
-  }, { isDev: false });
-  const activeInDev = getClientEnvConfig({
-    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: ' active ',
-    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_DEV_ACTIVE: '1',
-  }, { isDev: true });
-
-  ok('default revision mode resolves off', defaultMode.coachRevisionProposalMode === 'off');
-  ok('revision shadow mode can be enabled for diagnostics', shadow.coachRevisionProposalMode === 'shadow');
-  ok('revision active without dev-active flag resolves off', activeWithoutFlag.coachRevisionProposalMode === 'off');
-  ok('revision active with dev-active flag outside dev resolves off', activeOutsideDev.coachRevisionProposalMode === 'off');
-  ok('revision active with dev-active flag in dev resolves active', activeInDev.coachRevisionProposalMode === 'active');
-  ok('raw revision mode is exposed for diagnostics', activeInDev.coachRevisionProposalRawMode === 'active');
-  ok('revision activeAllowed true only in dev-active mode', activeInDev.coachRevisionProposalActiveAllowed);
-  ok('revision production active path remains impossible', !activeOutsideDev.coachRevisionProposalActiveAllowed);
-  ok('revision adapter is not created for off mode', !shouldCreateCoachRevisionProposalAdapter('off'));
-  ok('revision adapter is created for shadow mode', shouldCreateCoachRevisionProposalAdapter('shadow'));
-  ok('revision adapter is created for dev active mode', shouldCreateCoachRevisionProposalAdapter('active'));
-}
-
-section('[9] CoachScreen passes resolved CoachRevisionProposal wiring');
-{
-  const coachScreenPath = path.resolve(__dirname, '..', 'screens', 'coach', 'CoachScreen.tsx');
-  const coachScreen = fs.readFileSync(coachScreenPath, 'utf8');
-
-  ok(
-    'CoachScreen creates revision adapter through resolved-mode helper',
-    /shouldCreateCoachRevisionProposalAdapter\(clientEnv\.coachRevisionProposalMode\)/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes resolved revision mode to controller',
-    /coachRevisionProposalMode:\s*clientEnv\.coachRevisionProposalMode/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes raw revision mode diagnostics to controller',
-    /coachRevisionProposalRawMode:\s*clientEnv\.coachRevisionProposalRawMode/.test(coachScreen),
-  );
-  ok(
-    'CoachScreen passes revision active gate diagnostics to controller',
-    /coachRevisionProposalActiveAllowed:\s*clientEnv\.coachRevisionProposalActiveAllowed/.test(coachScreen),
-  );
-}
-
-console.log(`\n- Summary -`);
-console.log(`  Pass: ${pass}`);
-console.log(`  Fail: ${fail}`);
-
-if (fail > 0) {
-  console.log(`\n- Failures -`);
-  for (const failure of failures) console.log(`  - ${failure}`);
-  process.exit(1);
-}
-
-process.exit(0);
+console.log(`\nEnvironment configuration: ${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

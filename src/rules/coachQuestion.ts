@@ -2,19 +2,12 @@
  * WHAT THE ATHLETE ASKED, AS A TYPE — SLICE 2's READING LAYER.
  *
  * docs/COACH_REBUILD_KICKOFF_2026-08-09.md, S2: *"Read-only Q&A grounded in the
- * program, the week, and recorded rules per L-C1. The salvage layer (intent,
- * target resolution, clarifiers, truth gate) is re-pointed here, not
- * rewritten."*
+ * program, the week, and recorded rules per L-C1.
  *
  * ## THE VOCABULARY IS THE SALVAGE LAYER'S, AND THE COMPILER PROVES IT
  *
- * `CoachAnswerableKind` is an `Extract<>` over `CoachIntentKind` — the frozen
- * pipeline's own intent union. Not a copy of three strings, not a parallel
- * enum: a NARROWING, so the day somebody renames or deletes
- * `program_explanation` upstream, this file stops compiling instead of quietly
- * owning a second vocabulary. That is what "re-pointed, not rewritten" has to
- * mean in a type system, and it costs nothing at runtime because
- * `import type` is erased — no frozen module enters the graph.
+ * The clean-room reader owns only the three read-only outcomes it can produce.
+ * It deliberately has no dependency on the retired mutation intent system.
  *
  * ## THE TARGET IS A DATE, BY THE LEDGER'S OWN LAW
  *
@@ -50,7 +43,6 @@
  * argument, as it is for the opener.
  */
 
-import type { CoachIntentKind } from '../utils/coachIntent';
 import { WEEKDAY_NAMES } from '../utils/appDate';
 import type { VisibleWeek } from './visibleProjection';
 
@@ -66,10 +58,10 @@ import type { VisibleWeek } from './visibleProjection';
  *   READ-ONLY family rather than an arbitrary three.
  * - `general_question` — the honest floor: a question with no rule behind it.
  */
-export type CoachAnswerableKind = Extract<
-  CoachIntentKind,
-  'program_explanation' | 'session_mismatch_question' | 'general_question'
->;
+export type CoachAnswerableKind =
+  | 'program_explanation'
+  | 'session_mismatch_question'
+  | 'general_question';
 
 /**
  * WHAT THE QUESTION IS ABOUT.

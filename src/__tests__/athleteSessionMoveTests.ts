@@ -43,7 +43,6 @@ import {
   previewPlanChangeRisk,
   type PlanChange,
 } from '../utils/planChangeProducer';
-import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import {
   commitAthleteSessionMoveTransaction,
   commitProgramSetupRebuildTransaction,
@@ -60,8 +59,6 @@ import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTr
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { acceptedStateFingerprint } from '../store/coachMutationTransaction';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
-import { routeCoachCommand } from '../utils/coachCommandRouter';
 
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
@@ -147,7 +144,6 @@ function seed(
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] });
   // THE WORLD IS RETIRED BEFORE THE PROFILE IS ANSWERED, AND THE PROFILE GOES
   // THROUGH THE OWNED DOOR (seat answer 2, 2026-08-07).
   //
@@ -528,43 +524,6 @@ run('6 induced publication failure cannot create a half-move', () => {
     'failure published move provenance');
 });
 
-run('7 tap and Coach moves converge on accepted state and provenance', () => {
-  seed();
-  const tap = realDoor({
-    kind: 'move_session',
-    fromDate: dateForDay(FUTURE_WEEK, 1),
-    toDate: dateForDay(FUTURE_WEEK, 3),
-  }, FUTURE_WEEK);
-  assert(tap.commit?.ok, JSON.stringify(tap.commit));
-  const tapState = semantic(FUTURE_WEEK);
-  const tapConstraint = useProgramStore.getState().userRemovalConstraints.find((candidate) =>
-    candidate.mutationKind === 'move');
-  seed();
-  const source = workoutOn(FUTURE_WEEK, 1)!;
-  const coach = executeCoachCommand({
-    command: {
-      mode: 'mutate',
-      operation: 'move_session',
-      target: { kind: 'date', date: dateForDay(FUTURE_WEEK, 1), sessionName: source.name },
-      payload: { operation: 'move_session', toDate: dateForDay(FUTURE_WEEK, 3), swap: false },
-      scope: 'one_off',
-      confidence: 1,
-      needsClarification: false,
-      reason: 'athlete_requested_move',
-    },
-    todayISO: CURRENT_WEEK,
-    referenceResolution: null,
-    userMessage: 'Move Monday strength to Wednesday',
-  });
-  const coachConstraint = useProgramStore.getState().userRemovalConstraints.find((candidate) =>
-    candidate.mutationKind === 'move');
-  assert(coach.kind === 'mutated' && coach.applied, JSON.stringify(coach));
-  assert(semantic(FUTURE_WEEK) === tapState, 'tap and Coach visible states differ');
-  assert(coachConstraint?.id === tapConstraint?.id &&
-    coachConstraint?.moveTargetDate === tapConstraint?.moveTargetDate,
-  'tap and Coach provenance differ');
-});
-
 run('8 failed preview and failed commit share the identity rejection family', () => {
   seed();
   const week = visibleWeek(FUTURE_WEEK);
@@ -892,53 +851,6 @@ run('15 newer overlapping athlete intent supersedes stale restoration', () => {
   assert(result.outcome === 'superseded', JSON.stringify(result));
   assert(result.supersededById === second.id, 'newer owner was not reported');
   assert(semantic(FUTURE_WEEK) === beforeClear, 'superseded restore overwrote newer intent');
-});
-
-run('16 Coach undo bypasses RevertPlan and uses the shared restoration executor', () => {
-  seed();
-  const before = semantic(FUTURE_WEEK);
-  const source = workoutOn(FUTURE_WEEK, 1)!;
-  const moved = executeCoachCommand({
-    command: {
-      mode: 'mutate',
-      operation: 'move_session',
-      target: { kind: 'date', date: dateForDay(FUTURE_WEEK, 1), sessionName: source.name },
-      payload: { operation: 'move_session', toDate: dateForDay(FUTURE_WEEK, 3), swap: false },
-      scope: 'one_off',
-      confidence: 1,
-      needsClarification: false,
-      reason: 'athlete_requested_move',
-    },
-    todayISO: CURRENT_WEEK,
-    referenceResolution: null,
-    userMessage: 'Move Monday strength to Wednesday',
-  });
-  assert(moved.kind === 'mutated' && moved.applied, JSON.stringify(moved));
-  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(adjustment?.sourceActor === 'athlete' &&
-    adjustment.sourceSurface === 'coach_chat' && adjustment.status === 'active',
-    'Coach move ledger owner missing');
-  const undo = executeCoachCommand({
-    command: routeCoachCommand({
-      userMessage: 'undo that',
-      todayISO: CURRENT_WEEK,
-      referenceResolution: null,
-      lastChange: {
-        operation: 'move_session',
-        target: { kind: 'date', date: dateForDay(FUTURE_WEEK, 1), sessionName: source.name },
-        appliedAt: Date.now(),
-      },
-    }),
-    todayISO: CURRENT_WEEK,
-    referenceResolution: null,
-    userMessage: 'undo that',
-  });
-  assert(undo.kind === 'mutated' && undo.applied, JSON.stringify(undo));
-  assert(undo.route.startsWith('reversible_adjustment:restored'), undo.route);
-  assert(semantic(FUTURE_WEEK) === before, 'Coach undo did not restore the exact accepted week');
-  assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments
-    .find((candidate) => candidate.id === adjustment.id)?.status === 'cleared',
-  'Coach undo left the adjustment active');
 });
 
 run('17 changed accepted-after prescription conflicts without overwriting later intent', () => {

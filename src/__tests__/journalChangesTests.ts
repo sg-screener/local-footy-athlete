@@ -152,45 +152,6 @@ console.log('\n[3] THE LIST NEVER IMPLIES COMPLETENESS');
     !/readiness|illness|injuryEpisode|temporarySourceFact/i.test(code),
     code.match(/readiness|illness|injury\w*/gi));
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the screen source was read', screen.length > 4000, screen.length);
-  // BOTH HALVES ASSERTED SEPARATELY, so a later edit cannot drop one and leave
-  // the other looking correct.
-  ok('the surface renders the boundary sentence',
-    /testID="journal-changes-boundary"/.test(screen));
-
-  // ── `journal-changes-none` IS RETIRED, AND THE CELL IS RE-POINTED ──
-  //
-  // Sam's UI ruling (2026-08-09) moves this into the hero as a credit line and
-  // retires its empty state by name: "one credit line inside the hero on weeks a
-  // change happened, nothing otherwise. Data stays stored/derived regardless."
-  //
-  // THE REPLACEMENT IS A STRONGER CLAIM THAN THE ONE IT REPLACES. "The empty
-  // state renders" said a string existed. This says the block renders NOTHING —
-  // the component's first act on an empty week is `return null` — which is the
-  // property the ruling actually asked for, and which the old cell could not
-  // have distinguished from a rendered blank.
-  const screenCode = screen
-    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-  ok('the stripped screen source is substantial, not an empty slice',
-    screenCode.length > 4000, screenCode.length);
-  ok('the retired empty state is gone from the screen entirely',
-    !/journal-changes-none/.test(screenCode)
-    && !/You made no changes to this week/.test(screenCode),
-    screenCode.match(/You made no changes[^\n]*/g));
-
-  // AND THE BLOCK IS PROVEN TO RETURN NULL, at the anchor rather than anywhere
-  // in the file — AGENTS.md's anchoring law: prove the region was found before
-  // claiming anything about it.
-  const start = screenCode.indexOf('function WhatChanged');
-  const end = screenCode.indexOf('\nfunction ', start + 1);
-  ok('the WhatChanged component was located',
-    start > 0 && end > start, { start, end });
-  const region = screenCode.slice(start, end);
-  ok('and the located region is substantial', region.length > 200, region.length);
-  ok('a week with no changes renders nothing at all',
-    /return null/.test(region), region);
 }
 
 console.log(`\njournalChangesTests: ${pass} passed, ${fail} failed`);

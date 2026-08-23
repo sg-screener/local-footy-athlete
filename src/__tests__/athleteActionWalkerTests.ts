@@ -68,10 +68,6 @@ import { athleteActionLogEntries } from '../utils/athleteActionLog';
 import { useReadinessStore, applyReadinessSignalsWrite } from '../store/readinessStore';
 import { useCoachUpdatesStore, applyCoachUpdatesWrite } from '../store/coachUpdatesStore';
 import {
-  useCoachMutationHistoryStore,
-  applyCoachMutationHistoryWrite,
-} from '../store/coachMutationHistoryStore';
-import {
   useAthletePreferencesStore,
   applyAthletePrefsWrite,
   INITIAL_ATHLETE_PREFS,
@@ -80,8 +76,6 @@ import {
   useCoachPreferencesStore,
   applyCoachModalityPrefsWrite,
 } from '../store/coachPreferencesStore';
-import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
-import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -1478,9 +1472,7 @@ const host: WalkerHost = {
  *
  * — and diff the `[probe 6:N]` lines. Determinism means equal worlds produce
  * equal lines; the FIRST divergent action index names where a predecessor's
- * residue changed this walk's world. Beside each line the three suspected
- * carriers (the two LR-23 in-memory stores and the coach template-context
- * singleton) report whether they hold non-virgin state.
+ * residue changed this walk's world.
  */
 async function runOrderProbe(spec: string): Promise<void> {
   // A malformed spec must refuse loudly — BSD `seq -s,` emits a TRAILING
@@ -1494,19 +1486,6 @@ async function runOrderProbe(spec: string): Promise<void> {
     throw new Error(`WALKER_ORDER_PROBE spec "${spec}" did not parse to seeds`);
   }
   const target = seeds[seeds.length - 1];
-  const carrierState = (): string => {
-    const clarifier = require('../store/pendingCoachClarifierStore');
-    const context = require('../store/coachContextStateStore');
-    const pending = clarifier.usePendingCoachClarifierStore?.getState?.() ?? {};
-    const ctx = context.useCoachContextStateStore?.getState?.() ?? {};
-    let template = 'unreadable';
-    try {
-      const mod = require('../utils/coachRevisionTemplateContext');
-      template = JSON.stringify(mod.getCoachRevisionTemplateContext?.() ?? null)?.slice(0, 60) ?? 'null';
-    } catch { template = 'throws'; }
-    return `clarifier=${JSON.stringify(pending.pending ?? null)} ctx=${
-      Object.keys(ctx).filter((key) => ctx[key] != null).length}keys template=${template}`;
-  };
   for (const seed of seeds) {
     let index = 0;
     const probeHost: WalkerHost = {
@@ -1516,7 +1495,7 @@ async function runOrderProbe(spec: string): Promise<void> {
         if (seed === target) {
           index += 1;
           console.log(`[probe ${seed}:${index}] ${action.kind} | ${weekFingerprint()} | rev=${
-            useProgramStore.getState().acceptedMaterialContext.revision} | ${carrierState()}`);
+            useProgramStore.getState().acceptedMaterialContext.revision}`);
         }
         return result;
       },
@@ -2432,7 +2411,7 @@ async function walkTheScheduleDoors(): Promise<void> {
 
 }
 
-run('freshInstall is total — the two resets it was missing are covered', () => {
+run('freshInstall is total — preference resets are covered', () => {
   // THE RESETS ADDED ON 2026-07-31 HAVE A CELL, because a reset nothing checks
   // is a reset the next tidy-up deletes. Both stores are read by generation
   // (`getAthletePrefs()`) and by the projection (modality preferences), so a
@@ -2446,34 +2425,12 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
     from: 'bike',
     to: 'row',
   });
-  const clarifierStore = require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore;
-  const contextStore = require('../store/coachContextStateStore').useCoachContextStateStore;
-  clarifierStore.setState({ pending: { probe: true } } as never);
-  // The wave-2a stores, acted through their own doors so the reset lines in
-  // freshInstall cannot be deleted unnoticed.
-  useCoachStore.getState().addMessage({
-    id: 'totality-m1', conversationId: 'totality-conv', role: 'user',
-    content: 'leftover chat the next walk must never see',
-    createdAt: new Date().toISOString(),
-  });
-  useCoachMemoryStore.getState().addNote('leftover note the next walk must never see');
   freshInstall();
   const prefs = useAthletePreferencesStore.getState().prefs;
   assert(prefs.excluded.length === 0 && prefs.pinned.length === 0,
     `freshInstall left athlete pool prefs behind: ${JSON.stringify(prefs)}`);
   assert(Object.keys(useCoachPreferencesStore.getState().modalityPreferences ?? {}).length === 0,
     'freshInstall left coach modality preferences behind');
-  // Unit 6: the LR-23 in-memory stores are part of TOTAL now, and the check is
-  // what keeps their reset lines alive.
-  assert(clarifierStore.getState().pending == null,
-    'freshInstall left a pending coach clarifier behind');
-  assert(contextStore.getState() != null,
-    'coach context store unreadable after freshInstall');
-  assert(useCoachStore.getState().messages.length === 0
-    && useCoachStore.getState().conversations.length === 0,
-    'freshInstall left coach chat history behind');
-  assert(useCoachMemoryStore.getState().notes.length === 0,
-    'freshInstall left coach memory notes behind');
 });
 
 run('the calendar door refuses the wipe against a walked world', () => {
@@ -2573,44 +2530,6 @@ run('the coach prefs door refuses the wipe against a walked world', () => {
     'the refusal left no witness on the tape');
 });
 
-run('the mutation history door refuses the wipe against a walked world', () => {
-  // Same replay for coachMutationHistoryStore — the record AGENTS.md requires
-  // for follow-up target resolution. The entry is ACTED through the store's
-  // own `recordMutation` action for the same declared reason as above: the
-  // walker has no coach vocabulary, and LR-6 forbids adding one in this unit.
-  // Shallow tier, depth stated per L13: 3 actions, 3 days.
-  freshInstall();
-  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
-  performAction({ kind: 'generate_program' });
-  performAction({ kind: 'advance_time', days: 3 });
-  useCoachMutationHistoryStore.getState().recordMutation({
-    operation: 'swap_conditioning_modality_once',
-    mutationKind: 'modality_swap_once',
-    userMessage: 'swap my Tuesday row for a bike',
-    appliedReply: 'Done — Tuesday is on the bike this week.',
-    affectedDates: [addDaysISO(weekStart, 1)],
-    scope: 'one_off',
-    revertPlan: { kind: 'restore_snapshot', dateOverrides: [] },
-  });
-  const entriesBefore = JSON.stringify(useCoachMutationHistoryStore.getState().entries);
-  assert(useCoachMutationHistoryStore.getState().entries.length >= 1,
-    'precondition: the acted-in history entry must exist to protect');
-  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
-  const refusalsOnTape = () => athleteActionLogEntries()
-    .filter((entry) => entry.event === 'coach_mutation_history_write'
-      && entry.outcome === 'refused').length;
-  const refusalsBefore = refusalsOnTape();
-
-  const outcome = applyCoachMutationHistoryWrite({ next: [], writer: 'undo_engine' });
-
-  assert(!outcome.ok && outcome.reason === 'default_over_answered_history',
-    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
-  assert(JSON.stringify(useCoachMutationHistoryStore.getState().entries) === entriesBefore,
-    'the refused wipe changed the walked history anyway');
-  assert(refusalsOnTape() === refusalsBefore + 1,
-    'the refusal left no witness on the tape');
-});
-
 run('the readiness door refuses the wipe against a walked world', () => {
   // THE STORE-ARMOUR REPLAY, application 3 (docs/STORE_ARMOUR_RECIPE_
   // 2026-08-03.md §6): the state under attack is REACHED through
@@ -2671,7 +2590,7 @@ run('the coach-updates door refuses the wipe against a walked world', () => {
   const refusalsBefore = refusalsOnTape();
 
   const outcome = applyCoachUpdatesWrite({
-    next: { updatesByWeek: {}, activeConstraints: [], activeInjury: null },
+    next: { updatesByWeek: {}, activeConstraints: [] },
     writer: 'accepted_mirror',
   });
 
@@ -2679,77 +2598,6 @@ run('the coach-updates door refuses the wipe against a walked world', () => {
     `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
   assert(JSON.stringify(useCoachUpdatesStore.getState().updatesByWeek) === cardsBefore,
     'the refused wipe changed the walked cards anyway');
-  assert(refusalsOnTape() === refusalsBefore + 1,
-    'the refusal left no witness on the tape');
-});
-
-run('the coach chat door refuses the wipe against a walked world', () => {
-  // THE STORE-ARMOUR REPLAY, fleet wave 2a (docs/STORE_ARMOUR_RECIPE_
-  // 2026-08-03.md §6). The world is REACHED through host.perform; the chat is
-  // then ACTED through the store's own actions — the walker's vocabulary has
-  // NO coach action, and under the LR-6 standing STOP this unit may not add
-  // one. That gap is DECLARED here, not hidden: when LR-6 lifts, the
-  // vocabulary gains the coach doors and these act-in lines become walked
-  // actions. Shallow tier, depth stated per L13: 3 actions, 3 days.
-  freshInstall();
-  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
-  performAction({ kind: 'generate_program' });
-  performAction({ kind: 'advance_time', days: 3 });
-  useCoachStore.getState().addMessage({
-    id: 'walk-m1', conversationId: 'walk-conv', role: 'user',
-    content: 'my hamstring is tight, can Tuesday be easier?',
-    createdAt: new Date().toISOString(),
-  });
-  useCoachStore.getState().addMessage({
-    id: 'walk-m2', conversationId: 'walk-conv', role: 'assistant',
-    content: 'Done — Tuesday is now an easy movement day.',
-    createdAt: new Date().toISOString(),
-  });
-  const chatBefore = JSON.stringify(useCoachStore.getState().messages);
-  assert(useCoachStore.getState().messages.length >= 2,
-    'precondition: the acted-in chat must exist to protect');
-  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
-  const refusalsOnTape = () => athleteActionLogEntries()
-    .filter((entry) => entry.event === 'coach_store_write' && entry.outcome === 'refused').length;
-  const refusalsBefore = refusalsOnTape();
-
-  const outcome = applyCoachStoreWrite({
-    next: { conversations: [], activeConversation: null, messages: [] },
-    writer: 'coach_screen',
-  });
-
-  assert(!outcome.ok && outcome.reason === 'default_over_answered_chat',
-    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
-  assert(JSON.stringify(useCoachStore.getState().messages) === chatBefore,
-    'the refused wipe changed the walked chat anyway');
-  assert(refusalsOnTape() === refusalsBefore + 1,
-    'the refusal left no witness on the tape');
-});
-
-run('the coach memory door refuses the wipe against a walked world', () => {
-  // Same replay for coachMemoryStore — the note is ACTED through the store's
-  // own `addNote` for the same declared reason as above: the walker has no
-  // coach vocabulary, and LR-6 forbids adding one in this unit. Shallow tier,
-  // depth stated per L13: 3 actions, 3 days.
-  freshInstall();
-  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
-  performAction({ kind: 'generate_program' });
-  performAction({ kind: 'advance_time', days: 3 });
-  useCoachMemoryStore.getState().addNote('hamstring niggle — keep sprint volume low this week');
-  const notesBefore = JSON.stringify(useCoachMemoryStore.getState().notes);
-  assert(useCoachMemoryStore.getState().notes.length >= 1,
-    'precondition: the acted-in note must exist to protect');
-  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
-  const refusalsOnTape = () => athleteActionLogEntries()
-    .filter((entry) => entry.event === 'coach_memory_write' && entry.outcome === 'refused').length;
-  const refusalsBefore = refusalsOnTape();
-
-  const outcome = applyCoachMemoryWrite({ next: [], writer: 'coach_screen' });
-
-  assert(!outcome.ok && outcome.reason === 'default_over_answered_notes',
-    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
-  assert(JSON.stringify(useCoachMemoryStore.getState().notes) === notesBefore,
-    'the refused wipe changed the walked notes anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
 });

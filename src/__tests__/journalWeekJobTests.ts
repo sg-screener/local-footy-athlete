@@ -211,17 +211,6 @@ console.log('\n[3b] WEEK STATUS — the item I wrongly called blocked');
     !/achievedCount|unresolvedMinimumShortfall/.test(statusCode),
     statusCode.match(/achieved\w*|unresolved\w*/g));
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  // THE EVALUATOR BUILDS THE LEDGER FRESH — that is what makes this honest, and
-  // it is the difference between this and the version a gate refused.
-  ok('the screen derives the status through the evaluator, this turn',
-    /\bevaluateSection18EffectiveWeek\s*\(/.test(screen));
-  ok('and it uses the BLOCKING violations, not every advisory',
-    /blockingViolations/.test(screen));
-  for (const testId of ['journal-status-on-track', 'journal-status-gaps']) {
-    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
-  }
 }
 
 // ─── [4] It asks. It does not count, and it does not build. ──────────────
@@ -250,29 +239,6 @@ console.log('\n[4] OWNERSHIP — the contract already knows');
     /\bATHLETE_WORD_FOR_DOMAIN\b/.test(code)
     && !/main_strength:\s*'strength'/.test(code));
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the screen source was read', screen.length > 4000, screen.length);
-  ok('the screen reads the contract off the microcycle rather than composing one',
-    /exposureContractV2/.test(screen) && /\bbuildJournalWeekJob\s*\(/.test(screen));
-
-  // THREE-STATE RENDERING, ASSERTED AT THE SURFACE. A `!job.satisfied` test
-  // would render the unknown state as a failure, which is the whole point of
-  // the null.
-  const jobStart = screen.indexOf('function WeekJob');
-  const jobEnd = screen.indexOf('\n/**', jobStart);
-  ok('the WeekJob component was located', jobStart > 0 && jobEnd > jobStart,
-    { jobStart, jobEnd });
-  const region = screen.slice(jobStart, jobEnd);
-  ok('and the located region is substantial', region.length > 300, region.length);
-  // THE SURFACE STATES THE ASK AND CLAIMS NOTHING ABOUT COMPLETION. "Did the
-  // work happen" one section down answers that from recorded outcomes; a second
-  // verdict here, from a stale snapshot, would be two answers to one question.
-  ok('the surface renders no completion verdict at all',
-    !/satisfied/.test(region), region.match(/satisfied[^\n]*/g));
-  for (const testId of ['journal-job-none', 'journal-job-asks']) {
-    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
-  }
 }
 
 console.log(`\njournalWeekJobTests: ${pass} passed, ${fail} failed`);

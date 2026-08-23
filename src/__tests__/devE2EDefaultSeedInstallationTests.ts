@@ -55,15 +55,6 @@ async function main(): Promise<void> {
     const { useProgramStore } = require('../store/programStore') as
       typeof import('../store/programStore');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useCoachStore } = require('../store/coachStore') as
-      typeof import('../store/coachStore');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useCoachMemoryStore } = require('../store/coachMemoryStore') as
-      typeof import('../store/coachMemoryStore');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useCoachMutationHistoryStore } = require('../store/coachMutationHistoryStore') as
-      typeof import('../store/coachMutationHistoryStore');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { readActiveDevE2EScenarioSession } = require('../dev/e2e/devE2EScenarioRuntime') as
       typeof import('../dev/e2e/devE2EScenarioRuntime');
 
@@ -90,15 +81,6 @@ async function main(): Promise<void> {
         );
       }
 
-      if (seedId === 'coach-production-replay') {
-        ok(
-          'Coach replay default installation begins with empty durable Coach state',
-          useCoachStore.getState().messages.length === 0 &&
-            useCoachStore.getState().conversations.length === 0 &&
-            useCoachMemoryStore.getState().notes.length === 0 &&
-            useCoachMutationHistoryStore.getState().entries.length === 0,
-        );
-      }
     }
 
     ok(

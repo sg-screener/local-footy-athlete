@@ -51,12 +51,6 @@ const {
   useReadinessStore,
 } = require('../store/readinessStore') as typeof import('../store/readinessStore');
 const {
-  parseCoachIntent,
-} = require('../utils/coachIntent') as typeof import('../utils/coachIntent');
-const {
-  handleCoachTurn,
-} = require('../utils/coachTurnController') as typeof import('../utils/coachTurnController');
-const {
   executeProgramControlActionDurably,
 } = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
 const {
@@ -130,84 +124,6 @@ async function main(): Promise<void> {
   const now = '2026-07-20T09:00:00.000Z';
   const dayScope = temporaryFactScope({ kind: 'date', date });
   const weekScope = temporaryFactScope({ kind: 'week', date });
-
-  console.log('\n[1] typed intent boundary');
-  const factual = parseCoachIntent({
-    intent: 'fatigue', confidence: 1, needsClarification: false,
-    payload: { severity: 5, scope: 'one_off', reportKind: 'fatigue' },
-  });
-  const command = parseCoachIntent({
-    intent: 'request_program_adjustment', confidence: 1, needsClarification: false,
-    payload: { operation: 'reduce_strength_block', scope: 'this_week' },
-  });
-  const mixed = parseCoachIntent({
-    intent: 'mixed_fact_and_program_adjustment', confidence: 1, needsClarification: false,
-    payload: { factKind: 'fatigue', reportKind: 'cooked', operation: 'reduce_strength_block' },
-  });
-  check('factual report is not an explicit program edit', factual?.intent === 'fatigue');
-  check('explicit lighter command is a program adjustment', command?.intent === 'request_program_adjustment');
-  check('mixed intent preserves both typed owners', mixed?.intent === 'mixed_fact_and_program_adjustment' &&
-    mixed.payload?.factKind === 'fatigue' && mixed.payload?.operation === 'reduce_strength_block');
-
-  console.log('\n[1b] Coach typed front door owns factual cooked reports');
-  const cookedMessages: import('../utils/coachTurnController').CoachTurnMessage[] = [];
-  const cookedUser: import('../utils/coachTurnController').CoachTurnMessage = {
-    id: 'temporary-source-fact-cooked-user',
-    role: 'user',
-    content: "I'm cooked",
-  };
-  const cookedTurn = await handleCoachTurn({
-    userMessage: cookedUser,
-    messages: cookedMessages,
-    todayISO: date,
-    classifier: {
-      classify: async () => ({
-        status: 'classified' as const,
-        provenance: 'deterministic' as const,
-        intent: {
-          intent: 'fatigue' as const,
-          confidence: 1,
-          needsClarification: false,
-          payload: {
-            reportKind: 'cooked' as const,
-            scope: 'this_week',
-          },
-        },
-      }),
-    },
-    pendingCoachProposal: null,
-    pendingReadiness: null,
-    pendingInjury: null,
-    smokeCoachBikeFlow: false,
-    isFocused: true,
-    smokeWednesdayMissingReason: null,
-    smokeWednesdayOpenTarget: null,
-    setPendingCoachProposal: () => {},
-    setPendingReadiness: () => {},
-    appendUser: () => cookedMessages.push(cookedUser),
-    appendAssistant: (message) => cookedMessages.push(message),
-    appendUserAndAssistant: (message) => cookedMessages.push(cookedUser, message),
-    clearInput: () => {},
-    setIsLoading: () => {},
-    setCoachProgressLabel: () => {},
-    startSetupRebuildProgress: () => {},
-    clearSetupRebuildProgress: () => {},
-    setLastCoachDebug: () => {},
-    semanticProgramEditDraftMode: 'off',
-    coachRevisionProposalMode: 'off',
-  });
-  const cookedFact = activeFacts().find((fact) =>
-    !isInjurySourceFact(fact) && fact.factKind === 'fatigue');
-  const cookedReply = cookedMessages.find((message) => message.role === 'assistant')?.content ?? '';
-  check('factual “I’m cooked” commits a canonical fatigue fact',
-    cookedTurn.handled && cookedFact?.reportKind === 'cooked');
-  check('factual “I’m cooked” does not create an explicit load edit',
-    useProgramStore.getState().reversibleAdjustmentLedger.adjustments.every((entry) =>
-      entry.kind !== 'explicit_load_edit'));
-  check('factual “I’m cooked” does not fall into a vague load clarification',
-    /report is active/i.test(cookedReply) &&
-    !/strength|conditioning|whole session/i.test(cookedReply));
-  reset();
 
   console.log('\n[2] Coach/tap equivalence and strongest global tier once');
   const coachFatigue = createTemporaryFatigueFact({

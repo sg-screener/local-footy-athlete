@@ -200,10 +200,9 @@ export function dayIsPracticeMatch(day: ResolvedDay): boolean {
  * marker, stopped locking at all (`planChangeProducerTests` [4] and [17] caught
  * it). One question, one predicate, both ends.
  *
- * The COACH paths keep `visibleDayLooksLikeGame` (LR-6: `coachRevisionPolicy`,
- * `coachTurnController`, the semantic adapter are frozen). This owns the athlete
- * doors only, and says so rather than pretending the repo has one predicate when
- * it has two.
+ * Historical frozen Coach paths used `visibleDayLooksLikeGame`; those paths were
+ * retired by the 2026-08-24 clean-room ruling. This remains the one predicate for
+ * the living athlete doors.
  */
 export function dayIsFixture(day: ResolvedDay): boolean {
   return day.source === 'game'

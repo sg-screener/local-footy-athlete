@@ -59,7 +59,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { athleteActionLogEntries } from '../utils/athleteActionLog';
 import { quarantineBoundaryKeys, clearAllQuarantines } from '../store/refusedPayloadQuarantine';
@@ -123,7 +122,6 @@ function freshInstallAndGenerate(): void {
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
   const program = quiet(() => generateProgramLocally(profile, {
     todayISO: '2026-07-13', previousProgram: null,
     seasonPhaseClock: {

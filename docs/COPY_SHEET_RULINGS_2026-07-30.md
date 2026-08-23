@@ -1264,7 +1264,7 @@ Sam's power ruling (13-b) holding in the new place it could have broken out.
 
 ---
 
-## Batch 15 — the Journal, slice 1 (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 15 — the Journal, slice 1: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Every string below ships
 in the app today (`1659d664`) and is queued for his eye.
@@ -1357,7 +1357,7 @@ batch is named here as owed and is not done in this commit.
 
 ---
 
-## Batch 16 — the Journal's week note, slice 2 (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 16 — the Journal's week note, slice 2: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Recorded in the same
 commit that ships it, under the new derived-scope gate — which is what batch 15
@@ -1410,7 +1410,7 @@ unlisted, and they are listed here before the commit lands.
 the honest-absence line for notes, in the family of batch 15-c. The rest are
 labels. Sam's veto is one line on any of them.
 
-## Batch 17 — the Journal's Load section, the load slice (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 17 — the Journal's Load section: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Recorded in the same
 commit that ships it, under the derived-scope gate.
@@ -1690,7 +1690,7 @@ movements they complete, and leaving them unticked records that section as
 skipped. Separately authored Optional Work is a different session group and is
 not changed by this ruling.
 
-## Batch 19 — the strength line, Monday card item 2 (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 19 — the strength line: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling.
 
@@ -1748,7 +1748,7 @@ lift never appears at all, because its recorded weight is the one that was
 *prescribed and not lifted*; a row for it would report a best for a session the
 athlete said they did not do.
 
-## Batch 20 — this week's job (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 20 — this week's job: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Monday card / addendum
 Group 1 items 3 and 4.
@@ -1834,7 +1834,7 @@ copy says "the last time your {region} flared" rather than implying the athlete
 tagged it that way. **Adding a region to a note is Sam's ruling and is not
 assumed** (docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md §2).
 
-## Batch 22 — the monthly review (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 22 — the monthly review: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Design §"Monthly review";
 load ruling layer 5.
@@ -1923,7 +1923,7 @@ readiness/temporary-fact stores rather than in `JournalFelt`, and reading a seco
 store into this line was not done in the same slice that minted it. Named as owed
 rather than quietly dropped.
 
-## Batch 23 — what kind of work the week held (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 23 — what kind of work the week held: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 1,
 "key exposures, not completion counts".
@@ -1953,7 +1953,7 @@ so — and using it would count a Saturday game three times on one screen: once 
 conditioning, once as a game, once in the strip. The line uses
 `extraConditioningSessions`, and a mutation swapping them reds a cell.
 
-## Batch 24 — week status, one calm line (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 24 — week status: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 3 —
 the line batch 20 promised would come as its own batch when the derivation was
@@ -1990,7 +1990,7 @@ athlete. It is also SILENT when there is no contract: an ungoverned week gets no
 line at all, because "on track" against a standard that does not exist is a claim
 about nothing.
 
-## Batch 25 — what you changed this week (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 25 — what you changed this week: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 2 —
 the LAST unbuilt item in the Journal unit.
@@ -2032,7 +2032,7 @@ against a week that has since changed: a reconstruction, not a record. Recording
 it is an engine-side change to the decision doors, not a Journal change, and it
 is named as owed rather than faked.
 
-## Batch 26 — the exception-based front page (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 26 — the exception-based front page: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. The UI polish slice,
 against docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md.
@@ -2133,7 +2133,7 @@ which is the whole return on listing copy that nothing renders yet: had they not
 been listed, half the front page would have lit up carrying unsigned words, in a
 commit that touched no surface file and would have looked like a no-op.
 
-## Batch 27 — the month word (2026-08-09): SIGNED (Sam, 2026-08-09)
+## Batch 27 — the month word: WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling
 
 **STATUS: SIGNED BY SAM, 2026-08-09** — *"yeah add the 2 min thing"*, read by the
 seat as signing both this batch and 28 as proposed, with his veto standing and
@@ -2221,11 +2221,16 @@ eight load constants he signed this morning.
 
 | Where | SIGNED string |
 | --- | --- |
-| Notification title | "Last week" |
-| Notification body | "Your week is in the Journal." |
-| The offer row on the Journal | "Remind me on Monday mornings" |
-| The offer row's second line | "One notification a week, when your week is ready to look back on." |
-| Once it is on | "Monday mornings, we will remind you to look back at your week." |
+| Notification title | WITHDRAWN: "Last week" |
+| Notification body | WITHDRAWN: "Your week is in the Journal." |
+| The offer row on the Journal | WITHDRAWN: "Remind me on Monday mornings" |
+| The offer row's second line | WITHDRAWN: "One notification a week, when your week is ready to look back on." |
+| Once it is on | WITHDRAWN: "Monday mornings, we will remind you to look back at your week." |
+
+**WITHDRAWN 2026-08-24 by Sam's Coach clean-room ruling.** The old Journal
+screen and its reminder system are deleted before the new Coach dashboard is
+built; these words must not survive without their feature. Guarded by
+`test:copy-rulings-binding` and `test:coach-cleanroom`.
 
 **28-b. THE SENTENCE IS DELIBERATELY NOT A COACHING CLAIM.** It does not say the
 week went well or badly, does not name a number, and does not tell the athlete

@@ -366,47 +366,16 @@ console.log('\n[6b] KEY EXPOSURES — a different question from "did it happen"'
   ok('the kinds are independent of what was completed',
     week.work.completedFull === 0 && week.kinds.strength === 3);
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the kinds line is rendered', /testID="journal-week-kinds"/.test(screen));
-
-  // SAM'S FORBIDDEN VOCABULARY ON A NEW SURFACE. "Exposure" is a contract noun
-  // and may never reach an athlete.
-  const kindsStart = screen.indexOf('function WeekKinds');
-  const kindsEnd = screen.indexOf('function DidTheWorkHappen');
-  ok('the kinds component was located',
-    kindsStart > 0 && kindsEnd > kindsStart, { kindsStart, kindsEnd });
-  const region = screen.slice(kindsStart, kindsEnd);
-  ok('and it renders no forbidden vocabulary',
-    !/exposure/i.test(region.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')),
-    region.match(/exposure/gi));
 }
 
-// ─── [7] THE SURFACE — HIDDEN, still KEPT, and still a READER ────────────
+// ─── [7] THE RETIRED SURFACE STAYS GONE ────────────────────────────────────
 
-console.log('\n[7] SURFACE LAWS');
+console.log('\n[7] CLEAN-ROOM BOUNDARY');
 {
   const navigator = readFileSync(join(__dirname, '../navigation/AppNavigator.tsx'), 'utf8');
-  const screen = readFileSync(join(__dirname, '../screens/journal/JournalScreen.tsx'), 'utf8');
-
-  // ─── RE-AIMED 2026-08-09: SAM HID THE JOURNAL ──────────────────────────
-  //
-  // Four cells here went red the day the tab left the tab bar, and they are
-  // the cells that existed to red on exactly this day. They are re-aimed, not
-  // deleted — a cell quietly removed because its own unit made it red is the
-  // other half of the hazard this file has already written down once.
-  //
-  // WHAT THEY ASSERTED AND WHAT THEY ASSERT NOW. They asserted the screen was
-  // REACHABLE, which was the lesson of the purge: the previous journal tree
-  // was deleted for being unreachable from App.tsx. That lesson has not
-  // changed — it has been RULED ON. Sam's hide is deliberate unreachability
-  // with the machinery kept (docs/JOURNAL_HIDDEN_RULING_2026-08-09.md), so
-  // the surviving claim here is that the screen is still KEPT, and the
-  // absence of the route is owned by `journalHiddenContractTests`, which
-  // sweeps the whole product tree rather than this one file.
-  ok('AppNavigator still imports the Journal screen — frozen, not retired',
-    /import\s+JournalScreen\s+from\s+['"]\.\.\/screens\/journal\/JournalScreen['"]/.test(navigator));
-  ok('and registers NO Journal tab — hidden by Sam\'s ruling, 2026-08-09',
+  ok('AppNavigator imports no retired Journal screen',
+    !/JournalScreen/.test(navigator));
+  ok('and registers no Journal tab',
     !/<Tab\.Screen\b[\s\S]{0,200}?name="JournalTab"/.test(navigator),
   );
 
@@ -448,56 +417,6 @@ console.log('\n[7] SURFACE LAWS');
     missing.length === 0 && tabOrder[0].at < tabOrder[1].at && tabOrder[1].at < tabOrder[2].at,
     tabOrder);
 
-  // THE LOAD-BEARING LAW, RE-POINTED FOR SLICE 2 RATHER THAN LOOSENED.
-  //
-  // Slice 1 asserted the screen reached NO writer, and that was true. Slice 2
-  // adds the note input, which is an ANSWER and therefore a legitimate input
-  // write — so the cell now asserts the SHAPE of what may write: exactly one
-  // door, `recordJournalNote`, and still no transaction, no ledger append and
-  // no raw store write.
-  //
-  // Written this way because "a cell that reds when its own unit lands" is only
-  // half the hazard; the other half is a cell QUIETLY DELETED because its unit
-  // made it red. The forbidden list below is unchanged from slice 1 — nothing
-  // was relaxed, one thing was named.
-  ok('the screen source was found and is non-trivial', screen.length > 1000, screen.length);
-
-  const WRITER_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
-    ['a transaction commit', /\bcommit[A-Za-z]*Transaction\s*\(/],
-    ['a mutation transaction', /\brun[A-Za-z]*Transaction\s*\(/],
-    ['a direct store write', /\.\s*setState\s*\(/],
-    ['a ledger append', /\bappend[A-Za-z]*(Decision|Entry|Ledger)\s*\(/],
-    ['a persisted-store setter', /\buse[A-Za-z]*Store\.getState\(\)\.\s*set/],
-    ['the note store\'s own write owner, bypassing its door', /\bapplyJournalNoteWrite\s*\(/],
-  ];
-  const writers = WRITER_PATTERNS
-    .filter(([, pattern]) => pattern.test(screen))
-    .map(([name]) => name);
-  ok('the Journal screen reaches no transaction, ledger or raw store write',
-    writers.length === 0, writers);
-
-  const doors = [...screen.matchAll(/\brecordJournalNote\s*\(/g)];
-  ok('and its ONE door is the note door, used exactly once',
-    doors.length === 1, doors.length);
-
-  // The honest states are RENDERED, not merely derivable. Each is anchored by a
-  // testID so the assertion is about a node the athlete can be shown, and so an
-  // on-device explorer can find it.
-  for (const testId of [
-    'journal-no-reason-recorded',
-    'journal-felt-nothing-recorded',
-    'journal-load-building',
-  ]) {
-    ok(`the screen renders the honest state \`${testId}\``,
-      new RegExp(`testID="${testId}"`).test(screen));
-  }
-
-  // The strip must render from the DERIVATION's days, not from its own loop over
-  // the raw week — otherwise Sam's ruling would have a second implementation.
-  ok('the strip renders the derived days, not a re-derived week',
-    /<WeekShapeStrip\s+days=\{week\.days\}\s*\/>/.test(screen));
-  ok('and the screen asks the classifier for hardness rather than deciding it',
-    /\bcountWeeklyExposures\s*\(/.test(screen));
 }
 
 console.log(`\njournalWeekTests: ${pass} passed, ${fail} failed`);

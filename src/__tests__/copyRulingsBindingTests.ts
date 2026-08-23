@@ -145,18 +145,6 @@ const AUTHORING_MODULES = [
   // ("Your program stays as planned for now" became a lie), and without this
   // line neither the withdrawal nor its replacement was visible to the gate.
   'utils/readinessAcknowledgment.ts',
-  // THE MONDAY NOTIFICATION'S SENTENCE (batch 28, C6), added 2026-08-09 — and it
-  // is the FOURTH time this hatch has been opened for the same reason, which is
-  // now worth stating as a pattern rather than a coincidence: **words are
-  // authored where the feature's decision lives, and the feature's decision is
-  // almost never in `screens/`.**
-  //
-  // IT MATTERS MORE HERE THAN AT THE OTHER THREE ADDRESSES. A screen string
-  // shipping unbound is caught the next time somebody looks at the screen. A
-  // notification string ships to a lock screen at 8am on a Monday, where nobody
-  // is looking and Sam cannot review it by using the app — so this gate is the
-  // only reader it has other than the provenance gate in the module itself.
-  'rules/journalReminderCopy.ts',
   // THE PROJECTION SHEET AND THE TEAM-NIGHT SHEET, added 2026-08-22 by the
   // feedback-shell unit — and it is the SAME hatch opening for the seventh and
   // eighth time, for the reason already written out above: **words are authored
@@ -302,11 +290,10 @@ const KNOWN_ABSENT: readonly { text: string; record: string }[] = [
       + 'read as a retirement nobody signed. Withdrawing it here would BE that '
       + 'retirement. CORRECTED 2026-08-09: this said the tab was "one Tab.Screen '
       + 'block from returning" and THE TAB HAS RETURNED (coach slice 1). The '
-      + 'ruling is unchanged and the string is still dormant — the rebuilt tab is '
-      + 'a NEW screen that does not carry these words, and the frozen CoachScreen '
-      + 'that does carry them is still unreached. A record whose stated reason has '
-      + 'come true is a record the next reader cannot trust, so it is corrected '
-      + 'rather than left to read as a prediction.',
+      + 'ruling was superseded by Sam\'s 2026-08-24 clean-room ruling: the frozen '
+      + 'CoachScreen and its dormant copy were deliberately retired, while the '
+      + 'current read-only Coach tab remains. The string is still absent, now by '
+      + 'explicit retirement rather than by an unreachable screen.',
   },
   {
     text: 'Edit this session',
@@ -406,6 +393,10 @@ function withdrawnStrings(): { batch: string; text: string }[] {
   const out: { batch: string; text: string }[] = [];
   let batch = '?';
   for (const line of raw.split('\n')) {
+    const batchHeading = /^## Batch (\d+)\b/.exec(line);
+    if (batchHeading) {
+      batch = batchHeading[1];
+    }
     const heading = /^#+ (\d+[a-z])\./.exec(line)
       ?? /^\*\*(\d+)-([a-z])\./.exec(line);
     if (heading) batch = heading.length > 2 ? `${heading[1]}${heading[2]}` : heading[1];
@@ -431,7 +422,13 @@ function proposedStrings(): { batch: string; text: string }[] {
   if (start < 0) return [];
   const out: { batch: string; text: string }[] = [];
   let batch = '5';
+  let wholeBatchWithdrawn = false;
   for (const line of raw.slice(start).split('\n')) {
+    const batchHeading = /^## Batch (\d+)\b/.exec(line);
+    if (batchHeading) {
+      batch = batchHeading[1];
+      wholeBatchWithdrawn = line.includes('WITHDRAWN');
+    }
     // Any heading LEVEL and any batch NUMBER. It was `^### (5[a-z])\.`, which
     // meant every string a later batch proposed was reported to Sam under the
     // last batch-5 sub-heading the parser happened to have seen — Task 4's own
@@ -446,7 +443,7 @@ function proposedStrings(): { batch: string; text: string }[] {
     const heading = /^#+ (\d+[a-z])\./.exec(line)
       ?? /^\*\*(\d+)-([a-z])\./.exec(line);
     if (heading) batch = heading.length > 2 ? `${heading[1]}${heading[2]}` : heading[1];
-    if (!line.trimStart().startsWith('|')) continue;
+    if (!line.trimStart().startsWith('|') || wholeBatchWithdrawn) continue;
     // A WITHDRAWAL ROW IS NOT A PROPOSAL. Without this the batch that retires a
     // string proposes it again in the same table, and the gate demands the app
     // contain the words the batch just took out of it.

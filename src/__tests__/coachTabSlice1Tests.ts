@@ -102,7 +102,7 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
     { pattern: /from '[^']*\/store\//, why: 'a zustand store is a writer with a getter attached' },
     { pattern: /decisionLedger/, why: 'appending a decision is a mutation even when it reads like a log' },
     { pattern: /Transaction/, why: 'accepted-state transactions are the write path' },
-    { pattern: /coachActions|coachTurnController|coachCommand/, why: 'the frozen beta pipeline (LR-6)' },
+    { pattern: /coachActions|coachTurnController|coachCommand/, why: 'the retired beta pipeline' },
     { pattern: /applyProgramAdjustment|weekRebuild|generateProgram/, why: 'generation and adjustment writers' },
     { pattern: /AsyncStorage|persist/, why: 'the conversation dies with the screen — zero stored state' },
   ];

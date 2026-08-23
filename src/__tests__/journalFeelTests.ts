@@ -401,14 +401,6 @@ console.log('\n[7] THE JOURNAL — counted, never interpreted');
     twoGames.felt.gameFeelLatest === 5 && twoGames.felt.gameFeelsRecorded === 2,
     twoGames.felt);
 
-  const screen = readFileSync(
-    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
-  ok('the screen source was read', screen.length > 4000, screen.length);
-  ok('the Journal reads the complete game payload and only lifts legacy gameFeel as fallback',
-    /gameFeel:\s*feedback\.game\?\.feel\s*\?\?\s*feedback\.gameFeel\s*\?\?\s*null/.test(screen));
-  for (const testId of ['journal-felt-game', 'journal-felt-differed']) {
-    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
-  }
 }
 
 // ─── [8] The two questions stay two questions ────────────────────────────

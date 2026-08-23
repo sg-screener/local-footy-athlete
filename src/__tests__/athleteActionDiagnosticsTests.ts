@@ -24,7 +24,6 @@ import {
   type AthleteActionDiagnosticEvent,
 } from '../utils/athleteActionDiagnostics';
 import { applyPlanChange } from '../utils/planChangeProducer';
-import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { useProgramStore } from '../store/programStore';
@@ -196,63 +195,6 @@ async function main(): Promise<void> {
     tapMoveEvents.every((event) => event.sourceDate === SOURCE && event.targetDate === TARGET) &&
     tapMoveEvents.filter((event) => event.event === 'accepted_state_publication_result').length === 1,
     tapMoveEvents);
-
-  // 3. Coach and tap routes expose equivalent diagnostic stages.
-  enableDiagnostics();
-  let coachRemoved = false;
-  const coachResult = executeCoachCommand({
-    command: {
-      mode: 'mutate',
-      operation: 'remove_session',
-      target: { kind: 'date', date: SOURCE, sessionName: 'Lower Strength' },
-      payload: { operation: 'remove_session', reason: 'diagnostic test' },
-      scope: 'one_off',
-      confidence: 1,
-      needsClarification: false,
-      reason: 'diagnostic_test',
-    },
-    todayISO: TODAY,
-    referenceResolution: null,
-    userMessage: 'remove the session',
-    removeSessionDeps: {
-      snapshotBefore: () => workout('source-session', 2),
-      snapshotAfter: () => coachRemoved ? null : workout('source-session', 2),
-      visibleWeek: () => visibleWeek(coachRemoved),
-      readCalendarMark: () => null,
-      applyRemove: () => {
-        coachRemoved = true;
-        simpleAcceptedCommit('diagnostic:coach_delete');
-        return { applied: true };
-      },
-      rollback: () => { coachRemoved = false; },
-    },
-    undoDeps: {
-      readDateOverride: () => ({ workout: null, context: null }),
-      recordMutation: (entry) => ({
-        ...entry,
-        id: 'diagnostic-coach-mutation',
-        timestamp: 1,
-        revertedAt: null,
-      }),
-    },
-  });
-  const coachTraceId = getAthleteActionDiagnosticEvents()
-    .find((event) => event.event === 'athlete_action_requested' && event.source === 'coach')?.traceId;
-  const coachStages = eventNames(getAthleteActionDiagnosticEvents(coachTraceId));
-  const commonStages = [
-    'athlete_action_requested',
-    'athlete_action_parsed',
-    'athlete_action_route_selected',
-    'transaction_verification_result',
-    'accepted_state_publication_result',
-    'visible_projection_result',
-    'athlete_action_completed',
-    'athlete_ui_outcome_shown',
-  ];
-  check('3 Coach mutation is verified', coachResult.kind === 'mutated' && coachResult.applied, coachResult);
-  check('3 Coach and tap expose the same required stage set',
-    commonStages.every((stage) => coachStages.includes(stage)) &&
-    commonStages.every((stage) => tapDeleteStages.includes(stage)), coachStages);
 
   /* Cell 4 was deleted with its VEHICLE: it drove
    * `searchWholeWeekRepairCandidates`, the §18 repair search, which no longer

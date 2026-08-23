@@ -2,9 +2,6 @@ import { useProfileStore } from './profileStore';
 import { useProgramStore, PROGRAM_STORE_PERSISTENCE_KEY } from './programStore';
 import { useCalendarStore } from './calendarStore';
 import { useReadinessStore } from './readinessStore';
-import { useCoachStore } from './coachStore';
-import { useCoachMemoryStore } from './coachMemoryStore';
-import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import { useCoachUpdatesStore } from './coachUpdatesStore';
 import { useAthletePreferencesStore } from './athletePreferencesStore';
@@ -72,9 +69,6 @@ export const PERSISTED_STORE_HYDRATION_REGISTRY: readonly PersistedStoreHandle[]
   handle(PROGRAM_STORE_PERSISTENCE_KEY, useProgramStore),
   handle('calendar-storage', useCalendarStore),
   handle('readiness-store', useReadinessStore),
-  handle('coach-store', useCoachStore),
-  handle('coach-memory-store', useCoachMemoryStore),
-  handle('coach-mutation-history-store', useCoachMutationHistoryStore),
   handle('coach-preferences-store', useCoachPreferencesStore),
   handle('coach-updates', useCoachUpdatesStore),
   handle('athlete-preferences-store', useAthletePreferencesStore),
@@ -106,6 +100,9 @@ export const PERSISTED_STORE_HYDRATION_REGISTRY: readonly PersistedStoreHandle[]
 export const RETIRED_STORE_PERSIST_KEYS: readonly string[] = [
   'auth-store',
   'ui-store',
+  'coach-store',
+  'coach-memory-store',
+  'coach-mutation-history-store',
 ];
 
 /**

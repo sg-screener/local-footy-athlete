@@ -71,7 +71,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useDecisionLedgerStore, decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
@@ -135,7 +134,6 @@ function reachWorldByActing(): void {
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {

@@ -253,19 +253,9 @@ console.log('\n[6] user-facing write-path sources import/use the hard-stop guard
       label: 'uses hard-stop write guard',
     },
     {
-      rel: 'src/utils/coachCommandExecutor.ts',
-      pattern: /programEditWriteGuard/,
-      label: 'uses hard-stop write guard',
-    },
-    {
       rel: 'src/utils/planChangeProducer.ts',
       pattern: /programEditWriteGuard/,
       label: 'plan-change preview uses shared write guard',
-    },
-    {
-      rel: 'src/utils/coachTurnController.ts',
-      pattern: /programEditWriteGuard/,
-      label: 'coach revision gate uses shared write guard',
     },
   ];
   for (const { rel, pattern, label } of expectations) {

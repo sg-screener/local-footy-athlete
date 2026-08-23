@@ -26,12 +26,6 @@ import {
   useCoachUpdatesStore,
 } from './coachUpdatesStore';
 import {
-  useCoachMutationHistoryStore,
-  applyCoachMutationHistoryWrite,
-  beginCoachMutationHistoryResetAction,
-  endCoachMutationHistoryResetAction,
-} from './coachMutationHistoryStore';
-import {
   useCoachPreferencesStore,
   applyCoachModalityPrefsWrite,
   beginCoachModalityPrefsResetAction,
@@ -102,7 +96,6 @@ interface AcceptedMirrorSnapshot {
   coachUpdatesByWeek: ReturnType<typeof useCoachUpdatesStore.getState>['updatesByWeek'];
   activeConstraints: ReturnType<typeof useCoachUpdatesStore.getState>['activeConstraints'];
   dismissedCoachNoteIds: ReturnType<typeof useCoachUpdatesStore.getState>['dismissedCoachNoteIds'];
-  mutationHistoryEntries: ReturnType<typeof useCoachMutationHistoryStore.getState>['entries'];
   modalityPreferences: ReturnType<typeof useCoachPreferencesStore.getState>['modalityPreferences'];
   onboardingData: ReturnType<typeof useProfileStore.getState>['onboardingData'];
   isOnboardingComplete: ReturnType<typeof useProfileStore.getState>['isOnboardingComplete'];
@@ -145,7 +138,6 @@ const ACCEPTED_MIRROR_STORAGE_KEYS = [
   'calendar-storage',
   'readiness-store',
   'coach-updates',
-  'coach-mutation-history-store',
   'coach-preferences-store',
   'profile-store',
 ] as const;
@@ -645,21 +637,6 @@ function restoreAcceptedInMemory(
     activeConstraints: clone(mirrors.activeConstraints),
     dismissedCoachNoteIds: clone(mirrors.dismissedCoachNoteIds),
   });
-  // Through the mutation-history owner. A rollback restoring "no history yet"
-  // is a legitimate erasure — it removes the failed transaction's own record —
-  // so it runs under a reset act rather than around the door (recipe lesson 2).
-  {
-    const historyResetActionId = beginCoachMutationHistoryResetAction('coach_mutation_rollback');
-    try {
-      applyCoachMutationHistoryWrite({
-        next: clone(mirrors.mutationHistoryEntries),
-        writer: 'coach_mutation_rollback',
-        resetActionId: historyResetActionId,
-      });
-    } finally {
-      endCoachMutationHistoryResetAction(historyResetActionId);
-    }
-  }
   // Through the coach-prefs owner. A rollback restoring "no preferences yet"
   // is a legitimate erasure — it removes the failed transaction's own writes —
   // so it runs under a reset act rather than around the door (recipe lesson 2).
@@ -758,7 +735,6 @@ function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
     coachUpdatesByWeek: useCoachUpdatesStore.getState().updatesByWeek,
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
     dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
-    mutationHistoryEntries: useCoachMutationHistoryStore.getState().entries,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
     onboardingData: useProfileStore.getState().onboardingData,
     isOnboardingComplete: useProfileStore.getState().isOnboardingComplete,
@@ -786,10 +762,6 @@ function serializeAcceptedMirrorEnvelopes(
         activeConstraints: mirrors.activeConstraints,
         dismissedCoachNoteIds: mirrors.dismissedCoachNoteIds,
       },
-      version: 0,
-    }),
-    'coach-mutation-history-store': JSON.stringify({
-      state: { entries: mirrors.mutationHistoryEntries },
       version: 0,
     }),
     'coach-preferences-store': JSON.stringify({

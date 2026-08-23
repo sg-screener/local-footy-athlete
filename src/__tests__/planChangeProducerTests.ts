@@ -37,7 +37,6 @@ import { createStrengthIntent } from '../rules/strengthPatternContributions';
 import type { AthleteSessionDeletionTransactionInput } from '../store/acceptedStateTransaction';
 import { materializeCanonicalPlanChangeCandidate } from '../utils/canonicalPlanChangeCandidateMaterializer';
 import { validateLiveWorkoutWrite } from '../utils/postGenerationConstraintValidation';
-import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
 import { projectVisibleDay } from '../utils/visibleProgramProjection';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { canonicaliseAcceptedStateCandidate, useProgramStore } from '../store/programStore';
@@ -2143,37 +2142,6 @@ withAcceptedStores(() => {
   if (chainedWrites[0] && directWrites[0]) {
     eq('[19] equivalent direct and chained intent accepts equivalent state',
       projectedSnapshot(MON, chainedWrites[0]), projectedSnapshot(MON, directWrites[0]));
-  }
-
-  // Keep the strict semantic verifier unchanged: tampering with the accepted
-  // proposal snapshot still rejects before any publication.
-  if (!('error' in lowerProposal) && lowerProposal.kind === 'revision') {
-    const tampered: CoachRevisionProposal = {
-      ...lowerProposal,
-      revisedDays: lowerProposal.revisedDays.map((day) => ({
-        ...day,
-        workout: day.workout
-          ? { ...day.workout, durationMinutes: day.workout.durationMinutes + 1 }
-          : null,
-      })),
-    };
-    const mismatchWrites: Workout[] = [];
-    const mismatch = applyCoachRevisionDateOverrides({
-      proposal: tampered,
-      planChange: lowerChange,
-      visibleWeek: lowerWeek,
-      todayISO: TODAY,
-      validationPolicy: {
-        ...coachRevisionValidationPolicyForWeek(lowerWeek, TODAY),
-        requireConfirmationForAdds: false,
-      },
-      applyOverride: (_date, workout) => mismatchWrites.push(workout),
-    });
-    ok('[19] genuine semantic mismatch publishes nothing',
-      mismatch.applied.length === 0 &&
-        mismatchWrites.length === 0 &&
-        mismatch.rejected.some((entry) => entry.code === 'projected_override_mismatch'),
-      mismatch);
   }
 
   // Phase policy can decide availability, but every allowed case uses this

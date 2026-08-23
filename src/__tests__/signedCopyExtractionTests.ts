@@ -730,33 +730,6 @@ run('every OFF_SHEET exclusion names a real path and gives a reason', () => {
   }
 });
 
-run('the extractor sees a multi-line JSX sentence', () => {
-  // NON-VACUITY FOR THE WIDENING ITSELF. The whole re-baseline rests on the
-  // claim that the extractor now spans lines; asserting the COUNT went up would
-  // not prove that — a scope change alone would do it. So this asserts a
-  // specific sentence that is multi-line in the source and was provably
-  // invisible before: the Journal's building state.
-  //
-  // THE SUBJECT MOVED WHEN THE LOAD SLICE REWROTE THAT SECTION, and it was
-  // re-pointed rather than deleted — a canary quietly dropped because its own
-  // unit changed the line it watched is how a widening claim stops being
-  // checked. The cell is STRONGER than it was: it now also requires the match
-  // to come from the `jsx_text` pattern, which is the one that spans lines. The
-  // old version would have been satisfied by a ternary string literal on a
-  // single line, which proves nothing about spanning at all.
-  const found = extracted.filter((item) => item.file.startsWith('screens/journal'));
-  assert(found.length > 0, 'no journal strings extracted — scope regressed');
-  const multiLine = found.find((item) => /Once you have a few more weeks logged/.test(item.text));
-  assert(multiLine !== undefined,
-    'the multi-line JSX sentence in JournalScreen was not extracted — the widened '
-    + `extractor is not spanning lines. Found instead: ${found.map((f) => f.text).join(' | ')}`);
-  assert(multiLine.field === 'jsx_text',
-    'the sentence was matched by a single-line pattern, so this cell proves nothing '
-    + `about line-spanning. It came from: ${multiLine.field}`);
-  assert(/weeks logged, this shows how the week compared/.test(multiLine.text),
-    `the sentence was truncated at a line break: "${multiLine.text}"`);
-});
-
 run('the extraction finds athlete-visible prose', () => {
   // Non-vacuity. A broken regex would report a beautifully clean app.
   assert(extracted.length > 50,

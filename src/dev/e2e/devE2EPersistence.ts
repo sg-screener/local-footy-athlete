@@ -6,9 +6,6 @@ import {
   useCalendarStore,
 } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
-import { useCoachStore } from '../../store/coachStore';
-import { useCoachMemoryStore } from '../../store/coachMemoryStore';
-import { useCoachMutationHistoryStore } from '../../store/coachMutationHistoryStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
@@ -126,28 +123,6 @@ const semanticStores: SemanticStoreDescriptor[] = [
     key: 'readiness-store',
     store: useReadinessStore as unknown as PersistedStore,
     select: (state) => ({ signalsByDate: state.signalsByDate ?? {} }),
-  },
-  {
-    key: 'coach-store',
-    store: useCoachStore as unknown as PersistedStore,
-    select: (state) => ({
-      conversations: state.conversations ?? [],
-      activeConversation: state.activeConversation ?? null,
-      messages: state.messages ?? [],
-      isStreaming: state.isStreaming,
-      isLoading: state.isLoading,
-      error: state.error,
-    }),
-  },
-  {
-    key: 'coach-memory-store',
-    store: useCoachMemoryStore as unknown as PersistedStore,
-    select: (state) => ({ notes: state.notes ?? [] }),
-  },
-  {
-    key: 'coach-mutation-history-store',
-    store: useCoachMutationHistoryStore as unknown as PersistedStore,
-    select: (state) => ({ entries: state.entries ?? [] }),
   },
   {
     key: 'coach-preferences-store',

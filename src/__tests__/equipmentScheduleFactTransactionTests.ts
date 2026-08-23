@@ -53,9 +53,6 @@ const {
   semanticFingerprint,
 } = require('../utils/programSemanticSnapshot') as typeof import('../utils/programSemanticSnapshot');
 const {
-  parseCoachIntent,
-} = require('../utils/coachIntent') as typeof import('../utils/coachIntent');
-const {
   executeProgramControlActionDurably,
 } = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
 const {
@@ -175,17 +172,6 @@ async function main(): Promise<void> {
   });
 
   console.log('\n[1] typed facts and deterministic projections');
-  check('coach equipment intent remains typed',
-    parseCoachIntent({
-      intent: 'equipment_change',
-      confidence: 1,
-      needsClarification: false,
-      payload: {
-        equipmentMode: 'only',
-        equipmentTags: ['bodyweight', 'dumbbells'],
-        equipmentChangeScope: 'temporary',
-      },
-    })?.intent === 'equipment_change');
   const projection = composeTemporarySourceFactCompatibility({
     temporarySourceFacts: [equipment, away, cap],
   });

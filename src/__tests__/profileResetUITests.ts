@@ -23,7 +23,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   clearCoachAdjustments,
-  clearCoachChat,
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../utils/resetCoach';
@@ -563,9 +562,7 @@ ok(
 // ═════════════════════════════════════════════════════════════════════
 section('[8] Reset functions still callable + dispatch correctly');
 {
-  let activeInjuryNulled = false;
   let coachUpdatesCleared = 0;
-  let coachStoreCleared = false;
   let programCleared = false;
 
   const fakeDeps = {
@@ -577,34 +574,22 @@ section('[8] Reset functions still callable + dispatch correctly');
       clear: () => { programCleared = true; },
     },
     coachUpdatesStore: {
-      getActiveInjury: () => ({ bodyPart: 'hammy' }),
       getUpdatesByWeek: () => ({ '2026-04-27': { active: true } }),
-      setActiveInjury: (s: any) => { if (s === null) activeInjuryNulled = true; },
       clearAllCoachUpdates: () => { coachUpdatesCleared = 1; },
     },
     profileStore: { resetOnboarding: () => {}, clear: () => {} },
     calendarStore: { clear: () => {} },
     athletePreferencesStore: { setActiveInjuries: () => {}, clear: () => {} },
-    coachStore: { clear: () => { coachStoreCleared = true; } },
     clearPendingInjury: () => {},
   };
 
-  const a = clearCoachAdjustments({ deps: fakeDeps as any });
-  ok('clearCoachAdjustments → activeInjury nulled', activeInjuryNulled);
+  clearCoachAdjustments({ deps: fakeDeps as any });
   ok('clearCoachAdjustments → coachUpdates cleared', coachUpdatesCleared === 1);
-  ok('clearCoachAdjustments → summary.activeInjuryCleared', a.activeInjuryCleared);
-
-  const b = clearCoachChat({ deps: fakeDeps as any });
-  ok('clearCoachChat → coachStore cleared', coachStoreCleared);
-  ok('clearCoachChat → summary.chatCleared', b.chatCleared);
 
   // Reset state for full reset run.
   programCleared = false;
-  coachStoreCleared = false;
-  const c = resetProgramAndOnboarding({ deps: fakeDeps as any });
+  resetProgramAndOnboarding({ deps: fakeDeps as any });
   ok('resetProgramAndOnboarding → program cleared', programCleared);
-  ok('resetProgramAndOnboarding → chat cleared', coachStoreCleared);
-  ok('resetProgramAndOnboarding → summary.chatCleared', c.chatCleared);
 }
 
 // ═════════════════════════════════════════════════════════════════════

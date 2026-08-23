@@ -52,7 +52,6 @@ import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
 import { seedManualOverride } from './support/programOverrideHarness';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
-import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
@@ -889,36 +888,6 @@ run('regression', '8 Sunday deletion closes persisted following-week dependencie
     constraint.targetDate === SUNDAY && constraint.status === 'active'),
   'Sunday ownership missing');
   assert(accepted().evaluation.blockingViolations.length === 0, 'Sunday week not accepted');
-});
-
-run('regression', '9 tap and Coach whole-session deletion converge', () => {
-  let seeded = seedExactSundayRegression();
-  const tap = executeProgramControlAction({
-    type: 'bin_session',
-    source: { screen: 'program_tab', surface: 'test', initiatedBy: 'tap' },
-    payload: { date: SUNDAY, scope: 'whole_day' },
-    scope: 'today_only',
-    requiresRebuild: false,
-    createsActiveModifier: false,
-    oneOffOnly: true,
-  }, { visibleWeek: visibleWeek(), todayISO: WEEK });
-  assert(tap.ok, tap.message ?? 'tap delete failed');
-  const tapSemantic = visibleSemantic();
-  seeded = seedExactSundayRegression();
-  const coach = executeCoachCommand({
-    command: {
-      mode: 'mutate', operation: 'remove_session',
-      target: { kind: 'date', date: SUNDAY, sessionName: seeded.sunday.name },
-      payload: { operation: 'remove_session', reason: 'Athlete asked to bin it' },
-      scope: 'one_off', confidence: 1, needsClarification: false,
-      reason: 'athlete_requested_session_deletion',
-    },
-    todayISO: WEEK,
-    referenceResolution: null,
-    userMessage: 'Bin Sunday hard intervals',
-  });
-  assert(coach.kind === 'mutated' && coach.applied, JSON.stringify(coach));
-  assert(visibleSemantic() === tapSemantic, 'tap and Coach accepted states differ');
 });
 
 run('regression', '10 reload, rebuild and rollover do not resurrect target', () => {

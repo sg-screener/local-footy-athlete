@@ -11,11 +11,6 @@
  *                                  calendar marks, and user-authored manual
  *                                  overrides.
  *
- *   clearCoachChat()             — clears CoachScreen chat messages
- *                                  and the pendingInjury ref. Preserves
- *                                  program + injury episodes (caller can
- *                                  combine with clearCoachAdjustments).
- *
  *   resetProgramAndOnboarding()  — full reset across all coach + program
  *                                  stores; returns the user to onboarding.
  *
@@ -50,19 +45,13 @@ import { logger } from './logger';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useJournalNoteStore } from '../store/journalNoteStore';
 import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
-import { useCoachStore } from '../store/coachStore';
-import { useCoachContextStateStore } from '../store/coachContextStateStore';
-import { useCoachMemoryStore } from '../store/coachMemoryStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
-import { usePendingCoachClarifierStore } from '../store/pendingCoachClarifierStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
 import {
   getActiveProgramModifiers,
   clearActiveProgramModifier,
 } from './activeProgramModifiers';
-import { fireResetSignal } from './resetSignals';
 import { beginProfileResetAction, endProfileResetAction } from '../store/profileStore';
 import {
   beginAthleteActionTrace,
@@ -101,22 +90,6 @@ export interface ResetDeps {
     setActiveInjuries: (keys: any[]) => void;
     clear: () => void;
   };
-  coachStore: {
-    clear: () => void;
-  };
-  /**
-   * Caller-supplied callback to clear ephemeral CoachScreen state
-   * that lives outside Zustand (refs, timers). Used by chat reset
-   * so pendingInjuryRef doesn't survive after a "Clear coach chat".
-   */
-  clearPendingInjury?: () => void;
-  /**
-   * Caller-supplied callback to clear CoachScreen.messages local
-   * state. Optional — if omitted, the store-backed coachStore is
-   * still cleared but the in-memory React state may remain until
-   * the screen re-mounts.
-   */
-  clearChatMessages?: () => void;
 }
 
 export interface DevPostOnboardingResetDeps {
@@ -126,18 +99,12 @@ export interface DevPostOnboardingResetDeps {
   coachUpdatesStore: { clearAllCoachUpdates: () => void };
   calendarStore: { clear: () => void };
   athletePreferencesStore: { clear: () => void };
-  coachStore: { clear: () => void };
-  pendingClarifierStore: { clearPending: () => void };
-  mutationHistoryStore: { clearAll: () => void };
   readinessStore: { clear: () => void };
-  coachContextStore: { clearCoachContext: () => void };
   coachPreferencesStore: { clearAllModalityPreferences: () => void };
-  coachMemoryStore: { clearNotes: () => void };
   workoutLogStore: { clear: () => void };
   journalNoteStore: { clear: () => void };
   /** R-132: a reset athlete has timed nothing. */
   sessionStopwatchStore: { clear: () => void };
-  fireResetSignal: () => void;
   runDevOnboardingSkip: typeof runDevOnboardingSkip;
 }
 
@@ -171,9 +138,6 @@ function defaultDeps(): ResetDeps {
         useAthletePreferencesStore.getState().setActiveInjuries(keys),
       clear: () => useAthletePreferencesStore.getState().clear(),
     },
-    coachStore: {
-      clear: () => useCoachStore.getState().clear(),
-    },
   };
 }
 
@@ -194,29 +158,12 @@ function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
     athletePreferencesStore: {
       clear: () => useAthletePreferencesStore.getState().clear(),
     },
-    coachStore: {
-      clear: () => useCoachStore.getState().clear(),
-    },
-    pendingClarifierStore: {
-      clearPending: () =>
-        usePendingCoachClarifierStore.getState().reset(),
-    },
-    mutationHistoryStore: {
-      clearAll: () => useCoachMutationHistoryStore.getState().clearAll(),
-    },
     readinessStore: {
       clear: () => useReadinessStore.getState().clear(),
-    },
-    coachContextStore: {
-      clearCoachContext: () =>
-        useCoachContextStateStore.getState().clearCoachContext(),
     },
     coachPreferencesStore: {
       clearAllModalityPreferences: () =>
         useCoachPreferencesStore.getState().clearAllModalityPreferences(),
-    },
-    coachMemoryStore: {
-      clearNotes: () => useCoachMemoryStore.getState().clearNotes(),
     },
     workoutLogStore: {
       clear: () => useWorkoutLogStore.getState().clear(),
@@ -227,7 +174,6 @@ function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
     sessionStopwatchStore: {
       clear: () => useSessionStopwatchStore.setState({ current: null, lastEnded: null }),
     },
-    fireResetSignal,
     runDevOnboardingSkip,
   };
 }
@@ -240,10 +186,6 @@ export interface ResetSummary {
   injuryOverridesRemoved: string[];
   coachNotesRemoved: number;
   athletePrefInjuriesCleared: number;
-  /** True when the caller supplied a clearPendingInjury callback. */
-  pendingInjuryCleared: boolean;
-  /** True when chat messages were cleared. */
-  chatCleared: boolean;
 }
 
 export interface DevPostOnboardingResetResult {
@@ -320,8 +262,6 @@ export function clearCoachAdjustments(opts?: {
     injuryOverridesRemoved: [],
     coachNotesRemoved: 0,
     athletePrefInjuriesCleared: 0,
-    pendingInjuryCleared: false,
-    chatCleared: false,
   };
 
   const activePreferenceConstraints = useCoachUpdatesStore
@@ -462,68 +402,11 @@ export function clearCoachAdjustments(opts?: {
     });
   }
 
-  // 6. Caller-side pending ref (CoachScreen owns the ref). Either the
-  //    caller passes a clearPendingInjury callback (test path), or the
-  //    global resetSignal fires (production — CoachScreen subscribes).
-  if (deps.clearPendingInjury) {
-    deps.clearPendingInjury();
-    summary.pendingInjuryCleared = true;
-  } else {
-    fireResetSignal();
-    summary.pendingInjuryCleared = true;
-  }
-
   logger.debug('[reset] complete', { mode: 'clear_coach_adjustments', summary });
   return summary;
 }
 
-// ─── 2. CHAT-ONLY: clearCoachChat ───────────────────────────────────
-
-/**
- * Wipe the CoachScreen conversation. Clears the persisted coachStore
- * (conversations, messages) and the in-memory pending injury ref.
- *
- * Preserves: program, injury episodes, coachUpdates, overrides.
- *
- * Use when the user wants to start a fresh conversation but keep
- * their current program/injury state intact.
- */
-export function clearCoachChat(opts?: {
-  deps?: Partial<ResetDeps>;
-}): ResetSummary {
-  const deps: ResetDeps = { ...defaultDeps(), ...(opts?.deps ?? {}) } as ResetDeps;
-  logger.debug('[reset] clear_coach_chat_started');
-
-  const summary: ResetSummary = {
-    activeInjuryCleared: false,
-    coachUpdatesCleared: 0,
-    injuryOverridesRemoved: [],
-    coachNotesRemoved: 0,
-    athletePrefInjuriesCleared: 0,
-    pendingInjuryCleared: false,
-    chatCleared: false,
-  };
-
-  deps.coachStore.clear();
-  summary.chatCleared = true;
-  logger.debug('[reset] coach_chat_cleared');
-
-  if (deps.clearPendingInjury) {
-    deps.clearPendingInjury();
-    summary.pendingInjuryCleared = true;
-  } else {
-    fireResetSignal();
-    summary.pendingInjuryCleared = true;
-  }
-  if (deps.clearChatMessages) {
-    deps.clearChatMessages();
-  }
-
-  logger.debug('[reset] complete', { mode: 'clear_coach_chat', summary });
-  return summary;
-}
-
-// ─── 3. FULL RESET ──────────────────────────────────────────────────
+// ─── 2. FULL RESET ──────────────────────────────────────────────────
 
 /**
  * Nuclear reset: clears every coach + program store, returning the
@@ -581,35 +464,23 @@ function runFullReset(
   //    (so the audit trail shows what was cleared, not just "everything").
   const surgical = clearCoachAdjustments({ deps: opts?.deps });
 
-  // 2. Coach chat.
-  deps.coachStore.clear();
-
-  // 3. Program store (base program + all overrides).
+  // 2. Program store (base program + all overrides).
   deps.programStore.clear();
   logger.debug('[reset] program_store_cleared');
 
-  // 4. Profile / onboarding.
+  // 3. Profile / onboarding.
   deps.profileStore.clear();
   logger.debug('[reset] profile_store_cleared');
 
-  // 5. Calendar marks.
+  // 4. Calendar marks.
   deps.calendarStore.clear();
   logger.debug('[reset] calendar_store_cleared');
 
-  // 6. Athlete preferences.
+  // 5. Athlete preferences.
   deps.athletePreferencesStore.clear();
   logger.debug('[reset] athlete_preferences_cleared');
 
-  // 7. Caller-supplied ref / chat-message clears (or signal).
-  if (deps.clearPendingInjury) deps.clearPendingInjury();
-  else fireResetSignal();
-  if (deps.clearChatMessages) deps.clearChatMessages();
-
-  const summary: ResetSummary = {
-    ...surgical,
-    chatCleared: true,
-    pendingInjuryCleared: true,
-  };
+  const summary: ResetSummary = { ...surgical };
   logger.debug('[reset] complete', { mode: 'full_reset', summary });
   emitAthleteActionEvent(trace, 'athlete_action_parsed', {
     internalResultCode: 'full_reset_stores_cleared',
@@ -618,7 +489,7 @@ function runFullReset(
   return summary;
 }
 
-// ─── 4. DEV-ONLY POST-ONBOARDING RESET ─────────────────────────────
+// ─── 3. DEV-ONLY POST-ONBOARDING RESET ─────────────────────────────
 
 /**
  * Dev-only reset for repeated coach-flow testing. It clears all ephemeral
@@ -651,39 +522,27 @@ export async function resetToDevPostOnboardingState(opts?: {
     preferredTrainingDays: onboardingData.preferredTrainingDays ?? null,
   });
 
-  deps.pendingClarifierStore.clearPending();
-  deps.mutationHistoryStore.clearAll();
   deps.readinessStore.clear();
-  deps.coachContextStore.clearCoachContext();
   deps.coachPreferencesStore.clearAllModalityPreferences();
-  deps.coachMemoryStore.clearNotes();
   deps.coachUpdatesStore.clearAllCoachUpdates();
   deps.programStore.clear();
   deps.calendarStore.clear();
   deps.athletePreferencesStore.clear();
-  deps.coachStore.clear();
   deps.workoutLogStore.clear();
   deps.journalNoteStore.clear();
   deps.sessionStopwatchStore.clear();
-  deps.fireResetSignal();
 
   const result = await deps.runDevOnboardingSkip({
     onboardingData,
     generateProgram: opts?.generateProgram,
   });
 
-  deps.pendingClarifierStore.clearPending();
-  deps.mutationHistoryStore.clearAll();
   deps.readinessStore.clear();
-  deps.coachContextStore.clearCoachContext();
   deps.coachPreferencesStore.clearAllModalityPreferences();
-  deps.coachMemoryStore.clearNotes();
   deps.coachUpdatesStore.clearAllCoachUpdates();
-  deps.coachStore.clear();
   deps.workoutLogStore.clear();
   deps.journalNoteStore.clear();
   deps.sessionStopwatchStore.clear();
-  deps.fireResetSignal();
 
   const message = result.usedFallback
     ? 'Reset used DEFAULT_PROGRAM fallback. Check dev logs.'

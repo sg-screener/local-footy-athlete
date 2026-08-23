@@ -7,11 +7,6 @@ import {
 } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
-import { useCoachStore } from '../../store/coachStore';
-import { useCoachMemoryStore } from '../../store/coachMemoryStore';
-import { useCoachContextStateStore } from '../../store/coachContextStateStore';
-import { usePendingCoachClarifierStore } from '../../store/pendingCoachClarifierStore';
-import { useCoachMutationHistoryStore } from '../../store/coachMutationHistoryStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useWorkoutLogStore } from '../../store/workoutLogStore';
@@ -89,15 +84,10 @@ import {
 
 function clearLocalStateThroughPublicAPIs(): void {
   clearAthleteActionDiagnosticEvents();
-  useCoachContextStateStore.getState().clearCoachContext();
-  usePendingCoachClarifierStore.getState().clearPending();
   useWorkoutLogStore.getState().clear();
-  useCoachStore.getState().clear();
-  useCoachMemoryStore.getState().clearNotes();
   useCalendarStore.getState().clear();
   useReadinessStore.getState().clear();
   useCoachUpdatesStore.getState().clearAllCoachUpdates();
-  useCoachMutationHistoryStore.getState().clearAll();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
   useAthletePreferencesStore.getState().clear();
   // uiStore/authStore clears RETIRED with their stores (Sam's §6, 2026-08-03).
@@ -503,12 +493,10 @@ export function readDevE2EWitnessState(): DevE2EWitnessState {
     sessionFeedback: program.sessionFeedback,
     acceptedRevision: accepted.revision,
     coachState: {
-      transcriptCount:
-        useCoachStore.getState().messages.length +
-        useCoachStore.getState().conversations.length,
-      memoryCount: useCoachMemoryStore.getState().notes.length,
-      mutationHistoryCount: useCoachMutationHistoryStore.getState().entries.length,
-      pendingClarifier: usePendingCoachClarifierStore.getState().pending,
+      transcriptCount: 0,
+      memoryCount: 0,
+      mutationHistoryCount: 0,
+      pendingClarifier: null,
       // Pending Coach proposals are screen-local and non-persisted. A Dev E2E
       // launch starts before CoachScreen creates that ref, so the reset
       // protocol's durable state has no proposal to restore.

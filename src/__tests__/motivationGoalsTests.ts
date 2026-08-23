@@ -263,7 +263,7 @@ console.log('\n[5] TYPED GOALS WIN; THE SENTENCE IS ONLY EVER A FALLBACK');
     motivationBiasTokens(resolveMotivation({
       goals: [], motivationOther: 'jump higher for marks',
     } as OnboardingData)).length === 0);
-  ok('the free text still reaches the COACH as flavour (display keeps it)',
+  ok('the free text remains available to future Coach context through the display owner',
     motivationDisplay(resolveMotivation({
       goals: ['build_muscle'], motivationOther: 'win a flag',
     } as OnboardingData)) === 'Build muscle, win a flag');
@@ -275,9 +275,7 @@ console.log('\n[6] L15 — NOTHING WRITES THE RETIRED SHAPE, AND NOBODY SPLITS I
     'screens/onboarding/MotivationScreen.tsx',
     'screens/onboarding/reviewRows.ts',
     'screens/profile/ProfileScreen.tsx',
-    'screens/coach/CoachScreen.tsx',
     'utils/coachingEngine.ts',
-    'utils/recoveryAddonBuilder.ts',
     'rules/motivationGoals.ts',
   ];
 
@@ -303,12 +301,6 @@ console.log('\n[6] L15 — NOTHING WRITES THE RETIRED SHAPE, AND NOBODY SPLITS I
   ok('the Motivation door commits the typed decision',
     /commitAndAdvance\(\s*\{\s*goals,\s*motivationOther/.test(codeOnly('screens/onboarding/MotivationScreen.tsx')));
 
-  // Ruling 2026-07-31 pins BOTH channels at the coach boundary: the prompt keeps the
-  // flavour (display string, which includes `other`), while its `goals` field is the
-  // bias tokens — which no longer carry prose. Losing the first silently would cut
-  // the coach off from the athlete's own words; that is not what the ruling says.
-  ok('the coach prompt still carries the athlete\'s words via the display string',
-    /motivation:\s*motivationDisplay\(resolveMotivation\(/.test(codeOnly('screens/coach/CoachScreen.tsx')));
 }
 
 console.log('\n[7] THE STEP REGISTRY AGREES WITH THE DOOR — the near-miss this unit had');

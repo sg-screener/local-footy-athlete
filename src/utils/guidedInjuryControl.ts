@@ -1,5 +1,5 @@
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
-import type { InjuryBucket } from './injuryAdjustmentEngine';
+import type { InjuryBucket } from './programAdjustmentEngine';
 import { resolveInjuryRegion } from '../data/injuryRegions';
 import {
   classifyBibleInjurySeverity,
