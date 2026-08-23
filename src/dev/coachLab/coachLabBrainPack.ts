@@ -1,4 +1,5 @@
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import type { RetrievedCoachKnowledgeChunk } from './coachLabKnowledgeRetriever';
 
 export interface CoachLabKnowledgeFile {
   readonly path: string;
@@ -15,17 +16,7 @@ function sourceBlock(path: string, content: string): string {
   return `\n--- BEGIN ${path} ---\n${content}\n--- END ${path} ---`;
 }
 
-/**
- * One explicit authority stack for the clean-room Coach. The model receives the
- * complete canonical sources in Coach Lab; deleted Coach prompts and handlers
- * are deliberately not an input.
- */
-export function buildCoachLabBrainInstructions(pack: CoachLabBrainPack): string {
-  const exerciseSources = pack.exerciseSources
-    .map((source) => sourceBlock(source.path, source.content))
-    .join('\n');
-
-  return `You are the read-only LFA strength and conditioning Coach being evaluated in Coach Lab.
+const COACH_LAB_CONTRACT = `You are the read-only LFA strength and conditioning Coach being evaluated in Coach Lab.
 
 NON-NEGOTIABLE BOUNDARIES
 - Never diagnose an injury, illness, or medical condition. State the limit and direct the athlete to an appropriate clinician when needed.
@@ -34,22 +25,35 @@ NON-NEGOTIABLE BOUNDARIES
 - Use only the CURRENT ATHLETE SNAPSHOT for facts about this athlete and their current program.
 - When the supplied information is insufficient, ask one focused follow-up question instead of filling the gap.
 - When LFA is silent and a useful answer is still safe, you may use coaching judgement or general strength-and-conditioning knowledge, but clearly label it as coaching judgement.
-- Be concise, direct, practical, and use Australian English.
+- Use direct, practical Australian English. Aim for 60-90 words. Lead with the answer, preserve the material evidence, safety caveat and next action, and remove repetition or secondary background first.
 
 AUTHORITY ORDER — HIGHER SOURCES OVERRIDE LOWER SOURCES
 1. CURRENT ATHLETE SNAPSHOT supplied with the athlete message.
-2. ACTIVE LFA RULINGS in the registry below.
-3. LFA PROGRAMMING BIBLE below.
-4. Approved Coach Lab examples, when supplied in a later version.
-5. COACHING JUDGEMENT and general strength-and-conditioning knowledge, clearly labelled.
+2. ACTIVE LFA RULINGS supplied below.
+3. LFA PROGRAMMING BIBLE supplied below.
+4. Canonical exercise and conditioning sources supplied below.
+5. Approved Coach Lab examples, when supplied in a later version.
+6. COACHING JUDGEMENT and general strength-and-conditioning knowledge, clearly labelled.
 
 OUTPUT CONTRACT
 - Return only the required JSON object.
-- Cite a knowledge source only when it actually supports the claim.
+- Cite a knowledge source only when it actually supports the claim and only by an exact supplied chunk id.
 - Mark athlete facts with athlete_snapshot and list only snapshot fields actually used.
-- Mark LFA rules with lfa_rule and cite the supporting active_rule or lfa_bible source.
+- Mark LFA rules with lfa_rule and cite the supporting active_rule, lfa_bible or canonical_source chunk.
 - Mark judgement with coaching_judgement and set judgementLabel to labelled.
-- A useful honest limit or focused question is better than a generic refusal.
+- A useful honest limit or focused question is better than a generic refusal.`;
+
+/**
+ * One explicit authority stack for the clean-room Coach. The model receives the
+ * complete canonical sources only for an explicit quality benchmark; deleted
+ * Coach prompts and handlers are deliberately not an input.
+ */
+export function buildCoachLabBrainInstructions(pack: CoachLabBrainPack): string {
+  const exerciseSources = pack.exerciseSources
+    .map((source) => sourceBlock(source.path, source.content))
+    .join('\n');
+
+  return `${COACH_LAB_CONTRACT}
 
 ACTIVE LFA RULINGS
 ${pack.rulings}
@@ -59,6 +63,33 @@ ${pack.bible}
 
 CANONICAL EXERCISE AND CONDITIONING SOURCES
 ${exerciseSources}`;
+}
+
+function retrievedBlocks(
+  chunks: readonly RetrievedCoachKnowledgeChunk[],
+  authority: RetrievedCoachKnowledgeChunk['authority'],
+): string {
+  const selected = chunks.filter((chunk) => chunk.authority === authority);
+  if (selected.length === 0) return '(No matching canonical excerpt selected.)';
+  return selected.map((chunk) => sourceBlock(chunk.id, chunk.content)).join('\n');
+}
+
+export function buildRetrievedCoachLabBrainInstructions(
+  chunks: readonly RetrievedCoachKnowledgeChunk[],
+): string {
+  return `${COACH_LAB_CONTRACT}
+
+ACTIVE LFA RULINGS
+${retrievedBlocks(chunks, 'active_rule')}
+
+LFA PROGRAMMING BIBLE
+${retrievedBlocks(chunks, 'lfa_bible')}
+
+CANONICAL EXERCISE AND CONDITIONING SOURCES
+${retrievedBlocks(chunks, 'canonical_source')}
+
+APPROVED COACH LAB EXAMPLES
+${retrievedBlocks(chunks, 'approved_example')}`;
 }
 
 /** Only the shared, derived Coach Snapshot crosses the AI boundary. */

@@ -17,6 +17,16 @@ export type CoachLabFetch = (
 export interface OpenAIResponseResult {
   readonly outputText: string;
   readonly totalTokens: number | null;
+  readonly tokenReceipt: OpenAITokenReceipt;
+}
+
+export interface OpenAITokenReceipt {
+  readonly inputTokens: number | null;
+  readonly cachedInputTokens: number | null;
+  readonly cacheWriteTokens: number | null;
+  readonly outputTokens: number | null;
+  readonly reasoningTokens: number | null;
+  readonly totalTokens: number | null;
 }
 
 export interface OpenAIResponseRequest {
@@ -67,7 +77,7 @@ const RESPONSE_SCHEMA = {
           id: { type: 'string' },
           authority: {
             type: 'string',
-            enum: ['lfa_bible', 'active_rule', 'approved_example'],
+            enum: ['lfa_bible', 'active_rule', 'canonical_source', 'approved_example'],
           },
           sourceReference: { type: 'string' },
         },
@@ -154,10 +164,12 @@ export class OpenAIResponsesClient {
         body: JSON.stringify({
           model: request.model,
           store: false,
-          reasoning: { effort: 'medium' },
+          reasoning: { effort: 'low', context: 'current_turn' },
+          max_output_tokens: 1800,
           instructions: request.instructions,
           input: request.input,
           text: {
+            verbosity: 'low',
             format: {
               type: 'json_schema',
               name: 'coach_lab_response_v1',
@@ -186,10 +198,34 @@ export class OpenAIResponsesClient {
     if (!outputText) {
       throw new Error('OpenAI Responses returned no output text.');
     }
-    const usage = payload.usage as { total_tokens?: unknown } | undefined;
+    const usage = payload.usage as {
+      input_tokens?: unknown;
+      input_tokens_details?: {
+        cached_tokens?: unknown;
+        cache_write_tokens?: unknown;
+      };
+      output_tokens?: unknown;
+      output_tokens_details?: { reasoning_tokens?: unknown };
+      total_tokens?: unknown;
+    } | undefined;
+    const tokenReceipt: OpenAITokenReceipt = {
+      inputTokens: typeof usage?.input_tokens === 'number' ? usage.input_tokens : null,
+      cachedInputTokens: typeof usage?.input_tokens_details?.cached_tokens === 'number'
+        ? usage.input_tokens_details.cached_tokens
+        : null,
+      cacheWriteTokens: typeof usage?.input_tokens_details?.cache_write_tokens === 'number'
+        ? usage.input_tokens_details.cache_write_tokens
+        : null,
+      outputTokens: typeof usage?.output_tokens === 'number' ? usage.output_tokens : null,
+      reasoningTokens: typeof usage?.output_tokens_details?.reasoning_tokens === 'number'
+        ? usage.output_tokens_details.reasoning_tokens
+        : null,
+      totalTokens: typeof usage?.total_tokens === 'number' ? usage.total_tokens : null,
+    };
     return {
       outputText,
-      totalTokens: typeof usage?.total_tokens === 'number' ? usage.total_tokens : null,
+      totalTokens: tokenReceipt.totalTokens,
+      tokenReceipt,
     };
   }
 }

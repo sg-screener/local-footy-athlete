@@ -4322,3 +4322,21 @@ explicitly distance (the Primer's Acceleration), or ruled reps.
 carry pool entry must resolve to a duration dose); Groin Squeeze + Bear
 Carry: the Stage-B differential golden (both female worlds moved exactly
 there; the male 15 byte-frozen). Seat `pathway`.
+
+---
+
+**R-134** · *"Yeah thats a pretty good answer, its a bit long and waaaaay too
+expensive but it seems like it's talking to the athlete well - how do we improve
+that..."* followed by *"yep that sounds good boss"* (Sam, 2026-08-24) ·
+**PRESERVE THE COACHING TONE; MAKE THE EVERYDAY ANSWER SHORTER AND CHEAPER.**
+
+The full-source `gpt-5.6-sol` answer remains the quality benchmark, not the
+production request shape. The normal Coach Lab path retrieves exact, line-named
+excerpts from the current Bible, active rulings and canonical exercise sources
+for each athlete question; it never saves a condensed mini-Bible. Answers aim
+for 60–90 words and fail the Lab above 100. Routine requests use low reasoning
+and low verbosity, and record input, cached-input, cache-write, output,
+reasoning and total-token receipts. `sol`, `terra` and `luna` may be compared in
+Coach Lab, but a cheaper model replaces the benchmark only after Sam judges its
+answer quality. · `WORKING` — `test:coach-lab` retrieval, request-shape,
+receipt and answer-length cells. Seat `snapshot`.

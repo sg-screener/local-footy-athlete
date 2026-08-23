@@ -53,9 +53,8 @@ ratio; no score, threshold or second load owner was added.
 
 ## Measurements
 
-- Product compile: no error names a new or modified Step-3 file. The compile
-  remains red on unrelated shared-checkout files that were already red before
-  this slice.
+- Product compile: the full `tsc --noEmit` check is green at the cost-and-brevity
+  checkpoint.
 - Pure/ownership Snapshot guard: 40/40 green. It carries the signed sweet-spot
   edges, proves the continuum order, anchors the load hero before the tile grid
   and kills a mutation that swaps Load with Consistency.
@@ -123,8 +122,8 @@ not a generic benchmark, and it cannot change the athlete's program.
 - Snapshot 43/43, populated Snapshot 15/15, Coach clean-room 58/58 and Coach
   phrase ratchet 8/8 remain green. The Lab lives under dev tooling and changes
   no product screen, store, server or provider.
-- Compile remains red on the shared baseline. The Lab's one new dev/test error
-  was found and cleared; direct dev/test compilers now name no Coach Lab file.
+- The Lab's first dev/test type error was found and cleared. The full product
+  compile is now green at the later cost-and-brevity checkpoint.
 
 ## Fresh OpenAI Coach Lab connection
 
@@ -198,6 +197,46 @@ deployed endpoint again returns `503 coach_lab_disabled` before OpenAI.
   reduce sets, remove 1–2 accessories and avoid pushing. The citation label was
   not trusted merely because the model emitted it.
 
+### Cost-and-brevity slice
+
+Sam judged the benchmark answer as talking to the athlete well, while also
+being too long and far too expensive. Two paths were compared:
+
+1. Keep sending the whole knowledge pack and rely on prompt caching plus a
+   cheaper model.
+2. Retrieve exact current-source excerpts for each question, then use model and
+   caching choices only after the context itself is no longer wasteful.
+
+Selected option 2. Caching alone would discount repeated waste but would not
+remove it, and changing models before protecting the accepted voice would mix
+two variables. The full-source Sol run remains the quality benchmark.
+
+- The local retriever reads the current Bible, Rulings Registry and four
+  canonical exercise/conditioning sources on every run. It selects exact line
+  slices with exact source coordinates; it creates no summary or persisted
+  mini-Bible, so a source edit reaches the next request immediately.
+- Across the ten current Lab questions, the available source measured 811,981
+  characters. Selected knowledge measured 18,710–28,094 characters in 11 exact
+  chunks per case; complete instructions measured 22,088–31,482 characters.
+  The selected knowledge is 2.3–3.5% of the available source, before tokenisation.
+- The contract now aims for 60–90 words and the evaluator automatically fails
+  any answer over 100 words. Routine requests use low current-turn reasoning,
+  low verbosity and a 1,800-output-token safety cap.
+- Every provider response now records six explicit token units: input,
+  cached-input, cache-write, output, reasoning and total. The runner also prints
+  answer words plus selected/available knowledge characters, so the next paid
+  comparison cannot collapse cost into one unexplained number.
+- Sol remains the default benchmark. The isolated endpoint permits only
+  `gpt-5.6-sol`, `gpt-5.6-terra` and `gpt-5.6-luna`, enabling a controlled
+  same-question comparison after deployment without allowing arbitrary models.
+- `test:coach-lab` is green: baseline Lab 18/18, retrieval and length 18/18,
+  OpenAI request/receipt/transport 41/41. The request-shape cell was first seen
+  red against the prior medium-reasoning request; the retrieval suite was first
+  red before its source owner existed, and the 101-word mutation turns the
+  concise boundary red.
+- No paid request was made in this slice. The deployed endpoint remains disabled
+  between controlled runs.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
@@ -206,8 +245,9 @@ deployed endpoint again returns `503 coach_lab_disabled` before OpenAI.
 - Sam accepted the populated Coach dashboard in this task on 2026-08-24.
 - The Coach Lab runner, Bible-grounded OpenAI candidate, isolated endpoint and
   synthetic end-to-end provider connection are covered. A visual review/editor
-  and provider comparison are not built yet.
-- Canonical private LFA sources and a real Snapshot-derived athlete payload were
-  not sent to OpenAI; that data-sharing boundary awaits Sam's explicit approval.
+  is not built yet.
+- The prior canonical full-source benchmark is covered. The new retrieved
+  request shape has not yet run through the deployed endpoint, and no Terra or
+  Luna answer has been judged against the accepted Sol voice.
 - No answer is approved yet; Sam has not supplied the ideal answer set.
 - No program-change path is added or altered by the dashboard.

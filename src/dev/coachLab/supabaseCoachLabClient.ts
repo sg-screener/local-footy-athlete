@@ -2,7 +2,26 @@ import type {
   CoachLabFetch,
   OpenAIResponseRequest,
   OpenAIResponseResult,
+  OpenAITokenReceipt,
 } from './openAIResponsesClient';
+
+function nullableToken(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
+}
+
+function parseTokenReceipt(value: unknown): OpenAITokenReceipt {
+  const receipt = value && typeof value === 'object'
+    ? value as Partial<Record<keyof OpenAITokenReceipt, unknown>>
+    : {};
+  return {
+    inputTokens: nullableToken(receipt.inputTokens),
+    cachedInputTokens: nullableToken(receipt.cachedInputTokens),
+    cacheWriteTokens: nullableToken(receipt.cacheWriteTokens),
+    outputTokens: nullableToken(receipt.outputTokens),
+    reasoningTokens: nullableToken(receipt.reasoningTokens),
+    totalTokens: nullableToken(receipt.totalTokens),
+  };
+}
 
 /**
  * Local Coach Lab transport. The public Supabase key only authenticates the
@@ -48,6 +67,7 @@ export class SupabaseCoachLabClient {
     return {
       outputText: payload.outputText,
       totalTokens: typeof payload.totalTokens === 'number' ? payload.totalTokens : null,
+      tokenReceipt: parseTokenReceipt(payload.tokenReceipt),
     };
   }
 }

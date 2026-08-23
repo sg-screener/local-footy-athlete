@@ -318,7 +318,7 @@
     "test:exercise-edit-entry-surface": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditEntrySurfaceContractTests.ts",
     "test:coach-cleanroom": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachCleanroomContractTests.ts",
     "test:coach-snapshot": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotPopulatedTests.ts && npm run test:coach-lab",
-    "test:coach-lab": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachLabTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/openAICoachLabTests.ts",
+    "test:coach-lab": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachLabTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachLabRetrievalTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/openAICoachLabTests.ts",
     "coach:lab": "TZ=Australia/Melbourne sucrase-node scripts/run-coach-lab.ts",
     "coach:lab:openai": "TZ=Australia/Melbourne sucrase-node scripts/run-openai-coach-lab.ts",
     "test:coach-tab-slice1": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice1Tests.ts",

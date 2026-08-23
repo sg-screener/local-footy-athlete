@@ -5,7 +5,7 @@ declare const Deno: {
   serve(handler: (request: Request) => Promise<Response>): void;
 };
 
-const ALLOWED_MODEL = 'gpt-5.6-sol';
+const ALLOWED_MODELS = new Set(['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']);
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
@@ -33,7 +33,8 @@ Deno.serve(async (request) => {
     return json(400, { error: 'invalid_json' });
   }
 
-  if (body.model !== ALLOWED_MODEL
+  if (typeof body.model !== 'string'
+    || !ALLOWED_MODELS.has(body.model)
     || typeof body.instructions !== 'string'
     || typeof body.input !== 'string'
     || body.instructions.length > 1_500_000
@@ -45,7 +46,7 @@ Deno.serve(async (request) => {
   try {
     const client = new OpenAIResponsesClient({ apiKey });
     const result = await client.create({
-      model: ALLOWED_MODEL,
+      model: body.model,
       instructions: body.instructions,
       input: body.input,
     });

@@ -15,7 +15,7 @@ export type CoachLabSnapshotField = keyof Pick<
 
 export interface CoachLabKnowledgeSource {
   readonly id: string;
-  readonly authority: 'lfa_bible' | 'active_rule' | 'approved_example';
+  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example';
   readonly sourceReference: string;
 }
 
@@ -38,6 +38,17 @@ export interface CoachLabResponseV1 {
     readonly model: string;
     readonly promptVersion: string;
     readonly tokenUse?: number | null;
+    readonly tokenReceipt?: {
+      readonly inputTokens: number | null;
+      readonly cachedInputTokens: number | null;
+      readonly cacheWriteTokens: number | null;
+      readonly outputTokens: number | null;
+      readonly reasoningTokens: number | null;
+      readonly totalTokens: number | null;
+    };
+    readonly knowledgeAvailableCharacters?: number;
+    readonly knowledgeSelectedCharacters?: number;
+    readonly retrievedChunkIds?: readonly string[];
   };
 }
 
@@ -86,6 +97,7 @@ export interface CoachLabAutomaticChecks {
   readonly programFactsGrounded: boolean;
   readonly lfaClaimsGrounded: boolean;
   readonly judgementTransparent: boolean;
+  readonly concise: boolean;
 }
 
 export interface CoachLabEvaluation {
@@ -120,6 +132,12 @@ const SNAPSHOT_FIELDS: ReadonlySet<string> = new Set([
   'progress',
   'restrictions',
 ]);
+
+export const COACH_LAB_MAX_ANSWER_WORDS = 100;
+
+function answerWordCount(message: string): number {
+  return message.trim().split(/\s+/).filter(Boolean).length;
+}
 
 function responseHasValidShape(response: CoachLabResponseV1): boolean {
   return response.schemaVersion === COACH_LAB_RESPONSE_SCHEMA_VERSION
@@ -156,6 +174,7 @@ export function evaluateCoachLabResponse(
         (entry) => entry.authority === 'lfa_bible' || entry.authority === 'active_rule',
       ),
     judgementTransparent: !usesJudgement || response.judgementLabel === 'labelled',
+    concise: answerWordCount(response.message) <= COACH_LAB_MAX_ANSWER_WORDS,
   };
   const automaticFail = Object.values(automaticChecks).some((value) => !value);
   const ownerApproved = labCase.ownerReview.status === 'approved'

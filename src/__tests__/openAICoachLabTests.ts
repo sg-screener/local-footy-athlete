@@ -105,7 +105,13 @@ async function main(): Promise<void> {
               type: 'message',
               content: [{ type: 'output_text', text: JSON.stringify(MODEL_PAYLOAD) }],
             }],
-            usage: { input_tokens: 1200, output_tokens: 80, total_tokens: 1280 },
+            usage: {
+              input_tokens: 1200,
+              input_tokens_details: { cached_tokens: 100, cache_write_tokens: 20 },
+              output_tokens: 80,
+              output_tokens_details: { reasoning_tokens: 30 },
+              total_tokens: 1280,
+            },
           });
         },
       };
@@ -124,6 +130,11 @@ async function main(): Promise<void> {
         && !capturedBody.includes('secret-test-key'));
     ok('the strongest benchmark model is the default', body.model === 'gpt-5.6-sol');
     ok('the request disables provider-side response storage', body.store === false);
+    ok('routine Coach answers use low current-turn reasoning and low verbosity',
+      body.reasoning?.effort === 'low'
+        && body.reasoning?.context === 'current_turn'
+        && body.text?.verbosity === 'low'
+        && body.max_output_tokens === 1800);
     ok('structured output is strict JSON Schema',
       body.text?.format?.type === 'json_schema'
         && body.text.format.strict === true
@@ -131,24 +142,56 @@ async function main(): Promise<void> {
         && !JSON.stringify(body.text.format.schema).includes('uniqueItems'));
     ok('the schema structurally forbids program actions',
       body.text.format.schema.properties.programActions.maxItems === 0);
+    ok('canonical exercise citations are valid structured sources',
+      body.text.format.schema.properties.knowledgeSources.items.properties.authority.enum
+        .includes('canonical_source'));
     ok('the complete brain pack and athlete input reach their separate fields',
       body.instructions === 'FULL BRAIN PACK'
         && body.input === 'ATHLETE MESSAGE AND SNAPSHOT');
     ok('the typed output and token receipt return from the response',
       result.outputText === JSON.stringify(MODEL_PAYLOAD)
-        && result.totalTokens === 1280);
+        && result.totalTokens === 1280
+        && result.tokenReceipt.inputTokens === 1200
+        && result.tokenReceipt.cachedInputTokens === 100
+        && result.tokenReceipt.cacheWriteTokens === 20
+        && result.tokenReceipt.outputTokens === 80
+        && result.tokenReceipt.reasoningTokens === 30
+        && result.tokenReceipt.totalTokens === 1280);
   }
 
   console.log('\n[4] CHATGPT IS A REAL COACH LAB CANDIDATE, NEVER A LIVE APP WRITER');
   {
+    let receivedInstructions = '';
     const client = {
-      async create() {
-        return { outputText: JSON.stringify(MODEL_PAYLOAD), totalTokens: 1280 };
+      async create(request: { readonly instructions: string }) {
+        receivedInstructions = request.instructions;
+        return {
+          outputText: JSON.stringify(MODEL_PAYLOAD),
+          totalTokens: 1280,
+          tokenReceipt: {
+            inputTokens: 1200,
+            cachedInputTokens: 100,
+            cacheWriteTokens: 20,
+            outputTokens: 80,
+            reasoningTokens: 30,
+            totalTokens: 1280,
+          },
+        };
       },
     };
     const candidate = createOpenAICoachLabCandidate({
       client,
-      instructions: 'FULL BIBLE + RULINGS + EXERCISE SOURCES',
+      instructions: ({ labCase }) => ({
+        instructions: `RETRIEVED FOR ${labCase.id}`,
+        retrievalReceipt: {
+          unit: 'characters',
+          availableCharacters: 811_981,
+          selectedCharacters: 21_765,
+          selectedChunks: 11,
+          maximumSelectedCharacters: 60_000,
+        },
+        retrievedChunkIds: ['docs/LFA_PROGRAMMING_BIBLE.md:L2559-L2594'],
+      }),
     });
     const report = await runCoachLabAsync({
       cases: [COACH_LAB_CASES[2]],
@@ -163,7 +206,14 @@ async function main(): Promise<void> {
       result.response.diagnostics.provider === 'openai'
         && result.response.diagnostics.model === OPENAI_COACH_LAB_MODEL
         && result.response.diagnostics.promptVersion === OPENAI_COACH_LAB_PROMPT_VERSION
-        && result.response.diagnostics.tokenUse === 1280);
+        && result.response.diagnostics.tokenUse === 1280
+        && result.response.diagnostics.tokenReceipt?.cachedInputTokens === 100
+        && result.response.diagnostics.knowledgeAvailableCharacters === 811_981
+        && result.response.diagnostics.knowledgeSelectedCharacters === 21_765
+        && result.response.diagnostics.retrievedChunkIds?.[0]
+          === 'docs/LFA_PROGRAMMING_BIBLE.md:L2559-L2594');
+    ok('each case resolves its own retrieved prompt immediately before the request',
+      receivedInstructions === `RETRIEVED FOR ${COACH_LAB_CASES[2].id}`);
     ok('no ChatGPT output can contain a program action',
       result.response.programActions.length === 0
         && result.automaticChecks.readOnly);
@@ -203,7 +253,7 @@ async function main(): Promise<void> {
     ok('an empty API response stops without leaking the key', invalidResponseStopped);
   }
 
-  console.log('\n[6] THE LIVE RUNNER READS THE WHOLE CURRENT KNOWLEDGE SET');
+  console.log('\n[6] THE LIVE RUNNER RETRIEVES FROM THE WHOLE CURRENT KNOWLEDGE SET');
   {
     const runner = readFileSync(resolve(__dirname, '../../scripts/run-openai-coach-lab.ts'), 'utf8');
     for (const requiredPath of [
@@ -220,6 +270,9 @@ async function main(): Promise<void> {
       !/CoachScreen|coachTurnController|coach-chat\/index/.test(runner));
     ok('one case is the default so a command cannot accidentally buy ten calls',
       /DEFAULT_CASE_ID/.test(runner) && /--all/.test(runner));
+    ok('retrieval is the default and a full-source benchmark is explicit',
+      /retrieveCoachLabKnowledge/.test(runner)
+        && /--full-source/.test(runner));
   }
 
   console.log('\n[7] THE EXISTING SUPABASE KEY STAYS SERVER-SIDE');
@@ -238,7 +291,18 @@ async function main(): Promise<void> {
           ok: true,
           status: 200,
           async text() {
-            return JSON.stringify({ outputText: JSON.stringify(MODEL_PAYLOAD), totalTokens: 900 });
+            return JSON.stringify({
+              outputText: JSON.stringify(MODEL_PAYLOAD),
+              totalTokens: 900,
+              tokenReceipt: {
+                inputTokens: 850,
+                cachedInputTokens: 0,
+                cacheWriteTokens: 0,
+                outputTokens: 50,
+                reasoningTokens: 20,
+                totalTokens: 900,
+              },
+            });
           },
         };
       },
@@ -254,7 +318,9 @@ async function main(): Promise<void> {
       capturedHeaders.Authorization === 'Bearer public-anon-key'
         && !/OPENAI_API_KEY|sk-/.test(capturedBody));
     ok('the gateway returns the typed OpenAI receipt',
-      result.totalTokens === 900 && result.outputText === JSON.stringify(MODEL_PAYLOAD));
+      result.totalTokens === 900
+        && result.tokenReceipt.reasoningTokens === 20
+        && result.outputText === JSON.stringify(MODEL_PAYLOAD));
 
     const edgeSource = readFileSync(resolve(__dirname, '../../supabase/functions/coach-lab/index.ts'), 'utf8');
     const config = readFileSync(resolve(__dirname, '../../supabase/config.toml'), 'utf8');
@@ -262,7 +328,10 @@ async function main(): Promise<void> {
       /Deno\.env\.get\('OPENAI_API_KEY'\)/.test(edgeSource)
         && !/ANTHROPIC_API_KEY|COACH_LLM_PROVIDER|coach-chat/.test(edgeSource));
     ok('the endpoint fixes the model and bounds request size',
-      /ALLOWED_MODEL = 'gpt-5\.6-sol'/.test(edgeSource)
+      /ALLOWED_MODELS/.test(edgeSource)
+        && /gpt-5\.6-sol/.test(edgeSource)
+        && /gpt-5\.6-terra/.test(edgeSource)
+        && /gpt-5\.6-luna/.test(edgeSource)
         && /instructions\.length > 1_500_000/.test(edgeSource)
         && /input\.length > 100_000/.test(edgeSource));
     ok('the paid endpoint is disabled between controlled Lab runs',
@@ -277,7 +346,7 @@ async function main(): Promise<void> {
 
   console.log(`\nOpenAI Coach Lab totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
-  console.log('  NOT COVERED: the deployed endpoint ran one paid synthetic request only. Canonical private LFA sources were not sent, no real LFA answer was judged, and no live app screen or program change is touched.');
+  console.log('  NOT COVERED: this suite makes no provider call. One prior canonical full-source benchmark exists, but the retrieved prompt and cheaper models have not yet run through the deployed endpoint; no live app screen or program change is touched.');
   if (failed > 0) process.exit(1);
 }
 
