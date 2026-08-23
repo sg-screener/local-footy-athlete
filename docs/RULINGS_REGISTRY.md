@@ -4187,3 +4187,32 @@ OPEN EDGES OF R-130, CLOSED IN ONE MESSAGE.**
 same tiles, same motion as the other option screens; no new visual language.
 
 · `WRITTEN` → building. Seat `pathway`; plan in `docs/STATUS_PATHWAY.md`.
+
+---
+
+**R-130b** · *"no don't just add meaningless glute exercises in - i'd rather it
+be pulls kept and a couple of prehab drills - or some low fatiguing lower body
+work - like lower body accessories but don't just make it glute only … so pull
+day probably becomes horizontal, vertical, core, core, shoulder prehab, 1-2
+lower body accessories … same with push day"* (Sam, 2026-08-23, on seeing the
+first female mix on glass) · **THE FEMALE SPLIT-DAY SHAPE, RE-RULED — AND THE
+GLUTE NARROWING IS DEAD.**
+
+1. **Female split days are his list, verbatim:** the day's two main movements
+   (horizontal + vertical of its direction), **two core seats, one shoulder
+   prehab seat** (the shoulder-health pool — external rotation, scap work),
+   and **1-2 low-fatigue lower-body accessory seats**. The direction's
+   accessory rows and all arm/shoulder isolation are gone from female split
+   days. Built as two lower seats; kit or exclusions may drop one, which is
+   the ruled 1-2 range rather than a defect.
+2. **The lower seats draw the WHOLE lower-isolation pool** — hamstring, quad,
+   calf, glute alike. *"don't just make it glute only"* supersedes R-130a's
+   glute bias; the narrowing was measured delivering `Back Extension` on every
+   seat (the reachable glute group is one exercise deep) and that monotony is
+   what he refused.
+3. Female lower days keep their one extra lower-accessory seat (unnarrowed);
+   the combined upper day and full-body shapes are untouched by this ruling —
+   he spoke to the split days.
+
+Supersedes R-130a item 2's signed table. Males untouched, as everywhere in
+R-130. · Seat `pathway`.

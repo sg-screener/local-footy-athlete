@@ -532,30 +532,14 @@ const MAIN_BILATERAL_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
 const SPLIT_UPPER_ACCESSORY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
   'push_accessory_1', 'push_accessory_2',
   'pull_accessory_1', 'pull_accessory_2',
-  // R-130a: the female upper-day seats join the same-day dedup, so a day's
-  // two trunk rows (core + midline) and its glute row can never repeat an
-  // identity another slot on the day already took. Males never declare these
-  // slots, so the membership is inert on the male path.
-  'midline', 'lower_accessory',
+  // R-130b: the female seats join the same-day dedup, so a day's two trunk
+  // rows and its two lower rows are always four DIFFERENT identities. Males
+  // never declare these slots, so the membership is inert on the male path.
+  // (R-130a's glute-only narrowing lived here briefly and was KILLED by
+  // R-130b — *"don't just make it glute only"* — after the first mix's glass
+  // check showed the one reachable glute row on every seat.)
+  'midline', 'lower_accessory', 'second_lower_accessory', 'shoulder_prehab',
 ]);
-
-/**
- * R-130a: *"add more glutes"* — the female lower-accessory seat NARROWS to the
- * glute group of `isolation_lower` while any glute row is legal, and falls
- * back to the whole pool rather than leaving the seat empty. A narrowing, not
- * an ordering, deliberately: the block-rotation owner ignores list order (it
- * rotates), so an ordering here delivered quad and adductor rows — measured on
- * the first probe — while a filter is respected by the whole selection chain.
- * Same preference-with-fallback shape every other narrowing in this file uses.
- */
-function gluteFirst(
-  slot: SessionSlot,
-  candidates: readonly ComposedExerciseIdentity[],
-): readonly ComposedExerciseIdentity[] {
-  if (slot !== 'lower_accessory') return candidates;
-  const glutes = candidates.filter((id) => findPoolEntry(id)?.entry.group === 'glute');
-  return glutes.length > 0 ? glutes : candidates;
-}
 
 function hingePriorityFirst(
   slot: SessionSlot,
@@ -1342,14 +1326,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * equipment and experience legality outrank pins."* Experience is applied
        * last and never empties the slot (ruling 6). */
       const legalUnder = (out: ReadonlySet<string>, kit: readonly string[]) =>
-        gluteFirst(
+        hingePriorityFirst(
           slot,
-          hingePriorityFirst(
-            slot,
-            experiencePreferred(
-              pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
-              inputs.profile,
-            ),
+          experiencePreferred(
+            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
+            inputs.profile,
           ),
         );
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────

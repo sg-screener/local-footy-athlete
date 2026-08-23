@@ -73176,7 +73176,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -73263,9 +73263,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -73369,9 +73369,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -73711,7 +73711,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-banded-dead-bug",
-                      "ex-custom-back-extension"
+                      "ex-custom-bosch-hold"
                     ],
                     "exercises": [
                       {
@@ -73798,9 +73798,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -73904,9 +73904,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -74072,7 +74072,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -74159,9 +74159,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -74265,9 +74265,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -74607,7 +74607,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-banded-dead-bug",
-                      "ex-custom-back-extension"
+                      "ex-custom-bosch-hold"
                     ],
                     "exercises": [
                       {
@@ -74694,9 +74694,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -74800,9 +74800,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -74969,7 +74969,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -75071,9 +75071,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -75270,9 +75270,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -75330,11 +75330,11 @@
                       "power-w-composed-mc-ai-3-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -75385,43 +75385,13 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
+                        "identity": "ex-custom-band-pallof-press",
+                        "exerciseId": "ex-custom-band-pallof-press",
+                        "name": "Band Pallof Press",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
                         "repsMax": 10,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "High",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
-                        "order": 5,
-                        "sets": 2,
-                        "repsMin": 8,
-                        "repsMax": 12,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "High",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "ex-custom-band-pallof-press",
-                        "exerciseId": "ex-custom-band-pallof-press",
-                        "name": "Band Pallof Press",
-                        "order": 6,
-                        "sets": 2,
-                        "repsMin": 12,
-                        "repsMax": 15,
                         "weightKg": null,
                         "restSeconds": 0,
                         "prescriptionType": "reps",
@@ -75430,9 +75400,39 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
+                        "order": 5,
+                        "sets": 2,
+                        "repsMin": 8,
+                        "repsMax": 12,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
+                        "order": 6,
+                        "sets": 2,
+                        "repsMin": 12,
+                        "repsMax": 15,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -75445,9 +75445,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -75593,43 +75593,13 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
+                    "identity": "ex-custom-band-pallof-press",
+                    "exerciseId": "ex-custom-band-pallof-press",
+                    "name": "Band Pallof Press",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
                     "repsMax": 10,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "High",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
-                    "order": 5,
-                    "sets": 2,
-                    "repsMin": 8,
-                    "repsMax": 12,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "High",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "ex-custom-band-pallof-press",
-                    "exerciseId": "ex-custom-band-pallof-press",
-                    "name": "Band Pallof Press",
-                    "order": 6,
-                    "sets": 2,
-                    "repsMin": 12,
-                    "repsMax": 15,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
@@ -75638,9 +75608,39 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
+                    "order": 5,
+                    "sets": 2,
+                    "repsMin": 8,
+                    "repsMax": 12,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
+                    "order": 6,
+                    "sets": 2,
+                    "repsMin": 12,
+                    "repsMax": 15,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -75653,9 +75653,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -75712,11 +75712,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -75753,41 +75753,39 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 8,
                         "repsMax": 10,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
                         "repsMax": 12,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -75800,9 +75798,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -75815,9 +75813,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -75911,41 +75909,39 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 8,
                     "repsMax": 10,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
                     "repsMax": 12,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -75958,9 +75954,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -75973,9 +75969,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -76098,8 +76094,8 @@
                       "ex-rdl",
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
-                      "ex-custom-banded-tke",
-                      "ex-custom-back-extension"
+                      "ex-custom-bear-carry",
+                      "ex-custom-long-lever-copenhagen"
                     ],
                     "exercises": [
                       {
@@ -76170,9 +76166,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-tke",
-                        "exerciseId": "ex-custom-banded-tke",
-                        "name": "Banded TKE",
+                        "identity": "ex-custom-bear-carry",
+                        "exerciseId": "ex-custom-bear-carry",
+                        "name": "Bear Carry",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -76185,9 +76181,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-long-lever-copenhagen",
+                        "exerciseId": "ex-custom-long-lever-copenhagen",
+                        "name": "Long-Lever Copenhagen",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -76275,9 +76271,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-tke",
-                    "exerciseId": "ex-custom-banded-tke",
-                    "name": "Banded TKE",
+                    "identity": "ex-custom-bear-carry",
+                    "exerciseId": "ex-custom-bear-carry",
+                    "name": "Bear Carry",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -76290,9 +76286,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-long-lever-copenhagen",
+                    "exerciseId": "ex-custom-long-lever-copenhagen",
+                    "name": "Long-Lever Copenhagen",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -76331,9 +76327,9 @@
               "games": 0,
               "byCategory": {
                 "aerobic_base": 1,
-                "full_body_strength": 2,
                 "lower_strength": 2,
-                "tempo_conditioning": 2
+                "tempo_conditioning": 2,
+                "upper_strength": 2
               }
             }
           }
@@ -76461,7 +76457,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -76563,9 +76559,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -76762,9 +76758,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -76822,11 +76818,11 @@
                       "power-w-composed-mc-ai-4-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -76877,43 +76873,13 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
-                        "order": 4,
-                        "sets": 3,
-                        "repsMin": 8,
-                        "repsMax": 10,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "High",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
-                        "order": 5,
-                        "sets": 3,
-                        "repsMin": 8,
-                        "repsMax": 12,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "High",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
                         "identity": "ex-custom-band-pallof-press",
                         "exerciseId": "ex-custom-band-pallof-press",
                         "name": "Band Pallof Press",
-                        "order": 6,
+                        "order": 4,
                         "sets": 2,
-                        "repsMin": 12,
-                        "repsMax": 15,
+                        "repsMin": 8,
+                        "repsMax": 10,
                         "weightKg": null,
                         "restSeconds": 0,
                         "prescriptionType": "reps",
@@ -76922,9 +76888,39 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
+                        "order": 5,
+                        "sets": 2,
+                        "repsMin": 8,
+                        "repsMax": 12,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
+                        "order": 6,
+                        "sets": 3,
+                        "repsMin": 12,
+                        "repsMax": 15,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -76937,9 +76933,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -77085,43 +77081,13 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
-                    "order": 4,
-                    "sets": 3,
-                    "repsMin": 8,
-                    "repsMax": 10,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "High",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
-                    "order": 5,
-                    "sets": 3,
-                    "repsMin": 8,
-                    "repsMax": 12,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "High",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
                     "identity": "ex-custom-band-pallof-press",
                     "exerciseId": "ex-custom-band-pallof-press",
                     "name": "Band Pallof Press",
-                    "order": 6,
+                    "order": 4,
                     "sets": 2,
-                    "repsMin": 12,
-                    "repsMax": 15,
+                    "repsMin": 8,
+                    "repsMax": 10,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
@@ -77130,9 +77096,39 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
+                    "order": 5,
+                    "sets": 2,
+                    "repsMin": 8,
+                    "repsMax": 12,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
+                    "order": 6,
+                    "sets": 3,
+                    "repsMin": 12,
+                    "repsMax": 15,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -77145,9 +77141,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -77204,11 +77200,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -77245,41 +77241,39 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
-                        "sets": 3,
+                        "sets": 2,
                         "repsMin": 8,
                         "repsMax": 10,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
-                        "sets": 3,
+                        "sets": 2,
                         "repsMin": 8,
                         "repsMax": 12,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -77292,9 +77286,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -77307,9 +77301,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -77403,41 +77397,39 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
-                    "sets": 3,
+                    "sets": 2,
                     "repsMin": 8,
                     "repsMax": 10,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
-                    "sets": 3,
+                    "sets": 2,
                     "repsMin": 8,
                     "repsMax": 12,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -77450,9 +77442,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -77465,9 +77457,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -77590,8 +77582,8 @@
                       "ex-rdl",
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
-                      "ex-custom-banded-tke",
-                      "ex-custom-back-extension"
+                      "ex-custom-bear-carry",
+                      "ex-custom-long-lever-copenhagen"
                     ],
                     "exercises": [
                       {
@@ -77662,9 +77654,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-tke",
-                        "exerciseId": "ex-custom-banded-tke",
-                        "name": "Banded TKE",
+                        "identity": "ex-custom-bear-carry",
+                        "exerciseId": "ex-custom-bear-carry",
+                        "name": "Bear Carry",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -77677,9 +77669,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-long-lever-copenhagen",
+                        "exerciseId": "ex-custom-long-lever-copenhagen",
+                        "name": "Long-Lever Copenhagen",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 8,
@@ -77767,9 +77759,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-tke",
-                    "exerciseId": "ex-custom-banded-tke",
-                    "name": "Banded TKE",
+                    "identity": "ex-custom-bear-carry",
+                    "exerciseId": "ex-custom-bear-carry",
+                    "name": "Bear Carry",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -77782,9 +77774,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-long-lever-copenhagen",
+                    "exerciseId": "ex-custom-long-lever-copenhagen",
+                    "name": "Long-Lever Copenhagen",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 8,
@@ -77823,9 +77815,9 @@
               "games": 0,
               "byCategory": {
                 "aerobic_base": 1,
-                "full_body_strength": 2,
                 "lower_strength": 2,
-                "tempo_conditioning": 2
+                "tempo_conditioning": 2,
+                "upper_strength": 2
               }
             }
           }
@@ -77959,7 +77951,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -78061,9 +78053,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -78220,9 +78212,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -78263,11 +78255,11 @@
                       "power-w-composed-mc-ai-1-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -78318,9 +78310,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
+                        "identity": "ex-custom-band-pallof-press",
+                        "exerciseId": "ex-custom-band-pallof-press",
+                        "name": "Band Pallof Press",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -78333,9 +78325,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -78348,9 +78340,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-band-pallof-press",
-                        "exerciseId": "ex-custom-band-pallof-press",
-                        "name": "Band Pallof Press",
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -78363,9 +78355,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -78378,9 +78370,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -78493,9 +78485,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
+                    "identity": "ex-custom-band-pallof-press",
+                    "exerciseId": "ex-custom-band-pallof-press",
+                    "name": "Band Pallof Press",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -78508,9 +78500,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -78523,9 +78515,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-band-pallof-press",
-                    "exerciseId": "ex-custom-band-pallof-press",
-                    "name": "Band Pallof Press",
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -78538,9 +78530,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -78553,9 +78545,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -78627,11 +78619,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -78668,9 +78660,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 8,
@@ -78683,9 +78675,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -78695,14 +78687,12 @@
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -78715,9 +78705,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -78730,9 +78720,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -78793,9 +78783,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 8,
@@ -78808,9 +78798,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -78820,14 +78810,12 @@
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -78840,9 +78828,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -78855,9 +78843,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -79273,11 +79261,11 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
-                "full_body_strength": 2,
                 "game": 1,
                 "lower_strength": 1,
                 "primer": 1,
-                "team_training": 2
+                "team_training": 2,
+                "upper_strength": 2
               }
             }
           }
@@ -79405,7 +79393,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -79507,9 +79495,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -79666,9 +79654,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -79709,11 +79697,11 @@
                       "power-w-composed-mc-ai-2-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -79764,9 +79752,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
+                        "identity": "ex-custom-band-pallof-press",
+                        "exerciseId": "ex-custom-band-pallof-press",
+                        "name": "Band Pallof Press",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -79779,9 +79767,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -79794,9 +79782,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-band-pallof-press",
-                        "exerciseId": "ex-custom-band-pallof-press",
-                        "name": "Band Pallof Press",
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -79809,9 +79797,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -79824,9 +79812,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -79939,9 +79927,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
+                    "identity": "ex-custom-band-pallof-press",
+                    "exerciseId": "ex-custom-band-pallof-press",
+                    "name": "Band Pallof Press",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -79954,9 +79942,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -79969,9 +79957,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-band-pallof-press",
-                    "exerciseId": "ex-custom-band-pallof-press",
-                    "name": "Band Pallof Press",
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -79984,9 +79972,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -79999,9 +79987,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -80073,11 +80061,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -80114,9 +80102,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 8,
@@ -80129,9 +80117,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -80141,14 +80129,12 @@
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -80161,9 +80147,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -80176,9 +80162,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -80239,9 +80225,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 8,
@@ -80254,9 +80240,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -80266,14 +80252,12 @@
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -80286,9 +80270,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -80301,9 +80285,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -80719,11 +80703,11 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
-                "full_body_strength": 2,
                 "game": 1,
                 "lower_strength": 1,
                 "primer": 1,
-                "team_training": 2
+                "team_training": 2,
+                "upper_strength": 2
               }
             }
           }
@@ -80851,7 +80835,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -80953,9 +80937,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -81112,9 +81096,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -81155,11 +81139,11 @@
                       "power-w-composed-mc-ai-3-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -81210,9 +81194,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
+                        "identity": "ex-custom-band-pallof-press",
+                        "exerciseId": "ex-custom-band-pallof-press",
+                        "name": "Band Pallof Press",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -81225,9 +81209,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -81240,9 +81224,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-band-pallof-press",
-                        "exerciseId": "ex-custom-band-pallof-press",
-                        "name": "Band Pallof Press",
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -81255,9 +81239,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -81270,9 +81254,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -81385,9 +81369,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
+                    "identity": "ex-custom-band-pallof-press",
+                    "exerciseId": "ex-custom-band-pallof-press",
+                    "name": "Band Pallof Press",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -81400,9 +81384,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -81415,9 +81399,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-band-pallof-press",
-                    "exerciseId": "ex-custom-band-pallof-press",
-                    "name": "Band Pallof Press",
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -81430,9 +81414,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -81445,9 +81429,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -81519,11 +81503,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -81560,9 +81544,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 8,
@@ -81575,9 +81559,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -81587,14 +81571,12 @@
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -81607,9 +81589,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -81622,9 +81604,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -81685,9 +81667,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 8,
@@ -81700,9 +81682,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -81712,14 +81694,12 @@
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -81732,9 +81712,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -81747,9 +81727,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -82165,11 +82145,11 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
-                "full_body_strength": 2,
                 "game": 1,
                 "lower_strength": 1,
                 "primer": 1,
-                "team_training": 2
+                "team_training": 2,
+                "upper_strength": 2
               }
             }
           }
@@ -82297,7 +82277,7 @@
                       "ex-bulgarian-split",
                       "ex-custom-single-leg-rdl",
                       "ex-custom-ab-wheel",
-                      "ex-custom-back-extension"
+                      "ex-custom-banded-tke"
                     ],
                     "exercises": [
                       {
@@ -82399,9 +82379,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-banded-tke",
+                        "exerciseId": "ex-custom-banded-tke",
+                        "name": "Banded TKE",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 8,
@@ -82558,9 +82538,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-banded-tke",
+                    "exerciseId": "ex-custom-banded-tke",
+                    "name": "Banded TKE",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 8,
@@ -82601,11 +82581,11 @@
                       "power-w-composed-mc-ai-4-2-exercise",
                       "ex-barbell-rows",
                       "ex-custom-lat-pulldown",
-                      "ex-custom-chest-supported-db-row",
-                      "ex-custom-neutral-grip-pulldown",
                       "ex-custom-band-pallof-press",
-                      "ex-custom-back-extension",
-                      "ex-custom-banded-dead-bug"
+                      "ex-custom-banded-dead-bug",
+                      "ex-custom-band-pull-apart",
+                      "ex-custom-bosch-hold",
+                      "ex-custom-copenhagen-plank--half-"
                     ],
                     "exercises": [
                       {
@@ -82656,9 +82636,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-chest-supported-db-row",
-                        "exerciseId": "ex-custom-chest-supported-db-row",
-                        "name": "Chest-Supported DB Row",
+                        "identity": "ex-custom-band-pallof-press",
+                        "exerciseId": "ex-custom-band-pallof-press",
+                        "name": "Band Pallof Press",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -82671,9 +82651,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-neutral-grip-pulldown",
-                        "exerciseId": "ex-custom-neutral-grip-pulldown",
-                        "name": "Neutral-Grip Pulldown",
+                        "identity": "ex-custom-banded-dead-bug",
+                        "exerciseId": "ex-custom-banded-dead-bug",
+                        "name": "Banded Dead Bug",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 8,
@@ -82686,9 +82666,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-band-pallof-press",
-                        "exerciseId": "ex-custom-band-pallof-press",
-                        "name": "Band Pallof Press",
+                        "identity": "ex-custom-band-pull-apart",
+                        "exerciseId": "ex-custom-band-pull-apart",
+                        "name": "Band Pull-Apart",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -82701,9 +82681,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-bosch-hold",
+                        "exerciseId": "ex-custom-bosch-hold",
+                        "name": "Bosch Hold",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -82716,9 +82696,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-banded-dead-bug",
-                        "exerciseId": "ex-custom-banded-dead-bug",
-                        "name": "Banded Dead Bug",
+                        "identity": "ex-custom-copenhagen-plank--half-",
+                        "exerciseId": "ex-custom-copenhagen-plank--half-",
+                        "name": "Copenhagen Plank (Half)",
                         "order": 8,
                         "sets": 2,
                         "repsMin": 12,
@@ -82831,9 +82811,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-chest-supported-db-row",
-                    "exerciseId": "ex-custom-chest-supported-db-row",
-                    "name": "Chest-Supported DB Row",
+                    "identity": "ex-custom-band-pallof-press",
+                    "exerciseId": "ex-custom-band-pallof-press",
+                    "name": "Band Pallof Press",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -82846,9 +82826,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-neutral-grip-pulldown",
-                    "exerciseId": "ex-custom-neutral-grip-pulldown",
-                    "name": "Neutral-Grip Pulldown",
+                    "identity": "ex-custom-banded-dead-bug",
+                    "exerciseId": "ex-custom-banded-dead-bug",
+                    "name": "Banded Dead Bug",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 8,
@@ -82861,9 +82841,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-band-pallof-press",
-                    "exerciseId": "ex-custom-band-pallof-press",
-                    "name": "Band Pallof Press",
+                    "identity": "ex-custom-band-pull-apart",
+                    "exerciseId": "ex-custom-band-pull-apart",
+                    "name": "Band Pull-Apart",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -82876,9 +82856,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-bosch-hold",
+                    "exerciseId": "ex-custom-bosch-hold",
+                    "name": "Bosch Hold",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -82891,9 +82871,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-banded-dead-bug",
-                    "exerciseId": "ex-custom-banded-dead-bug",
-                    "name": "Banded Dead Bug",
+                    "identity": "ex-custom-copenhagen-plank--half-",
+                    "exerciseId": "ex-custom-copenhagen-plank--half-",
+                    "name": "Copenhagen Plank (Half)",
                     "order": 8,
                     "sets": 2,
                     "repsMin": 12,
@@ -82965,11 +82945,11 @@
                     "exerciseIds": [
                       "ex-bench-press",
                       "ex-custom-db-shoulder-press",
-                      "ex-custom-db-bench-press",
-                      "ex-tricep-dips",
                       "ex-custom-hanging-leg-raise",
-                      "ex-custom-back-extension",
-                      "ex-custom-hollow-hold"
+                      "ex-custom-hollow-hold",
+                      "ex-custom-banded-external-rotation",
+                      "ex-custom-crab-walks",
+                      "ex-custom-groin-squeeze"
                     ],
                     "exercises": [
                       {
@@ -83006,9 +82986,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
+                        "identity": "ex-custom-hanging-leg-raise",
+                        "exerciseId": "ex-custom-hanging-leg-raise",
+                        "name": "Hanging Leg Raise",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 8,
@@ -83021,9 +83001,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
+                        "identity": "ex-custom-hollow-hold",
+                        "exerciseId": "ex-custom-hollow-hold",
+                        "name": "Hollow Hold",
                         "order": 4,
                         "sets": 2,
                         "repsMin": 8,
@@ -83033,14 +83013,12 @@
                         "prescriptionType": "reps",
                         "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Dip Bars"
-                        ]
+                        "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hanging-leg-raise",
-                        "exerciseId": "ex-custom-hanging-leg-raise",
-                        "name": "Hanging Leg Raise",
+                        "identity": "ex-custom-banded-external-rotation",
+                        "exerciseId": "ex-custom-banded-external-rotation",
+                        "name": "Banded External Rotation",
                         "order": 5,
                         "sets": 2,
                         "repsMin": 12,
@@ -83053,9 +83031,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-back-extension",
-                        "exerciseId": "ex-custom-back-extension",
-                        "name": "Back Extension",
+                        "identity": "ex-custom-crab-walks",
+                        "exerciseId": "ex-custom-crab-walks",
+                        "name": "Crab Walks",
                         "order": 6,
                         "sets": 2,
                         "repsMin": 12,
@@ -83068,9 +83046,9 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-custom-hollow-hold",
-                        "exerciseId": "ex-custom-hollow-hold",
-                        "name": "Hollow Hold",
+                        "identity": "ex-custom-groin-squeeze",
+                        "exerciseId": "ex-custom-groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 7,
                         "sets": 2,
                         "repsMin": 12,
@@ -83131,9 +83109,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
+                    "identity": "ex-custom-hanging-leg-raise",
+                    "exerciseId": "ex-custom-hanging-leg-raise",
+                    "name": "Hanging Leg Raise",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 8,
@@ -83146,9 +83124,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
+                    "identity": "ex-custom-hollow-hold",
+                    "exerciseId": "ex-custom-hollow-hold",
+                    "name": "Hollow Hold",
                     "order": 4,
                     "sets": 2,
                     "repsMin": 8,
@@ -83158,14 +83136,12 @@
                     "prescriptionType": "reps",
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Dip Bars"
-                    ]
+                    "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hanging-leg-raise",
-                    "exerciseId": "ex-custom-hanging-leg-raise",
-                    "name": "Hanging Leg Raise",
+                    "identity": "ex-custom-banded-external-rotation",
+                    "exerciseId": "ex-custom-banded-external-rotation",
+                    "name": "Banded External Rotation",
                     "order": 5,
                     "sets": 2,
                     "repsMin": 12,
@@ -83178,9 +83154,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-back-extension",
-                    "exerciseId": "ex-custom-back-extension",
-                    "name": "Back Extension",
+                    "identity": "ex-custom-crab-walks",
+                    "exerciseId": "ex-custom-crab-walks",
+                    "name": "Crab Walks",
                     "order": 6,
                     "sets": 2,
                     "repsMin": 12,
@@ -83193,9 +83169,9 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-custom-hollow-hold",
-                    "exerciseId": "ex-custom-hollow-hold",
-                    "name": "Hollow Hold",
+                    "identity": "ex-custom-groin-squeeze",
+                    "exerciseId": "ex-custom-groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 7,
                     "sets": 2,
                     "repsMin": 12,
@@ -83611,11 +83587,11 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
-                "full_body_strength": 2,
                 "game": 1,
                 "lower_strength": 1,
                 "primer": 1,
-                "team_training": 2
+                "team_training": 2,
+                "upper_strength": 2
               }
             }
           }

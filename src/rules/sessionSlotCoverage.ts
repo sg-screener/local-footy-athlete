@@ -69,12 +69,27 @@ export type SessionSlot =
    */
   | 'midline'
   /**
-   * R-130a: the FEMALE glute-biased lower-isolation seat — *"add more glutes /
-   * lowers accessories"*. Draws `isolation_lower`, glute group first. Appears
-   * on female upper days (in the swap) and as the extra row on female lower
-   * days. No male table declares either of these two slots.
+   * The FEMALE low-fatigue lower-isolation seat. R-130b: draws the WHOLE
+   * `isolation_lower` pool — *"low fatiguing lower body work … don't just
+   * make it glute only"* — superseding R-130a's glute bias, which was
+   * measured delivering the one reachable glute row on every seat. Appears
+   * on female split days (twice, with `second_lower_accessory`) and as the
+   * extra row on female lower days. No male table declares it.
    */
   | 'lower_accessory'
+  /**
+   * R-130b: the second of the split day's *"1-2 lower body accessories"* —
+   * its own seat name so block-stable selection history keys the two apart
+   * and same-day dedup gives the day two DIFFERENT rows. Kit or exclusions
+   * dropping this seat is the ruled 1-2 range working, not a gap.
+   */
+  | 'second_lower_accessory'
+  /**
+   * R-130b: *"shoulder prehab"* — the female split-day seat drawing the
+   * shoulder-health pool (external rotation, scap work; the charter's prehab
+   * row already separates it from pump delts). No male table declares it.
+   */
+  | 'shoulder_prehab'
   | 'core';
 
 /**
@@ -181,20 +196,23 @@ export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
 ];
 
 /**
- * ── THE FEMALE TABLES — R-130a, Sam's signed mix, 2026-08-23 ───────────────
+ * ── THE FEMALE TABLES — R-130b, Sam's re-ruled shape, 2026-08-23 ───────────
  *
- * *"upper days — the arm/shoulder isolation rows (triceps + shoulders on push
- * day, biceps + traps on pull day; the one arm-or-shoulder row on the combined
- * upper day) become midline + one glute/lower accessory; lower days — one
- * extra glute-biased lower accessory row"* — proposed in those words and
- * answered *"yes, the exact female mix is correct"*.
+ * His split-day list, verbatim: *"pull day probably becomes horizontal,
+ * vertical, core, core, shoulder prehab, 1-2 lower body accessories … same
+ * with push day"*. So: the direction's two MAIN movements, two trunk seats,
+ * shoulder prehab, and two low-fatigue lower seats (kit may drop one — that
+ * is the ruled 1-2 range). The direction's accessory rows and every
+ * arm/shoulder isolation seat are gone from female split days. R-130b also
+ * killed the glute-only narrowing: the lower seats draw the whole
+ * `isolation_lower` pool.
  *
  * THE MALE TABLES ABOVE ARE UNTOUCHED OBJECTS, not defaults these override:
  * R-130's acceptance is that male worlds generate byte-identically, and these
- * lists exist beside the male ones rather than parameterising them. Upper-day
- * lengths are unchanged (a swap); the lower day grows by exactly the one row
- * Sam ordered. Full-body days carry no arm/shoulder isolation to swap, so both
- * paths share A/B/coverage — stated here so the omission reads as decided.
+ * lists exist beside the male ones rather than parameterising them. The lower
+ * day keeps its one extra lower seat (R-130a, unretracted); the combined
+ * upper day and full-body shapes are deliberately outside R-130b — he spoke
+ * to the split days — so they stand as R-130a left them.
  */
 export const FEMALE_LOWER_SLOTS: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
@@ -207,14 +225,14 @@ export const FEMALE_UPPER_FULL_SLOTS: readonly SessionSlot[] = [
 
 export const FEMALE_UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'push_accessory_1', 'push_accessory_2',
-  'midline', 'lower_accessory', 'core',
+  'core', 'midline', 'shoulder_prehab',
+  'lower_accessory', 'second_lower_accessory',
 ];
 
 export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'pull_accessory_1', 'pull_accessory_2',
-  'midline', 'lower_accessory', 'core',
+  'core', 'midline', 'shoulder_prehab',
+  'lower_accessory', 'second_lower_accessory',
 ];
 
 /**
@@ -449,6 +467,21 @@ function authoredPoolMembership(name: string): {
     : null;
 }
 
+/** Is this name in Sam's shoulder-health pool? (R-130b's `shoulder_prehab`.) */
+function isShoulderHealthPoolMember(name: string): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { POOL_REGISTRY } = require('../data/exercisePools') as {
+    POOL_REGISTRY: Record<string, readonly { name: string }[]>;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+    canonicalExerciseName: (raw: string) => string;
+  };
+  const canonical = canonicalExerciseName(name);
+  return POOL_REGISTRY.shoulder_health.some((entry) =>
+    entry.name === name || canonicalExerciseName(entry.name) === canonical);
+}
+
 function appendUpperGroupSlot(out: SessionSlot[], group: string | null | undefined): void {
   if (group === 'bicep') out.push('biceps');
   if (group === 'tricep') out.push('triceps');
@@ -477,9 +510,16 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
  * would disagree with its own availability test.
  */
 export function slotsForExerciseName(name: string): readonly SessionSlot[] {
+  // R-130b: the female shoulder-prehab seat draws the shoulder-health pool.
+  // Membership is decided BEFORE the tag gate below, deliberately: prehab
+  // rows may carry none of the strength taxonomy's tags, and a tagless
+  // shoulder-health row still fills the seat. Males never declare the seat,
+  // so the membership is inert on the male path.
+  const out: SessionSlot[] = isShoulderHealthPoolMember(name)
+    ? ['shoulder_prehab']
+    : [];
   const tag = getExerciseTags(name);
-  if (!tag) return [];
-  const out: SessionSlot[] = [];
+  if (!tag) return out;
   const unilateral = tag.unilateral === true;
 
   // ⚠ A UNILATERAL LIFT FILLS ITS SINGLE-LEG SLOT AND NOT THE BILATERAL ONE.
@@ -559,11 +599,11 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       break;
     }
     case 'isolation_lower':
-      // R-130a: a lower-isolation row also satisfies the female glute seat.
-      // Carry deliberately does not — the seat is lower-body work, not loaded
-      // carries. Males never declare the seat, so the extra membership is
-      // inert on the male path.
-      out.push('accessory_or_core', 'lower_accessory');
+      // R-130b: a lower-isolation row satisfies BOTH female lower seats —
+      // the whole pool, never a glute-only subset. Carry deliberately does
+      // not: the seats are lower-body work, not loaded carries. Males never
+      // declare either seat, so the memberships are inert on the male path.
+      out.push('accessory_or_core', 'lower_accessory', 'second_lower_accessory');
       break;
     case 'carry':
       out.push('accessory_or_core');
