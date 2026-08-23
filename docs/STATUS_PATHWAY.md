@@ -369,3 +369,67 @@ reds are red in control with byte-identical failure names).
 **IN FLIGHT:** full `sweep.sh pathway-slice2b` (detached; results land in the
 next session entry). **OWED NEXT:** slice 3 (the female mix per R-130a's signed
 table), slice 4 (G−1 ask offers females the Primer; close-out).
+
+---
+
+## 2026-08-23, EVENING — THE SWEEP RECKONING, AND SLICE 3 ON GLASS
+
+### THE SWEEP, CLOSED AGAINST A REAL CONTROL
+
+Candidate sweep (post-slice-2): 213/402 non-zero. **Control sweep at
+`3ebd5662` in the worktree: 179/402 — the standing state of main.** Delta:
+**35 mine, 1 FIXED (`test:session-type-charter`, red on main, green now).**
+Of the 35: **34 were the gender-refusal class** — fixtures generating programs
+with no gender — closed in two waves (`177c4465`, `0b83d788`): 22 + 12 suites
+stamped `gender: 'male'` at their profile literals (incl. the shared
+`samDevicePass20260805Fixture`, which alone revived 6), `equipment-answer`'s
+one-unanswered-step fixture, `ladder-wide`'s 180-world builder,
+`generatedPowerDeliveryTests`. Plus three conscious pin moves: `action-log`'s
+answer-count 2→3 (the first commit now writes two answers), the authorised
+exemption-kind list admits `session_authored_row`, and `Acceleration`'s
+poolless-by-design state got that typed exemption (locked-list +
+content-reconciliation green).
+
+⚠ **THE SED OVER-MATCHED 14 NON-PROFILE LITERALS** (ComposerInputs, §18
+inputs, dose inputs — and THREE `ProgramSetupEdit` literals, which would have
+been edit-door gender writes). All removed line-targeted; the compile gate's
+breach list is byte-identical to control. The lesson stands: `seasonPhase:` is
+not a profile marker, it is a popular field name.
+
+**Environmental, not mine:** `explorer-launch-ownership` reds in THIS checkout
+because `.claude/worktrees/` holds three other seats' stale worktrees, each
+with a repo copy — its one-owner scan finds four. Green in a clean tree. Other
+seats' worktrees are not mine to delete. **Pre-existing dead suites** (both
+die at import, both red in control): `generated-week-assembly`
+(composeWeek:1439) and `slot-coverage` (`applyPoolRotation` import) — both
+spawned as task chips; the second carries the female oracle cells that belong
+in it once revived.
+
+### SLICE 3 — BUILT (`0b83d788`), MALE BYTES HELD, ON GLASS
+
+`FEMALE_SLOTS_FOR_KIND` beside the untouched male tables; `slotsForKind(kind,
+gender)` the one pick; new seats `midline` + `lower_accessory` (same-day
+dedup, gap copy, kit-trainability all derived). Glute bias is a NARROWING with
+fallback — an ordering was measured useless (the rotation owner ignores
+order). **The reachable glute pool is ONE deep** (`Back Extension`;
+`Single-Leg Hip Thrust` is the single-leg seat's own exercise per R-084) — an
+R-118-shaped note for Sam, not padded here. Doses are positional and clamp to
+the accessory rung; set-budget and retention exclude both seats by the
+existing slot lists.
+
+**MEASURED:** differential 3/0 BEFORE the scenario append (male bytes held
+through the mix change); then two female scenarios appended LAST and the
+golden regenerated — **all 15 male scenarios JSON-identical, modes unchanged,
+the Primer's rows appear only in the female region** (17 scenarios, 3.25 MB).
+Headless probe male-vs-female: male picks unchanged; female upper days swap
+`Bicep Curl/Shrugs` → `Back Extension`/midline rows; female lower days +1.
+
+**ON GLASS (relaunch, world regenerated):** the female Tuesday upper-pull day
+reads Explosive Push-up, Barbell Row, Lat Pulldown, Chest-Supported DB Row,
+Neutral-Grip Pulldown, **Back Extension, Band Pallof Press, Banded Dead Bug**
+— no arm/shoulder isolation anywhere; Friday keeps the Primer; the week's
+shape is untouched. Screenshot sent to Sam.
+
+**OWED NEXT — slice 4:** the G−1 landing ask offers females the Primer
+(R-130a item 3), the close-out proof run, and the registry's R-130 row moved
+from `WRITTEN` to WORKING with its holders named.
