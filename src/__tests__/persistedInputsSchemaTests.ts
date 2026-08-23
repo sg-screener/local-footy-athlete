@@ -87,6 +87,12 @@ const DECLARED: Readonly<Record<string, InputClass>> = {
   'athlete-preferences-store.prefs': 'profile',
   'program-store.inputs.seasonPhaseClock': 'profile',
 
+  // R-132: the session stopwatch. The timing acts are FACTS (timestamps the
+  // athlete created; elapsed is derived); the ended measurement is a RESULT
+  // the feedback form offers back.
+  'session-stopwatch-store.current': 'fact',
+  'session-stopwatch-store.lastEnded': 'result',
+
   // §2.2 life-facts — typed, dated
   'calendar-storage.markedDays': 'fact',
   'readiness-store.signalsByDate': 'fact',

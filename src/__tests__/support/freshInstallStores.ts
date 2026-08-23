@@ -55,6 +55,11 @@ export function resetStoresToFreshInstall(reason: string): void {
     .usePendingCoachClarifierStore.getState().reset();
   require('../../store/coachContextStateStore')
     .useCoachContextStateStore.getState().clearCoachContext();
+  // R-132: the session stopwatch — a fresh install has timed nothing. The
+  // write also gives the store its persistence envelope, which is what the
+  // persisted-inputs schema measures declarations against.
+  require('../../store/sessionStopwatchStore')
+    .useSessionStopwatchStore.setState({ current: null, lastEnded: null });
   // The decision ledger (R1.1) — a fresh install has recorded no decisions.
   // FOUND 2026-08-05 by the L16 relaunch cell the day the quiescent boot began
   // REPLAYING the ledger: every prior cell's landed decisions replayed into the

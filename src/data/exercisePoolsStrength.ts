@@ -72,6 +72,13 @@ export type ComposedDoseCategory =
   | 'unloaded_lower_compound'
   | 'ballistic_strength'
   /**
+   * An ISOMETRIC HOLD whose authored pool entry prescribes SECONDS. Sam,
+   * 2026-08-23 (slice 5): *"bosch hold and half copenhagen both show 2x15 but
+   * its an isometric not a rep thing"* — the authored duration dose outranks
+   * the composer's positional rep ladder for these rows, on both paths.
+   */
+  | 'authored_timed_hold'
+  /**
    * NO RULED PHASE POLICY APPLIES — the composer's own authored band stands.
    * **This is a declaration, not a fallback.** Every composed row carries a
    * category; a row that reaches this one is saying "nothing overrode me",

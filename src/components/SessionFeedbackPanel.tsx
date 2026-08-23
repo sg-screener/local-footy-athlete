@@ -83,6 +83,7 @@ import {
 } from '../utils/sessionComponents';
 import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
+import { measuredMinutesFor } from '../store/sessionStopwatchStore';
 import {
   commitSessionOutcomeTransaction,
   createRecordSessionOutcomeIntentFromFeedback,
@@ -807,11 +808,17 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   // THE STRENGTH SESSION'S ACTUAL DURATION (seat item 18, Sam's option (a)).
   // Seeded from what was stored, so re-opening a logged session shows the
   // athlete their own answer rather than an empty box.
+  //
+  // R-132 (Sam, 2026-08-23): when nothing is stored yet and the athlete TIMED
+  // the session with the header stopwatch, the measured minutes seed the box —
+  // *"makes putting in the feed back form very easy"*. The stored answer
+  // always outranks the measurement; the athlete can still edit either.
+  const seededMinutes = existing?.actualMinutes ?? measuredMinutesFor(date);
   const [strengthHours, setStrengthHours] = useState(
-    existing?.actualMinutes ? String(Math.floor(existing.actualMinutes / 60)) : '',
+    seededMinutes ? String(Math.floor(seededMinutes / 60)) : '',
   );
   const [strengthMinutes, setStrengthMinutes] = useState(
-    existing?.actualMinutes ? String(existing.actualMinutes % 60) : '',
+    seededMinutes ? String(seededMinutes % 60) : '',
   );
 
   // Re-sync local state when navigating to a different date

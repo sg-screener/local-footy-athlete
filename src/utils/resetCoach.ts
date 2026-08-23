@@ -49,6 +49,7 @@ import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useJournalNoteStore } from '../store/journalNoteStore';
+import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
 import { useCoachStore } from '../store/coachStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
 import { useCoachMemoryStore } from '../store/coachMemoryStore';
@@ -134,6 +135,8 @@ export interface DevPostOnboardingResetDeps {
   coachMemoryStore: { clearNotes: () => void };
   workoutLogStore: { clear: () => void };
   journalNoteStore: { clear: () => void };
+  /** R-132: a reset athlete has timed nothing. */
+  sessionStopwatchStore: { clear: () => void };
   fireResetSignal: () => void;
   runDevOnboardingSkip: typeof runDevOnboardingSkip;
 }
@@ -220,6 +223,9 @@ function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
     },
     journalNoteStore: {
       clear: () => useJournalNoteStore.getState().clear(),
+    },
+    sessionStopwatchStore: {
+      clear: () => useSessionStopwatchStore.setState({ current: null, lastEnded: null }),
     },
     fireResetSignal,
     runDevOnboardingSkip,
@@ -658,6 +664,7 @@ export async function resetToDevPostOnboardingState(opts?: {
   deps.coachStore.clear();
   deps.workoutLogStore.clear();
   deps.journalNoteStore.clear();
+  deps.sessionStopwatchStore.clear();
   deps.fireResetSignal();
 
   const result = await deps.runDevOnboardingSkip({
@@ -675,6 +682,7 @@ export async function resetToDevPostOnboardingState(opts?: {
   deps.coachStore.clear();
   deps.workoutLogStore.clear();
   deps.journalNoteStore.clear();
+  deps.sessionStopwatchStore.clear();
   deps.fireResetSignal();
 
   const message = result.usedFallback

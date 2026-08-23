@@ -42,6 +42,14 @@ export interface ComposedDose {
   readonly category: ComposedDoseCategory;
   /** Set only where a ruling limits the row by quality rather than by count. */
   readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
+  /**
+   * Sam, 2026-08-23 (slice 5): an isometric filling a strength seat keeps its
+   * authored UNIT — `repsMin/repsMax` are SECONDS (or minutes) when this is
+   * set, exactly as the authored pool entry states them. Absent means reps,
+   * which is every other row unchanged.
+   */
+  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly perSide?: boolean;
 }
 
 /**
@@ -66,6 +74,46 @@ const UNLOADED_LOWER_COMPOUND: readonly [number, number, number] = [2, 10, 20];
 const BALLISTIC_STRENGTH: readonly [number, number, number] = [3, 6, 10];
 
 let categoryByIdentity: Map<string, ComposedDoseCategory> | null = null;
+
+let timedHoldByIdentity: Map<string, ComposedDose> | null = null;
+
+/**
+ * The authored duration dose for an identity, when any authored pool entry
+ * prescribes one. Read off `POOL_REGISTRY` (the prehab/recovery pools — the
+ * strength pools carry no durations), keyed by composed identity, first
+ * authored entry wins. Lazy for the same import-order reason as the category
+ * map above.
+ */
+function authoredTimedHoldFor(identity: string): ComposedDose | null {
+  if (!timedHoldByIdentity) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { POOL_REGISTRY } = require('../data/exercisePools') as {
+      POOL_REGISTRY: Record<string, readonly {
+        name: string; sets: number; repsMin: number; repsMax: number;
+        prescriptionType?: string; perSide?: boolean;
+      }[]>;
+    };
+    const built = new Map<string, ComposedDose>();
+    for (const entries of Object.values(POOL_REGISTRY)) {
+      for (const entry of entries) {
+        if (entry.prescriptionType !== 'duration'
+          && entry.prescriptionType !== 'duration_minutes') continue;
+        const key = composedIdentityFor(entry.name);
+        if (built.has(key)) continue;
+        built.set(key, {
+          sets: entry.sets,
+          repsMin: entry.repsMin,
+          repsMax: entry.repsMax,
+          category: 'authored_timed_hold',
+          prescriptionType: entry.prescriptionType,
+          ...(entry.perSide ? { perSide: true } : {}),
+        });
+      }
+    }
+    timedHoldByIdentity = built;
+  }
+  return timedHoldByIdentity.get(composedIdentityFor(identity)) ?? null;
+}
 
 /** The authored category for an identity, read off the pool entry that owns it. */
 export function composedDoseCategoryFor(rawName: string): ComposedDoseCategory | null {
@@ -114,6 +162,18 @@ export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
       };
     }
   }
+  // ── AN ISOMETRIC KEEPS ITS AUTHORED SECONDS — Sam, 2026-08-23 (slice 5) ──
+  //
+  // *"bosch hold and half copenhagen both show 2x15 but its an isometric not
+  // a rep thing."* The prehab pools ALREADY author these rows in seconds
+  // (Bosch Hold 2×20-30s, Copenhagen Plank (Half) 3×20-30s, per side); the
+  // gap was that a hold filling a STRENGTH seat was dosed by the positional
+  // rep ladder, which cannot say "seconds". The authored entry outranks the
+  // ladder — the same authored-dose-bounds rule every other governed row
+  // follows — and this closes the timed-hold case the passthrough comment
+  // below has always named as special.
+  const timedHold = authoredTimedHoldFor(input.identity);
+  if (timedHold) return timedHold;
   const category = composedDoseCategoryFor(input.identity);
   if (category === 'loaded_lower_secondary_compound') {
     const [sets, min, max] = LOADED_LOWER_SECONDARY[input.seasonPhase];

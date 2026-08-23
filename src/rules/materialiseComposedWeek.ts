@@ -101,6 +101,11 @@ function materialiseRow(
     prescribedRepsMax: row.repsMax,
     prescribedWeightKg: row.load,
     restSeconds: 0,
+    // Slice 5 (Sam, 2026-08-23): an isometric's authored UNIT reaches the
+    // stored row — without this, `2 × 20-30 seconds` rendered as `2 × 15`
+    // reps on every surface, which is the defect he reported.
+    ...(row.prescriptionType ? { prescriptionType: row.prescriptionType } : {}),
+    ...(row.perSide ? { perSide: true } : {}),
     exercise,
     // THE COMPOSER'S SUBSTITUTION RECORD, CARRIED. It has existed on
     // `ComposedRow` since 2026-08-17 and died here — the screen could see that

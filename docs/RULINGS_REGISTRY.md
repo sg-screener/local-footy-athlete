@@ -4231,3 +4231,45 @@ GLUTE NARROWING IS DEAD.**
 
 Supersedes R-130a item 2's signed table. Males untouched, as everywhere in
 R-130. · Seat `pathway`.
+
+---
+
+**R-131** · *"why are things that need seconds instead of reps being given reps
+- bosch hold and half copenhagen both show 2x15 but its an isometric not a rep
+thing"* (Sam, 2026-08-23) · **AN ISOMETRIC FILLING A STRENGTH SEAT KEEPS ITS
+AUTHORED SECONDS.**
+
+The prehab pools already author these rows in seconds (Bosch Hold 2×20-30s,
+Copenhagen Plank (Half) 3×20-30s, Long-Lever Copenhagen 3×15-25s, per side);
+the defect was the composer dosing ANY strength-seat row from its positional
+rep ladder, which cannot say "seconds". The dose owner
+(`rules/composedDose.resolveComposedDose`) now returns the authored duration
+dose — category `authored_timed_hold` — and the unit travels to the stored row
+(`prescriptionType`/`perSide`), so every surface renders `2 × 20-30s / side`.
+Applies to BOTH paths: one male world (`offseason-no-equipment`, bodyweight
+kit) carried these rows and moved with the fix — a PREDICTED golden movement,
+scoped in the regen to exactly that scenario plus the two female ones.
+· `WORKING` — differential golden (the three re-pinned worlds), on-glass
+check with slice 6's walk. Seat `pathway`.
+
+---
+
+**R-132** · *"Stopwatch in the strength sessions or programmed sessions in top
+right corner above everything maybe on same line as Thu 20/8 - 7 Exercises =
+keeping font the same but just saying 'Start session' its a little button or
+something with a timer next to it that you can pause or end, i.e. this should
+make it easy to monitor how long the strength lasts and makes putting in the
+feed back form very easy"* (Sam, 2026-08-23) · **THE SESSION STOPWATCH.**
+
+On the session screen's subtitle line, right side, in the subtitle's own font:
+idle shows his verbatim **"Start session"**; running shows the elapsed figure
+with **Pause/End**; paused shows **Resume/End** (batch 37). What is STORED is
+the athlete's timing ACTS (start/pause timestamps — facts) and, on End, ONE
+measured RESULT in minutes; elapsed is derived, so a relaunch mid-session
+resumes the same count. The measured minutes seed the strength feedback form's
+duration boxes when nothing is stored yet — the second half of his sentence —
+and the stored answer always outranks the measurement.
+`session-stopwatch-store` is registered with the hydration gate and the
+persisted-inputs schema (acts = `fact`, measurement = `result`).
+· `WORKING` — on-glass walk (start/pause/end and the seeded form). Seat
+`pathway`.

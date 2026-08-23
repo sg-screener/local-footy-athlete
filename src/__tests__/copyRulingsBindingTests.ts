@@ -173,6 +173,8 @@ const AUTHORING_MODULES = [
   // R-130 decision, and the screen reads them through `GENDER_COPY`, so the
   // ids never appear in a `screens/` file for the id-aware scan to find.
   'rules/onboardingGenderCopy.ts',
+  // THE SESSION STOPWATCH (batch 37, R-132) — same hatch, same reason.
+  'rules/sessionStopwatchCopy.ts',
 ];
 
 /**

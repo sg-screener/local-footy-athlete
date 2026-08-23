@@ -2474,3 +2474,18 @@ row's value prints `Male` or `Female` via `genderAnswerText` — the stored id a
 the shipped word are joined at one registry entry, never re-typed at a surface.
 
 **36-b. NOTHING IS REPLACED AND NOTHING IS WITHDRAWN.** Every string is new.
+
+## Batch 37 — the session stopwatch (2026-08-23): SIGNED, R-132
+
+**STATUS: SIGNED.** "Start session" is Sam's verbatim label from R-132
+(*"just saying 'Start session'"*); "pause or end" are his words for the two
+controls, and Resume is the counterpart a paused timer needs, proposed with
+the pair. Registered in `rules/sessionStopwatchCopy.ts` before the control
+was built. The elapsed figure is a derived number (`12:34`), never words.
+
+| Where | string | status |
+| --- | --- | --- |
+| The idle button, header right | "Start session" | SIGNED, R-132 verbatim |
+| The running control | "Pause" | SIGNED — his "pause or end" |
+| The paused control | "Resume" | PROPOSED — the pair's counterpart |
+| The running control | "End" | SIGNED — his "pause or end" |

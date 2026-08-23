@@ -203,6 +203,14 @@ export interface ComposedRow {
   readonly load: number;
   readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
   /**
+   * Slice 5 (Sam, 2026-08-23): set when the dose owner returned an authored
+   * ISOMETRIC dose — `repsMin/repsMax` are then seconds (or minutes), exactly
+   * as the pool entry authors them, carried to the stored row so no surface
+   * can re-read a hold as reps.
+   */
+  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly perSide?: boolean;
+  /**
    * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base
    * selection — a day-scoped exclusion took the canonical exercise out of this
    * one session. The base selection is unchanged and still recorded, so the
@@ -1592,6 +1600,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           kit: kitToday,
         }),
         ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
+        // Slice 5: an authored hold's unit travels with its numbers.
+        ...(dose.prescriptionType ? { prescriptionType: dose.prescriptionType } : {}),
+        ...(dose.perSide ? { perSide: true } : {}),
       });
     }
 

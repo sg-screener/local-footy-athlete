@@ -10,6 +10,7 @@ import Svg, { Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
 import { SessionDateLine } from '../../components/SessionDateLine';
+import { SessionStopwatchControl } from '../../components/SessionStopwatchControl';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, Sheet, SheetHeader } from '../../components/ui';
 import {
@@ -1741,6 +1742,13 @@ export default function DayWorkoutScreenV2() {
           {combinedSubtitle ? (
             <View style={styles.headerSubtitleRow}>
               <SessionDateLine label={combinedSubtitle} color="#8A8A8A" />
+              {/* R-132 (Sam, 2026-08-23): the stopwatch, on this same line,
+                * same font, top right — "Start session", then a timer he can
+                * pause or end. State lives in its own persisted store, so
+                * leaving the screen or the app never loses the count. */}
+              {date ? (
+                <SessionStopwatchControl workoutId={workout.id} dateISO={date} />
+              ) : null}
             </View>
           ) : null}
           {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
@@ -4880,7 +4888,14 @@ const styles = StyleSheet.create({
   // what makes the two share one optical centre rather than one row.
   // Spacing below the title only. The date line's own geometry lives in
   // `components/SessionDateLine`, so no screen can nudge it.
-  headerSubtitleRow: { marginTop: 3 },
+  // R-132: date left, stopwatch right, one line — his "same line as
+  // Thu 20/8 - 7 Exercises" placement.
+  headerSubtitleRow: {
+    marginTop: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   executionSectionIcon: { marginRight: 10 },
   // R-116 — rows with no stepper still reserve the right-side control slot.
   recoveryControlRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
