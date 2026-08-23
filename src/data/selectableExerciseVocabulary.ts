@@ -55,7 +55,8 @@ export type ContentExemptionKind =
   | 'zone1_recovery'
   | 'mobility_untagged'
   | 'power_pool_pending'
-  | 'load_ruling_pending';
+  | 'load_ruling_pending'
+  | 'session_authored_row';
 
 /** The completeness fields an exemption kind can waive. */
 export type ContentField = 'cue' | 'video' | 'tags' | 'pool' | 'load';
@@ -99,6 +100,19 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
       + 'placement here. Excluded from the AI vocabulary until placed — the app '
       + 'names these, the generator does not.',
   },
+  session_authored_row: {
+    waives: ['pool', 'tags', 'video'],
+    ruling:
+      'A row a signed SESSION authors by name — R-129\'s Primer accelerations '
+      + '("3 accelerations for 15m at 90%"). Deliberately in NO selectable '
+      + 'pool: its signed-copy entry records that pooling it would make a '
+      + 'running acceleration eligible inside ordinary gym strength sessions, '
+      + 'so it is prescribable only by the session that authors it. It carries '
+      + 'a curated cue in Sam\'s own dose words (added when R-130\'s '
+      + 'generator-placed Primer made the generation-side cue contract demand '
+      + 'one); a 15m run-through has no demo video and none of the strength '
+      + 'taxonomy\'s properties, by design.',
+  },
   load_ruling_pending: {
     waives: ['load'],
     ruling:
@@ -126,6 +140,9 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
  * check). A second copy would be a second thing to forget.
  */
 export const LOAD_RULING_PENDING = new Set<string>([]);
+
+/** Rows signed sessions author by name — see `session_authored_row`'s ruling. */
+export const SESSION_AUTHORED_ROWS = new Set<string>(['Acceleration']);
 
 
 /**
@@ -197,6 +214,7 @@ export function exemptionsFor(name: string): ContentExemptionKind[] {
   if (POWER_POOL_PENDING.has(name)) kinds.push('power_pool_pending');
   if (MOBILITY_UNTAGGED.has(name)) kinds.push('mobility_untagged');
   if (LOAD_RULING_PENDING.has(name)) kinds.push('load_ruling_pending');
+  if (SESSION_AUTHORED_ROWS.has(name)) kinds.push('session_authored_row');
   return kinds;
 }
 

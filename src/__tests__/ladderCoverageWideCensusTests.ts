@@ -88,6 +88,8 @@ function ok(name: string, condition: unknown, detail?: string): void {
 const { generateProgramLocally } = require('../services/api/generateProgram');
 
 const BASE = {
+  // R-130: refused at the generation door with no default; male ≙ pre-R-130.
+  gender: 'male',
   trainingLocation: 'Commercial gym',
   equipmentSelectionCompleteness: 'complete',
   recentTrainingLoad: 'Pretty consistent',

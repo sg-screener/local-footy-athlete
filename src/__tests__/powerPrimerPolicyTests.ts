@@ -217,7 +217,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
 // ══════════════════ INTEGRATION (rendered power ROW) ══════════════════
 
 const OFF_PROFILE: OnboardingData = {
-  seasonPhase: 'Off-season',
+  gender: 'male', seasonPhase: 'Off-season',
   position: 'key_position_ruck_tall',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],

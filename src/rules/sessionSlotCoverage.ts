@@ -60,6 +60,21 @@ export type SessionSlot =
   | 'triceps'
   | 'shoulders'
   | 'traps'
+  /**
+   * R-130a: the FEMALE upper-day trunk seat that replaces one arm/shoulder
+   * isolation row — *"put core on upper days to minimise upper accessories"*.
+   * A second seat drawing the same trunk pool as `core`, named separately so
+   * block-stable selection history keys the two seats apart and one day's two
+   * trunk rows cannot collapse onto one recorded choice.
+   */
+  | 'midline'
+  /**
+   * R-130a: the FEMALE glute-biased lower-isolation seat — *"add more glutes /
+   * lowers accessories"*. Draws `isolation_lower`, glute group first. Appears
+   * on female upper days (in the swap) and as the extra row on female lower
+   * days. No male table declares either of these two slots.
+   */
+  | 'lower_accessory'
   | 'core';
 
 /**
@@ -166,6 +181,43 @@ export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
 ];
 
 /**
+ * ── THE FEMALE TABLES — R-130a, Sam's signed mix, 2026-08-23 ───────────────
+ *
+ * *"upper days — the arm/shoulder isolation rows (triceps + shoulders on push
+ * day, biceps + traps on pull day; the one arm-or-shoulder row on the combined
+ * upper day) become midline + one glute/lower accessory; lower days — one
+ * extra glute-biased lower accessory row"* — proposed in those words and
+ * answered *"yes, the exact female mix is correct"*.
+ *
+ * THE MALE TABLES ABOVE ARE UNTOUCHED OBJECTS, not defaults these override:
+ * R-130's acceptance is that male worlds generate byte-identically, and these
+ * lists exist beside the male ones rather than parameterising them. Upper-day
+ * lengths are unchanged (a swap); the lower day grows by exactly the one row
+ * Sam ordered. Full-body days carry no arm/shoulder isolation to swap, so both
+ * paths share A/B/coverage — stated here so the omission reads as decided.
+ */
+export const FEMALE_LOWER_SLOTS: readonly SessionSlot[] = [
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
+  'lower_accessory',
+];
+
+export const FEMALE_UPPER_FULL_SLOTS: readonly SessionSlot[] = [
+  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull', 'midline',
+];
+
+export const FEMALE_UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
+  'horizontal_push', 'vertical_push',
+  'push_accessory_1', 'push_accessory_2',
+  'midline', 'lower_accessory', 'core',
+];
+
+export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
+  'horizontal_pull', 'vertical_pull',
+  'pull_accessory_1', 'pull_accessory_2',
+  'midline', 'lower_accessory', 'core',
+];
+
+/**
  * ── R-087: THE WEEK'S COMPLETE SET, IN SAM'S OWN ENUMERATION ORDER ──────────
  *
  * *"each week should contain all the main lifts i.e. squat, hinge, single leg
@@ -216,6 +268,35 @@ export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]
   // must not be handed a plausible-looking seven that is not this day's.
   full_body_coverage: WEEKLY_COVERAGE_SET,
 };
+
+/**
+ * R-130a: the female mix's own record — same kinds, the female lists where the
+ * ruling swaps them, the shared lists where it does not. `slotsForKind` is the
+ * one reader that picks between the two; nothing parameterises the male table.
+ */
+export const FEMALE_SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
+  lower: FEMALE_LOWER_SLOTS,
+  upper_full: FEMALE_UPPER_FULL_SLOTS,
+  upper_split_push: FEMALE_UPPER_SPLIT_PUSH_SLOTS,
+  upper_split_pull: FEMALE_UPPER_SPLIT_PULL_SLOTS,
+  full_body_a: FULL_BODY_A_SLOTS,
+  full_body_b: FULL_BODY_B_SLOTS,
+  full_body_coverage: WEEKLY_COVERAGE_SET,
+};
+
+/**
+ * The one switch, read at the one place a table is picked. `undefined` (a
+ * caller that predates the field, or a non-generation surface with no athlete
+ * in hand) gets the male table — behaviourally the pre-R-130 app, never a
+ * defaulted ANSWER: the generation path cannot reach here unanswered
+ * (`generationGenderOrThrow`).
+ */
+export function slotsForKind(
+  kind: SlotDayKind,
+  gender: 'male' | 'female' | undefined,
+): readonly SessionSlot[] {
+  return gender === 'female' ? FEMALE_SLOTS_FOR_KIND[kind] : SLOTS_FOR_KIND[kind];
+}
 
 /**
  * THE PATTERNS A DAY'S OWN LADDER ADMITS, given the patterns its PLAN named.
@@ -478,11 +559,19 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       break;
     }
     case 'isolation_lower':
+      // R-130a: a lower-isolation row also satisfies the female glute seat.
+      // Carry deliberately does not — the seat is lower-body work, not loaded
+      // carries. Males never declare the seat, so the extra membership is
+      // inert on the male path.
+      out.push('accessory_or_core', 'lower_accessory');
+      break;
     case 'carry':
       out.push('accessory_or_core');
       break;
     case 'core':
-      out.push('accessory_or_core', 'core');
+      // R-130a: trunk work fills either trunk seat — `core` and the female
+      // upper-day `midline`.
+      out.push('accessory_or_core', 'core', 'midline');
       break;
     default:
       break;

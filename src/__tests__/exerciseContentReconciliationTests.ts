@@ -117,6 +117,10 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
     'mobility_untagged',
     'power_pool_pending',
     'load_ruling_pending',
+    // R-129/R-130 (Sam, 2026-08-23): rows a signed session authors by name —
+    // the Primer's accelerations. Deliberately poolless (the signed-copy entry
+    // records why); the kind's own ruling carries the full attribution.
+    'session_authored_row',
   ];
   ok('no exemption kind exists outside the authorised set',
     Object.keys(EXEMPTION_KINDS).filter((k) => !AUTHORISED_KINDS.includes(k)));

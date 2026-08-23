@@ -135,7 +135,7 @@ function weekdaysOfGames(): string[] {
 async function reachOnboardedWorld(gameDay: string): Promise<void> {
   durable.clear();
   const base = samDevicePass20260805Profile();
-  const profile = { ...base, seasonPhase: 'In-season', gameDay } as typeof base;
+  const profile = { ...base, gender: 'male', seasonPhase: 'In-season', gameDay } as typeof base;
 
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);

@@ -562,7 +562,7 @@ async function main(): Promise<void> {
   const stillSelectable = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    gender: 'male', seasonPhase: 'Off-season' as never,
+    seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -592,7 +592,7 @@ async function main(): Promise<void> {
   const beforeSlots = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    gender: 'male', seasonPhase: 'Off-season' as never,
+    seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -608,7 +608,7 @@ async function main(): Promise<void> {
   const afterSlots = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    gender: 'male', seasonPhase: 'Off-season' as never,
+    seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -645,7 +645,7 @@ async function main(): Promise<void> {
   const exhaustive = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    gender: 'male', seasonPhase: 'Off-season' as never,
+    seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',

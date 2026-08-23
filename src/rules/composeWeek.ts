@@ -30,6 +30,7 @@ import {
   SLOTS_FOR_KIND,
   WEEKLY_COVERAGE_SET,
   slotsForExerciseName,
+  slotsForKind,
   type SessionSlot,
   type SlotDayKind,
 } from './sessionSlotCoverage';
@@ -531,7 +532,30 @@ const MAIN_BILATERAL_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
 const SPLIT_UPPER_ACCESSORY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
   'push_accessory_1', 'push_accessory_2',
   'pull_accessory_1', 'pull_accessory_2',
+  // R-130a: the female upper-day seats join the same-day dedup, so a day's
+  // two trunk rows (core + midline) and its glute row can never repeat an
+  // identity another slot on the day already took. Males never declare these
+  // slots, so the membership is inert on the male path.
+  'midline', 'lower_accessory',
 ]);
+
+/**
+ * R-130a: *"add more glutes"* — the female lower-accessory seat NARROWS to the
+ * glute group of `isolation_lower` while any glute row is legal, and falls
+ * back to the whole pool rather than leaving the seat empty. A narrowing, not
+ * an ordering, deliberately: the block-rotation owner ignores list order (it
+ * rotates), so an ordering here delivered quad and adductor rows — measured on
+ * the first probe — while a filter is respected by the whole selection chain.
+ * Same preference-with-fallback shape every other narrowing in this file uses.
+ */
+function gluteFirst(
+  slot: SessionSlot,
+  candidates: readonly ComposedExerciseIdentity[],
+): readonly ComposedExerciseIdentity[] {
+  if (slot !== 'lower_accessory') return candidates;
+  const glutes = candidates.filter((id) => findPoolEntry(id)?.entry.group === 'glute');
+  return glutes.length > 0 ? glutes : candidates;
+}
 
 function hingePriorityFirst(
   slot: SessionSlot,
@@ -1137,7 +1161,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       : composedDayKind(planned.strengthIntent) ?? 'lower';
     const declared = fullBody
       ? [...SLOTS_FOR_KIND.full_body_a, ...SLOTS_FOR_KIND.full_body_b]
-      : SLOTS_FOR_KIND[ordinary];
+      // R-130a: the female tables where the mix differs; both paths share the
+      // full-body shapes, so the arm above stays unswitched on purpose.
+      : slotsForKind(ordinary, inputs.profile?.gender);
     // The DAY's own exclusion set, not the week's: a slot a Tuesday-only
     // exclusion empties is still supplied by Thursday, and telling the coverage
     // day otherwise would make it claim a slot the week already covers.
@@ -1266,7 +1292,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // used as the day's own seven. That is what this branch exists to prevent.
     const shapeSlots = isCoverageDay && plannedCoverageGaps
       ? plannedCoverageGaps
-      : SLOTS_FOR_KIND[kind];
+      // R-130a: one switch, one pick — the female tables for female athletes,
+      // the male objects untouched for everyone else.
+      : slotsForKind(kind, inputs.profile?.gender);
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
     // ordinary week took the else arm: its lower rows came out accessories
@@ -1314,11 +1342,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * equipment and experience legality outrank pins."* Experience is applied
        * last and never empties the slot (ruling 6). */
       const legalUnder = (out: ReadonlySet<string>, kit: readonly string[]) =>
-        hingePriorityFirst(
+        gluteFirst(
           slot,
-          experiencePreferred(
-            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
-            inputs.profile,
+          hingePriorityFirst(
+            slot,
+            experiencePreferred(
+              pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
+              inputs.profile,
+            ),
           ),
         );
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────

@@ -286,12 +286,12 @@ console.log('\n[6] The weekly generator obeys the law');
     recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
   };
   const WORLDS: Array<[string, unknown]> = [
-    ['in-season full gym', { ...BASE, seasonPhase: 'In-season' }],
-    ['pre-season full gym', { ...BASE, seasonPhase: 'Pre-season' }],
-    ['off-season full gym', { ...BASE, seasonPhase: 'Off-season' }],
-    ['in-season no club', { ...BASE, seasonPhase: 'In-season', teamTrainingDays: [] }],
+    ['in-season full gym', { ...BASE, gender: 'male', seasonPhase: 'In-season' }],
+    ['pre-season full gym', { ...BASE, gender: 'male', seasonPhase: 'Pre-season' }],
+    ['off-season full gym', { ...BASE, gender: 'male', seasonPhase: 'Off-season' }],
+    ['in-season no club', { ...BASE, gender: 'male', seasonPhase: 'In-season', teamTrainingDays: [] }],
     ['off-season bodyweight', {
-      ...BASE, seasonPhase: 'Off-season',
+      ...BASE, gender: 'male', seasonPhase: 'Off-season',
       equipment: ['Bodyweight Only'], teamTrainingDays: [],
     }],
   ];

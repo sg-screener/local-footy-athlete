@@ -121,22 +121,22 @@ const { generateProgramLocally } = require('../services/api/generateProgram') as
 
 const BASE = {
   name: 'Test', age: 24, experienceLevel: '2-5 years', primaryGoal: 'Performance',
-  equipment: ['Full Gym'], sessionsPerWeek: 4, seasonPhase: 'Pre-season',
+  equipment: ['Full Gym'], sessionsPerWeek: 4, gender: 'male', seasonPhase: 'Pre-season',
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday',
   recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
 };
 
 const WORLDS: Array<[string, any]> = [
-  ['in-season full gym', { ...BASE, seasonPhase: 'In-season' }],
-  ['pre-season full gym', { ...BASE, seasonPhase: 'Pre-season' }],
-  ['off-season full gym', { ...BASE, seasonPhase: 'Off-season' }],
+  ['in-season full gym', { ...BASE, gender: 'male', seasonPhase: 'In-season' }],
+  ['pre-season full gym', { ...BASE, gender: 'male', seasonPhase: 'Pre-season' }],
+  ['off-season full gym', { ...BASE, gender: 'male', seasonPhase: 'Off-season' }],
   // THE BEGINNER IS IN THE CENSUS ON PURPOSE — R-013's whole subject is that
   // this athlete does NOT get a smaller cap. If the abolished 3 ever returns,
   // it returns HERE, and a census without a beginner could not see it.
   ['new athlete full gym', { ...BASE, experienceLevel: 'Complete beginner' }],
   ['off-season bodyweight', {
-    ...BASE, seasonPhase: 'Off-season', equipment: ['Bodyweight Only'], teamTrainingDays: [],
+    ...BASE, gender: 'male', seasonPhase: 'Off-season', equipment: ['Bodyweight Only'], teamTrainingDays: [],
   }],
 ];
 

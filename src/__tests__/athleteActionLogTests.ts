@@ -342,7 +342,10 @@ await run('every onboarding answer is on the tape', async () => {
   assert(commits.some((entry) => Array.isArray(entry.fields) &&
     (entry.fields as string[]).includes('seasonPhase')),
   `the commit did not record WHICH answer: ${JSON.stringify(commits[0])}`);
-  assert(commits[1]!.answerCountAfter === 2,
+  // 3, not 2, since R-130: the first commit above writes TWO answers (gender
+  // rides with seasonPhase, the way the real Gender step commits before the
+  // phase step), so after `position` the profile honestly holds three.
+  assert(commits[1]!.answerCountAfter === 3,
     `the commit did not record the profile size after it: ${
       JSON.stringify(commits[1]!.answerCountAfter)}`);
   // Never the answer itself: the log leaves the device.

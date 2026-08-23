@@ -252,4 +252,31 @@ export const STAGE_B_SCENARIOS: readonly StageBScenario[] = [
       }] as OnboardingData['injuries'],
     }),
   },
+
+  // ── R-130: THE FEMALE PATH — appended after the male scenarios, same
+  // additive-golden discipline as above. These two pin the whole female
+  // surface at the byte level: the G−1 Primer (in-season, single fixture),
+  // the mix (midline + glute seats on upper days, the extra lower row), and
+  // the absence of any generator gunshow. Every male scenario keeps its index
+  // and its bytes — which is R-130's acceptance measured, not asserted.
+  {
+    id: 'female-offseason',
+    description:
+      'The female off-season baseline — the R-130a mix on split and lower '
+      + 'days, byte-pinned beside the identical male world above.',
+    profile: baseProfile({ gender: 'female' }),
+  },
+  {
+    id: 'female-inseason-game-week',
+    description:
+      'Female in-season with a Saturday fixture — the scheduler-placed G−1 '
+      + 'Primer and the mix, in one pinned world.',
+    profile: baseProfile({
+      gender: 'female',
+      seasonPhase: 'In-season',
+      usualGameDay: 'Saturday',
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+    }),
+  },
 ];

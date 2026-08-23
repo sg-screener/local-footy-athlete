@@ -65,7 +65,7 @@ import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const PROFILE: Partial<OnboardingData> = {
-  seasonPhase: 'In-season',
+  gender: 'male', seasonPhase: 'In-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Friday', 'Saturday'],
   teamTrainingDaysPerWeek: 1,

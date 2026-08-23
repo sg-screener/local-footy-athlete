@@ -43,7 +43,7 @@ const profile = {
   ageRange: '26-30', experienceLevel: 'Intermediate',
   trainingLocation: 'Commercial gym', equipmentSelectionCompleteness: 'complete',
   equipment: ['Bodyweight Only'], recentTrainingLoad: 'Pretty consistent',
-  conditioningLevel: 'Average', seasonPhase: 'Pre-season',
+  conditioningLevel: 'Average', gender: 'male', seasonPhase: 'Pre-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
@@ -371,7 +371,7 @@ const capProfile = {
   ageRange: '26-30', experienceLevel: 'Intermediate',
   trainingLocation: 'Commercial gym', equipmentSelectionCompleteness: 'complete',
   equipment: ['Full gym'], recentTrainingLoad: 'Pretty consistent',
-  conditioningLevel: 'Average', seasonPhase: 'Pre-season', trainingDaysPerWeek: 4,
+  conditioningLevel: 'Average', gender: 'male', seasonPhase: 'Pre-season', trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
 };
@@ -601,7 +601,7 @@ const contrastProfile = {
   equipmentSelectionCompleteness: 'complete', equipment: ['Full gym'],
   // Capacity must score HIGH (6/6) or the policy returns a primer, not contrast.
   recentTrainingLoad: 'Very consistent', conditioningLevel: 'Elite',
-  seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
+  gender: 'male', seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
 };

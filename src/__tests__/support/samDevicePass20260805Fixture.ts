@@ -44,6 +44,7 @@ export function samDevicePass20260805Profile(): OnboardingData {
     weightKg: 90,
     position: 'inside_mid',
     goals: ['dominate_level', 'fresh_on_game_day'],
+    gender: 'male',
     seasonPhase: 'Pre-season',
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Monday', 'Wednesday'],

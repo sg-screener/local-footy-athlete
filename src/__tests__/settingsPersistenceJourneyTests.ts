@@ -208,7 +208,7 @@ function theAthlete(): OnboardingData {
     heightCm: 182,
     weightKg: 84,
     motivation: 'Dominate your level',
-    seasonPhase: 'In-season',
+    gender: 'male', seasonPhase: 'In-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,

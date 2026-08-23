@@ -73,7 +73,7 @@ import {
   conditioningVisibleDoseFor,
 } from './conditioningSelection';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
-import { SLOTS_FOR_KIND } from './sessionSlotCoverage';
+import { FEMALE_SLOTS_FOR_KIND, SLOTS_FOR_KIND } from './sessionSlotCoverage';
 import type { GeneratedWeekClauseId } from './generatedWeekContract';
 import { EQUIPMENT_TAG_LABELS } from './equipmentVocabulary';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
@@ -1863,7 +1863,13 @@ export function registerProjectionCopy(): void {
   // transcription of it. The equipment words come from the askable equipment
   // vocabulary — the same list the athlete answered.
   const gapEntries: SignedCopyEntry[] = [];
-  const slots = new Set<string>(Object.values(SLOTS_FOR_KIND).flatMap((list) => [...list]));
+  // R-130a: both paths' tables — the female lists carry two slots the male
+  // ones never declare (`midline`, `lower_accessory`), and a female gap notice
+  // must have its words on the sheet like any other.
+  const slots = new Set<string>([
+    ...Object.values(SLOTS_FOR_KIND).flatMap((list) => [...list]),
+    ...Object.values(FEMALE_SLOTS_FOR_KIND).flatMap((list) => [...list]),
+  ]);
   for (const slot of slots) {
     GAP_SLOTS_REGISTERED.add(slot);
     gapEntries.push({
