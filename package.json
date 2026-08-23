@@ -317,7 +317,7 @@
     "test:optional-topup": "TZ=Australia/Melbourne sucrase-node src/__tests__/optionalTopUpTests.ts",
     "test:exercise-edit-entry-surface": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditEntrySurfaceContractTests.ts",
     "test:coach-cleanroom": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachCleanroomContractTests.ts",
-    "test:coach-snapshot": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotPopulatedTests.ts && npm run test:coach-lab && npm run test:coach-chat-integration",
+    "test:coach-snapshot": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotPopulatedTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/progressTabOwnershipTests.ts && npm run test:coach-lab && npm run test:coach-chat-integration",
     "test:coach-lab": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachLabTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachLabRetrievalTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/openAICoachLabTests.ts",
     "test:coach-chat-integration": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachChatIntegrationTests.ts",
     "coach:lab": "TZ=Australia/Melbourne sucrase-node scripts/run-coach-lab.ts",

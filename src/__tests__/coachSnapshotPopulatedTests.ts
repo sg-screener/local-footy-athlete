@@ -175,6 +175,7 @@ function liveSnapshot(
     readinessSignal: useReadinessStore.getState().signalsByDate[asOfDateISO] ?? null,
     experienceLevel: profile?.experienceLevel,
     conditioningLevel: profile?.conditioningLevel,
+    twoKmTimeTrial: profile?.twoKmTimeTrial,
   });
 }
 
@@ -257,6 +258,12 @@ async function main(): Promise<void> {
     beforeCheckIn.progress.length > 0
       && beforeCheckIn.progress.some((lift) => lift.lastWeek !== null),
     beforeCheckIn.progress);
+  ok('logged real lifts also populate multi-week chart history',
+    beforeCheckIn.strengthHistory.some((history) => history.points.length >= 2),
+    beforeCheckIn.strengthHistory);
+  ok('the onboarding 2km answer reaches Progress unchanged',
+    beforeCheckIn.twoKmTimeTrial?.seconds === 420,
+    beforeCheckIn.twoKmTimeTrial);
   ok('the initial live picture honestly has no current-day check-in',
     beforeCheckIn.readiness.state === 'not_recorded');
   ok('the durable exclusion populates the active restriction tile',

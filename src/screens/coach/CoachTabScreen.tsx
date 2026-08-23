@@ -27,7 +27,6 @@ import { GuidedInjuryFlowSheet } from '../home/GuidedInjuryFlowSheet';
 import { RebuildSheet } from '../../components/RebuildSheet';
 import { useRebuildNotice } from '../../hooks/useRebuildNotice';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
-import { CoachDashboard } from './SnapshotDashboard';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
@@ -165,8 +164,9 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers({
     visibleWeekDays: weekDays,
   });
-  // ONE LIVE PICTURE FOR BOTH SURFACES. The dashboard renders this object and
-  // the conversation reads its visible week; neither keeps a saved copy.
+  // ONE LIVE PICTURE FOR THE CONVERSATION. Progress renders the same live
+  // derivation on its own tab; Coach keeps readiness and consistency available
+  // to Terra without turning them back into visible dashboard furniture.
   const snapshot = useLiveAthleteSnapshot({
     weekDays,
     visibleWeek,
@@ -212,9 +212,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // A REF AND NOT STATE, because this is read inside a scroll handler that runs
   // on every frame and must not re-render the conversation to record where it
   // is. `true` initially: an empty conversation is at its bottom.
-  // Start at the dashboard. Sending a message explicitly hands ownership to
-  // the conversation bottom; this avoids a populated dashboard auto-scrolling
-  // itself away on first layout while still making every new answer visible.
+  // Sending a message explicitly hands ownership to the conversation bottom.
   const atBottomRef = useRef(false);
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -399,10 +397,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           testID="coach-tab-conversation"
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
-          {/* One vertical owner for both the live picture and its conversation.
-              A fixed dashboard above this list can consume the entire body on
-              a populated athlete and leave a zero-height chat. */}
-          <CoachDashboard snapshot={snapshot} />
           <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
           {/* ── R-105: THE COACH RAISES IT, IN THE CONVERSATION ──
               The notification line, then Sam's signed question, then — for the

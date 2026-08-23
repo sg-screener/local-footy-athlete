@@ -1834,14 +1834,14 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
-    id: 'LAW-coach-snapshot-is-live-and-shared',
-    law: 'The Coach dashboard and conversation read one ephemeral Coach Snapshot derived fresh from the current visible week, readiness, recorded load and progress, and active restrictions. The Snapshot is never persisted, and a Coach surface cannot re-read those owners to produce a second account.',
-    ruledAt: 'docs/STATUS_SNAPSHOT.md, 2026-08-24 — records Sam\'s approval in this Codex task of the clean Coach rebuild around "one fresh vertical slice: live Coach Snapshot, dashboard" after the proposed architecture stated that the dashboard and chat read one shared live picture, calculated fresh and never saved as a copy.',
+    id: 'LAW-live-athlete-snapshot-is-live-and-shared',
+    law: 'Progress and the Coach conversation read one ephemeral live athlete Snapshot derived fresh from the current visible week, readiness, recorded load and progress, 2km answer and active restrictions. Progress owns the visible tracking dashboard. Coach visibly keeps My Status and chat but still receives readiness and Consistency as private coaching context. The Snapshot is never persisted, and neither surface re-reads those owners to produce a second account.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-139 — Sam, 2026-08-24, moved visible tracking into a new Progress tab and reduced Coach to My Status plus chat while explicitly retaining Coach monitoring of readiness and Consistency.',
     guard: {
       state: 'guarded',
       by: 'test:coach-snapshot',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `buildCoachSnapshot` is a pure, clock-free boundary that refuses a mismatched Journal week, load week or readiness date. `deriveCoachSnapshot` owns the complete Journal/load/progress derivation over explicit facts, and `useLiveAthleteSnapshot` is the only store-reading adapter and persists nothing. The current Coach screen calls it exactly once, hands that object to `CoachDashboard`, and supplies `snapshot.visibleWeek` to all three existing conversation readers. The dashboard reads its other four sections from that same object. The guard also scans every store for a Snapshot owner and walks a depth-35 athlete through 19 real outcomes plus rollover before proving the populated state and a no-reopen readiness update. LIVENESS: injecting a store import kills the purity cell; replacing the conversation inputs with the screen\'s separate `visibleWeek` kills the shared-owner cell; removing one earned history week kills the signed four-week ratio. NOT COVERED BY THIS GUARD: mounted populated-state pixels, AI response quality, and program changes. Base layout is separately walked by `.maestro/golden/coach-snapshot-dashboard.yaml`.',
+      receipt: 'UPDATED UNDER R-139, 2026-08-24 by seat `snapshot`. `buildCoachSnapshot` remains a pure, clock-free boundary and `deriveCoachSnapshot` now adds chart-ready main-lift history through the existing `buildJournalStrengthSeries` owner plus the one stored 2km answer. Coach and Progress each call the same adapter once; Coach passes the exact value to Terra without rendering dashboard cards, while Progress owns Load, main-lift charts and 2km. Source liveness removes Coach\'s Snapshot binding and Progress\'s load owner. The lived arm still walks depth 35 through real outcomes. NOT COVERED: physical-phone acceptance and future 2km history, because storage currently holds one answer only.',
     },
   },
   {
@@ -1856,14 +1856,25 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
-    id: 'LAW-coach-load-owns-the-dashboard-hero',
-    law: 'Training load owns the wide Coach Snapshot hero immediately below the title and shows the signed under-to-sweet-spot-to-over continuum. Weekly completion is a supporting signal named Consistency and sits inside the four-tile grid.',
-    ruledAt: 'docs/COPY_SHEET_RULINGS_2026-07-30.md, Batch 38 update, 2026-08-24 — records Sam\'s exact instruction that the sweet-spot training-load slider owns the top and the former top card moves into the four smaller boxes as Consistency.',
+    id: 'LAW-progress-load-owns-the-dashboard-hero',
+    law: 'Training load owns the wide Progress hero immediately below the Progress title and shows the signed under-to-sweet-spot-to-over continuum. Coach does not render a second load surface.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-139 superseding the earlier Batch 38 Coach placement — Sam moved the continuum into the new Progress tab and simplified Coach to My Status plus chat.',
     guard: {
       state: 'guarded',
       by: 'test:coach-snapshot',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. The guard proves every source anchor exists before comparing positions, requires the Load surface before the first tile row, requires Consistency inside the grid, and requires the load hero to own both the continuum track and signed sweet-spot zone. Its liveness arm swaps the Load and Consistency identities and must turn red. The focused glass flow separately requires the track and shaded zone on the mounted Coach tab. NOT COVERED: a marker cannot honestly render in the empty seed because no load ratio exists; the non-empty live-state flow remains owed.',
+      receipt: 'UPDATED UNDER R-139, 2026-08-24 by seat `snapshot`. The guard locates the mounted Progress screen before comparing anchors, requires Progress title -> Load continuum -> 2km -> Main lifts in that order, requires the continuum track and sweet-spot zone, and proves Coach has no dashboard import or ids. Main lifts render from one history list into a two-column grid. Moving Load below Main lifts kills the guard. `.maestro/golden/progress-dashboard.yaml` separately requires the populated marker and both progress sections. NOT COVERED: physical-phone pixels.',
+    },
+  },
+  {
+    id: 'LAW-day-view-mobility-completion-is-visible',
+    law: 'When saved session evidence says Mobility / Warm-up was fully or partly performed, the day view shows the same green completion tick as every other performed component. New saves derive this from item evidence; legacy full-session saves may restore it, while legacy partial saves never guess.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-139 — Sam, 2026-08-24: "Mobility / warm up is not ticked after a session finishes on day view ... it should have the green tick if its completed as well".',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `recordedExecutionSectionCompletion` derives Mobility from the exact persisted checklist items, returns full/partial/skipped with the shared completion derivation, and permits only legacy whole-session full as a fallback. Runtime cells cover full item evidence, partial item evidence and the full-vs-partial legacy boundary. A source binding cell requires HomeScreenV2 to pass the saved result into the separate Mobility / Warm-up row and draw the existing green check only for full/partial. NOT COVERED: simulator pixels and Sam\'s physical phone.',
     },
   },
   {

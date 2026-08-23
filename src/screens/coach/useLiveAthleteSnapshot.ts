@@ -40,6 +40,7 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     activeModifiers: input.activeModifiers,
     experienceLevel: athlete.onboardingData?.experienceLevel,
     conditioningLevel: athlete.onboardingData?.conditioningLevel,
+    twoKmTimeTrial: athlete.onboardingData?.twoKmTimeTrial,
   }), [
     asOfDateISO,
     input.weekDays,
@@ -49,5 +50,6 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     readinessSignalsByDate,
     athlete.onboardingData?.experienceLevel,
     athlete.onboardingData?.conditioningLevel,
+    athlete.onboardingData?.twoKmTimeTrial,
   ]);
 }

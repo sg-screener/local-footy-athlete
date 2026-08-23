@@ -40,6 +40,7 @@ import {
   selectMobilityPrehabFlow,
   type MobilityPrehabFlow,
 } from '../../utils/mobilityPrehabFlow';
+import { recordedExecutionSectionCompletion } from '../../utils/sessionExecutionChecklist';
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import {
@@ -609,6 +610,10 @@ export default function HomeScreenV2() {
           <DayTimeline
             entries={timelineEntries}
             mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
+            mobilityCompletion={recordedExecutionSectionCompletion(
+              sessionFeedback[day.date],
+              'mobility',
+            )}
             onOpen={() => handleViewWorkout(day)}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />
@@ -2771,6 +2776,8 @@ interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
   /** Optional, non-load-bearing flow from the same owner the session screen uses. */
   mobilityFlow: MobilityPrehabFlow | null;
+  /** Saved result for that same flow, read from the checklist's item evidence. */
+  mobilityCompletion: DayTimelineEntry['completion'];
   onOpen: () => void;
   /** Today is interactive; Week reveals the complete session in one simple drop. */
   presentation: 'interactive' | 'flat';
@@ -2797,7 +2804,13 @@ interface DayTimelineProps {
  * `conditioning`. A list keyed by kind would silently drop one of them — work
  * the athlete has to do, missing from the only screen that shows it.
  */
-function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelineProps) {
+function DayTimeline({
+  entries,
+  mobilityFlow,
+  mobilityCompletion,
+  onOpen,
+  presentation,
+}: DayTimelineProps) {
   // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
   //
   // The north star's rule is "store only decisions, derive everything else", and
@@ -2860,7 +2873,11 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
               style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
             >
               <View style={styles.timelineIconMarker}>
-                <RowIcon kind="mobility" size={13} color={rowIconColor('mobility')} />
+                {mobilityCompletion === 'full' || mobilityCompletion === 'partial' ? (
+                  <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+                ) : (
+                  <RowIcon kind="mobility" size={13} color={rowIconColor('mobility')} />
+                )}
               </View>
               <View style={styles.timelinePartText}>
                 <Text style={styles.timelineHeadline} numberOfLines={1}>
@@ -2876,6 +2893,11 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
                 </Text>
               </View>
               <TimelineChevron open={openParts.has('mobility-warmup')} />
+              {mobilityCompletion ? (
+                <ExplorerRenderWitness
+                  testID={`day-timeline-complete-mobility-warmup-${mobilityCompletion}`}
+                />
+              ) : null}
             </Pressable>
             {openParts.has('mobility-warmup') ? (
               <View style={styles.timelineRows} testID="day-timeline-rows-mobility-warmup">

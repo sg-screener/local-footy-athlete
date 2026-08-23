@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import CoachTabScreen from '../screens/coach/CoachTabScreen';
+import ProgressTabScreen from '../screens/progress/ProgressTabScreen';
 import { useCoachWeeklyCommitment } from '../screens/coach/useCoachWeeklyCommitment';
 import { commitmentConversationNoticeSentence } from '../rules/projectionCopy';
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -31,6 +32,7 @@ type ProfileStackParamList = {
 export type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
   CoachTab: { status?: 'open' } | undefined;
+  ProgressTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -53,6 +55,16 @@ function CoachIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    </Svg>
+  );
+}
+
+function ProgressIcon({ color, size }: { color: string; size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4 19V5" />
+      <Path d="M4 19h16" />
+      <Path d="M7 15l4-4 3 2 5-6" />
     </Svg>
   );
 }
@@ -214,6 +226,17 @@ export default function AppNavigator() {
             tabBarHideOnKeyboard: true,
           }}
           listeners={{ tabPress: () => logger.info('[tab-press] coach') }}
+        />
+        <Tab.Screen
+          name="ProgressTab"
+          component={ProgressTabScreen}
+          options={{
+            title: 'Progress',
+            tabBarIcon: ({ color }) => <ProgressIcon color={color} size={22} />,
+            tabBarButtonTestID: 'tab-progress',
+            tabBarAccessibilityLabel: 'Progress tab',
+          }}
+          listeners={{ tabPress: () => logger.info('[tab-press] progress') }}
         />
         <Tab.Screen
           name="ProfileTab"

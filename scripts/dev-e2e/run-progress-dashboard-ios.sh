@@ -21,8 +21,8 @@ scripts/dev-e2e/run-maestro-ios.sh \
 xcrun simctl openurl "${device_id}" \
   "localfootyathlete://e2e/coach-snapshot/populate"
 scripts/dev-e2e/run-maestro-ios.sh \
-  .maestro/golden/coach-snapshot-dashboard.yaml
-xcrun simctl openurl "${device_id}" \
-  "localfootyathlete://e2e/coach-snapshot/check-in/cooked"
+  .maestro/golden/progress-dashboard.yaml
 scripts/dev-e2e/run-maestro-ios.sh \
-  .maestro/golden/coach-snapshot-dashboard-live-refresh.yaml
+  .maestro/golden/coach-simple-shell.yaml
+scripts/dev-e2e/run-maestro-ios.sh \
+  .maestro/golden/mobility-completion-tick.yaml

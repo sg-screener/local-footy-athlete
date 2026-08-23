@@ -1,0 +1,28 @@
+appId: com.localfootyathlete.app
+name: Golden - simple Coach shell
+tags:
+  - e2e
+  - golden
+  - coach
+---
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
+- tapOn:
+    id: "tab-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-tab-input"
+    timeout: 15000
+- assertVisible:
+    id: "modifiers-strip-coach"
+- assertVisible:
+    id: "coach-tab-greeting"
+- assertVisible:
+    id: "coach-tab-conversation"
+- assertNotVisible:
+    id: "coach-dashboard"
+- assertNotVisible:
+    id: "progress-load-continuum"
+- takeScreenshot: artifacts/ui-walk/coach-simple-shell

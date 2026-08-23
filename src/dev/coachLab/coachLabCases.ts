@@ -219,6 +219,18 @@ export function coachLabFixtureSnapshot(): CoachSnapshot {
       lastWeek: { weightKg: 95, reps: 5 },
       direction: 'up',
     }],
+    strengthHistory: [{
+      exerciseName: 'Back Squat',
+      points: [
+        { weekStart: '2026-08-17', topSet: { weightKg: 95, reps: 5 } },
+        { weekStart, topSet: { weightKg: 100, reps: 5 } },
+      ],
+    }],
+    twoKmTimeTrial: {
+      seconds: 420,
+      recordedOn: '2026-08-24',
+      source: 'profile_edit',
+    },
     readinessSignal: {
       date: '2026-08-24',
       energy: 'low',

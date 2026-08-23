@@ -4416,3 +4416,32 @@ three-mutation and exact-rerun cells in `test:coach-lab`; generated-knowledge,
 server/client, empty-action and screen-cutover cells in
 `test:coach-chat-integration`, reached by `test:coach-snapshot` in
 `test:bible`. Seat `snapshot`.
+
+---
+
+**R-139** · *"I want you to create a 'progess tab' with the same UI as the
+other tabs - I changed my mind, coach should just have the my status in top
+right and then a chat box - but it can monitor the readiness and the consistency
+of the athlete for future sessions ... the progress tab should have the load
+continuum ... progress charts on main lifts and 2km time trial ... Mobility /
+warm up ... should have the green tick if its completed as well"* (Sam,
+2026-08-24) · **PROGRESS OWNS VISIBLE TRACKING; COACH STAYS INFORMED BUT SIMPLE;
+SAVED MOBILITY COMPLETION IS VISIBLE.**
+
+Progress is a fourth live bottom tab. It owns the load continuum immediately
+below its title, then the athlete's current recorded 2km time, followed by
+multi-week main-lift charts in a two-column grid. The app does not invent a 2km history:
+today only one 2km answer is stored, so the chart is ready for future recorded
+tests but shows only the fact that exists now.
+
+Coach removes the visible Snapshot dashboard. Its glass is My Status plus the
+conversation and composer, while Terra still receives the same live Snapshot,
+including readiness and Consistency, as private coaching context. No copied or
+persisted dashboard state is introduced.
+
+Mobility / Warm-up on the day view reads the saved checklist item evidence
+through the same completion owner as the feedback result. Full or partial
+performed work draws the same green tick as every other performed component. A
+legacy whole-session `full` result restores the tick; a legacy partial result
+does not guess which section was completed. · `WORKING` — `test:coach-snapshot`
+and `test:session-execution`. Seat `snapshot`.

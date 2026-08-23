@@ -31,10 +31,13 @@ import {
   type PlannedLift,
 } from './journalLoad';
 import {
+  buildJournalStrengthSeries,
   buildJournalStrengthTrend,
+  type StrengthTopSet,
   type StrengthLiftTrend,
 } from './journalStrengthTrend';
 import { countWeeklyExposures } from './weeklyExposureCounts';
+import type { TwoKmTimeTrialAnswer } from '../types/domain';
 
 export type CoachSnapshotReadinessState =
   | ReadinessQuickOption
@@ -52,6 +55,16 @@ export interface CoachSnapshotLoad {
   readonly coverage: JournalLoadCoverage | null;
 }
 
+export interface StrengthProgressPoint {
+  readonly weekStart: string;
+  readonly topSet: StrengthTopSet;
+}
+
+export interface StrengthProgressHistory {
+  readonly exerciseName: string;
+  readonly points: readonly StrengthProgressPoint[];
+}
+
 export interface CoachSnapshot {
   /** The date whose readiness answer this picture carries. */
   readonly asOfDateISO: string;
@@ -62,6 +75,10 @@ export interface CoachSnapshot {
   readonly readiness: CoachSnapshotReadiness;
   readonly load: CoachSnapshotLoad;
   readonly progress: readonly StrengthLiftTrend[];
+  /** Every recorded main-lift top set, grouped by lift for the Progress chart. */
+  readonly strengthHistory: readonly StrengthProgressHistory[];
+  /** The one recorded 2km answer. An array would falsely imply stored history. */
+  readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly restrictions: readonly ActiveCoachNote[];
 }
 
@@ -71,6 +88,8 @@ export interface BuildCoachSnapshotInput {
   readonly journalWeek: JournalWeek;
   readonly loadModel: JournalLoadModel;
   readonly strengthLifts: readonly StrengthLiftTrend[];
+  readonly strengthHistory: readonly StrengthProgressHistory[];
+  readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly readinessSignal: ReadinessSignal | null;
   readonly activeModifiers: readonly ActiveCoachNote[];
 }
@@ -104,6 +123,7 @@ export interface DeriveCoachSnapshotInput {
   readonly readinessSignal: ReadinessSignal | null;
   readonly experienceLevel?: OnboardingData['experienceLevel'];
   readonly conditioningLevel?: OnboardingData['conditioningLevel'];
+  readonly twoKmTimeTrial?: OnboardingData['twoKmTimeTrial'];
 }
 
 function countRecordedWeeks(
@@ -177,13 +197,22 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     sessionsPlannedThisWeek: journalWeek.work.sessionsPlanned,
     plannedStrength,
   });
+  const strengthSessions = Object.entries(input.recordedSessions).map(([date, feedback]) => ({
+    date,
+    strength: feedback.strength ?? [],
+  }));
   const progress = buildJournalStrengthTrend({
     weekStart: journalWeek.weekStart,
-    sessions: Object.entries(input.recordedSessions).map(([date, feedback]) => ({
-      date,
-      strength: feedback.strength ?? [],
-    })),
+    sessions: strengthSessions,
   });
+  const strengthSeries = buildJournalStrengthSeries({
+    weekStart: journalWeek.weekStart,
+    weeks: Math.max(1, countRecordedWeeks(input.recordedSessions)),
+    sessions: strengthSessions,
+  });
+  const strengthHistory = Array.from(strengthSeries.entries())
+    .map(([exerciseName, points]) => ({ exerciseName, points }))
+    .sort((left, right) => left.exerciseName.localeCompare(right.exerciseName));
 
   return buildCoachSnapshot({
     asOfDateISO: input.asOfDateISO,
@@ -191,6 +220,8 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     journalWeek,
     loadModel,
     strengthLifts: progress,
+    strengthHistory,
+    twoKmTimeTrial: input.twoKmTimeTrial ?? null,
     readinessSignal: input.readinessSignal,
     activeModifiers: input.activeModifiers,
   });
@@ -230,6 +261,11 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
       coverage: signedValue(input.loadModel.coverage),
     },
     progress: [...input.strengthLifts],
+    strengthHistory: input.strengthHistory.map((history) => ({
+      exerciseName: history.exerciseName,
+      points: [...history.points],
+    })),
+    twoKmTimeTrial: input.twoKmTimeTrial,
     restrictions: [...input.activeModifiers],
   };
 }

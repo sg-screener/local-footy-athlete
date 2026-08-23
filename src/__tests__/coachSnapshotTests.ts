@@ -118,6 +118,18 @@ const baseInput: BuildCoachSnapshotInput = {
     lastWeek: { weightKg: 95, reps: 5 },
     direction: 'up',
   }],
+  strengthHistory: [{
+    exerciseName: 'Back Squat',
+    points: [
+      { weekStart: '2026-08-17', topSet: { weightKg: 95, reps: 5 } },
+      { weekStart: '2026-08-24', topSet: { weightKg: 100, reps: 5 } },
+    ],
+  }],
+  twoKmTimeTrial: {
+    seconds: 420,
+    recordedOn: '2026-08-24',
+    source: 'profile_edit',
+  },
   readinessSignal: {
     date: '2026-08-24',
     energy: 'good',
@@ -150,6 +162,11 @@ console.log('\n[1] ONE PURE PICTURE CARRIES THE FIVE REQUESTED FACTS');
   ok('recorded progress survives without a second calculation',
     snapshot.progress[0]?.exerciseName === 'Back Squat'
       && snapshot.progress[0]?.direction === 'up');
+  ok('multi-week lift history survives as chart-ready facts',
+    snapshot.strengthHistory[0]?.points.length === 2
+      && snapshot.strengthHistory[0]?.points[0]?.topSet.weightKg === 95);
+  ok('the recorded 2km answer survives without invented history',
+    snapshot.twoKmTimeTrial?.seconds === 420);
   ok('the active restriction survives as the exact authored note',
     snapshot.restrictions[0] === modifier);
 }
@@ -161,9 +178,13 @@ console.log('\n[2] ABSENCE AND IDENTITY ARE HONEST');
     readinessSignal: null,
     activeModifiers: [],
     strengthLifts: [],
+    strengthHistory: [],
+    twoKmTimeTrial: null,
   });
   ok('no check-in stays not recorded', empty.readiness.state === 'not_recorded');
   ok('no progress stays empty', empty.progress.length === 0);
+  ok('no lift history stays empty', empty.strengthHistory.length === 0);
+  ok('no 2km answer stays absent', empty.twoKmTimeTrial === null);
   ok('no restriction stays empty', empty.restrictions.length === 0);
 
   let weekMismatch = false;
@@ -212,16 +233,28 @@ function conversationUsesSnapshot(body: string): boolean {
     && !/snapshot\s*:|visibleWeek/.test(call);
 }
 
-function loadOwnsTheHero(body: string): boolean {
-  const load = body.indexOf('testID="coach-dashboard-load"');
-  const firstTileRow = body.indexOf('<View style={styles.row}>');
-  const consistency = body.indexOf('testID="coach-dashboard-week"');
-  if (load < 0 || firstTileRow < 0 || consistency < 0) return false;
-  const hero = body.slice(load, firstTileRow);
-  return load < firstTileRow
-    && consistency > firstTileRow
-    && hero.includes('testID="coach-dashboard-load-track"')
-    && hero.includes('testID="coach-dashboard-load-sweet-spot"');
+function progressOwnsTheLoadHero(body: string): boolean {
+  const screenStart = body.indexOf('export default function ProgressTabScreen');
+  const screenEnd = body.indexOf('const styles = StyleSheet.create', screenStart);
+  if (screenStart < 0 || screenEnd < 0) return false;
+  const screen = body.slice(screenStart, screenEnd);
+  const title = screen.indexOf('testID="progress-tab-title"');
+  const load = screen.indexOf('<LoadContinuum load={snapshot.load} />');
+  const twoKm = screen.indexOf('<TwoKmChart answer={snapshot.twoKmTimeTrial} />');
+  const lifts = screen.indexOf('testID="progress-main-lifts"');
+  if (title < 0 || load < 0 || twoKm < 0 || lifts < 0) return false;
+  return title < load && load < twoKm && twoKm < lifts
+    && body.includes('testID="progress-load-track"')
+    && body.includes('testID="progress-load-sweet-spot"');
+}
+
+function progressUsesTwoColumnLiftGrid(body: string): boolean {
+  const grid = /liftGrid:\s*\{([\s\S]*?)\n\s*\},/.exec(body)?.[1] ?? '';
+  const card = /liftCard:\s*\{([\s\S]*?)\n\s*\},/.exec(body)?.[1] ?? '';
+  return /flexDirection:\s*'row'/.test(grid)
+    && /flexWrap:\s*'wrap'/.test(grid)
+    && /flexBasis:\s*'47%'/.test(card)
+    && /flexGrow:\s*1/.test(card);
 }
 
 console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE');
@@ -229,18 +262,15 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   const owner = source('src', 'rules', 'liveAthleteSnapshot.ts');
   const adapter = source('src', 'screens', 'coach', 'useLiveAthleteSnapshot.ts');
   const screen = source('src', 'screens', 'coach', 'CoachTabScreen.tsx');
-  const dashboard = source('src', 'screens', 'coach', 'SnapshotDashboard.tsx');
-  const glassFlow = source('.maestro', 'golden', 'coach-snapshot-dashboard.yaml');
-  const liveRefreshFlow = source(
-    '.maestro', 'golden', 'coach-snapshot-dashboard-live-refresh.yaml',
-  );
-  const glassReceipt = source('docs', 'GOLDEN_FLOW_RUN_RECEIPT.md');
+  const progress = source('src', 'screens', 'progress', 'ProgressTabScreen.tsx');
+  const glassFlow = source('.maestro', 'golden', 'progress-dashboard.yaml');
 
   ok('the Snapshot builder is domain-pure and clock-free', pureSnapshotOwner(owner));
-  ok('the pure owner reuses the Journal week/load/progress owners',
+  ok('the pure owner reuses the Journal week/load/current and historical progress owners',
     /buildJournalWeek/.test(owner)
       && /buildJournalLoadModel/.test(owner)
-      && /buildJournalStrengthTrend/.test(owner));
+      && /buildJournalStrengthTrend/.test(owner)
+      && /buildJournalStrengthSeries/.test(owner));
   ok('the store adapter delegates the complete derivation to that owner',
     /deriveCoachSnapshot\(\{/.test(adapter)
       && !/buildJournalWeek|buildJournalLoadModel|buildJournalStrengthTrend/.test(adapter));
@@ -250,48 +280,25 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
       && !/\.setState|\.persist|AsyncStorage|setReadinessSignal|applyReadinessSignalsWrite/.test(adapter));
   ok('the Coach screen builds exactly one Snapshot',
     (screen.match(/useLiveAthleteSnapshot\s*\(/g) ?? []).length === 1);
-  ok('the dashboard receives that exact Snapshot',
-    /<CoachDashboard\s+snapshot=\{snapshot\}\s*\/>/.test(screen));
-  const conversationAnchor = screen.indexOf('testID="coach-tab-conversation"');
-  const dashboardAnchor = screen.indexOf('<CoachDashboard snapshot={snapshot} />');
-  const turnAnchor = screen.indexOf('{turns.map((turn) => (');
-  ok('the dashboard and chat share one scroll owner so populated state cannot hide answers',
-    conversationAnchor >= 0 && dashboardAnchor > conversationAnchor && turnAnchor > dashboardAnchor);
+  ok('Coach renders no tracking dashboard after Progress takes ownership',
+    !/CoachDashboard|SnapshotDashboard|coach-dashboard/.test(screen));
   ok('the one production conversation door receives the exact Snapshot',
     conversationUsesSnapshot(screen));
-  for (const section of ['week', 'readiness', 'load', 'progress', 'restrictions']) {
-    ok(`the dashboard renders the ${section} section`,
-      dashboard.includes(`testID="coach-dashboard-${section}"`));
-    ok(`the glass flow requires the ${section} section`,
-      glassFlow.includes(`id: "coach-dashboard-${section}"`));
-  }
-  ok('the glass flow opens Coach and captures the dashboard',
-    /id: "tab-coach"/.test(glassFlow)
-      && /artifacts\/ui-walk\/coach-snapshot-dashboard/.test(glassFlow));
-  ok('populated glass requires the earned load marker and signed My Status label',
-    glassFlow.includes('id: "coach-dashboard-load-marker"')
-      && glassFlow.includes('"My Status"')
-      && glassFlow.includes('e2e-seed-ready-coach-snapshot-populated-journey'));
-  ok('live glass changes readiness without reopening Coach',
-    liveRefreshFlow.includes('e2e-seed-ready-coach-snapshot-cooked-check-in')
-      && liveRefreshFlow.includes('assertNotVisible: "No check-in today"')
-      && !/id: "tab-coach"/.test(liveRefreshFlow));
-  ok('the populated and live simulator executions have a dated receipt',
-    /coach-snapshot-dashboard\.yaml[^\n]+PASS[^\n]+populated/i.test(glassReceipt)
-      && /coach-snapshot-dashboard-live-refresh\.yaml[^\n]+PASS[^\n]+without leaving Coach/i
-        .test(glassReceipt));
-  ok('training load owns the hero and its signed sweet-spot continuum',
-    loadOwnsTheHero(dashboard)
-      && glassFlow.includes('id: "coach-dashboard-load-track"')
-      && glassFlow.includes('id: "coach-dashboard-load-sweet-spot"'));
-  ok('Consistency and the other three signals form the two-by-two tile grid',
-    (dashboard.match(/<View style=\{styles\.row\}>/g) ?? []).length === 2
-      && /consistency/.test(dashboard)
-      && /borderWidth:\s*1/.test(dashboard)
-      && /borderRadius:\s*borderRadius\.lg/.test(dashboard));
-  ok('athlete-visible dashboard words come from the one copy owner',
-    /COACH_DASHBOARD_COPY/.test(dashboard)
-      && !/>\s*(?:This week|Readiness|Load|Progress|My Status|Restrictions|None active)\s*</.test(dashboard));
+  ok('Progress receives the same live Snapshot once',
+    (progress.match(/useLiveAthleteSnapshot\s*\(/g) ?? []).length === 1);
+  ok('training load owns the Progress hero and its sweet-spot continuum',
+    progressOwnsTheLoadHero(progress)
+      && glassFlow.includes('id: "progress-load-track"')
+      && glassFlow.includes('id: "progress-load-sweet-spot"'));
+  ok('Progress renders chart-ready main-lift history and the recorded 2km answer',
+    /snapshot\.strengthHistory/.test(progress)
+      && /snapshot\.twoKmTimeTrial/.test(progress)
+      && progressUsesTwoColumnLiftGrid(progress)
+      && glassFlow.includes('id: "progress-main-lifts"')
+      && glassFlow.includes('id: "progress-two-km"'));
+  ok('the glass flow opens Progress and captures its populated dashboard',
+    /id: "tab-progress"/.test(glassFlow)
+      && /artifacts\/ui-walk\/progress-dashboard/.test(glassFlow));
 }
 
 console.log('\n[4] THE SNAPSHOT HAS NO PERSISTED COPY');
@@ -308,7 +315,7 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
 {
   const owner = source('src', 'rules', 'liveAthleteSnapshot.ts');
   const screen = source('src', 'screens', 'coach', 'CoachTabScreen.tsx');
-  const dashboard = source('src', 'screens', 'coach', 'SnapshotDashboard.tsx');
+  const progress = source('src', 'screens', 'progress', 'ProgressTabScreen.tsx');
   ok('a fabricated store dependency kills domain purity',
     pureSnapshotOwner(owner)
       && !pureSnapshotOwner(`${owner}\nimport { useProgramStore } from '../store/programStore';`));
@@ -318,25 +325,18 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
   );
   ok('a fabricated conversation bypass kills shared ownership',
     conversationUsesSnapshot(screen) && !conversationUsesSnapshot(bypass));
-  const fixedDashboard = screen.replace(
-    '<CoachDashboard snapshot={snapshot} />',
-    '',
-  ).replace(
-    '<ScrollView',
-    '<CoachDashboard snapshot={snapshot} />\n        <ScrollView',
-  );
-  const liveConversationAnchor = screen.indexOf('testID="coach-tab-conversation"');
-  const liveDashboardAnchor = screen.indexOf('<CoachDashboard snapshot={snapshot} />');
-  const fixedConversationAnchor = fixedDashboard.indexOf('testID="coach-tab-conversation"');
-  const fixedDashboardAnchor = fixedDashboard.indexOf('<CoachDashboard snapshot={snapshot} />');
-  ok('moving the dashboard outside the conversation scroll kills the visibility guard',
-    liveDashboardAnchor > liveConversationAnchor && fixedDashboardAnchor < fixedConversationAnchor);
-  const swappedHierarchy = dashboard
-    .replace('testID="coach-dashboard-load"', 'testID="coach-dashboard-swap"')
-    .replace('testID="coach-dashboard-week"', 'testID="coach-dashboard-load"')
-    .replace('testID="coach-dashboard-swap"', 'testID="coach-dashboard-week"');
-  ok('swapping load and Consistency kills the hierarchy guard',
-    loadOwnsTheHero(dashboard) && !loadOwnsTheHero(swappedHierarchy));
+  const movedLoad = progress
+    .replace('<LoadContinuum load={snapshot.load} />', '')
+    .replace(
+      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />',
+      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />\n'
+        + '<LoadContinuum load={snapshot.load} />',
+    );
+  ok('moving Load below the main-lift heading kills the hierarchy guard',
+    progressOwnsTheLoadHero(progress) && !progressOwnsTheLoadHero(movedLoad));
+  const singleColumn = progress.replace("flexWrap: 'wrap',", "flexDirection: 'column',");
+  ok('collapsing the main-lift grid to one column kills its layout guard',
+    progressUsesTwoColumnLiftGrid(progress) && !progressUsesTwoColumnLiftGrid(singleColumn));
 }
 
 console.log(`\nCoach Snapshot totals: ${pass} passed, ${fail} failed`);

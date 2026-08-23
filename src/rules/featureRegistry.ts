@@ -229,15 +229,15 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
     },
   },
   {
-    id: 'FEAT-coach-snapshot-dashboard',
-    feature: 'The Coach tab shows one live dashboard for this week, readiness, load, progress and active restrictions, and its conversation reads the same picture.',
-    askedFor: 'Sam, this Codex task, 2026-08-24: "Build one fresh vertical slice: live Coach Snapshot, dashboard" and start step 3.',
+    id: 'FEAT-progress-dashboard',
+    feature: 'Progress shows live load, main-lift history and the recorded 2km answer; Coach reads the same live athlete picture privately while showing only My Status and chat.',
+    askedFor: 'docs/RULINGS_REGISTRY.md R-139.',
     reachable: 'athlete_reachable',
     proof: {
       state: 'held',
       by: 'test:coach-snapshot',
       chainStatus: 'in_chain',
-      receipt: '`test:coach-snapshot` holds the pure Snapshot, one-adapter ownership, one screen construction, all five dashboard readers, the conversation sharing `snapshot.visibleWeek`, and a mutation that kills the four-week ratio when one earned week is removed. Its lived arm walks 35 calendar days, 19 real session outcomes and one production rollover. On 2026-08-24 the repeatable simulator runner passed on iPhone 17 Pro / iOS 26.3: `coach-snapshot-dashboard.png` shows the populated signed load marker, 5/5 Consistency, week-over-week Progress and one active My Status item; `coach-snapshot-dashboard-live-refresh.png` shows Readiness changing from No check-in today to Feeling flat without leaving Coach. The guard requires both flows and their dated run receipts.',
+      receipt: '`test:coach-snapshot` holds the pure live Snapshot, multi-week main-lift series, one recorded 2km fact, one-adapter ownership and the split between visible Progress and private Coach context. Its lived arm walks 35 calendar days through real outcomes and rollover. `.maestro/golden/progress-dashboard.yaml` is the mounted populated-state acceptance flow. Physical-phone acceptance remains owed.',
     },
   },
   {

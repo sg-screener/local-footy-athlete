@@ -1,0 +1,25 @@
+appId: com.localfootyathlete.app
+name: Golden - Mobility completion returns to day view
+tags:
+  - e2e
+  - golden
+  - workout
+  - mobility
+---
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
+- tapOn:
+    id: "tab-program"
+- tapOn:
+    id: "program-day-previous"
+- tapOn:
+    id: "program-day-previous"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline-part-mobility-warmup"
+    timeout: 15000
+- assertVisible:
+    id: "day-timeline-complete-mobility-warmup-full"
+- takeScreenshot: artifacts/ui-walk/mobility-completion-tick

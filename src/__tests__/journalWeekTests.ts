@@ -391,11 +391,12 @@ console.log('\n[7] CLEAN-ROOM BOUNDARY');
   // The number was never this file's law; the JOURNAL'S ABSENCE is, and that is
   // the cell directly above. Sam approved the coach tab
   // (docs/COACH_TAB_MOCK_2026-08-09.html) and slice 1 mounted it, so the total
-  // is three with the journal still gone. Pinned as the SET rather than the
+  // was three with the journal still gone. R-139 adds Progress as a new live
+  // owner without restoring Journal. Pinned as the SET rather than the
   // count, which reds both on an arrival and on a silent disappearance.
   const tabBlocks = navigator.match(/<Tab\.Screen\b/g) ?? [];
-  ok('the region was found — three tabs now, and none of them is the journal',
-    tabBlocks.length === 3, tabBlocks.length);
+  ok('the region was found — four tabs now, and none of them is the journal',
+    tabBlocks.length === 4, tabBlocks.length);
   // A MUTATION SURVIVED HERE AND THE CELL IS WRITTEN THE WAY IT IS BECAUSE OF
   // IT. The first version compared three `indexOf` results directly. `indexOf`
   // returns -1 when the anchor is MISSING, and -1 is less than everything — so
@@ -408,13 +409,16 @@ console.log('\n[7] CLEAN-ROOM BOUNDARY');
   // THE HIDE MAKES THAT LAW LOAD-BEARING RATHER THAN RETIRING IT. The order
   // claim is now about the two SURVIVORS, and if either anchor vanished the
   // remaining comparison would be exactly the vacuous pass described above.
-  const tabOrder = ['ProgramTab', 'CoachTab', 'ProfileTab']
+  const tabOrder = ['ProgramTab', 'CoachTab', 'ProgressTab', 'ProfileTab']
     .map((name) => ({ name, at: navigator.indexOf(`name="${name}"`) }));
   const missing = tabOrder.filter((tab) => tab.at < 0).map((tab) => tab.name);
   ok('every tab anchor is PRESENT before any order is claimed',
     missing.length === 0, missing);
-  ok('and the order is Program, Coach, Profile — the mock\'s own arrangement',
-    missing.length === 0 && tabOrder[0].at < tabOrder[1].at && tabOrder[1].at < tabOrder[2].at,
+  ok('and the order is Program, Coach, Progress, Profile — R-139\'s arrangement',
+    missing.length === 0
+      && tabOrder[0].at < tabOrder[1].at
+      && tabOrder[1].at < tabOrder[2].at
+      && tabOrder[2].at < tabOrder[3].at,
     tabOrder);
 
 }

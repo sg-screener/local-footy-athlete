@@ -1,0 +1,32 @@
+appId: com.localfootyathlete.app
+name: Golden - live Progress dashboard
+tags:
+  - e2e
+  - golden
+  - progress
+---
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
+- tapOn:
+    id: "tab-progress"
+- extendedWaitUntil:
+    visible:
+      id: "progress-tab-title"
+    timeout: 15000
+- assertVisible:
+    id: "progress-load-track"
+- assertVisible:
+    id: "progress-load-sweet-spot"
+- assertVisible:
+    id: "progress-load-marker"
+- assertVisible:
+    id: "progress-two-km"
+- assertVisible: "7:00"
+- scrollUntilVisible:
+    element:
+      id: "progress-main-lifts"
+    direction: DOWN
+    visibilityPercentage: 60
+- takeScreenshot: artifacts/ui-walk/progress-dashboard

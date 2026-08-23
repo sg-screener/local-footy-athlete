@@ -431,3 +431,34 @@ the old promise absent. Screenshot:
   remains a local/private v1 endpoint, not a public-release abuse boundary.
 - The model remains read-only. Existing My Status and system-raised commitment
   controls are tested separately and are not model tools.
+
+## 2026-08-24 — Progress owns tracking; Coach becomes conversation-only
+
+R-139 moves athlete-visible tracking into a fourth bottom tab ordered Program,
+Coach, Progress, Profile. Progress renders the shared live Snapshot as Load
+first, the current recorded 2km result second, then chart-ready main-lift
+history in a two-column grid. Coach keeps only My Status, the greeting,
+conversation and composer on screen, while the exact same ephemeral Snapshot
+still supplies Terra with readiness, Consistency, load, progress and active
+restrictions as private context.
+
+The separate Mobility/Warm-up row now reads its saved checklist evidence on Day
+view and displays the same green completion tick as the other completed session
+sections. Legacy whole-session completion restores only a full tick; legacy
+partial completion does not guess which item was completed.
+
+Focused Snapshot, navigation, Coach integration, feature-registry and signed-copy
+gates are green. The iPhone 17 Pro simulator passed the populated Progress,
+simple Coach and completed Mobility flows, and the three screenshots were
+visually inspected. The session-execution suite remains 185/191: all new
+Mobility cells pass and its six failures are pre-existing source-contract
+failures outside these edits.
+
+### NOT COVERED
+
+- Sam's physical iPhone acceptance remains owed under L10.
+- Only one 2km result is stored today, so the UI truthfully shows one point; a
+  historical 2km series awaits future recorded data rather than invented points.
+- This slice does not make Terra a program writer or add any model action.
+- The six unrelated existing session-execution failures were measured, not
+  repaired as part of the Mobility completion fix.

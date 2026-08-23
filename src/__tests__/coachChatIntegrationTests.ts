@@ -92,11 +92,12 @@ console.log('\n[3] THE APP CHAT IS TERRA-READ-ONLY');
     /isSending/.test(screen)
       && /disabled=\{!canSend\}/.test(screen)
       && /coach-tab-thinking/.test(screen));
-  ok('a populated dashboard and the conversation share one scroll surface',
-    screen.indexOf('<CoachDashboard snapshot={snapshot} />')
-      > screen.indexOf('testID="coach-tab-conversation"')
+  ok('Coach is the conversation surface while its athlete facts remain private model input',
+    screen.indexOf('testID="coach-tab-conversation"') >= 0
       && screen.indexOf('{turns.map((turn) => (')
-        > screen.indexOf('<CoachDashboard snapshot={snapshot} />'));
+        > screen.indexOf('testID="coach-tab-conversation"')
+      && !/CoachDashboard|SnapshotDashboard|coach-dashboard/.test(screen)
+      && /const snapshot = useLiveAthleteSnapshot/.test(screen));
 }
 
 console.log('\n[4] THE LIVE FUNCTION REQUIRES SUPABASE JWT VERIFICATION');

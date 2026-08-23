@@ -105,6 +105,25 @@ export function deriveSessionExecutionItemCompletion(
   return 'partial';
 }
 
+/** Read one saved checklist section for a day-card completion mark. */
+export function recordedExecutionSectionCompletion(
+  feedback: {
+    readonly completion: FeedbackCompletion;
+    readonly executionItems?: readonly SessionExecutionItemResult[];
+  } | null | undefined,
+  sectionId: SessionExecutionSectionId,
+): FeedbackCompletion | null {
+  if (!feedback) return null;
+  const sectionItems = feedback.executionItems?.filter(
+    (item) => item.sectionId === sectionId,
+  ) ?? [];
+  if (sectionItems.length > 0) return deriveSessionExecutionItemCompletion(sectionItems);
+  // Old saves have no item evidence. Only a whole-session `full` result can
+  // honestly mean this prescribed section was completed too.
+  if (feedback.executionItems === undefined && feedback.completion === 'full') return 'full';
+  return null;
+}
+
 /**
  * ⚠ **EXPORTED, BECAUSE THE ADD MENU NAMES THE SAME THINGS.**
  *

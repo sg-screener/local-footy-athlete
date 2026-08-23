@@ -11,6 +11,7 @@ import {
   buildSessionExecutionSummary,
   deriveChecklistComponentCompletions,
   deriveSessionExecutionCompletion,
+  recordedExecutionSectionCompletion,
 } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { buildSessionFeedbackPayload } from '../utils/sessionFeedbackForm';
@@ -103,6 +104,23 @@ ok('a session is full when mobility and every other prescribed section are full'
   deriveSessionExecutionCompletion(
     buildSessionExecutionSummary(plan, everyPrescribedItem),
   ) === 'full');
+ok('the saved item evidence returns full Mobility to the day view',
+  recordedExecutionSectionCompletion({
+    completion: 'full',
+    executionItems: buildSessionExecutionSummary(plan, everyPrescribedItem).items,
+  }, 'mobility') === 'full');
+ok('partial Mobility remains a completed partial result for the day-view tick',
+  recordedExecutionSectionCompletion({
+    completion: 'partial',
+    executionItems: buildSessionExecutionSummary(
+      plan,
+      new Set(plan.items.filter((item) => item.sectionId === 'mobility').slice(0, 1)
+        .map((item) => item.id)),
+    ).items,
+  }, 'mobility') === 'partial');
+ok('legacy full completion restores the Mobility tick without inventing a partial result',
+  recordedExecutionSectionCompletion({ completion: 'full' }, 'mobility') === 'full'
+    && recordedExecutionSectionCompletion({ completion: 'partial' }, 'mobility') === null);
 
 const teamWorkout: any = {
   id: 'team-session',
@@ -251,6 +269,10 @@ ok('mobility movements use the same controlled checklist owner',
   /function MobilityExerciseList/.test(screen)
     && /completedItemIds\.has\(itemId\)/.test(screen)
     && /onToggle=\{onToggleItem\}/.test(screen));
+ok('the day card reads Mobility completion from that saved checklist owner',
+  /recordedExecutionSectionCompletion\(\s*sessionFeedback\[day\.date\],\s*'mobility'/.test(home)
+    && /day-timeline-complete-mobility-warmup-\$\{mobilityCompletion\}/.test(home)
+    && /mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home));
 ok('mobility and every other session row use one square checkbox recipe',
   /sessionExecutionCheckbox/.test(screen)
     && /\.\.\.sessionExecutionCheckbox/.test(screen)
