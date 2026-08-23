@@ -4273,3 +4273,13 @@ and the stored answer always outranks the measurement.
 persisted-inputs schema (acts = `fact`, measurement = `result`).
 · `WORKING` — on-glass walk (start/pause/end and the seeded form). Seat
 `pathway`.
+
+**R-132a** · *"I think the start session needs to be more obvious a button -
+maybe via a play button as well or an underline? i dont know?"* (Sam,
+2026-08-23) · The idle control is a SMALL LIME PILL — the app's own
+primary-chip look (`colors.button.primary` on `primaryText`, the "Yes, log it"
+family) — with a play triangle before the same signed words, font unchanged.
+He floated play glyph or underline and left the treatment open; the pill is
+the app's existing button language rather than a new one, and the play glyph
+is his first suggestion honoured. Running/paused states keep their quiet text
+form — his note was about Start only.

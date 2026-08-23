@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { DATE_LINE_HEIGHT } from './SessionDateLine';
 import { SESSION_STOPWATCH_COPY } from '../rules/sessionStopwatchCopy';
@@ -43,14 +44,21 @@ export function SessionStopwatchControl({ workoutId, dateISO }: {
   }, [running]);
 
   if (!mine) {
+    // R-132a (Sam: *"needs to be more obvious a button - maybe via a play
+    // button"*): the app's own primary-chip look — lime pill, dark text — with
+    // a play triangle. Same signed words, same 13/500 font.
     return (
       <Pressable
         onPress={() => start({ workoutId, dateISO, nowISO: new Date().toISOString() })}
         accessibilityRole="button"
         testID="session-stopwatch-start"
         hitSlop={8}
+        style={styles.startPill}
       >
-        <Text style={[styles.text, styles.action]}>
+        <Svg width={10} height={10} viewBox="0 0 24 24" fill={colors.button.primaryText}>
+          <Path d="M7 4l13 8-13 8z" />
+        </Svg>
+        <Text style={[styles.text, styles.startPillText]}>
           {SESSION_STOPWATCH_COPY.start}
         </Text>
       </Pressable>
@@ -102,4 +110,15 @@ const styles = StyleSheet.create({
   },
   elapsed: { color: colors.text.primary },
   action: { color: colors.text.accent },
+  // R-132a: the primary-chip shape the app's other small buttons wear.
+  startPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.button.primary,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+  },
+  startPillText: { color: colors.button.primaryText },
 });
