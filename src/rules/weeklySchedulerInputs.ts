@@ -18,6 +18,7 @@ import type {
 import type { ContractPhase, OffseasonBlock } from './weeklyProgrammingContract';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
+import { storedGameAnchor } from './gameAnchor';
 import type { FixtureConditionedAvailability } from './fixtureConditionedAvailability';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
@@ -224,7 +225,18 @@ export function weeklySchedulerInputsFrom(args: {
     ? args.targetWeekAvailability.proposedFixtures.map((fixture) =>
         new Date(`${fixture.date}T12:00:00`).getDay())
     : [args.targetFixtureDay === undefined
-        ? dayNumber(profile.gameDay)
+        // THE ONE OWNER, not the legacy field. This read was
+        // `dayNumber(profile.gameDay)`, which ignored `usualGameDay` — so an
+        // athlete whose only anchor is the usual game day (the phase-shift
+        // flow's field, and `storedGameAnchor`'s PREFERRED field) got a BYE
+        // week from this path while `onboardingToCoachingInputs` said
+        // `hasGame: true` for the same profile. Two owners for "what day is
+        // the game on" is the exact disease `rules/gameAnchor.ts` was ruled
+        // to end (Sam, 2026-08-12). Measured: every in-season stage-b
+        // scenario built `in_season_bye_build` where the pre-demolition
+        // planner built `in_season_game_week`. An explicit `null` still means
+        // "the athlete removed the game" and still wins over the profile.
+        ? dayNumber(storedGameAnchor(profile))
         : dayNumber(args.targetFixtureDay)]
       .filter((day): day is number => day !== null);
   const explicitTargetWeek = args.targetWeekAvailability !== undefined
@@ -234,7 +246,8 @@ export function weeklySchedulerInputsFrom(args: {
     : args.targetFixtureDay !== undefined && args.targetFixtureDay !== null
       ? [dateForDayNumber(args.weekStartISO, dayNumber(args.targetFixtureDay)!)]
       : [];
-  const usualGameDay = dayNumber(profile.gameDay);
+  // Same owner as the fallback above — this read also skipped `usualGameDay`.
+  const usualGameDay = dayNumber(storedGameAnchor(profile));
   const usualDateThisWeek = usualGameDay === null
     ? null : dateForDayNumber(args.weekStartISO, usualGameDay);
   const fixtureProximityDates = explicitTargetWeek
