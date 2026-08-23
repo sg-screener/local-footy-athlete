@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   NativeScrollEvent,
@@ -15,11 +16,6 @@ import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
-import { coachAnswer } from '../../rules/coachAnswer';
-import { readCoachMessage } from '../../rules/coachRead';
-import { coachProposal } from '../../rules/coachProposal';
-import type { CoachChangeCard, CoachChangeCardChoice } from '../../rules/coachChangeCard';
-import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChangeOutcome';
 import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
@@ -35,11 +31,6 @@ import { CoachDashboard } from './SnapshotDashboard';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
-import { todayISOLocal } from '../../utils/appDate';
-import { executeProgramControlActionDurably } from '../../utils/programControlActions';
-import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
-import type { ProgramControlAction } from '../../types/programControlAction';
-import type { VisibleWeek } from '../../rules/visibleProjection';
 import type { TabParamList } from '../../navigation/AppNavigator';
 import { SeasonPhaseShiftSheet } from '../../components/SeasonPhaseShiftSheet';
 import { useCoachWeeklyCommitment } from './useCoachWeeklyCommitment';
@@ -53,6 +44,7 @@ import {
   commitmentPreviewUnavailableSentence,
 } from '../../rules/projectionCopy';
 import { useLiveAthleteSnapshot } from './useLiveAthleteSnapshot';
+import { askCoachReadOnly } from '../../services/api/coachChat';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -102,55 +94,12 @@ type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
  * keypad and rendering both put the toolbar on top of the CTA (simulator pass,
  * 2026-07-24). Here the send control IS the exit.
  *
- * ## SLICE 2 — IT ANSWERS, AND THE SCREEN STILL DECIDES NOTHING
+ * ## THE REBUILT CONVERSATION IS READ-ONLY TERRA
  *
- * The turn is `lexicalQuestionReader.read(...)` then `coachAnswer(...)`, both
- * pure, both in `rules/`. The screen does not classify, does not resolve a day,
- * does not choose a sentence and has no branch for "the coach had no answer" —
- * the answering rule owns that case, because a screen with its own fallback
- * wording is a second voice one edit away from disagreeing with the first.
- *
- * Still zero mutation paths: the answering layer imports the truth gate and the
- * projection and nothing else, and every reply it produces is validated against
- * a communication with NO applied changes (see `rules/coachAnswer`).
- *
- * ## SLICE 3 — IT CHANGES THINGS, AND THE CARD IS WHY IT IS ALLOWED TO
- *
- * The screen now reaches ONE writer: `executeProgramControlActionDurably`, the
- * athlete's own tap door. That is the whole of slice 3's mutation surface and
- * the import ban is re-aimed rather than lifted — every other writer family is
- * still forbidden, and the one door is asserted by NAME, so a second door
- * arriving is a red cell rather than a diff nobody reads.
- *
- * The chain, and every step of it decides something the screen does not:
- *
- *   message → readCoachMessage()  → question | change request
- *           → coachProposal()     → ProgramControlAction | ask | refusal
- *           → changeCardFor()     → the card, rendered FROM the action
- *           → the athlete's YES
- *           → executeProgramControlActionDurably()   (the door; the ledger
- *             records inside it, and undo covers it because it already covers
- *             the door)
- *           → coachChangeOutcome() → what the coach may claim, gated against
- *             the visible week before and after
- *
- * The screen owns none of those words. It owns two pieces of mechanics: which
- * card is on screen, and the fact that a change is settling.
- *
- * ## THE CARD LIVES IN THE FOOTER, AND THAT IS L-C3 RATHER THAN LAYOUT TASTE
- *
- * Sam's ruling 3: *"I want all the buttons working properly, no hidden enter
- * button behind the keyboard pop ups."* The seat's S3 order made it blocking:
- * *"the card's confirm buttons with keyboard up is the exact Nike case Sam
- * named."*
- *
- * A card rendered as the last bubble in the conversation is a card that can be
- * scrolled — and a keyboard appearing under it is a keyboard covering the
- * athlete's yes. So the card is part of the `KeyboardSafeArea` FOOTER, directly
- * above the composer, riding the keypad on the UI thread exactly as the
- * composer does. **It cannot be occluded because it is positioned against the
- * keyboard rather than laid out above it**, and its buttons are outside the
- * ScrollView, so no tap of theirs is ever spent dismissing a keyboard first.
+ * The screen hands one live Snapshot plus bounded recent turns to the one
+ * `askCoachReadOnly` door. The server owns the model, canonical retrieval,
+ * instructions and empty-action schema. This screen cannot reach a program
+ * mutation path, and a model answer cannot smuggle one back in.
  *
  * ## R-105 — THE WEEKLY-REDUCTION CONVERSATION LIVES HERE NOW
  *
@@ -158,13 +107,9 @@ type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
  * popping up on the main page - it should show up in the coaches chat with a
  * notification"*.
  *
- * ⚠ **THIS ADDS A SECOND DOOR TO THIS SCREEN, AND IT IS NAMED RATHER THAN
- * SLIPPED IN.** Slice 3's import ban was re-aimed, not lifted: the screen may
- * reach `executeProgramControlActionDurably` and now also
- * `confirmWeeklyCommitment` / `declineWeeklyCommitment`, both reached ONLY
- * through `useCoachWeeklyCommitment`. Every other writer family is still
- * forbidden and `coachTabSlice1Tests` asserts the two doors by NAME, so a third
- * arriving is a red cell rather than a diff nobody reads.
+ * These system-raised controls still reach `confirmWeeklyCommitment` /
+ * `declineWeeklyCommitment` through `useCoachWeeklyCommitment`. They are not an
+ * AI action and the model cannot create or confirm one.
  *
  * Both of those functions live in `store/weeklyCommitmentAnswer.ts` and rebuild
  * through `commitProfileProgramTransaction` — the canonical accepted-program
@@ -208,44 +153,15 @@ function SendIcon({ color }: { color: string }) {
   );
 }
 
-/**
- * A CHANGE THE ATHLETE HAS SAID YES TO, WAITING FOR THE WEEK TO COME BACK.
- *
- * `before` is the visible week AT THE MOMENT OF THE YES. It is captured rather
- * than re-read, because the whole claim the coach is about to make is a
- * comparison, and a comparison whose "before" is fetched after the change is
- * not a comparison at all.
- */
-interface SettlingChange {
-  readonly action: ProgramControlAction;
-  readonly before: VisibleWeek;
-  readonly door: { readonly ok: boolean; readonly outcome?: 'applied' | 'no_change' | 'refused'; readonly message?: string };
-}
-
 export default function CoachTabScreen({ route, navigation }: CoachTabScreenProps) {
-  // BOTH HALVES OF ONE PROJECTION, AND THE SECOND ONE IS NOT OPTIONAL.
-  //
-  // MEASURED, `npm run tape:coach-move-durability`, 2026-08-10: this destructured
-  // `visibleWeek` alone and handed the door `{ todayISO }`. Every plan-change
-  // action reaches `executePlanChangeAction`, whose FIRST line is
-  // `if (!context.visibleWeek || !context.todayISO) return fallbackResult(...)`
-  // — so the coach's move never ran. The athlete's identical move through
-  // `PlanChangeSheet` landed and recorded a `plan_change` on the same world in
-  // the same run; the coach's returned `ok: false` and changed nothing.
-  //
-  // `weekDays` is not a second week and not a second derivation: `projectWeekFor`
-  // computes it and then computes `visibleWeek` as `project()` OVER IT, in one
-  // call, and this is the SAME argument `PlanChangeSheet` passes at the same
-  // door. The screen is handing the door the week the athlete is looking at,
-  // which is exactly why the door asks the caller instead of deriving its own —
-  // a door that re-derived would be free to act on a week nobody is reading.
+  // BOTH HALVES COME FROM ONE PROJECTION. `weekDays` feeds the existing modifier
+  // selector and `visibleWeek` is the athlete-facing projection carried by the
+  // Snapshot; neither the dashboard nor Terra derives another week.
   const { weekDays, visibleWeek } = useResolvedWeek();
-  const todayISO = todayISOLocal();
   // RULING 4's LIST, THROUGH THE ONE SELECTOR. `useActiveModifiers` is the same
   // derivation `useHomeScreen` uses; the week it is handed is the week this
-  // screen is already looking at, for the reason the comment above gives about
-  // `executePlanChangeAction` — a surface that re-derived its own week would be
-  // free to describe a week nobody is reading.
+  // screen is already looking at, so My Status and the Snapshot cannot describe
+  // different weeks.
   const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers({
     visibleWeekDays: weekDays,
   });
@@ -286,10 +202,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
-  const [pending, setPending] = useState<
-    { readonly action: ProgramControlAction; readonly card: CoachChangeCard } | null
-  >(null);
-  const [settling, setSettling] = useState<SettlingChange | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   // ── THE CONVERSATION FOLLOWS THE ATHLETE, NOT THE OTHER WAY ROUND ──────────
   //
@@ -299,7 +212,10 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // A REF AND NOT STATE, because this is read inside a scroll handler that runs
   // on every frame and must not re-render the conversation to record where it
   // is. `true` initially: an empty conversation is at its bottom.
-  const atBottomRef = useRef(true);
+  // Start at the dashboard. Sending a message explicitly hands ownership to
+  // the conversation bottom; this avoids a populated dashboard auto-scrolling
+  // itself away on first layout while still making every new answer visible.
+  const atBottomRef = useRef(false);
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     // A TOLERANCE, because an exact equality is never true on a real device:
@@ -324,7 +240,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   }, [pinToBottom]);
 
   const trimmed = draft.trim();
-  const canSend = trimmed.length > 0;
+  const canSend = trimmed.length > 0 && !isSending;
 
   /** One coach sentence appended to the conversation. No wording happens here. */
   const say = useCallback((text: string) => {
@@ -334,78 +250,37 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     ]);
   }, []);
 
-  const send = useCallback((message: string) => {
-    if (message.length === 0) return;
+  const send = useCallback(async (message: string) => {
+    if (message.length === 0 || isSending) return;
+    const recentTurns = turns.map((turn) => ({
+      speaker: turn.speaker,
+      text: turn.text,
+    }));
+    atBottomRef.current = true;
     setTurns((previous) => [
       ...previous,
       { id: `athlete-${previous.length}`, speaker: 'athlete', text: message },
     ]);
     setDraft('');
-
-    // THE WHOLE TURN, AND IT IS PURE CALLS ALL THE WAY DOWN. One read, then
-    // either the answering rule or the proposal rule. The screen has no branch
-    // that chooses words — every leaf below returns the sentence it owns.
-    const read = readCoachMessage({ message, week: snapshot.visibleWeek, todayISO });
-
-    if (read.intent === 'question') {
-      say(coachAnswer({
-        question: read.question,
-        week: snapshot.visibleWeek,
-        todayISO,
-      }).text);
-      return;
+    setIsSending(true);
+    try {
+      const answer = await askCoachReadOnly({
+        message,
+        snapshot,
+        conversationContext: {
+          activeProgramTarget: null,
+          recentTurns,
+        },
+      });
+      say(answer);
+    } catch {
+      say(COACH_TAB_COPY.noAnswerYet);
+    } finally {
+      setIsSending(false);
     }
+  }, [isSending, turns, snapshot, say]);
 
-    // WHAT THE ATHLETE'S OWN PICKER OFFERS FOR THAT DAY, FROM THAT PICKER'S OWN
-    // CALL (L-C4). The screen already holds `weekDays` for the door, so this is
-    // the same argument reaching the same owner — not a second derivation. The
-    // rule cannot make this call itself and stay pure, so the screen makes it
-    // and hands over the answer whole, deciding nothing about it.
-    const moveOptions = read.request.from?.dateISO
-      ? listPlanChangeOptionsForDay({
-        visibleWeek: weekDays,
-        date: read.request.from.dateISO,
-        todayISO,
-      }).move
-      : null;
-
-    // NO CARD IS NO CHANGE, AND THE RULE OWNS THAT TOO. `coachProposal` returns
-    // an action and its card together or neither, so there is no state here in
-    // which the screen holds something executable that it cannot show.
-    const proposal = coachProposal({
-      request: read.request,
-      week: snapshot.visibleWeek,
-      moveOptions,
-    });
-    if (proposal.verdict !== 'proposed' || !proposal.action || !proposal.card) {
-      say(proposal.text);
-      return;
-    }
-    setPending({ action: proposal.action, card: proposal.card });
-  }, [snapshot, weekDays, todayISO, say]);
-
-  const handleSend = useCallback(() => send(draft.trim()), [draft, send]);
-
-  const handleConfirm = useCallback(async () => {
-    if (!pending) return;
-    const { action } = pending;
-    const before = visibleWeek;
-    setPending(null);
-    const result = await executeProgramControlActionDurably(
-      action,
-      { visibleWeek: weekDays, todayISO },
-    );
-    setSettling({
-      action,
-      before,
-      door: { ok: result.ok, outcome: result.outcome, message: result.message },
-    });
-  }, [pending, weekDays, visibleWeek, todayISO]);
-
-  const handleCancel = useCallback(() => {
-    setPending(null);
-    say(coachChangeDeclined());
-  }, [say]);
+  const handleSend = useCallback(() => { void send(draft.trim()); }, [draft, send]);
 
   /**
    * THE ATHLETE SAID YES TO A NEW WEEKLY COMMITMENT.
@@ -436,24 +311,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     say(commitmentDeclinedSentence());
   }, [weeklyCommitment, say]);
 
-  // THE COACH SPEAKS AFTER THE WEEK COMES BACK, NEVER BEFORE.
-  //
-  // `setSettling` is what schedules the render that re-reads the store, so by
-  // the time this effect runs `visibleWeek` IS the week the athlete is now
-  // looking at. Claiming the change from inside `handleConfirm` would mean
-  // claiming it against the week captured before the door ran — the door's
-  // account of itself wearing a diff's clothes.
-  useEffect(() => {
-    if (!settling) return;
-    say(coachChangeOutcome({
-      action: settling.action,
-      before: settling.before,
-      after: visibleWeek,
-      door: settling.door,
-    }).text);
-    setSettling(null);
-  }, [settling, visibleWeek, say]);
-
   // TWO OPENING BUBBLES, AND THE ORDER IS SAM'S RULING (2026-08-09): his own
   // greeting introduces the coach, then the week's shape. Two bubbles rather
   // than one sentence because they answer different questions — WHO is this,
@@ -462,28 +319,13 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // would imply it depends on something.
   const composer = (
     <View style={styles.footer}>
-      {/* ⚠ AT MOST ONE CARD, AND THE CHANGE THE ATHLETE JUST ASKED FOR WINS.
-          Two cards stacked in a keyboard-safe footer is two confirm buttons
-          competing for one thumb. The commitment conversation is not going
-          anywhere — it is derived, so it returns the moment the pending change
-          is answered. */}
-      {!pending && weeklyCommitment.conversation ? (
+      {/* The system-raised commitment card remains above the composer. Terra
+          cannot create it, accept it, or return any other action card. */}
+      {weeklyCommitment.conversation ? (
         <CommitmentCard
           conversation={weeklyCommitment.conversation}
           onAccept={handleCommitmentAccept}
           onDecline={handleCommitmentDecline}
-        />
-      ) : null}
-      {pending ? (
-        <ChangeCard
-          selectedChoiceId={pending.action.type === 'move_session'
-            ? (pending.action.payload.scope ?? 'whole_day')
-            : null}
-          onSelectChoice={(choice) => setPending((current) =>
-            current ? { ...current, action: choice.action } : current)}
-          card={pending.card}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
         />
       ) : null}
       <View style={styles.composer}>
@@ -537,7 +379,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
             onPress={() => navigation.setParams({ status: 'open' })}
           />
         </View>
-        <CoachDashboard snapshot={snapshot} />
         <ScrollView
           ref={scrollRef}
           style={styles.conversation}
@@ -558,6 +399,10 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           testID="coach-tab-conversation"
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
+          {/* One vertical owner for both the live picture and its conversation.
+              A fixed dashboard above this list can consume the entire body on
+              a populated athlete and leave a zero-height chat. */}
+          <CoachDashboard snapshot={snapshot} />
           <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
           {/* ── R-105: THE COACH RAISES IT, IN THE CONVERSATION ──
               The notification line, then Sam's signed question, then — for the
@@ -603,6 +448,14 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
               testID={`coach-tab-turn-${turn.id}`}
             />
           ))}
+          {isSending ? (
+            <View
+              style={[styles.bubble, styles.bubbleCoach, styles.thinking]}
+              testID="coach-tab-thinking"
+            >
+              <ActivityIndicator color={colors.accent.lime} />
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardSafeArea>
       {/* THE STATUS SCREEN, OVER THE TAB RATHER THAN BESIDE IT.
@@ -701,93 +554,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
  * the fix `modifiers` itself got when that hook was written. */
 
 
-/**
- * THE CHANGE CARD — L-C2 ON THE GLASS.
- *
- * It renders the card object and nothing else: a title, its labelled fields in
- * the order the rule put them in, and two controls. There is no `if` in here
- * about what kind of change it is, no formatting of a date, and no sentence.
- * **Every string on this component came out of `changeCardFor`**, which built
- * them from the action the door is about to be handed — so what the athlete
- * reads and what executes are two renderings of one value.
- *
- * Both controls are 44 high (L-C3, no dead tap zones) and sit in the footer, so
- * neither can be behind the keypad at any keyboard state.
- */
-function ChangeCard({
-  card,
-  selectedChoiceId,
-  onSelectChoice,
-  onConfirm,
-  onCancel,
-}: {
-  card: CoachChangeCard;
-  selectedChoiceId: string | null;
-  onSelectChoice: (choice: CoachChangeCardChoice) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <View style={styles.card} testID="coach-tab-change-card">
-      <Text variant="h3">{card.title}</Text>
-      {card.fields.map((field) => (
-        <View key={field.label} style={styles.cardRow}>
-          <Text variant="caption" style={styles.cardLabel}>{field.label}</Text>
-          <Text variant="body" style={styles.cardValue}>{field.value}</Text>
-        </View>
-      ))}
-      {/*
-        THE WAYS THROUGH THIS DAY, IN THE PICKER'S OWN WORDS (L-C4).
-        Rendered only when the day has more than one — `changeCardFor` returns
-        an empty list otherwise, so "one row" is unrepresentable here and the
-        card cannot show a chooser with nothing to choose. Every string is the
-        owner's; this component composes none of them.
-        44 high like both footer controls, for the same L-C3 reason.
-      */}
-      {card.choices.map((choice) => (
-        <Pressable
-          key={choice.id}
-          style={[
-            styles.cardChoice,
-            choice.id === selectedChoiceId ? styles.cardChoiceSelected : null,
-          ]}
-          onPress={() => onSelectChoice(choice)}
-          hitSlop={spacing.sm}
-          testID={`coach-tab-change-choice-${choice.id}`}
-          accessibilityRole="radio"
-          accessibilityState={{ selected: choice.id === selectedChoiceId }}
-          accessibilityLabel={choice.label}
-        >
-          <Text variant="body">{choice.label}</Text>
-          <Text variant="caption" style={styles.cardChoiceSub}>{choice.sub}</Text>
-        </Pressable>
-      ))}
-      <View style={styles.cardActions}>
-        <Pressable
-          style={[styles.cardButton, styles.cardCancel]}
-          onPress={onCancel}
-          hitSlop={spacing.sm}
-          testID="coach-tab-change-cancel"
-          accessibilityRole="button"
-          accessibilityLabel={card.cancelLabel}
-        >
-          <Text variant="body">{card.cancelLabel}</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.cardButton, styles.cardConfirm]}
-          onPress={onConfirm}
-          hitSlop={spacing.sm}
-          testID="coach-tab-change-confirm"
-          accessibilityRole="button"
-          accessibilityLabel={card.confirmLabel}
-        >
-          <Text variant="body" style={styles.cardConfirmText}>{card.confirmLabel}</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 function Bubble({
   speaker,
   text,
@@ -860,90 +626,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.light,
     borderColor: colors.surface.tertiary,
   },
-  // THE FOOTER IS THE WHOLE KEYBOARD-RIDING STRIP: the card when there is one,
-  // then the composer. Both are positioned against the keypad rather than laid
-  // out above it, which is what makes L-C3's "no control behind the keyboard"
-  // structural instead of a thing to check.
-  footer: {
-    backgroundColor: colors.surface.primary,
-  },
-  card: {
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    gap: spacingValues.smmd,
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    borderColor: colors.accent.lime,
-    backgroundColor: colors.surface.secondary,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  cardLabel: {
-    width: 48,
-    color: colors.text.tertiary,
-  },
-  cardValue: {
-    flex: 1,
-  },
-  cardChoice: {
+  thinking: {
+    minWidth: 52,
     minHeight: 44,
-    justifyContent: 'center',
-    paddingVertical: spacingValues.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
-    backgroundColor: colors.surface.primary,
-  },
-  cardChoiceSelected: {
-    borderColor: colors.text.primary,
-  },
-  cardChoiceSub: {
-    color: colors.text.tertiary,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  cardButton: {
-    flex: 1,
-    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
   },
-  cardCancel: {
+  // The composer stays inside the keyboard-riding footer.
+  footer: {
     backgroundColor: colors.surface.primary,
-  },
-  cardConfirm: {
-    backgroundColor: colors.accent.lime,
-    borderColor: colors.accent.lime,
-  },
-  /**
-   * TEXT ON LIME IS NEAR-BLACK, AND IT IS THE APP'S OWN TOKEN.
-   *
-   * Sam, 2026-08-23, looking at this card on his phone: *"i don't know what this
-   * says because i can't fucking read it - why are these buttons different style
-   * to normal?"* — white on `#C8FF00`.
-   *
-   * THE ANSWER TO HIS SECOND QUESTION IS THE CAUSE OF THE FIRST. These are
-   * hand-rolled `Pressable`s, not the shared `Button`, so they never inherited
-   * its `getTextColor()` — which returns `colors.button.primaryText` (`#0C0C0C`)
-   * for exactly this background. A bare `<Text variant="body">` defaults to
-   * `colors.text.primary` (`#FFFFFF`), and on lime that is unreadable.
-   *
-   * The SAME token is used here rather than a new near-black, so these buttons
-   * now read identically to every primary button in the app — which is what
-   * "normal" means in his question.
-   */
-  cardConfirmText: {
-    color: colors.button.primaryText,
   },
   composer: {
     flexDirection: 'row',

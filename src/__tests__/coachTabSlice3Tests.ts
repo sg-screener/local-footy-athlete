@@ -1,5 +1,5 @@
 /**
- * COACH REBUILD, SLICE 3 — IT CHANGES THINGS, AND THE CARD IS THE ONLY WAY IN.
+ * COACH REBUILD, SLICE 3 — RETIRED ACTION RULES PLUS THE READ-ONLY CUTOVER.
  *
  * docs/COACH_REBUILD_KICKOFF_2026-08-09.md, S3. Six claims, each with its own
  * way of going wrong:
@@ -26,11 +26,10 @@
  *   - **THE CONFIRM BUTTON DEGRADES BEHIND THE KEYBOARD.** [6] — L-C3, which
  *     the seat's order made BLOCKING for this boundary.
  *
- * WHAT THIS SUITE CANNOT DO, said here rather than in the report: no screen is
- * mounted, no door is executed, no athlete is walked. Sections [1]-[4] execute
- * the pure rules over hand-built weeks; [5] and [6] read SOURCE. **Whether the
- * confirm button is reachable with the keyboard up is a device and Sam's eye,
- * and nothing here claims it.**
+ * R-138 disconnected the pure action/card rules exercised in [1]-[5] from the
+ * live screen. They remain regression coverage for existing manual program
+ * controls; [6]-[9] prove the conversational screen has no route back to them.
+ * No screen is mounted and no model request is made here.
  *
  * Run: npm run test:coach-tab-slice3
  */
@@ -668,7 +667,7 @@ console.log('\n[4] THE MOUTH GATE — the coach may claim only what the week sho
 
 // ─── [5] THE COACH IS NOT A WRITER — IT PRODUCES A DOOR ACTION ───────────────
 
-console.log('\n[5] ONE OUTPUT — a ProgramControlAction, on the allow-list');
+console.log('\n[5] RETIRED MODEL-ACTION RULES REMAIN PURE AND DISCONNECTED');
 {
   const proposed = proposeIt('can you move friday to sunday?')!;
   const action = proposed.action!;
@@ -783,77 +782,39 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
     `${footerRegion.length} chars`,
   );
   ok(
-    'the change card is INSIDE the keyboard-riding footer, not in the scroll',
-    /<ChangeCard/.test(footerRegion),
-    'a card rendered as the last bubble can be scrolled, and a keyboard '
-      + 'appearing under it covers the athlete\'s yes',
+    'the retired AI change card is absent from the keyboard-riding footer',
+    !/<ChangeCard/.test(footerRegion),
+    'R-138 makes the model conversation read-only',
   );
   ok(
     'and the footer is what KeyboardSafeArea rides the keypad with',
     /<KeyboardSafeArea[^>]*footer=\{composer\}/s.test(screenCode),
   );
   ok(
-    'the card is NOT also rendered in the conversation',
-    (screenCode.match(/<ChangeCard/g) ?? []).length === 1,
-    'two cards is two yeses, and only one of them is reachable',
+    'the retired AI change card is absent from the whole screen',
+    (screenCode.match(/<ChangeCard/g) ?? []).length === 0,
+    'no model answer can mount a confirmation affordance',
   );
-  // NO DEAD TAP ZONES — the day-first invisible-witness lesson, applied to the
-  // two controls that execute a change.
-  // ANCHORED ON A LINE THAT IS EXACTLY `}`, NOT ON THE FIRST `}` AT COLUMN 0.
-  // The component's own destructured parameter list closes with `}: {` at
-  // column 0, so `\n\}` stopped 56 characters in and returned a slice that read
-  // as a region and contained none of the claims below. The prove-the-region
-  // cell reddened first and four claims reddened behind it — the anchoring law
-  // working, in the gate that cites it.
-  const cardComponent = /function ChangeCard\(\{[\s\S]*?\n\}\n/.exec(screenCode)?.[0] ?? '';
-  ok('the card component was located', cardComponent.length > 400
-    && /coach-tab-change-confirm/.test(cardComponent), `${cardComponent.length} chars`);
-  for (const control of ['coach-tab-change-confirm', 'coach-tab-change-cancel']) {
-    ok(`${control} exists and carries a hit slop`,
-      new RegExp(`testID="${control}"`).test(cardComponent));
-  }
-  ok('both card controls are 44 high',
-    /height: 44,/.test(screenCode)
-      && (screenCode.match(/cardButton: \{[\s\S]*?height: 44,/) ?? []).length === 1,
-    'the smallest control iOS considers reliably tappable');
-  ok('both carry an accessibility label taken from the card',
-    (cardComponent.match(/accessibilityLabel=\{card\.(confirm|cancel)Label\}/g) ?? []).length === 2,
-    'a screen-reader name composed here would be a third rendering of the change');
-  ok('and both are buttons to the accessibility tree',
-    (cardComponent.match(/accessibilityRole="button"/g) ?? []).length === 2);
+  ok('the retired change-card controls cannot survive without the component',
+    !/coach-tab-change-(confirm|cancel)|cardButton/.test(screenCode));
+  ok('the live conversation exposes exactly one model pending indicator',
+    (screenCode.match(/testID="coach-tab-thinking"/g) ?? []).length === 1
+      && /ActivityIndicator/.test(screenCode));
 
   // THE CARD BLOCKS NOTHING. The composer stays live while a card is up, so an
   // athlete who wants to type instead of tapping is never trapped.
   ok(
-    'the composer is still mounted while a card is showing',
-    // RE-ANCHORED, AND THE CHARACTER BOUND IS GONE (seat, 2026-08-10).
-    //
-    // This cell used to read `{pending ? ([\s\S]{0,200}?) : null}` followed by
-    // the composer — a WINDOW over the JSX region. L-C4's chooser added two
-    // props, the region grew past 200, and the cell reddened over a property
-    // that had not changed. Widening it to 600 was accepted once and is the
-    // wrong shape: **an anchor on the thing every slice edits is an anchor
-    // every slice breaks** (L12), and a window that must grow whenever a prop
-    // is added will be widened again by a slice that is hiding a real
-    // regression.
-    //
-    // The claim is not "the card's JSX is under N characters". It is: the
-    // card's conditional CLOSES, and the composer is the next thing mounted.
-    // `\) : null\}` is the smallest declaration that carries "the card ends
-    // here", and `\s*<View style={styles.composer}>` is the smallest that
-    // carries "and the composer follows". Nothing between them, no bound on
-    // what came before, and adding a hundred props changes neither.
-    /\) : null\}\s*<View style=\{styles\.composer\}>/.test(screenCode)
-      && /\{pending \? \(/.test(screenCode),
-    'a card that replaced the composer would be a modal without a dismiss',
+    'the composer remains mounted while the model answer is pending',
+    /const composer = \([\s\S]*?<View style=\{styles\.composer\}>/.test(screenCode)
+      && !/isSending\s*\?\s*\([\s\S]*?<View style=\{styles\.composer\}>/.test(footerRegion),
+    'pending network work may disable send but cannot replace the input',
   );
 
   // THE SCREEN STILL DECIDES NOTHING ABOUT WORDS.
   ok(
-    'the card component composes no string of its own',
-    !/>\s*[A-Za-z][A-Za-z ,'’.]{4,}\s*</.test(cardComponent)
-      && (cardComponent.match(/\{card\./g) ?? []).length >= 5,
-    'every string on the card came from changeCardFor',
+    'the pending indicator composes no status sentence of its own',
+    !/Coach is thinking|Thinking|Loading/.test(screenCode),
+    'the activity indicator is visual state, not invented athlete-facing copy',
   );
 
   // ── THE FOUR CASES SAM'S DEVICE FOUND, AS CELLS ────────────────────────────
@@ -922,7 +883,8 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
   );
   ok(
     'and it is a ref, so recording the position re-renders nothing',
-    /const atBottomRef = useRef\(true\);/.test(screenCode)
+    /const atBottomRef = useRef\(false\);/.test(screenCode)
+      && /atBottomRef\.current = true;[\s\S]{0,80}?setTurns/.test(screenCode)
       && /scrollEventThrottle=\{16\}/.test(screenCode),
   );
 
@@ -960,7 +922,7 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
 
 // ─── [7] THE DOOR IS HANDED THE WEEK — THE TAPE'S FINDING, AS CELLS ──────────
 
-console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND');
+console.log('\n[7] THE MODEL GETS CONTEXT, NEVER A PROGRAM DOOR');
 {
   // MEASURED FIRST, `npm run tape:coach-move-durability`, 2026-08-10. Slice 3
   // shipped with `handleConfirm` calling the door as
@@ -984,29 +946,25 @@ console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND')
   // returns something a regex passes over. The import line mentions the same
   // symbol, so the anchor is the AWAITED call and the region must carry its own
   // closing line before a word of it is read.
-  const callAnchor = screenCode.indexOf('await executeProgramControlActionDurably(');
+  const callAnchor = screenCode.indexOf('await askCoachReadOnly(');
   const callEnd = callAnchor >= 0 ? screenCode.indexOf(');', callAnchor) : -1;
-  const doorCall = callAnchor >= 0 && callEnd > callAnchor
+  const modelCall = callAnchor >= 0 && callEnd > callAnchor
     ? screenCode.slice(callAnchor, callEnd + 2)
     : '';
   ok(
-    'the screen\'s door call was located and holds its own closing line',
-    doorCall.length > 40 && doorCall.endsWith(');'),
-    `${doorCall.length} chars: ${JSON.stringify(doorCall.slice(0, 120))}`,
+    'the screen\'s read-only model call was located and holds its own closing line',
+    modelCall.length > 40 && modelCall.endsWith(');'),
+    `${modelCall.length} chars: ${JSON.stringify(modelCall.slice(0, 120))}`,
   );
   ok(
-    'and it hands the door a visibleWeek — WITHOUT IT THE MOVE DOES NOT RUN',
-    /visibleWeek:/.test(doorCall),
-    'executePlanChangeAction returns fallbackResult("Cannot safely apply this '
-      + 'day/session action without the current visible week.") when the context '
-      + 'has none, and the coach then reports a change it never made an attempt at',
+    'the model call receives the one live Snapshot',
+    /snapshot,/.test(modelCall),
+    'dashboard and chat must not build separate accounts of the athlete',
   );
   ok(
-    'and what it hands over is weekDays, the door\'s own representation',
-    /visibleWeek:\s*weekDays/.test(doorCall),
-    'the door takes ResolvedDay[]; `visibleWeek` on this screen is the PROJECTION '
-      + 'of that array. Passing the projection would be a type error today and a '
-      + 'second representation in the door\'s input if it ever stopped being one',
+    'ambiguous references are explicitly unresolved and recent turns are supplied',
+    /activeProgramTarget:\s*null/.test(modelCall) && /recentTurns,/.test(modelCall),
+    'the model may ask a question; it may not invent an earlier session target',
   );
   ok(
     'and both halves come out of ONE useResolvedWeek call',
@@ -1040,12 +998,11 @@ console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND')
     JSON.stringify(sheetCall.slice(0, 140)),
   );
   ok(
-    'and the coach passes the SAME context the sheet does',
-    /visibleWeek:\s*weekDays/.test(sheetCall) && /visibleWeek:\s*weekDays/.test(doorCall)
-      && /todayISO/.test(sheetCall) && /todayISO/.test(doorCall),
-    '"the coach goes through the same door as your own tap" is a claim about the '
-      + 'ARGUMENTS as much as about the function — the same door given different '
-      + 'context is two doors, which is what the tape measured',
+    'the athlete tap door remains in its own sheet and is absent from Coach chat',
+    /visibleWeek:\s*weekDays/.test(sheetCall)
+      && !/executeProgramControlActionDurably/.test(modelCall)
+      && !/programControlActions/.test(screenCode),
+    'existing manual controls remain available without becoming model tools',
   );
 
   // ── AND THE DOOR'S WORDS ARE BORROWED ONLY WHEN IT ADDRESSED THE ATHLETE ──
@@ -1102,13 +1059,10 @@ console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND')
 
   // ── AND THE DEPTH IS NAMED, because [7] is source and behaviour, not a run ──
   ok(
-    'the RUN that found this is a tape, and it is not in the chain',
-    /tape:coach-move-durability/.test(
-      read('..', 'package.json'),
-    ),
-    'npm run tape:coach-move-durability — it asserts nothing and prints a '
-      + 'measurement, so it is a tape and not a gate. These cells are what the '
-      + 'chain sees; the tape is what a person reads',
+    'the production read-only integration guard is in the chain',
+    /test:coach-chat-integration/.test(read('..', 'package.json'))
+      && /test:coach-snapshot/.test(read('..', 'package.json')),
+    'the integration guard checks the client, server schema and empty action list',
   );
 }
 
@@ -1240,13 +1194,11 @@ console.log('\n[8] L-C4 — the coach\'s ways through a day are the picker\'s ow
       + 'saying different things about one day',
   );
 
-  // ── AND THE OMISSION CANNOT COME BACK SILENTLY ──
+  // ── AND THE RETIRED MODEL ACTION PATH CANNOT COME BACK SILENTLY ──
   ok(
-    'the SCREEN asks the owner, with the week it already holds',
-    /listPlanChangeOptionsForDay\(\{[\s\S]{0,200}?visibleWeek: weekDays/.test(screenCode)
-      && /coachProposal\(\{[\s\S]{0,120}?moveOptions/.test(screenCode),
-    'moveOptions is optional so every existing caller keeps working — which is '
-      + 'exactly why the screen\'s own call site needs a cell of its own',
+    'the SCREEN asks for no move options and builds no model proposal',
+    !/listPlanChangeOptionsForDay|coachProposal|moveOptions/.test(screenCode),
+    'R-138 leaves plan changes to existing athlete-owned controls',
   );
 
   ok(
@@ -1376,8 +1328,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && /signedCopy\('phase\.review\.confirm'\)/.test(phaseSheet)
       && /targetPhase !== currentPhase \? \(/.test(phaseSheet)
       && /What days can you train\?/.test(phaseSheet)
-      && /Team training days/.test(phaseSheet)
-      && /Usual game day/.test(phaseSheet)
+      && /Which days does your team train\?/.test(phaseSheet)
+      && /Which day do you usually play\?/.test(phaseSheet)
       && /if \(targetPhase === 'In-season'\) setStep\('gameDay'\)/.test(phaseControl),
     'Review still forces the next phase, or selecting a target bypasses the '
       + 'availability/team/game questions');
@@ -1420,13 +1372,10 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
 const total = passed + failures.length;
 console.log(`\nCoach tab slice 3 totals: passed=${passed}/${total} failures=${failures.length}`);
 console.log(
-  '  DEPTH (L13): 0 IN THIS SUITE — the weeks above are hand-built and no door '
-  + 'is executed here; no walker, no accumulated world, no screen mounted, no '
-  + 'keyboard raised. THE DOOR IS RUN ELSEWHERE: `npm run '
-  + 'tape:coach-move-durability` drives the coach\'s move through the real '
-  + 'executor over a generated world at depth 1, with the athlete\'s own tap '
-  + 'beside it as the control. That tape is not in the chain — section [7] is '
-  + 'what the chain sees of its finding.',
+  '  DEPTH (L13): 0 IN THIS SUITE — the weeks above are hand-built; no screen '
+  + 'is mounted, no keyboard is raised and no model request is made. The live '
+  + 'client/server execution tape is test:coach-chat-integration; provider and '
+  + 'simulator checks remain separate instruments.',
 );
 totalsPrinted(failures.length);
 if (failures.length > 0) {

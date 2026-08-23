@@ -1,0 +1,36 @@
+appId: com.localfootyathlete.app
+name: Golden - production Terra read-only Coach chat
+tags:
+  - e2e
+  - golden
+  - coach
+  - terra
+---
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
+- tapOn:
+    id: "tab-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-tab-input"
+    timeout: 15000
+- tapOn:
+    id: "coach-tab-input"
+- inputText: "whats on thurs?"
+- tapOn:
+    id: "coach-tab-send"
+- extendedWaitUntil:
+    visible:
+      id: "coach-tab-turn-coach-1"
+    timeout: 45000
+- assertVisible:
+    id: "coach-tab-turn-athlete-0"
+- assertVisible: "G'day, I'm your S&C coach."
+- assertNotVisible: "make changes to your program"
+- assertNotVisible:
+    id: "coach-tab-change-card"
+- assertVisible:
+    id: "coach-tab-input"
+- takeScreenshot: artifacts/ui-walk/coach-terra-read-only

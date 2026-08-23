@@ -149,3 +149,50 @@ Seat read: practical first, grounded and proportionate. Owner review pending.
 The nine successful tapes now pass the corrected automatic boundaries, but none
 inherits the approved Sol tape. Sam must approve or correct each answer shape.
 The live app, physical phone and any program-confirmation path remain untouched.
+
+## Corrected shared-context reruns
+
+Sam ordered the three failed shapes corrected at their cause rather than by
+question-specific handlers. Prompt v3 receives one typed model input: every day
+has deterministic Snapshot-relative timing, conversational targets are explicit
+and bounded to six recent turns, and a same-day quick check is distinguished
+from a separately recorded status declaration. Three mutations were each seen
+red before restoration: all days forced to `today` (2 red), the active target
+discarded (1 red), and quick check misclassified as Wrecked/Cooked (1 red).
+
+### `missed-monday-cram-wednesday` — corrected
+
+> No—don’t cram Monday’s Lower Squat into Wednesday. You’ve got team training
+> Tuesday, Upper Push plus conditioning Thursday and a game Saturday, so keep
+> Wednesday as recovery and resume the planned work. Your quick check is low
+> energy with moderate soreness today, which supports reducing rather than
+> adding load. One missed session won’t wreck the week; don’t try to catch it
+> all up.
+
+Terra / `coach-lab-openai-v3-context`: 8,763 input, 8,760 cache-write, 528
+output, 9,291 total tokens; 8,955 ms. The future team session is now future.
+
+### `after-footy-why` — corrected
+
+> Which session do you mean—the Lower Squat today, Team Training tomorrow, or
+> something else?
+
+Terra / `coach-lab-openai-v3-context`: 7,648 input, 7,645 cache-write, 126
+output, 7,774 total tokens; 2,293 ms. It names only currently observed
+candidates and no longer invents a previous game.
+
+### `flat-deload-question` — corrected
+
+> Not automatically. Today’s quick check shows low energy and moderate
+> soreness, but it hasn’t recorded a Wrecked or Absolutely cooked readiness
+> declaration. For today’s Lower Squat, take a slight back-off: keep the main
+> work only if movement is sharp, reduce volume, skip any finisher and keep
+> effort away from grinding. If this flat feeling persists or worsens over the
+> next few days, a 7-day deload is justified. I can’t alter the plan from here.
+
+Terra / `coach-lab-openai-v3-context`: 8,765 input, 8,762 cache-write, 253
+output, 9,018 total tokens; 3,893 ms. It gives a current practical option
+without forcing a Wrecked/Cooked declaration.
+
+All automatic boundaries passed. The Lab switch was returned off and a
+post-run request returned `503 coach_lab_disabled` before OpenAI.

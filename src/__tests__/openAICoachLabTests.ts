@@ -5,7 +5,6 @@ import { resolve } from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   buildCoachLabBrainInstructions,
-  serializeCoachSnapshotForModel,
 } from '../dev/coachLab/coachLabBrainPack';
 import { COACH_LAB_CASES, coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { runCoachLabAsync } from '../dev/coachLab/coachLab';
@@ -19,6 +18,12 @@ import {
   type CoachLabFetch,
 } from '../dev/coachLab/openAIResponsesClient';
 import { SupabaseCoachLabClient } from '../dev/coachLab/supabaseCoachLabClient';
+import {
+  buildCoachModelInput,
+  coachModelDayTiming,
+  serializeCoachModelInput,
+} from '../rules/coachModelContext';
+import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../rules/coachKnowledgeManifest';
 
 armTotalsOrRed();
 
@@ -69,6 +74,12 @@ async function main(): Promise<void> {
         && /never change/i.test(instructions)
         && /clearly label/i.test(instructions)
         && /one focused follow-up question/i.test(instructions));
+    ok('the prompt makes time, reference and readiness meaning deterministic',
+      /past, today, or future/i.test(instructions)
+        && /active program target/i.test(instructions)
+        && /do not propose an unobserved target or history/i.test(instructions)
+        && /quick check/i.test(instructions)
+        && /do not force the athlete to reclassify/i.test(instructions));
     ok('ordinary soreness gets practical guidance before proportionate medical caution',
       /ordinary training fatigue or soreness/i.test(instructions)
         && /practical LFA-backed option first/i.test(instructions)
@@ -90,14 +101,79 @@ async function main(): Promise<void> {
 
   console.log('\n[2] THE SNAPSHOT IS THE ONLY ATHLETE PAYLOAD');
   {
-    const snapshotText = serializeCoachSnapshotForModel(coachLabFixtureSnapshot());
+    const snapshotText = serializeCoachModelInput({
+      athleteMessage: 'test question',
+      snapshot: coachLabFixtureSnapshot(),
+    });
     const parsed = JSON.parse(snapshotText) as Record<string, unknown>;
+    const currentSnapshot = parsed.currentAthleteSnapshot as Record<string, unknown>;
     ok('the live week, readiness, load, progress and restrictions are present',
-      'visibleWeek' in parsed
-        && 'readiness' in parsed
-        && 'load' in parsed
-        && 'progress' in parsed
-        && 'restrictions' in parsed);
+      'visibleWeek' in currentSnapshot
+        && 'readiness' in currentSnapshot
+        && 'load' in currentSnapshot
+        && 'progress' in currentSnapshot
+        && 'restrictions' in currentSnapshot);
+    const visibleWeek = currentSnapshot.visibleWeek as {
+      days: readonly {
+        date: string;
+        timing: { relationToAsOf: string; dayOffset: number };
+      }[];
+    };
+    ok('every visible day carries deterministic time meaning',
+      visibleWeek.days[0]?.timing?.relationToAsOf === 'today'
+        && visibleWeek.days[0]?.timing?.dayOffset === 0
+        && visibleWeek.days[1]?.timing?.relationToAsOf === 'future'
+        && visibleWeek.days[1]?.timing?.dayOffset === 1
+        && visibleWeek.days[5]?.timing?.relationToAsOf === 'future'
+        && visibleWeek.days[5]?.timing?.dayOffset === 5,
+      visibleWeek.days.map((day) => ({ date: day.date, timing: day.timing })));
+    const readiness = currentSnapshot.readiness as {
+      interpretation?: {
+        factKind?: string;
+        scope?: string;
+        separateStatusDeclarationRecorded?: boolean;
+      };
+    };
+    ok('the quick check cannot masquerade as an elevated readiness declaration',
+      readiness.interpretation?.factKind === 'quick_check'
+        && readiness.interpretation?.scope === 'today'
+        && readiness.interpretation?.separateStatusDeclarationRecorded === false,
+      readiness.interpretation);
+    const conversation = parsed.conversationContext as {
+      activeProgramTarget?: unknown;
+      recentTurns?: readonly unknown[];
+    } | undefined;
+    ok('missing conversational reference is explicit rather than guessed',
+      conversation?.activeProgramTarget === null
+        && Array.isArray(conversation?.recentTurns)
+        && conversation?.recentTurns.length === 0,
+      conversation);
+    ok('moving the as-of date changes all three temporal states through one owner',
+      coachModelDayTiming('2026-08-24', '2026-08-25').relationToAsOf === 'past'
+        && coachModelDayTiming('2026-08-25', '2026-08-25').relationToAsOf === 'today'
+        && coachModelDayTiming('2026-08-26', '2026-08-25').relationToAsOf === 'future');
+    const contextual = buildCoachModelInput({
+      athleteMessage: 'why is this here?',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: {
+        activeProgramTarget: {
+          kind: 'session',
+          dateISO: '2026-08-27',
+          partId: '2026-08-27-part-0',
+          label: 'Upper Push',
+        },
+        recentTurns: Array.from({ length: 7 }, (_, index) => ({
+          speaker: index % 2 === 0 ? 'athlete' as const : 'coach' as const,
+          text: `turn ${index}`,
+        })),
+      },
+    });
+    ok('the active target is carried and recent chat is bounded to the last six turns',
+      contextual.conversationContext.activeProgramTarget?.label === 'Upper Push'
+        && contextual.conversationContext.recentTurns.length === 6
+        && contextual.conversationContext.recentTurns[0]?.text === 'turn 1'
+        && contextual.conversationContext.recentTurns[5]?.text === 'turn 6',
+      contextual.conversationContext);
     ok('no account, email or athlete id is sent',
       !/email|userId|athleteId|accountId/i.test(snapshotText));
   }
@@ -177,9 +253,11 @@ async function main(): Promise<void> {
   console.log('\n[4] CHATGPT IS A REAL COACH LAB CANDIDATE, NEVER A LIVE APP WRITER');
   {
     let receivedInstructions = '';
+    let receivedInput = '';
     const client = {
-      async create(request: { readonly instructions: string }) {
+      async create(request: { readonly instructions: string; readonly input: string }) {
         receivedInstructions = request.instructions;
+        receivedInput = request.input;
         return {
           outputText: JSON.stringify(MODEL_PAYLOAD),
           totalTokens: 1280,
@@ -229,6 +307,15 @@ async function main(): Promise<void> {
           === 'docs/LFA_PROGRAMMING_BIBLE.md:L2559-L2594');
     ok('each case resolves its own retrieved prompt immediately before the request',
       receivedInstructions === `RETRIEVED FOR ${COACH_LAB_CASES[2].id}`);
+    const receivedModelInput = JSON.parse(receivedInput) as {
+      currentAthleteSnapshot?: { visibleWeek?: { days?: readonly { timing?: unknown }[] } };
+      conversationContext?: { activeProgramTarget?: unknown; recentTurns?: readonly unknown[] };
+    };
+    ok('the candidate sends the same typed context the live Coach will read',
+      !!receivedModelInput.currentAthleteSnapshot?.visibleWeek?.days?.[0]?.timing
+        && receivedModelInput.conversationContext?.activeProgramTarget === null
+        && receivedModelInput.conversationContext?.recentTurns?.length === 0,
+      receivedModelInput);
     ok('no ChatGPT output can contain a program action',
       result.response.programActions.length === 0
         && result.automaticChecks.readOnly);
@@ -279,8 +366,12 @@ async function main(): Promise<void> {
       'src/data/exerciseEquipmentRequirement.ts',
       'src/data/conditioningTemplates.ts',
     ]) {
-      ok(`the live runner includes ${requiredPath}`, runner.includes(requiredPath));
+      ok(`the shared manifest includes ${requiredPath}`,
+        COACH_KNOWLEDGE_SOURCE_SPECS.some((source) => source.path === requiredPath));
     }
+    ok('the live runner consumes the shared manifest rather than duplicating it',
+      /COACH_KNOWLEDGE_SOURCE_SPECS/.test(runner)
+        && /canonicalSources\(\)/.test(runner));
     ok('the deleted Coach pipeline is not an input',
       !/CoachScreen|coachTurnController|coach-chat\/index/.test(runner));
     ok('one case is the default so a command cannot accidentally buy ten calls',

@@ -370,3 +370,64 @@ synthetic probe returned `503 coach_lab_disabled` before OpenAI.
   probe.
 - No answer is approved yet; Sam has not supplied the ideal answer set.
 - No program-change path is added or altered by the dashboard.
+
+## 2026-08-24 — shared-context correction and live read-only cutover
+
+The three Terra failures had one architectural cause: the model received domain
+facts without the meanings the app already knew. Dates were bare strings, a
+pronoun had no typed conversation owner, and today's quick check looked like an
+invitation to choose a stronger status label. The correction is one shared
+model-input boundary used by Lab and production: deterministic day timing,
+bounded recent turns plus an explicit active target, and typed readiness
+provenance/scope. Three deliberate mutations each killed the new guard before
+restoration. The exact paid reruns and receipts are recorded in
+`docs/COACH_LAB_TERRA_TAPES_2026-08-24.md`; all three passed.
+
+The live Coach tab now awaits a dedicated `coach-chat` client instead of the
+local phrase reader. The production Edge Function fixes `gpt-5.6-terra`
+server-side, retrieves exact canonical sources from one generated manifest,
+accepts no client model or instructions, and returns a strict empty-action
+schema. The server rejects any model action and the client rejects one again.
+The old conversational proposal/card/program door is disconnected; separate
+athlete-owned My Status and system-raised commitment controls remain.
+
+### NOT COVERED
+
+- Local source, context mutation, canonical-source parity, client execution and
+  empty-action guards are green.
+- Production deployment and a real provider smoke are still owed at this point
+  in the record.
+- The React Native simulator and Sam's physical iPhone are still owed; by L10
+  this is gates-green work, not an athlete-facing completion claim.
+
+### Deployment and mounted execution receipt
+
+The dedicated `coach-chat` Edge Function deployed ACTIVE as version 2 with JWT
+verification, and `COACH_CHAT_ENABLED=true` was set separately from the disabled
+Lab switch. A production smoke through the real app client returned Thursday's
+future Upper Push plus Conditioning session and an empty action list.
+
+The first mounted populated-state flow found a real layout defect: the dashboard
+was fixed above the conversation and could consume the whole available body,
+leaving chat turns present but unreachable. The source-of-truth correction is
+one scroll owner containing Snapshot then conversation, with the composer still
+fixed above the keyboard. A liveness mutation moving the dashboard back outside
+the scroll now kills the Snapshot guard.
+
+The final iPhone 17 Pro simulator flow reset through the depth-35 populated
+journey, opened Coach, typed `whats on thurs?`, received a visible Terra answer,
+kept the composer reachable with the keyboard up, and proved no AI change card
+exists. It also caught the now-false greeting promise that Coach could change
+the program; R-138 removes that clause and retains Sam's exact first sentence,
+`G'day, I'm your S&C coach.` The final flow asserts the truthful greeting and
+the old promise absent. Screenshot:
+`artifacts/ui-walk/coach-terra-read-only.png`.
+
+### NOT COVERED AFTER DEPLOYMENT
+
+- Sam's physical iPhone acceptance remains owed; this is deployed and simulator
+  green, not L10-complete.
+- Production rate limiting beyond Supabase JWT verification is not added; this
+  remains a local/private v1 endpoint, not a public-release abuse boundary.
+- The model remains read-only. Existing My Status and system-raised commitment
+  controls are tested separately and are not model tools.

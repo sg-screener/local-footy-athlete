@@ -80,7 +80,6 @@ const retired = [
   'src/services/journalReminderProof.ts',
   'src/rules/journalReminder.ts',
   'src/rules/journalReminderCopy.ts',
-  'supabase/functions/coach-chat/index.ts',
   'supabase/functions/coach-intent/index.ts',
   'supabase/functions/coach-revision-proposal/index.ts',
   'supabase/functions/coach-semantic-program-edit-draft/index.ts',
@@ -111,6 +110,7 @@ const protectedFiles = [
   'src/rules/journalWeekJob.ts',
   'src/rules/journalWeekStatus.ts',
   'src/store/journalNoteStore.ts',
+  'supabase/functions/coach-chat/index.ts',
 ] as const;
 
 console.log('\n[2] THE DATA AND THE PROGRAM DOOR REMAIN');
@@ -144,10 +144,10 @@ console.log('\n[3] NOTHING SHIPPED CAN REACH THE RETIRED SYSTEMS');
 
   const config = source('supabase', 'config.toml');
   const registeredCoach = registeredCoachFunctions(config);
-  ok('Supabase registers only the fresh isolated Coach Lab function',
-    registeredCoach.length === 1 && registeredCoach[0] === 'coach-lab', registeredCoach);
+  ok('Supabase registers only the fresh Lab and read-only live Coach functions',
+    registeredCoach.join(',') === 'coach-lab,coach-chat', registeredCoach);
   ok('the function-name checker reds on a fabricated retired registration',
-    registeredCoachFunctions('[functions.coach-chat]\nverify_jwt = true')[0] === 'coach-chat'
+    registeredCoachFunctions('[functions.coach-intent]\nverify_jwt = true')[0] === 'coach-intent'
       && registeredCoachFunctions('[functions.coach-lab]\nverify_jwt = true')[0] === 'coach-lab');
 
   const product = filesUnder(SRC)

@@ -206,10 +206,10 @@ function pureSnapshotOwner(body: string): boolean {
 }
 
 function conversationUsesSnapshot(body: string): boolean {
-  return /readCoachMessage\([\s\S]{0,160}?week:\s*snapshot\.visibleWeek/.test(body)
-    && /coachAnswer\([\s\S]{0,180}?week:\s*snapshot\.visibleWeek/.test(body)
-    && /coachProposal\([\s\S]{0,180}?week:\s*snapshot\.visibleWeek/.test(body)
-    && !/(?:readCoachMessage|coachAnswer|coachProposal)\([\s\S]{0,180}?week:\s*visibleWeek/.test(body);
+  const call = /await askCoachReadOnly\(\{[\s\S]*?\n\s*\}\);/.exec(body)?.[0] ?? '';
+  return call.length > 100
+    && /\n\s*snapshot,\s*\n/.test(call)
+    && !/snapshot\s*:|visibleWeek/.test(call);
 }
 
 function loadOwnsTheHero(body: string): boolean {
@@ -252,7 +252,12 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
     (screen.match(/useLiveAthleteSnapshot\s*\(/g) ?? []).length === 1);
   ok('the dashboard receives that exact Snapshot',
     /<CoachDashboard\s+snapshot=\{snapshot\}\s*\/>/.test(screen));
-  ok('all three conversation readers use the Snapshot visible week',
+  const conversationAnchor = screen.indexOf('testID="coach-tab-conversation"');
+  const dashboardAnchor = screen.indexOf('<CoachDashboard snapshot={snapshot} />');
+  const turnAnchor = screen.indexOf('{turns.map((turn) => (');
+  ok('the dashboard and chat share one scroll owner so populated state cannot hide answers',
+    conversationAnchor >= 0 && dashboardAnchor > conversationAnchor && turnAnchor > dashboardAnchor);
+  ok('the one production conversation door receives the exact Snapshot',
     conversationUsesSnapshot(screen));
   for (const section of ['week', 'readiness', 'load', 'progress', 'restrictions']) {
     ok(`the dashboard renders the ${section} section`,
@@ -307,9 +312,25 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
   ok('a fabricated store dependency kills domain purity',
     pureSnapshotOwner(owner)
       && !pureSnapshotOwner(`${owner}\nimport { useProgramStore } from '../store/programStore';`));
-  const bypass = screen.replace(/week:\s*snapshot\.visibleWeek/g, 'week: visibleWeek');
+  const bypass = screen.replace(
+    /\n\s*snapshot,\s*\n/,
+    '\n        snapshot: { ...snapshot, visibleWeek },\n',
+  );
   ok('a fabricated conversation bypass kills shared ownership',
     conversationUsesSnapshot(screen) && !conversationUsesSnapshot(bypass));
+  const fixedDashboard = screen.replace(
+    '<CoachDashboard snapshot={snapshot} />',
+    '',
+  ).replace(
+    '<ScrollView',
+    '<CoachDashboard snapshot={snapshot} />\n        <ScrollView',
+  );
+  const liveConversationAnchor = screen.indexOf('testID="coach-tab-conversation"');
+  const liveDashboardAnchor = screen.indexOf('<CoachDashboard snapshot={snapshot} />');
+  const fixedConversationAnchor = fixedDashboard.indexOf('testID="coach-tab-conversation"');
+  const fixedDashboardAnchor = fixedDashboard.indexOf('<CoachDashboard snapshot={snapshot} />');
+  ok('moving the dashboard outside the conversation scroll kills the visibility guard',
+    liveDashboardAnchor > liveConversationAnchor && fixedDashboardAnchor < fixedConversationAnchor);
   const swappedHierarchy = dashboard
     .replace('testID="coach-dashboard-load"', 'testID="coach-dashboard-swap"')
     .replace('testID="coach-dashboard-week"', 'testID="coach-dashboard-load"')

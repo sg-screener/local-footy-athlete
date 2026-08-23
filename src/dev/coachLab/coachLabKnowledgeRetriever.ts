@@ -1,7 +1,22 @@
-import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
-import type { CoachLabKnowledgeSource } from './coachLab';
+export type CanonicalCoachKnowledgeAuthority =
+  | 'lfa_bible'
+  | 'active_rule'
+  | 'canonical_source'
+  | 'approved_example';
 
-export type CanonicalCoachKnowledgeAuthority = CoachLabKnowledgeSource['authority'];
+interface RetrievalSnapshot {
+  readonly readiness: unknown;
+  readonly restrictions: unknown;
+  readonly load: unknown;
+  readonly progress: unknown;
+  readonly visibleWeek: {
+    readonly days: readonly {
+      readonly kind: string;
+      readonly headline: unknown;
+      readonly parts: readonly { readonly kind: string; readonly headline: unknown }[];
+    }[];
+  };
+}
 
 export interface CanonicalCoachKnowledgeSource {
   readonly path: string;
@@ -90,7 +105,7 @@ function addWeightedTerms(
   }
 }
 
-function queryWeights(message: string, snapshot: CoachSnapshot): ReadonlyMap<string, number> {
+function queryWeights(message: string, snapshot: RetrievalSnapshot): ReadonlyMap<string, number> {
   const weights = new Map<string, number>();
   addWeightedTerms(weights, message, 8, true);
   addWeightedTerms(weights, JSON.stringify(snapshot.readiness), 4, true);
@@ -184,7 +199,7 @@ function safetyChunk(chunks: readonly RetrievedCoachKnowledgeChunk[]): Retrieved
  */
 export function retrieveCoachLabKnowledge(args: {
   readonly athleteMessage: string;
-  readonly snapshot: CoachSnapshot;
+  readonly snapshot: RetrievalSnapshot;
   readonly sources: readonly CanonicalCoachKnowledgeSource[];
   readonly maxSelectedCharacters?: number;
   readonly maxRankedChunks?: number;

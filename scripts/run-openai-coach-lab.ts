@@ -20,16 +20,18 @@ import {
   type CanonicalCoachKnowledgeSource,
 } from '../src/dev/coachLab/coachLabKnowledgeRetriever';
 import { SupabaseCoachLabClient } from '../src/dev/coachLab/supabaseCoachLabClient';
+import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../src/rules/coachKnowledgeManifest';
 
 const DEFAULT_CASE_ID = 'rooted-but-wants-to-train';
-const BIBLE_PATH = 'docs/LFA_PROGRAMMING_BIBLE.md';
-const RULINGS_PATH = 'docs/RULINGS_REGISTRY.md';
-const EXERCISE_SOURCE_PATHS = [
-  'src/data/exercisePoolsStrength.ts',
-  'src/data/exerciseTags.ts',
-  'src/data/exerciseEquipmentRequirement.ts',
-  'src/data/conditioningTemplates.ts',
-] as const;
+const BIBLE_PATH = COACH_KNOWLEDGE_SOURCE_SPECS.find(
+  (source) => source.authority === 'lfa_bible',
+)!.path;
+const RULINGS_PATH = COACH_KNOWLEDGE_SOURCE_SPECS.find(
+  (source) => source.authority === 'active_rule',
+)!.path;
+const EXERCISE_SOURCE_PATHS = COACH_KNOWLEDGE_SOURCE_SPECS
+  .filter((source) => source.authority === 'canonical_source')
+  .map((source) => source.path);
 
 function read(path: string): string {
   return readFileSync(resolve(process.cwd(), path), 'utf8');
@@ -53,15 +55,10 @@ function requestedModel(): string {
 }
 
 function canonicalSources(): readonly CanonicalCoachKnowledgeSource[] {
-  return [
-    { path: BIBLE_PATH, authority: 'lfa_bible', content: read(BIBLE_PATH) },
-    { path: RULINGS_PATH, authority: 'active_rule', content: read(RULINGS_PATH) },
-    ...EXERCISE_SOURCE_PATHS.map((path): CanonicalCoachKnowledgeSource => ({
-      path,
-      authority: 'canonical_source',
-      content: read(path),
-    })),
-  ];
+  return COACH_KNOWLEDGE_SOURCE_SPECS.map((source): CanonicalCoachKnowledgeSource => ({
+    ...source,
+    content: read(source.path),
+  }));
 }
 
 async function runCasesWithPaidCheckpoints(args: {

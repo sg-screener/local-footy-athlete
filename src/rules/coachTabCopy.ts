@@ -3,12 +3,10 @@
  *
  * Slice 1 of the coach rebuild, and every string below now carries a ruling:
  *
- * - **THE GREETING IS SAM'S OWN SENTENCE, VERBATIM** (2026-08-09): *"G'day, I'm
- *   your S&C coach. I can answer fitness questions and make changes to your
- *   program."* It is the one string in this batch that came out of his mouth
- *   word for word, so it is the one string that goes into the SIGNED-COPY SHEET
- *   rather than staying a module constant — `signed_sentence` provenance is
- *   exactly what it has.
+ * - **THE GREETING RETAINS SAM'S VERBATIM FIRST SENTENCE** (2026-08-09):
+ *   *"G'day, I'm your S&C coach."* R-138 made the rebuilt conversation
+ *   read-only, so the later promise that it changes the program is removed
+ *   rather than replaced with invented wording.
  * - **THE OPENER FRAGMENTS REMAIN APPROVED FOR RULE ANSWERS, BUT NO LONGER OPEN
  *   THE SCREEN.** Sam superseded the automatic second bubble on 2026-08-11:
  *   the empty Coach conversation now shows only his greeting. `coachAnswer`
@@ -16,15 +14,8 @@
  * - **THE HONEST NO-ANSWER REPLY IS APPROVED AS SHIPPED** (slice-1 boundary
  *   parked item 3).
  *
- * ## THE GREETING SHIPS AHEAD OF THE ABILITY, AND THAT IS RULED TOO
- *
- * *"I can … make changes to your program"* is not true on the day it ships —
- * S3 is what makes it true. Sam ruled the gap himself: *"we aren't releasing
- * the app yet - we are going to build that shit now."* The app has no users but
- * his own devices, so the claim becomes true before any athlete reads it. **If
- * a beta gate arrives before S3, this sentence is re-checked** — recorded here
- * because a sentence whose honesty depends on a release plan should say so in
- * the file that holds it, not only in a boundary doc.
+ * R-138 supersedes the old temporary promise-ahead-of-ability exception. The
+ * live Terra Coach has no action tools, so its greeting makes no action claim.
  *
  * ## WHY THE REST IS STILL A MODULE AND NOT THE SHEET
  *
@@ -97,12 +88,10 @@ registerSignedCopy([
   {
     id: COACH_GREETING_COPY_ID,
     source: 'signed_sentence',
-    provenance: "Sam, 2026-08-09 — verbatim, relayed through docs/SEAT_INBOX.md "
-      + 'item 1(a) of the fifty-ninth pass. Ships ahead of the ability by his own '
-      + "ruling (\"we aren't releasing the app yet - we are going to build that "
-      + 'shit now"); the seat owns re-checking it if a beta gate arrives before S3.',
-    text: "G'day, I'm your S&C coach. I can answer fitness questions and make "
-      + 'changes to your program.',
+    provenance: "Sam, 2026-08-09 — verbatim first sentence. R-138, 2026-08-24, "
+      + 'makes the live Terra conversation read-only, so the superseded program-change '
+      + 'promise is removed without inventing replacement copy.',
+    text: "G'day, I'm your S&C coach.",
   },
 ]);
 

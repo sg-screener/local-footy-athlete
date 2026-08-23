@@ -1866,6 +1866,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. The guard proves every source anchor exists before comparing positions, requires the Load surface before the first tile row, requires Consistency inside the grid, and requires the load hero to own both the continuum track and signed sweet-spot zone. Its liveness arm swaps the Load and Consistency identities and must turn red. The focused glass flow separately requires the track and shaded zone on the mounted Coach tab. NOT COVERED: a marker cannot honestly render in the empty seed because no load ratio exists; the non-empty live-state flow remains owed.',
     },
   },
+  {
+    id: 'LAW-live-model-coach-is-shared-context-and-read-only',
+    law: 'The live conversational Coach uses server-owned gpt-5.6-terra over the one live Coach Snapshot and bounded recent turns. Visible dates carry deterministic past/today/future timing, unresolved conversational targets are explicit, and quick-check readiness is distinct from a separately recorded status declaration. The model cannot propose, confirm or execute a program action; both server and app reject any non-empty action list.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-138 — Sam, 2026-08-24, verbatim: "correct those three answer shapes, rerun them, then connect Terra to the read-only app chat ... be careful not to just fix edge cases - i\'m more concerned about how and why it\'s reading it wrong".',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `test:coach-lab` proves the one shared typed model input and kills three boundary mutations: flattening all day timing to today, discarding the active conversation target, and treating the quick check as a Wrecked/Cooked declaration. The three exact Terra reruns then passed the mechanical boundary. `test:coach-chat-integration` proves production fixes Terra server-side, retrieves an exact generated copy of the canonical source manifest, accepts no client-supplied model or instructions, requires an empty action list at the server and rejects it again in the app client. It also proves `CoachTabScreen` awaits that client with the shared Snapshot and has no old conversational proposal, card or program writer. The integration test executes a fake-fetch tape across the real client and is reached by `test:coach-snapshot` in `test:bible`. NOT COVERED: physical-phone pixels and production-provider availability are separate deployment/device evidence.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

@@ -1,5 +1,8 @@
-import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
-import type { RetrievedCoachKnowledgeChunk } from './coachLabKnowledgeRetriever';
+interface RetrievedCoachKnowledgeChunk {
+  readonly id: string;
+  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example';
+  readonly content: string;
+}
 
 export interface CoachLabKnowledgeFile {
   readonly path: string;
@@ -23,6 +26,9 @@ NON-NEGOTIABLE BOUNDARIES
 - Never change the athlete's program and never claim that a change has been made. You have no write tools. programActions must always be an empty array.
 - Never invent athlete facts, LFA rules, program contents, completed sessions, loads, readiness, restrictions, or progress.
 - Use only the CURRENT ATHLETE SNAPSHOT for facts about this athlete and their current program.
+- Every visible day carries deterministic timing relative to asOfDateISO: past, today, or future. Use that timing for tense and sequence; never re-infer it from weekday names.
+- CONVERSATION CONTEXT owns what words such as this, that, it and after refer to. Resolve them only from recent turns or the active program target. If neither owns the target, ask only for the missing target; do not propose an unobserved target or history.
+- A readiness quick check is a today-scoped observation, not proof that the athlete separately declared Wrecked or Absolutely cooked. Read readiness.interpretation before answering. Give the practical current step and what would justify escalation; do not force the athlete to reclassify into stronger labels the Snapshot does not record.
 - For ordinary training fatigue or soreness with no stated pain or warning sign, give the practical LFA-backed option first. Do not turn normal training soreness into injury triage. Keep any safety limit brief and proportionate.
 - When the supplied information is genuinely insufficient, ask one focused follow-up question instead of filling the gap. Keep it short; do not bundle a scale and symptom checklist into one question.
 - Do not lead with your tool limitations when a useful read-only answer is available. Give the athlete the useful answer, then state any relevant limit briefly.
@@ -92,17 +98,4 @@ ${retrievedBlocks(chunks, 'canonical_source')}
 
 APPROVED COACH LAB EXAMPLES
 ${retrievedBlocks(chunks, 'approved_example')}`;
-}
-
-/** Only the shared, derived Coach Snapshot crosses the AI boundary. */
-export function serializeCoachSnapshotForModel(snapshot: CoachSnapshot): string {
-  return JSON.stringify({
-    asOfDateISO: snapshot.asOfDateISO,
-    visibleWeek: snapshot.visibleWeek,
-    thisWeek: snapshot.thisWeek,
-    readiness: snapshot.readiness,
-    load: snapshot.load,
-    progress: snapshot.progress,
-    restrictions: snapshot.restrictions,
-  });
 }

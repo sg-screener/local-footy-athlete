@@ -115,40 +115,23 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
     );
   }
 
-  // ── SLICE 3: THE BAN ON THE DOOR BECAME A BAN ON A SECOND DOOR ─────────────
-  //
-  // `programControlActions` left the list above on 2026-08-10, and that is the
-  // slice this gate was waiting for: S3 is *"it changes things"*, and a screen
-  // that changes things reaches a writer by definition. A ban that outlives the
-  // reason for it is a ban somebody deletes in a hurry, so it is REPLACED
-  // rather than removed, by the claim that actually protects the athlete now:
-  //
-  //   **exactly one writer, named, and it is the athlete's own tap door.**
-  //
-  // Counting is not the instrument — `a count taken for a record`, fourteen
-  // sightings. The set of imported writer SYMBOLS is compared to a declared
-  // set, so a second door arriving reds this cell whether or not the first one
-  // is still there, and a rename reds it too.
-  const doorImports = imports.filter((line) => /programControlActions/.test(line));
-  const doorSymbols = doorImports
-    .flatMap((line) => [...line.matchAll(/\b(execute|route)[A-Za-z]+\b/g)].map((m) => m[0]))
-    .sort();
+  // R-138 retires the conversational action card. The screen reaches one
+  // production chat client and no program-control door; the server response is
+  // text-only and the separate integration tape proves its action array empty.
   ok(
-    'the screen reaches EXACTLY the athlete tap door and nothing else in it',
-    doorSymbols.join(',') === 'executeProgramControlActionDurably',
-    doorSymbols.join(',') || '(no door imported)',
+    'the conversational screen reaches no program-control door',
+    !/programControlActions|executeProgramControlAction|routeProgramControlAction/.test(screenCode),
+    'a model cannot directly or indirectly enter a program writer',
   );
   ok(
-    'and it is the DURABLE door, not the synchronous one',
-    !/\bexecuteProgramControlAction\b(?!Durably)/.test(screenCode),
-    'the synchronous variant skips the accepted-state commit, so a coach change '
-      + 'made through it would not survive a relaunch — the exact loss the '
-      + 'overnight pass measured on the exercise door',
+    'the screen imports exactly the read-only Coach client',
+    imports.filter((line) => /services\/api\/coachChat/.test(line)).length === 1
+      && /import \{ askCoachReadOnly \}/.test(screenCode),
   );
   ok(
-    'the door is entered from exactly one place in the screen',
-    (screenCode.match(/executeProgramControlActionDurably\(/g) ?? []).length === 1,
-    'two call sites is two chances to send an action the card never showed',
+    'the read-only client is entered from exactly one place in the screen',
+    (screenCode.match(/askCoachReadOnly\(/g) ?? []).length === 1,
+    'one send path means one bounded Snapshot/context contract',
   );
 
   // AND THE ABSENCE OF A VIOLATION IS NOT THE PRESENCE OF THE PRACTICE. A screen
@@ -189,7 +172,7 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
     .map((match) => match[1]);
   ok(
     'the screen\'s rules/ imports were enumerated and there are some',
-    ruleModules.length >= 3,
+    ruleModules.length >= 2,
     ruleModules.join(', '),
   );
   const FORBIDDEN_ONE_HOP: ReadonlyArray<RegExp> = [
@@ -229,7 +212,7 @@ console.log('\n[2] ONE NAMING — the coach may not describe a day a second way'
   const homeScreen = stripComments(read('screens', 'home', 'HomeScreenV2.tsx'));
   ok(
     'and HomeScreenV2 still names its rows through the SAME function',
-    /visibleDayLeadHeadline\(day\)/.test(homeScreen),
+    /visibleDayLeadHeadline\(day(?:,|\))/.test(homeScreen),
     'this cell is the other half of the claim: if the week row stops calling it, '
       + '"the same call" becomes false and the coach silently owns a second '
       + 'naming with nothing red',
@@ -535,31 +518,23 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
       && /text,?\s*\}/.test(sayBody),
     'an appender that could pick a word is a screen that authors replies',
   );
-  // EVERY CALLER OF IT PASSES A RULE'S RETURN VALUE. Enumerated rather than
-  // asserted in the negative: a ban on literals would pass a caller that read a
-  // copy constant, which is how the cancel path very nearly shipped.
+  // EVERY CALLER IS ENUMERATED. The live model answer is already text returned
+  // by the production client; transport failure uses the signed copy owner.
   const sayCalls = [...screenCode.matchAll(/\bsay\(([\s\S]*?)\);/g)].map((m) => m[1].trim());
   ok(
-    'every coach sentence in the screen is a rule call and there are some',
-    // ⚠ ENUMERATED, AND R-105 ADDED THREE NAMES TO THE LIST — NOT A WILDCARD.
-    // The weekly-reduction conversation moved onto this screen, so the coach can
-    // now also say what the transaction reported, that the athlete declined, and
-    // that the rebuild refused. All three are `rules/projectionCopy` renderers
-    // over SIGNED entries, so the property this cell holds — *the screen names
-    // the rule, never the words* — is unchanged. A ban on literals would have
-    // let them through without anyone naming them, which is why this is a list.
+    'every coach sentence has a named owner and there are some',
     sayCalls.length >= 3 && sayCalls.every((argument) =>
-      /^(coachAnswer|coachChangeOutcome|coachChangeDeclined)\(/.test(argument)
-      || /^commitment(Confirmed|Declined|Failed)Sentence\(/.test(argument)
-      || /^proposal\.text$/.test(argument)),
+      /^answer$/.test(argument)
+      || /^COACH_TAB_COPY\.noAnswerYet$/.test(argument)
+      || /^commitment(Confirmed|Declined|Failed)Sentence\(/.test(argument)),
     sayCalls.join(' | '),
   );
   ok(
-    'the screen names no copy constant on any coach-turn path',
-    sayCalls.every((argument) => !/COACH_[A-Z_]+_COPY\./.test(argument))
+    'the only copy constant on a coach-turn path is the signed transport failure',
+    sayCalls.filter((argument) => /COACH_[A-Z_]+_COPY\./.test(argument))
+      .join(',') === 'COACH_TAB_COPY.noAnswerYet'
       && !/text: '[^']+'/.test(screenCode),
-    'the fallback, the refusal and the decline all live in rules/ — a copy '
-      + 'constant reached from here would be the screen owning a case',
+    'the app must not improvise model or failure wording',
   );
 }
 
@@ -635,9 +610,8 @@ console.log('\n[7] BATCH 30 — one module owns every new word, and the greeting
   // rather than after it: a cell that checked the two ENDS of a weekday word
   // stayed green while the middle changed and the athlete read "Game Tues".
   // A verbatim quote is pinned verbatim or it is not pinned.
-  const GREETING = "G'day, I'm your S&C coach. I can answer fitness questions "
-    + 'and make changes to your program.';
-  ok('the greeting is exactly the sentence Sam gave, character for character',
+  const GREETING = "G'day, I'm your S&C coach.";
+  ok('the greeting retains Sam\'s exact first sentence and makes no action claim',
     coachGreeting() === GREETING,
     coachGreeting());
 
@@ -649,19 +623,16 @@ console.log('\n[7] BATCH 30 — one module owns every new word, and the greeting
   ok('the greeting is in the signed-copy sheet, not a module constant',
     entry !== null && entry.text === GREETING,
     JSON.stringify(entry));
-  ok('and its provenance is a signed sentence carrying the date it was signed',
-    entry?.source === 'signed_sentence' && /2026-08-09/.test(entry?.provenance ?? ''),
+  ok('and its provenance carries the signed sentence and read-only supersession',
+    entry?.source === 'signed_sentence'
+      && /2026-08-09/.test(entry?.provenance ?? '')
+      && /R-138, 2026-08-24/.test(entry?.provenance ?? ''),
     `${entry?.source} | ${entry?.provenance}`);
 
-  // THE HONESTY GAP IS RECORDED WHERE THE WORDS ARE. The greeting promises an
-  // ability S3 delivers; Sam ruled the gap acceptable because the app has no
-  // users but his devices. That ruling has a condition attached, and a
-  // condition nobody can find is a condition nobody honours — so the module
-  // that holds the sentence must hold the re-check trigger too.
-  ok('the module records the beta-gate re-check the greeting ships under',
-    /beta gate/i.test(copySource) && /S3/.test(copySource),
-    'the sentence becomes true at S3; if a beta gate arrives first, the seat '
-      + 're-checks it, and that is written beside the words');
+  ok('the module records why the old program-change promise was removed',
+    /R-138/.test(copySource) && /read-only/.test(copySource)
+      && /makes no action claim/.test(copySource),
+    'the greeting cannot contradict the live model boundary');
 
   // THE SCREEN SHOWS ONLY IT. Sam superseded the second automatic week-shape
   // bubble and starter chip on 2026-08-11; typed session moves still go through

@@ -32,3 +32,6 @@ enabled = true
 
 [functions.coach-lab]
 verify_jwt = true
+
+[functions.coach-chat]
+verify_jwt = true

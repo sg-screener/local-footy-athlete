@@ -4388,3 +4388,31 @@ its same-case tape was cheaper but failed truthful Snapshot-field reporting and
 introduced broader advice than its declared basis supported. · `WORKING` —
 default-model, allowed-model and pending-only bench cells in `test:coach-lab`.
 Seat `snapshot`.
+
+---
+
+**R-138** · *"correct those three answer shapes, rerun them, then connect Terra
+to the read-only app chat ... be careful not to just fix edge cases - i'm more
+concerned about how and why it's reading it wrong"* (Sam, 2026-08-24) ·
+**TERRA REPLACES THE SIMPLE CONVERSATIONAL COACH AS A READ-ONLY LIVE APP CHAT.**
+
+The three wider-bench defects are corrected at the shared model-input boundary,
+not by adding phrases for their questions: every visible day now carries a
+deterministic past/today/future relation to the Snapshot date; conversational
+references resolve only from bounded recent turns and an explicit active target
+(including explicit `null`); and today's quick check is typed as a same-day
+readiness input distinct from a separately recorded `Wrecked`/`Absolutely
+cooked` declaration. Terra receives that one typed input in Lab and production.
+
+The app sends the one live Coach Snapshot, the athlete message and at most six
+recent turns to a dedicated server-owned `gpt-5.6-terra` endpoint. The server,
+not the app, owns instructions and exact retrieval from the current Bible,
+rulings and canonical exercise sources. The response schema can carry no
+program action; the server rejects a non-empty action list and the app rejects
+one again. The old conversational change proposal/card/writer is disconnected.
+Existing athlete-owned My Status and system-raised commitment controls remain
+separate controls and are not model tools. · `WORKING` — shared-context,
+three-mutation and exact-rerun cells in `test:coach-lab`; generated-knowledge,
+server/client, empty-action and screen-cutover cells in
+`test:coach-chat-integration`, reached by `test:coach-snapshot` in
+`test:bible`. Seat `snapshot`.

@@ -4,13 +4,13 @@ import type {
   CoachLabResponseV1,
 } from './coachLab';
 import { COACH_LAB_RESPONSE_SCHEMA_VERSION } from './coachLab';
-import { serializeCoachSnapshotForModel } from './coachLabBrainPack';
+import { serializeCoachModelInput } from '../../rules/coachModelContext';
 import type { CoachLabRetrievalReceipt } from './coachLabKnowledgeRetriever';
 import type { OpenAIResponseRequest, OpenAIResponseResult } from './openAIResponsesClient';
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 
 export const OPENAI_COACH_LAB_MODEL = 'gpt-5.6-terra';
-export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v2-retrieval';
+export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v3-context';
 
 export interface OpenAICoachLabClient {
   create(request: OpenAIResponseRequest): Promise<OpenAIResponseResult>;
@@ -55,11 +55,11 @@ export function createOpenAICoachLabCandidate(args: {
       const result = await args.client.create({
         model,
         instructions: resolved.instructions,
-        input: JSON.stringify({
+        input: serializeCoachModelInput({
           athleteMessage: labCase.athleteMessage,
           reviewFocus: labCase.reviewFocus,
           requiresLiveProgramFacts: labCase.requiresLiveProgramFacts,
-          currentAthleteSnapshot: JSON.parse(serializeCoachSnapshotForModel(snapshot)),
+          snapshot,
         }),
       });
       const payload = parseModelPayload(result.outputText);
