@@ -208,7 +208,7 @@ export interface ComposedRow {
    * as the pool entry authors them, carried to the stored row so no surface
    * can re-read a hold as reps.
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly prescriptionType?: 'duration' | 'duration_minutes' | 'distance';
   readonly perSide?: boolean;
   /**
    * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base

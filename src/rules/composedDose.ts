@@ -48,7 +48,7 @@ export interface ComposedDose {
    * set, exactly as the authored pool entry states them. Absent means reps,
    * which is every other row unchanged.
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly prescriptionType?: 'duration' | 'duration_minutes' | 'distance';
   readonly perSide?: boolean;
 }
 
@@ -96,8 +96,12 @@ function authoredTimedHoldFor(identity: string): ComposedDose | null {
     const built = new Map<string, ComposedDose>();
     for (const entries of Object.values(POOL_REGISTRY)) {
       for (const entry of entries) {
+        // 'distance' joined 2026-08-23 (the unit census): `Suitcase Carry` is
+        // authored in METRES in the trunk pool and was rep-laddered by the
+        // strength carry slot — the same authored-unit law, one more unit.
         if (entry.prescriptionType !== 'duration'
-          && entry.prescriptionType !== 'duration_minutes') continue;
+          && entry.prescriptionType !== 'duration_minutes'
+          && entry.prescriptionType !== 'distance') continue;
         const key = composedIdentityFor(entry.name);
         if (built.has(key)) continue;
         built.set(key, {
