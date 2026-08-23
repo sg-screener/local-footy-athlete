@@ -20,6 +20,11 @@ import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import type { TwoKmTimeTrialAnswer } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
+import {
+  buildProgressChartPoints,
+  progressChartDateRangeLabel,
+  type ProgressChartDatum,
+} from '../../rules/progressChartTimeline';
 
 const CHART_WIDTH = 300;
 const CHART_HEIGHT = 88;
@@ -71,58 +76,52 @@ function LoadContinuum({ load }: { load: CoachSnapshotLoad }) {
   );
 }
 
-function LineChart({ values, higherIsBetter = true }: {
-  values: readonly number[];
+function LineChart({ points: recordedPoints, higherIsBetter = true }: {
+  points: readonly ProgressChartDatum[];
   higherIsBetter?: boolean;
 }) {
-  if (values.length === 0) return null;
-  const performance = values.map((value) => higherIsBetter ? value : -value);
-  const min = Math.min(...performance);
-  const max = Math.max(...performance);
-  const span = max - min;
-  const usableWidth = CHART_WIDTH - CHART_PAD * 2;
-  const usableHeight = CHART_HEIGHT - CHART_PAD * 2;
-  const points = performance.map((value, index) => {
-    const x = values.length === 1
-      ? CHART_WIDTH / 2
-      : CHART_PAD + (index / (values.length - 1)) * usableWidth;
-    const y = span === 0
-      ? CHART_HEIGHT / 2
-      : CHART_PAD + ((max - value) / span) * usableHeight;
-    return { x, y };
-  });
+  const points = buildProgressChartPoints(recordedPoints, {
+    width: CHART_WIDTH,
+    height: CHART_HEIGHT,
+    padding: CHART_PAD,
+  }, higherIsBetter);
+  if (points.length === 0) return null;
+  const rangeLabel = progressChartDateRangeLabel(recordedPoints);
   return (
-    <Svg width="100%" height={CHART_HEIGHT} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}>
-      <Line
-        x1={CHART_PAD}
-        y1={CHART_HEIGHT - CHART_PAD}
-        x2={CHART_WIDTH - CHART_PAD}
-        y2={CHART_HEIGHT - CHART_PAD}
-        stroke={colors.surface.tertiary}
-        strokeWidth={1}
-      />
-      {points.length > 1 ? (
-        <Polyline
-          points={points.map(({ x, y }) => `${x},${y}`).join(' ')}
-          fill="none"
-          stroke={colors.accent.lime}
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+    <>
+      <Svg width="100%" height={CHART_HEIGHT} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}>
+        <Line
+          x1={CHART_PAD}
+          y1={CHART_HEIGHT - CHART_PAD}
+          x2={CHART_WIDTH - CHART_PAD}
+          y2={CHART_HEIGHT - CHART_PAD}
+          stroke={colors.surface.tertiary}
+          strokeWidth={1}
         />
-      ) : null}
-      {points.map(({ x, y }, index) => (
-        <Circle
-          key={`${x}-${index}`}
-          cx={x}
-          cy={y}
-          r={4}
-          fill={colors.accent.lime}
-          stroke={colors.surface.secondary}
-          strokeWidth={2}
-        />
-      ))}
-    </Svg>
+        {points.length > 1 ? (
+          <Polyline
+            points={points.map(({ x, y }) => `${x},${y}`).join(' ')}
+            fill="none"
+            stroke={colors.accent.lime}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
+        {points.map(({ x, y, dateISO }) => (
+          <Circle
+            key={dateISO}
+            cx={x}
+            cy={y}
+            r={4}
+            fill={colors.accent.lime}
+            stroke={colors.surface.secondary}
+            strokeWidth={2}
+          />
+        ))}
+      </Svg>
+      {rangeLabel ? <Text variant="caption" style={styles.chartRange}>{rangeLabel}</Text> : null}
+    </>
   );
 }
 
@@ -138,7 +137,10 @@ function StrengthChart({ history }: { history: StrengthProgressHistory }) {
         </Text>
         <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted} kg</Text>
       </View>
-      <LineChart values={history.points.map((point) => point.topSet.weightKg)} />
+      <LineChart points={history.points.map((point) => ({
+        dateISO: point.weekStart,
+        value: point.topSet.weightKg,
+      }))} />
     </View>
   );
 }
@@ -155,7 +157,10 @@ function TwoKmChart({ answer }: { answer: TwoKmTimeTrialAnswer | null }) {
           {recorded ? formatTwoKmTime(answer!.seconds!) : PROGRESS_TAB_COPY.notTested}
         </Text>
       </View>
-      {recorded ? <LineChart values={[answer!.seconds!]} higherIsBetter={false} /> : null}
+      {recorded ? <LineChart points={[{
+        dateISO: answer!.recordedOn,
+        value: answer!.seconds!,
+      }]} higherIsBetter={false} /> : null}
     </View>
   );
 }
@@ -302,6 +307,7 @@ const styles = StyleSheet.create({
   },
   chartTitle: { color: colors.text.primary, flex: 1 },
   chartValue: { color: colors.text.accent },
+  chartRange: { color: colors.text.tertiary, textAlign: 'center' },
   emptyCard: {
     backgroundColor: colors.surface.secondary,
     borderColor: colors.neutral.gray700,

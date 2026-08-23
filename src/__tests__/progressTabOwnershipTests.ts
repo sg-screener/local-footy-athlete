@@ -4,6 +4,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import {
+  buildProgressChartPoints,
+  progressChartDateRangeLabel,
+} from '../rules/progressChartTimeline';
 
 armTotalsOrRed();
 const ROOT = path.resolve(__dirname, '../..');
@@ -66,6 +70,10 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
     /twoKmTimeTrial/.test(snapshot)
       && /snapshot\.twoKmTimeTrial/.test(progress)
       && !/twoKmTimeTrialHistory|fake|sampleData|mockData/.test(progress));
+  ok('lift charts keep each recorded week and position it through the time-axis owner',
+    /buildProgressChartPoints/.test(progress)
+      && /dateISO:\s*point\.weekStart/.test(progress)
+      && !/function LineChart\(\{ values/.test(progress));
 
   const brokenCoach = coach.replace(
     'const snapshot = useLiveAthleteSnapshot',
@@ -78,6 +86,29 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('removing the Progress load owner kills the surface guard',
     progressOwnsVisibleTracking(progress, coach)
       && !progressOwnsVisibleTracking(brokenProgress, coach));
+}
+
+console.log('\n[TIMELINE] REAL DATES OWN HORIZONTAL SPACE');
+{
+  const points = buildProgressChartPoints([
+    { dateISO: '2026-05-04', value: 90 },
+    { dateISO: '2026-05-11', value: 95 },
+    { dateISO: '2026-08-24', value: 105 },
+  ], { width: 300, height: 88, padding: 10 });
+  ok('a one-week step followed by a fifteen-week gap is spaced by those dates',
+    points.length === 3
+      && points[1].x - points[0].x < (points[2].x - points[1].x) / 10);
+  ok('the date range makes even a two-point long gap visible in words',
+    progressChartDateRangeLabel([
+      { dateISO: '2026-05-04' },
+      { dateISO: '2026-08-24' },
+    ]) === '4 May – 24 Aug');
+  const unordered = buildProgressChartPoints([
+    { dateISO: '2026-08-24', value: 105 },
+    { dateISO: '2026-05-04', value: 90 },
+  ], { width: 300, height: 88, padding: 10 });
+  ok('stored input order cannot reverse time on the chart',
+    unordered.map((point) => point.dateISO).join(',') === '2026-05-04,2026-08-24');
 }
 
 console.log(`\nProgress tab totals: ${pass} passed, ${fail} failed`);

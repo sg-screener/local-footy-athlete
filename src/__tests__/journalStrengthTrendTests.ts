@@ -35,7 +35,10 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { buildJournalStrengthTrend } from '../rules/journalStrengthTrend';
+import {
+  buildJournalStrengthSeries,
+  buildJournalStrengthTrend,
+} from '../rules/journalStrengthTrend';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -200,6 +203,25 @@ console.log('\n[6] ORDER — heaviest first, and deterministic at a tie');
   ok('and a tie breaks by name, so the order never wobbles',
     lifts[1].exerciseName === 'Barbell Row' && lifts[2].exerciseName === 'Bench Press',
     lifts.map((l) => l.exerciseName));
+}
+
+// ─── [7] History follows recorded dates, not a guessed contiguous window ─
+
+console.log('\n[7] GAPPED HISTORY REMAINS HISTORY');
+{
+  const series = buildJournalStrengthSeries({
+    weekStart: '2026-08-24',
+    sessions: [
+      { date: '2026-05-04', strength: [lift({ weightKg: 90 })] },
+      { date: '2026-08-17', strength: [lift({ weightKg: 100 })] },
+      { date: '2026-08-24', strength: [lift({ weightKg: 105 })] },
+    ],
+  }).get('Back Squat') ?? [];
+  ok('every recorded lift week survives even when the history has long gaps',
+    series.length === 3
+      && series.map((point) => point.weekStart).join(',')
+        === '2026-05-04,2026-08-17,2026-08-24',
+    series);
 }
 
 console.log(`\njournalStrengthTrendTests: ${pass} passed, ${fail} failed`);

@@ -131,7 +131,6 @@ function directionFor(
  */
 export function buildJournalStrengthSeries(input: {
   readonly weekStart: string;
-  readonly weeks: number;
   readonly sessions: readonly JournalStrengthSessionInput[];
 }): ReadonlyMap<string, readonly { weekStart: string; topSet: StrengthTopSet }[]> {
   const byWeek = new Map<string, JournalStrengthSessionInput[]>();
@@ -143,15 +142,17 @@ export function buildJournalStrengthSeries(input: {
     else byWeek.set(weekStart, [session]);
   }
 
-  // OLDEST FIRST, because a trend is read left to right. `calendarWeeksBefore`
-  // returns most-recent-first, so this reverses it rather than re-deriving the
-  // week arithmetic a second time.
-  const window = [input.weekStart, ...calendarWeeksBefore(input.weekStart, input.weeks - 1)]
-    .slice()
-    .reverse();
+  // Every RECORDED week up to the requested week, oldest first. The old API
+  // accepted a number of weeks and built a contiguous calendar window from it.
+  // A three-record history spread across three months therefore inspected only
+  // the latest three weeks and silently dropped the oldest record. Recorded
+  // dates are the authority; an empty calendar week needs no manufactured row.
+  const recordedWeeks = Array.from(byWeek.keys())
+    .filter((weekStart) => weekStart <= input.weekStart)
+    .sort((left, right) => left.localeCompare(right));
 
   const series = new Map<string, { weekStart: string; topSet: StrengthTopSet }[]>();
-  for (const weekStart of window) {
+  for (const weekStart of recordedWeeks) {
     const tops = topSetsForSessions(byWeek.get(weekStart) ?? []);
     for (const [exerciseName, topSet] of tops.entries()) {
       const points = series.get(exerciseName);

@@ -207,7 +207,6 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
   });
   const strengthSeries = buildJournalStrengthSeries({
     weekStart: journalWeek.weekStart,
-    weeks: Math.max(1, countRecordedWeeks(input.recordedSessions)),
     sessions: strengthSessions,
   });
   const strengthHistory = Array.from(strengthSeries.entries())
