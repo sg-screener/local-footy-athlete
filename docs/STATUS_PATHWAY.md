@@ -433,3 +433,29 @@ shape is untouched. Screenshot sent to Sam.
 **OWED NEXT — slice 4:** the G−1 landing ask offers females the Primer
 (R-130a item 3), the close-out proof run, and the registry's R-130 row moved
 from `WRITTEN` to WORKING with its holders named.
+
+---
+
+## 2026-08-23 — R-130b: SAM RE-RULED THE MIX ON SIGHT, AND IT IS REBUILT (`2e114123`)
+
+He saw `Back Extension` on the upper day and killed the glute narrowing:
+*"don't just make it glute only … pull day probably becomes horizontal,
+vertical, core, core, shoulder prehab, 1-2 lower body accessories … same with
+push day."* Registered as **R-130b**, superseding R-130a item 2.
+
+Rebuilt in the same tables: female split days are his list verbatim — two
+mains, `core` + `midline`, new `shoulder_prehab` seat (shoulder-health pool;
+membership decided BEFORE the tag gate, since prehab rows can be tagless),
+and two whole-pool lower seats (`lower_accessory` + `second_lower_accessory`;
+kit dropping one IS the ruled 1-2). The direction's accessory seats left the
+female split tables; `gluteFirst` is deleted. Lower-day extra seat and the
+combined/full-body shapes stand as R-130a left them — stated in the ruling,
+not assumed.
+
+**MEASURED:** probe male picks byte-unchanged; female pull day = his list
+exactly. Golden regenerated — male 15 JSON-identical AGAIN, differential 3/0,
+compile = control, charter 44/0, primer 27/0, midline/display/binding green.
+**ON GLASS:** the female Tuesday reads Barbell Row, Lat Pulldown, Band Pallof
+Press, Banded Dead Bug, Band Pull-Apart, Bosch Hold, Copenhagen Plank —
+horizontal, vertical, core, core, shoulder prehab, two lower rows, in order;
+Friday's Primer untouched. Screenshot sent.
