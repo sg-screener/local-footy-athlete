@@ -4111,3 +4111,46 @@ By CLAUDE.md's own standard — *"DONE MEANS THE ATHLETE CAN SEE IT"* — this i
 WORKING in the suites and **OWED on glass**: the Add-menu row with its bolt, the
 week-row glyph, the day card reading "Primer", and a session screen with no
 weight controls.
+
+
+---
+
+**R-130** · *"It's one switch. Male or Female. … Everything in the app right now
+is built for the male path. Nothing has to change on the male side. The female
+path removes gunshow entirely. Prioritises lower body accessories and core over
+upper body accessories. And adds in the primer. … If it's easier to just say
+'never program gunshow for females' we can do that. And if they really want to do
+it then they can add it. … No it can't be changed after onboarding - a male is
+always a male. … There are no existing athletes mate. … there should be more
+focus on lower body accessories which will take care of the knee issue thing"*
+(Sam, 2026-08-23) · **THE FEMALE PATH IS ONE IMMUTABLE ONBOARDING ANSWER, AND IT
+CHANGES FOUR THINGS.**
+
+1. **THE GENERATOR NEVER PLACES A GUNSHOW.** The Add menu still offers it — she
+   may add one.
+2. **THE PRIMER IS PLACED ON G-1 AS OPTIONAL**, *"if no other sessions exist
+   there"*; **a MULTI-GAME week gets none** unless she adds it (Sam, same day,
+   answering the G-1 question directly). ⚠ **This REVERSES R-129's placement
+   answer for females only** — R-129 says `placedBy: ['athlete']`, and it stays
+   that way on the male path.
+3. **Lower-body accessories and core are prioritised over upper-body
+   accessories**, core landing on upper days to displace upper volume.
+4. **No separate knee mechanism** — the lower-accessory shift covers it.
+
+**SIGNED COPY, his literal words:** the question is `What is your gender?` and the
+two buttons are `Male` and `Female`.
+
+**IMMUTABLE AFTER ONBOARDING. NO MIGRATION** — there are no existing athletes, so
+the field is required and has no default.
+
+**THE STATED NON-GOAL:** the week's SHAPE does not change — same days, same
+session types, same anchors. Only which accessories fill the sessions and which
+optional session is offered.
+
+⚠ **THE DESIGN DECISION THIS RULING FORCES:** `rules/sessionTypeCharter.ts`
+answers *"who may place this?"* ONCE PER TYPE, for the whole app. Both changes 1
+and 2 need that answer to depend on WHO THE ATHLETE IS. That is the shape change,
+and it belongs in the charter — not as `if (female)` inside `coachingEngine`.
+
+· `WRITTEN` — no code. Brief for the building seat, with the audit's findings and
+the R-129 lessons: `docs/FEMALE_PATH_BRIEF_2026-08-23.md`.
