@@ -564,3 +564,10 @@ regeneration.
 **PENDING SAM:** Butterfly Stretch either/or (description says reps of 6-10s
 holds); same call covers Pissing Dog Against Wall + Dumbbell Pullovers; my
 proposed carry/groin seconds open to adjustment.
+
+**R-133 closed same day:** Sam ruled *"keep those three as reps"* (Butterfly
+Stretch, Pissing Dog Against Wall, Dumbbell Pullovers). Zero code moved —
+they were already reps; the registry row now records the hold-each-rep shape
+as ruled so it is never re-flagged. The unit census is CLOSED: every exercise
+is explicitly timed, explicitly distance, or ruled reps. Carry/groin seconds
+remain seat-proposed and open to his adjustment.

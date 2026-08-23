@@ -4308,12 +4308,15 @@ counts of held/breathed repetitions are deliberate, not unit defects. The
 same shape covers the squeeze-cue accessories (Pallof, TKE, Band Pull-Apart,
 Weighted Dead Bug, Ab Wheel and kin): reps with a hold inside the rep.
 
-**Butterfly Stretch — HIS CALL PENDING.** He asked what its description
-says: the authored entry reads 2×6-10 with dose note *"Hold each rep 6–10
-seconds"* — reps of held stretches. Pissing Dog Against Wall (2×6, "Hold
-each rep 5 seconds") and Dumbbell Pullovers (2×10, "Hold each rep for 2-3
-seconds") share the exact shape and await the same call. Until he rules,
-all three stay authored reps.
+**Butterfly Stretch, Pissing Dog Against Wall, Dumbbell Pullovers — REPS,
+RULED.** Shown their shared shape (reps where each rep is held a few
+seconds — Butterfly 2×6-10 "Hold each rep 6–10 seconds", Pissing Dog 2×6
+"Hold each rep 5 seconds", Pullovers 2×10 "Hold each rep for 2-3 seconds"),
+Sam ruled verbatim: *"keep those three as reps"* (2026-08-23). Zero code
+moved — they were already authored reps; this row exists so the
+hold-each-rep shape is never re-flagged as a unit defect. **This closes the
+unit census**: every exercise is now either explicitly timed (R-131/R-133),
+explicitly distance (the Primer's Acceleration), or ruled reps.
 
 · `WORKING` — carries: the R-133 pool-walk cells in `test:pools` (every
 carry pool entry must resolve to a duration dose); Groin Squeeze + Bear
