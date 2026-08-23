@@ -30,6 +30,9 @@ function read(path: string): string {
 }
 
 function selectedCases() {
+  if (process.argv.includes('--pending')) {
+    return COACH_LAB_CASES.filter((entry) => entry.ownerReview.status === 'pending');
+  }
   if (process.argv.includes('--all')) return COACH_LAB_CASES;
   const caseArg = process.argv.find((arg) => arg.startsWith('--case='));
   const caseId = caseArg?.slice('--case='.length) || DEFAULT_CASE_ID;
@@ -40,7 +43,7 @@ function selectedCases() {
 
 function requestedModel(): string {
   const modelArg = process.argv.find((arg) => arg.startsWith('--model='));
-  return modelArg?.slice('--model='.length) || 'gpt-5.6-sol';
+  return modelArg?.slice('--model='.length) || 'gpt-5.6-terra';
 }
 
 function canonicalSources(): readonly CanonicalCoachKnowledgeSource[] {

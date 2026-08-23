@@ -4373,3 +4373,18 @@ alter the plan reopens that future product decision but does not overturn the
 current read-only-v1 ruling without a separate confirmation-path decision.
 · `WORKING` — exact-tape and competing-model cells in `test:coach-lab`. Seat
 `snapshot`.
+
+---
+
+**R-137** · *"okay terra it is"* (Sam, 2026-08-24) · **TERRA IS THE SELECTED
+COACH TIER.**
+
+`gpt-5.6-terra` becomes the default for the rebuilt Coach after its same-case
+answer matched or bettered the approved Sol voice at materially lower measured
+cost and latency. The exact Sol tape remains the quality benchmark; model
+selection does not inherit its approval, and Terra must still clear the nine
+unreviewed Coach Lab questions before app integration. Luna is not the fallback:
+its same-case tape was cheaper but failed truthful Snapshot-field reporting and
+introduced broader advice than its declared basis supported. · `WORKING` —
+default-model, allowed-model and pending-only bench cells in `test:coach-lab`.
+Seat `snapshot`.

@@ -9,7 +9,7 @@ import type { CoachLabRetrievalReceipt } from './coachLabKnowledgeRetriever';
 import type { OpenAIResponseRequest, OpenAIResponseResult } from './openAIResponsesClient';
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 
-export const OPENAI_COACH_LAB_MODEL = 'gpt-5.6-sol';
+export const OPENAI_COACH_LAB_MODEL = 'gpt-5.6-terra';
 export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v2-retrieval';
 
 export interface OpenAICoachLabClient {

@@ -81,6 +81,9 @@ async function main(): Promise<void> {
     ok('R-136 binds approval to the exact Sol tape rather than every model',
       rulings.includes('**R-136**')
         && rulings.includes('APPROVAL NEVER TRANSFERS TO ANOTHER RESPONSE'));
+    ok('R-137 binds Terra as selected while Sol remains the approved benchmark',
+      rulings.includes('**R-137**')
+        && /TERRA IS THE SELECTED\s+COACH TIER/.test(rulings));
     ok('the prompt names the authority order',
       /CURRENT ATHLETE SNAPSHOT[\s\S]+ACTIVE LFA RULINGS[\s\S]+LFA PROGRAMMING BIBLE[\s\S]+COACHING JUDGEMENT/.test(instructions));
   }
@@ -140,7 +143,7 @@ async function main(): Promise<void> {
     ok('the API key exists only in the bearer header',
       capturedHeaders.Authorization === 'Bearer secret-test-key'
         && !capturedBody.includes('secret-test-key'));
-    ok('the strongest benchmark model is the default', body.model === 'gpt-5.6-sol');
+    ok('Sam\'s selected Terra tier is the default', body.model === 'gpt-5.6-terra');
     ok('the request disables provider-side response storage', body.store === false);
     ok('routine Coach answers use low current-turn reasoning and low verbosity',
       body.reasoning?.effort === 'low'
@@ -282,6 +285,8 @@ async function main(): Promise<void> {
       !/CoachScreen|coachTurnController|coach-chat\/index/.test(runner));
     ok('one case is the default so a command cannot accidentally buy ten calls',
       /DEFAULT_CASE_ID/.test(runner) && /--all/.test(runner));
+    ok('the pending-only bench cannot rebuy an already approved case',
+      /--pending/.test(runner) && /ownerReview\.status === 'pending'/.test(runner));
     ok('retrieval is the default and a full-source benchmark is explicit',
       /retrieveCoachLabKnowledge/.test(runner)
         && /--full-source/.test(runner));
