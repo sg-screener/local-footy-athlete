@@ -1625,6 +1625,8 @@ export function g1LandingAskForChange(args: {
       day.date === targetDate)?.workout ?? null,
     gameDates,
     sourceDate: args.change.kind === 'move_session' ? args.change.fromDate : null,
+    // R-130a item 3: her ask names the Primer, his the Gunshow.
+    athleteGender: profile?.gender,
   });
 }
 

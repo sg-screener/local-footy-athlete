@@ -1,4 +1,4 @@
-import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
+import type { AthleteGender, OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import type { G1LandingRouteId } from '../utils/planChangeTypes';
 import {
   applyConditioningDeloadToExercises,
@@ -90,6 +90,13 @@ export interface G1LandingAskContext {
    */
   keptSessionName: string | null;
   /**
+   * R-130a item 3 (Sam: *"yes offer females the primer"*): the one switch,
+   * carried so the empty-day route can name what it will actually place —
+   * the Primer for her, the Gunshow for him. Absent behaves male, which is
+   * the pre-R-130 ask verbatim; the real flows always carry it.
+   */
+  athleteGender?: AthleteGender;
+  /**
    * True when the landing session has no accessory work to keep, so route (b)
    * yields the derived pump session rather than a stripped-down version of
    * their own session. This changes only the sub-line, never the menu shape.
@@ -164,10 +171,20 @@ export function g1LandingRoutesFor(
 }
 
 const GUNSHOW_ROUTE: G1LandingRoute = {
+  // ⚠ THE ID IS A PERSISTED ROUTE KEY AND PREDATES R-130 — it stays
+  // `take_the_gunshow` for BOTH paths. What the athlete READS (the label) and
+  // what the route PLACES (`placeSessionForRoute`) are per-path: R-130a item
+  // 3, *"yes offer females the primer"*. Renaming the id would fork every
+  // suite and stored decision that carries it, to fix a word no athlete sees.
   id: 'take_the_gunshow',
-  label: (context) => `Keep ${context.g1DayName}'s Gunshow`,
-  detail: () =>
-    'light upper-body pump, what the day before a game is built for.',
+  label: (context) => (context.athleteGender === 'female'
+    ? `Keep ${context.g1DayName}'s Primer`
+    : `Keep ${context.g1DayName}'s Gunshow`),
+  // The female sub-line is R-129's SIGNED Primer sentence, reused verbatim
+  // from the Add menu (`planChangeProducer` CATEGORY_COPY) — no new words.
+  detail: (context) => (context.athleteGender === 'female'
+    ? 'Short, sharp session to feel ready for game day.'
+    : 'light upper-body pump, what the day before a game is built for.'),
   commits: true,
   requiresSecondWarning: false,
 };
@@ -275,6 +292,8 @@ export function resolveG1LandingAsk(args: {
   existingWorkout: Workout | null;
   gameDates: ReadonlySet<string>;
   sourceDate?: string | null;
+  /** R-130a item 3 — the one switch, for the empty-day route's own words. */
+  athleteGender?: AthleteGender;
 }): G1LandingAskContext | null {
   const targetDate = args.targetDate.slice(0, 10);
   const dayAfterTarget = shiftISO(targetDate, 1);
@@ -285,6 +304,7 @@ export function resolveG1LandingAsk(args: {
     g1DayName: dayNameForDate(targetDate),
     gameDayName: dayNameForDate(dayAfterTarget),
     keptSessionName: args.existingWorkout?.name ?? null,
+    ...(args.athleteGender ? { athleteGender: args.athleteGender } : {}),
     accessoriesComeFromPumpSession: accessoryRows(args.landingWorkout).length === 0,
   };
 }
@@ -344,8 +364,11 @@ export function placeSessionForRoute(args: {
   if (args.route === 'take_the_gunshow') {
     // The day's own session, in the athlete's slot. Same identity rule as every
     // other committing route: their session moved, carrying what they chose.
+    // R-130a item 3: the route PLACES per path — her Primer, his Gunshow —
+    // through the same builder each path's Add door uses.
     const pump = buildDerivedSession(
-      'arms_pump', args.targetDate, args.landingWorkout.microcycleId,
+      args.profile?.gender === 'female' ? 'primer' : 'arms_pump',
+      args.targetDate, args.landingWorkout.microcycleId,
       'Pre-game day', args.athlete,
     );
     return {
@@ -427,11 +450,14 @@ function accessoriesOnlySession(args: {
   landingWorkout: Workout;
   targetDate: string;
   athlete: AthleteContext;
+  profile: OnboardingData | null | undefined;
 }): Workout {
   const kept = accessoryRows(args.landingWorkout);
   if (kept.length === 0) {
+    // R-130a item 3: the zero-accessory fallback is the same per-path offer
+    // as the empty-day route — her Primer, his Gunshow.
     const pump = buildDerivedSession(
-      'arms_pump',
+      args.profile?.gender === 'female' ? 'primer' : 'arms_pump',
       args.targetDate,
       args.landingWorkout.microcycleId,
       'Pre-game day',

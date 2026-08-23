@@ -4152,8 +4152,23 @@ answers *"who may place this?"* ONCE PER TYPE, for the whole app. Both changes 1
 and 2 need that answer to depend on WHO THE ATHLETE IS. That is the shape change,
 and it belongs in the charter — not as `if (female)` inside `coachingEngine`.
 
-· `WRITTEN` — no code. Brief for the building seat, with the audit's findings and
-the R-129 lessons: `docs/FEMALE_PATH_BRIEF_2026-08-23.md`.
+· `WORKING` — built by seat `pathway`, 2026-08-23, all four changes plus the
+onboarding step, each held by a named gate: the question/immutability by
+`test:onboarding-reliability` walk cells + `test:onboarding-presentation` +
+`generationGenderOrThrow` (no default-for-the-unrecorded); the per-path charter
+by `test:session-type-charter` **44/0 — green for the first time on record**
+(per-path observation over four generated programs, E2b pinning no-male-primer
+/ no-female-gunshow); the G−1 Primer placement and the R-130b mix by the
+stage-b differential's **17-scenario golden (15 male worlds byte-frozen, 2
+female worlds appended)** and `test:primer-session` 27/0; the G−1 ask's
+per-path offer at `rules/g1LandingAsk.ts` (route id kept, label/placement per
+path — R-130a item 3). Athlete-visible proof: full female onboarding walk,
+week view with the Friday Primer, the R-130b split day, all on the simulator
+with screenshots to Sam. The male acceptance held at every slice: golden
+byte-identical, compile-gate breach list byte-equal to the control sweep at
+`3ebd5662`, door matrix at its standing 416/15 with no new red names.
+Original brief: `docs/FEMALE_PATH_BRIEF_2026-08-23.md`; build log:
+`docs/STATUS_PATHWAY.md`.
 
 ---
 

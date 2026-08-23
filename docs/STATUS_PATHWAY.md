@@ -459,3 +459,34 @@ compile = control, charter 44/0, primer 27/0, midline/display/binding green.
 Press, Banded Dead Bug, Band Pull-Apart, Bosch Hold, Copenhagen Plank —
 horizontal, vertical, core, core, shoulder prehab, two lower rows, in order;
 Friday's Primer untouched. Screenshot sent.
+
+---
+
+## 2026-08-23 — SLICE 4: THE ASK OFFERS HER THE PRIMER, AND R-130 IS `WORKING`
+
+**The G−1 landing ask is per-path** (R-130a item 3). The route id stays
+`take_the_gunshow` — a persisted key predating R-130, stated at the route —
+while the LABEL and the PLACEMENT switch: her empty-day option reads *"Keep
+Friday's Primer"* with R-129's signed Add-menu sentence as its sub-line (no
+new words), and both the empty-day route and the zero-accessory fallback build
+`'primer'` for her through the same builder her Add door uses.
+`athleteGender` rides `G1LandingAskContext`; the producer passes it from the
+profile it already held.
+
+**PROVEN HEADLESSLY, both paths in one probe:** female — label *"Keep
+Friday's Primer"*, places Primer, marker `primer`, 10 rows; male — *"Keep
+Friday's Gunshow"*, places Gunshow, marker `gunshow`, 6 rows.
+`test:g1-landing-ask-flow` 19/10 with failure names BYTE-IDENTICAL to the
+control run (the 10 are the demolished male G−1 world's standing reds);
+`test:athlete-door-matrix` back at its standing **416/15, no new red names**
+(its synthetic world and the ask suite's profiles gained the male stamp).
+Compile = control; differential 3/0; charter 44/0; primer 27/0.
+
+**R-130's registry row moved `WRITTEN` → `WORKING`** with every holder named.
+
+**QUEUED FOR SLICE 5 — SAM'S OWN QUESTION, saved as ordered:** *"why are
+things that need seconds instead of reps being given reps - bosch hold and
+half copenhagen both show 2x15 but its an isometric not a rep thing"* — the
+`isolation_lower` pool rows carry no `prescriptionType`, so isometric holds
+default to the reps shape. The answer and the fix go to him with slice 5, as
+he asked.

@@ -165,6 +165,8 @@ function quiet<T>(body: () => T): T {
 
 function syntheticProfile(): OnboardingData {
   return {
+    // R-130: refused at the generation door with no default; male ≙ pre-R-130.
+    gender: 'male',
     seasonPhase: 'In-season', position: 'inside_mid',
     motivation: 'Build strength and football fitness', trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
