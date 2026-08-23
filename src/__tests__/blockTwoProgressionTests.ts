@@ -117,7 +117,7 @@ const TRACKED_RECORDED_KG = 100;
 
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
@@ -297,7 +297,7 @@ function visibleLoadOf(
   const state = {
     currentProgram: program,
     currentMicrocycle: program.microcycles[0],
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     manualOverrides: {},
     markedDays: {},
     athleteContext: { ...DEFAULT_ATHLETE_CONTEXT, injuries: [], onboardingData: athlete() },

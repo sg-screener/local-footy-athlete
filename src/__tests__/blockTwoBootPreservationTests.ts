@@ -191,7 +191,7 @@ const ACCESSORY_RECORDED_KG = 17.5;
  */
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Off-season',
+    gender: 'male', seasonPhase: 'Off-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0,

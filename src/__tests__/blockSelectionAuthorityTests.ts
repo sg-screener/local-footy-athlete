@@ -59,7 +59,7 @@ function athlete(): OnboardingData {
   return {
     name: 'Replay Test',
     age: 24,
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,

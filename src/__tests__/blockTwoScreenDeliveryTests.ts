@@ -214,7 +214,7 @@ const APPROVED_QUESTION_SENTENCE =
 
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,

@@ -104,7 +104,7 @@ const BLOCK_3_START = '2026-08-31';          // the rollover Monday
 
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Off-season',
+    gender: 'male', seasonPhase: 'Off-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0,
@@ -562,7 +562,7 @@ async function main(): Promise<void> {
   const stillSelectable = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season' as never,
+    gender: 'male', seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -592,7 +592,7 @@ async function main(): Promise<void> {
   const beforeSlots = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season' as never,
+    gender: 'male', seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -608,7 +608,7 @@ async function main(): Promise<void> {
   const afterSlots = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season' as never,
+    gender: 'male', seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',
@@ -645,7 +645,7 @@ async function main(): Promise<void> {
   const exhaustive = composeWeek({
     profile: useProfileStore.getState().onboardingData,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season' as never,
+    gender: 'male', seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 1, isTeamDay: false, planEntryId: 'p1',

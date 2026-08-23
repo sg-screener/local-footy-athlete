@@ -136,7 +136,7 @@ function theAthlete(): OnboardingData {
     heightCm: 182,
     weightKg: 84,
     motivation: 'Dominate your level',
-    seasonPhase: 'In-season',
+    gender: 'male', seasonPhase: 'In-season',
     // GYM AVAILABILITY — three days they can train, named.
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
@@ -1618,7 +1618,7 @@ async function main(): Promise<void> {
       // Sunday as G+1, so `availableTrainingDays` finds nothing free and the offer
       // refuses `no_available_day` — a correct refusal about a real constraint, not
       // a world in which the offer can be exercised at all.
-      seasonPhase: 'Pre-season',
+      gender: 'male', seasonPhase: 'Pre-season',
       trainingDaysPerWeek: 2,
       preferredTrainingDays: ['Monday', 'Wednesday'],
       teamTrainingDaysPerWeek: 1,

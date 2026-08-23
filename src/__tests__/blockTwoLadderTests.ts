@@ -89,7 +89,7 @@ const CONTRACT_HARD_RPE = 8;
 
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
@@ -476,7 +476,7 @@ ok(
  */
 const ceilingAthlete = {
   ...athlete(),
-  seasonPhase: 'Pre-season',
+  gender: 'male', seasonPhase: 'Pre-season',
   trainingDaysPerWeek: 2,
   preferredTrainingDays: ['Monday', 'Thursday'],
   teamTrainingDaysPerWeek: 0,
@@ -1057,7 +1057,7 @@ function visibleRowsOf(
   const state = {
     currentProgram: program,
     currentMicrocycle: program.microcycles[0],
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     manualOverrides: {},
     markedDays: {},
     athleteContext: { ...DEFAULT_ATHLETE_CONTEXT, injuries: [], onboardingData: athlete() },

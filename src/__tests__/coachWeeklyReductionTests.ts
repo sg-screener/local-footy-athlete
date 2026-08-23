@@ -218,7 +218,7 @@ function theAthlete(): OnboardingData {
     // four, so the extra-session offer is correctly refused there and this
     // suite's whole preview arm would be vacuous. R-002: off-season has NO team
     // training, ever.
-    seasonPhase: 'Off-season',
+    gender: 'male', seasonPhase: 'Off-season',
     trainingDaysPerWeek: 2,
     preferredTrainingDays: ['Monday', 'Thursday'],
     teamTrainingDaysPerWeek: 0,
@@ -262,7 +262,7 @@ function theAthlete(): OnboardingData {
 function theBlockedAthlete(over: Partial<OnboardingData> = {}): OnboardingData {
   return {
     ...theAthlete(),
-    seasonPhase: 'In-season',
+    gender: 'male', seasonPhase: 'In-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,

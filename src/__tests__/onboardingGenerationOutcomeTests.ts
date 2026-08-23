@@ -309,7 +309,7 @@ console.log('\n[onboarding generation] transient failures get exactly one automa
     const { generateProgramFromProfile, generateProgramLocally } =
       require('../services/api/generateProgram');
     const profile = {
-      seasonPhase: 'In-season', trainingDaysPerWeek: 4,
+      gender: 'male', seasonPhase: 'In-season', trainingDaysPerWeek: 4,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
       teamTrainingDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday',
       trainingLocation: 'Commercial gym', equipment: ['Full Gym'],

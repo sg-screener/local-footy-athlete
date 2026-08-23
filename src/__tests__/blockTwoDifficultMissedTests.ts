@@ -157,7 +157,7 @@ const WEEK_ORDER: readonly DayOfWeek[] = [
 
 function athlete(): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
@@ -300,7 +300,7 @@ function visibleRowsOf(
   const state = {
     currentProgram: program,
     currentMicrocycle: program.microcycles[0],
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     manualOverrides: {},
     markedDays: {},
     athleteContext: { ...DEFAULT_ATHLETE_CONTEXT, injuries: [], onboardingData: athlete() },

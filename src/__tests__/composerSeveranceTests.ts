@@ -112,9 +112,9 @@ function composedFor(spec: WorldSpec) {
 
 function inputs(over: Record<string, unknown> = {}): never {
   return {
-    profile: { seasonPhase: 'Off-season' } as never,
+    profile: { gender: 'male', seasonPhase: 'Off-season' } as never,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season',
+    gender: 'male', seasonPhase: 'Off-season',
     offseasonSubphase: null,
     plannedDays: [LOWER_DAY_FIXTURE],
     kit: resolveEquipmentCapabilities({
@@ -156,15 +156,15 @@ const LOWER_DAY_FIXTURE = {
 };
 
 const FULL_GYM = world('full-gym in-season 2d club', {
-  seasonPhase: 'In-season', equipment: ['Full Gym'],
+  gender: 'male', seasonPhase: 'In-season', equipment: ['Full Gym'],
   teamTrainingDays: ['Tuesday', 'Thursday'],
 });
 const DB_BANDS = world('dumbbells+bands in-season 2d club', {
-  seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
+  gender: 'male', seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
   teamTrainingDays: ['Tuesday', 'Thursday'],
 });
 const AWAY = world('away bodyweight off-season 2d', {
-  seasonPhase: 'Off-season', equipment: undefined, equipmentAnswer: AWAY_ANSWER,
+  gender: 'male', seasonPhase: 'Off-season', equipment: undefined, equipmentAnswer: AWAY_ANSWER,
   teamTrainingDays: [],
 });
 
@@ -460,13 +460,13 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
   // the narrowing doing any work. A guard that cannot tell whether its subject
   // is switched on is not a guard.
   const wide = buildSection18WeeklyExposureContractV2({
-    seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
+    gender: 'male', seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
     anchorState: { teamTrainingDays: [], fixtureDays: [] },
     teamTrainingDays: [], capacity: 'moderate',
     plannerSelected: { mainStrength: 2, coreConditioning: 3, sprintHighSpeed: 1, powerPrimers: 0 },
   } as never);
   const narrowed = buildSection18WeeklyExposureContractV2({
-    seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
+    gender: 'male', seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
     anchorState: { teamTrainingDays: [], fixtureDays: [] },
     teamTrainingDays: [], capacity: 'moderate',
     plannerSelected: { mainStrength: 2, coreConditioning: 3, sprintHighSpeed: 1, powerPrimers: 0 },
@@ -485,9 +485,9 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
 
   // THE DISCLOSURE ITSELF — a typed gap, derived from kit + sheet.
   const composed = composeWeek({
-    profile: { seasonPhase: 'Off-season' } as never,
+    profile: { gender: 'male', seasonPhase: 'Off-season' } as never,
     phaseClock: { weekNumber: 1 },
-    seasonPhase: 'Off-season' as never,
+    gender: 'male', seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 2, isTeamDay: false, planEntryId: 'p', name: 'Upper Body Strength',
@@ -766,8 +766,8 @@ console.log('\n[retire] Behaviour the deleted rotation cells guarded, held again
   const fullGymTags = resolveEquipmentCapabilities({
     equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
   const compose = (weekNumber: number, excluded: string[] = []) => composeWeek({
-    profile: { seasonPhase: 'Off-season' } as never, phaseClock: { weekNumber },
-    seasonPhase: 'Off-season' as never, offseasonSubphase: null,
+    profile: { gender: 'male', seasonPhase: 'Off-season' } as never, phaseClock: { weekNumber },
+    gender: 'male', seasonPhase: 'Off-season' as never, offseasonSubphase: null,
     plannedDays: [day], kit: fullGymTags,
     injuries: { prohibitedPatterns: [], excludedIdentities: excluded },
     todayISO: '2026-07-13',
@@ -854,7 +854,7 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
   try {
     // A kit-limited world, so the composer certainly emits gaps.
     const outcome = build(world('semantic/db-in-season', {
-      seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
+      gender: 'male', seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
       teamTrainingDays: ['Tuesday', 'Thursday'],
     }));
     ok('[semantic] the probe world builds — non-vacuity first', outcome.kind === 'built');
@@ -1023,7 +1023,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
   ok('[U-1] the same movement leading a day takes the main-lift phase scheme',
     resolveComposedDose({
       identity: 'Single-Leg RDL', isMainLift: true, poolSlot: 'hinge' as never,
-      seasonPhase: 'In-season' as never, offseasonSubphase: null,
+      gender: 'male', seasonPhase: 'In-season' as never, offseasonSubphase: null,
       authoredFallback: [9, 99, 99] as readonly [number, number, number],
     }).category === 'main_lift');
 
@@ -1041,7 +1041,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
   const cut = (load: number, isMainLift: boolean, sub: string | null) =>
     applyOffseasonMainLiftLoad({
       load, isMainLift, poolSlot: 'squat' as never,
-      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
+      gender: 'male', seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
     });
   ok('[U-2] early off-season cuts a main lift to 75%', cut(100, true, 'early_offseason') === 75);
   ok('[U-2] mid off-season cuts to 90%', cut(100, true, 'mid_offseason') === 90);
@@ -1069,7 +1069,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
     cut(cut(100, true, 'early_offseason'), true, 'early_offseason') !== 75);
   {
     const athlete = {
-      seasonPhase: 'Off-season', weightKg: 80,
+      gender: 'male', seasonPhase: 'Off-season', weightKg: 80,
       squatStrength: 'Around bodyweight', benchStrength: 'Around bodyweight',
       experienceLevel: '2-5 years',
     } as never;
@@ -1077,7 +1077,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
     const derive = (sub: string | null) => resolveComposedLoad({
       identity: 'Back Squat', isMainLift: true, poolSlot: 'squat' as never,
-      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
+      gender: 'male', seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
       profile: athlete, kit: FULL_KIT,
     });
     const full = derive('late_offseason');
@@ -1091,7 +1091,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
     ok('[U-2] an unloaded identity stays at zero and is never cut',
       resolveComposedLoad({
         identity: 'Bodyweight Squat', isMainLift: true, poolSlot: 'squat' as never,
-        seasonPhase: 'Off-season' as never, offseasonSubphase: 'early_offseason' as never,
+        gender: 'male', seasonPhase: 'Off-season' as never, offseasonSubphase: 'early_offseason' as never,
         profile: athlete, kit: FULL_KIT,
       }) === 0);
 
@@ -1103,7 +1103,7 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       .tags as string[];
     const load = (identity: string, kit: string[]) => resolveComposedLoad({
       identity, isMainLift: false, poolSlot: null,
-      seasonPhase: 'In-season' as never, offseasonSubphase: null,
+      gender: 'male', seasonPhase: 'In-season' as never, offseasonSubphase: null,
       profile: athlete, kit,
     });
     ok('[R-083 load] an AWAY athlete gets 0kg on a legal unloaded row',

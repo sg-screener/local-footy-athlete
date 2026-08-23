@@ -66,7 +66,7 @@ function buildAnchorWeek(): { workouts: any[]; refusal: string | null } {
       equipmentSelectionCompleteness: 'complete',
       recentTrainingLoad: 'Pretty consistent',
       conditioningLevel: 'Average',
-      seasonPhase: 'In-season',
+      gender: 'male', seasonPhase: 'In-season',
       gameDay: GAME_DAY_NAME,
       trainingDaysPerWeek: 4,
       // Gym access DELIBERATELY overlaps both club nights, so the same-day

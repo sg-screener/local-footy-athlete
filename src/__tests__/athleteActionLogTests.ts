@@ -330,7 +330,7 @@ await run('every onboarding answer is on the tape', async () => {
   await clearAthleteActionLog();
   useProfileStore.setState({ onboardingData: {} as OnboardingData, isOnboardingComplete: false });
 
-  await commitOnboardingStep({ seasonPhase: 'In-season' } as never);
+  await commitOnboardingStep({ gender: 'male', seasonPhase: 'In-season' } as never);
   await commitOnboardingStep({ position: 'inside_mid' } as never);
 
   const commits = athleteActionLogEntries()
@@ -360,11 +360,11 @@ await run('a mirror refusal survives the relaunch that hides it', async () => {
   await clearAthleteActionLog();
   clearProfileMirrorRefusals();
   useProfileStore.setState({
-    onboardingData: { seasonPhase: 'In-season', position: 'inside_mid' } as OnboardingData,
+    onboardingData: { gender: 'male', seasonPhase: 'In-season', position: 'inside_mid' } as OnboardingData,
     isOnboardingComplete: true,
   });
 
-  publishAcceptedProfileCompatibilityMirror({ seasonPhase: 'In-season' } as OnboardingData);
+  publishAcceptedProfileCompatibilityMirror({ gender: 'male', seasonPhase: 'In-season' } as OnboardingData);
 
   const refusals = athleteActionLogEntries()
     .filter((entry) => entry.event === 'profile_mirror_publication_refused');
@@ -432,7 +432,7 @@ if (failed > 0) {
 
 function profile(): OnboardingData {
   return {
-    seasonPhase: 'In-season',
+    gender: 'male', seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
     trainingDaysPerWeek: 5,

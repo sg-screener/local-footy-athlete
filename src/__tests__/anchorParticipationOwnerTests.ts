@@ -221,7 +221,7 @@ const RECORDED_KG = 100;
 
 function clubAthlete(injured: boolean): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2,

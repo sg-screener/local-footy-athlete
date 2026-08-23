@@ -113,7 +113,7 @@ function quiet<T>(body: () => T): T {
 
 function profile(): OnboardingData {
   return {
-    seasonPhase: 'In-season',
+    gender: 'male', seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
     trainingDaysPerWeek: 5,

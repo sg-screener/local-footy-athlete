@@ -66,7 +66,7 @@ function build(gameDay: number, clubDays: readonly number[]): Built {
     const program = generateProgramLocally({
       trainingLocation: 'Commercial gym', equipmentSelectionCompleteness: 'complete',
       recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
-      seasonPhase: 'In-season', gameDay: WEEKDAY[gameDay], trainingDaysPerWeek: 4,
+      gender: 'male', seasonPhase: 'In-season', gameDay: WEEKDAY[gameDay], trainingDaysPerWeek: 4,
       preferredTrainingDays: gymDays, equipment: ['Full Gym'],
       teamTrainingDays: clubDays.map((d) => WEEKDAY[d]),
     } as never, {

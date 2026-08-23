@@ -183,7 +183,7 @@ const BLOCK_1_DATES = [
  */
 function athlete(over: Partial<OnboardingData> = {}): OnboardingData {
   return {
-    seasonPhase: 'Pre-season',
+    gender: 'male', seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 1,
@@ -589,7 +589,7 @@ console.log('\n[2b] A CLUB NIGHT IS NOT AN ELIGIBILITY REQUIREMENT');
  * `n+1` IS offered the session, and the cell below is that athlete.**
  */
 const noClubAthlete = athlete({
-  seasonPhase: 'Off-season',
+  gender: 'male', seasonPhase: 'Off-season',
   trainingDaysPerWeek: 2,
   preferredTrainingDays: ['Monday', 'Thursday'],
   teamTrainingDaysPerWeek: 0,
@@ -747,7 +747,7 @@ ok(
   availableTrainingDays({ profile: noClubAthlete, weekOrder: WEEK_ORDER }).length
     > availableTrainingDays({
       profile: athlete({
-        seasonPhase: 'Off-season',
+        gender: 'male', seasonPhase: 'Off-season',
         trainingDaysPerWeek: 2,
         preferredTrainingDays: ['Monday', 'Thursday'],
       } as Partial<OnboardingData>),
