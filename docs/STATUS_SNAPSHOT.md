@@ -317,6 +317,42 @@ the wider messy-question bench; Luna does not. The spend switch returned false
 after the two calls, and a post-run synthetic probe returned
 `503 coach_lab_disabled` before OpenAI.
 
+### Terra wider bench
+
+After Sam ruled *"okay terra it is"*, Terra became the guarded default while
+the exact Sol tape stayed the approved quality benchmark. A pending-only runner
+cell prevents rebuying the approved case. The first nine-case attempt stopped on
+the first case after the provider's 120-second timeout and returned no response
+receipt. No later case ran. The runner now emits a complete paid checkpoint
+after every case, so a later failure cannot erase earlier answer/token evidence.
+
+The retry and remaining eight cases all returned. Nine successful requests
+measured 68,858 input tokens (23,121 cached, 45,710 cache-write, 27 ordinary),
+2,037 output tokens, 70,895 total tokens and 33,448 ms summed latency (3,716 ms
+mean per successful request). Estimated successful-request spend is USD $0.1434
+under the dated official Terra rates and 1.25× cache-write rule; the unreceipted
+timed-out attempt is excluded. Exact messages and per-case receipts live in
+`docs/COACH_LAB_TERRA_TAPES_2026-08-24.md`.
+
+The wider bench found three answer corrections for Sam to rule on: future team
+training was phrased in the past, the after-footy clarification offered a prior
+game the Snapshot did not establish, and the deload answer forced a
+`wrecked`/`absolutely cooked` choice instead of giving the present practical
+option. Six other tapes are seat-pass, never owner-approved by implication.
+
+It also found three false automatic failures from one evaluator defect: any case
+marked as needing live program facts was forced to cite `visibleWeek`, even when
+it honestly asked a question without making a program claim or grounded its
+answer in Progress/Load/Readiness instead. The replacement rule permits a
+no-claim focused question with no fabricated receipt, or requires at least one
+real Snapshot field when athlete facts are claimed. Both new cells were seen red
+against the old evaluator before returning green. The recorded nine tapes pass
+the corrected mechanical boundary; human quality review still owns the three
+content defects above.
+
+The spend switch returned false immediately after the last case, and a post-run
+synthetic probe returned `503 coach_lab_disabled` before OpenAI.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
@@ -326,9 +362,9 @@ after the two calls, and a post-run synthetic probe returned
 - The Coach Lab runner, Bible-grounded OpenAI candidate, isolated endpoint and
   synthetic end-to-end provider connection are covered. A visual review/editor
   is not built yet.
-- The prior canonical full-source benchmark is covered. The new retrieved
-  Sol request is now covered; no Terra or Luna answer has been judged against
-  the accepted Sol voice.
+- The full-source and retrieved Sol benchmarks, same-case Terra/Luna comparison,
+  and nine wider Terra tapes are covered. Sam has not reviewed the nine wider
+  tapes or ruled on the three seat-proposed corrections.
 - The committed Edge Function changes are deployed as version 11. The remote
   kill switch is independently proven off by a post-deploy zero-spend `503`
   probe.

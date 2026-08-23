@@ -170,5 +170,5 @@ console.log('\n[6] SAM\'S COST-AND-LENGTH RULING IS BOUND TO THE LAB');
 
 console.log(`\nCoach Lab retrieval totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
-console.log('  NOT COVERED: no provider call runs, retrieval quality is proved only on the ten current Lab questions, and Sam has not reviewed a cheaper-model answer.');
+console.log('  NOT COVERED: no provider call runs here; retrieval quality is proved only on the ten current Lab questions, and nine wider Terra tapes remain under Sam review.');
 if (failed > 0) process.exit(1);

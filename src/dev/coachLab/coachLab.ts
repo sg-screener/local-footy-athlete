@@ -170,7 +170,8 @@ export function evaluateCoachLabResponse(
     useful: response.answerMode !== 'generic_refusal',
     readOnly: response.programActions.length === 0,
     programFactsGrounded: !labCase.requiresLiveProgramFacts
-      || (usesSnapshot && response.snapshotFieldsUsed.includes('visibleWeek')),
+      || (response.answerMode === 'focused_question' && !usesSnapshot)
+      || (usesSnapshot && response.snapshotFieldsUsed.length > 0),
     lfaClaimsGrounded: !claimsLfaRule
       || response.knowledgeSources.some(
         (entry) => entry.authority === 'lfa_bible' || entry.authority === 'active_rule',

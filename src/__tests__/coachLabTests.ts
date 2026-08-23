@@ -166,6 +166,24 @@ console.log('\n[3] AUTOMATIC BOUNDARIES FAIL CLOSED');
     inventedProgramFact.verdict === 'automatic_fail'
       && !inventedProgramFact.automaticChecks.programFactsGrounded);
 
+  const honestQuestion = evaluateCoachLabResponse(programCase, {
+    ...GOOD_RESPONSE,
+    message: 'Which exercise is the machine for?',
+    answerMode: 'focused_question',
+    basis: [],
+    snapshotFieldsUsed: [],
+  });
+  ok('a clarification that makes no program claim does not fabricate Snapshot use',
+    honestQuestion.automaticChecks.programFactsGrounded
+      && honestQuestion.verdict === 'needs_owner_review');
+
+  const progressAnswer = evaluateCoachLabResponse(programCase, {
+    ...GOOD_RESPONSE,
+    snapshotFieldsUsed: ['progress', 'load'],
+  });
+  ok('real progress and load receipts ground a program answer without fake visible-week use',
+    progressAnswer.automaticChecks.programFactsGrounded);
+
   const inventedLfaRule = evaluateCoachLabResponse(programCase, {
     ...GOOD_RESPONSE,
     basis: ['lfa_rule'],

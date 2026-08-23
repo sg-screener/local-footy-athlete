@@ -366,7 +366,7 @@ async function main(): Promise<void> {
 
   console.log(`\nOpenAI Coach Lab totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
-  console.log('  NOT COVERED: this suite makes no provider call. Sol, Terra and Luna each have one same-case tape, but the other nine cases and any plan-confirmation path remain untested; no live app screen or program change is touched.');
+  console.log('  NOT COVERED: this suite makes no provider call. Nine wider Terra tapes exist but remain under owner review; any plan-confirmation path, live app screen and program change remain untested.');
   if (failed > 0) process.exit(1);
 }
 
