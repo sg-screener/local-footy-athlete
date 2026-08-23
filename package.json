@@ -317,7 +317,7 @@
     "test:optional-topup": "TZ=Australia/Melbourne sucrase-node src/__tests__/optionalTopUpTests.ts",
     "test:exercise-edit-entry-surface": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditEntrySurfaceContractTests.ts",
     "test:coach-cleanroom": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachCleanroomContractTests.ts",
-    "test:coach-snapshot": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotTests.ts",
+    "test:coach-snapshot": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/coachSnapshotPopulatedTests.ts",
     "test:coach-tab-slice1": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice1Tests.ts",
     "test:coach-tab-slice2": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice2Tests.ts",
     "test:weekly-plan-display": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklyPlanDisplayTests.ts",

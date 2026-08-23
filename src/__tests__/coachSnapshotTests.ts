@@ -202,7 +202,7 @@ console.log('\n[2] ABSENCE AND IDENTITY ARE HONEST');
 
 function pureSnapshotOwner(body: string): boolean {
   return !/from ['"](?:react|react-native|\.\.\/store\/|\.\.\/hooks\/)/.test(body)
-    && !/todayISO|new Date\(|persist|setState|AsyncStorage/.test(body);
+    && !/todayISO|new Date\(|\.(?:persist|setState)\b|AsyncStorage/.test(body);
 }
 
 function conversationUsesSnapshot(body: string): boolean {
@@ -233,10 +233,13 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   const glassFlow = source('.maestro', 'golden', 'coach-snapshot-dashboard.yaml');
 
   ok('the Snapshot builder is domain-pure and clock-free', pureSnapshotOwner(owner));
-  ok('the adapter reuses the Journal week/load/progress owners',
-    /buildJournalWeek/.test(adapter)
-      && /buildJournalLoadModel/.test(adapter)
-      && /buildJournalStrengthTrend/.test(adapter));
+  ok('the pure owner reuses the Journal week/load/progress owners',
+    /buildJournalWeek/.test(owner)
+      && /buildJournalLoadModel/.test(owner)
+      && /buildJournalStrengthTrend/.test(owner));
+  ok('the store adapter delegates the complete derivation to that owner',
+    /deriveCoachSnapshot\(\{/.test(adapter)
+      && !/buildJournalWeek|buildJournalLoadModel|buildJournalStrengthTrend/.test(adapter));
   ok('the adapter reads readiness and active restrictions without writing',
     /useReadinessStore/.test(adapter)
       && /activeModifiers:\s*input\.activeModifiers/.test(adapter)

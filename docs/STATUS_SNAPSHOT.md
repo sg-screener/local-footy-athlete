@@ -39,8 +39,9 @@ ratio; no score, threshold or second load owner was added.
 
 ## Current shape
 
-- `buildCoachSnapshot`: pure, store-free and clock-free; carries one visible
-  week plus the existing Journal/readiness/restriction answers.
+- `deriveCoachSnapshot` and `buildCoachSnapshot`: pure, store-free and
+  clock-free; own the complete Journal/load/progress derivation and carry one
+  visible week plus the existing readiness/restriction answers.
 - `useLiveAthleteSnapshot`: the only input adapter; recomputes from existing facts.
 - `CoachDashboard`: one load-continuum hero and four compact Snapshot tiles —
   Consistency, readiness, progress and restrictions — with no AI and no writes.
@@ -54,9 +55,15 @@ ratio; no score, threshold or second load owner was added.
 - Product compile: no error names a new or modified Step-3 file. The compile
   remains red on unrelated shared-checkout files that were already red before
   this slice.
-- Pure/ownership Snapshot guard: 39/39 green. It now carries the signed
-  sweet-spot edges, proves the continuum order, anchors the load hero before
-  the tile grid and kills a mutation that swaps Load with Consistency.
+- Pure/ownership Snapshot guard: 40/40 green. It carries the signed sweet-spot
+  edges, proves the continuum order, anchors the load hero before the tile grid
+  and kills a mutation that swaps Load with Consistency.
+- Populated journey: 15/15 green after 35 calendar days, 19 real recorded
+  session decisions and one production block rollover. It earns five recorded
+  weeks, a signed load ratio and movable marker, populated Consistency,
+  week-over-week Progress and a durable Restriction. A Sunday cooked-status
+  action changes Readiness on the next live derivation without a reset or
+  reopened surface. Removing one history week kills the four-week ratio.
 - Clean-room: 58/58. Current Coach slice 2: 72/72. Journal week/load/strength:
   42/42, 125/125 and 17/17. Copy extraction/binding: 7/7 and 9/9. Feature and
   dead-affordance registries: 6/6 each.
@@ -79,9 +86,10 @@ ratio; no score, threshold or second load owner was added.
 
 ## NOT COVERED
 
-- Base/empty React Native glass is covered. Non-empty readiness, recorded
-  load/progress, an active restriction, the load marker and same-screen live
-  updates are not yet walked on glass.
+- Base/empty React Native glass is covered. The non-empty facts and live update
+  are now covered through the production action/derivation chain, but their
+  populated pixels and same-screen rerender are not yet walked on simulator
+  glass.
 - Sam has not yet accepted the redesigned layout on his physical phone.
 - No AI provider, Bible-grounded answer system or Coach Lab work belongs to
   this step.

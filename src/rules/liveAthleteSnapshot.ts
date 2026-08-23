@@ -7,20 +7,34 @@
  */
 
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
+import type { ResolvedDay } from '../utils/sessionResolver';
+import type { OnboardingData } from '../types/domain';
 import {
   getReadinessQuickOption,
   type ReadinessQuickOption,
   type ReadinessSignal,
 } from '../utils/readiness';
 import type { VisibleWeek } from './visibleProjection';
-import type { JournalWeek } from './journalWeek';
 import {
+  buildJournalWeek,
+  type JournalSessionOutcome,
+  type JournalWeek,
+} from './journalWeek';
+import {
+  buildJournalLoadModel,
+  journalWeekStartOf,
   signedValue,
+  type JournalLoadSessionInput,
   type JournalLoadCoverage,
   type JournalLoadHeadline,
   type JournalLoadModel,
+  type PlannedLift,
 } from './journalLoad';
-import type { StrengthLiftTrend } from './journalStrengthTrend';
+import {
+  buildJournalStrengthTrend,
+  type StrengthLiftTrend,
+} from './journalStrengthTrend';
+import { countWeeklyExposures } from './weeklyExposureCounts';
 
 export type CoachSnapshotReadinessState =
   | ReadinessQuickOption
@@ -59,6 +73,127 @@ export interface BuildCoachSnapshotInput {
   readonly strengthLifts: readonly StrengthLiftTrend[];
   readonly readinessSignal: ReadinessSignal | null;
   readonly activeModifiers: readonly ActiveCoachNote[];
+}
+
+/**
+ * The persisted facts this derivation is allowed to read, expressed in the
+ * existing Journal owners' types rather than as a second SessionFeedback type.
+ */
+export interface CoachSnapshotRecordedSession {
+  readonly completion: JournalSessionOutcome['completion'];
+  readonly skipReason?: JournalSessionOutcome['reason'];
+  readonly partialReason?: JournalSessionOutcome['reason'];
+  readonly feeling?: JournalSessionOutcome['feeling'];
+  readonly soreness?: JournalSessionOutcome['soreness'];
+  readonly gameFeel?: JournalSessionOutcome['gameFeel'];
+  readonly expectation?: JournalSessionOutcome['expectation'];
+  readonly strength?: JournalLoadSessionInput['strength'];
+  readonly conditioning?: JournalLoadSessionInput['conditioning'];
+  readonly teamTraining?: JournalLoadSessionInput['teamTraining'];
+  readonly game?: JournalLoadSessionInput['game'];
+  readonly difficulty?: JournalLoadSessionInput['difficulty'];
+  readonly actualMinutes?: JournalLoadSessionInput['actualMinutes'];
+}
+
+export interface DeriveCoachSnapshotInput {
+  readonly asOfDateISO: string;
+  readonly weekDays: readonly ResolvedDay[];
+  readonly visibleWeek: VisibleWeek;
+  readonly activeModifiers: readonly ActiveCoachNote[];
+  readonly recordedSessions: Readonly<Record<string, CoachSnapshotRecordedSession>>;
+  readonly readinessSignal: ReadinessSignal | null;
+  readonly experienceLevel?: OnboardingData['experienceLevel'];
+  readonly conditioningLevel?: OnboardingData['conditioningLevel'];
+}
+
+function countRecordedWeeks(
+  recordedSessions: Readonly<Record<string, CoachSnapshotRecordedSession>>,
+): number {
+  const weeks = new Set<string>();
+  for (const dateISO of Object.keys(recordedSessions)) {
+    const weekStart = journalWeekStartOf(dateISO);
+    if (weekStart) weeks.add(weekStart);
+  }
+  return weeks.size;
+}
+
+/**
+ * Derive the complete live picture from explicit current facts. Store and
+ * React ownership stop outside this function, so the athlete walker can prove
+ * the same calculation the mounted Coach reads without manufacturing a store.
+ */
+export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnapshot {
+  const exposures = countWeeklyExposures(
+    input.weekDays.map((day) => ({ date: day.date, workout: day.workout })),
+    {
+      experienceLevel: input.experienceLevel,
+      conditioningLevel: input.conditioningLevel,
+    },
+  );
+  const outcomesByDate: Record<string, JournalSessionOutcome> = {};
+  for (const day of input.visibleWeek.days) {
+    const feedback = input.recordedSessions[day.date];
+    if (!feedback) continue;
+    outcomesByDate[day.date] = {
+      completion: feedback.completion,
+      reason: feedback.skipReason ?? feedback.partialReason ?? null,
+      feeling: feedback.feeling ?? null,
+      soreness: feedback.soreness ?? null,
+      gameFeel: feedback.game?.feel ?? feedback.gameFeel ?? null,
+      expectation: feedback.expectation ?? null,
+    };
+  }
+  const journalWeek = buildJournalWeek({
+    weekStart: input.visibleWeek.weekStart,
+    days: input.visibleWeek.days,
+    exposures,
+    outcomesByDate,
+    weeksOfHistory: countRecordedWeeks(input.recordedSessions),
+  });
+
+  const sessions: JournalLoadSessionInput[] = Object.entries(input.recordedSessions)
+    .map(([date, feedback]) => ({
+      date,
+      strength: feedback.strength ?? [],
+      conditioning: feedback.conditioning ?? null,
+      teamTraining: feedback.teamTraining ?? null,
+      game: feedback.game ?? null,
+      difficulty: feedback.difficulty ?? null,
+      actualMinutes: feedback.actualMinutes ?? null,
+    }));
+  const plannedStrength: PlannedLift[] = input.weekDays.flatMap((day) =>
+    (day.workout?.exercises ?? []).map((exercise) => ({
+      exerciseName: exercise.exercise?.name ?? '',
+      sets: Number(exercise.prescribedSets) || 0,
+      repsMin: Number(exercise.prescribedRepsMin) || 0,
+      repsMax: Number(exercise.prescribedRepsMax) || 0,
+      weightKg: typeof exercise.prescribedWeightKg === 'number'
+        ? exercise.prescribedWeightKg
+        : null,
+    })));
+  const loadModel = buildJournalLoadModel({
+    weekStart: journalWeek.weekStart,
+    sessions,
+    sessionsPlannedThisWeek: journalWeek.work.sessionsPlanned,
+    plannedStrength,
+  });
+  const progress = buildJournalStrengthTrend({
+    weekStart: journalWeek.weekStart,
+    sessions: Object.entries(input.recordedSessions).map(([date, feedback]) => ({
+      date,
+      strength: feedback.strength ?? [],
+    })),
+  });
+
+  return buildCoachSnapshot({
+    asOfDateISO: input.asOfDateISO,
+    visibleWeek: input.visibleWeek,
+    journalWeek,
+    loadModel,
+    strengthLifts: progress,
+    readinessSignal: input.readinessSignal,
+    activeModifiers: input.activeModifiers,
+  });
 }
 
 function readinessState(
