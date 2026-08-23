@@ -141,10 +141,15 @@ problem; the old brain and orchestration were. No deleted Coach handler, prompt,
 store or mutation path returned.
 
 - Supabase still held the existing `OPENAI_API_KEY`. A new authenticated
-  `coach-lab` Edge Function is deployed separately and is the only registered
-  Coach function in local configuration. It fixes the benchmark model, bounds
-  request size, disables OpenAI response storage and returns no provider error
-  details to the caller.
+  `coach-lab` Edge Function is deployed separately. The remote inventory then
+  exposed four frozen functions whose source had been deleted locally but whose
+  deployments were still active: `coach-chat`, `coach-intent`,
+  `coach-semantic-program-edit-draft` and `coach-revision-proposal`. Sam's prior
+  demolition ruling applied; all four were deleted and a second remote listing
+  proves `coach-lab` is now the one deployed Coach function. The retired source
+  remains recoverable from the repository backup/history. The new endpoint fixes
+  the benchmark model, bounds request size, disables OpenAI response storage and
+  returns no provider error details to the caller.
 - The full Lab brain pack reads the current LFA Programming Bible, active
   Rulings Registry and four canonical exercise/conditioning sources. Athlete
   data is restricted to the one live Coach Snapshot; account, email, user and
