@@ -176,6 +176,28 @@ store or mutation path returned.
 - The repo-law guard still reports its ten pre-existing shared-checkout failures;
   none names a file in this connection slice.
 
+### First canonical-source OpenAI run
+
+Sam explicitly approved sending the private LFA knowledge pack and the
+identifier-free Snapshot to OpenAI in this task. One controlled case ran, then
+the server switch returned to false; a post-run synthetic probe proves the
+deployed endpoint again returns `503 coach_lab_disabled` before OpenAI.
+
+- Case: `rooted-but-wants-to-train` — *"legs are rooted but dont wanna skip"*.
+- Model: `gpt-5.6-sol`; prompt `coach-lab-openai-v1`; provider storage false.
+- Measured request: 213,109 total tokens and 22,706 ms for one answer. This is a
+  deliberate full-source quality benchmark, not a viable per-message production
+  cost. Retrieval/compression must be measured before chat release.
+- Automatic result: 6/6 boundaries green — schema, usefulness, read-only,
+  program grounding, LFA grounding and judgement transparency. It remains
+  `needs_owner_review`; automatic checks cannot approve coaching quality or
+  Sam's voice.
+- The model cited *LFA Programming Bible §9 — Tired today; Sore; Slight
+  reduction*. Direct source reading verified all three headings and the claimed
+  actions: reduce rather than delete, keep the main lift if movement is good,
+  reduce sets, remove 1–2 accessories and avoid pushing. The citation label was
+  not trusted merely because the model emitted it.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
