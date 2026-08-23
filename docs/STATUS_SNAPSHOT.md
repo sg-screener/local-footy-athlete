@@ -240,6 +240,31 @@ two variables. The full-source Sol run remains the quality benchmark.
   returns the expected `503 coach_lab_disabled`, proving the new remote version
   is live while its spend switch remains off.
 
+### First retrieved-context Sol run
+
+Sam approved one controlled paid comparison on the same case as the full-source
+benchmark. The spend switch was set true for that request only, returned false
+immediately afterwards, and a post-run synthetic probe returned
+`503 coach_lab_disabled` before OpenAI.
+
+- Case: `rooted-but-wants-to-train` — *"legs are rooted but dont wanna skip"*.
+- Model/prompt: `gpt-5.6-sol` / `coach-lab-openai-v2-retrieval`; provider
+  storage false; low current-turn reasoning; low verbosity.
+- Measured request: 7,352 input tokens, 0 cached-input tokens, 7,349
+  cache-write tokens, 339 output tokens including 142 reasoning tokens, and
+  7,691 total tokens in 10,042 ms. Against the same case's 213,109-token
+  full-source benchmark, total tokens fell 96.4% (27.7 times smaller).
+- Retrieval selected 21,765 of 813,045 available canonical-source characters in
+  11 exact line-named chunks. The 80-word answer passed all seven automatic
+  boundaries, including the new concise boundary, and remains
+  `needs_owner_review` rather than approving its own coaching quality.
+- The answer is materially cheaper and within the signed length range. Seat
+  review still finds a quality question for Sam: it leads safely and uses live
+  schedule/readiness facts, but spends much of the short answer on injury triage
+  and a compound follow-up instead of giving the practical reduced-session shape
+  that the retrieved `Sore` / `Slight reduction` rules support. No cheaper-model
+  comparison should obscure that prompt-quality question.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
@@ -250,8 +275,8 @@ two variables. The full-source Sol run remains the quality benchmark.
   synthetic end-to-end provider connection are covered. A visual review/editor
   is not built yet.
 - The prior canonical full-source benchmark is covered. The new retrieved
-  request shape has not yet run through the deployed endpoint, and no Terra or
-  Luna answer has been judged against the accepted Sol voice.
+  Sol request is now covered; no Terra or Luna answer has been judged against
+  the accepted Sol voice.
 - The committed Edge Function changes are deployed as version 11. The remote
   kill switch is independently proven off by a post-deploy zero-spend `503`
   probe.
