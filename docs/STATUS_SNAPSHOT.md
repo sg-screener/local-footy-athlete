@@ -234,8 +234,12 @@ two variables. The full-source Sol run remains the quality benchmark.
   red against the prior medium-reasoning request; the retrieval suite was first
   red before its source owner existed, and the 101-word mutation turns the
   concise boundary red.
-- No paid request was made in this slice. The deployed endpoint remains disabled
-  between controlled runs.
+- No paid request was made in this slice. A remote synthetic probe returns the
+  expected `503 coach_lab_disabled`, proving the deployed spend switch is still
+  off. The local Edge Function update is committed, but deployment could not be
+  verified: this seat's Supabase CLI has no authenticated profile and the
+  deploy/list commands produced no remote receipt. Remote version parity is
+  therefore OPEN-UNKNOWN, never implied by the local source.
 
 ## NOT COVERED
 
@@ -249,5 +253,8 @@ two variables. The full-source Sol run remains the quality benchmark.
 - The prior canonical full-source benchmark is covered. The new retrieved
   request shape has not yet run through the deployed endpoint, and no Terra or
   Luna answer has been judged against the accepted Sol voice.
+- The committed Edge Function changes have not been proven deployed because the
+  local Supabase CLI lacks an authenticated profile. The remote kill switch is
+  independently proven off by a zero-spend `503` probe.
 - No answer is approved yet; Sam has not supplied the ideal answer set.
 - No program-change path is added or altered by the dashboard.
