@@ -45,6 +45,7 @@ import type {
 import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
 import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
+import { GENDER_COPY, genderAnswerText } from '../../rules/onboardingGenderCopy';
 import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
@@ -212,6 +213,16 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     label: 'Name',
     step: 'Name',
     value: (data) => present(data.firstName),
+  },
+  {
+    // R-130: the row shows the one-switch answer through the signed words.
+    // During onboarding the row's Edit routes back to the Gender step like any
+    // other; after onboarding nothing collects the field again — immutability
+    // is the absence of a writer, not a disabled button.
+    section: 'About You',
+    label: GENDER_COPY.reviewLabel,
+    step: 'Gender',
+    value: (data) => (data.gender ? genderAnswerText(data.gender) : 'Not selected'),
   },
   {
     section: 'About You',

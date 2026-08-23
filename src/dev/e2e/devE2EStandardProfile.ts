@@ -2,6 +2,10 @@ import type { OnboardingData } from '../../types/domain';
 
 export const DEV_E2E_STANDARD_PROFILE: OnboardingData = {
   firstName: 'Sam',
+  // R-130: gender is a required onboarding answer with no default. A seeded
+  // world without it would be "an athlete the app would have refused"
+  // (LAW-test-worlds-are-generated-or-real). Male ≙ the pre-R-130 app.
+  gender: 'male',
   heightCm: 184,
   weightKg: 90,
   position: 'inside_mid',

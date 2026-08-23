@@ -63,6 +63,8 @@ export function samExport8Profile(): OnboardingData {
     ],
     experienceLevel: '5+ years',
     firstName: 'Sam',
+    // R-130: required answer, no default; male ≙ the pre-R-130 app.
+    gender: 'male',
     heightCm: 184,
     injuries: [],
     motivation: 'Dominate your level, Feel fresh on game day',

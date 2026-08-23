@@ -56,6 +56,10 @@ const TEAM_DAYS = ['Tuesday', 'Thursday', 'Wednesday'] as const;
 
 function baseProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    // R-130: required answer, no default. `male` is the byte-identity control —
+    // a male-stamped profile must generate exactly the pre-R-130 output, and
+    // this golden is the instrument that holds that claim.
+    gender: 'male',
     seasonPhase: 'Off-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',

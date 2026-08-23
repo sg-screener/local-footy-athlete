@@ -2454,3 +2454,23 @@ adjacent to batch 34's "Away / travel" and deliberately does not borrow it.
 **35-d. THE TWO QUESTIONS ARE HEADINGS, NOT SENTENCES ASSEMBLED IN CODE.** The
 file's own terminal note warns against signing fragments; both are whole strings
 with no interpolation, and the dates the athlete picks never appear inside them.
+
+## Batch 36 — the gender question (2026-08-23): SIGNED, R-130
+
+**STATUS: SIGNED.** The question and both buttons are Sam's literal words in
+R-130: *"the question is `What is your gender?`"* and *"the two buttons are
+`Male` and `Female`"*. Registered in `rules/onboardingGenderCopy.ts` BEFORE the
+screen was built — the R-129 `Acceleration` lesson.
+
+| Where | string | status |
+| --- | --- | --- |
+| The onboarding question | "What is your gender?" | SIGNED, R-130 verbatim |
+| Button one | "Male" | SIGNED, R-130 verbatim |
+| Button two | "Female" | SIGNED, R-130 verbatim |
+| The Review row label | "Gender" | PROPOSED — the noun of his signed question |
+
+**36-a. THE ANSWER IS RENDERED THROUGH THE SAME TWO SIGNED WORDS.** The Review
+row's value prints `Male` or `Female` via `genderAnswerText` — the stored id and
+the shipped word are joined at one registry entry, never re-typed at a surface.
+
+**36-b. NOTHING IS REPLACED AND NOTHING IS WITHDRAWN.** Every string is new.

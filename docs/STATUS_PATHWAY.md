@@ -236,3 +236,64 @@ volatile keys scrubbed, a committed 2.96 MB golden over 15 scenarios, strict
 
 **Probe files: none. Nothing in `src/` changed by this seat. One suite was RUN
 read-only for the baseline.**
+
+---
+
+## 2026-08-23, AFTERNOON — R-130a RECEIVED; THE PROOF INSTRUMENT WAS BROKEN ON `main` AND IS REPAIRED
+
+**Sam answered all three questions (R-130a):** males stay as they are (gunshow
+returns later as its own order), the proposed female mix is signed, the G−1
+landing ask offers females the Primer. Onboarding step must match the existing
+steps' style.
+
+### ⚠ THE DIFFERENTIAL WAS RED ON CLEAN `main`, AND THE CAUSE WAS A SECOND GAME-ANCHOR OWNER
+
+Before slice 1, the baseline run failed: **~75k of 76k golden lines diverged on
+an untouched tree** (verified in a clean worktree at `b501b665`, exit 1 — my
+first read had piped through `tail`, which masked the exit code). First
+divergence: the modes census lost `in_season_game_week` for `in_season_bye_build`
+— **every in-season scenario was building a BYE world.**
+
+**ROOT CAUSE, one line:** `rules/weeklySchedulerInputs.ts` fell back to
+`dayNumber(profile.gameDay)` — the LEGACY field — where the rest of the app
+reads `storedGameAnchor` (usualGameDay first; the one-owner rule of
+`rules/gameAnchor.ts`, Sam 2026-08-12). The differential's in-season scenarios
+(and any real athlete anchored only by `usualGameDay`, e.g. via phase shift)
+got bye weeks from the live scheduler path while `onboardingToCoachingInputs`
+said `hasGame: true` for the same profile. The regression became load-bearing
+when burn-the-boats made the scheduler path the sole planner; the differential
+had not been run since — **the golden was 17 days stale (last regen 2026-08-06)**.
+
+**FIX + MEASUREMENT (commit `3ebd5662`):** both reads now go through
+`storedGameAnchor`. A/B in the worktree (fix on vs off): charter 40/3,
+qa 148/37, scenarios 53/12 — **failure-name sets byte-identical**, so the fix
+moves nothing but usualGameDay-anchored worlds. Golden regenerated in the clean
+worktree with only the fix applied: determinism double-run PASS, all 8 modes
+back. **That golden is the R-130 male baseline** — the residual Aug-06→Aug-23
+movement is seventeen days of ruled work and is not re-adjudicated here.
+
+### SLICE 1 — BUILT, SUITES IN FLIGHT
+
+- `rules/onboardingGenderCopy.ts` — the four strings registered FIRST (question,
+  Male, Female, review label), batch 36 in the copy sheet doc.
+- `types/domain.ts` `AthleteGender` + `gender?:` (the `?:` convention the
+  influence gate pins; requiredness lives in the step registry).
+- `utils/onboardingSteps.ts` — `Gender` step directly after `Name`,
+  `visible: always`, satisfied only by the two literal answers.
+- `screens/onboarding/GenderScreen.tsx` — GymExperience's exact shape
+  (OnboardingLayout, SelectableTile, commit-on-tap, 250ms advance), every word
+  from the signed sheet. Navigator + param list + `NameScreen` re-pointed.
+- `reviewRows.ts` — one row, About You, value via `genderAnswerText`.
+- Central fixtures stamped `gender: 'male'`: `devE2EStandardProfile`,
+  stage-b `baseProfile`, `samDeviceExport8Fixture`, `COMPLETE_IN_SEASON_PROFILE`.
+
+**FIELD-INFLUENCE NOTE, so nobody reads it as gamed:** the gate's textual
+consumer match is satisfied by `rules/onboardingGenderCopy.ts`; the REAL
+programming consumer (charter/scheduler/composer) lands in slice 2 of this same
+task, with an engine-door refusal in the `generationSeasonPhaseOrThrow` shape —
+no default-for-the-unrecorded.
+
+**GENERATION-DOOR FACT for slice 2:** generation refuses per-field via
+`*OrThrow` doors only; `missingRequiredProfileFields` is diagnostics. So the
+gender refusal at the engine door is slice-2 work, and inline test profiles
+missing the stamp will surface THERE, not in slice 1.

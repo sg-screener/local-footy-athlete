@@ -134,6 +134,13 @@ export type MotivationGoal =
   | 'build_muscle'
   | 'stay_consistent';
 
+/**
+ * R-130 (Sam, 2026-08-23): *"It's one switch. Male or Female."* Asked once at
+ * onboarding, stored on the profile, IMMUTABLE after — *"a male is always a
+ * male"* — and there are no pre-R-130 athletes, so no migration and no default.
+ */
+export type AthleteGender = 'male' | 'female';
+
 export type InjurySeverity = 'Mild' | 'Moderate' | 'Severe';
 
 export type InjuryTiming = 'Running' | 'Lifting' | 'Both' | 'Constant';
@@ -167,6 +174,14 @@ export interface ProgramAvailabilityConstraint {
 
 export interface OnboardingData {
   firstName?: string;
+  /**
+   * R-130's one switch. `?:` is the TYPE convention every OnboardingData field
+   * carries (`onboardingFieldInfluenceTests` pins it); the answer is REQUIRED
+   * IN FACT — the Gender step's `satisfied` predicate refuses Review and
+   * generation without it. No post-onboarding surface writes it: immutability
+   * is the absence of a writer, and a full reset wipes it with the profile.
+   */
+  gender?: AthleteGender;
   ageRange?: AgeRange;
   position?: Position;
   /**

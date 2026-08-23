@@ -214,6 +214,9 @@ async function resetDisk(): Promise<void> {
 
 const COMPLETE_IN_SEASON_PROFILE: OnboardingData = {
   firstName: 'Sam',
+  // R-130: the Gender step is visible always and satisfied only by an answer,
+  // so a "complete" profile must carry one.
+  gender: 'male',
   heightCm: 183,
   weightKg: 84,
   position: 'Midfielder',
@@ -276,6 +279,8 @@ async function main(): Promise<void> {
 
     const journey: Array<[string, Partial<OnboardingData>]> = [
       ['Name', { firstName: 'Sam' }],
+      // R-130: the one-switch answer, asked directly after the name.
+      ['Gender', { gender: 'male' } as Partial<OnboardingData>],
       ['BodyMeasurements', { heightCm: 183, weightKg: 84 }],
       ['Position', { position: 'Midfielder' } as Partial<OnboardingData>],
       ['Motivation', { motivation: 'Run out games' }],
@@ -482,6 +487,10 @@ async function main(): Promise<void> {
     await resetDisk();
     await whileReleasingWrites(() => commitOnboardingStep({
       firstName: 'Sam',
+      // R-130: Gender sits between Name and BodyMeasurements; a mid-flow
+      // relaunch after these answers should resume at Motivation, so the
+      // walked-past steps must all be answered — gender included.
+      gender: 'male',
       heightCm: 183,
       weightKg: 84,
       position: 'Midfielder',

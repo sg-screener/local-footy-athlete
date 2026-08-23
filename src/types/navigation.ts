@@ -39,6 +39,7 @@ export type AuthStackParamList = {
 export type OnboardingStackParamList = {
   Welcome: undefined;
   Name: undefined;
+  Gender: undefined;
   Position: undefined;
   Motivation: undefined;
   BodyMeasurements: undefined;

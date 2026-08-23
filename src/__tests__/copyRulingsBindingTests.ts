@@ -168,6 +168,11 @@ const AUTHORING_MODULES = [
   // app" while it was on the screen.
   'rules/projectionCopy.ts',
   'rules/teamNightSize.ts',
+  // THE GENDER QUESTION (batch 36, R-130) — the ninth opening of the same
+  // hatch, for the stated reason: the four strings are authored beside the
+  // R-130 decision, and the screen reads them through `GENDER_COPY`, so the
+  // ids never appear in a `screens/` file for the id-aware scan to find.
+  'rules/onboardingGenderCopy.ts',
 ];
 
 /**

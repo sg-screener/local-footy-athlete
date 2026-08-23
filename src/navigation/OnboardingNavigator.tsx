@@ -20,6 +20,7 @@ import { TeamTrainingDurationScreen } from '../screens/onboarding/TeamTrainingDu
 import { TeamTrainingIntensityScreen } from '../screens/onboarding/TeamTrainingIntensityScreen';
 import { TrainingCommitmentScreen } from '../screens/onboarding/TrainingCommitmentScreen';
 import { PreferredTrainingDaysScreen } from '../screens/onboarding/PreferredTrainingDaysScreen';
+import { GenderScreen } from '../screens/onboarding/GenderScreen';
 import { GymExperienceScreen } from '../screens/onboarding/GymExperienceScreen';
 import { SquatStrengthScreen } from '../screens/onboarding/SquatStrengthScreen';
 import { BenchStrengthScreen } from '../screens/onboarding/BenchStrengthScreen';
@@ -73,6 +74,7 @@ export default function OnboardingNavigator() {
         options={{ animation: 'none' }}
       />
       <Stack.Screen name="Name" component={NameScreen} />
+      <Stack.Screen name="Gender" component={GenderScreen} />
       <Stack.Screen name="BodyMeasurements" component={BodyMeasurementsScreen} />
       <Stack.Screen name="Position" component={PositionScreen} />
       <Stack.Screen name="Motivation" component={MotivationScreen} />

@@ -20,6 +20,7 @@ import { equipmentAnswered } from './equipmentAvailability';
 
 export type OnboardingStepName =
   | 'Name'
+  | 'Gender'
   | 'BodyMeasurements'
   | 'Position'
   | 'Motivation'
@@ -74,6 +75,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['firstName'],
     visible: always,
     satisfied: (data) => filled(data.firstName),
+  },
+  {
+    // R-130 (Sam, 2026-08-23): one switch, Male or Female, asked EARLY because
+    // generation reads it, required with no default — there are no pre-R-130
+    // athletes. Immutable after onboarding: no edit surface collects it, and
+    // `satisfied` accepting only the two literal answers is what makes a
+    // profile that somehow lost it march back through this step rather than
+    // generate around the gap.
+    name: 'Gender',
+    answerLabel: 'your gender',
+    collects: ['gender'],
+    visible: always,
+    satisfied: (data) => data.gender === 'male' || data.gender === 'female',
   },
   {
     name: 'BodyMeasurements',
