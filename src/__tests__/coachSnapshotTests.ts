@@ -23,6 +23,7 @@ import type { VisibleWeek } from '../rules/visibleProjection';
 import type { JournalWeek } from '../rules/journalWeek';
 import type { JournalLoadModel } from '../rules/journalLoad';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
+import { coachLoadMarkerFraction } from '../rules/snapshotDashboardCopy';
 
 armTotalsOrRed();
 
@@ -94,6 +95,7 @@ const journalWeek = {
 const loadModel = {
   weekStart: WEEK_START,
   headline: { value: { ratio: 1.05, band: 'in' }, provenance: 'signed' },
+  sweetSpotBand: { value: { low: 0.8, high: 1.3 }, provenance: 'signed' },
   coverage: {
     value: { sessionsMeasured: 3, sessionsPlanned: 4, liftsUnmeasured: 1 },
     provenance: 'signed',
@@ -133,6 +135,15 @@ console.log('\n[1] ONE PURE PICTURE CARRIES THE FIVE REQUESTED FACTS');
   ok('this-week work is carried from the Journal owner', snapshot.thisWeek === journalWeek);
   ok('today readiness uses the existing quick-check vocabulary', snapshot.readiness.state === 'good');
   ok('the signed load headline crosses the surface door', snapshot.load.headline?.band === 'in');
+  ok('the signed sweet-spot edges cross the same surface door',
+    snapshot.load.sweetSpotBand?.low === 0.8
+      && snapshot.load.sweetSpotBand.high === 1.3);
+  const band = snapshot.load.sweetSpotBand!;
+  ok('the continuum keeps under, sweet spot and over in order',
+    coachLoadMarkerFraction(0.3, band) === 0
+      && coachLoadMarkerFraction(band.low, band) < coachLoadMarkerFraction(1.05, band)
+      && coachLoadMarkerFraction(1.05, band) < coachLoadMarkerFraction(band.high, band)
+      && coachLoadMarkerFraction(1.8, band) === 1);
   ok('load coverage remains its measured/planned pair',
     snapshot.load.coverage?.sessionsMeasured === 3
       && snapshot.load.coverage.sessionsPlanned === 4);
@@ -201,6 +212,18 @@ function conversationUsesSnapshot(body: string): boolean {
     && !/(?:readCoachMessage|coachAnswer|coachProposal)\([\s\S]{0,180}?week:\s*visibleWeek/.test(body);
 }
 
+function loadOwnsTheHero(body: string): boolean {
+  const load = body.indexOf('testID="coach-dashboard-load"');
+  const firstTileRow = body.indexOf('<View style={styles.row}>');
+  const consistency = body.indexOf('testID="coach-dashboard-week"');
+  if (load < 0 || firstTileRow < 0 || consistency < 0) return false;
+  const hero = body.slice(load, firstTileRow);
+  return load < firstTileRow
+    && consistency > firstTileRow
+    && hero.includes('testID="coach-dashboard-load-track"')
+    && hero.includes('testID="coach-dashboard-load-sweet-spot"');
+}
+
 console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE');
 {
   const owner = source('src', 'rules', 'liveAthleteSnapshot.ts');
@@ -233,11 +256,13 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   ok('the glass flow opens Coach and captures the dashboard',
     /id: "tab-coach"/.test(glassFlow)
       && /artifacts\/ui-walk\/coach-snapshot-dashboard/.test(glassFlow));
-  ok('the weekly hero carries a progress track on source and glass',
-    dashboard.includes('testID="coach-dashboard-week-progress"')
-      && glassFlow.includes('id: "coach-dashboard-week-progress"'));
-  ok('the four live signals are separated into a two-by-two tile grid',
+  ok('training load owns the hero and its signed sweet-spot continuum',
+    loadOwnsTheHero(dashboard)
+      && glassFlow.includes('id: "coach-dashboard-load-track"')
+      && glassFlow.includes('id: "coach-dashboard-load-sweet-spot"'));
+  ok('Consistency and the other three signals form the two-by-two tile grid',
     (dashboard.match(/<View style=\{styles\.row\}>/g) ?? []).length === 2
+      && /consistency/.test(dashboard)
       && /borderWidth:\s*1/.test(dashboard)
       && /borderRadius:\s*borderRadius\.lg/.test(dashboard));
   ok('athlete-visible dashboard words come from the one copy owner',
@@ -259,12 +284,19 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
 {
   const owner = source('src', 'rules', 'liveAthleteSnapshot.ts');
   const screen = source('src', 'screens', 'coach', 'CoachTabScreen.tsx');
+  const dashboard = source('src', 'screens', 'coach', 'SnapshotDashboard.tsx');
   ok('a fabricated store dependency kills domain purity',
     pureSnapshotOwner(owner)
       && !pureSnapshotOwner(`${owner}\nimport { useProgramStore } from '../store/programStore';`));
   const bypass = screen.replace(/week:\s*snapshot\.visibleWeek/g, 'week: visibleWeek');
   ok('a fabricated conversation bypass kills shared ownership',
     conversationUsesSnapshot(screen) && !conversationUsesSnapshot(bypass));
+  const swappedHierarchy = dashboard
+    .replace('testID="coach-dashboard-load"', 'testID="coach-dashboard-swap"')
+    .replace('testID="coach-dashboard-week"', 'testID="coach-dashboard-load"')
+    .replace('testID="coach-dashboard-swap"', 'testID="coach-dashboard-week"');
+  ok('swapping load and Consistency kills the hierarchy guard',
+    loadOwnsTheHero(dashboard) && !loadOwnsTheHero(swappedHierarchy));
 }
 
 console.log(`\nCoach Snapshot totals: ${pass} passed, ${fail} failed`);

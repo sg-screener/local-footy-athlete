@@ -18,7 +18,9 @@ tags:
 - assertVisible:
     id: "coach-dashboard-week"
 - assertVisible:
-    id: "coach-dashboard-week-progress"
+    id: "coach-dashboard-load-track"
+- assertVisible:
+    id: "coach-dashboard-load-sweet-spot"
 - assertVisible:
     id: "coach-dashboard-readiness"
 - assertVisible:

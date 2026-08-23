@@ -1064,9 +1064,9 @@ totalsPrinted(fail);
 console.log('  DEPTH (L13): 0 — a unit sweep over the pure derivation with hand-built '
   + 'session records. It does NOT walk an athlete through five real weeks, and no cell '
   + 'here mounts a surface.');
-console.log('  NOT COVERED: no current screen consumes this model; the retired Journal '
-  + 'UI is gone and the Coach dashboard is not built yet. The fallback rung is proven '
-  + 'WHOLE for the current week and '
+console.log('  NOT COVERED: the Coach dashboard now consumes the signed headline, sweet-spot '
+  + 'band and coverage, but this unit suite does not mount that surface or exercise its '
+  + 'live adapter. The fallback rung is proven WHOLE for the current week and '
   + 'proven ABSENT from ratio space; whether it should ever enter ratio space is Sam\'s '
   + 'open question (docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md §2b). No cell asserts '
   + 'what the athlete SEES on a device.');

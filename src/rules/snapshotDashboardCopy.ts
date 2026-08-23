@@ -1,9 +1,9 @@
 /**
  * BATCH 38 — COACH SNAPSHOT DASHBOARD. SIGNED 2026-08-24.
  *
- * Sam named the five sections: this week, readiness, load, progress and
- * restrictions. Sam reviewed the first dashboard and signed all wording:
- * "the wording is fine". The first layout was rejected and is being redesigned.
+ * Sam named the five sections, signed the first wording with "the wording is
+ * fine", then moved Load into the hero and supplied `Consistency` as the exact
+ * replacement label for weekly completion in the four-tile grid.
  */
 
 import type { CoachSnapshotReadinessState } from './liveAthleteSnapshot';
@@ -13,7 +13,7 @@ import type { StrengthLiftTrend, StrengthTrendDirection } from './journalStrengt
 
 export const COACH_DASHBOARD_COPY = {
   title: 'Coach snapshot',
-  thisWeek: 'This week',
+  consistency: 'Consistency',
   readiness: 'Readiness',
   load: 'Load',
   progress: 'Progress',
@@ -35,6 +35,22 @@ export const COACH_DASHBOARD_COPY = {
   progressNew: 'No last-week comparison',
   noRestrictions: 'None active',
 } as const;
+
+/**
+ * Position a load ratio on the signed continuum used by the old Journal hero.
+ * The track gives one band-width of context on either side of the sweet spot;
+ * clamping changes only the finite drawing, never the athlete's load number.
+ */
+export function coachLoadMarkerFraction(
+  ratio: number,
+  band: { readonly low: number; readonly high: number },
+): number {
+  const span = band.high - band.low;
+  if (!Number.isFinite(ratio) || span <= 0) return 0.5;
+  const trackLow = band.low - span;
+  const trackHigh = band.high + span;
+  return Math.min(1, Math.max(0, (ratio - trackLow) / (trackHigh - trackLow)));
+}
 
 export function coachWeekSummary(work: JournalWork): string {
   if (work.sessionsPlanned === 0) return COACH_DASHBOARD_COPY.noSessions;

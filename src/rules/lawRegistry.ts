@@ -1844,6 +1844,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `buildCoachSnapshot` is a pure, clock-free boundary that refuses a mismatched Journal week, load week or readiness date. `useLiveAthleteSnapshot` is the only store-reading adapter and persists nothing. The current Coach screen calls it exactly once, hands that object to `CoachDashboard`, and supplies `snapshot.visibleWeek` to all three existing conversation readers. The dashboard reads its other four sections from that same object. The guard also scans every store for a Snapshot owner. LIVENESS: injecting a store import kills the purity cell; replacing the conversation inputs with the screen\'s separate `visibleWeek` kills the shared-owner cell. NOT COVERED BY THIS GUARD: screen layout, AI response quality, and program changes. Base layout is separately walked by `.maestro/golden/coach-snapshot-dashboard.yaml`.',
     },
   },
+  {
+    id: 'LAW-coach-load-owns-the-dashboard-hero',
+    law: 'Training load owns the wide Coach Snapshot hero immediately below the title and shows the signed under-to-sweet-spot-to-over continuum. Weekly completion is a supporting signal named Consistency and sits inside the four-tile grid.',
+    ruledAt: 'docs/COPY_SHEET_RULINGS_2026-07-30.md, Batch 38 update, 2026-08-24 — records Sam\'s exact instruction that the sweet-spot training-load slider owns the top and the former top card moves into the four smaller boxes as Consistency.',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. The guard proves every source anchor exists before comparing positions, requires the Load surface before the first tile row, requires Consistency inside the grid, and requires the load hero to own both the continuum track and signed sweet-spot zone. Its liveness arm swaps the Load and Consistency identities and must turn red. The focused glass flow separately requires the track and shaded zone on the mounted Coach tab. NOT COVERED: a marker cannot honestly render in the empty seed because no load ratio exists; the non-empty live-state flow remains owed.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

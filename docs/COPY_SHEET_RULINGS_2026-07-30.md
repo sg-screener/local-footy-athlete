@@ -2502,10 +2502,17 @@ and said *"the wording is fine"*. That signs every literal and composed frame in
 this batch while rejecting the first visual treatment: *"i don't like how it
 looks — it will need some UI updating"*. The words stay; the layout changes.
 
+**UPDATED BY SAM, 2026-08-24.** Training load replaces weekly completion as the
+wide top signal and restores the signed sweet-spot continuum. The former top
+signal moves into the four-tile grid under Sam's exact word *"consistency"*.
+This hierarchy is registered and guarded as
+`LAW-coach-load-owns-the-dashboard-hero`.
+
 | Where | string | status |
 | --- | --- | --- |
 | Dashboard title | "Coach snapshot" | SIGNED |
-| Section label | "This week" | SIGNED |
+| Previous top-card label | "This week" | SUPERSEDED ON THE COACH DASHBOARD |
+| Section label | "Consistency" | SIGNED — Sam's exact word, 2026-08-24 |
 | Section label | "Readiness" | SIGNED |
 | Section label | "Load" | SIGNED |
 | Section label | "Progress" | SIGNED |

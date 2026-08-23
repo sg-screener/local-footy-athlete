@@ -34,6 +34,7 @@ export interface CoachSnapshotReadiness {
 
 export interface CoachSnapshotLoad {
   readonly headline: JournalLoadHeadline | null;
+  readonly sweetSpotBand: { readonly low: number; readonly high: number } | null;
   readonly coverage: JournalLoadCoverage | null;
 }
 
@@ -90,6 +91,7 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
     },
     load: {
       headline: signedValue(input.loadModel.headline),
+      sweetSpotBand: signedValue(input.loadModel.sweetSpotBand),
       coverage: signedValue(input.loadModel.coverage),
     },
     progress: [...input.strengthLifts],

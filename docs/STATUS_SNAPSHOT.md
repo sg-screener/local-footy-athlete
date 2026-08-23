@@ -21,7 +21,7 @@ Selected option 2. It removes the class of bugs where two Coach surfaces are
 individually correct about different moments or weeks. The pure builder refuses
 a week/date mismatch and the Snapshot is never persisted.
 
-For the visual revision, two shapes were compared:
+For the first visual revision, two shapes were compared:
 
 1. Restyle the original single dashboard card while keeping five stacked rows.
 2. Give the weekly result one clear hero card and separate the four supporting
@@ -31,13 +31,19 @@ Selected option 2. It establishes hierarchy instead of decorating a list. A
 first pass put lime markers on every tile; the simulator showed those markers
 could falsely imply that empty states were positive, so they were removed.
 
+Sam then corrected the hierarchy: training load is the primary coaching signal,
+because its signed continuum tells the athlete whether they are below, inside or
+above their sweet spot. The weekly completion card moved into the grid under his
+word `Consistency`. This reuses the existing signed 0.8–1.3 load band and live
+ratio; no score, threshold or second load owner was added.
+
 ## Current shape
 
 - `buildCoachSnapshot`: pure, store-free and clock-free; carries one visible
   week plus the existing Journal/readiness/restriction answers.
 - `useLiveAthleteSnapshot`: the only input adapter; recomputes from existing facts.
-- `CoachDashboard`: one weekly hero and four compact Snapshot tiles, no AI and
-  no writes.
+- `CoachDashboard`: one load-continuum hero and four compact Snapshot tiles —
+  Consistency, readiness, progress and restrictions — with no AI and no writes.
 - `CoachTabScreen`: constructs one Snapshot, hands it to the dashboard, and
   supplies its visible week to all existing conversation readers.
 - `test:coach-snapshot`: domain, ownership, persistence-absence and liveness
@@ -48,16 +54,16 @@ could falsely imply that empty states were positive, so they were removed.
 - Product compile: no error names a new or modified Step-3 file. The compile
   remains red on unrelated shared-checkout files that were already red before
   this slice.
-- Pure/ownership Snapshot guard: 36/36 green, including the redesigned layout
-  anchors, glass-flow anchors and two mutations that break the protected
-  ownership shapes.
+- Pure/ownership Snapshot guard: 39/39 green. It now carries the signed
+  sweet-spot edges, proves the continuum order, anchors the load hero before
+  the tile grid and kills a mutation that swaps Load with Consistency.
 - Clean-room: 58/58. Current Coach slice 2: 72/72. Journal week/load/strength:
   42/42, 125/125 and 17/17. Copy extraction/binding: 7/7 and 9/9. Feature and
   dead-affordance registries: 6/6 each.
-- Glass: the redesigned screen passed every focused command on iPhone 17 Pro /
-  iOS 26.3: deterministic seed, Coach navigation, weekly progress track, four
-  signal tiles, the existing conversation and screenshot. The screenshot was
-  inspected after the final neutral-state marker removal. Evidence:
+- Glass: the corrected screen passed every focused command on iPhone 17 Pro /
+  iOS 26.3: deterministic seed, Coach navigation, the load track, signed shaded
+  sweet-spot zone, four signal tiles, existing conversation and screenshot. The
+  screenshot was inspected: the empty athlete has no dishonest marker. Evidence:
   `artifacts/ui-walk/coach-snapshot-dashboard.png`.
 - The Coach phrase-handler clean-room ratchet is 8/8 after the generic Snapshot
   modules were moved out of Coach-named files. The gate was not re-baselined or
@@ -68,14 +74,14 @@ could falsely imply that empty states were positive, so they were removed.
   script, LR-18 row and 21 UNENFORCED laws. The Maestro element census has 16
   pre-existing stale ids; none is in the new flow.
 - The five dashboard labels and states are Batch 38 SIGNED by Sam's direct
-  ruling: *"the wording is fine"*. The first visual treatment was not signed;
-  this checkpoint is its replacement.
+  ruling: *"the wording is fine"*. `Consistency` is signed by his exact word in
+  the hierarchy correction.
 
 ## NOT COVERED
 
 - Base/empty React Native glass is covered. Non-empty readiness, recorded
-  load/progress, an active restriction and same-screen live updates are not yet
-  walked on glass.
+  load/progress, an active restriction, the load marker and same-screen live
+  updates are not yet walked on glass.
 - Sam has not yet accepted the redesigned layout on his physical phone.
 - No AI provider, Bible-grounded answer system or Coach Lab work belongs to
   this step.
