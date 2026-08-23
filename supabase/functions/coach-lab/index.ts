@@ -22,6 +22,9 @@ function json(status: number, body: Record<string, unknown>): Response {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return json(200, { ok: true });
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+  if (Deno.env.get('COACH_LAB_ENABLED') !== 'true') {
+    return json(503, { error: 'coach_lab_disabled' });
+  }
 
   let body: Record<string, unknown>;
   try {

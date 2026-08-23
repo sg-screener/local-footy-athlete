@@ -265,6 +265,9 @@ async function main(): Promise<void> {
       /ALLOWED_MODEL = 'gpt-5\.6-sol'/.test(edgeSource)
         && /instructions\.length > 1_500_000/.test(edgeSource)
         && /input\.length > 100_000/.test(edgeSource));
+    ok('the paid endpoint is disabled between controlled Lab runs',
+      /Deno\.env\.get\('COACH_LAB_ENABLED'\) !== 'true'/.test(edgeSource)
+        && /return json\(503, \{ error: 'coach_lab_disabled' \}\)/.test(edgeSource));
     ok('provider failures do not return internal details to the caller',
       /return json\(502, \{ error: 'coach_lab_provider_failed' \}\)/.test(edgeSource)
         && !edgeSource.includes('syntheticSmokeDetail'));

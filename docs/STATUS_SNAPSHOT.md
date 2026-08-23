@@ -149,7 +149,11 @@ store or mutation path returned.
   proves `coach-lab` is now the one deployed Coach function. The retired source
   remains recoverable from the repository backup/history. The new endpoint fixes
   the benchmark model, bounds request size, disables OpenAI response storage and
-  returns no provider error details to the caller.
+  returns no provider error details to the caller. A server-side
+  `COACH_LAB_ENABLED` kill switch is false between controlled runs, so the public
+  Supabase client credential cannot create unattended OpenAI spend. A deployed
+  synthetic probe now returns the expected `503 coach_lab_disabled` without
+  reaching OpenAI.
 - The full Lab brain pack reads the current LFA Programming Bible, active
   Rulings Registry and four canonical exercise/conditioning sources. Athlete
   data is restricted to the one live Coach Snapshot; account, email, user and
@@ -166,7 +170,7 @@ store or mutation path returned.
   live by reintroducing the keyword and turning the OpenAI Lab suite red 35/1;
   restoring the supported schema returns it to 36/36.
 - Final focused gates: Coach Snapshot 43/43, populated Snapshot 15/15, OpenAI
-  Coach Lab 36/36 and Coach clean-room 59/59. The clean-room guard now permits
+  Coach Lab 37/37 and Coach clean-room 59/59. The clean-room guard now permits
   exactly `coach-lab` and mutation-proves that a retired `coach-chat`
   registration remains forbidden.
 - The repo-law guard still reports its ten pre-existing shared-checkout failures;
