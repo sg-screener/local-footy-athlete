@@ -11,6 +11,7 @@ import {
   buildSessionExecutionSummary,
   deriveChecklistComponentCompletions,
   deriveSessionExecutionCompletion,
+  recordedCompletedSessionExecutionItemIds,
   recordedExecutionSectionCompletion,
 } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
@@ -121,6 +122,32 @@ ok('partial Mobility remains a completed partial result for the day-view tick',
 ok('legacy full completion restores the Mobility tick without inventing a partial result',
   recordedExecutionSectionCompletion({ completion: 'full' }, 'mobility') === 'full'
     && recordedExecutionSectionCompletion({ completion: 'partial' }, 'mobility') === null);
+
+const recordedPartial = buildSessionExecutionSummary(plan, new Set([
+  plan.items.find((item) => item.sectionId === 'mobility')!.id,
+  plan.items.find((item) => item.sectionId === 'strength')!.id,
+]));
+const restoredPartialIds = recordedCompletedSessionExecutionItemIds(plan, {
+  completion: 'partial',
+  executionItems: [
+    ...recordedPartial.items,
+    { itemId: 'exercise:no-longer-in-plan', sectionId: 'strength', componentId: 'strength', completed: true },
+  ],
+});
+ok('reopening restores the exact completed checklist items by stable id',
+  restoredPartialIds.size === 2
+    && recordedPartial.items.every((item) => restoredPartialIds.has(item.itemId) === item.completed),
+  { restored: [...restoredPartialIds], saved: recordedPartial.items });
+ok('reopening ignores saved item ids that are no longer in the visible plan',
+  !restoredPartialIds.has('exercise:no-longer-in-plan'));
+ok('rebuilding after reopen reproduces the saved item evidence',
+  JSON.stringify(buildSessionExecutionSummary(plan, restoredPartialIds).items)
+    === JSON.stringify(recordedPartial.items));
+const restoredLegacyFullIds = recordedCompletedSessionExecutionItemIds(plan, {
+  completion: 'full',
+});
+ok('a legacy full result restores prescribed work without inventing optional completion',
+  plan.items.every((item) => restoredLegacyFullIds.has(item.id) === (item.sectionId !== 'optional')));
 
 const teamWorkout: any = {
   id: 'team-session',
@@ -317,6 +344,10 @@ ok('mobility has no optional wording in text or accessibility copy',
   !/\boptional\b/i.test(mobilityRenderer));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
 ok('the durable outcome owns the per-item result', /executionItems:\s*executionSummary\?\.items/.test(feedback));
+ok('the reopened screen hydrates from the same durable item evidence',
+  /persistedFeedback/.test(screen)
+    && /recordedCompletedSessionExecutionItemIds\(executionPlan, persistedFeedback\)/.test(screen)
+    && /setCompletedExerciseIds/.test(screen));
 
 console.log('\n[4] Feedback reads checklist completion and asks one RPE score');
 ok('feedback accepts the execution summary', /executionSummary\?:\s*SessionExecutionSummary/.test(feedback));

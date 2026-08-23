@@ -3,7 +3,7 @@ import { Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useResolvedDay, useVisibleDay } from '../../hooks/useSchedule';
 import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
-import { useProgramStore } from '../../store/programStore';
+import { useProgramStore, type SessionFeedback } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import {
   formatLoadControlLabel,
@@ -125,9 +125,11 @@ export function useDayWorkout() {
   // view, not "Finish Session" again (WORKOUT_2026-07-21 row 2.1 / GROUPB
   // finding 1). `justSaved` excludes the just-saved transient success moment,
   // which owns its own auto-dismissing SessionCompleteMoment.
-  const persistedReceipt = useProgramStore((s: any) =>
-    date ? (s.sessionFeedback[date]?.outcomeReceipt ?? null) : null,
-  ) as SessionOutcomeTransactionReceipt | null;
+  const persistedFeedback = useProgramStore((s: any) =>
+    date ? (s.sessionFeedback[date] ?? null) : null,
+  ) as SessionFeedback | null;
+  const persistedReceipt = (persistedFeedback?.outcomeReceipt ?? null) as
+    SessionOutcomeTransactionReceipt | null;
   const isAlreadyComplete = !!persistedReceipt && !justSaved;
   const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
   const [editingWeightText, setEditingWeightText] = useState('');
@@ -460,6 +462,7 @@ export function useDayWorkout() {
     isFinished,
     justSaved,
     savedFeedbackReceipt,
+    persistedFeedback,
     persistedReceipt,
     isAlreadyComplete,
 

@@ -152,6 +152,7 @@ import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import {
   buildSessionExecutionPlan,
   buildSessionExecutionSummary,
+  recordedCompletedSessionExecutionItemIds,
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
 } from '../../utils/sessionExecutionChecklist';
@@ -598,6 +599,7 @@ export default function DayWorkoutScreenV2() {
     isFinished,
     justSaved,
     savedFeedbackReceipt,
+    persistedFeedback,
     persistedReceipt,
     isAlreadyComplete,
     editingWeightId,
@@ -747,22 +749,6 @@ export default function DayWorkoutScreenV2() {
     }),
     [workout, seasonPhase, isGameWeek, flowAthlete, date],
   );
-  const [completedExerciseIds, setCompletedExerciseIds] = React.useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-  React.useEffect(() => {
-    // An in-progress checklist is a screen draft. The durable result is written
-    // only when SessionFeedbackPanel commits its executionItems payload.
-    setCompletedExerciseIds(new Set());
-  }, [workout?.id]);
-  const toggleExerciseComplete = React.useCallback((itemId: string) => {
-    setCompletedExerciseIds((current) => {
-      const next = new Set(current);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
-  }, []);
   const executionPlan = React.useMemo(
     () => workout ? buildSessionExecutionPlan({
       workout,
@@ -771,6 +757,29 @@ export default function DayWorkoutScreenV2() {
     }) : null,
     [mobilityFlow, sessionTemplate, workout],
   );
+  const [completedExerciseIds, setCompletedExerciseIds] = React.useState<ReadonlySet<string>>(
+    () => executionPlan
+      ? recordedCompletedSessionExecutionItemIds(executionPlan, persistedFeedback)
+      : new Set(),
+  );
+  React.useEffect(() => {
+    // The checklist is a local draft until Save. Reopening (or hydration
+    // completing after mount) starts that draft from the exact durable item
+    // evidence. A same-session weight/edit render must not reset active ticks,
+    // so the effect keys on session identity and the saved fact, not the whole
+    // derived plan object.
+    setCompletedExerciseIds(executionPlan
+      ? recordedCompletedSessionExecutionItemIds(executionPlan, persistedFeedback)
+      : new Set());
+  }, [date, workout?.id, persistedFeedback]);
+  const toggleExerciseComplete = React.useCallback((itemId: string) => {
+    setCompletedExerciseIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }, []);
   const executionSummary = React.useMemo(
     () => executionPlan
       ? buildSessionExecutionSummary(executionPlan, completedExerciseIds)

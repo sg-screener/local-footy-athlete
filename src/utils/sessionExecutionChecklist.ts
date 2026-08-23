@@ -125,6 +125,39 @@ export function recordedExecutionSectionCompletion(
 }
 
 /**
+ * Restore the screen checklist from the durable result for this session.
+ *
+ * Exact item evidence wins. Results for rows that no longer exist in the
+ * current visible plan are ignored rather than resurrected. A legacy `full`
+ * result predates item evidence, so it can restore prescribed work only;
+ * optional work remains unknown and therefore unticked.
+ */
+export function recordedCompletedSessionExecutionItemIds(
+  plan: Pick<SessionExecutionPlan, 'items'>,
+  feedback: {
+    readonly completion: FeedbackCompletion;
+    readonly executionItems?: readonly SessionExecutionItemResult[];
+  } | null | undefined,
+): ReadonlySet<string> {
+  if (!feedback) return new Set();
+
+  const visibleItemIds = new Set(plan.items.map((item) => item.id));
+  if (feedback.executionItems !== undefined) {
+    return new Set(feedback.executionItems
+      .filter((item) => item.completed && visibleItemIds.has(item.itemId))
+      .map((item) => item.itemId));
+  }
+
+  if (feedback.completion === 'full') {
+    return new Set(plan.items
+      .filter((item) => item.sectionId !== 'optional')
+      .map((item) => item.id));
+  }
+
+  return new Set();
+}
+
+/**
  * ⚠ **EXPORTED, BECAUSE THE ADD MENU NAMES THE SAME THINGS.**
  *
  * The Add flow's top level IS three of these sections — `strength`,

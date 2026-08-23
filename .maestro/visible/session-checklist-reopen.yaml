@@ -1,0 +1,64 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - saved checklist restores after reopening a completed session
+tags:
+  - e2e
+  - visible
+  - workout
+  - feedback
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- scrollUntilVisible:
+    element:
+      id: "session-execution-select-all"
+    direction: DOWN
+- tapOn:
+    id: "session-execution-select-all"
+- assertVisible:
+    id: "session-execution-select-all"
+    text: "checkbox, checked"
+- scrollUntilVisible:
+    element:
+      id: "finish-session-action"
+    direction: DOWN
+- tapOn:
+    id: "finish-session-action"
+- scrollUntilVisible:
+    element:
+      id: "session-feedback-rpe-grid"
+    direction: DOWN
+- tapOn:
+    id: "session-feedback-rpe-grid"
+    point: "70%,50%"
+- extendedWaitUntil:
+    visible:
+      id: "session-feedback-rpe-grid-thumb"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "session-feedback-save-.*"
+    direction: DOWN
+- tapOn:
+    id: "session-feedback-save-.*"
+- assertVisible:
+    id: "session-completion"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 15000
+- assertVisible:
+    id: "day-complete-mon"
+- tapOn:
+    id: "view-completed-session-button"
+- scrollUntilVisible:
+    element:
+      id: "session-execution-select-all"
+    direction: DOWN
+- assertVisible:
+    id: "session-execution-select-all"
+    text: "checkbox, checked"
+- takeScreenshot: artifacts/visible/session-checklist-restored-after-reopen
