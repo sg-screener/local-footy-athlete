@@ -297,3 +297,27 @@ no default-for-the-unrecorded.
 `*OrThrow` doors only; `missingRequiredProfileFields` is diagnostics. So the
 gender refusal at the engine door is slice-2 work, and inline test profiles
 missing the stamp will surface THERE, not in slice 1.
+
+### SLICE 1 ON GLASS — WORKING, WITH ONE DEFECT ONLY THE PHONE COULD SEE
+
+Committed `c6d8ba59` + `118ceb2b`. The simulator pass (full reset → onboarding):
+
+- ⚠ **THE FOURTH EDIT WAS MISSING.** Registry, param list and Stack.Screen were
+  in; **`NameScreen` still navigated to `BodyMeasurements`** — forward motion is
+  each screen's own navigate call, and no suite drives screen navigation (the
+  reliability walk calls `commitOnboardingStep` directly). Athlete saw Name →
+  Height/Weight. Fixed in `118ceb2b`.
+- ⚠ **AND THE FIRST SIGHTING WAS ON A STALE BUNDLE.** Metro's log had ZERO
+  bundle requests — the app was running JS from an earlier session, so the
+  first walk exercised none of slice 1. Terminate + relaunch made the world
+  real. (`the-simulator-binary-was-stale-for-ten-days`, the JS-bundle variant.)
+- **VERIFIED after relaunch:** Name → *"WHAT IS YOUR GENDER?"*, Male / Female
+  tiles in the standard onboarding style; tap commits and advances to
+  BodyMeasurements; app relaunch with gender UNANSWERED resumes ONTO Gender;
+  relaunch with it answered resumes PAST it. Screenshot sent to Sam.
+- Setup sheet on the Profile tab shows NO gender row (immutability = absence of
+  writer, confirmed on glass). Device left reseeded on
+  `standard-in-season-week` (the seed accepts the stamped field).
+
+**OWED for slice 1 completeness:** the Review screen row on glass — rides along
+with slice 2's full female walk rather than 17 more taps now.
