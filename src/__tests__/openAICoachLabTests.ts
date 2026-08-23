@@ -113,6 +113,23 @@ async function main(): Promise<void> {
         && 'load' in currentSnapshot
         && 'progress' in currentSnapshot
         && 'restrictions' in currentSnapshot);
+    const progress = currentSnapshot.progress as {
+      mainLiftHistory?: readonly {
+        exerciseName?: string;
+        recordedWeeks?: number;
+        firstRecorded?: { weekStart?: string; weightKg?: number };
+        latestRecorded?: { weekStart?: string; weightKg?: number };
+      }[];
+      twoKmTimeTrial?: { seconds?: number; recordedOn?: string } | null;
+    };
+    ok('Terra receives concise long-term lift and 2km progress facts from the shared Snapshot',
+      progress.mainLiftHistory?.[0]?.exerciseName === 'Back Squat'
+        && progress.mainLiftHistory[0]?.recordedWeeks === 2
+        && progress.mainLiftHistory[0]?.firstRecorded?.weightKg === 95
+        && progress.mainLiftHistory[0]?.latestRecorded?.weightKg === 100
+        && progress.twoKmTimeTrial?.seconds === 420
+        && progress.twoKmTimeTrial?.recordedOn === '2026-08-24',
+      progress);
     const visibleWeek = currentSnapshot.visibleWeek as {
       days: readonly {
         date: string;
@@ -170,10 +187,57 @@ async function main(): Promise<void> {
     });
     ok('the active target is carried and recent chat is bounded to the last six turns',
       contextual.conversationContext.activeProgramTarget?.label === 'Upper Push'
+        && !('partId' in contextual.conversationContext.activeProgramTarget)
         && contextual.conversationContext.recentTurns.length === 6
         && contextual.conversationContext.recentTurns[0]?.text === 'turn 1'
         && contextual.conversationContext.recentTurns[5]?.text === 'turn 6',
       contextual.conversationContext);
+    const internalSnapshot = {
+      ...coachLabFixtureSnapshot(),
+      visibleWeek: {
+        ...coachLabFixtureSnapshot().visibleWeek,
+        days: coachLabFixtureSnapshot().visibleWeek.days.map((day, dayIndex) => ({
+          ...day,
+          owner: 'plan',
+          parts: day.parts.map((part, partIndex) => ({
+            ...part,
+            id: `private-part-${partIndex}`,
+            rows: dayIndex === 0 && partIndex === 0 ? [{
+              id: 'private-row',
+              name: 'Back Squat',
+              prescription: '3 × 5',
+              dose: [],
+              cue: 'Brace hard',
+            }] : part.rows,
+          })),
+        })),
+      },
+      restrictions: [{
+        id: 'private-note',
+        modifierId: 'private-modifier',
+        constraintId: 'private-constraint',
+        type: 'injury',
+        effect: { kind: 'none' },
+        title: 'Knee sore',
+        body: 'Keep painful work out.',
+        actions: [{ kind: 'clear', label: 'Clear' }],
+      }],
+    } as unknown as ReturnType<typeof coachLabFixtureSnapshot>;
+    const projected = buildCoachModelInput({
+      athleteMessage: 'what am I doing?',
+      snapshot: internalSnapshot,
+    });
+    const projectedText = JSON.stringify(projected.currentAthleteSnapshot);
+    ok('the positive projection keeps useful visible workout and restriction facts',
+      projectedText.includes('Back Squat')
+        && projectedText.includes('3 × 5')
+        && projectedText.includes('Knee sore')
+        && projectedText.includes('Keep painful work out.'));
+    ok('internal ids, owners, capabilities, timestamps and UI actions never cross',
+      !/"(?:id|modifierId|constraintId|partId|owner|capabilities|actions|updatedAt|temporarySourceFactIds|reversibleAdjustmentId|injuryEpisodeId)"\s*:/.test(projectedText),
+      projected.currentAthleteSnapshot);
+    ok('the model payload has no generic name field that could carry athlete identity',
+      !/"name"\s*:/.test(projectedText), projected.currentAthleteSnapshot);
     ok('no account, email or athlete id is sent',
       !/email|userId|athleteId|accountId/i.test(snapshotText));
   }

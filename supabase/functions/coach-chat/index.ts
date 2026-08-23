@@ -3,6 +3,7 @@ import { retrieveCoachLabKnowledge } from '../../../src/dev/coachLab/coachLabKno
 import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponsesClient.ts';
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
 import { evaluateCoachResponseContract } from '../../../src/rules/coachResponseContract.ts';
+import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -27,22 +28,7 @@ function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-interface RuntimeCoachSnapshot {
-  readonly asOfDateISO: string;
-  readonly readiness: unknown;
-  readonly restrictions: unknown;
-  readonly load: unknown;
-  readonly progress: unknown;
-  readonly visibleWeek: {
-    readonly days: readonly {
-      readonly kind: string;
-      readonly headline: unknown;
-      readonly parts: readonly { readonly kind: string; readonly headline: unknown }[];
-    }[];
-  };
-}
-
-function validSnapshot(value: unknown): value is RuntimeCoachSnapshot {
+function validSnapshot(value: unknown): value is CoachModelSnapshot {
   if (!record(value) || typeof value.asOfDateISO !== 'string' || !record(value.visibleWeek)) {
     return false;
   }
@@ -103,7 +89,7 @@ Deno.serve(async (request) => {
   if (Object.keys(body).length !== 1
     || !validModelInput(body.modelInput)
     || raw.length > 120_000
-    || /\"(?:email|userId|athleteId|accountId)\"\s*:/i.test(raw)) {
+    || /\"(?:email|userId|athleteId|accountId|name)\"\s*:/i.test(raw)) {
     return json(400, { error: 'invalid_coach_chat_request' });
   }
 

@@ -43,6 +43,8 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && /coach_chat_disabled/.test(edge)
       && /coach_chat_provider_failed/.test(edge)
       && !/detail\s*\}/.test(edge));
+  ok('the server refuses identity-shaped keys including a generic name',
+    /email\|userId\|athleteId\|accountId\|name/.test(edge));
   ok('the server refuses any model-produced program action before replying',
     /programActions\.length === 0/.test(read('src/rules/coachResponseContract.ts'))
       && /if \(!evaluation\.ok\) return json\(502/.test(edge));
