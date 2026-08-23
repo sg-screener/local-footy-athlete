@@ -36,6 +36,7 @@
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackCompletion } from '../types/sessionOutcome';
 import { completionByComponentId } from '../utils/sessionFeedbackForm';
+import { PART_ICON_KIND, type RowIconKind } from './sectionIconKinds';
 import { componentIdFromPartId } from './projectVisibleWeek';
 import { projectDayDetail } from './visibleDayDetail';
 import type { SignedCopy } from './signedCopy';
@@ -71,6 +72,21 @@ export interface DayTimelineEntry {
    * `surfaceAgreementTests` can compare them at all.
    */
   readonly rows: readonly VisibleRow[];
+  /**
+   * THE GLYPH THIS ROW DRAWS, decided where the WORKOUT is still in scope.
+   *
+   * The card used to look this up itself with `PART_ICON_KIND[entry.kind]`, and
+   * that table is keyed on `VisiblePartKind` — which has no `primer` member and
+   * should not grow one, because a Primer IS a strength part; it is a strength
+   * part with its own identity. So the card could not tell one from any other
+   * and drew a dumbbell where Sam asked for his bolt (R-129).
+   *
+   * Decided HERE rather than on the screen because this is where the typed
+   * `composedOptionalKind` is still readable. The alternative — matching the
+   * headline STRING on the card — is `displayLabelIconKind`'s antipattern, and
+   * this repo already has one of those.
+   */
+  readonly iconKind: RowIconKind;
 }
 
 /**
@@ -85,9 +101,50 @@ export interface DayTimelineEntry {
  * Every part, in order, always. There is no filter in this file and there must
  * never be one (`visibleDayDetail`'s rule, and for the same reason).
  */
+/**
+ * A composed optional session's own glyph, or the part kind's.
+ *
+ * A SET rather than an `if` so a second session type joins by being listed. The
+ * fallback is the shared `PART_ICON_KIND` table, so nothing that does not opt in
+ * moves a pixel.
+ */
+const ICON_KIND_BY_COMPOSED_OPTIONAL: Readonly<Record<string, RowIconKind>> = {
+  // Sam chose the bolt for the Primer knowing it is also the Speed glyph
+  // (R-129, 2026-08-23: *"yeah a lightning bolt"*).
+  primer: 'bolt',
+};
+
+function iconKindForSection(
+  kind: VisiblePartKind,
+  workout: { composedOptionalKind?: string } | null | undefined,
+): RowIconKind {
+  /*
+   * ⚠ **THE WORKOUT IS PASSED IN; IT IS NOT ON `VisibleDay`.** The first version
+   * read `(day as { workout?: ... }).workout?.composedOptionalKind` — and
+   * `VisibleDay` HAS NO `workout` FIELD, so the cast made a real lookup look
+   * like one and silently answered `undefined` every time. The bolt never
+   * appeared and nothing failed. A cast that invents a field is not a read.
+   */
+  const composed = workout?.composedOptionalKind;
+  // Scoped to the part kinds a composed optional session's CONTENT produces —
+  // the same two `partHeadline` names — so a team anchor on a combined day keeps
+  // its own glyph.
+  if (composed && (kind === 'strength' || kind === 'recovery')) {
+    const chosen = ICON_KIND_BY_COMPOSED_OPTIONAL[composed];
+    if (chosen) return chosen;
+  }
+  return PART_ICON_KIND[kind];
+}
+
 export function dayTimeline(
   day: VisibleDay | null | undefined,
   feedback: SessionFeedback | null | undefined,
+  /**
+   * The day's STORED workout, for the typed facts the visible projection does
+   * not carry. Optional so every existing caller is unchanged; a caller that
+   * omits it gets the part kind's own glyph, which is what the screen did before.
+   */
+  workout?: { composedOptionalKind?: string } | null,
 ): readonly DayTimelineEntry[] {
   const detail = projectDayDetail(day);
   if (!detail) return [];
@@ -103,5 +160,6 @@ export function dayTimeline(
     headline: section.headline,
     completion: recorded[componentIds[index]] ?? null,
     rows: section.rows,
+    iconKind: iconKindForSection(section.kind, workout),
   }));
 }

@@ -73,7 +73,14 @@
 
 import type { PlanChangeCategoryId } from '../utils/planChangeTypes';
 
-/** Sam's programmable vocabulary. Seven, and only these seven. */
+/**
+ * Sam's programmable vocabulary. EIGHT, and only these eight.
+ *
+ * It was seven until 2026-08-23, when R-129 added the Primer. The count is
+ * asserted by `sessionTypeCharterTests`, deliberately: an eighth type cannot
+ * appear without someone changing that number, and changing it is the moment
+ * the four answers below are demanded.
+ */
 export type SessionTypeId =
   | 'rest'
   | 'recovery'
@@ -81,7 +88,8 @@ export type SessionTypeId =
   | 'conditioning'
   | 'mobility'
   | 'prehab'
-  | 'gunshow';
+  | 'gunshow'
+  | 'primer';
 
 export const SESSION_TYPE_IDS = [
   'rest',
@@ -91,6 +99,7 @@ export const SESSION_TYPE_IDS = [
   'mobility',
   'prehab',
   'gunshow',
+  'primer',
 ] as const;
 
 /**
@@ -371,6 +380,47 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       + 'and added do-not-pair rules on 2026-08-21; DELTS_POOL remains the shoulder '
       + 'family, and its authored composition is a complete normal-gym session.',
   },
+
+  /**
+   * PRIMER — R-129, signed 2026-08-23. Sam's words for what it is FOR:
+   * *"a little 20 min session the day before their game to feel good"*.
+   *
+   * ⚠ **`placedBy` IS `athlete` ALONE, AND THE OMISSION OF `generator` IS THE
+   * RULING, NOT AN OVERSIGHT.** *"for now - it's only available to be added by
+   * player or swapped by a player … so default to gunshow"*. G-1 keeps the
+   * Gunshow; nothing places a Primer uninvited.
+   *
+   * ⚠ **AND THE DEFAULT IS ALREADY SCHEDULED TO CHANGE.** Same message: *"when I
+   * add in the female pathway, the primer will become the default - but don't
+   * worry about that"*. That is a STATED FUTURE ORDER and it is recorded here so
+   * the next reader does not mistake today's answer for a permanent one — but
+   * building generator placement now would be running ahead of the ruling, and
+   * this charter says `athlete` until the pathway lands.
+   */
+  primer: {
+    id: 'primer',
+    placedBy: ['athlete'],
+    chosenBy: { categories: ['primer'], otherDoor: null },
+    counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
+    composition: {
+      kind: 'authored',
+      source: 'utils/sessionBuilder.ts SESSION_SLOTS.primer — four mobility '
+        + 'drills drawn BY REGION from data/exercisePools.ts MOBILITY_POOL '
+        + '(2 hips, 1 upper, 1 lower-or-midline), authored Pogo Hops, one '
+        + 'explosive movement per family from rules/powerExercisePool.ts '
+        + 'POWER_EXERCISE_POOL, then two authored skippable rows: three 15m '
+        + 'accelerations and a heavy-but-easy lift.',
+      // THE POPULATION OF THE CITED SOURCE, not the nine slots — the same
+      // meaning `gunshow: 23` carries. 20 mobility drills + 7 explosive pool
+      // entries + the 4 movements R-129 authors by name and no pool holds.
+      count: 31,
+      sessionVariants: null,
+    },
+    ruling: 'Sam authored the nine slots in order on 2026-08-23 (R-129), amended '
+      + 'the same day to keep every tick box and remove the weight control from '
+      + 'the whole session, and ruled slot 3 draws the WHOLE signed upper '
+      + 'mobility region rather than a narrowed upper-back subset.',
+  },
 };
 
 /** The four questions, as a checkable vocabulary. */
@@ -475,6 +525,12 @@ export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   // left at 1 over a paid debt is slack a future regression could hide in.
   prehab: 0,
   gunshow: 0,
+  // PRIMER IS BORN AT ZERO, AND THAT IS A CLAIM, NOT A COURTESY. It arrives with
+  // all four answers signed in one message (R-129), so there is nothing for a
+  // debt entry to excuse — and a new type given slack "to start with" is slack
+  // that outlives the reason for it. If a Primer deviation turns up, it is a
+  // real entry above and this number moves with it, never quietly.
+  primer: 0,
 };
 
 /** Debt entries for one type. */

@@ -78,6 +78,7 @@ import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekE
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { buildCoachRevisionTemplateWorkout } from '../utils/coachRevisionTemplates';
 import { PLAN_CHANGE_CATEGORY_IDS, type PlanChangeCategoryId } from '../utils/planChangeTypes';
+import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import {
   CHARTER_DEBT,
   CHARTER_DEBT_CEILING,
@@ -154,12 +155,15 @@ function quiet<T>(b: () => T): T {
 
 console.log('\n-- A. every type answers all four questions --');
 
-run('A1. the charter covers Sam\'s seven, and only his seven', () => {
-  assert(SESSION_TYPE_IDS.length === 7, `charter has ${SESSION_TYPE_IDS.length} types, not 7`);
+run('A1. the charter covers Sam\'s eight, and only his eight', () => {
+  // EIGHT since R-129 (Sam, 2026-08-23) added the Primer. The number is written
+  // out rather than derived so that adding a ninth type is a DECISION someone
+  // has to make here, in the suite that then demands its four answers.
+  assert(SESSION_TYPE_IDS.length === 8, `charter has ${SESSION_TYPE_IDS.length} types, not 8`);
   for (const id of SESSION_TYPE_IDS) {
     assert(SESSION_TYPE_CHARTER[id]?.id === id, `charter row for "${id}" is missing or mislabelled`);
   }
-  assert(Object.keys(SESSION_TYPE_CHARTER).length === 7,
+  assert(Object.keys(SESSION_TYPE_CHARTER).length === 8,
     'the charter record has rows the id list does not name');
 });
 
@@ -338,6 +342,7 @@ const REPRESENTATIVE: Readonly<Record<SessionTypeId, readonly string[]>> = {
     .map((template) => template.templateId),
   prehab: ['accessories_prehab'],
   gunshow: ['accessories_pump'],
+  primer: ['primer_session'],
 };
 
 function builtSession(templateId: string, dayOfWeek: number): Workout | null {
@@ -522,6 +527,22 @@ const RECOVERY_POOLS = [
   TISSUE_QUALITY_POOL, MOBILITY_POOL, EASY_CARDIO_POOL, BREATHING_RESET_POOL,
 ];
 
+/**
+ * The movements R-129 authors BY NAME, which no pool holds.
+ *
+ * Written down here rather than imported because that is the point of the cell:
+ * if `SESSION_SLOTS.primer` grows a tenth row drawing something new, this list
+ * does not know about it and (d) reds — which is the gate doing its job. An
+ * import would make the expectation agree with the code by construction and
+ * assert nothing.
+ */
+const PRIMER_AUTHORED_NAMES = [
+  'Acceleration',
+  'Trap Bar Deadlift',
+  'High Box Squat',
+  'Bench Press',
+];
+
 const PREHAB_POOLS = [
   GROIN_ADDUCTORS_POOL, CALVES_POOL, LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL, HAMSTRING_LIGHT_POOL,
@@ -536,6 +557,13 @@ const AUTHORED_POPULATION: Readonly<Record<SessionTypeId, number | null>> = {
   mobility: MOBILITY_POOL.length,
   prehab: PREHAB_POOLS.reduce((total, pool) => total + pool.length, 0),
   gunshow: BICEPS_POOL.length + TRICEPS_POOL.length + DELTS_POOL.length,
+  // PRIMER draws from THREE sources, which is why its population is a sum of
+  // three and not a pool length: the whole mobility pool (its four drills are
+  // region-RESTRICTED draws from it, and a restriction narrows the shelf without
+  // narrowing the source), the explosive pool, and the handful of movements Sam
+  // authored by name that live in neither.
+  primer: MOBILITY_POOL.length + POWER_EXERCISE_POOL.length
+    + PRIMER_AUTHORED_NAMES.length,
 };
 
 /**
@@ -558,6 +586,11 @@ const AUTHORED_NAMES: Readonly<Record<SessionTypeId, ReadonlySet<string> | null>
   prehab: new Set(PREHAB_POOLS.flat().map((entry) => canonicalExerciseName(entry.name))),
   gunshow: new Set([...BICEPS_POOL, ...TRICEPS_POOL, ...DELTS_POOL].map(
     (entry) => canonicalExerciseName(entry.name))),
+  primer: new Set([
+    ...MOBILITY_POOL.map((entry) => entry.name),
+    ...POWER_EXERCISE_POOL.map((entry) => entry.name),
+    ...PRIMER_AUTHORED_NAMES,
+  ].map(canonicalExerciseName)),
 };
 
 /**

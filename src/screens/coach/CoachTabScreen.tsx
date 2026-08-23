@@ -763,7 +763,7 @@ function ChangeCard({
           accessibilityRole="button"
           accessibilityLabel={card.confirmLabel}
         >
-          <Text variant="body">{card.confirmLabel}</Text>
+          <Text variant="body" style={styles.cardConfirmText}>{card.confirmLabel}</Text>
         </Pressable>
       </View>
     </View>
@@ -906,6 +906,26 @@ const styles = StyleSheet.create({
   cardConfirm: {
     backgroundColor: colors.accent.lime,
     borderColor: colors.accent.lime,
+  },
+  /**
+   * TEXT ON LIME IS NEAR-BLACK, AND IT IS THE APP'S OWN TOKEN.
+   *
+   * Sam, 2026-08-23, looking at this card on his phone: *"i don't know what this
+   * says because i can't fucking read it - why are these buttons different style
+   * to normal?"* — white on `#C8FF00`.
+   *
+   * THE ANSWER TO HIS SECOND QUESTION IS THE CAUSE OF THE FIRST. These are
+   * hand-rolled `Pressable`s, not the shared `Button`, so they never inherited
+   * its `getTextColor()` — which returns `colors.button.primaryText` (`#0C0C0C`)
+   * for exactly this background. A bare `<Text variant="body">` defaults to
+   * `colors.text.primary` (`#FFFFFF`), and on lime that is unreadable.
+   *
+   * The SAME token is used here rather than a new near-black, so these buttons
+   * now read identically to every primary button in the app — which is what
+   * "normal" means in his question.
+   */
+  cardConfirmText: {
+    color: colors.button.primaryText,
   },
   composer: {
     flexDirection: 'row',

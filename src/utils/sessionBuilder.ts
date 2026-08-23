@@ -75,6 +75,9 @@ import {
   mobilityRegionOf,
   type MobilityRegion,
 } from '../rules/mobilitySessionComposition';
+import { eligiblePowerExercises, type PowerPoolEntry } from '../rules/powerExercisePool';
+import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
+import type { PowerFamily } from '../rules/powerPrimerPolicy';
 
 // ─── Athlete Context ───
 
@@ -117,6 +120,17 @@ export type DerivedSessionType =
   | 'prehab_accessories'
   | 'arms_pump'
   /**
+   * PRIMER — Sam's R-129 session, 2026-08-23. A 20-minute day-before-a-game
+   * session the athlete adds themselves: four mobility drills, pogo hops, an
+   * explosive movement each way, then two skippable extras.
+   *
+   * It is slot-composed like the others. What is new is not the session, it is
+   * two abilities its slots needed and no slot had — a REGION-FILTERED pool
+   * draw and non-pool slot sources (`power`, `authored`). Both are properties
+   * of a slot, available to anything; neither is a primer branch.
+   */
+  | 'primer'
+  /**
    * A standalone Mobility session, COMPOSED — Sam's signed 5-8 across the four
    * regions, at the doses he authored on each movement.
    *
@@ -135,25 +149,133 @@ type SlotComposedSessionType = Exclude<DerivedSessionType, 'mobility'>;
 // ─── Session Slot Definitions ───
 // Each session type is a sequence of "slots" — pick N exercises from a category.
 
-interface SessionSlot {
-  category: ExerciseCategory;
-  /** How many exercises to pick from this category. */
-  count: number;
+/**
+ * A row a slot AUTHORS rather than chooses.
+ *
+ * The composer's job is selection. Where Sam authored the movement AND its dose
+ * — Pogo Hops 2 x 10, three 15m accelerations — there is nothing to select, and
+ * inventing a one-member pool so the picker has something to pick would be a
+ * pool that exists to satisfy a code path rather than to hold candidates.
+ */
+export interface AuthoredSlotRow {
   /**
-   * ONE PICK PER NAMED REGION, then the remainder free.
+   * The candidates for this ONE row. The seed picks among them, so a row Sam
+   * authored as a choice rotates instead of freezing on the first name.
    *
-   * SAM, 2026-08-21, on a recovery day that offered Toe Stretch AND Calf
-   * Stretch: *"i don't like the toe stretch and calf stretch either one or the
-   * other is fine, but not both, maybe it should be 1 hip, 1 upper body, and
-   * one extra"*. Two free picks from one pool can land twice in the same
-   * region, which is what he read.
-   *
-   * The regions are `mobilitySessionComposition`'s — Sam's own signed table,
-   * one region per movement, already used by the standalone Mobility session
-   * for its full-body spread. **No second opinion about what a region is.**
+   * A list rather than a `name` + `alternatives` pair because it is one idea:
+   * *"TB dead or high box squat"* (Sam, R-129) is a single row with two legal
+   * fillings, and a single-filling row is a list of one. Every name must
+   * resolve in the exercise library.
    */
-  spread?: readonly MobilityRegion[];
+  readonly names: readonly string[];
+  readonly sets: number;
+  readonly repsMin: number;
+  readonly repsMax: number;
+  readonly restSeconds: number;
+  readonly notes: string;
+  readonly prescriptionType?: PoolExercise['prescriptionType'];
+  /**
+   * SKIPPABLE — renders in the session's OPTIONAL WORK cluster, below the
+   * prescribed work, under its own header.
+   *
+   * ⚠ **THIS FIELD WAS DELETED ON 2026-08-23 AND IS BACK THE SAME DAY, WHICH IS
+   * THE POINT.** It was cut because it had a WRITER AND NO READER — the
+   * `canOverride` shape. Sam then read the session on his phone: *"the strength
+   * work and the accelerations are still in the main session - they should be
+   * optional"*. It now has a reader — `sessionTemplate`'s optional cluster,
+   * through `WorkoutExercise.optionalNoPenalty` — so it is a fact the athlete
+   * can see, not dead weight. **Deleting a reader-less field was right; adding
+   * it back once a reader exists is the same rule, not a reversal of it.**
+   */
+  readonly optional?: boolean;
 }
+
+/*
+ * ⚠ **TWO FIELDS WERE DRAFTED HERE AND DELETED BEFORE THEY SHIPPED — READ THIS
+ * BEFORE ADDING THEM BACK.**
+ *
+ * `optional?: boolean` and `belowRepFloor?: boolean` were written on this
+ * interface to carry R-129's *"optional"* rows and its 3-rep exception. Both
+ * would have had a WRITER AND NO READER — CLAUDE.md's `canOverride` shape,
+ * "written nine times and read zero" — because Sam's amendment removed the only
+ * behaviour `optional` was going to drive (*"you can keep the checkboxes"*), and
+ * because the rep floor turned out not to need a per-row flag at all.
+ *
+ * WHAT CARRIES THEM INSTEAD:
+ *  - OPTIONAL is COPY. The athlete has to READ that a row is skippable, and a
+ *    boolean nothing renders does not tell them. It leads the row's notes.
+ *  - THE REP FLOOR is fixed in its own owner, for every row in the app rather
+ *    than for this session — see `strengthProgressionIntegration.applyDelta`.
+ */
+
+/**
+ * A SLOT NAMES ITS SOURCE.
+ *
+ * It was one shape — a category and a count — because every composed session
+ * drew from the accessory pools and nothing else. R-129's Primer draws from the
+ * mobility pool BY REGION, from the explosive pool BY FAMILY, and from Sam's own
+ * authored rows, so "which pool" stopped being the only question a slot answers.
+ *
+ * ⚠ **READ WITH `in`, NEVER BY A DISCRIMINANT FIELD.** This project has no
+ * `strictNullChecks`, so the false arm of a discriminated union does not narrow;
+ * `'authored' in slot` does. That is why there is no `source: '...'` tag.
+ *
+ * ⚠ **THESE ARE SLOT ABILITIES, NOT PRIMER RULES.** Sam, 2026-08-23, on being
+ * offered the special-case build: *"no do it properly, build it the right
+ * way"*. Any session type may use any of them.
+ */
+export type SessionSlot =
+  | {
+      category: ExerciseCategory;
+      /** How many exercises to pick from this category. */
+      count: number;
+      /**
+       * ONE PICK PER NAMED REGION, then the remainder free.
+       *
+       * SAM, 2026-08-21, on a recovery day that offered Toe Stretch AND Calf
+       * Stretch: *"i don't like the toe stretch and calf stretch either one or the
+       * other is fine, but not both, maybe it should be 1 hip, 1 upper body, and
+       * one extra"*. Two free picks from one pool can land twice in the same
+       * region, which is what he read.
+       *
+       * The regions are `mobilitySessionComposition`'s — Sam's own signed table,
+       * one region per movement, already used by the standalone Mobility session
+       * for its full-body spread. **No second opinion about what a region is.**
+       */
+      spread?: readonly MobilityRegion[];
+      /**
+       * RESTRICT the shelf to these regions. Every pick comes from one of them.
+       *
+       * ⚠ **NOT `spread`, AND THE DIFFERENCE IS THE WHOLE POINT.** `spread` takes
+       * ONE pick per named region and then fills FREELY from anywhere; `regions`
+       * never leaves the named set. R-129 slot 1-2 is *"2 hip mobility drills"* —
+       * two picks, both hips — which `spread: ['hips']` would have answered with
+       * one hip drill and one of anything.
+       *
+       * Same shrink-never-pad rule as everywhere else: a region emptied by kit or
+       * injury yields fewer rows, never a substitute from outside the set.
+       */
+      regions?: readonly MobilityRegion[];
+    }
+  | {
+      /** Pick from `POWER_EXERCISE_POOL`, this explosive family only. */
+      power: PowerFamily;
+      count: number;
+      /**
+       * The dose, AUTHORED ON THE SLOT and not derived here.
+       *
+       * `decidePowerPrimer` owns the dose for power that rides INSIDE a strength
+       * session, and it needs a phase / readiness / injury context this builder
+       * does not receive. Re-deriving a dose from what is to hand would make a
+       * second authority for one number. So the slot states it, in the open,
+       * where the session's author can see it beside the rows it applies to.
+       */
+      sets: number;
+      repsMin: number;
+      repsMax: number;
+      restSeconds: number;
+    }
+  | { authored: readonly AuthoredSlotRow[] };
 
 // BIBLE_ANCHOR: gunshow_two_two_two
 const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
@@ -204,6 +326,77 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
     { category: 'triceps',          count: 2 },
     { category: 'delts',            count: 2 },
   ],
+  /**
+   * PRIMER — Sam's authored order, R-129, 2026-08-23. Rows render in slot
+   * order, so this list IS the session the athlete reads top to bottom.
+   *
+   * *"2 hip mobility drills, upper back mobility drill, 1 extra drill (not hip
+   * or upper back mobility), pogo hops 2x10, explosive upper body, explosive
+   * lower body, optional 3 accelerations for 15m at 90%, optional heavy but
+   * easy lifts for low reps"*.
+   *
+   * ⚠ **SLOT 3 IS THE WHOLE `upper` REGION, INCLUDING `pec-doorway`.** Sam
+   * wrote "upper BACK"; the signed region is broader and holds a chest stretch.
+   * He was asked and ruled *"yeah just put the whole upper group in please"*.
+   * Narrowing it later needs a new ruling, not a tidy-up.
+   */
+  primer: [
+    { category: 'mobility', count: 2, regions: ['hips'] },
+    { category: 'mobility', count: 1, regions: ['upper'] },
+    // "1 extra drill (not hip or upper back mobility)" — the complement of the
+    // two named regions, stated as the regions it MAY use so an added fifth
+    // region is a decision rather than a silent inclusion.
+    { category: 'mobility', count: 1, regions: ['lower', 'midline'] },
+    {
+      authored: [{
+        names: ['Pogo Hops'],
+        sets: 2, repsMin: 10, repsMax: 10, restSeconds: 60,
+        notes: 'Short, springy contacts. Keep it light.',
+      }],
+    },
+    // Explosive upper is a ONE-CANDIDATE SHELF today (`Explosive Push-up` is the
+    // only `family: 'upper'` entry in the pool) and will prescribe the same
+    // movement every time. That is R-118's open pool gap, not a defect here;
+    // Sam, 2026-08-23: *"just use the push ups for now, I will add more power
+    // later"*. It is a pool draw and not an authored row precisely so that the
+    // day a second candidate lands, this session rotates with no edit.
+    { power: 'upper', count: 1, sets: 2, repsMin: 3, repsMax: 3, restSeconds: 90 },
+    // ⚠ **NO `exclude: ['Pogo Hops']` HERE, AND ITS ABSENCE IS MEASURED.**
+    // Slot 4 authors Pogo Hops, so this slot must not draw it again (R-118: one
+    // exercise appears once per session). An explicit exclusion was written, and
+    // MUTATION TESTING KILLED IT — removing it changed nothing, because
+    // `eligiblePowerExercises` already drops every `reducedTakeoverOnly` entry
+    // and Pogo Hops is the only one. The guarantee lives in the pool owner; a
+    // second copy here would have read like the thing holding it.
+    { power: 'lower', count: 1, sets: 2, repsMin: 3, repsMax: 3, restSeconds: 90 },
+    {
+      authored: [{
+        names: ['Acceleration'],
+        sets: 3, repsMin: 15, repsMax: 15, restSeconds: 90,
+        prescriptionType: 'distance',
+        notes: 'Build to about 90%. Walk back, take your time between each one.',
+        optional: true,
+      }],
+    },
+    {
+      authored: [
+        {
+          names: ['Trap Bar Deadlift', 'High Box Squat'],
+          sets: 2, repsMin: 2, repsMax: 2, restSeconds: 120,
+          notes: 'Heavy but easy, around 70%. '
+            + 'Every rep fast - leave plenty in the tank.',
+          optional: true,
+        },
+        {
+          names: ['Bench Press'],
+          sets: 2, repsMin: 3, repsMax: 3, restSeconds: 120,
+          notes: 'Heavy but easy, around 70%. '
+            + 'Every rep fast - leave plenty in the tank.',
+          optional: true,
+        },
+      ],
+    },
+  ],
 };
 
 const SESSION_META: Record<DerivedSessionType, {
@@ -213,6 +406,12 @@ const SESSION_META: Record<DerivedSessionType, {
   durationMinutes: number;
   intensity: IntensityLevel;
   descriptionSuffix: string;
+  /**
+   * The suffix IS the whole description — no `reason` prefix.
+   * Writer: `SESSION_META` below. Reader: `finaliseDerivedSession`'s
+   * `description`. Held by `test:primer-session` S11.
+   */
+  descriptionIsWhole?: boolean;
 }> = {
   // Recovery sessions reduce fatigue — they never add to it.
   // Active Recovery = tissue quality + mobility + easy cyclical + breathing.
@@ -267,6 +466,30 @@ const SESSION_META: Record<DerivedSessionType, {
     durationMinutes: 35,
     intensity: 'Light',
     descriptionSuffix: 'light upper body pump work',
+  },
+  /**
+   * PRIMER (R-129). `sessionTier: 'optional'` is the whole counting answer and
+   * it is the SAME field Gunshow uses — Sam, 2026-08-23: *"this session will
+   * not add fatigue just like gunshow doesn't add fatigue so it won't
+   * contribute to their load or readiness"*. No load, never a hard day, never
+   * breaks a rest day; nothing here is a second opinion about that.
+   *
+   * `workoutType: 'Strength'` so the day projects a STRENGTH part, which
+   * `composedOptionalKind: 'primer'` then names "Primer" — the same route
+   * Gunshow takes. It is not `'Mobility'`: the mobility drills open the session
+   * but the explosive and heavy rows are its point.
+   *
+   * Twenty minutes, in his words: *"a little 20 min session the day before
+   * their game to feel good"*.
+   */
+  primer: {
+    name: 'Primer',
+    workoutType: 'Strength',
+    sessionTier: 'optional',
+    durationMinutes: 20,
+    intensity: 'Light',
+    descriptionSuffix: 'Short and sharp, the day before a game',
+    descriptionIsWhole: true,
   },
   // Not conditioning and not strength. The charter's counting row says what the
   // ledger says: no load, never a hard day, never breaks rest — which is also why
@@ -609,6 +832,141 @@ const MOBILITY_ROW_EVIDENCE = {
   provenance: 'canonical_row_classifier',
 } as const;
 
+/**
+ * A slug for an authored row, so its id is stable and readable rather than a
+ * position. `exerciseId` is what every downstream lookup keys on.
+ */
+function authoredRowId(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+/**
+ * THE ROW SAM AUTHORED, WITH ITS FILLING ROTATED.
+ *
+ * `names` is one row's candidates — *"TB dead or high box squat"* — so the seed
+ * chooses among them exactly as a pool draw would, and two consecutive Primers
+ * do not open the same way. A single-candidate row is the same code path with
+ * nothing to choose.
+ */
+function authoredSlotRowToWorkoutExercise(
+  row: AuthoredSlotRow,
+  workoutId: string,
+  order: number,
+  seed: number,
+): WorkoutExercise {
+  const now = new Date().toISOString();
+  const name = row.names[Math.abs(seed) % row.names.length];
+  const id = authoredRowId(name);
+  return {
+    // AN AUTHORED PRIMER ROW IS NOT MAIN STRENGTH AND NEVER A HARD DAY.
+    // `Trap Bar Deadlift` and `Bench Press` are main lifts anywhere else in the
+    // app, and a classifier reading their NAMES here would hand the week a hard
+    // strength exposure the athlete never took — the exact inference
+    // ACCESSORY_ROW_EVIDENCE was written to end for the Gunshow's curls.
+    section18Evidence: ACCESSORY_ROW_EVIDENCE,
+    id: `${workoutId}-ex-${order}`,
+    workoutId,
+    exerciseId: id,
+    exerciseOrder: order,
+    prescribedSets: row.sets,
+    prescribedRepsMin: row.repsMin,
+    prescribedRepsMax: row.repsMax,
+    restSeconds: row.restSeconds,
+    ...(row.prescriptionType ? { prescriptionType: row.prescriptionType } : {}),
+    ...(row.optional ? { optionalNoPenalty: true } : {}),
+    // An authored row's dose is a decision, not a range to simplify.
+    exactDose: true,
+    notes: row.notes,
+    exercise: {
+      id,
+      name,
+      description: row.notes,
+    } as Exercise,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * THE EXPLOSIVE PICK IS THE POWER POOL'S OWN DECISION, NOT A SECOND FILTER.
+ *
+ * `eligiblePowerExercises` already holds every safety answer the pool's author
+ * signed — family, in-season safety, phase gate, training age, equipment, and
+ * the reduced-takeover exclusion that keeps Pogo Hops out of an ordinary slot.
+ * Re-implementing any of it here would be a second opinion about which jumps are
+ * safe.
+ *
+ * ⚠ **PHASE IS ASSERTED AS `In-season`, WHICH IS THE STRICT READING AND IS
+ * DELIBERATE.** This builder receives no phase. A Primer is the session before a
+ * game, and prescribing an off-season-only movement — depth jumps, bounds,
+ * kneeling jumps — the day before one contradicts the session's whole purpose.
+ * Asserting the narrowest phase asks the pool for the safest answer rather than
+ * guessing at the athlete's actual one. It is a FLOOR, and if this builder is
+ * ever handed a real phase, pass it — the answer can only widen.
+ */
+function pickPowerEntries(
+  slot: { power: PowerFamily; count: number },
+  athlete: AthleteContext,
+  seed: number,
+): PowerPoolEntry[] {
+  const eligible = eligiblePowerExercises({
+    family: slot.power,
+    phase: 'In-season',
+    // ⚠ **`ladderLevelForProfile`, NOT `ladderLevelForOnboardingAnswer`.** The
+    // strict resolver THROWS on an answer with no crosswalk row, and this call
+    // site is a session build, not a profile validation — an athlete whose
+    // recorded answer is off the crosswalk should get a Primer, not a crash.
+    // Written strict first and CAUGHT BY MEASUREMENT: `test:athlete-door-matrix`
+    // went 416/15 to 414/17 with "no crosswalk row for onboarding answer
+    // 'Advanced'". That module's own comment names this the entry point for a
+    // possibly-incomplete profile; the strict one exists for callers who must
+    // refuse, and this is not one.
+    trainingAge: ladderLevelForProfile(athlete.onboardingData?.experienceLevel),
+    reduced: false,
+    availableEquipment: athlete.equipmentTags ?? [],
+    blockId: `primer-${seed}`,
+  });
+
+  // SHRINK, NEVER PAD — the rule this repo applies everywhere else. A family
+  // whose shelf is empty yields no row; it does not borrow from the other one.
+  const picks: PowerPoolEntry[] = [];
+  for (let index = 0; index < slot.count && index < eligible.length; index++) {
+    picks.push(eligible[(Math.abs(seed) + index * 13) % eligible.length]);
+  }
+  return picks;
+}
+
+function powerEntryToWorkoutExercise(
+  entry: PowerPoolEntry,
+  slot: { sets: number; repsMin: number; repsMax: number; restSeconds: number },
+  workoutId: string,
+  order: number,
+): WorkoutExercise {
+  const now = new Date().toISOString();
+  const id = authoredRowId(entry.name);
+  return {
+    // Explosive work in a Primer is not main strength and not a hard exposure —
+    // the session's counting answer (R-129 (c)) is the same as the Gunshow's.
+    section18Evidence: ACCESSORY_ROW_EVIDENCE,
+    id: `${workoutId}-ex-${order}`,
+    workoutId,
+    exerciseId: id,
+    exerciseOrder: order,
+    prescribedSets: slot.sets,
+    prescribedRepsMin: slot.repsMin,
+    prescribedRepsMax: slot.repsMax,
+    restSeconds: slot.restSeconds,
+    notes: entry.authoredCueIntent,
+    exercise: {
+      id,
+      name: entry.name,
+      description: entry.authoredCueIntent,
+    } as Exercise,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 function poolExerciseToWorkoutExercise(
   pe: PoolExercise,
   workoutId: string,
@@ -699,6 +1057,30 @@ export function buildDerivedSession(
   // rotate independently
   let slotIndex = 0;
   for (const slot of slots) {
+    const slotSeedForSource = seed + slotIndex * 7919;
+
+    // ── AUTHORED ROWS — nothing to select ──
+    if ('authored' in slot) {
+      for (const row of slot.authored) {
+        exercises.push(authoredSlotRowToWorkoutExercise(
+          row, workoutId, order, slotSeedForSource + order,
+        ));
+        order += 1;
+      }
+      slotIndex += 1;
+      continue;
+    }
+
+    // ── EXPLOSIVE POOL — the power pool's own eligibility owner decides ──
+    if ('power' in slot) {
+      for (const entry of pickPowerEntries(slot, athlete, slotSeedForSource)) {
+        exercises.push(powerEntryToWorkoutExercise(entry, slot, workoutId, order));
+        order += 1;
+      }
+      slotIndex += 1;
+      continue;
+    }
+
     // ── Weekly category cap enforcement ──
     // If the caller provided week-level usage counts and this category
     // has a weekly cap defined, skip the slot when the cap is reached.
@@ -712,8 +1094,14 @@ export function buildDerivedSession(
     }
 
     const pool = POOL_REGISTRY[slot.category] || [];
-    const filtered = filterPool(pool, injuryTags, equipmentSet);
-    const slotSeed = seed + slotIndex * 7919; // prime offset for variety
+    // REGION RESTRICTION FIRST, so injury and equipment filtering then runs over
+    // the shelf the slot actually named. Doing it the other way round would let
+    // an unavailable drill count against the region's supply.
+    const inRegion = slot.regions
+      ? pool.filter((entry) => slot.regions.indexOf(mobilityRegionOf(entry)) !== -1)
+      : pool;
+    const filtered = filterPool(inRegion, injuryTags, equipmentSet);
+    const slotSeed = slotSeedForSource; // prime offset for variety
     const picks = slot.spread
       ? pickAcrossRegions(filtered, slot.count, slot.spread, slotSeed)
       : pickFromPool(filtered, slot.count, slotSeed, pairRuleFor(type));
@@ -721,9 +1109,15 @@ export function buildDerivedSession(
     for (const pe of picks) {
       // Recovery sessions already carry their identity in `workoutType`; the
       // ACCESSORY types are the ones that were being inferred from content.
+      // A PRIMER's pool picks are all mobility drills, so they declare
+      // `recovery_support` for the same reason the Mobility session's do — a
+      // classifier reading `ATG Split Squat` in a stretching slot is the trap
+      // MOBILITY_ROW_EVIDENCE exists for.
       const evidence = type === 'prehab_accessories' || type === 'arms_pump'
         ? ACCESSORY_ROW_EVIDENCE
-        : undefined;
+        : type === 'primer'
+          ? MOBILITY_ROW_EVIDENCE
+          : undefined;
       exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order, evidence));
       order++;
     }
@@ -762,6 +1156,7 @@ const COMPOSED_OPTIONAL_KIND_BY_TYPE: Partial<
   arms_pump: 'gunshow',
   prehab_accessories: 'prehab',
   mobility: 'mobility',
+  primer: 'primer',
 };
 
 function finaliseDerivedSession(args: {
@@ -789,7 +1184,20 @@ function finaliseDerivedSession(args: {
     microcycleId,
     dayOfWeek: dow,
     name: meta.name,
-    description: `${reason} - ${meta.descriptionSuffix}`,
+    /*
+     * WARNING: `reason` IS PROVENANCE, AND THE PRIMER DOES NOT PUT IT ON SCREEN.
+     * Sam, 2026-08-23: *"the subtitle doesn't need to say 'athlete added session'
+     * - just start at 'short and sharp'"*. `reason` is a builder-internal string
+     * ("Athlete-added session", "coach-template"), and prefixing it told the
+     * athlete where the row came from instead of what it is.
+     *
+     * SCOPED to the sessions that opt in via `descriptionIsWhole`, NOT applied to
+     * every type: the other six have shipped their prefixed description for
+     * months and changing them all is a copy change Sam has not asked for.
+     */
+    description: meta.descriptionIsWhole
+      ? meta.descriptionSuffix
+      : `${reason} - ${meta.descriptionSuffix}`,
     durationMinutes: meta.durationMinutes,
     intensity: meta.intensity,
     workoutType: meta.workoutType,

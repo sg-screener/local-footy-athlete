@@ -2224,8 +2224,24 @@ run('no clock times, and the timeline entry shape is pinned', () => {
   // it is the same list the day-detail screen already renders, which is what
   // `surfaceAgreementTests` exists to keep true. **A start time still cannot
   // arrive through here** — that is what this pin is for, and it is unchanged.
+  // ── `iconKind` ADMITTED 2026-08-23 (R-129). IT CAUGHT THE FIELD ON THE FIRST
+  // RUN, which is the second time this pin has done its job.
+  //
+  // WHY IT IS ADMITTED. Sam asked for the lightning bolt on his Primer's day
+  // card. The screen used to choose the glyph itself with
+  // `PART_ICON_KIND[entry.kind]`, and `VisiblePartKind` has no `primer` member —
+  // nor should it grow one, because a Primer IS a strength part; it is a
+  // strength part with its own identity. The alternative was to match the
+  // headline STRING on the card, which is `displayLabelIconKind`'s antipattern
+  // and this repo already carries one of those.
+  //
+  // It adds NO representation: it is a lookup in `PART_ICON_KIND` — the same
+  // table the screen was reading — performed where the workout's typed
+  // `composedOptionalKind` is still in scope, and it carries no clock time.
+  // **A start time still cannot arrive through here**; that is what this pin is
+  // for, and it is unchanged.
   assert(JSON.stringify(keys) === JSON.stringify(
-    ['completion', 'componentId', 'headline', 'kind', 'partId', 'rows']),
+    ['completion', 'componentId', 'headline', 'iconKind', 'kind', 'partId', 'rows']),
     `the timeline entry carries ${JSON.stringify(keys)}. Sam's direction is ordered `
     + 'steps and no times of day; a new field — a start time above all — arrives '
     + 'through this gate or not at all.');

@@ -995,7 +995,7 @@ export interface Workout {
    * Carried, never inferred: a canonicalisation pass must not re-derive it
    * from names.
    */
-  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility';
+  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility' | 'primer';
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
   /**
@@ -1285,6 +1285,49 @@ export interface ConditioningBlock {
  * Represents a single exercise within a workout
  */
 export interface WorkoutExercise {
+  /**
+   * THIS ROW IS SKIPPABLE, AND THE ATHLETE CAN SEE THAT IT IS.
+   *
+   * Sam, 2026-08-23, reading his Primer: *"the strength work and the
+   * accelerations are still in the main session - they should be optional"*.
+   * R-129 authors slots 8 and 9 as optional; before this they rendered as
+   * ordinary prescribed work with the word "Optional" buried in their notes,
+   * which is not the same thing.
+   *
+   * WRITER `utils/sessionBuilder.ts authoredSlotRowToWorkoutExercise`.
+   * READER `utils/sessionTemplate.ts` — the row joins the OPTIONAL WORK cluster.
+   * TEST   `test:primer-session` S12.
+   *
+   * It does NOT remove the tick box (Sam kept those) and it does NOT change any
+   * count: `optional` is about penalty and placement, never about completion.
+   */
+  optionalNoPenalty?: boolean;
+
+  /**
+   * THIS ROW'S DOSE IS EXACTLY AS AUTHORED AND MUST NOT BE SNAPPED.
+   *
+   * `displayReps` maps a rep RANGE onto `APPROVED_REP_TARGETS` so the athlete
+   * gets one number to hit instead of a range to choose inside. That is right
+   * for a prescribed range and wrong for a dose someone wrote deliberately:
+   * R-129 authors the Primer's heavy lift at `2 x 2` with Sam's explicit
+   * exception to the 3-rep minimum, `2` is not an approved target, and the
+   * formatter moved it to `3` — **the exception granted in the data, revoked on
+   * the screen.**
+   *
+   * ⚠ **SCOPED, NOT GLOBAL, AND THAT WAS MEASURED.** The first fix made
+   * `displayReps` skip snapping for ANY exact dose, and
+   * `test:session-template`'s "every rep range resolves to the approved
+   * vocabulary" caught it: a legacy `11 x 11` or `18 x 18` prescription SHOULD
+   * still snap to 10 and 20. The vocabulary law stands; only rows whose author
+   * wrote an exact number opt out.
+   *
+   * WRITER `utils/sessionBuilder.ts authoredSlotRowToWorkoutExercise` — an
+   * `AuthoredSlotRow` is exactly-authored by definition.
+   * READER `screens/home/dayWorkoutHelpers.ts formatStrengthSetsReps`.
+   * TEST   `test:primer-session` S13.
+   */
+  exactDose?: boolean;
+
   id: string;
   workoutId: string;
   exerciseId: string;

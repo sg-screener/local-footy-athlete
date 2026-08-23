@@ -3958,3 +3958,156 @@ joining; runtime-reachable 551 → 550; **`test:scenarios` byte-identical**; and
 `test:injury-authority`, `test:fatigue-abolition`, `test:preseason-exposure`,
 `test:exposure-engine`, `test:injury-severity-bands`,
 `test:conditioning-templates` and `test:rules-kernel` every one unchanged.
+
+---
+
+**R-129** · *"Add primer program - 2 hip mobility drills, upper back mobility
+drill, 1 extra drill (not hip or upper back mobility), pogo hops 2x10, explosive
+upper body, explosive lower body, optional 3 accelerations for 15m at 90%,
+optional heavy but easy lifts for low reps, i.e. TB dead or high box squat 2x2
+(make exception to the 3 rep minimum rule here just for this session) and bench
+for 2x3 or something? around 70% 1 RM? make this optional in the session i.e. no
+checkbox inside session for the heavy but easy lifts or accelerations … for now
+- it's only available to be added by player or swapped by a player … so default
+to gunshow - when I add in the female pathway, the primer will become the
+default … yes a lightning bolt"* (Sam, 2026-08-23) · **THE PRIMER IS AN EIGHTH
+SESSION TYPE, ATHLETE-PLACED ONLY, AND ITS LAST TWO SLOTS ARE UNCHECKED.**
+
+**THE AUTHORED COMPOSITION, IN SAM'S ORDER:**
+
+| # | slot | dose | tick box |
+| --- | --- | --- | --- |
+| 1-2 | hip mobility | 2 drills | yes |
+| 3 | upper-back mobility | 1 drill | yes |
+| 4 | one further mobility drill, **neither hip nor upper back** | 1 drill | yes |
+| 5 | Pogo Hops | 2 x 10 | yes |
+| 6 | explosive upper body | authored dose | yes |
+| 7 | explosive lower body | authored dose | yes |
+| 8 | 3 accelerations, 15m at 90% | **optional** | yes |
+| 9 | heavy-but-easy lift, low reps (Trap Bar Deadlift / High Box Squat 2x2, Bench 2x3, ~70% 1RM) | **optional** | yes |
+
+**PLACEMENT (a):** `athlete` ONLY. **NOT `generator`.** G-1 keeps the Gunshow;
+the Primer is add/swap only. ⚠ **THE DEFAULT FLIPS WITH THE FEMALE PATHWAY** —
+Sam, same message: *"when I add in the female pathway, the primer will become the
+default"*. **That is a STATED FUTURE ORDER, not scope for this task**, and a hand
+that builds generator placement now has run ahead of the ruling.
+
+**CHOOSER (b):** its own Add/Swap category, lightning-bolt glyph.
+**COUNTING (c):** optional — no load, never a hard day, never breaks rest,
+exactly as Gunshow. **COMPOSITION (d):** the table above.
+
+**THE 3-REP FLOOR EXCEPTION IS SCOPED TO THIS SESSION.** The floor is
+`strengthProgressionIntegration.applyDelta`'s `repsFloor` (3 when no band
+applies). Slot 9 authors 2 reps and the exception must be **stated on the slot**,
+never by lowering the global floor.
+
+⚠ **THREE THINGS THE APP CANNOT DO TODAY, MEASURED 2026-08-23 BEFORE ANY CODE
+WAS WRITTEN — these are the build, not decoration:**
+
+1. **THERE IS NO PERCENT-OF-1RM ANYWHERE IN THE APP.** `grep -i "1RM"` over
+   `types/domain.ts` returns NOTHING; every prescription is sets x reps (+ kg).
+   *"around 70% 1 RM"* therefore ships as an authored COACHING NOTE on slot 9,
+   not as a computed load. **ASSUMED, NOT RULED** — Sam wrote it with a question
+   mark and has not been asked to sign it.
+2. **THE EXPLOSIVE-UPPER POOL HAS EXACTLY ONE MEMBER.** `POWER_EXERCISE_POOL`
+   holds one `family: 'upper'` entry — `Explosive Push-up`. **Slot 6 will
+   prescribe the same movement every single time.** This is **R-118 already**,
+   whose fix is *"add more legitimate no-equipment explosive upper-body
+   options"*; the Primer makes that thin pool visible on every use rather than
+   on a bodyweight-only world. **Not fixed here. Named.**
+3. **`SpeedBlock` MAY NOT CARRY SLOT 8.** `SpeedBlockCountingFence` is
+   `hardExposure: true, createsHardDay: true` — routing the accelerations
+   through it would flip an OPTIONAL session into a HARD DAY and contradict
+   answer (c). Slot 8 is an authored row, not a speed block.
+
+**AMENDED THE SAME DAY, BY SAM, BEFORE ANY CODE — THE NO-CHECKBOX CLAUSE IS
+WITHDRAWN AND REPLACED.** *"I actually don't care about what weight they use or
+whether they tick it off or not really, so you can keep the checkboxes, but maybe
+it's worth removing the weight toggle completely from this session?"* (Sam,
+2026-08-23, second message). **Every row keeps its tick box. NO ROW IN THIS
+SESSION SHOWS A WEIGHT CONTROL.** The `optional` column above now means only
+"skippable, no penalty", which is what slots 8 and 9 always meant.
+
+⚠ **THE WEIGHT CONTROL IS CHOSEN BY EXERCISE NAME AND KNOWS NOTHING ABOUT THE
+SESSION.** `utils/loadEstimation.resolveLoadControlMode(exerciseName,
+selectedImplement)` takes no session argument at all: `'none'` is reached only
+via `PREHAB_NO_LOAD_EXERCISES`, a NAME set. A Trap Bar Deadlift must keep its
+stepper in a strength session and lose it here, so **the mode must become
+session-aware** — a signature change through `useDayWorkout.getLoadControlMode`
+and its `DayWorkoutScreenV2` call sites. It is NOT a name added to a set, and a
+hand that adds `Trap Bar Deadlift` to `PREHAB_NO_LOAD_EXERCISES` has silently
+removed the stepper from every strength session in the app.
+
+⚠ **`completionPolicy: 'optional_no_penalty'` IS WRITTEN AND READ BY NOTHING.**
+Measured 2026-08-23: outside `sessionComponents.ts` and its own suites, zero
+readers — the `canOverride` shape CLAUDE.md names. Recorded because the amendment
+above means **nothing in this task gives it a reader either**; it stays dead
+weight until some later task earns it one.
+
+**DURATION AND PURPOSE (Sam, same message):** *"a little 20 min session the day
+before their game to feel good"*. `durationMinutes: 20`. **It adds no fatigue,
+contributes to no load and to no readiness — exactly as Gunshow does not**, which
+is answer (c) restated by its author and not a new clause.
+
+**SLOTS 1-4 NEED NO NEW CONTENT.** `MOBILITY_REGION_BY_ID` (signed 2026-07-30)
+already tags every pool drill: `hips` 7, `upper` 5, `lower` 5, `midline` 3. Slots
+1-2 draw `hips`, slot 4 draws `lower`/`midline` (Sam: *"not hip or upper back"*).
+
+**SLOT 3 IS THE WHOLE `upper` REGION — RULED, NOT ASSUMED.** *"yeah just put the
+whole upper group in please"* (Sam, 2026-08-23, third message), answering the
+imprecision between his words (*"upper BACK mobility drill"*) and the signed
+`upper` region, which is broader and holds `pec-doorway`, a CHEST stretch. **All
+five `upper` drills are legal for slot 3.** No narrowed sub-set exists and none
+is to be invented.
+
+**FOUR ON-GLASS AMENDMENTS, SAM, 2026-08-23, after seeing the Add menu on his
+phone.** All four are HIS words and all four are held:
+
+1. *"change primer subtitle - short, sharp session to feel ready for game day"* —
+   **SIGNED copy.** It replaces my proposed line, and the difference is the
+   lesson: mine described what is IN the session, his says what it is FOR.
+2. *"change conditioning subittle - swap the word intervals for running"* —
+   now *"Light or hard - bike, row, ski or running"*.
+3. *"put primer below gunshow in the list"* — it had landed last, which put the
+   two optional gym sessions at opposite ends of the menu. Moved in BOTH owners:
+   the render order in `PlanChangeSheet` and the row model in
+   `planChangeTypeMenu`, which must not disagree.
+4. *"Is it possible to change the recovery icon to a battery thats like 3/4
+   full?"* — **THIS ONE AMENDS THE 2026-08-11 ICON AUDIT** and needed care. The
+   row used `full-energy`, which is ALSO the readiness screen's "full energy"
+   ANSWER; repointing that name would have silently changed a screen Sam did not
+   ask about. A new `three-quarter-energy` name was added instead
+   (`battery-80`). `test:approved-icons` was MOVED to the new signed state, not
+   loosened — it now asserts the 3/4 battery is present AND that `full-energy`
+   is ABSENT from this sheet, so reinstating the full battery reds.
+
+· **`WORKING`** — `test:primer-session`, 20 cells, built 2026-08-23 by seat
+`primer`. Every cell drives the REAL composer or the REAL owner over 40 seeds;
+none builds a Workout by hand. **MUTATION-PROVEN, FOUR MUTANTS, THREE KILLED AND
+THE FOURTH WORTH MORE THAN THE THREE:** removing `'primer'` from the no-load set
+reds `L1`; turning the hip region RESTRICTION back into a `spread` reds `S1`;
+flipping Pogo Hops' `reducedTakeoverOnly` reds `S6`. **The survivor was an
+explicit `exclude: ['Pogo Hops']` on the explosive-lower slot — removing it
+changed nothing, because `eligiblePowerExercises` already drops every
+reduced-takeover entry. It was DEAD CODE dressed as a guarantee, and it was
+deleted rather than kept**; `S6` now names the owner that actually holds the rule.
+Tree restored byte-identical after each mutant.
+
+**MEASURED AT BOTH ENDS, CONTROL AND CANDIDATE, ON THE SAME TREE.** Typecheck:
+**662 errors on HEAD, 662 with this work** — the gate is red on `main` and this
+change adds nothing to it. Fourteen suites run both ways; every one matches its
+control, including the three `test:session-type-charter` failures (`E1`, `E2`,
+`F2`) which are pre-existing and name recovery/prehab/gunshow, not the Primer.
+
+⚠ **ONE REGRESSION WAS INTRODUCED AND CAUGHT BY THE CONTROL, NOT BY READING.**
+`test:athlete-door-matrix` went **416/15 → 414/17**: the explosive slot resolved
+training age with the STRICT crosswalk resolver, which THROWS on an answer it has
+no row for ("Advanced"). Fixed to `ladderLevelForProfile`, the entry point that
+module's own comment names for a possibly-incomplete profile; back to **416/15**,
+and `S10` now holds it.
+
+⚠ **NOT DONE: THE ATHLETE HAS NOT SEEN IT.** No simulator pass, no screenshot.
+By CLAUDE.md's own standard — *"DONE MEANS THE ATHLETE CAN SEE IT"* — this is
+WORKING in the suites and **OWED on glass**: the Add-menu row with its bolt, the
+week-row glyph, the day card reading "Primer", and a session screen with no
+weight controls.

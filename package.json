@@ -373,6 +373,7 @@
     "test:session-list-combinations": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionListCombinationMatrixTests.ts",
     "test:session-type-charter": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionTypeCharterTests.ts",
     "test:strength-variants": "TZ=Australia/Melbourne sucrase-node src/__tests__/strengthSessionVariantTests.ts",
+    "test:primer-session": "TZ=Australia/Melbourne sucrase-node src/__tests__/primerSessionTests.ts",
     "test:mobility-accessory-doors": "TZ=Australia/Melbourne sucrase-node src/__tests__/mobilityAccessoryDoorTests.ts",
     "test:optional-topup": "TZ=Australia/Melbourne sucrase-node src/__tests__/optionalTopUpTests.ts",
     "test:exercise-edit-entry-surface": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditEntrySurfaceContractTests.ts",

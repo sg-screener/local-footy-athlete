@@ -5,6 +5,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet, SheetHeader } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { RowIcon } from '../../components/icons/SectionIcon';
 import { menuRowFor } from './planChangeTypeMenu';
 import { useProgramStore } from '../../store';
 import { applyProgramOverrideWrite } from '../../store/programStore';
@@ -802,7 +803,7 @@ export function PlanChangeSheet({
           {rowOffered('conditioning') && (
             <MenuOption
               label="Conditioning"
-              sub="Light or hard - bike, row, ski or intervals"
+              sub="Light or hard - bike, row, ski or running"
               icon={conditioningIcon(ACCENT)}
               testID="plan-change-type-conditioning"
               onPress={() => chooseType(mode, 'conditioning',
@@ -817,6 +818,16 @@ export function PlanChangeSheet({
               testID="plan-change-type-gunshow"
               onPress={() => chooseType(mode, 'strength',
                 () => chooseCategory(mode, 'gunshow'))}
+            />
+          )}
+          {rowOffered('primer') && (
+            <MenuOption
+              label={copyFor('primer')!.label}
+              sub={copyFor('primer')!.sub}
+              icon={primerIcon(ACCENT)}
+              testID="plan-change-type-primer"
+              onPress={() => chooseType(mode, 'strength',
+                () => chooseCategory(mode, 'primer'))}
             />
           )}
           {rowOffered('mobility') && (
@@ -1372,12 +1383,28 @@ const conditioningIcon = (color: string) => glyph(color, (
 ));
 /** Gunshow — a literal flexed bicep. */
 const gunshowIcon = (color: string) => <LfaIcon name="flexed-arm" color={color} />;
+/**
+ * THE BOLT ALREADY EXISTED AND IS NOT REDRAWN HERE.
+ *
+ * Sam asked for a lightning bolt (R-129) and the app has had one since R-116 —
+ * `RowIconKind: 'bolt'`, drawn once in `SectionIcon`. Reusing it means the Add
+ * menu, the week row and the session screen cannot draw three different bolts.
+ * He was told it is currently the Speed session's glyph and chose it anyway.
+ */
+const primerIcon = (color: string) => <RowIcon kind="bolt" size={15} color={color} />;
 /** Mobility — a person stretching. */
 const mobilityIcon = (color: string) => <LfaIcon name="mobility" color={color} />;
 /** Accessories / prehab — the shared medical shield. */
 const prehabIcon = (color: string) => <LfaIcon name="medical-shield" color={color} />;
 /** Recovery — a full battery: restored capacity rather than another action arrow. */
-const recoveryIcon = (color: string) => <LfaIcon name="full-energy" color={color} />;
+/* Sam, 2026-08-23: *"Is it possible to change the recovery icon to a battery
+ * thats like 3/4 full?"*. It was `full-energy` (a FULL battery), which read as
+ * "you are charged" rather than "this is what tops you up". Amends the row this
+ * sheet took from the 2026-08-11 icon audit; `test:approved-icons` moves with
+ * it rather than being loosened. */
+const recoveryIcon = (color: string) => (
+  <LfaIcon name="three-quarter-energy" color={color} />
+);
 /** Team — two people: the anchor Bin's "team" scope removes. */
 const teamIcon = (color: string) => glyph(color, (
   <><Circle cx="9" cy="8" r="3" /><Path d="M3.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" />

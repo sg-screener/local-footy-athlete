@@ -57,7 +57,8 @@ export interface CoachRevisionTemplateDefinition {
    *  'strength' / 'accessories' = ENGINE-GENERATED via buildTagAwareSession
    *  / buildDerivedSession — the same principles as weekly programming
    *  (tag scoring, game proximity, injury filters). Sheet v2 phase 4. */
-  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories' | 'mobility';
+  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories'
+    | 'mobility' | 'primer';
   byeOnly: boolean;
   durationMinutes: number;
   /** True when the built content varies by DATE (engine-generated) — the
@@ -68,8 +69,8 @@ export interface CoachRevisionTemplateDefinition {
   engineName?: string;
   /** Exact typed contract for engine-built strength templates. */
   strengthIntent?: StrengthIntent;
-  /** Derived-session type for buildDerivedSession (accessories only). */
-  derivedType?: 'arms_pump' | 'prehab_accessories';
+  /** Derived-session type for buildDerivedSession (composed session types). */
+  derivedType?: 'arms_pump' | 'prehab_accessories' | 'primer';
 }
 
 const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
@@ -262,6 +263,22 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     dynamic: true,
     derivedType: 'prehab_accessories',
   },
+  // ── Primer: Sam's R-129 pre-game session, athlete-placed only ──
+  //
+  // Its own `category` rather than `accessories`, because the accessories
+  // category is the one the charter already had to split once: a single
+  // category cannot answer "who may place this" for two different session
+  // types, and the Primer's answer (athlete alone) differs from both of theirs.
+  {
+    templateId: 'primer_session',
+    label: 'Primer',
+    description: 'Mobility, something explosive, and an optional heavy single or two.',
+    category: 'primer',
+    byeOnly: false,
+    durationMinutes: 20,
+    dynamic: true,
+    derivedType: 'primer',
+  },
 ];
 
 /* `RECOVERY_FLOW_ROWS` — the fixed four — is DELETED (Sam, 2026-08-21:
@@ -374,7 +391,15 @@ export function buildCoachRevisionTemplateWorkout(
   if (def.category === 'recovery') {
     return buildRecoveryTemplateWorkout(def, date);
   }
-  if (def.category === 'strength' || def.category === 'accessories') {
+  // ENGINE-BUILT means "this template names how it is composed", not "this
+  // template is one of two categories". It read `category === 'accessories'`,
+  // which was true of every composed template until R-129 added one that is not
+  // an accessory — and the category list is the wrong fact to ask anyway:
+  // `derivedType` IS the statement that `buildDerivedSession` owns the content.
+  // Keyed on it, a new composed type routes correctly the moment it declares
+  // one, instead of silently falling through to the conditioning path below and
+  // emitting a single row named after its own label.
+  if (def.category === 'strength' || def.derivedType) {
     return buildEngineTemplateWorkout(def, date);
   }
   const rows = conditioningRowsForTemplate(def);
@@ -612,7 +637,7 @@ function buildEngineTemplateWorkout(
       ctx.athlete,
       ctx.inSeason,
     );
-  } else if (def.category === 'accessories' && def.derivedType) {
+  } else if (def.derivedType) {
     generated = buildDerivedSession(
       def.derivedType,
       date,

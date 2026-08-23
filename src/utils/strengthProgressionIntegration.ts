@@ -593,9 +593,34 @@ function applyDelta(
   const setsCeiling = band
     ? Math.max(band.setsMax, exercise.prescribedSets)
     : Number.POSITIVE_INFINITY;
+  /**
+   * THE FLOOR NEVER DRAGS AN AUTHORED ROW *UP*.
+   *
+   * A floor exists to stop progression driving reps DOWN past a sensible
+   * minimum. The banded branch has always understood that: it takes the LOWER
+   * of the band and what the row was authored at, so a row prescribed below the
+   * band keeps its own number. The unbanded branch did not — it asserted a flat
+   * `3` — so any row authored at 1 or 2 reps was silently raised to 3 the first
+   * time progression touched it.
+   *
+   * FOUND VIA R-129 (Sam, 2026-08-23), whose Primer authors a heavy-but-easy
+   * double: *"make exception to the 3 rep minimum rule here just for this
+   * session"*. **The exception is not scoped to that session, because the defect
+   * never was.** A per-row opt-out flag would have been a writer with no reader
+   * for every other row in the app, and would have left the same bug live for
+   * the next authored double. The two branches now say the same thing.
+   *
+   * `prescribedRepsMin` is guarded because this project has no
+   * `strictNullChecks`: an absent value would make `Math.min` return NaN and
+   * silently poison every prescription downstream.
+   */
+  const authoredRepsFloor = typeof exercise.prescribedRepsMin === 'number'
+    && exercise.prescribedRepsMin > 0
+    ? exercise.prescribedRepsMin
+    : Number.POSITIVE_INFINITY;
   const repsFloor = band
     ? Math.min(band.repsMin, exercise.prescribedRepsMin)
-    : 3;
+    : Math.min(3, authoredRepsFloor);
   const repsCeiling = band
     ? Math.max(band.repsMax, exercise.prescribedRepsMax)
     : Number.POSITIVE_INFINITY;

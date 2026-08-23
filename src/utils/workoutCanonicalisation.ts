@@ -598,6 +598,51 @@ export function finaliseWorkoutAfterMutation(
   context: WorkoutCanonicalisationContext,
 ): WorkoutCanonicalisationResult {
   const actions: WorkoutCanonicalisationAction[] = [];
+
+  /**
+   * ── A COMPOSED OPTIONAL SESSION IS RETURNED UNTOUCHED ──────────────────────
+   *
+   * **THIS FUNCTION IS A STRENGTH-SESSION CANONICALISER.** It classifies rows,
+   * infers what the day was FOR, re-derives the session's name and type, and
+   * rebuilds its content as `leadingPower + strengthWithContrast + conditioning`
+   * — dropping anything that is none of those, and diverting mobility rows into
+   * a generated `Optional Mobility Add-on`. That is correct for a session the
+   * app composed from an intent. **It is destructive for one Sam authored slot
+   * by slot, because there is no intent to re-derive: the slots ARE the
+   * intent.**
+   *
+   * **MEASURED 2026-08-23, and this is the bug Sam reported FOUR TIMES.** A
+   * 10-row Primer through this function came out with **ZERO rows** in a bare
+   * context, and on his phone with **five** — `Pogo Hops`, `Explosive Push-up`
+   * and `Vertical Jump` deleted outright (the entire explosive half he kept
+   * asking about), two of his mobility drills diverted into the add-on block
+   * where they render with no tick box (*"some checkboxes and some not - they
+   * should all be consistent"*), and `High Box Squat` re-dosed from its authored
+   * `2 x 2` to `2 x 3`. **Every READ path — composer, template, projection,
+   * session template — returns all ten rows. Only this WRITE path does not**,
+   * which is why four rounds of reading the render code found nothing.
+   *
+   * ⚠ **THE FIX IS AN EARLY RETURN, NOT A NEW BRANCH INSIDE THE PASS.** Two
+   * narrower attempts were made first and BOTH FAILED, which is the evidence
+   * for this shape: adding the marker to `supportOnlyTextHint` changed nothing
+   * (ownership still answered `canonical_strength_rows`, because the session
+   * authors a trap-bar double and a bench), and making the marker outrank
+   * ownership still returned zero rows (the row partition below had already
+   * decided these rows were neither power, strength nor conditioning). **Each
+   * fix would have been one more condition teaching a strength pass about a
+   * session that is not one.** This file already states the principle in its own
+   * words a few hundred lines down: *"Filling a pattern is authoring, and
+   * authoring belongs to the composer."* So does keeping one.
+   *
+   * The marker is `composedOptionalKind`, stamped by the builder that composed
+   * the session — a typed fact, not a name, so a rename cannot defeat it. This
+   * covers Gunshow, Prehab, Mobility and Primer alike; the first three survived
+   * only because their names happened to match a regex below.
+   */
+  if (inputWorkout.composedOptionalKind) {
+    return { workout: inputWorkout, changed: false, actions };
+  }
+
   const earlyOffseason = context.phase === 'Off-season' &&
     context.offseasonSubphase === 'early_offseason';
   const originalJson = JSON.stringify(inputWorkout);
@@ -641,6 +686,30 @@ export function finaliseWorkoutAfterMutation(
   const prohibitedPatterns = new Set(context.prohibitedStrengthPatterns ?? []);
   const explicitRestIdentity = workout.workoutType === ('Rest' as WorkoutType) ||
     /^rest(?:\s+day)?$/i.test(workout.name.trim());
+  /**
+   * ⚠ **THE TYPED MARKER FIRST, THE NAME REGEX ONLY AS A LEGACY FALLBACK.**
+   *
+   * This asked ONE question — "is this light support work rather than a
+   * strength session?" — and answered it by matching the session's NAME against
+   * `gunshow|prehab|pump|accessor|low-fatigue`. Every composed optional session
+   * that existed when it was written happened to match. **R-129's Primer does
+   * not**, so it was judged as a strength session, and a strength session with
+   * no typed intent gets its content re-decided from scratch.
+   *
+   * **MEASURED 2026-08-23:** `finaliseWorkoutAfterMutation` took a 10-row Primer
+   * and returned **ZERO rows**. On Sam's phone it returned five, having deleted
+   * `Pogo Hops`, `Explosive Push-up` and `Vertical Jump` — the entire explosive
+   * half — and re-dosed `High Box Squat` from its authored `2 x 2` to `2 x 3`.
+   * He reported the missing power work FOUR TIMES before it was found here,
+   * because every read path (composer, template, projection, session template)
+   * returns all ten and only the WRITE path does not.
+   *
+   * `composedOptionalKind` is the typed fact that says "this workout IS one
+   * composed optional session". It is stamped by the builder that composed it
+   * and cannot be defeated by a rename, which the regex can — and was. The
+   * regex stays for legacy stored workouts that predate the marker; it is no
+   * longer the only way to answer.
+   */
   const supportOnlyTextHint =
     /\b(?:gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(
       `${workout.name} ${workout.description ?? ''}`,

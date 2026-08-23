@@ -22,6 +22,7 @@ import {
   normalizeTeamTrainingWorkoutForDisplay,
 } from '../../utils/teamTraining';
 import { projectDayDetail } from '../../rules/visibleDayDetail';
+import { sessionAsksForLoad } from '../../rules/sessionLoadEntry';
 import type { SessionOutcomeTransactionReceipt } from '../../types/sessionOutcome';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
@@ -139,10 +140,21 @@ export function useDayWorkout() {
   // Onboarding data for render-time load estimation (catches pre-existing programs).
   const onboardingData = useProfileStore((s: any) => s.onboardingData);
 
+  /**
+   * THE SESSION IS ASKED FIRST, THEN THE EXERCISE.
+   *
+   * `resolveLoadControlMode` is keyed on the exercise NAME and cannot know which
+   * session the row is in, so a session that does not want weights at all has to
+   * be asked separately — see `rules/sessionLoadEntry`. `'none'` is a mode the
+   * renderer already understands (prehab rows have used it for months), so this
+   * removes the control without a second rendering path.
+   */
   const getLoadControlMode = useCallback(
     (exercise: any, selectedImplement?: string | null): LoadControlMode =>
-      resolveLoadControlMode(exercise.exercise?.name || '', selectedImplement),
-    [],
+      (sessionAsksForLoad(workout)
+        ? resolveLoadControlMode(exercise.exercise?.name || '', selectedImplement)
+        : 'none'),
+    [workout],
   );
 
   /** Is this exercise able to return to an unloaded bodyweight state? */

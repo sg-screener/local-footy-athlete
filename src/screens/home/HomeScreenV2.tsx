@@ -517,7 +517,7 @@ export default function HomeScreenV2() {
      * row decides — which is the same rule, not an exception to it.
      */
     const timelineEntries = visibleDay
-      ? dayTimeline(visibleDay, sessionFeedback[day.date])
+      ? dayTimeline(visibleDay, sessionFeedback[day.date], day.workout)
       : [];
     const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
     const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;
@@ -1869,6 +1869,11 @@ function displayLabelIconKind(label: string | null | undefined): RowIconKind | n
 
   if (key === 'game' || key === 'game day') return 'game';
   if (key === 'team training') return 'team';
+  // PRIMER — Sam's lightning bolt (R-129). An EQUALITY, not a substring: this
+  // table's `includes` entries are what let "mobility" swallow any name
+  // containing it, and a Primer opens with mobility drills. Placed above the
+  // mobility branch for the same reason.
+  if (key === 'primer') return 'bolt';
 
   if (
     key === 'recovery' ||
@@ -2904,7 +2909,10 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
         * button does not cover should not sit above it.
         */}
       {entries.filter((entry) => entry.kind !== 'team_training').map((entry) => {
-        const iconKind = PART_ICON_KIND[entry.kind];
+        // The glyph is DECIDED BY THE PROJECTION, not looked up here: the
+        // timeline entry carries `iconKind` because that is where the workout's
+        // typed identity is still readable. See `rules/dayTimeline`.
+        const iconKind = entry.iconKind;
         const isOpen = openParts.has(entry.partId);
         // A PART WITH NO ROWS HAS NOTHING TO OPEN, and it does not pretend to.
         // Her own week view carries the same rule — rest and game days render as
@@ -2913,6 +2921,23 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
         // the athlete the affordance is a lie. Team-training and game parts are
         // the real cases here; they carry no exercise rows by construction.
         const canOpen = entry.rows.length > 0;
+        /*
+         * AN EMPTY PART THAT IS NOT AN ANCHOR DOES NOT RENDER AT ALL.
+         *
+         * Sam, 2026-08-23, on a Primer day carrying a THIRD component line —
+         * "PRIMER" with the blue recovery battery, no count, no chevron:
+         * *"we def don't need the primer card with the little blue icon next to
+         * it - no other days have that"*. It was a zero-row part: a label for a
+         * component with nothing in it.
+         *
+         * The rule above already exists for the FLAT presentation a few lines
+         * down (`if (!canOpen) return null`); this is the same rule applied to
+         * the default one, which had no reason to differ. Anchors are the
+         * deliberate exception and keep their line — a game carries no exercise
+         * rows by construction and is still the most important thing on the day.
+         * `team_training` is already filtered out above.
+         */
+        if (!canOpen && entry.kind !== 'game') return null;
         // `derived_number`: the template is the sheet's, the count is the part's
         // own row count. Never composed here — see `day.part.exercise_count`.
         const meta = canOpen

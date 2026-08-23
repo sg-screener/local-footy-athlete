@@ -17,6 +17,13 @@ export type LfaIconName =
   | 'medical-shield'
   | 'no-energy'
   | 'half-energy'
+  /**
+   * A three-quarter battery — Sam, 2026-08-23, for the Add menu's Recovery row.
+   * SEPARATE from `full-energy` on purpose: that name is the readiness screen's
+   * "full energy" ANSWER, and repointing it would have quietly changed a
+   * different screen to say something the athlete did not choose.
+   */
+  | 'three-quarter-energy'
   | 'full-energy'
   | 'totally-cooked'
   | 'severe-illness'
@@ -66,6 +73,7 @@ const MCI_ICON: Partial<Record<LfaIconName, MciName>> = {
   'medical-shield': 'shield-plus-outline',
   'no-energy': 'battery-low',
   'half-energy': 'battery-50',
+  'three-quarter-energy': 'battery-80',
   'full-energy': 'battery',
   'totally-cooked': 'skull-crossbones-outline',
   'severe-illness': 'emoticon-dead-outline',

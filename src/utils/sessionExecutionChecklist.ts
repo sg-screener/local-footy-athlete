@@ -1,7 +1,12 @@
 import type { FeedbackCompletion } from '../types/sessionOutcome';
 import type { Workout } from '../types/domain';
 import type { MobilityPrehabFlow } from './mobilityPrehabFlow';
-import { getSessionComponents, type SessionComponent } from './sessionComponents';
+import {
+  getSessionComponents,
+  sessionOrderIsAuthored,
+  type SessionComponent,
+} from './sessionComponents';
+import { SESSION_SECTION_ICON_KIND, type RowIconKind } from '../rules/sectionIconKinds';
 import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
 
 /**
@@ -42,6 +47,11 @@ export interface SessionExecutionSection {
   id: SessionExecutionSectionId;
   label: string;
   items: SessionExecutionItem[];
+  /**
+   * The glyph this section draws, decided here because only here is the
+   * workout's typed identity readable. See the note beside `mainSectionIcon`.
+   */
+  iconKind: RowIconKind;
 }
 
 export interface SessionExecutionPlan {
@@ -113,6 +123,11 @@ export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   recovery: 'Recovery',
   optional: 'Optional Work',
   other: 'Session',
+};
+
+/** A composed optional session's own section glyph. Mirrors `rules/dayTimeline`. */
+const SECTION_ICON_BY_COMPOSED_OPTIONAL: Readonly<Record<string, RowIconKind>> = {
+  primer: 'bolt',
 };
 
 const SECTION_ORDER: SessionExecutionSectionId[] = [
@@ -275,9 +290,41 @@ export function buildSessionExecutionPlan(args: {
     });
   }
 
+  /*
+   * A SESSION SAM AUTHORED NAMES ITS OWN MAIN SECTION.
+   *
+   * Sam, 2026-08-23, reading his Primer: *"this should be 'mobility warm up'
+   * then 'primer' then optional work which includes the accelerations and the
+   * heavy lifts"*. The middle section read STRENGTH — the generic label for
+   * whatever a session's main work is — which is right for a gym session and
+   * wrong for one that has its own name on the screen directly above it.
+   *
+   * Scoped through `sessionOrderIsAuthored`, the same predicate the template
+   * uses to keep his row order, so the two cannot disagree about which sessions
+   * are authored. Every other section keeps its label: the warm-up is still the
+   * warm-up and the optional cluster is still Optional Work, which is exactly
+   * the three-section shape he named.
+   */
+  const mainSectionLabel = sessionOrderIsAuthored(args.workout)
+    ? (args.workout.name ?? SECTION_LABELS.strength)
+    : SECTION_LABELS.strength;
+  /*
+   * THE SECTION CARRIES ITS OWN GLYPH, for the same reason it carries its own
+   * label: only here is the workout's typed identity readable. The screen used
+   * `SESSION_SECTION_ICON_KIND[section.id]` and could not tell a Primer's main
+   * section from any other strength section, so the day card drew Sam's bolt and
+   * the session screen drew a dumbbell for the same work — two surfaces
+   * disagreeing about one session, which is the split this repo keeps paying
+   * for. `rules/dayTimeline` makes the identical decision for the card.
+   */
+  const mainSectionIcon = sessionOrderIsAuthored(args.workout)
+    ? (SECTION_ICON_BY_COMPOSED_OPTIONAL[String(args.workout.composedOptionalKind)]
+      ?? SESSION_SECTION_ICON_KIND.strength)
+    : SESSION_SECTION_ICON_KIND.strength;
   const sections = SECTION_ORDER.map((id) => ({
     id,
-    label: SECTION_LABELS[id],
+    label: id === 'strength' ? mainSectionLabel : SECTION_LABELS[id],
+    iconKind: id === 'strength' ? mainSectionIcon : SESSION_SECTION_ICON_KIND[id],
     items: items.filter((item) => item.sectionId === id),
   })).filter((section) => section.items.length > 0);
   return { components, sections, items };

@@ -188,6 +188,7 @@ const CATEGORY_TEMPLATE_MATCH: Record<
   // session. `derivedType` is the typed fact the registry already carries.
   gunshow: (t) => t.category === 'accessories' && t.derivedType === 'arms_pump',
   prehab: (t) => t.category === 'accessories' && t.derivedType === 'prehab_accessories',
+  primer: (t) => t.category === 'primer' && t.derivedType === 'primer',
 };
 
 const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
@@ -245,6 +246,19 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
     label: 'Accessories',
     sub: 'Groin, calves, midline, shoulders - the armour work',
   },
+  // PRIMER (R-129). "Primer" is the word Sam chose, and it is free on the
+  // athlete's screen: R-110 removed the POWER / PRIMER disclosure on 2026-08-20,
+  // so no surface renders the word today. The CODE's `primer` (powerPrimerPolicy,
+  // power_primer_budget) means the explosive rows INSIDE a strength session and
+  // never reaches an athlete — the same split that lets `arms_pump` read
+  // "Gunshow". PROPOSED, NOT YET SIGNED as copy.
+  primer: {
+    label: 'Primer',
+    // SIGNED — Sam, 2026-08-23, replacing my proposed line after seeing it on
+    // glass: *"change primer subtitle - short, sharp session to feel ready for
+    // game day"*. His words say what it is FOR; mine described what is in it.
+    sub: 'Short, sharp session to feel ready for game day',
+  },
 };
 
 const MAX_VISIBLE_SESSIONS_PER_DAY = 2;
@@ -295,7 +309,16 @@ function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSession
   // `mobility` member and does not need one — `kind` exists so the ledger can
   // ask what counts, and the two answer that question identically.
   if (category === 'recovery' || category === 'mobility') return 'recovery';
-  if (category.startsWith('strength_') || category === 'gunshow' || category === 'prehab') return 'strength';
+  // PRIMER joins the STRENGTH kind, as Gunshow and Prehab do. `kind` is the
+  // ledger's question — "what sort of slot does this occupy on the day" — not a
+  // statement about load; the charter's `countsTowardLoad: false` answers that,
+  // and a Primer moves no total for the same reason a Gunshow moves none.
+  if (
+    category.startsWith('strength_')
+    || category === 'gunshow'
+    || category === 'prehab'
+    || category === 'primer'
+  ) return 'strength';
   return 'conditioning';
 }
 
@@ -317,7 +340,13 @@ function templateAddsSessionKind(
   category: CoachRevisionTemplateDefinition['category'],
 ): VisibleSessionKind {
   if (category === 'recovery' || category === 'mobility') return 'recovery';
-  if (category === 'strength' || category === 'accessories') return 'strength';
+  // `primer` sits with strength here for the SAME reason it does in
+  // `categoryAddsSessionKind`, and the two must never disagree — a split
+  // between these functions is what once let the sheet offer Mobility on a day
+  // the writer then refused it on.
+  if (category === 'strength' || category === 'accessories' || category === 'primer') {
+    return 'strength';
+  }
   return 'conditioning';
 }
 

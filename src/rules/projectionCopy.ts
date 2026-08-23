@@ -1316,13 +1316,19 @@ export function registerProjectionCopy(): void {
     {
       id: 'part.headline.recovery',
       source: 'sam_ruling',
-      provenance: 'REWORDED — Batch 7 (device-pass fix round, 2026-08-01). Was '
-        + '"Recovery" (Batch 6, Task 2). Recovery is a charter-deleted type and its '
-        + 'authored contents ARE the mobility flows, so the `recovery`-KIND parts '
-        + 'that still exist (attached add-ons; athlete-placed legacy recovery '
-        + 'sessions no deriver may rebuild) render the word for what their rows '
-        + 'are. The part KIND is unchanged — this is a word, not a re-typing.',
-      text: 'Mobility',
+      provenance: 'RESTORED to "Recovery" on 2026-08-23. It read "Recovery" (Batch 6), '
+        + 'was REWORDED to "Mobility" (Batch 7, 2026-08-01) on the reasoning that '
+        + '"Recovery is a charter-deleted type and its authored contents ARE the '
+        + 'mobility flows", and THAT PREMISE DIED on 2026-08-21 when Sam ruled '
+        + '"there should be a specific mobility day and a specific recovery day" and '
+        + 'Recovery was rebuilt with its own authored recipe (2 tissue quality, 3 '
+        + 'mobility, 1 easy cardio, 1 breathing reset). Its contents are no longer '
+        + '"the mobility flows", so the word that described them is no longer true. '
+        + 'FOUND BY SAM ON GLASS, 2026-08-23: adding Recovery and adding Mobility '
+        + 'both produced a card titled "Mobility" — and the Recovery one wore a '
+        + 'RECOVERY badge under a Mobility title, two words for one session '
+        + 'contradicting each other. The part KIND is unchanged; this is a word.',
+      text: 'Recovery',
     },
     {
       id: 'part.headline.power',
@@ -1372,6 +1378,16 @@ export function registerProjectionCopy(): void {
         + 'fifth-row label Sam signed 2026-07-31 (ruling 6-IV-1): the CATEGORY ID '
         + 'stays `prehab`, the athlete\'s word is "Accessories".',
       text: 'Accessories',
+    },
+    {
+      id: 'part.headline.optional.primer',
+      source: 'sam_ruling',
+      provenance: 'NEW — R-129 (Sam, 2026-08-23). Reuses the Add-menu label he '
+        + 'chose for the door (CATEGORY_COPY.primer), so the part is named for the '
+        + 'row the athlete tapped. Selected by the typed `composedOptionalKind`, '
+        + 'never by name; without this row a Primer part reads the honest-generic '
+        + '"Strength".',
+      text: 'Primer',
     },
     {
       id: 'part.headline.optional.mobility',
@@ -1746,6 +1762,35 @@ export function registerProjectionCopy(): void {
   // (cue-reconciliation unit) — this is a trace, not an invention, registered in
   // bulk because the vocabulary is the source, not a hand-picked subset of it.
   const exerciseEntries: SignedCopyEntry[] = [];
+  /**
+   * ⚠ **ONE EXERCISE NAME REGISTERED BY RULING RATHER THAN BY POOL MEMBERSHIP,
+   * AND THE REASON MATTERS.**
+   *
+   * R-129 authors *"3 accelerations for 15m at 90%"* as a row of the Primer.
+   * `Acceleration` is Sam's own word and is not in any of the four selectable
+   * pools, so the bulk trace below cannot reach it and the athlete's screen threw
+   * a render error the moment a Primer was opened — caught on Sam's phone
+   * 2026-08-23, by him, with twenty green cells behind it.
+   *
+   * **IT IS DELIBERATELY *NOT* ADDED TO `POWER_EXERCISE_POOL`**, which was the
+   * obvious fix and is the wrong one: that pool is one of the four SELECTABLE
+   * systems, so a running acceleration would immediately become eligible for the
+   * power slot inside ordinary gym strength sessions. The Primer names this row
+   * by authorship, not by selection, so its NAME needs provenance and its pool
+   * membership does not exist to be granted.
+   *
+   * If it should ever become selectable, that is a generation change with a
+   * scenario report, not an edit here.
+   */
+  exerciseEntries.push({
+    id: exerciseNameCopyId('Acceleration'),
+    source: 'sam_ruling',
+    provenance: 'R-129 (Sam, 2026-08-23): "optional 3 accelerations for 15m at 90%". '
+      + 'Authored BY NAME on utils/sessionBuilder.ts SESSION_SLOTS.primer; not a '
+      + 'member of any selectable pool, and not to be made one without a '
+      + 'generation ruling.',
+    text: 'Acceleration',
+  });
   for (const name of selectableExerciseNames()) {
     exerciseEntries.push({
       id: exerciseNameCopyId(name),

@@ -2665,7 +2665,7 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
           * TOTAL `Record`, so a new section kind stops the build until somebody
           * gives it an icon; it can never render iconless and silent again. */}
         <View style={styles.executionSectionIcon} testID={`session-execution-icon-${section.id}`}>
-          <RowIcon kind={SESSION_SECTION_ICON_KIND[section.id]} size={17} />
+          <RowIcon kind={section.iconKind ?? SESSION_SECTION_ICON_KIND[section.id]} size={17} />
         </View>
         <View style={styles.executionSectionHeading}>
           <Text style={styles.executionSectionTitle}>{section.label}</Text>

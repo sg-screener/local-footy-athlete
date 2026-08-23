@@ -50,6 +50,12 @@ export const PLAN_CHANGE_CATEGORY_IDS = [
   // draws the six prehab pools.
   'gunshow',
   'prehab',
+  // PRIMER (R-129, Sam 2026-08-23). Its own door because it is its own session
+  // type: *"it's only available to be added by player or swapped by a player"*,
+  // which makes the door the ONLY way it reaches a day. A category that shared
+  // the Gunshow's row would be the accessories mistake again — one door for two
+  // of Sam's types, and neither able to answer who may place it.
+  'primer',
 ] as const;
 
 export type PlanChangeCategoryId = (typeof PLAN_CHANGE_CATEGORY_IDS)[number];

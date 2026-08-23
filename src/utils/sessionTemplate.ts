@@ -1,5 +1,8 @@
 import type { Workout } from '../types/domain';
-import { getSessionComponentRows } from './sessionComponents';
+import {
+  getSessionComponentRows,
+  sessionOrderIsAuthored,
+} from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import {
@@ -337,8 +340,33 @@ export function buildSessionTemplate(
     ...componentRows.supportRows,
   ]));
   const supersetTags = supersetTagsFor(sessionRows);
+  /*
+   * ⚠ **A SESSION WHOSE ORDER SAM AUTHORED KEEPS IT.**
+   *
+   * `orderItems(..., d2Rank)` at the end of this function ranks by ROLE — power,
+   * main lift, accessories — which is right for a gym session the app composed
+   * and wrong for one Sam wrote slot by slot. R-129's Primer builds from
+   * stretches to something explosive and ends on two skippable heavy sets; D2
+   * classified those two as main lifts and sorted them to the TOP. Sam, seeing
+   * it: *"the order of the session is important and right now it's wrong"*.
+   *
+   * ONE SHARED ROLE IS THE FIX, and it is the SAME fix Mobility and Recovery
+   * already use ten lines above — every row ranks equally, `orderItems` is
+   * stable, so the authored order survives untouched. No second sorting rule was
+   * added; the existing one is simply given nothing to reorder.
+   */
+  const oneRole = sessionOrderIsAuthored(workout);
   for (const row of sessionRows) {
-    items.push(exerciseItem(row, 'strength', { superset: supersetTags.get(row) ?? null }));
+    items.push(exerciseItem(row, 'strength', {
+      superset: supersetTags.get(row) ?? null,
+      ...(oneRole ? { role: 'prehab' as const } : {}),
+      // A row the composer marked skippable joins the OPTIONAL WORK cluster —
+      // the same cluster add-on rows use, so there is one optional group on the
+      // screen rather than two ways of saying the same thing.
+      ...((row as { optionalNoPenalty?: boolean }).optionalNoPenalty
+        ? { optional: true }
+        : {}),
+    }));
   }
 
   // The add-on box dies, but its content does not: every add-on exercise

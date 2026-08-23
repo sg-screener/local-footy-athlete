@@ -254,12 +254,23 @@ ok('Program quick actions and readiness choices use the approved replacements',
   && home.includes("<LfaIcon name=\"half-energy\"")
   && home.includes("<LfaIcon name=\"totally-cooked\"")
   && home.includes("<LfaIcon name=\"severe-illness\""));
-ok('plan editing uses arrow, flexed arm, mobility, medical shield and full battery',
+/* ⚠ **THE RECOVERY BATTERY IS 3/4, NOT FULL — SAM AMENDED THE 2026-08-11 AUDIT
+ * ON 2026-08-23**, seeing the Add menu on his phone: *"Is it possible to change
+ * the recovery icon to a battery thats like 3/4 full?"* A full battery read as
+ * "you are charged" on a row that offers the thing that charges you.
+ *
+ * THE PIN MOVED TO THE NEW SIGNED STATE; IT WAS NOT LOOSENED. `full-energy` is
+ * asserted ABSENT from this sheet, so a hand that reinstates the full battery
+ * reds — which is what this suite is for. `full-energy` itself is untouched and
+ * still pinned on the readiness screen above, because it is that screen's
+ * ANSWER and Sam changed a MENU ICON, not an answer. */
+ok('plan editing uses arrow, flexed arm, mobility, medical shield and a 3/4 battery',
   plan.includes("<LfaIcon name=\"move-right\"")
   && plan.includes("<LfaIcon name=\"flexed-arm\"")
   && plan.includes("<LfaIcon name=\"mobility\"")
   && plan.includes("<LfaIcon name=\"medical-shield\"")
-  && plan.includes("<LfaIcon name=\"full-energy\"")
+  && plan.includes("<LfaIcon name=\"three-quarter-energy\"")
+  && !plan.includes("<LfaIcon name=\"full-energy\"")
   && !plan.includes('M3 12a9 9 0 1 1 3 6.7'));
 ok('injury regions use the approved bicep, lower-body and spine families',
   injury.includes("<LfaIcon name=\"flexed-arm\"")

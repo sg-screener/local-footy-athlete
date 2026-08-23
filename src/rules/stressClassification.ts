@@ -103,8 +103,14 @@ export function classifySessionStress(
     }
 
     // ── Always low ──
+    // PRIMER joins them by Sam's own words (R-129, 2026-08-23): *"this session
+    // will not add fatigue just like gunshow doesn't add fatigue so it won't
+    // contribute to their load or readiness"*. Without this case it would fall
+    // to `other` below and be scored MEDIUM — a 20-minute feel-good session
+    // silently eating a hard-day allowance.
     case 'gunshow':
     case 'prehab':
+    case 'primer':
     case 'recovery':
     case 'rest':
       return 'low';

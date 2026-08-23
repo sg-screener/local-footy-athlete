@@ -323,6 +323,37 @@ export function groupStrengthExercises(exercises: any[]): StrengthGroup[] {
  * because the law binds display and logging to the same middle.
  */
 export function formatStrengthSetsReps(exercise: any): string {
+  /**
+   * ⚠ **A ROW WHOSE UNIT IS NOT REPS DOES NOT GO THROUGH THE REP SNAPPER.**
+   *
+   * `displayReps` collapses a range onto `APPROVED_REP_TARGETS` — the right
+   * thing for a lift, because the athlete gets ONE number to hit instead of a
+   * range to choose inside. It is nonsense for a timed hold: **`Deep Squat Hold`
+   * is authored `30-45 SECONDS`, no rep target exists in that range, so the
+   * snapper fell back to the nearest approved target and rendered `2 × 20`** —
+   * a rep count, for a stretch, in seconds' clothing. Sam, 2026-08-23: *"deep
+   * squat hold says 2x20 - but doesn't say 20 seconds? it's a timed thing not a
+   * rep thing"*, and again for Couch and Pigeon Stretch.
+   *
+   * The unit-aware formatter already existed one function up, written for
+   * exactly this case — its own words: *"These sessions share the strength card,
+   * but their units can be seconds or minutes."* R-129's Primer is the first
+   * session to put timed holds, a distance and heavy lifts on that card
+   * together, so it is the first to need the card to ask per ROW rather than
+   * per SESSION.
+   *
+   * Delegation, not duplication: seconds, minutes, metres and per-side all keep
+   * their single owner, and nothing about this is Primer-specific — any session
+   * carrying a timed row through the strength card is fixed by it.
+   */
+  const pType = (exercise as { prescriptionType?: string }).prescriptionType;
+  if (pType && pType !== 'reps') return formatLowLoadSetsReps(exercise);
+  // An EXACTLY AUTHORED dose is shown as authored. `displayReps` simplifies a
+  // range; there is nothing to simplify where the author wrote one number, and
+  // snapping it would overwrite the decision — see `WorkoutExercise.exactDose`.
+  if ((exercise as { exactDose?: boolean }).exactDose) {
+    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}`;
+  }
   const shown = displayReps(exercise.prescribedRepsMin, exercise.prescribedRepsMax);
   return `${exercise.prescribedSets} × ${shown ?? exercise.prescribedRepsMin}`;
 }

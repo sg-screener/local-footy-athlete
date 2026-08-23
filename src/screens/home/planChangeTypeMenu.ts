@@ -26,7 +26,8 @@ export type PlanChangeTypeMenuRowId =
   | 'gunshow'
   | 'mobility'
   | 'recovery'
-  | 'prehab';
+  | 'prehab'
+  | 'primer';
 
 export interface PlanChangeTypeMenuRow {
   /** Stable row identity; the sheet's testID is `plan-change-type-<id>`. */
@@ -51,6 +52,10 @@ export const PLAN_CHANGE_TYPE_MENU: readonly PlanChangeTypeMenuRow[] = [
   { id: 'strength', reaches: ['strength_upper', 'strength_lower', 'strength_full'] },
   { id: 'conditioning', reaches: ['conditioning_light', 'conditioning_hard'] },
   { id: 'gunshow', reaches: ['gunshow'] },
+  // PRIMER sits directly under Gunshow — Sam, 2026-08-23, after seeing it on
+  // glass: *"put primer below gunshow in the list"*. It landed last when it was
+  // added, which put two optional gym sessions at opposite ends of the menu.
+  { id: 'primer', reaches: ['primer'] },
   { id: 'mobility', reaches: ['mobility'] },
   { id: 'recovery', reaches: ['recovery'] },
   { id: 'prehab', reaches: ['prehab'] },

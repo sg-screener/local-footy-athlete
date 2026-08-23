@@ -47,17 +47,31 @@ import type { RowIconKind } from '../../rules/sectionIconKinds';
 
 export function rowIconColor(kind: RowIconKind): string {
   switch (kind) {
+    /* ⚠ **THE ONLY COLOUR LEFT, AND IT IS NOT A SECTION THE ATHLETE TRAINS
+     * THROUGH.** A game is a FIXTURE. Everything below is work, and work is
+     * grey. */
     case 'game':
       return '#FFC247';
+    /* ── EVERY WORK GLYPH IS GREY — Sam, 2026-08-20: *"icon for conditioning
+     * should not be amber - keep same grey as the other logos"*. Conditioning
+     * (`flame`) moved then, from `#D9874E`.
+     *
+     * `recovery` (`#3AA7D8`, blue) and `bolt` (`#B6D85A`, lime) DID NOT MOVE
+     * WITH IT, and nothing had noticed until the Primer put a lime bolt on the
+     * day card beside five grey glyphs. Sam, 2026-08-23: *"the icon is lime
+     * green = should be grey to match everything else - mobility and recovery
+     * may need to be changed to match as well"*. **His 2026-08-20 ruling already
+     * covered them; they were simply left behind by it.**
+     *
+     * `mobility` was ALREADY grey and is unchanged — checked, not assumed.
+     *
+     * ⚠ **THE BLUE BADGE IS A DIFFERENT THING AND IS UNTOUCHED.** The `RECOVERY`
+     * pill on the day card, and the blue battery on the Tired status control,
+     * are not section glyphs and do not read from this table — Sam kept that
+     * badge deliberately (see `sessionBuilder` SESSION_META.mobility). This
+     * changes the SECTION ICON only. */
     case 'recovery':
-      return '#3AA7D8';
     case 'bolt':
-      return '#B6D85A';
-    /* Conditioning is GREY like every other work section — Sam, 2026-08-20:
-     * *"icon for conditioning should not be amber - keep same grey as the other
-     * logos"*. It was #D9874E. The amber that remains belongs to `game`, which
-     * is a fixture and not a section the athlete trains through. Changed HERE,
-     * in the one owner, so the Day card and the Session screen move together. */
     case 'flame':
     case 'strength':
     case 'team':

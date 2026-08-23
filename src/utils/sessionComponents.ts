@@ -548,6 +548,35 @@ function workoutTypeHasConditioning(workout: Partial<Workout>): boolean {
  * the component, template and checklist layers from each interpreting the
  * recovery tier differently.
  */
+/**
+ * IS THIS SESSION'S AUTHORED ROW ORDER THE PRESCRIPTION ITSELF?
+ *
+ * For an ordinary gym session the answer is NO, and D2's canonical order —
+ * power, then the main lift, then accessories — is a better read than whatever
+ * sequence the rows happen to sit in. That ranking is why `orderItems` exists.
+ *
+ * For a session Sam authored SLOT BY SLOT it is the opposite. R-129's Primer is
+ * *"2 hip mobility drills, upper back mobility drill, 1 extra drill … pogo hops
+ * … explosive upper body, explosive lower body, optional 3 accelerations …
+ * optional heavy but easy lifts"* — a warm-up that builds to something fast and
+ * finishes with two things you may skip. **D2 sorted the two optional heavy
+ * lifts to the TOP of it**, because they classify as main lifts, and Sam read
+ * that on his phone: *"the order of the session is important and right now it's
+ * wrong"*.
+ *
+ * ⚠ **THIS IS NOT A NEW MECHANISM.** Standalone Mobility and Recovery already
+ * force one shared role for exactly this reason — `buildSessionTemplate`'s own
+ * comment: *"Force one common role so their authored order is preserved instead
+ * of being rearranged by name inference."* This function is that question given
+ * a name, so the template and checklist layers read one answer instead of each
+ * inferring it — the same reason `standaloneLowLoadSessionKind` below lives here.
+ */
+export function sessionOrderIsAuthored(
+  workout: Partial<Workout> | null | undefined,
+): boolean {
+  return (workout as Workout)?.composedOptionalKind === 'primer';
+}
+
 export function standaloneLowLoadSessionKind(
   workout: Partial<Workout> | null | undefined,
 ): 'mobility' | 'recovery' | null {

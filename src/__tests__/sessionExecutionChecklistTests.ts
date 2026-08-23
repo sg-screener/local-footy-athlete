@@ -1144,8 +1144,23 @@ ok('[10] there is exactly ONE icon owner — neither screen keeps its own table'
     && /import \{[\s\S]{0,120}RowIcon[\s\S]{0,120}\} from '\.\.\/\.\.\/components\/icons\/SectionIcon'/
       .test(home),
   'HomeScreenV2 must import the icons, not define them');
+/* ── AMENDED 2026-08-23 (R-129): THE SECTION MAY CARRY ITS OWN GLYPH. ────────
+ *
+ * The gate's subject is unchanged and is the sentence above it — *"neither
+ * screen keeps its own table"*. It is still true: `section.iconKind` is decided
+ * in `utils/sessionExecutionChecklist`, which reads `SESSION_SECTION_ICON_KIND`,
+ * the one owner. No table moved to the screen and none was copied.
+ *
+ * WHY IT IS ADMITTED. A Primer's main section is a `strength` section with its
+ * own identity, so the id alone cannot distinguish it — the day card drew Sam's
+ * lightning bolt and this screen drew a dumbbell for the SAME work. Deciding it
+ * where the workout is readable is the same move `rules/dayTimeline` makes for
+ * the card, and it is what keeps the two surfaces agreeing.
+ *
+ * THE FALLBACK IS PINNED TOO, so a section that carries no glyph still resolves
+ * through the one owner rather than rendering iconless. */
 ok('[10] and the Session screen renders through that same owner',
-  /<RowIcon kind=\{SESSION_SECTION_ICON_KIND\[section\.id\]\}/.test(screen)
+  /<RowIcon kind=\{section\.iconKind \?\? SESSION_SECTION_ICON_KIND\[section\.id\]\}/.test(screen)
     && !/SESSION_SECTION_ICON_KIND\[section\.label\]/.test(screen));
 ok('[10] the colours moved with the glyphs — one table, not a second palette',
   /export function rowIconColor/.test(iconOwner)

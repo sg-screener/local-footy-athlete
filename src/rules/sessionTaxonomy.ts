@@ -51,6 +51,12 @@ export type SessionCategory =
   // different sessions with different pools and different doors.
   | 'gunshow'
   | 'prehab'
+  /**
+   * PRIMER (R-129). Its own category and not `gunshow`, because the two are
+   * different session types with different placement answers, and a shared
+   * category is exactly what stopped accessories answering "who may place it".
+   */
+  | 'primer'
   // Recovery / rest
   | 'recovery'
   | 'rest'
@@ -295,6 +301,34 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   // ── Game (anchor — nothing else programmed on the day) ──
   if (wt === 'Game' || /^game\b/i.test(workout.name ?? '')) {
     return [{ category: 'game', modality: 'running', reason: `workoutType/name = Game` }];
+  }
+
+  // ── PRIMER — decided by the TYPED marker, never by the name ──
+  //
+  // Every name-matched branch below is a regex, and a fourth one would have been
+  // the cheap way to do this. It would also have been wrong twice over: the word
+  // "primer" already means the explosive rows inside a strength session, so a
+  // regex would capture real strength days; and a Primer's own rows are trap bar
+  // deadlifts and bench presses, which `strengthCategoryFromExercises` reads as
+  // main strength. `composedOptionalKind` is stamped by the builder that
+  // composed the session and cannot be confused by either.
+  //
+  // ⚠ **IT SITS HERE, ABOVE THE STRENGTH INFERENCE, AND THE POSITION IS THE
+  // POINT.** Written first BELOW that inference, where its neighbours are, and
+  // that was a live defect: `isStrengthSession` pushes its own unit before any
+  // later branch runs, so a Primer carrying `Bench Press` classified as
+  // `upper_strength` at HIGH stress and took a hard day off the week's budget —
+  // the charter's 2026-07-30 Prehab defect, one session type over. Anything that
+  // moves this block below the strength branch reopens it.
+  //
+  // Returning early is safe and deliberate: a Primer is one composed session
+  // with no conditioning finisher and no team anchor, unlike a Gunshow day.
+  if ((workout as { composedOptionalKind?: string }).composedOptionalKind === 'primer') {
+    return [{
+      category: 'primer',
+      modality: 'none',
+      reason: 'composedOptionalKind === primer (typed marker, not name)',
+    }];
   }
 
   // ── Explicit rest stub ──
