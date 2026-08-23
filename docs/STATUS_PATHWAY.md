@@ -321,3 +321,51 @@ Committed `c6d8ba59` + `118ceb2b`. The simulator pass (full reset → onboarding
 
 **OWED for slice 1 completeness:** the Review screen row on glass — rides along
 with slice 2's full female walk rather than 17 more taps now.
+
+---
+
+## 2026-08-23, SLICE 2 — BUILT (`a2b6fe84`), AND PROVEN ON GLASS BY A FULL FEMALE WALK
+
+**The switch lives in the charter** (`placedBy` per path, both columns explicit
+for all eight types), the three standing charter reds are DECLARED DEBT with
+owners (recovery untraced-placer; gunshow male awaiting R-130a's restoration;
+prehab unowned), ceilings moved in the same commit — **`test:session-type-charter`
+is 44/0, green for the first time on record.** The placement runs in the
+scheduler (the demolition note's owner), travels typed through materialiser →
+connector → builder, and `generationGenderOrThrow` refuses the unanswered field
+at the same door as seasonPhase. `Acceleration` gained its curated cue in Sam's
+R-129 dose words — the generation-side cue contract demanded what the add door
+never did.
+
+**MEASURED:** differential **3/0 — male worlds byte-identical through the whole
+switch**. Compile breach list = control. QA failure sets = control (the first
+comparison double-counted the control's A/B halves; halved, they match
+exactly). primer-session 27/0. weekly-scheduler chain green after `gender:
+'male'` stamps on three more generation fixtures. `test:generated-week-assembly`
+dies at `composeWeek.ts:1439` IN CONTROL TOO — pre-existing, spawned as its own
+task.
+
+**ON GLASS — the full female walk, done by this seat on the simulator:**
+Full reset → onboarding as `Female` (Name → Gender fix `118ceb2b` live) →
+**Review shows Gender · Female** (slice 1's owed row) → GENERATE →
+**the week view shows FRI: Primer · OPTIONAL · bolt · 10 exercises, the day
+before SAT: Game Day** — in the pinned first week AND the real current week.
+No Gunshow anywhere in the female program. Screenshots sent to Sam.
+
+### ⚠ AND THE WALK CAUGHT A THIRD R-129 SURFACE — FIXED (`c1e0886b`)
+
+The week-row expansion read `High Box Squat 2 × 3` (authored 2 × 2) and
+`Acceleration 3 × 15` (no metres): the PROJECTION's rep formatter had no
+`exactDose` bypass and no distance branch — R-129 round 6 fixed the session
+screen's formatter and this second owner never got the same treatment, despite
+its own comment claiming the two surfaces "cannot diverge". Now: exactDose rows
+verbatim (everything else still snaps — the vocabulary law stands), and a
+signed `sets_distance` shape. Verified on glass: `2 × 2`, `3 × 15m`. Hits male
+add-door Primers identically, so this is an R-129 completeness fix, not a
+female-path one. Projection-surface suites at or above control
+(weekly-plan-display 62/0, session-template 77/0, render-truth 29/29; the two
+reds are red in control with byte-identical failure names).
+
+**IN FLIGHT:** full `sweep.sh pathway-slice2b` (detached; results land in the
+next session entry). **OWED NEXT:** slice 3 (the female mix per R-130a's signed
+table), slice 4 (G−1 ask offers females the Primer; close-out).
