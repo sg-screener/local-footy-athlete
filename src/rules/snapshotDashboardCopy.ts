@@ -1,8 +1,9 @@
 /**
- * BATCH 38 — COACH SNAPSHOT DASHBOARD. PROPOSED 2026-08-24.
+ * BATCH 38 — COACH SNAPSHOT DASHBOARD. SIGNED 2026-08-24.
  *
  * Sam named the five sections: this week, readiness, load, progress and
- * restrictions. The short states below are proposed until he reviews them.
+ * restrictions. Sam reviewed the first dashboard and signed all wording:
+ * "the wording is fine". The first layout was rejected and is being redesigned.
  */
 
 import type { CoachSnapshotReadinessState } from './liveAthleteSnapshot';

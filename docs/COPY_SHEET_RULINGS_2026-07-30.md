@@ -2495,38 +2495,37 @@ was built. The elapsed figure is a derived number (`12:34`), never words.
 | The paused control | "Resume" | PROPOSED — the pair's counterpart |
 | The running control | "End" | SIGNED — his "pause or end" |
 
-## Batch 38 — the Coach Snapshot dashboard (2026-08-24): PROPOSED
+## Batch 38 — the Coach Snapshot dashboard (2026-08-24): SIGNED
 
-**STATUS: PROPOSED, AWAITING SAM.** Sam named the five facts the dashboard must
-show — this week, readiness, load, progress and restrictions — and approved the
-live shared Snapshot architecture. He did not choose the exact labels or the
-short absence/comparison sentences below. They remain proposed and this build
-is not a release until he accepts or replaces them.
+**STATUS: SIGNED BY SAM, 2026-08-24.** Sam reviewed the first dashboard on glass
+and said *"the wording is fine"*. That signs every literal and composed frame in
+this batch while rejecting the first visual treatment: *"i don't like how it
+looks — it will need some UI updating"*. The words stay; the layout changes.
 
 | Where | string | status |
 | --- | --- | --- |
-| Dashboard title | "Coach snapshot" | PROPOSED |
-| Section label | "This week" | PROPOSED — Sam named the category, not the exact label |
-| Section label | "Readiness" | PROPOSED — Sam named the category, not the exact label |
-| Section label | "Load" | PROPOSED — Sam named the category, not the exact label |
-| Section label | "Progress" | PROPOSED — Sam named the category, not the exact label |
-| Section label | "Restrictions" | PROPOSED — Sam named the category, not the exact label |
-| No planned sessions | "No sessions planned this week." | PROPOSED |
-| No readiness answer today | "No check-in today" | PROPOSED |
-| Good readiness | "Feeling good" | PROPOSED |
-| Flat readiness | "Feeling flat" | PROPOSED |
-| Sore readiness | "Feeling sore" | PROPOSED |
-| Other recorded readiness | "Check-in recorded" | PROPOSED |
-| Load unavailable | "Not enough recorded load yet" | PROPOSED |
-| Load below band | "Below your usual range" | PROPOSED |
-| Load in band | "In your usual range" | PROPOSED |
-| Load above band | "Above your usual range" | PROPOSED |
-| No recorded lift | "No lifts recorded this week" | PROPOSED |
-| Lift increased | "Up from last week" | PROPOSED |
-| Lift unchanged | "Same as last week" | PROPOSED |
-| Lift decreased | "Down from last week" | PROPOSED |
-| First recorded comparison | "No last-week comparison" | PROPOSED |
-| No active restriction | "None active" | PROPOSED |
+| Dashboard title | "Coach snapshot" | SIGNED |
+| Section label | "This week" | SIGNED |
+| Section label | "Readiness" | SIGNED |
+| Section label | "Load" | SIGNED |
+| Section label | "Progress" | SIGNED |
+| Section label | "Restrictions" | SIGNED |
+| No planned sessions | "No sessions planned this week." | SIGNED |
+| No readiness answer today | "No check-in today" | SIGNED |
+| Good readiness | "Feeling good" | SIGNED |
+| Flat readiness | "Feeling flat" | SIGNED |
+| Sore readiness | "Feeling sore" | SIGNED |
+| Other recorded readiness | "Check-in recorded" | SIGNED |
+| Load unavailable | "Not enough recorded load yet" | SIGNED |
+| Load below band | "Below your usual range" | SIGNED |
+| Load in band | "In your usual range" | SIGNED |
+| Load above band | "Above your usual range" | SIGNED |
+| No recorded lift | "No lifts recorded this week" | SIGNED |
+| Lift increased | "Up from last week" | SIGNED |
+| Lift unchanged | "Same as last week" | SIGNED |
+| Lift decreased | "Down from last week" | SIGNED |
+| First recorded comparison | "No last-week comparison" | SIGNED |
+| No active restriction | "None active" | SIGNED |
 
 **THE COMPOSED LINES ARE LISTED AS FRAMES, NOT FALSE LITERALS.** Their values
 come from facts already owned by the Journal or modifier projection:
@@ -2539,4 +2538,4 @@ come from facts already owned by the Journal or modifier projection:
 **NOTHING FROM THE WITHDRAWN JOURNAL SURFACE IS REVIVED BY STATUS.** Some plain
 words necessarily coincide with that old screen, but every Batch 15–26 Journal
 surface batch remains withdrawn under the clean-room ruling. Batch 38 is a new
-proposal for a different surface and needs a new answer from Sam.
+surface for a different purpose, signed by Sam's 2026-08-24 answer above.

@@ -237,7 +237,7 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
       state: 'UNPROVEN',
       claim: 'BUILT',
       wouldTake: 'A simulator or physical-phone run with non-empty readiness, recorded load/progress and an active restriction, followed by changing one of those facts and verifying its dashboard value changes without reopening Coach.',
-      receipt: '`test:coach-snapshot` proves the pure Snapshot, the one-adapter ownership, one screen construction, five dashboard readers and the conversation sharing `snapshot.visibleWeek`. BASE GLASS IS PAID: `.maestro/golden/coach-snapshot-dashboard.yaml` passed on iPhone 17 Pro / iOS 26.3 and `artifacts/ui-walk/coach-snapshot-dashboard.png` shows all five empty/base states legibly beside the current conversation. The non-empty and live-update states named above remain unproven, so this row stays BUILT rather than WORKING.',
+      receipt: '`test:coach-snapshot` proves the pure Snapshot, the one-adapter ownership, one screen construction, five dashboard readers and the conversation sharing `snapshot.visibleWeek`. BASE GLASS IS PAID: `.maestro/golden/coach-snapshot-dashboard.yaml` passed on iPhone 17 Pro / iOS 26.3 and `artifacts/ui-walk/coach-snapshot-dashboard.png` shows the redesigned weekly hero and four neutral empty/base tiles legibly beside the current conversation. The non-empty and live-update states named above remain unproven, so this row stays BUILT rather than WORKING.',
     },
   },
   {

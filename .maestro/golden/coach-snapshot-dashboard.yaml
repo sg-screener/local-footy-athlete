@@ -18,6 +18,8 @@ tags:
 - assertVisible:
     id: "coach-dashboard-week"
 - assertVisible:
+    id: "coach-dashboard-week-progress"
+- assertVisible:
     id: "coach-dashboard-readiness"
 - assertVisible:
     id: "coach-dashboard-load"

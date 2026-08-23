@@ -233,6 +233,13 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   ok('the glass flow opens Coach and captures the dashboard',
     /id: "tab-coach"/.test(glassFlow)
       && /artifacts\/ui-walk\/coach-snapshot-dashboard/.test(glassFlow));
+  ok('the weekly hero carries a progress track on source and glass',
+    dashboard.includes('testID="coach-dashboard-week-progress"')
+      && glassFlow.includes('id: "coach-dashboard-week-progress"'));
+  ok('the four live signals are separated into a two-by-two tile grid',
+    (dashboard.match(/<View style=\{styles\.row\}>/g) ?? []).length === 2
+      && /borderWidth:\s*1/.test(dashboard)
+      && /borderRadius:\s*borderRadius\.lg/.test(dashboard));
   ok('athlete-visible dashboard words come from the one copy owner',
     /COACH_DASHBOARD_COPY/.test(dashboard)
       && !/>\s*(?:This week|Readiness|Load|Progress|Restrictions|None active)\s*</.test(dashboard));
