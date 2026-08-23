@@ -1,38 +1,27 @@
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import {
+  COACH_RESPONSE_MAX_ANSWER_WORDS,
+  evaluateCoachResponseContract,
+  type CoachResponseAutomaticChecks,
+  type CoachResponseBasis,
+  type CoachResponseKnowledgeSource,
+  type CoachResponsePayload,
+  type CoachResponseProgramAction,
+  type CoachResponseSnapshotField,
+} from '../../rules/coachResponseContract';
 
 export const COACH_LAB_RESPONSE_SCHEMA_VERSION = 1 as const;
 
-export type CoachLabBasis =
-  | 'athlete_snapshot'
-  | 'lfa_rule'
-  | 'coaching_judgement'
-  | 'general_s_and_c';
+export type CoachLabBasis = CoachResponseBasis;
 
-export type CoachLabSnapshotField = keyof Pick<
-  CoachSnapshot,
-  'visibleWeek' | 'thisWeek' | 'readiness' | 'load' | 'progress' | 'restrictions'
->;
+export type CoachLabSnapshotField = CoachResponseSnapshotField;
 
-export interface CoachLabKnowledgeSource {
-  readonly id: string;
-  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example';
-  readonly sourceReference: string;
-}
+export type CoachLabKnowledgeSource = CoachResponseKnowledgeSource;
 
-export interface CoachLabProgramAction {
-  readonly kind: string;
-  readonly label: string;
-}
+export type CoachLabProgramAction = CoachResponseProgramAction;
 
-export interface CoachLabResponseV1 {
+export interface CoachLabResponseV1 extends CoachResponsePayload {
   readonly schemaVersion: typeof COACH_LAB_RESPONSE_SCHEMA_VERSION;
-  readonly message: string;
-  readonly answerMode: 'answer' | 'focused_question' | 'honest_limit' | 'generic_refusal';
-  readonly basis: readonly CoachLabBasis[];
-  readonly snapshotFieldsUsed: readonly CoachLabSnapshotField[];
-  readonly knowledgeSources: readonly CoachLabKnowledgeSource[];
-  readonly judgementLabel: 'not_needed' | 'labelled' | 'missing';
-  readonly programActions: readonly CoachLabProgramAction[];
   readonly diagnostics: {
     readonly provider: string;
     readonly model: string;
@@ -92,15 +81,7 @@ export interface AsyncCoachLabCandidate {
   }): Promise<CoachLabResponseV1>;
 }
 
-export interface CoachLabAutomaticChecks {
-  readonly schemaValid: boolean;
-  readonly useful: boolean;
-  readonly readOnly: boolean;
-  readonly programFactsGrounded: boolean;
-  readonly lfaClaimsGrounded: boolean;
-  readonly judgementTransparent: boolean;
-  readonly concise: boolean;
-}
+export type CoachLabAutomaticChecks = CoachResponseAutomaticChecks;
 
 export interface CoachLabEvaluation {
   readonly verdict: 'automatic_fail' | 'needs_owner_review' | 'approved';
@@ -126,60 +107,24 @@ export interface CoachLabReport {
   };
 }
 
-const SNAPSHOT_FIELDS: ReadonlySet<string> = new Set([
-  'visibleWeek',
-  'thisWeek',
-  'readiness',
-  'load',
-  'progress',
-  'restrictions',
-]);
-
-export const COACH_LAB_MAX_ANSWER_WORDS = 100;
-
-function answerWordCount(message: string): number {
-  return message.trim().split(/\s+/).filter(Boolean).length;
-}
-
-function responseHasValidShape(response: CoachLabResponseV1): boolean {
-  return response.schemaVersion === COACH_LAB_RESPONSE_SCHEMA_VERSION
-    && typeof response.message === 'string'
-    && response.message.trim().length > 0
-    && Array.isArray(response.basis)
-    && response.basis.every((entry) => [
-      'athlete_snapshot', 'lfa_rule', 'coaching_judgement', 'general_s_and_c',
-    ].includes(entry))
-    && Array.isArray(response.snapshotFieldsUsed)
-    && response.snapshotFieldsUsed.every((entry) => SNAPSHOT_FIELDS.has(entry))
-    && Array.isArray(response.knowledgeSources)
-    && Array.isArray(response.programActions)
-    && typeof response.diagnostics?.provider === 'string'
-    && typeof response.diagnostics?.model === 'string'
-    && typeof response.diagnostics?.promptVersion === 'string';
-}
+export const COACH_LAB_MAX_ANSWER_WORDS = COACH_RESPONSE_MAX_ANSWER_WORDS;
 
 export function evaluateCoachLabResponse(
   labCase: CoachLabCase,
   response: CoachLabResponseV1,
 ): CoachLabEvaluation {
-  const usesSnapshot = response.basis.includes('athlete_snapshot');
-  const claimsLfaRule = response.basis.includes('lfa_rule');
-  const usesJudgement = response.basis.includes('coaching_judgement');
-  const automaticChecks: CoachLabAutomaticChecks = {
-    schemaValid: responseHasValidShape(response),
-    useful: response.answerMode !== 'generic_refusal',
-    readOnly: response.programActions.length === 0,
-    programFactsGrounded: !labCase.requiresLiveProgramFacts
-      || (response.answerMode === 'focused_question' && !usesSnapshot)
-      || (usesSnapshot && response.snapshotFieldsUsed.length > 0),
-    lfaClaimsGrounded: !claimsLfaRule
-      || response.knowledgeSources.some(
-        (entry) => entry.authority === 'lfa_bible' || entry.authority === 'active_rule',
-      ),
-    judgementTransparent: !usesJudgement || response.judgementLabel === 'labelled',
-    concise: answerWordCount(response.message) <= COACH_LAB_MAX_ANSWER_WORDS,
+  const shared = evaluateCoachResponseContract(response, {
+    requiresLiveProgramFacts: labCase.requiresLiveProgramFacts,
+  });
+  const labEnvelopeValid = response.schemaVersion === COACH_LAB_RESPONSE_SCHEMA_VERSION
+    && typeof response.diagnostics?.provider === 'string'
+    && typeof response.diagnostics?.model === 'string'
+    && typeof response.diagnostics?.promptVersion === 'string';
+  const labChecks: CoachLabAutomaticChecks = {
+    ...shared.automaticChecks,
+    schemaValid: shared.automaticChecks.schemaValid && labEnvelopeValid,
   };
-  const automaticFail = Object.values(automaticChecks).some((value) => !value);
+  const automaticFail = Object.values(labChecks).some((value) => !value);
   const ownerApproved = labCase.ownerReview.status === 'approved'
     && typeof labCase.ownerReview.idealAnswer === 'string'
     && labCase.ownerReview.idealAnswer.trim().length > 0
@@ -193,7 +138,7 @@ export function evaluateCoachLabResponse(
       : ownerApproved
         ? 'approved'
         : 'needs_owner_review',
-    automaticChecks,
+    automaticChecks: labChecks,
     manualReviewRequired: labCase.reviewFocus,
   };
 }

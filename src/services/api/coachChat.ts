@@ -4,6 +4,7 @@ import {
   type CoachModelConversationContext,
 } from '../../rules/coachModelContext';
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import { validateCoachCommunicationTruth } from '../../utils/verifiedCoachCommunication';
 
 interface CoachChatFetchResponse {
   readonly ok: boolean;
@@ -76,5 +77,19 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
   if (!Array.isArray(payload.programActions) || payload.programActions.length !== 0) {
     throw new Error('Coach chat refused a non-read-only answer.');
   }
-  return payload.message.trim();
+  const message = payload.message.trim();
+  const truth = validateCoachCommunicationTruth({
+    communication: {
+      appliedChanges: [],
+      activeGuidance: [],
+      optionalAdvice: [],
+      canSayProgramUpdated: false,
+      canSayProgramChanged: false,
+    },
+    replyText: message,
+  });
+  if (!truth.ok) {
+    throw new Error('Coach chat refused an untruthful read-only answer.');
+  }
+  return message;
 }

@@ -2,6 +2,7 @@ import { buildRetrievedCoachLabBrainInstructions } from '../../../src/dev/coachL
 import { retrieveCoachLabKnowledge } from '../../../src/dev/coachLab/coachLabKnowledgeRetriever.ts';
 import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponsesClient.ts';
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
+import { evaluateCoachResponseContract } from '../../../src/rules/coachResponseContract.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -76,15 +77,10 @@ function validModelInput(value: unknown): value is {
       && turn.text.length <= 1_000);
 }
 
-function parseReadOnlyPayload(outputText: string): Record<string, unknown> | null {
+function parseCoachPayload(outputText: string): Record<string, unknown> | null {
   try {
-    const parsed = JSON.parse(outputText) as Record<string, unknown>;
-    return record(parsed)
-      && typeof parsed.message === 'string'
-      && Array.isArray(parsed.programActions)
-      && parsed.programActions.length === 0
-      ? parsed
-      : null;
+    const parsed = JSON.parse(outputText) as unknown;
+    return record(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -125,8 +121,12 @@ Deno.serve(async (request) => {
       instructions,
       input: JSON.stringify(modelInput),
     });
-    const payload = parseReadOnlyPayload(result.outputText);
+    const payload = parseCoachPayload(result.outputText);
     if (!payload) return json(502, { error: 'coach_chat_invalid_answer' });
+    const evaluation = evaluateCoachResponseContract(payload, {
+      allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
+    });
+    if (!evaluation.ok) return json(502, { error: 'coach_chat_invalid_answer' });
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
     return json(200, {
       message: payload.message,

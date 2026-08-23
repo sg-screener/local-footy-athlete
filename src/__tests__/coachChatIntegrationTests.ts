@@ -7,6 +7,7 @@ import { CANONICAL_COACH_KNOWLEDGE } from '../../supabase/functions/coach-chat/c
 import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../rules/coachKnowledgeManifest';
 import { askCoachReadOnly } from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
+import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
 
 armTotalsOrRed();
 
@@ -43,8 +44,14 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && /coach_chat_provider_failed/.test(edge)
       && !/detail\s*\}/.test(edge));
   ok('the server refuses any model-produced program action before replying',
-    /parsed\.programActions\.length === 0/.test(edge)
-      && /if \(!payload\) return json\(502/.test(edge));
+    /programActions\.length === 0/.test(read('src/rules/coachResponseContract.ts'))
+      && /if \(!evaluation\.ok\) return json\(502/.test(edge));
+  ok('production and Coach Lab call one shared automatic response contract',
+    /evaluateCoachResponseContract/.test(edge)
+      && /evaluateCoachResponseContract/.test(read('src/dev/coachLab/coachLab.ts'))
+      && !/const automaticChecks: CoachLabAutomaticChecks/.test(read('src/dev/coachLab/coachLab.ts')));
+  ok('an automatic production failure is refused before any answer is returned',
+    /if \(!evaluation\.ok\) return json\(502/.test(edge));
 }
 
 console.log('\n[2] THE DEPLOYED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
@@ -169,6 +176,78 @@ async function finish(): Promise<void> {
     actionRejected = /read-only/.test(String(error));
   }
   ok('the app itself rejects a response carrying any action', actionRejected);
+
+  let falseChangeRejected = false;
+  try {
+    await askCoachReadOnly({
+      message: 'what changed',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        async text() {
+          return JSON.stringify({ message: 'I adjusted your week.', programActions: [] });
+        },
+      }),
+    });
+  } catch (error) {
+    falseChangeRejected = /truth|read-only|refused/i.test(String(error));
+  }
+  ok('the live app refuses a false change claim even with an empty action list',
+    falseChangeRejected);
+
+  console.log('\n[6] ONE AUTOMATIC CONTRACT BITES IN LAB AND PRODUCTION');
+  const grounded = {
+    message: 'Saturday is your game day.',
+    answerMode: 'answer',
+    basis: ['athlete_snapshot', 'lfa_rule'],
+    snapshotFieldsUsed: ['visibleWeek'],
+    knowledgeSources: [{
+      id: 'bible:L1-L2',
+      authority: 'lfa_bible',
+      sourceReference: 'docs/LFA_PROGRAMMING_BIBLE.md:L1-L2',
+    }],
+    judgementLabel: 'not_needed',
+    programActions: [],
+  };
+  const sound = evaluateCoachResponseContract(grounded, {
+    requiresLiveProgramFacts: true,
+    allowedKnowledgeSourceIds: ['bible:L1-L2'],
+  });
+  ok('a concise read-only answer with real Snapshot and source receipts passes',
+    sound.ok && Object.values(sound.automaticChecks).every(Boolean), sound);
+  const noSnapshotReceipt = evaluateCoachResponseContract({
+    ...grounded,
+    snapshotFieldsUsed: [],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  ok('a live program answer without a Snapshot receipt fails closed',
+    !noSnapshotReceipt.ok && !noSnapshotReceipt.automaticChecks.programFactsGrounded);
+  const unknownSource = evaluateCoachResponseContract({
+    ...grounded,
+    knowledgeSources: [{
+      id: 'invented:L9-L10',
+      authority: 'lfa_bible',
+      sourceReference: 'invented',
+    }],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  ok('a citation outside the retrieved knowledge fails closed',
+    !unknownSource.ok && !unknownSource.automaticChecks.lfaClaimsGrounded);
+  const hiddenJudgement = evaluateCoachResponseContract({
+    ...grounded,
+    basis: ['coaching_judgement'],
+    snapshotFieldsUsed: [],
+    knowledgeSources: [],
+    judgementLabel: 'missing',
+  });
+  ok('unlabelled coaching judgement fails closed',
+    !hiddenJudgement.ok && !hiddenJudgement.automaticChecks.judgementTransparent);
+  const falseChange = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'I moved your session to Friday.',
+  }, { allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  ok('a read-only answer claiming it changed the program fails closed',
+    !falseChange.ok && !falseChange.automaticChecks.changeClaimsTruthful);
 
   console.log(`\nCoach chat integration totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

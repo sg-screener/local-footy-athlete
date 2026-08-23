@@ -1,5 +1,8 @@
 /** Truth gate shared by the current read-only Coach answers and change outcomes. */
 import { logger } from './logger';
+import { READ_ONLY_FALSE_CHANGE_PATTERNS } from '../rules/coachResponseContract';
+
+export { READ_ONLY_FALSE_CHANGE_PATTERNS as FORBIDDEN_WHEN_NO_APPLIED };
 
 export type AppliedChangeKind =
   | 'session_replaced'
@@ -28,26 +31,6 @@ export interface VerifiedCoachCommunication {
   canSayProgramChanged: boolean;
 }
 
-export const FORBIDDEN_WHEN_NO_APPLIED: readonly RegExp[] = [
-  /\bprogram\s+updated\b/i,
-  /\bI\s+changed\b/i,
-  /\bI\s+reduced\b/i,
-  /\blighter\s+loads?\b/i,
-  /\bsubbed?\s+in\b/i,
-  /\bcap(p|ping|ped)\s+the\s+hard\s+sessions?\b/i,
-  /\badjusted\s+your\s+week\b/i,
-  /\bI\s+adjusted\b/i,
-  /\bI\s+removed\b/i,
-  /\bI\s+swapped\b/i,
-  /\bI\s+pulled\s+back\b/i,
-  /\bI(?:'ve|\s+have)?\s+pulled\s+back\b/i,
-  /\bpulled\s+back\b/i,
-  /\bnow\s+adjusted\b/i,
-  /\bI\s+moved\b/i,
-  /\bI(?:'ve|\s+have)\s+moved\b/i,
-  /\bmoved\s+your\b/i,
-] as const;
-
 export interface ValidateInput {
   communication: VerifiedCoachCommunication;
   replyText?: string;
@@ -71,7 +54,7 @@ export function validateCoachCommunicationTruth(
   const communication = input.communication;
 
   if (input.replyText && !communication.canSayProgramUpdated) {
-    for (const pattern of FORBIDDEN_WHEN_NO_APPLIED) {
+    for (const pattern of READ_ONLY_FALSE_CHANGE_PATTERNS) {
       if (pattern.test(input.replyText)) {
         violations.push(`reply contains forbidden claim: ${pattern.source}`);
       }
