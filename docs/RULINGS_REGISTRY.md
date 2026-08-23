@@ -4340,3 +4340,20 @@ reasoning and total-token receipts. `sol`, `terra` and `luna` may be compared in
 Coach Lab, but a cheaper model replaces the benchmark only after Sam judges its
 answer quality. · `WORKING` — `test:coach-lab` retrieval, request-shape,
 receipt and answer-length cells. Seat `snapshot`.
+
+---
+
+**R-135** · *"completeky agree on your verdict"* (Sam, 2026-08-24), referring
+to the first retrieved Sol answer being *"overly medical and not practical
+enough"* and the proposed correction that it should explain the reduced-session
+option before escalating warning signs · **ORDINARY TRAINING SORENESS GETS
+PRACTICAL COACHING FIRST; MEDICAL TRIAGE STAYS PROPORTIONATE.**
+
+When the athlete reports normal fatigue or soreness without pain or a warning
+sign, Coach leads with the relevant LFA-backed training option. It does not spend
+the answer inventing an injury screen, lead with its inability to diagnose or
+bundle a severity scale and symptom checklist into one question. A genuine pain
+or warning-sign report still receives the proper safety limit, and genuinely
+missing information may still earn one short focused question. · `WORKING` —
+`test:coach-lab` prompt-binding cell plus Sam's review of the same-case Sol tape.
+Seat `snapshot`.

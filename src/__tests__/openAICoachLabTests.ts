@@ -69,6 +69,15 @@ async function main(): Promise<void> {
         && /never change/i.test(instructions)
         && /clearly label/i.test(instructions)
         && /one focused follow-up question/i.test(instructions));
+    ok('ordinary soreness gets practical guidance before proportionate medical caution',
+      /ordinary training fatigue or soreness/i.test(instructions)
+        && /practical LFA-backed option first/i.test(instructions)
+        && /do not turn normal training soreness into injury triage/i.test(instructions)
+        && /do not bundle a scale and symptom checklist/i.test(instructions));
+    const rulings = readFileSync(resolve(__dirname, '../../docs/RULINGS_REGISTRY.md'), 'utf8');
+    ok('R-135 binds Sam\'s practical-before-triage correction',
+      rulings.includes('**R-135**')
+        && rulings.includes('PRACTICAL COACHING FIRST; MEDICAL TRIAGE STAYS PROPORTIONATE'));
     ok('the prompt names the authority order',
       /CURRENT ATHLETE SNAPSHOT[\s\S]+ACTIVE LFA RULINGS[\s\S]+LFA PROGRAMMING BIBLE[\s\S]+COACHING JUDGEMENT/.test(instructions));
   }
