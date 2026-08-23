@@ -1845,6 +1845,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-coach-lab-before-provider-or-release',
+    law: 'The clean conversational Coach is proven in a local Coach Lab before a provider is selected or the live Coach is replaced. The Lab uses messy athlete language and the live Coach Snapshot, rejects generic refusal, direct program actions, live-program answers without a Snapshot receipt, LFA claims without a source and unlabelled coaching judgement, and no answer counts as approved without Sam\'s recorded review.',
+    ruledAt: 'docs/STATUS_SNAPSHOT.md, 2026-08-24 — records Sam\'s accepted sequence in this Codex task: dashboard first, then "Dashboard accepted — start Coach Lab", under the earlier clean-Coach ruling that the new read-only chat is proven in Coach Lab before release and the provider is chosen by LFA\'s own tests.',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `test:coach-snapshot` now invokes `test:coach-lab`. The Lab executes ten distinct messy questions against the living deterministic Q&A path and one populated Snapshot, records eight automatic failures and zero approvals, and refuses to treat its two mechanically-grounded responses as approved while owner review is pending. Runtime counterexamples prove the evaluator turns red for a direct action, unlabelled judgement, a live-program claim without Snapshot fields, an LFA claim without a source, and the generic refusal. A second liveness pair proves a non-empty approved owner answer can clear review and an empty approval marker cannot. NOT COVERED: a model candidate, Bible retrieval, a visual editor, medical-content judgement, or Sam\'s answer set.',
+    },
+  },
+  {
     id: 'LAW-coach-load-owns-the-dashboard-hero',
     law: 'Training load owns the wide Coach Snapshot hero immediately below the title and shows the signed under-to-sweet-spot-to-over continuum. Weekly completion is a supporting signal named Consistency and sits inside the four-tile grid.',
     ruledAt: 'docs/COPY_SHEET_RULINGS_2026-07-30.md, Batch 38 update, 2026-08-24 — records Sam\'s exact instruction that the sweet-spot training-load slider owns the top and the former top card moves into the four smaller boxes as Consistency.',

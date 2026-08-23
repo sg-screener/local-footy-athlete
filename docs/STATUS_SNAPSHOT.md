@@ -6,9 +6,10 @@ Owner: `snapshot`
 
 ## Mission
 
-Step 3 of Sam's clean Coach rebuild: build one live Coach Snapshot and a
-non-AI dashboard for this week, readiness, load, progress and My Status.
-The current simple Coach remains in place.
+Steps 3-4 of Sam's clean Coach rebuild: one live Coach Snapshot and accepted
+dashboard, followed by a local Coach Lab that proves response quality before a
+provider or replacement chat is allowed near the app. The current simple Coach
+remains in place.
 
 ## Options compared before coding
 
@@ -89,12 +90,49 @@ ratio; no score, threshold or second load owner was added.
   the hierarchy correction, and `My Status` by his exact rename after confirming
   that tile is the same active-modifier list as the full status screen.
 
+## Coach Lab checkpoint
+
+Two starts were compared before coding:
+
+1. Put a model into the app first, then decide whether its answers feel good.
+2. Build a provider-free local evaluator first, baseline the living Coach, and
+   refuse to count an answer as good until both mechanical boundaries and Sam's
+   review clear it.
+
+Selected option 2. It makes provider choice a result of LFA's own questions,
+not a generic benchmark, and it cannot change the athlete's program.
+
+- The first corpus holds ten messy athlete questions from the Coach redesign
+  brief. Every ideal answer is deliberately `null` and owner review is pending;
+  no athlete-facing coaching answer was invented.
+- Every candidate returns one versioned response shape carrying its basis,
+  Snapshot fields, LFA sources, judgement label, program actions and provider
+  diagnostics. The current deterministic Q&A path is the first candidate.
+- The evaluator fails a generic refusal, any program action, an ungrounded live
+  program claim, an LFA claim with no source, or unlabelled coaching judgement.
+  Medical safety, coaching quality and Sam's voice stay mandatory human review
+  because a response cannot truthfully certify its own wording.
+- The first real run reached ten distinct cases: eight automatic failures, two
+  waiting for owner review and zero approved answers. The false-comfort catch is
+  visible: *"missed monday. cram it weds?"* receives a grounded Monday schedule
+  answer without answering whether Wednesday is wise. The automatic boundary
+  clears it, but owner review does not; this is why both halves exist.
+- `test:coach-lab` is 18/18 and mutation-proves direct-write, hidden-judgement,
+  ungrounded-program, ungrounded-LFA and generic-refusal failures. It runs inside
+  `test:coach-snapshot`, so the existing Bible chain reaches the new Lab.
+- Snapshot 43/43, populated Snapshot 15/15, Coach clean-room 58/58 and Coach
+  phrase ratchet 8/8 remain green. The Lab lives under dev tooling and changes
+  no product screen, store, server or provider.
+- Compile remains red on the shared baseline. The Lab's one new dev/test error
+  was found and cleared; direct dev/test compilers now name no Coach Lab file.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered
   on the simulator. The earlier honest empty state remains covered by its prior
   receipt.
-- Sam has not yet accepted the redesigned layout on his physical phone.
-- No AI provider, Bible-grounded answer system or Coach Lab work belongs to
-  this step.
+- Sam accepted the populated Coach dashboard in this task on 2026-08-24.
+- The Coach Lab runner and baseline are covered. A visual review/editor,
+  Bible-grounded candidate and provider comparison are not built yet.
+- No answer is approved yet; Sam has not supplied the ideal answer set.
 - No program-change path is added or altered by the dashboard.
