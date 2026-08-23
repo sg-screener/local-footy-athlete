@@ -171,7 +171,15 @@ Every slice: control-and-candidate measured in a worktree on the same tree
 
 ---
 
-## QUESTIONS FOR SAM — THREE, WITH RECOMMENDATIONS
+## QUESTIONS FOR SAM — ANSWERED 2026-08-23, REGISTERED AS **R-130a**
+
+Sam answered all three in one message: **(1) males stay as they are, gunshow
+returns later as its own order; (2) the proposed female mix is signed;
+(3) the G−1 landing ask offers females the Primer.** Plus: the onboarding step
+matches the existing steps' style. The section below is kept as the record of
+what was asked and why.
+
+## THE QUESTIONS AS ASKED — with recommendations (all three recommendations taken)
 
 REGISTRY-GREP: R-130, R-129, R-052, R-020, R-105, R-110, R-118, R-120, the
 2026-08-19 demolition ruling (area 3), the away/travel gunshow entry. Q1 exists

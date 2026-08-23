@@ -4154,3 +4154,36 @@ and it belongs in the charter — not as `if (female)` inside `coachingEngine`.
 
 · `WRITTEN` — no code. Brief for the building seat, with the audit's findings and
 the R-129 lessons: `docs/FEMALE_PATH_BRIEF_2026-08-23.md`.
+
+---
+
+**R-130a** · *"1. bring gunshow back later 2. yes, the exact female mix is
+correct 3. yes offer females the primer … i want the UI to keep consistent style
+so when you're adding the onboarding step it should match all the other steps"*
+(Sam, 2026-08-23, answering seat `pathway`'s three questions) · **THE THREE
+OPEN EDGES OF R-130, CLOSED IN ONE MESSAGE.**
+
+1. **MALES STAY EXACTLY AS THEY ARE THIS JOB; THE AUTO-GUNSHOW RETURNS LATER AS
+   ITS OWN ORDER.** Context that forced the question: the G−1 Gunshow
+   auto-placement has been dead since the 2026-08-19 demolition (area 3) — the
+   allocation lives in uncalled `buildWeeklyPlan`, the stage-b golden records
+   `gunshowSessions: 0` everywhere, and `test:session-type-charter` E2 says so
+   on `main`. So the male path today has NO generator-placed optional session,
+   and R-130's byte-identity acceptance freezes that state. The male G−1
+   Gunshow restoration is **a stated future order with no owner yet** — the
+   scheduler placement built for the female Primer must make it a
+   one-row flip, and the charter keeps gunshow's male `generator` claim as
+   DECLARED DEBT until that order lands.
+2. **THE FEMALE MIX IS SIGNED AS PROPOSED:** upper days — the arm/shoulder
+   isolation slots (`triceps` + `shoulders` on push day, `biceps` + `traps` on
+   pull day, the `arm_or_shoulder` row on the combined upper day) become
+   midline + one glute/lower accessory; lower days — one extra glute-biased
+   lower accessory row. **Session lengths unchanged.** Females only.
+3. **THE G−1 LANDING ASK OFFERS FEMALES THE PRIMER** where it offers males the
+   Gunshow (`take_the_gunshow` route and the zero-accessory fallback). The Add
+   menu still offers her the Gunshow — R-130's own words.
+
+**AND THE ONBOARDING STEP MATCHES THE EXISTING STEPS' STYLE** — same layout,
+same tiles, same motion as the other option screens; no new visual language.
+
+· `WRITTEN` → building. Seat `pathway`; plan in `docs/STATUS_PATHWAY.md`.
