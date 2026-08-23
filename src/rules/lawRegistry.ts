@@ -1833,6 +1833,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-20, seat `finish-coach-product`, section [7]. THE COMPARISON IS THE PREVIEW FUNCTION RUN A SECOND TIME with the ACCEPTED program as its candidate and the same week the athlete was looking at as its current — so what was shown and what arrived are compared day for day, arrival for arrival, component for component, by the same code. WHICH PRODUCER TO BUILD WITH WAS MEASURED, NOT ASSUMED: the transaction\'s own intermediate builder passes NO `progressionHistory` and disagreed with the delivered program in 40 of 90 prescriptions (`Bulgarian Split Squats 3x8-10` previewed, `4x8-10` delivered); the week-rebuild path, which hands generation the store\'s history, matched exactly. MUTATION M3: pointing the preview at the CURRENT week reds 5 cells. MUTATION M8b: a door that records the answer, reports success and changes no program reds 2. MUTATION M11: replacing the signed component join with a raw `.join(", ")` over the internal kind identifiers reds 1 — that one SURVIVED the first pass, because the suite printed the sentences and asserted nothing about them.',
     },
   },
+  {
+    id: 'LAW-coach-snapshot-is-live-and-shared',
+    law: 'The Coach dashboard and conversation read one ephemeral Coach Snapshot derived fresh from the current visible week, readiness, recorded load and progress, and active restrictions. The Snapshot is never persisted, and a Coach surface cannot re-read those owners to produce a second account.',
+    ruledAt: 'docs/STATUS_SNAPSHOT.md, 2026-08-24 — records Sam\'s approval in this Codex task of the clean Coach rebuild around "one fresh vertical slice: live Coach Snapshot, dashboard" after the proposed architecture stated that the dashboard and chat read one shared live picture, calculated fresh and never saved as a copy.',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `buildCoachSnapshot` is a pure, clock-free boundary that refuses a mismatched Journal week, load week or readiness date. `useLiveAthleteSnapshot` is the only store-reading adapter and persists nothing. The current Coach screen calls it exactly once, hands that object to `CoachDashboard`, and supplies `snapshot.visibleWeek` to all three existing conversation readers. The dashboard reads its other four sections from that same object. The guard also scans every store for a Snapshot owner. LIVENESS: injecting a store import kills the purity cell; replacing the conversation inputs with the screen\'s separate `visibleWeek` kills the shared-owner cell. NOT COVERED BY THIS GUARD: screen layout, AI response quality, and program changes. Base layout is separately walked by `.maestro/golden/coach-snapshot-dashboard.yaml`.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

@@ -2494,3 +2494,49 @@ was built. The elapsed figure is a derived number (`12:34`), never words.
 | The running control | "Pause" | SIGNED — his "pause or end" |
 | The paused control | "Resume" | PROPOSED — the pair's counterpart |
 | The running control | "End" | SIGNED — his "pause or end" |
+
+## Batch 38 — the Coach Snapshot dashboard (2026-08-24): PROPOSED
+
+**STATUS: PROPOSED, AWAITING SAM.** Sam named the five facts the dashboard must
+show — this week, readiness, load, progress and restrictions — and approved the
+live shared Snapshot architecture. He did not choose the exact labels or the
+short absence/comparison sentences below. They remain proposed and this build
+is not a release until he accepts or replaces them.
+
+| Where | string | status |
+| --- | --- | --- |
+| Dashboard title | "Coach snapshot" | PROPOSED |
+| Section label | "This week" | PROPOSED — Sam named the category, not the exact label |
+| Section label | "Readiness" | PROPOSED — Sam named the category, not the exact label |
+| Section label | "Load" | PROPOSED — Sam named the category, not the exact label |
+| Section label | "Progress" | PROPOSED — Sam named the category, not the exact label |
+| Section label | "Restrictions" | PROPOSED — Sam named the category, not the exact label |
+| No planned sessions | "No sessions planned this week." | PROPOSED |
+| No readiness answer today | "No check-in today" | PROPOSED |
+| Good readiness | "Feeling good" | PROPOSED |
+| Flat readiness | "Feeling flat" | PROPOSED |
+| Sore readiness | "Feeling sore" | PROPOSED |
+| Other recorded readiness | "Check-in recorded" | PROPOSED |
+| Load unavailable | "Not enough recorded load yet" | PROPOSED |
+| Load below band | "Below your usual range" | PROPOSED |
+| Load in band | "In your usual range" | PROPOSED |
+| Load above band | "Above your usual range" | PROPOSED |
+| No recorded lift | "No lifts recorded this week" | PROPOSED |
+| Lift increased | "Up from last week" | PROPOSED |
+| Lift unchanged | "Same as last week" | PROPOSED |
+| Lift decreased | "Down from last week" | PROPOSED |
+| First recorded comparison | "No last-week comparison" | PROPOSED |
+| No active restriction | "None active" | PROPOSED |
+
+**THE COMPOSED LINES ARE LISTED AS FRAMES, NOT FALSE LITERALS.** Their values
+come from facts already owned by the Journal or modifier projection:
+
+- "{done} of {planned} sessions done"
+- "{measured} of {planned} sessions measured"
+- "{exercise} · {weight} kg"
+- "1 active" / "{n} active"
+
+**NOTHING FROM THE WITHDRAWN JOURNAL SURFACE IS REVIVED BY STATUS.** Some plain
+words necessarily coincide with that old screen, but every Batch 15–26 Journal
+surface batch remains withdrawn under the clean-room ruling. Batch 38 is a new
+proposal for a different surface and needs a new answer from Sam.

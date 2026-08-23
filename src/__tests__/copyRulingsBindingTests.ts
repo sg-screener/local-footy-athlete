@@ -163,6 +163,10 @@ const AUTHORING_MODULES = [
   'rules/onboardingGenderCopy.ts',
   // THE SESSION STOPWATCH (batch 37, R-132) — same hatch, same reason.
   'rules/sessionStopwatchCopy.ts',
+  // THE COACH SNAPSHOT DASHBOARD (batch 38) — same hatch, same reason. The
+  // component reads one keyed copy owner, so requiring its literals in JSX
+  // would force the duplicate authority this binder is meant to prevent.
+  'rules/snapshotDashboardCopy.ts',
 ];
 
 /**

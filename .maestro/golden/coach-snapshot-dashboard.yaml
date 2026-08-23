@@ -1,0 +1,30 @@
+appId: com.localfootyathlete.app
+name: Golden - live Coach Snapshot dashboard
+tags:
+  - e2e
+  - golden
+  - coach
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "tab-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-dashboard"
+    timeout: 15000
+- assertVisible:
+    id: "coach-dashboard-week"
+- assertVisible:
+    id: "coach-dashboard-readiness"
+- assertVisible:
+    id: "coach-dashboard-load"
+- assertVisible:
+    id: "coach-dashboard-progress"
+- assertVisible:
+    id: "coach-dashboard-restrictions"
+- assertVisible:
+    id: "coach-tab-conversation"
+- takeScreenshot: artifacts/ui-walk/coach-snapshot-dashboard

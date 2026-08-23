@@ -31,6 +31,7 @@ import { GuidedInjuryFlowSheet } from '../home/GuidedInjuryFlowSheet';
 import { RebuildSheet } from '../../components/RebuildSheet';
 import { useRebuildNotice } from '../../hooks/useRebuildNotice';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
+import { CoachDashboard } from './SnapshotDashboard';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
@@ -51,6 +52,7 @@ import {
   commitmentPreviewDaySentence,
   commitmentPreviewUnavailableSentence,
 } from '../../rules/projectionCopy';
+import { useLiveAthleteSnapshot } from './useLiveAthleteSnapshot';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -247,6 +249,13 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers({
     visibleWeekDays: weekDays,
   });
+  // ONE LIVE PICTURE FOR BOTH SURFACES. The dashboard renders this object and
+  // the conversation reads its visible week; neither keeps a saved copy.
+  const snapshot = useLiveAthleteSnapshot({
+    weekDays,
+    visibleWeek,
+    activeModifiers: modifiers,
+  });
   // ── (a) THE SEVEN GO LIVE, THROUGH THE DAY SCREEN'S OWN WRITERS ───────────
   //
   // SEAT_INBOX item 8. Until 2026-08-12 only `dismiss_note` worked here and the
@@ -336,10 +345,14 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     // THE WHOLE TURN, AND IT IS PURE CALLS ALL THE WAY DOWN. One read, then
     // either the answering rule or the proposal rule. The screen has no branch
     // that chooses words — every leaf below returns the sentence it owns.
-    const read = readCoachMessage({ message, week: visibleWeek, todayISO });
+    const read = readCoachMessage({ message, week: snapshot.visibleWeek, todayISO });
 
     if (read.intent === 'question') {
-      say(coachAnswer({ question: read.question, week: visibleWeek, todayISO }).text);
+      say(coachAnswer({
+        question: read.question,
+        week: snapshot.visibleWeek,
+        todayISO,
+      }).text);
       return;
     }
 
@@ -359,13 +372,17 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     // NO CARD IS NO CHANGE, AND THE RULE OWNS THAT TOO. `coachProposal` returns
     // an action and its card together or neither, so there is no state here in
     // which the screen holds something executable that it cannot show.
-    const proposal = coachProposal({ request: read.request, week: visibleWeek, moveOptions });
+    const proposal = coachProposal({
+      request: read.request,
+      week: snapshot.visibleWeek,
+      moveOptions,
+    });
     if (proposal.verdict !== 'proposed' || !proposal.action || !proposal.card) {
       say(proposal.text);
       return;
     }
     setPending({ action: proposal.action, card: proposal.card });
-  }, [visibleWeek, weekDays, todayISO, say]);
+  }, [snapshot, weekDays, todayISO, say]);
 
   const handleSend = useCallback(() => send(draft.trim()), [draft, send]);
 
@@ -520,6 +537,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
             onPress={() => navigation.setParams({ status: 'open' })}
           />
         </View>
+        <CoachDashboard snapshot={snapshot} />
         <ScrollView
           ref={scrollRef}
           style={styles.conversation}
