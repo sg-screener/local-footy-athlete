@@ -4357,3 +4357,19 @@ or warning-sign report still receives the proper safety limit, and genuinely
 missing information may still earn one short focused question. · `WORKING` —
 `test:coach-lab` prompt-binding cell plus Sam's review of the same-case Sol tape.
 Seat `snapshot`.
+
+---
+
+**R-136** · *"but yes i approve the answer and now compare against terra and
+luna"* (Sam, 2026-08-24) · **THE CORRECTED SAME-CASE SOL TAPE IS APPROVED AS
+THE QUALITY BENCHMARK; APPROVAL NEVER TRANSFERS TO ANOTHER RESPONSE.**
+
+The exact approved message, model (`gpt-5.6-sol`) and prompt version
+(`coach-lab-openai-v2-retrieval`) are stored together in the case corpus. The
+evaluator requires all three to match; changing the words, model or prompt
+returns the candidate to owner review. This approval does not choose the final
+production tier by itself. Sam's accompanying question about whether Coach may
+alter the plan reopens that future product decision but does not overturn the
+current read-only-v1 ruling without a separate confirmation-path decision.
+· `WORKING` — exact-tape and competing-model cells in `test:coach-lab`. Seat
+`snapshot`.

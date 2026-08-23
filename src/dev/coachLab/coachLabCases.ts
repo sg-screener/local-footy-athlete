@@ -16,11 +16,16 @@ const PENDING = {
   status: 'pending',
   idealAnswer: null,
   correctionReason: null,
+  approvedModel: null,
+  approvedPromptVersion: null,
 } as const;
+
+export const ROOTED_SOL_APPROVED_ANSWER = 'Don’t skip automatically. For today’s Lower Squat, warm up and reassess, then reduce the lower-body volume and avoid extra sets or grinders. Keep the main lift only if you’re moving well; otherwise use recovery or unaffected work. That’s sensible with low energy, moderate soreness, team training tomorrow and Saturday’s game. I can’t alter the plan here. If this is pain rather than ordinary soreness, stop the affected work and see a physio.';
 
 /**
  * The first ten questions come from the messy-language examples in Sam's Coach
- * redesign brief. They are evaluation inputs, not approved Coach answers.
+ * redesign brief. They are evaluation inputs; approval is bound to an exact
+ * answer/model/prompt tape, never inherited by a competing response.
  */
 export const COACH_LAB_CASES: readonly CoachLabCase[] = [
   {
@@ -45,7 +50,13 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-redesign-brief-2026-08-24',
     requiresLiveProgramFacts: true,
     reviewFocus: ['coaching_quality', 'lfa_consistency', 'judgement_transparency', 'medical_safety', 'voice'],
-    ownerReview: PENDING,
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: ROOTED_SOL_APPROVED_ANSWER,
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-sol',
+      approvedPromptVersion: 'coach-lab-openai-v2-retrieval',
+    },
   },
   {
     id: 'painful-shoulder-alternative',

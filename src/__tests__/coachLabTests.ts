@@ -12,6 +12,7 @@
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   COACH_LAB_CASES,
+  ROOTED_SOL_APPROVED_ANSWER,
   coachLabFixtureSnapshot,
 } from '../dev/coachLab/coachLabCases';
 import {
@@ -43,9 +44,14 @@ console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
     new Set(COACH_LAB_CASES.map((entry) => entry.id)).size === COACH_LAB_CASES.length);
   ok('messy spelling and shorthand survive unchanged',
     COACH_LAB_CASES.some((entry) => entry.athleteMessage === 'legs are rooted but dont wanna skip'));
-  ok('no ideal answer is invented before Sam reviews it',
-    COACH_LAB_CASES.every((entry) => entry.ownerReview.status === 'pending'
-      && entry.ownerReview.idealAnswer === null));
+  const approved = COACH_LAB_CASES.filter((entry) => entry.ownerReview.status === 'approved');
+  ok('only Sam\'s exact approved Sol tape leaves pending review',
+    approved.length === 1
+      && approved[0].id === 'rooted-but-wants-to-train'
+      && approved[0].ownerReview.idealAnswer === ROOTED_SOL_APPROVED_ANSWER
+      && approved[0].ownerReview.approvedModel === 'gpt-5.6-sol'
+      && approved[0].ownerReview.approvedPromptVersion === 'coach-lab-openai-v2-retrieval'
+      && COACH_LAB_CASES.filter((entry) => entry.ownerReview.status === 'pending').length === 9);
   ok('every case declares whether live program facts are required',
     COACH_LAB_CASES.every((entry) => typeof entry.requiresLiveProgramFacts === 'boolean'));
 }
@@ -102,6 +108,8 @@ console.log('\n[3] AUTOMATIC BOUNDARIES FAIL CLOSED');
       status: 'approved',
       idealAnswer: GOOD_RESPONSE.message,
       correctionReason: null,
+      approvedModel: GOOD_RESPONSE.diagnostics.model,
+      approvedPromptVersion: GOOD_RESPONSE.diagnostics.promptVersion,
     },
   }, GOOD_RESPONSE);
   ok('an answer only becomes approved after a real owner answer is recorded',
@@ -109,10 +117,29 @@ console.log('\n[3] AUTOMATIC BOUNDARIES FAIL CLOSED');
 
   const emptyApproval = evaluateCoachLabResponse({
     ...programCase,
-    ownerReview: { status: 'approved', idealAnswer: null, correctionReason: null },
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: null,
+      correctionReason: null,
+      approvedModel: null,
+      approvedPromptVersion: null,
+    },
   }, GOOD_RESPONSE);
   ok('an empty approval marker cannot manufacture owner review',
     emptyApproval.verdict === 'needs_owner_review');
+
+  const competitor = evaluateCoachLabResponse({
+    ...programCase,
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: GOOD_RESPONSE.message,
+      correctionReason: null,
+      approvedModel: 'different-model',
+      approvedPromptVersion: GOOD_RESPONSE.diagnostics.promptVersion,
+    },
+  }, GOOD_RESPONSE);
+  ok('one approved tape cannot approve a competing model',
+    competitor.verdict === 'needs_owner_review');
 
   const action = evaluateCoachLabResponse(programCase, {
     ...GOOD_RESPONSE,
@@ -162,5 +189,5 @@ console.log('\n[3] AUTOMATIC BOUNDARIES FAIL CLOSED');
 
 console.log(`\nCoach Lab totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
-console.log('  NOT COVERED: no AI provider runs, no answer is approved, no Bible retrieval runs, no app UI is mounted, and no program change is attempted.');
+console.log('  NOT COVERED: no AI provider runs, nine cases remain unreviewed, no app UI is mounted, and no program change is attempted.');
 if (failed > 0) process.exit(1);

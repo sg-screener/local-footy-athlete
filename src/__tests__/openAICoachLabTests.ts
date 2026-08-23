@@ -78,6 +78,9 @@ async function main(): Promise<void> {
     ok('R-135 binds Sam\'s practical-before-triage correction',
       rulings.includes('**R-135**')
         && rulings.includes('PRACTICAL COACHING FIRST; MEDICAL TRIAGE STAYS PROPORTIONATE'));
+    ok('R-136 binds approval to the exact Sol tape rather than every model',
+      rulings.includes('**R-136**')
+        && rulings.includes('APPROVAL NEVER TRANSFERS TO ANOTHER RESPONSE'));
     ok('the prompt names the authority order',
       /CURRENT ATHLETE SNAPSHOT[\s\S]+ACTIVE LFA RULINGS[\s\S]+LFA PROGRAMMING BIBLE[\s\S]+COACHING JUDGEMENT/.test(instructions));
   }
@@ -355,7 +358,7 @@ async function main(): Promise<void> {
 
   console.log(`\nOpenAI Coach Lab totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
-  console.log('  NOT COVERED: this suite makes no provider call. One prior canonical full-source benchmark exists, but the retrieved prompt and cheaper models have not yet run through the deployed endpoint; no live app screen or program change is touched.');
+  console.log('  NOT COVERED: this suite makes no provider call. Sol, Terra and Luna each have one same-case tape, but the other nine cases and any plan-confirmation path remain untested; no live app screen or program change is touched.');
   if (failed > 0) process.exit(1);
 }
 

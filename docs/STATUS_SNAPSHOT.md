@@ -288,6 +288,35 @@ synthetic probe again returned `503 coach_lab_disabled` before OpenAI.
   Sam's direct judgement of this corrected answer; the model and seat do not
   approve his voice for him.
 
+### Sol approval and same-case Terra/Luna comparison
+
+Sam approved the corrected Sol answer and ordered the same question through
+Terra and Luna. Approval is stored as an exact three-part tape — message, model
+and prompt version — after a new regression exposed that the old case-wide flag
+would otherwise approve a competitor merely because Sol had passed. The old
+shape was seen red; the exact-tape and competing-model cells are now green.
+
+All three calls used the same 7,444 input-token payload, including 7,441
+cache-write tokens, and the same exact 21,765-character retrieved knowledge.
+USD estimates use each official model page's 2026-08-24 per-million token rates
+and its 1.25× cache-write rule; they are request estimates, not an invoice:
+
+- **Sol:** 391 output / 7,835 total tokens; 9,645 ms; estimated **$0.0583**.
+  Sam-approved 72-word benchmark.
+- **Terra:** 323 output / 7,767 total tokens; 6,692 ms; estimated **$0.0225**.
+  Its 73-word answer is the strongest seat-reviewed competitor on this case:
+  direct, practical, proportionate, and about 61% cheaper than Sol.
+- **Luna:** 424 output / 7,868 total tokens; 6,578 ms; estimated **$0.00237**.
+  Automatic boundaries all passed, but seat review rejects the tape: it added
+  broader restrictions (avoid sprinting/hard conditioning) and declared all six
+  Snapshot fields used despite the message not using load, progress or active
+  restrictions. The cheapest candidate is therefore not the truthful winner.
+
+No production tier is selected from one question. Terra earns advancement to
+the wider messy-question bench; Luna does not. The spend switch returned false
+after the two calls, and a post-run synthetic probe returned
+`503 coach_lab_disabled` before OpenAI.
+
 ## NOT COVERED
 
 - Populated React Native glass and the same-screen readiness rerender are covered

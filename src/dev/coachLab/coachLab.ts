@@ -56,6 +56,8 @@ export interface CoachLabOwnerReview {
   readonly status: 'pending' | 'approved' | 'corrected';
   readonly idealAnswer: string | null;
   readonly correctionReason: string | null;
+  readonly approvedModel: string | null;
+  readonly approvedPromptVersion: string | null;
 }
 
 export interface CoachLabCase {
@@ -179,7 +181,10 @@ export function evaluateCoachLabResponse(
   const automaticFail = Object.values(automaticChecks).some((value) => !value);
   const ownerApproved = labCase.ownerReview.status === 'approved'
     && typeof labCase.ownerReview.idealAnswer === 'string'
-    && labCase.ownerReview.idealAnswer.trim().length > 0;
+    && labCase.ownerReview.idealAnswer.trim().length > 0
+    && response.message === labCase.ownerReview.idealAnswer
+    && response.diagnostics.model === labCase.ownerReview.approvedModel
+    && response.diagnostics.promptVersion === labCase.ownerReview.approvedPromptVersion;
 
   return {
     verdict: automaticFail
