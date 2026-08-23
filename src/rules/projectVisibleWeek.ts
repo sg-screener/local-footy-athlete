@@ -406,7 +406,24 @@ function prescriptionCopy(row: any): SignedCopy {
       ? signedCopy('row.prescription.duration_seconds', { seconds: min })
       : signedCopy('row.prescription.duration_seconds_range', { min, max });
   }
+  // A DISTANCE row (the Primer's authored accelerations). Without this branch
+  // it fell through to sets×reps and the athlete read "3 × 15" — a rep count
+  // wearing a distance's numbers. Same unit-aware treatment the session screen
+  // got in R-129 round 6.
+  if (pType === 'distance' && hasRange && min === max && Number.isFinite(sets)) {
+    return signedCopy('row.prescription.sets_distance', { sets, metres: min });
+  }
   if (Number.isFinite(sets) && hasRange) {
+    // AN EXACTLY-AUTHORED DOSE IS NOT SNAPPED — R-129 round 6, the same scope
+    // the session screen's formatter carries: `exactDose` rows (stamped only on
+    // authored slot rows) keep Sam's numbers verbatim, so his 2-rep exception
+    // cannot be revoked by the approved-rep vocabulary on THIS surface either.
+    // Every other row still snaps: the vocabulary law stands.
+    if (row?.exactDose) {
+      return min === max
+        ? signedCopy('row.prescription.sets_reps', { sets, reps: min })
+        : signedCopy('row.prescription.sets_reps_range', { sets, min, max });
+    }
     // R-016. `displayReps` returns null only when BOTH ends are absent, which
     // `hasRange` has already excluded — the fallback to `min` is the same
     // defensive one `formatStrengthSetsReps` carries, kept identical so the two

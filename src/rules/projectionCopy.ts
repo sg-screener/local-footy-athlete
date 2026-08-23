@@ -1426,6 +1426,18 @@ export function registerProjectionCopy(): void {
       provenance: 'Mirrors dayWorkoutHelpers.formatStrengthSetsReps\'s range shape.',
       text: '{sets} × {min}-{max}',
     },
+    // A DISTANCE row — today the Primer's authored accelerations alone (R-129:
+    // "3 accelerations for 15m"). Mirrors formatLowLoadSetsReps's metre shape,
+    // already shipping on the session screen; without this id the row fell into
+    // `sets_reps` and read "3 × 15" — a rep count in distance's clothing — on
+    // every week-row expansion.
+    {
+      id: 'row.prescription.sets_distance',
+      source: 'derived_number',
+      provenance: 'Mirrors dayWorkoutHelpers.formatLowLoadSetsReps\'s metre shape, '
+        + 'shipping on the session screen since R-129 round 6.',
+      text: '{sets} × {metres}m',
+    },
     // ── WHEN THE APP CANNOT BUILD A WEEK AT ALL — Sam, 2026-08-17. ──
     //
     // His structure, verbatim, and it is three lines with a fixed first and
