@@ -490,3 +490,32 @@ half copenhagen both show 2x15 but its an isometric not a rep thing"* — the
 `isolation_lower` pool rows carry no `prescriptionType`, so isometric holds
 default to the reps shape. The answer and the fix go to him with slice 5, as
 he asked.
+
+---
+
+## 2026-08-23, NIGHT — SLICES 5 + 6 (`b9785811`): THE HOLDS KEEP THEIR SECONDS, AND THE STOPWATCH
+
+**R-131 (his parked question, answered):** the ANSWER was that the prehab
+pools always authored those rows in seconds (Bosch Hold 2×20-30s, Copenhagens
+20-30s/15-25s per side) — but a hold filling a STRENGTH seat was dosed by the
+composer's positional rep ladder, which can only say reps. The dose owner
+(`resolveComposedDose`) now returns the authored duration dose (category
+`authored_timed_hold`) and the unit travels to the stored row. PREDICTED
+golden movement, measured exact: three worlds (male `offseason-no-equipment` +
+both female), the other 14 male worlds byte-frozen. On glass: `Hollow Hold
+2 × 30s`.
+
+**R-132 (the stopwatch):** subtitle line, right side, subtitle's own font —
+idle *"Start session"* (his verbatim), running elapsed + Pause/End, paused
+Resume/End (batch 37, signed first). STORED: the timing ACTS + one measured
+RESULT; elapsed derived — proven on glass by leaving the session and returning
+(0:36 → 1:48, wall-true) and ending cleanly. Measured minutes seed the
+strength feedback duration boxes when nothing is stored. The store is
+registered everywhere a persisted store must be (hydration gate,
+persisted-inputs schema, fresh-install reset, BOTH product reset sites).
+
+**Suites:** compile = control; schema back to control shape (its 1 red = two
+PRE-EXISTING undeclared keys: `profile-store.signupDateISO`,
+`program-store.inputs.bandResistanceOverrides` — other seats'); charter 44/0;
+differential 3/0; binding 9/0. **OWED:** the duration prefill seen inside a
+fully ticked session on glass (logic is one seeded line, panel path traced).
