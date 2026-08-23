@@ -384,28 +384,29 @@ async function main() {
     path.resolve(__dirname, '..', 'dev', 'e2e', 'defaultDevE2ESeedCoordinator.ts'),
     'utf8',
   );
+  const worldResetSource = fs.readFileSync(
+    path.resolve(__dirname, '..', 'dev', 'e2e', 'devE2EWorldReset.ts'),
+    'utf8',
+  );
   const persistenceSource = fs.readFileSync(
     path.resolve(__dirname, '..', 'dev', 'e2e', 'devE2EPersistence.ts'),
     'utf8',
   );
-  const programClear = defaultCoordinatorSource.indexOf('useProgramStore.getState().clear()');
+  const programClear = worldResetSource.indexOf('useProgramStore.getState().clear()');
   const oldDomainClears = [
-    'clearCoachContext()',
-    'clearPending()',
-    'clearNotes()',
+    'useWorkoutLogStore.getState().clear()',
     'useCalendarStore.getState().clear()',
     'useReadinessStore.getState().clear()',
     'clearAllCoachUpdates()',
-    'clearAll()',
     'clearAllModalityPreferences()',
     'useAthletePreferencesStore.getState().clear()',
-    // 'useUIStore.getState().clear()' RETIRED with the store (Sam's §6,
-    // 2026-08-03) — the seed has no ui-store to clear any more.
+    'useDecisionLedgerStore.getState().clear()',
+    'useBlockSelectionHistoryStore.getState().clear()',
     'useProfileStore.getState().clear()',
   ];
   ok('ProgramStore clears after every old domain',
     programClear >= 0 && oldDomainClears.every((needle) => {
-      const domainClear = defaultCoordinatorSource.indexOf(needle);
+      const domainClear = worldResetSource.indexOf(needle);
       return domainClear >= 0 && domainClear < programClear;
     }));
   ok('dev feedback seed does not call the retired live feedback setter',

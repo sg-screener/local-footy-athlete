@@ -17,6 +17,8 @@ import {
   setDevE2EExplorerNativeLaunchDiagnostic,
   setDevE2EScenarioError,
   setDevE2ESeedError,
+  setDevE2ESeedLoading,
+  setDevE2ESeedReady,
   subscribeDevE2EState,
 } from './devE2EState';
 import {
@@ -57,6 +59,10 @@ import {
   restoreExplorerScenarioActiveTimeBudget,
 } from './explorerScenarioActiveTimeBudget';
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
+import {
+  runCoachSnapshotCookedCheckIn,
+  startCoachSnapshotPopulatedJourney,
+} from './coachSnapshotPopulatedJourney';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -332,6 +338,16 @@ export function installDevE2EEntry(args: {
       switch (route.kind) {
         case 'reset':
           return await coordinator.reset(route.seedId);
+        case 'coach_snapshot_populate':
+          setDevE2ESeedLoading('coach-snapshot-populated-journey');
+          await startCoachSnapshotPopulatedJourney();
+          setDevE2ESeedReady('coach-snapshot-populated-journey');
+          return true;
+        case 'coach_snapshot_cooked_check_in':
+          setDevE2ESeedLoading('coach-snapshot-cooked-check-in');
+          await runCoachSnapshotCookedCheckIn();
+          setDevE2ESeedReady('coach-snapshot-cooked-check-in');
+          return true;
         case 'checkpoint':
           return await coordinator.checkpoint(route.checkpointId);
         case 'scenario_reset':

@@ -54,6 +54,21 @@ for (const invalid of [
   ok(`exact parser rejects ${invalid}`, parseDevE2EEntryRoute(invalid) === null);
 }
 
+ok('Coach Snapshot cooked check-in accepts only its exact dev route',
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/coach-snapshot/check-in/cooked',
+  )?.kind === 'coach_snapshot_cooked_check_in' &&
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/coach-snapshot/check-in/cooked/',
+  ) === null);
+ok('Coach Snapshot population accepts only its exact dev route',
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/coach-snapshot/populate',
+  )?.kind === 'coach_snapshot_populate' &&
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/coach-snapshot/populate/',
+  ) === null);
+
 ok('physical evidence campaign route accepts exact campaign and repository identity',
   parseDevE2EEntryRoute(
     'localfootyathlete://e2e/explorer/evidence/start/' +

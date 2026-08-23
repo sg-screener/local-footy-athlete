@@ -6,11 +6,7 @@ import {
   useProgramStore,
 } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
-import { useReadinessStore } from '../../store/readinessStore';
-import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
-import { useWorkoutLogStore } from '../../store/workoutLogStore';
-import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import {
   composeTemporarySourceFactCompatibility,
@@ -56,9 +52,9 @@ import { requireActiveExplorerCampaignScenarioReset } from
   './explorerCampaignBootstrap';
 import {
   exportAthleteActionTraceCheckpointV2,
-  clearAthleteActionDiagnosticEvents,
   resumeAthleteActionTraceCheckpointV2,
 } from '../../utils/athleteActionDiagnostics';
+import { resetDevE2EWorldThroughPublicAPIs } from './devE2EWorldReset';
 import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
 import {
   buildDayWorkoutProjectedDay,
@@ -81,20 +77,6 @@ import {
   clearDevE2EScenarioRuntime,
   readActiveDevE2EScenarioSession,
 } from './devE2EScenarioRuntime';
-
-function clearLocalStateThroughPublicAPIs(): void {
-  clearAthleteActionDiagnosticEvents();
-  useWorkoutLogStore.getState().clear();
-  useCalendarStore.getState().clear();
-  useReadinessStore.getState().clear();
-  useCoachUpdatesStore.getState().clearAllCoachUpdates();
-  useCoachPreferencesStore.getState().clearAllModalityPreferences();
-  useAthletePreferencesStore.getState().clear();
-  // uiStore/authStore clears RETIRED with their stores (Sam's §6, 2026-08-03).
-  useProfileStore.getState().clear();
-  // ProgramStore is last so no legacy mirror can republish old material.
-  useProgramStore.getState().clear();
-}
 
 /** The Monday of the week containing `dateISO` — same arithmetic as
  *  `devE2EWeekStartForSeed`, applied to an arbitrary anchor. */
@@ -561,7 +543,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
     await requireActiveExplorerCampaignScenarioReset();
   },
   waitForHydration: waitForDevE2EHydration,
-  resetLocalState: clearLocalStateThroughPublicAPIs,
+  resetLocalState: resetDevE2EWorldThroughPublicAPIs,
   clearClock: clearPersistedDevE2EClock,
   installClock: replacePersistedDevE2EClockForSeed,
   readClockReceipt: readActiveDevE2EClockReceipt,

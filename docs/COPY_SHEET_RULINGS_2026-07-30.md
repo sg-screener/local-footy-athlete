@@ -2508,6 +2508,11 @@ signal moves into the four-tile grid under Sam's exact word *"consistency"*.
 This hierarchy is registered and guarded as
 `LAW-coach-load-owns-the-dashboard-hero`.
 
+**RENAMED BY SAM, 2026-08-24.** After confirming that the dashboard's
+Restrictions tile is a summary of the same active-modifier list owned by My
+Status, Sam instructed: *"yes rename dashboard tile my status"*. The data and
+count do not change; only the clarifying label does.
+
 | Where | string | status |
 | --- | --- | --- |
 | Dashboard title | "Coach snapshot" | SIGNED |
@@ -2516,7 +2521,8 @@ This hierarchy is registered and guarded as
 | Section label | "Readiness" | SIGNED |
 | Section label | "Load" | SIGNED |
 | Section label | "Progress" | SIGNED |
-| Section label | "Restrictions" | SIGNED |
+| Previous active-modifier label | "Restrictions" | SUPERSEDED ON THE COACH DASHBOARD |
+| Active-modifier section label | "My Status" | SIGNED — Sam's exact words, 2026-08-24 |
 | No planned sessions | "No sessions planned this week." | SIGNED |
 | No readiness answer today | "No check-in today" | SIGNED |
 | Good readiness | "Feeling good" | SIGNED |

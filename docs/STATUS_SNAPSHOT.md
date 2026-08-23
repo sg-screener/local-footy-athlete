@@ -7,7 +7,7 @@ Owner: `snapshot`
 ## Mission
 
 Step 3 of Sam's clean Coach rebuild: build one live Coach Snapshot and a
-non-AI dashboard for this week, readiness, load, progress and restrictions.
+non-AI dashboard for this week, readiness, load, progress and My Status.
 The current simple Coach remains in place.
 
 ## Options compared before coding
@@ -44,7 +44,7 @@ ratio; no score, threshold or second load owner was added.
   visible week plus the existing readiness/restriction answers.
 - `useLiveAthleteSnapshot`: the only input adapter; recomputes from existing facts.
 - `CoachDashboard`: one load-continuum hero and four compact Snapshot tiles —
-  Consistency, readiness, progress and restrictions — with no AI and no writes.
+  Consistency, readiness, progress and My Status — with no AI and no writes.
 - `CoachTabScreen`: constructs one Snapshot, hands it to the dashboard, and
   supplies its visible week to all existing conversation readers.
 - `test:coach-snapshot`: domain, ownership, persistence-absence and liveness
@@ -67,11 +67,15 @@ ratio; no score, threshold or second load owner was added.
 - Clean-room: 58/58. Current Coach slice 2: 72/72. Journal week/load/strength:
   42/42, 125/125 and 17/17. Copy extraction/binding: 7/7 and 9/9. Feature and
   dead-affordance registries: 6/6 each.
-- Glass: the corrected screen passed every focused command on iPhone 17 Pro /
-  iOS 26.3: deterministic seed, Coach navigation, the load track, signed shaded
-  sweet-spot zone, four signal tiles, existing conversation and screenshot. The
-  screenshot was inspected: the empty athlete has no dishonest marker. Evidence:
-  `artifacts/ui-walk/coach-snapshot-dashboard.png`.
+- Glass: the populated screen and its live refresh passed every focused command
+  on iPhone 17 Pro / iOS 26.3. A fresh local athlete earned five weeks through
+  real session, load, rollover and exclusion doors. The first screenshot shows
+  the signed moving load marker, 5/5 Consistency, week-over-week Progress and
+  one active My Status item. A cooked check-in was then accepted while Coach
+  stayed mounted; the second screenshot changes Readiness from `No check-in
+  today` to `Feeling flat` while the load marker and My Status remain. Evidence:
+  `artifacts/ui-walk/coach-snapshot-dashboard.png` and
+  `artifacts/ui-walk/coach-snapshot-dashboard-live-refresh.png`.
 - The Coach phrase-handler clean-room ratchet is 8/8 after the generic Snapshot
   modules were moved out of Coach-named files. The gate was not re-baselined or
   weakened.
@@ -82,14 +86,14 @@ ratio; no score, threshold or second load owner was added.
   pre-existing stale ids; none is in the new flow.
 - The five dashboard labels and states are Batch 38 SIGNED by Sam's direct
   ruling: *"the wording is fine"*. `Consistency` is signed by his exact word in
-  the hierarchy correction.
+  the hierarchy correction, and `My Status` by his exact rename after confirming
+  that tile is the same active-modifier list as the full status screen.
 
 ## NOT COVERED
 
-- Base/empty React Native glass is covered. The non-empty facts and live update
-  are now covered through the production action/derivation chain, but their
-  populated pixels and same-screen rerender are not yet walked on simulator
-  glass.
+- Populated React Native glass and the same-screen readiness rerender are covered
+  on the simulator. The earlier honest empty state remains covered by its prior
+  receipt.
 - Sam has not yet accepted the redesigned layout on his physical phone.
 - No AI provider, Bible-grounded answer system or Coach Lab work belongs to
   this step.

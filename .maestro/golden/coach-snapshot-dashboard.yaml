@@ -5,10 +5,10 @@ tags:
   - golden
   - coach
 ---
-- runFlow:
-    file: ../common/reset-seed.yaml
-    env:
-      SEED_ID: standard-in-season-week
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
 - tapOn:
     id: "tab-coach"
 - extendedWaitUntil:
@@ -22,6 +22,8 @@ tags:
 - assertVisible:
     id: "coach-dashboard-load-sweet-spot"
 - assertVisible:
+    id: "coach-dashboard-load-marker"
+- assertVisible:
     id: "coach-dashboard-readiness"
 - assertVisible:
     id: "coach-dashboard-load"
@@ -29,6 +31,8 @@ tags:
     id: "coach-dashboard-progress"
 - assertVisible:
     id: "coach-dashboard-restrictions"
+- assertVisible: "My Status"
+- assertVisible: "No check-in today"
 - assertVisible:
     id: "coach-tab-conversation"
 - takeScreenshot: artifacts/ui-walk/coach-snapshot-dashboard

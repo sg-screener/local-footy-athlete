@@ -1,0 +1,10 @@
+appId: com.localfootyathlete.app
+name: Reset before lived Coach Snapshot journey
+---
+# This is only the clean launch barrier. The shell runner next delivers the
+# population route with `simctl openurl`, bypassing Safari's flaky confirmation
+# sheet, and that route performs fresh onboarding plus the real athlete actions.
+- runFlow:
+    file: reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week

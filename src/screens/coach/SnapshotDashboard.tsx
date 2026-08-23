@@ -92,7 +92,7 @@ export function CoachDashboard({ snapshot }: { snapshot: CoachSnapshot }) {
         />
         <SnapshotCell
           testID="coach-dashboard-restrictions"
-          label={COACH_DASHBOARD_COPY.restrictions}
+          label={COACH_DASHBOARD_COPY.myStatus}
           value={coachRestrictionCount(snapshot.restrictions.length)}
           detail={leadRestriction?.title ?? null}
         />

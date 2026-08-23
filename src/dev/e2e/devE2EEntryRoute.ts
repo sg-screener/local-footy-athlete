@@ -6,6 +6,8 @@ import {
 
 export type DevE2EEntryRoute =
   | { kind: 'reset'; seedId: DevE2ESeedId }
+  | { kind: 'coach_snapshot_populate' }
+  | { kind: 'coach_snapshot_cooked_check_in' }
   | { kind: 'checkpoint'; checkpointId: DevE2ESeedId }
   | { kind: 'scenario_reset'; scenarioId: string }
   | { kind: 'scenario_checkpoint'; scenarioId: string; checkpointStepId: string }
@@ -44,6 +46,10 @@ export type DevE2EEntryRoute =
     };
 
 const EXACT_E2E_ROUTE = /^localfootyathlete:\/\/e2e\/(reset|checkpoint)\/([a-z0-9-]+)$/;
+const EXACT_COACH_SNAPSHOT_COOKED_ROUTE =
+  /^localfootyathlete:\/\/e2e\/coach-snapshot\/check-in\/cooked$/;
+const EXACT_COACH_SNAPSHOT_POPULATE_ROUTE =
+  /^localfootyathlete:\/\/e2e\/coach-snapshot\/populate$/;
 const EXACT_SCENARIO_RESET_ROUTE =
   /^localfootyathlete:\/\/e2e\/scenario\/reset\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
 const EXACT_SCENARIO_CHECKPOINT_ROUTE =
@@ -131,6 +137,12 @@ export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEnt
   const explorer = splitExplorerBootstrapQuery(url);
   if (!explorer) return null;
   const routeUrl = explorer.routeUrl;
+  if (EXACT_COACH_SNAPSHOT_POPULATE_ROUTE.test(routeUrl)) {
+    return { kind: 'coach_snapshot_populate' };
+  }
+  if (EXACT_COACH_SNAPSHOT_COOKED_ROUTE.test(routeUrl)) {
+    return { kind: 'coach_snapshot_cooked_check_in' };
+  }
   const evidenceStart = EXACT_EXPLORER_EVIDENCE_START_ROUTE.exec(routeUrl);
   if (evidenceStart) {
     return {

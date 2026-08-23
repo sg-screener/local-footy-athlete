@@ -1,0 +1,24 @@
+appId: com.localfootyathlete.app
+name: Golden - Coach Snapshot live readiness refresh
+tags:
+  - e2e
+  - golden
+  - coach
+---
+# Run after the populated dashboard flow and the direct simulator URL:
+# localfootyathlete://e2e/coach-snapshot/check-in/cooked
+# The app remains on Coach. This proves its mounted Snapshot repaints from the
+# accepted readiness fact instead of reading a saved copy on screen entry.
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-cooked-check-in"
+    timeout: 15000
+- assertVisible:
+    id: "coach-dashboard"
+- assertVisible:
+    id: "coach-dashboard-readiness"
+- assertNotVisible: "No check-in today"
+- assertVisible:
+    id: "coach-dashboard-load-marker"
+- assertVisible: "My Status"
+- takeScreenshot: artifacts/ui-walk/coach-snapshot-dashboard-live-refresh

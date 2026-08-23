@@ -231,6 +231,10 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   const screen = source('src', 'screens', 'coach', 'CoachTabScreen.tsx');
   const dashboard = source('src', 'screens', 'coach', 'SnapshotDashboard.tsx');
   const glassFlow = source('.maestro', 'golden', 'coach-snapshot-dashboard.yaml');
+  const liveRefreshFlow = source(
+    '.maestro', 'golden', 'coach-snapshot-dashboard-live-refresh.yaml',
+  );
+  const glassReceipt = source('docs', 'GOLDEN_FLOW_RUN_RECEIPT.md');
 
   ok('the Snapshot builder is domain-pure and clock-free', pureSnapshotOwner(owner));
   ok('the pure owner reuses the Journal week/load/progress owners',
@@ -259,6 +263,18 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   ok('the glass flow opens Coach and captures the dashboard',
     /id: "tab-coach"/.test(glassFlow)
       && /artifacts\/ui-walk\/coach-snapshot-dashboard/.test(glassFlow));
+  ok('populated glass requires the earned load marker and signed My Status label',
+    glassFlow.includes('id: "coach-dashboard-load-marker"')
+      && glassFlow.includes('"My Status"')
+      && glassFlow.includes('e2e-seed-ready-coach-snapshot-populated-journey'));
+  ok('live glass changes readiness without reopening Coach',
+    liveRefreshFlow.includes('e2e-seed-ready-coach-snapshot-cooked-check-in')
+      && liveRefreshFlow.includes('assertNotVisible: "No check-in today"')
+      && !/id: "tab-coach"/.test(liveRefreshFlow));
+  ok('the populated and live simulator executions have a dated receipt',
+    /coach-snapshot-dashboard\.yaml[^\n]+PASS[^\n]+populated/i.test(glassReceipt)
+      && /coach-snapshot-dashboard-live-refresh\.yaml[^\n]+PASS[^\n]+without leaving Coach/i
+        .test(glassReceipt));
   ok('training load owns the hero and its signed sweet-spot continuum',
     loadOwnsTheHero(dashboard)
       && glassFlow.includes('id: "coach-dashboard-load-track"')
@@ -270,7 +286,7 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
       && /borderRadius:\s*borderRadius\.lg/.test(dashboard));
   ok('athlete-visible dashboard words come from the one copy owner',
     /COACH_DASHBOARD_COPY/.test(dashboard)
-      && !/>\s*(?:This week|Readiness|Load|Progress|Restrictions|None active)\s*</.test(dashboard));
+      && !/>\s*(?:This week|Readiness|Load|Progress|My Status|Restrictions|None active)\s*</.test(dashboard));
 }
 
 console.log('\n[4] THE SNAPSHOT HAS NO PERSISTED COPY');

@@ -3,7 +3,8 @@
  *
  * Sam named the five sections, signed the first wording with "the wording is
  * fine", then moved Load into the hero and supplied `Consistency` as the exact
- * replacement label for weekly completion in the four-tile grid.
+ * replacement label for weekly completion in the four-tile grid. He renamed
+ * the active-modifier summary `My Status` after confirming it is the same list.
  */
 
 import type { CoachSnapshotReadinessState } from './liveAthleteSnapshot';
@@ -17,7 +18,7 @@ export const COACH_DASHBOARD_COPY = {
   readiness: 'Readiness',
   load: 'Load',
   progress: 'Progress',
-  restrictions: 'Restrictions',
+  myStatus: 'My Status',
   noSessions: 'No sessions planned this week.',
   noCheckIn: 'No check-in today',
   readinessGood: 'Feeling good',

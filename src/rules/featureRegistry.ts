@@ -234,10 +234,10 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
     askedFor: 'Sam, this Codex task, 2026-08-24: "Build one fresh vertical slice: live Coach Snapshot, dashboard" and start step 3.',
     reachable: 'athlete_reachable',
     proof: {
-      state: 'UNPROVEN',
-      claim: 'BUILT',
-      wouldTake: 'A simulator or physical-phone run with non-empty readiness, recorded load/progress and an active restriction, followed by changing one of those facts and verifying its dashboard value changes without reopening Coach.',
-      receipt: '`test:coach-snapshot` proves the pure Snapshot, the one-adapter ownership, one screen construction, five dashboard readers and the conversation sharing `snapshot.visibleWeek`. Its accumulated arm now walks one athlete through 35 calendar days, 19 real session outcomes and one production rollover, then proves a signed movable load marker plus populated Consistency, Progress and Restrictions; a Sunday status action changes Readiness on the next derivation without a reset, and removing one earned history week kills the four-week ratio. It also proves signed sweet-spot ownership and the load-first hierarchy, including a mutation that swaps Load with Consistency. BASE GLASS IS PAID: `.maestro/golden/coach-snapshot-dashboard.yaml` passed on iPhone 17 Pro / iOS 26.3 and `artifacts/ui-walk/coach-snapshot-dashboard.png` shows Load as the hero with its shaded signed zone, no dishonest empty-state marker, and Consistency in the four-tile grid. The populated and same-screen states have not yet been mounted on simulator glass, so this row stays BUILT rather than WORKING.',
+      state: 'held',
+      by: 'test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: '`test:coach-snapshot` holds the pure Snapshot, one-adapter ownership, one screen construction, all five dashboard readers, the conversation sharing `snapshot.visibleWeek`, and a mutation that kills the four-week ratio when one earned week is removed. Its lived arm walks 35 calendar days, 19 real session outcomes and one production rollover. On 2026-08-24 the repeatable simulator runner passed on iPhone 17 Pro / iOS 26.3: `coach-snapshot-dashboard.png` shows the populated signed load marker, 5/5 Consistency, week-over-week Progress and one active My Status item; `coach-snapshot-dashboard-live-refresh.png` shows Readiness changing from No check-in today to Feeling flat without leaving Coach. The guard requires both flows and their dated run receipts.',
     },
   },
   {
