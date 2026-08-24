@@ -1100,8 +1100,12 @@ export function registerProjectionCopy(): void {
       id: 'day.add_session.action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-196: when no programmed-session '
-        + 'card exists, retain a visible direct doorway for adding one.',
-      text: 'Add a session',
+        + 'card exists, retain a visible direct doorway for adding one. '
+        + 'REWORDED by Sam the same day (R-219), VERBATIM: "this should say '
+        + '\'add optional session\'". Anything the athlete puts on a rest day '
+        + 'is optional work — the word is the athlete\'s own reminder that the '
+        + 'rest day was the programmed answer.',
+      text: 'Add optional session',
     },
     {
       id: 'plan_change.add_to_session',

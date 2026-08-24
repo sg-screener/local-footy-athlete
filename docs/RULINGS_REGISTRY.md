@@ -5715,3 +5715,12 @@ one. Its transitional form — rows compiled but unreachable — did its job for
 commits and is now re-inverted to require the deletion. · `WORKING` —
 `test:week-board` 43 passed / 0 failed; `test:session-change-hub` ALL GREEN 56;
 `test:day-first-timeline` back to its 2 pre-existing reds. Seat `warmup`.
+
+---
+
+**R-219** · *"this should say 'add optional session'"* (Sam, 2026-08-25, on the
+Rest Day card) · **WORK PUT ON A REST DAY IS OPTIONAL WORK, AND THE BUTTON SAYS
+SO.** Rewords `day.add_session.action` from R-196's *"Add a session"*. The rest
+day was the programmed answer; the word is the athlete's own reminder that what
+they are adding sits on top of it. · `WORKING` — `test:signed-copy-extraction`.
+Seat `warmup`.
