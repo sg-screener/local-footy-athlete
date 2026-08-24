@@ -2231,13 +2231,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-week-edit-sheet-names-adjustment',
-    law: 'Tapping Edit this week opens a sheet headed “Adjust week”. Its first action-selection step asks “What changed this week?” before presenting the existing week adjustment options.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-201 — Sam supplied both replacement lines for the Edit this week sheet.',
+    law: 'Tapping Edit this week opens a sheet headed “Adjust week”. Its first action-selection step asks “What do you want to change?” before presenting the existing week adjustment options.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-201 — Sam supplied the replacement heading and corrected the first question to “What do you want to change?”.',
     guard: {
       state: 'guarded',
       by: 'test:day-first-timeline',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`. The existing WeekEditSheet remains the one owner; only its heading and first-step question moved into signed copy. The exact source binding and both signed values are held by the Week-edit cell in `test:day-first-timeline`. Focused run: the new cell is green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
+      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`; corrected under the same R-201 minutes later. The existing WeekEditSheet remains the one owner; only its heading and first-step question moved into signed copy. The exact source binding and both signed values are held by the Week-edit cell in `test:day-first-timeline`. Focused run: the corrected cell is green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
     },
   },
 ];

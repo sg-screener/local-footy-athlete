@@ -5191,10 +5191,11 @@ Sick and Injured remain unchanged. · `WORKING` —
 
 ---
 
-**R-201** · Week adjustments ask what changed (Sam, 2026-08-25) ·
-**THE WEEK SHEET NAMES THE ATHLETE'S CHANGE, NOT THE EDITING MECHANISM.**
+**R-201** · Week adjustment sheet uses the shorter heading (Sam, 2026-08-25) ·
+**THE SHEET SAYS ADJUST WEEK, THEN ASKS WHAT THE ATHLETE WANTS TO CHANGE.**
 
 Tapping **Edit this week** opens a sheet headed **Adjust week**. Its first
-question is **What changed this week?** The existing Bye, Game, Away and session
-options remain unchanged. · `WORKING` — `test:day-first-timeline`.
-Seat `headeralign`.
+question is **What do you want to change?** This corrects the earlier
+**What changed this week?** wording. The existing Bye, Game, Away and session
+options remain unchanged. · `WORKING` — `test:day-first-timeline`. Seat
+`headeralign`.

@@ -942,9 +942,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.question',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-201: the first weekly-adjustment '
-        + 'step asks “What changed this week?”.',
-      text: 'What changed this week?',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-201 correction: the first '
+        + 'weekly-adjustment step asks “What do you want to change?”.',
+      text: 'What do you want to change?',
     },
     {
       id: 'day.add_session.action',
