@@ -129,6 +129,28 @@ console.log('\n[4] The open-session sheet uses the three signed rows in Sam’s 
     cursor = at;
   }
   ok('and they appear in the order Sam wrote them', ordered);
+  ok('the popup uses the same flat row and divider treatment as Day plan options',
+    sheet.includes('<SessionOptionsRow')
+      && !sheet.includes('<ExerciseSheetOption')
+      && /sessionOptionsRow:\s*\{[\s\S]{0,220}borderBottomWidth: StyleSheet\.hairlineWidth[\s\S]{0,120}borderBottomColor: 'rgba\(255,255,255,0\.08\)'/.test(live)
+      && /sessionOptionsIcon:\s*\{[\s\S]{0,120}width:\s*38[\s\S]{0,80}height:\s*38[\s\S]{0,80}borderRadius:\s*19/.test(live));
+  ok('the popup restores the original dumbbell, medical-cross and plain-plus glyphs',
+    /import \{ ACTION_TINT, glyph as sessionChangeGlyph \}/.test(live)
+      && sheet.includes("icon={sessionChangeGlyph('injury')}")
+      && sheet.includes("icon={sessionChangeGlyph('equipment')}")
+      && sheet.includes("icon={sessionChangeGlyph('add')}")
+      && hubSource.includes('d="M6.5 7v10M4 9v6M17.5 7v10M20 9v6M6.5 12h11"')
+      && hubSource.includes('d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"')
+      && hubSource.includes('d="M12 5v14M5 12h14"'));
+  ok('the original icon tints remain attached to those same three actions',
+    sheet.includes('iconTint={ACTION_TINT.injury}')
+      && sheet.includes('iconTint={ACTION_TINT.equipment}')
+      && sheet.includes('iconTint={ACTION_TINT.add}')
+      && /injury: 'rgba\(255, 127, 127, 0\.12\)'/.test(hubSource)
+      && /equipment: 'rgba\(30, 167, 255, 0\.12\)'/.test(hubSource)
+      && /add: 'rgba\(198, 255, 0, 0\.12\)'/.test(hubSource));
+  ok('the popup ends with the same centred ghost Back treatment as Day plan options',
+    /<Button[\s\S]{0,180}label="Back"[\s\S]{0,180}variant="ghost"[\s\S]{0,220}setSessionOptionsVisible\(false\)/.test(sheet));
 }
 
 console.log('\n[5] NO DEAD BUTTONS — every open-session door names a real opener');

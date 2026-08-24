@@ -5239,6 +5239,19 @@ unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
 
 ---
 
+**R-210** · Active-session popup matches Day options and keeps its icons (Sam, 2026-08-25) ·
+**MOVING AN ACTION DOES NOT REDRAW IT OR INVENT A SECOND MENU STYLE.**
+
+The active-session `•••` popup uses the same flat label/subline rows, circular
+icon wells, quiet dividers and centred ghost **Back** treatment as the Day
+plan-options popup. It restores the active-session actions’ original exact
+dumbbell, medical-cross and plain-plus SVG paths, colours and tints; the
+substitute medical bag and outlined-plus icons are removed. Copy, order,
+availability and the three established handlers remain unchanged. · `WORKING`
+— `test:session-change-hub`. Seat `headeralign`.
+
+---
+
 **R-209** · Active-session changes move behind one options menu (Sam, 2026-08-25) ·
 **THE SESSION HEADER OFFERS ONE QUIET DOORWAY, NOT A SECOND CHANGE CARD.**
 

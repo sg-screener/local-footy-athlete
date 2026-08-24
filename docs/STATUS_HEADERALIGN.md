@@ -153,3 +153,14 @@ and the old card can be deleted rather than nested.
 Focused guard: `test:session-change-hub` — 41 passed / 0 failed.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone, VoiceOver order and completing a real edit.
+
+## 2026-08-25 — Session popup style and icon correction
+
+The active-session options popup now matches Day plan options: flat rows, quiet
+dividers, circular icon wells and a centred ghost Back control. The original
+dumbbell, medical cross and plain plus are imported from their existing owner,
+including their original colours and tints; the replacement icon shapes are gone.
+
+Focused guard: `test:session-change-hub` — 45 passed / 0 failed.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and VoiceOver order.

@@ -11,7 +11,9 @@
  * compact plan-options control, so this physical-status card owns no scheduling
  * doorway. R-209 then moved the active session's Injury, Equipment and Add
  * actions behind its own compact header menu; that screen no longer mounts
- * this card.
+ * this card. R-210 keeps the original glyph/tint owner here and imports those
+ * exact values into the new flat menu rows, so relocating a door cannot redraw
+ * the dumbbell, medical cross or plus.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
@@ -100,7 +102,7 @@ export const SESSION_CHANGE_ACTION_LABEL = CHANGE_ACTION_LABEL;
  * amber Sick, red Injured) and the retained session-action tints from this
  * component's first version, so nothing the athlete already recognises changes hue.
  */
-const ACTION_TINT: Record<ChangeActionId, string> = {
+export const ACTION_TINT: Record<ChangeActionId, string> = {
   tired: 'rgba(103, 215, 255, 0.12)',
   sick: 'rgba(255, 202, 104, 0.12)',
   injured: 'rgba(255, 127, 127, 0.12)',
@@ -125,7 +127,7 @@ const ACTION_STROKE: Record<ChangeActionId, string> = {
  * them; the battery, the thermometer and the medical cross are the pictures the
  * athlete has been taught.
  */
-function glyph(id: ChangeActionId): React.ReactNode {
+export function glyph(id: ChangeActionId): React.ReactNode {
   const stroke = ACTION_STROKE[id];
   const common = {
     width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',

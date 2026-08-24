@@ -19,6 +19,7 @@ import {
   useSessionActionStep,
 } from '../../components/SessionActionSheet';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { ACTION_TINT, glyph as sessionChangeGlyph } from '../../components/SessionChangeHub';
 import { UndoToast } from '../../components/UndoToast';
 import { useNavigation } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
@@ -2236,10 +2237,11 @@ export default function DayWorkoutScreenV2() {
           subtitle={signedCopy('session.change_card.heading')}
         />
         <View>
-          <ExerciseSheetOption
+          <SessionOptionsRow
             label={signedCopy('session.options.injury.label')}
             sub={signedCopy('session.options.injury.subline')}
-            icon={<MaterialCommunityIcons name="medical-bag" size={18} color="#FF7F7F" />}
+            icon={sessionChangeGlyph('injury')}
+            iconTint={ACTION_TINT.injury}
             testID="session-options-injury"
             onPress={() => {
               setSessionOptionsVisible(false);
@@ -2247,10 +2249,11 @@ export default function DayWorkoutScreenV2() {
             }}
           />
           {sessionEquipmentRequirements.length > 0 ? (
-            <ExerciseSheetOption
+            <SessionOptionsRow
               label={signedCopy('session.options.equipment.label')}
               sub={signedCopy('session.options.equipment.subline')}
-              icon={<MaterialCommunityIcons name="dumbbell" size={18} color="#67D7FF" />}
+              icon={sessionChangeGlyph('equipment')}
+              iconTint={ACTION_TINT.equipment}
               testID="session-options-equipment"
               onPress={() => {
                 setSessionOptionsVisible(false);
@@ -2258,15 +2261,24 @@ export default function DayWorkoutScreenV2() {
               }}
             />
           ) : null}
-          <ExerciseSheetOption
+          <SessionOptionsRow
             label={signedCopy('session.options.add.label')}
             sub={signedCopy('session.options.add.subline')}
-            icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#C6FF00" />}
+            icon={sessionChangeGlyph('add')}
+            iconTint={ACTION_TINT.add}
             testID="session-options-add"
             onPress={() => {
               setSessionOptionsVisible(false);
               openExerciseAdd();
             }}
+          />
+          <Button
+            label="Back"
+            variant="ghost"
+            size="md"
+            glow={false}
+            onPress={() => setSessionOptionsVisible(false)}
+            style={{ marginTop: spacing.sm }}
           />
         </View>
       </Sheet>
@@ -4970,6 +4982,44 @@ interface ExerciseSheetOptionProps {
   testID?: string;
   onPress: () => void;
 }
+
+interface SessionOptionsRowProps {
+  label: string;
+  sub: string;
+  icon: React.ReactNode;
+  iconTint: string;
+  testID: string;
+  onPress: () => void;
+}
+
+/**
+ * The active-session menu uses the same flat row rhythm as Day plan options:
+ * one circular icon well, label/subline, and a quiet divider. The glyph itself
+ * comes from SessionChangeHub's original icon owner so moving the actions can
+ * never redraw the dumbbell, medical cross or plus.
+ */
+function SessionOptionsRow({
+  label, sub, icon, iconTint, testID, onPress,
+}: SessionOptionsRowProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.sessionOptionsRow, pressed && { opacity: 0.7 }]}
+    >
+      <View style={[styles.sessionOptionsIcon, { backgroundColor: iconTint }]}>
+        {icon}
+      </View>
+      <View style={styles.sessionOptionsText}>
+        <Text style={styles.sessionOptionsLabel}>{label}</Text>
+        <Text style={styles.sessionOptionsSub}>{sub}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function ExerciseSheetOption({ label, sub, icon, testID, onPress }: ExerciseSheetOptionProps) {
   return (
     <Pressable
@@ -5311,6 +5361,34 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sessionOptionsRow: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  sessionOptionsIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  sessionOptionsText: { flex: 1 },
+  sessionOptionsLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sessionOptionsSub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: 2,
   },
   executionSectionIcon: { marginRight: 10 },
   // R-116 — rows with no stepper still reserve the right-side control slot.
