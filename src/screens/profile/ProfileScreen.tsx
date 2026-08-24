@@ -613,22 +613,22 @@ export default function ProfileScreen() {
               label="Equipment"
               value={formatEquipmentProfileSummary(onboardingData)}
             />
-            <TouchableOpacity
-              style={styles.setupChangeButton}
-              activeOpacity={0.7}
+            <V2Button
+              label="Something changed? Tell the coach"
               onPress={onProgramSetupChanged}
+              size="md"
+              glow={false}
+              leftIcon={(
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={18}
+                  color={colors.text.inverse}
+                />
+              )}
+              style={styles.setupChangeButton}
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
-            >
-              <MaterialCommunityIcons
-                name="pencil-outline"
-                size={18}
-                color={colors.accent.lime}
-              />
-              <Text style={styles.setupChangeText}>
-                Something changed? Tell the coach
-              </Text>
-            </TouchableOpacity>
+            />
           </Card>
         </View>
 
@@ -1591,22 +1591,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   setupChangeButton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: 12,
-    backgroundColor: '#1A1E18',
     marginHorizontal: spacing.sm,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  setupChangeText: {
-    color: colors.text.primary,
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 20,
   },
   actionStack: {
     gap: spacing.sm,

@@ -1116,3 +1116,25 @@ joins the day. An ordinary occupied destination remains a legal `swap`.
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - A real multi-edit sequence trading two ordinary occupied sessions.
 - VoiceOver order and the next physical-iPhone Release build.
+
+---
+
+## R-182 — make Profile setup change a primary button
+
+The dark rounded Profile edit control still blended into its card. It now uses
+the exact shared medium primary-button primitive used by Start Session: lime
+fill, black label, black 18-point pencil and the existing full-width geometry.
+Profile owns only the small inset margins, so the button treatment cannot drift
+from the app's primary action owner.
+
+### Evidence
+
+- TEST FIRST: the new treatment cell made `test:profile-reset-ui` 173/1 against
+  the dark control.
+- AFTER: `test:profile-reset-ui` is 174/174 and its chained LFA wordmark tape is
+  15/15.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Real VoiceOver speech and the next Release rebuild.

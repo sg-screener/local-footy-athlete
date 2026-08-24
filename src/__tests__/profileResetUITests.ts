@@ -211,9 +211,10 @@ ok(
 ok('Program setup CTA present', /Something changed\? Tell the coach/.test(src));
 ok('Program setup CTA testID present', /testID="profile-program-setup-change"/.test(src));
 ok(
-  'Program setup CTA uses the established edit-button treatment and pencil icon',
-  /<MaterialCommunityIcons[\s\S]{0,100}name="pencil-outline"[\s\S]{0,100}size=\{18\}[\s\S]{0,100}color=\{colors\.accent\.lime\}/.test(src)
-    && /setupChangeButton:\s*\{[^}]*minHeight:\s*48[^}]*flexDirection:\s*'row'[^}]*borderRadius:\s*12[^}]*backgroundColor:\s*'#1A1E18'/s.test(src),
+  'Program setup CTA uses the same lime primary treatment as Start Session',
+  /<V2Button[\s\S]{0,180}label="Something changed\? Tell the coach"[\s\S]{0,220}size="md"[\s\S]{0,120}glow=\{false\}/.test(src)
+    && /name="pencil-outline"[\s\S]{0,100}size=\{18\}[\s\S]{0,100}color=\{colors\.text\.inverse\}/.test(src)
+    && !/setupChangeButton:\s*\{[^}]*backgroundColor:\s*'#1A1E18'/s.test(src),
 );
 ok(
   'Program setup CTA opens guided setup sheet',

@@ -4962,3 +4962,15 @@ day combines the two sessions and never swaps Team Training away. The open
 workout keeps its narrower Equipment, Injury and Add hub because exercise-level
 Quick Swap and Quick Remove already own row changes. · `WORKING` —
 `test:day-first-timeline` + `test:move-scoping`. Seat `onboardingtype`.
+
+---
+
+**R-182** · Profile setup change is a primary action (Sam, 2026-08-24) ·
+**SAME VISUAL PRIORITY AS START SESSION.**
+
+**Something changed? Tell the coach** is a full-width lime primary button with
+black text and a black pencil, using the same shared medium button treatment as
+**Start Session**. This supersedes R-179's dark edit-button treatment: the
+control is important enough to look immediately actionable rather than blend
+into the Program Setup card. · `WORKING` — `test:profile-reset-ui`. Seat
+`onboardingtype`.
