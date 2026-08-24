@@ -184,12 +184,12 @@ Measured evidence after restoration:
   `AFA21856-881E-587B-96D5-60817FD11018`; Renee's phone was not targeted. The
   bundle launched successfully and remained in the device process list as PID
   8959.
+- Sam visually accepted the final Release on his physical iPhone on 2026-08-24:
+  "looks good". This closes the device acceptance requirement for the Coach,
+  Progress and completed Mobility / Warm-up surfaces in this checkpoint.
 
 ## NOT COVERED
 
-- Sam's visual acceptance of Coach, Progress, Privacy and the completed
-  Mobility / Warm-up tick is still required. Installation and launch prove the
-  final package reached the device; they are not presented as visual acceptance.
 - The repository-wide law gate still has its pre-existing unrelated reds: one
   missing `test:game-feedback` script, LR-18 without a registry row, and 21
   existing UNENFORCED rows. This order added one guarded row and did not change
