@@ -5484,3 +5484,56 @@ outlive it as the next screen's dead affordance. · `WORKING` —
 `test:session-duration-feedback` §3/§4, **21 passed, 0 failed** (was 14/0).
 Mutation-proven: removing the end from the save door reds the save cell and only
 it. Seat `warmup`.
+
+---
+
+**R-216** · *"replace the capitalised headings for each section here to be
+regular sentence case like the day view is"* (Sam, 2026-08-25) · **ONE LABEL
+OWNER, ONE VOICE.**
+
+`SECTION_LABELS` already reads `Mobility / Warm-up` and `Strength` — exactly
+what the Day card prints. The session screen was SHOUTING the same strings
+through `textTransform: 'uppercase'` plus 0.5 tracking. Both are deleted and
+nothing replaces them; the strings are untouched, which is the point — this is
+the same correction R-187 made on the Day card's own headings. · `WORKING` —
+`test:session-execution`. Seat `warmup`.
+
+---
+
+**R-217** · *"add the little plus icon the bottom of the last box in each
+section on session view — a 'quick add' feature that allows the athlete to add
+an exercise to that section ... have it follow the same pathway as the old 'add
+exercise' button, then remove the old add exercise button."* (Sam, 2026-08-25) ·
+**THE ADD DOOR MOVES INTO THE SECTION IT ADDS TO.**
+
+**IT IS THE SAME PATHWAY, ENTERED ONE RUNG DOWN.** R-120's level 1 is
+*Strength / Conditioning / Mobility / Warm-up* — and the plus has already
+answered that by WHERE it was tapped, so it opens at `openAddFamily`. No second
+add flow exists: same `legalAddFamilies`/`legalAddCandidates` legality, same
+rungs, same confirm.
+
+**NO TRANSLATION TABLE, BY CONSTRUCTION.** `AddFamilyId` is an `Extract` of
+`SessionExecutionSectionId`, so a section and an add family are one identity. A
+section outside those three — Accessories, Recovery, Optional Work — has no
+family and gets no plus.
+
+⚠ **MOUNTED IN THE ONE SECTION OWNER**, which both the standalone Mobility route
+and `SessionList` render through, so a section cannot exist without having been
+asked the question. A per-route plus is a plus one route forgets — the R-213
+lesson, applied before it could cost anything. A collapsed section shows none.
+
+⚠ **THE MENU ROW IS REPLACED, NOT DUPLICATED** — Sam's word. `openExerciseAdd`
+(level 1) had that row as its only caller and is deleted with it, and
+`session.options.add.label`/`.subline` are **deregistered rather than left
+signed for nobody**. `session.quick_add.label` (*"Quick add"*) is spoken only:
+the control is a bare glyph, so a screen reader hears it beside the section
+name.
+
+⚠ **ITS "Nothing safe to add today" SENTENCE IS GONE, DELIBERATELY.** That
+fallback fired only when EVERY family was empty. Legality is now read per
+section before a plus is drawn, so a section with nothing safe shows no control
+instead of a control that opens on a refusal — the honest answer moved from a
+sentence to an absence. · `WORKING` — `test:session-change-hub` §5b, **55
+passed, 0 failed**. Mutation-proven: dropping the plus from the `SessionList`
+route reds the both-routes cell, and removing the legality check reds the
+families cell — each alone. Seat `warmup`.

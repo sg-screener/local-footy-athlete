@@ -788,17 +788,18 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-25, R-211: equipment-option explanation.',
       text: 'Tell us what’s missing',
     },
+    /* The two `session.options.add.*` strings are DEREGISTERED — Sam,
+     * 2026-08-25 (R-217): the section plus *"will replace the 'add an exercise'
+     * option in the 3 dot menu"*. A signed string with no surface is copy the
+     * next build finds, trusts as ruled, and puts back on a menu he cleared. */
     {
-      id: 'session.options.add.label',
+      id: 'session.quick_add.label',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-209: third active-session option.',
-      text: 'Add an exercise',
-    },
-    {
-      id: 'session.options.add.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-209: Add-option explanation.',
-      text: 'Add something to this session',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-217, his words: "a \'quick add\' '
+        + 'feature that allows the athlete to add an exercise to that section". '
+        + 'Spoken only — the control is a plus glyph, so this is what a screen '
+        + 'reader announces beside the section name.',
+      text: 'Quick add',
     },
     {
       id: 'session.equipment.eyebrow',

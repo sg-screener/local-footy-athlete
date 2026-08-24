@@ -168,6 +168,7 @@ import {
   recordedCompletedSessionExecutionItemIds,
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
+  type SessionExecutionSectionId,
 } from '../../utils/sessionExecutionChecklist';
 import {
   buildSwapSuggestionPayload,
@@ -1193,31 +1194,20 @@ export default function DayWorkoutScreenV2() {
     };
   }, [date, editableExercises]);
 
-  /** LEVEL 1 — Strength / Conditioning / Mobility / Warm-up. */
-  const openExerciseAdd = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    const families = legalAddFamilies(addCandidateArgs());
-    if (families.length === 0) {
-      // HONEST. Every family empty means this athlete's kit and injuries leave
-      // nothing safe to add today, which is a sentence, not an empty list.
-      showExerciseEditFallback(
-        'Nothing safe to add today',
-        'With today’s kit and how you are pulling up, there is nothing safe to add on top of this session.',
-        `Find something safe to add to ${workoutLabel} on ${dateLabel}.`,
-      );
-      return;
-    }
-    setExerciseEditStep({
-      kind: 'add_family',
-      families: families.map((family) => ({
-        id: family.id, label: family.label, count: family.count,
-      })),
-    });
-  }, [
-    addCandidateArgs, dateLabel, editableExercises.length, isTeamOnly,
-    showExerciseEditFallback, workoutLabel,
-  ]);
-
+  /* ⚠ **LEVEL 1 IS DELETED, AND THAT IS THE POINT OF R-217.**
+   *
+   * `openExerciseAdd` opened *"Strength / Conditioning / Mobility / Warm-up"* —
+   * R-120's first rung — and the retired menu row was its only caller. The
+   * section plus answers that question by WHERE it is tapped, so the rung has
+   * nothing left to ask and `openAddFamily` is now the entry point.
+   *
+   * ⚠ **ITS "Nothing safe to add today" SENTENCE WENT WITH IT, DELIBERATELY.**
+   * That fallback fired when EVERY family was empty. Legality is now read per
+   * section before a plus is drawn, so a section with nothing safe shows no
+   * control instead of a control that opens on a refusal — the honest answer
+   * moved from a sentence to an absence. `showExerciseEditFallback` keeps its
+   * other callers.
+   */
   /** LEVEL 2 — the headings inside one family. */
   const openAddFamily = React.useCallback((
     family: AddFamilyId,
@@ -1235,6 +1225,42 @@ export default function DayWorkoutScreenV2() {
       ...(fromFamily ? { fromFamily } : {}),
     });
   }, [addCandidateArgs]);
+
+  /**
+   * ⚠ **WHICH SECTIONS OFFER A QUICK ADD — R-217.**
+   *
+   * `AddFamilyId` is an `Extract` of `SessionExecutionSectionId`, so a section
+   * and an add family are THE SAME IDENTITY and no translation table is needed
+   * (`addExerciseCandidates`: *"the families ARE session sections"*). A section
+   * outside those three — Accessories, Recovery, Optional Work — has no family
+   * to add into and gets no plus.
+   *
+   * The legality is the SAME `legalAddFamilies` pass the retired menu row ran,
+   * so a family with nothing safe for today's kit and injuries shows no plus at
+   * all rather than a control that opens on an empty list.
+   */
+  const quickAddFamilies = React.useMemo(() => {
+    if (isTeamOnly || isFinished || isAlreadyComplete || editableExercises.length === 0) {
+      return new Set<AddFamilyId>();
+    }
+    return new Set(legalAddFamilies(addCandidateArgs()).map((family) => family.id));
+  }, [
+    addCandidateArgs, editableExercises.length, isAlreadyComplete, isFinished, isTeamOnly,
+  ]);
+
+  /** The tap for one section's plus, or `null` when that section has none. */
+  const quickAddFor = React.useCallback(
+    (sectionId: SessionExecutionSectionId): (() => void) | null => {
+      const family = sectionId as AddFamilyId;
+      if (!quickAddFamilies.has(family)) return null;
+      // ⚠ ENTERS THE EXISTING HIERARCHY ONE LEVEL DOWN — R-120's level 1 IS the
+      // three section names, and the plus has already answered that question by
+      // WHERE it was tapped. Asking again would be the "path is the context"
+      // mistake R-120b names, in reverse.
+      return () => openAddFamily(family);
+    },
+    [openAddFamily, quickAddFamilies],
+  );
 
   /**
    * THE EXERCISE LIST FOR ONE LEAF. Shared by both routes into it, so the two
@@ -2130,6 +2156,7 @@ export default function DayWorkoutScreenV2() {
                 key={section.id}
                 section={section}
                 completedItemIds={completedExerciseIds}
+                onQuickAdd={quickAddFor(section.id)}
               >
                 <MobilityExerciseList
                   flow={mobilityFlow}
@@ -2157,6 +2184,7 @@ export default function DayWorkoutScreenV2() {
             <SessionList
               items={sessionTemplate.items}
               executionPlan={executionPlan!}
+              quickAddFor={quickAddFor}
               completedItemIds={completedExerciseIds}
               onToggleItem={toggleExerciseComplete}
               implementFor={implementFor}
@@ -2272,17 +2300,16 @@ export default function DayWorkoutScreenV2() {
               }}
             />
           ) : null}
-          <SessionOptionsRow
-            label={signedCopy('session.options.add.label')}
-            sub={signedCopy('session.options.add.subline')}
-            icon={sessionChangeGlyph('add')}
-            iconTint={ACTION_TINT.add}
-            testID="session-options-add"
-            onPress={() => {
-              setSessionOptionsVisible(false);
-              openExerciseAdd();
-            }}
-          />
+          {/* ⚠ **THE ADD ROW IS GONE FROM THIS MENU — SAM, 2026-08-25 (R-217):
+            * *"it will replace the 'add an exercise' option in the 3 dot menu
+            * in the top right corner"*.**
+            *
+            * It is REPLACED, not duplicated: the section plus knows which
+            * section it adds to, and this row could only ever ask that question
+            * again as its first step. Two doors to one flow, one of which has
+            * to ask something the other already answered, is the shape this
+            * screen keeps paying for. `openExerciseAdd` — the level-1 opener
+            * this row was the only caller of — went with it. */}
           <Button
             label="Back"
             variant="ghost"
@@ -2661,6 +2688,8 @@ interface SessionListProps {
   onSelectExercise: (name: string) => void;
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
+  /** R-217 — the section's quick-add tap, or `null` where nothing is legal. */
+  quickAddFor: (sectionId: SessionExecutionSectionId) => (() => void) | null;
 }
 
 /**
@@ -2801,6 +2830,7 @@ function SessionList({
   onSelectExercise,
   onQuickSwap,
   onQuickRemove,
+  quickAddFor,
 }: SessionListProps) {
   if (items.length === 0) return null;
 
@@ -2892,6 +2922,7 @@ function SessionList({
           key={section.id}
           section={section}
           completedItemIds={completedItemIds}
+          onQuickAdd={quickAddFor(section.id)}
         >
           {section.items.map((executionItem) => (
             <ExecutionChecklistItem
@@ -2938,9 +2969,21 @@ function withholdingOfTemplateItem(
     ?.unavailableForInjury ?? null;
 }
 
-function SessionExecutionSection({ section, completedItemIds, children }: {
+function SessionExecutionSection({ section, completedItemIds, onQuickAdd, children }: {
   section: SessionExecutionSectionModel;
   completedItemIds: ReadonlySet<string>;
+  /**
+   * ⚠ **R-217 (Sam, 2026-08-25): *"add the little plus icon the bottom of the
+   * last box in each section ... a 'quick add' feature that allows the athlete
+   * to add an exercise to that section"*.**
+   *
+   * `null` when this section has nothing legal to add — the athlete's kit and
+   * injuries decide that, not this component. **It is mounted HERE, in the one
+   * section owner both the Mobility route and `SessionList` render through, so
+   * a section cannot exist without having been asked the question.** That is
+   * the same lesson as R-213: a per-surface plus is a plus one surface forgets.
+   */
+  onQuickAdd?: (() => void) | null;
   children: React.ReactNode;
 }) {
   /**
@@ -3004,6 +3047,26 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
           testID={`session-execution-items-${section.id}`}
         >
           {children}
+          {/* THE PLUS SITS UNDER THE LAST CARD, INSIDE THE SECTION IT ADDS TO —
+            * which is what makes it unambiguous without a label: a control
+            * between two headings would belong to neither. A collapsed section
+            * shows none, because a plus with no visible list to join is an
+            * instruction to guess. */}
+          {onQuickAdd ? (
+            <View style={styles.quickAddRow}>
+              <View style={styles.quickAddConnector} />
+              <Pressable
+                onPress={onQuickAdd}
+                accessibilityRole="button"
+                accessibilityLabel={`${signedCopy('session.quick_add.label')}: ${section.label}`}
+                testID={`session-quick-add-${section.id}`}
+                hitSlop={10}
+                style={({ pressed }) => [styles.quickAddButton, pressed && { opacity: 0.6 }]}
+              >
+                <MaterialCommunityIcons name="plus" size={16} color={colors.text.secondary} />
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -5399,13 +5462,37 @@ const styles = StyleSheet.create({
   // sibling-in-one-row shape as every other control pair.
   addonCheckboxSlot: { flexDirection: 'row', alignItems: 'center' },
   executionSectionHeading: { flex: 1, gap: 2 },
+  /* ⚠ **R-216 (Sam, 2026-08-25): *"replace the capitalised headings for each
+   * section here to be regular sentence case like the day view is"*.**
+   *
+   * The `textTransform: 'uppercase'` and its 0.5 tracking are GONE, and nothing
+   * replaces them: `SECTION_LABELS` already reads `Mobility / Warm-up` and
+   * `Strength`, which is exactly what the Day card prints. The two surfaces
+   * were shouting and speaking the same words — one owner, two voices. Do not
+   * re-case the strings here to "match"; the label is the label. */
   executionSectionTitle: {
     color: colors.text.primary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  },
+  /* R-217 — the quick-add plus. A hairline drops from the last card to a small
+   * outlined circle, the same "one more of these" shape the Week card uses. */
+  quickAddRow: { alignItems: 'center', paddingTop: spacing.sm },
+  quickAddConnector: {
+    width: StyleSheet.hairlineWidth,
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  quickAddButton: {
+    marginTop: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   executionSectionCount: {
     color: colors.text.tertiary,

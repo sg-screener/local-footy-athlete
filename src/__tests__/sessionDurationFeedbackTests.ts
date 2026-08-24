@@ -116,37 +116,37 @@ ok('the ended measurement still pre-fills the matching strength session',
  * end now happens on the one action that cannot be taken back. */
 console.log('\n[3] The timer ends when the session is saved, not when the form opens');
 const hook = read('screens/home/useDayWorkout.ts');
-ok('opening the feedback sheet no longer ends the timer',
-  /const handleFinishWorkout = useCallback\(\(\) => \{\s*setIsFinished\(true\);\s*\}/.test(hook),
-  'Log Session opens a sheet the athlete can still cancel out of');
+ok('opening the feedback sheet no longer ends the timer — Log Session opens a '
+  + 'sheet the athlete can still cancel out of',
+  /const handleFinishWorkout = useCallback\(\(\) => \{\s*setIsFinished\(true\);\s*\}/.test(hook));
 ok('Save & Finish ends only the opened workout timer',
   /const handleFeedbackSaved = useCallback\([\s\S]{0,700}endStopwatchFor\(\{[\s\S]{0,180}workoutId: workout\.id[\s\S]{0,180}dateISO: date/.test(hook));
-ok('and cancelling the form cannot end it',
-  /const handleCancelFeedback = useCallback\(\(\) => \{\s*setIsFinished\(false\);\s*\}/.test(hook),
-  'the athlete who backs out of the form keeps the count they were running');
+ok('and cancelling the form cannot end it — the athlete who backs out keeps the '
+  + 'count they were running',
+  /const handleCancelFeedback = useCallback\(\(\) => \{\s*setIsFinished\(false\);\s*\}/.test(hook));
 
 /* ══ 4. The End control is gone ══ */
 console.log('\n[4] The header offers Start, Pause and Resume — never End');
 const control = read('components/SessionStopwatchControl.tsx');
-ok('the End button is removed from the running control',
+ok('the End button is removed from the running control — R-132 offered "pause or '
+  + 'end", R-215 keeps the pause half only',
   !/session-stopwatch-end/.test(control)
-    && !/SESSION_STOPWATCH_COPY\.end/.test(control),
-  'R-132 offered "pause or end"; R-215 keeps the pause half only');
-ok('and the control no longer reaches the store\'s whole-session end at all',
-  !/state\) => state\.end\b/.test(control),
-  'a handler with no button is the next screen\'s dead affordance');
+    && !/SESSION_STOPWATCH_COPY\.end/.test(control));
+ok('and the control no longer reaches the store\'s whole-session end at all — a '
+  + 'handler with no button is the next screen\'s dead affordance',
+  !/state\) => state\.end\b/.test(control));
 ok('Pause and Resume both survive — only End was retired',
   /session-stopwatch-pause-resume/.test(control)
     && /SESSION_STOPWATCH_COPY\.pause/.test(control)
     && /SESSION_STOPWATCH_COPY\.resume/.test(control));
-ok('the retired word is deregistered, not left signed for nobody',
+ok('the retired word is deregistered, not left signed for nobody — a signed '
+  + 'string with no surface is copy the next build will find and use',
   // Comments stripped: the file still EXPLAINS the retirement by name, and a
   // cell that reddened on its own explanation would force the reason out too.
   !/session\.stopwatch\.end/.test(
     read('rules/sessionStopwatchCopy.ts')
       .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, ''),
-  ),
-  'a signed string with no surface is copy the next build will find and use');
+  ));
 
 /* THE STORE KEEPS `end`, AND THAT IS NOT AN OVERSIGHT: `endFor` is built on it
  * and Save & Finish is now its one caller. What was deleted is the BUTTON. */

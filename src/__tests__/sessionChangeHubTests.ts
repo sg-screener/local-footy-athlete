@@ -107,12 +107,18 @@ console.log('\n[4] The open-session sheet uses the three signed rows in Sam’s 
   ok('CONTROL — the session-options sheet can be bounded',
     sheetAt > 0 && sheetEnd > sheetAt && sheet.length > 1000,
     `${sheetAt}..${sheetEnd}`);
-  const order = ['injury', 'equipment', 'add'];
-  const labels = ['Something hurts', 'Equipment changed', 'Add an exercise'];
+  /* ⚠ **THE ADD ROW LEFT THIS MENU — SAM, 2026-08-25 (R-217): *"it will replace
+   * the 'add an exercise' option in the 3 dot menu in the top right corner"*.**
+   * Add is now the plus at the foot of each section, which knows WHICH section
+   * it adds to; this row could only ever have asked that same question as its
+   * first step. The cells are narrowed to the two rows that remain and joined
+   * by [6] below, which requires the row's ABSENCE and the plus's presence —
+   * inverted, not deleted (`gate-must-watch-the-deleted-surface`). */
+  const order = ['injury', 'equipment'];
+  const labels = ['Something hurts', 'Equipment changed'];
   const sublines = [
     'Adjust around pain or a niggle',
     'Tell us what’s missing',
-    'Add something to this session',
   ];
   let cursor = -1;
   let ordered = true;
@@ -134,18 +140,19 @@ console.log('\n[4] The open-session sheet uses the three signed rows in Sam’s 
       && !sheet.includes('<ExerciseSheetOption')
       && /sessionOptionsRow:\s*\{[\s\S]{0,220}borderBottomWidth: StyleSheet\.hairlineWidth[\s\S]{0,120}borderBottomColor: 'rgba\(255,255,255,0\.08\)'/.test(live)
       && /sessionOptionsIcon:\s*\{[\s\S]{0,120}width:\s*38[\s\S]{0,80}height:\s*38[\s\S]{0,80}borderRadius:\s*19/.test(live));
-  ok('the popup restores the original dumbbell, medical-cross and plain-plus glyphs',
+  ok('the popup restores the original dumbbell and medical-cross glyphs',
     /import \{ ACTION_TINT, glyph as sessionChangeGlyph \}/.test(live)
       && sheet.includes("icon={sessionChangeGlyph('injury')}")
       && sheet.includes("icon={sessionChangeGlyph('equipment')}")
-      && sheet.includes("icon={sessionChangeGlyph('add')}")
       && hubSource.includes('d="M6.5 7v10M4 9v6M17.5 7v10M20 9v6M6.5 12h11"')
-      && hubSource.includes('d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"')
-      && hubSource.includes('d="M12 5v14M5 12h14"'));
-  ok('the original icon tints remain attached to those same three actions',
+      && hubSource.includes('d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"'));
+  /* The hub KEEPS its plus path — the Day plan dots still open Add ([7] below),
+   * and that is a different door from the one the session menu lost. */
+  ok('the shared plus glyph survives for the Day plan door that still uses it',
+    hubSource.includes('d="M12 5v14M5 12h14"'));
+  ok('the original icon tints remain attached to those same two actions',
     sheet.includes('iconTint={ACTION_TINT.injury}')
       && sheet.includes('iconTint={ACTION_TINT.equipment}')
-      && sheet.includes('iconTint={ACTION_TINT.add}')
       && /injury: 'rgba\(255, 127, 127, 0\.12\)'/.test(hubSource)
       && /equipment: 'rgba\(30, 167, 255, 0\.12\)'/.test(hubSource)
       && /add: 'rgba\(198, 255, 0, 0\.12\)'/.test(hubSource));
@@ -157,17 +164,74 @@ console.log('\n[5] NO DEAD BUTTONS — every open-session door names a real open
 {
   const sheetAt = live.indexOf('testID="session-options-sheet"');
   const sheet = live.slice(sheetAt, live.indexOf('testID="session-feedback-sheet"', sheetAt));
-  const openers = ['openSessionInjuryFlow', 'openSessionEquipment', 'openExerciseAdd'];
+  const openers = ['openSessionInjuryFlow', 'openSessionEquipment'];
   for (const opener of openers) {
     ok(`'${opener}' is a real callback on this screen`,
       new RegExp(`const ${opener} = React\\.useCallback`).test(live)
         && sheet.includes(`${opener}();`));
   }
   ok('each choice closes the menu before entering its established flow',
-    (sheet.match(/setSessionOptionsVisible\(false\);/g) ?? []).length === 3);
+    (sheet.match(/setSessionOptionsVisible\(false\);/g) ?? []).length === 2);
+  /* R-217 — the level-1 opener went with the row it served. `openExerciseAdd`
+   * asked "Strength / Conditioning / Mobility?", which is the one question the
+   * section plus has already answered by where it was tapped. Comments
+   * stripped: the screen still EXPLAINS the deletion by name. */
+  ok('the retired level-1 add opener is deleted, not left callable',
+    !/const openExerciseAdd = React\.useCallback/.test(live)
+      && !/openExerciseAdd\(\)/.test(
+        live.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, ''),
+      ),
+    'a handler with no door is the next screen\'s dead affordance');
   // Equipment is the ONE door that comes and goes, and it goes by ABSENCE.
   ok('Equipment is conditional on the session actually having requirements',
     /sessionEquipmentRequirements\.length > 0[\s\S]{0,260}session\.options\.equipment\.label/.test(sheet));
+}
+
+/* ══ THE ADD DOOR MOVED — it is a plus at the foot of each section ══ */
+console.log('\n[5b] Quick add: one plus per section, in the one section owner');
+{
+  ok('the plus is mounted in the SHARED section component, not per render route',
+    /function SessionExecutionSection\(\{ section, completedItemIds, onQuickAdd, children \}/.test(live)
+      && /testID=\{`session-quick-add-\$\{section\.id\}`\}/.test(live),
+    'both the Mobility route and SessionList render through this one owner');
+  ok('and BOTH render routes hand it the section\'s own tap',
+    (live.match(/onQuickAdd=\{quickAddFor\(section\.id\)\}/g) ?? []).length === 2,
+    'a route that omitted it would silently lose the plus for its sections');
+  ok('it sits AFTER the section\'s rows, under the last card',
+    (() => {
+      const at = live.indexOf('testID={`session-execution-items-${section.id}`}');
+      const children = live.indexOf('{children}', at);
+      const plus = live.indexOf('session-quick-add-', children);
+      return at > 0 && children > at && plus > children;
+    })());
+  ok('a collapsed section shows no plus',
+    (() => {
+      const expanded = live.indexOf('{expanded ? (');
+      const plus = live.indexOf('session-quick-add-', expanded);
+      const close = live.indexOf(') : null}', plus);
+      return expanded > 0 && plus > expanded && close > plus;
+    })(),
+    'a plus with no visible list to join is an instruction to guess');
+  ok('the tap enters the EXISTING hierarchy one level down, at the section\'s family',
+    /const quickAddFor = React\.useCallback\([\s\S]{0,900}openAddFamily\(family\)/.test(live),
+    'same legality owner, same rungs — only the first question is skipped');
+  ok('legality is the same legalAddFamilies pass the retired row ran',
+    /const quickAddFamilies = React\.useMemo\([\s\S]{0,700}legalAddFamilies\(addCandidateArgs\(\)\)/.test(live));
+  ok('a finished, already-saved or team-only session offers no plus',
+    /const quickAddFamilies = React\.useMemo\(\(\) => \{[\s\S]{0,320}isTeamOnly \|\| isFinished \|\| isAlreadyComplete/.test(live));
+  ok('a section outside the three add families gets none either',
+    /quickAddFamilies\.has\(family\)/.test(live)
+      && /ADD_FAMILY_ORDER: readonly AddFamilyId\[\] = \['strength', 'conditioning', 'mobility'\]/
+        .test(readFileSync(
+          join(__dirname, '..', 'utils', 'addExerciseCandidates.ts'), 'utf8',
+        )),
+    'AddFamilyId is an Extract of SessionExecutionSectionId — one identity, no table');
+  ok('the spoken label names the section, since the control is a bare glyph',
+    /accessibilityLabel=\{`\$\{signedCopy\('session\.quick_add\.label'\)\}: \$\{section\.label\}`\}/.test(live)
+      && /id: 'session\.quick_add\.label'[\s\S]{0,500}text: 'Quick add'/.test(copySource));
+  ok('and the menu row\'s two signed strings are deregistered, not left signed for nobody',
+    !/id: 'session\.options\.add\.(label|subline)'/.test(copySource),
+    'a signed string with no surface is copy the next build finds and uses');
 }
 
 console.log('\n[6] What Sam said to KEEP is still here');
