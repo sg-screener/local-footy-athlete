@@ -4759,3 +4759,14 @@ Program Setup, FAQ, Support, Developer Tools, Legal and Danger Zone. The green
 **Something changed? Tell the coach** strip and the red Danger Zone border keep
 their existing semantic treatments. Setup-sheet cards are outside this page
 surface ruling. · `WORKING` — `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-167** · Welcome first-card heading replacement (Sam, 2026-08-24) ·
+**FULL ATHLETIC DEVELOPMENT.**
+
+The **YOUR PLAN** card heading is **Full athletic development**. Its body remains
+**“Strength, speed, conditioning and recovery.”** The retired **Train everything
+that matters**, **Built as one program** and **Everything works together**
+headings are absent. · `WORKING` — `test:onboarding-presentation`. Seat
+`onboardingtype`.

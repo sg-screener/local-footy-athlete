@@ -322,6 +322,34 @@ Zone now use one `#101010` page-card surface.
 
 ---
 
+## R-167 — Full athletic development
+
+Sam replaced the first Welcome-card heading **Train everything that matters**
+with **Full athletic development**. The body remains **Strength, speed,
+conditioning and recovery.**
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 93/95; the approved-copy and
+  retired-copy cells were the only failures.
+- AFTER: `test:onboarding-presentation` — 95/95.
+- The guard requires the new heading and independently rejects the retired
+  wording, so both an omission and a rollback fail.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. R-167 updates
+  an existing guarded Welcome law, so the registry remains 171 / 150 guarded.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-167 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels and wrapping after the copy change.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the
