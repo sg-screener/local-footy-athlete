@@ -116,6 +116,7 @@ import {
 import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
 import { signedCopy } from '../rules/signedCopy';
 import { STRENGTH_FEEDBACK_COPY } from '../rules/strengthSessionFeedback';
+import { parseSessionDurationMinutes } from '../rules/sessionDuration';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -187,21 +188,6 @@ function parseRpe(value: string): number | undefined {
   const parsed = parseNumberField(value);
   if (parsed === undefined) return undefined;
   return Math.max(1, Math.min(10, Math.round(parsed)));
-}
-
-function parseHoursMinutes(hours: string, minutes: string): {
-  valid: boolean;
-  totalMinutes: number;
-} {
-  const parsedHours = /^\d+$/.test(hours.trim()) ? Number(hours.trim()) : NaN;
-  const parsedMinutes = /^\d+$/.test(minutes.trim()) ? Number(minutes.trim()) : NaN;
-  const valid = Number.isInteger(parsedHours) && parsedHours >= 0
-    && Number.isInteger(parsedMinutes) && parsedMinutes >= 0 && parsedMinutes <= 59
-    && parsedHours * 60 + parsedMinutes > 0;
-  return {
-    valid,
-    totalMinutes: valid ? parsedHours * 60 + parsedMinutes : 0,
-  };
 }
 
 function draftFromExistingFeedback(
@@ -294,11 +280,8 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
   const [completion, setCompletion] = useState<FeedbackCompletion | null>(
     initial ? 'full' : null,
   );
-  const [hours, setHours] = useState(
-    initial ? String(Math.floor(initial.durationMinutes / 60)) : '',
-  );
   const [minutes, setMinutes] = useState(
-    initial ? String(initial.durationMinutes % 60) : '',
+    initial ? String(initial.durationMinutes) : '',
   );
   const [effort, setEffort] = useState<number | null>(
     isSessionEffortRating(initial?.effort) ? initial!.effort : null,
@@ -308,13 +291,12 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
   useEffect(() => {
     const team = existing?.teamTraining;
     setCompletion(team ? 'full' : null);
-    setHours(team ? String(Math.floor(team.durationMinutes / 60)) : '');
-    setMinutes(team ? String(team.durationMinutes % 60) : '');
+    setMinutes(team ? String(team.durationMinutes) : '');
     setEffort(isSessionEffortRating(team?.effort) ? team!.effort : null);
     setSaveRefusal(null);
   }, [date, existing]);
 
-  const duration = parseHoursMinutes(hours, minutes);
+  const duration = parseSessionDurationMinutes(minutes);
   const attended = completion === 'full' || completion === 'partial';
   const recordableRefusal = sessionOutcomeRecordableRefusal(date);
   /* A SKIP NEEDS NO NUMBERS. "I did not go" is a complete answer, and demanding
@@ -419,37 +401,19 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
           </SectionLabel>
           <View style={styles.gameDurationRow}>
             <View style={styles.gameDurationField}>
-              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
-              <AppTextInput
-                testID="club-training-feedback-hours"
-                style={styles.gameDurationInput}
-                value={hours}
-                onChangeText={setHours}
-                placeholder="1"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType="numeric"
-                maxLength={2}
-              />
-            </View>
-            <View style={styles.gameDurationField}>
               <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
               <AppTextInput
                 testID="club-training-feedback-minutes"
                 style={styles.gameDurationInput}
                 value={minutes}
                 onChangeText={setMinutes}
-                placeholder="30"
+                placeholder="90"
                 placeholderTextColor={colors.text.tertiary}
                 keyboardType="numeric"
-                maxLength={2}
+                maxLength={3}
               />
             </View>
           </View>
-          {(hours.trim() || minutes.trim()) && !duration.valid ? (
-            <Text style={styles.inputError}>
-              {TEAM_TRAINING_FEEDBACK_COPY.durationRefusal}
-            </Text>
-          ) : null}
 
           <SectionLabel style={styles.section}>
             {TEAM_TRAINING_FEEDBACK_COPY.effortQuestion}
@@ -502,13 +466,12 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
     | SessionFeedback
     | undefined;
   const initialGame = existing?.game;
-  const initialHours = initialGame ? Math.floor(initialGame.timeOnGroundMinutes / 60) : 0;
-  const initialMinutes = initialGame ? initialGame.timeOnGroundMinutes % 60 : 0;
   const [playedWholeGame, setPlayedWholeGame] = useState<boolean | null>(
     initialGame?.playedWholeGame ?? null,
   );
-  const [hours, setHours] = useState(initialGame ? String(initialHours) : '');
-  const [minutes, setMinutes] = useState(initialGame ? String(initialMinutes) : '');
+  const [minutes, setMinutes] = useState(
+    initialGame ? String(initialGame.timeOnGroundMinutes) : '',
+  );
   const [bodyRpe, setBodyRpe] = useState<number | null>(initialGame?.bodyRpe ?? null);
   const [gameFeel, setGameFeel] = useState<FeedbackGameFeel | null>(
     initialGame?.feel ?? existing?.gameFeel ?? null,
@@ -518,14 +481,13 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
   useEffect(() => {
     const game = existing?.game;
     setPlayedWholeGame(game?.playedWholeGame ?? null);
-    setHours(game ? String(Math.floor(game.timeOnGroundMinutes / 60)) : '');
-    setMinutes(game ? String(game.timeOnGroundMinutes % 60) : '');
+    setMinutes(game ? String(game.timeOnGroundMinutes) : '');
     setBodyRpe(game?.bodyRpe ?? null);
     setGameFeel(game?.feel ?? existing?.gameFeel ?? null);
     setSaveRefusal(null);
   }, [date, existing]);
 
-  const gameDuration = parseHoursMinutes(hours, minutes);
+  const gameDuration = parseSessionDurationMinutes(minutes);
   const validDuration = gameDuration.valid;
   const timeOnGroundMinutes = gameDuration.totalMinutes;
   const recordableRefusal = sessionOutcomeRecordableRefusal(date);
@@ -631,35 +593,19 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.durationQuestion}</SectionLabel>
       <View style={styles.gameDurationRow}>
         <View style={styles.gameDurationField}>
-          <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
-          <AppTextInput
-            testID="game-feedback-hours"
-            style={styles.gameDurationInput}
-            value={hours}
-            onChangeText={setHours}
-            placeholder="1"
-            placeholderTextColor={colors.text.tertiary}
-            keyboardType="numeric"
-            maxLength={2}
-          />
-        </View>
-        <View style={styles.gameDurationField}>
           <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
           <AppTextInput
             testID="game-feedback-minutes"
             style={styles.gameDurationInput}
             value={minutes}
             onChangeText={setMinutes}
-            placeholder="30"
+            placeholder="80"
             placeholderTextColor={colors.text.tertiary}
             keyboardType="numeric"
-            maxLength={2}
+            maxLength={3}
           />
         </View>
       </View>
-      {(hours.trim() || minutes.trim()) && !validDuration ? (
-        <Text style={styles.inputError}>{GAME_FEEDBACK_COPY.durationRefusal}</Text>
-      ) : null}
 
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.rpeQuestion}</SectionLabel>
       <Text style={styles.rpeHint}>{GAME_FEEDBACK_COPY.rpeHint}</Text>
@@ -815,12 +761,17 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   // the session with the header stopwatch, the measured minutes seed the box —
   // *"makes putting in the feed back form very easy"*. The stored answer
   // always outranks the measurement; the athlete can still edit either.
-  const seededMinutes = existing?.actualMinutes ?? measuredMinutesFor(date);
-  const [strengthHours, setStrengthHours] = useState(
-    seededMinutes ? String(Math.floor(seededMinutes / 60)) : '',
+  const stopwatchMinutes = useMemo(
+    () => workout ? measuredMinutesFor({
+      workoutId: workout.id,
+      dateISO: date,
+      nowISO: new Date().toISOString(),
+    }) : null,
+    [date, workout?.id],
   );
+  const seededMinutes = existing?.actualMinutes ?? stopwatchMinutes;
   const [strengthMinutes, setStrengthMinutes] = useState(
-    seededMinutes ? String(seededMinutes % 60) : '',
+    seededMinutes ? String(seededMinutes) : '',
   );
 
   // Re-sync local state when navigating to a different date
@@ -850,7 +801,8 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     setAveragePace(conditioning?.averagePace ?? '');
     setConditioningRpe(textFromNumber(conditioning?.rpe));
     setSessionRpe(isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null);
-  }, [date, existing, sessionComponents, conditioningConfig.suggestedMode]);
+    setStrengthMinutes(seededMinutes ? String(seededMinutes) : '');
+  }, [date, existing, sessionComponents, conditioningConfig.suggestedMode, seededMinutes]);
 
   const feedbackDraft: FeedbackFormDraft = {
     completion,
@@ -884,8 +836,8 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     teamTrainingCompletion === 'full' || teamTrainingCompletion === 'partial'
   );
   // THE SAME PARSER THE OTHER TWO USE — not a second design, per the order.
-  const strengthDuration = parseHoursMinutes(strengthHours, strengthMinutes);
-  const strengthAnswered = strengthHours.trim() !== '' || strengthMinutes.trim() !== '';
+  const strengthDuration = parseSessionDurationMinutes(strengthMinutes);
+  const strengthAnswered = strengthMinutes.trim() !== '';
   // OPTIONAL, AND THAT IS THE RULING'S OWN SHAPE. A session missing the answer
   // is UNMEASURED (Sam chose (a) over (b)), so a blank must not block the save —
   // blocking would strand an athlete who simply did not time their session.
@@ -1372,37 +1324,19 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
               </SectionLabel>
               <View style={styles.gameDurationRow}>
                 <View style={styles.gameDurationField}>
-                  <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
-                  <AppTextInput
-                    testID="strength-feedback-hours"
-                    style={styles.gameDurationInput}
-                    value={strengthHours}
-                    onChangeText={setStrengthHours}
-                    placeholder="1"
-                    placeholderTextColor={colors.text.tertiary}
-                    keyboardType="numeric"
-                    maxLength={2}
-                  />
-                </View>
-                <View style={styles.gameDurationField}>
                   <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
                   <AppTextInput
                     testID="strength-feedback-minutes"
                     style={styles.gameDurationInput}
                     value={strengthMinutes}
                     onChangeText={setStrengthMinutes}
-                    placeholder="30"
+                    placeholder="60"
                     placeholderTextColor={colors.text.tertiary}
                     keyboardType="numeric"
-                    maxLength={2}
+                    maxLength={3}
                   />
                 </View>
               </View>
-              {strengthAnswered && !strengthDuration.valid ? (
-                <Text style={styles.inputError}>
-                  {GAME_FEEDBACK_COPY.durationRefusal}
-                </Text>
-              ) : null}
             </>
           ) : null}
         </>

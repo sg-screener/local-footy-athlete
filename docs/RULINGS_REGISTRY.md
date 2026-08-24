@@ -4790,3 +4790,18 @@ The Team Training Days picker uses the same single **M T W T F S S** row as
 Game Day and usual gym days. It remains a multi-select answer and retains its
 existing Continue rule and selected-count feedback. · `WORKING` —
 `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-170** · Session-duration feedback and stopwatch handoff (Sam, 2026-08-24) ·
+**ONE MINUTES FIELD; THE STRENGTH TIMER PREFILLS IT.**
+
+Team Training, Game and programmed-session feedback show one **Minutes** field,
+not separate Hours and Minutes fields. Existing stored durations remain total
+minutes and reopen as that same total. For a strength session, Pause preserves
+the frozen elapsed reading, End stores it, and Log Session captures the latest
+elapsed reading before opening feedback. A timer result is matched by workout
+and date, pre-fills the editable Minutes field, and never replaces an already
+saved athlete answer. If the timer was never used, the field stays blank for the
+athlete's estimate. · `WORKING` — `test:session-logging-ui`. Seat
+`onboardingtype`.

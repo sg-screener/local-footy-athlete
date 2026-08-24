@@ -12,10 +12,8 @@
  * 2026-08-13. It deliberately echoes the GAME one: "rough" tells the athlete an
  * estimate is fine, which is the difference between an answer and a blank.
  *
- * THE HOURS / MINUTES LABELS AND THE REFUSAL ARE REUSED, NOT RE-SIGNED. The
- * team-training block already reuses `GAME_FEEDBACK_COPY.hours` / `.minutes`;
- * a third copy of the word "Hours" would be three places for one word to
- * disagree.
+ * R-170 makes the stored unit the displayed unit: one total-minutes answer on
+ * every feedback form. The common Minutes label stays owned by gameFeedback.
  */
 
 import { registerSignedCopy, signedCopy } from './signedCopy';

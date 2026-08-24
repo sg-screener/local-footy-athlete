@@ -25,9 +25,7 @@ registerSignedCopy([
   // adjective nobody reads; saying it in brackets is what stops an athlete
   // leaving the box empty because they do not know the exact number.
   { id: 'game.feedback.duration_question', source: 'sam_ruling', provenance: 'SIGNED — Sam, 2026-08-22, verbatim. Supersedes the 2026-08-11 wording (batch 18-b-i-C).', text: 'Time on ground (estimate)' },
-  { id: 'game.feedback.hours', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input', text: 'Hours' },
   { id: 'game.feedback.minutes', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input', text: 'Minutes' },
-  { id: 'game.feedback.duration_refusal', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input validation', text: 'Enter a time, with minutes between 0 and 59.' },
   // ⚠ **"ON YOUR BODY" IS GONE** — Sam, 2026-08-22: *"'how hard was the game'
   // instead of on your body"*. It also cost the question a second line on a
   // 402pt screen, which is what put the form's Save button below the fold.
@@ -49,9 +47,7 @@ export const GAME_FEEDBACK_COPY = {
   wholeYes: signedCopy('game.feedback.whole_yes'),
   wholeNo: signedCopy('game.feedback.whole_no'),
   durationQuestion: signedCopy('game.feedback.duration_question'),
-  hours: signedCopy('game.feedback.hours'),
   minutes: signedCopy('game.feedback.minutes'),
-  durationRefusal: signedCopy('game.feedback.duration_refusal'),
   rpeQuestion: signedCopy('game.feedback.rpe_question'),
   rpeHint: signedCopy('game.feedback.rpe_hint'),
   feelQuestion: signedCopy('game.feedback.feel_question'),

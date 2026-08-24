@@ -22,6 +22,7 @@ import {
 import { projectDayDetail } from '../../rules/visibleDayDetail';
 import { sessionAsksForLoad } from '../../rules/sessionLoadEntry';
 import type { SessionOutcomeTransactionReceipt } from '../../types/sessionOutcome';
+import { useSessionStopwatchStore } from '../../store/sessionStopwatchStore';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -79,6 +80,7 @@ export function useDayWorkout() {
   const [savedFeedbackReceipt, setSavedFeedbackReceipt] =
     useState<SessionOutcomeTransactionReceipt | null>(null);
   const savedDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endStopwatchFor = useSessionStopwatchStore((state) => state.endFor);
 
   // ─── Resolved data ───
   //
@@ -367,8 +369,15 @@ export function useDayWorkout() {
   }, [navigation]);
 
   const handleFinishWorkout = useCallback(() => {
+    if (workout && date) {
+      endStopwatchFor({
+        workoutId: workout.id,
+        dateISO: date,
+        nowISO: new Date().toISOString(),
+      });
+    }
     setIsFinished(true);
-  }, []);
+  }, [date, endStopwatchFor, workout]);
 
   /* The feedback form is a SHEET now (Sam, 2026-08-22: *"instead of opening up
      like it does currently it should be the same as the log team training pop

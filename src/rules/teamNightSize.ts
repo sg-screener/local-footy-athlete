@@ -127,19 +127,12 @@ registerSignedCopy([
     provenance: 'Sam, 2026-08-12 — the common scale is 1-10; supersedes the 2026-08-11 1-5 ruling.',
     text: '1 = very easy · 10 = very hard',
   },
-  {
-    id: 'team_training.feedback.duration_refusal',
-    source: 'sam_ruling',
-    provenance: 'Sam, 2026-08-11 — hours and minutes follow the existing match duration input.',
-    text: 'Enter a time, with minutes between 0 and 59.',
-  },
 ]);
 
 export const TEAM_TRAINING_FEEDBACK_COPY = {
   durationQuestion: signedCopy('team_training.feedback.duration_question'),
   effortQuestion: signedCopy('team_training.feedback.effort_question'),
   effortHint: signedCopy('team_training.feedback.effort_hint'),
-  durationRefusal: signedCopy('team_training.feedback.duration_refusal'),
 } as const;
 
 const ORDINAL: Readonly<Record<TeamNightSize, number>> = { light: 0, normal: 1, hard: 2 };

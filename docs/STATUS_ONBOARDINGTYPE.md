@@ -651,3 +651,48 @@ luck!** line. The existing Log Session pop-up door was not changed.
 - Simulator reinspection after refresh.
 - The logged team-only state and Team Training beside programmed work.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-170 — minutes-only feedback with stopwatch handoff
+
+The stored duration was already total minutes, but every form split it into
+Hours and Minutes and rebuilt the total on save. The strength timer also only
+prefilled after End: Pause persisted its timestamps but the form did not read
+them, and Log Session opened feedback without capturing the running timer.
+
+Two options were compared:
+
+1. Keep the split fields and thread timer values through screen callbacks.
+2. Display the stored unit directly and make the stopwatch store answer for one
+   exact workout/date across paused, ended and Log Session paths.
+
+Option 2 landed. Team Training, Game and strength feedback each have one editable
+Minutes field. Pause is durably readable, End stores the result, and Log Session
+finalises the opened workout before showing feedback. A saved manual answer wins;
+no timer leaves the field blank.
+
+### Evidence
+
+- `test:session-logging-ui` — 25/25, then its in-chain duration tape 14/14.
+- Three liveness mutations each reddened the intended claim: removed Log Session
+  capture (1 red), date-only timer matching (1 red), and a Game Hours regression
+  (2 reds).
+- `test:journal-load` — 125/125; `test:training-logging` — 12/12;
+  `test:workout-log-progression-wiring` — 34/34;
+  `test:session-outcome-control` — 5/5.
+- `test:session-execution` — 194/199. Its hours/minutes cell now passes; the five
+  remaining failures are the same unrelated chevron, stale team-result,
+  equipment-sheet and date-line cells.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; none names a changed product file in this slice.
+- `test:law-registry` — 11/14 with its same three existing reds. The new row
+  raises guarded laws 150 → 151 without increasing UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-170 adds neither.
+
+### NOT COVERED
+
+- Simulator keyboard/layout pixels after collapsing each pair to one field.
+- A real-time start/pause/end/log walk on glass, including relaunch while paused.
+- The next physical-iPhone Release rebuild.

@@ -35,6 +35,12 @@ interface SessionStopwatchState {
   resume: (nowISO: string) => void;
   /** Ends and records the measurement. Returns it for the caller's own use. */
   end: (nowISO: string) => EndedSessionStopwatch | null;
+  /** Ends only the named session. A different open workout is never stopped. */
+  endFor: (args: {
+    workoutId: string;
+    dateISO: string;
+    nowISO: string;
+  }) => EndedSessionStopwatch | null;
 }
 
 export const useSessionStopwatchStore = create<SessionStopwatchState>()(
@@ -58,6 +64,13 @@ export const useSessionStopwatchStore = create<SessionStopwatchState>()(
         set({ current: null, lastEnded: ended });
         return ended;
       },
+      endFor: ({ workoutId, dateISO, nowISO }) => {
+        const { current } = get();
+        if (!current || current.workoutId !== workoutId || current.dateISO !== dateISO) {
+          return null;
+        }
+        return get().end(nowISO);
+      },
     }),
     {
       name: 'session-stopwatch-store',
@@ -70,10 +83,24 @@ export const useSessionStopwatchStore = create<SessionStopwatchState>()(
   ),
 );
 
-/** The measured minutes for a day's session, when the athlete timed one. */
-export function measuredMinutesFor(
-  dateISO: string,
-): number | null {
-  const ended = useSessionStopwatchStore.getState().lastEnded;
-  return ended && ended.dateISO === dateISO ? ended.measuredMinutes : null;
+/**
+ * The measured minutes for this exact session, when the athlete timed it.
+ *
+ * A paused stopwatch is already a durable measurement: its persisted
+ * `pausedAtISO` freezes the reading. A running stopwatch can also be read at
+ * the instant Log Session is tapped; that door immediately promotes it to the
+ * ended result through `endFor`.
+ */
+export function measuredMinutesFor(args: {
+  workoutId: string;
+  dateISO: string;
+  nowISO: string;
+}): number | null {
+  const { current, lastEnded } = useSessionStopwatchStore.getState();
+  if (current?.workoutId === args.workoutId && current.dateISO === args.dateISO) {
+    return endSessionStopwatch(current, args.nowISO).measuredMinutes;
+  }
+  return lastEnded?.workoutId === args.workoutId && lastEnded.dateISO === args.dateISO
+    ? lastEnded.measuredMinutes
+    : null;
 }

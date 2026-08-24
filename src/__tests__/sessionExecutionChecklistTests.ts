@@ -427,13 +427,13 @@ ok('no 1-5 effort anchor survives anywhere in the panel',
 ok('saved difficulty is the session RPE in checklist mode',
   /difficulty:\s*executionSummary\s*\?\s*sessionRpeValue\s*:\s*conditioningRpeValue/.test(feedback));
 ok('performed Team Training asks for duration and its own 1-10 effort',
-  TEAM_TRAINING_FEEDBACK_COPY.durationQuestion === 'How long was team training?'
+  TEAM_TRAINING_FEEDBACK_COPY.durationQuestion === 'Time spent training (estimate)'
     && TEAM_TRAINING_FEEDBACK_COPY.effortQuestion === 'How hard was team training?'
     && /TEAM_TRAINING_FEEDBACK_COPY\.durationQuestion/.test(feedback)
     && /TEAM_TRAINING_FEEDBACK_COPY\.effortQuestion/.test(feedback)
-    && /team-training-feedback-hours/.test(feedback)
-    && /team-training-feedback-minutes/.test(feedback)
-    && /team-training-feedback-effort-grid/.test(feedback)
+    && !/club-training-feedback-hours/.test(feedback)
+    && /club-training-feedback-minutes/.test(feedback)
+    && /club-training-feedback-effort-grid/.test(feedback)
     && /<EffortSlider/.test(feedback));
 ok('the extra team-training result is required only when that section was performed',
   /const draftIsComplete = baseDraftIsComplete[\s\S]{0,180}!teamTrainingWasPerformed \|\| teamTrainingOutcome !== undefined/.test(feedback));

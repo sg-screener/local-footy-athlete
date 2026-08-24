@@ -2097,6 +2097,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The profile suite pins one profilePageCardSurface at #101010 and requires it at the Program Setup summary, the shared FAQ/Support action row, both info-card mounts (Developer Tools and Legal), and before dangerCard so its later red border survives. TEST-FIRST LIVENESS: the new cell was the suite\'s only red against the lighter Profile page (171 / 1); applying the shared surface returned it to 172 / 0. NOT COVERED: simulator reinspection, Profile setup-sheet surfaces, the separate FAQ detail screen and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-session-duration-is-minutes-and-timer-backed',
+    law: 'Team Training, Game and programmed-session feedback each show one editable Minutes field and no Hours field. Existing total-minute answers reopen unchanged. For a strength session, Pause preserves the elapsed reading, End stores it, and Log Session captures the opened workout\'s latest reading before feedback. Timer measurements match both workout and date, seed only a blank answer, and a saved athlete answer always wins. With no timer measurement, the field remains blank for an estimate.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-170 — Sam required minutes-only feedback and confirmed the strength timer must automatically supply the reading at Pause, End or Log Session while preserving manual entry when unused.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-logging-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: keep screen-local hour/minute conversion plus callback plumbing, or make total minutes the one displayed/stored unit and let the persisted stopwatch store expose an exact workout/date measurement. The second landed. `test:session-logging-ui` runs the 14-cell duration tape in-chain: it executes 90-minute parsing, the no-timer null, Pause -> measurement, exact workout isolation, guarded Log Session finalisation, ended readback, saved-answer priority and all three one-field source mounts. TEST-FIRST: the tape initially could not load its missing duration owner; after that owner existed it reached 12/13 with saved-answer priority still unheld, then 13/13 before the explicit no-timer cell made the final tape 14/14. MUTATIONS: removing the Log Session capture reddened its door cell; weakening workout matching to date-only reddened cross-workout isolation; renaming the Game minutes field back to hours reddened both form-shape cells. Adjacent `test:journal-load` is 125/0, `test:training-logging` 12/0, `test:workout-log-progression-wiring` 34/0 and `test:session-outcome-control` 5/0. `test:session-execution` improved its directly stale hours-field cell and remains 194/5 on five pre-existing unrelated cells. `test:compile` retains the concurrent baseline of 483 errors / 60 worsened file-scope pairs and names none of this slice\'s changed product files. NOT COVERED: simulator keyboard/layout pixels, a real elapsed-minute UI walk, relaunch while paused on glass, and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
