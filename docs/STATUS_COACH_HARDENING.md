@@ -48,16 +48,26 @@ the private RPC request and the returned retry/scope verdict. For liveness,
 forcing the durable adapter to allow a database refusal killed the runtime
 verdict cell; the mutation was restored.
 
+## Live deployment receipt
+
+- `coach-chat` is ACTIVE as version 7 with JWT verification on.
+- A live `whats on thurs?` smoke crossed the deployed database limiter, called
+  Terra, returned `Thursday (27 Aug) is Upper Push plus Conditioning.`, and
+  carried zero program actions.
+- The linked database then reported `private.coach_rate_limits` with two
+  distinct rows: the one opaque client window and the separate global window.
+  The instrument's unit is database rows after one live Edge request, not
+  athletes or paid calls.
+- A truth-contract refusal now logs only its violation names before returning
+  the typed refusal; it never logs the athlete question or model answer.
+
 ## Pending in this same order
 
-- Deploy and live-probe the new endpoint after the refusal log lands.
 - Apply Sam-approved distinct outage/refusal copy and the accurate Privacy line.
 - Run the full focused chain and simulator before asking Sam to connect his
   phone.
 
 ## NOT COVERED
 
-- The changed `coach-chat` function is not deployed yet.
-- The database limiter has not yet been reached through the live Edge endpoint.
 - Athlete-facing copy is waiting on Sam's exact wording approval.
 - No simulator or physical phone build has been made in this order.
