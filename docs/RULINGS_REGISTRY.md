@@ -5548,5 +5548,12 @@ TIGHTENS AS ONE.**
 Gap above the connector `sm` -> `xs`, connector 10 -> 6, button 28 -> 24 with its
 glyph 16 -> 14 and its own top gap 6 -> 4. The tap target is unchanged: the
 `hitSlop={10}` was already doing that work, which is why the visible circle
-could shrink without the control getting harder to hit. · `WORKING` —
+could shrink without the control getting harder to hit.
+
+**SECOND PASS, SAME EYE:** *"move to 0 ... keep the plus the same size but move
+the circle to 20 ... the tap area can shrink i want there to be less space
+there"*. Gap `xs` -> 0, so the line starts on the last card's edge; circle
+24 -> 20 around an **unchanged 14 glyph**; `hitSlop` 10 -> 4. **The glyph
+staying put while the ring closes on it is the instruction** — a later pass must
+not "rebalance" the plus down to fit the smaller circle. · `WORKING` —
 `test:session-change-hub`, ALL GREEN 55. Seat `warmup`.

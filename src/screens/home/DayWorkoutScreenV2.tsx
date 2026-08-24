@@ -3060,7 +3060,7 @@ function SessionExecutionSection({ section, completedItemIds, onQuickAdd, childr
                 accessibilityRole="button"
                 accessibilityLabel={`${signedCopy('session.quick_add.label')}: ${section.label}`}
                 testID={`session-quick-add-${section.id}`}
-                hitSlop={10}
+                hitSlop={4}
                 style={({ pressed }) => [styles.quickAddButton, pressed && { opacity: 0.6 }]}
               >
                 <MaterialCommunityIcons name="plus" size={14} color={colors.text.secondary} />
@@ -5482,8 +5482,15 @@ const styles = StyleSheet.create({
    * *"the little gap between the line and the last exercise needs to be
    * smaller, the line itself can be slightly smaller, and the + button itself
    * can be slightly smaller"*. Gap sm -> xs, connector 10 -> 6, button 28 -> 24
-   * with its glyph 16 -> 14 and its own top gap 6 -> 4. */
-  quickAddRow: { alignItems: 'center', paddingTop: spacing.xs },
+   * with its glyph 16 -> 14 and its own top gap 6 -> 4.
+   *
+   * ⚠ **SECOND PASS, SAME EYE:** *"move to 0 ... keep the plus the same size but
+   * move the circle to 20 ... the tap area can shrink i want there to be less
+   * space there"*. The line now starts ON the last card's edge, the circle is
+   * 20 around an unchanged 14 glyph, and `hitSlop` drops 10 -> 4. **The glyph
+   * staying put while the ring closes on it is the whole instruction — do not
+   * "rebalance" the plus down to fit the smaller circle.** */
+  quickAddRow: { alignItems: 'center', paddingTop: 0 },
   quickAddConnector: {
     width: StyleSheet.hairlineWidth,
     height: 6,
@@ -5491,9 +5498,9 @@ const styles = StyleSheet.create({
   },
   quickAddButton: {
     marginTop: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
