@@ -1165,6 +1165,15 @@ ok('[10] START SESSION TOOK ITS PLACE — first on the row, before the options d
 ok('[10] the row is gated on the DATE, so deleting the words cannot delete the controls',
   /\{date \? \(\s*\n\s*<View style=\{styles\.headerSubtitleRow\}>/.test(screen),
   'it was gated on combinedSubtitle, which Start session would have died with');
+ok('[10] the gap ABOVE Start session is the same three terms as the gap below it',
+  /headerSubtitleRow: \{[\s\S]{0,900}?marginTop: spacing\.sm \+ spacing\.xs \+ spacing\.sm/.test(screen)
+    && /header: \{[\s\S]{0,200}?paddingBottom: spacing\.sm/.test(screen)
+    && /scrollContent: \{[\s\S]{0,300}?paddingTop: spacing\.xs/.test(screen)
+    && /executionSectionHeader: \{[\s\S]{0,200}?paddingVertical: spacing\.sm/.test(screen),
+  'R-214a: written as the SUM, a later spacing pass moves both sides together');
+ok('[10] and the retired date caption took its text style with it',
+  !/headerSubtitle: \{/.test(screen),
+  'a style whose only consumer is deleted is dead weight the next screen will trust');
 ok('[10] the stopwatch owns the line height its only remaining consumer needs',
   (() => {
     const stopwatch = fs.readFileSync(

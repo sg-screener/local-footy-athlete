@@ -5210,21 +5210,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   headerContent: {},
-  // Metadata line — single sentence under the title, left-aligned.
-  // marginTop (3) keeps it visually bound to the title. Same fontSize
-  // used for the inline Why link below so both spans sit on the same
-  // typographic line.
-  headerSubtitle: {
-    color: '#8A8A8A',
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.1,
-    // ⚠ THE `marginTop: 3` IS GONE AND THAT IS THE ALIGNMENT FIX. It pushed the
-    // TEXT down inside the row while the icon stayed put, so no amount of
-    // `alignItems: 'center'` on the parent could make the two share a centre.
-    // The row itself now carries the spacing below the title.
-    lineHeight: 20,
-  },
   // ── Scroll body ──
   scroll: { flex: 1 },
   scrollContent: {
@@ -5352,7 +5337,17 @@ const styles = StyleSheet.create({
   // the line's left, the options dots stay at its right. Spacing below the
   // title only — the controls own their own geometry.
   headerSubtitleRow: {
-    marginTop: 3,
+    /* ⚠ **R-214a (Sam, 2026-08-25): *"the padding above start session matches
+     * the padding below start session before mobility"*.** It was 3, tuned when
+     * this row held a grey caption bound tight to the wordmark above it; a
+     * control row is not a caption, and 3 read as the button touching the logo.
+     *
+     * THE GAP BELOW IS THREE TERMS, so this is written as their SUM rather than
+     * as the number 20 — change any one of them and both sides move together,
+     * which is the only way a "these two match" ruling survives a later spacing
+     * pass: the header's own paddingBottom (sm), the scroll's paddingTop (xs),
+     * and the first section header's paddingVertical (sm) above its heading. */
+    marginTop: spacing.sm + spacing.xs + spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

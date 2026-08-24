@@ -5424,3 +5424,29 @@ consumer. An unmounted component is a second header waiting to be remounted.
 removed, the glyph not to return as an icon-font name, and Start session to
 precede the dots on that row. · `WORKING` — `test:session-execution` §[10].
 Seat `warmup`.
+
+---
+
+**R-214a** · *"there's not enough gap between the start session button and the
+LFA logo — move start session down a bit so the padding above start session
+matches the padding below start session before mobility. The three dots across
+the other side should drop with it so they remain in line."* (Sam, 2026-08-25) ·
+**A CONTROL ROW IS NOT A CAPTION, AND IT DOES NOT SIT CAPTION-TIGHT.**
+
+The `marginTop: 3` was tuned when this row held a grey date caption bound
+deliberately to the wordmark above it. R-214 replaced that caption with a
+button, and 3 points then read as Start session touching the logo.
+
+**THE GAP BELOW IS THREE TERMS AND THE FIX IS WRITTEN AS THEIR SUM**, not as the
+number 20: the header's own `paddingBottom` (`sm`), the scroll's `paddingTop`
+(`xs`), and the first section header's `paddingVertical` (`sm`) above its
+heading. A later spacing pass on any one of them now moves both sides together
+— a hardcoded 20 would silently unbalance the row, which is how the 3 survived
+its own reason disappearing. The dots share the row, so they drop with it and
+need no rule of their own.
+
+⚠ **AND THE CAPTION'S TEXT STYLE WENT WITH THE CAPTION.** `headerSubtitle` had
+zero consumers after R-214 — a style whose only reader is deleted is dead weight
+the next screen will trust. · `WORKING` — `test:session-execution` §[10], 2
+cells, mutation-proven: restoring `marginTop: 3` reds the sum cell and only it.
+Seat `warmup`.
