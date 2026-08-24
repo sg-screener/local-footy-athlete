@@ -97,6 +97,16 @@ console.log('\n[0b] Season phase choices are text-only');
       .every((copy) => seasonPhaseScreen.includes(copy)));
 }
 
+console.log('\n[0c] Sprint exposure uses team-training language');
+{
+  const sprintExposureScreen = read('src/screens/onboarding/SprintExposureScreen.tsx');
+  ok('the subtitle says Team training, not Club training',
+    sprintExposureScreen.includes(
+      'So we can manage speed work and recovery. Team training counts if you sprint there.',
+    )
+      && !sprintExposureScreen.includes('Club training counts if you sprint there.'));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────

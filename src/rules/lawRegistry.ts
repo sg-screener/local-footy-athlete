@@ -1954,6 +1954,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `commitmentslider`. The onboarding presentation cells pin the exact subtitle, nullable selectedDays input, 1/7 bounds, visible labels, absence of the retired card picker, and the shared PanResponder rounding owner. TEST-FIRST LIVENESS: those cells produced the suite\'s only four reds against the old six-card screen (61/65); the slider returned it to 65/65. The pre-existing feedback slider now wraps the same DiscreteSlider owner, while `test:effort-scale` remains 42/42. NOT COVERED: simulator pixels, physical drag/tap feel and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-sprint-exposure-uses-team-training-language',
+    law: 'The sprint-exposure onboarding subtitle says "So we can manage speed work and recovery. Team training counts if you sprint there." The retired "Club training" version is absent.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-146 — Sam, 2026-08-24: "Change this subtitle to team training".',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `sprintcopy`. The onboarding presentation cell requires the exact approved Team training sentence and independently rejects the retired Club training sentence. TEST-FIRST LIVENESS: it was the suite\'s only red against the old screen (65/66); the one-word production change returned the suite to 66/66. NOT COVERED: simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

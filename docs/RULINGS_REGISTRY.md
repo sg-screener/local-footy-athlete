@@ -4525,3 +4525,12 @@ transaction. Feedback and onboarding sliders share one discrete touch owner,
 so their mechanics cannot drift. · `WORKING` —
 `test:onboarding-presentation` + `test:effort-scale`. Seat
 `commitmentslider`.
+
+---
+
+**R-146** · *"Change this subtitle to team training"* on the sprint-exposure
+screen (Sam, 2026-08-24) · **SPRINT EXPOSURE USES TEAM-TRAINING LANGUAGE.**
+
+The subtitle reads **"So we can manage speed work and recovery. Team training
+counts if you sprint there."** The retired **"Club training"** version is
+absent. · `WORKING` — `test:onboarding-presentation`. Seat `sprintcopy`.

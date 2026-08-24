@@ -76,7 +76,7 @@ export const SprintExposureScreen: React.FC<SprintExposureScreenProps> = ({
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          So we can manage speed work and recovery. Club training counts if you sprint there.
+          So we can manage speed work and recovery. Team training counts if you sprint there.
         </Text>
       </View>
 
