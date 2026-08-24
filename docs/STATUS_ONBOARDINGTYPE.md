@@ -763,6 +763,36 @@ no timer leaves the field blank.
 
 ---
 
+## R-177 — remove the duplicate Profile page header
+
+Profile now uses the same compact hierarchy as the other main tabs: the shared
+LFA wordmark is followed directly by **Program Setup**. The redundant
+**Profile** heading and its orphaned subtitle were removed together, along with
+their dead styles.
+
+### Evidence
+
+- TEST FIRST: `test:lfa-wordmark` moved from 13/13 to 13/14; the one new red
+  named the duplicated Profile heading/subtitle.
+- AFTER: `test:lfa-wordmark` is 14/14.
+- LIVENESS: temporarily restoring a visible `PROFILE` heading made the new cell
+  fail at 13/14; removing the mutation returned it to green.
+- The older `test:profile-reset-ui` expectations were inverted to guard the
+  new hierarchy and the full suite remains 173/173.
+- LIVE SIMULATOR: after clearing a stale DevE2E clock receipt and reloading the
+  app, Profile shows the LFA wordmark directly above **Program Setup** with no
+  duplicate heading, subtitle or leftover gap.
+- Registry baselines are unchanged: law registry 177 rows / 156 guarded / 21
+  `UNENFORCED` with the same three inherited reds; ruling registry 176 rulings
+  with the same two inherited reds.
+
+### NOT COVERED
+
+- The next physical-iPhone Release rebuild.
+- Real VoiceOver reading order.
+
+---
+
 ## R-174 — one quick-action system across every exercise row
 
 Sam restored row-level Swap/Remove as explicit shortcuts. The implementation

@@ -56,8 +56,12 @@ assert(program.indexOf('<LfaWordmark') >= 0
   && program.indexOf('<LfaWordmark') < program.indexOf('styles.topBar'),
   'Program places the wordmark before its Day / Week controls');
 assert(profile.indexOf('<LfaWordmark') >= 0
-  && profile.indexOf('<LfaWordmark') < profile.indexOf('testID="profile-page-header"'),
-  'Profile places the wordmark before its page title');
+  && profile.indexOf('<LfaWordmark') < profile.indexOf('testID="profile-program-setup-section"'),
+  'Profile places the wordmark before its first real content section');
+assert(!/testID="profile-page-header"/.test(profile)
+  && !/>\s*PROFILE\s*</.test(profile)
+  && !/Your program setup and support\./.test(profile),
+  'Profile does not repeat its tab name or keep an orphaned page subtitle');
 assert(!/LfaWordmark/.test(workoutDetail),
   'nested workout detail keeps its back-button/title hierarchy instead of repeating the logo');
 

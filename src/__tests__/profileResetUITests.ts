@@ -157,10 +157,10 @@ ok('section title DEVELOPER TOOLS present', /DEVELOPER TOOLS/.test(src));
 ok('section title SUPPORT present', /SUPPORT/.test(src));
 ok('section title LEGAL present', /LEGAL/.test(src));
 ok('section title DANGER ZONE present', /DANGER ZONE/.test(src));
-ok('page header PROFILE present', />\s*PROFILE\s*</.test(src));
+ok('redundant page header PROFILE absent', !/>\s*PROFILE\s*</.test(src));
 ok(
-  'page subtitle present',
-  /Your program setup and support\./.test(src),
+  'orphaned page subtitle absent',
+  !/Your program setup and support\./.test(src),
 );
 ok(
   'every Profile page card uses the darker programmed-session surface',
@@ -501,7 +501,7 @@ section('[5] Section lives inside ScrollView');
 // ═════════════════════════════════════════════════════════════════════
 section('[6] testID hooks present for each row');
 ok('testID profile-program-setup-section', /testID="profile-program-setup-section"/.test(src));
-ok('testID profile-page-header', /testID="profile-page-header"/.test(src));
+ok('testID profile-page-header absent', !/testID="profile-page-header"/.test(src));
 ok('testID profile-program-setup-change', /testID="profile-program-setup-change"/.test(src));
 ok('testID profile-coach-adjustments-section absent', !/testID="profile-coach-adjustments-section"/.test(src));
 ok('testID profile-active-coach-state absent', !/testID="profile-active-coach-state"/.test(src));

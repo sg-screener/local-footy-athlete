@@ -588,14 +588,6 @@ export default function ProfileScreen() {
         <View style={styles.brandHeader}>
           <LfaWordmark />
         </View>
-        <View style={styles.header} testID="profile-page-header">
-          <Text variant="h1" color={colors.text.primary} style={styles.headerTitle}>
-            PROFILE
-          </Text>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>
-            Your program setup and support.
-          </Text>
-        </View>
 
         {/* Program setup */}
         <View style={styles.section} testID="profile-program-setup-section">
@@ -1548,19 +1540,6 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: 'center',
     marginBottom: spacing.md,
-  },
-  header: {
-    marginBottom: spacing.lg,
-  },
-  headerTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: 0,
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-  },
-  headerSubtitle: {
-    lineHeight: 20,
   },
   section: {
     marginBottom: spacing.lg,

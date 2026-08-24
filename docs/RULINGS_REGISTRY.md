@@ -4900,3 +4900,14 @@ missing Undo. R-174's sentence *"Quick Remove removes first"* is superseded by
 this ruling; its icon, ranking, durability and row-coverage requirements remain
 unchanged. · `WORKING` — `test:quick-exercise-actions`, reached in-chain by
 `test:mobility-flow`. Seat `onboardingtype`.
+
+---
+
+**R-177** · Profile tab heading parity (Sam, 2026-08-24) · **THE TAB ALREADY
+NAMES THE PAGE.**
+
+Profile uses the shared LFA wordmark as its top-level header and begins its
+actual content at **Program Setup**. It does not repeat **Profile** as a page
+title or keep the now-orphaned *“Your program setup and support.”* subtitle.
+This matches the other main tabs' compact branded hierarchy. · `WORKING` —
+`test:lfa-wordmark` + `test:profile-reset-ui`. Seat `onboardingtype`.
