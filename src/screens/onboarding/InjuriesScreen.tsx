@@ -3,7 +3,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text } from '../../components/common/Text';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  answerCardSubtitle,
+  answerCardTitle,
+  headingXL,
+} from '../../components/onboarding/onboardingStyles';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { colors } from '../../theme/colors';
@@ -320,17 +324,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.tertiary,
   },
   optionLabel: {
+    ...answerCardTitle,
     color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
   },
   optionLabelSelected: {
     color: colors.accent.lime,
   },
   optionSubtext: {
+    ...answerCardSubtitle,
     color: colors.text.tertiary,
-    fontSize: 13,
-    lineHeight: 18,
     marginTop: 4,
   },
   mutedText: {

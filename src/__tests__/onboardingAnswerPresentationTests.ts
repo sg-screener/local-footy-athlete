@@ -97,6 +97,41 @@ console.log('\n[0b] Season phase choices are text-only');
       .every((copy) => seasonPhaseScreen.includes(copy)));
 }
 
+console.log('\n[0bb] Two-line onboarding choices share one typography recipe');
+{
+  const sharedStyles = read('src/components/onboarding/onboardingStyles.ts');
+  ok('the shared answer-card title is system text, sentence-case capable and consistently sized',
+    /answerCardTitle:\s*TextStyle\s*=\s*\{[\s\S]{0,260}fontSize:\s*16[\s\S]{0,120}fontWeight:\s*'700'[\s\S]{0,120}lineHeight:\s*24[\s\S]{0,120}letterSpacing:\s*0\.5[\s\S]{0,120}textTransform:\s*'none'/.test(sharedStyles));
+  ok('the shared answer-card supporting line has one compact readable recipe',
+    /answerCardSubtitle:\s*TextStyle\s*=\s*\{[\s\S]{0,220}fontSize:\s*13[\s\S]{0,120}fontWeight:\s*'400'[\s\S]{0,120}lineHeight:\s*20[\s\S]{0,120}textTransform:\s*'none'/.test(sharedStyles));
+
+  const twoLineChoices = [
+    ['SeasonPhaseScreen.tsx', 'cardLabel', 'cardTagline'],
+    ['GymExperienceScreen.tsx', 'cardLabel', 'cardDescription'],
+    ['ConditioningLevelScreen.tsx', 'optionLabel', 'optionSubtitle'],
+    ['TeamTrainingIntensityScreen.tsx', 'optionLabel', 'optionSubtitle'],
+    ['SprintExposureScreen.tsx', 'optionLabel', 'optionSubtitle'],
+    ['RecentTrainingLoadScreen.tsx', 'optionLabel', 'optionSubtitle'],
+    ['InjuriesScreen.tsx', 'optionLabel', 'optionSubtext'],
+  ] as const;
+
+  for (const [file, titleStyle, subtitleStyle] of twoLineChoices) {
+    const source = read(`src/screens/onboarding/${file}`);
+    const titleUsesSharedStyle = new RegExp(
+      `${titleStyle}:\\s*\\{[\\s\\S]{0,180}\\.\\.\\.answerCardTitle`,
+    );
+    const subtitleUsesSharedStyle = new RegExp(
+      `${subtitleStyle}:\\s*\\{[\\s\\S]{0,180}\\.\\.\\.answerCardSubtitle`,
+    );
+    ok(`${file} uses the shared title and supporting-line typography`,
+      titleUsesSharedStyle.test(source) && subtitleUsesSharedStyle.test(source));
+  }
+
+  const seasonPhaseScreen = read('src/screens/onboarding/SeasonPhaseScreen.tsx');
+  ok('season answers are no longer rendered through an all-caps heading variant',
+    !/variant="h4"/.test(seasonPhaseScreen));
+}
+
 console.log('\n[0c] Sprint exposure uses team-training language');
 {
   const sprintExposureScreen = read('src/screens/onboarding/SprintExposureScreen.tsx');

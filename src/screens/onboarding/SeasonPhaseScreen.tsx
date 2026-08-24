@@ -9,7 +9,11 @@ import { SeasonPhase } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  answerCardSubtitle,
+  answerCardTitle,
+  headingXL,
+} from '../../components/onboarding/onboardingStyles';
 
 type SeasonPhaseScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
@@ -102,7 +106,7 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
               style={styles.card}
             >
               <View style={styles.cardContent}>
-                <Text variant="h4" color={colors.text.primary}>
+                <Text color={colors.text.primary} style={styles.cardLabel}>
                   {phase.label}
                 </Text>
                 <Text
@@ -144,8 +148,11 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingRight: 24,
   },
+  cardLabel: {
+    ...answerCardTitle,
+  },
   cardTagline: {
-    lineHeight: 20,
+    ...answerCardSubtitle,
     marginTop: 4,
   },
 });

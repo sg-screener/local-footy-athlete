@@ -12,7 +12,11 @@ import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { ExperienceLevel } from '../../types/domain';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  answerCardSubtitle,
+  answerCardTitle,
+  headingXL,
+} from '../../components/onboarding/onboardingStyles';
 
 type GymExperienceScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
@@ -99,14 +103,12 @@ export const GymExperienceScreen: React.FC<GymExperienceScreenProps> = ({
               >
                 <View style={styles.cardContent}>
                   <Text
-                    variant="bodyEmphasis"
                     color={isSelected ? colors.text.primary : colors.text.secondary}
                     style={styles.cardLabel}
                   >
                     {option.title}
                   </Text>
                   <Text
-                    variant="caption"
                     color={isSelected ? colors.text.secondary : colors.text.tertiary}
                     style={styles.cardDescription}
                   >
@@ -151,9 +153,10 @@ const styles = StyleSheet.create({
     paddingRight: 28,
   },
   cardLabel: {
-    fontWeight: '600',
+    ...answerCardTitle,
   },
   cardDescription: {
+    ...answerCardSubtitle,
     marginTop: 4,
   },
 });

@@ -26,3 +26,25 @@ import { TextStyle } from 'react-native';
 export const headingXL: TextStyle = {
   fontWeight: '700',
 };
+
+/**
+ * Canonical typography for a choice card with a heading and supporting line.
+ *
+ * Keep answer text on the system face and never force its casing. The authored
+ * copy decides whether a label is sentence case or intentionally all-caps;
+ * heading variants are reserved for screen headings.
+ */
+export const answerCardTitle: TextStyle = {
+  fontSize: 16,
+  fontWeight: '700',
+  lineHeight: 24,
+  letterSpacing: 0.5,
+  textTransform: 'none',
+};
+
+export const answerCardSubtitle: TextStyle = {
+  fontSize: 13,
+  fontWeight: '400',
+  lineHeight: 20,
+  textTransform: 'none',
+};

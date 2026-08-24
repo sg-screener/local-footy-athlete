@@ -4579,3 +4579,15 @@ The Welcome hero reads **BUILT FOR FOOTY.** The three shared eyebrow labels are
 gap before their main heading; no card owns independent spacing. This
 supersedes R-149. · `WORKING` — `test:onboarding-presentation`. Seat
 `welcomecompact`.
+
+---
+
+**R-151** · Season Phase answer-card typography consistency (Sam, 2026-08-24) ·
+**ANSWER CARDS USE ONE TYPOGRAPHY OWNER; HEADINGS DO NOT STYLE ANSWERS.**
+
+Every two-line onboarding choice uses the same system-font recipe: 16px bold
+title and 13px regular supporting line, with shared line heights and no forced
+case. Screen-heading variants are not used for answer text. Authored casing is
+still copy: this ruling removes style-driven capitals and does not silently
+rewrite approved words. · `WORKING` — `test:onboarding-presentation`. Seat
+`onboardingtype`.

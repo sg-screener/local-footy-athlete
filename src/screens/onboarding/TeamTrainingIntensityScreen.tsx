@@ -13,7 +13,11 @@ import { TeamTrainingIntensity } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  answerCardSubtitle,
+  answerCardTitle,
+  headingXL,
+} from '../../components/onboarding/onboardingStyles';
 
 type TeamTrainingIntensityScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
@@ -139,15 +143,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.tertiary,
   },
   optionLabel: {
+    ...answerCardTitle,
     color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
     marginBottom: 4,
   },
   optionSubtitle: {
+    ...answerCardSubtitle,
     color: colors.text.tertiary,
-    fontSize: 13,
-    fontWeight: '400',
   },
 });

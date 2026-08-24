@@ -1987,6 +1987,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `welcomecopy`; UPDATED UNDER R-149 by `welcomeeyebrows`; UPDATED UNDER R-150 by `welcomecompact`. The onboarding presentation cells require every approved title, label, description, CTA and timing line; reject the retired card copy and TRAIN FOR title; require feature.label to render; and anchor the one featureLabelWrap style at marginBottom 2 so all cards share the same compact gap. R-150 TEST-FIRST LIVENESS: the three revised cells were the suite\'s only reds against the label-free TRAIN FOR screen (67/70); restoring the shared labels and BUILT FOR title returned it to 70/70. NOT COVERED: simulator pixels, small-screen wrapping and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-onboarding-answer-card-typography-has-one-owner',
+    law: 'Every two-line onboarding answer card uses the shared answerCardTitle and answerCardSubtitle typography. Answer text uses the system face, carries no style-driven text transform, and is never rendered through a screen-heading variant. Authored casing remains copy and is not rewritten by this style law.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-151 — Sam, 2026-08-24: "run a consistency audit through to make sure they use the same fonts and styles" after finding the season answers forced to capitals.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite pins the shared 16/700/24 title and 13/400/20 supporting-line recipes, requires no text transform, walks all seven two-line onboarding answer-card screens and requires both shared styles, and independently rejects h4 from SeasonPhase answers. TEST-FIRST LIVENESS: the new block was 0/10 against the previous production source (suite 70/80); creating the owner and moving all seven consumers returned it to 80/80. The audit found one style-driven uppercase outlier (SeasonPhase h4), one smaller caption recipe (GymExperience), and five duplicated copies of the dominant recipe; all now converge on one owner. NOT COVERED: authored all-caps copy was deliberately not rewritten, single-line/grid controls retain layout-specific typography, simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

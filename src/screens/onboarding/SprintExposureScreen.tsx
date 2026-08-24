@@ -12,7 +12,11 @@ import { SprintExposure } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
-import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  answerCardSubtitle,
+  answerCardTitle,
+  headingXL,
+} from '../../components/onboarding/onboardingStyles';
 
 type SprintExposureScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
@@ -134,10 +138,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   optionLabel: {
+    ...answerCardTitle,
     color: colors.text.secondary,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
     marginBottom: 4,
     paddingRight: 28,
   },
@@ -145,9 +147,8 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   optionSubtitle: {
+    ...answerCardSubtitle,
     color: colors.text.tertiary,
-    fontSize: 13,
-    fontWeight: '400',
     paddingRight: 28,
   },
   optionSubtitleSelected: {
