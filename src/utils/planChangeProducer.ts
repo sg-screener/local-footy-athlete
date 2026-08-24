@@ -518,7 +518,7 @@ export interface PlanChangeDayOptions {
  * is here rather than in the sheet.
  *
  * Sam ruled (2026-07-31, copy sheet §6-IV-3) that the Remove row's sub-line is
- * STATE-SELECTED: "Remove it — the day becomes rest." on a day whose only content
+ * STATE-SELECTED: "Make this a rest day" on a day whose only content
  * is the thing being removed, "Remove it — anything else on the day stays." on a
  * day with more on it. Batch 3's principle — a signed sentence must never be able
  * to lie — applied to itself, using this unit's own pattern: a typed cause picks

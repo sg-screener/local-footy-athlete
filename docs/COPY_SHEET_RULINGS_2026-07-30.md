@@ -370,7 +370,7 @@ describes — a signed sentence never claims a state-dependent outcome, and
 | Add row | "Put another session on this day" | `PlanChangeSheet.tsx:535` | REWRITE. Used to name extra strength or conditioning work — two of the five types behind it (ruling 9); retired wording in 6-III. **RULED 6-IV-2:** the neutral form is signed as shipped. |
 | Strength row | "Upper, lower or full body" | `PlanChangeSheet.tsx:647` | REWRITE. Used to end by naming accessories too (6-III). Accessories and Gunshow now have rows of their own, so the strength bucket is three buckets and says so. |
 | Remove (live, day has more on it) | "Remove it — anything else on the day stays." | `PlanChangeSheet.tsx` Remove row | Batch-3-signed, now the MULTI-CONTENT half of a state-selected pair (ruling 6-IV-3). |
-| Remove (live, sole-content day) | "Remove it — the day becomes rest." | `PlanChangeSheet.tsx` Remove row | NEW, SIGNED 2026-07-31 (6-IV-3). The batch-3 sentence beside it was false on a day whose only content is the session being removed; the cause is typed, not guessed. |
+| Remove (live, sole-content day) | "Make this a rest day" | `PlanChangeSheet.tsx` Remove row | REVISED AND SIGNED 2026-08-25 (R-198), replacing the earlier day-becomes-rest sentence. The cause remains typed: this line appears only when removing the programmed session leaves the day empty. |
 
 The Move row has no sub-line of its own: when the move door refuses, the row
 renders the producer's own TYPED refusal sentence. Two of those changed.
@@ -694,7 +694,7 @@ surfaced again by this unit]**
 
 > Remove sub-line: STATE-SELECTED variant approved — multi-content day:
 > **"Remove it — anything else on the day stays."**; sole-content day:
-> **"Remove it — the day becomes rest."** A typed cause picks the sentence —
+> **"Make this a rest day"** (revised by R-198). A typed cause picks the sentence —
 > this unit's own pattern, like the swap sub selected by `hasSession`.
 
 Batch 3's single sentence was false on a day whose only content IS the session
@@ -752,7 +752,7 @@ quoted occurrence here would be redundant against the binder, not new).
 
 6-IV-3 ruled the Remove row's sub-line STATE-SELECTED by
 `removeEmptiesTheDay`: multi-content day, "Remove it — anything else on the
-day stays."; sole-content day, "Remove it — the day becomes rest." That
+day stays."; sole-content day, "Make this a rest day" (revised by R-198). That
 ruling assumed a binary state. `binScopesForSnapshot` produces a third shape
 it did not consider: an UNANCHORED day carrying two or more section kinds
 (e.g. a plain strength day the athlete has added conditioning to) reports

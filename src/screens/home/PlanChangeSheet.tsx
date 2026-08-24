@@ -642,11 +642,11 @@ export function PlanChangeSheet({
               sentence must never be able to lie. A typed cause picks it now, the
               pattern this unit used for the Swap row's disabled lines. */}
           <MenuOption
-            label="Remove this session"
+            label={signedCopy('plan_change.remove_session')}
             sub={!options.canRemove
               ? "There's nothing on this day yet."
               : removeEmptiesTheDay(options)
-                ? 'Remove it — the day becomes rest.'
+                ? signedCopy('plan_change.remove_to_rest')
                 : 'Remove it — anything else on the day stays.'}
             icon={<MaterialCommunityIcons name="delete-outline" size={18} color={options.canRemove ? '#FF7A85' : MUTED} />}
             neutralIconChip

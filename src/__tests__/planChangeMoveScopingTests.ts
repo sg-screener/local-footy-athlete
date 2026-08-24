@@ -584,10 +584,10 @@ run('the row sub-line and the remove confirmation cannot disagree', () => {
     join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
     'utf8',
   );
-  assert(/'Remove it — the day becomes rest\.'/.test(sheet)
+  assert(/signedCopy\('plan_change\.remove_to_rest'\)/.test(sheet)
     && /'Remove it — anything else on the day stays\.'/.test(sheet),
     'both of Sam\'s signed Remove sub-lines are no longer in the sheet');
-  assert(/removeEmptiesTheDay\(options\)\s*\n?\s*\?\s*'Remove it — the day becomes rest\.'/.test(sheet),
+  assert(/removeEmptiesTheDay\(options\)\s*\n?\s*\?\s*signedCopy\('plan_change\.remove_to_rest'\)/.test(sheet),
     'the Remove row no longer selects its sub-line from removeEmptiesTheDay — if it '
     + 'derives the claim any other way it can contradict the confirmation');
 

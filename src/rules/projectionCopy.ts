@@ -946,6 +946,20 @@ export function registerProjectionCopy(): void {
         + 'option from “Add this session” to “Add to this session”.',
       text: 'Add to this session',
     },
+    {
+      id: 'plan_change.remove_session',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-198: rename the destructive '
+        + 'plan-change action to “Remove session”.',
+      text: 'Remove session',
+    },
+    {
+      id: 'plan_change.remove_to_rest',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-198: when removal empties the '
+        + 'day, explain the result as “Make this a rest day”.',
+      text: 'Make this a rest day',
+    },
 
     // ── The injury review's two section headings, R-124. ──
     //

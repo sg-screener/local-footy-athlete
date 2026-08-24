@@ -1590,3 +1590,29 @@ copy and still opens the same deterministic Add flow.
 ### NOT COVERED
 
 - Physical-iPhone Release, VoiceOver reading and translated copy.
+
+---
+
+## R-198 — rename the plan Remove row
+
+The destructive plan-options row now reads **Remove session**. Its sub-line
+reads **Make this a rest day** when the typed remove scope says the day will be
+empty; combined days retain the truthful explanation that their other content
+stays.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: show the new rest-day promise on every Remove row, or
+  derive it from the existing `removeEmptiesTheDay` owner. The derived version
+  landed because removing strength from a Team Training day does not create a
+  rest day.
+- TEST FIRST: the exact new title and sub-line cells each added one red. AFTER:
+  `test:session-change-hub` is 63/63; `test:day-first-timeline` returned to its
+  inherited 54/56 baseline; `test:move-scoping` returned to its inherited 17/18
+  baseline.
+- `test:signed-copy-extraction` is 7/7. Both new lines are signed R-198 copy.
+
+### NOT COVERED
+
+- Physical-iPhone Release, VoiceOver reading, translated copy and every
+  combined-day capability shape on glass.

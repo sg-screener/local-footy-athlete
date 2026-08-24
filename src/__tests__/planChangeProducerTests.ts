@@ -818,7 +818,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /label=\{signedCopy\('plan_change\.add_to_session'\)\}[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
       && !/strength or conditioning work to this day/.test(sheet)
       && /label="Move this session"/.test(actionsBlock)
-      && /label="Remove this session"/.test(actionsBlock)
+      && /label=\{signedCopy\('plan_change\.remove_session'\)\}/.test(actionsBlock)
       && !/label="Edit this session"|label="Add optional session"|label="I'm not 100%"|ask the coach/.test(actionsBlock));
   ok('[9] the sheet no longer decides capability from a workout name or type',
     !/workoutType === 'Recovery'/.test(sheet)
@@ -835,13 +835,13 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /name="arrow-right-bold-outline"[\s\S]{0,120}'#67D7FF'/.test(actionsBlock)
       && /name="delete-outline"[\s\S]{0,100}'#FF7A85'/.test(actionsBlock)
       && (actionsBlock.match(/neutralIconChip/g) ?? []).length === 3
-      && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
+      && /label=\{signedCopy\('plan_change\.remove_session'\)\}[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
   ok('[9] Day uses the same Add, Move, Remove visual order as Week',
     actionsBlock.indexOf("label={signedCopy('plan_change.add_to_session')}")
       < actionsBlock.indexOf('label="Move this session"')
       && actionsBlock.indexOf('label="Move this session"')
-        < actionsBlock.indexOf('label="Remove this session"')
+        < actionsBlock.indexOf("label={signedCopy('plan_change.remove_session')}")
       && !actionsBlock.includes('label="Swap this session"')
       && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(actionsBlock));
   ok('[9] swap category no longer offers Rest day because remove owns rest',

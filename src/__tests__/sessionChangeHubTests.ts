@@ -306,7 +306,7 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
       && /onPlanOptions=\{\(\) => setChangeSheetEntry\(\{ date: day\.date \}\)\}/.test(dayLive)
       && planSheetSource.includes('testID="plan-change-add"')
       && planSheetSource.includes('sessionMoveIngress(selectedWorkout.id)')
-      && /label="Remove this session"/.test(planSheetSource));
+      && /label=\{signedCopy\('plan_change\.remove_session'\)\}/.test(planSheetSource));
   ok('Plan options cannot silently default to Add instead of showing that menu',
     !/initialAction\s*=\s*'add'/.test(planSheetSource)
       && /!initialAction\) return;/.test(planSheetSource));

@@ -5156,3 +5156,15 @@ The first row in the programmed session's plan-options menu reads **Add to this
 session**. It no longer reads **Add this session**. The action, sub-line and
 deterministic Add flow are otherwise unchanged. · `WORKING` —
 `test:day-first-timeline` + simulator tap-through. Seat `onboardingtype`.
+
+---
+
+**R-198** · Plan Remove row states the result plainly (Sam, 2026-08-25) ·
+**REMOVING THE ONLY PROGRAMMED SESSION MAKES THE DAY A REST DAY.**
+
+The destructive plan-options row reads **Remove session**. When removing that
+session leaves the day empty, its sub-line reads **Make this a rest day**. On a
+combined day, the existing truthful sub-line continues to explain that anything
+else on the day stays; the interface never promises a rest day while Team
+Training or other work remains. · `WORKING` — `test:day-first-timeline` +
+`test:move-scoping` + simulator tap-through. Seat `onboardingtype`.
