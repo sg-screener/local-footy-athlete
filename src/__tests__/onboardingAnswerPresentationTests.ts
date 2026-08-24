@@ -161,6 +161,40 @@ console.log('\n[0bb] Two-line onboarding choices share one typography recipe');
     !/variant="h4"/.test(seasonPhaseScreen));
 }
 
+console.log('\n[0bba] Onboarding questions and answers use normal casing');
+{
+  const onboardingScale = read('src/theme/onboardingTypography.ts');
+  const headingRegion = onboardingScale.slice(
+    onboardingScale.indexOf('h1:'),
+    onboardingScale.indexOf('body:'),
+  );
+  ok('all onboarding heading variants use the system face rather than the all-caps display face',
+    (headingRegion.match(/fontFamily:\s*'System'/g) ?? []).length === 4
+      && !/BebasNeue/.test(headingRegion));
+  ok('the shared onboarding heading region never forces uppercase',
+    !/textTransform:\s*'uppercase'/.test(headingRegion));
+
+  const sentenceCaseScreens = [
+    'PositionScreen.tsx',
+    'TeamTrainingDaysScreen.tsx',
+    'InjuriesScreen.tsx',
+    'GymExperienceScreen.tsx',
+    'ConditioningLevelScreen.tsx',
+    'SprintExposureScreen.tsx',
+    'RecentTrainingLoadScreen.tsx',
+  ];
+  const remainingForcedAnswerCopy = sentenceCaseScreens.flatMap((file) => {
+    const source = read(`src/screens/onboarding/${file}`);
+    const forced = source.match(/(?:label|title):\s*'[A-Z][A-Z0-9 /?'-]{2,}'|label="[A-Z][A-Z0-9 /?'-]{2,}"|title="[A-Z][A-Z0-9 /?'-]{2,}"|>\s*[A-Z][A-Z ]{3,}[?]?\s*</g) ?? [];
+    return forced.map((copy) => `${file}: ${copy}`);
+  });
+  ok('no onboarding question or answer card in the audited steps authors all-caps copy',
+    remainingForcedAnswerCopy.length === 0,
+    remainingForcedAnswerCopy.join(', '));
+  ok('the dynamic injury question preserves the area instead of uppercasing it',
+    !/area\.toUpperCase\(\)/.test(read('src/screens/onboarding/InjuriesScreen.tsx')));
+}
+
 console.log('\n[0bc] Team-session intensity is learned from session feedback, not onboarding');
 {
   const navigator = read('src/navigation/OnboardingNavigator.tsx');

@@ -60,7 +60,7 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
           color={colors.text.primary}
           style={styles.title}
         >
-          WHAT POSITION FITS YOU BEST?
+          What position fits you best?
         </Text>
         <Text
           variant="bodySmall"

@@ -64,7 +64,7 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
           color={colors.text.primary}
           style={styles.title}
         >
-          TEAM TRAINING DAYS
+          Team training days
         </Text>
         <Text
           variant="bodySmall"

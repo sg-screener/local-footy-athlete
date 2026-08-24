@@ -30,22 +30,22 @@ const EXPERIENCE_OPTIONS: { id: ExperienceLevel; title: string; subtitle: string
   // athlete-facing `title` / `subtitle` should change.
   {
     id: 'Complete beginner',
-    title: 'NEW TO TRAINING',
+    title: 'New to training',
     subtitle: "Haven't done much structured gym work",
   },
   {
     id: '1-2 years',
-    title: 'DEVELOPING',
+    title: 'Developing',
     subtitle: 'Some gym experience, still learning',
   },
   {
     id: '2-5 years',
-    title: 'CONSISTENT',
+    title: 'Consistent',
     subtitle: 'Train regularly and handle solid loads',
   },
   {
     id: '5+ years',
-    title: 'ADVANCED',
+    title: 'Advanced',
     subtitle: 'High training loads, push hard consistently',
   },
 ];

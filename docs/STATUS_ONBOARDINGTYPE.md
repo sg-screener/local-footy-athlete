@@ -1387,3 +1387,42 @@ installer; product onboarding cannot reach that path by default.
   Week-tab press were exercised successfully in this pass; any remaining
   screen/gesture should be reported by its exact location so it can be added to
   the interaction matrix rather than guessed at.
+
+---
+
+## R-192 — remove forced capitals from onboarding steps
+
+The earlier consistency pass fixed the local answer-card styles but left the
+whole onboarding navigator inside a legacy typography scope whose heading face
+was Bebas Neue and whose h1-h4 variants forced uppercase. Because that font has
+no useful lowercase presentation, a local `textTransform: none` could never fix
+the rendered questions. Several answer lists also authored their labels in
+capitals, bypassing the local style correction entirely.
+
+The shared onboarding heading variants now retain their existing large sizes
+and line heights while using System bold with natural casing. The remaining
+hard-coded Position, Team Training, Injury, experience, conditioning, sprint
+and recent-load questions/options are sentence case. Welcome branding and
+small intentional label treatments remain unchanged.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: keep overriding each screen after the uppercase scope,
+  or remove uppercase and the all-caps face from the shared h1-h4 owner. The
+  shared owner landed because it fixes existing and future steps; copy literals
+  were then normalised only where they could still bypass that owner.
+- TEST FIRST: the new audit added four reds to the presentation suite: the
+  all-caps display face, forced transform, hard-coded answer copy and dynamic
+  injury-area uppercasing. AFTER: `test:onboarding-presentation` is 105/105.
+- LIVE SIMULATOR: the first real step renders **What should I call you?** and
+  the hierarchy explicitly contains no **WHAT SHOULD I CALL YOU?** node.
+- `test:prototype-typography` keeps its four typography cells green; its one
+  inherited red still names five unrelated athlete-facing files bypassing the
+  shared Text owner. `test:onboarding-reliability` remains 23/24 on its existing
+  block-selection persistence-name parser red.
+
+### NOT COVERED
+
+- Every step viewed manually on the Simulator, the physical-iPhone Release,
+  exceptionally long accessibility sizes (font scaling is currently disabled
+  app-wide), and translated copy.

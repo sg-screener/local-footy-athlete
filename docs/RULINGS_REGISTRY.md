@@ -5088,3 +5088,17 @@ program. The usual game day remains one recurring Profile fact; onboarding
 does not materialise every occurrence into dated Calendar overrides. This is
 one fresh-program boundary, not screen-specific cleanup. · `WORKING` —
 `test:accept-boundary-contract`. Seat `onboardingtype`.
+
+---
+
+**R-192** · Onboarding questions and answers use normal casing (Sam, 2026-08-24) ·
+**THE ONBOARDING FLOW DOES NOT SHOUT.**
+
+Onboarding keeps its larger readable heading scale but uses the same System
+typeface and natural casing as the rest of the app. Questions and answer-card
+labels are sentence case; no heading variant forces uppercase, and no
+hard-coded option label recreates it. The **BUILT FOR FOOTY.** Welcome hero,
+small eyebrow/status labels and intentional acronyms such as LFA remain their
+authored brand/label treatment. This supersedes R-151's carve-out that left
+authored all-capitals answer copy untouched. · `WORKING` —
+`test:onboarding-presentation`. Seat `onboardingtype`.

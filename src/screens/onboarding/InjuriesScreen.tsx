@@ -119,17 +119,17 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
         hideFooter
       >
         <Title
-          title="ARE YOU DEALING WITH ANY INJURIES RIGHT NOW?"
+          title="Are you dealing with any injuries right now?"
           subtitle="So we can adjust your training safely."
         />
         <View style={styles.optionList}>
           <OptionCard
-            label="YES"
+            label="Yes"
             subtext="I need training adjusted"
             onPress={() => setStep('region')}
           />
           <OptionCard
-            label="NO"
+            label="No"
             subtext="No current issues"
             onPress={saveNoIssues}
           />
@@ -150,7 +150,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
         hideFooter
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
-        <Title title="WHERE IS THE ISSUE?" />
+        <Title title="Where is the issue?" />
         <View style={styles.optionList}>
           {GUIDED_INJURY_REGION_OPTIONS.map((option) => (
             <OptionCard
@@ -182,7 +182,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
         hideFooter
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
-        <Title title="WHERE IS THE ISSUE?" subtitle={GUIDED_INJURY_AREA_HINT} />
+        <Title title="Where is the issue?" subtitle={GUIDED_INJURY_AREA_HINT} />
         <View style={styles.optionList}>
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
             <OptionCard
@@ -210,7 +210,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
         saveError={saveError}
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
-        <Title title={`HOW SEVERE IS YOUR ${area.toUpperCase()} ISSUE?`} />
+        <Title title={`How severe is your ${area} issue?`} />
         <View style={styles.optionList}>
           {GUIDED_INJURY_SEVERITY_OPTIONS.map((option) => (
             <OptionCard
@@ -236,10 +236,10 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
       saveError={saveError}
       hideFooter
     >
-      <Title title="ANY MORE INJURIES?" />
+      <Title title="Any more injuries?" />
       <View style={styles.optionList}>
-        <OptionCard label="YES" subtext="Add another injury" onPress={addAnotherInjury} />
-        <OptionCard label="NO" subtext="That’s everything" onPress={finishInjuries} />
+        <OptionCard label="Yes" subtext="Add another injury" onPress={addAnotherInjury} />
+        <OptionCard label="No" subtext="That’s everything" onPress={finishInjuries} />
       </View>
     </OnboardingLayout>
   );

@@ -1,38 +1,38 @@
 import type { TypographyScale } from './typography';
 
-/** The onboarding scale that shipped before the app-wide compact UI pass. */
+/**
+ * Onboarding keeps its larger scale, but uses the same system face and natural
+ * casing as the rest of the app. Bebas Neue has no meaningful lowercase and
+ * therefore made `textTransform: none` on individual screens ineffective.
+ */
 export const onboardingTypography = {
   h1: {
     fontSize: 36,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
     lineHeight: 42,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
+    letterSpacing: -0.2,
   },
   h2: {
     fontSize: 30,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
     lineHeight: 36,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
+    letterSpacing: -0.15,
   },
   h3: {
     fontSize: 24,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
     lineHeight: 30,
-    letterSpacing: 1,
-    textTransform: 'uppercase' as const,
+    letterSpacing: 0,
   },
   h4: {
     fontSize: 20,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
     lineHeight: 26,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase' as const,
+    letterSpacing: 0.1,
   },
   body: {
     fontSize: 16,

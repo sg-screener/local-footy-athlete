@@ -27,22 +27,22 @@ type RecentTrainingLoadScreenProps = NativeStackScreenProps<
 const TRAINING_LOAD_OPTIONS: { id: RecentTrainingLoad; label: string; subtitle: string }[] = [
   {
     id: 'Hardly at all',
-    label: 'HARDLY AT ALL',
+    label: 'Hardly at all',
     subtitle: '0-1 sessions per week',
   },
   {
     id: 'A bit',
-    label: 'A BIT',
+    label: 'A bit',
     subtitle: '2-3 sessions per week',
   },
   {
     id: 'Pretty consistent',
-    label: 'CONSISTENT',
+    label: 'Consistent',
     subtitle: '4-5 sessions per week',
   },
   {
     id: 'Very consistent',
-    label: 'VERY CONSISTENT',
+    label: 'Very consistent',
     subtitle: '6+ sessions per week',
   },
 ];

@@ -34,22 +34,22 @@ const CONDITIONING_OPTIONS: {
   // enum and are unchanged — only the athlete-facing copy was refreshed.
   {
     id: 'Poor',
-    label: 'STRUGGLE EARLY',
+    label: 'Struggle early',
     subtitle: 'Gas out quickly',
   },
   {
     id: 'Average',
-    label: 'FADE LATE',
+    label: 'Fade late',
     subtitle: 'Start okay, drop off late',
   },
   {
     id: 'Good',
-    label: 'SOLID',
+    label: 'Solid',
     subtitle: 'Handle most conditioning well',
   },
   {
     id: 'Elite',
-    label: 'VERY FIT',
+    label: 'Very fit',
     subtitle: 'Rarely struggle',
   },
 ];

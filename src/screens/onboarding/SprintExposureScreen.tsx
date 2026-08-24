@@ -28,17 +28,17 @@ type SprintExposureScreenProps = NativeStackScreenProps<
 const SPRINT_OPTIONS: { id: SprintExposure; label: string; subtitle: string }[] = [
   {
     id: 'No sprint training',
-    label: 'NONE',
+    label: 'None',
     subtitle: 'No sprint work',
   },
   {
     id: 'Occasionally',
-    label: 'OCCASIONAL',
+    label: 'Occasional',
     subtitle: 'Once a week or less',
   },
   {
     id: '2+ times per week',
-    label: 'REGULAR',
+    label: 'Regular',
     subtitle: '2+ times per week',
   },
 ];
