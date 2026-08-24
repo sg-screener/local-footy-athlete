@@ -695,6 +695,13 @@ export function registerProjectionCopy(): void {
       text: 'Team Training',
     },
     {
+      id: 'day.club_training.solo_helper',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-24: "Team training solo view on Day view '
+        + 'needs a subtitle i.e. Have fun at training!".',
+      text: 'Have fun at training!',
+    },
+    {
       id: 'day.club_training.status_label',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-22: "next to the icon it should say '

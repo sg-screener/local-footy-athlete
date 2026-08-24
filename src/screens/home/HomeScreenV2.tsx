@@ -2534,7 +2534,10 @@ function DayRow({
                 />
               </>
             ) : isTeamOnly ? (
-              <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+              <>
+                <Text style={styles.expandedMeta}>{signedCopy('day.club_training.solo_helper')}</Text>
+                <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+              </>
             ) : isOptionalSession ? (
               <>
                 <Text style={styles.expandedMeta}>This session is optional - only if you feel like it.</Text>

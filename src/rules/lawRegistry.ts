@@ -2053,6 +2053,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite first proves the programmed surface token was found and still owns #101010/#1F1F1F, then requires both the TeamTraining Card and Day-surface SessionChangeHub mount to include that exact style object. TEST-FIRST LIVENESS: the new cell was the suite\'s only additional red against the lighter #161616 default (52 pass / 3 fail versus the existing 52 / 2); sharing dayRowCalm returned it to 53 / 2. INSTRUMENT CORRECTION: the first post-fix run stayed red because its `<Card style` anchor rejected a harmless JSX newline; broadening that anchor to `<Card\\s+style` made the detector match the actual mount while its separate token and two-consumer assertions remained intact. NOT COVERED: simulator reinspection, Week-view cards, active Session screen change hub and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-team-only-day-has-training-helper',
+    law: 'When Team Training is the only session on the Program Day view, the card shows "Have fun at training!" between the title and Log Session, using the same subtitle style and position as Game Day\'s "Good luck!". The sentence comes from the signed-copy sheet, and the existing Log Session pop-up door is unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-163 — Sam requested a Team Training solo-view subtitle matching the Game Day helper position, with the words "Have fun at training!".',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + test:signed-copy-extraction + test:copy-rulings-binding',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite anchors the helper inside the isTeamOnly branch, requires the existing expandedMeta style and requires the exact signedCopy key; the same pre-existing team-only cell keeps the single Log Session in-place pop-up door and absence of the old navigating handler pinned. The signed-copy entry records Sam\'s exact words and provenance, while both copy gates remain green. TEST-FIRST LIVENESS: the amended team-only cell was the suite\'s only additional red against the subtitle-free card (52 pass / 3 fail versus the existing 52 / 2); the signed helper returned it to 53 / 2. NOT COVERED: simulator pixels, logged team-only presentation, Team Training beside programmed work and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

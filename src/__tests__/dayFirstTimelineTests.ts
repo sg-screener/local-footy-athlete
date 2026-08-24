@@ -1419,6 +1419,8 @@ run('a team-only day is CALLED team training, and logs it in one place', () => {
     + 'about programmed work, for a day that has none.');
   assert(!/handleFinishTeamSession/.test(home),
     'the day screen still holds the navigating handler');
+  assert(/isTeamOnly \? \([\s\S]{0,220}<Text style=\{styles\.expandedMeta\}>\{signedCopy\('day\.club_training\.solo_helper'\)\}<\/Text>/.test(home),
+    'the team-only card does not show the signed "Have fun at training!" helper in the Game Day subtitle position');
 
   // AND THE DAY GETS ITS NAME BACK. The title owner is a rule, not the screen,
   // so this half is asserted where it lives.

@@ -4713,3 +4713,15 @@ make a change?** cards share the same darker background and border. Team
 Training and the change card reuse the programmed card's existing surface style
 rather than copying its colour values. · `WORKING` — `test:day-first-timeline`.
 Seat `onboardingtype`.
+
+---
+
+**R-163** · Team-training-only Day helper (Sam, 2026-08-24) · **HAVE FUN AT
+TRAINING!**
+
+When Team Training is the only session on the Program Day view, its card shows
+**"Have fun at training!"** between the title and **Log Session**, in the same
+subtitle position and style used by Game Day's **Good luck!** line. The Log
+Session action and pop-up are unchanged. · `WORKING` —
+`test:day-first-timeline` + `test:signed-copy-extraction` +
+`test:copy-rulings-binding`. Seat `onboardingtype`.

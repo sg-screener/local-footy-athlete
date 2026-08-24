@@ -426,3 +426,31 @@ Option 2 landed, so one token owns all three backgrounds and borders.
 - Simulator reinspection after refresh.
 - Week-view cards and the active Session-screen change hub.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-163 — add the team-only training helper
+
+The Team Training-only card now shows **"Have fun at training!"** through the
+signed-copy sheet, in the same `expandedMeta` position as Game Day's **Good
+luck!** line. The existing Log Session pop-up door was not changed.
+
+### Evidence
+
+- BEFORE: `test:day-first-timeline` — 52/54 with two unrelated existing reds.
+- TEST FIRST: 52/55; the amended team-only cell was the only additional red.
+- AFTER: 53/55; only the same mobility/Gunshow reds remain.
+- `test:signed-copy-extraction` — 7/7.
+- `test:copy-rulings-binding` — 9/9.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; neither HomeScreenV2 nor projectionCopy is named.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded, raising guarded laws 146 → 147 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-163 adds neither.
+
+### NOT COVERED
+
+- Simulator reinspection after refresh.
+- The logged team-only state and Team Training beside programmed work.
+- Physical-iPhone Release rebuild.
