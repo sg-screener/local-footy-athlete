@@ -1834,10 +1834,10 @@ run('Week gets one edit menu while the existing Day edit door stays', () => {
     > sheet.indexOf('label="I’m going away"'),
   'session editing is no longer the bottom option in Edit this week');
   assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
-    && sheet.includes('name="trophy-outline" size={18} color="#FFC247"')
+    && sheet.includes('icon={<RowIcon kind="game" size={18} color={rowIconColor(\'game\')} />}')
     && sheet.includes('name="airplane" size={18} color="#B9A7FF"')
     && sheet.includes('name="pencil-outline" size={18} color="#5BD98A"'),
-  'the Week edit rows no longer use the signed bye, game, away and session icon treatment');
+  'the Week edit rows no longer use the established bye, game, away and session icon treatment');
   assert(sheet.includes("setStep('session_action')")
     && sheet.includes("'What do you want to do?'")
     && ['Add a session', 'Move a session', 'Swap a session', 'Remove a session']

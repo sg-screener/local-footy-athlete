@@ -3225,7 +3225,7 @@ function WeekEditSheet({
           {(phase === 'In-season' || phase === 'Pre-season') ? (
             <SheetOption
               label={addFixtureLabel}
-              icon={<MaterialCommunityIcons name="trophy-outline" size={18} color="#FFC247" />}
+              icon={<RowIcon kind="game" size={18} color={rowIconColor('game')} />}
               onPress={onAddFixture}
               testID="edit-week-add-fixture"
             />

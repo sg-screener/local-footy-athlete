@@ -752,3 +752,29 @@ mixed gym stacks still clear the marker, preserving the earlier projection law.
 - Accumulated multi-edit weeks beyond the matrix's accepted team-only and empty
   destination states.
 - The next physical-iPhone Release rebuild.
+
+---
+
+## R-172 — share the Week Game Day trophy with Add a game
+
+The Week Game Day row already renders the app's shared `RowIcon` game trophy.
+The Edit-this-week action independently chose Material Community Icons'
+`trophy-outline`, creating the visible mismatch Sam found.
+
+Two options were compared: choose a closer library trophy, or delete the second
+icon decision and use the established Game Day owner. The shared owner landed;
+the sheet retains its existing 18px action-row size and reads the same amber
+colour owner as the Week row.
+
+### Evidence
+
+- TEST FIRST: `test:day-first-timeline` moved from its existing 54/2 baseline to
+  53/3; the only added red named the Week edit icon treatment.
+- AFTER: `test:day-first-timeline` returned to 54/2. Its two existing
+  mobility-warm-up and generated-Gunshow reds are unchanged.
+- `test:approved-icons` remains at its existing 24/2 baseline.
+
+### NOT COVERED
+
+- Simulator reinspection and optical alignment in the Edit-this-week row.
+- The next physical-iPhone Release rebuild.

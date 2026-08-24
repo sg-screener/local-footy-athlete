@@ -4817,3 +4817,12 @@ headline, exercises and prescriptions. Team Training remains a separate
 component. Adding the same choice to a free day produces the same programmed
 session content without inventing Team Training. · `WORKING` —
 `test:athlete-door-matrix` + `test:session-components`. Seat `onboardingtype`.
+
+---
+
+**R-172** · Week Add-game icon parity (Sam, 2026-08-24) · **ONE GAME TROPHY.**
+
+The **Add a game** row inside **Edit this week** uses the exact shared trophy
+drawing and amber colour owner used by Game Day on the Week view. It does not
+use the similar library `trophy-outline` glyph. · `WORKING` —
+`test:day-first-timeline`. Seat `onboardingtype`.

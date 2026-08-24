@@ -2119,6 +2119,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: patch the Day title/section renderer after it misclassified a stacked workout, or preserve the added template\'s existing typed identity at the shared stack owner when the base is exactly Team Training-only. The second landed; genuinely mixed gym sessions still clear the purity marker. The athlete-door matrix drives all 10 live Add categories through the real accepted transaction against both an existing Team Training-only day and an empty day, projects the saved result, requires a non-empty part of the correct kind/headline, and proves Recovery, Mobility, Gunshow, Accessories and Primer retain byte-for-byte equal row name/prescription signatures across both destinations. It also proves Team Training remains on its own destination and is never invented on the free one. The session-component cells independently pin Recovery + Team Training and Mobility + Team Training as two components with no low-load row leaking into Strength. MUTATION-PROVEN: forcing the stack owner to clear composedOptionalKind made the matrix red specifically at team_only_night/recovery with "Recovery has no exercises"; restoring typed ownership returned the new cell to green. The complete matrix is 419 pass / 15 pre-existing reds versus its 418 / 15 baseline; session-components is 33 / 6 versus its 29 / 7 baseline, with the six remaining power/support reds pre-existing. NOT COVERED: physical Day-screen pixels, starting/completing each stacked session on glass, accumulated multi-edit weeks beyond the matrix\'s accepted destination states, and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-week-add-fixture-reuses-game-icon',
+    law: 'The Add a game action in the Week edit sheet renders through the same shared RowIcon game glyph and rowIconColor game owner as the Week view Game Day row. It must not select a separate lookalike trophy from a library.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-172 — Sam found Add a game used a different icon from the Week view Game Day and required them to match.',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: replace trophy-outline with another guessed library glyph, or render the existing shared RowIcon game owner already used by Game Day. The second removes the duplicate icon decision. TEST-FIRST LIVENESS: after the guard was aimed at the shared owner, `test:day-first-timeline` fell from its 54/2 baseline to 53/3 and named only the Week edit icon treatment as the added red. Replacing the sheet glyph with RowIcon kind game at the existing 18px action-row size and rowIconColor game restored 54/2; the two remaining mobility-warm-up and generated-Gunshow reds are unchanged and unrelated. `test:approved-icons` remains at its existing 24/2 baseline. NOT COVERED: simulator pixels, optical alignment inside the sheet row and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
