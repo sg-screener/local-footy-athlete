@@ -4616,3 +4616,12 @@ The first Welcome card reads **YOUR PLAN / Built as one program** with the body
 **"Strength, speed, conditioning and recovery."** The retired **Everything
 works together** heading and the longer phase-specific sentence are absent. ·
 `WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-154** · Position-choice alignment (Sam, 2026-08-24) · **POSITION
+CHOICES ARE LEFT ALIGNED.**
+
+All five full-width Position choices align their labels to the left. The shared
+selected-state tick remains in the top-right corner. · `WORKING` —
+`test:role-buckets`. Seat `onboardingtype`.

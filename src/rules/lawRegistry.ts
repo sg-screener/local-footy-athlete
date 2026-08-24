@@ -1923,13 +1923,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-position-copy-is-shared',
-    law: 'The onboarding Position screen asks "What position fits you best?" and says "Your position gives LFA a small programming bias." The matching Profile edit step asks the same position question, and the retired "footy role" / "your role" wording is absent from onboarding.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-143 — Sam, 2026-08-24: "change to what position fits you best - and your position gives LFA a small programming bias".',
+    law: 'The onboarding Position screen asks "What position fits you best?" and says "Your position gives LFA a small programming bias." The matching Profile edit step asks the same position question, and the retired "footy role" / "your role" wording is absent from onboarding. All five full-width Position choices align their labels to the left while the shared selected-state tick remains at the top right.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-143 + R-154 — Sam approved the Position wording, then required its five choice labels to be uncentred and left aligned.',
     guard: {
       state: 'guarded',
       by: 'test:role-buckets + test:profile-reset-ui',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `positioncopy`. `test:role-buckets` pins both exact onboarding sentences and rejects both retired role sentences; `test:profile-reset-ui` pins the matching Profile edit question. TEST-FIRST LIVENESS: the role suite was 49/52 and the Profile suite 170/171 against the old production copy; after the shared change they were 52/52 and 171/171. NOT COVERED: simulator pixels and the next physical-phone Release.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `positioncopy`; UPDATED UNDER R-154 by `onboardingtype`. `test:role-buckets` pins both exact onboarding sentences, rejects both retired role sentences, and anchors flex-start tile content plus explicitly left-aligned label text; `test:profile-reset-ui` pins the matching Profile edit question. R-143 TEST-FIRST LIVENESS: the role suite was 49/52 and the Profile suite 170/171 against the old production copy; after the shared change they were 52/52 and 171/171. R-154 TEST-FIRST LIVENESS: the two new alignment cells were the only reds against centered production (52/54); left alignment returned the suite to 54/54. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
   {

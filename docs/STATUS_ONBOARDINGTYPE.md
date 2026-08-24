@@ -141,3 +141,29 @@ point of the card.
 
 - Simulator pixels and small-screen wrapping after the copy change.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-154 — left-align Position choices
+
+Sam asked to uncentre the five Position choices. The direct screen-level fix is
+the elegant option here: Position owns this list geometry, while the shared
+SelectableTile continues to own the selected border, fill and top-right tick.
+
+### Evidence
+
+- TEST FIRST: `test:role-buckets` — 52/54; the two new alignment cells were the
+  only failures.
+- AFTER: `test:role-buckets` — 54/54.
+- The guard separately pins the tile content alignment and the label's text
+  alignment.
+- `test:law-registry` — 11/14 with the same three existing reds: one missing
+  script, one unregistered LR-18 guard and 21 UNENFORCED laws. The updated law
+  remains guarded and in-chain.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-154 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels after the alignment change.
+- Physical-iPhone Release rebuild.

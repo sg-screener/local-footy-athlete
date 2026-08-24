@@ -188,6 +188,10 @@ section('[7] onboarding role screen layout is a 5-item vertical list');
   ok('screen does not use wrapping row grid', !/flexWrap:\s*['"]wrap['"]/.test(src));
   ok('screen does not use 2-column flex basis', !/flexBasis:\s*['"]48\.5%['"]/.test(src));
   ok('role cards are full width', /width:\s*['"]100%['"]/.test(src));
+  ok('role card content is left aligned',
+    /tile:\s*\{[\s\S]{0,220}alignItems:\s*['"]flex-start['"]/.test(src));
+  ok('role labels are explicitly left aligned',
+    /tileText:\s*\{[\s\S]{0,220}textAlign:\s*['"]left['"]/.test(src));
   ok('combined outside/high label is not in screen source', !/Outside mid \/ high fwd \/ high back/.test(src));
 }
 

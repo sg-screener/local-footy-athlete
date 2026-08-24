@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 18,
     paddingHorizontal: 18,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     minHeight: 60,
   },
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   tileTextSelected: {
     color: colors.text.primary,
