@@ -5333,3 +5333,94 @@ affected**. The primary button always reads **Update session**. A centred ghost
 **Back** replaces the top-right Cancel treatment. Equipment selection and its
 existing apply pathway remain unchanged. · `WORKING` —
 `test:session-action-shell`. Seat `headeralign`.
+
+---
+
+**R-213** · *"yes it should count them as exercises - they just shouldn't count
+towards fatigue really but i think the whole session is the thing you give
+feedback on not the exercises themselves"* and *"If a warm up is already ticked
+off then it should stay, but otherwise swapping it for something else is okay if
+they change a main lift because the warm up is supposed to prepare them for the
+work ahead."* (Sam, 2026-08-25) · **WORK THE ATHLETE HAS ALREADY DONE OUTRANKS A
+MENU RE-PICKED UNDERNEATH THEM.**
+
+Raised by Sam from his own session: *"i think the mobility warm up is constantly
+missed somehow"*. **He was right, and one cause explains every symptom he
+listed.** The warm-up is DERIVED beside the session rather than stored in it, so
+each surface has to remember to ask `selectMobilityPrehabFlow` for it separately
+— and the ones that forgot are exactly the ones he noticed: the header count
+(template only, so `8 exercises` for 8 strength rows plus a 4-movement warm-up),
+the completion tick, and the swap door. The last two were wired in later; the
+count never was.
+
+**MEASURED 2026-08-25, headless, through the screen's own owners.** Swapping one
+main lift on an 8-row lower day re-derived 2 of the 4 warm-up movements. The
+saved ticks were keyed to the movements that vanished, so the reconciler saw ids
+no longer in the plan: **2 of 4 ticks lost and the Mobility section's saved
+completion went from `full` to unknown.** The athlete's OWN warm-up swap was
+lost the same way — its decision is keyed to the slot id that no longer existed.
+
+**THE FIX IS AN INPUT TO THE ONE OWNER, NOT A PATCH AT EACH SURFACE.**
+`performedMovementIds` is a REQUIRED field on `MobilityPrehabFlowContext`
+(`utils/sessionExecutionChecklist`'s `performedMobilityMovementIds` reads it off
+the saved record), because the defect class here is a surface FORGETTING the
+warm-up and an optional field is one a new screen omits without noticing. Both
+halves of the ruling are held: a performed movement the fresh fill dropped is put
+back, and everything NOT ticked is whatever the fill just chose for the new work.
+
+⚠ **THE AUTHORED MENU SHAPE MAY NOW BE BROKEN, DELIBERATELY, AND ONLY HERE.** A
+retained movement can come from a category the session's current menu does not
+contain, so `mobilityPrehabFlowTests` §1 asserts the shape for a flow with
+nothing performed. **The COUNT is not broken at all** — retention re-places work
+inside the count the menu produced and never pads past it.
+
+⚠ **FATIGUE IS UNCHANGED, WHICH IS THE HALF THAT NEEDED NO WORK.** R-049 (*"Dose
+counts main work only. Warm-up and cool-down never count"*) and R-088 (the cap
+counts strength rows only) already keep the warm-up out of load; the journal
+engine never reads the flow. Counting warm-up movements AS EXERCISES and keeping
+them out of fatigue were already two different questions in the code.
+
+⚠ **NOT COVERED.** A tick that has not been saved yet: retention reads the
+durable record, so ticking a warm-up and changing a main lift *before* logging
+the session can still re-pick it. Raised for Sam rather than guessed at.
+
+· `WORKING` — `test:mobility-flow` §7, 16 cells. Mutation-proven: neutering
+retention, dropping the fresh-fill dedup, removing the count cap and ignoring
+the ticked flag each red exactly one cell and only one. **The dedup mutation
+survived TWO cells before it bit** — with every movement ticked, restoring all
+of them and trimming to the menu count gives the same four either way, so the
+cap was hiding the missing dedup; the cell that catches it ticks ONE movement.
+Seat `warmup`.
+
+---
+
+**R-214** · *"can we remove the calendar icon, the Tue 25/8 - 8 exercises, then
+put the start session button in its place?"* (Sam, 2026-08-25) · **THE SESSION
+HEADER'S SECOND LINE IS A CONTROL ROW NOW, NOT A CAPTION.**
+
+**SUPERSEDES R-116**, whose four passes aligned that calendar glyph's optical
+centre against that date text, and **moves R-132's stopwatch** from the right of
+the line to its left. Both deliberately: what Sam removed is the line's CONTENT,
+and the geometry those rulings settled has nothing left to align.
+
+`Start session` leads the row; the Session Options dots keep the right. The row
+is now gated on `date` rather than on the subtitle string — gated on the words,
+deleting them would have taken Start session and the options door with them.
+
+⚠ **IT RETIRES THE EXERCISE COUNT RATHER THAN CORRECTING IT.** Sam ruled in the
+same conversation that the warm-up SHOULD count as exercises (R-213), then
+removed the only surface that showed a number. A corrected count with no reader
+is the dead weight this repo keeps paying for, so it is deleted with its
+surface. **If a count ever returns, it counts the execution plan — the one list
+that already holds both the strength rows and the warm-up — and never the
+template.**
+
+⚠ **`components/SessionDateLine.tsx` IS DELETED, NOT LEFT UNMOUNTED**, and its
+`DATE_LINE_HEIGHT` moved to `SessionStopwatchControl`, its one remaining
+consumer. An unmounted component is a second header waiting to be remounted.
+
+⚠ **THE SIX GUARDS THAT REQUIRED THE DATE LINE ARE INVERTED, NOT DELETED**
+(`gate-must-watch-the-deleted-surface`). They now require the removal to stay
+removed, the glyph not to return as an icon-font name, and Start session to
+precede the dots on that row. · `WORKING` — `test:session-execution` §[10].
+Seat `warmup`.

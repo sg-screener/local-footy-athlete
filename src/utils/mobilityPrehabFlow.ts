@@ -91,6 +91,16 @@ export interface MobilityPrehabFlowContext {
   athlete: AthleteContext;
   /** ISO date of the session; rotates which entry fills each slot. */
   date: string;
+  /**
+   * ⚠ **WARM-UP SLOTS THE ATHLETE HAS ALREADY DONE — REQUIRED, NOT OPTIONAL.**
+   *
+   * `utils/sessionExecutionChecklist`'s `performedMobilityMovementIds` reads
+   * them off the saved session record. It is required because the defect this
+   * closes was a surface FORGETTING to ask about the warm-up (R-213): an
+   * optional field is a field a new screen omits and never notices. A day with
+   * nothing ticked passes `[]` and derives exactly as it always did.
+   */
+  performedMovementIds: readonly string[];
 }
 
 function movementHighTarget(min: number | undefined, max: number | undefined): string {
@@ -151,6 +161,20 @@ const POOL_ENTRY_BY_NAME: ReadonlyMap<string, PoolExercise> = (() => {
   const map = new Map<string, PoolExercise>();
   for (const pool of Object.values(POOL_REGISTRY)) {
     for (const entry of pool) map.set(canonicalExerciseName(entry.name), entry);
+  }
+  return map;
+})();
+
+/**
+ * The same registry, keyed the way a SAVED TICK names a movement. A warm-up row
+ * is stored as its pool id, so retention (R-213) looks the movement back up by
+ * the id it was recorded under rather than by a name that may have been
+ * reworded since.
+ */
+const POOL_ENTRY_BY_ID: ReadonlyMap<string, PoolExercise> = (() => {
+  const map = new Map<string, PoolExercise>();
+  for (const pool of Object.values(POOL_REGISTRY)) {
+    for (const entry of pool) map.set(entry.id, entry);
   }
   return map;
 })();
@@ -256,6 +280,80 @@ function fillMenu(
   return movements;
 }
 
+/**
+ * The authored D17 category a movement really belongs to, found by asking the
+ * mapping rather than by inventing one. Used only for a RETAINED movement,
+ * whose own slot may not exist in the menu the session now takes.
+ *
+ * `DEFAULT_ATHLETE_CONTEXT`-style filtering is deliberately NOT applied here:
+ * the question is which category authored this exercise, not whether the
+ * athlete could be given it today — they have already done it.
+ */
+function authoredCategoryOf(exercise: PoolExercise): FlowSlotCategory | null {
+  const entry = EXERCISE_MUSCLE_METADATA.find(
+    (row) => canonicalExerciseName(row.exercise) === canonicalExerciseName(exercise.name),
+  );
+  if (!entry) return null;
+  for (const category of Object.keys(FLOW_CATEGORY_MUSCLE_MAPPING) as FlowSlotCategory[]) {
+    const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[category];
+    if (!mapping.pools.includes(entry.pool)) continue;
+    if (![...entry.primary, ...entry.secondary].some((g) => mapping.muscleGroups.includes(g))) {
+      continue;
+    }
+    return category;
+  }
+  return null;
+}
+
+/**
+ * ⚠ **WORK THE ATHLETE HAS ALREADY DONE OUTRANKS A MENU RE-PICKED UNDERNEATH
+ * THEM — SAM, 2026-08-25 (R-213).**
+ *
+ * *"If a warm up is already ticked off then it should stay, but otherwise
+ * swapping it for something else is okay if they change a main lift because the
+ * warm up is supposed to prepare them for the work ahead."*
+ *
+ * Both halves are here. A performed movement the fresh fill dropped is put
+ * back; everything the athlete had NOT done is whatever the fill just chose for
+ * the new work. So a main lift change still re-primes the session — it just
+ * cannot rewrite history while doing it.
+ *
+ * ⚠ **THIS IS THE ONE PLACE THE AUTHORED MENU SHAPE MAY BE BROKEN, AND IT IS
+ * BOUNDED TWO WAYS.** A retained movement can come from a category this menu
+ * does not contain (a lower day's hip drill kept on a day that became upper), so
+ * `mobilityPrehabFlowTests` §1 asserts the shape only for a flow with nothing
+ * performed. **The COUNT is not broken at all:** retention re-places work inside
+ * the count the menu produced and never pads past it, which is the half of
+ * "counts are law" that would actually mislead the athlete.
+ */
+function retainPerformed(
+  filled: MobilityPrehabFlowMovement[],
+  performedMovementIds: readonly string[],
+  athlete: AthleteContext,
+): MobilityPrehabFlowMovement[] {
+  if (performedMovementIds.length === 0) return filled;
+
+  const present = new Set(filled.map((movement) => movement.exercise.id));
+  const restored: MobilityPrehabFlowMovement[] = [];
+  const seen = new Set<string>();
+  for (const id of performedMovementIds) {
+    if (present.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    const exercise = POOL_ENTRY_BY_ID.get(id);
+    // An id no pool knows is a record of something this build cannot draw. It
+    // is skipped rather than turned into a movement with invented content.
+    if (!exercise) continue;
+    const category = authoredCategoryOf(exercise);
+    if (!category) continue;
+    restored.push({ exercise, category });
+  }
+  if (restored.length === 0) return filled;
+
+  // Performed work leads, then as much of the fresh fill as the count allows.
+  const capacity = Math.max(filled.length, restored.length);
+  return [...restored, ...filled].slice(0, capacity);
+}
+
 export function selectMobilityPrehabFlow(
   context: MobilityPrehabFlowContext,
 ): MobilityPrehabFlow | null {
@@ -274,7 +372,11 @@ export function selectMobilityPrehabFlow(
   const menu = SESSION_FLOW_MENUS.find((entry) => entry.dayType === dayType);
   if (!menu) return null;
 
-  const movements = fillMenu(menu, context.athlete, dateHash(context.date));
+  const movements = retainPerformed(
+    fillMenu(menu, context.athlete, dateHash(context.date)),
+    context.performedMovementIds,
+    context.athlete,
+  );
   // An empty draw is no flow rather than an empty one.
   if (movements.length === 0) return null;
 

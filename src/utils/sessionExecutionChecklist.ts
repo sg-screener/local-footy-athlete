@@ -83,6 +83,48 @@ export interface SessionExecutionSummary {
 }
 
 /**
+ * ⚠ **ONE OWNER FOR THE WARM-UP ROW'S IDENTITY.**
+ *
+ * The checklist writes it, `derivedExerciseDecisions` matches a quick swap
+ * against it, and `mobilityPrehabFlow` reads it back to keep work the athlete
+ * has already done. Three modules re-typing `mobility:${id}` is three chances
+ * for one of them to drift, and the row identity is what every saved tick is
+ * keyed to.
+ */
+export function mobilityFlowItemId(movementExerciseId: string): string {
+  return `mobility:${movementExerciseId}`;
+}
+
+/** The movement id inside a warm-up row identity, or null if it is not one. */
+export function mobilityFlowMovementIdOf(itemId: string): string | null {
+  return itemId.startsWith('mobility:') ? itemId.slice('mobility:'.length) : null;
+}
+
+/**
+ * ⚠ **THE WARM-UP SLOTS THIS DATE'S SAVED RECORD PROVES WERE PERFORMED —
+ * SAM, 2026-08-25 (R-213).**
+ *
+ * *"If a warm up is already ticked off then it should stay."* The warm-up is
+ * derived from the workout, so changing a main lift re-derives it; feeding this
+ * back into `selectMobilityPrehabFlow` is what stops that re-derivation taking
+ * the athlete's ticks with it.
+ *
+ * Only ticked rows, and only ones saved durably: an untouched row is not
+ * evidence of anything, and a row the athlete cleared is evidence against.
+ */
+export function performedMobilityMovementIds(
+  feedback: RecordedExecutionFeedback | null | undefined,
+): readonly string[] {
+  const ids: string[] = [];
+  for (const item of feedback?.executionItems ?? []) {
+    if (!item.completed || item.sectionId !== 'mobility') continue;
+    const movementId = mobilityFlowMovementIdOf(item.itemId);
+    if (movementId) ids.push(movementId);
+  }
+  return ids;
+}
+
+/**
  * Whole-session completion from the sections the athlete was prescribed.
  * The separately authored Optional Work cluster remains no-penalty; Mobility /
  * Warm-up is an ordinary prescribed section and therefore participates exactly
@@ -400,7 +442,7 @@ export function buildSessionExecutionPlan(args: {
 
   for (const movement of args.mobilityFlow?.movements ?? []) {
     items.push({
-      id: `mobility:${movement.exercise.id}`,
+      id: mobilityFlowItemId(movement.exercise.id),
       sectionId: 'mobility',
       componentId: null,
       label: movement.exercise.name,

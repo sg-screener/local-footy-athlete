@@ -1127,49 +1127,53 @@ ok('[10] the container does not disturb the alignment it wraps',
   'padding is on the container; the grid keeps its own geometry');
 
 // ── THE ICONS.
-/* ══ THE DATE LINE'S OPTICAL CENTRE — SAM, FOURTH PASS ═══════════════════════
- * *"The visible calendar glyph and date text must have centre-Y positions within
- * one pixel … do not compensate with an unexplained screen-specific margin."*
- * As with the control row, there is no renderer here, so these cells prove the
- * ARITHMETIC that makes the centres equal: two boxes of identical height,
- * centred in one row, with no margin on either, and a glyph whose visible ink is
- * symmetric inside its own viewBox. The measured crop is the rendered proof. */
-const dateLine = fs.readFileSync(
-  path.resolve(__dirname, '..', 'components', 'SessionDateLine.tsx'), 'utf8');
-ok('[10] CONTROL — the shared date component was found',
-  /export function SessionDateLine/.test(dateLine) && dateLine.length > 500);
-ok('[10] the calendar renders immediately before the date, in ONE shared component',
-  /session-header-calendar-icon[\s\S]{0,200}<Text style=\{\[styles\.text/.test(dateLine)
-    && /<SessionDateLine label=\{combinedSubtitle\}/.test(screen),
-  'and the screen no longer builds the row itself');
-ok('[10] the icon box and the text share ONE height — this is the alignment',
-  /export const DATE_LINE_HEIGHT = (\d+)/.test(dateLine)
-    && /height: DATE_LINE_HEIGHT/.test(dateLine)
-    && /lineHeight: DATE_LINE_HEIGHT/.test(dateLine),
-  'equal heights centred in one row have equal centre-Y, by arithmetic');
-ok('[10] and NEITHER carries a margin that could move one centre and not the other',
-  !/(marginTop|marginBottom|marginVertical|top:|transform)/.test(
-    dateLine.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')),
-  'the date Text used to carry marginTop: 3, which is exactly this bug');
-ok('[10] the glyph is DRAWN, not typed — no font metric left to be wrong about',
-  /viewBox="0 0 24 24"/.test(dateLine) && !/calendar-blank-outline/.test(screen),
-  'an icon font puts its ink above the box centre; an svg path does not');
-ok('[10] and its visible ink is symmetric about the viewBox centre',
+/* ══ THE DATE LINE IS DELETED, AND THESE CELLS NOW WATCH ITS ABSENCE ═════════
+ *
+ * ⚠ **SAM, 2026-08-25 (R-214): *"can we remove the calendar icon, the Tue 25/8
+ * - 8 exercises, then put the start session button in its place?"*** This
+ * SUPERSEDES R-116, four passes of which aligned that calendar glyph's optical
+ * centre against that date text.
+ *
+ * ⚠ **THE GUARDS ARE INVERTED, NOT DELETED** (`gate-must-watch-the-deleted-
+ * surface`). Six cells demanded the component exist, demanded the screen mount
+ * it, and demanded its two boxes share one height. Deleting them would leave
+ * the header unwatched at exactly the place it was just rewritten; they now
+ * require the removal to STAY removed and the ruled replacement to be there. */
+const dateComponentPath = path.resolve(__dirname, '..', 'components', 'SessionDateLine.tsx');
+ok('[10] the date component is gone, not merely unmounted',
+  !fs.existsSync(dateComponentPath),
+  'an unmounted component is a second header waiting to be remounted');
+ok('[10] and no screen builds the date line back by hand',
+  !/SessionDateLine|CalendarGlyph|session-header-calendar-icon/.test(screen)
+    && !/calendar-blank-outline/.test(screen),
+  'the glyph must not return as an icon-font name either');
+ok('[10] the session header no longer prints a date or an exercise count',
+  // Comments stripped: the screen still EXPLAINS the removal, and a cell that
+  // reddened on its own explanation would force the reason to be deleted too.
+  !/combinedSubtitle|countFragment|dateFragment|metaCount/.test(
+    screen.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, ''),
+  ),
+  'the count read the template only, so it said 8 for 8 strength rows + a 4-movement warm-up');
+ok('[10] START SESSION TOOK ITS PLACE — first on the row, before the options dots',
   (() => {
-    const ys = [...dateLine.matchAll(/<Path d="M\d+ (\d+)(?:v(\d+))?/g)]
-      .flatMap((m) => [Number(m[1]), Number(m[1]) + Number(m[2] ?? 0)]);
-    const rect = /<Path d="M4 (\d+)h16v(\d+)H4z"/.exec(dateLine);
-    if (rect) ys.push(Number(rect[1]), Number(rect[1]) + Number(rect[2]));
-    const top = Math.min(...ys); const bottom = Math.max(...ys);
-    return ys.length > 0 && Math.abs((top + bottom) / 2 - 12) <= 0.5;
+    const row = screen.indexOf('<View style={styles.headerSubtitleRow}>');
+    const stopwatch = screen.indexOf('<SessionStopwatchControl', row);
+    const dots = screen.indexOf('session-options-button', row);
+    return row > 0 && stopwatch > row && dots > stopwatch;
   })(),
-  'ink extent must straddle y=12, the viewBox centre');
-ok('[10] the date row stays ONE accessibility element speaking the date, not the glyph',
-  /accessible\s*\n?\s*accessibilityLabel=\{label\}/.test(dateLine));
-ok('[10] and no screen can nudge the date line — the screen owns spacing only',
-  /headerSubtitleRow: \{ marginTop: 3 \}/.test(screen)
-    && !/headerSubtitleIcon/.test(screen),
-  'geometry lives in the component; the screen positions the block, not its parts');
+  'R-132 put the stopwatch at the right of this line; R-214 moves it to the left');
+ok('[10] the row is gated on the DATE, so deleting the words cannot delete the controls',
+  /\{date \? \(\s*\n\s*<View style=\{styles\.headerSubtitleRow\}>/.test(screen),
+  'it was gated on combinedSubtitle, which Start session would have died with');
+ok('[10] the stopwatch owns the line height its only remaining consumer needs',
+  (() => {
+    const stopwatch = fs.readFileSync(
+      path.resolve(__dirname, '..', 'components', 'SessionStopwatchControl.tsx'), 'utf8');
+    return /export const SESSION_HEADER_LINE_HEIGHT = \d+/.test(stopwatch)
+      && /lineHeight: SESSION_HEADER_LINE_HEIGHT/.test(stopwatch)
+      && !/SessionDateLine/.test(stopwatch.replace(/\/\*[\s\S]*?\*\//g, ''));
+  })(),
+  'the measurement moved to its consumer rather than outliving its component');
 /* ⚠ **THE ICON GUARDS ARE NOW ABOUT ONE OWNER, NOT THREE NAMES — SAM,
  * 2026-08-20, second pass.** The first cut asserted that three glyphs existed
  * and said nothing about whether they were the DAY SCREEN'S glyphs. They were

@@ -43,6 +43,7 @@ import {
 } from '../../utils/mobilityPrehabFlow';
 import {
   buildSessionExecutionPlan,
+  performedMobilityMovementIds,
   reconcileRecordedSessionExecution,
 } from '../../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
@@ -315,13 +316,20 @@ export default function HomeScreenV2() {
           isGameWeek,
           athlete: reviewAthlete,
           date: day.date,
+          /* R-213 — the SAME retained warm-up the opened session shows. The card
+           * and the session must not disagree about which movements this day
+           * holds, which is exactly what an optional input would have allowed
+           * the moment one of the two forgot to pass it. */
+          performedMovementIds: performedMobilityMovementIds(
+            sessionFeedback[day.date] ?? null,
+          ),
         }),
         date: day.date,
         entries: ledgerEntries,
         excludedExerciseNames: excludedExerciseNamesOn(athletePrefs.exclusions, day.date),
       }),
     ]));
-  }, [athletePrefs.exclusions, currentPhase, ledgerEntries, projectedWorkoutByDate, reviewAthlete, weekDays]);
+  }, [athletePrefs.exclusions, currentPhase, ledgerEntries, projectedWorkoutByDate, reviewAthlete, sessionFeedback, weekDays]);
   const executionPlanByDate = useMemo(() => new Map(weekDays.flatMap((day) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date);
     if (!projectedWorkout) return [];

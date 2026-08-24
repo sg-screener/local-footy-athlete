@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
-import { DATE_LINE_HEIGHT } from './SessionDateLine';
 import { SESSION_STOPWATCH_COPY } from '../rules/sessionStopwatchCopy';
 import {
   formatSessionStopwatchElapsed,
@@ -16,11 +15,18 @@ import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
  * line, *"keeping font the same but just saying 'Start session' its a little
  * button or something with a timer next to it that you can pause or end."*
  *
- * The font IS the subtitle's (`SessionDateLine`'s 13/500/20) — his words. The
- * component only renders and forwards taps; every timestamp comes from the
+ * The font IS the subtitle's 13/500/20 — his words. It used to be imported from
+ * `SessionDateLine`, the date component that owned that line; R-214 deleted the
+ * date and its calendar, and moved this control into the space they vacated, so
+ * the one remaining consumer of that measurement now holds it.
+ *
+ * The component only renders and forwards taps; every timestamp comes from the
  * store, so navigating away, backgrounding or killing the app never loses the
  * count. The 1-second tick exists purely to repaint the derived elapsed text.
  */
+
+/** The header line's height — text line-height and control box alike. */
+export const SESSION_HEADER_LINE_HEIGHT = 20;
 export function SessionStopwatchControl({ workoutId, dateISO }: {
   workoutId: string;
   dateISO: string;
@@ -106,7 +112,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     letterSpacing: 0.1,
-    lineHeight: DATE_LINE_HEIGHT,
+    lineHeight: SESSION_HEADER_LINE_HEIGHT,
   },
   elapsed: { color: colors.text.primary },
   action: { color: colors.text.accent },

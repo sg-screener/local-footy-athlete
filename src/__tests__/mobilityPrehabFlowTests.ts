@@ -59,6 +59,7 @@ import { DEFAULT_ATHLETE_CONTEXT, type AthleteContext } from '../utils/sessionBu
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
+import { performedMobilityMovementIds } from '../utils/sessionExecutionChecklist';
 
 const src = path.resolve(__dirname, '..');
 
@@ -114,6 +115,8 @@ type FlowContext = {
   isGameWeek: boolean;
   athlete?: AthleteContext;
   date?: string;
+  /** Warm-up slots the saved session record proves this athlete already did. */
+  performedMovementIds?: readonly string[];
 };
 const IN_SEASON: FlowContext = { seasonPhase: 'In-season', isGameWeek: false };
 const DATE = '2026-07-30';
@@ -147,6 +150,10 @@ function flowFor(workout: any, context: FlowContext = IN_SEASON) {
     isGameWeek: context.isGameWeek,
     athlete: context.athlete ?? DEFAULT_ATHLETE_CONTEXT,
     date: context.date ?? DATE,
+    // EVERY CELL ABOVE §7 DESCRIBES A WARM-UP NOTHING HAS BEEN TICKED IN YET.
+    // Retention (§7) is a ruled exception to the authored menu shape, so the
+    // shape cells only mean what they say when this is empty.
+    performedMovementIds: context.performedMovementIds ?? [],
   });
 }
 
@@ -556,6 +563,169 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
   ok(
     'the flow never gates the Finish action',
     !/flowDone|mobilityDone/.test(screen),
+  );
+}
+
+/* ══ 7. A warm-up the athlete has already done stays ══ */
+
+/**
+ * ⚠ **SAM, 2026-08-25 (R-213): *"If a warm up is already ticked off then it
+ * should stay, but otherwise swapping it for something else is okay if they
+ * change a main lift because the warm up is supposed to prepare them for the
+ * work ahead."***
+ *
+ * The warm-up is DERIVED from the workout, so changing a main lift re-derives
+ * it. Measured on 2026-08-25: swapping one main lift replaced 2 of the 4
+ * movements, which silently took the athlete's ticks with them — the reconciler
+ * saw ids that no longer existed and reported the whole section as unknown.
+ *
+ * **The fix is retention at the ONE owner, not at each surface.** Every surface
+ * that shows a warm-up calls `selectMobilityPrehabFlow`, so the performed slots
+ * are an input to it and no caller can forget them — which is the same class of
+ * defect as the header count that only ever asked the template.
+ *
+ * The tension this resolves: §1 says the categories are exactly the authored
+ * menu's. Retention can break that shape, and it is ALLOWED to, because a
+ * movement the athlete has already performed outranks a menu re-picked
+ * underneath them. §1's cells run with nothing performed, which is what makes
+ * them still true.
+ */
+console.log('\n[7] Performed warm-up movements survive a re-derivation');
+{
+  const lowerDay = workoutOf({ exercises: [row('Back Squat'), row('Romanian Deadlift')] });
+  const fresh = flowFor(lowerDay);
+  ok('the fixture has a warm-up to perform', (fresh?.movements.length ?? 0) >= 2);
+
+  const performed = fresh!.movements.slice(0, 2).map((m) => m.exercise.id);
+
+  // The main lift changes to an upper-body one — a different D17 menu.
+  const upperDay = workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] });
+  const rederived = flowFor(upperDay);
+  const rederivedIds = (rederived?.movements ?? []).map((m) => m.exercise.id);
+  ok(
+    'CONTROL — the re-derivation really does drop the performed movements',
+    performed.some((id) => !rederivedIds.includes(id)),
+    `performed ${JSON.stringify(performed)}, re-derived ${JSON.stringify(rederivedIds)}`,
+  );
+
+  const retained = flowFor(upperDay, { ...IN_SEASON, performedMovementIds: performed });
+  const retainedIds = (retained?.movements ?? []).map((m) => m.exercise.id);
+  ok(
+    'every performed movement is still in the warm-up after the main lift changed',
+    performed.every((id) => retainedIds.includes(id)),
+    `kept ${JSON.stringify(retainedIds)}`,
+  );
+
+  ok(
+    'the movements the athlete had NOT done are still free to change',
+    rederivedIds.some((id) => !performed.includes(id) && retainedIds.includes(id)),
+    'the fresh picks for the new work must still get in',
+  );
+
+  // THE COUNT LAW IS NOT BORROWED AGAINST. Retention re-places work inside the
+  // menu's own count; it never pads the flow past what the menu produced.
+  ok(
+    'retention never makes the warm-up longer than the menu it fills',
+    (retained?.movements.length ?? 0) <= (rederived?.movements.length ?? 0),
+    `retained ${retained?.movements.length}, menu ${rederived?.movements.length}`,
+  );
+  ok(
+    'movementCount still reports what the flow actually holds',
+    retained?.movementCount === retained?.movements.length,
+  );
+
+  ok(
+    'no movement is listed twice when a performed one is also picked fresh',
+    new Set(retainedIds).size === retainedIds.length,
+    JSON.stringify(retainedIds),
+  );
+
+  /* ⚠ **THE CASE ABOVE CANNOT SEE A DUPLICATE, AND A MUTATION PROVED IT.**
+   * Those performed ids come from the LOWER menu and the re-derivation takes
+   * the UPPER one, so the fresh fill contains none of them and the guard
+   * against re-adding a movement that is ALREADY THERE never runs — deleting
+   * that guard reddened nothing. This is the same day re-derived, where every
+   * performed movement is still picked, which is the ordinary case: an athlete
+   * ticks a warm-up and changes nothing at all. */
+  const sameDayPerformed = fresh!.movements.map((m) => m.exercise.id);
+  const sameDay = flowFor(lowerDay, { ...IN_SEASON, performedMovementIds: sameDayPerformed });
+  const sameDayIds = (sameDay?.movements ?? []).map((m) => m.exercise.id);
+  ok(
+    'a performed movement the fresh fill ALSO picked appears exactly once',
+    sameDayIds.length === sameDayPerformed.length
+      && new Set(sameDayIds).size === sameDayIds.length,
+    `got ${JSON.stringify(sameDayIds)} for ${JSON.stringify(sameDayPerformed)}`,
+  );
+  ok(
+    'and ticking every movement changes nothing about an unchanged session',
+    JSON.stringify(sameDayIds) === JSON.stringify(sameDayPerformed),
+    'retention must not reorder a warm-up that was never re-picked',
+  );
+
+  /* ⚠ **AND ONE TICK, NOT FOUR — THE CELL ABOVE STILL COULD NOT SEE IT.**
+   * When EVERY movement is performed, restoring them all and then trimming to
+   * the menu's count produces the same four either way, so the count cap was
+   * hiding the missing dedup. With a SINGLE tick the duplicate is inside the
+   * cap: `[a] + [a,b,c,d]` trimmed to four is `a, a, b, c` — the athlete's
+   * first movement listed twice and the last one silently gone. */
+  const oneTicked = flowFor(lowerDay, {
+    ...IN_SEASON, performedMovementIds: sameDayPerformed.slice(0, 1),
+  });
+  const oneTickedIds = (oneTicked?.movements ?? []).map((m) => m.exercise.id);
+  ok(
+    'ticking ONE movement of an unchanged warm-up leaves all four, each once',
+    JSON.stringify(oneTickedIds) === JSON.stringify(sameDayPerformed),
+    `got ${JSON.stringify(oneTickedIds)} for ${JSON.stringify(sameDayPerformed)}`,
+  );
+
+  // A RETAINED MOVEMENT STILL NAMES A REAL D17 CATEGORY, resolved from the
+  // authored mapping rather than invented, so §1's per-movement cell keeps
+  // meaning something for it.
+  const misplaced: string[] = [];
+  for (const movement of retained?.movements ?? []) {
+    const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[movement.category];
+    const entry = EXERCISE_MUSCLE_METADATA.find((e) => e.exercise === movement.exercise.name);
+    if (!mapping || !entry) { misplaced.push(movement.exercise.name); continue; }
+    const poolOk = mapping.pools.includes(entry.pool);
+    const groupOk = [...entry.primary, ...entry.secondary]
+      .some((g) => mapping.muscleGroups.includes(g));
+    if (!poolOk || !groupOk) misplaced.push(`${movement.exercise.name} in ${movement.category}`);
+  }
+  ok(
+    'a retained movement carries the authored category it really belongs to',
+    misplaced.length === 0,
+    misplaced.join('; '),
+  );
+
+  ok(
+    'nothing performed leaves the flow exactly as it was derived',
+    JSON.stringify(movementNames(flowFor(upperDay, { ...IN_SEASON, performedMovementIds: [] })))
+      === JSON.stringify(movementNames(rederived)),
+  );
+  ok(
+    'an id that no pool knows is ignored rather than invented into a movement',
+    JSON.stringify(movementNames(
+      flowFor(upperDay, { ...IN_SEASON, performedMovementIds: ['not-an-exercise'] }),
+    )) === JSON.stringify(movementNames(rederived)),
+  );
+
+  // THE READER OF THE SAVED RECORD. The screen must not re-invent the item-id
+  // format; one owner writes `mobility:<id>` and one owner reads it back.
+  ok(
+    'the saved record reader returns only the mobility rows that were ticked',
+    JSON.stringify(performedMobilityMovementIds({
+      completion: 'partial',
+      executionItems: [
+        { itemId: 'mobility:elephant-walks', sectionId: 'mobility', componentId: null, completed: true },
+        { itemId: 'mobility:dead-hang', sectionId: 'mobility', componentId: null, completed: false },
+        { itemId: 'exercise:row-1', sectionId: 'strength', componentId: 'strength', completed: true },
+      ],
+    })) === JSON.stringify(['elephant-walks']),
+  );
+  ok(
+    'no saved record means nothing is retained',
+    performedMobilityMovementIds(null).length === 0
+      && performedMobilityMovementIds({ completion: 'full' }).length === 0,
   );
 }
 

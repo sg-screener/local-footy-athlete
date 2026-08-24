@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/SectionIcon';
-import { SessionDateLine } from '../../components/SessionDateLine';
 import { SessionStopwatchControl } from '../../components/SessionStopwatchControl';
 import { Text } from '../../components/common/Text';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
@@ -32,7 +31,7 @@ import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
-import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
+import { todayISOLocal } from '../../utils/appDate';
 import type { ComposedGap } from '../../rules/composeWeek';
 import {
   EXERCISE_EXCLUSION_QUESTION,
@@ -165,6 +164,7 @@ import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import {
   buildSessionExecutionPlan,
   buildSessionExecutionSummary,
+  performedMobilityMovementIds,
   recordedCompletedSessionExecutionItemIds,
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
@@ -820,6 +820,19 @@ export default function DayWorkoutScreenV2() {
     [resolvedWeek],
   );
   const flowAthlete = useAthleteContext();
+  /* ⚠ **R-213 — A TICKED WARM-UP OUTLIVES THE WORK IT WAS DERIVED FOR.**
+   *
+   * Sam, 2026-08-25: *"If a warm up is already ticked off then it should stay,
+   * but otherwise swapping it for something else is okay if they change a main
+   * lift."* The warm-up is derived from the workout, so a main lift change
+   * re-derives it — measured 2026-08-25, one swap replaced 2 of 4 movements and
+   * the saved ticks went with them. The saved record is an INPUT to the
+   * derivation, which is the only place that fact can be honoured for every
+   * surface at once. */
+  const performedMovementIds = React.useMemo(
+    () => performedMobilityMovementIds(persistedFeedback as any),
+    [persistedFeedback],
+  );
   const baseMobilityFlow = React.useMemo(
     () => selectMobilityPrehabFlow({
       workout: effectiveWorkout,
@@ -827,8 +840,9 @@ export default function DayWorkoutScreenV2() {
       isGameWeek,
       athlete: flowAthlete,
       date,
+      performedMovementIds,
     }),
-    [effectiveWorkout, seasonPhase, isGameWeek, flowAthlete, date],
+    [effectiveWorkout, seasonPhase, isGameWeek, flowAthlete, date, performedMovementIds],
   );
   const mobilityFlow = React.useMemo(
     () => applyMobilityFlowExerciseDecisions({
@@ -1890,24 +1904,26 @@ export default function DayWorkoutScreenV2() {
   // one of the words above it; the separator it invented lives in the signed
   // sheet, and the projection does the joining. See `visibleDayDetail.ts`.
 
-  // Subtitle meta count — the numbered rows the athlete sees, taken from the one
-  // list that renders them (`sessionListLabels` numbers exactly those). It used
-  // to be a fourth answer to "what kind of day is this", which is how a combined
-  // day counted its strength rows and a conditioning day counted nothing.
-  const metaCount = sessionListLabels(sessionTemplate.items).filter(Boolean).length;
-
-  // Combined "Fri 3/7 · 6 exercises" subtitle. All fragments are merged into a
-  // single line of plain body text — no stacked labels, no uppercase chips.
-  // Date leads (matching the dated day rows on the Program tab), then count so
-  // the athlete's eye lands on volume. What the day IS, is the title's job and
-  // only the title's — the third fragment used to answer that question a second
-  // time and was retired with `detail.attached` above.
-  const dateFragment = date ? shortWeekdayDateLabel(date) : '';
-  const countFragment =
-    metaCount > 0 ? `${metaCount} exercise${metaCount !== 1 ? 's' : ''}` : '';
-  const combinedSubtitle = [dateFragment, countFragment]
-    .filter(Boolean)
-    .join(' · ');
+  /* ── THE DATE LINE IS GONE, AND START SESSION HAS ITS PLACE ─────────────
+   *
+   * ⚠ **SAM, 2026-08-25 (R-214): *"can we remove the calendar icon, the Tue 25/8
+   * - 8 exercises, then put the start session button in its place?"*** This
+   * SUPERSEDES R-116, whose four passes aligned that calendar glyph against that
+   * date text, and it moves R-132's stopwatch from the right of the line to the
+   * left of it. Both are superseded deliberately: the line's own content is what
+   * he removed, not its geometry.
+   *
+   * ⚠ **AND IT RETIRES THE COUNT RATHER THAN FIXING IT.** The subtitle read
+   * `8 exercises` for a session of 8 strength rows and a 4-movement warm-up,
+   * because `sessionListLabels` numbers the TEMPLATE and the warm-up is derived
+   * beside it — the same "every surface must remember to ask about the warm-up"
+   * defect R-213 closes at the flow owner. Sam ruled the warm-up SHOULD count
+   * (2026-08-25) and then removed the line that showed the number. A corrected
+   * count with no reader would be exactly the dead weight this repo keeps
+   * paying for, so the count is deleted with its surface. If a count returns
+   * anywhere, it counts the execution plan — the one list that already holds
+   * both — and not the template.
+   */
   const sessionOptionsAvailable = Boolean(
     date && !isTeamOnly && editableExercises.length > 0
       && !isFinished && !isAlreadyComplete,
@@ -1970,40 +1986,35 @@ export default function DayWorkoutScreenV2() {
           {smokeCoachBikeFlow
             ? renderDayWorkoutSmokeContractMarkers(smokeContract)
             : null}
-          {/* ⚠ **THE CALENDAR ICON LEADS THE DATE — SAM, 2026-08-20 (R-116).**
-            *
-            * From the existing icon set this screen already uses for its section
-            * chevrons; no new graphic asset. The row is `accessible` as ONE
-            * element carrying the subtitle's own words, so a screen reader hears
-            * "Mon 13/7 · 6 exercises" and never the glyph — an icon beside text
-            * it merely decorates must not become a second thing to read. */}
-          {combinedSubtitle ? (
+          {/* ⚠ **THE ROW IS GATED ON THE DATE, NOT ON A SUBTITLE (R-214).** It
+            * used to be gated on `combinedSubtitle`, so deleting the words
+            * would have taken Start session and the options dots with them —
+            * the row's REASON to exist is that this is a dated session the
+            * athlete can start, which is precisely what `date` says. */}
+          {date ? (
             <View style={styles.headerSubtitleRow}>
-              <SessionDateLine label={combinedSubtitle} color="#8A8A8A" />
-              {/* R-132 (Sam, 2026-08-23): the stopwatch, on this same line,
-                * same font, top right — "Start session", then a timer he can
-                * pause or end. State lives in its own persisted store, so
+              {/* R-132 (Sam, 2026-08-23) placed the stopwatch on this line;
+                * R-214 moved it to the line's LEFT, into the space the date
+                * vacated. State still lives in its own persisted store, so
                 * leaving the screen or the app never loses the count. */}
-              {date ? (
-                <View style={styles.sessionHeaderActions}>
-                  <SessionStopwatchControl workoutId={workout.id} dateISO={date} />
-                  {sessionOptionsAvailable ? (
-                    <Pressable
-                      onPress={() => setSessionOptionsVisible(true)}
-                      accessibilityRole="button"
-                      accessibilityLabel={signedCopy('plan_change.session_options')}
-                      testID="session-options-button"
-                      hitSlop={12}
-                      style={({ pressed }) => [
-                        styles.sessionOptionsButton,
-                        pressed && { opacity: 0.6 },
-                      ]}
-                    >
-                      <MaterialCommunityIcons name="dots-horizontal" size={22} color="#B5B5B5" />
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : null}
+              <SessionStopwatchControl workoutId={workout.id} dateISO={date} />
+              <View style={styles.sessionHeaderActions}>
+                {sessionOptionsAvailable ? (
+                  <Pressable
+                    onPress={() => setSessionOptionsVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={signedCopy('plan_change.session_options')}
+                    testID="session-options-button"
+                    hitSlop={12}
+                    style={({ pressed }) => [
+                      styles.sessionOptionsButton,
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="dots-horizontal" size={22} color="#B5B5B5" />
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           ) : null}
           {/* ⚠ **THE THREE UNLABELLED HEADER ICONS STAY DELETED — SAM, 2026-08-19.**
@@ -5337,14 +5348,9 @@ const styles = StyleSheet.create({
   // heading. Both are decoration beside text that already says the words.
   // ⚠ R-116, SECOND PASS — *"Vertically centre the calendar icon with the date
   // text. They must share one aligned row and baseline/centre, with a small
-  // fixed gap."* `alignItems: 'center'` alone was not enough: the Text carries
-  // its own line-height box, so the glyph sat high against it. The icon is
-  // given the SAME line height as the text and centres inside it, which is
-  // what makes the two share one optical centre rather than one row.
-  // Spacing below the title only. The date line's own geometry lives in
-  // `components/SessionDateLine`, so no screen can nudge it.
-  // R-132: date left, stopwatch right, one line — his "same line as
-  // Thu 20/8 - 7 Exercises" placement.
+  // R-214: the date and its count are gone; Start session took their place at
+  // the line's left, the options dots stay at its right. Spacing below the
+  // title only — the controls own their own geometry.
   headerSubtitleRow: {
     marginTop: 3,
     flexDirection: 'row',
