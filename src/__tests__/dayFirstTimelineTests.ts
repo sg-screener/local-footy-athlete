@@ -1067,7 +1067,18 @@ run('unselected Week cards share the darker Day programmed surface', () => {
   assert(/const cardSelected = normal && \(dayShape \? isSelected : day\.isToday\)/.test(dayRow)
       && /selected=\{cardSelected\}/.test(dayRow),
     'the Week Today card lost its selected surface while darkening the ordinary rows');
+  const todayStyle = home.match(/weekDayCardToday:\s*\{[^}]+\}/)?.[0] ?? '';
+  assert(/!dayShape && cardSelected && styles\.weekDayCardToday/.test(dayRow)
+    && todayStyle.includes("backgroundColor: '#14160F'")
+    && todayStyle.includes('borderWidth: 1')
+    && todayStyle.includes("borderColor: 'rgba(200, 255, 0, 0.24)'")
+    && home.includes('testID="day-week-today-pill"'),
+  'the Week Today card no longer uses its quiet olive treatment while retaining the TODAY pill');
+  assert(/weekCardMeta:\s*\{[^}]*color:\s*'#A0A0A0'/.test(home),
+    'the Week exercise-count text has dropped back to the lower-contrast grey');
   assert(dayRow.indexOf('!dayShape && !cardSelected && styles.dayRowCalm')
+      < dayRow.indexOf('!dayShape && cardSelected && styles.weekDayCardToday')
+    && dayRow.indexOf('!dayShape && cardSelected && styles.weekDayCardToday')
       < dayRow.indexOf('isMoveTarget && styles.dayRowMoveTarget'),
     'move-target feedback must remain later than the calm Week surface so it stays visible');
 });
@@ -1325,10 +1336,10 @@ run('week navigation is absent from Today and compact below the toggle in Week',
   assert(/program-week-previous[\s\S]*program-week-current[\s\S]*program-week-next/.test(nav),
     'simplifying the navigator removed one of its three established doors');
   assert(nav.includes('testID="edit-week-button"')
-    && /testID="edit-week-button"[\s\S]{0,260}hitSlop=\{10\}/.test(nav)
+    && /testID="edit-week-button"[\s\S]{0,260}hitSlop=\{12\}/.test(nav)
     && /testID="edit-week-button"[\s\S]{0,500}name="dots-horizontal" size=\{22\}/.test(nav)
     && /weekPlanOptionsButton:\s*\{[\s\S]{0,180}width:\s*24[\s\S]{0,80}height:\s*24/.test(home),
-  'the Week range row does not carry one compact dots control with a 44-point target');
+  'the Week range row does not carry one compact dots control with a 48-point target');
   assert(/weekNavigationRow:\s*\{[\s\S]{0,180}position:\s*'relative'[\s\S]{0,180}alignItems:\s*'center'/.test(home)
     && /weekPlanOptionsButton:\s*\{[\s\S]{0,180}position:\s*'absolute'[\s\S]{0,80}right:\s*0/.test(home),
   'the dots no longer sit at the right while the week range stays centred');

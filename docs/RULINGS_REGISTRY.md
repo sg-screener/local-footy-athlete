@@ -5248,6 +5248,18 @@ route is unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralig
 
 ---
 
+**R-208** · Week hierarchy stays visible without shouting (Sam, 2026-08-25) ·
+**TODAY IS MARKED, WEEK OPTIONS ARE EASY TO HIT, AND METADATA IS LEGIBLE.**
+
+The current-day Week card keeps its **TODAY** pill but replaces the full lime
+outline with a one-point faint olive border and slight dark-olive tint. The
+Week `•••` keeps its visible 24-point, circle-free treatment while its invisible
+target grows to 48 points. Exercise-count metadata such as **6 exercises** uses
+a slightly brighter grey. No card action or navigation behaviour changes. ·
+`WORKING` — `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
 **R-205** · Week adjustment heading names this week (Sam, 2026-08-25) ·
 **THE SHEET NAMES THE SPECIFIC WEEK BEING CHANGED.**
 

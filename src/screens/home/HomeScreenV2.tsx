@@ -834,7 +834,7 @@ export default function HomeScreenV2() {
                 testID="edit-week-button"
                 accessibilityRole="button"
                 accessibilityLabel={signedCopy('week.edit_sheet.title')}
-                hitSlop={10}
+                hitSlop={12}
                 style={({ pressed }) => [
                   styles.weekPlanOptionsButton,
                   pressed && { opacity: 0.6 },
@@ -2451,6 +2451,7 @@ function DayRow({
         !dayShape && styles.weekDayCard,
         !dayShape && compactWeekStatus && styles.weekDayCardCompact,
         !dayShape && !cardSelected && styles.dayRowCalm,
+        !dayShape && cardSelected && styles.weekDayCardToday,
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
         dayShape && emphasized && styles.dayRowCalm,
@@ -4391,6 +4392,11 @@ const styles = StyleSheet.create({
   // pieces; today differs only through Card's existing selected treatment and
   // the existing Today badge. No colour, typeface or icon system is introduced.
   weekDayCard: { minHeight: 86 },
+  weekDayCardToday: {
+    backgroundColor: '#14160F',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 255, 0, 0.24)',
+  },
   weekDayCardCompact: { minHeight: 58 },
   weekDayCardInner: { paddingHorizontal: 12, paddingVertical: 10 },
   weekDayCardInnerCompact: { paddingVertical: 5 },
@@ -4424,7 +4430,7 @@ const styles = StyleSheet.create({
     textAlign: 'left', flexShrink: 1,
   },
   weekCardRestTitle: { color: '#777B77', fontSize: 13, fontWeight: '600' },
-  weekCardMeta: { color: '#8A8A8A', fontSize: 10, lineHeight: 13 },
+  weekCardMeta: { color: '#A0A0A0', fontSize: 10, lineHeight: 13 },
   weekCardCategoryRow: {
     minHeight: 17,
     flexDirection: 'row',

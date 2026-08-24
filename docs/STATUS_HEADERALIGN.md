@@ -120,3 +120,19 @@ Focused guard: `test:day-first-timeline` — the grouped-sheet cells are green a
 the inherited 54 passed / 2 failed baseline.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.
+
+## 2026-08-25 — Week-card hierarchy and hit area
+
+The current-day Week card keeps its TODAY pill but now uses a faint one-point
+olive border and subtler dark-olive tint instead of the full lime outline. The
+exercise-count grey is slightly brighter, and the Week dots retain their small
+circle-free appearance while their invisible target grows from 44 to 48 points.
+
+Two options compared: soften the shared selected Card primitive everywhere, or
+override only the Week current-day coordinate. The local treatment landed so
+Day selection and other selected cards do not change with this Week-only request.
+
+Focused guard: `test:day-first-timeline` — the new hierarchy, contrast and
+target-size cells are green at the inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and pressed-state pixels.
