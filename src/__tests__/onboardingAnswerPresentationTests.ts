@@ -350,6 +350,15 @@ console.log('\n[10] Every row names a real step');
     !allRows(COMPLETE_IN_SEASON).some((row) => row.step === 'Review'));
 }
 
+console.log('\n[10b] Review calls body measurements Measurements');
+{
+  const sectionTitles = buildReviewSections(COMPLETE_IN_SEASON)
+    .map((section) => section.title);
+  ok('Measurements replaces the retired Body section title',
+    (sectionTitles as readonly string[]).includes('Measurements')
+      && !(sectionTitles as readonly string[]).includes('Body'));
+}
+
 console.log('\n[11] The 2km row speaks all three of its states');
 {
   const rowFor = (data: OnboardingData) =>

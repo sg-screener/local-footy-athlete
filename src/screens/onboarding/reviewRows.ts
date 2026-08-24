@@ -53,7 +53,7 @@ import {
 
 export type ReviewSectionTitle =
   | 'About You'
-  | 'Body'
+  | 'Measurements'
   | 'Season'
   | 'Training'
   | 'Physical'
@@ -240,13 +240,13 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     value: (data) => present(motivationDisplay(resolveMotivation(data))),
   },
   {
-    section: 'Body',
+    section: 'Measurements',
     label: 'Height',
     step: 'BodyMeasurements',
     value: (data) => (data.heightCm ? `${data.heightCm} cm` : 'Not provided'),
   },
   {
-    section: 'Body',
+    section: 'Measurements',
     label: 'Weight',
     step: 'BodyMeasurements',
     value: (data) => (data.weightKg ? `${data.weightKg} kg` : 'Not provided'),
@@ -356,7 +356,7 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
 
 const SECTION_ORDER: readonly ReviewSectionTitle[] = [
   'About You',
-  'Body',
+  'Measurements',
   'Season',
   'Training',
   'Physical',

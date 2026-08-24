@@ -4534,3 +4534,12 @@ screen (Sam, 2026-08-24) · **SPRINT EXPOSURE USES TEAM-TRAINING LANGUAGE.**
 The subtitle reads **"So we can manage speed work and recovery. Team training
 counts if you sprint there."** The retired **"Club training"** version is
 absent. · `WORKING` — `test:onboarding-presentation`. Seat `sprintcopy`.
+
+---
+
+**R-147** · *"change body title to \"measurements\""* on Review (Sam,
+2026-08-24) · **REVIEW CALLS HEIGHT AND WEIGHT MEASUREMENTS.**
+
+The Review section containing Height and Weight is titled **MEASUREMENTS**.
+The retired **BODY** section title is absent. · `WORKING` —
+`test:onboarding-presentation`. Seat `measurementcopy`.

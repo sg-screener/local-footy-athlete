@@ -1965,6 +1965,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `sprintcopy`. The onboarding presentation cell requires the exact approved Team training sentence and independently rejects the retired Club training sentence. TEST-FIRST LIVENESS: it was the suite\'s only red against the old screen (65/66); the one-word production change returned the suite to 66/66. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-review-body-title-is-measurements',
+    law: 'The onboarding Review section containing Height and Weight is titled "Measurements". The retired "Body" section title is absent.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-147 — Sam, 2026-08-24: "change body title to measurements".',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `measurementcopy`. The onboarding presentation cell executes buildReviewSections over a complete in-season athlete, requires a Measurements section and rejects Body. TEST-FIRST LIVENESS: it was the suite\'s only red against the old section owner (66/67); changing the typed section key, both rows and the order returned the suite to 67/67. NOT COVERED: simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
