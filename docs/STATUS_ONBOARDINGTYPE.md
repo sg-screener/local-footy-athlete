@@ -350,6 +350,35 @@ conditioning and recovery.**
 
 ---
 
+## R-168 — first-letter weekday row
+
+Sam corrected the seven-across picker: it should show **M T W T F S S**, not
+three-letter abbreviations. The fix lives in the shared single-row layout, so it
+corrects both Game Day and usual gym days without changing Team Training's
+3-3-1 picker.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 95/96; the new visual-label and
+  accessibility cell was the only failure.
+- AFTER: `test:onboarding-presentation` — 96/96.
+- The guard requires the first-letter visual label, the full-day accessibility
+  label and the unchanged default grid path together.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. R-168 updates
+  an existing guarded weekday-row law, so the registry remains 171 / 150 guarded.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-168 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels after the label correction.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the

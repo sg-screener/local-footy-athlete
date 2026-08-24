@@ -4770,3 +4770,13 @@ The **YOUR PLAN** card heading is **Full athletic development**. Its body remain
 that matters**, **Built as one program** and **Everything works together**
 headings are absent. · `WORKING` — `test:onboarding-presentation`. Seat
 `onboardingtype`.
+
+---
+
+**R-168** · Seven-across weekday labels (Sam, 2026-08-24) · **FIRST LETTER
+ONLY.**
+
+The seven-across Game Day and usual gym-day pickers display **M T W T F S S**,
+not **Mon Tue Wed Thu Fri Sat Sun**. Each tile keeps its full weekday as its
+accessibility label. The shared 3-3-1 picker retains its three-letter labels. ·
+`WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.

@@ -23,9 +23,10 @@ import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
  * behaviour, presented as seven compact rounded-square tiles.
  */
 
-const DAYS: { id: DayOfWeek; label: string }[] = DAYS_OF_WEEK.map((day) => ({
+const DAYS: { id: DayOfWeek; label: string; compactLabel: string }[] = DAYS_OF_WEEK.map((day) => ({
   id: day,
   label: day.slice(0, 3),
+  compactLabel: day.slice(0, 1),
 }));
 
 export interface DayGridProps {
@@ -49,7 +50,7 @@ export const DayGrid: React.FC<DayGridProps> = ({
   isDimmed,
   layout = 'grid',
 }) => {
-  const renderDay = (day: { id: DayOfWeek; label: string }) => {
+  const renderDay = (day: { id: DayOfWeek; label: string; compactLabel: string }) => {
     const isSelected = selectedDays.includes(day.id);
     const dimmed = !isSelected && (isDimmed?.(day.id) ?? false);
     return (
@@ -58,6 +59,7 @@ export const DayGrid: React.FC<DayGridProps> = ({
         isSelected={isSelected}
         dimmed={dimmed}
         onPress={() => onToggleDay(day.id)}
+        accessibilityLabel={day.id}
         hideCheckmark
         style={[
           styles.dayTile,
@@ -69,7 +71,7 @@ export const DayGrid: React.FC<DayGridProps> = ({
           color={colors.text.primary}
           style={styles.dayLabel}
         >
-          {day.label}
+          {layout === 'single-row' ? day.compactLabel : day.label}
         </Text>
       </SelectableTile>
     );

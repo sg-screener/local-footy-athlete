@@ -224,6 +224,10 @@ console.log('\n[0f] Game day is one compact seven-day row');
     /singleRow:\s*\{[\s\S]{0,100}flexDirection:\s*'row'[\s\S]{0,100}gap:\s*6/.test(dayGrid)
       && /singleRowTile:\s*\{[\s\S]{0,160}flex:\s*1[\s\S]{0,120}aspectRatio:\s*1[\s\S]{0,120}paddingHorizontal:\s*0[\s\S]{0,120}paddingVertical:\s*0/.test(dayGrid)
       && !/borderRadius:\s*999/.test(dayGrid));
+  ok('single-row days show M T W T F S S while accessibility keeps full weekday names',
+    /compactLabel:\s*day\.slice\(0,\s*1\)/.test(dayGrid)
+      && /accessibilityLabel=\{day\.id\}/.test(dayGrid)
+      && /layout === 'single-row' \? day\.compactLabel : day\.label/.test(dayGrid));
   ok('the shared picker retains its 3-3-1 default for consumers that do not request the row',
     /DAYS\.slice\(0, 6\)\.map\(renderDay\)/.test(dayGrid)
       && /<View style=\{styles\.lastRow\}>\{renderDay\(DAYS\[6\]\)\}<\/View>/.test(dayGrid));
