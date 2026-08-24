@@ -4780,3 +4780,13 @@ The seven-across Game Day and usual gym-day pickers display **M T W T F S S**,
 not **Mon Tue Wed Thu Fri Sat Sun**. Each tile keeps its full weekday as its
 accessibility label. The shared 3-3-1 picker retains its three-letter labels. ·
 `WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-169** · Team-training weekday layout (Sam, 2026-08-24) · **MATCH THE
+SEVEN-ACROSS LETTER ROW.**
+
+The Team Training Days picker uses the same single **M T W T F S S** row as
+Game Day and usual gym days. It remains a multi-select answer and retains its
+existing Continue rule and selected-count feedback. · `WORKING` —
+`test:onboarding-presentation`. Seat `onboardingtype`.

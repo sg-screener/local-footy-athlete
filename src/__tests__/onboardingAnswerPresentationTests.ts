@@ -150,6 +150,8 @@ console.log('\n[0bc] Team-session intensity is learned from session feedback, no
   ok('team-training days advance directly to gym availability',
     /navigation\.navigate\('TrainingCommitment'\)/.test(teamDays)
       && !/navigation\.navigate\('TeamTrainingDuration'\)|navigation\.navigate\('TeamTrainingIntensity'\)/.test(teamDays));
+  ok('team-training days use the same seven-across first-letter row',
+    /<DayGrid[\s\S]{0,220}layout="single-row"/.test(teamDays));
   ok('Review no longer shows or links to the retired answer',
     !/Team Sessions|formatTeamSessions|formatTeamIntensity|TeamTrainingDuration|TeamTrainingIntensity/.test(reviewRows));
 }

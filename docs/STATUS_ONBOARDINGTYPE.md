@@ -379,6 +379,34 @@ corrects both Game Day and usual gym days without changing Team Training's
 
 ---
 
+## R-169 — Team Training matches the letter row
+
+Sam required Team Training Days to use the same seven-across **M T W T F S S**
+picker as Game Day and usual gym days. The screen now selects the shared layout;
+its multi-select state, Continue rule and feedback copy are unchanged.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 96/97; the Team Training layout
+  cell was the only failure.
+- AFTER: `test:onboarding-presentation` — 97/97.
+- The guard requires the Team Training screen to select the same shared layout,
+  so its letters and geometry cannot drift independently.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. R-169 updates
+  the existing guarded weekday-row law; the registry remains 171 / 150 guarded.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-169 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels after the layout correction.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the

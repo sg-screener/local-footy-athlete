@@ -75,7 +75,11 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
         </Text>
       </View>
 
-      <DayGrid selectedDays={selectedDays} onToggleDay={toggleDay} />
+      <DayGrid
+        selectedDays={selectedDays}
+        onToggleDay={toggleDay}
+        layout="single-row"
+      />
 
       {selectedDays.length > 0 && (
         <Text
