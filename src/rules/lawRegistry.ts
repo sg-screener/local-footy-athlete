@@ -2022,13 +2022,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-generation-card-icons-centre-on-full-message',
-    law: 'Each onboarding generation education card places its icon beside one text block containing both title and supporting sentence. The shared row vertically centres the icon against that complete text block; the body owns no separate left inset.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-157 — Sam, 2026-08-24: "these icons should be centre vertically here".',
+    law: 'Each onboarding generation education card places its icon beside one text block containing both title and supporting sentence. The shared row vertically centres the icon against that complete text block. Horizontally, a fixed column spans from the card edge to the words and centres the icon inside it while preserving the text position; the body owns no separate left inset.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-157 + R-161 — Sam first centred the icons vertically against the full message, then centred them horizontally between the card edge and words.',
     guard: {
       state: 'guarded',
       by: 'test:onboarding-presentation',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite anchors EducationCard\'s icon-first educationRow, nested educationText block containing both title and body, row alignItems center, flex text owner and absence of the retired body paddingLeft. TEST-FIRST LIVENESS: the two new cells were the suite\'s only reds against the title-centred icon structure (86/88); grouping title and body beside the icon returned it to 88/88. NOT COVERED: simulator pixels, Dynamic Type wrapping and the next physical-phone Release.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`; UPDATED UNDER R-161 by the same seat. The presentation suite anchors EducationCard\'s icon-first educationRow, nested educationText block containing both title and body, row alignItems center, flex text owner and absence of the retired body paddingLeft. It also requires the iconContainer inside one 54px centred iconColumn, card left padding zero/right padding 16 and no independent row gap: this preserves the existing 54px text start while moving the icon centre to the midpoint between edge and words. R-157 TEST-FIRST LIVENESS: the two vertical cells were the suite\'s only reds against the title-centred icon structure (86/88); grouping title and body beside the icon returned it to 88/88. R-161 TEST-FIRST LIVENESS: the horizontal-column cell was the suite\'s only red against the padded-row structure (94/95); the explicit column returned it to 95/95. NOT COVERED: simulator reinspection, Dynamic Type wrapping and the next physical-phone Release.',
     },
   },
   {

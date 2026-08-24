@@ -358,3 +358,36 @@ and the existing up-to-N cap, dimming and Continue transaction were untouched.
 - Simulator pixels and multi-selection feel.
 - Small-screen clipping and Dynamic Type.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-161 — centre generation icons horizontally
+
+The old card geometry used 16px left padding, a 28px icon and a 10px gap. That
+put the text at 54px but left the icon centre at 30px, so the empty space around
+the icon was visibly uneven. Two options were compared:
+
+1. Apply a one-off negative margin to nudge the icon left.
+2. Make the entire 54px pre-text area an icon column and centre the icon in it.
+
+Option 2 landed. The words remain at the exact same horizontal position, while
+all three icons now share a real centred column. Vertical centring is unchanged.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 94/95; the new horizontal
+  centring cell was the only failure.
+- AFTER: `test:onboarding-presentation` — 95/95.
+- The existing vertical icon structure and alignment cells remain green.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; CompleteScreen is not named.
+- `test:law-registry` — 11/14 with the same three existing reds; the updated
+  generation-icon row remains guarded and UNENFORCED stays at 21.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-161 adds neither.
+
+### NOT COVERED
+
+- Simulator reinspection after refresh.
+- Dynamic Type wrapping.
+- Physical-iPhone Release rebuild.

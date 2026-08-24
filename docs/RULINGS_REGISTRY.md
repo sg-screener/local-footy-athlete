@@ -4691,3 +4691,14 @@ single horizontal row of seven compact rounded-square weekday tiles as Game
 Day. Its existing selection cap, dimming and Continue behaviour are unchanged.
 This supersedes only R-159's statement that this screen retained the 3-3-1
 layout. · `WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-161** · Generation-card icon horizontal alignment (Sam, 2026-08-24) ·
+**ICONS CENTRE BETWEEN THE CARD EDGE AND WORDS.**
+
+Each generation education card gives its icon one fixed column spanning the
+space before the text, then centres the icon inside that column. The title and
+body retain their existing horizontal position, and R-157's vertical centring
+remains intact. · `WORKING` — `test:onboarding-presentation`. Seat
+`onboardingtype`.

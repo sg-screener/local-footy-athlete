@@ -202,6 +202,11 @@ console.log('\n[0e] Generation-card icons centre against the complete text block
     /educationRow:\s*\{[\s\S]{0,140}alignItems:\s*['"]center['"]/.test(completeScreen)
       && /educationText:\s*\{[\s\S]{0,80}flex:\s*1/.test(completeScreen)
       && !/educationBody:\s*\{[\s\S]{0,180}paddingLeft:/.test(completeScreen));
+  ok('each icon is horizontally centred in the full space before the words',
+    /<View style=\{styles\.iconColumn\}>[\s\S]{0,100}<View style=\{styles\.iconContainer\}>/.test(completeScreen)
+      && /educationCard:\s*\{[\s\S]{0,180}paddingLeft:\s*0[\s\S]{0,100}paddingRight:\s*16/.test(completeScreen)
+      && /iconColumn:\s*\{[\s\S]{0,120}width:\s*54[\s\S]{0,100}alignItems:\s*'center'/.test(completeScreen)
+      && !/educationRow:\s*\{[\s\S]{0,140}gap:/.test(completeScreen));
 }
 
 console.log('\n[0f] Game day is one compact seven-day row');

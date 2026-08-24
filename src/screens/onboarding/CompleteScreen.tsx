@@ -628,8 +628,10 @@ interface EducationCardProps {
 const EducationCard: React.FC<EducationCardProps> = ({ icon, title, body }) => (
   <View style={styles.educationCard}>
     <View style={styles.educationRow}>
-      <View style={styles.iconContainer}>
-        <Feather name={icon} size={15} color={colors.accent.lime} />
+      <View style={styles.iconColumn}>
+        <View style={styles.iconContainer}>
+          <Feather name={icon} size={15} color={colors.accent.lime} />
+        </View>
       </View>
       <View style={styles.educationText}>
         <Text style={styles.educationTitle}>{title}</Text>
@@ -703,7 +705,8 @@ const styles = StyleSheet.create({
   educationCard: {
     backgroundColor: colors.surface.secondary,
     borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingLeft: 0,
+    paddingRight: 16,
     paddingVertical: 14,
     borderWidth: 1,
     borderColor: colors.surface.tertiary,
@@ -711,10 +714,14 @@ const styles = StyleSheet.create({
   educationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
   },
   educationText: {
     flex: 1,
+  },
+  iconColumn: {
+    width: 54,
+    alignItems: 'center',
+    flexShrink: 0,
   },
   iconContainer: {
     width: 28,
