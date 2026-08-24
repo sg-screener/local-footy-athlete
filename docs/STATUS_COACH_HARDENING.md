@@ -176,16 +176,20 @@ Measured evidence after restoration:
   targeted.
 - The installed bundle launched successfully without Metro and remained in the
   device process list as PID 7829.
-- This receipt predates the final scoped checkpoint `dd174b10`. The final
-  Release rebuild is pending only because Sam's paired iPhone currently reports
-  `unavailable`; no attempt was redirected to Renee's phone.
+- A second fresh signed Release build from the final scoped checkpoint
+  `dd174b10` completed with `BUILD SUCCEEDED` in
+  `/private/tmp/lfa-release-coach-final-dd174b10`. Its embedded
+  `main.jsbundle` is non-empty and strict code-sign verification passed.
+- `devicectl` installed that final build on Sam's exact device id
+  `AFA21856-881E-587B-96D5-60817FD11018`; Renee's phone was not targeted. The
+  bundle launched successfully and remained in the device process list as PID
+  8959.
 
 ## NOT COVERED
 
-- A final Release install of checkpoint `dd174b10` and Sam's visual acceptance
-  of Coach, Progress, Privacy and the completed Mobility / Warm-up tick are
-  still required. The previous checkpoint's installation is not presented as
-  acceptance of these four fixes.
+- Sam's visual acceptance of Coach, Progress, Privacy and the completed
+  Mobility / Warm-up tick is still required. Installation and launch prove the
+  final package reached the device; they are not presented as visual acceptance.
 - The repository-wide law gate still has its pre-existing unrelated reds: one
   missing `test:game-feedback` script, LR-18 without a registry row, and 21
   existing UNENFORCED rows. This order added one guarded row and did not change
