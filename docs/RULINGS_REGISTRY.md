@@ -5013,3 +5013,15 @@ equipment editor returns to the setup page. This supersedes R-183's popup
 presentation while retaining its approved colours and typography. · `WORKING`
 — `test:profile-reset-ui` + `.maestro/golden/profile-setup-equipment.yaml`. Seat
 `onboardingtype`.
+
+---
+
+**R-186** · Profile setup doorway matches its internal edit rows (Sam, 2026-08-24) ·
+**ONE ACTION FAMILY, ONE VISUAL LANGUAGE.**
+
+**Something changed? Tell the coach** uses the same dark action row, lime text
+and right chevron as **Edit player details**, **Edit equipment** and **Edit
+program details**. One shared component renders all four controls, so the
+doorway cannot drift from the actions on the page it opens. It keeps no pencil.
+This supersedes R-182's lime primary-button treatment. · `WORKING` —
+`test:profile-reset-ui`. Seat `onboardingtype`.

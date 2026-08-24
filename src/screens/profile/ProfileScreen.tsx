@@ -612,12 +612,9 @@ export default function ProfileScreen() {
               label="Equipment"
               value={formatEquipmentProfileSummary(onboardingData)}
             />
-            <V2Button
+            <SetupEditAction
               label="Something changed? Tell the coach"
               onPress={onProgramSetupChanged}
-              size="md"
-              glow={false}
-              style={styles.setupChangeButton}
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
             />
@@ -856,6 +853,32 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
         {value}
       </Text>
     </View>
+  );
+}
+
+function SetupEditAction({
+  label,
+  onPress,
+  testID,
+  accessibilityLabel = label,
+}: {
+  label: string;
+  onPress: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.sheetCardAction}
+      activeOpacity={0.72}
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Text style={styles.sheetCardActionText}>{label}</Text>
+      <Text style={styles.sheetCardChevron}>›</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1328,14 +1351,10 @@ function SetupUpdatePage({
             label="Training Experience"
             value={formatExperienceDetail(experienceLevel)}
           />
-          <TouchableOpacity
-            style={styles.sheetCardAction}
-            activeOpacity={0.72}
+          <SetupEditAction
+            label="Edit player details"
             onPress={onEditPlayerDetails}
-          >
-            <Text style={styles.sheetCardActionText}>Edit player details</Text>
-            <Text style={styles.sheetCardChevron}>›</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
@@ -1343,16 +1362,12 @@ function SetupUpdatePage({
         <Text style={styles.sheetSectionTitle}>EQUIPMENT</Text>
         <View style={styles.sheetCard}>
           <SetupSummaryRow label="Training setup" value={equipmentSummary} />
-          <TouchableOpacity
-            style={styles.sheetCardAction}
-            activeOpacity={0.72}
+          <SetupEditAction
+            label="Edit equipment"
             onPress={onEditEquipment}
             testID="profile-setup-equipment-edit"
             accessibilityLabel="Edit equipment"
-          >
-            <Text style={styles.sheetCardActionText}>Edit equipment</Text>
-            <Text style={styles.sheetCardChevron}>›</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
@@ -1374,14 +1389,10 @@ function SetupUpdatePage({
               value={gameDay ? gameDay : 'Not set'}
             />
           ) : null}
-          <TouchableOpacity
-            style={styles.sheetCardAction}
-            activeOpacity={0.72}
+          <SetupEditAction
+            label="Edit program details"
             onPress={onEditProgramDetails}
-          >
-            <Text style={styles.sheetCardActionText}>Edit program details</Text>
-            <Text style={styles.sheetCardChevron}>›</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
@@ -1575,11 +1586,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
-  },
-  setupChangeButton: {
-    marginHorizontal: spacing.sm,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
   },
   actionStack: {
     gap: spacing.sm,

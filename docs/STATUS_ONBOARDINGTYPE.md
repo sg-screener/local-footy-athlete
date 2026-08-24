@@ -1220,3 +1220,23 @@ the setup page instead of dropping the athlete at Profile home.
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Hardware/gesture Back, real VoiceOver order, the updated golden tape on a
   device and the next Release rebuild.
+
+---
+
+## R-186 — unify the Profile setup edit actions
+
+The Profile doorway now uses the same dark row, lime label and chevron as the
+three edit actions inside the setup page. Rather than separately styling four
+lookalike controls, all four now render through one `SetupEditAction` owner.
+
+### Evidence
+
+- TEST FIRST: the exact shared-action cell made `test:profile-reset-ui` 175/176
+  against the lime primary doorway.
+- AFTER: `test:profile-reset-ui` is 176/176 and its chained LFA wordmark tape is
+  15/15.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Real VoiceOver speech and the next Release rebuild.

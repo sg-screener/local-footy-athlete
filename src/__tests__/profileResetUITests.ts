@@ -210,17 +210,20 @@ ok(
 );
 ok('Program setup CTA present', /Something changed\? Tell the coach/.test(src));
 ok('Program setup CTA testID present', /testID="profile-program-setup-change"/.test(src));
-const setupCtaStart = src.indexOf('<V2Button\n              label="Something changed? Tell the coach"');
+const setupCtaStart = src.indexOf('<SetupEditAction\n              label="Something changed? Tell the coach"');
 const setupCtaEnd = src.indexOf('accessibilityLabel="Something changed? Tell the coach"', setupCtaStart);
 const setupCtaSource = setupCtaStart >= 0 && setupCtaEnd > setupCtaStart
   ? src.slice(setupCtaStart, setupCtaEnd)
   : '';
 ok(
-  'Program setup CTA uses the same lime primary treatment as Start Session without a decorative icon',
+  'Program setup CTA uses the exact same dark edit row as the actions inside its page',
   setupCtaSource.length > 0
-    && /size="md"[\s\S]{0,120}glow=\{false\}/.test(setupCtaSource)
-    && !/leftIcon|pencil-outline/.test(setupCtaSource)
-    && !/setupChangeButton:\s*\{[^}]*backgroundColor:\s*'#1A1E18'/s.test(src),
+    && (src.match(/<SetupEditAction\b/g) ?? []).length === 4
+    && /function SetupEditAction[\s\S]*style=\{styles\.sheetCardAction\}[\s\S]*styles\.sheetCardActionText[\s\S]*styles\.sheetCardChevron/.test(src)
+    && /<SetupEditAction\s+label="Edit player details"/.test(src)
+    && /<SetupEditAction\s+label="Edit equipment"/.test(src)
+    && /<SetupEditAction\s+label="Edit program details"/.test(src)
+    && !/leftIcon|pencil-outline/.test(setupCtaSource),
 );
 ok(
   'Program setup CTA opens the guided setup page',
