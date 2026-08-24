@@ -1943,6 +1943,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `seasonicons`. The onboarding presentation cell rejects MaterialCommunityIcons, LfaIcon, phase.icon and icon-box styling from SeasonPhaseScreen while separately pinning all six retained labels and taglines. TEST-FIRST LIVENESS: the matching approved-icons cell failed against the icon-bearing screen; after deleting the imports, option metadata, render branch and reserved layout it passed. `test:onboarding-presentation` is 62/62. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-gym-availability-is-a-seven-stop-slider',
+    law: 'The onboarding gym-availability answer uses one initially empty horizontal discrete slider with seven visible stops, 1 through 7, and no selectable-card grid. It keeps writing the existing trainingDaysPerWeek field. Its subtitle says: "A gym session can be on the same day as team training. Lifting in the morning or before training is completely fine." Feedback and onboarding sliders share one touch-to-step owner.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-145 — Sam, 2026-08-24, requested 1–7 and then clarified: "make it a horizontal slider instead of the buttons - like we have on the feedback forms".',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation + test:effort-scale',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `commitmentslider`. The onboarding presentation cells pin the exact subtitle, nullable selectedDays input, 1/7 bounds, visible labels, absence of the retired card picker, and the shared PanResponder rounding owner. TEST-FIRST LIVENESS: those cells produced the suite\'s only four reds against the old six-card screen (61/65); the slider returned it to 65/65. The pre-existing feedback slider now wraps the same DiscreteSlider owner, while `test:effort-scale` remains 42/42. NOT COVERED: simulator pixels, physical drag/tap feel and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

@@ -4510,3 +4510,18 @@ Off-season, Pre-season and In-season keep their existing cards, labels and
 supporting lines, but none has a leading icon or reserved icon box. This
 supersedes the earlier icon-audit binding only for this onboarding screen. ·
 `WORKING` — `test:onboarding-presentation`. Seat `seasonicons`.
+
+---
+
+**R-145** · *"this needs to be 7 buttons 1-7 ... make it a horizontal slider
+instead of the buttons - like we have on the feedback forms"* and *"A gym
+session can be on the same day as team training. Lifting in the morning or
+before training is completely fine."* (Sam, 2026-08-24) · **GYM AVAILABILITY
+IS ONE SEVEN-STOP SLIDER.**
+
+The six-card picker is replaced by one empty horizontal slider with visible
+stops 1–7. It retains the existing `trainingDaysPerWeek` answer and Continue
+transaction. Feedback and onboarding sliders share one discrete touch owner,
+so their mechanics cannot drift. · `WORKING` —
+`test:onboarding-presentation` + `test:effort-scale`. Seat
+`commitmentslider`.

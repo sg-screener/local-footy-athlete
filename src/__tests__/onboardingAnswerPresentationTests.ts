@@ -411,6 +411,10 @@ console.log('\n[12] The Review screen renders the owner rather than a second lis
 console.log('\n[13] Training availability asks about gym access, not total training days');
 {
   const commitment = read('src/screens/onboarding/TrainingCommitmentScreen.tsx');
+  const discreteSliderPath = path.join(repoRoot, 'src/components/DiscreteSlider.tsx');
+  const discreteSlider = fs.existsSync(discreteSliderPath)
+    ? read('src/components/DiscreteSlider.tsx')
+    : '';
   const preferredDays = read('src/screens/onboarding/PreferredTrainingDaysScreen.tsx');
   const steps = read('src/utils/onboardingSteps.ts');
   const reviewRows = read('src/screens/onboarding/reviewRows.ts');
@@ -421,10 +425,22 @@ console.log('\n[13] Training availability asks about gym access, not total train
     ));
   ok('the helper explicitly permits lifting on a club-training day',
     commitment.includes(
-      'A gym session can be on the same day as club training. Lifting in the morning or on the way to footy training is completely fine.',
+      'A gym session can be on the same day as team training. Lifting in the morning or before training is completely fine.',
     ));
   ok('the old total-training-days question is gone',
     !commitment.includes('HOW MANY DAYS PER WEEK CAN YOU TRAIN?'));
+  ok('gym availability is one empty seven-stop horizontal slider',
+    /<DiscreteSlider/.test(commitment)
+      && /value=\{selectedDays\}/.test(commitment)
+      && /min=\{1\}/.test(commitment)
+      && /max=\{7\}/.test(commitment)
+      && /showStepLabels/.test(commitment));
+  ok('the retired six-card picker is absent',
+    !/COMMITMENT_OPTIONS|<SelectableTile|styles\.grid|styles\.card/.test(commitment));
+  ok('the shared slider owns touch-to-step behaviour and visible step labels',
+    /PanResponder\.create/.test(discreteSlider)
+      && /Math\.round\(ratio \* steps\)/.test(discreteSlider)
+      && /stepLabels/.test(discreteSlider));
 
   ok('the follow-up asks which gym-access days usually work',
     preferredDays.includes('Which days can you usually get there?'));
