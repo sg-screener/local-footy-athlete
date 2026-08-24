@@ -760,9 +760,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'session.change_card.heading',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-209: the active-session options '
-        + 'sheet asks the existing change-session question.',
-      text: 'Need to make a change?',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-211 superseding R-209: the '
+        + 'active-session options sheet asks “What do you want to change?”.',
+      text: 'What do you want to change?',
     },
     {
       id: 'session.options.injury.label',
@@ -773,8 +773,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'session.options.injury.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-209: injury-option explanation.',
-      text: 'Adjust this session around a niggle or injury',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-211: injury-option explanation.',
+      text: 'Adjust around pain or a niggle',
     },
     {
       id: 'session.options.equipment.label',
@@ -785,8 +785,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'session.options.equipment.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-209: equipment-option explanation.',
-      text: 'Update what you have available',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-211: equipment-option explanation.',
+      text: 'Tell us what’s missing',
     },
     {
       id: 'session.options.add.label',

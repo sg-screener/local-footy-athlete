@@ -164,3 +164,13 @@ including their original colours and tints; the replacement icon shapes are gone
 Focused guard: `test:session-change-hub` — 45 passed / 0 failed.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and VoiceOver order.
+
+## 2026-08-25 — Session-options wording correction
+
+The active-session popup now asks **What do you want to change?**. Something
+hurts says **Adjust around pain or a niggle**, and Equipment changed says
+**Tell us what’s missing**. Layout, icons and handlers are unchanged.
+
+Focused guard: `test:session-change-hub` — 45 passed / 0 failed.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.

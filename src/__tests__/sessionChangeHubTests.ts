@@ -87,9 +87,9 @@ console.log('\n[3] The active session has one compact options doorway and one la
   ok('the Day card carries Sam’s new status question and explanation verbatim',
     /id: 'day\.change_card\.heading'[\s\S]{0,300}text: 'Not feeling 100%\?'/.test(copySource)
       && /id: 'day\.change_card\.subline'[\s\S]{0,300}text: 'Tell us what’s changed and we’ll adjust today\.'/.test(copySource));
-  ok('the open-session sheet keeps the change-session question',
+  ok('the open-session sheet asks the signed change-session question',
     /subtitle=\{signedCopy\('session\.change_card\.heading'\)\}/.test(live)
-      && /id: 'session\.change_card\.heading'[\s\S]{0,300}text: 'Need to make a change\?'/.test(copySource));
+      && /id: 'session\.change_card\.heading'[\s\S]{0,300}text: 'What do you want to change\?'/.test(copySource));
   ok('the dots and sheet have stable ids',
     live.includes('testID="session-options-button"')
       && live.includes('testID="session-options-sheet"'));
@@ -110,8 +110,8 @@ console.log('\n[4] The open-session sheet uses the three signed rows in Sam’s 
   const order = ['injury', 'equipment', 'add'];
   const labels = ['Something hurts', 'Equipment changed', 'Add an exercise'];
   const sublines = [
-    'Adjust this session around a niggle or injury',
-    'Update what you have available',
+    'Adjust around pain or a niggle',
+    'Tell us what’s missing',
     'Add something to this session',
   ];
   let cursor = -1;

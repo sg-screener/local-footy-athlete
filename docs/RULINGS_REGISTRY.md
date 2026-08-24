@@ -5252,6 +5252,17 @@ availability and the three established handlers remain unchanged. · `WORKING`
 
 ---
 
+**R-211** · Active-session options use the final question and explanations (Sam, 2026-08-25) ·
+**THE MENU ASKS WHAT TO CHANGE, THEN EACH ROW SAYS WHAT IT NEEDS.**
+
+The active-session sheet is headed **Session options** / **What do you want to
+change?**. **Something hurts** reads **Adjust around pain or a niggle**.
+**Equipment changed** reads **Tell us what’s missing**. The Add row, option
+order, icons and established handlers remain unchanged. · `WORKING` —
+`test:session-change-hub`. Seat `headeralign`.
+
+---
+
 **R-209** · Active-session changes move behind one options menu (Sam, 2026-08-25) ·
 **THE SESSION HEADER OFFERS ONE QUIET DOORWAY, NOT A SECOND CHANGE CARD.**
 
