@@ -210,6 +210,44 @@ owner so its rounding and edge clamping run headlessly.
 
 ---
 
+## R-164 — enlarge programmed-part headings only
+
+Sam found **Mobility / Warm-up** and **Strength** too small beside the rest of
+the Program Day card. Two options were compared:
+
+1. Enlarge the existing shared timeline headline style. This would also enlarge
+   Team Training's **Session status** metadata.
+2. Add one programmed-part scale override and apply it only to the owned
+   mobility row and projected programmed-part loop.
+
+Option 2 landed. Both programmed headings now use the same 15px scale as **Need
+to make a change?**, while exercise counts and Team Training status stay compact.
+
+### Evidence
+
+- TEST FIRST: `test:day-first-timeline` — 52/55; the new programmed-heading
+  scale cell was the only additional red beside the two existing failures.
+- AFTER: `test:day-first-timeline` — 53/55. The two existing failures remain
+  the front-review mobility-flow handoff and the Gunshow fixture reachability.
+- The guard requires exactly two render owners to use the larger scale, so a
+  global change that also inflates Team Training status fails.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. The new row
+  raises the measured registry to 169 laws / 148 guarded without increasing
+  UNENFORCED.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-164 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels after the type change.
+- Long translated headings and Dynamic Type.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the

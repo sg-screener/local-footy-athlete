@@ -4725,3 +4725,15 @@ subtitle position and style used by Game Day's **Good luck!** line. The Log
 Session action and pop-up are unchanged. · `WORKING` —
 `test:day-first-timeline` + `test:signed-copy-extraction` +
 `test:copy-rulings-binding`. Seat `onboardingtype`.
+
+---
+
+**R-164** · Programmed-part heading scale (Sam, 2026-08-24) · **MAKE THE
+PROGRAMMED HEADINGS READABLE.**
+
+On the Program Day strength view, **Mobility / Warm-up** and programmed-part
+headings such as **Strength** use the same 15px scale as **Need to make a
+change?** Their exercise-count lines remain compact. Team Training's **Session
+status** label also remains compact because it is status metadata, not a
+programmed part heading. · `WORKING` — `test:day-first-timeline`. Seat
+`onboardingtype`.

@@ -878,7 +878,11 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*19[^}]*lineHeight:\s*23/.test(home),
     'the day session title does not match Renee\'s 19pt headline');
   assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
-    'the component headings remain too large or light');
+    'the compact status-label scale has drifted');
+  assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20/.test(home),
+    'the programmed Mobility / Warm-up and Strength headings no longer match the 15pt change-card heading scale');
+  assert((home.match(/styles\.programmedPartHeadline/g) ?? []).length === 2,
+    'both programmed part headings must use the larger scale, without enlarging Team Training session status');
   assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),
     'the exercise counts no longer match Renee\'s component meta size');
   assert(/timelineRow:\s*\{[^}]*minHeight:\s*52[^}]*paddingVertical:\s*10[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),

@@ -2899,7 +2899,10 @@ function DayTimeline({
                 )}
               </View>
               <View style={styles.timelinePartText}>
-                <Text style={styles.timelineHeadline} numberOfLines={1}>
+                <Text
+                  style={[styles.timelineHeadline, styles.programmedPartHeadline]}
+                  numberOfLines={1}
+                >
                   {signedCopy('day.part.mobility_warmup')}
                 </Text>
                 <Text style={styles.timelinePartMeta}>
@@ -3066,7 +3069,7 @@ function DayTimeline({
                     opposite case and deliberately so — Sam signed THAT one in
                     caps, so there the caps ARE the string. */}
                 <Text
-                  style={styles.timelineHeadline}
+                  style={[styles.timelineHeadline, styles.programmedPartHeadline]}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
@@ -4571,10 +4574,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
+  // Programmed work is the card's main content, so its headings sit at the
+  // same readable scale as "Need to make a change?". The compact Team
+  // Training status label deliberately keeps `timelineHeadline` alone.
+  programmedPartHeadline: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
   // ── THE DROP-DOWNS (UI merge slice 2, Sam's eye pass 2026-08-10) ──
-  // No new colour token, no new font size that is not already on this screen:
-  // the part name keeps `timelineHeadline`'s size and colour, the meta line
-  // reuses the muted grey and 12pt the day date already uses, and the
+  // No new colour token or new type scale: the part name keeps
+  // `timelineHeadline`'s colour and uses the existing 15pt card-heading scale;
+  // the meta line reuses the compact timeline scale, and the
   // prescription reuses the accent-free `#A7A7A7` the coach-note body uses.
   timelinePartText: { flex: 1, gap: 1 },
   timelinePartMeta: { color: '#929692', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
