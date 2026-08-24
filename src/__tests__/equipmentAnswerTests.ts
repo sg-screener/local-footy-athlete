@@ -365,6 +365,10 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
     !/onDone=/.test(read('navigation/OnboardingNavigator.tsx')),
     'the onboarding navigator now supplies an exit. It must pass NOTHING — that '
       + 'is what keeps the signed onboarding flow byte-identical.');
+  ok('the outdated checklist footnotes are absent',
+    !/Train somewhere else\?|Nothing ticked\?|bodyweight program/.test(equipmentScreen));
+  ok('the deleted footnote leaves no hidden Pressable or footNote style behind',
+    !/Pressable|styles\.footNote|footNote:/.test(equipmentScreen));
 
   const editor = read('screens/profile/EquipmentEditorSheet.tsx');
   ok('NEVER lives on the profile editor (the tri-state cycle), not onboarding',

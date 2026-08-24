@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
@@ -249,17 +249,6 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
               () => toggleModality(modality),
             ))}
         </View>
-
-        {!existing ? (
-          <Pressable onPress={() => setShowChecklist(false)} accessibilityRole="button">
-            <Text variant="caption" color={colors.text.tertiary} style={styles.footNote}>
-              Train somewhere else? Go back and change where you train.
-            </Text>
-          </Pressable>
-        ) : null}
-        <Text variant="caption" color={colors.text.tertiary} style={styles.footNote}>
-          Nothing ticked? Continue anyway — you'll get a bodyweight program.
-        </Text>
       </View>
     </OnboardingLayout>
   );
@@ -294,8 +283,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingRight: 24,
-  },
-  footNote: {
-    marginTop: 6,
   },
 });

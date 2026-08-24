@@ -207,3 +207,32 @@ owner so its rounding and edge clamping run headlessly.
 - Simulator pixels and physical drag/tap feel.
 - Small-screen clipping and Dynamic Type.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-156 — remove the equipment-checklist footer text
+
+Sam identified both notes below the equipment list as outdated. Deleting the
+copy and its obsolete tap target is cleaner than hiding it visually: the screen
+now ends at the final cardio-machine choice, then uses the existing Continue
+button.
+
+### Evidence
+
+- TEST FIRST: `test:equipment-answer` — 41/43; the two new footer-removal cells
+  were the only failures.
+- AFTER: `test:equipment-answer` — 43/43.
+- The guard rejects the retired copy, hidden Pressable and unused footnote
+  style independently.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs. Neither EquipmentScreen nor its edited suite is
+  named.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded, raising guarded laws 142 → 143 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-156 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and final vertical spacing after deletion.
+- Physical-iPhone Release rebuild.

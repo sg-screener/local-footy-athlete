@@ -4638,3 +4638,13 @@ centre. The earlier rail-and-thumb control is absent, while feedback forms keep
 their own existing sliders. This supersedes R-145's empty/shared-control detail
 but retains its range, subtitle and stored answer. · `WORKING` —
 `test:onboarding-presentation` + `test:effort-scale`. Seat `onboardingtype`.
+
+---
+
+**R-156** · Bottom-copy deletion on `EquipmentScreen` (Sam, 2026-08-24) ·
+**CARDIO CHOICES END THE SCREEN.**
+
+`Train somewhere else? Go back and change where you train.` and `Nothing
+ticked? Continue anyway — you'll get a bodyweight program.` are deleted together
+with their `Pressable` and `footNote` style. Standard Back and Continue remain.
+· `WORKING` — `test:equipment-answer`. Seat `onboardingtype`.
