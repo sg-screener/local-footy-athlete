@@ -1427,6 +1427,7 @@ function SetupUpdateSheet({
       // the flexing body resolved to zero height and the sheet opened as a
       // sliver — grab handle, no content, nothing to dismiss.
       flexibleBody={!building}
+      contentStyle={styles.setupSheetSurface}
       testID="profile-setup-update-sheet"
     >
       {showBack ? (
@@ -1639,6 +1640,9 @@ const styles = StyleSheet.create({
   setupSheetScroll: {
     maxHeight: '100%',
   },
+  setupSheetSurface: {
+    backgroundColor: colors.surface.primary,
+  },
   setupSheetScrollContent: {
     paddingBottom: spacing.xs,
   },
@@ -1793,58 +1797,61 @@ const styles = StyleSheet.create({
     color: colors.accent.lime,
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    letterSpacing: 1,
     marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
   },
   sheetCard: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
+    backgroundColor: '#101010',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.surface.tertiary,
     overflow: 'hidden',
   },
   setupSheetRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 13,
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   setupSheetLabel: {
+    width: 118,
     color: colors.text.tertiary,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 16,
-    marginBottom: 3,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   setupSheetValue: {
+    flex: 1,
     color: colors.text.primary,
     fontSize: 14,
     fontWeight: '600',
-    lineHeight: 19,
+    lineHeight: 20,
   },
   sheetCardAction: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 13,
-    backgroundColor: 'rgba(200, 255, 0, 0.03)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    backgroundColor: '#101010',
   },
   sheetCardActionText: {
     color: colors.accent.lime,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     lineHeight: 20,
   },
   sheetCardChevron: {
     color: colors.text.tertiary,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '300',
-    lineHeight: 25,
+    lineHeight: 28,
   },
   sheetSecondaryButton: {
     marginTop: spacing.md,

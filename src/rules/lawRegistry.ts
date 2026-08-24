@@ -2088,13 +2088,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-profile-page-cards-share-dark-surface',
-    law: 'Every section card on the Profile page uses one named #101010 darker surface: Program Setup, FAQ, Support, Developer Tools, Legal and Danger Zone. The embedded green setup-change treatment and the red Danger Zone border remain later semantic treatments. Setup-sheet cards are not governed by the page-card surface.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-166 — Sam found Profile used the same lighter card colour and required it to match the darker app surface.',
+    law: 'Every section card on the Profile page uses one named #101010 darker surface: Program Setup, FAQ, Support, Developer Tools, Legal and Danger Zone. The near-full-height setup flow uses the Profile near-black page background, #101010 summary cards, 12-point card radius and the same 13-point label / 14-point value row typography. The lime setup-change treatment and red Danger Zone border remain later semantic treatments.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-166 for Profile page cards and R-183 for the setup flow — Sam required the setup page to use the same background, fonts and styles as the rest of Profile.',
     guard: {
       state: 'guarded',
       by: 'test:profile-reset-ui',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The profile suite pins one profilePageCardSurface at #101010 and requires it at the Program Setup summary, the shared FAQ/Support action row, both info-card mounts (Developer Tools and Legal), and before dangerCard so its later red border survives. TEST-FIRST LIVENESS: the new cell was the suite\'s only red against the lighter Profile page (171 / 1); applying the shared surface returned it to 172 / 0. NOT COVERED: simulator reinspection, Profile setup-sheet surfaces, the separate FAQ detail screen and the next physical-phone Release.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The profile suite pins one profilePageCardSurface at #101010 and requires it at the Program Setup summary, the shared FAQ/Support action row, both info-card mounts (Developer Tools and Legal), and before dangerCard so its later red border survives. TEST-FIRST LIVENESS for R-166: the new cell was the suite\'s only red against the lighter Profile page (171/1); applying the shared surface returned 172/0. UPDATED FOR R-183: TWO OPTIONS COMPARED were changing the global Sheet surface for every popup, or giving this near-full-height Profile flow a local content surface while retaining shared Sheet controls. The scoped surface landed because the inconsistency belongs to this page-like flow, not every short popup. Its new source cell began 174/1 and returned `test:profile-reset-ui` to 175/0; the chained wordmark tape remains 15/0. The cell pins near-black flow background, #101010 cards/actions, 12-point radius and Profile\'s 13/14-point row typography. NOT COVERED: simulator or physical-iPhone pixels, smaller device text wrapping, the separate FAQ detail screen and the next Release rebuild.',
     },
   },
   {

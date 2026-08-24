@@ -4974,3 +4974,17 @@ black text and a black pencil, using the same shared medium button treatment as
 control is important enough to look immediately actionable rather than blend
 into the Program Setup card. · `WORKING` — `test:profile-reset-ui`. Seat
 `onboardingtype`.
+
+---
+
+**R-183** · Profile setup flow matches the Profile surface (Sam, 2026-08-24) ·
+**A NEAR-FULL-SCREEN FLOW SHOULD NOT LOOK LIKE A DIFFERENT APP.**
+
+The setup flow opened by **Something changed? Tell the coach** uses Profile's
+near-black page background and `#101010` card surface instead of the generic
+grey popup surface. Its summary rows reuse Profile's 13-point labels, 14-point
+values, spacing and 12-point card radius; edit rows use the established
+15-point action scale. It still uses the shared Sheet, SheetHeader, buttons and
+selection controls, so only the Profile-specific surface changes rather than
+restyling every popup in the app. · `WORKING` — `test:profile-reset-ui`. Seat
+`onboardingtype`.

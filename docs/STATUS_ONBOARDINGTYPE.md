@@ -1138,3 +1138,29 @@ from the app's primary action owner.
 
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Real VoiceOver speech and the next Release rebuild.
+
+---
+
+## R-183 — align the Profile setup flow
+
+The setup flow was using the generic `#141414` popup surface across almost the
+whole phone, while Profile behind it uses the app's near-black background and
+darker cards. Changing the global Sheet would have restyled every popup, so the
+flow now passes a local Profile surface into the shared Sheet instead.
+
+The flow background is `colors.surface.primary`; summary and edit rows use the
+same `#101010` surface and 12-point radius as Profile cards. Labels now use the
+Profile 13/600/18 scale, values use 14/600/20, row padding matches Profile, and
+edit actions use the established 15-point action scale. Shared popup headers,
+buttons, keyboard ownership and selection controls remain unchanged.
+
+### Evidence
+
+- TEST FIRST: the setup-style cell made `test:profile-reset-ui` 174/1.
+- AFTER: `test:profile-reset-ui` is 175/175 and the chained wordmark tape is
+  15/15.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Small-screen text wrapping, real VoiceOver speech and the next Release build.

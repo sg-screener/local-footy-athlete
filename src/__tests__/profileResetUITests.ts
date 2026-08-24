@@ -285,6 +285,15 @@ ok(
     && /<SelectableTile/.test(src),
 );
 ok(
+  'setup review uses the same dark surface and row typography as Profile',
+  /<Sheet[\s\S]{0,420}contentStyle=\{styles\.setupSheetSurface\}[\s\S]{0,420}testID="profile-setup-update-sheet"/.test(src)
+    && /setupSheetSurface:\s*\{[^}]*backgroundColor:\s*colors\.surface\.primary/.test(src)
+    && /sheetCard:\s*\{[^}]*backgroundColor:\s*'#101010'[^}]*borderRadius:\s*12/s.test(src)
+    && /setupSheetLabel:\s*\{[^}]*fontSize:\s*13[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*18/s.test(src)
+    && /setupSheetValue:\s*\{[^}]*fontSize:\s*14[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*20/s.test(src)
+    && /sheetCardAction:\s*\{[^}]*backgroundColor:\s*'#101010'/s.test(src),
+);
+ok(
   'setup sheet includes LFA and team day selectors',
     /What days can you train\?/.test(src)
     && /We.ll build your LFA work around these days\./.test(src)
