@@ -286,6 +286,42 @@ visible.
 
 ---
 
+## R-166 — darken every Profile page card
+
+Sam found Profile had the same lighter card colour. Two options were compared:
+
+1. Change only Program Setup and the visible FAQ row. Support, Legal and Danger
+   Zone would retain the old surface below the fold.
+2. Give every Profile page section one named dark surface, while leaving setup
+   sheets separate and preserving semantic green/red treatments.
+
+Option 2 landed. Program Setup, FAQ, Support, Developer Tools, Legal and Danger
+Zone now use one `#101010` page-card surface.
+
+### Evidence
+
+- TEST FIRST: `test:profile-reset-ui` — 171/172; the new whole-page surface
+  cell was the only failure.
+- AFTER: `test:profile-reset-ui` — 172/172.
+- The guard separately pins Program Setup, the shared FAQ/Support row, both
+  info-card mounts and Danger Zone's surface-before-border order.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. The new row
+  raises the measured registry to 171 laws / 150 guarded without increasing
+  UNENFORCED.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-166 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels after the surface change.
+- Setup-sheet cards and the separate FAQ detail screen.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the

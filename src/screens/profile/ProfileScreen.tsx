@@ -596,7 +596,7 @@ export default function ProfileScreen() {
         {/* Program setup */}
         <View style={styles.section} testID="profile-program-setup-section">
           <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>PROGRAM SETUP</Text>
-          <Card style={styles.summaryCard}>
+          <Card style={[styles.summaryCard, styles.profilePageCardSurface]}>
             <ProfileRow label="Name" value={displayName} />
             {position ? <ProfileRow label="Footy role" value={position} /> : null}
             {experienceLevel ? <ProfileRow label="Training Experience" value={experienceLevel} /> : null}
@@ -652,7 +652,7 @@ export default function ProfileScreen() {
             <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>
               DEVELOPER TOOLS
             </Text>
-            <Card style={styles.infoCard}>
+            <Card style={[styles.infoCard, styles.profilePageCardSurface]}>
               <TouchableOpacity
                 style={styles.resetRow}
                 activeOpacity={0.7}
@@ -696,7 +696,7 @@ export default function ProfileScreen() {
           <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>
             LEGAL
           </Text>
-          <Card style={styles.infoCard}>
+          <Card style={[styles.infoCard, styles.profilePageCardSurface]}>
             <TouchableOpacity
               style={styles.legalRow}
               activeOpacity={0.7}
@@ -738,7 +738,7 @@ export default function ProfileScreen() {
           <Text variant="label" color={colors.status.error} style={styles.sectionTitle}>
             DANGER ZONE
           </Text>
-          <Card style={styles.dangerCard}>
+          <Card style={[styles.profilePageCardSurface, styles.dangerCard]}>
             <TouchableOpacity
               style={styles.resetRow}
               activeOpacity={0.7}
@@ -875,7 +875,7 @@ function SecondaryActionRow({
 }) {
   return (
     <TouchableOpacity
-      style={styles.secondaryActionRow}
+      style={[styles.secondaryActionRow, styles.profilePageCardSurface]}
       activeOpacity={0.72}
       onPress={onPress}
     >
@@ -1559,6 +1559,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
+  },
+  // One quiet surface for every card on the Profile page. Sheet cards remain
+  // separate because they are temporary controls rather than page sections.
+  profilePageCardSurface: {
+    backgroundColor: '#101010',
   },
   infoCard: {
     padding: spacing.lg,

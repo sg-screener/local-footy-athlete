@@ -4748,3 +4748,14 @@ Day view instead of the lighter default card colour. The current-day card keeps
 its existing lime selected treatment, and week-edit move targets keep their
 feedback colour. · `WORKING` — `test:day-first-timeline`. Seat
 `onboardingtype`.
+
+---
+
+**R-166** · Profile page-card surface consistency (Sam, 2026-08-24) ·
+**PROFILE USES THE SAME DARK CARD SURFACE.**
+
+Every section card on the Profile page uses one shared `#101010` darker surface:
+Program Setup, FAQ, Support, Developer Tools, Legal and Danger Zone. The green
+**Something changed? Tell the coach** strip and the red Danger Zone border keep
+their existing semantic treatments. Setup-sheet cards are outside this page
+surface ruling. · `WORKING` — `test:profile-reset-ui`. Seat `onboardingtype`.

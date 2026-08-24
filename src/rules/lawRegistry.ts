@@ -2086,6 +2086,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite anchors the shared DayRow, requires every unselected Week row to reuse dayRowCalm, pins one cardSelected owner for both the Card selected prop and the calm-surface exclusion, and proves the move-target override remains later in style order. TEST-FIRST LIVENESS: the new Week-surface cell was the suite\'s only additional red against the lighter Week rows (53 pass / 3 fail versus the existing 53 / 2); applying the shared darker surface and updating the pre-existing selection-shape guard returned the suite to 54 / 2. NOT COVERED: simulator reinspection, pressed-state pixels, week-edit picker pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-profile-page-cards-share-dark-surface',
+    law: 'Every section card on the Profile page uses one named #101010 darker surface: Program Setup, FAQ, Support, Developer Tools, Legal and Danger Zone. The embedded green setup-change treatment and the red Danger Zone border remain later semantic treatments. Setup-sheet cards are not governed by the page-card surface.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-166 — Sam found Profile used the same lighter card colour and required it to match the darker app surface.',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The profile suite pins one profilePageCardSurface at #101010 and requires it at the Program Setup summary, the shared FAQ/Support action row, both info-card mounts (Developer Tools and Legal), and before dangerCard so its later red border survives. TEST-FIRST LIVENESS: the new cell was the suite\'s only red against the lighter Profile page (171 / 1); applying the shared surface returned it to 172 / 0. NOT COVERED: simulator reinspection, Profile setup-sheet surfaces, the separate FAQ detail screen and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

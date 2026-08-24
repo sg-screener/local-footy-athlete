@@ -152,6 +152,15 @@ ok(
   'page subtitle present',
   /Your program setup and support\./.test(src),
 );
+ok(
+  'every Profile page card uses the darker programmed-session surface',
+  /profilePageCardSurface:\s*\{[^}]*backgroundColor:\s*'#101010'/.test(src)
+    && /<Card style=\{\[styles\.summaryCard, styles\.profilePageCardSurface\]\}/.test(src)
+    && /style=\{\[styles\.secondaryActionRow, styles\.profilePageCardSurface\]\}/.test(src)
+    && (src.match(/<Card style=\{\[styles\.infoCard, styles\.profilePageCardSurface\]\}/g) ?? []).length === 2
+    && /<Card style=\{\[styles\.profilePageCardSurface, styles\.dangerCard\]\}/.test(src),
+  'Program Setup, FAQ/Support, Legal, developer tools and Danger Zone must share one darker page surface',
+);
 // A5 (Sam's v1 ruling): the Profile clear-coach-adjustments control is REMOVED.
 // It rendered, reported success with an all-zero summary, and changed nothing —
 // `clearCoachAdjustments` only clears the pre-§18 mirror stores, so the illness
