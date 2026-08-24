@@ -3989,7 +3989,7 @@ function QuickExerciseActions({
         hitSlop={8}
         style={({ pressed }) => [styles.exerciseRowActionBtn, pressed && { opacity: 0.6 }]}
       >
-        <MaterialCommunityIcons name="autorenew" size={15} color="#B9A7FF" />
+        <MaterialCommunityIcons name="autorenew" size={15} color={colors.text.secondary} />
       </Pressable>
       <Pressable
         onPress={() => onQuickRemove(exercise)}
@@ -4003,7 +4003,7 @@ function QuickExerciseActions({
           pressed && { opacity: 0.6 },
         ]}
       >
-        <MaterialCommunityIcons name="minus" size={15} color="#FF7F7F" />
+        <MaterialCommunityIcons name="trash-can-outline" size={15} color="rgba(255, 127, 127, 0.72)" />
       </Pressable>
     </View>
   );
@@ -5612,19 +5612,18 @@ const styles = StyleSheet.create({
     gap: 6,
     zIndex: 2,
   },
+  // The box is back to the original 22pt so the two glyphs sit at the same
+  // spacing and the same height as before; the comfortable tap area comes from
+  // hitSlop instead of an oversized invisible box.
   exerciseRowActionBtn: {
     width: 22,
     height: 22,
-    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(185, 167, 255, 0.10)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(185, 167, 255, 0.30)',
+    backgroundColor: 'transparent',
   },
   exerciseRowActionBtnDanger: {
-    backgroundColor: 'rgba(255, 127, 127, 0.10)',
-    borderColor: 'rgba(255, 127, 127, 0.30)',
+    backgroundColor: 'transparent',
   },
   // Muted play target — outline affordance, no resting fill at all.
   // Pushed one more step down: 16×16 ring at opacity 0.45 with a faint

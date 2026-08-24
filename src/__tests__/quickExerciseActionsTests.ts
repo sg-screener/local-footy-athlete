@@ -239,13 +239,24 @@ const source = fs.readFileSync(
   path.join(process.cwd(), 'src/screens/home/DayWorkoutScreenV2.tsx'), 'utf8',
 );
 assert(/function QuickExerciseActions\(/.test(source), 'one shared Quick Exercise Actions UI exists');
-assert(/name="autorenew"/.test(source) && /color="#B9A7FF"/.test(source),
-  'Quick Swap uses the purple chasing-arrows icon');
-assert(/name="minus"/.test(source) && /color="#FF7F7F"/.test(source)
-  && !/name="minus-circle-outline"/.test(source),
-  'Quick Remove uses one red circle with only a minus glyph inside');
+assert(/name="autorenew"/.test(source) && /color=\{colors\.text\.secondary\}/.test(source)
+  && !/color="#B9A7FF"/.test(source),
+  'Quick Swap uses the neutral secondary-grey chasing-arrows icon');
+assert(/name="trash-can-outline"/.test(source) && /color="rgba\(255, 127, 127, 0\.72\)"/.test(source)
+  && !/name="minus"/.test(source) && !/name="minus-circle-outline"/.test(source),
+  'Quick Remove uses a muted red trash-can glyph');
 assert((source.match(/size=\{15\}/g) ?? []).length >= 2,
   'both quick-action glyphs match the exercise-name font size');
+assert(/exerciseRowActionBtn: \{[\s\S]*?width: 22[\s\S]*?height: 22[\s\S]*?backgroundColor: 'transparent'/.test(source),
+  'both quick actions keep the original 22-point box, with no padded invisible target');
+assert(/exerciseRowActions: \{[\s\S]*?gap: 6/.test(source),
+  'the two quick actions keep their original 6-point spacing');
+assert((source.match(/hitSlop=\{8\}/g) ?? []).length >= 2,
+  'the comfortable tap area comes from hitSlop, not from an oversized box');
+assert(/exerciseRowActionBtnDanger: \{[\s\S]*?backgroundColor: 'transparent'/.test(source)
+  && !/rgba\(185, 167, 255, 0\.10\)/.test(source)
+  && !/rgba\(255, 127, 127, 0\.10\)/.test(source),
+  'neither quick action draws a coloured circle');
 assert(/exerciseRowActions: \{[\s\S]*?position: 'absolute'[\s\S]*?top: 12[\s\S]*?right: 14/.test(source),
   'quick actions are anchored together at the top right');
 assert(/controlsRow: \{[\s\S]*?position: 'absolute'[\s\S]*?right: 0[\s\S]*?bottom: 0[\s\S]*?alignItems: 'center'/.test(source),
