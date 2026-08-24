@@ -1139,8 +1139,6 @@ from the app's primary action owner.
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Real VoiceOver speech and the next Release rebuild.
 
----
-
 ## R-183 — align the Profile setup flow
 
 The setup flow was using the generic `#141414` popup surface across almost the
@@ -1240,3 +1238,30 @@ lookalike controls, all four now render through one `SetupEditAction` owner.
 
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Real VoiceOver speech and the next Release rebuild.
+
+---
+
+## R-187 — use normal casing for programmed section headings
+
+Every component heading in the Day programmed-work box now opts out of the
+compact label's uppercase transform through the one shared
+`programmedPartHeadline` style. Mobility / Warm-up, Strength, Conditioning,
+Primer, Recovery, Gunshow and future projected sections therefore keep their
+authored casing. CORE and compact status labels remain uppercase.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: rewriting individual signed strings would couple copy
+  to presentation and miss future section types; overriding the shared
+  programmed-heading style fixes the whole renderer without touching copy.
+- TEST FIRST: the casing cell changed the inherited targeted baseline from
+  54/56 to 53/56.
+- AFTER: `test:day-first-timeline` returned to its exact inherited 54/56
+  baseline; the two remaining failures are the pre-existing mobility-flow and
+  generated-Gunshow fixtures.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Week-card section typography, real VoiceOver speech and the next Release
+  rebuild.

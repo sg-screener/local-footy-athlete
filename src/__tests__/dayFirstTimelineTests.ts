@@ -879,8 +879,8 @@ run('the day timeline uses each session icon as its only marker and matches her 
     'the day session title does not match Renee\'s 19pt headline');
   assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
     'the compact status-label scale has drifted');
-  assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20/.test(home),
-    'the programmed Mobility / Warm-up and Strength headings no longer match the 15pt change-card heading scale');
+  assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20[^}]*textTransform:\s*'none'[^}]*letterSpacing:\s*0/.test(home),
+    'programmed section headings must keep the 15pt scale and normal casing while compact status labels remain uppercase');
   assert((home.match(/styles\.programmedPartHeadline/g) ?? []).length === 2,
     'both programmed part headings must use the larger scale, without enlarging Team Training session status');
   assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),

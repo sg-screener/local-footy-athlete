@@ -5025,3 +5025,15 @@ program details**. One shared component renders all four controls, so the
 doorway cannot drift from the actions on the page it opens. It keeps no pencil.
 This supersedes R-182's lime primary-button treatment. · `WORKING` —
 `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-187** · Programmed section headings use normal casing (Sam, 2026-08-24) ·
+**PROGRAMMED WORK DOES NOT SHOUT.**
+
+Every section heading inside the Day programmed-work box uses its authored
+normal casing — Mobility / Warm-up, Strength, Conditioning, Primer, Recovery,
+Gunshow and future sections through the same renderer. Compact status labels
+and badges such as SESSION STATUS and CORE remain uppercase. The shared
+programmed-heading style owns the distinction; signed copy strings are not
+rewritten. · `WORKING` — `test:day-first-timeline`. Seat `onboardingtype`.

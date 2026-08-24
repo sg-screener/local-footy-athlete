@@ -3016,12 +3016,9 @@ function DayTimeline({
                 )}
               </View>
               <View style={styles.timelinePartText}>
-                {/* THE CAPS ARE A STYLE, NOT THE STRING. `entry.headline` is
-                    `SignedCopy` and the sheet keeps its own casing ("Upper
-                    Push"); `textTransform` is presentation, which is where her
-                    structure is allowed to reach. The eyebrow above is the
-                    opposite case and deliberately so — Sam signed THAT one in
-                    caps, so there the caps ARE the string. */}
+                {/* Programmed sections keep their authored casing through one
+                    shared presentation override. Compact status labels still
+                    use the uppercase base style below. */}
                 <Text
                   style={[styles.timelineHeadline, styles.programmedPartHeadline]}
                   numberOfLines={1}
@@ -4518,8 +4515,8 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     lineHeight: 14,
     fontWeight: '800',
-    // CAPS ARE A STYLE HERE, NOT THE STRING — see the render site. The sheet
-    // keeps "Lower Body Strength"; her drop-down rows read them upper.
+    // Compact labels such as SESSION STATUS use this uppercase base style.
+    // Programmed section headings opt out in `programmedPartHeadline`.
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
@@ -4529,6 +4526,8 @@ const styles = StyleSheet.create({
   programmedPartHeadline: {
     fontSize: 15,
     lineHeight: 20,
+    textTransform: 'none',
+    letterSpacing: 0,
   },
   // ── THE DROP-DOWNS (UI merge slice 2, Sam's eye pass 2026-08-10) ──
   // No new colour token or new type scale: the part name keeps
