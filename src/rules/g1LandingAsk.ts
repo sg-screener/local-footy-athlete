@@ -190,13 +190,19 @@ const GUNSHOW_ROUTE: G1LandingRoute = {
 };
 
 /**
- * The back affordance, signed by Sam 2026-07-30. Labelled for what it does: on
- * a warning screen "Back" reads as "cancel", and what leaving actually does is
- * leave the day the way the day was built.
+ * The back affordance. Signed by Sam 2026-07-30 as *"Go back — leave <day>
+ * free"*, on the reasoning that "Back" on a warning screen reads as "cancel"
+ * and the row should say what it DOES.
+ *
+ * ⚠ **SHORTENED TO "Go back" BY SAM, 2026-08-25 (R-221), VERBATIM: *"the bottom
+ * button should just say 'go back' too not double up on leave frday free"*.**
+ * The reasoning above stopped applying the moment route (a) on the same screen
+ * was already labelled *"Leave Friday free"* — the back row was repeating an
+ * option sitting three lines above it, so the athlete read two ways to do one
+ * thing. The day name goes with it: this row now takes no context.
  */
 export const G1_LANDING_BACK_ROW = {
-  label: (context: G1LandingAskContext): string =>
-    `Go back — leave ${context.g1DayName} free`,
+  label: (): string => 'Go back',
 } as const;
 
 export const G1_LANDING_ROUTES: readonly G1LandingRoute[] = [

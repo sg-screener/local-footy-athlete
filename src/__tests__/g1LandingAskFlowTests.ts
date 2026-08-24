@@ -1244,7 +1244,9 @@ run('18 every athlete-facing string is filed in Sam\'s design document', () => {
     ...COPY_CONTEXTS.flatMap((context) => [
       G1_LANDING_WARNING.ask.body(context),
       G1_LANDING_WARNING.deloadConfirm.headline(context),
-      G1_LANDING_BACK_ROW.label(context),
+      // R-221 — the back row no longer takes a context: it is "Go back", and
+      // the day name it used to carry was repeating route (a) above it.
+      G1_LANDING_BACK_ROW.label(),
       // The menu the athlete actually sees for THIS context, so the fourth
       // route's strings are filed exactly where they are offered.
       ...g1LandingRoutesFor(context).map((route) =>

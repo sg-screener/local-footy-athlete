@@ -429,7 +429,7 @@ async function main(): Promise<void> {
      * always a proxy for "the day changed"; this asks the question directly, by
      * following the exercises that were on it. The cell's job — non-vacuity for
      * the two above, proving the durable path does something — is unchanged. */
-    const exerciseNames = (workout: Workout | null | undefined): string[] =>
+    const exerciseNames = (workout: { exercises?: unknown } | null | undefined): string[] =>
       ((workout?.exercises ?? []) as any[])
         .map((row) => row?.exercise?.name ?? row?.name).filter(Boolean).sort();
     const wasOnSource = exerciseNames(before.workout);

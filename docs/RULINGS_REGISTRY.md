@@ -5809,3 +5809,40 @@ survives, because the primary fix means nothing is lost; **removing BOTH
 reproduces Sam's bug exactly — "the club night's own session lost 8"** — and the
 cell catches it. `test:move-scoping` back to 17/1, its doubling cell green and
 now asserting the swap. Seat `warmup`.
+
+---
+
+**R-221** · *"the bottom button should just say 'go back' too not double up on
+leave frday free"* (Sam, 2026-08-25) · **A BACK ROW MUST NOT REPEAT AN OPTION
+ABOVE IT.** The G-1 ask's back row read **Go back — leave Friday free**, signed
+2026-07-30 on the reasoning that "Back" on a warning reads as "cancel" so the
+row should say what it DOES. **That reasoning stopped applying the moment route
+(a) on the same screen was already "Leave Friday free"** — the athlete read two
+ways to do one thing. The day name goes with it and the row now takes no
+context. Filed in the design document, so the copy census stays green rather
+than being loosened. · `WORKING` — `test:g1-landing-ask-flow` cell 18, back to
+its exact HEAD baseline. Seat `warmup`.
+
+---
+
+**R-222** · *"we need a bit more details on the strength session and the
+conditioning sessions — otherwise it's too hard to know what days you're
+swapping ... if all 3 are strength but they're really lowers, upper push, upper
+pull, then it's too hard to know what you're changing"*, and *"this should only
+show up when you're in the drag and drop screen"* (Sam, 2026-08-25) · **THE
+BOARD NAMES THE SESSION; THE WEEK ROWS KEEP NAMING THE KIND.**
+
+Every board box read `Strength`, so a week of three different sessions looked
+like three identical ones and the athlete was dragging blind.
+
+⚠ **NOTHING COMPOSES A NAME — THE OTHER FIELD WAS ALREADY THERE.** `VisiblePart`
+carries `headline` (the specific name: Lower Squat, Upper Push) AND `bucket`
+(the category word), **precisely so a surface can pick the one its job needs**.
+The board is the one surface whose job is telling two sessions apart, and
+`bucket` cannot do it. `bucket` remains the FALLBACK so a part with no specific
+name still labels its box.
+
+**Scoped by construction:** the week rows keep their bucket words (Sam's
+2026-08-08 ruling) because they answer a different question — what KIND of day
+is this — and `rules/weekBoard` reaches nothing but the board. · `WORKING` —
+`test:week-board` §7, 59 passed / 0 failed. Seat `warmup`.

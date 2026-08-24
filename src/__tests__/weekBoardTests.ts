@@ -27,8 +27,8 @@ function ok(name: string, condition: unknown, detail?: string): void {
   console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
 }
 
-const part = (kind: string, bucket: string): any => ({
-  id: `${kind}-1`, kind, headline: bucket, bucket, detail: null, rows: [],
+const part = (kind: string, bucket: string, headline = bucket): any => ({
+  id: `${kind}-1`, kind, headline, bucket, detail: null, rows: [],
   capabilities: {}, countsTowardLoad: true,
 });
 const day = (date: string, parts: any[]): any => ({
@@ -322,6 +322,38 @@ console.log('\n[6] A dragged box speaks the producer\'s scope vocabulary');
     weekBoardMoveScope({ box: emptyBox, day: soloDay, offeredScopeIds: ['whole_day'] }) === null);
   ok('an offer of nothing moves nothing',
     weekBoardMoveScope({ box: strengthBox, day: soloDay, offeredScopeIds: [] }) === null);
+}
+
+/* ══ 7. The box names the session, not the category ══ */
+
+/**
+ * ⚠ **R-222 (Sam, 2026-08-25): *"we need a bit more details on the strength
+ * session and the conditioning sessions — otherwise it's too hard to know what
+ * days you're swapping ... if all 3 are strength but they're really lowers,
+ * upper push, upper pull, then it's too hard to know what you're changing"*.**
+ *
+ * Every box read `Strength`, so a week of three different sessions looked like
+ * three identical ones and the athlete dragged blind.
+ */
+console.log('\n[7] A box names its session, so two of them can be told apart');
+{
+  const lower = buildWeekBoardDay(day('mon', [part('strength', 'Strength', 'Lower Squat')]));
+  const push = buildWeekBoardDay(day('tue', [part('strength', 'Strength', 'Upper Push')]));
+  ok('a strength box shows the session, not the category',
+    lower.boxes[0].label === 'Lower Squat', `got "${lower.boxes[0].label}"`);
+  ok('so two strength days no longer read identically',
+    lower.boxes[0].label !== push.boxes[0].label);
+  ok('conditioning names itself too',
+    buildWeekBoardDay(day('wed', [part('conditioning', 'Conditioning', 'Tempo Intervals')]))
+      .boxes[0].label === 'Tempo Intervals');
+  /* The bucket is the FALLBACK, not the choice: a part with no specific name
+     still labels its box rather than rendering blank. */
+  ok('a part with no specific name falls back to its category word',
+    buildWeekBoardDay(day('thu', [{ ...part('recovery', 'Recovery'), headline: null }]))
+      .boxes[0].label === 'Recovery');
+  ok('and the club night still reads as itself',
+    buildWeekBoardDay(day('fri', [part('team_training', 'Team Training')]))
+      .boxes[0].label === 'Team Training');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

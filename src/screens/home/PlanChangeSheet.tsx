@@ -1086,11 +1086,11 @@ export function PlanChangeSheet({
               }}
             />
           ))}
-          {/* Sam signed this label (2026-07-30): the back row says what it
-              DOES. "Back" on a warning reads as "cancel", and what it actually
-              does is leave the day the way the day was built. */}
+          {/* R-221 — "Go back", not "Go back — leave Friday free": route (a)
+              three lines above is already "Leave Friday free", and the back row
+              was repeating it. */}
           <MenuOption
-            label={G1_LANDING_BACK_ROW.label(step.context)}
+            label={G1_LANDING_BACK_ROW.label()}
             testID="g1-route-back"
             onPress={() => setStep(step.backStep)}
           />

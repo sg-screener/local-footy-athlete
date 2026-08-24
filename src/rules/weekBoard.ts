@@ -146,7 +146,28 @@ function boxForPart(part: VisiblePart, index: number): WeekBoardBox {
   return {
     id: `${part.id || part.kind}-${index}`,
     kind: BOX_KIND_FOR_PART[part.kind],
-    label: String(part.bucket ?? part.headline ?? ''),
+    /**
+     * ⚠ **THE BOARD SHOWS THE SESSION'S OWN NAME, NOT ITS CATEGORY — SAM,
+     * 2026-08-25 (R-222).**
+     *
+     * *"if all 3 are strength but they're really lowers, upper push, upper pull,
+     * then it's too hard to know what you're changing."* Every box read
+     * `Strength`, so a week of three different sessions looked like three
+     * identical ones and the athlete was dragging blind.
+     *
+     * `headline` is the projection's SPECIFIC name (Lower Squat, Upper Push);
+     * `bucket` is the category word the week rows and day titles use. **Both are
+     * carried by the projection precisely so a surface can pick the one its job
+     * needs** — this is the one surface whose job is telling two sessions apart,
+     * and `bucket` cannot do that. Nothing here composes a name: it reads the
+     * other field the owner already publishes.
+     *
+     * ⚠ **AND IT IS SCOPED TO THIS SURFACE.** Sam: *"this should only show up
+     * when you're in the drag and drop screen"*. The week rows keep their bucket
+     * words (his 2026-08-08 ruling) because they answer a different question —
+     * what KIND of day is this — and nothing in this file reaches them.
+     */
+    label: String(part.headline ?? part.bucket ?? ''),
     scope: SCOPE_FOR_PART[part.kind],
     binScope: BIN_SCOPE_FOR_PART[part.kind],
   };

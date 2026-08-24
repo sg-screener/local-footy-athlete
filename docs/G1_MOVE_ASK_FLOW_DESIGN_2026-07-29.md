@@ -214,7 +214,15 @@ keeps what is there.
 **The back row.** On a warning screen "Back" reads as "cancel"; what leaving
 actually does is leave the day the way the day was built.
 
-> - **Go back — leave Friday free**
+> - **Go back**
+
+**R-221 (Sam, 2026-08-25), VERBATIM:** *"the bottom button should just say 'go
+back' too not double up on leave frday free"*. It read **Go back — leave Friday
+free**, signed 2026-07-30 on the reasoning that "Back" on a warning screen reads
+as "cancel" so the row should say what it DOES. That reasoning stopped applying
+the moment route (a) on the same screen was already **Leave Friday free** — the
+back row was repeating an option three lines above it, so the athlete read two
+ways to do one thing. The day name goes with it; the row takes no context now.
 
 **Warning 2 — before route (c) applies**
 
