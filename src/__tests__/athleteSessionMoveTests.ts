@@ -102,8 +102,28 @@ function quiet<T>(body: () => T): T {
   }
 }
 
+/**
+ * ⚠ **THIS FIXTURE WENT STALE AND TOOK THE WHOLE SUITE DARK WITH IT.**
+ *
+ * Measured 2026-08-25: **all 20 cells were failing, and all 20 for ONE reason**
+ * — `generateProgramLocally` threw `missing_required_profile` before a single
+ * move was exercised. Onboarding grew `gender` (R-130), height, weight, first
+ * name and the 2km time trial; the generator started refusing a profile without
+ * them; this fixture was never updated. **So the move machinery — the door
+ * behind every Add / Move / Remove in the app — has been completely unguarded,
+ * while `test:bible` ran the suite and counted its failure among the noise.**
+ *
+ * The five values are `DEV_E2E_STANDARD_PROFILE`'s, deliberately: they are the
+ * app's own standard athlete, so the fixture is not a set of numbers invented
+ * to make a generator stop complaining.
+ */
 function profile(): OnboardingData {
   return {
+    firstName: 'Sam',
+    gender: 'male',
+    heightCm: 184,
+    weightKg: 90,
+    twoKmTimeTrial: { seconds: 480, recordedOn: '2026-07-01', source: 'onboarding' },
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
