@@ -197,6 +197,26 @@ interface PlanChangeSheetProps {
   date: string | null;
   weekDays: ResolvedDay[];
   initialAction?: PlanChangeInitialAction;
+  /**
+   * ⚠ **THE SCOPE THE ATHLETE ALREADY ANSWERED BY WHICH BIN THEY TAPPED —
+   * SAM, 2026-08-25 (R-218a).** *"when I hit remove on a double day i get the
+   * 'just the gym session' or 'just team training' option still — it should
+   * know which one I'm trying to delete because i hit the bin icon on that
+   * day."*
+   *
+   * ⚠ **THIS DOES NOT WEAKEN THE SKIP LAW ABOVE, AND THE DIFFERENCE IS THE
+   * WHOLE POINT.** That law refuses to skip the scope step when the APP would
+   * be INFERRING which session was meant — Sam's finding 3, where one offered
+   * scope on a two-session day silently turned "move the gym session" into
+   * "move everything". Here the athlete has already answered, with their
+   * thumb, on the box itself. It is R-120b's *"the path is the context"*:
+   * asking again would be asking a question they have just answered.
+   *
+   * **IT IS STILL VALIDATED AGAINST THE PRODUCER'S OFFER** — a scope the
+   * producer does not offer for this day falls through to the question rather
+   * than being committed. The board proposes; the producer still decides.
+   */
+  initialBinScope?: PlanChangeBinScopeId;
   fromWeek?: boolean;
   onClose: () => void;
 }
@@ -209,7 +229,7 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, initialAction, fromWeek = false, onClose,
+  visible, date, weekDays, initialAction, initialBinScope, fromWeek = false, onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
@@ -317,7 +337,7 @@ export function PlanChangeSheet({
       return;
     }
     if (options.canRemove) {
-      startBin();
+      startBin(initialBinScope);
     } else {
       setStep({
         kind: 'block_warning',
@@ -329,7 +349,7 @@ export function PlanChangeSheet({
     // not a watcher: after a successful edit the visible week changes, and
     // re-entering the chosen action then would overwrite its result screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, date, initialAction]);
+  }, [visible, date, initialAction, initialBinScope]);
 
   if (!date) return null;
   const selectedWorkout = selectedDay?.workout ?? null;
@@ -559,8 +579,18 @@ export function PlanChangeSheet({
   // sub-line, and a second predicate answering the same question is how the row
   // and the confirmation come to disagree about one day. See that function's
   // header for why the fact lives in the producer.
-  const startBin = () => {
+  const startBin = (preChosenScope?: PlanChangeBinScopeId) => {
     const scopes = options?.binScopes ?? [];
+    // R-218a — the bin icon already said WHICH. Honoured only when the producer
+    // actually offers that scope on this day; otherwise the question stands.
+    const answered = preChosenScope
+      && scopes.some((scope) => scope.id === preChosenScope)
+      ? scopes.find((scope) => scope.id === preChosenScope)
+      : null;
+    if (answered) {
+      setStep({ kind: 'confirm_remove', scope: answered.id, label: answered.label ?? null });
+      return;
+    }
     if (options && !removeEmptiesTheDay(options)) {
       setStep({ kind: 'pick_bin_scope' });
       return;

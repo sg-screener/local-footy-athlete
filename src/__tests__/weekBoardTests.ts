@@ -88,6 +88,23 @@ console.log('\n[2] Speed is energy-system work, so it is a conditioning box');
     buildWeekBoardDay(day('x', [part('recovery', 'Recovery')])).boxes[0].scope === 'recovery');
   ok('the club night carries NO move_session scope — it has its own typed action',
     buildWeekBoardDay(day('y', [part('team_training', 'Team Training')])).boxes[0].scope === null);
+
+  /* ⚠ **BIN AND MOVE ARE DIFFERENT VOCABULARIES.** Sam, 2026-08-25, on seeing
+   * the bin still ask "just the gym session or just team training": *"it should
+   * know which one I'm trying to delete because i hit the bin icon on that
+   * day"*. The box carries the answer, and for the club night that answer
+   * exists on the BIN axis while the move axis has none. */
+  ok('the club night DOES carry a bin scope, even with no move scope',
+    buildWeekBoardDay(day('y', [part('team_training', 'Team Training')])).boxes[0].binScope
+      === 'team');
+  ok('a strength box bins under strength',
+    buildWeekBoardDay(day('z', [part('strength', 'Strength')])).boxes[0].binScope === 'strength');
+  ok('a speed box bins under conditioning, the slot it occupies',
+    buildWeekBoardDay(day('z2', [part('speed', 'Speed')])).boxes[0].binScope === 'conditioning');
+  ok('a fixture carries no bin scope — it clears through its own door',
+    buildWeekBoardDay(day('z3', [part('game', 'Game Day')])).boxes[0].binScope === null);
+  ok('an empty box has nothing to bin',
+    buildWeekBoardDay(day('z4', [])).boxes[0].binScope === null);
 }
 
 /* ══ 3. A day over the cap is shown, never truncated ══ */
@@ -107,11 +124,13 @@ console.log('\n[3] Three parts is a defect to SEE, not a part to hide');
 console.log('\n[4] Drop rules — the board\'s own shape, not the program\'s legality');
 {
   const strengthBox: WeekBoardBox =
-    { id: 's', kind: 'session', label: 'Strength', scope: 'strength' };
-  const emptyBox: WeekBoardBox = { id: 'e', kind: 'empty', label: null, scope: null };
+    { id: 's', kind: 'session', label: 'Strength', scope: 'strength', binScope: 'strength' };
+  const emptyBox: WeekBoardBox =
+    { id: 'e', kind: 'empty', label: null, scope: null, binScope: null };
   const teamBox: WeekBoardBox =
-    { id: 't', kind: 'team_training', label: 'Team Training', scope: null };
-  const gameBox: WeekBoardBox = { id: 'g', kind: 'game', label: 'Game Day', scope: null };
+    { id: 't', kind: 'team_training', label: 'Team Training', scope: null, binScope: 'team' };
+  const gameBox: WeekBoardBox =
+    { id: 'g', kind: 'game', label: 'Game Day', scope: null, binScope: null };
   const openDay = { date: 'mon', boxes: [strengthBox, emptyBox], isFull: false };
   const fullDay = { date: 'tue', boxes: [strengthBox, teamBox], isFull: true };
   const gameDay = { date: 'sat', boxes: [gameBox], isFull: true };

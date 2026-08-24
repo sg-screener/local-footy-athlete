@@ -1,4 +1,4 @@
-import type { PlanChangeMoveScopeId } from '../utils/planChangeTypes';
+import type { PlanChangeBinScopeId, PlanChangeMoveScopeId } from '../utils/planChangeTypes';
 import type { VisibleDay, VisiblePart, VisiblePartKind } from './visibleProjection';
 
 /**
@@ -72,6 +72,15 @@ export interface WeekBoardBox {
    * screen deciding anything — and `null` where nothing can travel.
    */
   readonly scope: PlanChangeMoveScopeId | null;
+  /**
+   * ⚠ **BINNING HAS ITS OWN VOCABULARY, AND THE CLUB NIGHT IS WHY.**
+   *
+   * `move` and `bin` scopes are NOT the same set: team training carries no
+   * `move_session` scope (it moves through `move_team_night`, with a route) but
+   * it DOES have a `team` bin scope. Collapsing the two into one field would
+   * have made the club night either un-binnable or movable by the wrong door.
+   */
+  readonly binScope: PlanChangeBinScopeId | null;
 }
 
 export interface WeekBoardDay {
@@ -110,6 +119,18 @@ const BOX_KIND_FOR_PART: Readonly<Record<VisiblePartKind, WeekBoardBoxKind>> = {
  * `team_training` (the club night has its own typed action, `move_team_night`,
  * with a route — never `move_session`).
  */
+const BIN_SCOPE_FOR_PART: Readonly<Record<VisiblePartKind, PlanChangeBinScopeId | null>> = {
+  strength: 'strength',
+  conditioning: 'conditioning',
+  speed: 'conditioning',
+  support: 'strength',
+  recovery: 'recovery',
+  // The club night CAN be binned from here, under its own scope.
+  team_training: 'team',
+  // A fixture clears through its own door, not this one.
+  game: null,
+};
+
 const SCOPE_FOR_PART: Readonly<Record<VisiblePartKind, PlanChangeMoveScopeId | null>> = {
   strength: 'strength',
   conditioning: 'conditioning',
@@ -127,6 +148,7 @@ function boxForPart(part: VisiblePart, index: number): WeekBoardBox {
     kind: BOX_KIND_FOR_PART[part.kind],
     label: String(part.bucket ?? part.headline ?? ''),
     scope: SCOPE_FOR_PART[part.kind],
+    binScope: BIN_SCOPE_FOR_PART[part.kind],
   };
 }
 
@@ -152,7 +174,7 @@ export function buildWeekBoardDay(day: VisibleDay): WeekBoardDay {
   }
   return {
     date: day.date,
-    boxes: [...boxes, { id: `empty-${day.date}`, kind: 'empty', label: null, scope: null }],
+    boxes: [...boxes, { id: `empty-${day.date}`, kind: 'empty', label: null, scope: null, binScope: null }],
     isFull: false,
   };
 }

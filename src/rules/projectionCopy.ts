@@ -799,10 +799,12 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.board.banner',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-218, from his description of the '
-        + 'board: a + to add, a trash can to remove, and boxes that "should be '
-        + 'able to be dragged and dropped".',
-      text: 'Add, remove or drag your sessions',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-218a, VERBATIM: "make this say '
+        + '\'add, bin or move your sessions\'". The seat had proposed '
+        + '"Add, remove or drag your sessions"; his words replace it. "Bin" is '
+        + 'the glyph the athlete taps and "move" is what a drag DOES, so the '
+        + 'banner now names the outcome rather than the gesture.',
+      text: 'Add, bin or move your sessions',
     },
     {
       id: 'session.quick_add.label',

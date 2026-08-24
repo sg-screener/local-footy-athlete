@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import type { PlanChangeMoveScopeId } from '../../utils/planChangeTypes';
+import type { PlanChangeBinScopeId } from '../../utils/planChangeTypes';
 import type { WeekBoardBox, WeekBoardDay } from '../../rules/weekBoard';
 
 /**
@@ -46,7 +46,7 @@ export interface WeekBoardRow {
 export function WeekBoard({ rows, onAdd, onRemove }: {
   rows: readonly WeekBoardRow[];
   onAdd: (date: string) => void;
-  onRemove: (date: string, scope: PlanChangeMoveScopeId | null) => void;
+  onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
 }) {
   return (
     <View style={styles.board} testID="week-board">
@@ -82,7 +82,7 @@ function BoardBox({ box, date, onAdd, onRemove }: {
   box: WeekBoardBox;
   date: string;
   onAdd: (date: string) => void;
-  onRemove: (date: string, scope: PlanChangeMoveScopeId | null) => void;
+  onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
 }) {
   if (box.kind === 'empty') {
     return (
@@ -111,7 +111,7 @@ function BoardBox({ box, date, onAdd, onRemove }: {
       <Text style={styles.boxLabel} numberOfLines={2}>{box.label}</Text>
       {removable ? (
         <Pressable
-          onPress={() => onRemove(date, box.scope)}
+          onPress={() => onRemove(date, box.binScope)}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${box.label ?? 'this session'} on ${date}`}
           testID={`week-board-remove-${date}-${box.kind}`}
@@ -128,15 +128,19 @@ function BoardBox({ box, date, onAdd, onRemove }: {
 const styles = StyleSheet.create({
   board: { gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
+  /* ⚠ **THE DATE IS NOT A BOX — SAM, 2026-08-25 (R-218a): *"the dates don't
+   * need to have their own boxes"*.** It was drawn as a filled, rounded cell
+   * matching the session boxes beside it, which made the week read as three
+   * boxes per row when only two of them are things the athlete can act on. A
+   * label that looks like a control is the same defect as a control that looks
+   * like a label. Today keeps its lime weekday and nothing else. */
   dateCell: {
-    width: 52,
-    borderRadius: 12,
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  dateCellToday: { backgroundColor: 'rgba(198,255,0,0.10)' },
+  dateCellToday: {},
   weekday: { color: colors.text.tertiary, fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
   weekdayToday: { color: colors.text.accent },
   dayNumber: { color: colors.text.primary, fontSize: 17, fontWeight: '700' },

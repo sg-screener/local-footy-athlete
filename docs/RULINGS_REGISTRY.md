@@ -5605,3 +5605,37 @@ now unreachable, deliberately and temporarily, at Sam's instruction that the old
 pathway die last; `dayFirstTimelineTests` pins that exact transitional state so
 a half-finished slice is visible rather than silently normal. · `WORKING` —
 `test:week-board` 26 passed / 0 failed. Seat `warmup`.
+
+---
+
+**R-218a** · *"make this say 'add, bin or move your sessions' ... the dates don't
+need to have their own boxes ... when I hit remove on a double day i get the
+'just the gym session' or 'just team training' option still — it should know
+which one I'm trying to delete because i hit the bin icon on that day."* (Sam,
+2026-08-25, first look at the board) · **THE CONTROL THE ATHLETE TOUCHED IS AN
+ANSWER, AND THE SCREEN MUST NOT ASK IT AGAIN.**
+
+**The banner is his words**, replacing the seat's *"Add, remove or drag your
+sessions"*: "bin" is the glyph he taps and "move" is what a drag DOES, so it
+names outcomes rather than gestures.
+
+**The date is not a box.** It was drawn as a filled rounded cell matching the
+session boxes, so a row read as three boxes when only two are actionable. **A
+label that looks like a control is the same defect as a control that looks like
+a label.**
+
+⚠ **THE BIN CARRIES ITS SCOPE, AND THIS DOES NOT WEAKEN THE SKIP LAW.** The
+existing law refuses to skip the scope step when the APP would be INFERRING
+which session was meant (Sam's finding 3: one offered scope on a two-session day
+silently turned *"move the gym session"* into *"move everything"*). Here the
+athlete answered with their thumb, on the box itself — R-120b's *"the path is
+the context"*. **It is still validated against the producer's offer**: a scope
+the producer does not offer for that day falls through to the question rather
+than being committed. The board proposes; the producer still decides.
+
+⚠ **BIN AND MOVE ARE DIFFERENT VOCABULARIES, AND THE CLUB NIGHT IS WHY.** Team
+training carries no `move_session` scope — it travels through `move_team_night`
+with a route — but it DOES have a `team` bin scope. One collapsed field would
+have made the club night either un-binnable or movable by the wrong door, so
+`WeekBoardBox` carries both. · `WORKING` — `test:week-board` 31 passed / 0
+failed. Seat `warmup`.

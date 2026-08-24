@@ -66,6 +66,7 @@ import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
+import type { PlanChangeBinScopeId } from '../../utils/planChangeTypes';
 import { buildWeekBoardDay } from '../../rules/weekBoard';
 import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
@@ -383,6 +384,8 @@ export default function HomeScreenV2() {
     date: string;
     initialAction?: PlanChangeInitialAction;
     origin?: 'week';
+    /** R-218a — which box's bin was tapped. Absent means "ask, as before". */
+    binScope?: PlanChangeBinScopeId;
   } | null>(null);
   const [weekEditVisible, setWeekEditVisible] = useState(false);
   // ── ITEM 28: THE AWAY FLOW'S THREE ANSWERS ──
@@ -556,8 +559,17 @@ export default function HomeScreenV2() {
   const handleBoardAdd = useCallback((date: string) => {
     setChangeSheetEntry({ date, initialAction: 'add', origin: 'week' });
   }, []);
-  const handleBoardRemove = useCallback((date: string) => {
-    setChangeSheetEntry({ date, initialAction: 'remove', origin: 'week' });
+  /* R-218a — the bin icon carries WHICH. Sam, on seeing the sheet ask anyway:
+   * *"it should know which one I'm trying to delete because i hit the bin icon
+   * on that day"*. The scope travels with the entry; `PlanChangeSheet` still
+   * validates it against the producer's offer before honouring it. */
+  const handleBoardRemove = useCallback((date: string, scope: PlanChangeBinScopeId | null) => {
+    setChangeSheetEntry({
+      date,
+      initialAction: 'remove',
+      origin: 'week',
+      ...(scope ? { binScope: scope } : {}),
+    });
   }, []);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
@@ -1506,6 +1518,7 @@ export default function HomeScreenV2() {
         date={changeSheetEntry?.date ?? null}
         weekDays={weekDays}
         initialAction={changeSheetEntry?.initialAction}
+        initialBinScope={changeSheetEntry?.binScope}
         fromWeek={changeSheetEntry?.origin === 'week'}
         onClose={() => setChangeSheetEntry(null)}
       />
