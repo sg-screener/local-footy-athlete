@@ -87,14 +87,13 @@ import {
   type PhaseShiftStep,
 } from './homeScreenConstants';
 
-type WeekSessionEditAction = Exclude<PlanChangeInitialAction, 'actions'>;
+type WeekSessionEditAction = PlanChangeInitialAction;
 type DayPickerMode = 'normal' | 'moveGame' | 'addGame'
-  | 'sessionAdd' | 'sessionMove' | 'sessionSwap' | 'sessionRemove';
+  | 'sessionAdd' | 'sessionMove' | 'sessionRemove';
 
 const WEEK_SESSION_PICKER_MODE: Record<WeekSessionEditAction, DayPickerMode> = {
   add: 'sessionAdd',
   move: 'sessionMove',
-  swap: 'sessionSwap',
   remove: 'sessionRemove',
 };
 
@@ -104,14 +103,12 @@ const WEEK_SESSION_PICKER_COPY: Record<WeekSessionEditAction, {
 }> = {
   add: { banner: 'Tap the day you want to add to', row: 'Tap to add here' },
   move: { banner: 'Tap the session day you want to move', row: 'Tap to move' },
-  swap: { banner: 'Tap the session day you want to swap', row: 'Tap to swap' },
   remove: { banner: 'Tap the session day you want to remove', row: 'Tap to remove' },
 };
 
 function weekSessionActionForPickerMode(mode: DayPickerMode): WeekSessionEditAction | null {
   if (mode === 'sessionAdd') return 'add';
   if (mode === 'sessionMove') return 'move';
-  if (mode === 'sessionSwap') return 'swap';
   if (mode === 'sessionRemove') return 'remove';
   return null;
 }
@@ -619,7 +616,6 @@ export default function HomeScreenV2() {
            that really does have a list. */
         onLogGame={() => setGameFeedbackDate(day.date)}
         onGameDayActions={() => handleOpenGameDayActions(day.date)}
-        onMakeChange={() => setChangeSheetEntry({ date: day.date, initialAction: 'actions' })}
         staleWarning={staleByDate[day.date]}
         normal={isNormal}
         feedbackReceipts={receiptIdsForDate(day.date)}
@@ -1131,96 +1127,14 @@ export default function HomeScreenV2() {
           </View>
         )}
 
-        {/* ── THE LIFE-FACT CHIP ROW (Sam's ruling 2026-08-08, his own 2026-08-01
-            design, option a) ──
-            The five stacked bars that used to run down the bottom of this
-            screen are ONE horizontal row of round icon chips with a tiny label
-            under each, always visible, sitting just under the day's card.
-
-            PRESENTATION ONLY. Every chip keeps the door it already had: the same
-            onPress, the same testID, the same accessibility label — including the
-            two whose testID changes when a fact is already active. Nothing about
-            what a tap does moved; only where the tap lives and what it looks
-            like. The sentence each bar used to show is now the chip's spoken
-            hint, so the words are not deleted, they are demoted to where a four-
-            across row can still carry them.
-
-            The one-word labels are signed. Tired supersedes the old Time label
-            and changes its door; Away, Sick and Injured keep theirs. Equipment
-            now belongs inside the opened session, where its actual requirements
-            are known. Title Case, one word each — a four-across row has room for
-            a word, not a sentence. */}
-        {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
-            `&& dayFirst` is the whole change. Sam's reasoning IS the spec and it
-            is a general principle, not a layout note: *"someone will make a
-            change for that day if they need it and if it's chronic they're not
-            going to have to go to each day to make the change - also, people
-            don't plan on being sick or injured in the future so those buttons
-            don't need to be on weekly view"*.
-
-            Every remaining status chip keeps its
-            door, its testID and its place on the day screen — the day a change
-            is made on. The week shape simply stops offering a per-day control at
-            a week-level altitude. */}
-        {/* ── RULING 1: THE STATUS CIRCLES GET A CARD AND WORDS ABOVE THEM ──
-            Sam's FIRST bullet on his eye pass: *"there's no text above the little
-            buttons like rens said"*. His screen had the circles floating with
-            no panel and nothing telling the athlete what they are for.
-
-            **HER STRUCTURE, HIS DOORS.** The panel, the heading and the sub-line
-            are hers; every chip inside keeps the `onPress`, the `testID` and the
-            accessibility label it already had — hers reach nothing, his reach real
-            doors. Nothing about what a tap does moved.
-
-            The card heading and sub-line remain owned by signedCopy; this row
-            changes only the direct status controls beneath them. */}
-        {/* ── ONE CARD, THREE STATUS FACTS — THE DAY SURFACE'S WHOLE SET ──
-            *
-            * Sam, 2026-08-19 (correcting the ruling below): *"DAY PAGE: exactly
-            * Tired, Sick and Injured, together inside the original 'Need to
-            * make a change?' card … NO Remove, Equipment, Add or Swap. No
-            * separate readiness row. Use HomeScreenV2 at 1a7e7bd0 as the
-            * visual/source authority."*
-            *
-            * ⚠ **THIS RESTORES `1a7e7bd0`. IT IS NOT A NEW DESIGN.** The card,
-            * the three chips, their doors, their testIDs, their tints and their
-            * three glyphs are that commit's, path-for-path. The only thing that
-            * changed is WHERE the chip markup lives: in the shared
-            * `components/SessionChangeHub`, so the session screen can draw the
-            * same card with a different list.
-            *
-            * ## WHAT WAS HERE FOR ONE DAY, AND WHY IT WAS WRONG
-            *
-            * The earlier ruling — *"Both surfaces must show the same five
-            * actions: Equipment · Injury · Add · Remove · Swap … Do not keep
-            * separate Day and Session implementations"* — was about the SESSION
-            * screen growing a second, uglier copy of this card. It was read as
-            * "put the five on the Day screen too", so this card was handed the
-            * five session actions; Tired and Sick were evicted into a bare
-            * card-less row underneath, and **the Injured chip was deleted from
-            * the Day screen entirely**. `test:day-first-timeline` reddened on
-            * exactly those three cells and the change shipped anyway.
-            *
-            * **SHARING THE COMPONENT WAS NEVER THE DEFECT — THE HARD-CODED
-            * ACTION LIST WAS.** The hub now carries every action identity
-            * either surface can draw and no opinion about which belongs where;
-            * this list is the Day surface's answer and the session screen's is
-            * its own. Held by `test:session-change-hub` [8] and [9], which
-            * assert the two sets are DISJOINT rather than equal.
-            *
-            * ## WHY THESE THREE AND NOT THE FIVE
-            *
-            * They are facts about the ATHLETE, not changes to a session: they
-            * open the readiness sheet and the guided injury flow. Equipment,
-            * Add, Remove and Swap each need a session to act on, and the
-            * session screen is where the athlete has one open. */}
-        {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
-            `&& dayFirst` is the whole gate. Sam's reasoning IS the spec and it
-            is a general principle, not a layout note: *"someone will make a
-            change for that day if they need it and if it's chronic they're not
-            going to have to go to each day to make the change - also, people
-            don't plan on being sick or injured in the future so those buttons
-            don't need to be on weekly view"*. */}
+        {/* ONE DAY CARD, SIX DIRECT DOORS — Sam, 2026-08-24. Status facts stay
+            beside Add / Move / Remove, so the separate change link and its
+            redundant action menu are gone. Unavailable plan actions are absent:
+            a rest day can Add but cannot Move or Remove; a game uses its own
+            fixture controls. The Week shape keeps its separate Edit this week
+            entry because these chips act on the day currently in front of the
+            athlete. The open workout still reuses this visual component for its
+            narrower Equipment / Injury / Add set. */}
         {isNormal && dayFirst && (
           <SessionChangeHub
             testID="home-change-card"
@@ -1263,6 +1177,30 @@ export default function HomeScreenV2() {
                 testID: 'home-injured-entry',
                 accessibilityLabel: "I'm injured",
                 onPress: () => setReadinessInjuryVisible(true) },
+              ...(dayFirstDay && dayFirstDay.workout?.workoutType !== 'Game'
+                ? [{ id: 'add' as const,
+                    testID: 'home-plan-change-add',
+                    onPress: () => setChangeSheetEntry({
+                      date: dayFirstDay!.date,
+                      initialAction: 'add',
+                    }) }]
+                : []),
+              ...(dayFirstDay?.workout && dayFirstDay.workout.workoutType !== 'Game'
+                ? [
+                    { id: 'move' as const,
+                      testID: explorerTestId.sessionMoveIngress(dayFirstDay.workout.id),
+                      onPress: () => setChangeSheetEntry({
+                        date: dayFirstDay.date,
+                        initialAction: 'move',
+                      }) },
+                    { id: 'remove' as const,
+                      testID: explorerTestId.sessionDeleteIngress(dayFirstDay.workout.id),
+                      onPress: () => setChangeSheetEntry({
+                        date: dayFirstDay.date,
+                        initialAction: 'remove',
+                      }) },
+                  ]
+                : []),
             ]}
           />
         )}
@@ -1841,7 +1779,6 @@ interface DayRowProps {
   onFinishTeam: () => void;
   onLogGame: () => void;
   onGameDayActions: () => void;
-  onMakeChange: () => void;
   staleWarning: any;
   feedbackReceipts: string[];
   /** The day's OWN work is logged — see the note at the call site. */
@@ -2313,7 +2250,7 @@ function WeekDayCardHeader({
 function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
-  onLogGame, onGameDayActions, onMakeChange, staleWarning,
+  onLogGame, onGameDayActions, staleWarning,
   feedbackReceipts, sessionLogged, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
@@ -2582,13 +2519,6 @@ function DayRow({
                 <Button label="Start Session" size="md" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
               </>
             )}
-            <Pressable
-              onPress={onMakeChange}
-              style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-              testID="make-change-link"
-            >
-              <Text style={styles.makeChangeText}>Want to change something?</Text>
-            </Pressable>
           </View>
         )}
 
@@ -2620,13 +2550,6 @@ function DayRow({
       {dayShape && isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
           <Text style={styles.expandedMeta}>Freshen up. Adapt. Go again.</Text>
-          <Pressable
-            onPress={onMakeChange}
-            style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-            testID="add-session-link"
-          >
-            <Text style={styles.makeChangeText}>Add optional session?</Text>
-          </Pressable>
         </View>
       )}
       </View>
@@ -3266,7 +3189,7 @@ function WeekEditSheet({
             testID="edit-week-away"
           />
           <SheetOption
-            label="Add, move, swap or remove a session"
+            label="Add, move or remove a session"
             icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
             onPress={() => setStep('session_action')}
             testID="edit-week-session"
@@ -3285,12 +3208,6 @@ function WeekEditSheet({
             icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color="#67D7FF" />}
             onPress={() => onEditSession('move')}
             testID="edit-week-action-move"
-          />
-          <SheetOption
-            label="Swap a session"
-            icon={<MaterialCommunityIcons name="swap-horizontal" size={18} color="#B9A7FF" />}
-            onPress={() => onEditSession('swap')}
-            testID="edit-week-action-swap"
           />
           <SheetOption
             label="Remove a session"

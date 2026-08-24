@@ -368,8 +368,9 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
       && !/function GameDaySheet[\s\S]{0,900}label="Log Game"/.test(HOME_V2),
   );
   ok(
-    'HomeScreenV2 normal selected sessions still show Start Session and change link',
-    /isSelected && hasWorkout && !isGame && normal[\s\S]{0,700}label="Start Session"[\s\S]{0,420}<Text style=\{styles\.makeChangeText\}>Want to change something\?<\/Text>/.test(HOME_V2),
+    'HomeScreenV2 normal selected sessions show Start Session without the retired change link',
+    /isSelected && hasWorkout && !isGame && normal[\s\S]{0,700}label="Start Session"/.test(HOME_V2)
+      && !/Want to change something\?/.test(HOME_V2),
   );
   ok(
     'HomeScreenV2 normal selected sessions omit generic item counts',

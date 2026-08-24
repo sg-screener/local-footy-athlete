@@ -28,10 +28,9 @@ const contracts: Array<[string, string, RegExp]> = [
   ['fixture actions use exact fixture identity', sources.program, /fixtureIngress\('move', fixtureId\)[\s\S]*fixtureIngress\('remove', fixtureId\)/],
   ['fixture cards and lifecycle states use exact fixture identity', sources.program, /fixtureCard\(day\.workout\.id\)[\s\S]*fixtureState\(day\.workout\.id, 'active'\)[\s\S]*fixtureState\(`calendar-game-\$\{day\.date\}`, 'absent'\)/],
   // UPDATED 2026-07-31 (design rulings 7-8). `plan-change-edit-session` was the
-  // intermediate menu's one row, and the intermediate menu is deleted — the four
-  // actions are the first step now, so the stable ids are theirs.
+  // intermediate menu's one row. Day now enters Add / Move / Remove directly.
   ['plan action entry points', sources.plan,
-    /testID="plan-change-swap"[\s\S]*testID="plan-change-add"/],
+    /testID="plan-change-add"[\s\S]*sessionMoveIngress\(selectedWorkout\.id\)[\s\S]*sessionDeleteIngress\(selectedWorkout\.id\)/],
   ['plan session-type rows carry stable ids', sources.plan,
     /testID="plan-change-type-strength"[\s\S]*testID="plan-change-type-conditioning"[\s\S]*testID="plan-change-type-gunshow"[\s\S]*testID="plan-change-type-mobility"[\s\S]*testID="plan-change-type-prehab"/],
   ['plan deletion and movement use session identity', sources.plan, /sessionMoveIngress\(selectedWorkout\.id\)[\s\S]*sessionDeleteIngress\(selectedWorkout\.id\)/],

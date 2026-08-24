@@ -1082,3 +1082,37 @@ colour owner as the Week row.
 
 - Simulator reinspection and optical alignment in the Edit-this-week row.
 - The next physical-iPhone Release rebuild.
+
+---
+
+## R-181 — put Day plan actions in the change card
+
+The separate Day *Want to change something?* link and the dedicated session
+Swap route were two ways into one editing system. The Day card is now the one
+visible owner: Tired, Sick, Injured, Add, Move and Remove. Week keeps Add, Move
+and Remove and no longer offers a separate Swap action. The open workout hub
+remains Equipment, Injury and Add.
+
+The move producer now returns an explicit placement fact: `move`, `combine` or
+`swap`. A Team Training destination derives `combine` from the projected typed
+parts, so moving strength there preserves Team Training and tells the athlete it
+joins the day. An ordinary occupied destination remains a legal `swap`.
+
+### Evidence
+
+- `test:session-change-hub`: 58/58.
+- `test:day-first-timeline`: 54/56, its exact pre-change baseline; the two
+  existing mobility-warm-up and generated-Gunshow reds are unchanged.
+- `test:move-scoping`: 17/18; the new combine and ordinary-swap cells pass. Its
+  one existing unanchored multi-kind fixture red is unchanged.
+- MUTATION: removing the Team Training projected-part classifier changed
+  `test:move-scoping` from 17/1 to 16/2 and named Strength -> Team Training as
+  `swap`, then restoration returned the new cell to green.
+- `test:compile`: concurrent baseline remains 483 errors / 60 worsened
+  file-scope pairs; none of this slice's changed product files is named.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- A real multi-edit sequence trading two ordinary occupied sessions.
+- VoiceOver order and the next physical-iPhone Release build.

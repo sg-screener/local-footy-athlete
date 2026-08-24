@@ -1,10 +1,10 @@
 /**
  * ONE PLACE TO CHANGE THE SESSION, AND EVERY BUTTON IN IT GOES SOMEWHERE.
  *
- * Sam, 2026-08-19: *"Remove unlabelled header icons. Remove always-visible row
- * Swap/Remove icons. Build one 'Need to make a change?' section: Equipment ·
- * Injury · Add · Remove · Swap. No dead buttons. Keep play/demo, checkboxes,
- * load controls and form cues."*
+ * Sam, 2026-08-24: the Day card owns Tired · Sick · Injured · Add · Move ·
+ * Remove. The old separate "Want to change something?" link and dedicated
+ * session Swap action are gone. The open-session card keeps only Equipment ·
+ * Injury · Add because Quick Swap and Quick Remove live on each exercise row.
  *
  * ## WHY THIS SUITE READS SOURCE
  *
@@ -34,6 +34,8 @@ const DAY_SCREEN = join(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx');
 const daySource = readFileSync(DAY_SCREEN, 'utf8');
 const HUB = join(__dirname, '..', 'components', 'SessionChangeHub.tsx');
 const hubSource = readFileSync(HUB, 'utf8');
+const PLAN_SHEET = join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx');
+const planSheetSource = readFileSync(PLAN_SHEET, 'utf8');
 
 let passed = 0;
 const failures: string[] = [];
@@ -91,15 +93,15 @@ console.log('\n[3] There is exactly ONE change section, and it is labelled');
     `${(live.match(/<SessionChangeHub/g) ?? []).length} mounts`);
 }
 
-console.log('\n[4] All five doors, by name, in Sam’s order');
+console.log('\n[4] The open-session hub keeps its three session-wide doors');
 {
-  /* ⚠ **THE LABELS ARE THE SHARED OWNER'S NOW.** The screen names the five by
+  /* ⚠ **THE LABELS ARE THE SHARED OWNER'S NOW.** The screen names the actions by
    * ID; the words live once, in `components/SessionChangeHub`, which is what
    * stops the two surfaces saying different things for the same door. So the
    * ORDER is asserted on the screen (it composes the list) and the WORDS on the
    * component (it draws them). */
-  const order = ['equipment', 'injury', 'add', 'remove', 'swap'];
-  const labels = ['Equipment', 'Injury', 'Add', 'Remove', 'Swap'];
+  const order = ['equipment', 'injury', 'add'];
+  const labels = ['Equipment', 'Injury', 'Add'];
   const hub = live.slice(live.indexOf('<SessionChangeHub'), live.indexOf('/>', live.indexOf('<SessionChangeHub')));
   let cursor = -1;
   let ordered = true;
@@ -115,11 +117,11 @@ console.log('\n[4] All five doors, by name, in Sam’s order');
   ok('and they appear in the order Sam wrote them', ordered);
 }
 
-console.log('\n[5] NO DEAD BUTTONS — every door names a real opener');
+console.log('\n[5] NO DEAD BUTTONS — every open-session door names a real opener');
 {
   const hub = live.slice(live.indexOf('<SessionChangeHub'), live.indexOf('/>', live.indexOf('<SessionChangeHub')));
   const openers = [...hub.matchAll(/onPress: (\w+)/g)].map((match) => match[1]!);
-  ok('CONTROL — the hub really wires five openers', openers.length === 5,
+  ok('CONTROL — the hub really wires three openers', openers.length === 3,
     JSON.stringify(openers));
   for (const opener of openers) {
     ok(`'${opener}' is a real callback on this screen`,
@@ -191,17 +193,17 @@ console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
     /<SessionChangeHub/.test(live) && /<SessionChangeHub/.test(dayLive));
 
   /* THE VOCABULARY IS THE COMPONENT'S, NOT EACH SCREEN'S. */
-  ok('the shared owner names the five session actions',
-    /'equipment', 'injury', 'add', 'remove', 'swap'/.test(hubLive));
-  ok('and it names the three Day status actions beside them',
-    /'tired', 'sick', 'injured'/.test(hubLive));
+  ok('the shared owner names the three open-session actions',
+    /'equipment', 'injury', 'add'/.test(hubLive));
+  ok('and it names the six Day actions beside them',
+    /'tired', 'sick', 'injured', 'add', 'move', 'remove'/.test(hubLive));
   ok('and it owns the LABELS, so the two surfaces cannot say different words',
     /CHANGE_ACTION_LABEL/.test(hubLive)
       && !/label: 'Equipment'/.test(live) && !/label: 'Equipment'/.test(dayLive));
   ok('and it owns the ICONS and tints, so they cannot look different',
     /ACTION_TINT/.test(hubLive) && /function glyph\(/.test(hubLive));
 
-  for (const id of ['equipment', 'injury', 'add', 'remove', 'swap']) {
+  for (const id of ['equipment', 'injury', 'add']) {
     ok(`the session surface offers '${id}'`,
       new RegExp(`id: '${id}' as const`).test(live));
   }
@@ -221,7 +223,7 @@ console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
     !/handleOpenSessionChange/.test(dayLive));
 }
 
-console.log('\n[9] THE TWO SURFACES OFFER DIFFERENT SETS — AND THAT IS THE CONTRACT');
+console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
 {
   /* ⚠ **THIS SECTION IS THE ONE THAT WAS MISSING, AND ITS ABSENCE SHIPPED THE
    * DEFECT.**
@@ -245,8 +247,8 @@ console.log('\n[9] THE TWO SURFACES OFFER DIFFERENT SETS — AND THAT IS THE CON
   const dayLive = daySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const hubLive = hubSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  const DAY = ['tired', 'sick', 'injured'];
-  const SESSION = ['equipment', 'injury', 'add', 'remove', 'swap'];
+  const DAY = ['tired', 'sick', 'injured', 'add', 'move', 'remove'];
+  const SESSION = ['equipment', 'injury', 'add'];
 
   /** The ids a surface actually hands the hub, read off its own `actions` list. */
   const offered = (surface: string): string[] => {
@@ -266,18 +268,18 @@ console.log('\n[9] THE TWO SURFACES OFFER DIFFERENT SETS — AND THAT IS THE CON
     dayOffered.length > 0 && sessionOffered.length > 0,
     `day ${JSON.stringify(dayOffered)} session ${JSON.stringify(sessionOffered)}`);
 
-  ok('the Day surface offers EXACTLY Tired, Sick and Injured',
+  ok('the Day surface offers status plus Add, Move and Remove',
     JSON.stringify(dayOffered) === JSON.stringify(DAY),
     JSON.stringify(dayOffered));
-  ok('the session surface offers EXACTLY the five, in Sam’s order',
+  ok('the session surface offers EXACTLY its three session-wide actions',
     JSON.stringify(sessionOffered) === JSON.stringify(SESSION),
     JSON.stringify(sessionOffered));
-  ok('and the two sets share nothing',
-    dayOffered.every((id) => !sessionOffered.includes(id)));
+  ok('Add is deliberately shared; every other action belongs to one surface',
+    dayOffered.filter((id) => sessionOffered.includes(id)).join(',') === 'add');
 
-  for (const id of SESSION) {
-    ok(`the Day surface does NOT offer '${id}'`, !dayOffered.includes(id));
-  }
+  ok('the Day surface has no Equipment, Injury or dedicated Swap action',
+    !dayOffered.includes('equipment') && !dayOffered.includes('injury')
+      && !dayOffered.includes('swap'));
 
   /* THE SEPARATE ROW IS GONE — the other half of "no separate readiness row".
    * Deleting the five from the Day hub while leaving Tired and Sick outside it
@@ -289,6 +291,18 @@ console.log('\n[9] THE TWO SURFACES OFFER DIFFERENT SETS — AND THAT IS THE CON
     !/<View style=\{styles\.lifeFactChips\}/.test(dayLive)
       && !/<LifeFactChip/.test(dayLive),
     'the bare readiness row Sam ruled out has come back');
+
+  ok('the old separate change link is deleted from the Day card',
+    !/Want to change something\?/.test(dayLive)
+      && !/testID="make-change-link"/.test(dayLive));
+  ok('the three plan actions enter their existing sheets directly',
+    /initialAction: 'add'/.test(dayLive)
+      && /initialAction: 'move'/.test(dayLive)
+      && /initialAction: 'remove'/.test(dayLive));
+  ok('there is no dedicated whole-session Swap entry on Day or Week',
+    !/Swap this session|Swap a session|plan-change-swap|edit-week-action-swap/.test(
+      `${dayLive}\n${planSheetSource}`,
+    ));
 
   /* THE COMPONENT IS CONFIGURABLE, NOT TWO HARD-CODED LISTS. */
   ok('the hub renders the list it is handed and picks no list of its own',

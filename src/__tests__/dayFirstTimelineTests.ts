@@ -895,7 +895,7 @@ run('the day timeline uses each session icon as its only marker and matches her 
     'the primary day action has fallen back to the rejected 36pt control');
 });
 
-run('the Today card has no accent rail and its change link is quiet', () => {
+run('the Today card has no accent rail and no retired change link', () => {
   const home = homeScreenSource();
   const dayRowAt = home.indexOf('function DayRow(');
   const dayRowEnd = home.indexOf('interface WeekStripProps', dayRowAt);
@@ -906,8 +906,9 @@ run('the Today card has no accent rail and its change link is quiet', () => {
     'the Today card still renders the lime left rail Renee does not have');
   assert(!/dayAccentStrip:\s*\{/.test(home),
     'the retired Today-card accent rail style is still live');
-  assert(/makeChangeText:\s*\{[^}]*color:\s*'#AEB0AE'[^}]*fontSize:\s*12[^}]*fontWeight:\s*'500'/.test(home),
-    'Want to change something is not using Renee\'s quiet 12pt note treatment');
+  assert(!/Want to change something\?/.test(dayRow)
+    && !/testID="make-change-link"/.test(dayRow),
+  'the retired Day change link is still mounted');
 });
 
 run('the front review includes the owned mobility warm-up before all projected parts', () => {
@@ -1639,7 +1640,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries its direct status doors and no others', () => {
+run('the chip row carries status plus direct Add Move Remove doors', () => {
   const home = homeScreenSource();
   const hub = changeHubSource();
   const rowStart = home.indexOf('<SessionChangeHub');
@@ -1652,10 +1653,10 @@ run('the chip row carries its direct status doors and no others', () => {
     'the chip row region could not be delimited — this gate is reading the wrong '
     + 'span and would pass on anything');
   const chips = [...row.matchAll(/id: '(\w+)' as const/g)].map((match) => match[1]!);
-  assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); the Day surface owns three — tired, `
-    + 'sick and injured. Equipment, Add, Remove and Swap belong inside the opened '
-    + 'session, and Away belongs on the week shape (item 28).');
+  assert(JSON.stringify(chips) === JSON.stringify([
+    'tired', 'sick', 'injured', 'add', 'move', 'remove',
+  ]),
+  `the Day card renders the wrong action set: ${JSON.stringify(chips)}`);
   for (const door of LIFE_FACT_DOORS) {
     assert(chips.includes(door.id),
       `the "${door.label}" chip is not in the Day surface's action list at all.`);
@@ -1683,7 +1684,7 @@ run('the chip row carries its direct status doors and no others', () => {
   const labels = [...table.matchAll(/: '([^']*)'/g)].map((match) => match[1]!);
   assert(labels.length === 8,
     `found ${labels.length} chip label(s) in the shared table, expected 8 — the `
-    + 'three Day status facts and the five session changes');
+    + 'Day and open-session sets share Add and otherwise own distinct actions');
   for (const label of labels) {
     assert(/^[A-Z][a-z]+$/.test(label),
       `chip label "${label}" is not one Title Case word. The labels ship PROPOSED `
@@ -1801,7 +1802,7 @@ run('the add-fixture control shows in BOTH competitive phases, labelled by phase
     + 'already have a game.');
 });
 
-run('Week gets one edit menu while the existing Day edit door stays', () => {
+run('Week keeps one edit menu while Day owns Add Move Remove directly', () => {
   const home = homeScreenSource();
   const hook = fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
@@ -1814,10 +1815,12 @@ run('Week gets one edit menu while the existing Day edit door stays', () => {
   'the Week-only pen button is missing');
   assert(/editWeekButton:\s*\{[\s\S]*?justifyContent:\s*'flex-start'[\s\S]*?backgroundColor:\s*'#1A1E18'/.test(home),
     'Edit this week is no longer a subtly distinct, left-aligned button');
-  assert(home.includes('Want to change something?')
-    && home.includes('testID="make-change-link"')
-    && home.includes("setChangeSheetEntry({ date: day.date, initialAction: 'actions' })"),
-  'the existing Day edit door was changed or removed');
+  assert(!home.includes('Want to change something?')
+    && !home.includes('testID="make-change-link"')
+    && home.includes("initialAction: 'add'")
+    && home.includes("initialAction: 'move'")
+    && home.includes("initialAction: 'remove'"),
+  'Day did not replace the retired link with direct Add, Move and Remove doors');
 
   const sheetStart = home.indexOf('function WeekEditSheet');
   const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);
@@ -1828,9 +1831,9 @@ run('Week gets one edit menu while the existing Day edit door stays', () => {
     && /phase === 'In-season'/.test(sheet),
   'the bye row is missing or is not limited to In-season');
   assert(sheet.includes('label="I’m going away"')
-    && sheet.includes('label="Add, move, swap or remove a session"'),
+    && sheet.includes('label="Add, move or remove a session"'),
   'the Away or session-edit row is missing from Edit this week');
-  assert(sheet.indexOf('label="Add, move, swap or remove a session"')
+  assert(sheet.indexOf('label="Add, move or remove a session"')
     > sheet.indexOf('label="I’m going away"'),
   'session editing is no longer the bottom option in Edit this week');
   assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
@@ -1840,11 +1843,12 @@ run('Week gets one edit menu while the existing Day edit door stays', () => {
   'the Week edit rows no longer use the established bye, game, away and session icon treatment');
   assert(sheet.includes("setStep('session_action')")
     && sheet.includes("'What do you want to do?'")
-    && ['Add a session', 'Move a session', 'Swap a session', 'Remove a session']
+    && ['Add a session', 'Move a session', 'Remove a session']
       .every((label) => sheet.includes(`label="${label}"`))
-    && ["onEditSession('add')", "onEditSession('move')", "onEditSession('swap')", "onEditSession('remove')"]
+    && !sheet.includes('label="Swap a session"')
+    && ["onEditSession('add')", "onEditSession('move')", "onEditSession('remove')"]
       .every((route) => sheet.includes(route)),
-  'the weekly session flow does not choose Add, Move, Swap or Remove first');
+  'the weekly session flow does not choose Add, Move or Remove first');
   assert(home.includes('setWeekSessionEditAction(action)')
     && home.includes('WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner')
     && home.includes('const isPickerMode = pickerMode !== \'normal\'')
@@ -1853,25 +1857,24 @@ run('Week gets one edit menu while the existing Day edit door stays', () => {
   assert(home.includes("setChangeSheetEntry({ date: day.date, initialAction, origin: 'week' })")
     && home.includes("fromWeek={changeSheetEntry?.origin === 'week'}"),
   'the selected weekly day and action do not enter the existing PlanChangeSheet');
-  assert(plan.includes("export type PlanChangeInitialAction = 'actions' | 'add' | 'move' | 'swap' | 'remove'")
+  assert(plan.includes("export type PlanChangeInitialAction = 'add' | 'move' | 'remove'")
     && plan.includes("if (initialAction === 'add')")
     && plan.includes("if (initialAction === 'move')")
-    && plan.includes("if (initialAction === 'swap')")
-    && ['Swap this session', 'Add to this day', 'Move this session', 'Remove this session']
+    && !plan.includes("if (initialAction === 'swap')")
+    && ['Add this session', 'Move this session', 'Remove this session']
       .every((label) => plan.includes(`label="${label}"`)),
-  'the weekly route does not enter the same four action owners as Day');
+  'the weekly route does not enter the same three action owners as Day');
   assert(plan.includes('name="plus-circle-outline" size={18} color={options.canAdd ? \'#5BD98A\' : MUTED}')
     && plan.includes('name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : \'#67D7FF\'}')
-    && plan.includes('name="swap-horizontal" size={18} color={options.canSwap ? \'#B9A7FF\' : MUTED}')
     && plan.includes('name="delete-outline" size={18} color={options.canRemove ? \'#FF7A85\' : MUTED}'),
   'the Day action menu no longer matches the Week icon and colour system');
   const dayActions = plan.slice(
     plan.indexOf("step.kind === 'actions'"),
     plan.indexOf("step.kind === 'add_blocked_max_sessions'"),
   );
-  assert(dayActions.indexOf('label="Add to this day"') < dayActions.indexOf('label="Move this session"')
-    && dayActions.indexOf('label="Move this session"') < dayActions.indexOf('label="Swap this session"')
-    && dayActions.indexOf('label="Swap this session"') < dayActions.indexOf('label="Remove this session"')
+  assert(dayActions.indexOf('label="Add this session"') < dayActions.indexOf('label="Move this session"')
+    && dayActions.indexOf('label="Move this session"') < dayActions.indexOf('label="Remove this session"')
+    && !dayActions.includes('Swap this session')
     && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(dayActions),
   'the Day action menu no longer matches the Week order and centred Back treatment');
 

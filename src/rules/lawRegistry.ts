@@ -2185,6 +2185,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: add decoration to the existing flush footer, or reuse the established program-edit button geometry and pencil treatment. The shared treatment landed: 48-point dark rounded row, lime 18-point pencil and readable white label, while the existing setup-sheet door remains unchanged. TEST FIRST: `test:profile-reset-ui` gained one label cell and one action-treatment cell and began with exactly two reds. AFTER: it is 174/174 and its chained wordmark tape is 14/14. Registry baselines are 179 laws / 158 guarded / 21 UNENFORCED with the same three inherited reds and 178 rulings with the same two inherited reds. NOT COVERED: physical-iPhone Release, real VoiceOver speech and Sam\'s visual acceptance.',
     },
   },
+  {
+    id: 'LAW-day-change-card-owns-plan-actions',
+    law: 'The Day Need to make a change card owns Tired, Sick, Injured, Add, Move and Remove. There is no separate Want to change something link and no dedicated whole-session Swap action on Day or Week. Move may trade ordinary occupied sessions, but a Team Training destination is a combine: Team Training stays on its day and is never swapped with strength work. The open-workout hub remains Equipment, Injury and Add because row-level quick actions own exercise swaps and removals.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-181 — Sam removed the redundant link and session-swap option, moved Add/Move/Remove into the Day change card and forbade Strength ↔ Team Training swaps.',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + test:move-scoping',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: keep the separate Day link and prune one row from its sheet, or make the existing change card the single Day-level owner and delete the redundant session-swap route. The single-owner shape landed. `test:day-first-timeline` pins the six Day actions, direct Add/Move/Remove entry, deleted link and Week action parity; it returned to its exact 54/2 inherited baseline after the change. `test:move-scoping` behaviourally proves Strength -> Team Training is typed combine while a constructed ordinary occupied destination remains a swap; it is 17/1 on its pre-existing unanchored multi-kind fixture red. MUTATION: removing Team Training from the combine classifier made the named Strength -> Team Training cell red and changed the tape from 17/1 to 16/2; restoring the shared projected-part test returned 17/1. The dedicated `test:session-change-hub` is 58/58. `test:compile` remains at the concurrent 483-error / 60-worsened-pair baseline and names none of this slice\'s changed product files. NOT COVERED: simulator or physical-iPhone pixels, a real multi-edit swap sequence, VoiceOver order and the next Release rebuild.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

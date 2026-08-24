@@ -185,8 +185,9 @@ section('[4] Required sheet titles and child controls remain independently expos
   );
   ok(
     'Plan Change actions keep their identifiers on MenuOption',
-    /<MenuOption[\s\S]*?testID="plan-change-swap"[\s\S]*?onPress=/.test(planChangeSheet)
-      && /<MenuOption[\s\S]*?testID="plan-change-add"[\s\S]*?onPress=/.test(planChangeSheet),
+    /<MenuOption[\s\S]*?testID="plan-change-add"[\s\S]*?onPress=/.test(planChangeSheet)
+      && /sessionMoveIngress\(selectedWorkout\.id\)/.test(planChangeSheet)
+      && /sessionDeleteIngress\(selectedWorkout\.id\)/.test(planChangeSheet),
   );
   ok(
     'MenuOption forwards identifier and press to the same Pressable',

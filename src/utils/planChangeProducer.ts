@@ -366,8 +366,9 @@ export interface PlanChangeBinScope {
 export interface PlanChangeMoveDestination {
   date: string;
   /** Name of the session currently on that day, or null for a rest day.
-   *  Occupied destinations SWAP with the source day (sheet v2). */
+   *  `placement` says whether the move lands, combines or trades places. */
   occupiedBy: string | null;
+  placement: 'move' | 'combine' | 'swap';
 }
 
 /**
@@ -729,10 +730,21 @@ function moveOptionsForDay(args: {
       .some((anchor) => anchor.kind === 'game'));
   const destinationsFor = (scope: PlanChangeMoveScopeId): PlanChangeMoveDestination[] =>
     candidates
-      .map((candidate) => ({
-        date: candidate.date,
-        occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
-      }))
+      .map((candidate) => {
+        const candidateSnapshot = snapshotProjectedDay(candidate);
+        const occupiedBy = candidateSnapshot.workout?.title ?? null;
+        const combinesWithTeam = scope === 'team' ||
+          projectedDay(candidate).parts.some((part) => part.kind === 'team_training');
+        return {
+          date: candidate.date,
+          occupiedBy,
+          placement: occupiedBy === null
+            ? 'move' as const
+            : combinesWithTeam
+              ? 'combine' as const
+              : 'swap' as const,
+        };
+      })
       // A SCOPED MOVE MAY LAND ON AN OCCUPIED DAY — Sam's doubling law
       // (2026-07-30, ruling 3), which this filter predated and quietly
       // contradicted. Moving a session onto a team night is LEGAL and lands as a

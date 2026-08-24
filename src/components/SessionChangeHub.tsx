@@ -7,29 +7,13 @@
  * visual design as the Day screen — not a separate row of plain text pills …
  * Do not keep separate Day and Session implementations."*
  *
- * Sam, 2026-08-19 (the ruling that CORRECTED it): *"DAY PAGE: exactly Tired,
- * Sick and Injured, together inside the original 'Need to make a change?' card
- * … NO Remove, Equipment, Add or Swap, and no separate readiness row. ACTIVE
- * SESSION SCREEN: Equipment, Injury, Add, Remove and Swap. It may share a
- * configurable visual component with Day, but never a hard-coded action list."*
+ * Sam, 2026-08-24: the Day page keeps Tired, Sick and Injured and adds the
+ * three day-level plan doors Add, Move and Remove. The open-session page keeps
+ * Equipment, Injury and Add; row-level Quick Swap / Quick Remove own exercise
+ * changes there.
  *
- * ## WHAT WENT WRONG, AND WHY THE FIX IS IN THIS FILE
- *
- * The first ruling was read as "both surfaces show the same five actions", so
- * this component was written with the five session actions FROZEN into it —
- * `SESSION_CHANGE_ACTION_IDS`, a closed tint table, a closed glyph switch. The
- * Day screen then had to hand it those five, which pushed Tired and Sick out of
- * the signed card into a bare row beneath it and **deleted the Injured chip
- * from the Day screen altogether**.
- *
- * ⚠ **A HARD-CODED ACTION LIST IS THE DEFECT, NOT THE SHARING.** A shared card
- * whose vocabulary is one surface's list is not shared — it is one surface's
- * component that the other has to impersonate. This file now carries the
- * identity (word, tint, glyph) of EVERY action either surface can offer, and
- * owns no opinion about which of them belongs where. The two surface sets are
- * declared here, side by side, so a guard can assert them apart:
- * `DAY_STATUS_ACTION_IDS` and `SESSION_CHANGE_ACTION_IDS` — **and they are
- * disjoint**, which is the whole of Sam's correction expressed as data.
+ * The shared component owns presentation, never a frozen surface list. Its two
+ * callers deliberately overlap on Add and otherwise supply their own actions.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
@@ -47,8 +31,8 @@
  * disabled state for a caller to hand it. An action the surface cannot serve is
  * simply not in the list.
  *
- * WRITER: `screens/home/HomeScreenV2` (Day, the three status facts) and
- * `screens/home/DayWorkoutScreenV2` (session, the five session changes).
+ * WRITER: `screens/home/HomeScreenV2` (Day, six direct actions) and
+ * `screens/home/DayWorkoutScreenV2` (open session, three session-wide actions).
  * READER: the athlete. TEST: `test:session-change-hub` sections [8] and [9].
  */
 import React from 'react';
@@ -61,26 +45,23 @@ import { spacing } from '../theme/spacing';
 import { signedCopy } from '../rules/signedCopy';
 
 /**
- * THE DAY SURFACE'S SET — Sam: *"exactly Tired, Sick and Injured"*.
- *
- * These are FACTS ABOUT THE ATHLETE, not changes to a session: they open the
- * readiness sheet and the guided injury flow, never one of the five session
- * doors. They were the card's original contents at `1a7e7bd0` and this is a
- * restoration, not a new design.
+ * THE DAY SURFACE'S SET. Status facts and plan edits live together because they
+ * all answer the same visible question about the day in front of the athlete.
  */
-export const DAY_STATUS_ACTION_IDS = ['tired', 'sick', 'injured'] as const;
+export const DAY_CHANGE_ACTION_IDS = [
+  'tired', 'sick', 'injured', 'add', 'move', 'remove',
+] as const;
 
 /**
- * THE SESSION SURFACE'S SET, IN THE ORDER SAM WRITES THEM: *"Equipment ·
- * Injury · Add · Remove · Swap"*.
+ * THE OPEN-SESSION SET. Quick row actions own Remove and Swap.
  */
 export const SESSION_CHANGE_ACTION_IDS = [
-  'equipment', 'injury', 'add', 'remove', 'swap',
+  'equipment', 'injury', 'add',
 ] as const;
 
 /** Every identity this card can draw. Neither surface offers all of them. */
 export const CHANGE_ACTION_IDS = [
-  ...DAY_STATUS_ACTION_IDS, ...SESSION_CHANGE_ACTION_IDS,
+  'tired', 'sick', 'injured', 'equipment', 'injury', 'add', 'move', 'remove',
 ] as const;
 
 export type ChangeActionId = (typeof CHANGE_ACTION_IDS)[number];
@@ -111,8 +92,8 @@ export const CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {
   equipment: 'Equipment',
   injury: 'Injury',
   add: 'Add',
+  move: 'Move',
   remove: 'Remove',
-  swap: 'Swap',
 };
 
 /** The previous name, kept so existing readers do not have to be rewritten. */
@@ -121,8 +102,8 @@ export const SESSION_CHANGE_ACTION_LABEL = CHANGE_ACTION_LABEL;
 /**
  * The tints and strokes are the ones already chosen — the three status colours
  * are carried over VERBATIM from the Day screen at `1a7e7bd0` (cyan Tired,
- * amber Sick, red Injured) and the five session tints from this component's
- * first version, so nothing the athlete already recognises changes hue.
+ * amber Sick, red Injured) and the retained session-action tints from this
+ * component's first version, so nothing the athlete already recognises changes hue.
  */
 const ACTION_TINT: Record<ChangeActionId, string> = {
   tired: 'rgba(103, 215, 255, 0.12)',
@@ -131,8 +112,8 @@ const ACTION_TINT: Record<ChangeActionId, string> = {
   equipment: 'rgba(30, 167, 255, 0.12)',
   injury: 'rgba(255, 127, 127, 0.12)',
   add: 'rgba(198, 255, 0, 0.12)',
+  move: 'rgba(103, 215, 255, 0.12)',
   remove: 'rgba(255, 161, 196, 0.12)',
-  swap: 'rgba(185, 167, 255, 0.12)',
 };
 
 const ACTION_STROKE: Record<ChangeActionId, string> = {
@@ -142,8 +123,8 @@ const ACTION_STROKE: Record<ChangeActionId, string> = {
   equipment: '#67D7FF',
   injury: '#FF7F7F',
   add: '#C6FF00',
+  move: '#67D7FF',
   remove: '#FFA1C4',
-  swap: '#B9A7FF',
 };
 
 /**
@@ -207,18 +188,17 @@ function glyph(id: ChangeActionId): React.ReactNode {
       return (
         <Svg {...common}><Path d="M12 5v14M5 12h14" /></Svg>
       );
+    case 'move':
+      return (
+        <Svg {...common}>
+          <Path d="M4 12h15" /><Path d="m14 7 5 5-5 5" />
+        </Svg>
+      );
     // A minus in a circle — removal, not deletion of the day.
     case 'remove':
       return (
         <Svg {...common}>
           <Path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" /><Path d="M8 12h8" />
-        </Svg>
-      );
-    // Two arrows trading places.
-    case 'swap':
-      return (
-        <Svg {...common}>
-          <Path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" />
         </Svg>
       );
   }

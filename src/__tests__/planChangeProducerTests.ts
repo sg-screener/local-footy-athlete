@@ -705,8 +705,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 
   ok('[9] HomeScreenV2 keeps the weekly day-level PlanChangeSheet',
     /<PlanChangeSheet\b/.test(homeSrc)
-      && homeSrc.includes('"make-change-link"')
-      && homeSrc.includes('Want to change something?'));
+      && !homeSrc.includes('"make-change-link"')
+      && /initialAction: 'add'/.test(homeSrc)
+      && /initialAction: 'move'/.test(homeSrc)
+      && /initialAction: 'remove'/.test(homeSrc));
   ok('[9] DayWorkoutScreenV2 removes the weekly PlanChangeSheet',
     !/<PlanChangeSheet\b/.test(dayWorkoutSrc)
       && !/Want to change something\?/.test(dayWorkoutSrc));
@@ -807,14 +809,14 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const confirmWarningBlock = sheet.slice(confirmWarningIdx, blockWarningIdx);
   const blockWarningBlock = sheet.slice(blockWarningIdx, destinationIdx);
 
-  ok('[9] the four actions ARE the first step — no menu in front of the menu',
+  ok('[9] the three fallback actions remain one step — no menu in front of the menu',
     /\| \{ kind: 'actions' \}/.test(sheet)
       && /useState<Step>\(\{ kind: 'actions' \}\)/.test(sheet)
       && /if \(visible\) \{\s*setStep\(\{ kind: 'actions' \}\);/.test(sheet)
       && !/kind: 'menu'|kind: 'edit_session'|kind: 'pick_add_kind'/.test(sheet));
-  ok('[9] the first step owns swap/add/move/remove and nothing else',
-    /label="Swap this session"/.test(actionsBlock)
-      && /label="Add to this day"[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
+  ok('[9] the fallback step owns add/move/remove and nothing else',
+    !/label="Swap this session"/.test(actionsBlock)
+      && /label="Add this session"[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
       && !/strength or conditioning work to this day/.test(sheet)
       && /label="Move this session"/.test(actionsBlock)
       && /label="Remove this session"/.test(actionsBlock)
@@ -824,8 +826,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && !/sessionTier === 'recovery'/.test(sheet)
       && !/hasEditableSession|isRestOrRecoveryDay|selectedWorkoutName/.test(sheet));
   ok('[9] every action row is enabled from the projection\'s capability, not from content',
-    /disabled=\{!options\.canSwap\}/.test(actionsBlock)
-      && /disabled=\{!options\.canAdd\}/.test(actionsBlock)
+    /disabled=\{!options\.canAdd\}/.test(actionsBlock)
       && /disabled=\{!!options\.move\.refusal\}/.test(actionsBlock)
       && /disabled=\{!options\.canRemove\}/.test(actionsBlock));
   ok('[9] a disabled Move row renders the producer\'s own refusal sentence',
@@ -833,30 +834,27 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] every action row carries an icon and the danger row is the destructive one',
     /name="plus-circle-outline"[\s\S]{0,100}'#5BD98A'/.test(actionsBlock)
       && /name="arrow-right-bold-outline"[\s\S]{0,120}'#67D7FF'/.test(actionsBlock)
-      && /name="swap-horizontal"[\s\S]{0,100}'#B9A7FF'/.test(actionsBlock)
       && /name="delete-outline"[\s\S]{0,100}'#FF7A85'/.test(actionsBlock)
-      && (actionsBlock.match(/neutralIconChip/g) ?? []).length === 4
+      && (actionsBlock.match(/neutralIconChip/g) ?? []).length === 3
       && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
-  ok('[9] Day uses the same Add, Move, Swap, Remove visual order as Week',
-    actionsBlock.indexOf('label="Add to this day"')
+  ok('[9] Day uses the same Add, Move, Remove visual order as Week',
+    actionsBlock.indexOf('label="Add this session"')
       < actionsBlock.indexOf('label="Move this session"')
       && actionsBlock.indexOf('label="Move this session"')
-        < actionsBlock.indexOf('label="Swap this session"')
-      && actionsBlock.indexOf('label="Swap this session"')
         < actionsBlock.indexOf('label="Remove this session"')
+      && !actionsBlock.includes('label="Swap this session"')
       && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(actionsBlock));
   ok('[9] swap category no longer offers Rest day because remove owns rest',
     !/label="Rest day"|Clear the day - same as binning the session/.test(sheet));
-  ok('[9] the first step reuses the existing swap/add/move/remove routes',
-    /kind: 'pick_type', mode: 'swap'/.test(actionsBlock)
-      && /onPress=\{startAdd\}/.test(actionsBlock)
+  ok('[9] the first step reuses the existing add/move/remove routes',
+    /onPress=\{startAdd\}/.test(actionsBlock)
       && /onPress=\{\(\) => startMove\(\)\}/.test(actionsBlock)
       && /onPress=\{startBin\}/.test(actionsBlock)
       && /apply\(\{[\s\S]{0,24}kind: 'move_session'/.test(sheet.slice(destinationIdx, binScopeIdx))
       && /apply\([\s\S]{0,80}\{ kind: 'remove_session'/.test(sheet));
-  ok('[9] Add and Swap open ONE type step offering Sam\'s five session types',
-    /\| \{ kind: 'pick_type'; mode: 'swap' \| 'add' \}/.test(sheet)
+  ok('[9] Add opens one type step offering Sam\'s five session types',
+    /\| \{ kind: 'pick_type' \}/.test(sheet)
       && /label="Strength"[\s\S]{0,140}Upper, lower or full body/.test(typeBlock)
       && /label="Conditioning"[\s\S]{0,140}Light or hard - bike, row, ski or intervals/.test(typeBlock)
       && /offers\('gunshow'\)/.test(typeBlock)
@@ -870,24 +868,24 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     /filter\(\(c\) => c\.id\.startsWith\('strength_'\)\)/.test(sheet)
       && !/c\.id\.startsWith\('strength_'\) \|\| c\.id === 'gunshow'/.test(sheet));
   ok('[9] the type step routes pickers with the mode it was opened in',
-    /chooseType\(mode, 'strength',[\s\S]{0,80}kind: 'pick_strength', mode/.test(typeBlock)
-      && /chooseType\(mode, 'conditioning',[\s\S]{0,80}kind: 'pick_conditioning', mode/.test(typeBlock)
-      && /pickerBackStep\(step\.mode\)/.test(sheet));
+    /chooseType\('strength',[\s\S]{0,80}kind: 'pick_strength'/.test(typeBlock)
+      && /chooseType\('conditioning',[\s\S]{0,80}kind: 'pick_conditioning'/.test(typeBlock)
+      && /pickerBackStep\(\)/.test(sheet));
   ok('[9] add blockers explain max sessions and duplicate session types',
     /Please remove a session first/.test(sheet)
       && /This day already has 2 sessions\. Remove one before adding another\./.test(sheet)
       && /Already has strength work/.test(sheet)
-      && /This day already includes a strength session\. Swap the current session or remove one before adding another\./.test(sheet)
+      && /This day already includes a strength session\. Remove one before adding another\./.test(sheet)
       && /Already has conditioning work/.test(sheet)
-      && /This day already includes conditioning\. Swap the current session or remove one before adding another\./.test(sheet));
+      && /This day already includes conditioning\. Remove one before adding another\./.test(sheet));
   ok('[9] the add guard blocks a duplicate KIND and never blocks mobility',
     /const chooseType = \([\s\S]{0,700}adds !== 'recovery' && \(options\?\.visibleSessionKinds \?\? \[\]\)\.includes\(adds\)/.test(sheet)
-      && /chooseType\(mode, 'recovery',/.test(typeBlock));
-  ok('[9] duplicate blockers route to existing swap/remove flows and back to the type step',
-    /label="Swap this session"[\s\S]{0,200}kind: 'pick_type', mode: 'swap'/.test(duplicateBlock)
+      && /chooseType\('recovery',/.test(typeBlock));
+  ok('[9] duplicate blockers route to remove and back to the Add type step',
+    !/label="Swap this session"/.test(duplicateBlock)
       && /label="Remove a session"[\s\S]{0,140}onPress=\{startBin\}/.test(duplicateBlock)
-      && /kind: 'pick_type', mode: 'add'/.test(duplicateBlock));
-  ok('[9] nested steps back out to the four actions, and the four actions close',
+      && /kind: 'pick_type'/.test(duplicateBlock));
+  ok('[9] nested steps back out to the three actions, and the three actions close',
     /setStep\(\{ kind: 'actions' \}\)/.test(sheet.slice(destinationIdx))
       && /<BackRow onPress=\{onClose\} \/>/.test(actionsBlock));
   // RULINGS 7 AND 8, THE ABSENCE HALF. Readiness lives on the week card and the

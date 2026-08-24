@@ -77,16 +77,14 @@ import { getSessionComponents } from '../../utils/sessionComponents';
  * session?" and no longer reads a workout's name or `sessionTier` to decide what
  * an athlete may do with it. Two things went with that:
  *
- *   - THE INTERMEDIATE MENU IS GONE (ruling 7/8). "Want to change something?"
- *     used to open a menu whose only job was to open another menu; now it opens
- *     the four actions themselves. The editable-session branch that chose between
+ *   - THE INTERMEDIATE MENU IS GONE (ruling 7/8, updated 2026-08-24). The Day
+ *     card now owns Add, Move and Remove directly. The editable-session branch that chose between
  *     "Edit this session" and "Add optional session" went with it — it was a
  *     capability question answered by comparing a workout's type and tier against
  *     the word recovery and lowercasing its name, which is the second-derivation
  *     shape this unit removes (and the reason the source contract in
  *     `planChangeProducerTests` [9] now asserts those comparisons are ABSENT from
- *     this file, hence the circumlocution here). An empty day now shows the same
- *     four rows with three of them off.
+ *     this file, hence the circumlocution here).
  *   - THE READINESS ROW AND THE ASK-THE-COACH ROW ARE GONE (ruling 7). Readiness
  *     lives on the week card, which is the single week-level owner this sheet
  *     already handed off to; the Coach tab covers the escape hatch. A hand-off is
@@ -100,15 +98,10 @@ type Step =
   | { kind: 'actions' }
   | { kind: 'add_blocked_max_sessions' }
   | { kind: 'add_blocked_duplicate'; duplicate: 'strength' | 'conditioning' }
-  /**
-   * WHAT KIND OF SESSION — the five types of Sam's ruling 9, one step, two
-   * modes. Add and Swap offer the SAME five rows, so they are one step with a
-   * `mode` rather than two lists that can drift apart (`pick_add_kind` used to
-   * offer two of the five and `pick_category` a different three).
-   */
-  | { kind: 'pick_type'; mode: 'swap' | 'add' }
-  | { kind: 'pick_conditioning'; mode: 'swap' | 'add' }
-  | { kind: 'pick_strength'; mode: 'swap' | 'add' }
+  /** WHAT KIND OF SESSION — Add's single five-type path. */
+  | { kind: 'pick_type' }
+  | { kind: 'pick_conditioning' }
+  | { kind: 'pick_strength' }
   | {
       kind: 'confirm_warning';
       change: PlanChange;
@@ -206,7 +199,7 @@ interface PlanChangeSheetProps {
   onClose: () => void;
 }
 
-export type PlanChangeInitialAction = 'actions' | 'add' | 'move' | 'swap' | 'remove';
+export type PlanChangeInitialAction = 'add' | 'move' | 'remove';
 
 function weekdayLabel(dateISO: string): string {
   const day = new Date(`${dateISO}T12:00:00`);
@@ -214,14 +207,14 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, initialAction = 'actions', fromWeek = false, onClose,
+  visible, date, weekDays, initialAction = 'add', fromWeek = false, onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const activeConstraints = useCoachUpdatesStore((state) => state.activeConstraints);
 
-  // Fresh menu every time the sheet opens for a (new) day. The four actions ARE
-  // the first step — there is no menu in front of the menu (ruling 8).
+  // Fresh state every time the sheet opens for a (new) day. The Day or Week
+  // surface has already selected Add, Move or Remove.
   useEffect(() => {
     if (visible) {
       setStep({ kind: 'actions' });
@@ -308,31 +301,16 @@ export function PlanChangeSheet({
   };
 
   // External entry points choose only the action and date. From there they
-  // enter the SAME next step as the four visible rows below — no copied move,
-  // add, swap or remove sequence. The daily route keeps `actions`, while the
-  // Week picker supplies one of the four direct actions after its day tap.
+  // enter the same Add, Move or Remove sequence. There is no separate Day
+  // action menu and no dedicated whole-session Swap entry.
   useEffect(() => {
-    if (!visible || initialAction === 'actions' || !options || options.locked !== null) return;
+    if (!visible || !options || options.locked !== null) return;
     if (initialAction === 'add') {
       startAdd();
       return;
     }
     if (initialAction === 'move') {
       startMove();
-      return;
-    }
-    if (initialAction === 'swap') {
-      if (options.canSwap) {
-        setStep({ kind: 'pick_type', mode: 'swap' });
-      } else {
-        setStep({
-          kind: 'block_warning',
-          reasons: [options.hasSession
-            ? 'Nothing on this day can be swapped.'
-            : "There's nothing on this day yet."],
-          backStep: { kind: 'actions' },
-        });
-      }
       return;
     }
     if (options.canRemove) {
@@ -495,32 +473,26 @@ export function PlanChangeSheet({
     void commitPlanChange(change, opts, preview.trace);
   };
 
-  const pickerBackStep = (mode: 'swap' | 'add'): Step => ({ kind: 'pick_type', mode });
+  const pickerBackStep = (): Step => ({ kind: 'pick_type' });
 
   const categoryBackStep = (
-    mode: 'swap' | 'add',
     category: PlanChangeCategoryId,
   ): Step => {
     if (category.startsWith('conditioning_')) {
-      return { kind: 'pick_conditioning', mode };
+      return { kind: 'pick_conditioning' };
     }
     if (category.startsWith('strength_')) {
-      return { kind: 'pick_strength', mode };
+      return { kind: 'pick_strength' };
     }
     // Gunshow, Mobility and Accessories commit from the type list itself —
     // there is no bucket under them, so the way back is the list.
-    return pickerBackStep(mode);
+    return pickerBackStep();
   };
 
-  const applyCategory = (
-    mode: 'swap' | 'add',
-    category: PlanChangeCategoryId,
-  ) =>
+  const applyCategory = (category: PlanChangeCategoryId) =>
     apply(
-      mode === 'swap'
-        ? { kind: 'swap_category', date, category }
-        : { kind: 'add_category', date, category },
-      { backStep: categoryBackStep(mode, category) },
+      { kind: 'add_category', date, category },
+      { backStep: categoryBackStep(category) },
     );
 
   const startAdd = () => {
@@ -528,7 +500,7 @@ export function PlanChangeSheet({
       setStep({ kind: 'add_blocked_max_sessions' });
       return;
     }
-    setStep({ kind: 'pick_type', mode: 'add' });
+    setStep({ kind: 'pick_type' });
   };
 
   /**
@@ -542,11 +514,9 @@ export function PlanChangeSheet({
    * "you can always add a recovery or mobility flow to any day").
    */
   const chooseType = (
-    mode: 'swap' | 'add',
     adds: 'strength' | 'conditioning' | 'recovery',
     go: () => void,
   ) => {
-    if (mode === 'swap') { go(); return; }
     if ((options?.visibleSessionCount ?? 0) >= 2) {
       setStep({ kind: 'add_blocked_max_sessions' });
       return;
@@ -560,11 +530,8 @@ export function PlanChangeSheet({
 
   // Athlete override principle: safe edits commit, risky edits route
   // through the shared pre-commit risk assessor.
-  const chooseCategory = (
-    mode: 'swap' | 'add',
-    category: PlanChangeCategoryId,
-  ) => {
-    applyCategory(mode, category);
+  const chooseCategory = (category: PlanChangeCategoryId) => {
+    applyCategory(category);
   };
 
   // Remove entry point: multi-part days pick WHICH part first; days offering one
@@ -617,7 +584,9 @@ export function PlanChangeSheet({
         </Text>
       )}
 
-      {/* THE FOUR ACTIONS — Sam's design rulings 7-9, 2026-07-31.
+      {/* INTERNAL FALLBACK — direct Day and Week buttons skip this step. It is
+          retained only as a safe Back destination for nested Add / Move /
+          Remove questions; the dedicated whole-session Swap action is gone.
           This IS the first step. Every row's availability is a capability the
           projection computed for this day (`PlanChangeDayOptions`), rendered
           here; a row the athlete cannot use is shown OFF with the reason under
@@ -626,7 +595,7 @@ export function PlanChangeSheet({
       {options && options.locked === null && step.kind === 'actions' && (
         <View>
           <MenuOption
-            label="Add to this day"
+            label="Add this session"
             // NAMES NO TYPE. It read "Add extra strength or conditioning work to
             // this day", which named two of the five behind it (ruling 9) — and
             // that sub-line has now rotted twice, once when accessories split
@@ -655,26 +624,6 @@ export function PlanChangeSheet({
               ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
               : undefined}
             onPress={() => startMove()}
-          />
-          <MenuOption
-            label="Swap this session"
-            // WHY IT IS OFF, NOT A GENERIC LINE — and selected by a typed fact
-            // the projection owns, never by guessing. `canSwap` is false for two
-            // different days: one with nothing on it, and one whose whole
-            // content is a fixed appointment. "There's nothing here to swap"
-            // was true of the first and false of the second (a team night HAS
-            // something; it just is not the athlete's to trade), and a signed
-            // sentence must never be able to lie (batch 3).
-            sub={options.canSwap
-              ? 'Change it for another type of session'
-              : options.hasSession
-                ? 'Nothing on this day can be swapped.'
-                : "There's nothing on this day yet."}
-            icon={<MaterialCommunityIcons name="swap-horizontal" size={18} color={options.canSwap ? '#B9A7FF' : MUTED} />}
-            neutralIconChip
-            disabled={!options.canSwap}
-            testID="plan-change-swap"
-            onPress={() => setStep({ kind: 'pick_type', mode: 'swap' })}
           />
           {/* THE REMOVE ROW'S THREE SENTENCES.
 
@@ -741,27 +690,22 @@ export function PlanChangeSheet({
           </Text>
           <Text style={styles.confirmText}>
             {step.duplicate === 'strength'
-              ? 'This day already includes a strength session. Swap the current session or remove one before adding another.'
-              : 'This day already includes conditioning. Swap the current session or remove one before adding another.'}
+              ? 'This day already includes a strength session. Remove one before adding another.'
+              : 'This day already includes conditioning. Remove one before adding another.'}
           </Text>
-          <MenuOption
-            label="Swap this session"
-            icon={swapIcon(ACCENT)}
-            onPress={() => setStep({ kind: 'pick_type', mode: 'swap' })}
-          />
           <MenuOption
             label="Remove a session"
             icon={removeIcon(DANGER)}
             danger
             onPress={startBin}
           />
-          <BackRow onPress={() => setStep({ kind: 'pick_type', mode: 'add' })} />
+          <BackRow onPress={() => setStep({ kind: 'pick_type' })} />
         </View>
       )}
 
       {/* WHAT KIND OF SESSION — the five types, Sam's design ruling 9.
-          Add and Swap show the SAME five rows: Strength, Conditioning, Gunshow,
-          Mobility and Accessories. Strength and Conditioning open a bucket
+          Add shows Strength, Conditioning, Gunshow, Mobility and Accessories.
+          Strength and Conditioning open a bucket
           (which variant); the other three are a session on their own and commit
           from here.
 
@@ -786,18 +730,17 @@ export function PlanChangeSheet({
         // silent gap on a phone (device pass 2026-08-05, finding 3).
         const rowOffered = (rowId: Parameters<typeof menuRowFor>[0]) =>
           menuRowFor(rowId).reaches.some(offers);
-        const mode = step.mode;
         return (
         <View>
-          <Text style={styles.sectionLabel}>{mode === 'swap' ? 'Swap to:' : 'Add:'}</Text>
+          <Text style={styles.sectionLabel}>Add:</Text>
           {rowOffered('strength') && (
             <MenuOption
               label="Strength"
               sub="Upper, lower or full body"
               icon={strengthIcon(ACCENT)}
               testID="plan-change-type-strength"
-              onPress={() => chooseType(mode, 'strength',
-                () => setStep({ kind: 'pick_strength', mode }))}
+              onPress={() => chooseType('strength',
+                () => setStep({ kind: 'pick_strength' }))}
             />
           )}
           {rowOffered('conditioning') && (
@@ -806,8 +749,8 @@ export function PlanChangeSheet({
               sub="Light or hard - bike, row, ski or running"
               icon={conditioningIcon(ACCENT)}
               testID="plan-change-type-conditioning"
-              onPress={() => chooseType(mode, 'conditioning',
-                () => setStep({ kind: 'pick_conditioning', mode }))}
+              onPress={() => chooseType('conditioning',
+                () => setStep({ kind: 'pick_conditioning' }))}
             />
           )}
           {rowOffered('gunshow') && (
@@ -816,8 +759,8 @@ export function PlanChangeSheet({
               sub={copyFor('gunshow')!.sub}
               icon={gunshowIcon(ACCENT)}
               testID="plan-change-type-gunshow"
-              onPress={() => chooseType(mode, 'strength',
-                () => chooseCategory(mode, 'gunshow'))}
+              onPress={() => chooseType('strength',
+                () => chooseCategory('gunshow'))}
             />
           )}
           {rowOffered('primer') && (
@@ -826,8 +769,8 @@ export function PlanChangeSheet({
               sub={copyFor('primer')!.sub}
               icon={primerIcon(ACCENT)}
               testID="plan-change-type-primer"
-              onPress={() => chooseType(mode, 'strength',
-                () => chooseCategory(mode, 'primer'))}
+              onPress={() => chooseType('strength',
+                () => chooseCategory('primer'))}
             />
           )}
           {rowOffered('mobility') && (
@@ -836,8 +779,8 @@ export function PlanChangeSheet({
               sub={copyFor('mobility')!.sub}
               icon={mobilityIcon(ACCENT)}
               testID="plan-change-type-mobility"
-              onPress={() => chooseType(mode, 'recovery',
-                () => chooseCategory(mode, 'mobility'))}
+              onPress={() => chooseType('recovery',
+                () => chooseCategory('mobility'))}
             />
           )}
           {/* THE RECOVERY CHOICE (Sam, 2026-08-05, docs/DISPLAY_TIMES_RULING
@@ -853,8 +796,8 @@ export function PlanChangeSheet({
               sub={copyFor('recovery')!.sub}
               icon={recoveryIcon(ACCENT)}
               testID="plan-change-type-recovery"
-              onPress={() => chooseType(mode, 'recovery',
-                () => chooseCategory(mode, 'recovery'))}
+              onPress={() => chooseType('recovery',
+                () => chooseCategory('recovery'))}
             />
           )}
           {/* RULING 9's "Accessories" ROW IS THE PREHAB DOOR. The charter split
@@ -870,8 +813,8 @@ export function PlanChangeSheet({
               sub={copyFor('prehab')!.sub}
               icon={prehabIcon(ACCENT)}
               testID="plan-change-type-prehab"
-              onPress={() => chooseType(mode, 'strength',
-                () => chooseCategory(mode, 'prehab'))}
+              onPress={() => chooseType('strength',
+                () => chooseCategory('prehab'))}
             />
           )}
           <BackRow onPress={() => setStep({ kind: 'actions' })} />
@@ -893,10 +836,10 @@ export function PlanChangeSheet({
                 label={c.label}
                 sub={c.sub}
                 icon={conditioningIcon(ACCENT)}
-                onPress={() => chooseCategory(step.mode, c.id)}
+                onPress={() => chooseCategory(c.id)}
               />
             ))}
-          <BackRow onPress={() => setStep(pickerBackStep(step.mode))} />
+          <BackRow onPress={() => setStep(pickerBackStep())} />
         </View>
       )}
 
@@ -919,10 +862,10 @@ export function PlanChangeSheet({
                 label={c.label}
                 sub={c.sub}
                 icon={strengthIcon(ACCENT)}
-                onPress={() => chooseCategory(step.mode, c.id)}
+                onPress={() => chooseCategory(c.id)}
               />
             ))}
-          <BackRow onPress={() => setStep(pickerBackStep(step.mode))} />
+          <BackRow onPress={() => setStep(pickerBackStep())} />
         </View>
       )}
 
@@ -1136,19 +1079,19 @@ export function PlanChangeSheet({
               <MenuOption
                 key={destination.date}
                 label={weekdayLabel(destination.date)}
-                sub={destination.occupiedBy
-                  // The team-night move never trades places: the anchor lands
-                  // COMBINED beside what's there (doubling law) — the sub-line
-                  // must not promise a swap the door will not do.
-                  ? scope.id === 'team'
-                    ? `Joins ${destination.occupiedBy} on this day`
-                    : `Swap with ${destination.occupiedBy}`
-                  : 'Currently a rest day'}
-                // Calendar/day glyph family (carry-forward from Task 4): an
-                // occupied destination gets the swap glyph — landing there
-                // trades with what's on it, which is what the sub-line says;
-                // an empty destination gets a blank calendar day.
-                icon={destination.occupiedBy ? swapIcon(ACCENT) : dayIcon(ACCENT)}
+                sub={destination.placement === 'combine'
+                  ? `Joins ${destination.occupiedBy} on this day`
+                  : destination.placement === 'swap'
+                    ? `Swap with ${destination.occupiedBy}`
+                    : 'Currently a rest day'}
+                // The producer owns the meaning. A Team Training destination
+                // combines and therefore uses Move; only a real trade uses the
+                // chasing-arrows mark.
+                icon={destination.placement === 'swap'
+                  ? swapIcon(ACCENT)
+                  : destination.placement === 'combine'
+                    ? moveIcon(ACCENT)
+                    : dayIcon(ACCENT)}
                 testID={explorerTestId.sessionMoveDestination(destination.date)}
                 onPress={() => apply(scope.id === 'team'
                   // The anchor's own move: the typed ask decides once-or-
@@ -1262,8 +1205,7 @@ export function PlanChangeSheet({
  * (Continue, Cancel, OK) keep the old plain layout: an empty chip beside a
  * confirmation button would be a shape carrying no meaning.
  *
- * `disabled` renders the row OFF rather than removing it (Sam's design ruling 8:
- * the four actions are always the four actions). It is a real disable — no press
+ * `disabled` renders the row OFF rather than removing it. It is a real disable — no press
  * handler at all, `accessibilityState` set — because a row that looks dead and
  * still fires is worse than either.
  */

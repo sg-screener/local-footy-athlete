@@ -62,7 +62,7 @@ function ok(name: string, condition: unknown, detail?: string): void {
   console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
 }
 
-console.log('\n[1] All five actions open through the ONE shell');
+console.log('\n[1] All three session-wide actions open through the ONE shell');
 {
   ok('the shell exists', fs.existsSync(path.join(src, SHELL_PATH)));
 
@@ -74,9 +74,9 @@ console.log('\n[1] All five actions open through the ONE shell');
   const ids = (declared?.[1] ?? '')
     .split(',').map((raw) => raw.trim().replace(/'/g, '')).filter(Boolean);
   ok(
-    'the hub still offers exactly the five session actions',
-    ids.length === 5
-      && ['equipment', 'injury', 'add', 'remove', 'swap'].every((id) => ids.includes(id)),
+    'the hub offers exactly the three session-wide actions',
+    ids.length === 3
+      && ['equipment', 'injury', 'add'].every((id) => ids.includes(id)),
     `read from SessionChangeHub: ${ids.join(', ')}`,
   );
 
@@ -91,7 +91,7 @@ console.log('\n[1] All five actions open through the ONE shell');
       && /explorerTestId\.injuryDetail\(episodeId\)/.test(injury),
   );
   ok(
-    'Add, Remove and Swap open through the shell',
+    'Add and the row-level Remove / Swap flows open through the shell',
     /<SessionActionSheet/.test(screen)
       && /testID="exercise-edit-sheet"/.test(screen),
   );
@@ -312,22 +312,19 @@ console.log('\n[7] The shell owns safe area, height and reset-on-close');
   }
 }
 
-console.log('\n[8] The hub itself is untouched — same five words, same colours');
+console.log('\n[8] The hub keeps the three session-wide words and colours');
 {
   const hub = read('components/SessionChangeHub.tsx');
   ok(
-    'the five labels are unchanged',
+    'the three session-wide labels are unchanged',
     /equipment: 'Equipment',/.test(hub) && /injury: 'Injury',/.test(hub)
-      && /add: 'Add',/.test(hub) && /remove: 'Remove',/.test(hub)
-      && /swap: 'Swap',/.test(hub),
+      && /add: 'Add',/.test(hub),
   );
   ok(
-    'the five tints are unchanged',
+    'the three session-wide tints are unchanged',
     /equipment: 'rgba\(30, 167, 255, 0\.12\)'/.test(hub)
       && /injury: 'rgba\(255, 127, 127, 0\.12\)'/.test(hub)
-      && /add: 'rgba\(198, 255, 0, 0\.12\)'/.test(hub)
-      && /remove: 'rgba\(255, 161, 196, 0\.12\)'/.test(hub)
-      && /swap: 'rgba\(185, 167, 255, 0\.12\)'/.test(hub),
+      && /add: 'rgba\(198, 255, 0, 0\.12\)'/.test(hub),
   );
   ok(
     'the one-line shrink-to-fit label rule survives (Equipment is the word that does not fit)',

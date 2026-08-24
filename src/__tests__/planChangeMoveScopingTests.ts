@@ -99,6 +99,11 @@ function quiet<T>(body: () => T): T {
 
 function profile(): OnboardingData {
   return {
+    firstName: 'Sam',
+    gender: 'male',
+    heightCm: 184,
+    weightKg: 90,
+    twoKmTimeTrial: '08:00',
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -287,6 +292,50 @@ run('a team night is offered as a move destination', () => {
     scope.destinations.map((destination) => destination.date));
   assert(offered.includes(teamDay),
     `the team night ${teamDay} is not offered as a destination: ${JSON.stringify(offered)}`);
+});
+
+run('strength landing on Team Training is explicitly a combine, never a swap', () => {
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const { date: teamDay } = combinedDay(weekStart);
+  const move = optionsFor(weekStart, monday).move;
+  assert(!move.refusal, `a plain day refused all moves: ${move.refusal?.message ?? ''}`);
+  const destination = move.scopes
+    .flatMap((scope) => scope.destinations)
+    .find((entry) => entry.date === teamDay);
+  assert(destination, `team night ${teamDay} was not offered`);
+  assert(destination.placement === 'combine',
+    `strength -> Team Training was described as ${destination.placement}, not combine`);
+});
+
+run('an occupied non-anchor destination can still be a swap', () => {
+  const weekStart = seed();
+  const sourceDate = soleContentDay(weekStart);
+  const sourceWorkout = visibleWeek(weekStart)
+    .find((day) => day.date === sourceDate)?.workout;
+  const restDate = visibleWeek(weekStart)
+    .find((day) => !day.workout)?.date;
+  assert(sourceWorkout && restDate,
+    'the seed no longer supplies the ordinary session + rest-day fixture');
+
+  // Turn the rest day into an ordinary occupied destination. The live seed's
+  // occupied days are all anchors, so without this explicit fixture the cell
+  // would "prove" ordinary swapping by never reaching one.
+  seedManualOverride(restDate, {
+    ...sourceWorkout,
+    id: 'ordinary-swap-target',
+    name: 'Ordinary accessory session',
+    dayOfWeek: new Date(`${restDate}T12:00:00`).getDay(),
+  }, { intent: 'program_adjustment' });
+
+  const move = optionsFor(weekStart, sourceDate).move;
+  assert(!move.refusal, `a plain day refused all moves: ${move.refusal?.message ?? ''}`);
+  const swap = move.scopes
+    .flatMap((scope) => scope.destinations)
+    .find((entry) => entry.date === restDate);
+  assert(swap, `the occupied ordinary destination ${restDate} was not offered`);
+  assert(swap.placement === 'swap',
+    `an occupied ordinary destination was described as ${swap.placement}, not swap`);
 });
 
 run('game day is still never a destination', () => {

@@ -4947,3 +4947,18 @@ Phase and modifier content. This deliberately supersedes R-175's exclusion of
 nested workout detail from wordmark placement. · `WORKING` —
 `test:lfa-wordmark`, reached in-chain by `test:profile-reset-ui`. Seat
 `onboardingtype`.
+
+---
+
+**R-181** · Day change actions live in the change card (Sam, 2026-08-24) ·
+**ONE DAY-LEVEL OWNER; NO DEDICATED SESSION-SWAP DOOR.**
+
+The Day card's **Need to make a change?** section contains Tired, Sick,
+Injured, Add, Move and Remove. The separate *“Want to change something?”* link
+is deleted. The dedicated **Swap this session** option is deleted from both Day
+and Week; Move may trade places with an ordinary occupied session when that is
+the truthful result. Team Training is different: moving strength work onto its
+day combines the two sessions and never swaps Team Training away. The open
+workout keeps its narrower Equipment, Injury and Add hub because exercise-level
+Quick Swap and Quick Remove already own row changes. · `WORKING` —
+`test:day-first-timeline` + `test:move-scoping`. Seat `onboardingtype`.
