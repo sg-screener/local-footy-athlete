@@ -2319,7 +2319,13 @@ function DayRow({
       {isMoveSource
         ? <Badge label="Moving" tone="outline" />
         : showRowBadges && hasWorkout && !isGame && day.workout.sessionTier
-          ? <SessionTierBadge compact={dayShape} tier={day.workout.sessionTier} />
+          ? (
+            <SessionTierBadge
+              compact={dayShape}
+              tier={day.workout.sessionTier}
+              style={dayShape ? styles.selectedTierBadge : undefined}
+            />
+          )
           : null}
     </>
   );
@@ -2400,7 +2406,7 @@ function DayRow({
                 pressed && { opacity: 0.6 },
               ]}
             >
-              <MaterialCommunityIcons name="dots-horizontal" size={18} color="#B5B5B5" />
+              <MaterialCommunityIcons name="dots-horizontal" size={22} color="#B5B5B5" />
             </Pressable>
           ) : null}
         </View>
@@ -4639,9 +4645,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     flexWrap: 'wrap',
   },
+  selectedTierBadge: {
+    alignSelf: 'center',
+  },
   planOptionsButton: {
     width: 24,
     height: 24,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
   },

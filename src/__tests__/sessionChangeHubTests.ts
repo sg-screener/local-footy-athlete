@@ -312,8 +312,11 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
       && /!initialAction\) return;/.test(planSheetSource));
   ok('the status-card owner contains no scheduling doorway',
     !/editAction\??:|SessionChangeEditAction|styles\.editDoor/.test(hubLive));
-  ok('the dots stay visually small but own a 44 by 44 invisible tap target',
+  ok('the larger dots and tier badge share the title row’s middle and keep a 44 by 44 tap target',
     /planOptionsButton:\s*\{[\s\S]{0,160}width:\s*24[\s\S]{0,80}height:\s*24/.test(dayLive)
+      && /selectedTierBadge:\s*\{[\s\S]{0,80}alignSelf:\s*'center'/.test(dayLive)
+      && /planOptionsButton:\s*\{[\s\S]{0,160}alignSelf:\s*'center'/.test(dayLive)
+      && /name="dots-horizontal" size=\{22\}/.test(dayLive)
       && /testID="home-plan-options"[\s\S]{0,260}hitSlop=\{10\}/.test(dayLive));
   ok('days without a programmed session keep a direct Add session doorway',
     /testID="home-add-session"/.test(dayLive)
