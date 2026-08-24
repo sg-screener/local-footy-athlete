@@ -44,7 +44,7 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
       void commitAndAdvance({
         teamTrainingDaysPerWeek: selectedDays.length,
         teamTrainingDays: selectedDays,
-      }, () => navigation.navigate('TeamTrainingDuration'));
+      }, () => navigation.navigate('TrainingCommitment'));
     }
   };
 

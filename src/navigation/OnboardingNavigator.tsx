@@ -16,8 +16,6 @@ import { BodyMeasurementsScreen } from '../screens/onboarding/BodyMeasurementsSc
 import { SeasonPhaseScreen } from '../screens/onboarding/SeasonPhaseScreen';
 import { GameDayScreen } from '../screens/onboarding/GameDayScreen';
 import { TeamTrainingDaysScreen } from '../screens/onboarding/TeamTrainingDaysScreen';
-import { TeamTrainingDurationScreen } from '../screens/onboarding/TeamTrainingDurationScreen';
-import { TeamTrainingIntensityScreen } from '../screens/onboarding/TeamTrainingIntensityScreen';
 import { TrainingCommitmentScreen } from '../screens/onboarding/TrainingCommitmentScreen';
 import { PreferredTrainingDaysScreen } from '../screens/onboarding/PreferredTrainingDaysScreen';
 import { GenderScreen } from '../screens/onboarding/GenderScreen';
@@ -81,8 +79,6 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="SeasonPhase" component={SeasonPhaseScreen} />
       <Stack.Screen name="GameDay" component={GameDayScreen} />
       <Stack.Screen name="TeamTrainingDays" component={TeamTrainingDaysScreen} />
-      <Stack.Screen name="TeamTrainingDuration" component={TeamTrainingDurationScreen} />
-      <Stack.Screen name="TeamTrainingIntensity" component={TeamTrainingIntensityScreen} />
       <Stack.Screen name="TrainingCommitment" component={TrainingCommitmentScreen} />
       <Stack.Screen name="PreferredTrainingDays" component={PreferredTrainingDaysScreen} />
       <Stack.Screen name="Equipment" component={EquipmentScreen} />

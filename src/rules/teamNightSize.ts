@@ -3,19 +3,16 @@
  *
  * SAM'S RULINGS. The principle, 2026-07-30:
  *
- *   > The onboarding team-training duration and intensity answers are a
- *   > STARTING ASSUMPTION ONLY. Season reality varies — some team nights hard, some
- *   > lighter — so a static onboarding answer can never own team-night size. The
- *   > ESTIMATE→MEASURED pattern applies, same as loads and the 2km TT.
- *
- * Then the mechanism, signed in full (`docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md`):
+ * The mechanism is signed in full (`docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md`):
  *
  *   > The one-question mechanism ("How was training?" Light / Normal / Hard) on the
  *   > existing completion flow for team-training days, stored in `SessionFeedback`;
- *   > size = rolling read of the LAST 3 logged team nights; silence = onboarding seed
- *   > persists (never decays); a Hard night informs next WEEK, never next day (readiness
- *   > door owns today); the team-training
- *   > duration question STOPS BEING ASKED at onboarding.
+ *   > size = rolling read of the LAST 3 logged team nights; a Hard night informs next
+ *   > WEEK, never next day (readiness door owns today).
+ *
+ * Sam removed the remaining onboarding intensity estimate on 2026-08-24 because every
+ * team session now asks the athlete what actually happened. Until the first eligible
+ * logged answer exists, the honest result is unknown — never a guessed Normal.
  *
  * THIS MODULE STORES NOTHING. The size is a pure read over answers the athlete already
  * gave — the north star's shape exactly: the ANSWERS are stored (in `SessionFeedback`,
@@ -24,7 +21,6 @@
  * convergence rule presumes wrong.
  */
 
-import type { TeamTrainingIntensity } from '../types/domain';
 import { registerSignedCopy, signedCopy } from './signedCopy';
 
 /**
@@ -73,9 +69,7 @@ export const TEAM_NIGHT_WINDOW = 3;
 export type TeamNightSizeSource =
   /** At least one logged team night before this week. The athlete's own measurements. */
   | 'measured'
-  /** No logged nights yet: the onboarding answer, still standing. */
-  | 'onboarding_seed'
-  /** No logged nights and no onboarding answer. The app knows nothing and says so. */
+  /** No eligible logged night. The app knows nothing and says so. */
   | 'unknown';
 
 export interface ResolvedTeamNightSize {
@@ -84,29 +78,6 @@ export interface ResolvedTeamNightSize {
   readonly source: TeamNightSizeSource;
   /** How many logged nights the read actually used (0–3). */
   readonly sampleSize: number;
-}
-
-/**
- * THE SEED. The onboarding intensity answer, on the same three-rung scale.
- *
- * Four answers, three rungs: `Hard` and `Very intense` both seed `hard`. That is not a
- * loss — the seed's whole job is to be replaced by the first logged night, and the
- * distinction between "hard" and "match-level" has no consumer that measurement will not
- * supply better. Recorded here rather than assumed, because it is the one place the four
- * become three.
- */
-const SEED_BY_INTENSITY: Readonly<Record<TeamTrainingIntensity, TeamNightSize>> = {
-  Light: 'light',
-  Moderate: 'normal',
-  Hard: 'hard',
-  'Very intense': 'hard',
-};
-
-export function teamNightSeedFor(
-  intensity: TeamTrainingIntensity | null | undefined,
-): TeamNightSize | null {
-  if (!intensity) return null;
-  return SEED_BY_INTENSITY[intensity] ?? null;
 }
 
 /**
@@ -177,8 +148,6 @@ const BY_ORDINAL: readonly TeamNightSize[] = ['light', 'normal', 'hard'];
 export interface DeriveTeamNightSizeInput {
   /** Every logged team night the athlete has. Order does not matter. */
   readonly loggedNights: readonly LoggedTeamNight[];
-  /** The onboarding `teamTrainingIntensity` answer, if they gave one. */
-  readonly onboardingIntensity?: TeamTrainingIntensity | null;
   /**
    * The Monday of the week being planned.
    *
@@ -215,13 +184,9 @@ export function deriveTeamNightSize(
     .slice(0, TEAM_NIGHT_WINDOW);
 
   if (eligible.length === 0) {
-    // SILENCE IS NOT EVIDENCE (Sam's ruling). The seed persists indefinitely and never
-    // decays toward Normal — an athlete who does not answer has not told us their nights
-    // got easier.
-    const seed = teamNightSeedFor(input.onboardingIntensity);
-    return seed === null
-      ? { size: null, source: 'unknown', sampleSize: 0 }
-      : { size: seed, source: 'onboarding_seed', sampleSize: 0 };
+    // Silence is not evidence. With the static onboarding estimate retired, the read
+    // remains honestly unknown until a completed team session supplies feedback.
+    return { size: null, source: 'unknown', sampleSize: 0 };
   }
 
   const mean = eligible.reduce((total, night) => total + ORDINAL[night.size], 0)

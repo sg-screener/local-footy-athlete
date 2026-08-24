@@ -290,10 +290,6 @@ async function main(): Promise<void> {
         teamTrainingDaysPerWeek: 2,
         teamTrainingDays: ['Tuesday', 'Thursday'],
       } as Partial<OnboardingData>],
-      ['TeamTrainingDuration', {
-        teamTrainingDuration: 90,
-        teamTrainingIntensity: 'Moderate',
-        } as Partial<OnboardingData>],
       ['TrainingCommitment', { trainingDaysPerWeek: 3 }],
       ['PreferredTrainingDays', {
         preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],

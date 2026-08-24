@@ -206,9 +206,8 @@ console.log('\n[4] The estimate-seed role means what it says');
 {
   const seeds = ONBOARDING_FIELD_DECLARATIONS.filter(
     (entry) => entry.role === 'coach_context_and_estimate_seed');
-  // BOTH team-night answers LEFT this role on 2026-07-31, in opposite directions, and the
-  // role is empty as a result. Duration was RETIRED (Sam: it stops being asked); intensity
-  // GRADUATED (its mechanism shipped, so it has a real consumer and needs no declaration).
+  // Both team-night onboarding estimates are now retired. The session-feedback mechanism
+  // owns the truth, so no onboarding answer is waiting for a promised successor.
   //
   // Asserted as empty rather than deleted, because empty is the meaningful state: no
   // answer is currently waiting on a promised mechanism. A future seed re-populates it and
@@ -226,8 +225,9 @@ console.log('\n[5] A retired answer is retired ON THE RECORD, never merely forgo
 {
   const retired = ONBOARDING_FIELD_DECLARATIONS.filter(
     (entry) => entry.role === 'retired_no_longer_asked');
-  ok('teamTrainingDuration is the retired answer', 
-    retired.map((entry) => entry.field).join(',') === 'teamTrainingDuration',
+  ok('both retired team-session estimates are named',
+    retired.map((entry) => entry.field).join(',')
+      === 'teamTrainingDuration,teamTrainingIntensity',
     retired.map((e) => e.field));
 
   for (const entry of retired) {

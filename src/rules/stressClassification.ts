@@ -15,7 +15,6 @@ import type {
   Workout,
   ExperienceLevel,
   ConditioningLevel,
-  TeamTrainingIntensity,
 } from '../types/domain';
 import type { SessionUnit } from './sessionTaxonomy';
 
@@ -32,8 +31,8 @@ export interface StressContext {
    * RETIRED FROM STRESS (Sam, 2026-07-30): a team night is a hard day unconditionally,
    * so this answer no longer decides stress. The field is gone rather than left unread —
    * an input a classifier accepts and ignores is the shape that made this defect
-   * invisible. The answer itself survives as coach context and as the estimate-seed for
-   * team-night SIZE; see `docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md`.
+   * invisible. The old answer survives only as legacy profile data; completed-session
+   * feedback owns team-night size.
    */
 }
 
@@ -63,14 +62,13 @@ export function classifySessionStress(
       //
       // TWO BIBLE LINES WERE IN TENSION and the app had picked the wrong one to obey.
       // `:119` lists what counts as a hard day and team training is first on it. `:704`
-      // gives the athlete's own intensity scale — "Light = skills/touch, low running" —
-      // and this branch used that answer to downshift a team night to MEDIUM, which took
-      // it off the hard-day budget.
+      // gives an intensity scale — "Light = skills/touch, low running" — and this branch
+      // used the old onboarding answer to downshift a team night to MEDIUM, which took it
+      // off the hard-day budget.
       //
       // Sam ruled `:119` governs hard-day status and the intensity answer no longer
-      // decides it. `:704`'s scale is not deleted: it describes the athlete's starting
-      // assumption about team-night SIZE, which his estimate→measured ruling
-      // (docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md) makes a seed rather than a truth.
+      // decides it. `:704`'s scale now belongs to completed-session feedback, where the
+      // athlete describes the night that actually happened.
       //
       // Why the old reading was wrong even before the ruling: a static onboarding answer
       // cannot know that THIS Tuesday was a match simulation. Believing it let a hard

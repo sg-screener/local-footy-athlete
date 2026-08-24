@@ -6,7 +6,8 @@
  *   4. `ageRange`, `biggestFrustration`, `successVision` = COACH-CONTEXT-ONLY, declared.
  *   5. "The coach-context category is SIGNED as a mechanism: a typed declaration + gate,
  *      so a field can be ruled coach-flavour but can never drift there silently.
- *      `teamTrainingDuration` is declared coach-context + estimate-seed per ruling 2+3."
+ *      retired team-session estimates are declared so they cannot silently regain a
+ *      writer after completed-session feedback has taken ownership."
  *
  * WHY A MECHANISM AND NOT A LIST IN A DOCUMENT. The influence map found eight fields that
  * influence nothing about the program, and the reason none of them was noticed is that
@@ -103,20 +104,15 @@ export const ONBOARDING_FIELD_DECLARATIONS: readonly OnboardingFieldDeclaration[
       + 'the question is gone.',
     supersededBy: 'docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md',
   },
-  // `teamTrainingIntensity` GRADUATED OUT OF THIS LIST on 2026-07-31, and the gate is what
-  // pushed it out.
-  //
-  // It was declared `coach_context_and_estimate_seed` — "coach context today, and the seed
-  // for a value that MEASUREMENT will own" — with this file's own comment saying such a
-  // field "is not finished; it is waiting on a mechanism". The mechanism shipped: the
-  // team-night question, and `rules/teamNightSize.ts` reading this answer as the seed the
-  // rolling read falls back to. So it now HAS a programming consumer, which is exactly
-  // what a declaration here promises it does not have, and `onboardingFieldInfluenceTests`
-  // failed the moment the consumer existed.
-  //
-  // That failure is the mechanism working. A field whose successor arrives should LEAVE
-  // this list, and the only honest way out is having a consumer — which §3 (CODE →
-  // DECLARED) then accepts without a declaration at all.
+  {
+    field: 'teamTrainingIntensity',
+    role: 'retired_no_longer_asked',
+    ruling: 'Sam, 2026-08-24: stop asking how hard team sessions usually are during '
+      + 'onboarding because every completed team session now collects the real feedback. '
+      + 'The old field remains readable for existing profiles, but no onboarding door '
+      + 'writes it and no programming rule uses it as an estimate.',
+    supersededBy: 'src/rules/teamNightSize.ts',
+  },
 ];
 
 const BY_FIELD: ReadonlyMap<string, OnboardingFieldDeclaration> =

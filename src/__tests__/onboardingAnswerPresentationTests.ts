@@ -109,7 +109,6 @@ console.log('\n[0bb] Two-line onboarding choices share one typography recipe');
     ['SeasonPhaseScreen.tsx', 'cardLabel', 'cardTagline'],
     ['GymExperienceScreen.tsx', 'cardLabel', 'cardDescription'],
     ['ConditioningLevelScreen.tsx', 'optionLabel', 'optionSubtitle'],
-    ['TeamTrainingIntensityScreen.tsx', 'optionLabel', 'optionSubtitle'],
     ['SprintExposureScreen.tsx', 'optionLabel', 'optionSubtitle'],
     ['RecentTrainingLoadScreen.tsx', 'optionLabel', 'optionSubtitle'],
     ['InjuriesScreen.tsx', 'optionLabel', 'optionSubtext'],
@@ -130,6 +129,28 @@ console.log('\n[0bb] Two-line onboarding choices share one typography recipe');
   const seasonPhaseScreen = read('src/screens/onboarding/SeasonPhaseScreen.tsx');
   ok('season answers are no longer rendered through an all-caps heading variant',
     !/variant="h4"/.test(seasonPhaseScreen));
+}
+
+console.log('\n[0bc] Team-session intensity is learned from session feedback, not onboarding');
+{
+  const navigator = read('src/navigation/OnboardingNavigator.tsx');
+  const routeTypes = read('src/types/navigation.ts');
+  const steps = read('src/utils/onboardingSteps.ts');
+  const teamDays = read('src/screens/onboarding/TeamTrainingDaysScreen.tsx');
+  const reviewRows = read('src/screens/onboarding/reviewRows.ts');
+
+  ok('both retired team-intensity onboarding screens are deleted',
+    !fs.existsSync(path.join(repoRoot, 'src/screens/onboarding/TeamTrainingDurationScreen.tsx'))
+      && !fs.existsSync(path.join(repoRoot, 'src/screens/onboarding/TeamTrainingIntensityScreen.tsx')));
+  ok('the retired routes and required step are absent',
+    !/TeamTrainingDuration|TeamTrainingIntensity/.test(navigator)
+      && !/TeamTrainingDuration|TeamTrainingIntensity/.test(routeTypes)
+      && !/name:\s*'TeamTrainingDuration'|name:\s*'TeamTrainingIntensity'/.test(steps));
+  ok('team-training days advance directly to gym availability',
+    /navigation\.navigate\('TrainingCommitment'\)/.test(teamDays)
+      && !/navigation\.navigate\('TeamTrainingDuration'\)|navigation\.navigate\('TeamTrainingIntensity'\)/.test(teamDays));
+  ok('Review no longer shows or links to the retired answer',
+    !/Team Sessions|formatTeamSessions|formatTeamIntensity|TeamTrainingDuration|TeamTrainingIntensity/.test(reviewRows));
 }
 
 console.log('\n[0c] Sprint exposure uses team-training language');

@@ -4591,3 +4591,18 @@ case. Screen-heading variants are not used for answer text. Authored casing is
 still copy: this ruling removes style-driven capitals and does not silently
 rewrite approved words. · `WORKING` — `test:onboarding-presentation`. Seat
 `onboardingtype`.
+
+---
+
+**R-152** · Team-session intensity onboarding step retirement (Sam,
+2026-08-24) · **TEAM-SESSION SIZE COMES FROM COMPLETED-SESSION FEEDBACK.**
+
+Onboarding asks which days contain team training and then advances directly to
+gym availability. It does not ask athletes to estimate how hard team sessions
+usually are, and Review does not show that retired answer. Both obsolete
+intensity screens and routes are deleted. Until an eligible team session has
+feedback, the derived size is honestly unknown rather than guessed from a
+static onboarding answer. Existing stored intensity values remain readable as
+legacy profile data but no longer shape the read. · `WORKING` —
+`test:onboarding-presentation` + `test:team-night-size` +
+`test:onboarding-field-influence`. Seat `onboardingtype`.

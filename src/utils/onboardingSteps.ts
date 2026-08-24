@@ -27,7 +27,6 @@ export type OnboardingStepName =
   | 'SeasonPhase'
   | 'GameDay'
   | 'TeamTrainingDays'
-  | 'TeamTrainingDuration'
   | 'TrainingCommitment'
   | 'PreferredTrainingDays'
   | 'Equipment'
@@ -142,27 +141,6 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['teamTrainingDaysPerWeek', 'teamTrainingDays'],
     visible: preOrInSeason,
     satisfied: (data) => filled(data.teamTrainingDays),
-  },
-  {
-    name: 'TeamTrainingDuration',
-    // DURATION IS NO LONGER ASKED (Sam's ruling, 2026-07-30). It had NO programming
-    // consumer — the influence map found it reached the Review screen and the coach
-    // prompt and nothing else — and with team-night SIZE now measured from logged nights,
-    // there was no mechanism left for it to seed. Sam's options were "give it a consumer"
-    // or "stop asking"; he chose to stop asking.
-    //
-    // The step and its screen survive because INTENSITY is still asked: it is the
-    // estimate seed the rolling read falls back to until the first team night is logged
-    // (`rules/teamNightSize.ts`). The step NAME is left alone deliberately — it is a
-    // persisted navigation/resume key, and renaming it would strand athletes mid-flow for
-    // no gain.
-    //
-    // `teamTrainingDuration` stays on `OnboardingData` as a read-only legacy answer:
-    // profiles that already answered it keep it, nothing new writes it.
-    answerLabel: 'how hard team training is',
-    collects: ['teamTrainingIntensity'],
-    visible: preOrInSeason,
-    satisfied: (data) => filled(data.teamTrainingIntensity),
   },
   {
     name: 'TrainingCommitment',

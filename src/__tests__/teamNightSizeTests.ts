@@ -13,15 +13,17 @@
  *
  *   > The one-question mechanism ("How was training?" Light / Normal / Hard, Sam-signed
  *   > copy) on the existing completion flow for team-training days, stored in
- *   > SessionFeedback; size = rolling read of the LAST 3 logged team nights; silence =
- *   > onboarding seed persists (never decays); a Hard night informs next WEEK, never next
- *   > day (readiness door owns today); teamTrainingDuration STOPS BEING ASKED.
+ *   > SessionFeedback; size = rolling read of the LAST 3 logged team nights; a Hard night
+ *   > informs next WEEK, never next day (readiness door owns today).
+ *
+ * R-152 retires the remaining onboarding estimate. Silence is now honestly unknown until
+ * completed-session feedback exists.
  *
  * VERIFICATION STRATEGY (L12). Five clauses, and the classes they can each fail in are
  * different, so the gate is split the same way:
  *
  *   - the WINDOW can drift (4 nights, or the oldest 3) — swept, not sampled;
- *   - SILENCE can start decaying — asserted after arbitrarily long silence;
+ *   - SILENCE can become a guessed default — asserted after arbitrarily long silence;
  *   - the NEXT-WEEK law can leak — asserted at the boundary date, both sides;
  *   - the QUESTION can appear where it should not, or vanish where it should be — driven
  *     through the real form owner for every completion state × team/non-team;
@@ -35,13 +37,11 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { SessionFeedback } from '../store/programStore';
-import type { TeamTrainingIntensity } from '../types/domain';
 import {
   TEAM_NIGHT_SIZES,
   TEAM_NIGHT_SIZE_OPTIONS,
   TEAM_NIGHT_WINDOW,
   deriveTeamNightSize,
-  teamNightSeedFor,
   type LoggedTeamNight,
   type TeamNightSize,
 } from '../rules/teamNightSize';
@@ -78,9 +78,8 @@ const night = (dateISO: string, size: TeamNightSize): LoggedTeamNight => ({ date
 /** Every logged night before the planned week, so only the window rule is in play. */
 function derive(
   loggedNights: readonly LoggedTeamNight[],
-  onboardingIntensity?: TeamTrainingIntensity | null,
 ) {
-  return deriveTeamNightSize({ loggedNights, onboardingIntensity, weekStartISO: WEEK_START });
+  return deriveTeamNightSize({ loggedNights, weekStartISO: WEEK_START });
 }
 
 console.log('\nTeam-night size — Sam 2026-07-30');
@@ -119,48 +118,39 @@ console.log('\n[1] THE ROLLING READ USES THE LAST THREE, AND ONLY THE LAST THREE
     ]).size === size));
 }
 
-console.log('\n[2] SILENCE IS NOT EVIDENCE — the seed persists and never decays');
+console.log('\n[2] SILENCE IS UNKNOWN UNTIL TEAM-SESSION FEEDBACK EXISTS');
 {
-  const INTENSITIES: TeamTrainingIntensity[] = ['Light', 'Moderate', 'Hard', 'Very intense'];
-  for (const intensity of INTENSITIES) {
-    const seeded = derive([], intensity);
-    ok(`"${intensity}" seeds a size with source onboarding_seed`,
-      seeded.source === 'onboarding_seed' && seeded.size === teamNightSeedFor(intensity),
-      seeded);
-  }
-  ok('Hard and Very intense both seed hard — the four answers become three rungs',
-    teamNightSeedFor('Hard') === 'hard' && teamNightSeedFor('Very intense') === 'hard');
-
-  // THE DECAY TEST. A seed that decays toward Normal would drift as the weeks pass with no
-  // answers; the read has no clock beyond the week start, so this asserts the property
-  // directly across a year of silence.
   const farFuture = deriveTeamNightSize({
-    loggedNights: [], onboardingIntensity: 'Light', weekStartISO: '2027-07-27',
+    loggedNights: [], weekStartISO: '2027-07-27',
   });
-  ok('a year of silence does not move the seed toward Normal',
-    farFuture.size === 'light' && farFuture.source === 'onboarding_seed', farFuture);
+  ok('a year without feedback stays UNKNOWN, not a guessed Normal',
+    farFuture.size === null && farFuture.source === 'unknown', farFuture);
 
-  const nothing = derive([], null);
-  ok('no nights and no onboarding answer is UNKNOWN, not a guessed Normal',
+  const nothing = derive([]);
+  ok('no logged team night is UNKNOWN',
     nothing.size === null && nothing.source === 'unknown', nothing);
 
-  ok('one logged night immediately outranks the seed',
-    derive([night('2026-07-22', 'light')], 'Hard').source === 'measured');
+  ok('one logged night immediately becomes the measured truth',
+    derive([night('2026-07-22', 'light')]).source === 'measured');
+
+  const sizeOwner = readFileSync(join(__dirname, '../rules/teamNightSize.ts'), 'utf8');
+  ok('the read has no onboarding-intensity seed path left',
+    !/teamNightSeedFor|onboardingIntensity|onboarding_seed|TeamTrainingIntensity/.test(sizeOwner));
 }
 
 console.log('\n[3] A HARD NIGHT INFORMS NEXT WEEK, NEVER NEXT DAY');
 {
   // The boundary, from both sides. The readiness door owns "today"; if this read could see
   // a night inside the week being planned, two doors would answer one question.
-  const insideThisWeek = derive([night(WEEK_START, 'hard')], 'Light');
+  const insideThisWeek = derive([night(WEEK_START, 'hard')]);
   ok('a night logged ON the week start is not evidence for that week',
-    insideThisWeek.source === 'onboarding_seed', insideThisWeek);
+    insideThisWeek.source === 'unknown', insideThisWeek);
 
-  const laterThisWeek = derive([night('2026-07-30', 'hard')], 'Light');
+  const laterThisWeek = derive([night('2026-07-30', 'hard')]);
   ok('a night logged mid-week is not evidence for that week',
-    laterThisWeek.source === 'onboarding_seed', laterThisWeek);
+    laterThisWeek.source === 'unknown', laterThisWeek);
 
-  const dayBefore = derive([night('2026-07-26', 'hard')], 'Light');
+  const dayBefore = derive([night('2026-07-26', 'hard')]);
   ok('a night logged the day BEFORE the week start is evidence for it',
     dayBefore.source === 'measured' && dayBefore.size === 'hard', dayBefore);
 
@@ -168,7 +158,6 @@ console.log('\n[3] A HARD NIGHT INFORMS NEXT WEEK, NEVER NEXT DAY');
   // an exclusion filter alone could satisfy by never counting anything.
   const nextWeek = deriveTeamNightSize({
     loggedNights: [night('2026-07-30', 'hard')],
-    onboardingIntensity: 'Light',
     weekStartISO: '2026-08-03',
   });
   ok('that same night IS evidence for the following week',
@@ -311,33 +300,26 @@ console.log('\n[6] THE WORDS ARE SAM\'S, AND THEY ARE IN THE SHEET');
     /TEAM_NIGHT_SIZE_OPTIONS\.map/.test(panel));
 }
 
-console.log('\n[7] DURATION STOPS BEING ASKED');
+console.log('\n[7] ONBOARDING STOPS ASKING FOR TEAM-SESSION SIZE');
 {
   const collectors = ONBOARDING_STEPS
-    .filter((step) => (step.collects as readonly string[]).includes('teamTrainingDuration'))
+    .filter((step) => (step.collects as readonly string[]).some((field) =>
+      field === 'teamTrainingDuration' || field === 'teamTrainingIntensity'))
     .map((step) => step.name);
-  ok('no onboarding step collects teamTrainingDuration', collectors.length === 0, collectors);
+  ok('no onboarding step collects duration or intensity', collectors.length === 0, collectors);
 
-  const step = ONBOARDING_STEPS.find((candidate) => candidate.name === 'TeamTrainingDuration')!;
-  ok('the team-training step still collects INTENSITY — it is the seed',
-    step.collects.includes('teamTrainingIntensity'));
-  ok('and it is satisfied by intensity alone',
-    step.satisfied({ teamTrainingIntensity: 'Hard' } as never) &&
-      !step.satisfied({} as never),
-    'an athlete must not be blocked on a question the app no longer asks');
-
-  const screen = readFileSync(
-    join(__dirname, '../screens/onboarding/TeamTrainingDurationScreen.tsx'), 'utf8',
+  const navigator = readFileSync(join(__dirname, '../navigation/OnboardingNavigator.tsx'), 'utf8');
+  const teamDays = readFileSync(
+    join(__dirname, '../screens/onboarding/TeamTrainingDaysScreen.tsx'), 'utf8',
   );
-  ok('the screen no longer offers duration options',
-    !/DURATION_OPTIONS/.test(screen) && !/HOW LONG\?/.test(screen));
-  ok('the screen no longer writes the duration answer',
-    !/teamTrainingDuration:/.test(screen));
-
-  // Review's contract: every row routes to a step that can still edit its answer.
   const rows = readFileSync(join(__dirname, '../screens/onboarding/reviewRows.ts'), 'utf8');
-  ok('Review no longer shows a duration it cannot let the athlete change',
-    !/formatTeamDuration/.test(rows));
+  ok('the navigator has no team-intensity question route',
+    !/TeamTrainingDuration|TeamTrainingIntensity/.test(navigator));
+  ok('team-training days advance straight to gym availability',
+    /navigate\('TrainingCommitment'\)/.test(teamDays)
+      && !/navigate\('TeamTrainingDuration'\)|navigate\('TeamTrainingIntensity'\)/.test(teamDays));
+  ok('Review has no row for an answer onboarding no longer asks',
+    !/Team Sessions|formatTeamSessions|formatTeamIntensity|TeamTrainingDuration|TeamTrainingIntensity/.test(rows));
 }
 
 console.log(`\nteamNightSizeTests: ${pass} passed, ${fail} failed`);

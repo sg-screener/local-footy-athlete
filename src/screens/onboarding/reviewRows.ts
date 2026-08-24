@@ -39,7 +39,6 @@ import type {
   RecentTrainingLoad,
   SprintExposure,
   SquatStrength,
-  TeamTrainingIntensity,
   TwoKmTimeTrialAnswer,
 } from '../../types/domain';
 import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
@@ -101,22 +100,6 @@ const formatDays = (days?: DayOfWeek[]): string | null => {
   if (!days || days.length === 0) return null;
   return sortDays(days).join(', ');
 };
-
-const formatTeamIntensity = (intensity?: TeamTrainingIntensity): string | null => {
-  if (!intensity) return null;
-  return intensity === 'Very intense' ? 'Very hard' : intensity;
-};
-
-/**
- * Duration is no longer ASKED (Sam, 2026-07-30), so it is no longer shown back.
- *
- * Review's contract is that every row routes to a step the athlete can edit; a duration
- * row would route to a screen that no longer collects it — an "Edit" that changes nothing.
- * Athletes who answered it before the ruling keep the stored value; they simply are not
- * shown a question the app has stopped asking.
- */
-const formatTeamSessions = (data: OnboardingData): string | null =>
-  formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined);
 
 const formatExperience = (value?: ExperienceLevel): string => {
   if (!value) return 'Not selected';
@@ -274,12 +257,6 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
       ?? (data.teamTrainingDaysPerWeek
         ? `${data.teamTrainingDaysPerWeek} days per week`
         : 'Not selected'),
-  },
-  {
-    section: 'Season',
-    label: 'Team Sessions',
-    step: 'TeamTrainingDuration',
-    value: (data) => formatTeamSessions(data) ?? 'Not selected',
   },
   {
     section: 'Training',

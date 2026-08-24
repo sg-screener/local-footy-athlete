@@ -55,3 +55,58 @@ Authored uppercase strings remain unchanged because they are copy, not style.
 - Simulator pixels after the shared style change.
 - Small-screen wrapping and Dynamic Type (font scaling is disabled app-wide).
 - The next physical-iPhone Release build.
+
+---
+
+## R-152 — retire the team-session intensity question
+
+Sam removed the **“What are team sessions like?”** onboarding step. Two options
+were compared:
+
+1. Hide the live screen and leave its required answer, Review row, dead route
+   and estimate seed behind.
+2. Retire the answer end to end: delete both obsolete screens, remove the
+   routes and required step, advance straight from team-training days to gym
+   availability, remove the Review row, and let completed-session feedback be
+   the only team-size evidence.
+
+Option 2 landed. Existing stored duration/intensity fields remain on the profile
+only so old data can still be read; no new onboarding door writes either.
+
+The earlier typography audit now has six live two-line answer-card consumers;
+the seventh audited consumer was the obsolete intensity screen deleted here.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 79/83, four new removal cells
+  red; AFTER — 83/83.
+- TEST FIRST: `test:team-night-size` — 50/54, four flow-removal cells red;
+  AFTER — 50/50 with the old seed tests replaced by feedback-only truth.
+- `test:onboarding-field-influence` — 26/28; the two existing unrelated reds
+  are `ageRange` and `trainingLocation`. Both retired team-session answers pass
+  their no-consumer and no-collector checks.
+- `test:onboarding-reliability` — 23/24; the fresh full journey, resume order,
+  completeness and generation fields pass. Its one existing red is the
+  persisted-store gate failing to parse `blockSelectionHistoryStore.ts`.
+- `test:dead-affordances` — 6/6 across 96 remaining screen sources.
+- `test:dev-onboarding-skip` — 7/7; `test:profile-reset-ui` — 171/171.
+- `test:compile` — 483 total baseline errors and 60 worsened file/scope pairs;
+  no changed product file is named. The edited onboarding reliability test
+  improves from five type errors to four.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded and raises guarded laws 141 → 142 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites; R-152 adds neither.
+- `test:prototype-typography` — 4/5; the remaining five shared-Text bypasses
+  are unchanged and outside onboarding.
+- `test:onboarding-cold-start` could not reach this flow: its existing accepted-
+  state transaction crash (`calendarStore` receives an undefined map) fails the
+  scenarios before onboarding route acceptance. No cold-start pass is claimed.
+
+### NOT COVERED
+
+- Simulator pixels and a cold-start walkthrough after deletion.
+- Physical-iPhone Release rebuild.
+- The derived team-night size has no production programming consumer today;
+  this change makes its source honest but does not claim feedback already
+  changes a future program.

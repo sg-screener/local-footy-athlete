@@ -214,7 +214,9 @@ export interface OnboardingData {
   usualGameDay?: DayOfWeek;
   teamTrainingDaysPerWeek?: number;
   teamTrainingDays?: DayOfWeek[];
+  /** Legacy read-ingress only (R-152). No onboarding or programming writer remains. */
   teamTrainingDuration?: TeamTrainingDuration;
+  /** Legacy read-ingress only (R-152). Completed-session feedback owns real intensity. */
   teamTrainingIntensity?: TeamTrainingIntensity;
   trainingDaysPerWeek?: number;
   trainingDaysUnsure?: boolean;

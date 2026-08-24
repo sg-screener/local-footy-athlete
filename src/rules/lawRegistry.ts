@@ -1998,6 +1998,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite pins the shared 16/700/24 title and 13/400/20 supporting-line recipes, requires no text transform, walks all seven two-line onboarding answer-card screens and requires both shared styles, and independently rejects h4 from SeasonPhase answers. TEST-FIRST LIVENESS: the new block was 0/10 against the previous production source (suite 70/80); creating the owner and moving all seven consumers returned it to 80/80. The audit found one style-driven uppercase outlier (SeasonPhase h4), one smaller caption recipe (GymExperience), and five duplicated copies of the dominant recipe; all now converge on one owner. NOT COVERED: authored all-caps copy was deliberately not rewritten, single-line/grid controls retain layout-specific typography, simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-team-session-size-is-feedback-not-onboarding',
+    law: 'Onboarding does not ask for team-training duration or intensity. After TeamTrainingDays it advances directly to TrainingCommitment, no retired answer appears on Review, and no static onboarding estimate seeds team-night size. The read is unknown until eligible completed-session feedback exists; existing stored answers remain legacy data only.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-152 — Sam, 2026-08-24, retired the remaining team-session intensity onboarding screen after confirming every session now has feedback.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation + test:team-night-size + test:onboarding-field-influence',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. `test:onboarding-presentation` deletes both obsolete screen files from the reachable product, rejects both routes and both step names, pins TeamTrainingDays -> TrainingCommitment, and rejects the Review row. `test:team-night-size` independently proves no step collects either retired field, no navigator route exists, the direct advance exists, Review is silent, the seed path is absent, silence stays unknown and one logged night becomes measured truth. `test:onboarding-field-influence` records both legacy fields as retired, asserts no programming consumer and no collector. TEST-FIRST LIVENESS: the four new presentation cells were the suite\'s only reds (79/83), and the four revised team-night cells were its only reds (50/54) against the old reachable flow; the final suites are 83/83 and 50/50. `test:onboarding-field-influence` is 26/28 with only its two pre-existing unrelated ageRange/trainingLocation consumer reds. REMOVAL DESTINATION: live team-session size remains the rolling read of completed-session feedback in rules/teamNightSize.ts; navigation goes to TrainingCommitment; existing persisted fields remain read-ingress legacy data and gain no writer. NOT COVERED: simulator pixels, a cold-start on glass, and any future programming consumer of the derived team-night size (none exists today).',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
