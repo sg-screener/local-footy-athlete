@@ -5223,3 +5223,16 @@ same **Adjust week** sheet. Its visible dots match the Day pattern and retain a
 44-point physical tap target. The range remains centred and Monday moves up into
 the space the old bar occupied. · `WORKING` — `test:day-first-timeline`. Seat
 `headeralign`.
+
+---
+
+**R-204** · Week adjustments are grouped by purpose (Sam, 2026-08-25) ·
+**SCHEDULE CHANGES AND TRAINING ARE DIFFERENT KINDS OF EDIT.**
+
+The first **Adjust week** screen groups **I have a bye**, **Add a game** and
+**I’m going away** under **Schedule changes**. Their explanations read
+**Remove this week’s game**, **Add another game to this week** and **Adjust
+around travel or time away**. A small divider and gap then introduce
+**Training**, whose one row reads **Manage sessions** / **Add, move or remove
+training**. The same four action doors and their underlying behaviour remain
+unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.

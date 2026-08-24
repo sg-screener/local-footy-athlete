@@ -947,6 +947,20 @@ export function registerProjectionCopy(): void {
       text: 'What do you want to change?',
     },
     {
+      id: 'week.edit_sheet.schedule_heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-204: the first three Week '
+        + 'adjustments sit under “Schedule changes”.',
+      text: 'Schedule changes',
+    },
+    {
+      id: 'week.edit_sheet.training_heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-204: session management sits '
+        + 'in its own “Training” section.',
+      text: 'Training',
+    },
+    {
       id: 'week.edit_sheet.bye.label',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-202: first Week option label.',
@@ -967,8 +981,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.game.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: Add-game option explanation.',
-      text: 'Add a game and adjust training around it',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-204: Add-game option explanation.',
+      text: 'Add another game to this week',
     },
     {
       id: 'week.edit_sheet.away.label',
@@ -979,8 +993,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.away.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: Away option explanation.',
-      text: 'Tell us when you’re away',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-204: Away option explanation.',
+      text: 'Adjust around travel or time away',
     },
     {
       id: 'week.edit_sheet.manage_sessions.label',
@@ -991,8 +1005,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.manage_sessions.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: session-management explanation.',
-      text: 'Add, move or remove training this week',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-204: session-management explanation.',
+      text: 'Add, move or remove training',
     },
     {
       id: 'day.add_session.action',

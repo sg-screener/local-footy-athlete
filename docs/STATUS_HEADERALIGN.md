@@ -70,3 +70,21 @@ phase-aware.
 Focused guard: `test:day-first-timeline`.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.
+
+## 2026-08-25 — Week options grouped by purpose
+
+The first Adjust week screen now separates Schedule changes from Training.
+Bye, Add a game and Away remain together; a quiet divider and gap introduce
+Manage sessions as the only Training row. The three requested explanations now
+read Add another game to this week, Adjust around travel or time away, and Add,
+move or remove training.
+
+Two options compared: leave four equal rows and change only their spacing, or
+give the two kinds of edit named sections while keeping the existing action
+doors. The named sections landed because they create the hierarchy Sam asked
+for without adding another navigation step or mutation path.
+
+Focused guard: `test:day-first-timeline` — the grouped-sheet cells are green at
+the inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.

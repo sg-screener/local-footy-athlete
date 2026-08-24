@@ -1848,18 +1848,29 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
     > sheet.indexOf("label={signedCopy('week.edit_sheet.away.label')}"),
   'session editing is no longer the bottom option in Edit this week');
   const expectedWeekOptionCopy = [
+    ['week.edit_sheet.schedule_heading', 'Schedule changes'],
+    ['week.edit_sheet.training_heading', 'Training'],
     ['week.edit_sheet.bye.label', 'I have a bye'],
     ['week.edit_sheet.bye.subline', 'Remove this week’s game'],
     ['week.edit_sheet.game.label', 'Add a game'],
-    ['week.edit_sheet.game.subline', 'Add a game and adjust training around it'],
+    ['week.edit_sheet.game.subline', 'Add another game to this week'],
     ['week.edit_sheet.away.label', 'I’m going away'],
-    ['week.edit_sheet.away.subline', 'Tell us when you’re away'],
+    ['week.edit_sheet.away.subline', 'Adjust around travel or time away'],
     ['week.edit_sheet.manage_sessions.label', 'Manage sessions'],
-    ['week.edit_sheet.manage_sessions.subline', 'Add, move or remove training this week'],
+    ['week.edit_sheet.manage_sessions.subline', 'Add, move or remove training'],
   ] as const;
   assert(expectedWeekOptionCopy.every(([id, text]) => signedCopy(id) === text)
     && expectedWeekOptionCopy.every(([id]) => sheet.includes(`signedCopy('${id}')`)),
-  'the four Week options no longer render all eight signed label/subline values');
+  'the Week adjustment sheet no longer renders both headings and all eight signed option values');
+  assert(sheet.indexOf("signedCopy('week.edit_sheet.schedule_heading')")
+      < sheet.indexOf("signedCopy('week.edit_sheet.bye.label')")
+    && sheet.indexOf("signedCopy('week.edit_sheet.away.label')")
+      < sheet.indexOf("signedCopy('week.edit_sheet.training_heading')")
+    && sheet.indexOf("signedCopy('week.edit_sheet.training_heading')")
+      < sheet.indexOf("signedCopy('week.edit_sheet.manage_sessions.label')")
+    && home.includes('weekEditTrainingSection: {')
+    && /weekEditTrainingSection:\s*\{[\s\S]{0,180}borderTopWidth: StyleSheet\.hairlineWidth[\s\S]{0,180}marginTop: spacing\.md/.test(home),
+  'Schedule changes and Training are no longer separated in the requested order by a quiet divider and gap');
   assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
     && sheet.includes('icon={<RowIcon kind="game" size={18} color={rowIconColor(\'game\')} />}')
     && sheet.includes('name="airplane" size={18} color="#B9A7FF"')

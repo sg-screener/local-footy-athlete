@@ -3181,6 +3181,9 @@ function WeekEditSheet({
 
       {step === 'actions' ? (
         <View>
+          <Text style={styles.weekEditSectionLabel}>
+            {signedCopy('week.edit_sheet.schedule_heading')}
+          </Text>
           {phase === 'In-season' ? (
             <SheetOption
               label={signedCopy('week.edit_sheet.bye.label')}
@@ -3209,13 +3212,18 @@ function WeekEditSheet({
             onPress={onAway}
             testID="edit-week-away"
           />
-          <SheetOption
-            label={signedCopy('week.edit_sheet.manage_sessions.label')}
-            sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
-            icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
-            onPress={() => setStep('session_action')}
-            testID="edit-week-session"
-          />
+          <View style={styles.weekEditTrainingSection}>
+            <Text style={styles.weekEditSectionLabel}>
+              {signedCopy('week.edit_sheet.training_heading')}
+            </Text>
+            <SheetOption
+              label={signedCopy('week.edit_sheet.manage_sessions.label')}
+              sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
+              icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
+              onPress={() => setStep('session_action')}
+              testID="edit-week-session"
+            />
+          </View>
         </View>
       ) : (
         <View>
@@ -4798,6 +4806,15 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8FF00',
   },
   sheetCurrentText: { color: '#B0B0B0', fontSize: 13, fontWeight: '500' },
+
+  weekEditSectionLabel: {
+    color: '#B0B0B0', fontSize: 13, fontWeight: '700', lineHeight: 18,
+    paddingTop: spacing.xs, paddingBottom: 4,
+  },
+  weekEditTrainingSection: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#353535',
+    marginTop: spacing.md, paddingTop: spacing.sm,
+  },
 
   sheetOption: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
