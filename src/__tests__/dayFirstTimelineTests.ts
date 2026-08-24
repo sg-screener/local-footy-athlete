@@ -52,7 +52,7 @@ import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
-import type { TrainingProgram } from '../types/domain';
+import type { TrainingProgram, Workout } from '../types/domain';
 import {
   clampProgramWeekOffset,
   programWeekOffsetBounds,
@@ -75,6 +75,13 @@ import {
   projectParts,
 } from '../rules/projectVisibleWeek';
 import { dayTimeline } from '../rules/dayTimeline';
+import {
+  buildSessionExecutionPlan,
+  buildSessionExecutionSummary,
+  reconcileRecordedSessionExecution,
+  recordedCompletedSessionExecutionItemIds,
+} from '../utils/sessionExecutionChecklist';
+import { buildSessionTemplate } from '../utils/sessionTemplate';
 // The exhibit is found by its power ROWS now — the part it used to be found
 // by is exactly what Sam's 2026-08-20 ruling deleted.
 import { powerRows } from '../rules/sessionRowCounting';
@@ -312,6 +319,71 @@ run('a legacy single-component outcome still ticks its one component', () => {
   assert(entries[0].completion === 'full',
     `${entries[0].partId}: the legacy session-level completion did not lift onto its `
     + `one component (reads "${entries[0].completion}")`);
+});
+
+run('the day card and reopened checklist reconcile one saved result against one current plan', () => {
+  world();
+  const resolved = projected(WEEK).find((candidate) => candidate.workout
+    && getSessionComponents(candidate.workout).some((component) => component.kind === 'strength'));
+  assert(resolved?.workout, 'the generated week has no strength session to edit after logging');
+  const day = visibleDays(WEEK).find((candidate) => candidate.date === resolved.date);
+  assert(day, `the visible projection lost the chosen session on ${resolved.date}`);
+
+  const beforeWorkout = resolved.workout as Workout;
+  const beforePlan = buildSessionExecutionPlan({
+    workout: beforeWorkout,
+    template: buildSessionTemplate(beforeWorkout),
+    mobilityFlow: null,
+  });
+  const completedBefore = new Set(beforePlan.items
+    .filter((item) => item.sectionId !== 'optional')
+    .map((item) => item.id));
+  const feedback = {
+    dateStr: resolved.date,
+    completion: 'full',
+    components: beforePlan.components.map((component) => ({
+      componentId: component.id,
+      kind: component.kind,
+      label: component.label,
+      completion: 'full' as const,
+    })),
+    executionItems: buildSessionExecutionSummary(beforePlan, completedBefore).items,
+  } as unknown as SessionFeedback;
+
+  const changedWorkout = {
+    ...beforeWorkout,
+    exercises: [
+      ...(beforeWorkout.exercises ?? []),
+      {
+        id: 'added-after-session-was-logged',
+        exerciseId: 'added-after-session-was-logged',
+        prescribedSets: 3,
+        prescribedRepsMin: 6,
+        prescribedRepsMax: 8,
+        exercise: { id: 'added-after-session-was-logged', name: 'Added lift' },
+      },
+    ],
+  } as Workout;
+  const currentPlan = buildSessionExecutionPlan({
+    workout: changedWorkout,
+    template: buildSessionTemplate(changedWorkout),
+    mobilityFlow: null,
+  });
+  const reopenedIds = recordedCompletedSessionExecutionItemIds(currentPlan, feedback);
+  const strengthEntry = dayTimeline(
+    day,
+    feedback,
+    changedWorkout,
+    reconcileRecordedSessionExecution(currentPlan, feedback),
+  )
+    .find((entry) => entry.kind === 'strength');
+  assert(strengthEntry,
+    `the changed session has no Strength row: ${JSON.stringify(day.parts.map((part) => part.kind))}`);
+  assert(strengthEntry.completion === null,
+    `the day card says Strength is ${String(strengthEntry.completion)} while the reopened `
+    + `checklist restores ${reopenedIds.size}/${currentPlan.items.length} exact item ids`);
+  assert(reopenedIds.size < currentPlan.items.length,
+    'the changed-plan exhibit did not add an unknown row, so the agreement assertion is vacuous');
 });
 
 run('two parts of one kind both survive — the timeline keys on id, not kind', () => {

@@ -590,6 +590,7 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
     bodyRpe,
     canSave,
     date,
+    existing,
     gameFeel,
     onSave,
     playedWholeGame,

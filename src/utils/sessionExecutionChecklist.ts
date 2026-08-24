@@ -117,7 +117,33 @@ export interface RecordedSessionExecutionReconciliation {
   readonly completedItemIds: ReadonlySet<string>;
   readonly orphanedItems: readonly SessionExecutionItemResult[];
   readonly sectionCompletions: Readonly<Partial<Record<SessionExecutionSectionId, FeedbackCompletion>>>;
+  /**
+   * The current visible component's answer, including an explicit `null` when
+   * that component belongs to a section whose rows changed after it was saved.
+   * Explicit null prevents a caller falling back to stale kind-level evidence.
+   */
+  readonly componentCompletions: Readonly<Record<string, FeedbackCompletion | null>>;
   readonly source: 'exact_items' | 'legacy_programmed_full' | 'none';
+}
+
+function componentCompletionsFromSections(
+  plan: Pick<SessionExecutionPlan, 'items'>,
+  sectionCompletions: Readonly<Partial<Record<SessionExecutionSectionId, FeedbackCompletion>>>,
+): Readonly<Record<string, FeedbackCompletion | null>> {
+  const sectionsByComponent = new Map<string, Set<SessionExecutionSectionId>>();
+  for (const item of plan.items) {
+    if (!item.componentId) continue;
+    const sections = sectionsByComponent.get(item.componentId) ?? new Set<SessionExecutionSectionId>();
+    sections.add(item.sectionId);
+    sectionsByComponent.set(item.componentId, sections);
+  }
+  return Object.fromEntries([...sectionsByComponent.entries()].map(([componentId, sectionIds]) => {
+    const values = [...sectionIds].map((sectionId) => sectionCompletions[sectionId] ?? null);
+    if (values.some((value) => value === null)) return [componentId, null];
+    if (values.every((value) => value === 'full')) return [componentId, 'full'];
+    if (values.every((value) => value === 'skipped')) return [componentId, 'skipped'];
+    return [componentId, 'partial'];
+  }));
 }
 
 /**
@@ -136,6 +162,7 @@ export function reconcileRecordedSessionExecution(
       completedItemIds: new Set(),
       orphanedItems: [],
       sectionCompletions: {},
+      componentCompletions: {},
       source: 'none',
     };
   }
@@ -163,6 +190,7 @@ export function reconcileRecordedSessionExecution(
         .map((item) => item.itemId)),
       orphanedItems: feedback.executionItems.filter((item) => !visibleItemIds.has(item.itemId)),
       sectionCompletions,
+      componentCompletions: componentCompletionsFromSections(plan, sectionCompletions),
       source: 'exact_items',
     };
   }
@@ -174,12 +202,14 @@ export function reconcileRecordedSessionExecution(
     const completedItemIds = new Set(plan.items
       .filter((item) => item.sectionId !== 'optional')
       .map((item) => item.id));
+    const sectionCompletions = Object.fromEntries(plan.sections
+      .filter((section) => section.id !== 'optional')
+      .map((section) => [section.id, 'full' as const]));
     return {
       completedItemIds,
       orphanedItems: [],
-      sectionCompletions: Object.fromEntries(plan.sections
-        .filter((section) => section.id !== 'optional')
-        .map((section) => [section.id, 'full' as const])),
+      sectionCompletions,
+      componentCompletions: componentCompletionsFromSections(plan, sectionCompletions),
       source: 'legacy_programmed_full',
     };
   }
@@ -188,6 +218,7 @@ export function reconcileRecordedSessionExecution(
     completedItemIds: new Set(),
     orphanedItems: [],
     sectionCompletions: {},
+    componentCompletions: componentCompletionsFromSections(plan, {}),
     source: 'none',
   };
 }

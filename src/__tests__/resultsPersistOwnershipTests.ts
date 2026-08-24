@@ -62,7 +62,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
-import { resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { resolveDateWithConditioning, resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { flushPendingStorageWrites, pendingStorageWriteCount } from '../store/asyncStorageCompat';
@@ -70,6 +70,7 @@ import {
   commitSessionOutcomeTransaction,
   createRecordSessionOutcomeIntentFromFeedback,
 } from '../store/sessionOutcomeTransaction';
+import { getSessionComponents } from '../utils/sessionComponents';
 import {
   samDevicePass20260805Profile,
   SAM_PASS_20260805_TODAY_ISO,
@@ -273,6 +274,61 @@ const main = async () => {
       'the outcome RECEIPT did not survive. `useDayWorkout` reads exactly this key to '
       + 'decide `isAlreadyComplete`, so without it the athlete reopens a session they '
       + 'already finished and is asked to finish it again (GROUPB finding 1)');
+  });
+
+  await run('2b a real game result can be saved again without losing its existing record', async () => {
+    reachWorldByActing();
+    const date = Object.keys(SAM_PASS_20260805_MARKED_DAYS)[0];
+    const workout = quiet(() => resolveDateWithConditioning(
+      date,
+      buildScheduleStateImperative(),
+    ).workout);
+    assert(workout, `the acted game mark on ${date} resolved no workout`);
+    const componentIdsBefore = getSessionComponents(workout).map((component) => component.id);
+    const first = await quietAsync(() => commitSessionOutcomeTransaction(
+      createRecordSessionOutcomeIntentFromFeedback({
+        date,
+        feedback: {
+          dateStr: date,
+          completion: 'full',
+          game: { playedWholeGame: true, timeOnGroundMinutes: 80, bodyRpe: 7, feel: 3 },
+        } as never,
+        workout,
+        source: { entryPoint: 'tap', surface: 'game_feedback_panel' },
+      }),
+      TODAY,
+    ));
+    assert(first.ok, `the first real game save refused: ${'code' in first ? first.code : 'unknown'}`);
+    const existing = useProgramStore.getState().sessionFeedback[date];
+    assert(existing?.game, 'the first save reported success but stored no game result');
+
+    const currentWorkout = quiet(() => resolveDateWithConditioning(
+      date,
+      buildScheduleStateImperative(),
+    ).workout);
+    assert(currentWorkout, `the saved game on ${date} no longer resolves a workout`);
+    const second = await quietAsync(() => commitSessionOutcomeTransaction(
+      createRecordSessionOutcomeIntentFromFeedback({
+        date,
+        feedback: {
+          ...existing,
+          game: { playedWholeGame: false, timeOnGroundMinutes: 63, bodyRpe: 6, feel: 4 },
+        },
+        workout: currentWorkout,
+        source: { entryPoint: 'tap', surface: 'game_feedback_panel' },
+      }),
+      TODAY,
+    ));
+    assert(second.ok, `re-saving the real game refused: ${'code' in second ? second.code : 'unknown'}`);
+    const after = useProgramStore.getState().sessionFeedback[date];
+    assert(after?.game?.timeOnGroundMinutes === 63,
+      `the second game answer did not replace the first: ${JSON.stringify(after?.game)}`);
+    assert(JSON.stringify(after.executionItems) === JSON.stringify(existing.executionItems),
+      're-saving the game changed the programmed-session item evidence sharing its date');
+    const componentIdsAfter = getSessionComponents(currentWorkout).map((component) => component.id);
+    assert(JSON.stringify(componentIdsAfter) === JSON.stringify(componentIdsBefore),
+      `the accepted fixture route changed component identity between saves: `
+      + `${JSON.stringify(componentIdsBefore)} -> ${JSON.stringify(componentIdsAfter)}`);
   });
 
   // ── 3. A WEIGHT THE ATHLETE EDITED SURVIVES ──────────────────────────────

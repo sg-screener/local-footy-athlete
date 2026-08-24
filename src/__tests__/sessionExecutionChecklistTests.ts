@@ -332,7 +332,9 @@ ok('mobility movements use the same controlled checklist owner',
     && /completedItemIds\.has\(itemId\)/.test(screen)
     && /onToggle=\{onToggleItem\}/.test(screen));
 ok('the day card reads Mobility completion from that saved checklist owner',
-  /recordedExecutionSectionCompletion\(\s*executionPlan,\s*sessionFeedback\[day\.date\],\s*'mobility'/.test(home)
+  /reconcileRecordedSessionExecution\(executionPlan, sessionFeedback\[day\.date\]\)/.test(home)
+    && /dayTimeline\(visibleDay, sessionFeedback\[day\.date\], day\.workout, recordedExecution\)/.test(home)
+    && /mobilityCompletion=\{recordedExecution\?\.sectionCompletions\.mobility \?\? null\}/.test(home)
     && /day-timeline-complete-mobility-warmup-\$\{mobilityCompletion\}/.test(home)
     && /mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home));
 ok('mobility and every other session row use one square checkbox recipe',
@@ -380,7 +382,8 @@ ok('mobility has no optional wording in text or accessibility copy',
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
 ok('the durable outcome owns the per-item result', /executionItems:\s*executionSummary\?\.items/.test(feedback));
 ok('saving game feedback carries prior checklist evidence instead of erasing it',
-  /const feedback: SessionFeedback = \{\s*\.\.\.\(existing \?\? \{\}\),[\s\S]{0,180}?game,/.test(feedback));
+  /const feedback: SessionFeedback = \{\s*\.\.\.\(existing \?\? \{\}\),[\s\S]{0,180}?game,/.test(feedback)
+    && /bodyRpe,\s*canSave,\s*date,\s*existing,\s*gameFeel,/.test(feedback));
 ok('the reopened screen hydrates from the same durable item evidence',
   /persistedFeedback/.test(screen)
     && /recordedCompletedSessionExecutionItemIds\(executionPlan, persistedFeedback\)/.test(screen)

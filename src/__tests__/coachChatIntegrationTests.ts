@@ -62,8 +62,11 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
     /maxLength=\{COACH_CHAT_MAX_MESSAGE_CHARACTERS\}/.test(
       read('src/screens/coach/CoachTabScreen.tsx'),
     )
-      && /coachChatMessageWithinLimit/.test(read('src/screens/coach/CoachTabScreen.tsx'))
-      && /COACH_CHAT_MAX_MESSAGE_CHARACTERS/.test(edge)
+      && /if \(!coachChatMessageWithinLimit\(message\) \|\| isSending\) return;/.test(
+        read('src/screens/coach/CoachTabScreen.tsx'),
+      )
+      && /value\.athleteMessage\.length <= COACH_CHAT_MAX_MESSAGE_CHARACTERS/.test(edge)
+      && /turn\.text\.length <= COACH_CHAT_MAX_MESSAGE_CHARACTERS/.test(edge)
       && !/athleteMessage\.length <= 1_000/.test(edge));
   ok('the server refuses any model-produced program action before replying',
     /programActions\.length === 0/.test(read('src/rules/coachResponseContract.ts'))
@@ -347,6 +350,26 @@ async function finish(): Promise<void> {
   }
   ok('a server contract refusal remains refused at the screen boundary',
     serverRefusalCode === 'refused');
+
+  let serverInvalidAnswerCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'what is next',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => ({
+        ok: false,
+        status: 502,
+        async text() {
+          return JSON.stringify({ error: 'coach_chat_invalid_answer' });
+        },
+      }),
+    });
+  } catch (error) {
+    serverInvalidAnswerCode = coachChatFailureCode(error);
+  }
+  ok('a benign server answer failure remains no_answer at the screen boundary',
+    serverInvalidAnswerCode === 'no_answer');
   ok('the copy owner executes a distinct approved answer for every typed failure',
     coachFailureReply('unavailable') === "Coach isn't available right now. Try again shortly."
       && coachFailureReply('refused') === "I can't answer that safely."
@@ -426,6 +449,26 @@ async function finish(): Promise<void> {
     !wrongShape.ok
       && !wrongShape.automaticChecks.schemaValid
       && coachResponseContractFailureCode(wrongShape) === 'invalid_answer');
+  const readOnlyViolation = evaluateCoachResponseContract({
+    ...grounded,
+    programActions: [{ kind: 'move', label: 'Move it' }],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  const refusalMatrix = [
+    ['readOnly', readOnlyViolation],
+    ['programFactsGrounded', noSnapshotReceipt],
+    ['lfaClaimsGrounded', unknownSource],
+    ['judgementTransparent', hiddenJudgement],
+    ['changeClaimsTruthful', falseChange],
+  ] as const;
+  ok('every truth and read-only contract member independently remains a refusal',
+    refusalMatrix.every(([check, evaluation]) =>
+      evaluation.automaticChecks[check] === false
+        && coachResponseContractFailureCode(evaluation) === 'refused'),
+    refusalMatrix.map(([check, evaluation]) => ({
+      check,
+      value: evaluation.automaticChecks[check],
+      code: coachResponseContractFailureCode(evaluation),
+    })));
 
   console.log('\n[7] THE LIVE RATE WINDOW IS DURABLE, PRIVATE AND SHARED');
   const forwarded = new Request('https://example.test', {

@@ -36,6 +36,7 @@
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackCompletion } from '../types/sessionOutcome';
 import { completionByComponentId } from '../utils/sessionFeedbackForm';
+import type { RecordedSessionExecutionReconciliation } from '../utils/sessionExecutionChecklist';
 import { PART_ICON_KIND, type RowIconKind } from './sectionIconKinds';
 import { componentIdFromPartId } from './projectVisibleWeek';
 import { projectDayDetail } from './visibleDayDetail';
@@ -145,20 +146,28 @@ export function dayTimeline(
    * omits it gets the part kind's own glyph, which is what the screen did before.
    */
   workout?: { composedOptionalKind?: string } | null,
+  /**
+   * The same plan-aware execution receipt that restores the workout checklist.
+   * Components covered by it never fall back to stale kind-level completions.
+   */
+  recordedExecution?: RecordedSessionExecutionReconciliation | null,
 ): readonly DayTimelineEntry[] {
   const detail = projectDayDetail(day);
   if (!detail) return [];
 
   const componentIds = detail.sections.map((section) =>
     componentIdFromPartId(section.partId));
-  const recorded = completionByComponentId(feedback, componentIds);
+  const recordedByLegacyComponent = completionByComponentId(feedback, componentIds);
 
   return detail.sections.map((section, index) => ({
     partId: section.partId,
     componentId: componentIds[index],
     kind: section.kind,
     headline: section.headline,
-    completion: recorded[componentIds[index]] ?? null,
+    completion: recordedExecution
+      && componentIds[index] in recordedExecution.componentCompletions
+      ? recordedExecution.componentCompletions[componentIds[index]]
+      : recordedByLegacyComponent[componentIds[index]] ?? null,
     rows: section.rows,
     iconKind: iconKindForSection(section.kind, workout),
   }));

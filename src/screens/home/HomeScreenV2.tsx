@@ -42,7 +42,7 @@ import {
 } from '../../utils/mobilityPrehabFlow';
 import {
   buildSessionExecutionPlan,
-  recordedExecutionSectionCompletion,
+  reconcileRecordedSessionExecution,
 } from '../../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { useAthleteContext } from '../../hooks/useSchedule';
@@ -529,8 +529,13 @@ export default function HomeScreenV2() {
      * recorded completion. A club-only day has no such component, so its one
      * row decides — which is the same rule, not an exception to it.
      */
+    const mobilityFlow = mobilityFlowByDate.get(day.date) ?? null;
+    const executionPlan = executionPlanByDate.get(day.date) ?? null;
+    const recordedExecution = executionPlan
+      ? reconcileRecordedSessionExecution(executionPlan, sessionFeedback[day.date])
+      : null;
     const timelineEntries = visibleDay
-      ? dayTimeline(visibleDay, sessionFeedback[day.date], day.workout)
+      ? dayTimeline(visibleDay, sessionFeedback[day.date], day.workout, recordedExecution)
       : [];
     const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
     const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;
@@ -538,9 +543,6 @@ export default function HomeScreenV2() {
       && decidingRows.every((entry) => entry.completion !== null);
 
     const clubEntry = timelineEntries.find((entry) => entry.kind === 'team_training');
-    const mobilityFlow = mobilityFlowByDate.get(day.date) ?? null;
-    const executionPlan = executionPlanByDate.get(day.date) ?? null;
-
     return (
       <React.Fragment key={day.date}>
       <DayRow
@@ -624,11 +626,7 @@ export default function HomeScreenV2() {
           <DayTimeline
             entries={timelineEntries}
             mobilityFlow={mobilityFlow}
-            mobilityCompletion={executionPlan ? recordedExecutionSectionCompletion(
-              executionPlan,
-              sessionFeedback[day.date],
-              'mobility',
-            ) : null}
+            mobilityCompletion={recordedExecution?.sectionCompletions.mobility ?? null}
             onOpen={() => handleViewWorkout(day)}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />
