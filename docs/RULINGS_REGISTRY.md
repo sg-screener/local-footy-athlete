@@ -4805,3 +4805,15 @@ and date, pre-fills the editable Minutes field, and never replaces an already
 saved athlete answer. If the timer was never used, the field stays blank for the
 athlete's estimate. · `WORKING` — `test:session-logging-ui`. Seat
 `onboardingtype`.
+
+---
+
+**R-171** · Added-session identity across destination shapes (Sam, 2026-08-24) ·
+**THE DAY CHANGES; THE SESSION DOES NOT.**
+
+Adding Recovery, Mobility, Primer, Gunshow, Accessories, conditioning or
+strength to a Team Training-only day keeps the added session's own type,
+headline, exercises and prescriptions. Team Training remains a separate
+component. Adding the same choice to a free day produces the same programmed
+session content without inventing Team Training. · `WORKING` —
+`test:athlete-door-matrix` + `test:session-components`. Seat `onboardingtype`.

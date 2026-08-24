@@ -582,6 +582,7 @@ export function standaloneLowLoadSessionKind(
 ): 'mobility' | 'recovery' | null {
   if (!workout) return null;
   if ((workout as Workout).composedOptionalKind === 'mobility') return 'mobility';
+  if ((workout as Workout).composedOptionalKind === 'recovery') return 'recovery';
   if (workout.workoutType === 'Recovery' || (workout as any).sessionTier === 'recovery') {
     return 'recovery';
   }
@@ -856,7 +857,13 @@ export function getSessionComponents(
   }
 
   const teamState = getTeamTrainingWorkoutState(workout);
-  const { strengthRows, supportRows, conditioningRows } = getSessionComponentRows(workout);
+  const {
+    strengthRows,
+    supportRows,
+    conditioningRows,
+    mobilityRows,
+    recoveryRows,
+  } = getSessionComponentRows(workout);
   const components: SessionComponent[] = [];
 
   if (hasPower(workout)) {
@@ -915,17 +922,8 @@ export function getSessionComponents(
         });
   }
 
-  if (teamState.hasTeamTraining || workoutNameHasTeamTraining(workout)) {
-    components.push({
-      id: 'team_training',
-      kind: 'team_training',
-      label: 'team training',
-      completionPolicy: 'required',
-    });
-  }
-
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
-  if (components.length === 0 && lowLoadKind === 'mobility') {
+  if (lowLoadKind === 'mobility' && (mobilityRows.length > 0 || components.length === 0)) {
     components.push({
       id: 'mobility',
       kind: 'mobility',
@@ -934,11 +932,20 @@ export function getSessionComponents(
     });
   }
 
-  if (components.length === 0 && lowLoadKind === 'recovery') {
+  if (lowLoadKind === 'recovery' && (recoveryRows.length > 0 || components.length === 0)) {
     components.push({
       id: 'recovery',
       kind: 'recovery',
       label: 'recovery work',
+      completionPolicy: 'required',
+    });
+  }
+
+  if (teamState.hasTeamTraining || workoutNameHasTeamTraining(workout)) {
+    components.push({
+      id: 'team_training',
+      kind: 'team_training',
+      label: 'team training',
       completionPolicy: 'required',
     });
   }

@@ -696,3 +696,59 @@ no timer leaves the field blank.
 - Simulator keyboard/layout pixels after collapsing each pair to one field.
 - A real-time start/pause/end/log walk on glass, including relaunch while paused.
 - The next physical-iPhone Release rebuild.
+
+---
+
+## R-171 — preserve added-session identity on team nights
+
+The photographed failure was not a Day-screen wording error. The shared Add
+materialiser deliberately cleared composed-session identity whenever it stacked
+two workouts. That is correct for two gym sessions whose parts must name
+themselves, but wrong when the existing workout is Team Training-only: Team
+Training is an anchor beside the added session, not another gym component.
+
+Two options were compared:
+
+1. Teach the Day renderer to recognise Recovery exercises and rename the box.
+2. Preserve the added template's typed identity at the one stack owner only
+   when the base is Team Training-only, then let every downstream reader consume
+   that fact.
+
+Option 2 landed. Recovery promotes its existing Recovery workout type into the
+same marker already owned by Mobility, Gunshow, Accessories and Primer. True
+mixed gym stacks still clear the marker, preserving the earlier projection law.
+
+### Evidence
+
+- `test:athlete-door-matrix` adds one real 10-category x 2-destination cell:
+  all live Add categories go through the production transaction onto an empty
+  day and a Team Training-only day, then through the real visible projection.
+- For Recovery, Mobility, Gunshow, Accessories and Primer, row name and
+  prescription signatures are equal across both destinations. This holds the
+  photographed content-shrink defect as well as the title.
+- The Team Training anchor survives every team-night add and is absent from
+  every free-day result.
+- MUTATION: forcing the stack owner back to `composedOptionalKind: undefined`
+  reddened the new cell at `team_only_night/recovery: Recovery has no
+  exercises`; restoring the owner returns it to green.
+- Full `test:athlete-door-matrix`: 419/434, versus measured baseline 418/433;
+  the same 15 existing reds remain (one scoped-power move and 14 sprint
+  placement coordinates).
+- `test:session-components`: 33/39 versus measured baseline 29/36. Its new
+  Recovery/Mobility + Team cells pass and one old low-load combination red is
+  removed; the remaining six power/support cells are existing reds.
+- `test:surface-agreement` 5/5; `test:session-type-charter` 44/44;
+  `test:recovery-template` 39/39; `test:primer-session` 27/27;
+  `test:mobility-accessory-doors` 31/31.
+- Existing adjacent reds remain existing: `test:day-first-timeline` 54/56;
+  `test:plan-change-producer` is stale against the expanded template count and
+  required onboarding profile; `test:workout-canonicalisation` has its existing
+  hinge failure and stale undefined validator import.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels.
+- Starting, completing and logging all 20 added-session/destination combinations.
+- Accumulated multi-edit weeks beyond the matrix's accepted team-only and empty
+  destination states.
+- The next physical-iPhone Release rebuild.

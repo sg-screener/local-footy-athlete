@@ -96,12 +96,14 @@ import {
 } from '../utils/planChangeProducer';
 import type {
   PlanChange,
+  PlanChangeCategoryId,
   PlanChangeBinScopeId,
   PlanChangeMoveScopeId,
 } from '../utils/planChangeTypes';
+import { PLAN_CHANGE_CATEGORY_IDS } from '../utils/planChangeTypes';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
-import { projectParts } from '../rules/projectVisibleWeek';
+import { project, projectParts } from '../rules/projectVisibleWeek';
 
 /**
  * TWO WORLDS, AND WHY THE SECOND ONE EXISTS.
@@ -1126,6 +1128,98 @@ cell(`[${activeWorld.id}] every session type the Add step offers is one the door
   assert(broken.length === 0,
     `the Add step offered a session type the door will not take:\n        ${broken.join('\n        ')}`);
   assert(offersDriven > 0, 'no Add offer was driven — this cell is asleep');
+});
+
+/**
+ * THE ADDED SESSION KEEPS ITS OWN IDENTITY ON BOTH DESTINATION SHAPES.
+ *
+ * A team-training-only container used to erase `composedOptionalKind` while
+ * stacking. Recovery, Mobility, Primer and Accessories then rendered as
+ * Strength; Gunshow could disappear with the rows classified as team content.
+ * A free day used the untouched template and therefore looked correct, which
+ * made this a destination-coordinate bug. Drive every Add category through the
+ * production door against both shapes and inspect the canonical projection the
+ * Day screen reads.
+ */
+cell(`[${activeWorld.id}] every Add category keeps its identity on team-only and free days`, () => {
+  const destinationStates = DAY_STATES.filter((state) =>
+    state.id === 'team_only_night' || state.id === 'empty_midweek');
+  const expected = new Map<PlanChangeCategoryId, {
+    kind: 'strength' | 'conditioning' | 'recovery';
+    headline?: string;
+  }>([
+    ['conditioning_light', { kind: 'conditioning' }],
+    ['conditioning_hard', { kind: 'conditioning' }],
+    ['recovery', { kind: 'recovery', headline: 'Recovery' }],
+    ['mobility', { kind: 'recovery', headline: 'Mobility' }],
+    ['strength_upper', { kind: 'strength' }],
+    ['strength_lower', { kind: 'strength' }],
+    ['strength_full', { kind: 'strength' }],
+    ['gunshow', { kind: 'strength', headline: 'Gunshow' }],
+    ['prehab', { kind: 'strength', headline: 'Accessories' }],
+    ['primer', { kind: 'strength', headline: 'Primer' }],
+  ]);
+  assert(destinationStates.length === 2,
+    `identity matrix reached ${destinationStates.length}/2 destination shapes`);
+  assert(expected.size === PLAN_CHANGE_CATEGORY_IDS.length,
+    `identity matrix covers ${expected.size}/${PLAN_CHANGE_CATEGORY_IDS.length} Add categories`);
+  const contentByDestination = new Map<string, string[]>();
+
+  for (const dayState of destinationStates) {
+    for (const category of PLAN_CHANGE_CATEGORY_IDS) {
+      const context = quiet(() => dayState.build());
+      const result = quiet(() => applyPlanChange({
+        change: { kind: 'add_category', date: context.date, category },
+        visibleWeek: visibleWeek(context.weekStart),
+        todayISO: world.todayISO,
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
+      }));
+      assert(result.outcome === 'applied',
+        `${dayState.id}/${category}: Add returned ${result.outcome} — ${result.message}`);
+
+      const resolved = visibleWeek(context.weekStart);
+      const visible = quiet(() => project({
+        week: resolved,
+        weekStart: context.weekStart,
+      })).days.find((day) => day.date === context.date);
+      assert(visible,
+        `${dayState.id}/${category}: the accepted day did not reach the projection`);
+      const content = visible.parts.filter((part) => part.kind !== 'team_training');
+      const answer = expected.get(category)!;
+      const matching = content.find((part) => part.kind === answer.kind &&
+        (!answer.headline || String(part.headline) === answer.headline));
+      assert(matching,
+        `${dayState.id}/${category}: expected ${answer.headline ?? answer.kind}, got `
+        + JSON.stringify(content.map((part) => ({
+          kind: part.kind,
+          headline: String(part.headline),
+          rows: part.rows.length,
+        }))));
+      assert(matching.rows.length > 0,
+        `${dayState.id}/${category}: ${String(matching.headline)} has no exercises`);
+      contentByDestination.set(`${dayState.id}:${category}`,
+        matching.rows.map((row) => `${String(row.name)}|${String(row.prescription ?? '')}`));
+      if (dayState.id === 'team_only_night') {
+        assert(visible.parts.some((part) => part.kind === 'team_training'),
+          `${dayState.id}/${category}: adding the session deleted team training`);
+      } else {
+        assert(!visible.parts.some((part) => part.kind === 'team_training'),
+          `${dayState.id}/${category}: a free-day add invented team training`);
+      }
+    }
+  }
+
+  // The destination may add or omit the Team Training anchor; it must not
+  // rewrite the session the athlete chose. This is the row-count half of the
+  // photographed defect: Recovery shrank to three rows only after stacking.
+  for (const category of ['recovery', 'mobility', 'gunshow', 'prehab', 'primer'] as const) {
+    const team = contentByDestination.get(`team_only_night:${category}`) ?? [];
+    const free = contentByDestination.get(`empty_midweek:${category}`) ?? [];
+    assert(JSON.stringify(team) === JSON.stringify(free),
+      `${category}: team-night content ${JSON.stringify(team)} differs from `
+      + `free-day content ${JSON.stringify(free)}`);
+  }
 });
 
 cell(`[${activeWorld.id}] preview never throws, on any day-state`, () => {

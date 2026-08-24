@@ -158,6 +158,9 @@ function stackTemplate(args: {
   template: Workout;
   preservesTeamTraining: boolean;
 }): Workout {
+  const baseIsTeamTrainingOnly = getTeamTrainingWorkoutState(args.base).isTeamTrainingOnly;
+  const templateComposedKind = args.template.composedOptionalKind ??
+    (args.template.workoutType === 'Recovery' ? 'recovery' : undefined);
   const baseHasConditioning = hasConditioning(args.base);
   const templateHasConditioning = hasConditioning(args.template);
   const baseHasStrength = hasStrength(args.base);
@@ -227,15 +230,29 @@ function stackTemplate(args: {
       ...(args.base.recoveryAddons ?? []),
       ...(args.template.recoveryAddons ?? []),
     ],
-    // A STACKED DAY IS NOT A COMPOSED OPTIONAL SESSION (2026-08-01). The
+    // A GENUINELY MIXED GYM DAY IS NOT A COMPOSED OPTIONAL SESSION
+    // (2026-08-01). The
     // marker means "this workout IS one composed Gunshow/Accessories/Mobility
     // session"; spreading the base carried it onto combined days, where the
     // projection then named an added conditioning part with the optional
     // word's claim standing beside it (deep walker, L-P6, seeds 1 and 3 —
     // a typed mobility day + conditioning add rendered no "Mobility" at all).
-    // The parts of a combined day name themselves by content; the marker dies
-    // with the purity it describes.
-    composedOptionalKind: undefined,
+    // The parts of a combined GYM day name themselves by content; the marker
+    // dies with the purity it describes.
+    //
+    // TEAM TRAINING IS AN ANCHOR, NOT ANOTHER GYM SESSION. A composed session
+    // placed on a team-training-only day is still wholly Recovery, Mobility,
+    // Gunshow, Accessories or Primer work beside that anchor. Clearing its
+    // typed identity made every one of those additions fall through to the
+    // generic Strength bucket (and could hide Gunshow entirely). Preserve the
+    // builder's identity only for that exact shape. Recovery carries its
+    // identity in workoutType while standalone, so the stack promotes that
+    // existing typed fact into the same marker rather than inferring from its
+    // name or rows.
+    composedOptionalKind:
+      args.preservesTeamTraining && baseIsTeamTrainingOnly
+        ? templateComposedKind
+        : undefined,
     derivedSessionProvenance: undefined,
   } as Workout;
 }

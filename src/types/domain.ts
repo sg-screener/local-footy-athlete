@@ -1010,9 +1010,11 @@ export interface Workout {
    * from the `DerivedSessionType` it already receives — one site, every
    * route (generator, athlete door, resolver derivation) funnels through it.
    * Carried, never inferred: a canonicalisation pass must not re-derive it
-   * from names.
+   * from names. A standalone Recovery already owns a typed `workoutType`; when
+   * it is placed beside a team-training-only anchor, the shared stack owner
+   * promotes that fact into this marker so projection does not relabel it.
    */
-  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility' | 'primer';
+  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility' | 'primer' | 'recovery';
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
   /**

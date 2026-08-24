@@ -1092,6 +1092,7 @@ const PART_BUCKET_KIND: Readonly<Record<VisiblePartKind, VisiblePartKind>> = {
 function partBucket(kind: VisiblePartKind, workout: Workout | null | undefined): SignedCopy {
   const optional = workout?.composedOptionalKind;
   if (optional && (kind === 'strength' || kind === 'recovery')) {
+    if (optional === 'recovery') return signedCopy('part.headline.recovery');
     return signedCopy(`part.headline.optional.${optional}`);
   }
   return signedCopy(`part.headline.${PART_BUCKET_KIND[kind]}`);
@@ -1129,6 +1130,7 @@ function partHeadline(
   // a `team_training` part on a combined day is never the optional session.
   const optional = workout?.composedOptionalKind;
   if (optional && (kind === 'strength' || kind === 'recovery')) {
+    if (optional === 'recovery') return signedCopy('part.headline.recovery');
     return signedCopy(`part.headline.optional.${optional}`);
   }
   if (kind === 'strength') {

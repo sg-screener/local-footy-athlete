@@ -296,6 +296,36 @@ section('7. Single-component non-strength sessions');
   assert(kinds(conditioningOnly).join(',') === 'conditioning', 'conditioning only detects conditioning');
 }
 
+section('7b. Low-load sessions remain distinct beside team training');
+{
+  const recoveryWithTeam = {
+    name: 'Team Training + Recovery Flow',
+    workoutType: 'Team Training',
+    composedOptionalKind: 'recovery',
+    exercises: [ex('we-walk', 'Outdoor Walk')],
+  };
+  assert(
+    kinds(recoveryWithTeam as any).join(',') === 'recovery,team_training',
+    'recovery added to team training stays recovery rather than strength',
+  );
+  const rows = getSessionComponentRows(recoveryWithTeam as any);
+  assert(
+    rows.recoveryRows.length === 1 && rows.strengthRows.length === 0,
+    'recovery rows beside team training are filed only under recovery',
+  );
+
+  const mobilityWithTeam = {
+    name: 'Team Training + Mobility',
+    workoutType: 'Team Training',
+    composedOptionalKind: 'mobility',
+    exercises: [ex('we-mobility', 'Open Book Thoracic Rotation')],
+  };
+  assert(
+    kinds(mobilityWithTeam as any).join(',') === 'mobility,team_training',
+    'mobility added to team training stays mobility rather than strength',
+  );
+}
+
 section('8. Trunk/support rows do not masquerade as conditioning phases');
 {
   const aerobicRows = [
