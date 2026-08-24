@@ -111,24 +111,29 @@ console.log('\n[0d] Welcome explains the complete LFA program');
 {
   const welcomeScreen = read('src/screens/onboarding/WelcomeScreen.tsx');
   const approvedWelcomeCopy = [
-    'TRAIN FOR',
+    'BUILT FOR',
     'FOOTY.',
     'One complete program built around your season and schedule.',
+    'YOUR PLAN',
     'Everything works together',
     'Strength, speed, conditioning and recovery specific to each phase of the season.',
     'Footy comes first',
     'Gym work fits around team training, game day and your schedule.',
+    'YOUR WEEK',
     'See how you’re tracking',
     'Monitor your training load, readiness and fitness over time.',
+    'YOUR PROGRESS',
     'Build my program  →',
     'Takes about 3 minutes',
   ];
   ok('the complete approved Welcome copy is present',
     approvedWelcomeCopy.every((copy) => welcomeScreen.includes(copy)));
-  ok('the retired Built for footy card copy is absent',
-    !/BUILT FOR|Training built around your season\.|YOUR PLAN|Built for footy|YOUR SCHEDULE|Fits your week|YOUR BODY|Keeps you available/.test(welcomeScreen));
-  ok('the cards have no Your Program, Your Week or Your Progress eyebrow labels',
-    !/YOUR PROGRAM|YOUR WEEK|YOUR PROGRESS|feature\.label|featureLabel/.test(welcomeScreen));
+  ok('the retired Welcome copy is absent',
+    !/TRAIN FOR|Training built around your season\.|YOUR PROGRAM|YOUR SCHEDULE|Fits your week|YOUR BODY|Keeps you available/.test(welcomeScreen));
+  ok('all three eyebrow labels render through one shared compact gap',
+    /feature\.label/.test(welcomeScreen)
+      && /featureLabelWrap:\s*\{[\s\S]{0,100}marginBottom:\s*2/.test(welcomeScreen)
+      && (welcomeScreen.match(/featureLabelWrap:\s*\{/g) ?? []).length === 1);
 }
 
 // ───────────────────────────────────────────────────────────────────────────

@@ -4550,11 +4550,11 @@ The retired **BODY** section title is absent. · `WORKING` —
 *"TRAIN FOR FOOTY. One complete program built around your season and
 schedule."* (2026-08-24) · **WELCOME EXPLAINS THE COMPLETE LFA PROGRAM.**
 
-Welcome presents **Everything works together**, **Footy comes first**, and
-**See how you’re tracking**, using Sam's exact descriptions for phase-specific
-training, schedule fit and progress monitoring. The CTA reads **Build my
-program →** and keeps **Takes about 3 minutes**. The retired Built for footy /
-Your plan / Your schedule / Your body copy is absent. · `WORKING` —
+Welcome presents **YOUR PLAN / Everything works together**, **YOUR WEEK / Footy
+comes first**, and **YOUR PROGRESS / See how you’re tracking**, using Sam's
+exact descriptions for phase-specific training, schedule fit and progress
+monitoring. The CTA reads **Build my program →** and keeps **Takes about 3
+minutes**. The retired card copy is absent. · `WORKING` —
 `test:onboarding-presentation`. Seat `welcomecopy`.
 
 ---
@@ -4566,3 +4566,16 @@ The three Welcome cards begin directly with their main headings. **YOUR
 PROGRAM**, **YOUR WEEK** and **YOUR PROGRESS**, along with their label field and
 reserved label spacing, are removed. · `WORKING` —
 `test:onboarding-presentation`. Seat `welcomeeyebrows`.
+
+---
+
+**R-150** · *"put them back but reduce the padding between 'your plan' and
+'everything works together' so it's smaller and the same in each box ... change
+the main title back to Built for footy"* (Sam, 2026-08-24) · **WELCOME LABELS
+RETURN WITH ONE COMPACT GAP.**
+
+The Welcome hero reads **BUILT FOR FOOTY.** The three shared eyebrow labels are
+**YOUR PLAN**, **YOUR WEEK** and **YOUR PROGRESS**. All three use the same 2px
+gap before their main heading; no card owns independent spacing. This
+supersedes R-149. · `WORKING` — `test:onboarding-presentation`. Seat
+`welcomecompact`.

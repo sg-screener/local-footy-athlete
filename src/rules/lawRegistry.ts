@@ -1978,13 +1978,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-welcome-explains-the-complete-program',
-    law: 'Welcome uses Sam\'s approved TRAIN FOR FOOTY copy: one complete program; Everything works together; Footy comes first; See how you\'re tracking; their exact approved descriptions; Build my program; and Takes about 3 minutes. The cards have no Your Program, Your Week or Your Progress eyebrow labels or reserved label field. The retired Built for footy, Your plan, Your schedule and Your body copy is absent.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-148 + R-149 — Sam supplied the complete Welcome copy on 2026-08-24, then removed the three eyebrow labels.',
+    law: 'Welcome uses Sam\'s approved BUILT FOR FOOTY copy: one complete program; Your Plan / Everything works together; Your Week / Footy comes first; Your Progress / See how you\'re tracking; their exact approved descriptions; Build my program; and Takes about 3 minutes. All three eyebrow labels render through one shared 2px gap before the main heading. The retired card copy and TRAIN FOR title are absent.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-148 + R-150 — Sam supplied the complete Welcome copy, then restored the labels with compact shared spacing and the BUILT FOR FOOTY title. R-150 supersedes R-149.',
     guard: {
       state: 'guarded',
       by: 'test:onboarding-presentation',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `welcomecopy`; UPDATED UNDER R-149 by seat `welcomeeyebrows`. The onboarding presentation cells require every approved title, description, CTA and timing line in WelcomeScreen source; reject all four retired copy families; and reject the three eyebrow strings plus the label field and styles. R-148 TEST-FIRST LIVENESS: the two Welcome cells were the suite\'s only reds against the old screen (67/69), then 69/69. R-149 TEST-FIRST LIVENESS: the new absence cell was the suite\'s only red (69/70); deleting the data, render and reserved styles returned it to 70/70. NOT COVERED: simulator pixels, small-screen wrapping and the next physical-phone Release.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `welcomecopy`; UPDATED UNDER R-149 by `welcomeeyebrows`; UPDATED UNDER R-150 by `welcomecompact`. The onboarding presentation cells require every approved title, label, description, CTA and timing line; reject the retired card copy and TRAIN FOR title; require feature.label to render; and anchor the one featureLabelWrap style at marginBottom 2 so all cards share the same compact gap. R-150 TEST-FIRST LIVENESS: the three revised cells were the suite\'s only reds against the label-free TRAIN FOR screen (67/70); restoring the shared labels and BUILT FOR title returned it to 70/70. NOT COVERED: simulator pixels, small-screen wrapping and the next physical-phone Release.',
     },
   },
 ];
