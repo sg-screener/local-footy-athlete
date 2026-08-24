@@ -51,13 +51,6 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
         >
           What should I call you?
         </Text>
-        <Text
-          variant="body"
-          color={colors.text.secondary}
-          style={styles.subtitle}
-        >
-          So I can coach you properly.
-        </Text>
       </View>
 
       <View style={[styles.inputCard, shadows.xs]}>
@@ -86,10 +79,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...headingXL,
-    marginBottom: 8,
-  },
-  subtitle: {
-    lineHeight: 20,
   },
   inputCard: {
     flexDirection: 'row',

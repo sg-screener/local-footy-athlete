@@ -1910,6 +1910,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `exportcleanup`. `test:action-log` anchors the CompleteScreen error branch, requires the exact refusal export mount there without a Release gate, and rejects the component, test id and export wiring from Welcome and Profile. `test:profile-mirror-narrowing` independently rejects both the old Profile controls and their serializer imports. FIRST RUN: both suites red against the existing normal-screen diagnostics; after the cleanup the action-log suite was 12/0 and the new Profile cell passed while that suite retained only its two pre-existing unrelated reds. MUTATION: restoring the real Welcome import and mount makes the failure-only cell red; restoring the cleaned source makes it green. NOT COVERED: the completion error layout on simulator and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-name-question-stands-alone',
+    law: 'The onboarding Name screen asks "What should I call you?" without the retired "So I can coach you properly." subtitle and without replacement copy.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-142 — Sam, 2026-08-24: "remove so i can coach you properly".',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingcopy`. Section [0] of `src/__tests__/onboardingAnswerPresentationTests.ts` pins the retained question and rejects the exact retired subtitle. TEST-FIRST LIVENESS: the new absence cell was the suite\'s sole red against the existing screen (59/60); removing the subtitle returned the suite to 60/60. The screen also deletes the now-unused subtitle style instead of leaving a dead visual contract. NOT COVERED: simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

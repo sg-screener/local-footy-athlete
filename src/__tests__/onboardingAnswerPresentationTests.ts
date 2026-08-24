@@ -78,6 +78,15 @@ function ok(name: string, condition: unknown, detail?: string): void {
 const read = (relative: string): string =>
   stripComments(fs.readFileSync(path.join(repoRoot, relative), 'utf8'));
 
+console.log('\n[0] The name question stands on its own');
+{
+  const nameScreen = read('src/screens/onboarding/NameScreen.tsx');
+  ok('the approved name question remains',
+    /What should I call you\?/.test(nameScreen));
+  ok('the retired coaching subtitle is absent',
+    !/So I can coach you properly\./.test(nameScreen));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────

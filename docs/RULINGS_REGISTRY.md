@@ -4478,3 +4478,13 @@ surface, where an athlete can be blocked before Profile is reachable and the
 diagnostic may still explain the refusal. Nothing is exported automatically;
 sharing remains an explicit tap on that failure surface. · `WORKING` —
 `test:action-log` + `test:profile-mirror-narrowing`. Seat `exportcleanup`.
+
+---
+
+**R-142** · *"remove so i can coach you properly"* (Sam, 2026-08-24) · **THE
+NAME QUESTION STANDS ALONE.**
+
+The Name onboarding screen keeps **"What should I call you?"** and removes the
+subtitle **"So I can coach you properly."** No replacement sentence is added.
+The input follows the question after the existing section spacing. · `WORKING`
+— `test:onboarding-presentation`. Seat `onboardingcopy`.
