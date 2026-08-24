@@ -5879,3 +5879,50 @@ copy of its look.
 means "accessories only" or "deloaded", and inventing three would be this seat
 choosing athlete-facing symbols. Raised for Sam. · `WORKING` —
 `test:g1-landing-ask-flow`, back to its exact HEAD failure list. Seat `warmup`.
+
+---
+
+**R-224** · *"this still just says strength"*, and *"yeah go after that — fix the
+session naming ... i still want day card and week card to show the general thing
+i.e. strength — but for this drag and drop knowing slightly more detail is
+important"* (Sam, 2026-08-25) · **THE SPLIT HE ASKED FOR ALREADY EXISTED. THE
+SPECIFIC NAME DID NOT.**
+
+`VisiblePart` has carried `headline` (the specific name) and `bucket` (the
+category word) all along, exactly so the board can show one and the day and week
+cards the other — R-222 wired the board to `headline` and Sam still read
+"Strength", because **`headline` was falling back to the generic word for every
+session in the app.**
+
+⚠ **MEASURED: 42 OF 42 sessions carrying exercises** across In-season,
+Pre-season and Off-season resolved to `"Session"`, missed the strength label map
+and printed "Strength". **This was never a board defect — the day card says
+"Strength" for the same reason.**
+
+**TWO OWNERS OF ONE QUESTION DISAGREED, AND THE QUIETER ONE WON EVERY SURFACE.**
+`classifyGenerationSession` falls back from an empty `effectivePatterns` to
+`plannedPatterns`; `resolveSessionDisplayName` read `effectivePatterns` alone. 26
+of the 42 held a typed intent saying exactly what they were —
+`plannedPatterns: ["pull"]`, primary `pull`, archetype `upper` — with an empty
+delivery record. The namer now falls back the same way, on the same field, for
+the same stated reason.
+
+⚠ **THE FALLBACK IS TO THE TYPED PLAN, NOT TO PROSE.** `focus` and `name` stay
+deliberately unread: that pass-through leaked planner text onto an athlete's
+screen once (`surfaceAgreementTests` cell 3) and stays shut.
+
+⚠ **THE REMAINING 16 ARE A DIFFERENT DEFECT, AND THE APP ALREADY SHOUTS ABOUT
+IT.** They carry no typed intent at all. `test:session-naming` — dead at import
+since before this work — throws the reason: *"B1-PIVOT: the legacy
+strength-content builder is severed. A strength plan entry
+(`sched:2026-07-13:1:lower`) reached `fallbackExercisesForPlanEntry`, which means
+composeWeek did not cover a day the planner asked for."* **Those days are
+composed by a fallback that carries no plan**, which is a composer-coverage
+defect, not a naming one. Sam's Monday still reads "Strength" until it is fixed.
+
+· `WORKING` — `test:week-board` §8, mutation-proven: removing the fallback reds
+the three cells that name a session and only those. **§7 alone could not have
+caught this** — it proves the board reads `headline`, with fixtures that supply
+one. The cell is on the NAMER, where the disagreement was. It lives in
+`test:week-board` because `test:session-naming` reports nothing; move it back
+when that suite is alive. Seat `warmup`.

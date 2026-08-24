@@ -423,7 +423,30 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
     ? normalizeStrengthIntent(input.strengthIntent)
     : null;
   if (typedIntent) {
-    patterns = [...typedIntent.effectivePatterns];
+    /**
+     * ⚠ **EMPTY `effectivePatterns` FALLS BACK TO `plannedPatterns` — AND NOT
+     * DOING SO LEFT EVERY SESSION IN THE APP CALLED "Strength" (R-224).**
+     *
+     * Measured 2026-08-25 over `generateProgramLocally` for all three season
+     * phases: **42 of 42 sessions carrying exercises resolved to "Session"** and
+     * fell through to the generic label. 26 of them held a typed intent that
+     * said exactly what they were — `plannedPatterns: ["pull"]`, primary
+     * `pull`, archetype `upper` — with `effectivePatterns: []`.
+     *
+     * ⚠ **THE FALLBACK IS NOT INVENTED HERE. `classifyGenerationSession` HAS
+     * ALWAYS DONE IT**, on the same field, for the same reason: an empty
+     * `effectivePatterns` means nothing was recorded about delivery, not that
+     * nothing was planned. **Two owners of one question disagreed, and the
+     * quieter one won on every athlete-facing surface** — the day card, the week
+     * row and the board all read this path.
+     *
+     * This is a TYPED field, not text: it is the authored plan, so nothing here
+     * infers a name from prose. `focus`/`name` remain deliberately unread (see
+     * `partHeadline`) — that pass-through is a different defect and stays shut.
+     */
+    patterns = typedIntent.effectivePatterns.length > 0
+      ? [...typedIntent.effectivePatterns]
+      : [...typedIntent.plannedPatterns];
   } else {
     const visibleContentPatterns = movementPatternsFromVisibleContent(input);
     const legacyFocus = strengthTextForMovementInference(input.focus);

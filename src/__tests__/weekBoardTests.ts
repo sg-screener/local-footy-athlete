@@ -356,6 +356,63 @@ console.log('\n[7] A box names its session, so two of them can be told apart');
       .boxes[0].label === 'Team Training');
 }
 
+/* ══ 8. The name the board shows has to EXIST ══ */
+
+/**
+ * ⚠ **R-224 — 42 OF 42 SESSIONS WERE CALLED "Strength", AND §7 ABOVE COULD NOT
+ * SEE IT.** Sam, 2026-08-25, after §7 landed: *"this still just says strength"*.
+ *
+ * §7 proves the board reads `headline` rather than `bucket`. It says nothing
+ * about whether `headline` ever HOLDS a specific name — its fixtures supply one.
+ * Measured over `generateProgramLocally` for all three season phases: **every
+ * session carrying exercises resolved to "Session"**, missed the strength label
+ * map, and fell through to the generic word.
+ *
+ * **THE CAUSE WAS TWO OWNERS OF ONE QUESTION DISAGREEING.**
+ * `classifyGenerationSession` falls back from an empty `effectivePatterns` to
+ * `plannedPatterns`; `resolveSessionDisplayName` did not, and the quieter one
+ * won on every athlete-facing surface. This cell is on the NAMER, because that
+ * is where the disagreement was — a cell on the board would have gone green
+ * against a fixture while the app said "Strength" to Sam.
+ *
+ * ⚠ **THIS RUNS HERE BECAUSE `test:session-naming` DIES AT IMPORT** — it has
+ * done at HEAD since before this work, throwing `B1-PIVOT` before a single cell
+ * runs. Putting the rule in a suite that reports nothing would be writing it
+ * into the dark. Move it back when that suite is alive.
+ */
+console.log('\n[8] A typed plan names its session, even with no delivery record');
+{
+  const { resolveSessionDisplayName } = require('../utils/sessionNaming');
+  const name = (intent: any) => resolveSessionDisplayName({
+    strengthIntent: intent, exercises: [{ name: 'Barbell Row' }],
+    isTeamDay: false, tier: 'core',
+  }).trim();
+
+  ok('CONTROL — a delivered pattern names the session, as it always did',
+    name({ archetype: 'upper', primaryPattern: 'pull',
+      plannedPatterns: ['pull'], effectivePatterns: ['pull'] }) === 'Upper Pull');
+
+  /* THE DEFECT: the generator writes exactly this — a planned pattern with no
+     delivery record — on the majority of real sessions. */
+  ok('an EMPTY delivery record falls back to the plan, and the session is named',
+    name({ archetype: 'upper', primaryPattern: 'pull',
+      plannedPatterns: ['pull'], effectivePatterns: [] }) === 'Upper Pull',
+    'this returned "Session" and every surface then printed "Strength"');
+  ok('and the same holds for a push day',
+    name({ archetype: 'upper', primaryPattern: 'push',
+      plannedPatterns: ['push'], effectivePatterns: [] }) === 'Upper Push');
+  ok('and for a squat day',
+    name({ archetype: 'lower', primaryPattern: 'squat',
+      plannedPatterns: ['squat'], effectivePatterns: [] }) === 'Lower Squat');
+
+  /* ⚠ THE FALLBACK IS TO THE TYPED PLAN, NOT TO PROSE. `focus` and `name` stay
+     unread — that pass-through leaked planner text onto an athlete's screen
+     once (surfaceAgreementTests cell 3) and stays shut. */
+  ok('a session with NO typed plan is still not named from its raw text',
+    name(undefined) !== 'Lower Hinge' && name(undefined) !== 'Upper Pull',
+    'inferring a name from planner prose is a different defect, still closed');
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
   console.log('\nFailures:');
