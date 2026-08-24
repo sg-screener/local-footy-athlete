@@ -4702,3 +4702,14 @@ space before the text, then centres the icon inside that column. The title and
 body retain their existing horizontal position, and R-157's vertical centring
 remains intact. · `WORKING` — `test:onboarding-presentation`. Seat
 `onboardingtype`.
+
+---
+
+**R-162** · Program Day-card surface consistency (Sam, 2026-08-24) · **THE
+THREE DAY CARDS USE THE SAME DARK BACKGROUND.**
+
+On the Program Day view, the programmed session, Team Training and **Need to
+make a change?** cards share the same darker background and border. Team
+Training and the change card reuse the programmed card's existing surface style
+rather than copying its colour values. · `WORKING` — `test:day-first-timeline`.
+Seat `onboardingtype`.

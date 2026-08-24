@@ -391,3 +391,38 @@ all three icons now share a real centred column. Vertical centring is unchanged.
 - Simulator reinspection after refresh.
 - Dynamic Type wrapping.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-162 — match all three Program Day-card surfaces
+
+The programmed session already used the darker `dayRowCalm` surface
+(`#101010`, border `#1F1F1F`). Team Training and the change card fell back to
+the lighter default Card surface (`#161616`). Two options were compared:
+
+1. Copy the dark colours into both lower-card styles.
+2. Apply the programmed card's existing surface style to both lower cards.
+
+Option 2 landed, so one token owns all three backgrounds and borders.
+
+### Evidence
+
+- BEFORE: `test:day-first-timeline` — 52/54 with two unrelated existing reds.
+- TEST FIRST: 52/55; the new surface-sharing cell was the only additional red.
+- AFTER: 53/55; only the same two unrelated mobility/Gunshow reds remain.
+- The first post-fix run exposed a test-anchor fault: `<Card style` did not
+  match formatted JSX with a newline. The corrected `<Card\\s+style` anchor
+  reaches the real mount while retaining independent assertions for the shared
+  token and both consumers.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; neither HomeScreenV2 nor the edited suite is named.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded, raising guarded laws 145 → 146 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-162 adds neither.
+
+### NOT COVERED
+
+- Simulator reinspection after refresh.
+- Week-view cards and the active Session-screen change hub.
+- Physical-iPhone Release rebuild.

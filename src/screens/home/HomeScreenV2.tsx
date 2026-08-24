@@ -1202,7 +1202,7 @@ export default function HomeScreenV2() {
                box on this screen sits at. This card is a SIBLING of that
                container rather than a child of it, so it does not inherit the
                gap and has to say it. */
-            style={styles.changeHub}
+            style={[styles.changeHub, styles.dayRowCalm]}
             /* THE ROW KEEPS ITS OWN ID. `home-life-fact-chips` is the
                coordinate five Maestro flows and the day-first gate reach this
                row by; a card that renamed it would silently break every one. */
@@ -2629,7 +2629,10 @@ function TeamTrainingCard({
   onLog: () => void;
 }) {
   return (
-    <Card style={styles.teamTrainingCard} testID="day-team-training-card">
+    <Card
+      style={[styles.teamTrainingCard, styles.dayRowCalm]}
+      testID="day-team-training-card"
+    >
       <Text style={styles.teamTrainingTitle}>{signedCopy('day.club_training.title')}</Text>
       <View style={styles.teamTrainingRow}>
         <View style={styles.timelineIconMarker}>

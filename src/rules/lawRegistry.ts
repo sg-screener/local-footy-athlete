@@ -2042,6 +2042,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`; UPDATED UNDER R-160 by the same seat. The presentation suite pins the exact Game Day instruction, both screens\' explicit single-row request, the shared picker\'s one-container map over its canonical DAYS list, six-pixel horizontal gap, flex-one square geometry, zero inner padding, absence of a circular radius, and retention of the 3-3-1 default for non-row consumers. R-159 TEST-FIRST LIVENESS: the four new requirements were the suite\'s only reds against the old 3-3-1 Game Day (89/93); the shared layout variant returned it to 93/93. R-160 TEST-FIRST LIVENESS: the new usual-gym-days row cell was the suite\'s only red against the 3-3-1 screen (93/94); selecting the existing shared variant returned it to 94/94 without changing the cap path. `test:game-anchor` independently keeps its whole-week picker cell green but remains 13/15 on two pre-existing unrelated generation/reader findings. NOT COVERED: simulator pixels, small-screen clipping, Dynamic Type and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-day-companion-cards-share-programmed-surface',
+    law: 'On the Program Day view, the programmed session, Team Training and Need to make a change cards share the same darker card background and border. The two companion cards must reuse the programmed card surface style rather than copying its colour values.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-162 — Sam found Team Training and Need to make a change were lighter than the programmed box and required both to match it.',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite first proves the programmed surface token was found and still owns #101010/#1F1F1F, then requires both the TeamTraining Card and Day-surface SessionChangeHub mount to include that exact style object. TEST-FIRST LIVENESS: the new cell was the suite\'s only additional red against the lighter #161616 default (52 pass / 3 fail versus the existing 52 / 2); sharing dayRowCalm returned it to 53 / 2. INSTRUMENT CORRECTION: the first post-fix run stayed red because its `<Card style` anchor rejected a harmless JSX newline; broadening that anchor to `<Card\\s+style` made the detector match the actual mount while its separate token and two-consumer assertions remained intact. NOT COVERED: simulator reinspection, Week-view cards, active Session screen change hub and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

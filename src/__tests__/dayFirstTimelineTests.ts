@@ -1038,6 +1038,18 @@ run('the status circles sit in a card with words above them', () => {
     'Away did not move into the Week-only Edit this week menu');
 });
 
+run('Team Training and the change card share the programmed card surface', () => {
+  const home = homeScreenSource();
+  const calmStyle = home.match(/dayRowCalm:\s*\{[^}]+\}/)?.[0] ?? '';
+  assert(calmStyle.includes("backgroundColor: '#101010'")
+    && calmStyle.includes("borderColor: '#1F1F1F'"),
+  'the programmed card surface token could not be found — this cell would be comparing against nothing');
+  assert(/<Card\s+style=\{\[styles\.teamTrainingCard, styles\.dayRowCalm\]\}/.test(home),
+    'Team Training does not reuse the programmed card surface');
+  assert(/<SessionChangeHub[\s\S]{0,900}style=\{\[styles\.changeHub, styles\.dayRowCalm\]\}/.test(home),
+    'Need to make a change does not reuse the programmed card surface');
+});
+
 /**
  * ITEM 28 — THE OTHER HALF OF THE MOVE, AND THE HALF A DELETION WOULD PASS.
  *
