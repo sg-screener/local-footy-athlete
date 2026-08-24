@@ -2176,13 +2176,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-profile-setup-edit-looks-actionable',
-    law: 'Profile names the focus row Main goal/s. Its “Something changed? Tell the coach” control is a full-width lime primary medium button with black text and pencil, using the same shared visual treatment as Start Session rather than a flush or dark data row.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-179 for the label and R-182 for the superseding lime primary-button treatment — Sam required the setup-change action to be as obvious as Start Session.',
+    law: 'Profile names the focus row Main goal/s. Its “Something changed? Tell the coach” control is a full-width lime primary medium button with black text and no decorative left icon, using the same shared visual treatment as Start Session rather than a flush or dark data row.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-179 for the label, R-182 for the superseding lime primary-button treatment and R-184 for removing the pencil — Sam required the setup-change action to be obvious without an unnecessary icon.',
     guard: {
       state: 'guarded',
       by: 'test:profile-reset-ui',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. R-179 first replaced the flush footer with a dark edit-button treatment. R-182 supersedes that visual choice: TWO OPTIONS COMPARED were hand-copying Start Session\'s lime geometry into Profile, or rendering the same shared V2Button primitive at medium size. The shared primitive landed, keeping the Profile margin owner only. TEST FIRST for R-182: the existing Profile tape gained the shared-primary assertion and began 173/1 against the dark button; replacing it with the shared medium primary button returned `test:profile-reset-ui` to 174/0 and its chained wordmark tape to 15/0. The guard pins the black 18-point pencil and forbids the retired dark surface. NOT COVERED: simulator or physical-iPhone pixels, real VoiceOver speech and the next Release rebuild.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. R-179 first replaced the flush footer with a dark edit-button treatment. R-182 supersedes that visual choice: TWO OPTIONS COMPARED were hand-copying Start Session\'s lime geometry into Profile, or rendering the same shared V2Button primitive at medium size. The shared primitive landed, keeping the Profile margin owner only. TEST FIRST for R-182: the existing Profile tape gained the shared-primary assertion and began 173/1 against the dark button; replacing it with the shared medium primary button returned `test:profile-reset-ui` to 174/0 and its chained wordmark tape to 15/0. UPDATED FOR R-184: keeping the pencil with adjusted spacing was compared with removing the redundant decoration while retaining the shared button. Sam chose removal. The bounded source cell began 174/1 against the pencil and returned `test:profile-reset-ui` to 175/0 after the `leftIcon` was removed; it pins the icon-free CTA and still forbids the retired dark surface. NOT COVERED: simulator or physical-iPhone pixels, real VoiceOver speech and the next Release rebuild.',
     },
   },
   {

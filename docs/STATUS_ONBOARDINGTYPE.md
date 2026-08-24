@@ -1164,3 +1164,23 @@ buttons, keyboard ownership and selection controls remain unchanged.
 
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Small-screen text wrapping, real VoiceOver speech and the next Release build.
+
+---
+
+## R-184 — remove the Profile setup button pencil
+
+The **Something changed? Tell the coach** wording already explains the action,
+so its decorative pencil has been removed. The full-width lime shared button,
+label, press behaviour and accessibility label are unchanged.
+
+### Evidence
+
+- TEST FIRST: the bounded CTA cell made `test:profile-reset-ui` 174/175 against
+  the existing pencil.
+- AFTER: `test:profile-reset-ui` is 175/175 and its chained LFA wordmark tape is
+  15/15.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Real VoiceOver speech and the next Release rebuild.

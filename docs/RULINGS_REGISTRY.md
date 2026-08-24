@@ -4988,3 +4988,13 @@ values, spacing and 12-point card radius; edit rows use the established
 selection controls, so only the Profile-specific surface changes rather than
 restyling every popup in the app. · `WORKING` — `test:profile-reset-ui`. Seat
 `onboardingtype`.
+
+---
+
+**R-184** · Profile setup button has no pencil (Sam, 2026-08-24) ·
+**THE WORDING ALREADY NAMES THE ACTION.**
+
+The full-width lime **Something changed? Tell the coach** button keeps the same
+shared medium primary treatment and behaviour, but has no decorative pencil
+icon. This supersedes only the pencil requirement in R-182. · `WORKING` —
+`test:profile-reset-ui`. Seat `onboardingtype`.

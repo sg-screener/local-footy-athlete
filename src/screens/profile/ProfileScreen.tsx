@@ -618,13 +618,6 @@ export default function ProfileScreen() {
               onPress={onProgramSetupChanged}
               size="md"
               glow={false}
-              leftIcon={(
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={18}
-                  color={colors.text.inverse}
-                />
-              )}
               style={styles.setupChangeButton}
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
