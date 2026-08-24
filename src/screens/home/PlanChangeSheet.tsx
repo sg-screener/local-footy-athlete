@@ -358,6 +358,12 @@ export function PlanChangeSheet({
     }
     if (initialAction === 'move') {
       if (initialMove) {
+        /* `closeOnSuccess` — a dragged move needs no result screen. Sam,
+         * 2026-08-25, on seeing one: *"you see this pop up which doesn't really
+         * make any sense"*. It read "Done. Session moved to 2026-07-15" under
+         * the heading "What do you want to do with it?", which is a menu's
+         * question answered by a menu the athlete never opened. **The board
+         * showing the session in its new box IS the confirmation.** */
         apply(initialMove.scope === 'team'
           ? {
               kind: 'move_team_night',
@@ -370,7 +376,8 @@ export function PlanChangeSheet({
               fromDate: date!,
               toDate: initialMove.toDate,
               ...(initialMove.scope === 'whole_day' ? {} : { scope: initialMove.scope }),
-            });
+            },
+          { closeOnSuccess: true });
         return;
       }
       startMove();
@@ -638,8 +645,30 @@ export function PlanChangeSheet({
     setStep({ kind: 'confirm_remove', scope: scopes[0]?.id ?? 'whole_day', label: null });
   };
 
+  /**
+   * ⚠ **A DRAGGED MOVE RUNS THIS SHEET WITHOUT SHOWING IT — SAM, 2026-08-25
+   * (R-218d): *"the old pop up for 'add swap remove' etc pops up for a second,
+   * but then disappears"*.**
+   *
+   * Routing the drag through this component was right — it is the one place
+   * that previews risk, raises the G-1 and team-night asks and commits through
+   * the durable door, and duplicating any of that would have been a second
+   * change path. **Showing its MENU was wrong**: the athlete answered every
+   * question that menu asks with their hand, so the sheet flashed a question
+   * and an answer nobody needed.
+   *
+   * So it mounts INVISIBLE for a dragged move and reveals itself only if a step
+   * appears that genuinely needs the athlete — a G-1 ask, a team-night ask, a
+   * block, a confirm, or a failure. `step.kind === 'actions'` is the untouched
+   * initial state, so "still on actions" means "nothing has asked yet".
+   *
+   * **A silent success closes it before any step is set at all**, through
+   * `closeOnSuccess` — the same escape the bin flow already used.
+   */
+  const runningSilently = !!initialMove && step.kind === 'actions';
+
   return (
-    <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
+    <Sheet visible={visible && !runningSilently} onClose={onClose} testID="plan-change-sheet">
       <SheetHeader
         title={fromWeek ? weekdayLabel(date) : signedCopy('plan_change.session_options')}
         subtitle={fromWeek ? 'What do you want to do with it?' : weekdayLabel(date)}

@@ -229,9 +229,21 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
 
   /* ⚠ THE BOARD CHOSE THE CHANGE; IT DOES NOT DECIDE IF THE CHANGE IS ALLOWED. */
   ok('a dragged move goes through the ONE move door, not a new commit path',
-    /initialAction: 'move'[\s\S]{0,120}move: \{ toDate: args\.toDate, scope \}/.test(home)
-      && /if \(initialMove\) \{[\s\S]{0,400}apply\(/.test(sheet),
+    /initialAction: 'move'[\s\S]{0,200}move: \{ toDate: args\.toDate, scope \}/.test(home)
+      && /if \(initialMove\) \{[\s\S]{0,600}apply\(/.test(sheet),
     'the producer still refuses an illegal move and still raises the G-1 ask');
+
+  /* ⚠ **THE BOARD ASKS THE PRODUCER WHETHER THE DESTINATION WAS EVER OFFERED.**
+   * This was in the plan and was NOT built in the first drag commit, so a drag
+   * could commit a move the menu it replaced would never have listed —
+   * `weekBoardDropRefusal` only ever answered the board's own SHAPE rules. */
+  ok('a drop the producer never offered is refused, not committed',
+    /listPlanChangeOptionsForDay\(\{[\s\S]{0,160}date: args\.fromDate/.test(home)
+      && /offer\?\.destinations\.find\(\(entry\) => entry\.date === args\.toDate\)/.test(home)
+      && /if \(!destination\) \{[\s\S]{0,200}return;/.test(home),
+    'the board must ask the owner, not answer for it');
+  ok('and it repeats the producer\'s own refusal rather than inventing words',
+    /setBoardRefusal\(offered\?\.move\.refusal\?\.message/.test(home));
   ok('the club night drags as this-week-only, and never raises the permanent ask',
     /teamNightRoute: 'this_week_only'/.test(sheet)
       && !/teamNightRoute: 'permanent'/.test(sheet),

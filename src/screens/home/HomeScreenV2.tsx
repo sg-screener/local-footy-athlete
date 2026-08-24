@@ -67,6 +67,7 @@ import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
 import type { PlanChangeBinScopeId, PlanChangeMoveScopeId } from '../../utils/planChangeTypes';
+import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
 import { buildWeekBoardDay, type WeekBoardBox } from '../../rules/weekBoard';
 import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
@@ -572,13 +573,37 @@ export default function HomeScreenV2() {
     setBoardRefusal(null);
     const scope = args.box.kind === 'team_training' ? 'team' : args.box.scope;
     if (!scope) return;
+    /**
+     * ⚠ **THE PRODUCER MUST HAVE OFFERED THIS DESTINATION. THIS CHECK WAS IN
+     * THE PLAN AND WAS NOT BUILT, AND THAT GAP IS RECORDED HERE RATHER THAN
+     * QUIETLY CLOSED.**
+     *
+     * `weekBoardDropRefusal` only ever answered the board's own SHAPE rules —
+     * team training, game day, a full day. Without this, a drag could commit a
+     * move the menu it replaced would never have listed, because the board was
+     * asking a different question from the one the producer answers.
+     *
+     * `listPlanChangeOptionsForDay` is the same call `PlanChangeSheet` makes,
+     * so there is no second legality here either: the board asks the owner and
+     * repeats its refusal.
+     */
+    const offered = listPlanChangeOptionsForDay({
+      visibleWeek: weekDays, date: args.fromDate, todayISO: todayISOLocal(),
+    });
+    const offer = offered?.move.scopes.find((entry) => entry.id === scope);
+    const destination = offer?.destinations.find((entry) => entry.date === args.toDate);
+    if (!destination) {
+      setBoardRefusal(offered?.move.refusal?.message
+        ?? "That move isn't available on this week.");
+      return;
+    }
     setChangeSheetEntry({
       date: args.fromDate,
       initialAction: 'move',
       origin: 'week',
       move: { toDate: args.toDate, scope },
     });
-  }, []);
+  }, [weekDays]);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
