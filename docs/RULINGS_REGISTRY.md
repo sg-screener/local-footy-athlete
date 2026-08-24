@@ -4658,3 +4658,13 @@ Each generation education card places its icon beside one text block containing
 both the title and supporting sentence. The row centres the icon vertically
 against that complete block rather than against the title alone. · `WORKING` —
 `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-158** · Welcome first-card heading replacement (Sam, 2026-08-24) ·
+**TRAIN EVERYTHING THAT MATTERS.**
+
+The **YOUR PLAN** card heading is **Train everything that matters**. Its body
+remains **"Strength, speed, conditioning and recovery."** The retired **Built
+as one program** heading is absent. · `WORKING` —
+`test:onboarding-presentation`. Seat `onboardingtype`.

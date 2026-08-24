@@ -269,3 +269,25 @@ centred against the text block's real height rather than a fixed pixel guess.
 
 - Simulator pixels and Dynamic Type wrapping.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-158 — replace the first Welcome-card heading
+
+Sam replaced **Built as one program** with **Train everything that matters**.
+The existing short body remains unchanged.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 86/88; the exact-copy and
+  retired-copy cells were the only failures.
+- AFTER: `test:onboarding-presentation` — 88/88.
+- `test:law-registry` — 11/14 with the same three existing reds; the updated
+  Welcome law remains guarded and in-chain.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-158 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and heading wrapping.
+- Physical-iPhone Release rebuild.

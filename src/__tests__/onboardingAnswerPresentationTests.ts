@@ -172,7 +172,7 @@ console.log('\n[0d] Welcome explains the complete LFA program');
     'FOOTY.',
     'One complete program built around your season and schedule.',
     'YOUR PLAN',
-    'Built as one program',
+    'Train everything that matters',
     'Strength, speed, conditioning and recovery.',
     'Footy comes first',
     'Gym work fits around team training, game day and your schedule.',
@@ -186,7 +186,7 @@ console.log('\n[0d] Welcome explains the complete LFA program');
   ok('the complete approved Welcome copy is present',
     approvedWelcomeCopy.every((copy) => welcomeScreen.includes(copy)));
   ok('the retired Welcome copy is absent',
-    !/TRAIN FOR|Training built around your season\.|YOUR PROGRAM|YOUR SCHEDULE|Fits your week|YOUR BODY|Keeps you available|Everything works together|recovery specific to each phase of the season/.test(welcomeScreen));
+    !/TRAIN FOR|Training built around your season\.|YOUR PROGRAM|YOUR SCHEDULE|Fits your week|YOUR BODY|Keeps you available|Everything works together|Built as one program|recovery specific to each phase of the season/.test(welcomeScreen));
   ok('all three eyebrow labels render through one shared compact gap',
     /feature\.label/.test(welcomeScreen)
       && /featureLabelWrap:\s*\{[\s\S]{0,100}marginBottom:\s*2/.test(welcomeScreen)

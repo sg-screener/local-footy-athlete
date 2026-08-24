@@ -41,7 +41,7 @@ type FeatureCardData = {
 const FEATURES: FeatureCardData[] = [
   {
     label: 'YOUR PLAN',
-    title: 'Built as one program',
+    title: 'Train everything that matters',
     description: 'Strength, speed, conditioning and recovery.',
     icon: 'dumbbell',
   },
