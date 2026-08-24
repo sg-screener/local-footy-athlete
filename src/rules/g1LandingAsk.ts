@@ -177,9 +177,25 @@ const GUNSHOW_ROUTE: G1LandingRoute = {
   // 3, *"yes offer females the primer"*. Renaming the id would fork every
   // suite and stored decision that carries it, to fix a word no athlete sees.
   id: 'take_the_gunshow',
+  /**
+   * ⚠ **"INSTEAD", NOT "KEEP" — SAM, 2026-08-25 (R-223), VERBATIM: *"friday's
+   * gunshow instead"*.**
+   *
+   * He read *"Keep Friday's Gunshow"* on an empty Friday and said *"it always
+   * says keep fridays gunshow even if there is no gunshow programmed"*. He is
+   * right, and the fault is the VERB, not the route: this route is offered
+   * **only on an EMPTY G-1** (see `g1LandingRoutesFor`), where its job is to
+   * PLACE the session the day is built for. "Keep" promises something is
+   * already there. Route (a) — the one that really does keep what the day
+   * holds — is the only row entitled to that word.
+   *
+   * The female path takes the same correction: Sam noted it *"probably says
+   * this on the female pathway too even though it's never programmed"*, and it
+   * did.
+   */
   label: (context) => (context.athleteGender === 'female'
-    ? `Keep ${context.g1DayName}'s Primer`
-    : `Keep ${context.g1DayName}'s Gunshow`),
+    ? `${context.g1DayName}'s Primer instead`
+    : `${context.g1DayName}'s Gunshow instead`),
   // The female sub-line is R-129's SIGNED Primer sentence, reused verbatim
   // from the Add menu (`planChangeProducer` CATEGORY_COPY) — no new words.
   detail: (context) => (context.athleteGender === 'female'

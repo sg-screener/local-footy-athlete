@@ -5846,3 +5846,36 @@ name still labels its box.
 2026-08-08 ruling) because they answer a different question — what KIND of day
 is this — and `rules/weekBoard` reaches nothing but the board. · `WORKING` —
 `test:week-board` §7, 59 passed / 0 failed. Seat `warmup`.
+
+---
+
+**R-223** · *"friday's gunshow instead"*, *"it always says keep fridays gunshow
+even if there is no gunshow programmed — and i assume it probably says this on
+the female pathway too"*, and *"just match session options style"* (Sam,
+2026-08-25) · **"KEEP" BELONGS ONLY TO THE ROW THAT REALLY KEEPS SOMETHING.**
+
+⚠ **THE VERB WAS THE FAULT, NOT THE ROUTE.** The Gunshow route is offered **only
+on an EMPTY G-1** — Sam signed it 2026-07-30 so an athlete adding work the day
+before a game is offered the session that day was built for — and its job there
+is to PLACE that session. *"Keep"* promises something is already there. It now
+reads **"Friday's Gunshow instead"**, and the female path takes the same
+correction (**"Friday's Primer instead"**), which Sam predicted before it was
+checked.
+
+⚠ **AND THERE ARE TWO GUNSHOW ROWS, WHICH THE COPY CENSUS CAUGHT WHEN THE FIRST
+EDIT REWORDED BOTH.** Route (a) reads *"Keep Friday's Gunshow"* on a day that
+really holds one, and that is correct and stays. Only the empty-day route
+changed. **The census refused the over-broad edit rather than the app shipping
+it** — the design document is the contract, and it did its job.
+
+**THE STYLE FIX IS THE EXIT, NOT THE ROWS.** The G-1 rows already share Session
+Options' padding and hairline divider; what differed is that this step ended in
+another LIST ROW, so the way out looked like a fourth thing to choose. It now
+ends in the same centred ghost `Button` those sheets use — the component, not a
+copy of its look.
+
+⚠ **NOT DONE, AND NOT GUESSED AT: the icon chips.** Session Options rows carry a
+38pt round glyph and the G-1 routes have none. There is no existing glyph that
+means "accessories only" or "deloaded", and inventing three would be this seat
+choosing athlete-facing symbols. Raised for Sam. · `WORKING` —
+`test:g1-landing-ask-flow`, back to its exact HEAD failure list. Seat `warmup`.

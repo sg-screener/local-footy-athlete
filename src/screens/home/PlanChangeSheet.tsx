@@ -1086,13 +1086,24 @@ export function PlanChangeSheet({
               }}
             />
           ))}
-          {/* R-221 — "Go back", not "Go back — leave Friday free": route (a)
-              three lines above is already "Leave Friday free", and the back row
-              was repeating it. */}
-          <MenuOption
+          {/* ⚠ **R-221 / R-223 — THE SAME BACK TREATMENT AS THE OTHER POPUPS.**
+            * Sam, 2026-08-25: *"it doesn't match the style of the other pop
+            * ups"* and *"the bottom button should just say 'go back'"*.
+            *
+            * Session Options and the Week Adjust sheet both end in a centred
+            * ghost button; this step ended in another list row, so the way OUT
+            * looked like a fourth thing to choose. It is the same `Button`
+            * those sheets use, not a copy of its look. The rows above already
+            * share their padding and hairline divider — what differed was the
+            * exit. */}
+          <Button
             label={G1_LANDING_BACK_ROW.label()}
+            variant="ghost"
+            size="md"
+            glow={false}
             testID="g1-route-back"
             onPress={() => setStep(step.backStep)}
+            style={{ marginTop: 8 }}
           />
         </View>
       )}

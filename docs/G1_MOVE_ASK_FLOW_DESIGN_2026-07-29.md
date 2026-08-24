@@ -208,7 +208,7 @@ day was built for; the menu had three ways to place *their* choice and never
 offered the day's own. Not shown on an occupied day, where route (a) already
 keeps what is there.
 
-> - **Keep Friday's Gunshow** — light upper-body pump, what the day before a
+> - **Friday's Gunshow instead** — light upper-body pump, what the day before a
 >   game is built for.
 
 **The back row.** On a warning screen "Back" reads as "cancel"; what leaving
@@ -321,3 +321,12 @@ The power-counting golden was regenerated: 49 lines, all inside
 `preseason-team-and-game`, and NO conditioning content changed. This fix only
 removed an unsatisfiable demand; the 49 lines are the practice-match ruling's own
 effect on a scenario that used to throw before it could be recorded.
+
+**R-223 (Sam, 2026-08-25), VERBATIM:** *"friday's gunshow instead"*. The row read
+**Keep Friday's Gunshow**; he saw it on an EMPTY Friday and said *"it always says
+keep fridays gunshow even if there is no gunshow programmed"*. The verb was the
+fault, not the route: this route is offered only on an empty G-1, where its job
+is to PLACE the session the day is built for, and "Keep" promises something is
+already there. Route (a) — which really does keep what the day holds — is the
+only row entitled to that word. The female path takes the same correction
+(**Friday's Primer instead**), which he predicted before it was checked.
