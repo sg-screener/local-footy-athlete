@@ -26,3 +26,12 @@ green. The run reported 45 passed / 2 failed; both inherited failures name
 untouched popup counts in `SeasonPhaseShiftSheet` / `HomeScreenV2`.
 
 NOT COVERED: screenshots, broad audits, physical iPhone and other popup routes.
+
+## 2026-08-25 — Today-only status wording
+
+The Not feeling 100% card now says **Tell us what’s changed and we’ll adjust
+today.** The signed copy row changed; the card still reads that one owner.
+
+Focused guard: `test:session-change-hub`.
+
+NOT COVERED: screenshots, broad audits, physical iPhone and other status flows.

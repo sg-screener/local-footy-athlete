@@ -921,9 +921,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.change_card.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-195: “Tell us what’s changed and '
-        + 'we’ll adjust your training.”',
-      text: 'Tell us what’s changed and we’ll adjust your training.',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-195/R-200: “Tell us what’s changed '
+        + 'and we’ll adjust today.”',
+      text: 'Tell us what’s changed and we’ll adjust today.',
     },
     {
       id: 'day.plan_options.accessibility_label',

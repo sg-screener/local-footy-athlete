@@ -5178,3 +5178,13 @@ The popup opened from the programmed-session card's `•••` control is heade
 **Session options**. The previous **Plan change** heading is retired on this
 entry path. The date and the Add / Move / Remove actions remain unchanged. ·
 `WORKING` — `test:accessibility-contracts`. Seat `headeralign`.
+
+---
+
+**R-200** · Day status explanation speaks only about today (Sam, 2026-08-25) ·
+**A SAME-DAY STATUS CHECK PROMISES A SAME-DAY ADJUSTMENT.**
+
+The **Not feeling 100%?** card says **Tell us what’s changed and we’ll adjust
+today.** The previous ending **we’ll adjust your training** is retired. Tired,
+Sick and Injured remain unchanged. · `WORKING` —
+`test:session-change-hub`. Seat `headeralign`.

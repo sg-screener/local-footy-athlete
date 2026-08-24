@@ -86,7 +86,7 @@ console.log('\n[3] There is exactly ONE change section, and it is labelled');
   ok('the hub is mounted', live.includes('<SessionChangeHub'));
   ok('the Day card carries Sam’s new status question and explanation verbatim',
     /id: 'day\.change_card\.heading'[\s\S]{0,300}text: 'Not feeling 100%\?'/.test(copySource)
-      && /id: 'day\.change_card\.subline'[\s\S]{0,300}text: 'Tell us what’s changed and we’ll adjust your training\.'/.test(copySource));
+      && /id: 'day\.change_card\.subline'[\s\S]{0,300}text: 'Tell us what’s changed and we’ll adjust today\.'/.test(copySource));
   ok('the open-session card keeps its own change-session heading',
     /heading=\{signedCopy\('session\.change_card\.heading'\)\}/.test(live)
       && /id: 'session\.change_card\.heading'[\s\S]{0,300}text: 'Need to make a change\?'/.test(copySource));
