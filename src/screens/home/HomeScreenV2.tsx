@@ -66,6 +66,8 @@ import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
+import { buildWeekBoardDay } from '../../rules/weekBoard';
+import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
   applyMobilityFlowExerciseDecisions,
   applyRecoveryAddonExerciseDecisions,
@@ -371,6 +373,12 @@ export default function HomeScreenV2() {
   };
 
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
+  /**
+   * R-218 — the Week board. Screen state, never persisted: it is where the
+   * athlete's thumb is, not a decision about their training, and it resets with
+   * the screen exactly as the session sections' expanded state does.
+   */
+  const [weekBoardOpen, setWeekBoardOpen] = useState(false);
   const [changeSheetEntry, setChangeSheetEntry] = useState<{
     date: string;
     initialAction?: PlanChangeInitialAction;
@@ -525,6 +533,33 @@ export default function HomeScreenV2() {
    * about, so tapping it re-selects rather than emptying the screen. Game days
    * keep their action sheet in both.
   */
+  /**
+   * The board's rows. `buildWeekBoardDay` decides what a day HOLDS; this only
+   * pairs its answer with the dated head the resolved day already carries, so
+   * no date is formatted here and no day is decomposed here.
+   */
+  const weekBoardRows: WeekBoardRow[] = useMemo(() => weekDays.map((day) => ({
+    date: day.date,
+    short: day.short,
+    dayNumber: String(Number(day.date.slice(8, 10))),
+    isToday: day.isToday,
+    board: buildWeekBoardDay(
+      visibleWeek.days.find((visible) => visible.date === day.date)
+        ?? { date: day.date, parts: [] } as any,
+    ),
+  })), [visibleWeek, weekDays]);
+
+  /* ⚠ **THE SAME DOORS THE RETIRED MENU ROWS RAISED — SAM: *"follow the same
+   * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
+   * the Add and Remove rows sent; only the thing the athlete touched changed.
+   * There is no second add flow and no second remove flow to drift. */
+  const handleBoardAdd = useCallback((date: string) => {
+    setChangeSheetEntry({ date, initialAction: 'add', origin: 'week' });
+  }, []);
+  const handleBoardRemove = useCallback((date: string) => {
+    setChangeSheetEntry({ date, initialAction: 'remove', origin: 'week' });
+  }, []);
+
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
     const isSelected = dayFirst ? true : isNormal
@@ -954,6 +989,18 @@ export default function HomeScreenV2() {
             onCancel={() => setWeekSessionEditAction(null)}
           />
         )}
+        {/* ⚠ **THE BOARD BORROWS THE PICKER'S BANNER, AND THAT IS THE POINT.**
+          * It is the shape the athlete already knows for "the week is in a
+          * different mode right now, here is the way out" — a second banner
+          * treatment for the same idea would be a second visual language for
+          * one state. Its Cancel is the ONLY exit, because the board replaces
+          * the day rows: without it the week would have no way back. */}
+        {weekBoardOpen && (
+          <MoveBanner
+            text={signedCopy('week.board.banner')}
+            onCancel={() => setWeekBoardOpen(false)}
+          />
+        )}
 
         {/* ONLY WEEK'S COMPACT DATE NAV SITS BETWEEN THE TOGGLE AND THE WEEK.
             Today still puts its card directly under the control. On Week, Sam's
@@ -1132,7 +1179,15 @@ export default function HomeScreenV2() {
               count={modifierCount}
               onPress={() => setModifiersSheetOpen(true)}
             />
-            {weekDays.map((day, idx) => renderDayRow(day, idx))}
+            {/* ⚠ **R-218 — MANAGE SESSIONS LANDS HERE, AND THE DAY ROWS STAND
+              * DOWN WHILE IT IS OPEN.** Sam, 2026-08-25: *"you hit manage
+              * sessions — you get taken straight here — the dates should not be
+              * selectable"*. Rendering the board BESIDE the rows would leave two
+              * readings of one week on one screen, and the rows are exactly the
+              * thing whose whole-row tap he is replacing. */}
+            {weekBoardOpen
+              ? <WeekBoard rows={weekBoardRows} onAdd={handleBoardAdd} onRemove={handleBoardRemove} />
+              : weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
 
@@ -1474,6 +1529,11 @@ export default function HomeScreenV2() {
           setWeekEditVisible(false);
           setExpandedWeekIdx(-1);
           setWeekSessionEditAction(action);
+        }}
+        onOpenBoard={() => {
+          setWeekEditVisible(false);
+          setExpandedWeekIdx(-1);
+          setWeekBoardOpen(true);
         }}
       />
 
@@ -3149,6 +3209,8 @@ interface WeekEditSheetProps {
   onAddFixture: () => void;
   onAway: () => void;
   onEditSession: (action: WeekSessionEditAction) => void;
+  /** R-218 — Manage sessions goes straight to the board. */
+  onOpenBoard: () => void;
 }
 
 function WeekEditSheet({
@@ -3160,6 +3222,7 @@ function WeekEditSheet({
   onAddFixture,
   onAway,
   onEditSession,
+  onOpenBoard,
 }: WeekEditSheetProps) {
   const [step, setStep] = React.useState<'actions' | 'session_action'>('actions');
   const [savingBye, setSavingBye] = React.useState(false);
@@ -3229,7 +3292,7 @@ function WeekEditSheet({
               label={signedCopy('week.edit_sheet.manage_sessions.label')}
               sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
               icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
-              onPress={() => setStep('session_action')}
+              onPress={onOpenBoard}
               testID="edit-week-session"
             />
           </View>

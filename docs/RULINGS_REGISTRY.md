@@ -5566,3 +5566,42 @@ had. It is cancelled with `marginTop: -spacing.sm`, written as the SAME token so
 a literal `-8` cannot silently reopen the gap the day the body's spacing
 changes. A cell pins both halves together. · `WORKING` —
 `test:session-change-hub`, ALL GREEN 56. Seat `warmup`.
+
+---
+
+**R-218** · *"you hit manage sessions — you get taken straight here — the dates
+should not be selectable ... the day should be broken into its own thing but in
+2 sections ... For days where nothing is planned, they can just be one box. Game
+day is also one box. For rest days you should have a + icon ... for any box that
+has a session in it, you should have a trash can symbol ... and these boxes
+should be able to be dragged and dropped."* (Sam, 2026-08-25) · **THE WEEK BOARD.
+Plan: `docs/WEEK_BOARD_PLAN_2026-08-25.md`.**
+
+His four answers, asked before the plan: **two boxes is the cap**; a drop onto an
+occupied box **swaps**; **every empty box carries a `+`**; the team-training box
+**drags as `this_week_only`, no question**. His three corrections to the first
+draft: the empty box is a property of **room**, not of rest days; **a day may
+never hold three and speed is conditioning**; the old pathway is deleted **last**.
+
+⚠ **THE BOXES ARE THE EXISTING MOVE SCOPES, AND THE DROP RULES ALREADY
+EXISTED.** `move_session` already takes `whole_day | strength | conditioning |
+recovery | team`, and `planChangeProducer` already computes destinations,
+already refuses an occupied G-1 and already knows when a day is full. The board
+RENDERS those owners. **A drop legality computed in the screen would be the
+second authority this repo has already paid for twice.**
+
+⚠ **THE SEAT'S "SPEED MAKES A THIRD PART" FLAG WAS RAISED AND WITHDRAWN,
+MEASURED.** The generator places `speedBlock` as `pre_lift` when the day has
+lifts and `standalone` when it does not, so speed is never a third thing.
+Census over `generateProgramLocally` for all three season phases at 2026-07-13:
+**84 workouts, ZERO days yielding more than two boxes.** The over-cap branch is
+kept and renders every part rather than hiding one, so a future regression is
+visible instead of silent.
+
+**SLICE 1-3 LANDED** — the derivation, the board, the `+` and the bin, both
+raising the same `changeSheetEntry` the retired rows raised. **Drag is slice 4
+and is NOT built.** The old Add / Move / Remove rows are still compiled and are
+now unreachable, deliberately and temporarily, at Sam's instruction that the old
+pathway die last; `dayFirstTimelineTests` pins that exact transitional state so
+a half-finished slice is visible rather than silently normal. · `WORKING` —
+`test:week-board` 26 passed / 0 failed. Seat `warmup`.

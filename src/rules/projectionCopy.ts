@@ -792,6 +792,18 @@ export function registerProjectionCopy(): void {
      * 2026-08-25 (R-217): the section plus *"will replace the 'add an exercise'
      * option in the 3 dot menu"*. A signed string with no surface is copy the
      * next build finds, trusts as ruled, and puts back on a menu he cleared. */
+    /* R-218 — the Week board's mode banner. It says what the athlete can DO
+     * here, because the board offers three actions at once and a banner naming
+     * only one of them would be the old "pick a day, then say what you meant"
+     * flow wearing new words. */
+    {
+      id: 'week.board.banner',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-218, from his description of the '
+        + 'board: a + to add, a trash can to remove, and boxes that "should be '
+        + 'able to be dragged and dropped".',
+      text: 'Add, remove or drag your sessions',
+    },
     {
       id: 'session.quick_add.label',
       source: 'sam_ruling',

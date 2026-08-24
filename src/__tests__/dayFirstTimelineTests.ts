@@ -1887,12 +1887,27 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
     && sheet.includes('name="airplane" size={18} color="#B9A7FF"')
     && sheet.includes('name="pencil-outline" size={18} color="#5BD98A"'),
   'the Week edit rows no longer use the established bye, game, away and session icon treatment');
-  assert(sheet.includes("setStep('session_action')")
-    && sheet.includes("'What do you want to do?'")
+  /* ⚠ **R-218 — MANAGE SESSIONS NOW LANDS ON THE BOARD, NOT ON A CHOICE OF
+   * THREE.** Sam, 2026-08-25: *"you hit manage sessions — you get taken
+   * straight here"*. This assertion REQUIRED the opposite and is inverted, not
+   * deleted (`gate-must-watch-the-deleted-surface`).
+   *
+   * ⚠ **THE THREE ROWS STILL EXIST AND ARE UNREACHABLE, AND THAT IS DELIBERATE
+   * AND TEMPORARY.** Sam asked for the old pathway to be deleted LAST — *"so
+   * it's easier to connect what happens when you add a session, or remove a
+   * session"* — because the board's `+` and bin call the same handlers. This
+   * cell pins that transitional state EXACTLY: the route is the board, the
+   * rows and their handlers are still compiled. The final slice deletes both
+   * and re-inverts this cell. **A slice that leaves this half-done is visible
+   * here rather than silently normal.** */
+  assert(!sheet.includes("setStep('session_action')")
+    && sheet.includes('onPress={onOpenBoard}'),
+  'Manage sessions no longer opens the board directly');
+  assert(sheet.includes("'What do you want to do?'")
     && !sheet.includes('label="Swap a session"')
     && ["onEditSession('add')", "onEditSession('move')", "onEditSession('remove')"]
       .every((route) => sheet.includes(route)),
-  'the weekly session flow does not choose Add, Move or Remove first');
+  'the old Add / Move / Remove rows were deleted before the final slice');
   const expectedWeekSessionActionCopy = [
     ['week.edit_sheet.session_action.add.label', 'Add a session'],
     ['week.edit_sheet.session_action.add.subline', 'Choose a day to add it to'],
