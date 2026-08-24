@@ -2,7 +2,7 @@
  * ONE PLACE TO CHANGE THE SESSION, AND EVERY BUTTON IN IT GOES SOMEWHERE.
  *
  * Sam, 2026-08-24: the Day card keeps Tired · Sick · Injured as direct status
- * controls, then owns one separate Edit day doorway into Add · Move · Remove.
+ * controls; Add · Move · Remove enter from the programmed session card.
  * The old "Want to change something?" link and dedicated session Swap action
  * are gone. The open-session card keeps only Equipment · Injury · Add because
  * Quick Swap and Quick Remove live on each exercise row.
@@ -300,19 +300,24 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
   ok('the old separate change link is deleted from the Day card',
     !/Want to change something\?/.test(dayLive)
       && !/testID="make-change-link"/.test(dayLive));
-  ok('one clear Edit day doorway opens the existing three-action menu',
-    /editAction=\{[\s\S]{0,500}testID: 'home-edit-day'/.test(dayLive)
-      && /setChangeSheetEntry\(\{\s*date: dayFirstDay\.date\s*\}\)/.test(dayLive)
+  ok('one small session-card menu opens the existing three-action menu',
+    /testID="home-plan-options"/.test(dayLive)
+      && /name="dots-horizontal"/.test(dayLive)
+      && /onPlanOptions=\{\(\) => setChangeSheetEntry\(\{ date: day\.date \}\)\}/.test(dayLive)
       && planSheetSource.includes('testID="plan-change-add"')
       && planSheetSource.includes('sessionMoveIngress(selectedWorkout.id)')
       && /label="Remove this session"/.test(planSheetSource));
-  ok('Edit day cannot silently default to Add instead of showing that menu',
+  ok('Plan options cannot silently default to Add instead of showing that menu',
     !/initialAction\s*=\s*'add'/.test(planSheetSource)
       && /!initialAction\) return;/.test(planSheetSource));
-  ok('the shared owner renders Edit day separately from the status-chip row',
-    /editAction\?: SessionChangeEditAction/.test(hubLive)
-      && /testID=\{editAction\.testID\}/.test(hubLive)
-      && /styles\.editDoor/.test(hubLive));
+  ok('the status-card owner contains no scheduling doorway',
+    !/editAction\??:|SessionChangeEditAction|styles\.editDoor/.test(hubLive));
+  ok('the dots stay visually small but own a 44 by 44 invisible tap target',
+    /planOptionsButton:\s*\{[\s\S]{0,160}width:\s*24[\s\S]{0,80}height:\s*24/.test(dayLive)
+      && /testID="home-plan-options"[\s\S]{0,260}hitSlop=\{10\}/.test(dayLive));
+  ok('days without a programmed session keep a direct Add session doorway',
+    /testID="home-add-session"/.test(dayLive)
+      && /onAddSession=\{\(\) => setChangeSheetEntry\(\{ date: day\.date, initialAction: 'add' \}\)\}/.test(dayLive));
   ok('there is no dedicated whole-session Swap entry on Day or Week',
     !/Swap this session|Swap a session|plan-change-swap|edit-week-action-swap/.test(
       `${dayLive}\n${planSheetSource}`,

@@ -44,8 +44,8 @@ tags:
 # `day-timeline` is the day shape's new witness: it exists in this shape only,
 # which is the property `week-strip` used to carry.
 #
-# `home-edit-day` is asserted, not tapped: R-194 makes it the one doorway from
-# this Day shape into deterministic Add / Move / Remove edits.
+# `home-plan-options` is asserted, not tapped: R-196 puts the deterministic
+# Add / Move / Remove doorway on the programmed session card.
 - assertNotVisible:
     id: "week-strip"
 - assertVisible:
@@ -55,7 +55,7 @@ tags:
 - assertVisible:
     id: "view-workout-button"
 - assertVisible:
-    id: "home-edit-day"
+    id: "home-plan-options"
 - assertVisible:
     id: "home-life-fact-chips"
 - takeScreenshot: "artifacts/ui-walk/walk-1-day"

@@ -46,7 +46,7 @@ tags:
     id: "day-row-mon-state-selected"
 
 - tapOn:
-    id: "home-edit-day"
+    id: "home-plan-options"
 - tapOn:
     id: "session-move-action-.*"
 - tapOn:

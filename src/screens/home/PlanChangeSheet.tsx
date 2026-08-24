@@ -77,9 +77,9 @@ import { getSessionComponents } from '../../utils/sessionComponents';
  * session?" and no longer reads a workout's name or `sessionTier` to decide what
  * an athlete may do with it. Two things went with that:
  *
- *   - THE OLD INTERMEDIATE MENU IS GONE (ruling 7/8). The Day card now enters
- *     the canonical Add, Move and Remove action menu through one Edit day
- *     doorway. The editable-session branch that chose between
+ *   - THE OLD INTERMEDIATE MENU IS GONE (ruling 7/8). The programmed session
+ *     card now enters the canonical Add, Move and Remove action menu through
+ *     one compact plan-options doorway. The editable-session branch that chose between
  *     "Edit this session" and "Add optional session" went with it — it was a
  *     capability question answered by comparing a workout's type and tier against
  *     the word recovery and lowercasing its name, which is the second-derivation
@@ -302,7 +302,7 @@ export function PlanChangeSheet({
   };
 
   // Week deep links choose an action and date, then enter the same Add, Move or
-  // Remove sequence. Day's Edit day doorway intentionally omits initialAction,
+  // Remove sequence. Day's plan-options doorway intentionally omits initialAction,
   // so the canonical three-action menu remains visible. There is no dedicated
   // whole-session Swap entry.
   useEffect(() => {
@@ -586,7 +586,7 @@ export function PlanChangeSheet({
         </Text>
       )}
 
-      {/* EDIT DAY'S FIRST STEP. Week deep links may still skip it after the
+      {/* PLAN OPTIONS' FIRST STEP. Week deep links may still skip it after the
           athlete has already chosen Add / Move / Remove there; nested questions
           return here on Back. The dedicated whole-session Swap action is gone.
           Every row's availability is a capability the

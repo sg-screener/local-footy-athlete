@@ -1640,7 +1640,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries status and one separate Edit day doorway', () => {
+run('the chip row carries status and no scheduling doorway', () => {
   const home = homeScreenSource();
   const hub = changeHubSource();
   const rowStart = home.indexOf('<SessionChangeHub');
@@ -1689,9 +1689,8 @@ run('the chip row carries status and one separate Edit day doorway', () => {
       + 'under the copy regime and are Sam\'s to sign; a sentence smuggled in here '
       + 'is unsigned copy on the busiest row of the screen.');
   }
-  assert(/editAction=\{[\s\S]{0,500}testID: 'home-edit-day'/.test(row)
-    && /signedCopy\('day\.change_card\.edit_day'\)/.test(row),
-  'the Day card does not expose one separately styled, signed Edit day doorway');
+  assert(!/editAction=/.test(row),
+    'the physical-status card still owns a scheduling doorway');
 });
 
 run('the old status bars did not survive alongside their own chips', () => {
@@ -1803,7 +1802,7 @@ run('the add-fixture control shows in BOTH competitive phases, labelled by phase
     + 'already have a game.');
 });
 
-run('Week keeps one edit menu while Day enters it through Edit day', () => {
+run('Week keeps one edit menu while Day enters it through the session card menu', () => {
   const home = homeScreenSource();
   const hook = fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
@@ -1818,9 +1817,9 @@ run('Week keeps one edit menu while Day enters it through Edit day', () => {
     'Edit this week is no longer a subtly distinct, left-aligned button');
   assert(!home.includes('Want to change something?')
     && !home.includes('testID="make-change-link"')
-    && home.includes("testID: 'home-edit-day'")
-    && /setChangeSheetEntry\(\{\s*date: dayFirstDay\.date\s*\}\)/.test(home),
-  'Day does not enter the existing Add / Move / Remove menu through Edit day');
+    && home.includes('testID="home-plan-options"')
+    && /onPlanOptions=\{\(\) => setChangeSheetEntry\(\{ date: day\.date \}\)\}/.test(home),
+  'Day does not enter the existing Add / Move / Remove menu through its programmed-session card');
 
   const sheetStart = home.indexOf('function WeekEditSheet');
   const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);

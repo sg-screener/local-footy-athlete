@@ -926,11 +926,18 @@ export function registerProjectionCopy(): void {
       text: 'Tell us what’s changed and we’ll adjust your training.',
     },
     {
-      id: 'day.change_card.edit_day',
+      id: 'day.plan_options.accessibility_label',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-24, R-194: replace the three direct '
-        + 'scheduling buttons with one clear “Edit day” doorway.',
-      text: 'Edit day',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-196: put a compact three-dot '
+        + 'plan-options control on the programmed session card.',
+      text: 'Plan options',
+    },
+    {
+      id: 'day.add_session.action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-196: when no programmed-session '
+        + 'card exists, retain a visible direct doorway for adding one.',
+      text: 'Add a session',
     },
 
     // ── The injury review's two section headings, R-124. ──

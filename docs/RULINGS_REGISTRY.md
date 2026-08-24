@@ -5130,3 +5130,19 @@ unchanged beneath it. The active workout's Equipment / Injury / Add hub is a
 different question and therefore retains **Need to make a change?** plus its
 existing session-specific explanation. · `WORKING` —
 `test:session-change-hub` + `test:day-first-timeline`. Seat `onboardingtype`.
+
+---
+
+**R-196** · Plan options live on the programmed session card (Sam, 2026-08-25) ·
+**STATUS CHANGES THE ATHLETE; PLAN OPTIONS CHANGE THE SESSION.**
+
+The Day status card contains only **Tired**, **Sick** and **Injured**. A compact
+`•••` control sits beside the programmed session's tier badge and opens the
+existing deterministic Add / Move / Remove menu. The dots remain visually small,
+but their invisible touch area is 44 × 44 points. Rest and Team Training-only
+days retain a direct **Add a session** doorway because no programmed-session card
+exists there to own the dots; Game Day keeps its specialised controls. This
+supersedes R-194's full-width **Edit day** presentation, not its separation of
+status from scheduling or any plan-change validation/write rule. · `WORKING` —
+`test:session-change-hub` + `test:day-first-timeline` + simulator tap-through.
+Seat `onboardingtype`.

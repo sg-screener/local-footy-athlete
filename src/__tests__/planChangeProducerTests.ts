@@ -706,8 +706,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] HomeScreenV2 keeps the weekly day-level PlanChangeSheet',
     /<PlanChangeSheet\b/.test(homeSrc)
       && !homeSrc.includes('"make-change-link"')
-      && /testID: 'home-edit-day'/.test(homeSrc)
-      && /setChangeSheetEntry\(\{\s*date: dayFirstDay\.date\s*\}\)/.test(homeSrc));
+      && /testID="home-plan-options"/.test(homeSrc)
+      && /onPlanOptions=\{\(\) => setChangeSheetEntry\(\{ date: day\.date \}\)\}/.test(homeSrc));
   ok('[9] DayWorkoutScreenV2 removes the weekly PlanChangeSheet',
     !/<PlanChangeSheet\b/.test(dayWorkoutSrc)
       && !/Want to change something\?/.test(dayWorkoutSrc));

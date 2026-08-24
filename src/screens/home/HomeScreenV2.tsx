@@ -593,6 +593,8 @@ export default function HomeScreenV2() {
           return isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx);
         }}
         onViewWorkout={() => handleViewWorkout(day)}
+        onPlanOptions={() => setChangeSheetEntry({ date: day.date })}
+        onAddSession={() => setChangeSheetEntry({ date: day.date, initialAction: 'add' })}
         /* ── LOG SESSION IS THE CLUB FORM, IN PLACE — Sam, 2026-08-22 ──
            *"the log session button left over - should just be a pop up like the
            game day one = not take you inside session view"*.
@@ -1127,11 +1129,10 @@ export default function HomeScreenV2() {
           </View>
         )}
 
-        {/* ONE DAY STATUS CARD + ONE EDIT DOOR — Sam, 2026-08-24. Tired, Sick
-            and Injured remain immediate facts about the athlete. Add / Move /
-            Remove are a different concern, so one Edit day row opens the
-            existing capability-driven menu instead of mixing three scheduling
-            chips into the status row. Game days keep their fixture controls.
+        {/* ONE DAY STATUS CARD — Sam, 2026-08-25. Tired, Sick and Injured remain
+            immediate facts about the athlete. Add / Move / Remove are a
+            different concern and now enter from the programmed session card's
+            plan-options control. Game days keep their fixture controls.
             The open workout still reuses this visual component for its narrower
             Equipment / Injury / Add set. */}
         {isNormal && dayFirst && (
@@ -1149,13 +1150,6 @@ export default function HomeScreenV2() {
                coordinate five Maestro flows and the day-first gate reach this
                row by; a card that renamed it would silently break every one. */
             rowTestID="home-life-fact-chips"
-            editAction={dayFirstDay && dayFirstDay.workout?.workoutType !== 'Game'
-              ? {
-                  label: signedCopy('day.change_card.edit_day'),
-                  testID: 'home-edit-day',
-                  onPress: () => setChangeSheetEntry({ date: dayFirstDay.date }),
-                }
-              : undefined}
             actions={[
               { id: 'tired' as const,
                 testID: 'home-tired-entry',
@@ -1758,6 +1752,10 @@ interface DayRowProps {
   normal: boolean;
   onPress: () => void;
   onViewWorkout: () => void;
+  /** Opens the existing deterministic Add / Move / Remove menu for this work. */
+  onPlanOptions: () => void;
+  /** Preserves the Add doorway where no programmed-session card exists. */
+  onAddSession: () => void;
   onFinishTeam: () => void;
   onLogGame: () => void;
   onGameDayActions: () => void;
@@ -2231,7 +2229,7 @@ function WeekDayCardHeader({
  */
 function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
-  hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
+  hasWorkout, isGame, normal, onPress, onViewWorkout, onPlanOptions, onAddSession, onFinishTeam,
   onLogGame, onGameDayActions, staleWarning,
   feedbackReceipts, sessionLogged, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
@@ -2343,6 +2341,13 @@ function DayRow({
   const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
   const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
   const cardSelected = normal && (dayShape ? isSelected : day.isToday);
+  // A small visual control with a full physical target. It belongs to the
+  // programmed work card, never to Team Training or Game Day: those have their
+  // own specialised controls and must not become movable strength sessions by
+  // sharing this doorway. `hitSlop={10}` expands the visible 24pt glyph button
+  // to a 44pt touch target without making the card header taller.
+  const showPlanOptions = dayShape && isSelected && normal
+    && hasWorkout && !isGame && !isTeamOnly;
 
   /* ── THE TITLE LEADS THE CARD ──
      Sam, 2026-08-22: *"we no longer need todays session or the date in the top
@@ -2381,7 +2386,24 @@ function DayRow({
             </Text>
           </View>
         </View>
-        <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
+        <View style={styles.selectedBadgeCluster}>
+          {rowBadges}
+          {showPlanOptions ? (
+            <Pressable
+              onPress={onPlanOptions}
+              accessibilityRole="button"
+              accessibilityLabel={signedCopy('day.plan_options.accessibility_label')}
+              testID="home-plan-options"
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.planOptionsButton,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <MaterialCommunityIcons name="dots-horizontal" size={18} color="#B5B5B5" />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -2487,6 +2509,14 @@ function DayRow({
               <>
                 <Text style={styles.expandedMeta}>{signedCopy('day.club_training.solo_helper')}</Text>
                 <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+                <Button
+                  label={signedCopy('day.add_session.action')}
+                  variant="secondary"
+                  size="md"
+                  glow={false}
+                  onPress={onAddSession}
+                  testID="home-add-session"
+                />
               </>
             ) : isOptionalSession ? (
               <>
@@ -2532,6 +2562,14 @@ function DayRow({
       {dayShape && isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
           <Text style={styles.expandedMeta}>Freshen up. Adapt. Go again.</Text>
+          <Button
+            label={signedCopy('day.add_session.action')}
+            variant="secondary"
+            size="md"
+            glow={false}
+            onPress={onAddSession}
+            testID="home-add-session"
+          />
         </View>
       )}
       </View>
@@ -4600,6 +4638,12 @@ const styles = StyleSheet.create({
     gap: 8,
     flexShrink: 1,
     flexWrap: 'wrap',
+  },
+  planOptionsButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayLabel: {
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',

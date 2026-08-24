@@ -1534,3 +1534,39 @@ change does not make the session-edit surface ask the wrong question.
 
 - Physical-iPhone Release, VoiceOver reading, the retained active-session
   heading viewed on glass in this pass and unusual accessibility text sizes.
+
+---
+
+## R-196 — move plan options onto the programmed session card
+
+The full-width Edit day row is gone from the physical-status card. A compact
+three-dot control now sits beside the programmed session's tier badge and opens
+the same deterministic Add / Move / Remove sheet. Its visible frame is 24 × 24;
+10 points of hit slop on every side make the actual tap target 44 × 44 without
+increasing the card header height. Rest and Team Training-only days keep a direct
+Add a session doorway because they have no programmed-session card to own dots.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: create a new session-card menu and duplicate the plan
+  actions, or relocate the existing PlanChangeSheet doorway. The relocation
+  landed because capability, warning, confirmation and writes remain with their
+  existing owner.
+- TEST FIRST: `test:session-change-hub` began 59/63 with four new cells red
+  against Edit day. AFTER: 63/63.
+- LIVENESS: changing the hit slop from 10 to 9 made the target-size cell fail at
+  62/63; restoring 10 returned it green.
+- `test:day-first-timeline` remains at its exact inherited 54/56 baseline; its
+  two existing reds still name mobility review wiring and a generated Gunshow
+  fixture. `test:signed-copy-extraction` is 7/7.
+- `test:compile` remains at the concurrent 483-error / 60-worsened-pair baseline
+  and names none of this slice's changed product files.
+- LIVE SIMULATOR, no screenshots: `home-plan-options` was visible,
+  `home-edit-day` absent, tapping the dots showed Add / Move / Remove, and the
+  Rest-day Add a session fallback opened the Add type picker.
+
+### NOT COVERED
+
+- Physical-iPhone Release, exact pixels on every device width, VoiceOver
+  reading/order, every day capability combination and committing a real plan
+  edit through each action.

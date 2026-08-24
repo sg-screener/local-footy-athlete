@@ -7,14 +7,14 @@
  * visual design as the Day screen — not a separate row of plain text pills …
  * Do not keep separate Day and Session implementations."*
  *
- * Sam, 2026-08-24: the Day page keeps Tired, Sick and Injured as direct status
- * controls and puts Add, Move and Remove behind one separately styled Edit day
+ * Sam, 2026-08-25: the Day page keeps Tired, Sick and Injured as direct status
+ * controls. Add, Move and Remove now enter from the programmed session card's
+ * compact plan-options control, so this physical-status card owns no scheduling
  * doorway. The open-session page keeps Equipment, Injury and Add; row-level
  * Quick Swap / Quick Remove own exercise changes there.
  *
  * The shared component owns presentation, never a frozen surface list. Its two
- * callers supply deliberately disjoint direct-action sets; Day's plan edits
- * enter through the separate doorway prop.
+ * callers supply deliberately disjoint direct-action sets.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
@@ -32,7 +32,7 @@
  * disabled state for a caller to hand it. An action the surface cannot serve is
  * simply not in the list.
  *
- * WRITER: `screens/home/HomeScreenV2` (Day, three status actions + Edit day) and
+ * WRITER: `screens/home/HomeScreenV2` (Day, three status actions) and
  * `screens/home/DayWorkoutScreenV2` (open session, three session-wide actions).
  * READER: the athlete. TEST: `test:session-change-hub` sections [8] and [9].
  */
@@ -47,7 +47,7 @@ import { signedCopy, type SignedCopy } from '../rules/signedCopy';
 
 /**
  * THE DAY SURFACE'S DIRECT SET. These are athlete-state facts. Day/session plan
- * edits live behind the separate Edit day doorway below the row.
+ * edits live on the programmed session card.
  */
 export const DAY_CHANGE_ACTION_IDS = [
   'tired', 'sick', 'injured',
@@ -82,14 +82,6 @@ export interface SessionChangeAction {
   testID?: string;
   /** Defaults to the shared label. Overridden where a door's spoken name differs. */
   accessibilityLabel?: string;
-  accessibilityHint?: string;
-}
-
-/** One distinct doorway for day/session edits; never another status chip. */
-export interface SessionChangeEditAction {
-  label: SignedCopy;
-  onPress: () => void;
-  testID: string;
   accessibilityHint?: string;
 }
 
@@ -200,7 +192,6 @@ export function SessionChangeHub({
   rowTestID,
   heading,
   subline,
-  editAction,
   style,
 }: {
   actions: readonly SessionChangeAction[];
@@ -211,8 +202,6 @@ export function SessionChangeHub({
   heading?: SignedCopy;
   /** Defaults to the signed sub-line. The session surface narrows it to today. */
   subline?: string;
-  /** Day-only doorway into the deterministic Add / Move / Remove menu. */
-  editAction?: SessionChangeEditAction;
   /**
    * ⚠ **THE GAP ABOVE THIS CARD IS THE SURFACE'S, NOT THIS COMPONENT'S** —
    * Sam, 2026-08-22, on the Day view: *"make them all the same gap as the gap
@@ -227,7 +216,7 @@ export function SessionChangeHub({
    */
   style?: StyleProp<ViewStyle>;
 }) {
-  if (actions.length === 0 && !editAction) return null;
+  if (actions.length === 0) return null;
   return (
     <Card tone="default" padding="lg" radius="lg" style={style} testID={testID}>
       {/* ⚠ **THE WORDS COME FROM THE SHEET, NOT FROM HERE.** They were literals
@@ -274,27 +263,6 @@ export function SessionChangeHub({
           );
         })}
       </View>
-      {editAction && (
-        <Pressable
-          onPress={editAction.onPress}
-          accessibilityRole="button"
-          accessibilityLabel={editAction.label}
-          accessibilityHint={editAction.accessibilityHint}
-          testID={editAction.testID}
-          style={({ pressed }) => [styles.editDoor, pressed && { opacity: 0.7 }]}
-        >
-          <Text style={styles.editDoorLabel}>{editAction.label}</Text>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="m9 5 7 7-7 7"
-              stroke="#8A8A8A"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </Pressable>
-      )}
     </Card>
   );
 }
@@ -317,23 +285,5 @@ const styles = StyleSheet.create({
   chipLabel: {
     color: '#8A8F98', fontSize: 12, lineHeight: 16, fontWeight: '600',
     letterSpacing: 0.2, textAlign: 'center',
-  },
-  editDoor: {
-    minHeight: 48,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#101010',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  editDoorLabel: {
-    color: '#F5F5F5',
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '700',
   },
 });
