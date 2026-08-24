@@ -985,9 +985,9 @@ run('the status circles sit in a card with words above them', () => {
   assert(/signedCopy\('day\.change_card\.heading'\)/.test(hub)
     && /signedCopy\('day\.change_card\.subline'\)/.test(hub),
     'the heading and sub-line above the circles are not read from the sheet.');
-  assert(!/Need to make a change\?/.test(home) && !/Need to make a change\?/.test(hub)
-    && !/Update your status to modify your program\./.test(home)
-    && !/Update your status to modify your program\./.test(hub),
+  assert(!/Not feeling 100%\?/.test(home) && !/Not feeling 100%\?/.test(hub)
+    && !/Tell us what’s changed and we’ll adjust your training\./.test(home)
+    && !/Tell us what’s changed and we’ll adjust your training\./.test(hub),
     'the change card\'s sentences are hardcoded. They are PROPOSED sheet entries '
     + '(batch 33) awaiting Sam — a literal is a word he can never re-word. They '
     + 'were literals in the shared component for one day, which is why this cell '

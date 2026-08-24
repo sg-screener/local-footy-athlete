@@ -5118,3 +5118,15 @@ and commits through the accepted-state transaction owner. This supersedes only
 R-181's six-direct-button presentation; its movement and Team Training rules
 remain standing. · `WORKING` — `test:session-change-hub` +
 `test:day-first-timeline` + `test:move-scoping`. Seat `onboardingtype`.
+
+---
+
+**R-195** · Day status card names the athlete-state question plainly (Sam, 2026-08-25) ·
+**STATUS WORDS STAY ON THE STATUS SURFACE.**
+
+The Day status card reads **Not feeling 100%?** followed by **Tell us what’s
+changed and we’ll adjust your training.** Tired, Sick and Injured remain
+unchanged beneath it. The active workout's Equipment / Injury / Add hub is a
+different question and therefore retains **Need to make a change?** plus its
+existing session-specific explanation. · `WORKING` —
+`test:session-change-hub` + `test:day-first-timeline`. Seat `onboardingtype`.

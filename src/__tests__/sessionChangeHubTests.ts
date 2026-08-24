@@ -37,6 +37,8 @@ const HUB = join(__dirname, '..', 'components', 'SessionChangeHub.tsx');
 const hubSource = readFileSync(HUB, 'utf8');
 const PLAN_SHEET = join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx');
 const planSheetSource = readFileSync(PLAN_SHEET, 'utf8');
+const COPY = join(__dirname, '..', 'rules', 'projectionCopy.ts');
+const copySource = readFileSync(COPY, 'utf8');
 
 let passed = 0;
 const failures: string[] = [];
@@ -82,12 +84,12 @@ console.log('\n[2] The always-visible row Swap/Remove icons are gone');
 console.log('\n[3] There is exactly ONE change section, and it is labelled');
 {
   ok('the hub is mounted', live.includes('<SessionChangeHub'));
-  /* THE WORDS MOVED TO THE SHARED OWNER (2026-08-19) and are asserted THERE.
-   * Leaving this cell pointed at the screen would have failed for the right
-   * reason — the screen no longer draws the panel — while sounding like the
-   * question had been deleted. */
-  ok('and the shared owner carries Sam’s question, verbatim',
-    hubSource.includes('Need to make a change?'));
+  ok('the Day card carries Sam’s new status question and explanation verbatim',
+    /id: 'day\.change_card\.heading'[\s\S]{0,300}text: 'Not feeling 100%\?'/.test(copySource)
+      && /id: 'day\.change_card\.subline'[\s\S]{0,300}text: 'Tell us what’s changed and we’ll adjust your training\.'/.test(copySource));
+  ok('the open-session card keeps its own change-session heading',
+    /heading=\{signedCopy\('session\.change_card\.heading'\)\}/.test(live)
+      && /id: 'session\.change_card\.heading'[\s\S]{0,300}text: 'Need to make a change\?'/.test(copySource));
   ok('the hub has a stable id', live.includes('day-workout-change-hub'));
   ok('there is only one of it',
     (live.match(/<SessionChangeHub/g) ?? []).length === 1,

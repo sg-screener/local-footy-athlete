@@ -198,6 +198,7 @@ export function SessionChangeHub({
   actions,
   testID = 'session-change-hub',
   rowTestID,
+  heading,
   subline,
   editAction,
   style,
@@ -206,6 +207,8 @@ export function SessionChangeHub({
   testID?: string;
   /** Defaults to `<testID>-actions`; the Day surface keeps `home-life-fact-chips`. */
   rowTestID?: string;
+  /** Defaults to Day's signed status question. Session supplies its own heading. */
+  heading?: SignedCopy;
   /** Defaults to the signed sub-line. The session surface narrows it to today. */
   subline?: string;
   /** Day-only doorway into the deterministic Add / Move / Remove menu. */
@@ -231,7 +234,9 @@ export function SessionChangeHub({
           in this file for one day and that is a word Sam could never re-word;
           `day.change_card.*` are the signed rows and moving the panel must not
           quietly orphan them. Held by `test:day-first-timeline`. */}
-      <Text style={styles.heading}>{signedCopy('day.change_card.heading')}</Text>
+      <Text style={styles.heading}>
+        {heading ?? signedCopy('day.change_card.heading')}
+      </Text>
       <Text style={styles.subline}>
         {subline ?? signedCopy('day.change_card.subline')}
       </Text>

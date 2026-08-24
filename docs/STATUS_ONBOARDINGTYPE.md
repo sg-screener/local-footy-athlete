@@ -1508,3 +1508,29 @@ previews, confirms and commits the action.
 
 - Physical-iPhone Release, VoiceOver order, every day capability combination
   and a real committed Add/Move/Remove sequence.
+
+---
+
+## R-195 — reword the Day status card only
+
+The Day card now asks **Not feeling 100%?** and says **Tell us what’s changed
+and we’ll adjust your training.** The active-workout Equipment / Injury / Add
+hub retains its own **Need to make a change?** heading, so a Day-only copy
+change does not make the session-edit surface ask the wrong question.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: replace the shared heading globally, or split only the
+  heading identity while keeping one shared visual component. The isolated
+  signed heading landed because the two surfaces now ask different questions.
+- TEST FIRST: two exact-copy cells were red against the old shared wording.
+  AFTER: `test:session-change-hub` is 61/61.
+- `test:day-first-timeline` remains at its exact inherited 54/2 baseline, with
+  the signed-copy and no-hardcoded-copy cells green.
+- LIVE SIMULATOR, no screenshots: both new lines, Tired, Injured and Edit day
+  were visible together in the Day card.
+
+### NOT COVERED
+
+- Physical-iPhone Release, VoiceOver reading, the retained active-session
+  heading viewed on glass in this pass and unusual accessibility text sizes.

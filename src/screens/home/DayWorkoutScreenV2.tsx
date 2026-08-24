@@ -2219,6 +2219,7 @@ export default function DayWorkoutScreenV2() {
                same `spacing.md`. The Day screen spaces its boxes at 8, so the
                shared card stopped holding either number. */
             style={styles.changeHub}
+            heading={signedCopy('session.change_card.heading')}
             subline={signedCopy('session.change_card.subline')}
             actions={[
               ...(sessionEquipmentRequirements.length > 0

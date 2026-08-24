@@ -758,6 +758,13 @@ export function registerProjectionCopy(): void {
       text: 'Update today\'s session using the buttons below',
     },
     {
+      id: 'session.change_card.heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — retained for the active-session Equipment / Injury / Add '
+        + 'hub when Sam reworded only the Day status card in R-195 on 2026-08-25.',
+      text: 'Need to make a change?',
+    },
+    {
       id: 'session.log_action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-22: "this finish session button should be '
@@ -908,18 +915,15 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.change_card.heading',
       source: 'sam_ruling',
-      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2, ruling 1. Read out of '
-        + 'docs/design/LFA_UI_PROTOTYPE_2026-08-10.html, the prototype Sam signed the '
-        + 'direction of. His words for the gap: "there\'s no text above the little '
-        + 'buttons like rens said".',
-      text: 'Need to make a change?',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-195: “Not feeling 100%?”',
+      text: 'Not feeling 100%?',
     },
     {
       id: 'day.change_card.subline',
       source: 'sam_ruling',
-      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2, ruling 1. The second '
-        + 'line of the same panel in the signed prototype.',
-      text: 'Update your status to modify your program.',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-195: “Tell us what’s changed and '
+        + 'we’ll adjust your training.”',
+      text: 'Tell us what’s changed and we’ll adjust your training.',
     },
     {
       id: 'day.change_card.edit_day',
