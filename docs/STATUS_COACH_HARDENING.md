@@ -18,7 +18,7 @@ chunks it retrieved. Coach Lab uses each case's live-fact requirement and the
 chunk ids attached by the non-model retrieval owner. A fabricated Lab citation
 now fails the same shared contract as it does in production.
 
-Measured evidence: `test:coach-chat-integration` 52/0 and `test:coach-lab`
+Measured evidence: `test:coach-chat-integration` 56/0 and `test:coach-lab`
 104/0 across its three suites. Changing production's live-program requirement
 to false killed the production-policy cell; the mutation was restored.
 
@@ -50,7 +50,7 @@ verdict cell; the mutation was restored.
 
 ## Live deployment receipt
 
-- `coach-chat` is ACTIVE as version 7 with JWT verification on.
+- `coach-chat` is ACTIVE as version 8 with JWT verification on.
 - A live `whats on thurs?` smoke crossed the deployed database limiter, called
   Terra, returned `Thursday (27 Aug) is Upper Push plus Conditioning.`, and
   carried zero program actions.
@@ -61,13 +61,50 @@ verdict cell; the mutation was restored.
 - A truth-contract refusal now logs only its violation names before returning
   the typed refusal; it never logs the athlete question or model answer.
 
-## Pending in this same order
+## Truthful failures and disclosure
 
-- Apply Sam-approved distinct outage/refusal copy and the accurate Privacy line.
-- Run the full focused chain and simulator before asking Sam to connect his
-  phone.
+Sam approved three distinct athlete-visible outcomes: the existing no-answer
+copy for a genuinely empty response, `Coach isn't available right now. Try
+again shortly.` for transport/server outages, and `I can't answer that safely.`
+for a grounding refusal. One shared closed failure type owns the mapping from
+the API boundary to the screen, so the UI cannot silently collapse those
+states back together.
+
+The Privacy screen now states exactly which concise, whitelisted summaries may
+be sent, that backend and AI services receive them, and that Coach is completely
+read-only. Ruling R-140 and its guarded registry row bind both the failure copy
+and the disclosure to `test:coach-snapshot + test:profile-reset-ui`.
+
+Measured evidence:
+
+- `test:coach-snapshot`: Snapshot 35/0, populated-state 17/0, Progress 13/0,
+  Coach Lab 104/0, Coach integration 56/0.
+- `test:profile-reset-ui`: 171/0.
+- `test:signed-copy-extraction`: 7/0 and `test:copy-rulings-binding`: 9/0.
+- Collapsing the outage copy back into the old no-answer copy killed two Coach
+  integration cells. Removing restrictions from the disclosure killed its
+  Profile cell. Both mutations were restored.
+- A final live deployed request returned `Tomorrow is Team Training.` with zero
+  program actions.
+
+## Simulator acceptance
+
+- The populated production-Terra Coach flow crossed the live backend, rendered
+  the athlete question and grounded answer, exposed no change card, and kept
+  the read-only introduction.
+- The Privacy flow navigated from Profile and found both complete approved
+  disclosure paragraphs on screen.
+- Visual receipts: `artifacts/ui-walk/coach-terra-read-only.png` and
+  `artifacts/ui-walk/coach-hardening-privacy.png`.
 
 ## NOT COVERED
 
-- Athlete-facing copy is waiting on Sam's exact wording approval.
-- No simulator or physical phone build has been made in this order.
+- The physical iPhone rebuild and Sam's device acceptance have not been run;
+  that is the next and only remaining step in this order.
+- The repository-wide law gate still has its pre-existing unrelated reds: one
+  missing `test:game-feedback` script, LR-18 without a registry row, and 21
+  existing UNENFORCED rows. This order added one guarded row and did not change
+  the UNENFORCED count.
+- The broad compile baseline is stale across unrelated shared-checkout files.
+  Raw TypeScript output contains no error in a file changed by this order; the
+  baseline was not widened.

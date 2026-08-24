@@ -1,0 +1,35 @@
+appId: com.localfootyathlete.app
+name: Golden - Coach hardening Privacy disclosure
+tags:
+  - e2e
+  - golden
+  - coach
+  - privacy
+---
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+    timeout: 30000
+- hideKeyboard
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-page-header"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "profile-privacy-policy"
+    direction: DOWN
+- tapOn:
+    id: "profile-privacy-policy"
+- extendedWaitUntil:
+    visible: "Privacy Policy"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Coach chat and AI processing"
+    direction: DOWN
+- assertVisible: "Coach messages and concise, whitelisted summaries of your program, readiness, training load, progress and restrictions may be sent to backend and AI services so the app can return a Coach response. The Coach is completely read-only and cannot change your program."
+- assertVisible: "The Coach AI is not sent your name, body measurements, internal IDs, buttons or full saved profile. Coach conversations are not saved by the app, and AI responses are requested with provider storage off."
+- takeScreenshot: "artifacts/ui-walk/coach-hardening-privacy"
