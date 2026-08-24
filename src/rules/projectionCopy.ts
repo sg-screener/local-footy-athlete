@@ -933,6 +933,20 @@ export function registerProjectionCopy(): void {
       text: 'Plan options',
     },
     {
+      id: 'week.edit_sheet.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-201: the sheet opened by Edit '
+        + 'this week is headed “Adjust week”.',
+      text: 'Adjust week',
+    },
+    {
+      id: 'week.edit_sheet.question',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-201: the first weekly-adjustment '
+        + 'step asks “What changed this week?”.',
+      text: 'What changed this week?',
+    },
+    {
       id: 'day.add_session.action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-196: when no programmed-session '

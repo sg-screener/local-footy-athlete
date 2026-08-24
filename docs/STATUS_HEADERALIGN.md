@@ -35,3 +35,15 @@ today.** The signed copy row changed; the card still reads that one owner.
 Focused guard: `test:session-change-hub`.
 
 NOT COVERED: screenshots, broad audits, physical iPhone and other status flows.
+
+## 2026-08-25 — Week adjustment wording
+
+The sheet opened by Edit this week now reads **Adjust week** and **What changed
+this week?** Both lines use signed copy; its actions and nested session step are
+unchanged.
+
+Focused guard: `test:day-first-timeline` — the new exact-copy cell is green at
+the inherited 54 passed / 2 failed baseline. The two existing reds remain the
+mobility review wiring and missing generated Gunshow fixture.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.

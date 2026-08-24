@@ -1754,6 +1754,11 @@ run('the add-fixture control never caps the week at one game', () => {
   assert(sheetStart >= 0 && sheetEnd > sheetStart,
     'the Edit this week sheet could not be bounded');
   const sheet = home.slice(sheetStart, sheetEnd);
+  assert(sheet.includes("title={signedCopy('week.edit_sheet.title')}")
+    && sheet.includes("? signedCopy('week.edit_sheet.question')")
+    && signedCopy('week.edit_sheet.title') === 'Adjust week'
+    && signedCopy('week.edit_sheet.question') === 'What changed this week?',
+  'the Edit this week sheet no longer opens with the signed Adjust week / What changed this week wording');
   assert(/phase === 'In-season' \|\| phase === 'Pre-season'/.test(sheet)
     && sheet.includes('testID="edit-week-add-fixture"'),
   'the add-fixture row is no longer available in both competitive phases');

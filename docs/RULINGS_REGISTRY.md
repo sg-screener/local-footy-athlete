@@ -5188,3 +5188,13 @@ The **Not feeling 100%?** card says **Tell us what’s changed and we’ll adjus
 today.** The previous ending **we’ll adjust your training** is retired. Tired,
 Sick and Injured remain unchanged. · `WORKING` —
 `test:session-change-hub`. Seat `headeralign`.
+
+---
+
+**R-201** · Week adjustments ask what changed (Sam, 2026-08-25) ·
+**THE WEEK SHEET NAMES THE ATHLETE'S CHANGE, NOT THE EDITING MECHANISM.**
+
+Tapping **Edit this week** opens a sheet headed **Adjust week**. Its first
+question is **What changed this week?** The existing Bye, Game, Away and session
+options remain unchanged. · `WORKING` — `test:day-first-timeline`.
+Seat `headeralign`.

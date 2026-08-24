@@ -3177,9 +3177,9 @@ function WeekEditSheet({
   return (
     <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet">
       <SheetHeader
-        title="Edit this week"
+        title={signedCopy('week.edit_sheet.title')}
         subtitle={step === 'actions'
-          ? 'What do you want to change?'
+          ? signedCopy('week.edit_sheet.question')
           : 'What do you want to do?'}
       />
 
