@@ -194,6 +194,23 @@ console.log('\n[3] AUTOMATIC BOUNDARIES FAIL CLOSED');
     inventedLfaRule.verdict === 'automatic_fail'
       && !inventedLfaRule.automaticChecks.lfaClaimsGrounded);
 
+  const fabricatedRetrievedSource = evaluateCoachLabResponse(programCase, {
+    ...GOOD_RESPONSE,
+    basis: ['lfa_rule'],
+    knowledgeSources: [{
+      id: 'invented:L9-L10',
+      authority: 'lfa_bible',
+      sourceReference: 'invented',
+    }],
+    diagnostics: {
+      ...GOOD_RESPONSE.diagnostics,
+      retrievedChunkIds: ['bible:L1-L2'],
+    },
+  });
+  ok('a Lab citation outside the chunks actually retrieved turns grounding red',
+    fabricatedRetrievedSource.verdict === 'automatic_fail'
+      && !fabricatedRetrievedSource.automaticChecks.lfaClaimsGrounded);
+
   const refusal = evaluateCoachLabResponse(programCase, {
     ...GOOD_RESPONSE,
     message: "I don't have an answer for that yet.",

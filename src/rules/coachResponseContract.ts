@@ -150,12 +150,14 @@ function wordCount(message: string): number {
   return message.trim().split(/\s+/).filter(Boolean).length;
 }
 
+export interface CoachResponseGroundingPolicy {
+  readonly requiresLiveProgramFacts: boolean;
+  readonly allowedKnowledgeSourceIds: readonly string[];
+}
+
 export function evaluateCoachResponseContract(
   response: unknown,
-  options: {
-    readonly requiresLiveProgramFacts?: boolean;
-    readonly allowedKnowledgeSourceIds?: readonly string[];
-  } = {},
+  policy: CoachResponseGroundingPolicy,
 ): CoachResponseContractEvaluation {
   const schemaValid = isCoachResponsePayload(response);
   const payload = schemaValid ? response : null;
@@ -171,18 +173,15 @@ export function evaluateCoachResponseContract(
   const snapshotReceiptConsistent = usesSnapshot
     ? snapshotFields.length > 0
     : snapshotFields.length === 0;
-  const allowedIds = options.allowedKnowledgeSourceIds === undefined
-    ? null
-    : new Set(options.allowedKnowledgeSourceIds);
-  const sourcesWereRetrieved = allowedIds === null
-    || sources.every((source) => allowedIds.has(source.id));
+  const allowedIds = new Set(policy.allowedKnowledgeSourceIds);
+  const sourcesWereRetrieved = sources.every((source) => allowedIds.has(source.id));
   const checks: CoachResponseAutomaticChecks = {
     schemaValid,
     useful: payload !== null && payload.answerMode !== 'generic_refusal',
     readOnly: payload !== null && payload.programActions.length === 0,
     programFactsGrounded: payload !== null
       && snapshotReceiptConsistent
-      && (!options.requiresLiveProgramFacts
+      && (!policy.requiresLiveProgramFacts
         || focusedQuestionWithoutFacts
         || usesSnapshot),
     lfaClaimsGrounded: payload !== null

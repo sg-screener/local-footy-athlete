@@ -11,7 +11,11 @@ import {
 } from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
-import { createSlidingWindowRateLimiter } from '../../supabase/functions/_shared/slidingWindowRateLimit';
+import {
+  checkDurableCoachRateLimit,
+  forwardedClientAddress,
+  opaqueClientRateLimitKey,
+} from '../../supabase/functions/_shared/durableCoachRateLimit';
 
 armTotalsOrRed();
 
@@ -56,13 +60,31 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
     /evaluateCoachResponseContract/.test(edge)
       && /evaluateCoachResponseContract/.test(read('src/dev/coachLab/coachLab.ts'))
       && !/const automaticChecks: CoachLabAutomaticChecks/.test(read('src/dev/coachLab/coachLab.ts')));
+  ok('production supplies both live-program and retrieved-source grounding inputs',
+    /requiresLiveProgramFacts:\s*true/.test(edge)
+      && /allowedKnowledgeSourceIds:\s*retrieval\.chunks/.test(edge));
+  ok('Coach Lab supplies both case truth and actual retrieved-source grounding inputs',
+    /requiresLiveProgramFacts:\s*labCase\.requiresLiveProgramFacts/.test(read('src/dev/coachLab/coachLab.ts'))
+      && /allowedKnowledgeSourceIds:\s*response\.diagnostics\.retrievedChunkIds/.test(
+        read('src/dev/coachLab/coachLab.ts'),
+      ));
   ok('an automatic production failure is refused before any answer is returned',
     /if \(!evaluation\.ok\) return json\(502, \{ error: 'coach_chat_response_refused' \}\)/.test(edge));
-  ok('a bounded request window refuses before the paid provider call',
-    /createSlidingWindowRateLimiter/.test(edge)
+  ok('a durable shared request window refuses before the paid provider call',
+    /checkDurableCoachRateLimit/.test(edge)
+      && !/createSlidingWindowRateLimiter/.test(edge)
       && /if \(!rateLimit\.allowed\) \{\s*return json\(429/.test(edge)
       && /Retry-After/.test(edge)
       && edge.indexOf('return json(429') < edge.indexOf('new OpenAIResponsesClient'));
+  ok('rate-limit identity never falls back to the app-wide authorization key',
+    /forwardedClientAddress/.test(edge)
+      && !/request\.headers\.get\('authorization'\)/.test(edge));
+  ok('the durable limiter is held by an atomic database migration',
+    /private\.coach_rate_limits/.test(read('supabase/migrations/007_coach_rate_limits.sql'))
+      && /on conflict \(client_key\) do update/i.test(
+        read('supabase/migrations/007_coach_rate_limits.sql'),
+      )
+      && /global:coach-chat/.test(read('supabase/migrations/007_coach_rate_limits.sql')));
 }
 
 console.log('\n[2] THE DEPLOYED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
@@ -307,36 +329,61 @@ async function finish(): Promise<void> {
     snapshotFieldsUsed: [],
     knowledgeSources: [],
     judgementLabel: 'missing',
-  });
+  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: [] });
   ok('unlabelled coaching judgement fails closed',
     !hiddenJudgement.ok && !hiddenJudgement.automaticChecks.judgementTransparent);
   const falseChange = evaluateCoachResponseContract({
     ...grounded,
     message: 'I moved your session to Friday.',
-  }, { allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
   ok('a read-only answer claiming it changed the program fails closed',
     !falseChange.ok && !falseChange.automaticChecks.changeClaimsTruthful);
 
-  console.log('\n[7] THE LIVE RATE WINDOW IS BOUNDED AND ROLLS FORWARD');
-  let now = 10_000;
-  const limiter = createSlidingWindowRateLimiter({
-    windowMs: 1_000,
-    maxRequests: 2,
-    maxKeys: 3,
-    now: () => now,
+  console.log('\n[7] THE LIVE RATE WINDOW IS DURABLE, PRIVATE AND SHARED');
+  const forwarded = new Request('https://example.test', {
+    headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.2' },
   });
-  const first = limiter.check('athlete-a');
-  const second = limiter.check('athlete-a');
-  const blocked = limiter.check('athlete-a');
-  ok('the configured number pass and the next request is refused with a retry receipt',
-    first.allowed && second.allowed
-      && !blocked.allowed && blocked.retryAfterSeconds === 1,
-    blocked);
-  ok('one noisy client does not spend another client\'s allowance',
-    limiter.check('athlete-b').allowed);
-  now = 11_001;
-  ok('an expired window releases the same client without permanent state',
-    limiter.check('athlete-a').allowed);
+  ok('the platform-forwarded client address is read without the shared auth fallback',
+    forwardedClientAddress(forwarded) === '203.0.113.7'
+      && forwardedClientAddress(new Request('https://example.test')) === null);
+  const keyA = await opaqueClientRateLimitKey('203.0.113.7', 'a'.repeat(32));
+  const keyAAgain = await opaqueClientRateLimitKey('203.0.113.7', 'a'.repeat(32));
+  const keyB = await opaqueClientRateLimitKey('203.0.113.8', 'a'.repeat(32));
+  ok('the durable store receives a stable opaque key rather than a raw address',
+    keyA === keyAAgain && keyA !== keyB && !keyA.includes('203.0.113.7'));
+  let rpcBody = '';
+  let rpcHeaders: Record<string, string> = {};
+  const durable = await checkDurableCoachRateLimit({
+    clientKey: keyA,
+    supabaseUrl: 'https://project.supabase.co',
+    serviceRoleKey: 'private-service-key',
+    windowSeconds: 60,
+    clientMaxRequests: 20,
+    globalMaxRequests: 200,
+    fetch: async (_url, init) => {
+      rpcBody = init.body;
+      rpcHeaders = init.headers;
+      return {
+        ok: true,
+        status: 200,
+        async text() {
+          return JSON.stringify([{
+            allowed: false,
+            retry_after_seconds: 17,
+            scope: 'client',
+          }]);
+        },
+      };
+    },
+  });
+  ok('the shared database verdict carries its retry receipt and refusal scope',
+    !durable.allowed && durable.retryAfterSeconds === 17 && durable.scope === 'client',
+    durable);
+  ok('the private database credential stays in headers and both spend ceilings reach the RPC',
+    rpcHeaders.apikey === 'private-service-key'
+      && !rpcBody.includes('private-service-key')
+      && rpcBody.includes('"p_client_max_requests":20')
+      && rpcBody.includes('"p_global_max_requests":200'));
 
   console.log(`\nCoach chat integration totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

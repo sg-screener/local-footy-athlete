@@ -115,6 +115,7 @@ export function evaluateCoachLabResponse(
 ): CoachLabEvaluation {
   const shared = evaluateCoachResponseContract(response, {
     requiresLiveProgramFacts: labCase.requiresLiveProgramFacts,
+    allowedKnowledgeSourceIds: response.diagnostics.retrievedChunkIds ?? [],
   });
   const labEnvelopeValid = response.schemaVersion === COACH_LAB_RESPONSE_SCHEMA_VERSION
     && typeof response.diagnostics?.provider === 'string'
