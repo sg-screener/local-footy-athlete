@@ -50,7 +50,7 @@ verdict cell; the mutation was restored.
 
 ## Live deployment receipt
 
-- `coach-chat` is ACTIVE as version 8 with JWT verification on.
+- `coach-chat` is ACTIVE as version 9 with JWT verification on.
 - A live `whats on thurs?` smoke crossed the deployed database limiter, called
   Terra, returned `Thursday (27 Aug) is Upper Push plus Conditioning.`, and
   carried zero program actions.
@@ -87,6 +87,39 @@ Measured evidence:
 - A final live deployed request returned `Tomorrow is Team Training.` with zero
   program actions.
 
+## Final falsification-pass fixes
+
+The four findings in the final read-only audit are now fixed at their shared
+owners rather than patched as isolated prompts:
+
+- One shared 1,000-character boundary now protects the input, API client,
+  history builder and Edge function. Oversize current turns stop before the
+  network call and oversize historical turns are excluded from model context.
+- Recorded workout completion now reconciles saved execution evidence against
+  the current visible plan. Changed or removed rows are not guessed as
+  complete; game-only feedback cannot fabricate gym completion; orphaned saved
+  evidence remains available in the reconciliation receipt.
+- Response-contract failures are typed. Schema, usability and concision
+  failures return an invalid-answer outcome; only truth, grounding and
+  read-only violations use the safety-refusal outcome.
+- The Coach slice guard now recognises the shared typed failure renderer and
+  remains coupled to the visible failure states.
+
+Measured evidence:
+
+- `test:coach-snapshot`: Snapshot 35/0, populated 17/0, Progress 13/0, Coach
+  Lab 104/0 and Coach integration 62/0.
+- `test:coach-tab-slice1`: 75/75; `test:mobility-flow`: 59/0;
+  `test:results-persist`: 5/0.
+- `test:session-execution`: every new reconciliation cell is green, with the
+  same six unrelated pre-existing reds (193/6 total).
+- `npx tsc --noEmit -p tsconfig.json --pretty false` exits 0.
+- Three mutation runs independently killed the message-boundary cells, the
+  invalid-answer/refusal classification cells, and the plan-reconciliation /
+  game-feedback cells. Every mutation was restored before the green runs.
+- A live version-9 request answered the next-session question from the concise
+  Snapshot and returned zero program actions.
+
 ## Simulator acceptance
 
 - The populated production-Terra Coach flow crossed the live backend, rendered
@@ -96,6 +129,9 @@ Measured evidence:
   disclosure paragraphs on screen.
 - Visual receipts: `artifacts/ui-walk/coach-terra-read-only.png` and
   `artifacts/ui-walk/coach-hardening-privacy.png`.
+- The final version-9 pass also completed the Progress dashboard, simple Coach
+  shell, live Terra read-only conversation, and Mobility completion return with
+  the full day tick.
 
 ## Physical iPhone release
 
@@ -109,16 +145,19 @@ Measured evidence:
   targeted.
 - The installed bundle launched successfully without Metro and remained in the
   device process list as PID 7829.
+- This receipt predates the final four-fix checkpoint `d647bf7f`. The final
+  Release rebuild is pending only because Sam's paired iPhone currently reports
+  `unavailable`; no attempt was redirected to Renee's phone.
 
 ## NOT COVERED
 
-- Sam's visual acceptance of Coach, Progress, Privacy and the completed
-  Mobility / Warm-up tick on this exact install is still required. Installation
-  and launch are verified; athlete-facing acceptance is not inferred from them.
+- A final Release install of checkpoint `d647bf7f` and Sam's visual acceptance
+  of Coach, Progress, Privacy and the completed Mobility / Warm-up tick are
+  still required. The previous checkpoint's installation is not presented as
+  acceptance of these four fixes.
 - The repository-wide law gate still has its pre-existing unrelated reds: one
   missing `test:game-feedback` script, LR-18 without a registry row, and 21
   existing UNENFORCED rows. This order added one guarded row and did not change
   the UNENFORCED count.
-- The broad compile baseline is stale across unrelated shared-checkout files.
-  Raw TypeScript output contains no error in a file changed by this order; the
-  baseline was not widened.
+- `test:session-execution` retains six pre-existing unrelated red cells named
+  in the measured evidence above; this order did not hide or rewrite them.
