@@ -11,6 +11,7 @@ import {
 } from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
+import { coachFailureReply } from '../rules/coachTabCopy';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -140,6 +141,12 @@ console.log('\n[3] THE APP CHAT IS TERRA-READ-ONLY');
     /coachChatFailureCode\(error\)/.test(screen)
       && /failure === 'refused'/.test(screen)
       && /console\.warn\('\[coach-chat\] response refused by the read-only truth contract'\)/.test(screen));
+  const coachCopy = read('src/rules/coachTabCopy.ts');
+  ok('the three typed failure causes render three truthful approved answers',
+    /unavailable: "Coach isn\'t available right now\. Try again shortly\."/.test(coachCopy)
+      && /refused: "I can\'t answer that safely\."/.test(coachCopy)
+      && /no_answer: COACH_TAB_COPY\.noAnswerYet/.test(coachCopy)
+      && /say\(coachFailureReply\(failure\)\)/.test(screen));
   ok('Coach is the conversation surface while its athlete facts remain private model input',
     screen.indexOf('testID="coach-tab-conversation"') >= 0
       && screen.indexOf('{turns.map((turn) => (')
@@ -290,6 +297,15 @@ async function finish(): Promise<void> {
   }
   ok('a server contract refusal remains refused at the screen boundary',
     serverRefusalCode === 'refused');
+  ok('the copy owner executes a distinct approved answer for every typed failure',
+    coachFailureReply('unavailable') === "Coach isn't available right now. Try again shortly."
+      && coachFailureReply('refused') === "I can't answer that safely."
+      && coachFailureReply('no_answer') === "I don't have an answer for that yet."
+      && new Set([
+        coachFailureReply('unavailable'),
+        coachFailureReply('refused'),
+        coachFailureReply('no_answer'),
+      ]).size === 3);
 
   console.log('\n[6] ONE AUTOMATIC CONTRACT BITES IN LAB AND PRODUCTION');
   const grounded = {
@@ -388,6 +404,13 @@ async function finish(): Promise<void> {
       && !rpcBody.includes('private-service-key')
       && rpcBody.includes('"p_client_max_requests":20')
       && rpcBody.includes('"p_global_max_requests":200'));
+
+  const rulingRegistry = read('docs/RULINGS_REGISTRY.md');
+  const lawRegistry = read('src/rules/lawRegistry.ts');
+  ok('R-140 records the exact approved failure and privacy words with a chained guard',
+    /\*\*R-140\*\*/.test(rulingRegistry)
+      && /LAW-coach-failures-and-ai-disclosure-are-truthful/.test(lawRegistry)
+      && /test:coach-snapshot \+ test:profile-reset-ui/.test(lawRegistry));
 
   console.log(`\nCoach chat integration totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

@@ -1888,6 +1888,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `snapshot`. `test:coach-lab` proves the one shared typed model input and kills three boundary mutations: flattening all day timing to today, discarding the active conversation target, and treating the quick check as a Wrecked/Cooked declaration. The three exact Terra reruns then passed the mechanical boundary. `test:coach-chat-integration` proves production fixes Terra server-side, retrieves an exact generated copy of the canonical source manifest, accepts no client-supplied model or instructions, requires an empty action list at the server and rejects it again in the app client. It also proves `CoachTabScreen` awaits that client with the shared Snapshot and has no old conversational proposal, card or program writer. The integration test executes a fake-fetch tape across the real client and is reached by `test:coach-snapshot` in `test:bible`. NOT COVERED: physical-phone pixels and production-provider availability are separate deployment/device evidence.',
     },
   },
+  {
+    id: 'LAW-coach-failures-and-ai-disclosure-are-truthful',
+    law: 'The live Coach renders its typed failure honestly: unavailable says Coach is unavailable and to try again shortly; a truth or safety refusal says it cannot answer safely; only a genuine usable-answer absence says it has no answer yet. Privacy names every whitelisted summary category sent for Coach processing: program, readiness, training load, progress and restrictions, while retaining the completely read-only boundary.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-140 — Sam, 2026-08-24, approved the three exact proposed sentences with "wording approved".',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-snapshot + test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `coachhardening`. TWO OPTIONS COMPARED: inspect HTTP/provider wording in the screen, or let the existing closed unavailable/refused/no_answer vocabulary choose from one copy map. The second landed, so transport detail cannot become athlete copy and adding a failure code is a type error until words exist. `test:coach-chat-integration` pins Sam\'s exact three sentences, the screen\'s one mapping call and R-140 provenance; its executed API tape separately reaches all three typed causes. `test:profile-reset-ui` pins the complete approved Privacy category list. FIRST RUN: the Coach cell red because all failures still rendered noAnswerYet; the Privacy cell red because its sentence named progress summaries only. NOT COVERED: simulator pixels and Sam\'s physical iPhone after the final batched rebuild.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

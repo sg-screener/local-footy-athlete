@@ -4445,3 +4445,22 @@ performed work draws the same green tick as every other performed component. A
 legacy whole-session `full` result restores the tick; a legacy partial result
 does not guess which section was completed. · `WORKING` — `test:coach-snapshot`
 and `test:session-execution`. Seat `snapshot`.
+
+---
+
+**R-140** · *"wording approved"* (Sam, 2026-08-24), approving the three exact
+sentences put to him after the fresh Coach checkpoint audit · **COACH FAILURES
+AND THE AI DISCLOSURE SAY WHAT ACTUALLY HAPPENED.**
+
+An unavailable Coach says **"Coach isn't available right now. Try again
+shortly."** A truth/safety refusal says **"I can't answer that safely."** A
+usable-answer absence keeps the previously approved **"I don't have an answer
+for that yet."** The Privacy page says **"Coach messages and concise,
+whitelisted summaries of your program, readiness, training load, progress and
+restrictions may be sent to backend and AI services so the app can return a
+Coach response. The Coach is completely read-only and cannot change your
+program."**
+
+The typed cause, not HTTP or provider prose, chooses the athlete sentence.
+· `WORKING` — `test:coach-snapshot` + `test:profile-reset-ui`. Seat
+`coachhardening`.

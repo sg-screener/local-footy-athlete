@@ -1,3 +1,5 @@
+import type { CoachChatFailureCode } from './coachChatFailure';
+
 /**
  * BATCH 30 — EVERY WORD THE COACH TAB PUTS ON THE GLASS. RULED 2026-08-09.
  *
@@ -256,3 +258,14 @@ export const COACH_TAB_COPY = {
    */
   noAnswerYet: "I don't have an answer for that yet.",
 } as const;
+
+/** R-140 — exact Sam-approved words for each typed live Coach failure. */
+export const COACH_FAILURE_COPY = {
+  unavailable: "Coach isn't available right now. Try again shortly.",
+  refused: "I can't answer that safely.",
+  no_answer: COACH_TAB_COPY.noAnswerYet,
+} as const satisfies Record<CoachChatFailureCode, string>;
+
+export function coachFailureReply(code: CoachChatFailureCode): string {
+  return COACH_FAILURE_COPY[code];
+}

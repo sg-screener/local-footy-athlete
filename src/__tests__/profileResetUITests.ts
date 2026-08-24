@@ -633,8 +633,8 @@ section('[9b] Legal copy is MVP-safe');
   const terms = fs.readFileSync(termsPath, 'utf8');
   ok('Privacy says MVP does not require an account', /does not require you to create an account/.test(privacy));
   ok('Privacy mentions backend and AI services', /backend and AI services/.test(privacy));
-  ok('Privacy names the approved concise whitelisted Coach boundary',
-    /concise, whitelisted progress summaries/.test(privacy)
+  ok('Privacy names every approved concise whitelisted Coach summary category',
+    /concise, whitelisted summaries of your program, readiness, training load, progress and restrictions/.test(privacy)
       && /Coach is completely read-only and cannot change your program/.test(privacy));
   ok('Privacy says identity, internals and the full profile stay out of the Coach payload',
     /not sent your name, body measurements, internal IDs, buttons or full saved profile/.test(privacy));

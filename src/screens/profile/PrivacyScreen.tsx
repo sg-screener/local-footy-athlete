@@ -49,7 +49,7 @@ export const PrivacyScreen: React.FC = () => {
         Coach chat and AI processing
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        Coach messages and concise, whitelisted progress summaries may be sent to backend and AI services so the app can return a coach response. The Coach is completely read-only and cannot change your program.
+        Coach messages and concise, whitelisted summaries of your program, readiness, training load, progress and restrictions may be sent to backend and AI services so the app can return a Coach response. The Coach is completely read-only and cannot change your program.
       </Text>
       <Text variant="body" style={styles.sectionContent}>
         The Coach AI is not sent your name, body measurements, internal IDs, buttons or full saved profile. Coach conversations are not saved by the app, and AI responses are requested with provider storage off.

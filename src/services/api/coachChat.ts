@@ -4,6 +4,7 @@ import {
   type CoachModelConversationContext,
 } from '../../rules/coachModelContext';
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import type { CoachChatFailureCode } from '../../rules/coachChatFailure';
 import { validateCoachCommunicationTruth } from '../../utils/verifiedCoachCommunication';
 
 interface CoachChatFetchResponse {
@@ -29,8 +30,6 @@ export interface AskCoachReadOnlyInput {
   readonly fetch?: CoachChatFetch;
   readonly timeoutMs?: number;
 }
-
-export type CoachChatFailureCode = 'unavailable' | 'refused' | 'no_answer';
 
 /**
  * The screen must not infer why Coach failed from provider prose or HTTP text.

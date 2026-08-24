@@ -16,7 +16,11 @@ import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
-import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
+import {
+  COACH_TAB_COPY,
+  coachFailureReply,
+  coachGreeting,
+} from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
@@ -278,7 +282,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         // event is enough to distinguish a safety refusal from an outage.
         console.warn('[coach-chat] response refused by the read-only truth contract');
       }
-      say(COACH_TAB_COPY.noAnswerYet);
+      say(coachFailureReply(failure));
     } finally {
       setIsSending(false);
     }
