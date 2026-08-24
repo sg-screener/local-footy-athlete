@@ -108,7 +108,7 @@ owners rather than patched as isolated prompts:
 Measured evidence:
 
 - `test:coach-snapshot`: Snapshot 35/0, populated 17/0, Progress 13/0, Coach
-  Lab 104/0 and Coach integration 62/0.
+  Lab 104/0 and Coach integration 64/0.
 - `test:coach-tab-slice1`: 75/75; `test:mobility-flow`: 59/0;
   `test:results-persist`: 5/0.
 - `test:session-execution`: every new reconciliation cell is green, with the
@@ -119,6 +119,37 @@ Measured evidence:
   game-feedback cells. Every mutation was restored before the green runs.
 - A live version-9 request answered the next-session question from the concise
   Snapshot and returned zero program actions.
+
+## Final scoped audit closure
+
+Checkpoint `dd174b10` closes the two proven audit findings without widening the
+work into speculative compatibility changes:
+
+- Home now creates one plan-aware execution reconciliation per rendered day.
+  Strength, Conditioning, Mobility and the reopened checklist all read that
+  same receipt. A generated-world test logs the original plan, adds a lift, and
+  proves the card and reopened checklist both leave the new shape incomplete.
+- The benign-invalid-answer client branch, every individual refusal-class
+  member, the server/composer length checks and the game callback dependency
+  now have targeted guards.
+- The real acted fixture route was saved twice through the production
+  transaction. The second save replaced the game answer, retained the existing
+  execution evidence and retained the fixture's component identities. The
+  speculative plan-growth transaction change was therefore not made.
+
+Measured evidence after restoration:
+
+- `test:coach-snapshot` is fully green with Coach integration 64/0.
+- `test:day-first-timeline` is 52/2; the two reds are the same unrelated
+  mobility-source-shape and Gunshow-fixture gaps present before this order.
+- `test:session-execution` is 193/6; the six pre-existing unrelated reds are
+  unchanged. `test:mobility-flow` is 59/0 and `test:results-persist` is 6/0.
+- TypeScript exits 0.
+- Four restored mutations separately killed the invalid-answer client mapping,
+  an individual refusal member, the shared day-card reconciliation and the
+  game callback dependency.
+- Simulator flows passed Progress, the simple Coach shell, live Terra read-only
+  chat and the completed Mobility / Warm-up tick.
 
 ## Simulator acceptance
 
@@ -145,13 +176,13 @@ Measured evidence:
   targeted.
 - The installed bundle launched successfully without Metro and remained in the
   device process list as PID 7829.
-- This receipt predates the final four-fix checkpoint `d647bf7f`. The final
+- This receipt predates the final scoped checkpoint `dd174b10`. The final
   Release rebuild is pending only because Sam's paired iPhone currently reports
   `unavailable`; no attempt was redirected to Renee's phone.
 
 ## NOT COVERED
 
-- A final Release install of checkpoint `d647bf7f` and Sam's visual acceptance
+- A final Release install of checkpoint `dd174b10` and Sam's visual acceptance
   of Coach, Progress, Privacy and the completed Mobility / Warm-up tick are
   still required. The previous checkpoint's installation is not presented as
   acceptance of these four fixes.
