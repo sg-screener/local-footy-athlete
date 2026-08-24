@@ -1570,3 +1570,23 @@ Add a session doorway because they have no programmed-session card to own dots.
 - Physical-iPhone Release, exact pixels on every device width, VoiceOver
   reading/order, every day capability combination and committing a real plan
   edit through each action.
+
+---
+
+## R-197 — rename the plan Add row
+
+The first plan-options row now reads **Add to this session**. It uses signed
+copy and still opens the same deterministic Add flow.
+
+### Evidence
+
+- TEST FIRST: the revised exact-copy cell moved `test:day-first-timeline` from
+  its inherited 54 passed / 2 failed baseline to 53 passed / 3 failed. After the
+  copy landed it returned to 54 passed / 2 failed.
+- `test:signed-copy-extraction` is 7/7.
+- LIVE SIMULATOR, no screenshots: **Add to this session** was visible and the
+  retired **Add this session** wording was absent.
+
+### NOT COVERED
+
+- Physical-iPhone Release, VoiceOver reading and translated copy.

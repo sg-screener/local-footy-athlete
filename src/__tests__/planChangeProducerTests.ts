@@ -815,7 +815,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && !/kind: 'menu'|kind: 'edit_session'|kind: 'pick_add_kind'/.test(sheet));
   ok('[9] the fallback step owns add/move/remove and nothing else',
     !/label="Swap this session"/.test(actionsBlock)
-      && /label="Add this session"[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
+      && /label=\{signedCopy\('plan_change\.add_to_session'\)\}[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
       && !/strength or conditioning work to this day/.test(sheet)
       && /label="Move this session"/.test(actionsBlock)
       && /label="Remove this session"/.test(actionsBlock)
@@ -838,7 +838,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
   ok('[9] Day uses the same Add, Move, Remove visual order as Week',
-    actionsBlock.indexOf('label="Add this session"')
+    actionsBlock.indexOf("label={signedCopy('plan_change.add_to_session')}")
       < actionsBlock.indexOf('label="Move this session"')
       && actionsBlock.indexOf('label="Move this session"')
         < actionsBlock.indexOf('label="Remove this session"')

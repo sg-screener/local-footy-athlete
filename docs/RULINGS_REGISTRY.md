@@ -5146,3 +5146,13 @@ supersedes R-194's full-width **Edit day** presentation, not its separation of
 status from scheduling or any plan-change validation/write rule. · `WORKING` —
 `test:session-change-hub` + `test:day-first-timeline` + simulator tap-through.
 Seat `onboardingtype`.
+
+---
+
+**R-197** · Plan Add row names its destination (Sam, 2026-08-25) ·
+**THE ACTION ADDS WORK TO THE SESSION ALREADY ON SCREEN.**
+
+The first row in the programmed session's plan-options menu reads **Add to this
+session**. It no longer reads **Add this session**. The action, sub-line and
+deterministic Add flow are otherwise unchanged. · `WORKING` —
+`test:day-first-timeline` + simulator tap-through. Seat `onboardingtype`.

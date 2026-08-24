@@ -1860,7 +1860,8 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
     && plan.includes("if (initialAction === 'add')")
     && plan.includes("if (initialAction === 'move')")
     && !plan.includes("if (initialAction === 'swap')")
-    && ['Add this session', 'Move this session', 'Remove this session']
+    && plan.includes("label={signedCopy('plan_change.add_to_session')}")
+    && ['Move this session', 'Remove this session']
       .every((label) => plan.includes(`label="${label}"`)),
   'the weekly route does not enter the same three action owners as Day');
   assert(plan.includes('name="plus-circle-outline" size={18} color={options.canAdd ? \'#5BD98A\' : MUTED}')
@@ -1871,7 +1872,7 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
     plan.indexOf("step.kind === 'actions'"),
     plan.indexOf("step.kind === 'add_blocked_max_sessions'"),
   );
-  assert(dayActions.indexOf('label="Add this session"') < dayActions.indexOf('label="Move this session"')
+  assert(dayActions.indexOf("label={signedCopy('plan_change.add_to_session')}") < dayActions.indexOf('label="Move this session"')
     && dayActions.indexOf('label="Move this session"') < dayActions.indexOf('label="Remove this session"')
     && !dayActions.includes('Swap this session')
     && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(dayActions),

@@ -939,6 +939,13 @@ export function registerProjectionCopy(): void {
         + 'card exists, retain a visible direct doorway for adding one.',
       text: 'Add a session',
     },
+    {
+      id: 'plan_change.add_to_session',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-197: rename the first plan-change '
+        + 'option from “Add this session” to “Add to this session”.',
+      text: 'Add to this session',
+    },
 
     // ── The injury review's two section headings, R-124. ──
     //

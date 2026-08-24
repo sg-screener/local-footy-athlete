@@ -31,6 +31,7 @@ import {
   programControlActionForPlanChange,
 } from '../../utils/programControlActions';
 import { riskReasons } from '../../utils/planChangeRefusalCopy';
+import { signedCopy } from '../../rules/signedCopy';
 import {
   G1_LANDING_BACK_ROW,
   G1_LANDING_WARNING,
@@ -597,7 +598,7 @@ export function PlanChangeSheet({
       {options && options.locked === null && step.kind === 'actions' && (
         <View>
           <MenuOption
-            label="Add this session"
+            label={signedCopy('plan_change.add_to_session')}
             // NAMES NO TYPE. It read "Add extra strength or conditioning work to
             // this day", which named two of the five behind it (ruling 9) — and
             // that sub-line has now rotted twice, once when accessories split
