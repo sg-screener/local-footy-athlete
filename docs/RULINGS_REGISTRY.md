@@ -4543,3 +4543,17 @@ absent. · `WORKING` — `test:onboarding-presentation`. Seat `sprintcopy`.
 The Review section containing Height and Weight is titled **MEASUREMENTS**.
 The retired **BODY** section title is absent. · `WORKING` —
 `test:onboarding-presentation`. Seat `measurementcopy`.
+
+---
+
+**R-148** · Sam supplied the complete replacement Welcome copy beginning
+*"TRAIN FOR FOOTY. One complete program built around your season and
+schedule."* (2026-08-24) · **WELCOME EXPLAINS THE COMPLETE LFA PROGRAM.**
+
+Welcome presents **YOUR PROGRAM / Everything works together**, **YOUR WEEK /
+Footy comes first**, and **YOUR PROGRESS / See how you’re tracking**, using
+Sam's exact descriptions for phase-specific training, schedule fit and progress
+monitoring. The CTA reads **Build my program →** and keeps **Takes about 3
+minutes**. The retired Built for footy / Your plan / Your schedule / Your body
+copy is absent. · `WORKING` — `test:onboarding-presentation`. Seat
+`welcomecopy`.

@@ -40,21 +40,21 @@ type FeatureCardData = {
 
 const FEATURES: FeatureCardData[] = [
   {
-    label: 'YOUR PLAN',
-    title: 'Built for footy',
-    description: 'Strength, running, recovery - all in one week.',
+    label: 'YOUR PROGRAM',
+    title: 'Everything works together',
+    description: 'Strength, speed, conditioning and recovery specific to each phase of the season.',
     icon: 'dumbbell',
   },
   {
-    label: 'YOUR SCHEDULE',
-    title: 'Fits your week',
-    description: 'Built around team training and game day.',
+    label: 'YOUR WEEK',
+    title: 'Footy comes first',
+    description: 'Gym work fits around team training, game day and your schedule.',
     icon: 'calendar-month-outline',
   },
   {
-    label: 'YOUR BODY',
-    title: 'Keeps you available',
-    description: 'Smart load so you can train hard and stay on the park.',
+    label: 'YOUR PROGRESS',
+    title: 'See how you’re tracking',
+    description: 'Monitor your training load, readiness and fitness over time.',
     icon: 'shield-check-outline',
   },
 ];
@@ -173,13 +173,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
               },
             ]}
           >
-            <Text style={styles.heroTitle}>BUILT FOR</Text>
+            <Text style={styles.heroTitle}>TRAIN FOR</Text>
             <Text style={styles.heroTitle}>FOOTY.</Text>
           </Animated.View>
 
           <Animated.View style={{ opacity: taglineOpacity }}>
             <Text style={styles.tagline}>
-              Training built around your season.
+              One complete program built around your season and schedule.
             </Text>
           </Animated.View>
 
@@ -219,14 +219,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             <Pressable
               testID="onboarding-welcome-cta"
               accessibilityRole="button"
-              accessibilityLabel="Build My Program"
+              accessibilityLabel="Build my program"
               style={({ pressed }) => [
                 styles.ctaButton,
                 pressed && styles.ctaButtonPressed,
               ]}
               onPress={handleGetStarted}
             >
-              <Text style={styles.ctaText}>Build My Program  →</Text>
+              <Text style={styles.ctaText}>Build my program  →</Text>
             </Pressable>
             <Text style={styles.ctaSubtext}>
               Takes about 3 minutes

@@ -107,6 +107,31 @@ console.log('\n[0c] Sprint exposure uses team-training language');
       && !sprintExposureScreen.includes('Club training counts if you sprint there.'));
 }
 
+console.log('\n[0d] Welcome explains the complete LFA program');
+{
+  const welcomeScreen = read('src/screens/onboarding/WelcomeScreen.tsx');
+  const approvedWelcomeCopy = [
+    'TRAIN FOR',
+    'FOOTY.',
+    'One complete program built around your season and schedule.',
+    'YOUR PROGRAM',
+    'Everything works together',
+    'Strength, speed, conditioning and recovery specific to each phase of the season.',
+    'YOUR WEEK',
+    'Footy comes first',
+    'Gym work fits around team training, game day and your schedule.',
+    'YOUR PROGRESS',
+    'See how you’re tracking',
+    'Monitor your training load, readiness and fitness over time.',
+    'Build my program  →',
+    'Takes about 3 minutes',
+  ];
+  ok('the complete approved Welcome copy is present',
+    approvedWelcomeCopy.every((copy) => welcomeScreen.includes(copy)));
+  ok('the retired Built for footy card copy is absent',
+    !/BUILT FOR|Training built around your season\.|YOUR PLAN|Built for footy|YOUR SCHEDULE|Fits your week|YOUR BODY|Keeps you available/.test(welcomeScreen));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────

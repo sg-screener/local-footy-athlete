@@ -1976,6 +1976,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `measurementcopy`. The onboarding presentation cell executes buildReviewSections over a complete in-season athlete, requires a Measurements section and rejects Body. TEST-FIRST LIVENESS: it was the suite\'s only red against the old section owner (66/67); changing the typed section key, both rows and the order returned the suite to 67/67. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-welcome-explains-the-complete-program',
+    law: 'Welcome uses Sam\'s approved TRAIN FOR FOOTY copy: one complete program; Your Program / Everything works together; Your Week / Footy comes first; Your Progress / See how you\'re tracking; their exact approved descriptions; Build my program; and Takes about 3 minutes. The retired Built for footy, Your plan, Your schedule and Your body copy is absent.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-148 — Sam, 2026-08-24, supplied the complete replacement Welcome page copy.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `welcomecopy`. The onboarding presentation cell requires every approved title, label, description, CTA and timing line in WelcomeScreen source and independently rejects all four retired copy families. TEST-FIRST LIVENESS: the two Welcome cells were the suite\'s only reds against the old screen (67/69); replacing the complete copy returned it to 69/69. NOT COVERED: simulator pixels, small-screen wrapping and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
