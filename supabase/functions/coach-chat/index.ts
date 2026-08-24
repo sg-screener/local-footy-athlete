@@ -153,7 +153,10 @@ Deno.serve(async (request) => {
       requiresLiveProgramFacts: true,
       allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
     });
-    if (!evaluation.ok) return json(502, { error: 'coach_chat_response_refused' });
+    if (!evaluation.ok) {
+      console.warn('coach-chat response refused by contract', evaluation.violations);
+      return json(502, { error: 'coach_chat_response_refused' });
+    }
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
     return json(200, {
       message: payload.message,

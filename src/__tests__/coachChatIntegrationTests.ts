@@ -55,7 +55,7 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
     /email\|userId\|athleteId\|accountId\|name/.test(edge));
   ok('the server refuses any model-produced program action before replying',
     /programActions\.length === 0/.test(read('src/rules/coachResponseContract.ts'))
-      && /if \(!evaluation\.ok\) return json\(502/.test(edge));
+      && /if \(!evaluation\.ok\) \{[\s\S]{0,220}?return json\(502/.test(edge));
   ok('production and Coach Lab call one shared automatic response contract',
     /evaluateCoachResponseContract/.test(edge)
       && /evaluateCoachResponseContract/.test(read('src/dev/coachLab/coachLab.ts'))
@@ -69,7 +69,11 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
         read('src/dev/coachLab/coachLab.ts'),
       ));
   ok('an automatic production failure is refused before any answer is returned',
-    /if \(!evaluation\.ok\) return json\(502, \{ error: 'coach_chat_response_refused' \}\)/.test(edge));
+    /if \(!evaluation\.ok\) \{[\s\S]{0,220}?return json\(502, \{ error: 'coach_chat_response_refused' \}\)/.test(edge));
+  ok('a production truth refusal leaves a typed server receipt without athlete text',
+    /console\.warn\('coach-chat response refused by contract', evaluation\.violations\)/.test(edge)
+      && edge.indexOf("console.warn('coach-chat response refused by contract'")
+        < edge.indexOf("return json(502, { error: 'coach_chat_response_refused' })"));
   ok('a durable shared request window refuses before the paid provider call',
     /checkDurableCoachRateLimit/.test(edge)
       && !/createSlidingWindowRateLimiter/.test(edge)
