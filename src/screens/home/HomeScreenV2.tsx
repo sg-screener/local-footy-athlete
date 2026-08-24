@@ -779,53 +779,68 @@ export default function HomeScreenV2() {
               the large circular IconButtons have been replaced by plain glyphs
               with expanded hitSlop so simpler does not mean harder to tap. */}
           {!dayFirst ? (
-            <View style={styles.compactWeekNav} testID="program-week-navigation">
+            <View style={styles.weekNavigationRow}>
+              <View style={styles.compactWeekNav} testID="program-week-navigation">
+                <Pressable
+                  onPress={canGoPrev ? handleCompactPrev : undefined}
+                  disabled={!canGoPrev}
+                  testID="program-week-previous"
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous week"
+                  accessibilityState={{ disabled: !canGoPrev }}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.compactWeekNavButton,
+                    !canGoPrev && styles.compactWeekNavButtonDisabled,
+                    pressed && { opacity: 0.6 },
+                  ]}
+                >
+                  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M15 18l-6-6 6-6" />
+                  </Svg>
+                </Pressable>
+                <Pressable
+                  style={styles.compactWeekNavCurrent}
+                  onPress={isThisWeek ? undefined : handleCompactThisWeek}
+                  accessibilityRole="button"
+                  accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
+                  testID="program-week-current"
+                >
+                  <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
+                    {weekLabel}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={canGoNext ? handleCompactNext : undefined}
+                  disabled={!canGoNext}
+                  testID="program-week-next"
+                  accessibilityRole="button"
+                  accessibilityLabel="Next week"
+                  accessibilityState={{ disabled: !canGoNext }}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.compactWeekNavButton,
+                    !canGoNext && styles.compactWeekNavButtonDisabled,
+                    pressed && { opacity: 0.6 },
+                  ]}
+                >
+                  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M9 18l6-6-6-6" />
+                  </Svg>
+                </Pressable>
+              </View>
               <Pressable
-                onPress={canGoPrev ? handleCompactPrev : undefined}
-                disabled={!canGoPrev}
+                onPress={() => setWeekEditVisible(true)}
+                testID="edit-week-button"
                 accessibilityRole="button"
-                accessibilityLabel="Previous week"
-                accessibilityState={{ disabled: !canGoPrev }}
-                testID="program-week-previous"
-                hitSlop={8}
+                accessibilityLabel={signedCopy('week.edit_sheet.title')}
+                hitSlop={10}
                 style={({ pressed }) => [
-                  styles.compactWeekNavButton,
-                  !canGoPrev && styles.compactWeekNavButtonDisabled,
+                  styles.weekPlanOptionsButton,
                   pressed && { opacity: 0.6 },
                 ]}
               >
-                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M15 18l-6-6 6-6" />
-                </Svg>
-              </Pressable>
-              <Pressable
-                style={styles.compactWeekNavCurrent}
-                onPress={isThisWeek ? undefined : handleCompactThisWeek}
-                accessibilityRole="button"
-                accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
-                testID="program-week-current"
-              >
-                <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
-                  {weekLabel}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={canGoNext ? handleCompactNext : undefined}
-                disabled={!canGoNext}
-                accessibilityRole="button"
-                accessibilityLabel="Next week"
-                accessibilityState={{ disabled: !canGoNext }}
-                testID="program-week-next"
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.compactWeekNavButton,
-                  !canGoNext && styles.compactWeekNavButtonDisabled,
-                  pressed && { opacity: 0.6 },
-                ]}
-              >
-                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M9 18l6-6-6-6" />
-                </Svg>
+                <MaterialCommunityIcons name="dots-horizontal" size={22} color="#B5B5B5" />
               </Pressable>
             </View>
           ) : (
@@ -1109,19 +1124,6 @@ export default function HomeScreenV2() {
               count={modifierCount}
               onPress={() => setModifiersSheetOpen(true)}
             />
-            <Pressable
-              onPress={() => setWeekEditVisible(true)}
-              testID="edit-week-button"
-              accessibilityRole="button"
-              accessibilityLabel="Edit this week"
-              style={({ pressed }) => [
-                styles.editWeekButton,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <MaterialCommunityIcons name="pencil-outline" size={18} color="#C8FF00" />
-              <Text style={styles.editWeekButtonText}>Edit this week</Text>
-            </Pressable>
             {weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
@@ -4120,6 +4122,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
     textTransform: 'uppercase',
   },
+  weekNavigationRow: {
+    minHeight: 40,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekPlanOptionsButton: {
+    position: 'absolute',
+    right: 0,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Move banner
   moveBanner: {
@@ -4360,23 +4376,6 @@ const styles = StyleSheet.create({
   // Seven instances of one card structure. Selection opens details inside the
   // card; it does not replace the head or import the day screen's actions.
   dayList: { gap: spacing.sm, marginTop: spacing.sm },
-  editWeekButton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#1A1E18',
-  },
-  editWeekButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-
   // THE WEEK'S ONE CARD SHAPE (Sam, 2026-08-11). Every day uses these layout
   // pieces; today differs only through Card's existing selected treatment and
   // the existing Today badge. No colour, typeface or icon system is introduced.

@@ -48,6 +48,18 @@ mobility review wiring and missing generated Gunshow fixture.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.
 
+## 2026-08-25 — Week options move into the range row
+
+The large Edit this week bar is gone. A compact dots control now sits at the
+right of the week date row and opens the same Adjust week sheet. The date range
+stays centred, the dots keep a 44-point tap target, and Monday moves up by the
+removed bar and gap.
+
+Focused guard: `test:day-first-timeline` — the new layout cells are green at the
+inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.
+
 ## 2026-08-25 — Week option wording
 
 The first Adjust week screen now uses Sam's four label/subline pairs for Bye,

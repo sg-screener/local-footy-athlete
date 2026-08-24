@@ -5211,3 +5211,15 @@ going away** / **Tell us when you’re away**; and **Manage sessions** / **Add,
 move or remove training this week**. **Add a game** is the one popup label in
 both competitive phases; the underlying phase-aware picker is unchanged. ·
 `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
+**R-203** · Week editing becomes a secondary control (Sam, 2026-08-25) ·
+**THE WEEK IS FOR READING FIRST.**
+
+The large green-tinted **Edit this week** bar is removed. One compact `•••`
+control sits at the right of the previous / date range / next row and opens the
+same **Adjust week** sheet. Its visible dots match the Day pattern and retain a
+44-point physical tap target. The range remains centred and Monday moves up into
+the space the old bar occupied. · `WORKING` — `test:day-first-timeline`. Seat
+`headeralign`.

@@ -1324,6 +1324,14 @@ run('week navigation is absent from Today and compact below the toggle in Week',
     'the compact week navigator region could not be found');
   assert(/program-week-previous[\s\S]*program-week-current[\s\S]*program-week-next/.test(nav),
     'simplifying the navigator removed one of its three established doors');
+  assert(nav.includes('testID="edit-week-button"')
+    && /testID="edit-week-button"[\s\S]{0,260}hitSlop=\{10\}/.test(nav)
+    && /testID="edit-week-button"[\s\S]{0,500}name="dots-horizontal" size=\{22\}/.test(nav)
+    && /weekPlanOptionsButton:\s*\{[\s\S]{0,180}width:\s*24[\s\S]{0,80}height:\s*24/.test(home),
+  'the Week range row does not carry one compact dots control with a 44-point target');
+  assert(/weekNavigationRow:\s*\{[\s\S]{0,180}position:\s*'relative'[\s\S]{0,180}alignItems:\s*'center'/.test(home)
+    && /weekPlanOptionsButton:\s*\{[\s\S]{0,180}position:\s*'absolute'[\s\S]{0,80}right:\s*0/.test(home),
+  'the dots no longer sit at the right while the week range stays centred');
   assert(!/<IconButton\b/.test(nav) && !/<Badge\b/.test(nav),
     'the Week shape still uses the large circular buttons or relative-week badge');
   assert(/compactWeekNavLabel:\s*\{[^}]*fontSize:\s*13\b[^}]*lineHeight:\s*18\b/.test(home)
@@ -1784,12 +1792,12 @@ run('the add-fixture control is on the WEEK shape only', () => {
   const home = homeScreenSource();
   const body = home.slice(home.indexOf('function HomeScreenV2'));
   const entryAt = body.indexOf('testID="edit-week-button"');
-  const weekBranchAt = body.lastIndexOf('<ModifiersStrip', entryAt);
-  assert(entryAt > 0 && weekBranchAt > 0
-    && body.slice(weekBranchAt, entryAt).includes('surface="week"'),
-  'Edit this week is no longer mounted in the Week branch');
+  const weekNavAt = body.indexOf('testID="program-week-navigation"');
+  const dayNavAt = body.indexOf('testID="program-day-navigation"');
+  assert(entryAt > weekNavAt && dayNavAt > entryAt,
+  'the Week options dots are no longer owned by the Week navigator branch');
   assert(body.split('testID="edit-week-button"').length - 1 === 1,
-    'Edit this week has more than one visible entry, so it may have leaked onto Day');
+    'Week options has more than one visible entry, so it may have leaked onto Day');
 });
 
 run('the add-fixture control shows in BOTH competitive phases with one signed label', () => {
@@ -1814,12 +1822,11 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   const plan = fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'), 'utf8');
 
-  assert(home.includes('<Text style={styles.editWeekButtonText}>Edit this week</Text>')
-    && home.includes('name="pencil-outline"')
-    && home.includes('testID="edit-week-button"'),
-  'the Week-only pen button is missing');
-  assert(/editWeekButton:\s*\{[\s\S]*?justifyContent:\s*'flex-start'[\s\S]*?backgroundColor:\s*'#1A1E18'/.test(home),
-    'Edit this week is no longer a subtly distinct, left-aligned button');
+  assert(home.includes('testID="edit-week-button"')
+    && home.includes('name="dots-horizontal" size={22}')
+    && !home.includes('styles.editWeekButton')
+    && !home.includes('styles.editWeekButtonText'),
+  'the large Edit this week bar survived or the Week-only dots control is missing');
   assert(!home.includes('Want to change something?')
     && !home.includes('testID="make-change-link"')
     && home.includes('testID="home-plan-options"')
