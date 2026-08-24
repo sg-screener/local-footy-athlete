@@ -658,6 +658,23 @@ function executeProgramControlActionWithinTrace(
           route: route.route,
         };
       }
+      /**
+       * DERIVED ROWS CHANGE THROUGH THE LEDGER, NOT A COPIED WORKOUT.
+       *
+       * D17 warm-up rows and optional recovery add-ons are projected at read
+       * time. The durable wrapper records this accepted action verbatim and
+       * their projection applies it; writing a dateOverride here would create a
+       * second stored copy of a derived source and would disappear at boot.
+       */
+      if (action.payload.derivedSource) {
+        return {
+          ok: true,
+          changedProgram: true,
+          requiresRebuild: false,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
       const result = replaceExerciseAtDate({
         date: action.payload.date,
         todayISO: context.todayISO,
@@ -735,6 +752,15 @@ function executeProgramControlActionWithinTrace(
       // could not speak for a block: a dated constraint answers one date, and
       // an athlete who says "this block" means every session in it. Both are
       // off this path, and `removeExerciseAtDate` is deleted outright.
+      if (action.payload.derivedSource) {
+        return {
+          ok: true,
+          changedProgram: true,
+          requiresRebuild: false,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
       const removalDate = action.payload.date.slice(0, 10);
       const removalOriginal = resolveWorkoutOnDate(removalDate);
       if (!removalOriginal) {
@@ -2382,6 +2408,46 @@ async function executeProgramControlActionDurablyWithinTrace(
     action.type === 'remove_exercise';
   if (!durableSessionMutation) {
     return executeProgramControlAction(action, context);
+  }
+  /**
+   * DERIVED ROWS HAVE ONE MATERIAL OWNER: THE DECISION LEDGER.
+   *
+   * A D17 warm-up or recovery add-on has no stored `workout.exercises` row to
+   * mutate. Sending it through `runCoachMutationTransaction` therefore creates
+   * an impossible contract: the core correctly accepts the action, but the
+   * transaction correctly sees no material program diff and rolls it back
+   * before the ledger append below can happen. The first simulator tap exposed
+   * exactly that false refusal.
+   *
+   * For these rows the append IS the accepted mutation. We still execute the
+   * ordinary core first, so the same routing and live safety refusal apply; then
+   * we append the exact typed action through the same ledger owner used below.
+   * No copied workout and no special swap writer are introduced.
+   */
+  const derivedExerciseAction =
+    (action.type === 'swap_exercise' || action.type === 'remove_exercise')
+    && !!action.payload.derivedSource;
+  if (derivedExerciseAction) {
+    const core = executeProgramControlAction(action, context);
+    if (!core.ok || !core.changedProgram) return core;
+    // Lazy for the same cycle reason documented on the ordinary append below.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { programControlDecisionFor } = require('../rules/programControlDecisions');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { appendDecisionEntry } = require('../store/decisionLedgerStore');
+    const decision = programControlDecisionFor(action);
+    const outcome = decision ? appendDecisionEntry({
+      decision,
+      provenance: action.source.initiatedBy === 'system' ? 'system_fixture' : 'athlete_tap',
+      writer: 'program_control',
+    }) : { ok: false, reason: 'derived_action_not_recordable' };
+    if (outcome.ok) return core;
+    return {
+      ...core,
+      ok: false,
+      changedProgram: false,
+      message: 'That change could not be saved, so nothing changed.',
+    };
   }
   const dates = action.type === 'move_session'
     ? [action.payload.fromDate, action.payload.toDate]

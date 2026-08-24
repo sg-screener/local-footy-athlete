@@ -967,7 +967,7 @@ ok('[10] the row is a grid: fixed gutter, then one content column',
     && /exerciseNumberGutter:\s*\{[^}]*width:\s*32/.test(screen)
     && /exerciseNumberGutter:\s*\{[^}]*marginLeft:\s*-13/.test(screen)
     && /exerciseNumberGutter:\s*\{[^}]*marginRight:\s*13/.test(screen)
-    && /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen));
+    && /exerciseContentColumn:\s*\{[^}]*flex:\s*1[^}]*minWidth:\s*0/.test(screen));
 ok('[10] the NUMBER lives in the gutter, not beside the name',
   /<View style=\{styles\.exerciseNumberGutter\}>[\s\S]{0,160}exerciseLabelText/.test(cardSource)
     && !/exerciseLabelBadge/.test(headerRow),
@@ -1123,7 +1123,7 @@ ok('[10] and the container is NOT a button — no press on the card itself',
   'only the name/Play, the stepper and the tick are pressable');
 ok('[10] the container does not disturb the alignment it wraps',
   /exerciseRowGrid:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
-    && /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0\s*\}/.test(screen),
+    && /exerciseContentColumn:\s*\{[^}]*flex:\s*1[^}]*minWidth:\s*0/.test(screen),
   'padding is on the container; the grid keeps its own geometry');
 
 // ── THE ICONS.

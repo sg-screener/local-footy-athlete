@@ -152,7 +152,7 @@ interface SessionCategoryPayload {
   templateId?: string;
 }
 
-interface ExercisePrescriptionPayload {
+export interface ExercisePrescriptionPayload {
   name: string;
   sets: number;
   repsMin: number;
@@ -162,6 +162,16 @@ interface ExercisePrescriptionPayload {
   prescriptionType?: WorkoutExercise['prescriptionType'];
   perSide?: boolean;
   restSeconds?: number;
+}
+
+/**
+ * A row projected from an authored session input rather than `workout.exercises`.
+ * The ledger still stores the athlete's one decision; the projection applies it
+ * to the owning source at read time.
+ */
+export interface DerivedExerciseSource {
+  kind: 'mobility_flow' | 'recovery_addon';
+  id: string;
 }
 
 export type ProgramControlAction =
@@ -222,6 +232,7 @@ export type ProgramControlAction =
         originExerciseName?: string;
         cause: 'injury' | 'kit_today';
       };
+      derivedSource?: DerivedExerciseSource;
     }>
   | ProgramControlActionBase<'add_exercise', {
       date: string;
@@ -233,6 +244,7 @@ export type ProgramControlAction =
       exercise: string;
       exerciseId?: string;
       futureWeeksToo?: boolean;
+      derivedSource?: DerivedExerciseSource;
     }>
   | ProgramControlActionBase<'set_recovery_mode', {
       date: string;

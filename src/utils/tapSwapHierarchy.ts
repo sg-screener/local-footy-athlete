@@ -89,6 +89,7 @@ export interface TapSwapChoice {
     | 'injury_hierarchy'
     | 'pattern_substitute_engine'
     | 'tag_registry_pattern_fallback'
+    | 'add_hierarchy_fallback'
     | 'recovery_fallback'
     | 'rest_fallback';
   reason: string;
@@ -99,6 +100,7 @@ export interface TapSwapChoice {
     weight?: number;
     prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
     restSeconds?: number;
+    perSide?: boolean;
   };
 }
 

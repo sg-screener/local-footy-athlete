@@ -400,6 +400,68 @@ function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
   return filed;
 }
 
+function leafForExerciseName(name: string): AddLeafId | null {
+  const wanted = resolveExerciseName(name).toLowerCase();
+  for (const group of selectableVocabularyGroups()) {
+    const match = group.names.find((candidate) => resolveExerciseName(candidate).toLowerCase() === wanted);
+    if (!match) continue;
+    const target = LEAF_FOR_POOL[group.id];
+    return target === 'by_conditioning_tier'
+      ? LEAF_FOR_TIER[CONDITIONING_META[match]?.tier ?? 'B-low']
+      : liftUnilateralToSingleLeg(target, match);
+  }
+  return null;
+}
+
+function familyForLeaf(leaf: AddLeafId): AddFamilyId | null {
+  for (const spec of Object.values(ADD_GROUPS)) {
+    if (spec.leaves.includes(leaf)) return spec.family;
+  }
+  return null;
+}
+
+/**
+ * Legal alternatives for one existing exercise, ordered nearest first.
+ *
+ * Quick Swap uses this only after the specialised swap hierarchy. It is not a
+ * second legality opinion: the names come from `legalNamesByLeaf`, the exact
+ * owner used by Add, and therefore pass the same equipment/injury gate. The
+ * original leaf comes first; remaining leaves stay inside the same visible
+ * session family.
+ */
+export function legalAddAlternativesForExercise(
+  args: AddCandidateArgs & { originalExercise: string },
+): Array<AddCandidate & { proximity: 'same_leaf' | 'same_family' }> {
+  const originalLeaf = leafForExerciseName(args.originalExercise);
+  if (!originalLeaf) return [];
+  const family = familyForLeaf(originalLeaf);
+  if (!family) return [];
+  const filed = legalNamesByLeaf(args);
+  const leaves = [
+    originalLeaf,
+    ...Object.values(ADD_GROUPS)
+      .filter((spec) => spec.family === family)
+      .flatMap((spec) => spec.leaves)
+      .filter((leaf) => leaf !== originalLeaf),
+  ];
+  const seen = new Set<string>();
+  const alternatives: Array<AddCandidate & { proximity: 'same_leaf' | 'same_family' }> = [];
+  for (const leaf of leaves) {
+    for (const name of filed.get(leaf) ?? []) {
+      const key = resolveExerciseName(name).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      alternatives.push({
+        name,
+        ...bandFor(name),
+        weightKg: loadFor(name, args.profile),
+        proximity: leaf === originalLeaf ? 'same_leaf' : 'same_family',
+      });
+    }
+  }
+  return alternatives;
+}
+
 /**
  * EVERY LEVEL OF SAM'S MENU EXCEPT THE EXERCISES, IN ONE ANSWER.
  *

@@ -38,6 +38,7 @@ import {
   EXERCISE_EXCLUSION_SCOPES,
   EXERCISE_EXCLUSION_SCOPE_DETAIL,
   EXERCISE_EXCLUSION_SCOPE_LABEL,
+  excludedExerciseNamesOn,
   exclusionExpiryLabel,
   type ExerciseExclusionScope,
 } from '../../rules/exerciseExclusions';
@@ -77,6 +78,8 @@ import {
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
+import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
+import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import {
   getTapSwapChoices,
   groupTapSwapChoices,
@@ -94,6 +97,15 @@ import {
 } from '../../rules/selectedImplement';
 import type { EquipmentTag } from '../../data/exercisePools';
 import type { LoadControlMode } from '../../utils/loadEstimation';
+import type { DerivedExerciseSource } from '../../types/programControlAction';
+import {
+  nextQuickSwapChoice,
+  rankedQuickSwapChoices,
+} from '../../utils/quickExerciseActions';
+import {
+  applyMobilityFlowExerciseDecisions,
+  applyRecoveryAddonExerciseDecisions,
+} from '../../utils/derivedExerciseDecisions';
 
 /**
  * The typed implement for a row PLUS whether today's kit changed it. Sam's UI
@@ -166,6 +178,7 @@ type EditableExercise = {
   name: string;
   targetId?: string;
   raw?: any;
+  derivedSource?: DerivedExerciseSource;
 };
 
 // THE SWAP PAYLOAD'S SHAPE AND ITS RULE BOTH LIVE IN `utils/swapSuggestionPayload`
@@ -306,6 +319,16 @@ type ExerciseEditStep =
       constraint: ActiveInjuryConstraint;
     }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
+  | { kind: 'replace_removed'; exercise: EditableExercise }
+  | {
+      kind: 'choose_removed_replacement';
+      exercise: EditableExercise;
+      groups: readonly {
+        id: string;
+        label: string;
+        options: readonly { name: string; suggestion: SuggestedSwap }[];
+      }[];
+    }
   /**
    * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
    *
@@ -456,22 +479,62 @@ function displayExerciseName(name: string | null | undefined, fallback = 'Exerci
   return formatExerciseDisplayName(name) || fallback;
 }
 
+function editableExerciseForRow(
+  row: any,
+  derivedSource?: DerivedExerciseSource,
+): EditableExercise | null {
+  const targetId = String(
+    derivedSource?.id ?? row?.id ?? row?.exerciseId ?? row?.exercise?.id ?? '',
+  ).trim();
+  const name = getExerciseName(row);
+  if (!targetId || !name) return null;
+  return { key: targetId, name, targetId, raw: row, derivedSource };
+}
+
 function buildEditableExercises(workout: any, isTeamOnly: boolean): EditableExercise[] {
   if (!workout || isTeamOnly) return [];
-  return (workout.exercises ?? [])
+  const stored = (workout.exercises ?? [])
     .filter((exercise: any) => !isTeamTrainingItem(exercise))
     .map((exercise: any) => {
       const targetId = exercise.id || exercise.exerciseId || exercise.exercise?.id;
       if (!targetId) return null;
-      return {
-        key: String(targetId),
-        name: getExerciseName(exercise),
-        targetId: String(targetId),
-        raw: exercise,
-      };
+      return editableExerciseForRow(exercise);
     })
     .filter((exercise: EditableExercise | null): exercise is EditableExercise =>
       exercise !== null && !!exercise.name);
+  const addons = (workout.recoveryAddons ?? []).flatMap((addon: any) =>
+    (addon?.exercises ?? []).map((exercise: any) => {
+      const targetId = String(exercise?.id ?? '').trim();
+      if (!targetId) return null;
+      return editableExerciseForRow(exercise, {
+        kind: 'recovery_addon' as const,
+        id: targetId,
+      });
+    })).filter((exercise: EditableExercise | null): exercise is EditableExercise => !!exercise);
+  return [...stored, ...addons];
+}
+
+function buildMobilityEditableExercises(flow: MobilityPrehabFlow | null): EditableExercise[] {
+  return (flow?.movements ?? []).map(({ exercise }) => {
+    const targetId = `mobility:${exercise.id}`;
+    return {
+      key: targetId,
+      name: exercise.name,
+      targetId,
+      raw: {
+        id: targetId,
+        exerciseId: targetId,
+        prescribedSets: exercise.sets,
+        prescribedRepsMin: exercise.repsMin,
+        prescribedRepsMax: exercise.repsMax,
+        prescriptionType: exercise.prescriptionType,
+        perSide: exercise.perSide,
+        restSeconds: exercise.restSeconds,
+        exercise: { id: exercise.id, name: exercise.name },
+      },
+      derivedSource: { kind: 'mobility_flow' as const, id: targetId },
+    };
+  });
 }
 
 function tapSwapReason(reason: SwapReason): TapSwapReason {
@@ -633,6 +696,25 @@ export default function DayWorkoutScreenV2() {
   const [injuryFlowOpen, setInjuryFlowOpen] = React.useState(false);
   const [sessionEquipmentVisible, setSessionEquipmentVisible] =
     React.useState(false);
+  const quickSwapState = React.useRef<Record<string, {
+    choices: readonly TapSwapChoice[];
+    attemptedNames: readonly string[];
+  }>>({});
+  const ledgerEntries = useDecisionLedgerStore((state) => state.entries);
+  const storedAthletePrefs = useAthletePreferencesStore((state) => state.prefs);
+  const excludedExerciseNames = React.useMemo(
+    () => excludedExerciseNamesOn(storedAthletePrefs.exclusions, date),
+    [date, storedAthletePrefs.exclusions],
+  );
+  const effectiveWorkout = React.useMemo(
+    () => workout ? applyRecoveryAddonExerciseDecisions({
+      workout,
+      date,
+      entries: ledgerEntries,
+      excludedExerciseNames,
+    }) : workout,
+    [date, excludedExerciseNames, ledgerEntries, workout],
+  );
   const [
     pendingComponentDeletionObservation,
     setPendingComponentDeletionObservation,
@@ -644,13 +726,9 @@ export default function DayWorkoutScreenV2() {
     exerciseKey: string;
   } | null>(null);
 
-  const editableExercises = React.useMemo(
-    () => buildEditableExercises(workout, isTeamOnly),
-    [workout, isTeamOnly],
-  );
-  const sessionEquipmentRequirements = React.useMemo(
-    () => deriveSessionEquipmentRequirements(editableExercises),
-    [editableExercises],
+  const storedEditableExercises = React.useMemo(
+    () => buildEditableExercises(effectiveWorkout, isTeamOnly),
+    [effectiveWorkout, isTeamOnly],
   );
 
   /**
@@ -721,8 +799,8 @@ export default function DayWorkoutScreenV2() {
    * render helper.
    */
   const sessionTemplate = React.useMemo(
-    () => buildSessionTemplate(workout),
-    [workout],
+    () => buildSessionTemplate(effectiveWorkout),
+    [effectiveWorkout],
   );
 
   /**
@@ -739,23 +817,40 @@ export default function DayWorkoutScreenV2() {
     [resolvedWeek],
   );
   const flowAthlete = useAthleteContext();
-  const mobilityFlow = React.useMemo(
+  const baseMobilityFlow = React.useMemo(
     () => selectMobilityPrehabFlow({
-      workout,
+      workout: effectiveWorkout,
       seasonPhase,
       isGameWeek,
       athlete: flowAthlete,
       date,
     }),
-    [workout, seasonPhase, isGameWeek, flowAthlete, date],
+    [effectiveWorkout, seasonPhase, isGameWeek, flowAthlete, date],
+  );
+  const mobilityFlow = React.useMemo(
+    () => applyMobilityFlowExerciseDecisions({
+      flow: baseMobilityFlow,
+      date,
+      entries: ledgerEntries,
+      excludedExerciseNames,
+    }),
+    [baseMobilityFlow, date, excludedExerciseNames, ledgerEntries],
+  );
+  const editableExercises = React.useMemo(
+    () => [...storedEditableExercises, ...buildMobilityEditableExercises(mobilityFlow)],
+    [mobilityFlow, storedEditableExercises],
+  );
+  const sessionEquipmentRequirements = React.useMemo(
+    () => deriveSessionEquipmentRequirements(editableExercises),
+    [editableExercises],
   );
   const executionPlan = React.useMemo(
-    () => workout ? buildSessionExecutionPlan({
-      workout,
+    () => effectiveWorkout ? buildSessionExecutionPlan({
+      workout: effectiveWorkout,
       template: sessionTemplate,
       mobilityFlow,
     }) : null,
-    [mobilityFlow, sessionTemplate, workout],
+    [effectiveWorkout, mobilityFlow, sessionTemplate],
   );
   const [completedExerciseIds, setCompletedExerciseIds] = React.useState<ReadonlySet<string>>(
     () => executionPlan
@@ -940,8 +1035,71 @@ export default function DayWorkoutScreenV2() {
     [date, editableExercises],
   );
 
-  const prepareSwap = React.useCallback(
-    (exercise: EditableExercise) => {
+  /** One tap advances through one ranked list for the original visible slot. */
+  const quickSwapExercise = React.useCallback(async (exercise: EditableExercise) => {
+    if (!date) return;
+    const slotId = exercise.targetId ?? exercise.key;
+    let state = quickSwapState.current[slotId];
+    if (!state) {
+      const environment = resolveTapSwapEnvironment({
+        date,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[date],
+      });
+      state = {
+        choices: rankedQuickSwapChoices({
+          originalExercise: exercise.name,
+          reason: 'preference',
+          environment,
+          existingExerciseNames: editableExercises.map((item) => item.name),
+          profile: useProfileStore.getState().onboardingData,
+        }),
+        attemptedNames: [],
+      };
+    }
+    const next = nextQuickSwapChoice(state.choices, state.attemptedNames);
+    if (!next) {
+      showExerciseEditFallback(
+        'No safe swap for this one',
+        `There is no safe replacement for ${displayExerciseName(exercise.name)} with today’s kit and how you are pulling up. You can remove it instead.`,
+        `Find a safe replacement for ${displayExerciseName(exercise.name)} on ${date}.`,
+      );
+      return;
+    }
+    const suggestion = suggestedSwapFromChoice(exercise, next.choice);
+    if (suggestion.kind !== 'exercise') return;
+    const result = await executeProgramControlActionDurably({
+      type: 'swap_exercise',
+      source: { screen: 'session_detail', surface: 'quick_exercise_action', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: {
+        date,
+        fromExercise: exercise.name,
+        fromExerciseId: exercise.targetId,
+        toExercise: suggestion.suggestion,
+        derivedSource: exercise.derivedSource,
+      },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    }, { todayISO: date });
+    if (result.ok) {
+      quickSwapState.current[slotId] = {
+        choices: state.choices,
+        attemptedNames: next.attemptedNames,
+      };
+      return;
+    }
+    setExerciseEditStep({
+      kind: 'result',
+      ok: false,
+      title: 'Could not swap exercise',
+      message: result.message ?? 'Nothing changed.',
+    });
+  }, [date, editableExercises, showExerciseEditFallback]);
+
+  const swapGroupsFor = React.useCallback((exercise: EditableExercise) => {
       const reason: SwapReason = 'Preference';
       const dateISO = date ?? todayISOLocal();
       const environment = resolveTapSwapEnvironment({
@@ -954,11 +1112,12 @@ export default function DayWorkoutScreenV2() {
       // each group at two and OMITS a group with no legal member — Sam's *"show
       // fewer when good legal options do not exist"* honoured by omission
       // rather than by padding the list with something illegal.
-      const groups = groupTapSwapChoices(getTapSwapChoices({
+      return groupTapSwapChoices(rankedQuickSwapChoices({
         originalExercise: exercise.name,
         reason: tapSwapReason(reason),
         environment,
         existingExerciseNames: editableExercises.map((item) => item.name),
+        profile: useProfileStore.getState().onboardingData,
       })).map((group) => ({
         id: group.id,
         label: group.label,
@@ -970,6 +1129,12 @@ export default function DayWorkoutScreenV2() {
           };
         }),
       })).filter((group) => group.options.length > 0);
+    }, [date, editableExercises]);
+
+  const prepareSwap = React.useCallback(
+    (exercise: EditableExercise) => {
+      const reason: SwapReason = 'Preference';
+      const groups = swapGroupsFor(exercise);
       if (groups.length === 0) {
         // HONEST, NOT AN EMPTY SHEET. A row with no legal substitute says so in
         // the athlete's words; it does not open a chooser with nothing in it.
@@ -982,7 +1147,7 @@ export default function DayWorkoutScreenV2() {
       }
       setExerciseEditStep({ kind: 'choose_swap', exercise, reason, groups });
     },
-    [date, dateLabel, editableExercises, showExerciseEditFallback],
+    [dateLabel, showExerciseEditFallback, swapGroupsFor],
   );
 
 
@@ -1530,6 +1695,7 @@ export default function DayWorkoutScreenV2() {
           date,
           exercise: exercise.name,
           exerciseId: exercise.targetId,
+          derivedSource: exercise.derivedSource,
         },
         requiresRebuild: false,
         createsActiveModifier: false,
@@ -1557,7 +1723,7 @@ export default function DayWorkoutScreenV2() {
             exerciseKey: exercise.key,
           });
         }
-        setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+        setExerciseEditStep({ kind: 'replace_removed', exercise });
         return;
       }
       setExerciseEditStep({
@@ -1569,6 +1735,62 @@ export default function DayWorkoutScreenV2() {
     },
     [date, workout.id],
   );
+
+  const offerRemovedReplacement = React.useCallback((exercise: EditableExercise) => {
+    const groups = swapGroupsFor(exercise);
+    if (groups.length === 0) {
+      setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+      return;
+    }
+    setExerciseEditStep({ kind: 'choose_removed_replacement', exercise, groups });
+  }, [swapGroupsFor]);
+
+  const keepRemovedWithoutReplacement = React.useCallback((exercise: EditableExercise) => {
+    setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+  }, []);
+
+  const addRemovedReplacement = React.useCallback(async (
+    exercise: EditableExercise,
+    suggestion: SuggestedSwap,
+  ) => {
+    if (!date || suggestion.kind !== 'exercise') return;
+    const action = exercise.derivedSource
+      ? {
+          type: 'swap_exercise' as const,
+          source: { screen: 'session_detail' as const, surface: 'quick_remove_replacement', initiatedBy: 'tap' as const },
+          scope: 'today_only' as const,
+          payload: {
+            date,
+            fromExercise: exercise.name,
+            fromExerciseId: exercise.targetId,
+            toExercise: suggestion.suggestion,
+            derivedSource: exercise.derivedSource,
+          },
+          requiresRebuild: false,
+          createsActiveModifier: false,
+          oneOffOnly: true,
+        }
+      : {
+          type: 'add_exercise' as const,
+          source: { screen: 'session_detail' as const, surface: 'quick_remove_replacement', initiatedBy: 'tap' as const },
+          scope: 'today_only' as const,
+          payload: { date, exercise: suggestion.suggestion },
+          requiresRebuild: false,
+          createsActiveModifier: false,
+          oneOffOnly: true,
+        };
+    const result = await executeProgramControlActionDurably(action, { todayISO: date });
+    if (result.ok) {
+      setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+      return;
+    }
+    setExerciseEditStep({
+      kind: 'result',
+      ok: false,
+      title: 'Could not add replacement',
+      message: result.message ?? 'The original exercise is still removed.',
+    });
+  }, [date]);
 
   // Wrap derivation in try/catch so a thrown contract still produces a
   // failed marker with reason=contract-error instead of leaving the
@@ -1760,11 +1982,11 @@ export default function DayWorkoutScreenV2() {
               ) : null}
             </View>
           ) : null}
-          {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
+          {/* ⚠ **THE THREE UNLABELLED HEADER ICONS STAY DELETED — SAM, 2026-08-19.**
             *
-            * *"Remove unlabelled header icons. Remove always-visible row
-            * Swap/Remove icons. Build one 'Need to make a change?' section:
-            * Equipment · Injury · Add · Remove · Swap."*
+            * The later 2026-08-24 Quick Swap / Quick Remove ruling restores
+            * ROW shortcuts only. It does not restore the three unrelated
+            * unlabelled controls in this header.
             *
             * A plus, a dumbbell and a plaster in the sticky header, each opening
             * a different change flow, and nothing on the screen said which was
@@ -1893,6 +2115,8 @@ export default function DayWorkoutScreenV2() {
                   startEditingWeight={startEditingWeight}
                   commitWeightEdit={commitWeightEdit}
                   onSelectExercise={setSelectedExercise}
+                  onQuickSwap={quickSwapExercise}
+                  onQuickRemove={removeExerciseToday}
                 />
               </SessionExecutionSection>
             ))}
@@ -1916,6 +2140,8 @@ export default function DayWorkoutScreenV2() {
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
+              onQuickSwap={quickSwapExercise}
+              onQuickRemove={removeExerciseToday}
             />
             {/**
               * SELECT ALL — Sam, 2026-08-22: *"There should be a Select all
@@ -2088,6 +2314,9 @@ export default function DayWorkoutScreenV2() {
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
+        onOfferRemovedReplacement={offerRemovedReplacement}
+        onKeepRemovedWithoutReplacement={keepRemovedWithoutReplacement}
+        onAddRemovedReplacement={addRemovedReplacement}
         onAddFamily={openAddFamily}
         onAddGroup={openAddGroup}
         onAddLeaf={openAddLeaf}
@@ -2377,6 +2606,8 @@ interface SessionListProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }
 
 /**
@@ -2405,6 +2636,8 @@ function MobilityExerciseList({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
+  onQuickSwap,
+  onQuickRemove,
 }: {
   flow: MobilityPrehabFlow | null;
   completedItemIds: ReadonlySet<string>;
@@ -2423,6 +2656,8 @@ function MobilityExerciseList({
   startEditingWeight: (exercise: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }) {
   if (!flow) return null;
 
@@ -2477,6 +2712,11 @@ function MobilityExerciseList({
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={onSelectExercise}
+              quickExercise={editableExerciseForRow(row, {
+                kind: 'mobility_flow', id: itemId,
+              })!}
+              onQuickSwap={onQuickSwap}
+              onQuickRemove={onQuickRemove}
             />
             )}
           </ExecutionChecklistItem>
@@ -2506,6 +2746,8 @@ function SessionList({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
+  onQuickSwap,
+  onQuickRemove,
 }: SessionListProps) {
   if (items.length === 0) return null;
 
@@ -2524,6 +2766,8 @@ function SessionList({
         <ConditioningChoiceRow
           key={key}
           options={item.options}
+          onQuickSwap={onQuickSwap}
+          onQuickRemove={onQuickRemove}
         />
       );
     }
@@ -2532,6 +2776,8 @@ function SessionList({
         <ConditioningPhaseRow
           key={key}
           exercise={item.row}
+          onQuickSwap={onQuickSwap}
+          onQuickRemove={onQuickRemove}
         />
       );
     }
@@ -2542,6 +2788,8 @@ function SessionList({
           exercise={item.row}
           expandedCues={expandedCues}
           toggleCue={toggleCue}
+          onQuickSwap={onQuickSwap}
+          onQuickRemove={onQuickRemove}
         />
       );
     }
@@ -2575,6 +2823,9 @@ function SessionList({
         startEditingWeight={startEditingWeight}
         commitWeightEdit={commitWeightEdit}
         onSelectExercise={onSelectExercise}
+        quickExercise={editableExerciseForRow(item.row)!}
+        onQuickSwap={onQuickSwap}
+        onQuickRemove={onQuickRemove}
       />
     );
   };
@@ -2864,16 +3115,20 @@ function AddonRow({
   exercise,
   expandedCues,
   toggleCue,
+  onQuickSwap,
+  onQuickRemove,
 }: {
   exercise: any;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }) {
   const token = stableTestIdToken(exercise?.id);
   const name = exercise?.name;
   return (
     <View style={styles.exerciseCard} testID={`workout-exercise-row-${token}`}>
-      <View style={styles.exerciseHeaderRow}>
+      <View style={[styles.exerciseHeaderRow, styles.exerciseHeaderWithQuickActions]}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} numberOfLines={2}>
             {displayExerciseName(name)}
@@ -2892,6 +3147,13 @@ function AddonRow({
         expandedCues={expandedCues}
         toggleCue={toggleCue}
       />
+      <QuickExerciseActions
+        exercise={editableExerciseForRow(exercise, {
+          kind: 'recovery_addon', id: String(exercise.id),
+        })!}
+        onQuickSwap={onQuickSwap}
+        onQuickRemove={onQuickRemove}
+      />
     </View>
   );
 }
@@ -2906,8 +3168,12 @@ function AddonRow({
  */
 function ConditioningChoiceRow({
   options,
+  onQuickSwap,
+  onQuickRemove,
 }: {
   options: Array<{ title: string; description: string; rows: any[] }>;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }) {
   const isChoice = options.length > 1;
   const [expanded, setExpanded] = React.useState(!isChoice);
@@ -2951,6 +3217,8 @@ function ConditioningChoiceRow({
                   key={exercise.id}
                   exercise={exercise}
                   idx={idx}
+                  onQuickSwap={onQuickSwap}
+                  onQuickRemove={onQuickRemove}
                 />
               ))}
             </View>
@@ -2975,6 +3243,9 @@ function ConditioningChoiceRow({
  */
 interface StrengthExerciseCardProps {
   exercise: any;
+  quickExercise: EditableExercise;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
   /**
    * R-116 — the completion checkbox, built by `ExecutionChecklistItem` and
    * PLACED here, because only this card knows where its weight stepper is.
@@ -3009,6 +3280,9 @@ interface StrengthExerciseCardProps {
 }
 function StrengthExerciseCard({
   exercise,
+  quickExercise,
+  onQuickSwap,
+  onQuickRemove,
   checkbox,
   label,
   isGrouped,
@@ -3412,13 +3686,14 @@ function StrengthExerciseCard({
             </Pressable>
           </View>
         )}
-        {/* ⚠ **IMMEDIATELY RIGHT OF THE STEPPER — SAM, 2026-08-20 (R-116),
-            SUPERSEDING R-111's NAME-LINE CLAUSE.** Load and done are one
-            movement of the hand, so they are one object with one small fixed
-            gap — never two things pushed to opposite ends of the row. */}
         {checkbox}
         </View>
       </View>
+      <QuickExerciseActions
+        exercise={quickExercise}
+        onQuickSwap={onQuickSwap}
+        onQuickRemove={onQuickRemove}
+      />
     </Card>
   );
 }
@@ -3452,8 +3727,12 @@ function usePersonalPace(notes: string | null | undefined) {
  */
 function ConditioningPhaseRow({
   exercise,
+  onQuickSwap,
+  onQuickRemove,
 }: {
   exercise: any;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }) {
   const phaseName = exercise.exercise?.name || 'Phase';
   const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
@@ -3468,7 +3747,7 @@ function ConditioningPhaseRow({
       style={styles.exerciseCard}
       testID={`workout-exercise-row-${exerciseToken}`}
     >
-      <View style={styles.exerciseHeaderRow}>
+      <View style={[styles.exerciseHeaderRow, styles.exerciseHeaderWithQuickActions]}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} numberOfLines={2}>
             {phaseDisplayName}
@@ -3492,6 +3771,11 @@ function ConditioningPhaseRow({
         </Text>
       ) : null}
       {restLabel ? <Text style={styles.conditioningRest}>{restLabel}</Text> : null}
+      <QuickExerciseActions
+        exercise={editableExerciseForRow(exercise)!}
+        onQuickSwap={onQuickSwap}
+        onQuickRemove={onQuickRemove}
+      />
     </View>
   );
 }
@@ -3502,10 +3786,14 @@ function ConditioningPhaseRow({
 interface ConditioningRowProps {
   exercise: any;
   idx: number;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
 }
 function ConditioningRow({
   exercise,
   idx,
+  onQuickSwap,
+  onQuickRemove,
 }: ConditioningRowProps) {
   const name = exercise.exercise?.name || `Phase ${idx + 1}`;
   const displayName = displayExerciseName(name, `Phase ${idx + 1}`);
@@ -3525,7 +3813,7 @@ function ConditioningRow({
       testID={`workout-exercise-row-${exerciseToken}`}
     >
       <View style={styles.conditioningBullet} />
-      <View style={{ flex: 1 }}>
+      <View style={styles.conditioningRowContent}>
         <View style={styles.conditioningRowHeader}>
           <Text style={styles.conditioningRowName}>{displayName}</Text>
         </View>
@@ -3548,6 +3836,11 @@ function ConditioningRow({
             {paceLine}
           </Text>
         ) : null}
+        <QuickExerciseActions
+          exercise={editableExerciseForRow(exercise)!}
+          onQuickSwap={onQuickSwap}
+          onQuickRemove={onQuickRemove}
+        />
       </View>
     </View>
   );
@@ -3584,14 +3877,6 @@ function TeamTrainingRow({ checkbox }: { checkbox?: React.ReactNode }) {
  * **Neither behaviour changed.** Same `onPlay`, same handler, same
  * `Play <name> demo` label on both the name and the button; the checkbox keeps
  * its `accessibilityRole="checkbox"`, its checked state and its toggle.
- *
- * TASK 8 (ruling 12): the single "Change" pill that opened the modal
- * exercise_menu is retired. In its place, two icon buttons that already know
- * their own destination — swap enters `swap_reason` for this exercise,
- * remove enters `confirm_remove` — so what used to be "tap Change, then
- * choose Swap or Remove from a sheet" is one tap. `onSwap`/`onRemove` are
- * only present for rows the athlete can actually edit (team-training rows
- * pass neither, same gate the old `onChange` used).
  *
  * The play target is a small, low-opacity affordance — present but never
  * competing with the exercise name. Pressing brightens it (opacity → 1,
@@ -3637,18 +3922,50 @@ function ExerciseHeaderRow({
  * signed card of tinted icon chips. Same heading, same five doors, two
  * visual languages. The shared owner is `components/SessionChangeHub`. */
 
-/* ⚠ **`ExerciseRowActions` IS DELETED — SAM, 2026-08-19.**
- *
- * *"Remove always-visible row Swap/Remove icons."* Two unlabelled icons on
- * EVERY row of every session, competing with the exercise name and the load
- * controls for the athlete's attention, for two actions they take rarely. Both
- * doors are in the one labelled section now (`SessionChangeHub`), which asks
- * which exercise rather than putting the question on all of them at once.
- *
- * The `componentSwapIngress` / `componentDeleteIngress` test ids MOVED with the
- * ingress, onto the picker's rows — a deleted surface whose gate keeps watching
- * is the shape `gate-must-watch-the-deleted-surface` names.
+/**
+ * The row shortcut Sam restored on 2026-08-24. These do not own a second edit
+ * engine: both callbacks terminate at the same ranked swap and durable removal
+ * owners as the labelled hub below the session.
  */
+function QuickExerciseActions({
+  exercise,
+  onQuickSwap,
+  onQuickRemove,
+}: {
+  exercise: EditableExercise;
+  onQuickSwap: (exercise: EditableExercise) => void;
+  onQuickRemove: (exercise: EditableExercise) => void;
+}) {
+  const token = stableTestIdToken(exercise.targetId ?? exercise.key);
+  return (
+    <View style={styles.exerciseRowActions}>
+      <Pressable
+        onPress={() => onQuickSwap(exercise)}
+        accessibilityRole="button"
+        accessibilityLabel={`Quick swap ${displayExerciseName(exercise.name)}`}
+        testID={`quick-swap-exercise-${token}`}
+        hitSlop={8}
+        style={({ pressed }) => [styles.exerciseRowActionBtn, pressed && { opacity: 0.6 }]}
+      >
+        <MaterialCommunityIcons name="autorenew" size={15} color="#B9A7FF" />
+      </Pressable>
+      <Pressable
+        onPress={() => onQuickRemove(exercise)}
+        accessibilityRole="button"
+        accessibilityLabel={`Quick remove ${displayExerciseName(exercise.name)}`}
+        testID={`quick-remove-exercise-${token}`}
+        hitSlop={8}
+        style={({ pressed }) => [
+          styles.exerciseRowActionBtn,
+          styles.exerciseRowActionBtnDanger,
+          pressed && { opacity: 0.6 },
+        ]}
+      >
+        <MaterialCommunityIcons name="minus" size={15} color="#FF7F7F" />
+      </Pressable>
+    </View>
+  );
+}
 
 /**
  * Pro-mode play button — smaller, muted at rest, brightens only on press.
@@ -3808,6 +4125,9 @@ interface ExerciseEditSheetProps {
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
   onRemoveToday: (exercise: EditableExercise) => void;
+  onOfferRemovedReplacement: (exercise: EditableExercise) => void;
+  onKeepRemovedWithoutReplacement: (exercise: EditableExercise) => void;
+  onAddRemovedReplacement: (exercise: EditableExercise, suggestion: SuggestedSwap) => void;
   onFutureScope: (step: FutureScopeStep) => void;
   onTodayOnly: () => void;
   /** Sam's scope question, answered. Routed to the ONE exclusion transaction owner. */
@@ -3826,7 +4146,8 @@ interface ExerciseEditSheetProps {
  * screen behind, and it is untouched.
  */
 const AFTER_THE_CHANGE_LANDED: ReadonlySet<ExerciseEditStep['kind']> = new Set([
-  'exclusion_scope', 'future_scope', 'result', 'coach_fallback',
+  'replace_removed', 'choose_removed_replacement', 'exclusion_scope',
+  'future_scope', 'result', 'coach_fallback',
 ]);
 
 function ExerciseEditSheet(props: ExerciseEditSheetProps) {
@@ -3869,6 +4190,9 @@ function ExerciseEditBody({
   onApplySwapToday,
   onApplyAddToday,
   onRemoveToday,
+  onOfferRemovedReplacement,
+  onKeepRemovedWithoutReplacement,
+  onAddRemovedReplacement,
   onFutureScope,
   onTodayOnly,
   onExclusionScope,
@@ -4240,6 +4564,50 @@ function ExerciseEditBody({
             />
           </>
         );
+      case 'replace_removed':
+        return (
+          <>
+            <Text style={styles.exerciseEditBody}>
+              {displayExerciseName(step.exercise.name)} was removed. Would you like to add an exercise to replace it?
+            </Text>
+            <Button
+              label="Yes, show replacements"
+              variant="primary"
+              size="md"
+              onPress={() => onOfferRemovedReplacement(step.exercise)}
+            />
+            <Button
+              label="No, leave it removed"
+              variant="secondary"
+              size="md"
+              onPress={() => onKeepRemovedWithoutReplacement(step.exercise)}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      case 'choose_removed_replacement':
+        return (
+          <>
+            <Text style={styles.exerciseEditBody}>
+              Pick a safe replacement for {displayExerciseName(step.exercise.name)}.
+            </Text>
+            {step.groups.map((group) => (
+              <View key={group.id} style={styles.exerciseEditGroup}>
+                <Text style={styles.exerciseEditGroupLabel}>{group.label}</Text>
+                {group.options.map((option) => (
+                  <Button
+                    key={`${group.id}:${option.name}`}
+                    label={option.name}
+                    variant="secondary"
+                    size="md"
+                    onPress={() => onAddRemovedReplacement(step.exercise, option.suggestion)}
+                    style={styles.exerciseEditSecondaryButton}
+                  />
+                ))}
+              </View>
+            ))}
+          </>
+        );
       case 'choose_swap':
         return (
           <>
@@ -4461,6 +4829,8 @@ function exerciseEditStepKey(step: Exclude<ExerciseEditStep, { kind: 'closed' }>
       return `confirm_swap:${step.exercise.key}`;
     case 'choose_swap':
     case 'confirm_remove':
+    case 'replace_removed':
+    case 'choose_removed_replacement':
     case 'exclusion_scope':
       return `${step.kind}:${step.exercise.key}`;
     default:
@@ -4484,6 +4854,10 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return step.label;
     case 'confirm_remove':
       return 'Remove this exercise?';
+    case 'replace_removed':
+      return 'Replace it?';
+    case 'choose_removed_replacement':
+      return 'Choose a replacement';
     case 'choose_swap':
       return 'What would you rather do?';
     case 'confirm_swap':
@@ -4517,6 +4891,9 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
       return `${step.review.bodyPart} \u00b7 ${step.review.severity}/10`;
     case 'confirm_remove':
     case 'confirm_swap':
+      return displayExerciseName(step.exercise.name);
+    case 'replace_removed':
+    case 'choose_removed_replacement':
       return displayExerciseName(step.exercise.name);
     case 'confirm_add':
       return 'Add one exercise or small block, not another full session.';
@@ -4981,6 +5358,7 @@ const styles = StyleSheet.create({
   // the ruling now says generous space AROUND each exercise and tight grouping
   // WITHIN it. Those are different axes and this is the one that changed.
   exerciseCard: {
+    position: 'relative',
     backgroundColor: 'rgba(255, 255, 255, 0.025)',
     borderColor: 'rgba(255, 255, 255, 0.07)',
     borderWidth: StyleSheet.hairlineWidth,
@@ -5080,6 +5458,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 0,
   },
+  exerciseHeaderWithQuickActions: { paddingRight: 68 },
   exerciseLabelBadge: {
     minWidth: 18,
     alignItems: 'flex-start',
@@ -5117,25 +5496,28 @@ const styles = StyleSheet.create({
   // Per-row swap/remove icon buttons (ruling 12) — replace the single
   // retired "Change" pill styles.
   exerciseRowActions: {
+    position: 'absolute',
+    top: 12,
+    right: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    zIndex: 2,
   },
   exerciseRowActionBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    backgroundColor: 'rgba(185, 167, 255, 0.10)',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(185, 167, 255, 0.30)',
   },
   exerciseRowActionBtnDanger: {
-    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-    borderColor: 'rgba(244, 67, 54, 0.25)',
+    backgroundColor: 'rgba(255, 127, 127, 0.10)',
+    borderColor: 'rgba(255, 127, 127, 0.30)',
   },
-
   // Muted play target — outline affordance, no resting fill at all.
   // Pushed one more step down: 16×16 ring at opacity 0.45 with a faint
   // ring (alpha 0.22). At this weight the play icon is a secondary tool
@@ -5169,7 +5551,7 @@ const styles = StyleSheet.create({
   // content lines must share the exact same left edge; one right control
   // group."* The number used to be a sibling of the NAME, so the gutter existed
   // on line one only and the two lines below started under it.
-  exerciseRowGrid: { flexDirection: 'row', alignItems: 'center' },
+  exerciseRowGrid: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
   // Fixed width — the gutter never changes size, so the content column's left
   // edge is the same on every row. It stretches to the card height so the
   // number centres vertically and its right border becomes one quiet divider.
@@ -5186,7 +5568,7 @@ const styles = StyleSheet.create({
   // Every text line lives in here, so they cannot disagree about their left
   // edge. `minWidth: 0` lets a long name wrap INSIDE the column instead of
   // widening it and shoving the controls off the row.
-  exerciseContentColumn: { flex: 1, minWidth: 0 },
+  exerciseContentColumn: { flex: 1, minWidth: 0, paddingRight: 68 },
   // Line two. The dose takes the free width; the controls do not shrink.
   // Line two is now TEXT ONLY — the controls left it, so its height is the
   // text's own and the 1-3px rhythm is reachable.
@@ -5201,6 +5583,9 @@ const styles = StyleSheet.create({
   // translation. `alignItems: 'center'` is what makes their centres coincide,
   // and it is the only thing that decides it.
   controlsRow: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
@@ -5500,6 +5885,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  conditioningRowContent: {
+    flex: 1,
+    position: 'relative',
+    paddingRight: 68,
   },
   conditioningBullet: {
     width: 8,

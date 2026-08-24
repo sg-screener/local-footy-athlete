@@ -61,6 +61,13 @@ import {
 import { addDaysISO } from '../../utils/programBlockState';
 import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
+import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
+import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
+import {
+  applyMobilityFlowExerciseDecisions,
+  applyRecoveryAddonExerciseDecisions,
+} from '../../utils/derivedExerciseDecisions';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
 import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
@@ -291,27 +298,44 @@ export default function HomeScreenV2() {
   const navIsToday = dayFirstDay?.isToday === true;
 
   const reviewAthlete = useAthleteContext();
+  const ledgerEntries = useDecisionLedgerStore((state) => state.entries);
+  const athletePrefs = useAthletePreferencesStore((state) => state.prefs);
+  const projectedWorkoutByDate = useMemo(() => new Map(weekDays.map((day) => {
+    if (!day.workout) return [day.date, null] as const;
+    return [day.date, applyRecoveryAddonExerciseDecisions({
+      workout: day.workout,
+      date: day.date,
+      entries: ledgerEntries,
+      excludedExerciseNames: excludedExerciseNamesOn(athletePrefs.exclusions, day.date),
+    })] as const;
+  })), [athletePrefs.exclusions, ledgerEntries, weekDays]);
   const mobilityFlowByDate = useMemo(() => {
     const isGameWeek = weekDays.some((day) => day.indicator === 'game');
     return new Map(weekDays.map((day) => [
       day.date,
-      selectMobilityPrehabFlow({
-        workout: day.workout,
-        seasonPhase: currentPhase,
-        isGameWeek,
-        athlete: reviewAthlete,
+      applyMobilityFlowExerciseDecisions({
+        flow: selectMobilityPrehabFlow({
+          workout: projectedWorkoutByDate.get(day.date) ?? null,
+          seasonPhase: currentPhase,
+          isGameWeek,
+          athlete: reviewAthlete,
+          date: day.date,
+        }),
         date: day.date,
+        entries: ledgerEntries,
+        excludedExerciseNames: excludedExerciseNamesOn(athletePrefs.exclusions, day.date),
       }),
     ]));
-  }, [currentPhase, reviewAthlete, weekDays]);
+  }, [athletePrefs.exclusions, currentPhase, ledgerEntries, projectedWorkoutByDate, reviewAthlete, weekDays]);
   const executionPlanByDate = useMemo(() => new Map(weekDays.flatMap((day) => {
-    if (!day.workout) return [];
+    const projectedWorkout = projectedWorkoutByDate.get(day.date);
+    if (!projectedWorkout) return [];
     return [[day.date, buildSessionExecutionPlan({
-      workout: day.workout,
-      template: buildSessionTemplate(day.workout),
+      workout: projectedWorkout,
+      template: buildSessionTemplate(projectedWorkout),
       mobilityFlow: mobilityFlowByDate.get(day.date) ?? null,
     })] as const];
-  })), [mobilityFlowByDate, weekDays]);
+  })), [mobilityFlowByDate, projectedWorkoutByDate, weekDays]);
   /* ── SAM'S SHEET, RULED 2026-08-13: *"add the popup"* ──
      The day/week notice used to navigate straight to My Status. It now opens
      this sheet first, which lists WHICH modifiers are acting and offers "Go to
@@ -499,6 +523,7 @@ export default function HomeScreenV2() {
    * keep their action sheet in both.
   */
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
+    const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
     const isSelected = dayFirst ? true : isNormal
       ? idx === expandedWeekIdx
       : idx === selectedIdx;
@@ -535,7 +560,7 @@ export default function HomeScreenV2() {
       ? reconcileRecordedSessionExecution(executionPlan, sessionFeedback[day.date])
       : null;
     const timelineEntries = visibleDay
-      ? dayTimeline(visibleDay, sessionFeedback[day.date], day.workout, recordedExecution)
+      ? dayTimeline(visibleDay, sessionFeedback[day.date], projectedWorkout, recordedExecution)
       : [];
     const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
     const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;

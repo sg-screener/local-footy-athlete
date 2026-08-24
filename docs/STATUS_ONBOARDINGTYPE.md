@@ -763,6 +763,61 @@ no timer leaves the field blank.
 
 ---
 
+## R-174 — one quick-action system across every exercise row
+
+Sam restored row-level Swap/Remove as explicit shortcuts. The implementation
+does not restore the deleted private row editor: every row renderer delegates to
+one `QuickExerciseActions` component, the established tap-swap hierarchy, the
+durable ProgramControlAction door, the decision ledger and the existing
+exclusion/Undo owners.
+
+Derived D17 warm-ups and optional recovery add-ons needed one structural change:
+their edits are stored as ledger decisions and folded into the live projection.
+No copied warm-up or recovery list is persisted. The source slot id survives a
+swap, so repeated taps remain attached to the original slot and advance through
+one ranked list.
+
+### Evidence
+
+- TEST FIRST: the new tape initially stopped on the missing projection module;
+  after the pure decision fold existed it reached 13/22, with the nine remaining
+  reds all naming absent UI/prompt wiring.
+- `test:quick-exercise-actions` — 33/33. It covers real Strength, Mobility and
+  Conditioning ranking/family retention, repeated A→B→C→A choice,
+  exact-date isolation, reversal, derived warm-up swap/remove, optional recovery
+  swap/remove, stable ids, every live row renderer, icon identity and the
+  post-remove replacement ask, top-right icon geometry/size, bottom-right
+  completion placement without added card height, exact checkbox/weight-control
+  centring, the single-circle Remove glyph, and the ledger-only durable branch.
+- MUTATION: changing the exhausted-list wrap from first-ranked back to the
+  second answer made the A-after-wrap cell red (21/22); restoring it returned
+  the then-22-cell tape to green; the final six real-family cells bring it to
+  28/28.
+- `test:mobility-flow` — 59/59 and now invokes the quick-action tape from the
+  `test:bible` chain.
+- `test:compile` remains at 483 errors / 60 worsened pairs, the measured shared
+  baseline. Its four `programControlActions.ts` errors are in the pre-existing
+  equipment-availability block, outside this diff; it names neither new module
+  nor the changed Day/Home screens.
+- `test:exercise-removal-owner` remains 32/35 on its three pre-existing restart
+  reds.
+- LIVE SIMULATOR: the first D17 tap initially failed because the material-program
+  transaction correctly found no stored row and refused before the ledger could
+  append. The corrected ledger-owned path then advanced the same stable row from
+  `Hip 90/90 Stretch` → `Cat-Cow` → `World’s Greatest Stretch`; Remove opened
+  the replacement question, **No** left it out, and **Yes** opened populated
+  Closest Matches / Similar Options groups. The photographed row has Swap/Remove
+  top right at the exercise-name glyph size and its checkbox bottom right.
+  The follow-up layout correction puts that checkbox in the same absolute
+  control row as the weight toggle, so their centres coincide without making
+  the card taller; Remove now draws only the outer red button and its minus.
+
+### NOT COVERED
+
+- VoiceOver reading order and the next physical-iPhone Release rebuild.
+
+---
+
 ## R-171 — preserve added-session identity on team nights
 
 The photographed failure was not a Day-screen wording error. The shared Add

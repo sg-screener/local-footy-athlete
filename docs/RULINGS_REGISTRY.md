@@ -4842,3 +4842,26 @@ an existing athlete shifts into Off-season, and Review shows the saved answer.
 The date cannot be impossible or in the future. · `WORKING` —
 `test:phase-clock` + `test:onboarding-presentation` +
 `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-174** · Per-exercise Quick Swap and Quick Remove (Sam, 2026-08-24) ·
+**ONE-TAP ROW SHORTCUTS; ONE EXISTING CHANGE SYSTEM.**
+
+Every exercise row — Strength, Mobility / Warm-up, Conditioning and optional
+recovery work — shows Quick Swap and Quick Remove together at the top right;
+the completion checkbox sits at the bottom right, on the exact same centreline
+as the weight control immediately to its left. Neither control changes the
+card's height. The action glyphs match the exercise-name font size. Swap is the
+purple circular chasing-arrows icon; Remove is one red circular control with a
+plain minus glyph — never a second circle inside it. Quick
+Swap applies the best legal match immediately; each later tap advances through
+the same ranked list for that original slot and wraps only after every legal
+answer has been tried. Quick Remove removes first, then asks whether the athlete
+wants a replacement. **No** leaves the row out; **Yes** offers the existing
+ranked legal matches. The controls are shortcuts into the existing safety,
+durable program-control, ledger, exclusion and Undo owners — never a second
+swap/remove engine. Derived warm-up and recovery rows store only the athlete's
+decision and apply it to the live projection. · `WORKING` —
+`test:quick-exercise-actions`, reached in-chain by `test:mobility-flow`. Seat
+`onboardingtype`.
