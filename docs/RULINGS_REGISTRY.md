@@ -5762,3 +5762,50 @@ refused rather than guessed at.
 of a combined day move the entire day, club night included — the same class of
 defect one step to the left. · `WORKING` — `test:week-board` §6, 54 passed / 0
 failed. Seat `warmup`.
+
+---
+
+**R-220** · *"pulling a strength day to a strength day just disappeared the
+session that was originally there = it didnt swap them"*, and his answer when
+shown the conflict: **swap them** (Sam, 2026-08-25) · **AN ABSORB ONTO A CLUB
+NIGHT THAT ALREADY HOLDS A SESSION IS A SWAP, NOT A ONE-WAY TRIP.**
+
+**MEASURED, through the real door:** a 6-exercise lower day moved onto a Team
+Training day carrying an 8-exercise upper session produced `Team Training +
+lower` holding **6**, reported *"Done. Session moved."*, and lost the other 8.
+
+**TWO CAUSES, AND THE SECOND IS WHY NOTHING CAUGHT THE FIRST.**
+
+1. `teamTrainingAnchorContainer` builds the absorb base with `exercises: []` —
+   right when the club night is ALONE, which is the doubling law's own case and
+   where nothing can be lost; **the deletion itself** when it is not alone.
+2. `detectAthleteMoveContentLoss`, the door's conservation post-condition,
+   compares workout **IDENTITIES**. The combined day keeps the anchor's
+   identity, so the check passed while the content went. Its own comment
+   reasoned that an absorb displaces nothing *"because the anchor never left"* —
+   true only for a bare club night. **`LAW-count-names-instrument`: the check
+   named identities, not content.** This seat made the identical mistake in its
+   first probe and had to correct it before the diagnosis was right.
+
+**THE FIX KEEPS BOTH OF SAM'S RULINGS.** The day is split first: its gym session
+comes off, the arrival takes that place beside the anchor, and the displaced
+session goes back to the day the arrival came from. **The doubling law holds —
+the anchor never moves and the day is still combined.** **The cap holds too** —
+neither day ends up with three. Two gym parts on one club night is refused
+rather than guessed at, because choosing one to displace would be choosing one
+to delete.
+
+⚠ **AN EARLIER ATTEMPT FILTERED THE DESTINATION OUT OF THE PRODUCER'S OFFER AND
+WAS REVERTED.** It overturned the signed doubling law and reddened three cells
+that pin it. **The guard belongs at the door every path passes, not beside the
+one offer that exists today** — which is what the content-loss suite has been
+saying about this whole class.
+
+· `WORKING` — `test:athlete-session-move` cell 23, which calls the door DIRECTLY
+rather than through the offer and follows EXERCISE NAMES rather than identities.
+**Mutation-proven three ways:** removing the swap-back reds it *and shows the
+conservation check correctly refusing*; removing the `displaced` survivor alone
+survives, because the primary fix means nothing is lost; **removing BOTH
+reproduces Sam's bug exactly — "the club night's own session lost 8"** — and the
+cell catches it. `test:move-scoping` back to 17/1, its doubling cell green and
+now asserting the swap. Seat `warmup`.

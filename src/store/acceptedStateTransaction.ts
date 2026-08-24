@@ -2792,8 +2792,28 @@ export interface AthleteSessionMoveTransactionInput {
    * The placed session ALREADY CONTAINS the destination's content — a move onto
    * a team night, which lands as a combined day (Sam's doubling law). There is
    * nothing to swap back, and swapping would take the anchor off the day.
+   *
+   * ⚠ **"NOTHING TO SWAP BACK" WAS TRUE ONLY FOR A BARE CLUB NIGHT.** When the
+   * anchor day also held a gym session, that session was displaced by the
+   * arrival and nothing said so — see `displacedFromTarget`.
    */
   placedSessionAbsorbsTarget?: boolean;
+  /**
+   * ⚠ **THE GYM SESSION THE ABSORB PUSHED OFF THE ANCHOR DAY — R-220 (Sam,
+   * 2026-08-25): *"pulling a strength day to a strength day just disappeared the
+   * session that was originally there = it didnt swap them"*.**
+   *
+   * An absorb onto a club night that ALREADY held a gym session is a swap, not a
+   * one-way trip: the arrival joins the anchor, and the session it replaced goes
+   * back to the day the arrival came from. Nothing is lost and neither day ends
+   * up holding three (Sam's cap, R-218).
+   *
+   * **IT IS ALSO A SURVIVOR THE CONSERVATION CHECK MUST REQUIRE.** The old code
+   * passed `displaced: null` for every absorb, reasoning that the anchor never
+   * left — so the anchor day's own eight exercises could vanish with the check
+   * reporting success.
+   */
+  displacedFromTarget?: Workout | null;
   /**
    * A SESSION-scoped move off a combined day (Sam, 2026-07-30): the gym session
    * leaves, team training stays anchored. Both halves arrive together from one
@@ -3405,6 +3425,11 @@ export function stageAthleteSessionMoveTransaction(
     ? (args.componentSplit.remainingWorkout
         ? cloneWorkoutForDate(args.componentSplit.remainingWorkout, sourceDate)
         : null)
+    // R-220 — an absorb that pushed a gym session off the anchor day sends that
+    // session back to the source. This is the swap Sam ruled for, and it is why
+    // the absorb no longer has to choose something to delete.
+    : args.placedSessionAbsorbsTarget && args.displacedFromTarget
+      ? cloneWorkoutForDate(args.displacedFromTarget, sourceDate)
     : acceptedTarget && acceptedTargetIsSwappable && !args.placedSessionAbsorbsTarget
       ? cloneWorkoutForDate(acceptedTarget, sourceDate)
       : null;
@@ -3596,8 +3621,11 @@ export function commitAthleteSessionMoveTransaction(
       moved: args.placedSessionAbsorbsTarget
         ? args.placedSession?.workout ?? args.originalSourceWorkout
         : args.componentSplit?.movedWorkout ?? args.originalSourceWorkout,
+      // R-220 — an absorb DOES displace, whenever the anchor day held a gym
+      // session. Passing `null` here unconditionally is what let eight
+      // exercises vanish under a "Done. Session moved." message.
       displaced: args.placedSessionAbsorbsTarget
-        ? null
+        ? args.displacedFromTarget ?? null
         : args.componentSplit
           ? args.componentSplit.remainingWorkout
           : args.existingTargetWorkout,

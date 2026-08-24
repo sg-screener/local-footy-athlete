@@ -422,10 +422,22 @@ async function main(): Promise<void> {
     assert(durable.changedProgram,
       'the durable move reported ok but changed no program');
     const after = weekOf('2026-08-06').find((day) => day.date === '2026-08-06');
-    assert(!after?.workout || getSessionComponents(after.workout).length
-      < getSessionComponents(before.workout).length,
-      'the durable move claimed success and the source day is unchanged — '
-      + `still "${after?.workout?.name}"`);
+    /* ⚠ **"FEWER COMPONENTS" STOPPED MEANING "THE MOVE HAPPENED" — R-220 (Sam,
+     * 2026-08-25).** A move onto a club night that already holds a gym session
+     * is now a SWAP: the source does not empty, it receives the session it
+     * displaced, and the component count can land identical. Counting was
+     * always a proxy for "the day changed"; this asks the question directly, by
+     * following the exercises that were on it. The cell's job — non-vacuity for
+     * the two above, proving the durable path does something — is unchanged. */
+    const exerciseNames = (workout: Workout | null | undefined): string[] =>
+      ((workout?.exercises ?? []) as any[])
+        .map((row) => row?.exercise?.name ?? row?.name).filter(Boolean).sort();
+    const wasOnSource = exerciseNames(before.workout);
+    const nowOnSource = exerciseNames(after?.workout);
+    assert(!after?.workout
+      || wasOnSource.some((name) => !nowOnSource.includes(name)),
+      'the durable move claimed success and the source day still holds every '
+      + `exercise it started with — still "${after?.workout?.name}"`);
   });
 
   // ────────────────────────────────────────────────────────────────────────

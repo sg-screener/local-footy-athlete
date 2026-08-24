@@ -1511,7 +1511,7 @@ function athleteMoveInput(args: {
   }
   // A team night absorbs the arriving session rather than trading places with
   // it (Sam's doubling law). The anchor stays; the day becomes combined.
-  const targetWorkout = args.visibleWeek.find((day) =>
+  let targetWorkout = args.visibleWeek.find((day) =>
     day.date === args.change.toDate)?.workout ?? null;
   const targetHoldsTeamAnchor = !!targetWorkout &&
     getTeamTrainingWorkoutState(targetWorkout).hasTeamTraining;
@@ -1537,9 +1537,45 @@ function athleteMoveInput(args: {
    * hold three, and club night + existing gym session + arrival IS three — the
    * move had no lawful result to produce.
    */
-  const anchorDayHoldsGymWork = !!targetWorkout
-    && (targetWorkout.exercises ?? []).length > 0;
-  if (targetHoldsTeamAnchor && anchorDayHoldsGymWork) return null;
+  /**
+   * ⚠ **AN ABSORB ONTO A CLUB NIGHT THAT ALREADY HOLDS A GYM SESSION IS A SWAP
+   * — SAM, 2026-08-25 (R-220), ANSWERING THE DEFECT HE FOUND.**
+   *
+   * *"pulling a strength day to a strength day just disappeared the session that
+   * was originally there = it didnt swap them."* Measured: a 6-exercise lower
+   * day onto a Team Training day carrying 8 exercises produced `Team Training +
+   * lower` with 6, said *"Done. Session moved."*, and lost the 8.
+   *
+   * `teamTrainingAnchorContainer` builds the absorb base with `exercises: []`.
+   * Correct when the club night is ALONE — the doubling law's own case, where
+   * nothing can be lost. When it is not alone, that strip IS the deletion.
+   *
+   * **SO THE DAY IS SPLIT FIRST**: its gym session comes off, the arrival takes
+   * that place beside the anchor, and the displaced session goes back to the day
+   * the arrival came from. Sam's doubling law is kept — the anchor never moves
+   * and the day is still combined — and his cap is kept too, because neither day
+   * ends up holding three.
+   *
+   * ⚠ **TWO GYM PARTS ON ONE CLUB NIGHT IS REFUSED RATHER THAN GUESSED AT.**
+   * That day is already at Sam's cap; there is no single session to displace and
+   * choosing one would be picking something to delete, which is the whole defect
+   * this replaces.
+   */
+  const targetDay = args.visibleWeek.find((day) => day.date === args.change.toDate);
+  let displacedFromTarget: Workout | null = null;
+  if (targetHoldsTeamAnchor && targetDay && (targetWorkout?.exercises ?? []).length > 0) {
+    const targetGymScopes = MOVABLE_COMPONENT_SCOPES.filter((candidateScope) =>
+      projectedDay(targetDay).parts.some((part) => part.kind === candidateScope));
+    if (targetGymScopes.length !== 1) return null;
+    const targetSplit = splitAcceptedSessionForAthleteMove({
+      day: targetDay,
+      scope: ATHLETE_REMOVAL_SCOPE[targetGymScopes[0]],
+    });
+    if (targetSplit.ok === false) return null;
+    displacedFromTarget = targetSplit.movedWorkout;
+    targetWorkout = targetSplit.remainingWorkout;
+    if (!targetWorkout) return null;
+  }
   const combinedOntoAnchor = targetHoldsTeamAnchor && targetWorkout
     ? stackSessionOntoTeamAnchor({
       anchorDay: targetWorkout,
@@ -1566,6 +1602,7 @@ function athleteMoveInput(args: {
         ? { route, workout: placedWorkout }
         : null,
     placedSessionAbsorbsTarget: !!combinedOntoAnchor,
+    ...(displacedFromTarget ? { displacedFromTarget } : {}),
   };
 }
 

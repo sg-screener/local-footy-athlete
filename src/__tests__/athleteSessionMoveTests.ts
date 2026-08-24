@@ -1058,7 +1058,7 @@ run('20 an occupied restoration target conflicts without publishing a program ov
  * is wrong for exactly that reason — organised by PATH, so the invariant keeps
  * being true and unenforced somewhere new.
  */
-run('23 a move onto a team night carrying gym work is refused, not absorbed', () => {
+run('23 a move onto a team night carrying gym work SWAPS, losing nothing', () => {
   seed();
   const names = (workout: Workout | null | undefined): string[] =>
     ((workout?.exercises ?? []) as any[])
@@ -1073,19 +1073,38 @@ run('23 a move onto a team night carrying gym work is refused, not absorbed', ()
     'CONTROL: the team-night day must actually carry gym work, or this proves nothing');
   assert(names(source).length > 0, 'CONTROL: the source must carry work');
 
+  const sourceNames = names(source);
   const result = realDoor({
     kind: 'move_session',
     fromDate: dateForDay(FUTURE_WEEK, source.dayOfWeek),
     toDate: dateForDay(FUTURE_WEEK, anchor.dayOfWeek),
   }, FUTURE_WEEK);
+  assert(result.commit?.ok, `the swap was refused: ${JSON.stringify(result.commit)}`);
 
-  assert(!result.commit?.ok,
-    `the door reported success over a destructive absorb: ${JSON.stringify(result.commit)}`);
   const afterAnchor = names(workoutOn(FUTURE_WEEK, anchor.dayOfWeek));
-  const lost = anchorNames.filter((name) => !afterAnchor.includes(name));
-  assert(lost.length === 0, `the team night lost ${lost.length} exercises: ${lost.join(', ')}`);
-  assert(names(workoutOn(FUTURE_WEEK, source.dayOfWeek)).length > 0,
-    'the refused move emptied the source anyway');
+  const afterSource = names(workoutOn(FUTURE_WEEK, source.dayOfWeek));
+
+  /* ⚠ **CONTENT, NOT IDENTITIES.** The door's own conservation check compares
+   * `planEntryId ?? id`, and the combined day KEEPS the anchor's identity — so
+   * it reported success while eight exercises vanished. A cell that measured the
+   * same thing would have been just as blind. Every exercise name is followed. */
+  const everywhere = [...afterAnchor, ...afterSource];
+  const lostFromAnchor = anchorNames.filter((name) => !everywhere.includes(name));
+  assert(lostFromAnchor.length === 0,
+    `the club night's own session lost ${lostFromAnchor.length}: ${lostFromAnchor.join(', ')}`);
+  const lostFromSource = sourceNames.filter((name) => !everywhere.includes(name));
+  assert(lostFromSource.length === 0,
+    `the moved session lost ${lostFromSource.length}: ${lostFromSource.join(', ')}`);
+
+  /* AND IT IS A SWAP, NOT A PILE: the arrival is on the club night, the session
+   * it replaced is back on the day the arrival came from. */
+  assert(sourceNames.every((name) => afterAnchor.includes(name)),
+    'the moved session did not land on the club night');
+  assert(anchorNames.every((name) => afterSource.includes(name)),
+    'the displaced session did not travel back to the source day');
+  const { getTeamTrainingWorkoutState } = require('../utils/teamTraining');
+  assert(getTeamTrainingWorkoutState(workoutOn(FUTURE_WEEK, anchor.dayOfWeek)!).hasTeamTraining,
+    "the club night was taken off its own day — Sam's doubling law says the anchor stays");
 });
 
 async function runAsync(name: string, body: () => Promise<void>): Promise<void> {

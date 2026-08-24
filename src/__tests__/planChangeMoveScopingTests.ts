@@ -357,6 +357,10 @@ run('moving onto a team night lands a combined day, keeping the anchor', () => {
   const { date: teamDay } = combinedDay(weekStart);
   const source = visibleWeek(weekStart).find((day) => day.date === monday)?.workout;
   assert(source, 'seed no longer has a Monday session to move');
+  // Read BEFORE the move: whether the club night carried its own gym work is
+  // what decides whether anything travels back (R-220).
+  const sourceWorkoutOnTeamDay = visibleWeek(weekStart)
+    .find((day) => day.date === teamDay)?.workout;
 
   const result = quiet(() => applyPlanChange({
     change: { kind: 'move_session', fromDate: monday, toDate: teamDay },
@@ -375,8 +379,26 @@ run('moving onto a team night lands a combined day, keeping the anchor', () => {
     `the move took the team anchor off the day: "${landed.name}"`);
   assert(landed.name.length > 'Team Training'.length,
     `the day names only the anchor, not the session that landed: "${landed.name}"`);
-  assert(!visibleWeek(weekStart).find((day) => day.date === monday)?.workout,
-    'the source day was not vacated');
+  /* ⚠ **THE SOURCE IS VACATED ONLY WHEN THE CLUB NIGHT WAS BARE — R-220 (Sam,
+   * 2026-08-25).** This assertion demanded an empty Monday unconditionally, and
+   * that is the one-way trip which DELETED the club night's own session: with
+   * nothing coming back, the absorb had to strip the anchor day to make room.
+   *
+   * Sam ruled it a SWAP. So a club night that held a gym session sends that
+   * session back to the source, and Monday is not empty — it holds the session
+   * that was displaced. A bare club night still vacates the source, because
+   * there was nothing to displace. **The doubling law is untouched: the anchor
+   * never moved and the day is still combined**, which the four assertions above
+   * still require. */
+  const sourceAfter = visibleWeek(weekStart).find((day) => day.date === monday)?.workout;
+  const anchorHeldGymWork = (sourceWorkoutOnTeamDay?.exercises ?? []).length > 0;
+  if (anchorHeldGymWork) {
+    assert(sourceAfter, 'the displaced session did not come back to the source day');
+    assert((sourceAfter?.exercises ?? []).length > 0,
+      'the source day came back empty — the displaced session lost its content');
+  } else {
+    assert(!sourceAfter, 'the source day was not vacated');
+  }
 });
 
 run('a plain day still offers the whole-day move it always did', () => {
