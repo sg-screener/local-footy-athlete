@@ -32,7 +32,6 @@ type WelcomeScreenProps = NativeStackScreenProps<
 >;
 
 type FeatureCardData = {
-  label: string;
   title: string;
   description: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -40,19 +39,16 @@ type FeatureCardData = {
 
 const FEATURES: FeatureCardData[] = [
   {
-    label: 'YOUR PROGRAM',
     title: 'Everything works together',
     description: 'Strength, speed, conditioning and recovery specific to each phase of the season.',
     icon: 'dumbbell',
   },
   {
-    label: 'YOUR WEEK',
     title: 'Footy comes first',
     description: 'Gym work fits around team training, game day and your schedule.',
     icon: 'calendar-month-outline',
   },
   {
-    label: 'YOUR PROGRESS',
     title: 'See how you’re tracking',
     description: 'Monitor your training load, readiness and fitness over time.',
     icon: 'shield-check-outline',
@@ -69,9 +65,6 @@ const FeatureCard: React.FC<{ feature: FeatureCardData }> = ({ feature }) => (
       />
     </View>
     <View style={styles.featureTextBlock}>
-      <View style={styles.featureLabelWrap}>
-        <Text style={styles.featureLabel}>{feature.label}</Text>
-      </View>
       <Text style={styles.featureTitle}>{feature.title}</Text>
       <Text style={styles.featureDescription}>{feature.description}</Text>
     </View>
@@ -187,7 +180,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           <View style={styles.featuresSection}>
             {FEATURES.map((feature, index) => (
               <Animated.View
-                key={feature.label}
+                key={feature.title}
                 style={{
                   opacity: cardAnims[index].opacity,
                   transform: [{ translateY: cardAnims[index].translateY }],
@@ -357,16 +350,6 @@ const styles = StyleSheet.create({
   featureTextBlock: {
     flex: 1,
     minWidth: 0,
-  },
-  featureLabelWrap: {
-    alignSelf: 'flex-start',
-    marginBottom: 6,
-  },
-  featureLabel: {
-    color: '#C8FF00',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0,
   },
   featureTitle: {
     color: colors.text.primary,

@@ -4550,10 +4550,19 @@ The retired **BODY** section title is absent. · `WORKING` —
 *"TRAIN FOR FOOTY. One complete program built around your season and
 schedule."* (2026-08-24) · **WELCOME EXPLAINS THE COMPLETE LFA PROGRAM.**
 
-Welcome presents **YOUR PROGRAM / Everything works together**, **YOUR WEEK /
-Footy comes first**, and **YOUR PROGRESS / See how you’re tracking**, using
-Sam's exact descriptions for phase-specific training, schedule fit and progress
-monitoring. The CTA reads **Build my program →** and keeps **Takes about 3
-minutes**. The retired Built for footy / Your plan / Your schedule / Your body
-copy is absent. · `WORKING` — `test:onboarding-presentation`. Seat
-`welcomecopy`.
+Welcome presents **Everything works together**, **Footy comes first**, and
+**See how you’re tracking**, using Sam's exact descriptions for phase-specific
+training, schedule fit and progress monitoring. The CTA reads **Build my
+program →** and keeps **Takes about 3 minutes**. The retired Built for footy /
+Your plan / Your schedule / Your body copy is absent. · `WORKING` —
+`test:onboarding-presentation`. Seat `welcomecopy`.
+
+---
+
+**R-149** · *"remove your progress your week your program from this screen"*
+(Sam, 2026-08-24) · **WELCOME CARDS HAVE NO EYEBROW LABELS.**
+
+The three Welcome cards begin directly with their main headings. **YOUR
+PROGRAM**, **YOUR WEEK** and **YOUR PROGRESS**, along with their label field and
+reserved label spacing, are removed. · `WORKING` —
+`test:onboarding-presentation`. Seat `welcomeeyebrows`.
