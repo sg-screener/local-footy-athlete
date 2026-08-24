@@ -1884,7 +1884,7 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   'the weekly session flow does not choose Add, Move or Remove first');
   const expectedWeekSessionActionCopy = [
     ['week.edit_sheet.session_action.add.label', 'Add a session'],
-    ['week.edit_sheet.session_action.add.subline', 'Put another session on a day this week'],
+    ['week.edit_sheet.session_action.add.subline', 'Choose a day to add it to'],
     ['week.edit_sheet.session_action.move.label', 'Move a session'],
     ['week.edit_sheet.session_action.move.subline', 'Choose a session and move it to another day'],
     ['week.edit_sheet.session_action.remove.label', 'Remove a session'],

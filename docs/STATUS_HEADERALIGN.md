@@ -71,6 +71,16 @@ the inherited 54 passed / 2 failed baseline.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and completing a session edit.
 
+## 2026-08-25 — Week Add-session explanation
+
+The nested Add a session row now says **Choose a day to add it to**. The label
+and Add route are unchanged.
+
+Focused guard: `test:day-first-timeline` — the corrected Add subline cell is
+green at the inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and completing a session edit.
+
 ## 2026-08-25 — Week adjustment heading correction
 
 The Week dots sheet now reads **Adjust this week** instead of **Adjust week**.

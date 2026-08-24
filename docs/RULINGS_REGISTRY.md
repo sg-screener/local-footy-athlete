@@ -5239,6 +5239,15 @@ unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
 
 ---
 
+**R-207** · Week Add action names the next choice briefly (Sam, 2026-08-25) ·
+**THE EXPLANATION SAYS WHAT HAPPENS NEXT.**
+
+The nested **Add a session** row reads **Choose a day to add it to**, replacing
+R-206’s longer **Put another session on a day this week** explanation. Its Add
+route is unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
 **R-205** · Week adjustment heading names this week (Sam, 2026-08-25) ·
 **THE SHEET NAMES THE SPECIFIC WEEK BEING CHANGED.**
 

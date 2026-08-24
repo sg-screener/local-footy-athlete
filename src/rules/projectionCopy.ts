@@ -1017,8 +1017,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.session_action.add.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Add explanation.',
-      text: 'Put another session on a day this week',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-207 superseding R-206: nested '
+        + 'Week Add explanation.',
+      text: 'Choose a day to add it to',
     },
     {
       id: 'week.edit_sheet.session_action.move.label',
