@@ -4934,3 +4934,16 @@ Tell the coach** is a distinct dark rounded edit button inside Program Setup,
 using the same small lime pencil treatment as the established program-edit
 button rather than looking like another data row. · `WORKING` —
 `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-180** · LFA wordmark on programmed workouts and My Status (Sam,
+2026-08-24) · **THE BRAND REPLACES THE GENERIC WORKOUT TITLE.**
+
+Every programmed workout detail shows the shared LFA wordmark beneath Back in
+place of its generic top title such as **Strength**; the section-level work
+headings remain. **My Status** also shows the shared wordmark before its Season
+Phase and modifier content. This deliberately supersedes R-175's exclusion of
+nested workout detail from wordmark placement. · `WORKING` —
+`test:lfa-wordmark`, reached in-chain by `test:profile-reset-ui`. Seat
+`onboardingtype`.

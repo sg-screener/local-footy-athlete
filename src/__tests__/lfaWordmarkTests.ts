@@ -26,6 +26,7 @@ const coach = read('src/screens/coach/CoachTabScreen.tsx');
 const progress = read('src/screens/progress/ProgressTabScreen.tsx');
 const profile = read('src/screens/profile/ProfileScreen.tsx');
 const workoutDetail = read('src/screens/home/DayWorkoutScreenV2.tsx');
+const coachStatus = read('src/screens/coach/CoachStatusScreen.tsx');
 
 console.log('\n-- LFA wordmark ownership --');
 
@@ -62,8 +63,14 @@ assert(!/testID="profile-page-header"/.test(profile)
   && !/>\s*PROFILE\s*</.test(profile)
   && !/Your program setup and support\./.test(profile),
   'Profile does not repeat its tab name or keep an orphaned page subtitle');
-assert(!/LfaWordmark/.test(workoutDetail),
-  'nested workout detail keeps its back-button/title hierarchy instead of repeating the logo');
+assert(/import \{ LfaWordmark \}/.test(workoutDetail)
+  && /<LfaWordmark[^>]*testID="day-workout-title"/.test(workoutDetail)
+  && !/<Text[\s\S]{0,160}style=\{styles\.headerTitle\}/.test(workoutDetail),
+  'programmed workout detail replaces its generic session title with the shared wordmark');
+assert(/import \{ LfaWordmark \}/.test(coachStatus)
+  && coachStatus.indexOf('<LfaWordmark') >= 0
+  && coachStatus.indexOf('<LfaWordmark') < coachStatus.indexOf('testID="coach-status-season-phase"'),
+  'My Status shows the shared wordmark before its status content');
 
 console.log(`\nlfaWordmarkTests: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

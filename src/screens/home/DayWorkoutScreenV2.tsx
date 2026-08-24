@@ -12,6 +12,7 @@ import { RowIcon, SESSION_SECTION_ICON_KIND } from '../../components/icons/Secti
 import { SessionDateLine } from '../../components/SessionDateLine';
 import { SessionStopwatchControl } from '../../components/SessionStopwatchControl';
 import { Text } from '../../components/common/Text';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { Card, Button, IconButton, Sheet, SheetHeader } from '../../components/ui';
 import {
   SessionActionSheet,
@@ -1945,15 +1946,7 @@ export default function DayWorkoutScreenV2() {
           />
         </View>
         <View style={styles.headerContent}>
-          {/* Pro mode header: title → single metadata sentence. */}
-          <Text
-            style={styles.headerTitle}
-            numberOfLines={2}
-            testID="day-workout-title"
-            accessibilityLabel={`Workout: ${visibleWorkoutTitle}`}
-          >
-            {visibleWorkoutTitle}
-          </Text>
+          <LfaWordmark testID="day-workout-title" />
           {/*
             DayWorkout smoke contract markers — mounted in the EXACT
             same render path as day-workout-title (sibling inside the
@@ -5121,13 +5114,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   headerContent: {},
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    lineHeight: 30,
-  },
   // Metadata line — single sentence under the title, left-aligned.
   // marginTop (3) keeps it visually bound to the title. Same fontSize
   // used for the inline Why link below so both spans sit on the same

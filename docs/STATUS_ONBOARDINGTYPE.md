@@ -844,6 +844,28 @@ and white label, while keeping the same guided setup-sheet door.
 
 ---
 
+## R-180 — extend the wordmark to workout detail and My Status
+
+Programmed workout detail now uses the shared LFA wordmark in place of its
+generic top title; its Mobility / Warm-up, Strength and Conditioning section
+headings are unchanged. My Status now shows the same wordmark before its status
+content.
+
+### Evidence
+
+- TEST FIRST: two new wordmark cells produced exactly two reds.
+- AFTER: `test:lfa-wordmark` 15/15; in-chain `test:profile-reset-ui` 174/174.
+- The workout keeps the stable `day-workout-title` test coordinate on the logo.
+- Registry baselines: 179 laws / 158 guarded / 21 `UNENFORCED` with the same
+  three inherited reds; 179 rulings with the same two inherited reds.
+
+### NOT COVERED
+
+- Physical-iPhone Release and Sam's visual acceptance.
+- Real VoiceOver speech.
+
+---
+
 ## R-174 — one quick-action system across every exercise row
 
 Sam restored row-level Swap/Remove as explicit shortcuts. The implementation

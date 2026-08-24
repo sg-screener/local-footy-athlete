@@ -31,6 +31,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { ActiveModifiersSection } from '../../components/ActiveModifiersSection';
 import type {
   ActiveCoachNote,
@@ -74,6 +75,9 @@ export default function CoachStatusScreen({
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.brandHeader}>
+          <LfaWordmark testID="coach-status-wordmark" />
+        </View>
         <Pressable
           style={({ pressed }) => [styles.phaseRow, pressed && { opacity: 0.72 }]}
           onPress={onReviewPhase}
@@ -177,6 +181,7 @@ const styles = StyleSheet.create({
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1 },
   bodyContent: { paddingHorizontal: 20, paddingBottom: 32 },
+  brandHeader: { minHeight: 32, justifyContent: 'center', marginBottom: 16 },
   phaseRow: {
     minHeight: 84,
     flexDirection: 'row',
