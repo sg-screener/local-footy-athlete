@@ -564,6 +564,7 @@ function generationPhaseResolution(
   return resolveSeasonPhaseClock({
     selectedPhase,
     targetWeekStartISO: blockStartISO,
+    seasonFinishedOn: profile.seasonFinishedOn,
     persistedClock: options.seasonPhaseClock ?? previousProgram?.seasonPhaseClock,
     legacyProgram: previousProgram,
   });
@@ -2363,6 +2364,7 @@ export function buildProgramGenerationRequestDiagnostics(
   const diagnosticsClock = resolveSeasonPhaseClock({
     selectedPhase: generationProfile.seasonPhase ?? DIAGNOSTICS_PHASE_WHEN_UNANSWERED,
     targetWeekStartISO: diagnosticsWeek,
+    seasonFinishedOn: generationProfile.seasonFinishedOn,
   }).clock;
   const derivedPlan = plan ?? buildInitialGeneratedCoachingPlan({
     coachingInputs: derivedInputs,

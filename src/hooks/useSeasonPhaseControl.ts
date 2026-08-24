@@ -21,6 +21,14 @@ import {
   type PhaseShiftStep,
 } from '../screens/home/homeScreenConstants';
 import { storedGameAnchor } from '../rules/gameAnchor';
+import {
+  validateSeasonFinishDateParts,
+} from '../rules/seasonPhaseClock';
+import {
+  EMPTY_SEASON_FINISH_DATE,
+  seasonFinishDateDraft,
+  type SeasonFinishDateDraft,
+} from '../components/season/SeasonFinishDateFields';
 
 /**
  * The one owner of the athlete's season-phase review flow.
@@ -43,6 +51,13 @@ export function useSeasonPhaseControl() {
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
   const [gameAnchorAnswered, setGameAnchorAnswered] = useState(false);
+  const [pendingSeasonFinishDate, setPendingSeasonFinishDateState] = useState<SeasonFinishDateDraft>(
+    seasonFinishDateDraft(onboardingData.seasonFinishedOn),
+  );
+  const [pendingSeasonFinishedOn, setPendingSeasonFinishedOn] = useState<string | null | undefined>(
+    onboardingData.seasonFinishedOn,
+  );
+  const [seasonFinishAttempted, setSeasonFinishAttempted] = useState(false);
   const {
     isRebuilding,
     rebuildMsgIdx,
@@ -62,11 +77,22 @@ export function useSeasonPhaseControl() {
     const storedGameDay = storedGameAnchor(onboardingData);
     setPendingGameDay(storedGameDay);
     setGameAnchorAnswered(Boolean(storedGameDay));
+    setPendingSeasonFinishDateState(seasonFinishDateDraft(onboardingData.seasonFinishedOn));
+    setPendingSeasonFinishedOn(onboardingData.seasonFinishedOn);
+    setSeasonFinishAttempted(false);
     setVisible(true);
   };
 
   const selectTargetPhase = (target: SeasonPhase) => {
     clearRebuildNoticeError();
+    if (target === 'Off-season' && currentPhase !== 'Off-season') {
+      // A date from an older Off-season is history, not the answer for this
+      // new transition. Re-ask cleanly so accepting a stale date takes more
+      // than simply pressing Continue.
+      setPendingSeasonFinishDateState({ ...EMPTY_SEASON_FINISH_DATE });
+      setPendingSeasonFinishedOn(undefined);
+      setSeasonFinishAttempted(false);
+    }
     setTargetPhase(target);
   };
 
@@ -80,11 +106,24 @@ export function useSeasonPhaseControl() {
   const back = () => {
     if (isRebuilding) return;
     setStep((previous) => {
-      if (previous === 'availability') return 'confirm';
+      if (previous === 'seasonFinish') return 'confirm';
+      if (previous === 'availability') return targetPhase === 'Off-season' ? 'seasonFinish' : 'confirm';
       if (previous === 'teamDays') return 'availability';
       if (previous === 'gameDay') return 'teamDays';
       return previous;
     });
+  };
+
+  const setPendingSeasonFinishDate = (value: SeasonFinishDateDraft) => {
+    setPendingSeasonFinishDateState(value);
+    setPendingSeasonFinishedOn(undefined);
+    setSeasonFinishAttempted(false);
+  };
+
+  const answerSeasonFinishNotSure = () => {
+    setPendingSeasonFinishedOn(null);
+    setSeasonFinishAttempted(false);
+    setStep('availability');
   };
 
   const togglePreferredDay = (day: DayOfWeek) => {
@@ -120,6 +159,7 @@ export function useSeasonPhaseControl() {
     try {
       const nextProfile = applyPhaseShift(onboardingData, {
         targetPhase,
+        seasonFinishedOn: targetPhase === 'Off-season' ? pendingSeasonFinishedOn : undefined,
         preferredTrainingDays: pendingPreferredDays,
         teamTrainingDays: pendingTeamDays,
         gameAnchor: targetPhase === 'In-season' && gameAnchorAnswered
@@ -130,6 +170,7 @@ export function useSeasonPhaseControl() {
       });
       const patch: Partial<typeof onboardingData> = {
         seasonPhase: nextProfile.seasonPhase,
+        seasonFinishedOn: nextProfile.seasonFinishedOn,
         preferredTrainingDays: nextProfile.preferredTrainingDays,
         trainingDaysPerWeek: nextProfile.trainingDaysPerWeek,
         teamTrainingDays: nextProfile.teamTrainingDays,
@@ -163,6 +204,19 @@ export function useSeasonPhaseControl() {
 
   const advance = async () => {
     if (step === 'confirm') {
+      setStep(targetPhase === 'Off-season' ? 'seasonFinish' : 'availability');
+      return;
+    }
+    if (step === 'seasonFinish') {
+      const validation = validateSeasonFinishDateParts(
+        pendingSeasonFinishDate.day,
+        pendingSeasonFinishDate.month,
+        pendingSeasonFinishDate.year,
+        todayISOLocal(),
+      );
+      setSeasonFinishAttempted(true);
+      if (!validation.ok) return;
+      setPendingSeasonFinishedOn(validation.dateISO);
       setStep('availability');
       return;
     }
@@ -189,6 +243,8 @@ export function useSeasonPhaseControl() {
     pendingTeamDays,
     pendingGameDay,
     gameAnchorAnswered,
+    pendingSeasonFinishDate,
+    seasonFinishAttempted,
     isRebuilding,
     error: rebuildError,
     canRetry: rebuildErrorCanRetry,
@@ -201,6 +257,8 @@ export function useSeasonPhaseControl() {
     toggleTeamDay,
     answerGameDay,
     answerNoGameDay,
+    setPendingSeasonFinishDate,
+    answerSeasonFinishNotSure,
     selectTargetPhase,
     advance,
   };

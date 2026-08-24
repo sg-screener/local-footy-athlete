@@ -44,6 +44,7 @@ export type OnboardingStackParamList = {
   Motivation: undefined;
   BodyMeasurements: undefined;
   SeasonPhase: undefined;
+  SeasonFinished: undefined;
   GameDay: undefined;
   TeamTrainingDays: undefined;
   TrainingCommitment: undefined;

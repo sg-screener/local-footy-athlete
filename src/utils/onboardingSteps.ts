@@ -25,6 +25,7 @@ export type OnboardingStepName =
   | 'Position'
   | 'Motivation'
   | 'SeasonPhase'
+  | 'SeasonFinished'
   | 'GameDay'
   | 'TeamTrainingDays'
   | 'TrainingCommitment'
@@ -55,6 +56,8 @@ export interface OnboardingStep {
 const always = (): boolean => true;
 
 const inSeason = (data: OnboardingData): boolean => data.seasonPhase === 'In-season';
+
+const offSeason = (data: OnboardingData): boolean => data.seasonPhase === 'Off-season';
 
 const preOrInSeason = (data: OnboardingData): boolean =>
   data.seasonPhase === 'Pre-season' || data.seasonPhase === 'In-season';
@@ -125,6 +128,14 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['seasonPhase'],
     visible: always,
     satisfied: (data) => filled(data.seasonPhase),
+  },
+  {
+    name: 'SeasonFinished',
+    answerLabel: 'when your season finished',
+    collects: ['seasonFinishedOn'],
+    visible: offSeason,
+    // null is the explicit "I'm not sure" answer; undefined is silence.
+    satisfied: (data) => Object.prototype.hasOwnProperty.call(data, 'seasonFinishedOn'),
   },
   {
     name: 'GameDay',

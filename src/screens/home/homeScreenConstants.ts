@@ -43,7 +43,7 @@ export const DAY_NUM_TO_NAME: DayOfWeek[] = [
  * Phase-shift flow steps.
  *
  * Order:
- *   confirm → availability → [teamDays (non-Off-season)] → [gameDay (In-season)] → building
+ *   confirm → [seasonFinish (Off-season)] → availability → [teamDays (non-Off-season)] → [gameDay (In-season)] → building
  *
  * `availability` re-asks "what days can you train?" before rebuild. Onboarding
  * may have happened months ago and the athlete's real schedule drifts, so we
@@ -53,6 +53,7 @@ export const DAY_NUM_TO_NAME: DayOfWeek[] = [
  */
 export type PhaseShiftStep =
   | 'confirm'
+  | 'seasonFinish'
   | 'availability'
   | 'teamDays'
   | 'gameDay'

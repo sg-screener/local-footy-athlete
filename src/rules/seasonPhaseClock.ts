@@ -18,6 +18,7 @@ export const SEASON_PHASE_CLOCK_VERSION = 1 as const;
 
 export type SeasonPhaseClockOriginProvenance =
   | 'explicit_user_phase_change'
+  | 'explicit_season_finish_date'
   | 'deterministic_legacy_migration';
 
 export type SeasonPhaseClockResolutionProvenance =
@@ -59,6 +60,8 @@ export interface SeasonPhaseClockResolution {
 export interface ResolveSeasonPhaseClockInput {
   selectedPhase: SeasonPhase;
   targetWeekStartISO: string;
+  /** Exact athlete answer. Only Off-season consumes it; null means not sure. */
+  seasonFinishedOn?: string | null;
   persistedClock?: SeasonPhaseClock | null;
   /** Existing persisted program, used only when migrating a missing clock. */
   legacyProgram?: TrainingProgram | null;
@@ -140,6 +143,56 @@ export function phaseClockMondayISO(dateISO: string): string {
   return formatLocalDate(date);
 }
 
+/**
+ * The first complete training week after the athlete's season ends.
+ * A Monday finish therefore starts the following Monday, while a Saturday
+ * final starts two days later. This is the one calendar anchor used by every
+ * Off-season subphase calculation.
+ */
+export function firstOffseasonWeekStartAfterFinish(dateISO: string): string {
+  if (localCalendarDayNumber(dateISO) === null) {
+    throw new Error(`Invalid season-finish date: ${dateISO}`);
+  }
+  const date = parseLocalDate(dateISO)!;
+  const daysUntilFollowingMonday = date.getDay() === 1 ? 7 : (8 - date.getDay()) % 7;
+  date.setDate(date.getDate() + daysUntilFollowingMonday);
+  return formatLocalDate(date);
+}
+
+export type SeasonFinishDateValidation =
+  | { ok: true; dateISO: string }
+  | { ok: false; message: string };
+
+/** One strict ingress for the DD / MM / YYYY answer used by every edit surface. */
+export function validateSeasonFinishDateParts(
+  dayText: string,
+  monthText: string,
+  yearText: string,
+  todayISO: string,
+): SeasonFinishDateValidation {
+  const day = Number(dayText);
+  const month = Number(monthText);
+  const year = Number(yearText);
+  if (![dayText, monthText, yearText].every((part) => /^\d+$/.test(part.trim()))) {
+    return { ok: false, message: 'Enter a real date.' };
+  }
+  const dateISO = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  if (localCalendarDayNumber(dateISO) === null) {
+    return { ok: false, message: 'Enter a real date.' };
+  }
+  if (localCalendarDayNumber(todayISO) === null || dateISO > todayISO.slice(0, 10)) {
+    return { ok: false, message: "Your season finish date can't be in the future." };
+  }
+  return { ok: true, dateISO };
+}
+
+export function formatSeasonFinishDate(dateISO: string | null | undefined): string {
+  if (dateISO === null) return 'Not sure';
+  const match = DATE_ONLY_PATTERN.exec(String(dateISO ?? ''));
+  if (!match || localCalendarDayNumber(dateISO ?? '') === null) return 'Not selected';
+  return `${Number(match[3])}/${Number(match[2])}/${match[1]}`;
+}
+
 function seasonPhaseForProgram(program: TrainingProgram | null | undefined): SeasonPhase | null {
   const value = String(program?.programPhase ?? '');
   if (/off|base/i.test(value)) return 'Off-season';
@@ -157,6 +210,7 @@ export function isValidSeasonPhaseClock(value: unknown): value is SeasonPhaseClo
       clock.selectedPhase === 'In-season') &&
     !!parseLocalDate(clock.phaseEntryWeekStartISO ?? '') &&
     (clock.originProvenance === 'explicit_user_phase_change' ||
+      clock.originProvenance === 'explicit_season_finish_date' ||
       clock.originProvenance === 'deterministic_legacy_migration');
 }
 
@@ -197,6 +251,20 @@ export function establishSeasonPhaseClock(
   input: ResolveSeasonPhaseClockInput,
 ): { clock: SeasonPhaseClock; provenance: SeasonPhaseClockResolutionProvenance } {
   const targetWeekStartISO = phaseClockMondayISO(input.targetWeekStartISO);
+  if (
+    input.selectedPhase === 'Off-season' &&
+    typeof input.seasonFinishedOn === 'string' &&
+    localCalendarDayNumber(input.seasonFinishedOn) !== null
+  ) {
+    return {
+      clock: createClock(
+        input.selectedPhase,
+        firstOffseasonWeekStartAfterFinish(input.seasonFinishedOn),
+        'explicit_season_finish_date',
+      ),
+      provenance: 'explicit_season_finish_date',
+    };
+  }
   if (
     isValidSeasonPhaseClock(input.persistedClock) &&
     input.persistedClock.selectedPhase === input.selectedPhase

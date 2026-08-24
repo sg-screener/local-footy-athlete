@@ -539,12 +539,16 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         pendingTeamDays={phaseControl.pendingTeamDays}
         pendingGameDay={phaseControl.pendingGameDay}
         gameAnchorAnswered={phaseControl.gameAnchorAnswered}
+        pendingSeasonFinishDate={phaseControl.pendingSeasonFinishDate}
+        seasonFinishAttempted={phaseControl.seasonFinishAttempted}
         onClose={phaseControl.close}
         onBack={phaseControl.back}
         onTogglePendingPreferredDay={phaseControl.togglePreferredDay}
         onTogglePendingTeamDay={phaseControl.toggleTeamDay}
         onSetPendingGameDay={phaseControl.answerGameDay}
         onAnswerNoUsualGameDay={phaseControl.answerNoGameDay}
+        onChangeSeasonFinishDate={phaseControl.setPendingSeasonFinishDate}
+        onAnswerSeasonFinishNotSure={phaseControl.answerSeasonFinishNotSure}
         onSelectTargetPhase={phaseControl.selectTargetPhase}
         onAdvance={() => { void phaseControl.advance(); }}
       />

@@ -198,6 +198,13 @@ export interface OnboardingData {
   weightKg?: number;
   seasonPhase?: SeasonPhase;
   /**
+   * The athlete's exact final day of their most recent season, stored as a
+   * local YYYY-MM-DD calendar date. `null` is the athlete explicitly saying
+   * they are not sure; `undefined` means the conditional question was never
+   * answered. Off-season week and subphase are derived from this fact.
+   */
+  seasonFinishedOn?: string | null;
+  /**
    * The onboarding screen's game-day answer. ANY day of the week — Sam,
    * 2026-08-12: *"i can't know when every single club in aus is going to play a
    * game"*. This used to be a `GameDay` enum of Friday/Saturday/Sunday/'Varies',

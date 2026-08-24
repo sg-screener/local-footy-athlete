@@ -62,7 +62,7 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
     void commitAndAdvance({ seasonPhase: phase }, () => {
       setTimeout(() => {
         if (phase === 'Off-season') {
-          navigation.navigate('TrainingCommitment');
+          navigation.navigate('SeasonFinished');
         } else if (phase === 'Pre-season') {
           navigation.navigate('TeamTrainingDays');
         } else {

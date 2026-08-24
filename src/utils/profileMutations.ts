@@ -88,6 +88,8 @@ export class PhaseShiftRefusal extends Error {
 export interface PhaseShiftInput {
   /** Target season phase. */
   targetPhase: SeasonPhase;
+  /** Exact answer collected when entering Off-season; null means not sure. */
+  seasonFinishedOn?: string | null;
   /**
    * Athlete availability for the new phase. When present, overwrites the
    * stored `preferredTrainingDays` before the rebuild. The phase-shift modal
@@ -138,6 +140,10 @@ export function applyPhaseShift(
   const updates: Partial<OnboardingData> = {
     seasonPhase: input.targetPhase,
   };
+
+  if (input.targetPhase === 'Off-season' && input.seasonFinishedOn !== undefined) {
+    updates.seasonFinishedOn = input.seasonFinishedOn;
+  }
 
   // Availability override — applied regardless of phase, because even
   // Off-season rebuilds care about which days the athlete can train. If the

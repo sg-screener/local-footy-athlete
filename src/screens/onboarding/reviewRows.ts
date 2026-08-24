@@ -45,6 +45,7 @@ import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
 import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
 import { GENDER_COPY, genderAnswerText } from '../../rules/onboardingGenderCopy';
+import { formatSeasonFinishDate } from '../../rules/seasonPhaseClock';
 import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
@@ -239,6 +240,12 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     label: 'Season Phase',
     step: 'SeasonPhase',
     value: (data) => present(data.seasonPhase),
+  },
+  {
+    section: 'Season',
+    label: 'Season finished',
+    step: 'SeasonFinished',
+    value: (data) => formatSeasonFinishDate(data.seasonFinishedOn),
   },
   {
     section: 'Season',

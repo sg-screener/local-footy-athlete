@@ -131,6 +131,16 @@ ok(
     && /title="Game day" subtitle="Which day do you usually play\?"[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet),
 );
 ok(
+  'entering Off-season asks for the finish date before availability',
+  /step === 'seasonFinish'/.test(phaseSheet)
+    && /When did your season finish\?/.test(phaseSheet)
+    && /SeasonFinishDateFields/.test(phaseSheet)
+    && /I'm not sure/.test(phaseSheet)
+    && /targetPhase === 'Off-season' \? 'seasonFinish' : 'availability'/.test(
+      fs.readFileSync(path.resolve(__dirname, '..', 'hooks', 'useSeasonPhaseControl.ts'), 'utf8'),
+    ),
+);
+ok(
   'seven day chips wrap as four then three, centred rather than six plus one',
   /chipGrid:\s*\{[^}]*flexWrap:\s*'wrap'[^}]*justifyContent:\s*'center'/.test(homeV2)
     && /dayChip:\s*\{[^}]*width:\s*'22%'[^}]*minWidth:\s*58/.test(homeV2),

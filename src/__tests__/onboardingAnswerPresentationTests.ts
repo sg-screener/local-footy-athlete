@@ -98,6 +98,35 @@ console.log('\n[0b] Season phase choices are text-only');
       .every((copy) => seasonPhaseScreen.includes(copy)));
 }
 
+console.log('\n[0ba] Off-season asks when the athlete finished');
+{
+  const navigator = read('src/navigation/OnboardingNavigator.tsx');
+  const routeTypes = read('src/types/navigation.ts');
+  const steps = read('src/utils/onboardingSteps.ts');
+  const seasonPhase = read('src/screens/onboarding/SeasonPhaseScreen.tsx');
+  const reviewRows = read('src/screens/onboarding/reviewRows.ts');
+  const screenPath = path.join(repoRoot, 'src/screens/onboarding/SeasonFinishedScreen.tsx');
+  const screen = fs.existsSync(screenPath)
+    ? read('src/screens/onboarding/SeasonFinishedScreen.tsx')
+    : '';
+
+  ok('Season Finished is a mounted conditional onboarding step',
+    /name="SeasonFinished"/.test(navigator)
+      && /SeasonFinished:\s*undefined/.test(routeTypes)
+      && /name:\s*'SeasonFinished'/.test(steps)
+      && /data\.seasonPhase\s*===\s*'Off-season'/.test(steps));
+  ok('choosing Off-season goes to the finish-date question',
+    /phase\s*===\s*'Off-season'[\s\S]{0,160}navigate\('SeasonFinished'\)/.test(seasonPhase));
+  ok('the finish-date screen asks the approved question and stores an exact date or not sure',
+    /When did your season finish\?/.test(screen)
+      && /This helps LFA start you at the right point of your off-season\./.test(screen)
+      && /seasonFinishedOn/.test(screen)
+      && /I'm not sure/.test(screen));
+  ok('Review exposes the Off-season finish answer through its owning step',
+    /label:\s*'Season finished'/.test(reviewRows)
+      && /step:\s*'SeasonFinished'/.test(reviewRows));
+}
+
 console.log('\n[0bb] Two-line onboarding choices share one typography recipe');
 {
   const sharedStyles = read('src/components/onboarding/onboardingStyles.ts');

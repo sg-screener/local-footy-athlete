@@ -58,6 +58,70 @@ Authored uppercase strings remain unchanged because they are copy, not style.
 
 ---
 
+## R-173 — anchor Off-season to the athlete's real finish date
+
+### LOOP CHECK
+
+No repeated implementation loop. This is a new athlete-owned calendar fact
+feeding the existing season clock; it does not add a second subphase system.
+
+### Options compared
+
+1. Ask the athlete to choose early, mid or late Off-season and persist that
+   bucket. It is quick, but becomes stale immediately as weeks pass.
+2. Store the exact season-finish date and derive the phase week through the
+   existing clock. This removes a parallel answer and keeps every later week
+   deterministic.
+
+Option 2 landed. The first complete Monday after the final day is Phase Week 1.
+Weeks 1–2 remain early, 3–4 mid and 5 onward late under the already signed
+Bible policy. A not-sure answer remains explicit null and uses the honest
+recently-finished fallback.
+
+The question is conditional after choosing Off-season, appears on Review, and
+is also asked by the existing season-shift sheet before rebuilding into
+Off-season. One shared three-field date control and one validation owner serve
+both surfaces. Real generation reads the saved date, and an exact answer
+outranks a stale same-phase clock.
+
+### Evidence
+
+- TEST FIRST: the clock/generation cells began at a missing-export load red;
+  the four onboarding presentation cells were the only new reds at 97/101;
+  the conditional resume cell was the reliability suite's only new red.
+- `test:season-finish-date` — 12/12, including impossible/future dates,
+  following-Monday ownership, mid/late derivation, stale-clock correction,
+  not-sure fallback, real generation and both phase-shift answer shapes.
+- MUTATION: removing `seasonFinishedOn` from the real generation boundary
+  reddened the named generation cell; restoring it returned the tape to 12/12.
+- `test:onboarding-presentation` — 101/101.
+- `test:profile-reset-ui` — 173/173.
+- `test:onboarding-generation-outcome` — 50/50.
+- `test:settings-persistence` — 187/187.
+- `test:onboarding-reliability` — 23/24; its one existing red is the persisted-
+  store parser for `blockSelectionHistoryStore.ts`.
+- `test:compile` — the concurrent baseline remains 483 errors across 60
+  worsened file/scope pairs; zero feature file errors.
+- `test:law-registry` — 11/14, 175 rows / 154 guarded / 21 UNENFORCED. R-173's
+  row is guarded and introduces no additional registry red.
+
+### What catches the next defect of this class
+
+The conditional step registry makes a missing answer block Review; the focused
+generation tape proves the saved date reaches the real season clock and checks
+both edit-door answer shapes. A future date-entry surface must reuse those same
+owners or the presentation/profile guards and clock tape diverge red.
+
+### NOT COVERED
+
+- Simulator pixels, keyboard next-field behaviour and small-screen layout.
+- Locale-specific date formatting beyond the Australian DD/MM/YYYY display.
+- Editing the date from Profile while already inside Off-season; the live flow
+  covers entering Off-season and onboarding Review covers pre-generation edits.
+- The next physical-iPhone Release build.
+
+---
+
 ## R-152 — retire the team-session intensity question
 
 Sam removed the **“What are team sessions like?”** onboarding step. Two options

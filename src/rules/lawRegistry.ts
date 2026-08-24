@@ -2130,6 +2130,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: replace trophy-outline with another guessed library glyph, or render the existing shared RowIcon game owner already used by Game Day. The second removes the duplicate icon decision. TEST-FIRST LIVENESS: after the guard was aimed at the shared owner, `test:day-first-timeline` fell from its 54/2 baseline to 53/3 and named only the Week edit icon treatment as the added red. Replacing the sheet glyph with RowIcon kind game at the existing 18px action-row size and rowIconColor game restored 54/2; the two remaining mobility-warm-up and generated-Gunshow reds are unchanged and unrelated. `test:approved-icons` remains at its existing 24/2 baseline. NOT COVERED: simulator pixels, optical alignment inside the sheet row and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-offseason-finish-date-anchors-phase-week',
+    law: 'Choosing Off-season conditionally asks when the athlete finished their season. An exact valid non-future local date is stored as the source fact; null records an explicit not-sure answer. The first complete Monday after that date is Phase Week 1, and early/mid/late Off-season are derived by the canonical season clock rather than stored beside it. The exact date outranks a stale same-phase clock, generation consumes it, Review displays it, and the live phase-shift flow asks the same question before rebuilding into Off-season.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-173 — Sam approved adding the season-finish answer so a mid-Off-season signup does not restart in the regular first two weeks.',
+    guard: {
+      state: 'guarded',
+      by: 'test:phase-clock + test:onboarding-presentation + test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: store an athlete-selected early/mid/late bucket, or store the exact finish date and let the existing season clock derive every week. The exact-date anchor landed because it cannot drift from the phase week and remains useful over time. TEST FIRST: the first clock/generation cells began at a missing-export load red; four onboarding source/row cells were the presentation suite\'s only reds (97/101), and the conditional resume cell was the reliability suite\'s only new red. AFTER: `test:season-finish-date` is 12/12, presentation is 101/101, profile UI is 173/173 and reliability is 23/24 on one pre-existing persisted-store parser red. MUTATION: removing the saved-date argument from the real generation boundary reddened the named generation cell; restoring it returned the dedicated tape to 12/12. `test:season-finish-date` is reached in-chain through `test:phase-clock`. NOT COVERED: simulator pixels, keyboard traversal, locale-specific date presentation, physical-iPhone Release and editing the date from Profile while already inside Off-season.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

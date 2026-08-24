@@ -4826,3 +4826,19 @@ The **Add a game** row inside **Edit this week** uses the exact shared trophy
 drawing and amber colour owner used by Game Day on the Week view. It does not
 use the similar library `trophy-outline` glyph. · `WORKING` —
 `test:day-first-timeline`. Seat `onboardingtype`.
+
+---
+
+**R-173** · Off-season finish-date anchor (Sam, 2026-08-24) · **ASK FOR THE
+FINISH DATE; DERIVE THE OFF-SEASON WEEK.**
+
+When an athlete chooses Off-season, onboarding asks **“When did your season
+finish?”** and stores the exact local calendar date. **“I'm not sure”** is an
+explicit answer and falls back to recently finished. The first complete Monday
+after the finish date is Phase Week 1; the existing season clock derives early
+(weeks 1–2), mid (weeks 3–4) and late (week 5 onward) from that one anchor. The
+app never stores a second early/mid/late answer. The same question is asked when
+an existing athlete shifts into Off-season, and Review shows the saved answer.
+The date cannot be impossible or in the future. · `WORKING` —
+`test:phase-clock` + `test:onboarding-presentation` +
+`test:profile-reset-ui`. Seat `onboardingtype`.

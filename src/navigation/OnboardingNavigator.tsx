@@ -14,6 +14,7 @@ import { PositionScreen } from '../screens/onboarding/PositionScreen';
 import { MotivationScreen } from '../screens/onboarding/MotivationScreen';
 import { BodyMeasurementsScreen } from '../screens/onboarding/BodyMeasurementsScreen';
 import { SeasonPhaseScreen } from '../screens/onboarding/SeasonPhaseScreen';
+import { SeasonFinishedScreen } from '../screens/onboarding/SeasonFinishedScreen';
 import { GameDayScreen } from '../screens/onboarding/GameDayScreen';
 import { TeamTrainingDaysScreen } from '../screens/onboarding/TeamTrainingDaysScreen';
 import { TrainingCommitmentScreen } from '../screens/onboarding/TrainingCommitmentScreen';
@@ -77,6 +78,7 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="Position" component={PositionScreen} />
       <Stack.Screen name="Motivation" component={MotivationScreen} />
       <Stack.Screen name="SeasonPhase" component={SeasonPhaseScreen} />
+      <Stack.Screen name="SeasonFinished" component={SeasonFinishedScreen} />
       <Stack.Screen name="GameDay" component={GameDayScreen} />
       <Stack.Screen name="TeamTrainingDays" component={TeamTrainingDaysScreen} />
       <Stack.Screen name="TrainingCommitment" component={TrainingCommitmentScreen} />

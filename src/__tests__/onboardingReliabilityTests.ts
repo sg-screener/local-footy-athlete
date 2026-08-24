@@ -605,10 +605,14 @@ async function main(): Promise<void> {
       teamTrainingIntensity: undefined,
     } as unknown as OnboardingData;
     const names = visibleOnboardingSteps(offSeason).map((step) => step.name);
-    assert(!names.includes('GameDay') && !names.includes('TeamTrainingDays'),
+    assert(!names.includes('GameDay') && !names.includes('TeamTrainingDays') && names.includes('SeasonFinished'),
       `off-season flow still shows team/game steps: ${names.join(', ')}`);
-    assert(resolveOnboardingResumeStep(offSeason) === 'Review',
-      `off-season complete profile resumed at ${resolveOnboardingResumeStep(offSeason)}`);
+    assert(resolveOnboardingResumeStep(offSeason) === 'SeasonFinished',
+      `unanswered off-season profile resumed at ${resolveOnboardingResumeStep(offSeason)}`);
+    assert(resolveOnboardingResumeStep({ ...offSeason, seasonFinishedOn: '2026-08-01' }) === 'Review',
+      'an exact finish date did not satisfy the conditional step');
+    assert(resolveOnboardingResumeStep({ ...offSeason, seasonFinishedOn: null }) === 'Review',
+      'the explicit not-sure answer was treated as silence');
 
     const beginner = {
       ...COMPLETE_IN_SEASON_PROFILE,

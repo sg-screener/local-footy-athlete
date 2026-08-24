@@ -47,6 +47,12 @@ import {
 } from '../screens/home/homeScreenConstants';
 import { signedCopy } from '../rules/signedCopy';
 import type { DayOfWeek, SeasonPhase } from '../types/domain';
+import {
+  SeasonFinishDateFields,
+  type SeasonFinishDateDraft,
+} from './season/SeasonFinishDateFields';
+import { validateSeasonFinishDateParts } from '../rules/seasonPhaseClock';
+import { todayISOLocal } from '../utils/appDate';
 
 interface PhaseShiftSheetProps {
   visible: boolean;
@@ -61,6 +67,8 @@ interface PhaseShiftSheetProps {
   pendingPreferredDays: DayOfWeek[];
   pendingTeamDays: DayOfWeek[];
   pendingGameDay: DayOfWeek | null;
+  pendingSeasonFinishDate: SeasonFinishDateDraft;
+  seasonFinishAttempted: boolean;
   /** False until the athlete names a day or says they have no usual one. */
   gameAnchorAnswered: boolean;
   onClose: () => void;
@@ -69,6 +77,8 @@ interface PhaseShiftSheetProps {
   onTogglePendingTeamDay: (d: DayOfWeek) => void;
   onSetPendingGameDay: (d: DayOfWeek) => void;
   onAnswerNoUsualGameDay: () => void;
+  onChangeSeasonFinishDate: (value: SeasonFinishDateDraft) => void;
+  onAnswerSeasonFinishNotSure: () => void;
   onSelectTargetPhase: (phase: SeasonPhase) => void;
   onAdvance: () => void;
 }
@@ -98,9 +108,11 @@ function BackChevron({ onPress }: { onPress: () => void }) {
 export function SeasonPhaseShiftSheet({
   visible, step, currentPhase, targetPhase, isRebuilding, error, canRetry, msgIdx, msgOpacity,
   pendingPreferredDays, pendingTeamDays, pendingGameDay, gameAnchorAnswered,
+  pendingSeasonFinishDate, seasonFinishAttempted,
   onClose, onBack,
   onTogglePendingPreferredDay, onTogglePendingTeamDay, onSetPendingGameDay,
   onAnswerNoUsualGameDay, onSelectTargetPhase, onAdvance,
+  onChangeSeasonFinishDate, onAnswerSeasonFinishNotSure,
 }: PhaseShiftSheetProps) {
   const building = step === 'building' || isRebuilding;
   // Back is meaningful on every interactive step except the first. Hide on
@@ -112,6 +124,15 @@ export function SeasonPhaseShiftSheet({
   // athletes who legitimately need to drop a day mid-season — the engine
   // copes fine with a reduced set.
   const availabilityValid = pendingPreferredDays.length >= 1;
+  const seasonFinishValidation = validateSeasonFinishDateParts(
+    pendingSeasonFinishDate.day,
+    pendingSeasonFinishDate.month,
+    pendingSeasonFinishDate.year,
+    todayISOLocal(),
+  );
+  const seasonFinishError = 'message' in seasonFinishValidation
+    ? seasonFinishValidation.message
+    : null;
 
   return (
     <Sheet visible={visible} onClose={onClose} dismissable={!isRebuilding}>
@@ -175,6 +196,30 @@ export function SeasonPhaseShiftSheet({
             variant="secondary"
             size="md"
             onPress={onClose}
+            style={{ marginTop: spacing.md }}
+          />
+        </>
+      ) : step === 'seasonFinish' ? (
+        <>
+          <SheetHeader title="When did your season finish?" subtitle="Start at the right point" />
+          <SheetDescription>
+            This helps LFA start you at the right point of your off-season.
+          </SheetDescription>
+          <SeasonFinishDateFields
+            value={pendingSeasonFinishDate}
+            onChange={onChangeSeasonFinishDate}
+          />
+          {seasonFinishAttempted && seasonFinishError ? (
+            <Text style={styles.sheetError}>
+              {seasonFinishError}
+            </Text>
+          ) : null}
+          <Button label="Continue" size="lg" onPress={onAdvance} style={{ marginTop: spacing.lg }} />
+          <Button
+            label="I'm not sure"
+            variant="secondary"
+            size="md"
+            onPress={onAnswerSeasonFinishNotSure}
             style={{ marginTop: spacing.md }}
           />
         </>
