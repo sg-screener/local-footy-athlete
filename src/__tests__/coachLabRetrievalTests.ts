@@ -56,8 +56,11 @@ function retrievalFor(caseId: string) {
 
 console.log('\n[1] RETRIEVAL SENDS EXACT CANONICAL EXCERPTS, NOT A MINI-BIBLE');
 {
+  const retrieverSource = read('src/dev/coachLab/coachLabKnowledgeRetriever.ts');
   const retrieval = retrievalFor('rooted-but-wants-to-train');
   const selected = retrieval.chunks.map((chunk) => chunk.content).join('\n');
+  ok('production retrieval has no hand-tuned athlete phrase expansion table',
+    !/QUERY_EXPANSIONS|queryPhrases/.test(retrieverSource));
   ok('the available source is the measured full knowledge set',
     retrieval.receipt.availableCharacters > 800_000,
     retrieval.receipt.availableCharacters);
@@ -65,6 +68,9 @@ console.log('\n[1] RETRIEVAL SENDS EXACT CANONICAL EXCERPTS, NOT A MINI-BIBLE');
     selected.includes('Tired today')
       && selected.includes('Sore')
       && selected.includes('Slight reduction'));
+  ok('overlapping source chunks keep adjacent readiness rules together',
+    retrieval.chunks.some((chunk) => chunk.content.includes('Tired today')
+      && chunk.content.includes('Sore')));
   ok('selected context is under one tenth of the available source',
     retrieval.receipt.selectedCharacters < retrieval.receipt.availableCharacters / 10,
     retrieval.receipt);
@@ -77,6 +83,19 @@ console.log('\n[1] RETRIEVAL SENDS EXACT CANONICAL EXCERPTS, NOT A MINI-BIBLE');
   ok('the receipt names character units, chunk count and every source coordinate',
     retrieval.receipt.selectedChunks === retrieval.chunks.length
       && retrieval.chunks.every((chunk) => /:L\d+-L\d+$/.test(chunk.id)));
+}
+
+console.log('\n[1b] STRUCTURED FACTS, NOT SLANG PATCHES, DRIVE READINESS RETRIEVAL');
+{
+  const retrieval = retrieveCoachLabKnowledge({
+    athleteMessage: 'help',
+    snapshot: coachLabFixtureSnapshot(),
+    sources: SOURCES,
+  });
+  const selected = retrieval.chunks.map((chunk) => chunk.content).join('\n');
+  ok('low energy and moderate soreness retrieve their canonical rules without a keyword hint',
+    selected.includes('Tired today') && selected.includes('Sore')
+      && selected.includes('Slight reduction'));
 }
 
 console.log('\n[2] DIFFERENT ATHLETE QUESTIONS RETRIEVE DIFFERENT KNOWLEDGE');

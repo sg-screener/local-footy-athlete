@@ -53,33 +53,43 @@ const STOP_WORDS = new Set([
   'that', 'the', 'this', 'to', 'wanna', 'what', 'when', 'with', 'you', 'your',
 ]);
 
-const QUERY_EXPANSIONS: Readonly<Record<string, readonly string[]>> = {
-  root: ['tired', 'fatigue', 'cooked', 'sore', 'soreness', 'readiness', 'slight', 'reduction', 'volume', 'accessories'],
-  flat: ['tired', 'fatigue', 'cooked', 'readiness', 'deload', 'recovery'],
-  skip: ['missed', 'session', 'delete', 'keep', 'reduction'],
-  miss: ['session', 'skip', 'move', 'cram', 'overload'],
-  cram: ['missed', 'session', 'move', 'overload', 'week'],
-  shoulder: ['injury', 'pain', 'pressing', 'alternative', 'swap', 'movement'],
-  knee: ['injury', 'pain', 'sore', 'range', 'alternative', 'lower'],
-  sore: ['soreness', 'injury', 'pain', 'readiness', 'reduction'],
-  painful: ['pain', 'injury', 'severity', 'alternative'],
-  machine: ['equipment', 'apparatus', 'kit', 'exercise', 'alternative', 'swap'],
-  same: ['alternative', 'swap', 'movement', 'pattern', 'muscle'],
-  thurs: ['thursday', 'schedule', 'week', 'session', 'program'],
-  play: ['game', 'fixture', 'match', 'week', 'schedule'],
-  footy: ['game', 'team', 'training', 'fixture', 'recovery'],
-  strength: ['lift', 'load', 'progress', 'maintain', 'volume'],
-  los: ['progress', 'maintain', 'strength', 'load'],
-  deload: ['fatigue', 'readiness', 'recovery', 'cooked', 'week'],
-};
-
 function stem(token: string): string {
+  if (token.length > 6 && token.endsWith('ness')) return token.slice(0, -4);
   if (token.length > 5 && token.endsWith('ies')) return `${token.slice(0, -3)}y`;
-  if (token.length > 5 && token.endsWith('ing')) return token.slice(0, -3);
-  if (token.length > 4 && token.endsWith('ed')) return token.slice(0, -2);
+  if (token.length > 5 && token.endsWith('ing')) {
+    const base = token.slice(0, -3);
+    return /(.)\1$/.test(base) ? base.slice(0, -1) : base;
+  }
+  if (token.length > 4 && token.endsWith('ed')) {
+    const base = token.slice(0, -2);
+    return /(.)\1$/.test(base) ? base.slice(0, -1) : base;
+  }
   if (token.length > 4 && token.endsWith('es')) return token.slice(0, -2);
   if (token.length > 3 && token.endsWith('s')) return token.slice(0, -1);
   return token;
+}
+
+function readinessCanonicalSearchText(readiness: unknown): string {
+  if (!readiness || typeof readiness !== 'object') return '';
+  const signal = (readiness as { signal?: unknown }).signal;
+  if (!signal || typeof signal !== 'object') return '';
+  const typed = signal as {
+    energy?: unknown;
+    soreness?: unknown;
+    painFlag?: unknown;
+    flatToday?: unknown;
+    poorSleepPattern?: unknown;
+  };
+  const canonicalTerms: string[] = [];
+  if (typed.energy === 'low') canonicalTerms.push('tired fatigue reduction');
+  if (typeof typed.soreness === 'string' && typed.soreness !== 'none') {
+    canonicalTerms.push('sore soreness reduction');
+  }
+  if (typed.soreness === 'moderate') canonicalTerms.push('moderate reduction');
+  if (typed.painFlag === true) canonicalTerms.push('pain injury');
+  if (typed.flatToday === true) canonicalTerms.push('flat tired fatigue readiness deload');
+  if (typed.poorSleepPattern === true) canonicalTerms.push('poor sleep tired recovery readiness');
+  return canonicalTerms.join(' ');
 }
 
 function tokens(text: string): readonly string[] {
@@ -93,49 +103,19 @@ function addWeightedTerms(
   weights: Map<string, number>,
   text: string,
   weight: number,
-  expand: boolean,
 ): void {
   for (const token of tokens(text)) {
     weights.set(token, Math.max(weights.get(token) ?? 0, weight));
-    if (!expand) continue;
-    for (const expanded of QUERY_EXPANSIONS[token] ?? []) {
-      const normalised = stem(expanded);
-      weights.set(normalised, Math.max(weights.get(normalised) ?? 0, Math.max(1, weight - 2)));
-    }
   }
 }
 
 function queryWeights(message: string, snapshot: RetrievalSnapshot): ReadonlyMap<string, number> {
   const weights = new Map<string, number>();
-  addWeightedTerms(weights, message, 8, true);
-  addWeightedTerms(weights, JSON.stringify(snapshot.readiness), 4, true);
-  addWeightedTerms(weights, JSON.stringify(snapshot.restrictions), 4, true);
-  addWeightedTerms(weights, JSON.stringify(snapshot.load), 2, false);
-  addWeightedTerms(weights, JSON.stringify(snapshot.progress), 2, false);
-  for (const day of snapshot.visibleWeek.days) {
-    addWeightedTerms(weights, `${day.kind} ${day.headline}`, 1, true);
-    for (const part of day.parts) addWeightedTerms(weights, `${part.kind} ${part.headline}`, 1, true);
-  }
+  addWeightedTerms(weights, message, 8);
+  addWeightedTerms(weights, JSON.stringify(snapshot.readiness), 2);
+  addWeightedTerms(weights, readinessCanonicalSearchText(snapshot.readiness), 12);
+  addWeightedTerms(weights, JSON.stringify(snapshot.restrictions), 4);
   return weights;
-}
-
-function queryPhrases(message: string): readonly string[] {
-  const messageTokens = new Set(tokens(message));
-  const phrases: string[] = [];
-  if (['root', 'tired', 'flat', 'sore'].some((token) => messageTokens.has(token))) {
-    phrases.push('tired today', 'sore', 'slight reduction');
-  }
-  if (['miss', 'cram', 'skip'].some((token) => messageTokens.has(token))) {
-    phrases.push('missed session', 'missed multiple sessions');
-  }
-  if (['shoulder', 'knee', 'painful'].some((token) => messageTokens.has(token))) {
-    phrases.push('injury', 'pain', 'reintroduction rules');
-  }
-  if (['machine', 'equipment'].some((token) => messageTokens.has(token))) {
-    phrases.push('equipment', 'exercise alternatives');
-  }
-  if (messageTokens.has('deload')) phrases.push('when to deload', 'deload rules');
-  return phrases;
 }
 
 function chunkSource(source: CanonicalCoachKnowledgeSource): readonly RetrievedCoachKnowledgeChunk[] {
@@ -143,7 +123,7 @@ function chunkSource(source: CanonicalCoachKnowledgeSource): readonly RetrievedC
   const chunks: RetrievedCoachKnowledgeChunk[] = [];
   let start = 0;
   while (start < lines.length) {
-    let end = Math.min(lines.length, start + 36);
+    let end = Math.min(lines.length, start + 72);
     while (end > start + 8 && lines.slice(start, end).join('\n').length > 7_000) end -= 1;
     const content = lines.slice(start, end).join('\n');
     chunks.push({
@@ -155,7 +135,8 @@ function chunkSource(source: CanonicalCoachKnowledgeSource): readonly RetrievedC
       content,
       score: 0,
     });
-    start = end;
+    if (end === lines.length) break;
+    start += Math.max(12, Math.floor((end - start) / 3));
   }
   return chunks;
 }
@@ -163,25 +144,25 @@ function chunkSource(source: CanonicalCoachKnowledgeSource): readonly RetrievedC
 function scoreChunk(
   chunk: RetrievedCoachKnowledgeChunk,
   weights: ReadonlyMap<string, number>,
-  phrases: readonly string[],
+  inverseDocumentFrequency: ReadonlyMap<string, number>,
 ): number {
   const bodyCounts = new Map<string, number>();
   for (const token of tokens(chunk.content)) bodyCounts.set(token, (bodyCounts.get(token) ?? 0) + 1);
   const headingTokens = new Set(tokens(chunk.content.split('\n')
-    .filter((line) => line.trim().length > 1 && line.trim().length <= 80 && !line.trim().startsWith('*'))
+    .map((line) => line.trim())
+    .filter((line) => line.length > 1
+      && line.length <= 60
+      && line.split(/\s+/).length <= 8
+      && !line.startsWith('*')
+      && !/[.!?:;]$/.test(line))
     .join(' ')));
   let score = 0;
   for (const [term, weight] of weights) {
     const count = bodyCounts.get(term) ?? 0;
     if (count === 0) continue;
-    score += weight * Math.min(count, 4);
-    if (headingTokens.has(term)) score += weight * 6;
-  }
-  const normalisedContent = chunk.content.toLowerCase();
-  const normalisedLines = chunk.content.split('\n').map((line) => line.trim().toLowerCase());
-  for (const phrase of phrases) {
-    if (normalisedContent.includes(phrase)) score += 120;
-    if (normalisedLines.includes(phrase)) score += 400;
+    const rarity = inverseDocumentFrequency.get(term) ?? 1;
+    score += weight * rarity * Math.min(count, 4);
+    if (headingTokens.has(term)) score += weight * rarity * 6;
   }
   if (score > 0 && chunk.authority === 'active_rule') score += 3;
   return score;
@@ -206,10 +187,21 @@ export function retrieveCoachLabKnowledge(args: {
 }): CoachLabKnowledgeRetrieval {
   const maximumSelectedCharacters = args.maxSelectedCharacters ?? 60_000;
   const allChunks = args.sources.flatMap(chunkSource);
+  const documentFrequency = new Map<string, number>();
+  for (const chunk of allChunks) {
+    for (const token of new Set(tokens(chunk.content))) {
+      documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
+    }
+  }
+  const inverseDocumentFrequency = new Map(
+    [...documentFrequency].map(([term, frequency]) => [
+      term,
+      Math.log((allChunks.length + 1) / (frequency + 1)) + 1,
+    ]),
+  );
   const weights = queryWeights(args.athleteMessage, args.snapshot);
-  const phrases = queryPhrases(args.athleteMessage);
   const ranked = allChunks
-    .map((chunk) => ({ ...chunk, score: scoreChunk(chunk, weights, phrases) }))
+    .map((chunk) => ({ ...chunk, score: scoreChunk(chunk, weights, inverseDocumentFrequency) }))
     .filter((chunk) => chunk.score > 0)
     .sort((left, right) => right.score - left.score
       || left.path.localeCompare(right.path)
