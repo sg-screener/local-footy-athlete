@@ -4677,6 +4677,17 @@ ROUNDED-SQUARE ROW.**
 Game Day says **"Select the day you play most often."** and presents Monday
 through Sunday in one horizontal row. The controls remain compact rounded-square
 tiles rather than becoming circles. The shared day picker retains its 3-3-1
-default for the multi-select team-training and usual-gym-day questions. ·
+default for Team Training; R-160 later gives usual gym days the same row. ·
 `WORKING` — `test:onboarding-presentation` + `test:game-anchor`. Seat
 `onboardingtype`.
+
+---
+
+**R-160** · Usual gym-day picker layout (Sam, 2026-08-24) · **MATCH THE
+SEVEN-ACROSS GAME-DAY ROW.**
+
+The multi-select **Which days can you usually get there?** screen uses the same
+single horizontal row of seven compact rounded-square weekday tiles as Game
+Day. Its existing selection cap, dimming and Continue behaviour are unchanged.
+This supersedes only R-159's statement that this screen retained the 3-3-1
+layout. · `WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.

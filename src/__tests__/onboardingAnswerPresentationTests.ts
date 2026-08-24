@@ -219,7 +219,7 @@ console.log('\n[0f] Game day is one compact seven-day row');
     /singleRow:\s*\{[\s\S]{0,100}flexDirection:\s*'row'[\s\S]{0,100}gap:\s*6/.test(dayGrid)
       && /singleRowTile:\s*\{[\s\S]{0,160}flex:\s*1[\s\S]{0,120}aspectRatio:\s*1[\s\S]{0,120}paddingHorizontal:\s*0[\s\S]{0,120}paddingVertical:\s*0/.test(dayGrid)
       && !/borderRadius:\s*999/.test(dayGrid));
-  ok('the shared picker retains its 3-3-1 default for the other day questions',
+  ok('the shared picker retains its 3-3-1 default for consumers that do not request the row',
     /DAYS\.slice\(0, 6\)\.map\(renderDay\)/.test(dayGrid)
       && /<View style=\{styles\.lastRow\}>\{renderDay\(DAYS\[6\]\)\}<\/View>/.test(dayGrid));
 }
@@ -595,6 +595,8 @@ console.log('\n[13] Training availability asks about gym access, not total train
     preferredDays.includes('Which days can you usually get there?'));
   ok('the follow-up describes gym or usual strength-equipment days',
     preferredDays.includes('gym or your usual strength equipment'));
+  ok('the usual gym-day picker uses the same seven-across rounded-square row',
+    /<DayGrid[\s\S]{0,260}layout="single-row"/.test(preferredDays));
 
   ok('the step registry describes the answers as gym access',
     steps.includes('how many days a week you can get to a gym or your usual strength equipment')

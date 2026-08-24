@@ -303,9 +303,10 @@ the app's more square rounded boxes. Two options were compared:
 2. Give the canonical shared DayGrid an explicit single-row layout while
    retaining its existing 3-3-1 default.
 
-Option 2 landed. Game Day now asks the shared owner for one horizontal row; the
-team-training and usual-gym-day screens are unchanged. The instruction line is
-**"Select the day you play most often."**
+Option 2 landed. Game Day now asks the shared owner for one horizontal row. At
+this checkpoint the team-training and usual-gym-day screens were unchanged;
+R-160 later makes usual gym days match while Team Training retains the default.
+The instruction line is **"Select the day you play most often."**
 
 ### Evidence
 
@@ -328,4 +329,32 @@ team-training and usual-gym-day screens are unchanged. The instruction line is
 
 - Simulator pixels and small-screen clipping.
 - Dynamic Type.
+- Physical-iPhone Release rebuild.
+
+---
+
+## R-160 — make usual gym days match Game Day
+
+The usual gym-day picker now requests the same shared seven-across
+rounded-square layout as Game Day. No second layout or weekday list was added,
+and the existing up-to-N cap, dimming and Continue transaction were untouched.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 93/94; the new usual-gym-days
+  row cell was the only failure.
+- AFTER: `test:onboarding-presentation` — 94/94.
+- The earlier Game Day layout cells and the shared 3-3-1 default cell remain
+  green.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; neither PreferredTrainingDays nor DayGrid is named.
+- `test:law-registry` — 11/14 with the same three existing reds; the updated
+  row remains guarded and UNENFORCED stays at 21.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-160 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and multi-selection feel.
+- Small-screen clipping and Dynamic Type.
 - Physical-iPhone Release rebuild.

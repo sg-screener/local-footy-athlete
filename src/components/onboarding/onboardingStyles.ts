@@ -17,10 +17,9 @@ import { TextStyle } from 'react-native';
  *     marginBottom: spacing.sm,
  *   },
  *
- * Day-grid layout lives in `<DayGrid>` (../onboarding/DayGrid.tsx) — that
- * component is the single source of truth for the Mon–Sat 3-up grid +
- * centered-Sunday last row used by PreferredTrainingDays and
- * TeamTrainingDays.
+ * Day-picker layout lives in `<DayGrid>` (../onboarding/DayGrid.tsx). That
+ * component owns both the default Mon–Sat 3-up grid + centered Sunday and the
+ * explicit seven-across rounded-square row used by Game Day and usual gym days.
  */
 
 export const headingXL: TextStyle = {

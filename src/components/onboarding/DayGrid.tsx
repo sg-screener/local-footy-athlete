@@ -18,9 +18,9 @@ import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
  *   Thu  Fri  Sat
  *        Sun
  *
- * The default 3-3-1 grid is used for multi-select questions. Game Day asks for
- * the explicit `single-row` layout: the same canonical seven answers and
- * selection behaviour, presented as seven compact rounded-square tiles.
+ * The default remains a 3-3-1 grid. Game Day and usual gym days ask for the
+ * explicit `single-row` layout: the same canonical seven answers and selection
+ * behaviour, presented as seven compact rounded-square tiles.
  */
 
 const DAYS: { id: DayOfWeek; label: string }[] = DAYS_OF_WEEK.map((day) => ({

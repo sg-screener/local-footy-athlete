@@ -119,16 +119,14 @@ export const PreferredTrainingDaysScreen: React.FC<
           </Text>
         ) : null}
 
-        {/*
-         * Day picker layout (Mon–Sat 3-up, Sunday centered) lives in the
-         * shared <DayGrid /> so this screen and TeamTrainingDaysScreen
-         * stay in lockstep. Cap-aware dimming is the only per-screen
-         * behaviour we plumb in.
-         */}
+        {/* The shared picker owns the same seven-across rounded-square row as
+         * Game Day. Cap-aware dimming remains this screen's only behavioural
+         * difference. */}
         <DayGrid
           selectedDays={selectedDays}
           onToggleDay={toggleDay}
           isDimmed={() => isAtCap}
+          layout="single-row"
         />
       </View>
     </OnboardingLayout>
