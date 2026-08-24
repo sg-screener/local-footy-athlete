@@ -44,9 +44,15 @@ to the app or introducing stored athlete data.
   and bypassing the live `429` branch killed the endpoint-order guard. All were
   restored.
 
-NOT COVERED: these Edge changes are not deployed yet. The live limiter is
-deliberately coarse and per Edge isolate; it is useful immediate spend protection,
-not a distributed public-scale quota. Before a broad public launch, use real
-Supabase user sessions and a durable atomic limiter (for example Redis), rather
-than the current app-wide anon credential. No provider call or phone rebuild has
-been made in this checkpoint.
+## Deployment receipt
+
+- `coach-chat` deployed ACTIVE as version 3 at 2026-08-24 00:03:17 UTC.
+- `coach-lab` deployed ACTIVE as version 26 at 2026-08-24 00:03:19 UTC.
+
+NOT COVERED: the live limiter is deliberately coarse and per Edge isolate; it is
+useful immediate spend protection, not a distributed public-scale quota. Before
+a broad public launch, use real Supabase user sessions and a durable atomic
+limiter (for example Redis), rather than the current app-wide anon credential.
+The newly typed response-refusal code landed after version 3 and requires the
+next deployment. No real provider call or phone rebuild has been made in this
+checkpoint.

@@ -5,7 +5,10 @@ import path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { CANONICAL_COACH_KNOWLEDGE } from '../../supabase/functions/coach-chat/canonicalCoachKnowledge.generated';
 import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../rules/coachKnowledgeManifest';
-import { askCoachReadOnly } from '../services/api/coachChat';
+import {
+  askCoachReadOnly,
+  coachChatFailureCode,
+} from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
 import { createSlidingWindowRateLimiter } from '../../supabase/functions/_shared/slidingWindowRateLimit';
@@ -54,7 +57,7 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && /evaluateCoachResponseContract/.test(read('src/dev/coachLab/coachLab.ts'))
       && !/const automaticChecks: CoachLabAutomaticChecks/.test(read('src/dev/coachLab/coachLab.ts')));
   ok('an automatic production failure is refused before any answer is returned',
-    /if \(!evaluation\.ok\) return json\(502/.test(edge));
+    /if \(!evaluation\.ok\) return json\(502, \{ error: 'coach_chat_response_refused' \}\)/.test(edge));
   ok('a bounded request window refuses before the paid provider call',
     /createSlidingWindowRateLimiter/.test(edge)
       && /if \(!rateLimit\.allowed\) \{\s*return json\(429/.test(edge)
@@ -107,6 +110,10 @@ console.log('\n[3] THE APP CHAT IS TERRA-READ-ONLY');
     /isSending/.test(screen)
       && /disabled=\{!canSend\}/.test(screen)
       && /coach-tab-thinking/.test(screen));
+  ok('the screen reads a typed failure and logs safety refusals without athlete text',
+    /coachChatFailureCode\(error\)/.test(screen)
+      && /failure === 'refused'/.test(screen)
+      && /console\.warn\('\[coach-chat\] response refused by the read-only truth contract'\)/.test(screen));
   ok('Coach is the conversation surface while its athlete facts remain private model input',
     screen.indexOf('testID="coach-tab-conversation"') >= 0
       && screen.indexOf('{turns.map((turn) => (')
@@ -181,7 +188,7 @@ async function finish(): Promise<void> {
       }),
     });
   } catch (error) {
-    actionRejected = /read-only/.test(String(error));
+    actionRejected = coachChatFailureCode(error) === 'refused';
   }
   ok('the app itself rejects a response carrying any action', actionRejected);
 
@@ -200,10 +207,63 @@ async function finish(): Promise<void> {
       }),
     });
   } catch (error) {
-    falseChangeRejected = /truth|read-only|refused/i.test(String(error));
+    falseChangeRejected = coachChatFailureCode(error) === 'refused';
   }
   ok('the live app refuses a false change claim even with an empty action list',
     falseChangeRejected);
+
+  let emptyAnswerCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'what is next',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        async text() {
+          return JSON.stringify({ message: '', programActions: [] });
+        },
+      }),
+    });
+  } catch (error) {
+    emptyAnswerCode = coachChatFailureCode(error);
+  }
+  ok('an empty provider answer is typed as no_answer', emptyAnswerCode === 'no_answer');
+
+  let outageCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'what is next',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => { throw new Error('offline'); },
+    });
+  } catch (error) {
+    outageCode = coachChatFailureCode(error);
+  }
+  ok('a transport failure is typed as unavailable without exposing its message',
+    outageCode === 'unavailable');
+
+  let serverRefusalCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'what is next',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => ({
+        ok: false,
+        status: 502,
+        async text() {
+          return JSON.stringify({ error: 'coach_chat_response_refused' });
+        },
+      }),
+    });
+  } catch (error) {
+    serverRefusalCode = coachChatFailureCode(error);
+  }
+  ok('a server contract refusal remains refused at the screen boundary',
+    serverRefusalCode === 'refused');
 
   console.log('\n[6] ONE AUTOMATIC CONTRACT BITES IN LAB AND PRODUCTION');
   const grounded = {

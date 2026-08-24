@@ -124,9 +124,9 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
     'a model cannot directly or indirectly enter a program writer',
   );
   ok(
-    'the screen imports exactly the read-only Coach client',
+    'the screen imports exactly the read-only Coach client and its typed failure reader',
     imports.filter((line) => /services\/api\/coachChat/.test(line)).length === 1
-      && /import \{ askCoachReadOnly \}/.test(screenCode),
+      && /import \{ askCoachReadOnly, coachChatFailureCode \}/.test(screenCode),
   );
   ok(
     'the read-only client is entered from exactly one place in the screen',

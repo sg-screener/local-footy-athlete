@@ -142,7 +142,7 @@ Deno.serve(async (request) => {
     const evaluation = evaluateCoachResponseContract(payload, {
       allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
     });
-    if (!evaluation.ok) return json(502, { error: 'coach_chat_invalid_answer' });
+    if (!evaluation.ok) return json(502, { error: 'coach_chat_response_refused' });
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
     return json(200, {
       message: payload.message,

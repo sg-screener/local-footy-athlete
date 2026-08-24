@@ -43,7 +43,7 @@ import {
   commitmentPreviewUnavailableSentence,
 } from '../../rules/projectionCopy';
 import { useLiveAthleteSnapshot } from './useLiveAthleteSnapshot';
-import { askCoachReadOnly } from '../../services/api/coachChat';
+import { askCoachReadOnly, coachChatFailureCode } from '../../services/api/coachChat';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -271,7 +271,13 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         },
       });
       say(answer);
-    } catch {
+    } catch (error) {
+      const failure = coachChatFailureCode(error);
+      if (failure === 'refused') {
+        // Never log the athlete's question or the model's answer. The typed
+        // event is enough to distinguish a safety refusal from an outage.
+        console.warn('[coach-chat] response refused by the read-only truth contract');
+      }
       say(COACH_TAB_COPY.noAnswerYet);
     } finally {
       setIsSending(false);

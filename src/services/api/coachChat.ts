@@ -30,6 +30,37 @@ export interface AskCoachReadOnlyInput {
   readonly timeoutMs?: number;
 }
 
+export type CoachChatFailureCode = 'unavailable' | 'refused' | 'no_answer';
+
+/**
+ * The screen must not infer why Coach failed from provider prose or HTTP text.
+ * This is the app-side boundary: transport/provider failures are retryable,
+ * malformed or empty answers are absence, and answers rejected by the
+ * read-only/truth contracts are safety refusals.
+ */
+export class CoachChatError extends Error {
+  constructor(
+    readonly code: CoachChatFailureCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'CoachChatError';
+  }
+}
+
+export function coachChatFailureCode(error: unknown): CoachChatFailureCode {
+  return error instanceof CoachChatError ? error.code : 'unavailable';
+}
+
+function serverFailureCode(raw: string): string | null {
+  try {
+    const parsed = JSON.parse(raw) as { error?: unknown };
+    return typeof parsed.error === 'string' ? parsed.error : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The live app's only AI door. It can ask for one read-only answer and nothing
  * else: the server owns Terra, retrieval, instructions and the empty-action
@@ -37,7 +68,9 @@ export interface AskCoachReadOnlyInput {
  */
 export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<string> {
   const config = getClientEnvConfig();
-  if (!config.isReady) throw new Error('Coach chat environment is unavailable.');
+  if (!config.isReady) {
+    throw new CoachChatError('unavailable', 'Coach chat environment is unavailable.');
+  }
   const fetcher = input.fetch ?? (globalThis.fetch as unknown as CoachChatFetch);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? 45_000);
@@ -59,23 +92,34 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
         }),
       }),
     });
+  } catch {
+    throw new CoachChatError('unavailable', 'Coach chat request could not reach the server.');
   } finally {
     clearTimeout(timeout);
   }
 
   const raw = await response.text();
-  if (!response.ok) throw new Error(`Coach chat unavailable (${response.status}).`);
+  if (!response.ok) {
+    const serverCode = serverFailureCode(raw);
+    if (serverCode === 'coach_chat_response_refused') {
+      throw new CoachChatError('refused', 'Coach chat refused an unsafe answer.');
+    }
+    if (serverCode === 'coach_chat_invalid_answer') {
+      throw new CoachChatError('no_answer', 'Coach chat returned no usable answer.');
+    }
+    throw new CoachChatError('unavailable', `Coach chat unavailable (${response.status}).`);
+  }
   let payload: { message?: unknown; programActions?: unknown };
   try {
     payload = JSON.parse(raw) as { message?: unknown; programActions?: unknown };
   } catch {
-    throw new Error('Coach chat returned an unreadable answer.');
+    throw new CoachChatError('no_answer', 'Coach chat returned an unreadable answer.');
   }
   if (typeof payload.message !== 'string' || !payload.message.trim()) {
-    throw new Error('Coach chat returned no answer.');
+    throw new CoachChatError('no_answer', 'Coach chat returned no answer.');
   }
   if (!Array.isArray(payload.programActions) || payload.programActions.length !== 0) {
-    throw new Error('Coach chat refused a non-read-only answer.');
+    throw new CoachChatError('refused', 'Coach chat refused a non-read-only answer.');
   }
   const message = payload.message.trim();
   const truth = validateCoachCommunicationTruth({
@@ -89,7 +133,7 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
     replyText: message,
   });
   if (!truth.ok) {
-    throw new Error('Coach chat refused an untruthful read-only answer.');
+    throw new CoachChatError('refused', 'Coach chat refused an untruthful read-only answer.');
   }
   return message;
 }
