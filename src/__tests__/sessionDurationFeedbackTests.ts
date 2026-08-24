@@ -100,10 +100,61 @@ ok('the ended measurement still pre-fills the matching strength session',
     nowISO: '2026-08-24T02:00:00.000Z',
   }) === 42);
 
-console.log('\n[3] The live Log Session door captures before opening feedback');
+/* ⚠ **THE TIMER ENDS AT SAVE & FINISH, NOT AT LOG SESSION — SAM, 2026-08-25
+ * (R-215): *"can you remove the option to hit 'end' after you hit start
+ * session? the timer will just end when the user logs their session and hits
+ * 'save and finish'."***
+ *
+ * The cell here USED TO REQUIRE the opposite — `handleFinishWorkout` ending the
+ * stopwatch before `setIsFinished(true)` — and it is inverted rather than
+ * deleted (`gate-must-watch-the-deleted-surface`).
+ *
+ * ⚠ **AND MOVING IT FIXES A SEPARATE DEFECT NOBODY HAD NAMED.** Log Session
+ * only OPENS the feedback sheet, and `handleCancelFeedback` flips that flag
+ * straight back — so under the old placement an athlete who opened the form and
+ * cancelled had already lost their running timer, with no way to resume it. The
+ * end now happens on the one action that cannot be taken back. */
+console.log('\n[3] The timer ends when the session is saved, not when the form opens');
 const hook = read('screens/home/useDayWorkout.ts');
-ok('the finish handler ends only the opened workout timer before showing feedback',
-  /const handleFinishWorkout = useCallback\(\(\) => \{[\s\S]{0,320}endStopwatchFor\(\{[\s\S]{0,180}workoutId: workout\.id[\s\S]{0,180}dateISO: date[\s\S]{0,180}setIsFinished\(true\)/.test(hook));
+ok('opening the feedback sheet no longer ends the timer',
+  /const handleFinishWorkout = useCallback\(\(\) => \{\s*setIsFinished\(true\);\s*\}/.test(hook),
+  'Log Session opens a sheet the athlete can still cancel out of');
+ok('Save & Finish ends only the opened workout timer',
+  /const handleFeedbackSaved = useCallback\([\s\S]{0,700}endStopwatchFor\(\{[\s\S]{0,180}workoutId: workout\.id[\s\S]{0,180}dateISO: date/.test(hook));
+ok('and cancelling the form cannot end it',
+  /const handleCancelFeedback = useCallback\(\(\) => \{\s*setIsFinished\(false\);\s*\}/.test(hook),
+  'the athlete who backs out of the form keeps the count they were running');
+
+/* ══ 4. The End control is gone ══ */
+console.log('\n[4] The header offers Start, Pause and Resume — never End');
+const control = read('components/SessionStopwatchControl.tsx');
+ok('the End button is removed from the running control',
+  !/session-stopwatch-end/.test(control)
+    && !/SESSION_STOPWATCH_COPY\.end/.test(control),
+  'R-132 offered "pause or end"; R-215 keeps the pause half only');
+ok('and the control no longer reaches the store\'s whole-session end at all',
+  !/state\) => state\.end\b/.test(control),
+  'a handler with no button is the next screen\'s dead affordance');
+ok('Pause and Resume both survive — only End was retired',
+  /session-stopwatch-pause-resume/.test(control)
+    && /SESSION_STOPWATCH_COPY\.pause/.test(control)
+    && /SESSION_STOPWATCH_COPY\.resume/.test(control));
+ok('the retired word is deregistered, not left signed for nobody',
+  // Comments stripped: the file still EXPLAINS the retirement by name, and a
+  // cell that reddened on its own explanation would force the reason out too.
+  !/session\.stopwatch\.end/.test(
+    read('rules/sessionStopwatchCopy.ts')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, ''),
+  ),
+  'a signed string with no surface is copy the next build will find and use');
+
+/* THE STORE KEEPS `end`, AND THAT IS NOT AN OVERSIGHT: `endFor` is built on it
+ * and Save & Finish is now its one caller. What was deleted is the BUTTON. */
+ok('the store still ends a session, for the save door to call',
+  typeof store.getState().end === 'function'
+    && typeof store.getState().endFor === 'function');
+
+console.log('\n[3b] The measurement the form reads is unchanged by the move');
 ok('the strength form matches the timer by workout and date',
   /measuredMinutesFor\(\{[\s\S]{0,160}workoutId: workout\.id[\s\S]{0,160}dateISO: date/.test(panel));
 ok('a previously saved manual answer outranks a timer measurement',

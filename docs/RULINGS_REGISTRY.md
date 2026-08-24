@@ -5450,3 +5450,37 @@ zero consumers after R-214 — a style whose only reader is deleted is dead weig
 the next screen will trust. · `WORKING` — `test:session-execution` §[10], 2
 cells, mutation-proven: restoring `marginTop: 3` reds the sum cell and only it.
 Seat `warmup`.
+
+---
+
+**R-215** · *"can you remove the option to hit 'end' after you hit start
+session? the timer will just end when the user logs their session and hits 'save
+and finish'."* (Sam, 2026-08-25) · **ONE ACTION ENDS A SESSION'S TIMER, AND IT
+IS THE ONE THAT CANNOT BE TAKEN BACK.**
+
+**PARTIALLY SUPERSEDES R-132**, whose *"a timer next to it that you can pause or
+end"* built both controls. The pause half stays; the End button is deleted and
+`session.stopwatch.end` is **deregistered, not left signed for nobody** — a
+signed string with no surface is copy the next build finds, trusts as ruled, and
+puts back on a screen Sam asked to clear.
+
+⚠ **AND THE MOVE FIXED A DEFECT NOBODY HAD NAMED.** The end was NOT already at
+Save & Finish: `handleFinishWorkout` ended the stopwatch and then flipped the
+flag that OPENS the feedback sheet — and `handleCancelFeedback` flips that flag
+straight back. **An athlete who tapped Log session and then cancelled had
+already lost their running timer with no way to resume it.** The end now lives
+in `handleFeedbackSaved`, and it is `endFor` rather than `end` so a stopwatch
+running on another day's workout is never stopped by this save.
+
+⚠ **THE PRE-FILLED MINUTES ARE UNCHANGED.** `measuredMinutesFor` reads a RUNNING
+stopwatch by deriving its elapsed without mutating it — the exact case it was
+written for — so the form still opens with the measured number even though the
+timer is no longer stopped before it appears.
+
+⚠ **THE STORE KEEPS `end`.** It is `endFor`'s foundation and the save door is
+now its one caller. What was deleted is the BUTTON, and a cell requires the
+control to have no path to the store's whole-session end, so a handler cannot
+outlive it as the next screen's dead affordance. · `WORKING` —
+`test:session-duration-feedback` §3/§4, **21 passed, 0 failed** (was 14/0).
+Mutation-proven: removing the end from the save door reds the save cell and only
+it. Seat `warmup`.

@@ -15,6 +15,13 @@ import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
  * line, *"keeping font the same but just saying 'Start session' its a little
  * button or something with a timer next to it that you can pause or end."*
  *
+ * ⚠ **THE `end` HALF IS RETIRED — SAM, 2026-08-25 (R-215): *"can you remove the
+ * option to hit 'end' after you hit start session? the timer will just end when
+ * the user logs their session and hits 'save and finish'."*** So the running
+ * control is elapsed + Pause/Resume, and the ONE thing that ends a session's
+ * timer is saving that session. The store keeps `end`; it is `endFor`'s
+ * foundation and the save door is now its only caller.
+ *
  * The font IS the subtitle's 13/500/20 — his words. It used to be imported from
  * `SessionDateLine`, the date component that owned that line; R-214 deleted the
  * date and its calendar, and moved this control into the space they vacated, so
@@ -35,7 +42,6 @@ export function SessionStopwatchControl({ workoutId, dateISO }: {
   const start = useSessionStopwatchStore((state) => state.start);
   const pause = useSessionStopwatchStore((state) => state.pause);
   const resume = useSessionStopwatchStore((state) => state.resume);
-  const end = useSessionStopwatchStore((state) => state.end);
 
   const mine = current !== null && current.workoutId === workoutId;
   const running = mine && current!.pausedAtISO === null;
@@ -89,16 +95,6 @@ export function SessionStopwatchControl({ workoutId, dateISO }: {
       >
         <Text style={[styles.text, styles.action]}>
           {running ? SESSION_STOPWATCH_COPY.pause : SESSION_STOPWATCH_COPY.resume}
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={() => end(new Date().toISOString())}
-        accessibilityRole="button"
-        testID="session-stopwatch-end"
-        hitSlop={8}
-      >
-        <Text style={[styles.text, styles.action]}>
-          {SESSION_STOPWATCH_COPY.end}
         </Text>
       </Pressable>
     </View>

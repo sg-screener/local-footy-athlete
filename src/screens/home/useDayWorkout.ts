@@ -368,16 +368,25 @@ export function useDayWorkout() {
     navigation.goBack();
   }, [navigation]);
 
+  /**
+   * ⚠ **LOG SESSION OPENS THE SHEET. IT DOES NOT END THE TIMER — SAM,
+   * 2026-08-25 (R-215): *"the timer will just end when the user logs their
+   * session and hits 'save and finish'."***
+   *
+   * The `endStopwatchFor` call used to be RIGHT HERE, and moving it fixes a
+   * second defect nobody had named: this handler only flips a flag that opens a
+   * sheet, and `handleCancelFeedback` below flips it straight back — so an
+   * athlete who opened the form and cancelled had already lost the timer they
+   * were running, with no way to resume it. The end now happens on the one
+   * action that cannot be taken back.
+   *
+   * The form's pre-filled minutes are unaffected: `measuredMinutesFor` reads a
+   * RUNNING stopwatch by deriving its elapsed without mutating it, which is
+   * exactly the case it was written for.
+   */
   const handleFinishWorkout = useCallback(() => {
-    if (workout && date) {
-      endStopwatchFor({
-        workoutId: workout.id,
-        dateISO: date,
-        nowISO: new Date().toISOString(),
-      });
-    }
     setIsFinished(true);
-  }, [date, endStopwatchFor, workout]);
+  }, []);
 
   /* The feedback form is a SHEET now (Sam, 2026-08-22: *"instead of opening up
      like it does currently it should be the same as the log team training pop
@@ -397,6 +406,16 @@ export function useDayWorkout() {
    * sticky.
    */
   const handleFeedbackSaved = useCallback((receipt: SessionOutcomeTransactionReceipt) => {
+    /* R-215 — Save & Finish is what ends the session's timer, and `endFor`
+     * rather than `end` so a stopwatch running on some OTHER day's workout is
+     * never stopped by this save. */
+    if (workout && date) {
+      endStopwatchFor({
+        workoutId: workout.id,
+        dateISO: date,
+        nowISO: new Date().toISOString(),
+      });
+    }
     if (savedDismissTimer.current) {
       clearTimeout(savedDismissTimer.current);
     }
@@ -407,7 +426,7 @@ export function useDayWorkout() {
       savedDismissTimer.current = null;
       navigation.goBack();
     }, SESSION_COMPLETE_DISMISS_MS);
-  }, [navigation]);
+  }, [date, endStopwatchFor, navigation, workout]);
 
   // Clear the auto-dismiss timer if the screen unmounts first (e.g. the
   // athlete hits the hardware back button before the delay fires).
