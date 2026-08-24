@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, SelectableTile } from '../../components/common';
-import { LfaIcon } from '../../components/icons/LfaIcon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -22,12 +20,6 @@ type PhaseOption = {
   id: SeasonPhase;
   label: string;
   tagline: string;
-  icon:
-    | {
-        type: 'material';
-        name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-      }
-    | { type: 'aflFooty' };
 };
 
 const PHASE_OPTIONS: PhaseOption[] = [
@@ -35,19 +27,16 @@ const PHASE_OPTIONS: PhaseOption[] = [
     id: 'Off-season',
     label: 'Off-season',
     tagline: 'Build your base',
-    icon: { type: 'material', name: 'dumbbell' },
   },
   {
     id: 'Pre-season',
     label: 'Pre-season',
     tagline: 'Get game-ready',
-    icon: { type: 'material', name: 'heart-pulse' },
   },
   {
     id: 'In-season',
     label: 'In-season',
     tagline: 'Stay strong & fresh',
-    icon: { type: 'aflFooty' },
   },
 ];
 
@@ -105,9 +94,6 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
       <View style={styles.cardsContainer}>
         {PHASE_OPTIONS.map((phase) => {
           const isSelected = selectedPhase === phase.id;
-          const iconColor = isSelected
-            ? colors.accent.lime
-            : colors.text.secondary;
           return (
             <SelectableTile
               key={phase.id}
@@ -116,36 +102,18 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
               style={styles.card}
             >
               <View style={styles.cardContent}>
-                <View
-                  style={[
-                    styles.iconBox,
-                    isSelected && styles.iconBoxSelected,
-                  ]}
+                <Text variant="h4" color={colors.text.primary}>
+                  {phase.label}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  color={
+                    isSelected ? colors.accent.lime : colors.text.secondary
+                  }
+                  style={styles.cardTagline}
                 >
-                  {phase.icon.type === 'aflFooty' ? (
-                    <LfaIcon name="footy" color={iconColor} size={26} />
-                  ) : (
-                    <MaterialCommunityIcons
-                      name={phase.icon.name}
-                      size={20}
-                      color={iconColor}
-                    />
-                  )}
-                </View>
-                <View style={styles.cardTextBlock}>
-                  <Text variant="h4" color={colors.text.primary}>
-                    {phase.label}
-                  </Text>
-                  <Text
-                    variant="bodySmall"
-                    color={
-                      isSelected ? colors.accent.lime : colors.text.secondary
-                    }
-                    style={styles.cardTagline}
-                  >
-                    {phase.tagline}
-                  </Text>
-                </View>
+                  {phase.tagline}
+                </Text>
               </View>
             </SelectableTile>
           );
@@ -174,28 +142,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
     paddingRight: 24,
-  },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  iconBoxSelected: {
-    backgroundColor: 'rgba(200,255,0,0.08)',
-    borderColor: 'rgba(200,255,0,0.18)',
-  },
-  cardTextBlock: {
-    flex: 1,
-    minWidth: 0,
   },
   cardTagline: {
     lineHeight: 20,

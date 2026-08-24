@@ -218,8 +218,12 @@ ok('the app footy is the supplied thin traced ball, not the retired local drawin
   && owner.includes('strokeWidth={18}')
   && owner.includes('strokeWidth={16}')
   && owner.includes('<Circle cx={210} cy={269} r={10} fill={color} />')
-  && seasonPhase.includes('<LfaIcon name="footy" color={iconColor} size={26} />')
   && !seasonPhase.includes('AflFootyIcon'));
+ok('season phase choices are text-only with no leading icons',
+  !seasonPhase.includes('MaterialCommunityIcons')
+  && !seasonPhase.includes('LfaIcon')
+  && !seasonPhase.includes('phase.icon')
+  && !seasonPhase.includes('styles.iconBox'));
 ok('the shared owner exposes the approved semantic replacements',
   [
     'sick', 'injury', 'mobility', 'medical-shield', 'no-energy',

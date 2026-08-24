@@ -1932,6 +1932,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `positioncopy`. `test:role-buckets` pins both exact onboarding sentences and rejects both retired role sentences; `test:profile-reset-ui` pins the matching Profile edit question. TEST-FIRST LIVENESS: the role suite was 49/52 and the Profile suite 170/171 against the old production copy; after the shared change they were 52/52 and 171/171. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-season-phase-choices-are-text-only',
+    law: 'The onboarding season-phase choices are text-only: Off-season, Pre-season and In-season retain their labels and supporting lines, but have no icon imports, icon data, rendered icons or reserved icon boxes.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-144 — Sam, 2026-08-24: "remove icons here" on the season-phase picker.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `seasonicons`. The onboarding presentation cell rejects MaterialCommunityIcons, LfaIcon, phase.icon and icon-box styling from SeasonPhaseScreen while separately pinning all six retained labels and taglines. TEST-FIRST LIVENESS: the matching approved-icons cell failed against the icon-bearing screen; after deleting the imports, option metadata, render branch and reserved layout it passed. `test:onboarding-presentation` is 62/62. NOT COVERED: simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

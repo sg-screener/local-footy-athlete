@@ -4500,3 +4500,13 @@ position gives LFA a small programming bias."** The matching Profile edit step
 uses the same question so the two athlete surfaces cannot drift back to
 different language. · `WORKING` — `test:role-buckets` +
 `test:profile-reset-ui`. Seat `positioncopy`.
+
+---
+
+**R-144** · *"remove icons here"* on the season-phase picker (Sam,
+2026-08-24) · **SEASON PHASE CHOICES ARE TEXT-ONLY.**
+
+Off-season, Pre-season and In-season keep their existing cards, labels and
+supporting lines, but none has a leading icon or reserved icon box. This
+supersedes the earlier icon-audit binding only for this onboarding screen. ·
+`WORKING` — `test:onboarding-presentation`. Seat `seasonicons`.

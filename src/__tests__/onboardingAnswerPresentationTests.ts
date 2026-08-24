@@ -87,6 +87,16 @@ console.log('\n[0] The name question stands on its own');
     !/So I can coach you properly\./.test(nameScreen));
 }
 
+console.log('\n[0b] Season phase choices are text-only');
+{
+  const seasonPhaseScreen = read('src/screens/onboarding/SeasonPhaseScreen.tsx');
+  ok('season cards have no icon imports, data or rendered icon boxes',
+    !/MaterialCommunityIcons|LfaIcon|phase\.icon|styles\.iconBox/.test(seasonPhaseScreen));
+  ok('all three season labels and taglines remain',
+    ['Off-season', 'Build your base', 'Pre-season', 'Get game-ready', 'In-season', 'Stay strong & fresh']
+      .every((copy) => seasonPhaseScreen.includes(copy)));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────
