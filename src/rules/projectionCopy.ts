@@ -935,9 +935,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.title',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-201: the sheet opened by Edit '
-        + 'this week is headed “Adjust week”.',
-      text: 'Adjust week',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-205 superseding R-201: the '
+        + 'sheet opened by the Week dots is headed “Adjust this week”.',
+      text: 'Adjust this week',
     },
     {
       id: 'week.edit_sheet.question',

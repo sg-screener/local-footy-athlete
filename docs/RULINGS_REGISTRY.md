@@ -5236,3 +5236,13 @@ around travel or time away**. A small divider and gap then introduce
 **Training**, whose one row reads **Manage sessions** / **Add, move or remove
 training**. The same four action doors and their underlying behaviour remain
 unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
+**R-205** · Week adjustment heading names this week (Sam, 2026-08-25) ·
+**THE SHEET NAMES THE SPECIFIC WEEK BEING CHANGED.**
+
+The sheet opened from the Week dots is headed **Adjust this week**, superseding
+R-201’s shorter **Adjust week** heading. Its question, grouped options and all
+underlying behaviour remain unchanged. · `WORKING` —
+`test:day-first-timeline`. Seat `headeralign`.

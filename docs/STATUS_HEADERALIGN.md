@@ -60,6 +60,17 @@ inherited 54 passed / 2 failed baseline.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.
 
+## 2026-08-25 — Week adjustment heading correction
+
+The Week dots sheet now reads **Adjust this week** instead of **Adjust week**.
+Only the signed heading changed; its question, grouped rows and actions are
+unchanged.
+
+Focused guard: `test:day-first-timeline` — the corrected heading cell is green
+at the inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.
+
 ## 2026-08-25 — Week option wording
 
 The first Adjust week screen now uses Sam's four label/subline pairs for Bye,

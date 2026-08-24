@@ -2231,13 +2231,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-week-edit-sheet-names-adjustment',
-    law: 'Tapping Edit this week opens a sheet headed “Adjust week”. Its first action-selection step asks “What do you want to change?”. Under “Schedule changes” it reads: “I have a bye” / “Remove this week’s game”; “Add a game” / “Add another game to this week”; and “I’m going away” / “Adjust around travel or time away”. A quiet divider and gap introduce “Training”, whose one row reads “Manage sessions” / “Add, move or remove training”. Add a game is the one popup label in both competitive phases.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-201, R-202 and R-204 — Sam supplied the heading/question and option wording, then grouped schedule changes apart from training.',
+    law: 'Tapping the Week dots opens a sheet headed “Adjust this week”. Its first action-selection step asks “What do you want to change?”. Under “Schedule changes” it reads: “I have a bye” / “Remove this week’s game”; “Add a game” / “Add another game to this week”; and “I’m going away” / “Adjust around travel or time away”. A quiet divider and gap introduce “Training”, whose one row reads “Manage sessions” / “Add, move or remove training”. Add a game is the one popup label in both competitive phases.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-201, R-202, R-204 and R-205 — Sam supplied the heading/question and option wording, grouped schedule changes apart from training, then extended the heading to “Adjust this week”.',
     guard: {
       state: 'guarded',
       by: 'test:day-first-timeline',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`; corrected under the same R-201 minutes later and extended for R-202/R-204. The existing WeekEditSheet remains the one owner; its heading, first-step question, two section labels and four option label/subline pairs read signed copy. The Week-edit cells in `test:day-first-timeline` require every signed value and binding, the requested section order, a quiet divider/gap, and the same four action doors. Focused run: the R-204 cells are green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
+      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`; corrected under the same R-201 minutes later and extended for R-202/R-204/R-205. The existing WeekEditSheet remains the one owner; its heading, first-step question, two section labels and four option label/subline pairs read signed copy. The Week-edit cells in `test:day-first-timeline` require every signed value and binding, the requested section order, a quiet divider/gap, and the same four action doors. Focused run: the R-205 heading cell is green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
     },
   },
 ];
