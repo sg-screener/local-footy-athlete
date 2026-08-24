@@ -1045,7 +1045,7 @@ function SetupUpdateSheet({
     </>
   ) : step === 'playerPosition' ? (
     <>
-      <SheetHeader title="Player details" subtitle="What footy role fits you best?" />
+      <SheetHeader title="Player details" subtitle="What position fits you best?" />
       <View style={styles.playerOptionGrid}>
         {ROLE_BUCKET_OPTIONS.map((option) => {
           const selected = draftPosition === option.id;

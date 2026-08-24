@@ -295,7 +295,7 @@ ok(
 ok(
   'setup sheet includes structured player detail edit steps',
   /What should I call you\?/.test(src)
-    && /What footy role fits you best\?/.test(src)
+    && /What position fits you best\?/.test(src)
     && /What’s your training experience\?/.test(src)
     && /Save player details/.test(src),
 );

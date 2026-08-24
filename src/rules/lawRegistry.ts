@@ -1921,6 +1921,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingcopy`. Section [0] of `src/__tests__/onboardingAnswerPresentationTests.ts` pins the retained question and rejects the exact retired subtitle. TEST-FIRST LIVENESS: the new absence cell was the suite\'s sole red against the existing screen (59/60); removing the subtitle returned the suite to 60/60. The screen also deletes the now-unused subtitle style instead of leaving a dead visual contract. NOT COVERED: simulator pixels and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-position-copy-is-shared',
+    law: 'The onboarding Position screen asks "What position fits you best?" and says "Your position gives LFA a small programming bias." The matching Profile edit step asks the same position question, and the retired "footy role" / "your role" wording is absent from onboarding.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-143 — Sam, 2026-08-24: "change to what position fits you best - and your position gives LFA a small programming bias".',
+    guard: {
+      state: 'guarded',
+      by: 'test:role-buckets + test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `positioncopy`. `test:role-buckets` pins both exact onboarding sentences and rejects both retired role sentences; `test:profile-reset-ui` pins the matching Profile edit question. TEST-FIRST LIVENESS: the role suite was 49/52 and the Profile suite 170/171 against the old production copy; after the shared change they were 52/52 and 171/171. NOT COVERED: simulator pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

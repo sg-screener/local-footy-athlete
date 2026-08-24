@@ -60,14 +60,14 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
           color={colors.text.primary}
           style={styles.title}
         >
-          WHAT FOOTY ROLE FITS YOU BEST?
+          WHAT POSITION FITS YOU BEST?
         </Text>
         <Text
           variant="bodySmall"
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          Your role gives LFA a small programming bias.
+          Your position gives LFA a small programming bias.
         </Text>
       </View>
 

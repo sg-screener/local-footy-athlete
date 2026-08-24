@@ -4488,3 +4488,15 @@ The Name onboarding screen keeps **"What should I call you?"** and removes the
 subtitle **"So I can coach you properly."** No replacement sentence is added.
 The input follows the question after the existing section spacing. · `WORKING`
 — `test:onboarding-presentation`. Seat `onboardingcopy`.
+
+---
+
+**R-143** · *"change to what position fits you best - and your position gives
+LFA a small programming bias"* (Sam, 2026-08-24) · **POSITION, NOT FOOTY ROLE,
+IS THE ATHLETE WORD.**
+
+The onboarding screen asks **"What position fits you best?"** and says **"Your
+position gives LFA a small programming bias."** The matching Profile edit step
+uses the same question so the two athlete surfaces cannot drift back to
+different language. · `WORKING` — `test:role-buckets` +
+`test:profile-reset-ui`. Seat `positioncopy`.

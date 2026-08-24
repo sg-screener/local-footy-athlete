@@ -179,8 +179,10 @@ section('[7] onboarding role screen layout is a 5-item vertical list');
   );
   ok('screen renders shared role labels, not raw enum ids', /\{role\.label\}/.test(src));
   ok('screen maps all shared role options', /ROLE_OPTIONS\.map/.test(src));
-  ok('screen title is fixed uppercase copy', /WHAT FOOTY ROLE FITS YOU BEST\?/.test(src));
-  ok('screen subtitle is fixed copy', /Your role gives LFA a small programming bias\./.test(src));
+  ok('screen title is Sam’s approved position copy', /WHAT POSITION FITS YOU BEST\?/.test(src));
+  ok('screen subtitle is Sam’s approved position copy', /Your position gives LFA a small programming bias\./.test(src));
+  ok('the retired role wording is absent',
+    !/WHAT FOOTY ROLE FITS YOU BEST\?|Your role gives LFA a small programming bias\./.test(src));
   ok('screen uses vertical list style', /<View style=\{styles\.list\}>/.test(src));
   ok('screen does not render old grid style', !/styles\.grid/.test(src));
   ok('screen does not use wrapping row grid', !/flexWrap:\s*['"]wrap['"]/.test(src));
