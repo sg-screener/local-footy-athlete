@@ -60,6 +60,17 @@ inherited 54 passed / 2 failed baseline.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and dynamic type.
 
+## 2026-08-25 — Week session-action explanations
+
+The nested Manage sessions step now gives Add, Move and Remove one explanatory
+line each. The labels, icons, order and action routes are unchanged; all six
+label/subline values now use signed copy.
+
+Focused guard: `test:day-first-timeline` — the new nested-copy cell is green at
+the inherited 54 passed / 2 failed baseline.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and completing a session edit.
+
 ## 2026-08-25 — Week adjustment heading correction
 
 The Week dots sheet now reads **Adjust this week** instead of **Adjust week**.

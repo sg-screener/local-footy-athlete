@@ -1878,12 +1878,21 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   'the Week edit rows no longer use the established bye, game, away and session icon treatment');
   assert(sheet.includes("setStep('session_action')")
     && sheet.includes("'What do you want to do?'")
-    && ['Add a session', 'Move a session', 'Remove a session']
-      .every((label) => sheet.includes(`label="${label}"`))
     && !sheet.includes('label="Swap a session"')
     && ["onEditSession('add')", "onEditSession('move')", "onEditSession('remove')"]
       .every((route) => sheet.includes(route)),
   'the weekly session flow does not choose Add, Move or Remove first');
+  const expectedWeekSessionActionCopy = [
+    ['week.edit_sheet.session_action.add.label', 'Add a session'],
+    ['week.edit_sheet.session_action.add.subline', 'Put another session on a day this week'],
+    ['week.edit_sheet.session_action.move.label', 'Move a session'],
+    ['week.edit_sheet.session_action.move.subline', 'Choose a session and move it to another day'],
+    ['week.edit_sheet.session_action.remove.label', 'Remove a session'],
+    ['week.edit_sheet.session_action.remove.subline', 'Choose a session to remove from the week'],
+  ] as const;
+  assert(expectedWeekSessionActionCopy.every(([id, text]) => signedCopy(id) === text)
+    && expectedWeekSessionActionCopy.every(([id]) => sheet.includes(`signedCopy('${id}')`)),
+  'the nested Week session actions no longer render all six signed label/subline values');
   assert(home.includes('setWeekSessionEditAction(action)')
     && home.includes('WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner')
     && home.includes('const isPickerMode = pickerMode !== \'normal\'')

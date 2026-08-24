@@ -1009,6 +1009,42 @@ export function registerProjectionCopy(): void {
       text: 'Add, move or remove training',
     },
     {
+      id: 'week.edit_sheet.session_action.add.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Add label.',
+      text: 'Add a session',
+    },
+    {
+      id: 'week.edit_sheet.session_action.add.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Add explanation.',
+      text: 'Put another session on a day this week',
+    },
+    {
+      id: 'week.edit_sheet.session_action.move.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Move label.',
+      text: 'Move a session',
+    },
+    {
+      id: 'week.edit_sheet.session_action.move.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Move explanation.',
+      text: 'Choose a session and move it to another day',
+    },
+    {
+      id: 'week.edit_sheet.session_action.remove.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Remove label.',
+      text: 'Remove a session',
+    },
+    {
+      id: 'week.edit_sheet.session_action.remove.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Remove explanation.',
+      text: 'Choose a session to remove from the week',
+    },
+    {
       id: 'day.add_session.action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-196: when no programmed-session '

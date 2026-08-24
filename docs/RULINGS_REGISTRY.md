@@ -5246,3 +5246,14 @@ The sheet opened from the Week dots is headed **Adjust this week**, superseding
 R-201’s shorter **Adjust week** heading. Its question, grouped options and all
 underlying behaviour remain unchanged. · `WORKING` —
 `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
+**R-206** · Week session actions explain the next choice (Sam, 2026-08-25) ·
+**EACH TRAINING ACTION SAYS WHAT THE ATHLETE WILL CHOOSE NEXT.**
+
+The nested **Manage sessions** step reads: **Add a session** / **Put another
+session on a day this week**; **Move a session** / **Choose a session and move
+it to another day**; and **Remove a session** / **Choose a session to remove
+from the week**. Their order, icons and existing Add / Move / Remove routes are
+unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.

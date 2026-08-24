@@ -3228,19 +3228,22 @@ function WeekEditSheet({
       ) : (
         <View>
           <SheetOption
-            label="Add a session"
+            label={signedCopy('week.edit_sheet.session_action.add.label')}
+            sub={signedCopy('week.edit_sheet.session_action.add.subline')}
             icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#5BD98A" />}
             onPress={() => onEditSession('add')}
             testID="edit-week-action-add"
           />
           <SheetOption
-            label="Move a session"
+            label={signedCopy('week.edit_sheet.session_action.move.label')}
+            sub={signedCopy('week.edit_sheet.session_action.move.subline')}
             icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color="#67D7FF" />}
             onPress={() => onEditSession('move')}
             testID="edit-week-action-move"
           />
           <SheetOption
-            label="Remove a session"
+            label={signedCopy('week.edit_sheet.session_action.remove.label')}
+            sub={signedCopy('week.edit_sheet.session_action.remove.subline')}
             icon={<MaterialCommunityIcons name="delete-outline" size={18} color="#FF7A85" />}
             onPress={() => onEditSession('remove')}
             testID="edit-week-action-remove"
