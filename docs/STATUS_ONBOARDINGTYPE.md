@@ -819,6 +819,42 @@ one ranked list.
 
 ---
 
+## R-175 — one supplied LFA wordmark across the four main tabs
+
+The black and white files carry identical geometry and differ only by fill. One
+`LfaWordmark` vector owner now preserves the supplied three paths and accepts a
+colour; white is the dark-app default. Program, Coach, Progress and Profile all
+render it top-left. Coach and Progress no longer draw fake italic text, and
+nested workout detail deliberately stays unbranded so its back/title hierarchy
+remains primary.
+
+### Evidence
+
+- TEST FIRST: `test:lfa-wordmark` began 1/13; twelve reds named the missing
+  owner, exact SVG contract, four mounts and fake-text retirement.
+- AFTER: `test:lfa-wordmark` is 13/13. It runs after `test:profile-reset-ui`,
+  whose own 173 checks remain green.
+- LIVENESS: changing the shared `viewBox` from `871` to `870` made the exact
+  geometry cell fail (12/13); restoring the supplied value returned 13/13.
+- LIVE SIMULATOR: one Maestro route opened Coach, Progress, Profile and Program
+  and captured each tab. The wordmark is visible top-left on all four; Coach's
+  My Status remains opposite it and the other screen titles/controls remain
+  below it.
+- Targeted TypeScript output names no wordmark error. Its five HomeScreenV2
+  errors are the existing `TemporarySourceFact.factId` failures in the unrelated
+  modifier block.
+- Registry measurements remain at their inherited baseline: law registry 177
+  rows / 156 guarded / 21 `UNENFORCED` with the same three red checks; ruling
+  registry 174 rulings / 6 of 8 checks green with the same two inherited reds.
+
+### NOT COVERED
+
+- The next physical-iPhone Release and real VoiceOver speech.
+- A future light surface using the black tint, onboarding/splash branding and
+  non-phone widths.
+
+---
+
 ## R-171 — preserve added-session identity on team nights
 
 The photographed failure was not a Day-screen wording error. The shared Add

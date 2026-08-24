@@ -26,6 +26,7 @@ import {
   type RowIconKind,
 } from '../../components/icons/SectionIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { ClubTrainingFeedbackPanel, GameSessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
@@ -717,6 +718,9 @@ export default function HomeScreenV2() {
           onPress={dayFirst ? undefined : handleClearWeekPresentation}
           accessible={false}
         >
+        <View style={styles.brandHeader}>
+          <LfaWordmark />
+        </View>
         {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
           {/* ── Day / Week ──
@@ -4143,6 +4147,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
+  brandHeader: { minHeight: 32, justifyContent: 'center', marginBottom: spacing.md },
 
   // Program shape controls. Day pays only for the toggle. Week adds this
   // compact navigation row underneath it, matching the accepted hierarchy

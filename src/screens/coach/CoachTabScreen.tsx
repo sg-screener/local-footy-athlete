@@ -31,6 +31,7 @@ import { GuidedInjuryFlowSheet } from '../home/GuidedInjuryFlowSheet';
 import { RebuildSheet } from '../../components/RebuildSheet';
 import { useRebuildNotice } from '../../hooks/useRebuildNotice';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
@@ -373,7 +374,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <KeyboardSafeArea scrollable={false} footer={composer}>
         <View style={styles.header}>
-          <Text style={styles.brand}>LFA</Text>
+          <LfaWordmark />
         {/* ── RULINGS 4 + 9: "MY STATUS" ──
             OUTSIDE THE CONVERSATION SCROLL, AND THAT IS THE WHOLE DESIGN
             DECISION. The ScrollView below pins to the bottom on new content, so
@@ -600,14 +601,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
-  },
-  brand: {
-    color: colors.text.primary,
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    letterSpacing: -1.2,
   },
   conversation: {
     flex: 1,

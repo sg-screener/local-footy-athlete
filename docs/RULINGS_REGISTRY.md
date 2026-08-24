@@ -4868,3 +4868,17 @@ swap/remove engine. Derived warm-up and recovery rows store only the athlete's
 decision and apply it to the live projection. · `WORKING` —
 `test:quick-exercise-actions`, reached in-chain by `test:mobility-flow`. Seat
 `onboardingtype`.
+
+---
+
+**R-175** · Supplied LFA wordmark on the four main tabs (Sam, 2026-08-24) ·
+**ONE VECTOR LOGO; TOP-LEVEL BRANDING ONLY.**
+
+The exact supplied LFA wordmark is rendered from one shared vector owner. Its
+default is white on the app's dark background; the same paths may be tinted
+black for a future light surface rather than maintaining a second drawing.
+Program, Coach, Progress and Profile show the compact wordmark at the top left.
+Coach and Progress no longer imitate it with styled `LFA` text. Nested workout
+details, onboarding steps and sheets keep their own back-button/title hierarchy
+and do not repeat the logo. · `WORKING` — `test:lfa-wordmark`, reached in-chain
+by `test:profile-reset-ui`. Seat `onboardingtype`.

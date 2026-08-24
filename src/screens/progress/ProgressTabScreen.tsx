@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import { useLiveAthleteSnapshot } from '../coach/useLiveAthleteSnapshot';
@@ -181,7 +182,9 @@ export default function ProgressTabScreen() {
         showsVerticalScrollIndicator={false}
         testID="progress-tab-scroll"
       >
-        <Text style={styles.brand}>LFA</Text>
+        <View style={styles.brandHeader}>
+          <LfaWordmark />
+        </View>
         <ProgressHeading title={PROGRESS_TAB_COPY.title} testID="progress-tab-title" />
         <LoadContinuum load={snapshot.load} />
 
@@ -216,13 +219,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacingValues.xxxl,
     gap: spacing.sm,
   },
-  brand: {
-    color: colors.text.primary,
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    letterSpacing: -1.2,
+  brandHeader: {
+    minHeight: 32,
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   heading: {

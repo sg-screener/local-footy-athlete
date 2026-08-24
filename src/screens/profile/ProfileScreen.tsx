@@ -30,6 +30,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
 import { Text } from '../../components/common/Text';
+import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
 import { Button as V2Button, Sheet, SheetDescription, SheetHeader } from '../../components/ui';
@@ -584,6 +585,9 @@ export default function ProfileScreen() {
           { paddingBottom: 88 + insets.bottom },
         ]}
       >
+        <View style={styles.brandHeader}>
+          <LfaWordmark />
+        </View>
         <View style={styles.header} testID="profile-page-header">
           <Text variant="h1" color={colors.text.primary} style={styles.headerTitle}>
             PROFILE
@@ -1539,6 +1543,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
+  },
+  brandHeader: {
+    minHeight: 32,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   header: {
     marginBottom: spacing.lg,
