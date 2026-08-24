@@ -19,7 +19,6 @@ import {
   useSessionActionStep,
 } from '../../components/SessionActionSheet';
 import { LfaIcon } from '../../components/icons/LfaIcon';
-import { SessionChangeHub } from '../../components/SessionChangeHub';
 import { UndoToast } from '../../components/UndoToast';
 import { useNavigation } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
@@ -696,6 +695,8 @@ export default function DayWorkoutScreenV2() {
    * `EditableExercise` the athlete had been made to pick first. */
   const [injuryFlowOpen, setInjuryFlowOpen] = React.useState(false);
   const [sessionEquipmentVisible, setSessionEquipmentVisible] =
+    React.useState(false);
+  const [sessionOptionsVisible, setSessionOptionsVisible] =
     React.useState(false);
   const quickSwapState = React.useRef<Record<string, {
     choices: readonly TapSwapChoice[];
@@ -1906,6 +1907,10 @@ export default function DayWorkoutScreenV2() {
   const combinedSubtitle = [dateFragment, countFragment]
     .filter(Boolean)
     .join(' · ');
+  const sessionOptionsAvailable = Boolean(
+    date && !isTeamOnly && editableExercises.length > 0
+      && !isFinished && !isAlreadyComplete,
+  );
 
   return (
     <SafeAreaView style={styles.container} testID="workout-screen">
@@ -1979,22 +1984,38 @@ export default function DayWorkoutScreenV2() {
                 * pause or end. State lives in its own persisted store, so
                 * leaving the screen or the app never loses the count. */}
               {date ? (
-                <SessionStopwatchControl workoutId={workout.id} dateISO={date} />
+                <View style={styles.sessionHeaderActions}>
+                  <SessionStopwatchControl workoutId={workout.id} dateISO={date} />
+                  {sessionOptionsAvailable ? (
+                    <Pressable
+                      onPress={() => setSessionOptionsVisible(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel={signedCopy('plan_change.session_options')}
+                      testID="session-options-button"
+                      hitSlop={12}
+                      style={({ pressed }) => [
+                        styles.sessionOptionsButton,
+                        pressed && { opacity: 0.6 },
+                      ]}
+                    >
+                      <MaterialCommunityIcons name="dots-horizontal" size={22} color="#B5B5B5" />
+                    </Pressable>
+                  ) : null}
+                </View>
               ) : null}
             </View>
           ) : null}
           {/* ⚠ **THE THREE UNLABELLED HEADER ICONS STAY DELETED — SAM, 2026-08-19.**
             *
-            * The later 2026-08-24 Quick Swap / Quick Remove ruling restores
-            * ROW shortcuts only. It does not restore the three unrelated
-            * unlabelled controls in this header.
+            * The compact dots are ONE labelled Session options doorway, not
+            * those three ambiguous direct actions returning to the header.
             *
             * A plus, a dumbbell and a plaster in the sticky header, each opening
             * a different change flow, and nothing on the screen said which was
             * which. The equipment one also came and went with
             * `sessionEquipmentRequirements`, so the row silently changed shape
-            * between sessions. All five doors now live in ONE labelled section
-            * below the session — see `SessionChangeHub`. */}
+            * between sessions. R-209 replaces the later card with one labelled
+            * menu behind the dots; the three established handlers stay put. */}
         </View>
       </View>
 
@@ -2199,43 +2220,56 @@ export default function DayWorkoutScreenV2() {
           </View>
         ) : null}
 
-        {/* ── SESSION-WIDE CHANGES ───────────────────────────────────────
-          *
-          * Equipment, Injury and Add still describe the session as a whole.
-          * Swap and Remove now live on the exact exercise row they change, so
-          * repeating them here would ask the athlete to choose that row again.
-          *
-          * **NO DEAD BUTTONS** is enforced by construction: `SessionChangeHub`
-          * takes the actions as a list and renders exactly the ones handed to
-          * it, so a door that cannot act today is ABSENT rather than present
-          * and inert. Equipment is the only one that comes and goes, and it
-          * goes when the session needs no equipment at all. */}
-        {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
-          <SessionChangeHub
-            testID="day-workout-change-hub"
-            /* THE 16 THAT WAS INSIDE THE COMPONENT, NOW SAID HERE. Sam's
-               2026-08-22 ruling on this screen is that the gap under the box
-               matches the gap above it, and `finishSection` below carries the
-               same `spacing.md`. The Day screen spaces its boxes at 8, so the
-               shared card stopped holding either number. */
-            style={styles.changeHub}
-            heading={signedCopy('session.change_card.heading')}
-            subline={signedCopy('session.change_card.subline')}
-            actions={[
-              ...(sessionEquipmentRequirements.length > 0
-                ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
-                : []),
-              { id: 'injury' as const, onPress: openSessionInjuryFlow },
-              { id: 'add' as const, onPress: openExerciseAdd },
-            ]}
-          />
-        ) : null}
-
         {/* ── Finish moment (hidden once the session is complete) ── */}
         {!isFinished && !isAlreadyComplete ? (
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
       </KeyboardSafeArea>
+
+      <Sheet
+        visible={sessionOptionsVisible}
+        onClose={() => setSessionOptionsVisible(false)}
+        testID="session-options-sheet"
+      >
+        <SheetHeader
+          title={signedCopy('plan_change.session_options')}
+          subtitle={signedCopy('session.change_card.heading')}
+        />
+        <View>
+          <ExerciseSheetOption
+            label={signedCopy('session.options.injury.label')}
+            sub={signedCopy('session.options.injury.subline')}
+            icon={<MaterialCommunityIcons name="medical-bag" size={18} color="#FF7F7F" />}
+            testID="session-options-injury"
+            onPress={() => {
+              setSessionOptionsVisible(false);
+              openSessionInjuryFlow();
+            }}
+          />
+          {sessionEquipmentRequirements.length > 0 ? (
+            <ExerciseSheetOption
+              label={signedCopy('session.options.equipment.label')}
+              sub={signedCopy('session.options.equipment.subline')}
+              icon={<MaterialCommunityIcons name="dumbbell" size={18} color="#67D7FF" />}
+              testID="session-options-equipment"
+              onPress={() => {
+                setSessionOptionsVisible(false);
+                openSessionEquipment();
+              }}
+            />
+          ) : null}
+          <ExerciseSheetOption
+            label={signedCopy('session.options.add.label')}
+            sub={signedCopy('session.options.add.subline')}
+            icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#C6FF00" />}
+            testID="session-options-add"
+            onPress={() => {
+              setSessionOptionsVisible(false);
+              openExerciseAdd();
+            }}
+          />
+        </View>
+      </Sheet>
 
       {/**
         * THE SESSION FEEDBACK FORM IS A POP-UP — Sam, 2026-08-22: *"instead of
@@ -5130,15 +5164,6 @@ const styles = StyleSheet.create({
     // The row itself now carries the spacing below the title.
     lineHeight: 20,
   },
-  // Session-level change doors (ruling 12) — three icon chips replacing the
-  // single "Edit exercises" link.
-  exerciseActionsRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-    alignSelf: 'flex-start',
-  },
-
   // ── Scroll body ──
   scroll: { flex: 1 },
   scrollContent: {
@@ -5275,6 +5300,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  sessionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sessionOptionsButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   executionSectionIcon: { marginRight: 10 },
   // R-116 — rows with no stepper still reserve the right-side control slot.
@@ -5979,7 +6015,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  changeHub: { marginTop: spacing.md },
   /* The feedback sheet's scrolling body — `flexShrink: 1` with an auto basis,
      so it measures its content and gives space back when the sheet's cap binds.
      `flex: 1` collapses to nothing here (the sliver-sheet defect in `ui/Sheet`). */

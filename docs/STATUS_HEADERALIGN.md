@@ -136,3 +136,20 @@ Focused guard: `test:day-first-timeline` — the new hierarchy, contrast and
 target-size cells are green at the inherited 54 passed / 2 failed baseline.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and pressed-state pixels.
+
+## 2026-08-25 — Active-session options menu
+
+The active-session header now has the same compact, circle-free dots pattern as
+Week, with a 48-point invisible target. The old Need to make a change card is
+gone. Its Injury, Equipment and Add pathways now appear as labelled rows in one
+Session options sheet using Sam's new copy; each still calls its existing flow.
+Equipment remains absent where the session has no equipment requirements.
+
+Two options compared: place the old three-chip card inside a popup, or use the
+existing labelled sheet-row pattern while retaining the three handlers. The row
+menu landed because its label/explanation pairs need horizontal reading space
+and the old card can be deleted rather than nested.
+
+Focused guard: `test:session-change-hub` — 41 passed / 0 failed.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone, VoiceOver order and completing a real edit.

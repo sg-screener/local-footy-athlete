@@ -760,9 +760,45 @@ export function registerProjectionCopy(): void {
     {
       id: 'session.change_card.heading',
       source: 'sam_ruling',
-      provenance: 'SIGNED — retained for the active-session Equipment / Injury / Add '
-        + 'hub when Sam reworded only the Day status card in R-195 on 2026-08-25.',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: the active-session options '
+        + 'sheet asks the existing change-session question.',
       text: 'Need to make a change?',
+    },
+    {
+      id: 'session.options.injury.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: first active-session option.',
+      text: 'Something hurts',
+    },
+    {
+      id: 'session.options.injury.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: injury-option explanation.',
+      text: 'Adjust this session around a niggle or injury',
+    },
+    {
+      id: 'session.options.equipment.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: second active-session option.',
+      text: 'Equipment changed',
+    },
+    {
+      id: 'session.options.equipment.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: equipment-option explanation.',
+      text: 'Update what you have available',
+    },
+    {
+      id: 'session.options.add.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: third active-session option.',
+      text: 'Add an exercise',
+    },
+    {
+      id: 'session.options.add.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-209: Add-option explanation.',
+      text: 'Add something to this session',
     },
     {
       id: 'session.log_action',

@@ -5239,6 +5239,22 @@ unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
 
 ---
 
+**R-209** · Active-session changes move behind one options menu (Sam, 2026-08-25) ·
+**THE SESSION HEADER OFFERS ONE QUIET DOORWAY, NOT A SECOND CHANGE CARD.**
+
+The active-session header gains compact, circle-free `•••` matching the Week
+control, with a 48-point invisible target. It opens **Session options** / **Need
+to make a change?** with: **Something hurts** / **Adjust this session around a
+niggle or injury**; **Equipment changed** / **Update what you have available**;
+and **Add an exercise** / **Add something to this session**. Equipment remains
+absent when the open session has no equipment requirements, rather than becoming
+a dead button. Each option closes the menu and enters its established Injury,
+Equipment or Add flow. The old active-session **Need to make a change?** card is
+removed; row-level Quick Swap and Quick Remove remain where they are. ·
+`WORKING` — `test:session-change-hub`. Seat `headeralign`.
+
+---
+
 **R-207** · Week Add action names the next choice briefly (Sam, 2026-08-25) ·
 **THE EXPLANATION SAYS WHAT HAPPENS NEXT.**
 

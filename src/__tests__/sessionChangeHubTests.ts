@@ -4,8 +4,8 @@
  * Sam, 2026-08-24: the Day card keeps Tired · Sick · Injured as direct status
  * controls; Add · Move · Remove enter from the programmed session card.
  * The old "Want to change something?" link and dedicated session Swap action
- * are gone. The open-session card keeps only Equipment · Injury · Add because
- * Quick Swap and Quick Remove live on each exercise row.
+ * are gone. The open session now puts Injury · Equipment · Add behind one
+ * compact header menu because Quick Swap and Quick Remove live on each row.
  *
  * ## WHY THIS SUITE READS SOURCE
  *
@@ -81,39 +81,50 @@ console.log('\n[2] The always-visible row Swap/Remove icons are gone');
   ok('no row passes an `onRemove` prop', !/onRemove=\{/.test(live));
 }
 
-console.log('\n[3] There is exactly ONE change section, and it is labelled');
+console.log('\n[3] The active session has one compact options doorway and one labelled sheet');
 {
-  ok('the hub is mounted', live.includes('<SessionChangeHub'));
+  ok('the old open-session hub is removed', !live.includes('<SessionChangeHub'));
   ok('the Day card carries Sam’s new status question and explanation verbatim',
     /id: 'day\.change_card\.heading'[\s\S]{0,300}text: 'Not feeling 100%\?'/.test(copySource)
       && /id: 'day\.change_card\.subline'[\s\S]{0,300}text: 'Tell us what’s changed and we’ll adjust today\.'/.test(copySource));
-  ok('the open-session card keeps its own change-session heading',
-    /heading=\{signedCopy\('session\.change_card\.heading'\)\}/.test(live)
+  ok('the open-session sheet keeps the change-session question',
+    /subtitle=\{signedCopy\('session\.change_card\.heading'\)\}/.test(live)
       && /id: 'session\.change_card\.heading'[\s\S]{0,300}text: 'Need to make a change\?'/.test(copySource));
-  ok('the hub has a stable id', live.includes('day-workout-change-hub'));
-  ok('there is only one of it',
-    (live.match(/<SessionChangeHub/g) ?? []).length === 1,
-    `${(live.match(/<SessionChangeHub/g) ?? []).length} mounts`);
+  ok('the dots and sheet have stable ids',
+    live.includes('testID="session-options-button"')
+      && live.includes('testID="session-options-sheet"'));
+  ok('the visible dots stay compact while the invisible target is 48 points',
+    /sessionOptionsButton:\s*\{[\s\S]{0,160}width:\s*24[\s\S]{0,80}height:\s*24/.test(live)
+      && /testID="session-options-button"[\s\S]{0,260}hitSlop=\{12\}/.test(live)
+      && /name="dots-horizontal" size=\{22\}/.test(live));
 }
 
-console.log('\n[4] The open-session hub keeps its three session-wide doors');
+console.log('\n[4] The open-session sheet uses the three signed rows in Sam’s order');
 {
-  /* ⚠ **THE LABELS ARE THE SHARED OWNER'S NOW.** The screen names the actions by
-   * ID; the words live once, in `components/SessionChangeHub`, which is what
-   * stops the two surfaces saying different things for the same door. So the
-   * ORDER is asserted on the screen (it composes the list) and the WORDS on the
-   * component (it draws them). */
-  const order = ['equipment', 'injury', 'add'];
-  const labels = ['Equipment', 'Injury', 'Add'];
-  const hub = live.slice(live.indexOf('<SessionChangeHub'), live.indexOf('/>', live.indexOf('<SessionChangeHub')));
+  const sheetAt = live.indexOf('testID="session-options-sheet"');
+  const sheetEnd = live.indexOf('testID="session-feedback-sheet"', sheetAt);
+  const sheet = live.slice(sheetAt, sheetEnd);
+  ok('CONTROL — the session-options sheet can be bounded',
+    sheetAt > 0 && sheetEnd > sheetAt && sheet.length > 1000,
+    `${sheetAt}..${sheetEnd}`);
+  const order = ['injury', 'equipment', 'add'];
+  const labels = ['Something hurts', 'Equipment changed', 'Add an exercise'];
+  const sublines = [
+    'Adjust this session around a niggle or injury',
+    'Update what you have available',
+    'Add something to this session',
+  ];
   let cursor = -1;
   let ordered = true;
   for (let i = 0; i < order.length; i++) {
-    ok(`'${labels[i]}' is a labelled door`,
-      hub.includes(`id: '${order[i]}' as const`)
-        && hubSource.includes(`${order[i]}: '${labels[i]}'`),
-      hub.slice(0, 200));
-    const at = hub.indexOf(`id: '${order[i]}' as const`);
+    const labelId = `session.options.${order[i]}.label`;
+    const sublineId = `session.options.${order[i]}.subline`;
+    ok(`'${labels[i]}' and its explanation are signed and rendered`,
+      sheet.includes(`signedCopy('${labelId}')`)
+        && sheet.includes(`signedCopy('${sublineId}')`)
+        && new RegExp(`id: '${labelId.replace(/\./g, '\\.')}'[\\s\\S]{0,220}text: '${labels[i]}'`).test(copySource)
+        && new RegExp(`id: '${sublineId.replace(/\./g, '\\.')}'[\\s\\S]{0,260}text: '${sublines[i]}'`).test(copySource));
+    const at = sheet.indexOf(`signedCopy('${labelId}')`);
     if (at <= cursor) ordered = false;
     cursor = at;
   }
@@ -122,19 +133,19 @@ console.log('\n[4] The open-session hub keeps its three session-wide doors');
 
 console.log('\n[5] NO DEAD BUTTONS — every open-session door names a real opener');
 {
-  const hub = live.slice(live.indexOf('<SessionChangeHub'), live.indexOf('/>', live.indexOf('<SessionChangeHub')));
-  const openers = [...hub.matchAll(/onPress: (\w+)/g)].map((match) => match[1]!);
-  ok('CONTROL — the hub really wires three openers', openers.length === 3,
-    JSON.stringify(openers));
+  const sheetAt = live.indexOf('testID="session-options-sheet"');
+  const sheet = live.slice(sheetAt, live.indexOf('testID="session-feedback-sheet"', sheetAt));
+  const openers = ['openSessionInjuryFlow', 'openSessionEquipment', 'openExerciseAdd'];
   for (const opener of openers) {
     ok(`'${opener}' is a real callback on this screen`,
-      new RegExp(`const ${opener} = React\\.useCallback`).test(live));
+      new RegExp(`const ${opener} = React\\.useCallback`).test(live)
+        && sheet.includes(`${opener}();`));
   }
-  ok('no door is rendered disabled instead of omitted',
-    !/disabled=\{/.test(hub), hub);
+  ok('each choice closes the menu before entering its established flow',
+    (sheet.match(/setSessionOptionsVisible\(false\);/g) ?? []).length === 3);
   // Equipment is the ONE door that comes and goes, and it goes by ABSENCE.
   ok('Equipment is conditional on the session actually having requirements',
-    /sessionEquipmentRequirements\.length > 0[\s\S]{0,120}id: 'equipment' as const/.test(live));
+    /sessionEquipmentRequirements\.length > 0[\s\S]{0,260}session\.options\.equipment\.label/.test(sheet));
 }
 
 console.log('\n[6] What Sam said to KEEP is still here');
@@ -160,180 +171,40 @@ console.log('\n[7] The deleted surface’s gate still watches — the ingress id
     /action === 'swap'[\s\S]{0,200}componentSwapIngress/.test(live));
 }
 
-console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
+console.log('\n[8] The Day status card and active-session menu stay separate');
 {
-  /* ⚠ **TWO IMPLEMENTATIONS OF THE SAME PANEL IS THE DEFECT THIS SECTION EXISTS
-   * TO STOP COMING BACK.**
-   *
-   * Sam, 2026-08-19: *"The Need to make a change? section inside an active
-   * session must use the same shared UI component and visual design as the Day
-   * screen — not a separate row of plain text pills … Do not keep separate Day
-   * and Session implementations. Both must render one shared hub and enter the
-   * same canonical action doors."*
-   *
-   * The session screen had grown its own row of bordered text pills beside the
-   * Day screen's signed card of tinted icon chips: same heading, same five
-   * doors, two visual languages, and every future change to make twice.
-   *
-   * A cell that only checked "both mention a hub" would pass on two copies, so
-   * these assert the SHARED MODULE is imported by each screen AND that neither
-   * still declares one of its own. */
   const dayLive = daySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const hubLive = hubSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-
-  ok('the session screen imports the SHARED hub',
-    /import \{ SessionChangeHub \} from '\.\.\/\.\.\/components\/SessionChangeHub'/.test(live));
-  ok('the Day screen imports the SAME shared hub',
-    /import \{ SessionChangeHub \} from '\.\.\/\.\.\/components\/SessionChangeHub'/.test(dayLive));
-  ok('the session screen no longer declares a hub of its own',
-    !/function SessionChangeHub\(/.test(live), 'a local copy is the duplication itself');
-  ok('the Day screen declares no hub of its own either',
-    !/function SessionChangeHub\(/.test(dayLive));
-  ok('the session screen no longer carries the plain-pill styles',
-    !/changeHubButton|changeHubButtonText|changeHubRow/.test(live),
-    'the pill row is deleted, not merely unmounted');
-  ok('both surfaces mount the component',
-    /<SessionChangeHub/.test(live) && /<SessionChangeHub/.test(dayLive));
-
-  /* THE VOCABULARY IS THE COMPONENT'S, NOT EACH SCREEN'S. */
-  ok('the shared owner names the three open-session actions',
-    /'equipment', 'injury', 'add'/.test(hubLive));
-  ok('and it names the three Day status actions beside them',
-    /'tired', 'sick', 'injured'/.test(hubLive));
-  ok('and it owns the LABELS, so the two surfaces cannot say different words',
-    /CHANGE_ACTION_LABEL/.test(hubLive)
-      && !/label: 'Equipment'/.test(live) && !/label: 'Equipment'/.test(dayLive));
-  ok('and it owns the ICONS and tints, so they cannot look different',
-    /ACTION_TINT/.test(hubLive) && /function glyph\(/.test(hubLive));
-
-  for (const id of ['equipment', 'injury', 'add']) {
-    ok(`the session surface offers '${id}'`,
-      new RegExp(`id: '${id}' as const`).test(live));
-  }
-
-  /* ⚠ **THE `openChange` DEEP LINK IS GONE, AND THAT IS THE OTHER HALF OF THE
-   * CORRECTION.** It existed only so the Day hub's Equipment/Add/Swap chips
-   * could open the session screen on a door. The Day hub no longer offers those
-   * three, so nothing navigated with the param any more: a route field with no
-   * writer is exactly the dead weight later code trusts. Sender
-   * (`useHomeScreen.handleOpenSessionChange`), param
-   * (`types/navigation`, `AppNavigator`) and receiver (this screen's effect)
-   * were deleted together — a half-deletion leaves a door that answers to
-   * nobody. */
-  ok('the dead openChange deep link is gone from the session screen',
-    !/openChange/.test(live), 'the receiver outlived its only sender');
-  ok('and from the Day screen',
-    !/handleOpenSessionChange/.test(dayLive));
+  ok('the Day screen still imports and mounts its shared status hub',
+    /import \{ SessionChangeHub \} from '\.\.\/\.\.\/components\/SessionChangeHub'/.test(dayLive)
+      && /<SessionChangeHub/.test(dayLive));
+  ok('the active session neither imports nor mounts that status card',
+    !/import \{ SessionChangeHub \}/.test(live) && !/<SessionChangeHub/.test(live));
+  ok('the Day card still offers exactly Tired, Sick and Injured',
+    /id: 'tired' as const[\s\S]*id: 'sick' as const[\s\S]*id: 'injured' as const/.test(dayLive));
+  ok('the status-card owner contains no session-options doorway',
+    !/session-options-button|session-options-sheet/.test(hubLive));
+  ok('the old openChange deep link stays gone from both screens',
+    !/openChange/.test(live) && !/handleOpenSessionChange/.test(dayLive));
 }
 
-console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
+console.log('\n[9] Scheduling and in-session options keep distinct menus');
 {
-  /* ⚠ **THIS SECTION IS THE ONE THAT WAS MISSING, AND ITS ABSENCE SHIPPED THE
-   * DEFECT.**
-   *
-   * Sam, 2026-08-19: *"DAY PAGE: exactly Tired, Sick and Injured, together
-   * inside the original 'Need to make a change?' card … NO Remove, Equipment,
-   * Add or Swap. No separate readiness row. ACTIVE SESSION SCREEN: Equipment,
-   * Injury, Add, Remove and Swap … It may share a configurable visual component
-   * with Day, but never a hard-coded action list."*
-   *
-   * Section [8] proves the two surfaces draw the SAME CARD. On its own that is
-   * satisfied by both drawing the same five chips — which is precisely what
-   * shipped, and it evicted Tired and Sick into a bare row and deleted the
-   * Injured chip outright. **Sameness of component and sameness of contents are
-   * different claims, and only one of them is true.**
-   *
-   * So: each surface's set is asserted EXACTLY (nothing missing, nothing
-   * extra), and the two are asserted DISJOINT. A future hand that hard-codes
-   * one list into the shared component reddens here even if section [8] stays
-   * green. */
   const dayLive = daySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  const hubLive = hubSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-
-  const DAY = ['tired', 'sick', 'injured'];
-  const SESSION = ['equipment', 'injury', 'add'];
-
-  /** The ids a surface actually hands the hub, read off its own `actions` list. */
-  const offered = (surface: string): string[] => {
-    const at = surface.indexOf('<SessionChangeHub');
-    if (at < 0) return [];
-    const end = surface.indexOf('/>', at);
-    if (end < 0) return [];
-    return [...surface.slice(at, end).matchAll(/id: '(\w+)' as const/g)]
-      .map((match) => match[1]!);
-  };
-
-  // ⚠ CONTROL. Every "does not offer" cell below is a negation, and a negation
-  // is true of an empty list. If the reader stopped finding the mount at all,
-  // both surfaces would look perfectly compliant.
-  const dayOffered = offered(dayLive);
-  const sessionOffered = offered(live);
-  ok('CONTROL — the reader finds a non-empty list on each surface',
-    dayOffered.length > 0 && sessionOffered.length > 0,
-    `day ${JSON.stringify(dayOffered)} session ${JSON.stringify(sessionOffered)}`);
-
-  ok('the Day surface offers EXACTLY the three direct status controls',
-    JSON.stringify(dayOffered) === JSON.stringify(DAY),
-    JSON.stringify(dayOffered));
-  ok('the session surface offers EXACTLY its three session-wide actions',
-    JSON.stringify(sessionOffered) === JSON.stringify(SESSION),
-    JSON.stringify(sessionOffered));
-  ok('the direct Day and open-session action sets are disjoint',
-    dayOffered.filter((id) => sessionOffered.includes(id)).length === 0);
-
-  ok('the Day status row has no plan edit, Equipment, Injury or Swap action',
-    !dayOffered.includes('equipment') && !dayOffered.includes('injury')
-      && !dayOffered.includes('swap') && !dayOffered.includes('add')
-      && !dayOffered.includes('move') && !dayOffered.includes('remove'));
-
-  /* THE SEPARATE ROW IS GONE — the other half of "no separate readiness row".
-   * Deleting the five from the Day hub while leaving Tired and Sick outside it
-   * would satisfy every cell above and still be the wrong screen. */
-  ok('the three sit INSIDE the card, not in a row beside it',
-    /testID="home-change-card"[\s\S]{0,600}rowTestID="home-life-fact-chips"/.test(dayLive),
-    'the status row must be the change card’s own row');
-  ok('and the Day screen has no second chip row of its own',
-    !/<View style=\{styles\.lifeFactChips\}/.test(dayLive)
-      && !/<LifeFactChip/.test(dayLive),
-    'the bare readiness row Sam ruled out has come back');
-
-  ok('the old separate change link is deleted from the Day card',
-    !/Want to change something\?/.test(dayLive)
-      && !/testID="make-change-link"/.test(dayLive));
-  ok('one small session-card menu opens the existing three-action menu',
+  ok('Day plan dots still open Add / Move / Remove',
     /testID="home-plan-options"/.test(dayLive)
-      && /name="dots-horizontal"/.test(dayLive)
       && /onPlanOptions=\{\(\) => setChangeSheetEntry\(\{ date: day\.date \}\)\}/.test(dayLive)
       && planSheetSource.includes('testID="plan-change-add"')
       && planSheetSource.includes('sessionMoveIngress(selectedWorkout.id)')
       && /label=\{signedCopy\('plan_change\.remove_session'\)\}/.test(planSheetSource));
-  ok('Plan options cannot silently default to Add instead of showing that menu',
-    !/initialAction\s*=\s*'add'/.test(planSheetSource)
-      && /!initialAction\) return;/.test(planSheetSource));
-  ok('the status-card owner contains no scheduling doorway',
-    !/editAction\??:|SessionChangeEditAction|styles\.editDoor/.test(hubLive));
-  ok('the larger dots and tier badge share the title row’s middle and keep a 44 by 44 tap target',
-    /planOptionsButton:\s*\{[\s\S]{0,160}width:\s*24[\s\S]{0,80}height:\s*24/.test(dayLive)
-      && /selectedTierBadge:\s*\{[\s\S]{0,80}alignSelf:\s*'center'/.test(dayLive)
-      && /planOptionsButton:\s*\{[\s\S]{0,160}alignSelf:\s*'center'/.test(dayLive)
-      && /name="dots-horizontal" size=\{22\}/.test(dayLive)
-      && /testID="home-plan-options"[\s\S]{0,260}hitSlop=\{10\}/.test(dayLive));
-  ok('days without a programmed session keep a direct Add session doorway',
-    /testID="home-add-session"/.test(dayLive)
-      && /onAddSession=\{\(\) => setChangeSheetEntry\(\{ date: day\.date, initialAction: 'add' \}\)\}/.test(dayLive));
-  ok('there is no dedicated whole-session Swap entry on Day or Week',
-    !/Swap this session|Swap a session|plan-change-swap|edit-week-action-swap/.test(
-      `${dayLive}\n${planSheetSource}`,
-    ));
-
-  /* THE COMPONENT IS CONFIGURABLE, NOT TWO HARD-CODED LISTS. */
-  ok('the hub renders the list it is handed and picks no list of its own',
-    /actions\.map\(/.test(hubLive) && !/DAY_STATUS_ACTION_IDS\.map\(/.test(hubLive)
-      && !/SESSION_CHANGE_ACTION_IDS\.map\(/.test(hubLive));
-  ok('each surface may name its own testIDs, so no door is silently renamed',
-    /action\.testID \?\?/.test(hubLive)
-      && /testID: 'home-tired-entry'/.test(dayLive)
-      && /testID: 'home-injured-entry'/.test(dayLive));
+  ok('active-session dots do not offer Move, Remove or whole-session Swap',
+    !/session-options-(move|remove|swap)/.test(live)
+      && !/Swap this session|Swap a session/.test(live));
+  ok('row-level Quick Swap and Quick Remove remain available',
+    live.includes('onQuickSwap={quickSwapExercise}')
+      && live.includes('onQuickRemove={requestExerciseRemoval}'));
+  ok('the session menu is gated by the same editable active-session conditions',
+    /const sessionOptionsAvailable = Boolean\([\s\S]{0,220}date && !isTeamOnly && editableExercises\.length > 0[\s\S]{0,120}!isFinished && !isAlreadyComplete/.test(live));
 }
 
 console.log(`\n${'─'.repeat(72)}`);

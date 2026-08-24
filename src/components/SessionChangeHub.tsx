@@ -1,6 +1,5 @@
 /**
- * ONE "NEED TO MAKE A CHANGE?" CARD, RENDERED BY BOTH SURFACES — WITH A
- * DIFFERENT LIST OF ACTIONS ON EACH.
+ * ONE DAY-STATUS CARD. THE ACTIVE SESSION NOW USES ITS OWN OPTIONS SHEET.
  *
  * Sam, 2026-08-19 (the ruling that built this): *"The Need to make a change?
  * section inside an active session must use the same shared UI component and
@@ -8,13 +7,11 @@
  * Do not keep separate Day and Session implementations."*
  *
  * Sam, 2026-08-25: the Day page keeps Tired, Sick and Injured as direct status
- * controls. Add, Move and Remove now enter from the programmed session card's
+ * controls. Add, Move and Remove enter from the programmed session card's
  * compact plan-options control, so this physical-status card owns no scheduling
- * doorway. The open-session page keeps Equipment, Injury and Add; row-level
- * Quick Swap / Quick Remove own exercise changes there.
- *
- * The shared component owns presentation, never a frozen surface list. Its two
- * callers supply deliberately disjoint direct-action sets.
+ * doorway. R-209 then moved the active session's Injury, Equipment and Add
+ * actions behind its own compact header menu; that screen no longer mounts
+ * this card.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
@@ -32,8 +29,7 @@
  * disabled state for a caller to hand it. An action the surface cannot serve is
  * simply not in the list.
  *
- * WRITER: `screens/home/HomeScreenV2` (Day, three status actions) and
- * `screens/home/DayWorkoutScreenV2` (open session, three session-wide actions).
+ * WRITER: `screens/home/HomeScreenV2` (Day, three status actions).
  * READER: the athlete. TEST: `test:session-change-hub` sections [8] and [9].
  */
 import React from 'react';
