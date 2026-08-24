@@ -211,3 +211,53 @@ export function weekBoardDropRefusal(args: {
   if (args.target.kind === 'empty' && args.to.isFull) return 'day_full';
   return null;
 }
+
+/**
+ * ⚠ **WHICH SCOPE A DRAGGED BOX TRAVELS UNDER — AND THIS IS THE BUG SAM HIT.**
+ *
+ * 2026-08-25: *"pulling a strength day to a strength day just disappeared the
+ * session that was originally there = it didnt swap them"*.
+ *
+ * The board sent the BOX'S OWN scope (`'strength'`), and for a day whose only
+ * content is a gym session the producer does not offer that scope at all.
+ * `moveOptionsForDay`: *"A single-component day has nothing to scope: moving
+ * 'just the gym session' off a day that is only a gym session IS the whole-day
+ * move, and offering both would be two names for one action."* — so such a day
+ * offers `['whole_day']` and nothing else.
+ *
+ * **A `move_session` carrying an unoffered component scope is not a swap.** The
+ * scoped path ABSORBS — Sam's doubling law, written for landing on a team night:
+ * *"the move ABSORBS, the anchor stays put, and nothing travels back to the
+ * source."* Absorbing into an occupied strength box overwrites it and returns
+ * nothing, which is exactly a session disappearing.
+ *
+ * **THE FIX IS TO SPEAK THE PRODUCER'S VOCABULARY, NOT TO TEACH THE BOARD A
+ * SECOND ONE.** The offered ids are passed in; this picks among them:
+ *
+ * 1. the box's own component scope, when the day actually offers it;
+ * 2. otherwise `whole_day` — but ONLY when this box is the day's whole movable
+ *    content, because that is the precise case where the two are the same
+ *    action under two names;
+ * 3. otherwise nothing, and the drop is refused rather than guessed at.
+ *
+ * ⚠ **STEP 2 IS BOUNDED FOR A REASON.** Falling back to `whole_day` whenever
+ * the component scope is missing would let a drag of ONE part of a combined day
+ * move the entire day — the team night with it. That is the same class of
+ * defect as the one this function fixes, one step to the left.
+ */
+export function weekBoardMoveScope(args: {
+  box: WeekBoardBox;
+  day: WeekBoardDay;
+  offeredScopeIds: readonly PlanChangeMoveScopeId[];
+}): PlanChangeMoveScopeId | null {
+  const offered = new Set(args.offeredScopeIds);
+  // The club night has its own action and its own scope word.
+  if (args.box.kind === 'team_training') return offered.has('team') ? 'team' : null;
+  if (args.box.kind !== 'session' || !args.box.scope) return null;
+  if (offered.has(args.box.scope)) return args.box.scope;
+  const movable = args.day.boxes.filter((box) => box.kind === 'session');
+  const isTheWholeOfTheDay = movable.length === 1 && movable[0].id === args.box.id
+    && !args.day.boxes.some((box) => box.kind === 'team_training' || box.kind === 'game');
+  return isTheWholeOfTheDay && offered.has('whole_day') ? 'whole_day' : null;
+}
+

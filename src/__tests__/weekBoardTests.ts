@@ -15,6 +15,7 @@ import {
   buildWeekBoard,
   buildWeekBoardDay,
   weekBoardDropRefusal,
+  weekBoardMoveScope,
   type WeekBoardBox,
 } from '../rules/weekBoard';
 
@@ -240,16 +241,87 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
   ok('a drop the producer never offered is refused, not committed',
     /listPlanChangeOptionsForDay\(\{[\s\S]{0,160}date: args\.fromDate/.test(home)
       && /offer\?\.destinations\.find\(\(entry\) => entry\.date === args\.toDate\)/.test(home)
-      && /if \(!destination\) \{[\s\S]{0,200}return;/.test(home),
+      && /if \(!scope \|\| !destination\) \{[\s\S]{0,220}return;/.test(home),
     'the board must ask the owner, not answer for it');
   ok('and it repeats the producer\'s own refusal rather than inventing words',
     /setBoardRefusal\(offered\?\.move\.refusal\?\.message/.test(home));
+  /* ⚠ The screen must ASK `weekBoardMoveScope` rather than send the box's own
+   * scope — the difference between a swap and a destroyed session. */
+  ok('the screen chooses the scope from the producer\'s offer, not from the box',
+    /weekBoardMoveScope\(\{[\s\S]{0,220}offeredScopeIds: offered\.move\.scopes\.map/.test(home)
+      && !/const scope = args\.box\.kind === 'team_training' \? 'team' : args\.box\.scope/.test(home),
+    'sending the box\'s own scope is what absorbed and destroyed the destination');
   ok('the club night drags as this-week-only, and never raises the permanent ask',
     /teamNightRoute: 'this_week_only'/.test(sheet)
       && !/teamNightRoute: 'permanent'/.test(sheet),
     'Sam, 2026-08-25: dragging it moves it for this week, no question');
   ok('and it travels by move_team_night, never by move_session',
     /initialMove\.scope === 'team'[\s\S]{0,120}kind: 'move_team_night'/.test(sheet));
+}
+
+/* ══ 6. The scope a dragged box travels under ══ */
+
+/**
+ * ⚠ **THE BUG SAM HIT, PINNED.** *"pulling a strength day to a strength day just
+ * disappeared the session that was originally there = it didnt swap them"*.
+ *
+ * The board sent the box's own `'strength'` scope. A day whose only content is a
+ * gym session does not OFFER that scope — `moveOptionsForDay` gives it
+ * `['whole_day']`, because *"moving 'just the gym session' off a day that is
+ * only a gym session IS the whole-day move"*. A scoped move the producer never
+ * offered does not swap: the scoped path ABSORBS, overwrites the destination
+ * and returns nothing to the source.
+ */
+console.log('\n[6] A dragged box speaks the producer\'s scope vocabulary');
+{
+  const strengthBox: WeekBoardBox =
+    { id: 's', kind: 'session', label: 'Strength', scope: 'strength', binScope: 'strength' };
+  const condBox: WeekBoardBox =
+    { id: 'c', kind: 'session', label: 'Conditioning', scope: 'conditioning', binScope: 'conditioning' };
+  const emptyBox: WeekBoardBox =
+    { id: 'e', kind: 'empty', label: null, scope: null, binScope: null };
+  const teamBox: WeekBoardBox =
+    { id: 't', kind: 'team_training', label: 'Team Training', scope: null, binScope: 'team' };
+
+  const soloDay = { date: 'mon', boxes: [strengthBox, emptyBox], isFull: false };
+  const combinedDay = { date: 'tue', boxes: [strengthBox, condBox], isFull: true };
+  const teamDay = { date: 'wed', boxes: [strengthBox, teamBox], isFull: true };
+
+  ok('THE DEFECT: a solo strength day offers only whole_day, and that is what travels',
+    weekBoardMoveScope({ box: strengthBox, day: soloDay, offeredScopeIds: ['whole_day'] })
+      === 'whole_day',
+    'sending the unoffered "strength" scope here is what absorbed and destroyed the destination');
+
+  ok('a combined day DOES offer the component scope, so the box travels as itself',
+    weekBoardMoveScope({
+      box: strengthBox, day: combinedDay,
+      offeredScopeIds: ['whole_day', 'strength', 'conditioning'],
+    }) === 'strength');
+
+  /* ⚠ THE FALLBACK IS BOUNDED, AND THIS IS THE CELL THAT KEEPS IT SO. Falling
+   * back to whole_day whenever the component scope is missing would let a drag
+   * of ONE part of a combined day take the entire day — the team night with it.
+   * That is the same defect one step to the left. */
+  ok('a part of a COMBINED day never falls back to moving the whole day',
+    weekBoardMoveScope({
+      box: strengthBox, day: combinedDay, offeredScopeIds: ['whole_day'],
+    }) === null,
+    'the athlete dragged one box, not the day');
+  ok('and a day holding a team night never falls back to whole_day either',
+    weekBoardMoveScope({
+      box: strengthBox, day: teamDay, offeredScopeIds: ['whole_day'],
+    }) === null,
+    'the club night would have travelled with it');
+
+  ok('the club night itself travels under the team scope',
+    weekBoardMoveScope({ box: teamBox, day: teamDay, offeredScopeIds: ['strength', 'team'] })
+      === 'team');
+  ok('and is refused when that scope is not offered',
+    weekBoardMoveScope({ box: teamBox, day: teamDay, offeredScopeIds: ['strength'] }) === null);
+  ok('an empty box has no scope to travel under',
+    weekBoardMoveScope({ box: emptyBox, day: soloDay, offeredScopeIds: ['whole_day'] }) === null);
+  ok('an offer of nothing moves nothing',
+    weekBoardMoveScope({ box: strengthBox, day: soloDay, offeredScopeIds: [] }) === null);
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

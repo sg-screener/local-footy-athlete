@@ -68,7 +68,7 @@ import { useAthletePreferencesStore } from '../../store/athletePreferencesStore'
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
 import type { PlanChangeBinScopeId, PlanChangeMoveScopeId } from '../../utils/planChangeTypes';
 import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
-import { buildWeekBoardDay, type WeekBoardBox } from '../../rules/weekBoard';
+import { buildWeekBoardDay, weekBoardMoveScope, type WeekBoardBox } from '../../rules/weekBoard';
 import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
   applyMobilityFlowExerciseDecisions,
@@ -571,8 +571,6 @@ export default function HomeScreenV2() {
     fromDate: string; toDate: string; box: WeekBoardBox;
   }) => {
     setBoardRefusal(null);
-    const scope = args.box.kind === 'team_training' ? 'team' : args.box.scope;
-    if (!scope) return;
     /**
      * ⚠ **THE PRODUCER MUST HAVE OFFERED THIS DESTINATION. THIS CHECK WAS IN
      * THE PLAN AND WAS NOT BUILT, AND THAT GAP IS RECORDED HERE RATHER THAN
@@ -590,9 +588,28 @@ export default function HomeScreenV2() {
     const offered = listPlanChangeOptionsForDay({
       visibleWeek: weekDays, date: args.fromDate, todayISO: todayISOLocal(),
     });
-    const offer = offered?.move.scopes.find((entry) => entry.id === scope);
+    /**
+     * ⚠ **THE BOX TRAVELS UNDER A SCOPE THE PRODUCER OFFERS, NOT UNDER ITS OWN
+     * NAME — AND SENDING ITS OWN NAME IS WHAT DESTROYED A SESSION.**
+     *
+     * Sam, 2026-08-25: *"pulling a strength day to a strength day just
+     * disappeared the session that was originally there"*. A day whose only
+     * content is a gym session offers `['whole_day']` and NOT `'strength'`, so
+     * the board was committing a scope the producer never listed; the scoped
+     * path absorbs rather than swaps, overwrote the destination and returned
+     * nothing to the source. `weekBoardMoveScope` picks among the offered ids.
+     */
+    const sourceBoard = weekBoardRows.find((row) => row.date === args.fromDate)?.board;
+    const scope = sourceBoard && offered
+      ? weekBoardMoveScope({
+          box: args.box,
+          day: sourceBoard,
+          offeredScopeIds: offered.move.scopes.map((entry) => entry.id),
+        })
+      : null;
+    const offer = scope ? offered?.move.scopes.find((entry) => entry.id === scope) : undefined;
     const destination = offer?.destinations.find((entry) => entry.date === args.toDate);
-    if (!destination) {
+    if (!scope || !destination) {
       setBoardRefusal(offered?.move.refusal?.message
         ?? "That move isn't available on this week.");
       return;
@@ -603,7 +620,7 @@ export default function HomeScreenV2() {
       origin: 'week',
       move: { toDate: args.toDate, scope },
     });
-  }, [weekDays]);
+  }, [weekBoardRows, weekDays]);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;

@@ -5724,3 +5724,41 @@ SO.** Rewords `day.add_session.action` from R-196's *"Add a session"*. The rest
 day was the programmed answer; the word is the athlete's own reminder that what
 they are adding sits on top of it. · `WORKING` — `test:signed-copy-extraction`.
 Seat `warmup`.
+
+---
+
+**R-218e** · *"pulling a strength day to a strength day just disappeared the
+session that was originally there = it didnt swap them"* (Sam, 2026-08-25) ·
+**THE BOARD WAS SPEAKING A SCOPE THE PRODUCER NEVER OFFERED, AND AN UNOFFERED
+SCOPED MOVE ABSORBS RATHER THAN SWAPS.**
+
+**The board sent the BOX'S OWN scope** (`'strength'`). `moveOptionsForDay` does
+not offer that for a day whose only content is a gym session — *"A
+single-component day has nothing to scope: moving 'just the gym session' off a
+day that is only a gym session IS the whole-day move, and offering both would be
+two names for one action."* Such a day offers `['whole_day']` and nothing else.
+
+**A `move_session` carrying an unoffered component scope is not a swap.** The
+scoped path ABSORBS — Sam's doubling law, written for landing on a team night:
+*"the move ABSORBS, the anchor stays put, and nothing travels back to the
+source."* Absorbing into an occupied strength box overwrites it and returns
+nothing. That is a session disappearing.
+
+⚠ **THE TRANSACTION WAS NEVER THE FAULT, AND THE SEAT SAID OTHERWISE FIRST.**
+It reported the loss as the known open conservation defect. Waking
+`test:athlete-session-move` disproved that: cell 3, *"occupied compatible
+destination swaps atomically"*, PASSES. **The swap works; the board was not
+asking for one.** The earlier claim is withdrawn.
+
+**THE FIX SPEAKS THE PRODUCER'S VOCABULARY RATHER THAN TEACHING THE BOARD A
+SECOND ONE.** `weekBoardMoveScope` picks among the OFFERED ids: the box's own
+component scope where the day offers it; otherwise `whole_day`, **but only when
+that box is the day's whole movable content**, which is the precise case where
+the two are one action under two names; otherwise nothing, and the drop is
+refused rather than guessed at.
+
+⚠ **THAT FALLBACK IS BOUNDED AND TWO CELLS KEEP IT SO.** Falling back to
+`whole_day` whenever the component scope is missing would let a drag of ONE part
+of a combined day move the entire day, club night included — the same class of
+defect one step to the left. · `WORKING` — `test:week-board` §6, 54 passed / 0
+failed. Seat `warmup`.
