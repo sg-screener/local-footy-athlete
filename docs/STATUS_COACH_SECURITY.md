@@ -53,6 +53,7 @@ NOT COVERED: the live limiter is deliberately coarse and per Edge isolate; it is
 useful immediate spend protection, not a distributed public-scale quota. Before
 a broad public launch, use real Supabase user sessions and a durable atomic
 limiter (for example Redis), rather than the current app-wide anon credential.
-The newly typed response-refusal code landed after version 3 and requires the
-next deployment. No real provider call or phone rebuild has been made in this
-checkpoint.
+The latest ACTIVE deployments are `coach-chat` version 5 and `coach-lab`
+version 27. Two post-security production smokes passed through the live rate
+window with zero actions: one simple schedule question and one messy-readiness
+question. No phone rebuild has been made in this checkpoint.

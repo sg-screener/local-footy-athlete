@@ -34,6 +34,13 @@ still reaches Terra unchanged.
 - Liveness: zeroing structured-readiness weight killed three named retrieval
   cells, including the no-keyword readiness case. The mutation was restored.
 
+## Deployment and paid smoke receipt
+
+- `coach-chat` is ACTIVE as version 5 at 2026-08-24 00:12:14 UTC.
+- `coach-lab` is ACTIVE as version 27 at 2026-08-24 00:12:22 UTC.
+- One production smoke asked `legs are rooted but dont wanna skip`. Terra advised
+  a reduced lower session, used the live low-energy/moderate-soreness facts,
+  returned zero actions and made no program-change claim.
+
 NOT COVERED: no embedding benchmark or full nine-answer paid rerun was needed or
-run. The updated retriever is not deployed yet. One paid messy-language smoke,
-simulator acceptance and physical-iPhone acceptance remain owed.
+run. Simulator acceptance and physical-iPhone acceptance remain owed.

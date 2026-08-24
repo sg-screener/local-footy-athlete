@@ -29,8 +29,9 @@ reach the screen.
   `coach_chat_response_refused` to `coach_chat_invalid_answer` killed the named
   production-refusal cell. The mutation was restored.
 
+The typed endpoint is deployed in the current ACTIVE `coach-chat` version 5.
+
 NOT COVERED: the three causes still intentionally use the one already-approved
 athlete sentence. A distinct outage sentence is blocked on Sam's copy approval;
-no new athlete wording was invented here. The updated edge function is not yet
-deployed, no real provider call was made, no React Native failure state was
-mounted, and no physical-phone acceptance was run.
+no new athlete wording was invented here. No React Native failure state was
+mounted and no physical-phone acceptance was run.

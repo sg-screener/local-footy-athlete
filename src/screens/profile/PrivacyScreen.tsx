@@ -12,7 +12,7 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
-const LAST_UPDATED = '2026-05-03';
+const LAST_UPDATED = '2026-08-24';
 
 export const PrivacyScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -49,7 +49,10 @@ export const PrivacyScreen: React.FC = () => {
         Coach chat and AI processing
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        Coach messages and relevant program context may be sent to backend and AI services so the app can understand your request and return a coach response. Deterministic app rules make the final visible program changes.
+        Coach messages and concise, whitelisted progress summaries may be sent to backend and AI services so the app can return a coach response. The Coach is completely read-only and cannot change your program.
+      </Text>
+      <Text variant="body" style={styles.sectionContent}>
+        The Coach AI is not sent your name, body measurements, internal IDs, buttons or full saved profile. Coach conversations are not saved by the app, and AI responses are requested with provider storage off.
       </Text>
 
       <Text variant="h4" style={styles.sectionTitle}>
@@ -63,7 +66,7 @@ export const PrivacyScreen: React.FC = () => {
         Storage and use
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        Some app data is stored on your device so your profile, program and coach state can persist. Backend services may process requests needed for program generation and coach replies. We do not sell your personal data.
+        Some app data is stored on your device so your profile, program and training history can persist. Backend services may process requests needed for program generation and coach replies. We do not sell your personal data.
       </Text>
 
       <Text variant="h4" style={styles.sectionTitle}>
