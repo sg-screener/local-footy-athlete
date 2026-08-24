@@ -5555,5 +5555,14 @@ the circle to 20 ... the tap area can shrink i want there to be less space
 there"*. Gap `xs` -> 0, so the line starts on the last card's edge; circle
 24 -> 20 around an **unchanged 14 glyph**; `hitSlop` 10 -> 4. **The glyph
 staying put while the ring closes on it is the instruction** — a later pass must
-not "rebalance" the plus down to fit the smaller circle. · `WORKING` —
-`test:session-change-hub`, ALL GREEN 55. Seat `warmup`.
+not "rebalance" the plus down to fit the smaller circle.
+
+⚠ **THIRD PASS, AND THE FIRST TWO HAD NOT FOUND THE REAL GAP.** Sam, on a crop:
+*"look at where the bottom of the last box finishes and where the line starts...
+why the gap"*. `paddingTop: 0` was never going to close it —
+`executionSectionBody` carries `gap: spacing.sm` and **the plus is one of its
+children**, so the flex gap sat above the connector whatever padding the row
+had. It is cancelled with `marginTop: -spacing.sm`, written as the SAME token so
+a literal `-8` cannot silently reopen the gap the day the body's spacing
+changes. A cell pins both halves together. · `WORKING` —
+`test:session-change-hub`, ALL GREEN 56. Seat `warmup`.

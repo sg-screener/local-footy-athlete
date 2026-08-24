@@ -5490,7 +5490,14 @@ const styles = StyleSheet.create({
    * 20 around an unchanged 14 glyph, and `hitSlop` drops 10 -> 4. **The glyph
    * staying put while the ring closes on it is the whole instruction — do not
    * "rebalance" the plus down to fit the smaller circle.** */
-  quickAddRow: { alignItems: 'center', paddingTop: 0 },
+  /* ⚠ **THE `paddingTop: 0` WAS NOT THE GAP — `executionSectionBody` HAS
+   * `gap: spacing.sm`, AND THE PLUS IS ONE OF ITS CHILDREN.** So the flex gap
+   * sat between the last card and this row no matter what padding it carried,
+   * which is the space Sam photographed. The negative margin CANCELS that one
+   * gap and nothing else, and it is written as the same token so the two can
+   * never drift apart — a literal `-8` would silently reopen the gap the day
+   * the body's spacing changed. */
+  quickAddRow: { alignItems: 'center', paddingTop: 0, marginTop: -spacing.sm },
   quickAddConnector: {
     width: StyleSheet.hairlineWidth,
     height: 6,

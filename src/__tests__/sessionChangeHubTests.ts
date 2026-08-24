@@ -212,6 +212,10 @@ console.log('\n[5b] Quick add: one plus per section, in the one section owner');
       return expanded > 0 && plus > expanded && close > plus;
     })(),
     'a plus with no visible list to join is an instruction to guess');
+  ok('the plus starts flush with the last card, cancelling the body\'s own flex gap',
+    /executionSectionBody: \{ paddingBottom: spacing\.md, gap: spacing\.sm \}/.test(live)
+      && /quickAddRow: \{[^}]*marginTop: -spacing\.sm/.test(live),
+    'the plus is a CHILD of that body, so its gap applied to the plus too');
   ok('the tap enters the EXISTING hierarchy one level down, at the section\'s family',
     /const quickAddFor = React\.useCallback\([\s\S]{0,900}openAddFamily\(family\)/.test(live),
     'same legality owner, same rungs — only the first question is skipped');
