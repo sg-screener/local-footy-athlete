@@ -1,0 +1,153 @@
+/**
+ * THE WEEK BOARD — Sam, 2026-08-25 (R-218).
+ *
+ * Pins the SHAPE rules only: how many boxes a day shows, which box a part
+ * becomes, and which drops the board itself refuses. Whether the PROGRAM allows
+ * a move is `planChangeProducer`'s question and is asked separately — see the
+ * note on `weekBoardDropRefusal`.
+ *
+ * Run: npm run test:week-board
+ */
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+
+import {
+  WEEK_BOARD_MAX_BOXES,
+  buildWeekBoard,
+  buildWeekBoardDay,
+  weekBoardDropRefusal,
+  type WeekBoardBox,
+} from '../rules/weekBoard';
+
+let passed = 0;
+const failures: string[] = [];
+function ok(name: string, condition: unknown, detail?: string): void {
+  if (condition) { passed += 1; console.log(`  PASS ${name}`); return; }
+  failures.push(name);
+  console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
+}
+
+const part = (kind: string, bucket: string): any => ({
+  id: `${kind}-1`, kind, headline: bucket, bucket, detail: null, rows: [],
+  capabilities: {}, countsTowardLoad: true,
+});
+const day = (date: string, parts: any[]): any => ({
+  date, kind: 'training', headline: 'Day', parts, gaps: [],
+});
+
+/* ══ 1. Boxes are parts plus room ══ */
+console.log('\n[1] Boxes = the day\'s parts, plus ONE empty box while there is room');
+{
+  const solo = buildWeekBoardDay(day('2026-08-24', [part('strength', 'Strength')]));
+  ok('a day with one session shows that session and an empty box beside it',
+    solo.boxes.length === 2 && solo.boxes[0].kind === 'session' && solo.boxes[1].kind === 'empty');
+  ok('and it is not full', solo.isFull === false);
+
+  const paired = buildWeekBoardDay(day('2026-08-25', [
+    part('strength', 'Strength'), part('team_training', 'Team Training'),
+  ]));
+  ok('a strength + team training day shows exactly those two, no empty box',
+    paired.boxes.length === 2
+      && paired.boxes.map((b: WeekBoardBox) => b.kind).join(',') === 'session,team_training');
+  ok('and it IS full', paired.isFull === true);
+
+  /* ⚠ SAM'S OWN CORRECTION: the single box is a property of ROOM, not of rest
+   * days. A rest day has no parts, so its one box IS the empty box — which is
+   * why adding a session there produces "session + empty" with no rule change. */
+  const rest = buildWeekBoardDay(day('2026-08-26', []));
+  ok('a rest or unplanned day is ONE box, and that box is the empty one',
+    rest.boxes.length === 1 && rest.boxes[0].kind === 'empty');
+  ok('and dropping a session there would leave it looking like any other day',
+    buildWeekBoardDay(day('2026-08-26', [part('conditioning', 'Conditioning')]))
+      .boxes.map((b: WeekBoardBox) => b.kind).join(',') === 'session,empty');
+
+  const game = buildWeekBoardDay(day('2026-08-29', [part('game', 'Game Day')]));
+  ok('game day is ONE box with no empty beside it',
+    game.boxes.length === 1 && game.boxes[0].kind === 'game' && game.isFull === true);
+  ok('and a fixture carries no move scope — it travels through its own door',
+    game.boxes[0].scope === null);
+
+  ok('the cap Sam answered is two', WEEK_BOARD_MAX_BOXES === 2);
+  ok('a whole week maps one day to one board day',
+    buildWeekBoard([day('a', []), day('b', [])]).length === 2);
+}
+
+/* ══ 2. Speed is conditioning ══ */
+console.log('\n[2] Speed is energy-system work, so it is a conditioning box');
+{
+  const speedDay = buildWeekBoardDay(day('2026-08-27', [part('speed', 'Speed')]));
+  ok('a speed part is an ordinary movable session box',
+    speedDay.boxes[0].kind === 'session');
+  ok('and it travels under the CONDITIONING scope, the slot it occupies',
+    speedDay.boxes[0].scope === 'conditioning',
+    `got ${speedDay.boxes[0].scope}`);
+  /* Not a load claim: SpeedBlockCountingFence keeps conditioningCredit 'none',
+     and this file never reads or contradicts that. */
+  const strengthDay = buildWeekBoardDay(day('2026-08-28', [part('strength', 'Strength')]));
+  ok('strength still travels under its own scope', strengthDay.boxes[0].scope === 'strength');
+  ok('recovery still travels under its own scope',
+    buildWeekBoardDay(day('x', [part('recovery', 'Recovery')])).boxes[0].scope === 'recovery');
+  ok('the club night carries NO move_session scope — it has its own typed action',
+    buildWeekBoardDay(day('y', [part('team_training', 'Team Training')])).boxes[0].scope === null);
+}
+
+/* ══ 3. A day over the cap is shown, never truncated ══ */
+console.log('\n[3] Three parts is a defect to SEE, not a part to hide');
+{
+  const three = buildWeekBoardDay(day('2026-08-30', [
+    part('strength', 'Strength'), part('conditioning', 'Conditioning'),
+    part('team_training', 'Team Training'),
+  ]));
+  ok('every part still renders',
+    three.boxes.length === 3,
+    'hiding one would make a programming defect invisible on the surface built to show the week');
+  ok('and the day takes no more', three.isFull === true);
+}
+
+/* ══ 4. The drops the board itself refuses ══ */
+console.log('\n[4] Drop rules — the board\'s own shape, not the program\'s legality');
+{
+  const strengthBox: WeekBoardBox =
+    { id: 's', kind: 'session', label: 'Strength', scope: 'strength' };
+  const emptyBox: WeekBoardBox = { id: 'e', kind: 'empty', label: null, scope: null };
+  const teamBox: WeekBoardBox =
+    { id: 't', kind: 'team_training', label: 'Team Training', scope: null };
+  const gameBox: WeekBoardBox = { id: 'g', kind: 'game', label: 'Game Day', scope: null };
+  const openDay = { date: 'mon', boxes: [strengthBox, emptyBox], isFull: false };
+  const fullDay = { date: 'tue', boxes: [strengthBox, teamBox], isFull: true };
+  const gameDay = { date: 'sat', boxes: [gameBox], isFull: true };
+  const refuse = (box: WeekBoardBox, from: any, target: WeekBoardBox, to: any) =>
+    weekBoardDropRefusal({ box, from, target, to });
+
+  ok('a strength onto a free day is allowed',
+    refuse(strengthBox, fullDay, emptyBox, openDay) === null);
+  ok('a strength onto another session is allowed — they swap (his answer)',
+    refuse(strengthBox, openDay, strengthBox, fullDay) === null);
+  ok('a strength onto a TEAM TRAINING box is refused',
+    refuse(strengthBox, openDay, teamBox, fullDay) === 'onto_team_training');
+  ok('nothing may be dropped onto game day',
+    refuse(strengthBox, openDay, gameBox, gameDay) === 'onto_game');
+  ok('a fixture cannot be dragged from the board',
+    refuse(gameBox, gameDay, emptyBox, openDay) === 'not_movable');
+  /* Across two days — dragging an empty box onto its OWN day would be caught by
+     the same-day rule first and prove nothing about whether it can be lifted. */
+  ok('an empty box is not a thing you can pick up',
+    refuse(emptyBox, openDay, emptyBox, fullDay) === 'not_movable');
+  ok('dropping onto the day it came from is a no-op, not a move',
+    refuse(strengthBox, openDay, emptyBox, openDay) === 'same_day');
+
+  /* ⚠ THE CAP BITES ON THE **ADD**, NOT ON THE SWAP, and that is the whole
+   * reason a swap is allowed onto a full day: it conserves the count. */
+  const fullWithRoomlessEmpty = { date: 'wed', boxes: [strengthBox, emptyBox], isFull: true };
+  ok('a drop onto a full day\'s empty box is refused',
+    refuse(strengthBox, openDay, emptyBox, fullWithRoomlessEmpty) === 'day_full');
+  ok('but a SWAP onto that same full day is still allowed',
+    refuse(strengthBox, openDay, strengthBox, fullWithRoomlessEmpty) === null,
+    'a swap conserves the day\'s count, so the cap has nothing to refuse');
+}
+
+console.log(`\n${passed} passed, ${failures.length} failed`);
+if (failures.length > 0) {
+  console.log('\nFailures:');
+  for (const failure of failures) console.log(`- ${failure}`);
+  process.exit(1);
+}

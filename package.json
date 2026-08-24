@@ -233,6 +233,7 @@
     "test:move-scoping": "TZ=Australia/Melbourne sucrase-node src/__tests__/planChangeMoveScopingTests.ts",
     "test:profile-mirror-narrowing": "TZ=Australia/Melbourne sucrase-node src/__tests__/profileMirrorNarrowingTests.ts",
     "test:placement-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/athletePlacementOwnershipTests.ts",
+    "test:week-board": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekBoardTests.ts",
     "test:week-budget-placement": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekBudgetPlacementOwnershipTests.ts",
     "test:phase-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseOwnershipTests.ts",
     "test:phase-shift-atomicity": "TZ=Australia/Melbourne sucrase-node src/__tests__/phaseShiftAtomicityTests.ts",

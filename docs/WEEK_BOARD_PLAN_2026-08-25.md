@@ -97,13 +97,20 @@ So the board folds `speed` into the Conditioning box. Two consequences:
 - **The cap of two is a DISPLAY rule as well as a drop rule**, which is the
   opposite of what the first draft assumed. That draft was written before this
   answer and its resolution is SUPERSEDED.
-- ⚠ **`speed` IS A SEPARATELY PRODUCED PART TODAY** (`projectVisibleWeek`
-  emits it, `sessionComponents` types it), so `strength + speed + team_training`
-  is expressible. Folding speed into conditioning makes that
-  `strength + conditioning + team_training` — still three. **If a real week
-  produces one, that is a DEFECT to show Sam with a screenshot, not something
-  the board quietly truncates.** Checked in slice 2 against real generated
-  weeks; a finding, not a blocker.
+- ⚠ **THE SEAT'S "SPEED COULD MAKE A THIRD PART" FLAG WAS WRONG, AND IS
+  WITHDRAWN — MEASURED, NOT ARGUED.** `Workout.speedBlock` carries a
+  `placement` that the generator picks as `pre_lift` when the day already has
+  lifts and `standalone` when it does not (`coachingEngine`), so speed is either
+  sprints INSIDE that day's strength session or it IS the session. It is never a
+  third thing competing for a slot. **CENSUS, 2026-08-25:
+  `generateProgramLocally` over the standard profile at 2026-07-13 for
+  In-season, Pre-season and Off-season — 84 workouts, ZERO days yielding more
+  than two boxes.** Sam's rule already holds in the generated program; the fold
+  is a display correction, not a new programming rule.
+- The over-cap branch in `buildWeekBoardDay` is therefore **defensive, not
+  expected**: it renders every part rather than hiding one, so that if a future
+  generation change ever produces a third, it is VISIBLE on the surface built to
+  show the week's shape instead of silently dropped.
 
 **3. THE OLD PATHWAY IS DELETED LAST, NOT FIRST.** *"maybe it's worth saving the
 old pathway deletion until the end so it's easier to connect what happens when
