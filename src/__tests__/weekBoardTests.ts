@@ -196,6 +196,21 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     /boxAt\(left \+ origin\.x \+ localX, rowTop \+ origin\.y \+ localY\)/.test(board),
     'raw x/y would match the same offset inside every row — "wrong day" that is really "wrong space"');
 
+  /* ⚠ **THE DROP POINT IS START + TRANSLATION, AND THE FIRST BUILD SHIPPED THE
+   * BUG THIS CATCHES.** Sam: *"the drag works but i cant seem to drop anything
+   * anywhere"*. `onEnd`'s `event.x` is relative to a view the finger is
+   * DRAGGING, so it barely changes across the whole gesture; every drop
+   * hit-tested back onto its own box, resolved `same_day`, and returned
+   * silently. Start offset and translation are the two numbers the transform
+   * cannot corrupt. */
+  ok('the drop point is the START offset plus the TRANSLATION, never onEnd\'s x/y',
+    /startX\.value \+ event\.translationX/.test(board)
+      && /startY\.value \+ event\.translationY/.test(board)
+      && /onStart\(\(event\) => \{[\s\S]{0,400}startX\.value = event\.x/.test(board),
+    'a drag that visibly works and can never land is what onEnd x/y produces');
+  ok('and onEnd does not pass its own x/y through to the hit-test',
+    !/runOnJS\(onDrop\)\(\s*date, box\.id, event\.x, event\.y/.test(board));
+
   ok('a fixture is neither dragged nor binned',
     /const draggable = box\.kind !== 'game'/.test(board)
       && /const removable = box\.kind !== 'game'/.test(board));

@@ -229,15 +229,37 @@ function BoardBox({ box, date, onLayout, onAdd, onRemove, onDrop }: {
     .activateAfterLongPress(220)
     .onStart((event) => {
       lifted.value = 1;
-      startX.value = event.absoluteX;
-      startY.value = event.absoluteY;
+      // ⚠ **THE ONLY MOMENT `event.x`/`event.y` CAN BE TRUSTED IS THIS ONE.**
+      // See the note on `onEnd`.
+      startX.value = event.x;
+      startY.value = event.y;
     })
     .onUpdate((event) => {
       dx.value = event.translationX;
       dy.value = event.translationY;
     })
     .onEnd((event) => {
-      runOnJS(onDrop)(date, box.id, event.x, event.y);
+      /**
+       * ⚠ **`event.x` IN `onEnd` IS NOT WHERE THE FINGER LANDED — AND THAT BUG
+       * SHIPPED ONCE.** Sam, 2026-08-25: *"the drag works but i cant seem to
+       * drop anything anywhere"*.
+       *
+       * Pan reports `x`/`y` relative to its own view, and this view is being
+       * TRANSLATED BY THE FINGER. So the finger stays at very nearly the same
+       * point INSIDE the box for the whole drag, and `event.x` at the end is
+       * roughly `event.x` at the start. Every drop therefore hit-tested back
+       * onto the box it came from, resolved as `same_day`, and returned
+       * silently — a drag that visibly worked and could never land.
+       *
+       * **The two trustworthy numbers are the START offset and the TRANSLATION**,
+       * and neither is affected by the transform. Where the finger let go is
+       * where it pressed, plus how far it travelled.
+       */
+      runOnJS(onDrop)(
+        date, box.id,
+        startX.value + event.translationX,
+        startY.value + event.translationY,
+      );
     })
     .onFinalize(() => {
       // The box always returns home. What the drop CHANGED is re-derived and

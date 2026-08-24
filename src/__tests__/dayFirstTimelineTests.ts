@@ -1774,7 +1774,9 @@ run('the add-fixture control never caps the week at one game', () => {
     'the Edit this week sheet could not be bounded');
   const sheet = home.slice(sheetStart, sheetEnd);
   assert(sheet.includes("title={signedCopy('week.edit_sheet.title')}")
-    && sheet.includes("? signedCopy('week.edit_sheet.question')")
+    // R-218 final slice — the subtitle no longer switches on a nested step, so
+    // it is a plain call rather than the `? …` ternary this used to match.
+    && sheet.includes("subtitle={signedCopy('week.edit_sheet.question')}")
     && signedCopy('week.edit_sheet.title') === 'Adjust this week'
     && signedCopy('week.edit_sheet.question') === 'What do you want to change?',
   'the Week dots sheet no longer opens with the signed Adjust this week / What do you want to change wording');
@@ -1903,30 +1905,47 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   assert(!sheet.includes("setStep('session_action')")
     && sheet.includes('onPress={onOpenBoard}'),
   'Manage sessions no longer opens the board directly');
-  assert(sheet.includes("'What do you want to do?'")
+  /* ⚠ **AND NOW THEY ARE GONE — R-218 FINAL SLICE.** The transitional assertion
+   * this replaces required the rows to still be compiled while unreachable,
+   * which is what stopped a half-done slice reading as normal. Sam asked for
+   * this deletion to come LAST because the board's `+` and bin call the same
+   * handlers; those handlers are untouched, and only the rows, their nested
+   * step, the three picker modes and six signed strings went. */
+  assert(!sheet.includes("'What do you want to do?'")
     && !sheet.includes('label="Swap a session"')
     && ["onEditSession('add')", "onEditSession('move')", "onEditSession('remove')"]
-      .every((route) => sheet.includes(route)),
-  'the old Add / Move / Remove rows were deleted before the final slice');
-  const expectedWeekSessionActionCopy = [
-    ['week.edit_sheet.session_action.add.label', 'Add a session'],
-    ['week.edit_sheet.session_action.add.subline', 'Choose a day to add it to'],
-    ['week.edit_sheet.session_action.move.label', 'Move a session'],
-    ['week.edit_sheet.session_action.move.subline', 'Choose a session and move it to another day'],
-    ['week.edit_sheet.session_action.remove.label', 'Remove a session'],
-    ['week.edit_sheet.session_action.remove.subline', 'Choose a session to remove from the week'],
-  ] as const;
-  assert(expectedWeekSessionActionCopy.every(([id, text]) => signedCopy(id) === text)
-    && expectedWeekSessionActionCopy.every(([id]) => sheet.includes(`signedCopy('${id}')`)),
-  'the nested Week session actions no longer render all six signed label/subline values');
-  assert(home.includes('setWeekSessionEditAction(action)')
-    && home.includes('WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner')
-    && home.includes('const isPickerMode = pickerMode !== \'normal\'')
-    && home.includes('WEEK_SESSION_PICKER_COPY[weekPickerAction].row'),
-  'the chosen action does not turn the Week cards into the day picker');
-  assert(home.includes("setChangeSheetEntry({ date: day.date, initialAction, origin: 'week' })")
+      .every((route) => !sheet.includes(route))
+    && !home.includes("week.edit_sheet.session_action."),
+  'the retired Add / Move / Remove rows or their nested step are still mounted');
+  /* ⚠ **THE SIX STRINGS ARE DEREGISTERED, NOT ORPHANED.** This cell required
+   * all six to be signed AND rendered. A signed string with no surface is copy
+   * the next build finds, trusts as ruled, and puts back — so the pin is now
+   * that the sheet is unreachable from the copy source at all. */
+  const copySource = fs.readFileSync(
+    path.join(__dirname, '..', 'rules', 'projectionCopy.ts'), 'utf8');
+  assert(['add', 'move', 'remove'].every((action) =>
+    !copySource.includes(`week.edit_sheet.session_action.${action}.label`)
+      && !copySource.includes(`week.edit_sheet.session_action.${action}.subline`)),
+  'the retired nested-step strings are still signed for a surface that no longer exists');
+  /* ⚠ **AND THE THREE PICKER MODES WENT WITH THEM.** This cell required the
+   * chosen action to turn the Week cards INTO a day picker — the "pick a day,
+   * then say what you meant" flow the board replaced. `moveGame` and `addGame`
+   * are untouched: a fixture is still set and moved by picking a day. */
+  assert(!home.includes('setWeekSessionEditAction(action)')
+    && !home.includes('WEEK_SESSION_PICKER_COPY')
+    && !/DayPickerMode = [^;]*sessionAdd/.test(home)
+    && home.includes('const isPickerMode = pickerMode !== \'normal\''),
+  'the retired session day-picker modes are still live');
+  /* ⚠ **THE WEEK STILL ENTERS THE ONE PLAN-CHANGE SHEET — through the BOARD's
+   * controls now, not through a day the athlete tapped after choosing an
+   * action.** The `origin: 'week'` contract is unchanged and still pinned; what
+   * moved is which control fills it in. R-218's whole claim is that no second
+   * add/move/remove path was built, so this is the cell that would catch one. */
+  assert(home.includes("initialAction: 'add', origin: 'week'")
+    && home.includes("initialAction: 'remove'")
+    && home.includes("initialAction: 'move'")
     && home.includes("fromWeek={changeSheetEntry?.origin === 'week'}"),
-  'the selected weekly day and action do not enter the existing PlanChangeSheet');
+  'the board no longer enters the existing PlanChangeSheet as the week');
   assert(plan.includes("export type PlanChangeInitialAction = 'add' | 'move' | 'remove'")
     && plan.includes("if (initialAction === 'add')")
     && plan.includes("if (initialAction === 'move')")

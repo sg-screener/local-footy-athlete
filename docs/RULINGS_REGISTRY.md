@@ -5682,3 +5682,36 @@ passed / 0 failed.
 and unchanged by it — the whole move suite is dark. The plan named it as slice
 4's net and it cannot serve as one. **Raised for Sam; not this seat's to fix
 inside a UI slice.** Seat `warmup`.
+
+---
+
+**R-218c** · *"the drag works but i cant seem to drop anything anywhere"* and
+*"do the clean up"* (Sam, 2026-08-25) · **A DRAG THAT VISIBLY WORKS AND CAN
+NEVER LAND, AND THE RETIREMENT OF THE OLD PATHWAY.**
+
+⚠ **THE DROP BUG IS WORTH RECORDING BECAUSE IT LOOKED LIKE A GESTURE PROBLEM
+AND WAS AN ARITHMETIC ONE.** Pan reports `x`/`y` relative to its own view — and
+that view is being TRANSLATED BY THE FINGER, so the finger stays at nearly the
+same point INSIDE the box for the whole drag. `onEnd`'s `event.x` was therefore
+roughly `onStart`'s, every drop hit-tested back onto the box it came from,
+resolved `same_day`, and returned in silence. **The two numbers a transform
+cannot corrupt are the START offset and the TRANSLATION**; where the finger let
+go is where it pressed plus how far it travelled. A cell pins that and reds if
+`onEnd`'s own `x`/`y` are ever passed through again.
+
+**THE OLD PATHWAY IS RETIRED, LAST, AS HE ASKED.** Gone: the nested *Add a
+session / Move a session / Remove a session* step (R-206), its six signed
+strings, the three `sessionAdd` / `sessionMove` / `sessionRemove` picker modes
+and the whole-week tap-to-pick list they produced, the `edit-week-<action>-day`
+identity, and the sheet's now-single-valued `step`. **`moveGame` and `addGame`
+are untouched** — a fixture is still set and moved by picking a day, through its
+own door.
+
+⚠ **THE HANDLERS ARE UNTOUCHED, WHICH IS WHY HE ASKED FOR THIS ORDER.** The
+board's `+`, bin and drag all raise the same `changeSheetEntry` with
+`origin: 'week'` that those rows raised. **No second add, move or remove path
+was built**, and the re-aimed cell in `dayFirstTimelineTests` is what would catch
+one. Its transitional form — rows compiled but unreachable — did its job for two
+commits and is now re-inverted to require the deletion. · `WORKING` —
+`test:week-board` 43 passed / 0 failed; `test:session-change-hub` ALL GREEN 56;
+`test:day-first-timeline` back to its 2 pre-existing reds. Seat `warmup`.

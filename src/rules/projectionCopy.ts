@@ -1089,43 +1089,13 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-25, R-204: session-management explanation.',
       text: 'Add, move or remove training',
     },
-    {
-      id: 'week.edit_sheet.session_action.add.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Add label.',
-      text: 'Add a session',
-    },
-    {
-      id: 'week.edit_sheet.session_action.add.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-207 superseding R-206: nested '
-        + 'Week Add explanation.',
-      text: 'Choose a day to add it to',
-    },
-    {
-      id: 'week.edit_sheet.session_action.move.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Move label.',
-      text: 'Move a session',
-    },
-    {
-      id: 'week.edit_sheet.session_action.move.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Move explanation.',
-      text: 'Choose a session and move it to another day',
-    },
-    {
-      id: 'week.edit_sheet.session_action.remove.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Remove label.',
-      text: 'Remove a session',
-    },
-    {
-      id: 'week.edit_sheet.session_action.remove.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-206: nested Week Remove explanation.',
-      text: 'Choose a session to remove from the week',
-    },
+    /* ⚠ **THE SIX `week.edit_sheet.session_action.*` STRINGS ARE DEREGISTERED
+     * — R-218 FINAL SLICE.** They were the nested *"Add a session / Move a
+     * session / Remove a session"* screen (R-206), which the board replaced:
+     * the athlete taps the bin ON the session or drags the box, so nothing is
+     * left to choose from a list first. A signed string with no surface is copy
+     * the next build finds, trusts as ruled, and puts back on a screen Sam
+     * cleared. */
     {
       id: 'day.add_session.action',
       source: 'sam_ruling',

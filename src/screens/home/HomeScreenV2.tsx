@@ -91,31 +91,19 @@ import {
   type PhaseShiftStep,
 } from './homeScreenConstants';
 
-type WeekSessionEditAction = PlanChangeInitialAction;
-type DayPickerMode = 'normal' | 'moveGame' | 'addGame'
-  | 'sessionAdd' | 'sessionMove' | 'sessionRemove';
+type DayPickerMode = 'normal' | 'moveGame' | 'addGame';
 
-const WEEK_SESSION_PICKER_MODE: Record<WeekSessionEditAction, DayPickerMode> = {
-  add: 'sessionAdd',
-  move: 'sessionMove',
-  remove: 'sessionRemove',
-};
-
-const WEEK_SESSION_PICKER_COPY: Record<WeekSessionEditAction, {
-  banner: string;
-  row: string;
-}> = {
-  add: { banner: 'Tap the day you want to add to', row: 'Tap to add here' },
-  move: { banner: 'Tap the session day you want to move', row: 'Tap to move' },
-  remove: { banner: 'Tap the session day you want to remove', row: 'Tap to remove' },
-};
-
-function weekSessionActionForPickerMode(mode: DayPickerMode): WeekSessionEditAction | null {
-  if (mode === 'sessionAdd') return 'add';
-  if (mode === 'sessionMove') return 'move';
-  if (mode === 'sessionRemove') return 'remove';
-  return null;
-}
+/* ⚠ **THE THREE SESSION PICKER MODES ARE DELETED — R-218 FINAL SLICE.**
+ *
+ * `sessionAdd` / `sessionMove` / `sessionRemove` turned the whole week into a
+ * tap-to-pick list with a banner reading "Tap the session day you want to
+ * remove". **The board replaced the question that list existed to ask:** the
+ * athlete taps the bin ON the session, or drags the box itself, so there is
+ * nothing left to disambiguate by picking a day afterwards.
+ *
+ * `moveGame` and `addGame` are NOT deleted and are not this ruling's subject —
+ * a fixture still moves and is still set by picking a day, through its own
+ * door. `DayPickerMode` keeps them. */
 
 /**
  * HomeScreenV2 — one visible week, two deliberate screen shapes.
@@ -218,9 +206,7 @@ export default function HomeScreenV2() {
     handleConfirmRebuild,
   } = useHomeScreen();
 
-  const [weekSessionEditAction, setWeekSessionEditAction] =
-    useState<WeekSessionEditAction | null>(null);
-  const isNormal = mode.type === 'normal' && weekSessionEditAction === null;
+  const isNormal = mode.type === 'normal';
   /* ── ITEM 19: THE ADD-FIXTURE CONTROL NAMES THE PHASE AND NOTHING ELSE ──
      Sam, 2026-08-12: *"a user should be able to have as many games as needed in
      their week"*.
@@ -602,9 +588,7 @@ export default function HomeScreenV2() {
     const hasWorkout = !!day.workout;
     const isGame = day.workout?.workoutType === 'Game';
     const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
-    const pickerMode: DayPickerMode = weekSessionEditAction
-      ? WEEK_SESSION_PICKER_MODE[weekSessionEditAction]
-      : mode.type;
+    const pickerMode: DayPickerMode = mode.type;
     const isPickerMode = pickerMode !== 'normal';
     const isMoveTarget = isPickerMode && !isMoveSource;
     // The projection's answer for this date — the card's ONE source for
@@ -653,12 +637,9 @@ export default function HomeScreenV2() {
         hasWorkout={hasWorkout}
         isGame={!!isGame}
         onPress={() => {
-          if (weekSessionEditAction) {
-            const initialAction = weekSessionEditAction;
-            setWeekSessionEditAction(null);
-            setChangeSheetEntry({ date: day.date, initialAction, origin: 'week' });
-            return;
-          }
+          /* R-218 — the session-picker branch is deleted with the modes it read.
+           * A whole-row tap no longer means "this is the day I meant"; on the
+           * board the control the athlete touched already says which session. */
           if (dayFirst && !isGame) return;
           if (!dayFirst && isNormal && !isGame) {
             setExpandedWeekIdx((current) => (current === idx ? -1 : idx));
@@ -1015,12 +996,6 @@ export default function HomeScreenV2() {
           <MoveBanner
             text={currentPhase === 'Pre-season' ? 'Tap the day to set the practice match' : 'Tap the day to set as game day'}
             onCancel={handleCancelMove}
-          />
-        )}
-        {weekSessionEditAction && (
-          <MoveBanner
-            text={WEEK_SESSION_PICKER_COPY[weekSessionEditAction].banner}
-            onCancel={() => setWeekSessionEditAction(null)}
           />
         )}
         {/* ⚠ **THE BOARD BORROWS THE PICKER'S BANNER, AND THAT IS THE POINT.**
@@ -1578,11 +1553,6 @@ export default function HomeScreenV2() {
           setWeekEditVisible(false);
           setScheduleAck(null);
           setAwayVisible(true);
-        }}
-        onEditSession={(action) => {
-          setWeekEditVisible(false);
-          setExpandedWeekIdx(-1);
-          setWeekSessionEditAction(action);
         }}
         onOpenBoard={() => {
           setWeekEditVisible(false);
@@ -2231,7 +2201,6 @@ function WeekDayCardHeader({
   compactStatus,
   dayToken,
 }: WeekDayCardHeaderProps) {
-  const weekPickerAction = weekSessionActionForPickerMode(pickerMode);
   // Rest and fixtures are status rows, not empty training rows. Only reserve
   // the category tier when the row can actually render one; otherwise that
   // invisible line makes these two cards look needlessly tall.
@@ -2307,9 +2276,9 @@ function WeekDayCardHeader({
 
         {isMoveTarget ? (
           <Text style={[styles.moveTargetLabel, styles.weekCardPickerLabel]}>
-            {weekPickerAction
-              ? WEEK_SESSION_PICKER_COPY[weekPickerAction].row
-              : pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
+            {/* Only the two GAME pickers reach this row now — R-218 deleted
+              * the three session modes and the words they showed here. */}
+            {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
           </Text>
         ) : rowCount > 0 ? (
           <Text style={styles.weekCardMeta} testID={`day-row-${dayToken}-count`}>
@@ -2354,7 +2323,6 @@ function DayRow({
   feedbackReceipts, sessionLogged, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
-  const weekPickerAction = weekSessionActionForPickerMode(pickerMode);
   const showRowBadges = emphasized;
   // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout, and now
   // exactly ONE word. `cardLeadHeadline` gives the day's BUCKET (Strength,
@@ -2561,10 +2529,11 @@ function DayRow({
       padding="none"
       radius="lg"
       onPress={cardCanPress ? onPress : undefined}
+      /* R-218 — the `edit-week-<action>-day-<date>` identity went with the three
+       * session picker modes that produced it. A move target is now only ever a
+       * FIXTURE target, which is what the remaining two pickers are for. */
       testID={isMoveTarget
-        ? weekPickerAction
-          ? `edit-week-${weekPickerAction}-day-${day.date}`
-          : explorerTestId.fixtureTarget(day.date)
+        ? explorerTestId.fixtureTarget(day.date)
         : `day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${title ? ` ${title}` : ''}`}
       accessible={!exposesNestedControls}
@@ -3262,7 +3231,6 @@ interface WeekEditSheetProps {
   onBye: () => Promise<boolean>;
   onAddFixture: () => void;
   onAway: () => void;
-  onEditSession: (action: WeekSessionEditAction) => void;
   /** R-218 — Manage sessions goes straight to the board. */
   onOpenBoard: () => void;
 }
@@ -3275,17 +3243,14 @@ function WeekEditSheet({
   onBye,
   onAddFixture,
   onAway,
-  onEditSession,
   onOpenBoard,
 }: WeekEditSheetProps) {
-  const [step, setStep] = React.useState<'actions' | 'session_action'>('actions');
+  /* R-218 final slice — `step` is gone with the nested Add / Move / Remove
+   * screen it switched to. A state with one possible value is not a state. */
   const [savingBye, setSavingBye] = React.useState(false);
 
   React.useEffect(() => {
-    if (visible) {
-      setStep('actions');
-      setSavingBye(false);
-    }
+    if (visible) setSavingBye(false);
   }, [visible]);
 
   const applyBye = async () => {
@@ -3300,12 +3265,10 @@ function WeekEditSheet({
     <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet">
       <SheetHeader
         title={signedCopy('week.edit_sheet.title')}
-        subtitle={step === 'actions'
-          ? signedCopy('week.edit_sheet.question')
-          : 'What do you want to do?'}
+        subtitle={signedCopy('week.edit_sheet.question')}
       />
 
-      {step === 'actions' ? (
+      {(
         <View>
           <Text style={styles.weekEditSectionLabel}>
             {signedCopy('week.edit_sheet.schedule_heading')}
@@ -3351,39 +3314,18 @@ function WeekEditSheet({
             />
           </View>
         </View>
-      ) : (
-        <View>
-          <SheetOption
-            label={signedCopy('week.edit_sheet.session_action.add.label')}
-            sub={signedCopy('week.edit_sheet.session_action.add.subline')}
-            icon={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#5BD98A" />}
-            onPress={() => onEditSession('add')}
-            testID="edit-week-action-add"
-          />
-          <SheetOption
-            label={signedCopy('week.edit_sheet.session_action.move.label')}
-            sub={signedCopy('week.edit_sheet.session_action.move.subline')}
-            icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color="#67D7FF" />}
-            onPress={() => onEditSession('move')}
-            testID="edit-week-action-move"
-          />
-          <SheetOption
-            label={signedCopy('week.edit_sheet.session_action.remove.label')}
-            sub={signedCopy('week.edit_sheet.session_action.remove.subline')}
-            icon={<MaterialCommunityIcons name="delete-outline" size={18} color="#FF7A85" />}
-            onPress={() => onEditSession('remove')}
-            testID="edit-week-action-remove"
-          />
-          <Button
-            label="Back"
-            variant="ghost"
-            size="md"
-            glow={false}
-            onPress={() => setStep('actions')}
-            style={{ marginTop: spacing.sm }}
-          />
-        </View>
       )}
+      {/* ⚠ **THE NESTED Add / Move / Remove STEP IS DELETED — R-218 FINAL
+        * SLICE.** Sam, 2026-08-25: the board *"will replace"* it, and he asked
+        * for this deletion to come LAST *"so it's easier to connect what
+        * happens when you add a session, or remove a session"* — the board's
+        * `+` and bin call the handlers this step used to route to, and those
+        * handlers are untouched.
+        *
+        * `step` keeps its two states rather than collapsing to a boolean: the
+        * sheet still has an 'actions' step, and a second shape is one edit away
+        * if Sam ever wants one. Nothing here asks the athlete which of three
+        * things they meant, because the control they touch now says it. */}
     </Sheet>
   );
 }
