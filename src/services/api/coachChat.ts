@@ -6,6 +6,7 @@ import {
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 import type { CoachChatFailureCode } from '../../rules/coachChatFailure';
 import { validateCoachCommunicationTruth } from '../../utils/verifiedCoachCommunication';
+import { coachChatMessageWithinLimit } from '../../rules/coachChatLimits';
 
 interface CoachChatFetchResponse {
   readonly ok: boolean;
@@ -66,6 +67,9 @@ function serverFailureCode(raw: string): string | null {
  * schema, while this client owns only the current derived athlete context.
  */
 export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<string> {
+  if (!coachChatMessageWithinLimit(input.message)) {
+    throw new CoachChatError('no_answer', 'Coach chat message is outside the request boundary.');
+  }
   const config = getClientEnvConfig();
   if (!config.isReady) {
     throw new CoachChatError('unavailable', 'Coach chat environment is unavailable.');

@@ -40,7 +40,11 @@ import {
   selectMobilityPrehabFlow,
   type MobilityPrehabFlow,
 } from '../../utils/mobilityPrehabFlow';
-import { recordedExecutionSectionCompletion } from '../../utils/sessionExecutionChecklist';
+import {
+  buildSessionExecutionPlan,
+  recordedExecutionSectionCompletion,
+} from '../../utils/sessionExecutionChecklist';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import {
@@ -300,6 +304,14 @@ export default function HomeScreenV2() {
       }),
     ]));
   }, [currentPhase, reviewAthlete, weekDays]);
+  const executionPlanByDate = useMemo(() => new Map(weekDays.flatMap((day) => {
+    if (!day.workout) return [];
+    return [[day.date, buildSessionExecutionPlan({
+      workout: day.workout,
+      template: buildSessionTemplate(day.workout),
+      mobilityFlow: mobilityFlowByDate.get(day.date) ?? null,
+    })] as const];
+  })), [mobilityFlowByDate, weekDays]);
   /* ── SAM'S SHEET, RULED 2026-08-13: *"add the popup"* ──
      The day/week notice used to navigate straight to My Status. It now opens
      this sheet first, which lists WHICH modifiers are acting and offers "Go to
@@ -526,6 +538,8 @@ export default function HomeScreenV2() {
       && decidingRows.every((entry) => entry.completion !== null);
 
     const clubEntry = timelineEntries.find((entry) => entry.kind === 'team_training');
+    const mobilityFlow = mobilityFlowByDate.get(day.date) ?? null;
+    const executionPlan = executionPlanByDate.get(day.date) ?? null;
 
     return (
       <React.Fragment key={day.date}>
@@ -609,11 +623,12 @@ export default function HomeScreenV2() {
         timeline={visibleDay ? (
           <DayTimeline
             entries={timelineEntries}
-            mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
-            mobilityCompletion={recordedExecutionSectionCompletion(
+            mobilityFlow={mobilityFlow}
+            mobilityCompletion={executionPlan ? recordedExecutionSectionCompletion(
+              executionPlan,
               sessionFeedback[day.date],
               'mobility',
-            )}
+            ) : null}
             onOpen={() => handleViewWorkout(day)}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />

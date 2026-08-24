@@ -11,6 +11,7 @@ import {
   buildSessionExecutionSummary,
   deriveChecklistComponentCompletions,
   deriveSessionExecutionCompletion,
+  reconcileRecordedSessionExecution,
   recordedCompletedSessionExecutionItemIds,
   recordedExecutionSectionCompletion,
 } from '../utils/sessionExecutionChecklist';
@@ -106,12 +107,12 @@ ok('a session is full when mobility and every other prescribed section are full'
     buildSessionExecutionSummary(plan, everyPrescribedItem),
   ) === 'full');
 ok('the saved item evidence returns full Mobility to the day view',
-  recordedExecutionSectionCompletion({
+  recordedExecutionSectionCompletion(plan, {
     completion: 'full',
     executionItems: buildSessionExecutionSummary(plan, everyPrescribedItem).items,
   }, 'mobility') === 'full');
 ok('partial Mobility remains a completed partial result for the day-view tick',
-  recordedExecutionSectionCompletion({
+  recordedExecutionSectionCompletion(plan, {
     completion: 'partial',
     executionItems: buildSessionExecutionSummary(
       plan,
@@ -120,8 +121,8 @@ ok('partial Mobility remains a completed partial result for the day-view tick',
     ).items,
   }, 'mobility') === 'partial');
 ok('legacy full completion restores the Mobility tick without inventing a partial result',
-  recordedExecutionSectionCompletion({ completion: 'full' }, 'mobility') === 'full'
-    && recordedExecutionSectionCompletion({ completion: 'partial' }, 'mobility') === null);
+  recordedExecutionSectionCompletion(plan, { completion: 'full' }, 'mobility') === 'full'
+    && recordedExecutionSectionCompletion(plan, { completion: 'partial' }, 'mobility') === null);
 
 const recordedPartial = buildSessionExecutionSummary(plan, new Set([
   plan.items.find((item) => item.sectionId === 'mobility')!.id,
@@ -140,6 +141,40 @@ ok('reopening restores the exact completed checklist items by stable id',
   { restored: [...restoredPartialIds], saved: recordedPartial.items });
 ok('reopening ignores saved item ids that are no longer in the visible plan',
   !restoredPartialIds.has('exercise:no-longer-in-plan'));
+const replacedMobilityId = plan.items.find((item) => item.sectionId === 'mobility')!.id;
+const changedMobilityPlan = {
+  ...plan,
+  items: plan.items.map((item) => item.id === replacedMobilityId
+    ? { ...item, id: `replacement:${item.id}` }
+    : item),
+  sections: plan.sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => item.id === replacedMobilityId
+      ? { ...item, id: `replacement:${item.id}` }
+      : item),
+  })),
+};
+const oldFullFeedback = {
+  completion: 'full' as const,
+  executionItems: buildSessionExecutionSummary(plan, everyPrescribedItem).items,
+};
+const changedReconciliation = reconcileRecordedSessionExecution(
+  changedMobilityPlan,
+  oldFullFeedback,
+);
+ok('a replaced Mobility plan cannot keep the old day-card tick while reopening unticked',
+  recordedExecutionSectionCompletion(changedMobilityPlan, oldFullFeedback, 'mobility') === null
+    && [...recordedCompletedSessionExecutionItemIds(changedMobilityPlan, oldFullFeedback)]
+      .every((id) => !id.startsWith('replacement:'))
+    && changedReconciliation.source === 'exact_items'
+    && changedReconciliation.orphanedItems.length === 1);
+const gameOnlyFull = {
+  completion: 'full' as const,
+  game: { playedWholeGame: true, timeOnGroundMinutes: 80, bodyRpe: 7, feel: 3 as const },
+};
+ok('a game-only full result never fabricates programmed-session checklist evidence',
+  recordedCompletedSessionExecutionItemIds(plan, gameOnlyFull).size === 0
+    && recordedExecutionSectionCompletion(plan, gameOnlyFull, 'mobility') === null);
 ok('rebuilding after reopen reproduces the saved item evidence',
   JSON.stringify(buildSessionExecutionSummary(plan, restoredPartialIds).items)
     === JSON.stringify(recordedPartial.items));
@@ -297,7 +332,7 @@ ok('mobility movements use the same controlled checklist owner',
     && /completedItemIds\.has\(itemId\)/.test(screen)
     && /onToggle=\{onToggleItem\}/.test(screen));
 ok('the day card reads Mobility completion from that saved checklist owner',
-  /recordedExecutionSectionCompletion\(\s*sessionFeedback\[day\.date\],\s*'mobility'/.test(home)
+  /recordedExecutionSectionCompletion\(\s*executionPlan,\s*sessionFeedback\[day\.date\],\s*'mobility'/.test(home)
     && /day-timeline-complete-mobility-warmup-\$\{mobilityCompletion\}/.test(home)
     && /mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home));
 ok('mobility and every other session row use one square checkbox recipe',
@@ -344,6 +379,8 @@ ok('mobility has no optional wording in text or accessibility copy',
   !/\boptional\b/i.test(mobilityRenderer));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
 ok('the durable outcome owns the per-item result', /executionItems:\s*executionSummary\?\.items/.test(feedback));
+ok('saving game feedback carries prior checklist evidence instead of erasing it',
+  /const feedback: SessionFeedback = \{\s*\.\.\.\(existing \?\? \{\}\),[\s\S]{0,180}?game,/.test(feedback));
 ok('the reopened screen hydrates from the same durable item evidence',
   /persistedFeedback/.test(screen)
     && /recordedCompletedSessionExecutionItemIds\(executionPlan, persistedFeedback\)/.test(screen)

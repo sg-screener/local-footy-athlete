@@ -48,6 +48,10 @@ import {
 } from '../../rules/projectionCopy';
 import { useLiveAthleteSnapshot } from './useLiveAthleteSnapshot';
 import { askCoachReadOnly, coachChatFailureCode } from '../../services/api/coachChat';
+import {
+  COACH_CHAT_MAX_MESSAGE_CHARACTERS,
+  coachChatMessageWithinLimit,
+} from '../../rules/coachChatLimits';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -242,7 +246,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   }, [pinToBottom]);
 
   const trimmed = draft.trim();
-  const canSend = trimmed.length > 0 && !isSending;
+  const canSend = coachChatMessageWithinLimit(trimmed) && !isSending;
 
   /** One coach sentence appended to the conversation. No wording happens here. */
   const say = useCallback((text: string) => {
@@ -253,7 +257,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   }, []);
 
   const send = useCallback(async (message: string) => {
-    if (message.length === 0 || isSending) return;
+    if (!coachChatMessageWithinLimit(message) || isSending) return;
     const recentTurns = turns.map((turn) => ({
       speaker: turn.speaker,
       text: turn.text,
@@ -345,6 +349,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           placeholderTextColor={colors.text.tertiary}
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
+          maxLength={COACH_CHAT_MAX_MESSAGE_CHARACTERS}
           testID="coach-tab-input"
           accessibilityLabel={COACH_TAB_COPY.placeholder}
         />

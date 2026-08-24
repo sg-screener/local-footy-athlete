@@ -105,23 +105,100 @@ export function deriveSessionExecutionItemCompletion(
   return 'partial';
 }
 
-/** Read one saved checklist section for a day-card completion mark. */
+interface RecordedExecutionFeedback {
+  readonly completion: FeedbackCompletion;
+  readonly executionItems?: readonly SessionExecutionItemResult[];
+  /** A match or club result can share the date record without proving gym work. */
+  readonly game?: unknown;
+  readonly teamTraining?: unknown;
+}
+
+export interface RecordedSessionExecutionReconciliation {
+  readonly completedItemIds: ReadonlySet<string>;
+  readonly orphanedItems: readonly SessionExecutionItemResult[];
+  readonly sectionCompletions: Readonly<Partial<Record<SessionExecutionSectionId, FeedbackCompletion>>>;
+  readonly source: 'exact_items' | 'legacy_programmed_full' | 'none';
+}
+
+/**
+ * One readback of saved execution evidence against the plan currently shown.
+ *
+ * Exact rows are never transferred onto replacement rows. A historical `full`
+ * may restore prescribed work only when it is genuinely an old programmed-
+ * session result; a game or club result sharing the date is not gym evidence.
+ */
+export function reconcileRecordedSessionExecution(
+  plan: Pick<SessionExecutionPlan, 'items' | 'sections'>,
+  feedback: RecordedExecutionFeedback | null | undefined,
+): RecordedSessionExecutionReconciliation {
+  if (!feedback) {
+    return {
+      completedItemIds: new Set(),
+      orphanedItems: [],
+      sectionCompletions: {},
+      source: 'none',
+    };
+  }
+
+  const visibleItemIds = new Set(plan.items.map((item) => item.id));
+  if (feedback.executionItems !== undefined) {
+    const currentItems = feedback.executionItems.filter((item) => visibleItemIds.has(item.itemId));
+    const currentById = new Map(currentItems.map((item) => [item.itemId, item]));
+    const sectionCompletions: Partial<Record<SessionExecutionSectionId, FeedbackCompletion>> = {};
+    for (const section of plan.sections) {
+      const recorded = section.items.flatMap((item) => {
+        const result = currentById.get(item.id);
+        return result ? [result] : [];
+      });
+      // A section changed after it was logged. Missing rows are unknown, not
+      // skipped and not completed by association with the old section.
+      if (recorded.length === section.items.length && recorded.length > 0) {
+        const completion = deriveSessionExecutionItemCompletion(recorded);
+        if (completion !== null) sectionCompletions[section.id] = completion;
+      }
+    }
+    return {
+      completedItemIds: new Set(currentItems
+        .filter((item) => item.completed)
+        .map((item) => item.itemId)),
+      orphanedItems: feedback.executionItems.filter((item) => !visibleItemIds.has(item.itemId)),
+      sectionCompletions,
+      source: 'exact_items',
+    };
+  }
+
+  const isLegacyProgrammedFull = feedback.completion === 'full'
+    && feedback.game === undefined
+    && feedback.teamTraining === undefined;
+  if (isLegacyProgrammedFull) {
+    const completedItemIds = new Set(plan.items
+      .filter((item) => item.sectionId !== 'optional')
+      .map((item) => item.id));
+    return {
+      completedItemIds,
+      orphanedItems: [],
+      sectionCompletions: Object.fromEntries(plan.sections
+        .filter((section) => section.id !== 'optional')
+        .map((section) => [section.id, 'full' as const])),
+      source: 'legacy_programmed_full',
+    };
+  }
+
+  return {
+    completedItemIds: new Set(),
+    orphanedItems: [],
+    sectionCompletions: {},
+    source: 'none',
+  };
+}
+
+/** Read one reconciled checklist section for a day-card completion mark. */
 export function recordedExecutionSectionCompletion(
-  feedback: {
-    readonly completion: FeedbackCompletion;
-    readonly executionItems?: readonly SessionExecutionItemResult[];
-  } | null | undefined,
+  plan: Pick<SessionExecutionPlan, 'items' | 'sections'>,
+  feedback: RecordedExecutionFeedback | null | undefined,
   sectionId: SessionExecutionSectionId,
 ): FeedbackCompletion | null {
-  if (!feedback) return null;
-  const sectionItems = feedback.executionItems?.filter(
-    (item) => item.sectionId === sectionId,
-  ) ?? [];
-  if (sectionItems.length > 0) return deriveSessionExecutionItemCompletion(sectionItems);
-  // Old saves have no item evidence. Only a whole-session `full` result can
-  // honestly mean this prescribed section was completed too.
-  if (feedback.executionItems === undefined && feedback.completion === 'full') return 'full';
-  return null;
+  return reconcileRecordedSessionExecution(plan, feedback).sectionCompletions[sectionId] ?? null;
 }
 
 /**
@@ -133,28 +210,10 @@ export function recordedExecutionSectionCompletion(
  * optional work remains unknown and therefore unticked.
  */
 export function recordedCompletedSessionExecutionItemIds(
-  plan: Pick<SessionExecutionPlan, 'items'>,
-  feedback: {
-    readonly completion: FeedbackCompletion;
-    readonly executionItems?: readonly SessionExecutionItemResult[];
-  } | null | undefined,
+  plan: Pick<SessionExecutionPlan, 'items' | 'sections'>,
+  feedback: RecordedExecutionFeedback | null | undefined,
 ): ReadonlySet<string> {
-  if (!feedback) return new Set();
-
-  const visibleItemIds = new Set(plan.items.map((item) => item.id));
-  if (feedback.executionItems !== undefined) {
-    return new Set(feedback.executionItems
-      .filter((item) => item.completed && visibleItemIds.has(item.itemId))
-      .map((item) => item.itemId));
-  }
-
-  if (feedback.completion === 'full') {
-    return new Set(plan.items
-      .filter((item) => item.sectionId !== 'optional')
-      .map((item) => item.id));
-  }
-
-  return new Set();
+  return reconcileRecordedSessionExecution(plan, feedback).completedItemIds;
 }
 
 /**

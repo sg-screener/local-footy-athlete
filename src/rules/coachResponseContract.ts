@@ -155,6 +155,30 @@ export interface CoachResponseGroundingPolicy {
   readonly allowedKnowledgeSourceIds: readonly string[];
 }
 
+export type CoachResponseContractFailureCode = 'invalid_answer' | 'refused';
+
+/**
+ * Usability failures mean the provider produced no answer the app can show.
+ * Truth, grounding and read-only failures are refusals. Keeping this decision
+ * beside the checks prevents the transport from turning "too long" into a
+ * false safety claim about the athlete's question.
+ */
+export function coachResponseContractFailureCode(
+  evaluation: CoachResponseContractEvaluation,
+): CoachResponseContractFailureCode | null {
+  if (evaluation.ok) return null;
+  const checks = evaluation.automaticChecks;
+  if (!checks.schemaValid) return 'invalid_answer';
+  if (!checks.readOnly
+    || !checks.programFactsGrounded
+    || !checks.lfaClaimsGrounded
+    || !checks.judgementTransparent
+    || !checks.changeClaimsTruthful) {
+    return 'refused';
+  }
+  return 'invalid_answer';
+}
+
 export function evaluateCoachResponseContract(
   response: unknown,
   policy: CoachResponseGroundingPolicy,

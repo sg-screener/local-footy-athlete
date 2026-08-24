@@ -1,4 +1,5 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
+import { coachChatMessageWithinLimit } from './coachChatLimits';
 
 export type CoachModelSpeaker = 'coach' | 'athlete';
 
@@ -90,7 +91,7 @@ function boundedConversation(
       label: context.activeProgramTarget.label,
     } : null,
     recentTurns: context.recentTurns
-      .filter((turn) => turn.text.trim().length > 0)
+      .filter((turn) => coachChatMessageWithinLimit(turn.text))
       .slice(-MAX_RECENT_TURNS)
       .map((turn) => ({ speaker: turn.speaker, text: turn.text.trim() })),
   };

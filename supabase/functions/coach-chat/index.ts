@@ -2,8 +2,12 @@ import { buildRetrievedCoachLabBrainInstructions } from '../../../src/dev/coachL
 import { retrieveCoachLabKnowledge } from '../../../src/dev/coachLab/coachLabKnowledgeRetriever.ts';
 import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponsesClient.ts';
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
-import { evaluateCoachResponseContract } from '../../../src/rules/coachResponseContract.ts';
+import {
+  coachResponseContractFailureCode,
+  evaluateCoachResponseContract,
+} from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
+import { COACH_CHAT_MAX_MESSAGE_CHARACTERS } from '../../../src/rules/coachChatLimits.ts';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -65,7 +69,7 @@ function validModelInput(value: unknown): value is {
   const conversation = value.conversationContext;
   return typeof value.athleteMessage === 'string'
     && value.athleteMessage.trim().length > 0
-    && value.athleteMessage.length <= 1_000
+    && value.athleteMessage.length <= COACH_CHAT_MAX_MESSAGE_CHARACTERS
     && validSnapshot(snapshot)
     && record(conversation)
     && Array.isArray(conversation.recentTurns)
@@ -73,7 +77,7 @@ function validModelInput(value: unknown): value is {
     && conversation.recentTurns.every((turn) => record(turn)
       && (turn.speaker === 'coach' || turn.speaker === 'athlete')
       && typeof turn.text === 'string'
-      && turn.text.length <= 1_000);
+      && turn.text.length <= COACH_CHAT_MAX_MESSAGE_CHARACTERS);
 }
 
 function parseCoachPayload(outputText: string): Record<string, unknown> | null {
@@ -153,9 +157,14 @@ Deno.serve(async (request) => {
       requiresLiveProgramFacts: true,
       allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
     });
-    if (!evaluation.ok) {
-      console.warn('coach-chat response refused by contract', evaluation.violations);
-      return json(502, { error: 'coach_chat_response_refused' });
+    const failureCode = coachResponseContractFailureCode(evaluation);
+    if (failureCode !== null) {
+      console.warn('coach-chat response rejected by contract', evaluation.violations);
+      return json(502, {
+        error: failureCode === 'invalid_answer'
+          ? 'coach_chat_invalid_answer'
+          : 'coach_chat_response_refused',
+      });
     }
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
     return json(200, {

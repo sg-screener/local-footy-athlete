@@ -519,20 +519,20 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
     'an appender that could pick a word is a screen that authors replies',
   );
   // EVERY CALLER IS ENUMERATED. The live model answer is already text returned
-  // by the production client; transport failure uses the signed copy owner.
+  // by the production client; every typed failure uses the R-140 copy owner.
   const sayCalls = [...screenCode.matchAll(/\bsay\(([\s\S]*?)\);/g)].map((m) => m[1].trim());
   ok(
     'every coach sentence has a named owner and there are some',
     sayCalls.length >= 3 && sayCalls.every((argument) =>
       /^answer$/.test(argument)
-      || /^COACH_TAB_COPY\.noAnswerYet$/.test(argument)
+      || /^coachFailureReply\(failure\)$/.test(argument)
       || /^commitment(Confirmed|Declined|Failed)Sentence\(/.test(argument)),
     sayCalls.join(' | '),
   );
   ok(
-    'the only copy constant on a coach-turn path is the signed transport failure',
-    sayCalls.filter((argument) => /COACH_[A-Z_]+_COPY\./.test(argument))
-      .join(',') === 'COACH_TAB_COPY.noAnswerYet'
+    'typed failures reach the one approved copy owner rather than a screen constant',
+    sayCalls.filter((argument) => /COACH_[A-Z_]+_COPY\./.test(argument)).length === 0
+      && sayCalls.filter((argument) => argument === 'coachFailureReply(failure)').length === 1
       && !/text: '[^']+'/.test(screenCode),
     'the app must not improvise model or failure wording',
   );

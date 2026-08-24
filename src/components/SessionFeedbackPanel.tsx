@@ -546,8 +546,9 @@ export const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSav
     };
     try {
       const feedback: SessionFeedback = {
+        ...(existing ?? {}),
         dateStr: date,
-        completion: 'full',
+        completion: existing?.completion ?? 'full',
         game,
       };
       const result = await commitSessionOutcomeTransaction(

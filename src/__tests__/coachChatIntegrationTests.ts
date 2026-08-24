@@ -10,8 +10,12 @@ import {
   coachChatFailureCode,
 } from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
-import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
+import {
+  coachResponseContractFailureCode,
+  evaluateCoachResponseContract,
+} from '../rules/coachResponseContract';
 import { coachFailureReply } from '../rules/coachTabCopy';
+import { buildCoachModelInput } from '../rules/coachModelContext';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -54,9 +58,17 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && !/detail\s*\}/.test(edge));
   ok('the server refuses identity-shaped keys including a generic name',
     /email\|userId\|athleteId\|accountId\|name/.test(edge));
+  ok('the composer and server share one 1,000-character request boundary',
+    /maxLength=\{COACH_CHAT_MAX_MESSAGE_CHARACTERS\}/.test(
+      read('src/screens/coach/CoachTabScreen.tsx'),
+    )
+      && /coachChatMessageWithinLimit/.test(read('src/screens/coach/CoachTabScreen.tsx'))
+      && /COACH_CHAT_MAX_MESSAGE_CHARACTERS/.test(edge)
+      && !/athleteMessage\.length <= 1_000/.test(edge));
   ok('the server refuses any model-produced program action before replying',
     /programActions\.length === 0/.test(read('src/rules/coachResponseContract.ts'))
-      && /if \(!evaluation\.ok\) \{[\s\S]{0,220}?return json\(502/.test(edge));
+      && /const failureCode = coachResponseContractFailureCode\(evaluation\)/.test(edge)
+      && /failureCode === 'invalid_answer'[\s\S]{0,100}?'coach_chat_response_refused'/.test(edge));
   ok('production and Coach Lab call one shared automatic response contract',
     /evaluateCoachResponseContract/.test(edge)
       && /evaluateCoachResponseContract/.test(read('src/dev/coachLab/coachLab.ts'))
@@ -70,11 +82,15 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
         read('src/dev/coachLab/coachLab.ts'),
       ));
   ok('an automatic production failure is refused before any answer is returned',
-    /if \(!evaluation\.ok\) \{[\s\S]{0,220}?return json\(502, \{ error: 'coach_chat_response_refused' \}\)/.test(edge));
+    /if \(failureCode !== null\) \{[\s\S]{0,300}?return json\(502/.test(edge)
+      && edge.indexOf('if (failureCode !== null)') < edge.indexOf('console.log(\'coach-chat token receipt\''));
   ok('a production truth refusal leaves a typed server receipt without athlete text',
-    /console\.warn\('coach-chat response refused by contract', evaluation\.violations\)/.test(edge)
-      && edge.indexOf("console.warn('coach-chat response refused by contract'")
-        < edge.indexOf("return json(502, { error: 'coach_chat_response_refused' })"));
+    /console\.warn\('coach-chat response rejected by contract', evaluation\.violations\)/.test(edge)
+      && edge.indexOf("console.warn('coach-chat response rejected by contract'")
+        < edge.indexOf('return json(502', edge.indexOf("console.warn('coach-chat response rejected by contract'")));
+  ok('answer usability failures are absence while truth and read-only failures are refusals',
+    /coachResponseContractFailureCode\(evaluation\)/.test(edge)
+      && /failureCode === 'invalid_answer'\s*\? 'coach_chat_invalid_answer'\s*:\s*'coach_chat_response_refused'/.test(edge));
   ok('a durable shared request window refuses before the paid provider call',
     /checkDurableCoachRateLimit/.test(edge)
       && !/createSlidingWindowRateLimiter/.test(edge)
@@ -225,6 +241,40 @@ async function finish(): Promise<void> {
   }
   ok('the app itself rejects a response carrying any action', actionRejected);
 
+  let oversizedFetches = 0;
+  let oversizedCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'x'.repeat(1_001),
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: async () => {
+        oversizedFetches += 1;
+        return { ok: true, status: 200, async text() { return '{}'; } };
+      },
+    });
+  } catch (error) {
+    oversizedCode = coachChatFailureCode(error);
+  }
+  ok('an oversized current turn is refused before fetch as no usable answer',
+    oversizedFetches === 0 && oversizedCode === 'no_answer',
+    { oversizedFetches, oversizedCode });
+  const boundedAfterOversizedTurn = buildCoachModelInput({
+    athleteMessage: 'what is next',
+    snapshot: coachLabFixtureSnapshot(),
+    conversationContext: {
+      activeProgramTarget: null,
+      recentTurns: [
+        { speaker: 'athlete', text: 'x'.repeat(1_001) },
+        { speaker: 'coach', text: 'Your last usable answer.' },
+      ],
+    },
+  });
+  ok('an oversized historical turn is dropped before it can poison later requests',
+    boundedAfterOversizedTurn.conversationContext.recentTurns.length === 1
+      && boundedAfterOversizedTurn.conversationContext.recentTurns[0]?.text
+        === 'Your last usable answer.');
+
   let falseChangeRejected = false;
   try {
     await askCoachReadOnly({
@@ -357,7 +407,25 @@ async function finish(): Promise<void> {
     message: 'I moved your session to Friday.',
   }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
   ok('a read-only answer claiming it changed the program fails closed',
-    !falseChange.ok && !falseChange.automaticChecks.changeClaimsTruthful);
+    !falseChange.ok
+      && !falseChange.automaticChecks.changeClaimsTruthful
+      && coachResponseContractFailureCode(falseChange) === 'refused');
+  const tooLong = evaluateCoachResponseContract({
+    ...grounded,
+    message: Array.from({ length: 101 }, () => 'word').join(' '),
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  ok('a grounded 101-word answer is unusable rather than a safety refusal',
+    !tooLong.ok
+      && !tooLong.automaticChecks.concise
+      && coachResponseContractFailureCode(tooLong) === 'invalid_answer');
+  const wrongShape = evaluateCoachResponseContract({ message: 'Safe words, wrong envelope.' }, {
+    requiresLiveProgramFacts: true,
+    allowedKnowledgeSourceIds: ['bible:L1-L2'],
+  });
+  ok('a wrong response shape is unusable rather than a claim about athlete safety',
+    !wrongShape.ok
+      && !wrongShape.automaticChecks.schemaValid
+      && coachResponseContractFailureCode(wrongShape) === 'invalid_answer');
 
   console.log('\n[7] THE LIVE RATE WINDOW IS DURABLE, PRIVATE AND SHARED');
   const forwarded = new Request('https://example.test', {
