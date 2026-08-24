@@ -14,3 +14,15 @@ slop preserve its physical target.
 Focused guard: `test:session-change-hub`.
 
 NOT COVERED: screenshots, broad audits, physical iPhone and other badge surfaces.
+
+## 2026-08-25 — Session-options heading
+
+The popup opened from the programmed-session dots now reads **Session options**
+instead of **Plan change**. The heading moved from a local literal into signed
+copy beside the menu's existing signed action labels.
+
+Focused guard: `test:accessibility-contracts` — the new signed-heading cell is
+green. The run reported 45 passed / 2 failed; both inherited failures name
+untouched popup counts in `SeasonPhaseShiftSheet` / `HomeScreenV2`.
+
+NOT COVERED: screenshots, broad audits, physical iPhone and other popup routes.

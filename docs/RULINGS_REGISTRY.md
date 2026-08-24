@@ -5168,3 +5168,13 @@ combined day, the existing truthful sub-line continues to explain that anything
 else on the day stays; the interface never promises a rest day while Team
 Training or other work remains. · `WORKING` — `test:day-first-timeline` +
 `test:move-scoping` + simulator tap-through. Seat `onboardingtype`.
+
+---
+
+**R-199** · Programmed-session popup names what it contains (Sam, 2026-08-25) ·
+**THE DOTS OPEN OPTIONS FOR THIS SESSION.**
+
+The popup opened from the programmed-session card's `•••` control is headed
+**Session options**. The previous **Plan change** heading is retired on this
+entry path. The date and the Add / Move / Remove actions remain unchanged. ·
+`WORKING` — `test:accessibility-contracts`. Seat `headeralign`.

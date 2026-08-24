@@ -947,6 +947,13 @@ export function registerProjectionCopy(): void {
       text: 'Add to this session',
     },
     {
+      id: 'plan_change.session_options',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-199: the popup opened by the '
+        + 'programmed-session dots is headed “Session options”.',
+      text: 'Session options',
+    },
+    {
       id: 'plan_change.remove_session',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-198: rename the destructive '

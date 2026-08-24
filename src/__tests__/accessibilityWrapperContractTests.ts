@@ -19,6 +19,7 @@ const sheet = read('components/ui/Sheet.tsx');
 const button = read('components/ui/Button.tsx');
 const card = read('components/ui/Card.tsx');
 const planChangeSheet = read('screens/home/PlanChangeSheet.tsx');
+const projectionCopy = read('rules/projectionCopy.ts');
 const home = read('screens/home/HomeScreenV2.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
 const equipment = read('screens/home/EquipmentLimitationSheet.tsx');
@@ -180,8 +181,9 @@ section('[3] Interactive Card supports nested controls without swallowing them')
 section('[4] Required sheet titles and child controls remain independently exposed');
 {
   ok(
-    'Plan Change title remains visible accessibility text inside Sheet',
-    /<Sheet[^>]*testID="plan-change-sheet">[\s\S]*?<SheetHeader title="Plan change" subtitle=\{weekdayLabel\(date\)\}/.test(planChangeSheet),
+    'Session options remains signed, visible accessibility text inside the plan sheet',
+    /<Sheet[^>]*testID="plan-change-sheet">[\s\S]*?<SheetHeader[\s\S]{0,180}title=\{fromWeek \? weekdayLabel\(date\) : signedCopy\('plan_change\.session_options'\)\}/.test(planChangeSheet)
+      && /id: 'plan_change\.session_options'[\s\S]{0,240}text: 'Session options'/.test(projectionCopy),
   );
   ok(
     'Plan Change actions keep their identifiers on MenuOption',

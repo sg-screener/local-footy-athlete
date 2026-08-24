@@ -571,7 +571,7 @@ export function PlanChangeSheet({
   return (
     <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
       <SheetHeader
-        title={fromWeek ? weekdayLabel(date) : 'Plan change'}
+        title={fromWeek ? weekdayLabel(date) : signedCopy('plan_change.session_options')}
         subtitle={fromWeek ? 'What do you want to do with it?' : weekdayLabel(date)}
       />
 
