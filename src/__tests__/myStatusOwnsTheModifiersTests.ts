@@ -250,7 +250,37 @@ run('the sheet reads those words through signedCopy, not literals', () => {
     'a hard-coded status label is back in the sheet — two sources for one word');
 });
 
-// ── [6] THE CHECKER ITSELF REDS ON A FABRICATED VIOLATION ──────────────────
+// ── [6] A SAVED FACT CANNOT DISAPPEAR WITH A PROGRAM OUTPUT ───────────────
+//
+// Device founding case, 2026-08-24: Program still showed a saved shoulder
+// injury while My Status said 0 active. Two filters caused that disagreement:
+// the status hook read a compatibility mirror instead of accepted state, and
+// Coach handed the selector a visible week, allowing the program-effect proof
+// gate to hide the fact when that week was missing or elsewhere.
+
+run('My Status reads accepted injury state, never the CoachUpdates mirror', () => {
+  const hook = read('src/hooks/useActiveModifiers.ts');
+  assert(/useProgramStore\(\(s\) => s\.acceptedMaterialContext\)/.test(hook),
+    'useActiveModifiers no longer subscribes to ProgramStore accepted context — '
+    + 'a saved typed injury can again disagree with the compatibility mirror');
+  assert(!/useCoachUpdatesStore\(\(s\) => s\.activeConstraints\)/.test(hook),
+    'useActiveModifiers still lets CoachUpdates decide whether a saved injury exists');
+});
+
+run('My Status is unfiltered even when the visible program week is absent', () => {
+  const screen = read('src/screens/coach/CoachTabScreen.tsx');
+  const anchor = screen.indexOf('useActiveModifiers(');
+  assert(anchor > -1,
+    'CoachTabScreen no longer calls useActiveModifiers — this cell has lost its anchor');
+  const call = screen.slice(anchor, screen.indexOf(';', anchor) + 1);
+  assert(call.length > 1,
+    'the My Status modifier call could not be bounded — this assertion reads nothing');
+  assert(/^useActiveModifiers\(\);$/.test(call.trim()),
+    `My Status calls \`${call.trim()}\`; passing visibleWeekDays lets a missing or `
+    + 'different program output hide a saved athlete fact');
+});
+
+// ── [7] THE CHECKER ITSELF REDS ON A FABRICATED VIOLATION ──────────────────
 //
 // LIVENESS, moved here with the law it now holds. Cell [1] passes when every
 // kind has a route — and it would ALSO pass if `coachNoteActionRoute` simply

@@ -1426,3 +1426,50 @@ small intentional label treatments remain unchanged.
 - Every step viewed manually on the Simulator, the physical-iPhone Release,
   exceptionally long accessibility sizes (font scaling is currently disabled
   app-wide), and translated copy.
+
+---
+
+## R-193 — injury save cannot blank the program or disappear from My Status
+
+The injury fact was accepted before the app performed its final whole-world
+settle. That settle deliberately cleared the derived program and compatibility
+state before regenerating it; if generation or acceptance then failed, the
+half-built blank world escaped. Separately, My Status read the CoachUpdates
+compatibility mirror and filtered facts through the visible program week, so a
+canonical saved injury could still be hidden when the mirror or program output
+was missing.
+
+The complete post-decision settle now runs inside the existing exact accepted-
+state transaction. A failure restores memory, mirrors, the durable ProgramStore
+envelope and visible projection together. My Status now reads the canonical
+accepted context and deliberately does not apply Program's visible-week proof
+filter.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: patch the injury card after failure, or make the entire
+  settle atomic and read status from the typed-fact owner. The latter landed
+  because it protects every post-decision rebuild and removes the second injury
+  authority rather than repairing one screen.
+- REAL-ACTION TEST: a generated athlete reports a shoulder injury through the
+  production action, the CoachUpdates mirror is deliberately emptied, and the
+  My Status selector still finds the canonical episode.
+- FORCED FAILURE TEST: `commitRebuiltProgram` throws after the settle has taken
+  its clean slate; the complete state fingerprint and durable envelope return
+  byte-exact, the program remains non-null, and the injury remains visible.
+- LIVENESS: reverting My Status to the mirror made the new injury test red;
+  bypassing the atomic settle made it red; passing `visibleWeekDays` back into
+  Coach made `test:my-status-modifiers` red.
+- LIVE SIMULATOR, no screenshots: fresh seed → report moderate shoulder injury
+  → Program screen remains → Coach → My Status shows `Shoulder issue active`
+  and does not show the empty state. The complete Maestro flow passed.
+- `test:my-status-modifiers`: 10/10 green. `test:quiescent-boot`: the new injury
+  coordinate is green; suite total remains 5/6 because the pre-existing
+  zero-decision boot byte test still reports `coach-updates` / profile envelope
+  shape changes unrelated to this action.
+
+### NOT COVERED
+
+- Physical-iPhone Release acceptance, every injury body area/severity, injury
+  update/resolution, a real process kill during the settle, and the broader
+  scrolling/faulty-click/onboarding reports outside this injury coordinate.

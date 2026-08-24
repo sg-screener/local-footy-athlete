@@ -58,11 +58,18 @@ import type { TrainingProgram } from '../types/domain';
 import type { PlanChange } from '../utils/planChangeTypes';
 import { flushPendingStorageWrites, pendingStorageWriteCount } from '../store/asyncStorageCompat';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { useProgramStore, PROGRAM_STORE_PERSISTENCE_KEY } from '../store/programStore';
+import {
+  useProgramStore,
+  PROGRAM_STORE_PERSISTENCE_KEY,
+  readDurableProgramStoreEnvelope,
+} from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import {
+  publishAcceptedCoachUpdatesCompatibilityMirror,
+  useCoachUpdatesStore,
+} from '../store/coachUpdatesStore';
 import { useDecisionLedgerStore, DECISION_LEDGER_PERSISTENCE_KEY, decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
@@ -76,8 +83,13 @@ import { seedManualOverride } from './support/programOverrideHarness';
 import {
   rebuildDerivedWorld,
   runQuiescentBoot,
+  settleDerivedWorldAfterDecision,
   PRE_REBUILD_ENVELOPE_PARKING_KEY,
 } from '../store/quiescentBoot';
+import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
+import { completeAcceptedStateFingerprint } from '../store/coachMutationTransaction';
+import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
+import { buildCoachNotesFromModifiers } from '../utils/activeCoachNotes';
 import {
   samDevicePass20260805Profile,
   SAM_PASS_20260805_TODAY_ISO,
@@ -335,6 +347,75 @@ const main = async () => {
       'rebuilding the derived world changed the ledger — replay is appending');
     assert(durable.get(DECISION_LEDGER_PERSISTENCE_KEY) === ledgerEnvelopeBefore,
       'the ledger envelope on disk moved under replay');
+  });
+
+  await run('a failed post-injury settle restores the complete injury-bearing program', async () => {
+    reachWorldByActing();
+    const constraint = buildGuidedInjuryConstraint({
+      region: 'upper_body',
+      area: 'Shoulder',
+      severity: 6,
+      severityBand: 'moderate',
+      adjustmentLevel: 'moderate',
+      triggers: ['Pressing'],
+      seriousSymptoms: false,
+    }, { todayISO: TODAY });
+    const injury = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'program_tab', surface: 'guided_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as never, { todayISO: TODAY }));
+    assert(injury.ok, `the injury did not reach accepted state: ${injury.message ?? 'no reason'}`);
+    await settleWrites();
+
+    const beforeNotes = buildCoachNotesFromModifiers(getActiveProgramModifiers(), []);
+    assert(beforeNotes.some((note) => note.injuryEpisodeId),
+      'the accepted injury did not reach the same notes My Status renders');
+    // CoachUpdates is a compatibility mirror, not injury authority. Reproduce
+    // the on-device disagreement directly: ProgramStore still owns the saved
+    // episode while the old My Status input is empty. The status selector must
+    // keep showing the injury from canonical accepted state.
+    publishAcceptedCoachUpdatesCompatibilityMirror({ activeConstraints: [] });
+    assert(useCoachUpdatesStore.getState().activeConstraints.length === 0,
+      'the stale-mirror coordinate was not established');
+    const notesWithEmptyMirror = buildCoachNotesFromModifiers(getActiveProgramModifiers(), []);
+    assert(notesWithEmptyMirror.some((note) => note.injuryEpisodeId),
+      'My Status still lets an empty compatibility mirror hide a saved injury');
+
+    const beforeState = completeAcceptedStateFingerprint();
+    const beforeEnvelope = await readDurableProgramStoreEnvelope();
+    assert(useProgramStore.getState().currentProgram !== null,
+      'the precondition has no program before the forced settle failure');
+
+    // The failure is injected AFTER `rebuildDerivedWorldNow` has taken its
+    // clean slate. This is the exact half-built coordinate that erased Sam's
+    // program; failing generation before the slate would not exercise it.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const weekRebuild = require('../utils/weekRebuild') as typeof import('../utils/weekRebuild');
+    const originalCommit = weekRebuild.commitRebuiltProgram;
+    weekRebuild.commitRebuiltProgram = (() => {
+      throw new Error('forced_post_injury_settle_failure_after_clean_slate');
+    }) as typeof originalCommit;
+    try {
+      await quietAsync(() => settleDerivedWorldAfterDecision());
+    } finally {
+      weekRebuild.commitRebuiltProgram = originalCommit;
+    }
+    await settleWrites();
+
+    assert(completeAcceptedStateFingerprint() === beforeState,
+      'a failed settle did not restore the complete accepted program and mirrors');
+    assert((await readDurableProgramStoreEnvelope()) === beforeEnvelope,
+      'a failed settle did not restore the exact durable injury-bearing envelope');
+    assert(useProgramStore.getState().currentProgram !== null,
+      'the failed settle left the athlete with no program');
+    const afterNotes = buildCoachNotesFromModifiers(getActiveProgramModifiers(), []);
+    assert(afterNotes.some((note) => note.injuryEpisodeId),
+      'the failed settle removed the injury from the My Status source');
   });
 
   await run('boot acceptance keeps the profile that generated the world', async () => {

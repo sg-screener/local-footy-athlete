@@ -304,7 +304,42 @@ export async function runQuiescentBoot(): Promise<void> {
  */
 export async function settleDerivedWorldAfterDecision(): Promise<void> {
   if (ledgerReplayActive()) return;
-  await rebuildDerivedWorld();
+  // A SETTLE IS AN ATHLETE ACTION'S LAST PUBLICATION STEP, NOT A BOOT.
+  //
+  // Measured on Sam's device 2026-08-24: reporting an injury could leave the
+  // whole program missing and My Status showing no injury. The injury fact had
+  // already committed successfully; then `rebuildDerivedWorldNow` took its
+  // deliberate clean slate (currentProgram=null, activeConstraints=[]), and a
+  // later generation/acceptance failure escaped with that half-built world
+  // still live. The next screen therefore saw neither the old program nor the
+  // newly accepted injury projection.
+  //
+  // The existing accepted-state transaction already owns exact memory,
+  // mirror, durable-envelope and visible-projection rollback. Use that owner
+  // for the ENTIRE settle instead of adding an injury-specific rescue. The
+  // pre-state captured here already contains the accepted injury and the safe
+  // live recomposition, so a failed re-derivation degrades to that complete
+  // world rather than to an empty program.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { runCoachMutationTransaction } = require('./coachMutationTransaction');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { todayISOLocal } = require('../utils/appDate');
+  const outcome = await runCoachMutationTransaction({
+    todayISO: todayISOLocal(),
+    allowAcceptedStateOnlyChange: true,
+    allowIdempotentNoop: true,
+    mutate: () => {
+      rebuildDerivedWorldNow();
+      return true;
+    },
+    didApply: (applied: boolean) => applied,
+  });
+  if (!outcome.ok) {
+    logger.error('[quiescentBoot] post-decision settle failed; complete accepted world restored', {
+      route: outcome.route,
+      reason: outcome.reason,
+    });
+  }
 }
 
 /**
@@ -388,6 +423,16 @@ function deriveBootFixtureMarks(
  * Everything it builds lives in memory — persistence carries inputs only.
  */
 export async function rebuildDerivedWorld(): Promise<void> {
+  rebuildDerivedWorldNow();
+}
+
+/**
+ * Synchronous body so the post-decision transaction can include every write
+ * in its rollback boundary. `async () => rebuildDerivedWorld()` would hand the
+ * transaction a Promise and let verification run before a future asynchronous
+ * body; this function makes the mutation boundary structural.
+ */
+function rebuildDerivedWorldNow(): void {
   const profileState = useProfileStore.getState();
   if (!profileState.isOnboardingComplete) return;
   const profile = profileState.onboardingData;

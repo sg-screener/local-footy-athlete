@@ -14,6 +14,7 @@ import {
 } from '../store/coachPreferencesStore';
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { useReadinessStore } from '../store/readinessStore';
 import { removeInjuryOverridesFromDate } from './applyAdjustmentEvents';
 import { restoreExcludedExercise } from './exerciseExclusionOwner';
@@ -1520,8 +1521,14 @@ export function selectActiveProgramModifiers(
 }
 
 export function getActiveProgramModifiers(todayISO: string = todayISOLocal()): ActiveProgramModifier[] {
+  const accepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
   return selectActiveProgramModifiers({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    // ProgramStore's accepted context owns the typed facts. CoachUpdates is a
+    // compatibility mirror and must never decide whether My Status can see a
+    // saved injury.
+    activeConstraints: accepted.activeConstraints,
     athletePrefs: useAthletePreferencesStore.getState().prefs,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
     onboardingData: useProfileStore.getState().onboardingData,

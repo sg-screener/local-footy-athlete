@@ -165,13 +165,15 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // selector and `visibleWeek` is the athlete-facing projection carried by the
   // Snapshot; neither the dashboard nor Terra derives another week.
   const { weekDays, visibleWeek } = useResolvedWeek();
-  // RULING 4's LIST, THROUGH THE ONE SELECTOR. `useActiveModifiers` is the same
-  // derivation `useHomeScreen` uses; the week it is handed is the week this
-  // screen is already looking at, so My Status and the Snapshot cannot describe
-  // different weeks.
-  const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers({
-    visibleWeekDays: weekDays,
-  });
+  // MY STATUS IS THE FACT SURFACE, NOT A PROGRAM-EFFECT PROOF SURFACE.
+  // Program passes its visible week into this selector so a day/week notice is
+  // shown only when that week visibly carries the adjustment. My Status must
+  // deliberately remain unfiltered: if generation fails or the athlete is
+  // viewing another week, a saved injury is still a saved injury and its only
+  // status/control surface cannot disappear with the program output. This was
+  // already the written ruling in `useHomeScreen`; the old argument below was
+  // the implementation contradicting it.
+  const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers();
   // ONE LIVE PICTURE FOR THE CONVERSATION. Progress renders the same live
   // derivation on its own tab; Coach keeps readiness and consistency available
   // to Terra without turning them back into visible dashboard furniture.

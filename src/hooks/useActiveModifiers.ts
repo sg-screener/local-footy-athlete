@@ -31,6 +31,7 @@ import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { isTemporaryEquipmentFact } from '../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 
@@ -80,7 +81,17 @@ export interface ActiveModifiers {
 export function useActiveModifiers(
   input: ActiveModifiersSnapshotInput = {},
 ): ActiveModifiers {
-  const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
+  // THE ACCEPTED PROGRAM CONTEXT IS THE AUTHORITY; CoachUpdates is only its
+  // compatibility mirror. Reading the mirror here made My Status the one
+  // athlete-facing surface that could lose an injury while Program still
+  // showed the canonical injury episode (device reproduction, 2026-08-24).
+  // Normalisation also re-composes the constraint from the stored typed fact,
+  // so a stale/empty compatibility array cannot turn a saved injury invisible.
+  const acceptedMaterialContext = useProgramStore((s) => s.acceptedMaterialContext);
+  const activeConstraints = useMemo(
+    () => normalizeAcceptedMaterialContext(acceptedMaterialContext).activeConstraints,
+    [acceptedMaterialContext],
+  );
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
