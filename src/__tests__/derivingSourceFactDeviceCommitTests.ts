@@ -135,7 +135,7 @@ function seedDeviceExact(): string {
         reason: 'deriving-device-commit-test:today', program: { todayWorkout: w },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: [d.anchorDate] } as never),
     },
-    calendarStore: { setGameDay: () => undefined },
+    fixtureMarkInstaller: { setGameDay: () => undefined },
   } as never));
   useProfileStore.setState({ onboardingData: d.profile, isOnboardingComplete: true });
   return d.anchorDate;

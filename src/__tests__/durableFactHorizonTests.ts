@@ -169,7 +169,7 @@ function seedSpentWeekFriday(): void {
         validateWeekStarts: [devE2EWeekStartForSeed('spent-week-friday')],
       } as never),
     },
-    calendarStore: {
+    fixtureMarkInstaller: {
       setGameDay: (date: string) => {
         const accepted = getAcceptedMaterialContext();
         const program = useProgramStore.getState().currentProgram!;

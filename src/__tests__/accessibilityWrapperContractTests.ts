@@ -160,7 +160,7 @@ section('[2] Button exposes one stable actionable leaf');
 section('[3] Interactive Card supports nested controls without swallowing them');
 {
   const cardPressableTag = openingTag(card, 'Pressable', 'importantForAccessibility={exposesAsAccessibilityElement');
-  const dayCardTag = openingTag(home, 'Card', 'accessible={!exposesExpandedActions}');
+  const dayCardTag = openingTag(home, 'Card', 'accessible={!exposesNestedControls}');
 
   ok('Card has a shared accessibility-container option', /accessible\?: boolean/.test(card));
   ok('interactive cards remain one element by default', /accessible \?\? true/.test(card));
@@ -170,11 +170,11 @@ section('[3] Interactive Card supports nested controls without swallowing them')
   );
   ok(
     'expanded day rows use container mode only while nested controls render',
-    /const exposesExpandedActions = isSelected && normal/.test(home),
+    /const exposesNestedControls = isSelected && normal && \(dayShape \|\| canExpand\)/.test(home),
   );
-  ok('expanded day row disables parent accessibility grouping', /accessible=\{!exposesExpandedActions\}/.test(dayCardTag));
+  ok('expanded day row disables parent accessibility grouping', /accessible=\{!exposesNestedControls\}/.test(dayCardTag));
   ok('day row identifier remains canonical in normal mode', /`day-row-\$\{dayToken\}`/.test(dayCardTag));
-  ok('day row press behavior remains attached', /onPress=\{onPress\}/.test(dayCardTag));
+  ok('day row press behavior remains attached', /onPress=\{cardCanPress \? onPress : undefined\}/.test(dayCardTag));
 }
 
 section('[4] Required sheet titles and child controls remain independently exposed');

@@ -101,6 +101,17 @@ function resetMarks(): void {
 
 console.log('\n-- Calendar ownership (store-armour recipe) --');
 
+run('a fresh unhydrated calendar slice is the canonical empty map', () => {
+  useCalendarStore.setState({ markedDays: undefined as never });
+  const outcome = applyCalendarMarkedDaysWrite({
+    next: {},
+    writer: 'accepted_transaction',
+  });
+  assert(outcome.ok, `cold-start empty write failed: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCalendarStore.getState().markedDays) === '{}',
+    `cold-start calendar state was not normalised: ${JSON.stringify(useCalendarStore.getState().markedDays)}`);
+});
+
 run('disk keeps calendar facts, never the derived fixture projection', () => {
   const inputs = calendarPersistedInputs({
     '2026-08-07': 'game',

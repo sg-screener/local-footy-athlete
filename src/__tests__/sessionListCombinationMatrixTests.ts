@@ -139,14 +139,19 @@ const WORLDS: readonly WorldSpec[] = [
 function profileFor(world: WorldSpec): OnboardingData {
   return {
     firstName: 'Matrix',
+    gender: 'male',
     age: '24',
     position: 'Midfielder',
     experienceLevel: '2-5 years',
+    heightCm: 184,
+    weightKg: 90,
+    motivation: 'Dominate your level',
     seasonPhase: world.seasonPhase,
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDays: world.teamTrainingDays,
     teamTrainingDaysPerWeek: world.teamTrainingDays.length,
+    ...(world.gameOffset !== null ? { gameDay: 'Saturday' } : {}),
     trainingLocation: 'Full Gym',
     equipmentAnswer: {
       protocolVersion: 1,
@@ -157,10 +162,19 @@ function profileFor(world: WorldSpec): OnboardingData {
       modalities: {},
     },
     conditioningLevel: 'Elite',
+    squatStrength: '1.5x bodyweight',
+    benchStrength: '1.5x bodyweight+',
     squatConfidence: 'Confident',
     benchConfidence: 'Confident',
+    twoKmTimeTrial: {
+      seconds: 420,
+      recordedOn: INSTALL_DAY,
+      source: 'onboarding',
+    },
+    injuries: [],
     recentTrainingLoad: 'Very consistent',
     sprintExposure: 'Regularly',
+    ...(world.seasonPhase === 'Off-season' ? { seasonFinishedOn: '2026-06-20' } : {}),
   } as unknown as OnboardingData;
 }
 
@@ -183,7 +197,10 @@ function reachWorld(world: WorldSpec): void {
   freshInstall();
   const profile = profileFor(world);
   useProfileStore.getState().updateOnboardingData(profile);
-  useProfileStore.getState().completeOnboarding();
+  const completion = useProfileStore.getState().completeOnboarding();
+  assert(!(completion && typeof completion === 'object'
+    && (completion as { ok?: boolean }).ok === false),
+  `${world.id}: matrix fixture no longer completes onboarding — ${JSON.stringify(completion)}`);
   const program = quiet(() => generateProgramLocally(
     useProfileStore.getState().onboardingData,
     {
@@ -290,42 +307,9 @@ const CONTAINED: readonly ContainedCoordinate[] = [
   // its two dependants (this containment and the blind spot below) pointing at
   // a red that no longer exists, which is what block [3] caught.
 
-  // THE SUPPORT BADGE SPANS SIX COORDINATES, NOT THE ONE ITS ENTRY RECORDS.
-  //
-  // The walker's declared red for this shape carries a single reproduction
-  // ("deep, 2026-08-24 — template ["strength","support"] / projection
-  // ["strength"]"). This matrix's first run found the same `omits [] and
-  // invents ["support"]` disagreement on SIX distinct coordinates, 56
-  // observations, in worlds a bounded suite reaches trivially. The defect is
-  // one; the space it occupies was never measured. That measurement is this
-  // matrix's first product, and it is why the entry's "DEEP ONLY, by survey"
-  // note describes the WALKER's reachability rather than the defect's.
-  //
-  // Every entry below is the same owner and the same fix; they are listed
-  // separately so that a partial fix (say, strength-only days) cannot quietly
-  // keep claiming the whole space.
-  ...([
-    'plain × [strength]',
-    'plain × [conditioning,strength]',
-    'plain × [recovery,strength]',
-    'plain × [conditioning,power,strength]',
-    'plain × [conditioning,recovery,strength]',
-    // `plain × [conditioning,power,recovery,strength]` RETIRED 2026-08-13. It
-    // now AGREES, and this list's own note says the entries are separate "so
-    // that a partial fix cannot quietly keep claiming the whole space" — so a
-    // coordinate that agrees must leave, or the containment over-claims.
-    // Retired by `3e413f61`: that day stopped being arm work and gained Sam's
-    // `:227` ladder, so it no longer carries the trunk/midline row whose
-    // `support`-vs-`strengthRows` split is what this owner describes. The other
-    // five coordinates are UNTOUCHED and still disagree.
-  ].map((coordinate) => ({
-    coordinate,
-    ownedBy: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
-    why: 'A trunk/midline row is badged `support` by the template\'s NAME '
-      + 'classifier while `getSessionComponentRows` put it in `strengthRows`, '
-      + 'so no `support` part exists for the projection to carry. Present '
-      + 'wherever a strength day carries such a row, which is most of them.',
-  })) as ContainedCoordinate[]),
+  // RETIRED 2026-08-24 — every Midline/support containment. Midline now maps
+  // to the Strength session on both sides of this comparison, and this
+  // matrix's stale-debt cell proved the former declarations no longer held.
 ];
 
 /**
@@ -361,9 +345,8 @@ const BLIND_SPOTS: readonly BlindSpot[] = [
   // there is no flag-vs-block disagreement left for the composition to expose —
   // and the declared red this entry pointed at was deleted with it.
   //
-  // Nothing is being hidden by this deletion: the entry's sibling half (the
-  // `support` badge, `session_list_badges_a_midline_row_the_projection_has_no_
-  // part_for`) is still declared and still contains its six coordinates above.
+  // Its former support sibling was paid and retired on 2026-08-24 when
+  // Midline ceased to be a session identity.
 ];
 
 

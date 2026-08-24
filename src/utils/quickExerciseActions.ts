@@ -2,6 +2,7 @@ import type { OnboardingData } from '../types/domain';
 import { resolveExerciseName } from './loadEstimation';
 import { legalAddAlternativesForExercise } from './addExerciseCandidates';
 import { exerciseSessionFamily, type ExerciseSessionFamily } from '../rules/exerciseSessionFamily';
+import { classifyExerciseRole } from './sessionRoles';
 import {
   getTapSwapChoices,
   type TapSwapChoice,
@@ -42,9 +43,12 @@ export function nextQuickSwapChoice<T extends { name?: string | null }>(
  * One ranked answer space for every exercise family.
  *
  * The specialised swap ladder speaks first. Add's existing legal hierarchy
- * completes families that ladder never modelled (notably warm-up and
- * conditioning) and broadens a repeatedly tapped slot after its closest
- * answers are exhausted. Both sources use the same safety owner.
+ * completes families that ladder never modelled, but only from the original
+ * exercise leaf. "Same Strength family" is not similarity: treating it as one
+ * is how Box Jumps reached a Pallof Press slot. The one exception is a typed
+ * visible section correcting an ambiguous name (for example Half Copenhagen
+ * inside Mobility / Warm-up); there the section's family is the stronger fact.
+ * Both sources use the same safety owner.
  */
 export function rankedQuickSwapChoices(args: {
   originalExercise: string;
@@ -64,6 +68,9 @@ export function rankedQuickSwapChoices(args: {
   }).filter((choice) => choice.kind === 'exercise'
     && !!choice.name
     && (!args.requiredFamily || exerciseSessionFamily(choice.name) === args.requiredFamily));
+  const typedFamilyCorrectsName = !!args.requiredFamily
+    && exerciseSessionFamily(args.originalExercise) !== args.requiredFamily;
+  const originalRole = classifyExerciseRole(args.originalExercise);
   const completion = legalAddAlternativesForExercise({
     originalExercise: args.originalExercise,
     environment: args.environment,
@@ -73,7 +80,11 @@ export function rankedQuickSwapChoices(args: {
     ],
     profile: args.profile,
     requiredFamily: args.requiredFamily,
-  }).map((candidate): TapSwapChoice => ({
+  }).filter((candidate) => typedFamilyCorrectsName || (
+    candidate.proximity === 'same_leaf'
+      && classifyExerciseRole(candidate.name) === originalRole
+  ))
+    .map((candidate): TapSwapChoice => ({
     kind: 'exercise',
     name: candidate.name,
     hierarchyTier: candidate.proximity === 'same_leaf'

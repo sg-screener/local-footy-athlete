@@ -30,7 +30,10 @@ import {
 } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
+import { useReadinessStore } from '../store/readinessStore';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { seedOnboardingProgram } from '../utils/onboardingCompletion';
+import { generateProgramLocally } from '../services/api/generateProgram';
 import { DEV_E2E_STANDARD_PROFILE } from '../dev/e2e/devE2EStandardProfile';
 import { todayISOLocal } from '../utils/appDate';
 import type { Microcycle, TrainingProgram } from '../types/domain';
@@ -109,24 +112,54 @@ console.log('\n[accept boundary] the refusal does not fire for an installable pr
   // A program whose microcycles carry a contract is untouched by this gate.
   // Guarded structurally: if the gate ever widened to healthy programs, every
   // generated program would stop installing.
-  const program: any = contractlessProgram();
-  program.microcycles[0].exposureContractV2 = {
-    identity: { seasonPhase: 'In-season', expectedSubphase: null, anchorState: 'game' },
-  };
+  const onboardingToday = '2026-07-13';
+  const program = generateProgramLocally(DEV_E2E_STANDARD_PROFILE, {
+    todayISO: onboardingToday,
+    previousProgram: null,
+    activeConstraints: [],
+  });
 
   useProgramStore.setState({
     currentProgram: null, currentMicrocycle: null, todayWorkout: null,
   } as any);
+  // A new onboarding can follow an explicit reset/re-onboarding on the same
+  // install. Seed the exact stale-input class seen on glass: a prior fixture,
+  // readiness signal and severe injury modifier.
+  useCalendarStore.setState({
+    markedDays: { '2026-08-29': 'game' },
+    selectedDate: null,
+  });
+  useReadinessStore.setState({
+    signalsByDate: {
+      '2026-08-24': {
+        date: '2026-08-24', source: 'coach_message',
+        updatedAt: '2026-08-24T00:00:00.000Z', energy: 'low', flatToday: false,
+      },
+    },
+  } as any);
+  useCoachUpdatesStore.setState({
+    activeConstraints: [{
+      id: 'old-athlete-injury', type: 'injury', status: 'active',
+      severity: 9, adjustmentLevel: 'training_paused',
+    }],
+  } as any);
   let thrown: any = null;
   try {
     seedOnboardingProgram({
-      onboardingData: DEV_E2E_STANDARD_PROFILE, program, todayISO: TODAY,
+      onboardingData: DEV_E2E_STANDARD_PROFILE, program, todayISO: onboardingToday,
     });
   } catch (error) { thrown = error; }
 
-  ok('a program carrying a contract is not refused by THIS gate',
-    !(thrown instanceof AcceptedProgramContractMissingError),
+  ok('a generated program carrying a contract installs successfully',
+    thrown === null,
     `threw: ${thrown?.name}: ${thrown?.message}`);
+  ok('real onboarding keeps the recurring game day on the profile instead of minting dated overrides',
+    Object.keys(useCalendarStore.getState().markedDays ?? {}).length === 0,
+    'a profile game anchor was duplicated into explicit calendar marks');
+  ok('real onboarding clears previous-athlete readiness and coach modifiers atomically',
+    Object.keys(useReadinessStore.getState().signalsByDate ?? {}).length === 0
+      && (useCoachUpdatesStore.getState().activeConstraints ?? []).length === 0,
+    'a stale readiness or injury modifier survived into the new program');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

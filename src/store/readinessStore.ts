@@ -251,7 +251,11 @@ export function applyReadinessSignalsWrite(args: {
   writer: ReadinessWriterId;
   resetActionId?: string;
 }): ReadinessWriteOutcome {
-  const signalCountBefore = Object.keys(useReadinessStore.getState().signalsByDate).length;
+  const currentSignals = normalizeAcceptedKeyedMap<ReadinessSignal>(
+    useReadinessStore.getState().signalsByDate,
+  );
+  const nextSignals = normalizeAcceptedKeyedMap<ReadinessSignal>(args.next);
+  const signalCountBefore = Object.keys(currentSignals).length;
   const record = (outcome: 'applied' | 'refused', reason?: string, resetActionId?: string) => {
     emitAthleteActionEvent(beginAthleteActionTrace({
       source: 'system',
@@ -261,13 +265,15 @@ export function applyReadinessSignalsWrite(args: {
       writer: args.writer,
       outcome,
       signalCountBefore,
-      signalCountAfter: Object.keys(useReadinessStore.getState().signalsByDate).length,
+      signalCountAfter: Object.keys(normalizeAcceptedKeyedMap<ReadinessSignal>(
+        useReadinessStore.getState().signalsByDate,
+      )).length,
       ...(reason ? { internalResultCode: reason } : {}),
       ...(resetActionId ? { resetActionId } : {}),
     });
   };
 
-  const nextIsTheDefault = Object.keys(args.next).length === 0;
+  const nextIsTheDefault = Object.keys(nextSignals).length === 0;
   const effectiveResetActionId = args.resetActionId ?? activeReadinessResetActionId();
   if (nextIsTheDefault && signalCountBefore > 0) {
     if (!effectiveResetActionId) {
@@ -282,7 +288,7 @@ export function applyReadinessSignalsWrite(args: {
     }
   }
 
-  useReadinessStore.setState({ signalsByDate: args.next });
+  useReadinessStore.setState({ signalsByDate: nextSignals });
   record('applied', undefined, effectiveResetActionId);
   return { ok: true };
 }

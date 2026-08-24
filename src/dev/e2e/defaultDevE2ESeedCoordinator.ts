@@ -200,7 +200,7 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
     // normal onboarding revision sequence, but publish each deterministic
     // mark through the canonical accepted-state transaction without
     // reinterpreting the already-accepted program.
-    calendarStore: {
+    fixtureMarkInstaller: {
       setGameDay: (date) => installAcceptedCalendarGame(date, seed.profile),
     },
   });

@@ -1,6 +1,5 @@
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import { assertAcceptedProgramInstallable, useProgramStore } from '../store/programStore';
-import { useCalendarStore } from '../store/calendarStore';
 import { computeGameDatesForBlock } from './sessionResolver';
 import { logger } from './logger';
 import { acceptedStatePresenceSummary } from '../store/acceptedStateColdStart';
@@ -90,10 +89,16 @@ export function seedOnboardingProgram(args: {
     ReturnType<typeof useProgramStore.getState>,
     'setCurrentProgram' | 'setCurrentMicrocycle' | 'setTodayWorkout'
   >;
-  calendarStore?: Pick<ReturnType<typeof useCalendarStore.getState>, 'setGameDay'>;
+  /**
+   * Test-seed-only fixture materialisation. Real onboarding leaves the usual
+   * game day on the accepted profile, where the resolver projects it each
+   * week. Supplying this explicitly is reserved for deterministic harness
+   * worlds whose registry includes dated fixture marks.
+   */
+  fixtureMarkInstaller?: { setGameDay: (date: string, todayISO?: string) => void };
 }): void {
+  const usesLiveProgramStore = args.programStore === undefined;
   const programStore = args.programStore ?? useProgramStore.getState();
-  const calendarStore = args.calendarStore ?? useCalendarStore.getState();
   const { program, onboardingData } = args;
 
   // Fail fast, by name, BEFORE anything is installed (Sam ruling 2026-07-26,
@@ -105,14 +110,18 @@ export function seedOnboardingProgram(args: {
   // rebuilds a week to rescue it; structural migration belongs to hydration.
   assertAcceptedProgramInstallable(program);
 
-  // Brand-new athlete program: a TRUE fresh slate is intended here, so the
-  // override wipe is explicit. (setCurrentProgram no longer clears
-  // overrides implicitly — override lifecycle belongs to the canonical
-  // rebuild sweep; see programStore.setCurrentProgram.)
-  runAcceptedStateStep('clear_manual_overrides', () =>
-    useProgramStore.getState().clearManualOverrides(args.todayISO));
+  // Brand-new athlete program: this is a TRUE fresh slate. The full live
+  // program input/result surface is cleared before acceptance; deterministic
+  // harnesses inject their own closed program-store implementation and retain
+  // exact seed ownership.
+  runAcceptedStateStep('clear_previous_training_state', () => {
+    if (usesLiveProgramStore) useProgramStore.getState().clear();
+  });
   runAcceptedStateStep('set_current_program', () =>
-    programStore.setCurrentProgram(program, { todayISO: args.todayISO }));
+    programStore.setCurrentProgram(program, {
+      todayISO: args.todayISO,
+      freshAcceptedContext: usesLiveProgramStore,
+    }));
 
   // Select from the accepted store copy. The acceptance boundary may
   // canonicalise rows, and todayWorkout must reference that accepted raw row
@@ -135,8 +144,16 @@ export function seedOnboardingProgram(args: {
   runAcceptedStateStep('set_today_workout', () =>
     programStore.setTodayWorkout(todayWorkout, args.todayISO));
 
-  const selectedGameDay = storedGameAnchor(onboardingData);
-  if (selectedGameDay && program.startDate && program.endDate) {
+  // A recurring game day is already an accepted PROFILE fact and is projected
+  // virtually by the resolver. Materialising every Saturday (or other chosen
+  // day) as an explicit calendar override creates a second source of truth and
+  // runs one accepted-state rebuild per fixture. That exact duplicate path
+  // made a healthy generated program fail during onboarding with WC-142.
+  // Only deterministic test seeds may ask for dated marks explicitly.
+  const selectedGameDay = args.fixtureMarkInstaller
+    ? storedGameAnchor(onboardingData)
+    : null;
+  if (args.fixtureMarkInstaller && selectedGameDay && program.startDate && program.endDate) {
     const gameDates = computeGameDatesForBlock(
       selectedGameDay,
       program.startDate,
@@ -145,7 +162,7 @@ export function seedOnboardingProgram(args: {
     logger.debug(`[Onboarding] Seeding ${gameDates.length} game dates for ${selectedGameDay}:`, gameDates);
     gameDates.forEach((date) => runAcceptedStateStep(
       `set_game_day:${date}`,
-      () => calendarStore.setGameDay(date, args.todayISO),
+      () => args.fixtureMarkInstaller!.setGameDay(date, args.todayISO),
     ));
   }
 }

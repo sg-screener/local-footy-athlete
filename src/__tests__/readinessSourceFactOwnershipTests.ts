@@ -260,7 +260,7 @@ function seedDeviceExact(): string {
         validateWeekStarts: [dseed.anchorDate],
       } as never),
     },
-    calendarStore: { setGameDay: () => undefined },
+    fixtureMarkInstaller: { setGameDay: () => undefined },
   } as never));
   useProfileStore.setState({ onboardingData: dseed.profile, isOnboardingComplete: true });
   return dseed.anchorDate;

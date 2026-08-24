@@ -183,7 +183,7 @@ async function seedDeviceExact(): Promise<void> {
         validateWeekStarts: [dseed.anchorDate],
       } as never),
     },
-    calendarStore: { setGameDay: () => undefined },
+    fixtureMarkInstaller: { setGameDay: () => undefined },
   } as never));
   useProfileStore.setState({ onboardingData: dseed.profile, isOnboardingComplete: true });
   // Explicit Saturday game mark — mirrors installAcceptedCalendarGame.

@@ -163,18 +163,18 @@ section('5. Power, speed and recovery add-on metadata become honest components')
     },
   };
   const powerComponents = getSessionComponents(powerAndUpper as any);
-  assert(kinds(powerAndUpper as any).join(',') === 'power,strength', 'power + upper detects both components');
+  assert(kinds(powerAndUpper as any).join(',') === 'strength', 'power remains a row inside Strength');
   assert(
-    componentQuestionLabel(powerComponents[0], powerComponents.length) === 'Did you complete the power work?',
-    'power gets a separate completion question',
+    componentQuestionLabel(powerComponents[0], powerComponents.length) === 'Did you complete it?',
+    'power shares the one Strength completion question',
   );
   assert(
-    componentSkipReasonLabel(powerComponents[0]) === 'Why did you skip the power work?',
-    'power skip reason copy is component-specific',
+    componentSkipReasonLabel(powerComponents[0]) === 'Why did you skip the strength work?',
+    'power uses the Strength skip-reason copy',
   );
   assert(
     powerComponents[0].completionPolicy === 'required',
-    'programmed power is completion-bearing but remains separate from strength',
+    'programmed power remains completion-bearing inside Strength',
   );
   assert(
     !kinds(powerAndUpper as any).some((kind) =>
@@ -326,7 +326,7 @@ section('7b. Low-load sessions remain distinct beside team training');
   );
 }
 
-section('8. Trunk/support rows do not masquerade as conditioning phases');
+section('8. Midline rows stay inside their Conditioning session');
 {
   const aerobicRows = [
     ex('we-bike', 'Bike Tempo'),
@@ -348,16 +348,17 @@ section('8. Trunk/support rows do not masquerade as conditioning phases');
   const rows = getSessionComponentRows(workout as any);
 
   assert(
-    rows.conditioningRows.map((row) => row.exercise.name).join(',') === 'Bike Tempo,RowErg Intervals',
-    'conditioning phases contain only the actual aerobic rows',
+    rows.conditioningRows.map((row) => row.exercise.name).join(',')
+      === 'Bike Tempo,RowErg Intervals,Pallof Press,Side Plank',
+    'the conditioning session retains every prescribed row',
   );
   assert(
-    rows.supportRows.map((row) => row.exercise.name).join(',') === 'Pallof Press,Side Plank',
-    'Pallof Press and Side Plank are separated into trunk/support rows',
+    rows.supportRows.length === 0,
+    'midline rows never mint a separate support session',
   );
   assert(
-    kinds(workout as any).join(',') === 'support,conditioning',
-    'standalone conditioning exposes a separate support component',
+    kinds(workout as any).join(',') === 'conditioning',
+    'standalone conditioning keeps one session identity',
   );
 
   const baseClassification = classifyVisibleSession({

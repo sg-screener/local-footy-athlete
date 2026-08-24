@@ -133,7 +133,7 @@ export function seedSpentWeekFriday(): { anchor: string; weekStart: string } {
         validateWeekStarts: [weekStart],
       } as never),
     },
-    calendarStore: {
+    fixtureMarkInstaller: {
       setGameDay: (date: string) => {
         const accepted = getAcceptedMaterialContext();
         const program = useProgramStore.getState().currentProgram!;

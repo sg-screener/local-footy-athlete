@@ -1396,7 +1396,12 @@ export interface ProgramState {
 
   setCurrentProgram: (
     program: TrainingProgram | null,
-    options?: { clearOverrideDates?: readonly string[]; todayISO?: string },
+    options?: {
+      clearOverrideDates?: readonly string[];
+      todayISO?: string;
+      /** New-onboarding acceptance: no fact or decision from a prior athlete survives. */
+      freshAcceptedContext?: boolean;
+    },
   ) => void;
   setBlockState: (blockState: StoredProgramBlockState | null) => void;
   ensureBlockState: (dateISO?: string) => StoredProgramBlockState;
@@ -1498,12 +1503,17 @@ export const useProgramStore = create<ProgramState>()(
           : null;
         if (candidateProgram) assertProgramWriteAccepted(candidateProgram, effectiveTodayISO);
         const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
+        const freshAcceptedContext = options?.freshAcceptedContext === true;
         const clearedDates = new Set(options?.clearOverrideDates ?? []);
-        const candidateOverrides = clearedDates.size > 0
+        const candidateOverrides = freshAcceptedContext
+          ? {}
+          : clearedDates.size > 0
           ? Object.fromEntries(Object.entries(priorState.dateOverrides).filter(([date]) =>
               !clearedDates.has(date)))
           : priorState.dateOverrides;
-        const candidateOverrideContexts = clearedDates.size > 0
+        const candidateOverrideContexts = freshAcceptedContext
+          ? {}
+          : clearedDates.size > 0
           ? Object.fromEntries(Object.entries(priorState.overrideContexts).filter(([date]) =>
               !clearedDates.has(date)))
           : priorState.overrideContexts;
@@ -1512,7 +1522,9 @@ export const useProgramStore = create<ProgramState>()(
               currentProgram: candidateProgram,
               dateOverrides: candidateOverrides,
               overrideContexts: candidateOverrideContexts,
-              userRemovalConstraints: priorState.userRemovalConstraints,
+              userRemovalConstraints: freshAcceptedContext
+                ? []
+                : priorState.userRemovalConstraints,
             }, {
               profile: acceptedProfileForContext(
                 useProgramStore.getState().acceptedMaterialContext,
@@ -1537,6 +1549,12 @@ export const useProgramStore = create<ProgramState>()(
             dateOverrides: validatedOverrides,
             overrideContexts: validatedOverrideContexts,
             weekScopedOverlays: {},
+            userRemovalConstraints: freshAcceptedContext
+              ? []
+              : priorState.userRemovalConstraints,
+            reversibleAdjustmentLedger: freshAcceptedContext
+              ? createEmptyReversibleAdjustmentLedger()
+              : priorState.reversibleAdjustmentLedger,
             exposureContractsByWeek: {},
             blockState: validatedProgram
               ? deriveStoredBlockStateFromProgram(validatedProgram, effectiveTodayISO)
@@ -1550,6 +1568,14 @@ export const useProgramStore = create<ProgramState>()(
             // caller's idea of today. `wornWorldBootTests` holds the line.
             generationAnchorISO: generationAnchorForProgram(validatedProgram),
           },
+          ...(freshAcceptedContext ? {
+            profile: require('./profileStore').useProfileStore.getState().onboardingData,
+            markedDays: {},
+            readinessSignalsByDate: {},
+            activeConstraints: [],
+            injuryEpisodes: [],
+            temporarySourceFacts: [],
+          } : {}),
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
             microcycle.startDate.slice(0, 10)) ?? [],
         });

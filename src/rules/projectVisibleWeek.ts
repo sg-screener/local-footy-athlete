@@ -1124,10 +1124,11 @@ function partHeadline(
   // the Gunshow / Accessories / Mobility door reads that door's word on the
   // part, never "Strength" (the honest-generic fallback) and never "Recovery"
   // (the deleted type a mobility session's `workoutType` still wears).
-  // Scoped to the CONTENT part kinds a composed optional session produces —
-  // its trunk rows still classify `support` and keep "Midline Work" (the
-  // part-composition question is audited, not silently re-answered here), and
-  // a `team_training` part on a combined day is never the optional session.
+  // Scoped to the CONTENT part kinds a composed optional session produces.
+  // Midline rows remain inside those content parts; `support` survives in the
+  // type only for legacy read compatibility and is no longer projected as a
+  // session identity. A `team_training` part on a combined day is never the
+  // optional session.
   const optional = workout?.composedOptionalKind;
   if (optional && (kind === 'strength' || kind === 'recovery')) {
     if (optional === 'recovery') return signedCopy('part.headline.recovery');

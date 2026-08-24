@@ -50,15 +50,22 @@ export const STRENGTH_ROLE_KIND: Record<string, string> = {
    * moved, which is the whole of what Sam ruled.
    */
   power: 'strength',
-  midline: 'support',
+  // Midline is an exercise role inside Strength, not a separate session kind.
+  // Keep this observer aligned with the athlete-facing component owner.
+  midline: 'strength',
   main_lift: 'strength',
   accessory: 'strength',
   prehab: 'strength',
   conditioning: 'conditioning',
 };
 
-/** Part kinds the day-detail CONTENT list does not carry (title-only). */
-export const TITLE_ONLY_PART_KINDS: ReadonlySet<string> = new Set(['game']);
+/**
+ * Anchor part kinds the opened programmed-session list does not carry.
+ * Game and Team Training have their own Day cards/forms; comparing either to
+ * the gym-session template manufactures a missing-content defect at the test
+ * boundary even though the athlete can reach both anchors separately.
+ */
+export const TITLE_ONLY_PART_KINDS: ReadonlySet<string> = new Set(['game', 'team_training']);
 
 /**
  * The kinds the SESSION LIST claims — `buildSessionTemplate`, D13's separate
@@ -68,7 +75,9 @@ export function sessionTemplateKinds(workout: unknown): string[] {
   const template = buildSessionTemplate((workout ?? null) as never);
   const kinds = new Set<string>();
   for (const item of template.items as SessionTemplateItem[]) {
-    if (item.kind === 'team_training') { kinds.add(TEMPLATE_ITEM_KIND.team_training); continue; }
+    // Team Training is an anchor with its own Day card/form, not programmed
+    // gym content. Exclude it on the template side just as projection does.
+    if (item.kind === 'team_training') continue;
     if (item.kind === 'conditioning_choice') {
       kinds.add(TEMPLATE_ITEM_KIND.conditioning_choice);
       continue;

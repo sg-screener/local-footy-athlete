@@ -1265,3 +1265,125 @@ authored casing. CORE and compact status labels remain uppercase.
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Week-card section typography, real VoiceOver speech and the next Release
   rebuild.
+
+---
+
+## R-188 / R-189 — remove false Midline identity and false swap similarity
+
+The same two underlying mistakes reached multiple surfaces. Component
+classification promoted a role into a session identity after removing power
+from its content check. Quick Swap promoted membership of the entire Strength
+family into a similarity claim. Both broad claims are gone at their shared
+owners rather than hidden on the screens where Sam saw them.
+
+### Evidence
+
+- MIDLINE TEST FIRST: the tape reported a support component, no Strength
+  component and the exact Explosive Push-up + Dragon Flag mechanism before the
+  component owner changed.
+- MIDLINE AFTER: all four new identity cells pass; the stale copy-file census
+  was re-sited from the deleted frozen Coach files to the live session owners,
+  and `test:midline` is 23/23.
+- SWAP MEASUREMENT: Band Pallof Press had more than 100 “similar” fallback
+  answers, including Box Jumps, because every other Strength leaf was admitted.
+- SWAP TEST FIRST: the role-totality and literal Box Jumps cells were the only
+  two new reds. AFTER: its behavior cells passed, and explicit source-anchor
+  liveness brought `test:quick-exercise-actions` to 56/56.
+- `test:day-first-timeline` remains at its exact inherited 54/56 baseline.
+
+### NOT COVERED
+
+- The simulator and physical iPhone (no screenshot loop in this pass).
+- Existing persisted support-component feedback, accumulated repeated swaps on
+  glass, the broader scroll/tap/onboarding stability investigation and the next
+  Release rebuild.
+
+---
+
+## R-190 — stabilise fresh onboarding installation
+
+The cold-start harness reproduced the reported onboarding failure before any
+screen assertion: program installation entered the accepted-state transaction
+while Calendar and Readiness were still unhydrated, and both write owners called
+`Object.keys` on an absent map. The Calendar crash hid the identical Readiness
+crash directly behind it.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: delay installation until every store happened to expose
+  a map, or make each accepted-state ownership boundary canonicalise its own
+  input. Boundary normalisation landed because it also covers legacy missing
+  fields and removes the hydration-order dependency entirely.
+- BEFORE: the cold-start suite repeatedly threw from Calendar, then from
+  Readiness after Calendar was corrected.
+- AFTER: the crash paths are gone; the cold-start suite reaches all 15 cases.
+  Its remaining assertions are established compatibility/horizon debt rather
+  than exceptions from either writer.
+- `test:calendar-ownership` is 9/9 and
+  `test:readiness-store-ownership` is 8/8, including new unhydrated-state cells.
+- The repaired session-list matrix now completes real onboarding in all three
+  phase worlds and is 6/6 across 18 reached day-type/content coordinates.
+- The action walker now completes its real generated walks. It remains 16/20
+  on older schedule/restore debt, and exposed one raw `upper_pull` confirmation
+  that was removed at the shared confirmation-copy boundary.
+- The day-card interaction guard had drifted behind the current shared Card
+  owner and falsely stopped checking four click/accessibility properties. Those
+  cells now bind the real conditional press and nested-control geometry;
+  `test:accessibility-contracts` improved from 40/47 to 44/47. Its three
+  remaining reds are existing Sheet-header/title contracts.
+
+### NOT COVERED
+
+- Exact scroll or missed-tap reproduction on glass; Sam has not yet named the
+  screen and gesture, and requested no screenshot loop.
+- The simulator and physical iPhone, legacy disk payloads beyond the two
+  accepted maps, and the next Release rebuild.
+
+---
+
+## R-191 — new onboarding owns a genuinely fresh training context
+
+The visual pass found two separate post-generation failures beneath the same
+onboarding handoff. First, real onboarding was turning the Profile's recurring
+game day into one dated Calendar override per week. Each unnecessary write
+rebuilt the accepted week until a healthy program was refused with WC-142.
+Second, after that duplication was removed, the visible Week rendered almost
+entirely as Rest because a prior simulator athlete's severe shoulder injury,
+fatigue modifier and low-readiness answer still constrained the new athlete.
+
+The accepted onboarding boundary now clears the old program/result state and
+publishes an explicitly empty fact context with the new program. Recurring game
+day remains virtual from the accepted Profile. Deterministic harness worlds may
+still request dated fixture marks through an explicitly named fixture-only
+installer; product onboarding cannot reach that path by default.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: add another cleanup call to each screen/store after
+  navigation, or declare new-onboarding acceptance as the one fresh-context
+  owner. The accepted-program boundary landed because it clears the entire
+  input class before any screen can read a mixed old/new athlete world.
+- LIVE BEFORE: the simulator system log named
+  `set_game_day:2026-08-29` and `not_enough_legal_gym_days: WC-142`; after that
+  was removed, the simulator's persisted files named an old
+  `training_paused` shoulder injury, fatigue constraint and low readiness while
+  the new generated program itself contained Monday Strength and Tuesday /
+  Thursday Team Training.
+- TEST FIRST: the acceptance tape seeds those three stale fact kinds before
+  installing a real locally generated program. AFTER:
+  `test:accept-boundary-contract` is 11/11 and proves successful installation,
+  zero explicit game marks, zero readiness signals and zero coach constraints.
+- LIVE AFTER: the Simulator reaches Program and the Week visibly contains
+  Monday Strength plus Tuesday/Thursday Strength + Team Training, with its rest
+  days intact and no Midline Work session headline.
+
+### NOT COVERED
+
+- A physical-iPhone Release rebuild, historical session records that may live
+  outside the accepted program stores, real VoiceOver, and an exhaustive
+  gesture sweep of every screen.
+- The original broad “faulty clicks / scrolling” report has no single named
+  remaining gesture. The Review scroll, Generate press, Program handoff and
+  Week-tab press were exercised successfully in this pass; any remaining
+  screen/gesture should be reported by its exact location so it can be added to
+  the interaction matrix rather than guessed at.

@@ -85,24 +85,41 @@ console.log('\n[1] Athlete-facing copy says midline');
       },
     ],
   };
-  const support = getSessionComponents(supportWorkout).find(
-    (component) => component.kind === 'support',
-  );
-  ok('the session still resolves a midline component', !!support);
+  const components = getSessionComponents(supportWorkout);
+  const strength = components.find((component) => component.kind === 'strength');
   ok(
-    'its label says midline',
-    support?.label === 'midline work',
-    `got ${support?.label}`,
+    'midline rows stay inside Strength rather than becoming session vocabulary',
+    !!strength && !components.some((component) => component.kind === 'support'),
+    `got ${components.map((component) => component.kind).join(',')}`,
   );
   ok(
-    'the post-session question says midline',
-    componentQuestionLabel(support!, 2) === 'Did you complete the midline work?',
-    `got ${componentQuestionLabel(support!, 2)}`,
+    'the post-session question keeps the work inside Strength',
+    !!strength && componentQuestionLabel(strength, 2) === 'Did you complete the strength work?',
+    strength ? `got ${componentQuestionLabel(strength, 2)}` : 'no Strength component',
   );
   ok(
-    'the skip-reason sentence says midline',
-    componentSkipReasonLabel(support!) === 'Why did you skip the midline work?',
-    `got ${componentSkipReasonLabel(support!)}`,
+    'the skip-reason sentence keeps the work inside Strength',
+    !!strength && componentSkipReasonLabel(strength) === 'Why did you skip the strength work?',
+    strength ? `got ${componentSkipReasonLabel(strength)}` : 'no Strength component',
+  );
+
+  const powerAndMidline = getSessionComponents({
+    ...supportWorkout,
+    exercises: [
+      {
+        ...supportWorkout.exercises[0],
+        id: 'power-1',
+        role: 'power',
+        exercise: { id: 'power-ex', name: 'Explosive Push-up' },
+      },
+      supportWorkout.exercises[0],
+    ],
+  });
+  ok(
+    'power plus midline projects as one Strength component, never Strength + Midline Work',
+    powerAndMidline.filter((component) => component.kind === 'strength').length === 1
+      && !powerAndMidline.some((component) => component.kind === 'support'),
+    `got ${powerAndMidline.map((component) => component.kind).join(',')}`,
   );
 
   const screen = read('screens/home/DayWorkoutScreenV2.tsx');
@@ -155,12 +172,16 @@ console.log('\n[2] Sweep — no rendered literal still says trunk');
     // a superseded module. The one athlete-facing string it carried was an
     // inline exercise cue; curated cues are owned by `data/exerciseCues.ts`,
     // which this same sweep reads two lines down. Nothing left the sweep.
-    'utils/sessionExplanation.ts',
+    // `sessionExplanation.ts` was retired with the frozen Coach. The live
+    // programmed-list language is now owned by the session template.
+    'utils/sessionTemplate.ts',
     'utils/constraintPlan.ts',
     'utils/exposureEngine.ts',
     'utils/guidedInjuryControl.ts',
     'utils/activeProgramModifiers.ts',
-    'utils/coachCommandRouter.ts',
+    // The frozen command router was deleted in the Coach clean-room rebuild;
+    // the live Day entry mounts the shared programmed-work presentation.
+    'screens/home/DayWorkoutScreen.tsx',
     'utils/coachRevisionTemplates.ts',
     'data/exercisePools.ts',
     'data/exerciseCues.ts',

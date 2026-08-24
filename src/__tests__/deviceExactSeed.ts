@@ -104,7 +104,7 @@ function installBase(d: ReturnType<typeof buildDevE2ESeed>): void {
         reason: 'device-exact-seed:today', program: { todayWorkout: w },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: [d.anchorDate] } as never),
     },
-    calendarStore: { setGameDay: () => undefined },
+    fixtureMarkInstaller: { setGameDay: () => undefined },
   } as never));
   useProfileStore.setState({ onboardingData: d.profile, isOnboardingComplete: true });
 }

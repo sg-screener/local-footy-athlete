@@ -107,6 +107,17 @@ function resetSignals(): void {
 
 console.log('\n-- Readiness store ownership (store-armour recipe) --');
 
+run('a fresh unhydrated readiness slice is the canonical empty map', () => {
+  useReadinessStore.setState({ signalsByDate: undefined as never });
+  const outcome = applyReadinessSignalsWrite({
+    next: {},
+    writer: 'accepted_transaction',
+  });
+  assert(outcome.ok, `cold-start empty write failed: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useReadinessStore.getState().signalsByDate) === '{}',
+    `cold-start readiness state was not normalised: ${JSON.stringify(useReadinessStore.getState().signalsByDate)}`);
+});
+
 run('the door refuses the default over answered signals', () => {
   resetSignals();
   clearAllQuarantines();

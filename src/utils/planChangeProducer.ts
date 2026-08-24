@@ -2977,6 +2977,30 @@ function outcomeWeekday(date: string | null): string {
   });
 }
 
+const INTERNAL_SESSION_PURPOSE_LABELS: Readonly<Record<string, string>> = {
+  full_body: 'Full Body Strength',
+  lower: 'Lower Body Strength',
+  lower_squat: 'Lower Body Strength',
+  lower_hinge: 'Lower Body Strength',
+  upper: 'Upper Body Strength',
+  upper_push: 'Upper Body Strength',
+  upper_pull: 'Upper Body Strength',
+};
+
+/**
+ * Accepted-state names can retain a scheduler purpose beside the final visible
+ * title (for example `upper_pull + Full Body Strength`). Purpose ids are useful
+ * internally and must never reach confirmation copy. When a real title is
+ * present it wins; when the id is all we have, use its plain-language label.
+ */
+function athleteSafeSessionLabel(value: string | null): string {
+  const raw = value?.trim() || 'New session';
+  const parts = raw.split(/\s*\+\s*/).map((part) => part.trim()).filter(Boolean);
+  const authored = parts.filter((part) => !INTERNAL_SESSION_PURPOSE_LABELS[part]);
+  if (authored.length > 0) return authored.join(' + ');
+  return parts.map((part) => INTERNAL_SESSION_PURPOSE_LABELS[part] ?? part).join(' + ');
+}
+
 /**
  * Swap copy is a projection of the accepted transaction result. It names the
  * session the athlete now has and, on an authorised reduction, discloses it
@@ -2987,7 +3011,7 @@ function athleteSwapDoneMessage(
   pickedTitle: string | null,
   outcome: AthleteDeletionPublishedOutcome | null,
 ): string {
-  const label = pickedTitle ?? 'New session';
+  const label = athleteSafeSessionLabel(pickedTitle);
   const lead = `Done. ${label} is now on ${date}.`;
   if (!outcome) return lead;
   // Reduction only when the displaced required work is genuinely unrelocatable.
@@ -3025,7 +3049,7 @@ function athleteAdditionDoneMessage(
   pickedTitle: string | null,
   outcome: AthleteAdditionPublishedOutcome | null,
 ): string {
-  const label = pickedTitle ?? 'New session';
+  const label = athleteSafeSessionLabel(pickedTitle);
   const lead = `Done. ${label} added on ${outcomeWeekday(date)}.`;
   if (!outcome || outcome.kind !== 'added_with_repair' || outcome.repairedDates.length === 0) {
     return lead;

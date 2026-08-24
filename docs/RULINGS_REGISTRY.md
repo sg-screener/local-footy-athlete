@@ -5037,3 +5037,54 @@ Gunshow and future sections through the same renderer. Compact status labels
 and badges such as SESSION STATUS and CORE remain uppercase. The shared
 programmed-heading style owns the distinction; signed copy strings are not
 rewritten. · `WORKING` — `test:day-first-timeline`. Seat `onboardingtype`.
+
+---
+
+**R-188** · Midline stays inside its session (Sam, 2026-08-24) ·
+**MIDLINE IS WORK, NOT A SESSION NAME.**
+
+Midline rows remain inside Strength or Conditioning even when edits leave them
+as the only non-power work. Day and Week must never create a separate Midline
+Work component or join it into the session headline. The row remains visible
+and completable inside its owning session. · `WORKING` — `test:midline` +
+`test:action-walker`. Seat `onboardingtype`.
+
+---
+
+**R-189** · Quick Swap similarity must be real (Sam, 2026-08-24) ·
+**A SHARED FAMILY IS NOT A MATCH.**
+
+The specialist swap ladder keeps its authored pattern and safety logic. The
+generic Add-taxonomy completion may offer only exercises from the original
+exact leaf and role; it may not exhaust the leaf and then call the rest of the
+Strength library “similar.” A typed visible section may still correct an
+ambiguous exercise name. Therefore a midline exercise such as Band Pallof Press
+can never offer power work such as Box Jumps. Fewer truthful swaps are better
+than a long irrelevant list. · `WORKING` — `test:quick-exercise-actions`,
+reached in-chain by `test:mobility-flow`. Seat `onboardingtype`.
+
+---
+
+**R-190** · Fresh onboarding state is empty, never absent (Sam, 2026-08-24) ·
+**A CLEAN INSTALL MUST NOT DEPEND ON HYDRATION HAVING ALREADY WON A RACE.**
+
+The accepted-state calendar and readiness writers treat an unhydrated or
+legacy-missing map as their canonical empty map. Installing the first program
+may therefore clear or publish accepted state before persistence hydration
+without crashing on `Object.keys(undefined)`. Existing answered facts retain
+their guarded reset rules; absence is normalised only at the ownership
+boundary. · `WORKING` — `test:calendar-ownership` +
+`test:readiness-store-ownership`. Seat `onboardingtype`.
+
+---
+
+**R-191** · New onboarding means a new training context (Sam, 2026-08-24) ·
+**A NEW ATHLETE NEVER INHERITS THE PREVIOUS ATHLETE'S PROGRAM FACTS.**
+
+Accepting a newly generated onboarding program clears previous calendar
+overrides, readiness answers, coach constraints, injury episodes, temporary
+facts, program edits, feedback and load overrides before publishing the new
+program. The usual game day remains one recurring Profile fact; onboarding
+does not materialise every occurrence into dated Calendar overrides. This is
+one fresh-program boundary, not screen-specific cleanup. · `WORKING` —
+`test:accept-boundary-contract`. Seat `onboardingtype`.

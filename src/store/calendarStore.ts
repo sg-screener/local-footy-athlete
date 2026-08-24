@@ -338,7 +338,15 @@ export function applyCalendarMarkedDaysWrite(args: {
   writer: CalendarWriterId;
   resetActionId?: string;
 }): CalendarWriteOutcome {
-  const markCountBefore = Object.keys(useCalendarStore.getState().markedDays).length;
+  // Cold-start and migration callers can reach the writer before Zustand has
+  // restored the persisted slice. The boundary is the normalisation owner:
+  // undefined means the canonical empty map, never a value `Object.keys` may
+  // crash on halfway through onboarding installation.
+  const currentMarkedDays = normalizeAcceptedKeyedMap<CalendarDayType>(
+    useCalendarStore.getState().markedDays,
+  );
+  const nextMarkedDays = normalizeAcceptedKeyedMap<CalendarDayType>(args.next);
+  const markCountBefore = Object.keys(currentMarkedDays).length;
   const record = (outcome: 'applied' | 'refused', reason?: string, resetActionId?: string) => {
     emitAthleteActionEvent(beginAthleteActionTrace({
       source: 'system',
@@ -348,7 +356,9 @@ export function applyCalendarMarkedDaysWrite(args: {
       writer: args.writer,
       outcome,
       markCountBefore,
-      markCountAfter: Object.keys(useCalendarStore.getState().markedDays).length,
+      markCountAfter: Object.keys(normalizeAcceptedKeyedMap<CalendarDayType>(
+        useCalendarStore.getState().markedDays,
+      )).length,
       ...(reason ? { internalResultCode: reason } : {}),
       // `erasureActId`, not `resetActionId` — the diagnostics forbidden-key
       // filter drops any key containing "set" (recipe lesson 12).
@@ -356,7 +366,7 @@ export function applyCalendarMarkedDaysWrite(args: {
     });
   };
 
-  const nextIsTheDefault = Object.keys(args.next).length === 0;
+  const nextIsTheDefault = Object.keys(nextMarkedDays).length === 0;
   const effectiveResetActionId = args.resetActionId ?? activeCalendarResetActionId();
   if (nextIsTheDefault && markCountBefore > 0) {
     if (!effectiveResetActionId) {
@@ -371,7 +381,7 @@ export function applyCalendarMarkedDaysWrite(args: {
     }
   }
 
-  useCalendarStore.setState({ markedDays: args.next });
+  useCalendarStore.setState({ markedDays: nextMarkedDays });
   record('applied', undefined, effectiveResetActionId);
   return { ok: true };
 }

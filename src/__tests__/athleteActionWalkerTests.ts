@@ -250,6 +250,7 @@ function profileFor(rng: () => number): OnboardingData {
     // would refuse (found by R1.3: the quiescent boot gates on a COMPLETED
     // onboarding, and the old boot never looked).
     firstName: 'Walker',
+    gender: 'male',
     heightCm: 184,
     weightKg: 90,
     seasonPhase,
@@ -284,6 +285,7 @@ function profileFor(rng: () => number): OnboardingData {
       modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
       answeredOn: INSTALL_DAY,
     },
+    ...(seasonPhase === 'Off-season' ? { seasonFinishedOn: '2026-06-20' } : {}),
     ...(gameDay ? { usualGameDay: gameDay, gameDay } : {}),
   } as unknown as OnboardingData;
 }
@@ -1294,25 +1296,19 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
         }
       }
 
-      // L-P8 CARD IDENTITY, ONE NAME (Sam, 2026-08-01 — the queue addition
-      // extending ruling 7-e to ALL sessions). Support/midline rows inside a
-      // strength or conditioning session are CONTENTS, not card vocabulary: a
-      // lower day reads "Lower Body Strength", never "+ Midline Work". A
-      // support part may exist ONLY as the identity of a day whose sole
-      // content is trunk work — so a support part beside a strength or
-      // conditioning part on the same day is the defect, whatever the words.
-      // (Team-combo joins are untouched: team_training is an anchor part, not
-      // content this law counts. Power rides beside a sole-trunk day
-      // unchanged — folding trunk into an invented "Strength" word would be
-      // the opposite defect.)
+      // L-P8 CARD IDENTITY, ONE NAME (corrected by Sam, 2026-08-24).
+      // Midline is an exercise role inside Strength or Conditioning, never a
+      // session type. No support part may reach either surface — even when
+      // edits leave midline as the only non-power row — because that is the
+      // exact path that produced "Strength + Midline Work" from Explosive
+      // Push-up + Dragon Flag.
       {
         const kinds = visibleDay.parts.map((part) => String(part.kind));
-        if (kinds.includes('support') &&
-          (kinds.includes('strength') || kinds.includes('conditioning'))) {
+        if (kinds.includes('support')) {
           offend('L-P8 CARD IDENTITY',
-            `${day.date}: a support part rides beside content parts `
-            + `(${JSON.stringify(kinds)}) — midline rows are contents of the `
-            + 'session they are in, not card vocabulary (Sam, 2026-08-01).');
+            `${day.date}: a support part reached the visible program `
+            + `(${JSON.stringify(kinds)}) — midline rows are contents of `
+            + 'Strength or Conditioning, never card vocabulary.');
         }
       }
 
@@ -1673,26 +1669,6 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     redsIn: 'bounded',
   },
   {
-    id: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
-    law: 'L-P3 TEMPLATE = PROJECTION',
-    declares: { form: 'template_projection', omits: [], invents: ['support'] },
-    why: 'THE TRUNK/SUPPORT SPLIT, ANSWERED TWICE. The template badges a row '
-      + '`midline` via `classifyExerciseRole(name)` — a NAME classifier — while '
-      + '`getSessionComponentRows` decides the same question with '
-      + '`isTrunkSupportRow`, put the row in `strengthRows`, and so no `support` '
-      + 'component exists for the projection to carry. Nothing is lost from the '
-      + 'glass here (the row renders either way); what disagrees is what KIND of '
-      + 'work the athlete is being told it is, which is the same defect class from '
-      + 'the other end. DEEP ONLY, by survey. Reproduce: deep, 2026-08-24 — '
-      + 'template ["strength","support"] / projection ["strength"].',
-    paidBy: 'the D13 session-template owner, with `sessionComponents` — role should '
-      + 'come from the part the row belongs to, not from a second reading of its '
-      + 'name (the name-as-a-data-channel shape this unit exists to remove).',
-    expiresWhen: 'the session list never badges work as a kind the projection does '
-      + 'not carry on that day.',
-    redsIn: 'deep',
-  },
-  {
     id: 'session_list_has_no_representation_for_speed_work',
     law: 'L-P3 TEMPLATE = PROJECTION',
     declares: { form: 'template_projection', omits: ['speed'], invents: [] },
@@ -1731,19 +1707,10 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // enumerating rather than another single fix.
   // `session_list_drops_a_team_night_stack_and_badges_support` — ENTRY
   // DELETED 2026-08-05, MOVED NOT PAID (the same day's second reach loss).
-  // The combination shape (a team night carrying both gym domains rendering
-  // as neither, plus a `support` badge) stopped being deterministically
-  // reachable in EITHER tier after the R1.3 world-fidelity fixes re-rolled
-  // every seeded path. The defect is pre-existing composition code and its
-  // TWO constituent mechanisms remain declared on this list
-  // (`session_list_drops_conditioning_attached_to_an_appointment`,
-  // `session_list_badges_a_midline_row_the_projection_has_no_part_for`);
-  // the combination matrix still watches the composition itself as its one
-  // blind spot (cells [5]/[6], composition `roles=[midline]
-  // buckets=[conditioning,strength] cond=block_no_flag`), now pointed at the
-  // constituent entries. Owner unchanged: the D13 session-template owner
-  // with `sessionComponents`; paying one mechanism alone still leaves the
-  // matrix blind spot standing until the composition is re-measured.
+  // The combination shape stopped being deterministically reachable after the
+  // R1.3 world-fidelity fixes. Its historic support constituent was paid on
+  // 2026-08-24 when Midline ceased to be a session identity; if `support`
+  // returns it is now novel rather than silently contained.
   // PAID AND DELETED 2026-08-05 — `composed_optional_marker_survives_a_stacked_combination`.
   //
   // Its `paidBy` asked for "clearing the marker at every combining site, not the
@@ -1896,20 +1863,17 @@ run('the declaration matcher decomposes combinations and refuses novelty', () =>
   const shapeOf = (omits: string[], invents: string[]): string[] | null =>
     declaredRedsFor(LAW, offence(omits, invents));
   const SPEED = 'session_list_has_no_representation_for_speed_work';
-  const SUPPORT = 'session_list_badges_a_midline_row_the_projection_has_no_part_for';
   const RECOVERY = 'session_list_calls_a_conditioning_day_recovery';
 
   const cases: Array<{ omits: string[]; invents: string[]; expect: string[] | null; why: string }> = [
     { omits: ['speed'], invents: [], expect: [SPEED], why: 'a single declared shape still matches itself' },
-    { omits: [], invents: ['support'], expect: [SUPPORT], why: 'the other single shape' },
     { omits: ['conditioning'], invents: ['recovery'], expect: [RECOVERY],
       why: 'an entry that declares BOTH halves is one constituent, not two' },
-    // THE RED THIS RULING EXISTS FOR — the deep walker's 2026-07-27 offence.
-    { omits: ['speed'], invents: ['support'], expect: [SUPPORT, SPEED],
-      why: 'a combination is covered by its constituents, with no entry declared for the pair' },
     { omits: ['conditioning', 'speed'], invents: ['recovery'], expect: [RECOVERY, SPEED],
       why: 'a three-element combination decomposes the same way' },
     // AND THE HALF THAT KEEPS IT A RATCHET.
+    { omits: [], invents: ['support'], expect: null,
+      why: 'the paid Midline/support shape is novel again if it ever returns' },
     { omits: ['strength'], invents: [], expect: null, why: 'an undeclared element is a NEW red' },
     { omits: ['speed'], invents: ['power'], expect: null,
       why: 'one novel element leaves the WHOLE day undeclared — no partial credit' },
@@ -2809,6 +2773,9 @@ function tapeWorldProfile(overrides?: Partial<Record<string, unknown>>): Onboard
   // one (an In-season charter world must, or completion refuses it).
   if (!overrides || !('usualGameDay' in overrides)) delete profile.usualGameDay;
   if (!overrides || !('gameDay' in overrides)) delete profile.gameDay;
+  if (profile.seasonPhase === 'Off-season' && !profile.seasonFinishedOn) {
+    profile.seasonFinishedOn = '2026-06-20';
+  }
   return profile as unknown as OnboardingData;
 }
 

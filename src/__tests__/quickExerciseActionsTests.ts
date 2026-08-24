@@ -10,6 +10,7 @@ import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { ProgramControlAction } from '../types/programControlAction';
 import type { TapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
+import { classifyExerciseRole } from '../utils/sessionRoles';
 
 let passed = 0;
 let failed = 0;
@@ -105,6 +106,17 @@ assert(derivedMobilityRanked.length > 0,
   'a real derived warm-up row has ranked legal replacements');
 assert(derivedMobilityRanked.every((choice) => exerciseSessionFamily(choice.name!) === 'mobility'),
   'the typed Mobility / Warm-up slot outranks an ambiguous exercise name');
+const pallofRanked = rankedQuickSwapChoices({
+  originalExercise: 'Band Pallof Press',
+  reason: 'preference',
+  environment: healthyEnvironment,
+});
+assert(pallofRanked.length > 0,
+  'Band Pallof Press has real ranked midline replacements');
+assert(pallofRanked.every((choice) => classifyExerciseRole(choice.name!) === 'midline'),
+  'a midline Quick Swap never broadens into power, main lifts or unrelated accessories');
+assert(!pallofRanked.some((choice) => choice.name === 'Box Jumps'),
+  'Box Jumps can never be offered as a Band Pallof Press replacement');
 let attempted: readonly string[] = [];
 for (const expected of ['A', 'B', 'C', 'A']) {
   const next = nextQuickSwapChoice(choices, attempted);
@@ -241,10 +253,12 @@ assert(/controlsRow: \{[\s\S]*?position: 'absolute'[\s\S]*?right: 0[\s\S]*?botto
 assert(/<View style=\{styles\.controlsRow\}>[\s\S]*?styles\.weightControl[\s\S]*?\{checkbox\}[\s\S]*?<\/View>/.test(source),
   'the weight toggle and checkbox are siblings on one exact centreline');
 const hubStart = source.indexOf('testID="day-workout-change-hub"');
+assert(hubStart >= 0, 'the session-wide change hub anchor exists');
 const hubEnd = source.indexOf('/>', hubStart);
+assert(hubEnd >= 0, 'the session-wide change hub closing anchor exists');
+assert(hubEnd > hubStart, 'the session-wide change hub closing anchor exists');
 const hubSource = source.slice(hubStart, hubEnd);
-assert(hubStart >= 0 && hubEnd > hubStart
-  && /id: 'equipment'/.test(hubSource)
+assert(/id: 'equipment'/.test(hubSource)
   && /id: 'injury'/.test(hubSource)
   && /id: 'add'/.test(hubSource)
   && !/id: 'remove'/.test(hubSource)
@@ -258,10 +272,12 @@ for (const renderer of [
     `${renderer} is wired to both quick actions`);
 }
 const requestStart = source.indexOf('const requestExerciseRemoval =');
+assert(requestStart >= 0, 'the pending removal request anchor exists');
 const removeStart = source.indexOf('const removeExerciseToday =', requestStart);
+assert(removeStart >= 0, 'the removal commit anchor exists');
+assert(removeStart > requestStart, 'the removal commit anchor follows its request');
 const requestSource = source.slice(requestStart, removeStart);
-assert(requestStart >= 0 && removeStart > requestStart
-  && /setExerciseEditStep\(\{ kind: 'decide_removal', exercise \}\)/.test(requestSource)
+assert(/setExerciseEditStep\(\{ kind: 'decide_removal', exercise \}\)/.test(requestSource)
   && !/executeProgramControlAction/.test(requestSource),
   'Quick Remove opens a pending decision without changing the program');
 assert((source.match(/onQuickRemove=\{requestExerciseRemoval\}/g) ?? []).length >= 2,
@@ -272,20 +288,24 @@ assert(/case 'decide_removal':[\s\S]*?Yes, show replacements[\s\S]*?No, remove i
   && /step\.kind === 'decide_removal'[\s\S]*?\? 'Go back'/.test(source),
   'the pending decision offers replacement, removal and one true no-change exit');
 const decisionCaseStart = source.indexOf("case 'decide_removal':");
+assert(decisionCaseStart >= 0, 'the removal decision-case anchor exists');
 const decisionCaseEnd = source.indexOf("case 'choose_removal_replacement':", decisionCaseStart);
+assert(decisionCaseEnd >= 0, 'the replacement decision-case anchor exists');
+assert(decisionCaseEnd > decisionCaseStart, 'the replacement decision-case anchor follows it');
 const decisionCaseSource = source.slice(decisionCaseStart, decisionCaseEnd);
-assert(decisionCaseStart >= 0 && decisionCaseEnd > decisionCaseStart
-  && !/was removed/.test(decisionCaseSource),
+assert(!/was removed/.test(decisionCaseSource),
   'the pending decision never claims the exercise was already removed');
 assert(/case 'decide_removal':\n\s*case 'choose_removal_replacement':\n\s*return null;/.test(source),
   'the pending removal steps do not repeat the exercise name as a subtitle');
 assert(/const keepRemovedWithoutReplacement =[\s\S]*?removeExerciseToday\(exercise\)/.test(source),
   'No, remove it commits the removal only after the athlete chooses it');
 const replacementStart = source.indexOf('const addRemovedReplacement =');
+assert(replacementStart >= 0, 'the replacement commit anchor exists');
 const replacementEnd = source.indexOf('// Wrap derivation', replacementStart);
+assert(replacementEnd >= 0, 'the replacement commit closing anchor exists');
+assert(replacementEnd > replacementStart, 'the replacement commit closing anchor exists');
 const replacementSource = source.slice(replacementStart, replacementEnd);
-assert(replacementStart >= 0 && replacementEnd > replacementStart
-  && /type: 'swap_exercise'/.test(replacementSource)
+assert(/type: 'swap_exercise'/.test(replacementSource)
   && !/type: 'add_exercise'/.test(replacementSource),
   'choosing a replacement commits one atomic swap rather than remove then add');
 
@@ -293,9 +313,12 @@ const controlSource = fs.readFileSync(
   path.join(process.cwd(), 'src/utils/programControlActions.ts'), 'utf8',
 );
 const derivedLedgerBranch = controlSource.indexOf('const derivedExerciseAction =');
+assert(derivedLedgerBranch >= 0, 'the derived exercise decision anchor exists');
 const ordinaryTransaction = controlSource.indexOf('const transaction = await runCoachMutationTransaction', derivedLedgerBranch);
-assert(derivedLedgerBranch >= 0 && ordinaryTransaction > derivedLedgerBranch
-  && /appendDecisionEntry/.test(controlSource.slice(derivedLedgerBranch, ordinaryTransaction)),
+assert(ordinaryTransaction >= 0, 'the ordinary transaction anchor exists');
+assert(ordinaryTransaction > derivedLedgerBranch,
+  'the ordinary transaction anchor follows the derived decision branch');
+assert(/appendDecisionEntry/.test(controlSource.slice(derivedLedgerBranch, ordinaryTransaction)),
   'derived exercise actions append through the ledger before the material-program transaction');
 
 console.log(`quick exercise actions: ${passed} passed / ${failed} failed`);
