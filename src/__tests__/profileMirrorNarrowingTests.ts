@@ -400,26 +400,17 @@ run('a publication that does not widen the gap still lands', () => {
     'a legitimate publication was recorded as a refusal');
 });
 
-// ── The instrument has to exist where the defect does ───────────────────
+// ── The temporary instrument no longer lives on a healthy screen ────────
 
-run('the stored-state export is reachable on a Release build', () => {
+run('the stored-state export has retired from the normal Profile screen', () => {
   const profileScreen = readFileSync(
     join(__dirname, '..', 'screens', 'profile', 'ProfileScreen.tsx'),
     'utf8',
   );
-  // Quoted match, not a substring: `indexOf('profile-export-stored-state')`
-  // also matches `profile-export-stored-state-ANYTHING`, so it survived a
-  // mutation that renamed the control out from under it.
-  const exportIdx = profileScreen.indexOf('testID="profile-export-stored-state"');
-  assert(exportIdx > 0, 'the stored-state export button is gone from ProfileScreen');
-  // It first shipped inside the `__DEV__`-only developer-tools section, so on
-  // the one device carrying the wiped profile it was invisible. The readout and
-  // the button must sit in the unconditional header, beside the tap counters.
-  const devToolsIdx = profileScreen.indexOf('profile-developer-tools-section');
-  assert(devToolsIdx === -1 || exportIdx < devToolsIdx,
-    'the export moved back inside the __DEV__-only developer tools section');
-  assert(profileScreen.indexOf('testID="profile-stored-state-readout"') > 0,
-    'the inline counts readout is gone — the numbers must be legible without sharing');
+  assert(!/profile-export-stored-state|profile-stored-state-readout/.test(profileScreen),
+    'the old export button or internal counts still render in Profile');
+  assert(!/serialiseStoredStateExport|storedStateExportHeadline/.test(profileScreen),
+    'Profile still wires the retired stored-state diagnostic');
 });
 
 // ── ONE WRITER, AND THE TAPE SEES ALL OF IT (5D.1, arrived early) ────────

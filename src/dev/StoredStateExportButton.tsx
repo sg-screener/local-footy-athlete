@@ -20,8 +20,9 @@ import { serialiseStoredStateExport, storedStateExportHeadline } from './devStor
  * that is broken": an export button reachable only after onboarding completes
  * is dark for every onboarding defect there will ever be.
  *
- * So this renders on the refusal screen itself and on the Welcome screen — the
- * two places a locked-out athlete can actually be — on every build.
+ * R-141 retires this temporary instrument from every healthy athlete screen.
+ * It renders only inside the actual onboarding completion refusal, where the
+ * athlete is blocked and the evidence may still be needed, on every build.
  *
  * RENDER NEVER THROWS. Capturing the export reads several stores, and one of
  * them is in whatever state caused the refusal. A capture that throws here

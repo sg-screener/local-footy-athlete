@@ -377,35 +377,32 @@ await run('a mirror refusal survives the relaunch that hides it', async () => {
   `the logged refusal does not name what it saved: ${JSON.stringify(refusals[0])}`);
 });
 
-await run('the export is reachable without completing onboarding', async () => {
-  // Sam, locked out 2026-07-30: the completion guard refused, "Finish that
-  // step" dropped him to the first onboarding screen, and the only export
-  // affordance lived behind a Profile tab that requires finishing the very
-  // onboarding that was refusing. The log is worthless if it cannot leave the
-  // device, and it cannot leave the device from a screen the athlete is
-  // locked out of.
-  //
-  // A source pin, deliberately: a mounted-render test is not reachable in this
-  // repo, and the ONLY thing that would catch this affordance being tidied
-  // away is a check that it is still there.
+await run('the export exists only on the onboarding failure surface', async () => {
+  // R-141 retires the temporary diagnostic from normal athlete screens while
+  // keeping the one place it still earns its keep: the real completion refusal
+  // that can strand an athlete before Profile exists.
   const { readFileSync } = require('fs') as typeof import('fs');
   const { join } = require('path') as typeof import('path');
-  const screens = [
-    ['CompleteScreen.tsx', 'the completion refusal screen'],
-    ['WelcomeScreen.tsx', 'the first onboarding screen'],
-  ] as const;
-  for (const [file, description] of screens) {
-    const source = readFileSync(
-      join(__dirname, '..', 'screens', 'onboarding', file), 'utf8');
-    assert(source.includes('<StoredStateExportButton'),
-      `${description} (${file}) no longer offers the stored-state export — an `
-      + 'athlete stuck there cannot send the evidence');
-    // Never behind a build flag: this is the screen the defect strands them on.
-    const rendered = source.slice(source.indexOf('<StoredStateExportButton') - 200,
-      source.indexOf('<StoredStateExportButton'));
-    assert(!/__DEV__\s*&&\s*$/.test(rendered.trimEnd()),
-      `${description} gates the export on __DEV__ — dark on the build that has the bug`);
-  }
+  const complete = readFileSync(
+    join(__dirname, '..', 'screens', 'onboarding', 'CompleteScreen.tsx'), 'utf8');
+  const refusalStart = complete.indexOf("if (phase === 'error')");
+  const normalStart = complete.indexOf('/* ── Generating / Ready state ── */');
+  assert(refusalStart >= 0 && normalStart > refusalStart,
+    'the completion refusal region was not found — this cell is asserting on nothing');
+  const refusal = complete.slice(refusalStart, normalStart);
+  assert(/<StoredStateExportButton\s+testID="onboarding-refusal-export-button"/.test(refusal),
+    'the real onboarding refusal no longer offers its stored-state diagnostic');
+  assert(!/__DEV__\s*&&[\s\S]*<StoredStateExportButton/.test(refusal),
+    'the refusal diagnostic is dark on the Release build where it may be needed');
+
+  const welcome = readFileSync(
+    join(__dirname, '..', 'screens', 'onboarding', 'WelcomeScreen.tsx'), 'utf8');
+  const profile = readFileSync(
+    join(__dirname, '..', 'screens', 'profile', 'ProfileScreen.tsx'), 'utf8');
+  assert(!/<StoredStateExportButton|onboarding-welcome-export-button/.test(welcome),
+    'the temporary export is still visible on the normal Welcome screen');
+  assert(!/profile-export-stored-state|profile-stored-state-readout|serialiseStoredStateExport|storedStateExportHeadline/.test(profile),
+    'stored-state diagnostics are still visible or wired on the normal Profile screen');
 });
 
 await run('clearing the log clears the disk too', async () => {

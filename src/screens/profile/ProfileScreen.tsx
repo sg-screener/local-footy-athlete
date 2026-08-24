@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
-  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -27,10 +26,6 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
-import {
-  serialiseStoredStateExport,
-  storedStateExportHeadline,
-} from '../../dev/devStoredStateExport';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -261,20 +256,6 @@ export default function ProfileScreen() {
         },
       ],
     );
-  };
-
-  // Sam's one-tap instrument (2026-07-30). The profile-mirror wipe had to be
-  // diagnosed against a reconstruction of his device because nobody could read
-  // the real bytes. This shares them verbatim — no summary, no interpretation.
-  const onDevExportStoredState = async () => {
-    try {
-      await Share.share({
-        title: storedStateExportHeadline(),
-        message: serialiseStoredStateExport(),
-      });
-    } catch {
-      // A dismissed share sheet is not a failure worth reporting.
-    }
   };
 
   const onDevPostOnboardingReset = async () => {
@@ -610,39 +591,6 @@ export default function ProfileScreen() {
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>
             Your program setup and support.
           </Text>
-          {/* ─── TEMPORARY, DELIBERATELY VISIBLE IN RELEASE ───
-              2026-07-30. The developer-tools section is `__DEV__`-only, so on
-              Sam's Release build the export was unreachable — his Profile goes
-              Legal → Danger Zone and the section is not there at all. Requiring
-              Metro or a debug build to read a wiped profile defeats the point:
-              the wipe is on the RELEASE device, and that is the state we need.
-              Same treatment as the tap counters above — explicitly visible,
-              never `__DEV__`-gated, and removed with them.
-
-              The counts render INLINE so the key question is answered without
-              sharing anything: `answers` is the live profile, `snapshot` is the
-              accepted profile snapshot. A healthy device shows both in the high
-              twenties. `answers 2` is the wipe; if `snapshot` is still healthy
-              while `answers` is not, the real profile survives in the snapshot
-              and recovery is a read, not a re-onboard. */}
-          <Text
-            variant="bodySmall"
-            color={colors.accent.lime}
-            testID="profile-stored-state-readout"
-          >
-            {storedStateExportHeadline()}
-          </Text>
-          <TouchableOpacity
-            onPress={onDevExportStoredState}
-            testID="profile-export-stored-state"
-            accessibilityRole="button"
-            accessibilityLabel="Export stored state"
-            style={styles.storedStateExportButton}
-          >
-            <Text variant="body" color={colors.surface.primary} style={{ fontWeight: '700' }}>
-              Export stored state
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Program setup */}
@@ -1601,15 +1549,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     fontWeight: '800',
     marginBottom: spacing.xs,
-  },
-  /** TEMPORARY — remove with the stored-state export. */
-  storedStateExportButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: '#C8FF00',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
   },
   headerSubtitle: {
     lineHeight: 20,

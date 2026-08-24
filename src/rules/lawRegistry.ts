@@ -1899,6 +1899,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `coachhardening`. TWO OPTIONS COMPARED: inspect HTTP/provider wording in the screen, or let the existing closed unavailable/refused/no_answer vocabulary choose from one copy map. The second landed, so transport detail cannot become athlete copy and adding a failure code is a type error until words exist. `test:coach-chat-integration` pins Sam\'s exact three sentences, the screen\'s one mapping call and R-140 provenance; its executed API tape separately reaches all three typed causes. `test:profile-reset-ui` pins the complete approved Privacy category list. FIRST RUN: the Coach cell red because all failures still rendered noAnswerYet; the Privacy cell red because its sentence named progress summaries only. NOT COVERED: simulator pixels and Sam\'s physical iPhone after the final batched rebuild.',
     },
   },
+  {
+    id: 'LAW-stored-state-export-is-failure-only',
+    law: 'Stored-state diagnostics never appear on a healthy Welcome or Profile screen. The explicit export remains only on the real onboarding completion failure surface, where an athlete may be blocked before Profile exists; it never shares automatically.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-141 — Sam, 2026-08-24, approved removing the temporary export and internal counts from normal screens while retaining it on the actual failure screen.',
+    guard: {
+      state: 'guarded',
+      by: 'test:action-log + test:profile-mirror-narrowing',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `exportcleanup`. `test:action-log` anchors the CompleteScreen error branch, requires the exact refusal export mount there without a Release gate, and rejects the component, test id and export wiring from Welcome and Profile. `test:profile-mirror-narrowing` independently rejects both the old Profile controls and their serializer imports. FIRST RUN: both suites red against the existing normal-screen diagnostics; after the cleanup the action-log suite was 12/0 and the new Profile cell passed while that suite retained only its two pre-existing unrelated reds. MUTATION: restoring the real Welcome import and mount makes the failure-only cell red; restoring the cleaned source makes it green. NOT COVERED: the completion error layout on simulator and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

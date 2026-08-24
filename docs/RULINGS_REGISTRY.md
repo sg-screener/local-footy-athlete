@@ -4464,3 +4464,17 @@ program."**
 The typed cause, not HTTP or provider prose, chooses the athlete sentence.
 · `WORKING` — `test:coach-snapshot` + `test:profile-reset-ui`. Seat
 `coachhardening`.
+
+---
+
+**R-141** · *"do we still need this export state thing in the app?"* followed
+by *"okay do that"* (Sam, 2026-08-24) · **STORED-STATE DIAGNOSTICS ARE
+FAILURE-ONLY, NOT PART OF A HEALTHY ATHLETE SCREEN.**
+
+The temporary **Export stored state** button and its internal answer/snapshot
+counts are removed from the normal Welcome and Profile screens. The underlying
+export remains available only on the real onboarding completion failure
+surface, where an athlete can be blocked before Profile is reachable and the
+diagnostic may still explain the refusal. Nothing is exported automatically;
+sharing remains an explicit tap on that failure surface. · `WORKING` —
+`test:action-log` + `test:profile-mirror-narrowing`. Seat `exportcleanup`.
