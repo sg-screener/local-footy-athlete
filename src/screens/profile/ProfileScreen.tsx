@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
 import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
@@ -608,7 +608,7 @@ export default function ProfileScreen() {
               <ProfileRow label="Team Training" value={formatList(teamDays) ?? ''} />
             ) : null}
             {gameDay ? <ProfileRow label="Game Day" value={gameDay} /> : null}
-            {mainFocus ? <ProfileRow label="Main goal / focus" value={mainFocus} /> : null}
+            {mainFocus ? <ProfileRow label="Main goal/s" value={mainFocus} /> : null}
             <ProfileRow
               label="Equipment"
               value={formatEquipmentProfileSummary(onboardingData)}
@@ -620,6 +620,11 @@ export default function ProfileScreen() {
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
             >
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color={colors.accent.lime}
+              />
               <Text style={styles.setupChangeText}>
                 Something changed? Tell the coach
               </Text>
@@ -1586,13 +1591,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   setupChangeButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: '#1A1E18',
+    marginHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    backgroundColor: 'rgba(200, 255, 0, 0.03)',
   },
   setupChangeText: {
-    color: colors.accent.lime,
-    fontSize: 14,
+    color: colors.text.primary,
+    fontSize: 15,
     fontWeight: '700',
     lineHeight: 20,
   },

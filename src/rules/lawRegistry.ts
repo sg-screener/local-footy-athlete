@@ -2174,6 +2174,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: delete the signed notification sentence and every consumer, or retain the derived tab notification/accessibility announcement while removing only its redundant visual bubble from the conversation. The second landed because R-105 still requires an arrival notification and the tab dot already owns that job. TEST FIRST: the source-level mount cell was inverted to require the live signed question and forbid both `coach-tab-commitment-notice` and the notification-copy call; it failed while the preamble Bubble remained. AFTER: that named cell passes, the question and choice card remain mounted under the same live-conversation guard, and `test:signed-copy-extraction` is 7/7. LIVENESS: temporarily restoring the real signed preamble Bubble made the named cell fail; removing the mutation returned it to green. LIVE SIMULATOR: the greeting is followed immediately by the weekly question and the existing choice card; the generic announcement bubble is absent. The full weekly-reduction tape currently continues into its inherited off-season-finish-date fixture failure from R-173 and crashes in section [7]; the R-178 cell executes and passes before that unrelated stop. Registry baselines are 178 laws / 157 guarded / 21 UNENFORCED with the same three inherited reds and 177 rulings with the same two inherited reds. NOT COVERED: physical-iPhone Release and real VoiceOver speech.',
     },
   },
+  {
+    id: 'LAW-profile-setup-edit-looks-actionable',
+    law: 'Profile names the focus row Main goal/s. Its “Something changed? Tell the coach” control is visually a distinct edit button: the established dark rounded action surface with the small lime pencil, not a flush data row.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-179 — Sam changed the label and asked for the Profile setup control to use the established edit-button treatment.',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. TWO OPTIONS COMPARED: add decoration to the existing flush footer, or reuse the established program-edit button geometry and pencil treatment. The shared treatment landed: 48-point dark rounded row, lime 18-point pencil and readable white label, while the existing setup-sheet door remains unchanged. TEST FIRST: `test:profile-reset-ui` gained one label cell and one action-treatment cell and began with exactly two reds. AFTER: it is 174/174 and its chained wordmark tape is 14/14. Registry baselines are 179 laws / 158 guarded / 21 UNENFORCED with the same three inherited reds and 178 rulings with the same two inherited reds. NOT COVERED: physical-iPhone Release, real VoiceOver speech and Sam\'s visual acceptance.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

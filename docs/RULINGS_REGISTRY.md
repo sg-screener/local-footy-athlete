@@ -4923,3 +4923,14 @@ say *“Your coach has something to ask about your week.”* The existing derive
 Coach-tab dot remains the notification required by R-105, and its concise
 accessibility announcement remains available outside the conversation. ·
 `WORKING` — `test:coach-weekly-reduction`. Seat `onboardingtype`.
+
+---
+
+**R-179** · Profile goal label and setup-edit button (Sam, 2026-08-24) ·
+**NAME THE GOALS; SHOW THE ACTION AS AN ACTION.**
+
+Profile labels the athlete's focus row **Main goal/s**. **Something changed?
+Tell the coach** is a distinct dark rounded edit button inside Program Setup,
+using the same small lime pencil treatment as the established program-edit
+button rather than looking like another data row. · `WORKING` —
+`test:profile-reset-ui`. Seat `onboardingtype`.

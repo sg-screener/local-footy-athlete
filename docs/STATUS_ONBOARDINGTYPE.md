@@ -823,6 +823,27 @@ The derived tab dot and its accessibility announcement remain intact.
 
 ---
 
+## R-179 — Profile goal label and edit-button treatment
+
+Changed **Main goal / focus** to **Main goal/s**. The setup-change action now
+uses the established dark rounded edit-button shape, with a small lime pencil
+and white label, while keeping the same guided setup-sheet door.
+
+### Evidence
+
+- TEST FIRST: two new Profile cells produced exactly two reds: the old label
+  and the old flush-footer treatment.
+- AFTER: `test:profile-reset-ui` 174/174; chained `test:lfa-wordmark` 14/14.
+- Registry baselines: 179 laws / 158 guarded / 21 `UNENFORCED` with the same
+  three inherited reds; 178 rulings with the same two inherited reds.
+
+### NOT COVERED
+
+- Physical-iPhone Release and Sam's visual acceptance.
+- Real VoiceOver speech.
+
+---
+
 ## R-174 — one quick-action system across every exercise row
 
 Sam restored row-level Swap/Remove as explicit shortcuts. The implementation

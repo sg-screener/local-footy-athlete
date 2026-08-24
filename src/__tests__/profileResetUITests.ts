@@ -197,7 +197,7 @@ ok('Training Experience row present', /label="Training Experience"/.test(src));
 ok('LFA Days row present', /label="LFA Days"/.test(src));
 ok('Team Training row present when available', /label="Team Training"/.test(src));
 ok('Game Day row present when available', /label="Game Day"/.test(src));
-ok('Main goal / focus row present when available', /label="Main goal \/ focus"/.test(src));
+ok('Main goal/s row present when available', /label="Main goal\/s"/.test(src));
 ok(
   'Equipment row uses the onboarding-choice summary, not the itemised checklist',
   /label="Equipment"[\s\S]{0,120}formatEquipmentProfileSummary\(onboardingData\)/.test(src)
@@ -210,6 +210,11 @@ ok(
 );
 ok('Program setup CTA present', /Something changed\? Tell the coach/.test(src));
 ok('Program setup CTA testID present', /testID="profile-program-setup-change"/.test(src));
+ok(
+  'Program setup CTA uses the established edit-button treatment and pencil icon',
+  /<MaterialCommunityIcons[\s\S]{0,100}name="pencil-outline"[\s\S]{0,100}size=\{18\}[\s\S]{0,100}color=\{colors\.accent\.lime\}/.test(src)
+    && /setupChangeButton:\s*\{[^}]*minHeight:\s*48[^}]*flexDirection:\s*'row'[^}]*borderRadius:\s*12[^}]*backgroundColor:\s*'#1A1E18'/s.test(src),
+);
 ok(
   'Program setup CTA opens guided setup sheet',
   /onProgramSetupChanged[\s\S]*setSetupSheetVisible\(true\)/.test(src)
