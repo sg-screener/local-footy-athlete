@@ -4606,3 +4606,13 @@ static onboarding answer. Existing stored intensity values remain readable as
 legacy profile data but no longer shape the read. · `WORKING` —
 `test:onboarding-presentation` + `test:team-night-size` +
 `test:onboarding-field-influence`. Seat `onboardingtype`.
+
+---
+
+**R-153** · Welcome first-card copy shortening (Sam, 2026-08-24) ·
+**FIRST CARD ENDS AT RECOVERY.**
+
+The first Welcome card reads **YOUR PLAN / Built as one program** with the body
+**"Strength, speed, conditioning and recovery."** The retired **Everything
+works together** heading and the longer phase-specific sentence are absent. ·
+`WORKING` — `test:onboarding-presentation`. Seat `onboardingtype`.

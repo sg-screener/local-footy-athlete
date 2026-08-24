@@ -41,8 +41,8 @@ type FeatureCardData = {
 const FEATURES: FeatureCardData[] = [
   {
     label: 'YOUR PLAN',
-    title: 'Everything works together',
-    description: 'Strength, speed, conditioning and recovery specific to each phase of the season.',
+    title: 'Built as one program',
+    description: 'Strength, speed, conditioning and recovery.',
     icon: 'dumbbell',
   },
   {

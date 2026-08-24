@@ -110,3 +110,34 @@ the seventh audited consumer was the obsolete intensity screen deleted here.
 - The derived team-night size has no production programming consumer today;
   this change makes its source honest but does not claim feedback already
   changes a future program.
+
+---
+
+## R-153 — shorten the first Welcome card
+
+Sam asked for the first card to end after **recovery** and for **Everything
+works together** to be replaced. Two options were compared:
+
+1. Change only the body and leave the generic heading.
+2. Shorten the body and make the heading describe the product structure.
+
+Option 2 landed: **Built as one program** / **Strength, speed, conditioning and
+recovery.** This removes the repeated season explanation while preserving the
+point of the card.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 81/83; the two revised Welcome
+  copy cells were the only failures.
+- AFTER: `test:onboarding-presentation` — 83/83.
+- The same guard rejects both retired first-card strings independently.
+- `test:law-registry` — 11/14 with the same three existing reds: one missing
+  script, one unregistered LR-18 guard and 21 UNENFORCED laws. The updated law
+  remains guarded and in-chain.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-153 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and small-screen wrapping after the copy change.
+- Physical-iPhone Release rebuild.
