@@ -7,8 +7,8 @@ import { DayOfWeek } from '../../types/domain';
 import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 
 /**
- * Canonical day-of-week grid used across onboarding (PreferredTrainingDays,
- * TeamTrainingDays) and anywhere else the athlete picks days of the week.
+ * Canonical day-of-week picker used across onboarding and anywhere else the
+ * athlete picks days of the week.
  *
  * Layout is Mon–Sat in a 3-up grid (12px gap, 31% tile width), then Sunday
  * sits centered on its own row underneath so the final row feels
@@ -18,9 +18,9 @@ import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
  *   Thu  Fri  Sat
  *        Sun
  *
- * This is deliberately a component (not just a style export) so the
- * Sunday-row split, dim/select rules, and tile contents stay in lockstep
- * across every consumer — no per-screen special casing.
+ * The default 3-3-1 grid is used for multi-select questions. Game Day asks for
+ * the explicit `single-row` layout: the same canonical seven answers and
+ * selection behaviour, presented as seven compact rounded-square tiles.
  */
 
 const DAYS: { id: DayOfWeek; label: string }[] = DAYS_OF_WEEK.map((day) => ({
@@ -39,12 +39,15 @@ export interface DayGridProps {
    * selected.
    */
   isDimmed?: (day: DayOfWeek) => boolean;
+  /** `grid` keeps the 3-3-1 default; `single-row` places all seven days across. */
+  layout?: 'grid' | 'single-row';
 }
 
 export const DayGrid: React.FC<DayGridProps> = ({
   selectedDays,
   onToggleDay,
   isDimmed,
+  layout = 'grid',
 }) => {
   const renderDay = (day: { id: DayOfWeek; label: string }) => {
     const isSelected = selectedDays.includes(day.id);
@@ -56,7 +59,10 @@ export const DayGrid: React.FC<DayGridProps> = ({
         dimmed={dimmed}
         onPress={() => onToggleDay(day.id)}
         hideCheckmark
-        style={styles.dayTile}
+        style={[
+          styles.dayTile,
+          layout === 'single-row' ? styles.singleRowTile : styles.gridTile,
+        ]}
       >
         <Text
           variant="bodyEmphasis"
@@ -68,6 +74,10 @@ export const DayGrid: React.FC<DayGridProps> = ({
       </SelectableTile>
     );
   };
+
+  if (layout === 'single-row') {
+    return <View style={styles.singleRow}>{DAYS.map(renderDay)}</View>;
+  }
 
   // 7 days don't divide evenly into a 3-column grid. Splitting the render
   // (Mon–Sat in the wrap container, Sunday centered alone) keeps the lone
@@ -82,6 +92,10 @@ export const DayGrid: React.FC<DayGridProps> = ({
 };
 
 const styles = StyleSheet.create({
+  singleRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   daysContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -96,11 +110,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayTile: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridTile: {
     width: '31%',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  singleRowTile: {
+    flex: 1,
+    aspectRatio: 1,
+    minWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   dayLabel: {
     fontWeight: '600',

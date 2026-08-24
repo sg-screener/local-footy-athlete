@@ -2031,6 +2031,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite anchors EducationCard\'s icon-first educationRow, nested educationText block containing both title and body, row alignItems center, flex text owner and absence of the retired body paddingLeft. TEST-FIRST LIVENESS: the two new cells were the suite\'s only reds against the title-centred icon structure (86/88); grouping title and body beside the icon returned it to 88/88. NOT COVERED: simulator pixels, Dynamic Type wrapping and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-game-day-is-one-seven-day-row',
+    law: 'The onboarding Game Day picker says "Select the day you play most often." and shows the canonical Monday-through-Sunday week in one horizontal row of compact rounded-square tiles. The shared day picker keeps its 3-3-1 default for the other multi-select day questions.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-159 — Sam supplied the seven-across reference but required the existing more-square rounded tile shape to remain.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation + test:game-anchor',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite pins the exact instruction, GameDay\'s explicit single-row request, the shared picker\'s one-container map over its canonical DAYS list, six-pixel horizontal gap, flex-one square geometry, zero inner padding, absence of a circular radius, and retention of the 3-3-1 default. TEST-FIRST LIVENESS: the four new requirements were the suite\'s only reds against the old 3-3-1 Game Day (89/93); the shared layout variant returned it to 93/93. `test:game-anchor` independently keeps its whole-week picker cell green but remains 13/15 on two pre-existing unrelated generation/reader findings. NOT COVERED: simulator pixels, small-screen clipping, Dynamic Type and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

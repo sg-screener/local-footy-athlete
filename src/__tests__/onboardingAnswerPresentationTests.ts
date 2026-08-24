@@ -204,6 +204,26 @@ console.log('\n[0e] Generation-card icons centre against the complete text block
       && !/educationBody:\s*\{[\s\S]{0,180}paddingLeft:/.test(completeScreen));
 }
 
+console.log('\n[0f] Game day is one compact seven-day row');
+{
+  const gameDayScreen = read('src/screens/onboarding/GameDayScreen.tsx');
+  const dayGrid = read('src/components/onboarding/DayGrid.tsx');
+
+  ok('Game Day carries the approved instruction line',
+    gameDayScreen.includes('Select the day you play most often.'));
+  ok('Game Day explicitly requests the dedicated single-row layout',
+    /<DayGrid[\s\S]{0,220}layout="single-row"/.test(gameDayScreen));
+  ok('the single-row layout renders the entire canonical week in one container',
+    /if \(layout === 'single-row'\)\s*\{[\s\S]{0,180}<View style=\{styles\.singleRow\}>\{DAYS\.map\(renderDay\)\}<\/View>/.test(dayGrid));
+  ok('single-row days are compact rounded-square tiles, not circles or a wrapped grid',
+    /singleRow:\s*\{[\s\S]{0,100}flexDirection:\s*'row'[\s\S]{0,100}gap:\s*6/.test(dayGrid)
+      && /singleRowTile:\s*\{[\s\S]{0,160}flex:\s*1[\s\S]{0,120}aspectRatio:\s*1[\s\S]{0,120}paddingHorizontal:\s*0[\s\S]{0,120}paddingVertical:\s*0/.test(dayGrid)
+      && !/borderRadius:\s*999/.test(dayGrid));
+  ok('the shared picker retains its 3-3-1 default for the other day questions',
+    /DAYS\.slice\(0, 6\)\.map\(renderDay\)/.test(dayGrid)
+      && /<View style=\{styles\.lastRow\}>\{renderDay\(DAYS\[6\]\)\}<\/View>/.test(dayGrid));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────

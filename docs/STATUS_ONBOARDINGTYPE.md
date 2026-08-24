@@ -291,3 +291,41 @@ The existing short body remains unchanged.
 
 - Simulator pixels and heading wrapping.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-159 — make Game Day one seven-across row
+
+Sam supplied the newer seven-across Game Day design while explicitly retaining
+the app's more square rounded boxes. Two options were compared:
+
+1. Render a second hard-coded weekday list inside GameDayScreen.
+2. Give the canonical shared DayGrid an explicit single-row layout while
+   retaining its existing 3-3-1 default.
+
+Option 2 landed. Game Day now asks the shared owner for one horizontal row; the
+team-training and usual-gym-day screens are unchanged. The instruction line is
+**"Select the day you play most often."**
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 89/93; the four new requirements
+  were the only failures.
+- AFTER: `test:onboarding-presentation` — 93/93.
+- `test:game-anchor` — its whole-week picker cell remains green; suite 13/15 on
+  the same unrelated midweek-generation and deleted-reader findings.
+- The guard requires canonical seven-day mapping in one container, compact
+  flex-one square geometry, rounded rather than circular tiles, the exact
+  instruction and retention of the other screens' 3-3-1 default.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs; neither GameDayScreen nor DayGrid is named.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded, raising guarded laws 144 → 145 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-159 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and small-screen clipping.
+- Dynamic Type.
+- Physical-iPhone Release rebuild.

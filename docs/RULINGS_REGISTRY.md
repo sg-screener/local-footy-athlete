@@ -4668,3 +4668,15 @@ The **YOUR PLAN** card heading is **Train everything that matters**. Its body
 remains **"Strength, speed, conditioning and recovery."** The retired **Built
 as one program** heading is absent. · `WORKING` —
 `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-159** · Game-day picker layout (Sam, 2026-08-24) · **SEVEN DAYS IN ONE
+ROUNDED-SQUARE ROW.**
+
+Game Day says **"Select the day you play most often."** and presents Monday
+through Sunday in one horizontal row. The controls remain compact rounded-square
+tiles rather than becoming circles. The shared day picker retains its 3-3-1
+default for the multi-select team-training and usual-gym-day questions. ·
+`WORKING` — `test:onboarding-presentation` + `test:game-anchor`. Seat
+`onboardingtype`.
