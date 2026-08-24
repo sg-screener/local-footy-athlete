@@ -97,10 +97,24 @@ Measured evidence:
 - Visual receipts: `artifacts/ui-walk/coach-terra-read-only.png` and
   `artifacts/ui-walk/coach-hardening-privacy.png`.
 
+## Physical iPhone release
+
+- A fresh signed Release build from checkpoint `3b64e152` completed with
+  `BUILD SUCCEEDED` in the isolated derived-data path
+  `/private/tmp/lfa-release-coach-hardening-20260824-1125`.
+- The standalone `main.jsbundle` is embedded and strict code-sign verification
+  passed.
+- `devicectl` installed the build in place on Sam's paired iPhone 16 Pro Max,
+  device id `AFA21856-881E-587B-96D5-60817FD11018`. Renee's iPhone was not
+  targeted.
+- The installed bundle launched successfully without Metro and remained in the
+  device process list as PID 7829.
+
 ## NOT COVERED
 
-- The physical iPhone rebuild and Sam's device acceptance have not been run;
-  that is the next and only remaining step in this order.
+- Sam's visual acceptance of Coach, Progress, Privacy and the completed
+  Mobility / Warm-up tick on this exact install is still required. Installation
+  and launch are verified; athlete-facing acceptance is not inferred from them.
 - The repository-wide law gate still has its pre-existing unrelated reds: one
   missing `test:game-feedback` script, LR-18 without a registry row, and 21
   existing UNENFORCED rows. This order added one guarded row and did not change
