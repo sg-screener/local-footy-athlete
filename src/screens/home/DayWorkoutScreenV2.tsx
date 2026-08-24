@@ -319,9 +319,9 @@ type ExerciseEditStep =
       constraint: ActiveInjuryConstraint;
     }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
-  | { kind: 'replace_removed'; exercise: EditableExercise }
+  | { kind: 'decide_removal'; exercise: EditableExercise }
   | {
-      kind: 'choose_removed_replacement';
+      kind: 'choose_removal_replacement';
       exercise: EditableExercise;
       groups: readonly {
         id: string;
@@ -1044,6 +1044,9 @@ export default function DayWorkoutScreenV2() {
           environment,
           existingExerciseNames: editableExercises.map((item) => item.name),
           profile: useProfileStore.getState().onboardingData,
+          requiredFamily: exercise.derivedSource?.kind === 'mobility_flow'
+            ? 'mobility'
+            : undefined,
         }),
         attemptedNames: [],
       };
@@ -1108,6 +1111,9 @@ export default function DayWorkoutScreenV2() {
         environment,
         existingExerciseNames: editableExercises.map((item) => item.name),
         profile: useProfileStore.getState().onboardingData,
+        requiredFamily: exercise.derivedSource?.kind === 'mobility_flow'
+          ? 'mobility'
+          : undefined,
       })).map((group) => ({
         id: group.id,
         label: group.label,
@@ -1564,11 +1570,11 @@ export default function DayWorkoutScreenV2() {
    * My Status's "Change scope" and the coach path use — so an answer given here
    * and an answer given there are the same fact, not two rows that disagree.
    *
-   * Today's session is already updated by the time this runs: `removeExerciseToday`
-   * applied the day override before the question was asked. So a `today_only`
-   * answer has nothing further to change in the program and simply records why
-   * the row is gone, which is what puts it on Status for the day and in history
-   * after it.
+   * Today's session is updated only after the athlete has made the removal
+   * decision. `removeExerciseToday` commits the day override immediately before
+   * this scope question opens. So a `today_only` answer has nothing further to
+   * change in the program and simply records why the row is gone, which is what
+   * puts it on Status for the day and in history after it.
    */
   const applyExclusionScope = React.useCallback(
     (exercise: EditableExercise, scope: ExerciseExclusionScope) => {
@@ -1674,6 +1680,18 @@ export default function DayWorkoutScreenV2() {
     closeExerciseEditor();
   }, [closeExerciseEditor]);
 
+  /**
+   * OPEN THE QUESTION; WRITE NOTHING.
+   *
+   * Quick Remove used to call the durable removal door directly and only then
+   * ask whether the athlete wanted a replacement. That made Close look like an
+   * undo even though the row was already gone. The row stays visible until one
+   * of the two committing answers below is chosen.
+   */
+  const requestExerciseRemoval = React.useCallback((exercise: EditableExercise) => {
+    setExerciseEditStep({ kind: 'decide_removal', exercise });
+  }, []);
+
   const removeExerciseToday = React.useCallback(
     async (exercise: EditableExercise) => {
       if (!date) return;
@@ -1713,7 +1731,7 @@ export default function DayWorkoutScreenV2() {
             exerciseKey: exercise.key,
           });
         }
-        setExerciseEditStep({ kind: 'replace_removed', exercise });
+        setExerciseEditStep({ kind: 'exclusion_scope', exercise });
         return;
       }
       setExerciseEditStep({
@@ -1729,56 +1747,56 @@ export default function DayWorkoutScreenV2() {
   const offerRemovedReplacement = React.useCallback((exercise: EditableExercise) => {
     const groups = swapGroupsFor(exercise);
     if (groups.length === 0) {
-      setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+      setExerciseEditStep({
+        kind: 'result',
+        ok: false,
+        title: 'No safe replacements',
+        message: `${displayExerciseName(exercise.name)} is still in your session. Nothing was changed.`,
+      });
       return;
     }
-    setExerciseEditStep({ kind: 'choose_removed_replacement', exercise, groups });
+    setExerciseEditStep({ kind: 'choose_removal_replacement', exercise, groups });
   }, [swapGroupsFor]);
 
-  const keepRemovedWithoutReplacement = React.useCallback((exercise: EditableExercise) => {
-    setExerciseEditStep({ kind: 'exclusion_scope', exercise });
-  }, []);
+  const keepRemovedWithoutReplacement = React.useCallback(async (exercise: EditableExercise) => {
+    await removeExerciseToday(exercise);
+  }, [removeExerciseToday]);
 
   const addRemovedReplacement = React.useCallback(async (
     exercise: EditableExercise,
     suggestion: SuggestedSwap,
   ) => {
     if (!date || suggestion.kind !== 'exercise') return;
-    const action = exercise.derivedSource
-      ? {
-          type: 'swap_exercise' as const,
-          source: { screen: 'session_detail' as const, surface: 'quick_remove_replacement', initiatedBy: 'tap' as const },
-          scope: 'today_only' as const,
-          payload: {
-            date,
-            fromExercise: exercise.name,
-            fromExerciseId: exercise.targetId,
-            toExercise: suggestion.suggestion,
-            derivedSource: exercise.derivedSource,
-          },
-          requiresRebuild: false,
-          createsActiveModifier: false,
-          oneOffOnly: true,
-        }
-      : {
-          type: 'add_exercise' as const,
-          source: { screen: 'session_detail' as const, surface: 'quick_remove_replacement', initiatedBy: 'tap' as const },
-          scope: 'today_only' as const,
-          payload: { date, exercise: suggestion.suggestion },
-          requiresRebuild: false,
-          createsActiveModifier: false,
-          oneOffOnly: true,
-        };
+    const action = {
+      type: 'swap_exercise' as const,
+      source: { screen: 'session_detail' as const, surface: 'quick_remove_replacement', initiatedBy: 'tap' as const },
+      scope: 'today_only' as const,
+      payload: {
+        date,
+        fromExercise: exercise.name,
+        fromExerciseId: exercise.targetId,
+        toExercise: suggestion.suggestion,
+        derivedSource: exercise.derivedSource,
+      },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    };
     const result = await executeProgramControlActionDurably(action, { todayISO: date });
     if (result.ok) {
-      setExerciseEditStep({ kind: 'exclusion_scope', exercise });
+      setExerciseEditStep({
+        kind: 'result',
+        ok: true,
+        title: 'Exercise replaced',
+        message: `${displayExerciseName(exercise.name)} was replaced with ${displayExerciseName(suggestion.suggestion.name)} for today’s session.`,
+      });
       return;
     }
     setExerciseEditStep({
       kind: 'result',
       ok: false,
-      title: 'Could not add replacement',
-      message: result.message ?? 'The original exercise is still removed.',
+      title: 'Could not replace exercise',
+      message: result.message ?? 'The original exercise is still in your session.',
     });
   }, [date]);
 
@@ -2106,7 +2124,7 @@ export default function DayWorkoutScreenV2() {
                   commitWeightEdit={commitWeightEdit}
                   onSelectExercise={setSelectedExercise}
                   onQuickSwap={quickSwapExercise}
-                  onQuickRemove={removeExerciseToday}
+                  onQuickRemove={requestExerciseRemoval}
                 />
               </SessionExecutionSection>
             ))}
@@ -2131,7 +2149,7 @@ export default function DayWorkoutScreenV2() {
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
               onQuickSwap={quickSwapExercise}
-              onQuickRemove={removeExerciseToday}
+              onQuickRemove={requestExerciseRemoval}
             />
             {/**
               * SELECT ALL — Sam, 2026-08-22: *"There should be a Select all
@@ -4126,12 +4144,12 @@ interface ExerciseEditSheetProps {
 /**
  * THE STEPS THAT COME AFTER A CHANGE HAS ALREADY LANDED. On these the shell's
  * exit says "Close", not "Cancel": the removal is done, the swap is done, and a
- * word promising to undo it would be lying. Undo is `UndoToast`'s, on the
- * screen behind, and it is untouched.
+ * word promising to undo it would be lying. The pending removal decision and
+ * its replacement list are deliberately absent: leaving either one changes
+ * nothing.
  */
 const AFTER_THE_CHANGE_LANDED: ReadonlySet<ExerciseEditStep['kind']> = new Set([
-  'replace_removed', 'choose_removed_replacement', 'exclusion_scope',
-  'future_scope', 'result', 'coach_fallback',
+  'exclusion_scope', 'future_scope', 'result', 'coach_fallback',
 ]);
 
 function ExerciseEditSheet(props: ExerciseEditSheetProps) {
@@ -4258,6 +4276,9 @@ function ExerciseEditBody({
     if (step.kind === 'confirm_remove') {
       return () => onStep({ kind: 'pick_exercise', action: 'remove' });
     }
+    if (step.kind === 'choose_removal_replacement') {
+      return () => onStep({ kind: 'decide_removal', exercise: step.exercise });
+    }
     return undefined;
   };
 
@@ -4267,7 +4288,9 @@ function ExerciseEditBody({
     title: exerciseEditTitle(step),
     subtitle: exerciseEditSubtitle(step),
     onBack: backTarget(),
-    cancelLabel: AFTER_THE_CHANGE_LANDED.has(step.kind) ? 'Close' : 'Cancel',
+    cancelLabel: step.kind === 'decide_removal'
+      ? 'Go back'
+      : AFTER_THE_CHANGE_LANDED.has(step.kind) ? 'Close' : 'Cancel',
   });
 
   // ⚠ **INJURY NO LONGER COMES THROUGH HERE (Sam, 2026-08-20).** It was the
@@ -4548,11 +4571,11 @@ function ExerciseEditBody({
             />
           </>
         );
-      case 'replace_removed':
+      case 'decide_removal':
         return (
           <>
             <Text style={styles.exerciseEditBody}>
-              {displayExerciseName(step.exercise.name)} was removed. Would you like to add an exercise to replace it?
+              Would you like to replace {displayExerciseName(step.exercise.name)} with another exercise, or remove it without a replacement?
             </Text>
             <Button
               label="Yes, show replacements"
@@ -4561,7 +4584,7 @@ function ExerciseEditBody({
               onPress={() => onOfferRemovedReplacement(step.exercise)}
             />
             <Button
-              label="No, leave it removed"
+              label="No, remove it"
               variant="secondary"
               size="md"
               onPress={() => onKeepRemovedWithoutReplacement(step.exercise)}
@@ -4569,7 +4592,7 @@ function ExerciseEditBody({
             />
           </>
         );
-      case 'choose_removed_replacement':
+      case 'choose_removal_replacement':
         return (
           <>
             <Text style={styles.exerciseEditBody}>
@@ -4813,8 +4836,8 @@ function exerciseEditStepKey(step: Exclude<ExerciseEditStep, { kind: 'closed' }>
       return `confirm_swap:${step.exercise.key}`;
     case 'choose_swap':
     case 'confirm_remove':
-    case 'replace_removed':
-    case 'choose_removed_replacement':
+    case 'decide_removal':
+    case 'choose_removal_replacement':
     case 'exclusion_scope':
       return `${step.kind}:${step.exercise.key}`;
     default:
@@ -4838,9 +4861,9 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return step.label;
     case 'confirm_remove':
       return 'Remove this exercise?';
-    case 'replace_removed':
+    case 'decide_removal':
       return 'Replace it?';
-    case 'choose_removed_replacement':
+    case 'choose_removal_replacement':
       return 'Choose a replacement';
     case 'choose_swap':
       return 'What would you rather do?';
@@ -4876,9 +4899,9 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
     case 'confirm_remove':
     case 'confirm_swap':
       return displayExerciseName(step.exercise.name);
-    case 'replace_removed':
-    case 'choose_removed_replacement':
-      return displayExerciseName(step.exercise.name);
+    case 'decide_removal':
+    case 'choose_removal_replacement':
+      return null;
     case 'confirm_add':
       return 'Add one exercise or small block, not another full session.';
     case 'add_family':

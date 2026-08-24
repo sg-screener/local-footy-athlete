@@ -1,6 +1,7 @@
 import type { OnboardingData } from '../types/domain';
 import { resolveExerciseName } from './loadEstimation';
 import { legalAddAlternativesForExercise } from './addExerciseCandidates';
+import { exerciseSessionFamily, type ExerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import {
   getTapSwapChoices,
   type TapSwapChoice,
@@ -51,6 +52,8 @@ export function rankedQuickSwapChoices(args: {
   environment: TapSwapEnvironment;
   existingExerciseNames?: readonly string[];
   profile?: OnboardingData | null;
+  /** The visible section owns the family when the row name is ambiguous. */
+  requiredFamily?: ExerciseSessionFamily;
 }): TapSwapChoice[] {
   const specialised = getTapSwapChoices({
     originalExercise: args.originalExercise,
@@ -58,7 +61,9 @@ export function rankedQuickSwapChoices(args: {
     environment: args.environment,
     existingExerciseNames: args.existingExerciseNames,
     recoveryAllowed: false,
-  }).filter((choice) => choice.kind === 'exercise' && !!choice.name);
+  }).filter((choice) => choice.kind === 'exercise'
+    && !!choice.name
+    && (!args.requiredFamily || exerciseSessionFamily(choice.name) === args.requiredFamily));
   const completion = legalAddAlternativesForExercise({
     originalExercise: args.originalExercise,
     environment: args.environment,
@@ -67,6 +72,7 @@ export function rankedQuickSwapChoices(args: {
       args.originalExercise,
     ],
     profile: args.profile,
+    requiredFamily: args.requiredFamily,
   }).map((candidate): TapSwapChoice => ({
     kind: 'exercise',
     name: candidate.name,

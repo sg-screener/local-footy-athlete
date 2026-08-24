@@ -430,19 +430,26 @@ function familyForLeaf(leaf: AddLeafId): AddFamilyId | null {
  * session family.
  */
 export function legalAddAlternativesForExercise(
-  args: AddCandidateArgs & { originalExercise: string },
+  args: AddCandidateArgs & {
+    originalExercise: string;
+    /** A typed visible slot outranks a name that belongs to another pool. */
+    requiredFamily?: AddFamilyId;
+  },
 ): Array<AddCandidate & { proximity: 'same_leaf' | 'same_family' }> {
   const originalLeaf = leafForExerciseName(args.originalExercise);
-  if (!originalLeaf) return [];
-  const family = familyForLeaf(originalLeaf);
+  const inferredFamily = originalLeaf ? familyForLeaf(originalLeaf) : null;
+  const family = args.requiredFamily ?? inferredFamily;
   if (!family) return [];
+  const nearestLeaf = originalLeaf && familyForLeaf(originalLeaf) === family
+    ? originalLeaf
+    : null;
   const filed = legalNamesByLeaf(args);
   const leaves = [
-    originalLeaf,
+    ...(nearestLeaf ? [nearestLeaf] : []),
     ...Object.values(ADD_GROUPS)
       .filter((spec) => spec.family === family)
       .flatMap((spec) => spec.leaves)
-      .filter((leaf) => leaf !== originalLeaf),
+      .filter((leaf) => leaf !== nearestLeaf),
   ];
   const seen = new Set<string>();
   const alternatives: Array<AddCandidate & { proximity: 'same_leaf' | 'same_family' }> = [];
@@ -455,7 +462,7 @@ export function legalAddAlternativesForExercise(
         name,
         ...bandFor(name),
         weightKg: loadFor(name, args.profile),
-        proximity: leaf === originalLeaf ? 'same_leaf' : 'same_family',
+        proximity: leaf === nearestLeaf ? 'same_leaf' : 'same_family',
       });
     }
   }

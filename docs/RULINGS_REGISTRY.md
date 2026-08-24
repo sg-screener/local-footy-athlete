@@ -4882,3 +4882,21 @@ Coach and Progress no longer imitate it with styled `LFA` text. Nested workout
 details, onboarding steps and sheets keep their own back-button/title hierarchy
 and do not repeat the logo. · `WORKING` — `test:lfa-wordmark`, reached in-chain
 by `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-176** · Quick Remove asks before changing the program (Sam, 2026-08-24) ·
+**PENDING CHOICE FIRST; ONE COMMITTING ACTION SECOND.**
+
+This corrects R-174's removal order. Tapping Quick Remove leaves the exercise
+in the session and asks whether to show replacements, remove it without a
+replacement, or **Go back** without changing anything. The exercise name is
+written once in that question, not repeated as a subtitle. Choosing **Yes**
+opens the ranked legal replacement list while the original row remains; picking
+an answer commits one atomic swap. Choosing **No** commits the removal and then
+asks its existing scope question. Only either committing choice changes the
+Program screen, so closing or going back is a truthful no-op rather than a
+missing Undo. R-174's sentence *"Quick Remove removes first"* is superseded by
+this ruling; its icon, ranking, durability and row-coverage requirements remain
+unchanged. · `WORKING` — `test:quick-exercise-actions`, reached in-chain by
+`test:mobility-flow`. Seat `onboardingtype`.

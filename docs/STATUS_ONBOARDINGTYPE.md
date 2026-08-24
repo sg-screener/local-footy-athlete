@@ -819,6 +819,51 @@ one ranked list.
 
 ---
 
+## R-176 — Quick Remove stays pending until the athlete decides
+
+Quick Remove now opens one pending decision and writes nothing. **Go back**
+closes it with the original row intact; **No, remove it** reaches the durable
+remove door; **Yes, show replacements** keeps the row while showing the ranked
+list, then commits the chosen answer as one swap instead of remove-plus-add.
+The duplicated exercise-name subtitle is gone.
+
+### Evidence
+
+- TEST FIRST: the expanded quick-action tape began 34/40; six reds named the
+  eager write, direct row wiring, missing three-way choice, duplicate subtitle,
+  delayed removal commit and remove-plus-add replacement.
+- AFTER: the first correction reached 40/40. The simulator then caught a typed
+  warm-up slot being ranked from its ambiguous exercise name and offering
+  Strength work. Two real-row family cells began 41/42; the shared ranking owner
+  now accepts the row's typed family, and the completed tape is 43/43. Its
+  in-chain parent `test:mobility-flow` is 59/59 before running those same cells.
+- LIVENESS: routing one live exercise family back to the eager remove door made
+  the pending-routing cell fail (39/40); restoring the request-only owner
+  returned 40/40. Removing the typed-family input from one of its two live
+  ranking callers made the caller-totality cell fail (42/43); restoring it
+  returned 43/43.
+- LIVE SIMULATOR: the pending sheet shows one exercise name, **Yes**, **No** and
+  one **Go back** exit. After Go back, the photographed row remains. The ranked
+  replacement list opens with the original row still visible behind it, and a
+  selected answer lands as one visible replacement rather than an empty slot.
+- Targeted TypeScript output names no changed-file error. The session-shell
+  suite remains at its inherited 58/59: its source scan counts the existing
+  feedback Sheet in DayWorkoutScreenV2, unrelated to this edit flow.
+- Registry baselines are unchanged apart from this new ruling: law registry
+  177 rows / 156 guarded / 21 `UNENFORCED` with the same three reds; ruling
+  registry 175 rulings / 6 of 8 checks green with the same two reds.
+- `test:exercise-add-candidates` remains unrunnable before its first cell: its
+  existing fixture reaches the current gender-required generation gate without
+  a gender answer. It supplied no regression signal for this change.
+
+### NOT COVERED
+
+- A physical-iPhone Release and real VoiceOver speech.
+- Restarting the app on glass after committing either choice; the same durable
+  swap and removal doors remain covered headlessly by their existing tapes.
+
+---
+
 ## R-175 — one supplied LFA wordmark across the four main tabs
 
 The black and white files carry identical geometry and differ only by fill. One

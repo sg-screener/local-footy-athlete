@@ -95,6 +95,16 @@ for (const original of ['Bench Press', "World's Greatest Stretch", 'Tempo Run'])
   assert(ranked.every((choice) => exerciseSessionFamily(choice.name!) === exerciseSessionFamily(original)),
     `${original} Quick Swap stays inside its session family`);
 }
+const derivedMobilityRanked = rankedQuickSwapChoices({
+  originalExercise: 'Half Copenhagen',
+  reason: 'preference',
+  environment: healthyEnvironment,
+  requiredFamily: 'mobility',
+});
+assert(derivedMobilityRanked.length > 0,
+  'a real derived warm-up row has ranked legal replacements');
+assert(derivedMobilityRanked.every((choice) => exerciseSessionFamily(choice.name!) === 'mobility'),
+  'the typed Mobility / Warm-up slot outranks an ambiguous exercise name');
 let attempted: readonly string[] = [];
 for (const expected of ['A', 'B', 'C', 'A']) {
   const next = nextQuickSwapChoice(choices, attempted);
@@ -247,8 +257,37 @@ for (const renderer of [
   assert(new RegExp(`${renderer}[\\s\\S]*?onQuickSwap[\\s\\S]*?onQuickRemove`).test(source),
     `${renderer} is wired to both quick actions`);
 }
-assert(/kind: 'replace_removed'/.test(source),
-  'Quick Remove asks whether the athlete wants a replacement after removal');
+const requestStart = source.indexOf('const requestExerciseRemoval =');
+const removeStart = source.indexOf('const removeExerciseToday =', requestStart);
+const requestSource = source.slice(requestStart, removeStart);
+assert(requestStart >= 0 && removeStart > requestStart
+  && /setExerciseEditStep\(\{ kind: 'decide_removal', exercise \}\)/.test(requestSource)
+  && !/executeProgramControlAction/.test(requestSource),
+  'Quick Remove opens a pending decision without changing the program');
+assert((source.match(/onQuickRemove=\{requestExerciseRemoval\}/g) ?? []).length >= 2,
+  'every rendered exercise family routes Quick Remove to the pending decision');
+assert((source.match(/requiredFamily: exercise\.derivedSource\?\.kind === 'mobility_flow'/g) ?? []).length === 2,
+  'both the one-tap swap and replacement list pass the typed warm-up family to ranking');
+assert(/case 'decide_removal':[\s\S]*?Yes, show replacements[\s\S]*?No, remove it/.test(source)
+  && /step\.kind === 'decide_removal'[\s\S]*?\? 'Go back'/.test(source),
+  'the pending decision offers replacement, removal and one true no-change exit');
+const decisionCaseStart = source.indexOf("case 'decide_removal':");
+const decisionCaseEnd = source.indexOf("case 'choose_removal_replacement':", decisionCaseStart);
+const decisionCaseSource = source.slice(decisionCaseStart, decisionCaseEnd);
+assert(decisionCaseStart >= 0 && decisionCaseEnd > decisionCaseStart
+  && !/was removed/.test(decisionCaseSource),
+  'the pending decision never claims the exercise was already removed');
+assert(/case 'decide_removal':\n\s*case 'choose_removal_replacement':\n\s*return null;/.test(source),
+  'the pending removal steps do not repeat the exercise name as a subtitle');
+assert(/const keepRemovedWithoutReplacement =[\s\S]*?removeExerciseToday\(exercise\)/.test(source),
+  'No, remove it commits the removal only after the athlete chooses it');
+const replacementStart = source.indexOf('const addRemovedReplacement =');
+const replacementEnd = source.indexOf('// Wrap derivation', replacementStart);
+const replacementSource = source.slice(replacementStart, replacementEnd);
+assert(replacementStart >= 0 && replacementEnd > replacementStart
+  && /type: 'swap_exercise'/.test(replacementSource)
+  && !/type: 'add_exercise'/.test(replacementSource),
+  'choosing a replacement commits one atomic swap rather than remove then add');
 
 const controlSource = fs.readFileSync(
   path.join(process.cwd(), 'src/utils/programControlActions.ts'), 'utf8',
