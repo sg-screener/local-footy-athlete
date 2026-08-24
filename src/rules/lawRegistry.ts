@@ -2075,6 +2075,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite pins a dedicated programmedPartHeadline at 15px / 20px, proves exactly the owned mobility row and the projected-part loop apply it, and separately keeps timelineHeadline at 10.5px / 14px so Team Training session status and exercise counts do not inflate with the programmed headings. TEST-FIRST LIVENESS: the new scale cell was the suite\'s only additional red against the undersized headings (52 pass / 3 fail versus the existing 53 / 2); applying the dedicated override returned it to 53 / 2. NOT COVERED: simulator reinspection, long translated headings, Dynamic Type and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-week-cards-share-day-programmed-surface',
+    law: 'Ordinary cards on the Program Week view reuse the darker Day programmed-session surface rather than the lighter default Card surface. The current-day card retains the established selected treatment, and week-edit move-target feedback remains later in the style order so it stays visible.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-165 — Sam found the Week cards still used the lighter surface and required them to match the darker Day screen.',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The day-first suite anchors the shared DayRow, requires every unselected Week row to reuse dayRowCalm, pins one cardSelected owner for both the Card selected prop and the calm-surface exclusion, and proves the move-target override remains later in style order. TEST-FIRST LIVENESS: the new Week-surface cell was the suite\'s only additional red against the lighter Week rows (53 pass / 3 fail versus the existing 53 / 2); applying the shared darker surface and updating the pre-existing selection-shape guard returned the suite to 54 / 2. NOT COVERED: simulator reinspection, pressed-state pixels, week-edit picker pixels and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

@@ -248,6 +248,44 @@ to make a change?**, while exercise counts and Team Training status stay compact
 
 ---
 
+## R-165 — darken ordinary Week cards
+
+Sam found Week view still used the lighter default card colour. Two options
+were compared:
+
+1. Give Week cards another copied dark colour. This would create a second token
+   that could drift from Day view.
+2. Reuse Day view's existing programmed-card surface on unselected Week rows,
+   while excluding the selected current day and keeping edit feedback later.
+
+Option 2 landed. Strength, Team Training, Rest Day and Game Day rows now share
+the darker Day surface. Today's lime selection and move-target feedback remain
+visible.
+
+### Evidence
+
+- TEST FIRST: `test:day-first-timeline` — 53/56; the new Week-surface cell was
+  the only additional red beside the two existing failures.
+- AFTER: `test:day-first-timeline` — 54/56. The two existing failures remain
+  the front-review mobility-flow handoff and Gunshow fixture reachability.
+- The guard pins surface reuse, selected-state ownership and override order.
+- `test:law-registry` — 11/14 with the same three existing reds: missing
+  `test:game-feedback`, unregistered LR-18 and 21 UNENFORCED laws. The new row
+  raises the measured registry to 170 laws / 149 guarded without increasing
+  UNENFORCED.
+- `test:ruling-registry` — 6/8 with its existing nine UNENFORCED rulings and 16
+  uncited historical question sites. R-165 adds neither.
+- `test:compile` — the concurrent baseline remains 483 errors and 60 worsened
+  file/scope pairs. Neither changed source file is named.
+
+### NOT COVERED
+
+- Simulator pixels after the surface change.
+- Pressed-state and week-edit picker pixels.
+- Physical-iPhone Release rebuild.
+
+---
+
 ## R-156 — remove the equipment-checklist footer text
 
 Sam identified both notes below the equipment list as outdated. Deleting the

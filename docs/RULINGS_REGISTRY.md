@@ -4737,3 +4737,14 @@ change?** Their exercise-count lines remain compact. Team Training's **Session
 status** label also remains compact because it is status metadata, not a
 programmed part heading. · `WORKING` — `test:day-first-timeline`. Seat
 `onboardingtype`.
+
+---
+
+**R-165** · Program Week-card surface consistency (Sam, 2026-08-24) · **WEEK
+USES THE SAME DARK CARD SURFACE AS DAY.**
+
+Ordinary Week-view day cards reuse the darker programmed-session surface from
+Day view instead of the lighter default card colour. The current-day card keeps
+its existing lime selected treatment, and week-edit move targets keep their
+feedback colour. · `WORKING` — `test:day-first-timeline`. Seat
+`onboardingtype`.

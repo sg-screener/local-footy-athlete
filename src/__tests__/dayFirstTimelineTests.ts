@@ -1054,6 +1054,23 @@ run('Team Training and the change card share the programmed card surface', () =>
     'Need to make a change does not reuse the programmed card surface');
 });
 
+run('unselected Week cards share the darker Day programmed surface', () => {
+  const home = homeScreenSource();
+  const dayRowAt = home.indexOf('function DayRow(');
+  const dayRowEnd = home.indexOf('interface WeekStripProps', dayRowAt);
+  assert(dayRowAt > 0 && dayRowEnd > dayRowAt,
+    'the shared DayRow region could not be found');
+  const dayRow = home.slice(dayRowAt, dayRowEnd);
+  assert(/!dayShape && !cardSelected && styles\.dayRowCalm/.test(dayRow),
+    'ordinary Week cards do not reuse the darker Day programmed-session surface');
+  assert(/const cardSelected = normal && \(dayShape \? isSelected : day\.isToday\)/.test(dayRow)
+      && /selected=\{cardSelected\}/.test(dayRow),
+    'the Week Today card lost its selected surface while darkening the ordinary rows');
+  assert(dayRow.indexOf('!dayShape && !cardSelected && styles.dayRowCalm')
+      < dayRow.indexOf('isMoveTarget && styles.dayRowMoveTarget'),
+    'move-target feedback must remain later than the calm Week surface so it stays visible');
+});
+
 /**
  * ITEM 28 — THE OTHER HALF OF THE MOVE, AND THE HALF A DELETION WOULD PASS.
  *
@@ -1266,7 +1283,8 @@ run('the week starts collapsed while Day owns its persistent weekday directly', 
   const dayRow = home.slice(dayRowAt, home.indexOf('interface WeekStripProps', dayRowAt));
   assert(dayRowAt > 0 && dayRow.length > 2000,
     'the DayRow region could not be found');
-  assert(/selected=\{normal && \(dayShape \? isSelected : day\.isToday\)\}/.test(dayRow),
+  assert(/const cardSelected = normal && \(dayShape \? isSelected : day\.isToday\)/.test(dayRow)
+      && /selected=\{cardSelected\}/.test(dayRow),
     'clearing Week expansion also removed today\'s independent highlight');
 });
 

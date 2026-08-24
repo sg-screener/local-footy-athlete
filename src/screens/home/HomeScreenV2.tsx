@@ -2394,6 +2394,7 @@ function DayRow({
   const compactWeekStatus = !dayShape && normal && (isGame || !hasWorkout) && !isMoveTarget;
   const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
   const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
+  const cardSelected = normal && (dayShape ? isSelected : day.isToday);
 
   /* ── THE TITLE LEADS THE CARD ──
      Sam, 2026-08-22: *"we no longer need todays session or the date in the top
@@ -2460,7 +2461,7 @@ function DayRow({
   return (
     <Card
       tone="default"
-      selected={normal && (dayShape ? isSelected : day.isToday)}
+      selected={cardSelected}
       padding="none"
       radius="lg"
       onPress={cardCanPress ? onPress : undefined}
@@ -2475,6 +2476,7 @@ function DayRow({
         styles.dayRow,
         !dayShape && styles.weekDayCard,
         !dayShape && compactWeekStatus && styles.weekDayCardCompact,
+        !dayShape && !cardSelected && styles.dayRowCalm,
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
         dayShape && emphasized && styles.dayRowCalm,
