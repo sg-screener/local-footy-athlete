@@ -462,10 +462,11 @@ async function main(): Promise<void> {
     `cardAt=${cardAt} guardAt=${guardAt}`,
   );
   ok(
-    'the COACH TAB really mounts the conversation — hook, bubbles and card',
+    'the COACH TAB mounts the question directly — hook, question and card without a preamble bubble',
     /useCoachWeeklyCommitment\(\)/.test(coachScreenSource)
       && cardAt > 0 && guardAt > 0 && guardAt < cardAt
-      && /coach-tab-commitment-notice/.test(coachScreenSource)
+      && !/coach-tab-commitment-notice/.test(coachScreenSource)
+      && !/commitmentConversationNoticeSentence/.test(coachScreenSource)
       && /coach-tab-commitment-question/.test(coachScreenSource),
     'the conversation is derived and never drawn — a feature nothing mounts',
   );

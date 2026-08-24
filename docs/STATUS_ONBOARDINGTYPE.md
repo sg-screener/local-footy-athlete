@@ -793,6 +793,36 @@ their dead styles.
 
 ---
 
+## R-178 — let the Coach ask the question directly
+
+Removed the visible *“Your coach has something to ask about your week.”*
+preamble bubble. The real weekly question now follows the greeting directly.
+The derived tab dot and its accessibility announcement remain intact.
+
+### Evidence
+
+- TEST FIRST: the weekly-reduction mount cell was changed to require the real
+  question and forbid the preamble test ID; it failed while the Bubble remained.
+- AFTER: that named cell passes and the question/card still share the same live
+  conversation guard.
+- LIVENESS: temporarily restoring the real signed preamble Bubble made that
+  named cell fail; removing the mutation returned it to green.
+- `test:signed-copy-extraction`: 7/7.
+- LIVE SIMULATOR: Coach now shows its greeting followed immediately by the
+  weekly question; the generic announcement bubble is absent and the choice
+  card is unchanged.
+- The full weekly-reduction tape still hits its inherited R-173 fixture failure
+  and later section-[7] crash; the R-178 cell executes and passes before it.
+- Registry baselines: 178 laws / 157 guarded / 21 `UNENFORCED` with the same
+  three inherited reds; 177 rulings with the same two inherited reds.
+
+### NOT COVERED
+
+- The next physical-iPhone Release rebuild.
+- Real VoiceOver speech.
+
+---
+
 ## R-174 — one quick-action system across every exercise row
 
 Sam restored row-level Swap/Remove as explicit shortcuts. The implementation

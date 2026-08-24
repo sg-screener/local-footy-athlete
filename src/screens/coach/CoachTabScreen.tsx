@@ -41,7 +41,6 @@ import { useCoachWeeklyCommitment } from './useCoachWeeklyCommitment';
 import { CommitmentCard } from '../../components/CommitmentCard';
 import {
   commitmentConfirmedSentence,
-  commitmentConversationNoticeSentence,
   commitmentDeclinedSentence,
   commitmentFailedSentence,
   commitmentPreviewDaySentence,
@@ -414,20 +413,16 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
           <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
-          {/* ── R-105: THE COACH RAISES IT, IN THE CONVERSATION ──
-              The notification line, then Sam's signed question, then — for the
-              extra-session offer — exactly what the REGENERATED week becomes,
-              read off the program acceptance publishes. These sit above the
-              athlete's turns because the coach raised the subject; they are
+          {/* ── R-105 + R-178: THE COACH ASKS DIRECTLY ──
+              The signed question, then — for the extra-session offer — exactly
+              what the REGENERATED week becomes, read off the program acceptance
+              publishes. The tab dot remains the notification; an extra bubble
+              announcing that a question follows is redundant. These sit above
+              the athlete's turns because the coach raised the subject; they are
               derived, so answering makes them go and a relaunch cannot bring an
               answered question back. */}
           {weeklyCommitment.conversation ? (
             <>
-              <Bubble
-                speaker="coach"
-                text={String(commitmentConversationNoticeSentence())}
-                testID="coach-tab-commitment-notice"
-              />
               <Bubble
                 speaker="coach"
                 text={String(weeklyCommitment.conversation.sentence)}

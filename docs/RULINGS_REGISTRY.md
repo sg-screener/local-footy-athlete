@@ -4911,3 +4911,15 @@ actual content at **Program Setup**. It does not repeat **Profile** as a page
 title or keep the now-orphaned *“Your program setup and support.”* subtitle.
 This matches the other main tabs' compact branded hierarchy. · `WORKING` —
 `test:lfa-wordmark` + `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-178** · Weekly Coach question without a preamble (Sam, 2026-08-24) ·
+**ASK THE QUESTION; DO NOT ANNOUNCE IT.**
+
+When the Coach raises a weekly-commitment question, the actual question is the
+next Coach bubble after the greeting. The visible conversation does not first
+say *“Your coach has something to ask about your week.”* The existing derived
+Coach-tab dot remains the notification required by R-105, and its concise
+accessibility announcement remains available outside the conversation. ·
+`WORKING` — `test:coach-weekly-reduction`. Seat `onboardingtype`.
