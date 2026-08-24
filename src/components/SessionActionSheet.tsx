@@ -56,7 +56,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Sheet, SheetDescription, SheetHeader } from './ui';
+import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
@@ -173,6 +173,12 @@ export interface SessionActionSheetProps {
   testID: string;
   /** Overridden only where a door's spoken name differs from "Cancel". */
   cancelAccessibilityLabel?: string;
+  /**
+   * A single-step submenu can use the same centred ghost Back treatment as
+   * the options sheet that opened it. Multi-step actions retain the shared
+   * Back / Cancel chrome above their changing questions.
+   */
+  closePlacement?: 'header' | 'footer-back';
 }
 
 export function SessionActionSheet({
@@ -181,6 +187,7 @@ export function SessionActionSheet({
   children,
   testID,
   cancelAccessibilityLabel,
+  closePlacement = 'header',
 }: SessionActionSheetProps) {
   const insets = useSafeAreaInsets();
   const [header, setHeader] = React.useState<PublishedStep | null>(null);
@@ -267,7 +274,7 @@ export function SessionActionSheet({
       {/* ── THE CHROME ROW: Back on the left, Cancel on the right ──────────
         * Fixed height whether or not Back is drawn, so a step with nowhere
         * shallower to go does not sit 20pt higher than the step before it. */}
-      <View style={styles.chrome}>
+      {closePlacement === 'header' ? <View style={styles.chrome}>
         {step?.canGoBack ? (
           <Pressable
             onPress={() => backRef.current?.()}
@@ -292,7 +299,7 @@ export function SessionActionSheet({
         >
           <Text style={styles.cancelText}>{step?.cancelLabel ?? 'Cancel'}</Text>
         </Pressable>
-      </View>
+      </View> : null}
 
       <SheetHeader
         title={step?.eyebrow ?? 'Session'}
@@ -322,6 +329,17 @@ export function SessionActionSheet({
           <ShellContext.Provider value={channel}>{children}</ShellContext.Provider>
         </View>
       </ScrollView>
+      {closePlacement === 'footer-back' ? (
+        <Button
+          label="Back"
+          variant="ghost"
+          size="md"
+          glow={false}
+          onPress={onClose}
+          testID={SESSION_ACTION_BACK_TEST_ID}
+          style={styles.footerBack}
+        />
+      ) : null}
     </Sheet>
   );
 }
@@ -349,4 +367,5 @@ const styles = StyleSheet.create({
   },
   body: { flexShrink: 1 },
   bodyContent: { paddingBottom: spacing.xs },
+  footerBack: { marginTop: spacing.sm },
 });

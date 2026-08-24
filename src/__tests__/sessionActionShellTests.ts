@@ -41,10 +41,25 @@ const sheet = read('components/ui/Sheet.tsx');
 const screen = read('screens/home/DayWorkoutScreenV2.tsx');
 const equipment = read('screens/home/SessionEquipmentSheet.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
+const projectionCopy = read('rules/projectionCopy.ts');
+const exerciseEditStart = screen.indexOf('function ExerciseEditSheet(');
+const exerciseEditEnd = screen.indexOf('\nfunction futureScopeBody(', exerciseEditStart);
+const exerciseEdit = exerciseEditStart >= 0 && exerciseEditEnd > exerciseEditStart
+  ? screen.slice(exerciseEditStart, exerciseEditEnd)
+  : '';
+
+function registeredCopy(id: string): string | null {
+  const anchor = `id: '${id}'`;
+  const start = projectionCopy.indexOf(anchor);
+  if (start < 0) return null;
+  const next = projectionCopy.indexOf('\n    {', start + anchor.length);
+  const row = projectionCopy.slice(start, next < 0 ? projectionCopy.length : next);
+  return /text: '([^']*(?:\\'[^']*)*)'/.exec(row)?.[1]?.replace(/\\'/g, "'") ?? null;
+}
 
 /** Every file that renders one of the five actions' questions. */
 const ACTION_BODIES: readonly (readonly [string, string])[] = [
-  ['screens/home/DayWorkoutScreenV2.tsx', screen],
+  ['screens/home/DayWorkoutScreenV2.tsx', exerciseEdit],
   ['screens/home/SessionEquipmentSheet.tsx', equipment],
   ['screens/home/GuidedInjuryFlowSheet.tsx', injury],
 ];
@@ -65,6 +80,8 @@ function ok(name: string, condition: unknown, detail?: string): void {
 console.log('\n[1] All three session-wide actions open through the ONE shell');
 {
   ok('the shell exists', fs.existsSync(path.join(src, SHELL_PATH)));
+  ok('the exercise-action component region was found before inspecting it',
+    exerciseEditStart >= 0 && exerciseEditEnd > exerciseEditStart && exerciseEdit.length > 1000);
 
   /* The five ids are `SessionChangeHub`'s, read from the hub itself rather than
    * retyped here — a list of action names copied into a test is a second
@@ -154,10 +171,33 @@ console.log('\n[3] The shell owns Back, and a first step has none');
       && /header:\s*\{[^}]*marginBottom:\s*14/.test(sheet)
       && /description:\s*\{[^}]*marginBottom:\s*18/.test(sheet),
   );
-  ok(
-    'Equipment asks what is missing beneath its lime category title',
-    /eyebrow: 'Equipment',[\s\S]*title: 'What are you missing\?'/.test(equipment),
-  );
+  ok('Equipment uses the signed category and today-question',
+    /eyebrow: signedCopy\('session\.equipment\.eyebrow'\)/.test(equipment)
+      && /title: signedCopy\('session\.equipment\.heading'\)/.test(equipment)
+      && registeredCopy('session.equipment.eyebrow') === 'Equipment'
+      && registeredCopy('session.equipment.heading') === 'What do you have today?');
+  ok('Equipment uses Sam’s signed instruction',
+    /signedCopy\('session\.equipment\.description'\)/.test(equipment)
+      && registeredCopy('session.equipment.description')
+        === 'Untick anything you don’t have. We’ll adjust affected exercises around what’s available.');
+  ok('Equipment uses flat option-sheet rows rather than cards',
+    /borderBottomWidth: StyleSheet\.hairlineWidth/.test(equipment)
+      && /borderBottomColor: 'rgba\(255,255,255,0\.08\)'/.test(equipment)
+      && /width: 38,[\s\S]*height: 38,[\s\S]*borderRadius: 19/.test(equipment)
+      && !/backgroundColor: '#1A1A1A'/.test(equipment));
+  ok('Equipment names up to three exercises and collapses four or more to a count',
+    /requirement\.exerciseNames\.length <= 3/.test(equipment)
+      && /requirement\.exerciseNames\.join\(', '\)/.test(equipment)
+      && /session\.equipment\.affected\.plural/.test(equipment)
+      && registeredCopy('session.equipment.affected.plural') === 'exercises affected');
+  ok('Equipment’s primary action always reads Update session',
+    /label=\{signedCopy\('session\.equipment\.update_action'\)\}/.test(equipment)
+      && registeredCopy('session.equipment.update_action') === 'Update session'
+      && !/Replace unavailable equipment/.test(equipment));
+  ok('Equipment matches the options sheet with no top Cancel and a centred ghost Back',
+    /closePlacement="footer-back"/.test(equipment)
+      && /closePlacement === 'header' \? <View style=\{styles\.chrome\}>/.test(shell)
+      && /closePlacement === 'footer-back' \? \([\s\S]*label="Back"[\s\S]*variant="ghost"/.test(shell));
   ok(
     'the two steps that were reached from the picker now climb back to it',
     /if \(step\.kind === 'choose_swap'\) \{\n\s*return \(\) => onStep\(\{ kind: 'pick_exercise', action: 'swap' \}\);/.test(screen)

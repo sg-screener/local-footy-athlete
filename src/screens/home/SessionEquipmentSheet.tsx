@@ -25,7 +25,8 @@ import {
   SessionActionSheet,
   useSessionActionStep,
 } from '../../components/SessionActionSheet';
-import { spacing, borderRadius } from '../../theme/spacing';
+import { spacing } from '../../theme/spacing';
+import { signedCopy } from '../../rules/signedCopy';
 import { equipmentIconFor } from './EquipmentLimitationSheet';
 import type {
   SessionEquipmentRequirement,
@@ -50,6 +51,7 @@ export function SessionEquipmentSheet({
       visible={visible}
       onClose={onClose}
       testID="session-equipment-sheet"
+      closePlacement="footer-back"
     >
       <SessionEquipmentBody
         requirements={requirements}
@@ -72,8 +74,8 @@ function SessionEquipmentBody({
 
   useSessionActionStep({
     key: 'equipment',
-    eyebrow: 'Equipment',
-    title: 'What are you missing?',
+    eyebrow: signedCopy('session.equipment.eyebrow'),
+    title: signedCopy('session.equipment.heading'),
   });
 
   const toggle = (key: SessionEquipmentRequirementKey) => {
@@ -88,7 +90,7 @@ function SessionEquipmentBody({
   return (
     <>
       <SheetDescription>
-        Untick anything you don’t have today. We’ll replace affected exercises using equipment you still have.
+        {signedCopy('session.equipment.description')}
       </SheetDescription>
       <View style={styles.list}>
         {requirements.map((requirement) => {
@@ -110,8 +112,10 @@ function SessionEquipmentBody({
                 <Text style={[styles.label, !available && styles.missingText]}>
                   {requirement.label}
                 </Text>
-                <Text style={styles.exerciseNames} numberOfLines={2}>
-                  {requirement.exerciseNames.join(', ')}
+                <Text style={styles.affectedCount}>
+                  {requirement.exerciseNames.length <= 3
+                    ? requirement.exerciseNames.join(', ')
+                    : `${requirement.exerciseNames.length} ${signedCopy('session.equipment.affected.plural')}`}
                 </Text>
               </View>
               <MaterialCommunityIcons
@@ -128,7 +132,7 @@ function SessionEquipmentBody({
         Permanent change? Update your equipment in Profile.
       </Text>
       <Button
-        label={missing.size > 0 ? 'Replace unavailable equipment' : 'Done'}
+        label={signedCopy('session.equipment.update_action')}
         size="lg"
         onPress={() => missing.size > 0 ? onApply(missing) : onClose()}
         testID="session-equipment-apply"
@@ -139,33 +143,30 @@ function SessionEquipmentBody({
 
 const styles = StyleSheet.create({
   list: {
-    gap: spacing.sm,
+    gap: 0,
   },
   row: {
-    minHeight: 64,
-    borderRadius: borderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#343434',
-    backgroundColor: '#1A1A1A',
+    minHeight: 62,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
   },
   pressed: { opacity: 0.72 },
   icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(200,255,0,0.08)',
   },
   iconMissing: { backgroundColor: '#202020' },
-  rowCopy: { flex: 1, marginHorizontal: spacing.md },
+  rowCopy: { flex: 1, marginHorizontal: 14 },
   label: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   missingText: { color: '#777777' },
-  exerciseNames: { color: '#777777', fontSize: 13, lineHeight: 18, marginTop: 2 },
+  affectedCount: { color: 'rgba(255,255,255,0.5)', fontSize: 13, lineHeight: 17, marginTop: 2 },
   profileNote: {
     color: '#777777',
     fontSize: 13,

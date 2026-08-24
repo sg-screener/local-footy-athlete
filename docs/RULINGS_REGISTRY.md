@@ -5318,3 +5318,18 @@ session on a day this week**; **Move a session** / **Choose a session and move
 it to another day**; and **Remove a session** / **Choose a session to remove
 from the week**. Their order, icons and existing Add / Move / Remove routes are
 unchanged. · `WORKING` — `test:day-first-timeline`. Seat `headeralign`.
+
+---
+
+**R-212** · Session equipment asks what is available today (Sam, 2026-08-25) ·
+**THE SUB-SHEET MATCHES THE MENU THAT OPENED IT AND SUMMARISES IMPACT WITHOUT
+TURNING INTO AN EXERCISE LIST.**
+
+Tapping **Equipment changed** opens **Equipment** / **What do you have today?**
+with **Untick anything you don’t have. We’ll adjust affected exercises around
+what’s available.** Its rows match the parent Session Options sheet’s flat-row
+style. Up to three affected exercises are named; four or more read **N exercises
+affected**. The primary button always reads **Update session**. A centred ghost
+**Back** replaces the top-right Cancel treatment. Equipment selection and its
+existing apply pathway remain unchanged. · `WORKING` —
+`test:session-action-shell`. Seat `headeralign`.

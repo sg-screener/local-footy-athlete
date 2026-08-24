@@ -48,6 +48,22 @@ mobility review wiring and missing generated Gunshow fixture.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.
 
+## 2026-08-25 — Session equipment sheet hierarchy
+
+The Equipment sub-sheet now reads **Equipment** / **What do you have today?**
+and uses Sam’s new instruction and **Update session** action. Its checklist uses
+the parent options popup’s flat-row rhythm and centred ghost Back treatment.
+Rows name one to three affected exercises; four or more collapse to a count.
+
+Two options compared: rebuild Equipment as a standalone copy of the options
+sheet, or keep the shared session-action shell and add one single-step footer
+presentation. The shared-shell presentation landed, preserving one owner for
+height, scrolling, reset and safe-area behaviour.
+
+Focused guard: `test:session-action-shell` — 65 passed / 0 failed.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone, VoiceOver and completing an equipment update.
+
 ## 2026-08-25 — Week options move into the range row
 
 The large Edit this week bar is gone. A compact dots control now sits at the

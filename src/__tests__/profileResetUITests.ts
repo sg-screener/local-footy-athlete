@@ -740,8 +740,8 @@ ok(
 );
 ok(
   'session sheet asks only about this session and points permanent edits to Profile',
-  /eyebrow: 'Equipment'/.test(sessionEquipmentSheet)
-    && /title: 'What are you missing\?'/.test(sessionEquipmentSheet)
+  /eyebrow: signedCopy\('session\.equipment\.eyebrow'\)/.test(sessionEquipmentSheet)
+    && /title: signedCopy\('session\.equipment\.heading'\)/.test(sessionEquipmentSheet)
     && /requirements\.map/.test(sessionEquipmentSheet)
     && /Permanent change\? Update your equipment in Profile\./.test(sessionEquipmentSheet)
     && !/ownedEquipmentKit\(\)/.test(sessionEquipmentSheet),

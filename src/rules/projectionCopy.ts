@@ -801,6 +801,36 @@ export function registerProjectionCopy(): void {
       text: 'Add something to this session',
     },
     {
+      id: 'session.equipment.eyebrow',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-212: equipment-sheet category.',
+      text: 'Equipment',
+    },
+    {
+      id: 'session.equipment.heading',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-212: equipment-sheet question.',
+      text: 'What do you have today?',
+    },
+    {
+      id: 'session.equipment.description',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-212: equipment-sheet instruction.',
+      text: 'Untick anything you don’t have. We’ll adjust affected exercises around what’s available.',
+    },
+    {
+      id: 'session.equipment.affected.plural',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-212: four-or-more equipment impact count.',
+      text: 'exercises affected',
+    },
+    {
+      id: 'session.equipment.update_action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-212: equipment-sheet primary action.',
+      text: 'Update session',
+    },
+    {
       id: 'session.log_action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-22: "this finish session button should be '
