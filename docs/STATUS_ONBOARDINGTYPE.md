@@ -236,3 +236,36 @@ button.
 
 - Simulator pixels and final vertical spacing after deletion.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-157 — vertically centre generation-card icons
+
+Sam found that each icon was centred against the title while the body sat in a
+separate row below it. Two options were compared:
+
+1. Add a one-off top offset to the icon.
+2. Make each card one row: icon beside a text block containing title and body.
+
+Option 2 landed. It remains correct when the sentence wraps because the icon is
+centred against the text block's real height rather than a fixed pixel guess.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 86/88; the two new alignment
+  cells were the only failures.
+- AFTER: `test:onboarding-presentation` — 88/88.
+- The guard pins the structure, the centred row, the flexible text block and
+  removal of the old body-only left inset.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs. Neither CompleteScreen nor the edited presentation
+  suite is named.
+- `test:law-registry` — 11/14 with the same three existing reds; the new row is
+  guarded, raising guarded laws 143 → 144 without raising UNENFORCED (21).
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-157 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and Dynamic Type wrapping.
+- Physical-iPhone Release rebuild.

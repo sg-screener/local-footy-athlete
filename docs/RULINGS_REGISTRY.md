@@ -4648,3 +4648,13 @@ but retains its range, subtitle and stored answer. · `WORKING` —
 ticked? Continue anyway — you'll get a bodyweight program.` are deleted together
 with their `Pressable` and `footNote` style. Standard Back and Continue remain.
 · `WORKING` — `test:equipment-answer`. Seat `onboardingtype`.
+
+---
+
+**R-157** · Generation-card icon alignment (Sam, 2026-08-24) · **ICONS
+CENTRE AGAINST THE FULL MESSAGE.**
+
+Each generation education card places its icon beside one text block containing
+both the title and supporting sentence. The row centres the icon vertically
+against that complete block rather than against the title alone. · `WORKING` —
+`test:onboarding-presentation`. Seat `onboardingtype`.

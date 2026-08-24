@@ -193,6 +193,17 @@ console.log('\n[0d] Welcome explains the complete LFA program');
       && (welcomeScreen.match(/featureLabelWrap:\s*\{/g) ?? []).length === 1);
 }
 
+console.log('\n[0e] Generation-card icons centre against the complete text block');
+{
+  const completeScreen = read('src/screens/onboarding/CompleteScreen.tsx');
+  ok('each education card groups its title and body beside one icon',
+    /<View style=\{styles\.educationRow\}>[\s\S]{0,220}<View style=\{styles\.iconContainer\}>[\s\S]{0,220}<View style=\{styles\.educationText\}>[\s\S]{0,220}\{title\}[\s\S]{0,220}\{body\}/.test(completeScreen));
+  ok('the row vertically centres its icon and the text block owns the old body inset',
+    /educationRow:\s*\{[\s\S]{0,140}alignItems:\s*['"]center['"]/.test(completeScreen)
+      && /educationText:\s*\{[\s\S]{0,80}flex:\s*1/.test(completeScreen)
+      && !/educationBody:\s*\{[\s\S]{0,180}paddingLeft:/.test(completeScreen));
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // (1) The timing law
 // ───────────────────────────────────────────────────────────────────────────

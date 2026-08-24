@@ -2020,6 +2020,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The equipment-answer suite rejects all three distinctive fragments of the retired footer copy and independently rejects Pressable, styles.footNote and the footNote declaration from EquipmentScreen. TEST-FIRST LIVENESS: the two new cells were the suite\'s only reds against the old footer (41/43); deleting both notes, the hidden tap target, unused import and dead style returned it to 43/43. The existing cells still pin the optional external exit, ordinary onboarding fallback and untouched equipment-answer semantics. NOT COVERED: simulator pixels, vertical spacing after deletion and the next physical-phone Release.',
     },
   },
+  {
+    id: 'LAW-generation-card-icons-centre-on-full-message',
+    law: 'Each onboarding generation education card places its icon beside one text block containing both title and supporting sentence. The shared row vertically centres the icon against that complete text block; the body owns no separate left inset.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-157 — Sam, 2026-08-24: "these icons should be centre vertically here".',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `onboardingtype`. The presentation suite anchors EducationCard\'s icon-first educationRow, nested educationText block containing both title and body, row alignItems center, flex text owner and absence of the retired body paddingLeft. TEST-FIRST LIVENESS: the two new cells were the suite\'s only reds against the title-centred icon structure (86/88); grouping title and body beside the icon returned it to 88/88. NOT COVERED: simulator pixels, Dynamic Type wrapping and the next physical-phone Release.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */
