@@ -1515,6 +1515,31 @@ function athleteMoveInput(args: {
     day.date === args.change.toDate)?.workout ?? null;
   const targetHoldsTeamAnchor = !!targetWorkout &&
     getTeamTrainingWorkoutState(targetWorkout).hasTeamTraining;
+  /**
+   * ⚠ **THE DOOR REFUSES AN ABSORB THAT WOULD DELETE THE ANCHOR DAY'S OWN GYM
+   * WORK — SAM, 2026-08-25, MEASURED (R-220).**
+   *
+   * `teamTrainingAnchorContainer` builds the absorb base with `exercises: []`.
+   * That is right when the target is team training ALONE — the case the
+   * doubling law was written for, where nothing can be lost. When the target
+   * already holds a gym session it is destruction: a 6-exercise lower day moved
+   * onto a Team Training day carrying 8 exercises produced `Team Training +
+   * lower` with **6**, reported *"Done. Session moved."*, and lost the other 8.
+   *
+   * ⚠ **THE OFFER IS ALREADY FILTERED ABOVE, AND THAT IS NOT ENOUGH.** A caller
+   * that does not consult `destinationsFor` — a future surface, a coach action,
+   * a test — reaches this code with the same date and the same result. **The
+   * suite that owns this class says the coverage shape is wrong because it is
+   * organised BY PATH**; so the guard goes at the door every path passes, not
+   * beside the one offer that happens to exist today.
+   *
+   * Refusing is not a capability lost. Sam's cap (R-218) is that a day may never
+   * hold three, and club night + existing gym session + arrival IS three — the
+   * move had no lawful result to produce.
+   */
+  const anchorDayHoldsGymWork = !!targetWorkout
+    && (targetWorkout.exercises ?? []).length > 0;
+  if (targetHoldsTeamAnchor && anchorDayHoldsGymWork) return null;
   const combinedOntoAnchor = targetHoldsTeamAnchor && targetWorkout
     ? stackSessionOntoTeamAnchor({
       anchorDay: targetWorkout,

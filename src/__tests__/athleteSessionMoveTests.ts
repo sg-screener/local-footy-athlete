@@ -1040,6 +1040,54 @@ run('20 an occupied restoration target conflicts without publishing a program ov
     'occupied restoration target was overwritten silently');
 });
 
+/**
+ * ⚠ **R-220 — CONTENT CONSERVATION ON A TEAM-NIGHT LANDING, AT THE DOOR.**
+ *
+ * Sam, 2026-08-25: *"pulling a strength day to a strength day just disappeared
+ * the session that was originally there = it didnt swap them"*.
+ *
+ * MEASURED before the fix: a 6-exercise lower day moved onto a Team Training day
+ * carrying an 8-exercise upper session produced `Team Training + lower` holding
+ * **6**, reported *"Done. Session moved."*, and the destination's 8 were gone.
+ * The mechanism is `teamTrainingAnchorContainer`, which builds the absorb base
+ * with `exercises: []`.
+ *
+ * **THIS CELL CALLS THE DOOR DIRECTLY, NOT THE OFFER**, because the offer is
+ * also filtered and a cell that went through it would pass without the door
+ * guard existing at all. The suite that owns this class says its coverage shape
+ * is wrong for exactly that reason — organised by PATH, so the invariant keeps
+ * being true and unenforced somewhere new.
+ */
+run('23 a move onto a team night carrying gym work is refused, not absorbed', () => {
+  seed();
+  const names = (workout: Workout | null | undefined): string[] =>
+    ((workout?.exercises ?? []) as any[])
+      .map((row) => row?.exercise?.name ?? row?.name)
+      .filter(Boolean)
+      .sort();
+  const week = accepted(FUTURE_WEEK).visibleWorkouts;
+  const source = clone(week.find((workout) => workout.workoutType === 'Strength')!);
+  const anchor = clone(week.find((workout) => workout.workoutType === 'Team Training')!);
+  const anchorNames = names(anchor);
+  assert(anchorNames.length > 0,
+    'CONTROL: the team-night day must actually carry gym work, or this proves nothing');
+  assert(names(source).length > 0, 'CONTROL: the source must carry work');
+
+  const result = realDoor({
+    kind: 'move_session',
+    fromDate: dateForDay(FUTURE_WEEK, source.dayOfWeek),
+    toDate: dateForDay(FUTURE_WEEK, anchor.dayOfWeek),
+  }, FUTURE_WEEK);
+
+  assert(!result.commit?.ok,
+    `the door reported success over a destructive absorb: ${JSON.stringify(result.commit)}`);
+  const afterAnchor = names(workoutOn(FUTURE_WEEK, anchor.dayOfWeek));
+  const lost = anchorNames.filter((name) => !afterAnchor.includes(name));
+  assert(lost.length === 0, `the team night lost ${lost.length} exercises: ${lost.join(', ')}`);
+  assert(names(workoutOn(FUTURE_WEEK, source.dayOfWeek)).length > 0,
+    'the refused move emptied the source anyway');
+});
+
 async function runAsync(name: string, body: () => Promise<void>): Promise<void> {
   try {
     await body();
