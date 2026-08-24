@@ -2231,13 +2231,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-week-edit-sheet-names-adjustment',
-    law: 'Tapping Edit this week opens a sheet headed “Adjust week”. Its first action-selection step asks “What do you want to change?” before presenting the existing week adjustment options.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-201 — Sam supplied the replacement heading and corrected the first question to “What do you want to change?”.',
+    law: 'Tapping Edit this week opens a sheet headed “Adjust week”. Its first action-selection step asks “What do you want to change?”. The four options read: “I have a bye” / “Remove this week’s game”; “Add a game” / “Add a game and adjust training around it”; “I’m going away” / “Tell us when you’re away”; and “Manage sessions” / “Add, move or remove training this week”. Add a game is the one popup label in both competitive phases.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-201 and R-202 — Sam supplied the replacement heading/question, then all four option labels and explanations.',
     guard: {
       state: 'guarded',
       by: 'test:day-first-timeline',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`; corrected under the same R-201 minutes later. The existing WeekEditSheet remains the one owner; only its heading and first-step question moved into signed copy. The exact source binding and both signed values are held by the Week-edit cell in `test:day-first-timeline`. Focused run: the corrected cell is green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
+      receipt: 'BORN GUARDED 2026-08-25 by seat `headeralign`; corrected under the same R-201 minutes later and extended for R-202. The existing WeekEditSheet remains the one owner; its heading, first-step question and four option label/subline pairs read signed copy. The Week-edit cells in `test:day-first-timeline` require every signed value, every screen binding, the existing row order and the same four action doors. Focused run: the R-202 cells are green at the suite\'s inherited 54 passed / 2 failed baseline; the two reds still name mobility review wiring and an absent generated Gunshow fixture. NOT COVERED: screenshots, simulator interaction, nested session-action wording, physical iPhone and translated copy.',
     },
   },
 ];

@@ -947,6 +947,54 @@ export function registerProjectionCopy(): void {
       text: 'What do you want to change?',
     },
     {
+      id: 'week.edit_sheet.bye.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: first Week option label.',
+      text: 'I have a bye',
+    },
+    {
+      id: 'week.edit_sheet.bye.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: active Bye option explanation.',
+      text: 'Remove this week’s game',
+    },
+    {
+      id: 'week.edit_sheet.game.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: one label in both competitive phases.',
+      text: 'Add a game',
+    },
+    {
+      id: 'week.edit_sheet.game.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: Add-game option explanation.',
+      text: 'Add a game and adjust training around it',
+    },
+    {
+      id: 'week.edit_sheet.away.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: Away option label.',
+      text: 'I’m going away',
+    },
+    {
+      id: 'week.edit_sheet.away.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: Away option explanation.',
+      text: 'Tell us when you’re away',
+    },
+    {
+      id: 'week.edit_sheet.manage_sessions.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: session-management option label.',
+      text: 'Manage sessions',
+    },
+    {
+      id: 'week.edit_sheet.manage_sessions.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-25, R-202: session-management explanation.',
+      text: 'Add, move or remove training this week',
+    },
+    {
       id: 'day.add_session.action',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-196: when no programmed-session '

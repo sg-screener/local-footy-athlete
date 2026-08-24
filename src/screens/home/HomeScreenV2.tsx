@@ -235,9 +235,6 @@ export default function HomeScreenV2() {
      EXISTING FIXTURES ARE REACHED BY TAPPING THEIR OWN DAY, which is a door
      that already works and is per-fixture rather than first-fixture. This
      control's job is adding, so it only ever adds. */
-  const addFixtureLabel = currentPhase === 'Pre-season'
-    ? 'Add a practice match'
-    : 'Add a game';
   const weekHasFixture = weekDays.some(
     (day) => day.indicator === 'game' || day.workout?.workoutType === 'Game',
   );
@@ -1452,7 +1449,6 @@ export default function HomeScreenV2() {
         visible={weekEditVisible}
         phase={currentPhase}
         hasFixture={weekHasFixture}
-        addFixtureLabel={addFixtureLabel}
         onClose={() => setWeekEditVisible(false)}
         onBye={handleSetByeWeek}
         onAddFixture={() => {
@@ -3137,7 +3133,6 @@ interface WeekEditSheetProps {
   visible: boolean;
   phase: SeasonPhase;
   hasFixture: boolean;
-  addFixtureLabel: string;
   onClose: () => void;
   onBye: () => Promise<boolean>;
   onAddFixture: () => void;
@@ -3149,7 +3144,6 @@ function WeekEditSheet({
   visible,
   phase,
   hasFixture,
-  addFixtureLabel,
   onClose,
   onBye,
   onAddFixture,
@@ -3187,9 +3181,9 @@ function WeekEditSheet({
         <View>
           {phase === 'In-season' ? (
             <SheetOption
-              label="I have a bye"
+              label={signedCopy('week.edit_sheet.bye.label')}
               sub={hasFixture
-                ? savingBye ? 'Updating this week…' : 'Remove this week’s games'
+                ? savingBye ? 'Updating this week…' : signedCopy('week.edit_sheet.bye.subline')
                 : 'This week is already a bye'}
               icon={<MaterialCommunityIcons name="calendar-remove-outline" size={18} color={hasFixture ? '#67D7FF' : '#666666'} />}
               disabled={!hasFixture || savingBye}
@@ -3199,20 +3193,23 @@ function WeekEditSheet({
           ) : null}
           {(phase === 'In-season' || phase === 'Pre-season') ? (
             <SheetOption
-              label={addFixtureLabel}
+              label={signedCopy('week.edit_sheet.game.label')}
+              sub={signedCopy('week.edit_sheet.game.subline')}
               icon={<RowIcon kind="game" size={18} color={rowIconColor('game')} />}
               onPress={onAddFixture}
               testID="edit-week-add-fixture"
             />
           ) : null}
           <SheetOption
-            label="I’m going away"
+            label={signedCopy('week.edit_sheet.away.label')}
+            sub={signedCopy('week.edit_sheet.away.subline')}
             icon={<MaterialCommunityIcons name="airplane" size={18} color="#B9A7FF" />}
             onPress={onAway}
             testID="edit-week-away"
           />
           <SheetOption
-            label="Add, move or remove a session"
+            label={signedCopy('week.edit_sheet.manage_sessions.label')}
+            sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
             icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
             onPress={() => setStep('session_action')}
             testID="edit-week-session"

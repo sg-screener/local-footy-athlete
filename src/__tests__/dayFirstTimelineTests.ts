@@ -1792,15 +1792,15 @@ run('the add-fixture control is on the WEEK shape only', () => {
     'Edit this week has more than one visible entry, so it may have leaked onto Day');
 });
 
-run('the add-fixture control shows in BOTH competitive phases, labelled by phase', () => {
+run('the add-fixture control shows in BOTH competitive phases with one signed label', () => {
   const home = homeScreenSource();
   assert(!/showPracticeMatchCTA|showAddGameCTA|showAddFixtureCTA/.test(home),
     'the two old CTA flags are back. They were one decision wearing two names, '
     + 'and two names is how the two cards drifted into disagreeing about '
     + 'whether a week may have a second game.');
-  assert(/'Add a practice match'/.test(home) && /'Add a game'/.test(home),
-    'the control no longer carries both phase labels; the order is that the '
-    + 'label follows the phase, matching the picker banner that already branches');
+  assert(!home.includes("'Add a practice match'")
+    && signedCopy('week.edit_sheet.game.label') === 'Add a game',
+    'the Week popup has regrown phase-specific Add wording instead of one Add a game label');
   assert(!/No game this week/.test(home),
     'the old in-season copy is back. "No game this week - add one" is FALSE on '
     + 'exactly the weeks this control now has to appear on — the ones that '
@@ -1831,15 +1831,28 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   assert(sheetStart >= 0 && sheetEnd > sheetStart,
     'the Week edit sheet could not be bounded');
   const sheet = home.slice(sheetStart, sheetEnd);
-  assert(sheet.includes('label="I have a bye"')
+  assert(sheet.includes("label={signedCopy('week.edit_sheet.bye.label')}")
     && /phase === 'In-season'/.test(sheet),
   'the bye row is missing or is not limited to In-season');
-  assert(sheet.includes('label="I’m going away"')
-    && sheet.includes('label="Add, move or remove a session"'),
+  assert(sheet.includes("label={signedCopy('week.edit_sheet.away.label')}")
+    && sheet.includes("label={signedCopy('week.edit_sheet.manage_sessions.label')}"),
   'the Away or session-edit row is missing from Edit this week');
-  assert(sheet.indexOf('label="Add, move or remove a session"')
-    > sheet.indexOf('label="I’m going away"'),
+  assert(sheet.indexOf("label={signedCopy('week.edit_sheet.manage_sessions.label')}")
+    > sheet.indexOf("label={signedCopy('week.edit_sheet.away.label')}"),
   'session editing is no longer the bottom option in Edit this week');
+  const expectedWeekOptionCopy = [
+    ['week.edit_sheet.bye.label', 'I have a bye'],
+    ['week.edit_sheet.bye.subline', 'Remove this week’s game'],
+    ['week.edit_sheet.game.label', 'Add a game'],
+    ['week.edit_sheet.game.subline', 'Add a game and adjust training around it'],
+    ['week.edit_sheet.away.label', 'I’m going away'],
+    ['week.edit_sheet.away.subline', 'Tell us when you’re away'],
+    ['week.edit_sheet.manage_sessions.label', 'Manage sessions'],
+    ['week.edit_sheet.manage_sessions.subline', 'Add, move or remove training this week'],
+  ] as const;
+  assert(expectedWeekOptionCopy.every(([id, text]) => signedCopy(id) === text)
+    && expectedWeekOptionCopy.every(([id]) => sheet.includes(`signedCopy('${id}')`)),
+  'the four Week options no longer render all eight signed label/subline values');
   assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
     && sheet.includes('icon={<RowIcon kind="game" size={18} color={rowIconColor(\'game\')} />}')
     && sheet.includes('name="airplane" size={18} color="#B9A7FF"')

@@ -5199,3 +5199,15 @@ question is **What do you want to change?** This corrects the earlier
 **What changed this week?** wording. The existing Bye, Game, Away and session
 options remain unchanged. · `WORKING` — `test:day-first-timeline`. Seat
 `headeralign`.
+
+---
+
+**R-202** · Week adjustment options explain their result (Sam, 2026-08-25) ·
+**FOUR OPTIONS, EACH WITH ONE PLAIN EXPLANATION.**
+
+The first **Adjust week** screen reads: **I have a bye** / **Remove this week’s
+game**; **Add a game** / **Add a game and adjust training around it**; **I’m
+going away** / **Tell us when you’re away**; and **Manage sessions** / **Add,
+move or remove training this week**. **Add a game** is the one popup label in
+both competitive phases; the underlying phase-aware picker is unchanged. ·
+`WORKING` — `test:day-first-timeline`. Seat `headeralign`.

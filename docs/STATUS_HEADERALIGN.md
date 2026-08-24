@@ -47,3 +47,14 @@ the inherited 54 passed / 2 failed baseline. The two existing reds remain the
 mobility review wiring and missing generated Gunshow fixture.
 
 NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.
+
+## 2026-08-25 — Week option wording
+
+The first Adjust week screen now uses Sam's four label/subline pairs for Bye,
+Game, Away and Manage sessions. All eight lines use signed copy. The Game row
+uses **Add a game** in both competitive phases while its underlying picker stays
+phase-aware.
+
+Focused guard: `test:day-first-timeline`.
+
+NOT COVERED: screenshots, simulator interaction, physical iPhone and translated copy.
