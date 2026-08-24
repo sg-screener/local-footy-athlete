@@ -1,10 +1,16 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type { PlanChangeBinScopeId } from '../../utils/planChangeTypes';
-import type { WeekBoardBox, WeekBoardDay } from '../../rules/weekBoard';
+import { weekBoardDropRefusal, type WeekBoardBox, type WeekBoardDay } from '../../rules/weekBoard';
 
 /**
  * ── THE WEEK BOARD ──────────────────────────────────────────────────────────
@@ -43,15 +49,98 @@ export interface WeekBoardRow {
   readonly board: WeekBoardDay;
 }
 
-export function WeekBoard({ rows, onAdd, onRemove }: {
+/** Where a box sits, in board coordinates. Filled by `onLayout`, never guessed. */
+type Frame = { x: number; y: number; width: number; height: number };
+
+export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
   rows: readonly WeekBoardRow[];
   onAdd: (date: string) => void;
   onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
+  /** R-218b — a completed drag. The BOARD decides the shape is legal; the
+   *  producer still decides whether the program allows it. */
+  onMove: (args: { fromDate: string; toDate: string; box: WeekBoardBox }) => void;
+  /** Why a drop was refused, in the athlete's words. */
+  onRefused: (message: string) => void;
 }) {
+  /**
+   * ⚠ **THE FRAMES ARE MEASURED, NOT COMPUTED FROM THE STYLESHEET.** A hit-test
+   * that assumed "row height 58 + gap 8, date column 44" would be a second copy
+   * of the layout, and it would be wrong the first time a label wrapped to two
+   * lines or a phone changed its text size. `onLayout` reports what was actually
+   * drawn.
+   */
+  const frames = React.useRef<Record<string, Frame>>({});
+  const rowTops = React.useRef<Record<string, number>>({});
+  const boxesLeft = React.useRef<Record<string, number>>({});
+
+  const rememberRow = (date: string) => (event: LayoutChangeEvent) => {
+    rowTops.current[date] = event.nativeEvent.layout.y;
+  };
+  const rememberBoxesContainer = (date: string) => (event: LayoutChangeEvent) => {
+    boxesLeft.current[date] = event.nativeEvent.layout.x;
+  };
+  const rememberBox = (date: string, boxId: string) => (event: LayoutChangeEvent) => {
+    const { x, y, width, height } = event.nativeEvent.layout;
+    frames.current[`${date}:${boxId}`] = { x, y, width, height };
+  };
+
+  /** The box under a point in board coordinates, or null. */
+  const boxAt = (px: number, py: number): { row: WeekBoardRow; box: WeekBoardBox } | null => {
+    for (const row of rows) {
+      const top = rowTops.current[row.date];
+      const left = boxesLeft.current[row.date];
+      if (top === undefined || left === undefined) continue;
+      for (const box of row.board.boxes) {
+        const frame = frames.current[`${row.date}:${box.id}`];
+        if (!frame) continue;
+        const x0 = left + frame.x;
+        const y0 = top + frame.y;
+        if (px >= x0 && px <= x0 + frame.width && py >= y0 && py <= y0 + frame.height) {
+          return { row, box };
+        }
+      }
+    }
+    return null;
+  };
+
+  /**
+   * ⚠ **THE GESTURE REPORTS `x`/`y` RELATIVE TO THE BOX IT STARTED ON**, not to
+   * the board, so they are converted here by adding that box's own measured
+   * origin. Hit-testing the raw values would have matched whatever sits at the
+   * same offset inside every row — a bug that looks like "the drop went to the
+   * wrong day" and is really "the two numbers were never in the same space".
+   */
+  const handleDrop = React.useCallback((
+    fromDate: string, boxId: string, localX: number, localY: number,
+  ) => {
+    const from = rows.find((row) => row.date === fromDate);
+    const box = from?.board.boxes.find((entry) => entry.id === boxId);
+    if (!from || !box) return;
+    const origin = frames.current[`${fromDate}:${boxId}`];
+    const rowTop = rowTops.current[fromDate];
+    const left = boxesLeft.current[fromDate];
+    if (!origin || rowTop === undefined || left === undefined) return;
+    const landed = boxAt(left + origin.x + localX, rowTop + origin.y + localY);
+    // Dropped on nothing — the athlete changed their mind. Silence, not an error.
+    if (!landed) return;
+    const refusal = weekBoardDropRefusal({
+      box, from: from.board, target: landed.box, to: landed.row.board,
+    });
+    if (refusal === 'same_day') return;
+    if (refusal) { onRefused(DROP_REFUSAL_COPY[refusal]); return; }
+    onMove({ fromDate, toDate: landed.row.date, box });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onMove, onRefused, rows]);
+
   return (
     <View style={styles.board} testID="week-board">
       {rows.map((row) => (
-        <View key={row.date} style={styles.row} testID={`week-board-day-${row.date}`}>
+        <View
+          key={row.date}
+          style={styles.row}
+          testID={`week-board-day-${row.date}`}
+          onLayout={rememberRow(row.date)}
+        >
           {/* ⚠ **THE DATE IS NOT SELECTABLE — SAM, 2026-08-25.** It is a `View`
             * and not a `Pressable`, so there is no handler to accidentally
             * re-attach later. The whole-row tap this replaces is what made the
@@ -61,14 +150,16 @@ export function WeekBoard({ rows, onAdd, onRemove }: {
             <Text style={[styles.weekday, row.isToday && styles.weekdayToday]}>{row.short}</Text>
             <Text style={styles.dayNumber}>{row.dayNumber}</Text>
           </View>
-          <View style={styles.boxes}>
+          <View style={styles.boxes} onLayout={rememberBoxesContainer(row.date)}>
             {row.board.boxes.map((box) => (
               <BoardBox
                 key={box.id}
                 box={box}
                 date={row.date}
+                onLayout={rememberBox(row.date, box.id)}
                 onAdd={onAdd}
                 onRemove={onRemove}
+                onDrop={handleDrop}
               />
             ))}
           </View>
@@ -78,11 +169,21 @@ export function WeekBoard({ rows, onAdd, onRemove }: {
   );
 }
 
-function BoardBox({ box, date, onAdd, onRemove }: {
+/** Why a drop was refused, in words the athlete reads. One per typed refusal. */
+const DROP_REFUSAL_COPY: Record<string, string> = {
+  not_movable: "That one can't be moved from here.",
+  onto_team_training: "Team training stays put — drop it on a free day instead.",
+  onto_game: "Nothing goes on game day.",
+  day_full: "That day is full — two sessions is the most.",
+};
+
+function BoardBox({ box, date, onLayout, onAdd, onRemove, onDrop }: {
   box: WeekBoardBox;
   date: string;
+  onLayout: (event: LayoutChangeEvent) => void;
   onAdd: (date: string) => void;
   onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
+  onDrop: (fromDate: string, boxId: string, px: number, py: number) => void;
 }) {
   if (box.kind === 'empty') {
     return (
@@ -91,6 +192,7 @@ function BoardBox({ box, date, onAdd, onRemove }: {
         accessibilityRole="button"
         accessibilityLabel={`Add a session on ${date}`}
         testID={`week-board-add-${date}`}
+        onLayout={onLayout}
         style={({ pressed }) => [
           styles.box, styles.emptyBox, pressed && styles.boxPressed,
         ]}
@@ -103,10 +205,64 @@ function BoardBox({ box, date, onAdd, onRemove }: {
   /* A FIXTURE IS A LABEL HERE. It carries no bin and no drag: the game moves
    * and clears through its own door, which this board does not replace. */
   const removable = box.kind !== 'game';
-  return (
-    <View
-      style={[styles.box, box.kind === 'team_training' && styles.teamBox]}
+  const draggable = box.kind !== 'game';
+
+  /* THE BOX FOLLOWS THE FINGER ON THE UI THREAD. Only the DROP crosses back to
+   * JS — a drag that re-rendered the week on every frame would fight the list
+   * it is being dragged over. */
+  const dx = useSharedValue(0);
+  const dy = useSharedValue(0);
+  const lifted = useSharedValue(0);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+
+  /**
+   * ⚠ **`activateAfterLongPress` IS WHAT LETS THIS LIVE INSIDE A SCROLLING
+   * WEEK.** The board sits in the Program tab's ScrollView. A pan that claimed
+   * the touch immediately would steal every attempt to scroll past the week;
+   * requiring the finger to rest first means a flick still scrolls and only a
+   * deliberate hold lifts a session. This is the failure the plan named as most
+   * likely to bite, and it is answered by the gesture's own contract rather
+   * than by fighting the parent for the responder.
+   */
+  const pan = Gesture.Pan()
+    .activateAfterLongPress(220)
+    .onStart((event) => {
+      lifted.value = 1;
+      startX.value = event.absoluteX;
+      startY.value = event.absoluteY;
+    })
+    .onUpdate((event) => {
+      dx.value = event.translationX;
+      dy.value = event.translationY;
+    })
+    .onEnd((event) => {
+      runOnJS(onDrop)(date, box.id, event.x, event.y);
+    })
+    .onFinalize(() => {
+      // The box always returns home. What the drop CHANGED is re-derived and
+      // re-rendered from the program, never from where the finger stopped.
+      lifted.value = 0;
+      dx.value = 0;
+      dy.value = 0;
+    });
+
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: dx.value },
+      { translateY: dy.value },
+      { scale: lifted.value ? 1.03 : 1 },
+    ] as never,
+    opacity: lifted.value ? 0.92 : 1,
+    zIndex: lifted.value ? 20 : 0,
+    elevation: lifted.value ? 8 : 0,
+  }));
+
+  const content = (
+    <Animated.View
+      style={[styles.box, box.kind === 'team_training' && styles.teamBox, dragStyle]}
       testID={`week-board-box-${date}-${box.kind}`}
+      onLayout={onLayout}
     >
       <Text style={styles.boxLabel} numberOfLines={2}>{box.label}</Text>
       {removable ? (
@@ -121,8 +277,10 @@ function BoardBox({ box, date, onAdd, onRemove }: {
           <MaterialCommunityIcons name="trash-can-outline" size={15} color="#FF7A85" />
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
+
+  return draggable ? <GestureDetector gesture={pan}>{content}</GestureDetector> : content;
 }
 
 const styles = StyleSheet.create({

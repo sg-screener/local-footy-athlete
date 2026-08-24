@@ -164,6 +164,67 @@ console.log('\n[4] Drop rules — the board\'s own shape, not the program\'s leg
     'a swap conserves the day\'s count, so the cap has nothing to refuse');
 }
 
+/* ══ 5. The drag surface ══ */
+
+/**
+ * ⚠ **R-218b — SOURCE CELLS, BECAUSE THERE IS NO RENDERER HERE.** What these
+ * pin are the three things that make a drag inside a SCROLLING week work at
+ * all, each of which was a real decision and not a detail.
+ */
+console.log('\n[5] The drag: long-press to lift, measured frames, one move door');
+{
+  const fs = require('fs');
+  const path = require('path');
+  const board = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'WeekBoard.tsx'), 'utf8');
+  const home = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  const sheet = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'), 'utf8');
+
+  ok('the pan only activates after a long press, so a flick still scrolls the week',
+    /Gesture\.Pan\(\)\s*\n?\s*\.activateAfterLongPress\(\d+\)/.test(board),
+    'a pan that claimed the touch immediately would steal every scroll past the board');
+
+  ok('the frames are MEASURED by onLayout, not computed from the stylesheet',
+    /const frames = React\.useRef/.test(board)
+      && /event\.nativeEvent\.layout/.test(board)
+      && !/height: 58[\s\S]{0,80}hitTest/.test(board),
+    'a hit-test built from style constants is a second copy of the layout');
+
+  ok('the gesture\'s box-relative point is converted into board space before hit-testing',
+    /boxAt\(left \+ origin\.x \+ localX, rowTop \+ origin\.y \+ localY\)/.test(board),
+    'raw x/y would match the same offset inside every row — "wrong day" that is really "wrong space"');
+
+  ok('a fixture is neither dragged nor binned',
+    /const draggable = box\.kind !== 'game'/.test(board)
+      && /const removable = box\.kind !== 'game'/.test(board));
+
+  ok('the box always springs home — the program re-renders the result, not the finger',
+    /onFinalize\(\(\) => \{[\s\S]{0,220}dx\.value = 0;[\s\S]{0,60}dy\.value = 0;/.test(board));
+
+  ok('a refused drop gives a reason, one per typed refusal',
+    /DROP_REFUSAL_COPY/.test(board)
+      && ['not_movable', 'onto_team_training', 'onto_game', 'day_full']
+        .every((code) => new RegExp(`${code}:`).test(board)),
+    'a spring-back with no sentence reads as a fumbled drag');
+  ok('and the screen actually shows it',
+    /testID="week-board-refusal"/.test(home) && /boardRefusal/.test(home),
+    'a refusal state with no reader is dead weight');
+
+  /* ⚠ THE BOARD CHOSE THE CHANGE; IT DOES NOT DECIDE IF THE CHANGE IS ALLOWED. */
+  ok('a dragged move goes through the ONE move door, not a new commit path',
+    /initialAction: 'move'[\s\S]{0,120}move: \{ toDate: args\.toDate, scope \}/.test(home)
+      && /if \(initialMove\) \{[\s\S]{0,400}apply\(/.test(sheet),
+    'the producer still refuses an illegal move and still raises the G-1 ask');
+  ok('the club night drags as this-week-only, and never raises the permanent ask',
+    /teamNightRoute: 'this_week_only'/.test(sheet)
+      && !/teamNightRoute: 'permanent'/.test(sheet),
+    'Sam, 2026-08-25: dragging it moves it for this week, no question');
+  ok('and it travels by move_team_night, never by move_session',
+    /initialMove\.scope === 'team'[\s\S]{0,120}kind: 'move_team_night'/.test(sheet));
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
   console.log('\nFailures:');

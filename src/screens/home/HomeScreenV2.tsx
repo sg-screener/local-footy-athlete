@@ -66,8 +66,8 @@ import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
-import type { PlanChangeBinScopeId } from '../../utils/planChangeTypes';
-import { buildWeekBoardDay } from '../../rules/weekBoard';
+import type { PlanChangeBinScopeId, PlanChangeMoveScopeId } from '../../utils/planChangeTypes';
+import { buildWeekBoardDay, type WeekBoardBox } from '../../rules/weekBoard';
 import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
   applyMobilityFlowExerciseDecisions,
@@ -386,7 +386,11 @@ export default function HomeScreenV2() {
     origin?: 'week';
     /** R-218a — which box's bin was tapped. Absent means "ask, as before". */
     binScope?: PlanChangeBinScopeId;
+    /** R-218b — a completed drag: which day it landed on, under which scope. */
+    move?: { toDate: string; scope: PlanChangeMoveScopeId | 'team' };
   } | null>(null);
+  /** R-218b — why the board itself refused a drop. Cleared on the next touch. */
+  const [boardRefusal, setBoardRefusal] = useState<string | null>(null);
   const [weekEditVisible, setWeekEditVisible] = useState(false);
   // ── ITEM 28: THE AWAY FLOW'S THREE ANSWERS ──
   // The sheet owns the two dates; this screen owns only what survives it — the
@@ -569,6 +573,24 @@ export default function HomeScreenV2() {
       initialAction: 'remove',
       origin: 'week',
       ...(scope ? { binScope: scope } : {}),
+    });
+  }, []);
+
+  /* ⚠ **A DRAGGED MOVE ENTERS THE ONE MOVE DOOR — R-218b.** The drag chose the
+   * change (which session, which day); `PlanChangeSheet` still applies it
+   * through the producer, so an illegal move refuses and a G-1 landing still
+   * raises its ask. The board never commits anything itself. */
+  const handleBoardMove = useCallback((args: {
+    fromDate: string; toDate: string; box: WeekBoardBox;
+  }) => {
+    setBoardRefusal(null);
+    const scope = args.box.kind === 'team_training' ? 'team' : args.box.scope;
+    if (!scope) return;
+    setChangeSheetEntry({
+      date: args.fromDate,
+      initialAction: 'move',
+      origin: 'week',
+      move: { toDate: args.toDate, scope },
     });
   }, []);
 
@@ -1013,6 +1035,16 @@ export default function HomeScreenV2() {
             onCancel={() => setWeekBoardOpen(false)}
           />
         )}
+        {/* ⚠ **A REFUSED DROP SAYS WHY.** The box springs home either way, and a
+          * spring-back with no sentence is indistinguishable from a drag the
+          * athlete simply fumbled — so the one case where the board itself said
+          * no gets a reason. It clears on the next drag, because it is about
+          * the attempt that just happened and nothing else. */}
+        {weekBoardOpen && boardRefusal ? (
+          <Text style={styles.boardRefusal} testID="week-board-refusal">
+            {boardRefusal}
+          </Text>
+        ) : null}
 
         {/* ONLY WEEK'S COMPACT DATE NAV SITS BETWEEN THE TOGGLE AND THE WEEK.
             Today still puts its card directly under the control. On Week, Sam's
@@ -1198,7 +1230,15 @@ export default function HomeScreenV2() {
               * readings of one week on one screen, and the rows are exactly the
               * thing whose whole-row tap he is replacing. */}
             {weekBoardOpen
-              ? <WeekBoard rows={weekBoardRows} onAdd={handleBoardAdd} onRemove={handleBoardRemove} />
+              ? (
+                <WeekBoard
+                  rows={weekBoardRows}
+                  onAdd={handleBoardAdd}
+                  onRemove={handleBoardRemove}
+                  onMove={handleBoardMove}
+                  onRefused={setBoardRefusal}
+                />
+              )
               : weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
@@ -1519,6 +1559,7 @@ export default function HomeScreenV2() {
         weekDays={weekDays}
         initialAction={changeSheetEntry?.initialAction}
         initialBinScope={changeSheetEntry?.binScope}
+        initialMove={changeSheetEntry?.move}
         fromWeek={changeSheetEntry?.origin === 'week'}
         onClose={() => setChangeSheetEntry(null)}
       />
@@ -4903,6 +4944,14 @@ const styles = StyleSheet.create({
   weekEditSectionLabel: {
     color: '#B0B0B0', fontSize: 13, fontWeight: '700', lineHeight: 18,
     paddingTop: spacing.xs, paddingBottom: 4,
+  },
+  /* R-218b — the board's own refusal line, under its banner. */
+  boardRefusal: {
+    color: '#FFB4B4',
+    fontSize: 12.5,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   weekEditTrainingSection: {
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#353535',

@@ -5639,3 +5639,46 @@ with a route — but it DOES have a `team` bin scope. One collapsed field would
 have made the club night either un-binnable or movable by the wrong door, so
 `WeekBoardBox` carries both. · `WORKING` — `test:week-board` 31 passed / 0
 failed. Seat `warmup`.
+
+---
+
+**R-218b** · *"these boxes should be able to be dragged and dropped ... you
+can't move more than 3 sessions to a day, and you can't move a
+strength/conditioning/mobility etc session to where a team training box [is],
+but you can drag a strength to a strength, or a strength to a free day."* (Sam,
+2026-08-25) · **THE DRAG CHOOSES THE CHANGE. IT DOES NOT DECIDE WHETHER THE
+CHANGE IS ALLOWED.**
+
+A drop raises the SAME `apply` the destination list uses, so an illegal move
+still refuses and a G-1 landing still raises its ask. **The board never commits
+anything itself** — the two things `a-legality-probe-is-not-a-change-probe`
+exists to keep apart.
+
+⚠ **`activateAfterLongPress` IS WHAT LETS THIS LIVE IN A SCROLLING WEEK.** The
+board sits in the Program tab's ScrollView; a pan claiming the touch immediately
+would steal every attempt to scroll past it. A flick still scrolls, a hold
+lifts. **This was named in the plan as the thing most likely to bite and is
+answered by the gesture's own contract rather than by fighting the parent for
+the responder.**
+
+⚠ **THE FRAMES ARE MEASURED, NOT COMPUTED FROM THE STYLESHEET.** A hit-test
+assuming "row 58 + gap 8, date column 44" would be a second copy of the layout,
+wrong the first time a label wraps or the phone's text size changes.
+
+⚠ **AND THE GESTURE'S POINT IS CONVERTED BEFORE IT IS TESTED.** Pan reports
+`x`/`y` relative to the box it started on. Hit-testing those raw would match
+whatever sits at the same offset in every row — a defect that reads as *"the
+drop went to the wrong day"* and is really *"the two numbers were never in the
+same space"*.
+
+A refused drop gets a sentence, one per typed refusal: a spring-back with no
+reason is indistinguishable from a fumbled drag. The club night drags as
+`teamNightRoute: 'this_week_only'` and never raises the permanent ask, which is
+Sam's answer given before the plan. · `WORKING` — `test:week-board` §5, 41
+passed / 0 failed.
+
+⚠ **NOT COVERED, AND IT IS THE SAFETY NET THIS SLICE MOST WANTED:**
+`test:athlete-session-move` is **0 passed / 20 failed at HEAD**, before this work
+and unchanged by it — the whole move suite is dark. The plan named it as slice
+4's net and it cannot serve as one. **Raised for Sam; not this seat's to fix
+inside a UI slice.** Seat `warmup`.

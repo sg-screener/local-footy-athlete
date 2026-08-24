@@ -217,6 +217,29 @@ interface PlanChangeSheetProps {
    * than being committed. The board proposes; the producer still decides.
    */
   initialBinScope?: PlanChangeBinScopeId;
+  /**
+   * ⚠ **A COMPLETED MOVE, DRAGGED — R-218b (Sam, 2026-08-25): *"these boxes
+   * should be able to be dragged and dropped"*.**
+   *
+   * A drag answers every question this sheet would otherwise ask in sequence:
+   * WHICH session (the box lifted), and WHERE (the box dropped on). So the
+   * sheet applies it rather than walking the athlete back through a menu they
+   * have already operated with their hand.
+   *
+   * ⚠ **IT IS APPLIED THROUGH `apply`, THE SAME COMMIT THE DESTINATION LIST
+   * USES.** Nothing here bypasses the producer: an illegal move still refuses,
+   * and a G-1 landing still raises its ask. **The drag chose the change; it did
+   * not decide whether the change is allowed** — and those are the two things
+   * `a-legality-probe-is-not-a-change-probe` exists to keep apart.
+   *
+   * `teamNightRoute: 'this_week_only'` is Sam's answer, given before the plan:
+   * dragging the club night moves it for this week and asks nothing. The
+   * permanent route is untouched and still reachable from its own flow.
+   */
+  initialMove?: {
+    toDate: string;
+    scope: PlanChangeMoveScopeId | 'team';
+  };
   fromWeek?: boolean;
   onClose: () => void;
 }
@@ -229,7 +252,8 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, initialAction, initialBinScope, fromWeek = false, onClose,
+  visible, date, weekDays, initialAction, initialBinScope, initialMove,
+  fromWeek = false, onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
@@ -333,6 +357,22 @@ export function PlanChangeSheet({
       return;
     }
     if (initialAction === 'move') {
+      if (initialMove) {
+        apply(initialMove.scope === 'team'
+          ? {
+              kind: 'move_team_night',
+              fromDate: date!,
+              toDate: initialMove.toDate,
+              teamNightRoute: 'this_week_only',
+            }
+          : {
+              kind: 'move_session',
+              fromDate: date!,
+              toDate: initialMove.toDate,
+              ...(initialMove.scope === 'whole_day' ? {} : { scope: initialMove.scope }),
+            });
+        return;
+      }
       startMove();
       return;
     }
@@ -349,7 +389,7 @@ export function PlanChangeSheet({
     // not a watcher: after a successful edit the visible week changes, and
     // re-entering the chosen action then would overwrite its result screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, date, initialAction, initialBinScope]);
+  }, [visible, date, initialAction, initialBinScope, initialMove]);
 
   if (!date) return null;
   const selectedWorkout = selectedDay?.workout ?? null;
