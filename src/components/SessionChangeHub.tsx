@@ -7,13 +7,14 @@
  * visual design as the Day screen — not a separate row of plain text pills …
  * Do not keep separate Day and Session implementations."*
  *
- * Sam, 2026-08-24: the Day page keeps Tired, Sick and Injured and adds the
- * three day-level plan doors Add, Move and Remove. The open-session page keeps
- * Equipment, Injury and Add; row-level Quick Swap / Quick Remove own exercise
- * changes there.
+ * Sam, 2026-08-24: the Day page keeps Tired, Sick and Injured as direct status
+ * controls and puts Add, Move and Remove behind one separately styled Edit day
+ * doorway. The open-session page keeps Equipment, Injury and Add; row-level
+ * Quick Swap / Quick Remove own exercise changes there.
  *
  * The shared component owns presentation, never a frozen surface list. Its two
- * callers deliberately overlap on Add and otherwise supply their own actions.
+ * callers supply deliberately disjoint direct-action sets; Day's plan edits
+ * enter through the separate doorway prop.
  *
  * ## WHAT THIS OWNS, AND WHAT IT DELIBERATELY DOES NOT
  *
@@ -31,7 +32,7 @@
  * disabled state for a caller to hand it. An action the surface cannot serve is
  * simply not in the list.
  *
- * WRITER: `screens/home/HomeScreenV2` (Day, six direct actions) and
+ * WRITER: `screens/home/HomeScreenV2` (Day, three status actions + Edit day) and
  * `screens/home/DayWorkoutScreenV2` (open session, three session-wide actions).
  * READER: the athlete. TEST: `test:session-change-hub` sections [8] and [9].
  */
@@ -42,14 +43,14 @@ import Svg, { Path } from 'react-native-svg';
 
 import { Card } from './ui';
 import { spacing } from '../theme/spacing';
-import { signedCopy } from '../rules/signedCopy';
+import { signedCopy, type SignedCopy } from '../rules/signedCopy';
 
 /**
- * THE DAY SURFACE'S SET. Status facts and plan edits live together because they
- * all answer the same visible question about the day in front of the athlete.
+ * THE DAY SURFACE'S DIRECT SET. These are athlete-state facts. Day/session plan
+ * edits live behind the separate Edit day doorway below the row.
  */
 export const DAY_CHANGE_ACTION_IDS = [
-  'tired', 'sick', 'injured', 'add', 'move', 'remove',
+  'tired', 'sick', 'injured',
 ] as const;
 
 /**
@@ -61,7 +62,7 @@ export const SESSION_CHANGE_ACTION_IDS = [
 
 /** Every identity this card can draw. Neither surface offers all of them. */
 export const CHANGE_ACTION_IDS = [
-  'tired', 'sick', 'injured', 'equipment', 'injury', 'add', 'move', 'remove',
+  'tired', 'sick', 'injured', 'equipment', 'injury', 'add',
 ] as const;
 
 export type ChangeActionId = (typeof CHANGE_ACTION_IDS)[number];
@@ -84,6 +85,14 @@ export interface SessionChangeAction {
   accessibilityHint?: string;
 }
 
+/** One distinct doorway for day/session edits; never another status chip. */
+export interface SessionChangeEditAction {
+  label: SignedCopy;
+  onPress: () => void;
+  testID: string;
+  accessibilityHint?: string;
+}
+
 /** The word the athlete reads. One place, so no two surfaces can disagree. */
 export const CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {
   tired: 'Tired',
@@ -92,8 +101,6 @@ export const CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {
   equipment: 'Equipment',
   injury: 'Injury',
   add: 'Add',
-  move: 'Move',
-  remove: 'Remove',
 };
 
 /** The previous name, kept so existing readers do not have to be rewritten. */
@@ -112,8 +119,6 @@ const ACTION_TINT: Record<ChangeActionId, string> = {
   equipment: 'rgba(30, 167, 255, 0.12)',
   injury: 'rgba(255, 127, 127, 0.12)',
   add: 'rgba(198, 255, 0, 0.12)',
-  move: 'rgba(103, 215, 255, 0.12)',
-  remove: 'rgba(255, 161, 196, 0.12)',
 };
 
 const ACTION_STROKE: Record<ChangeActionId, string> = {
@@ -123,8 +128,6 @@ const ACTION_STROKE: Record<ChangeActionId, string> = {
   equipment: '#67D7FF',
   injury: '#FF7F7F',
   add: '#C6FF00',
-  move: '#67D7FF',
-  remove: '#FFA1C4',
 };
 
 /**
@@ -188,19 +191,6 @@ function glyph(id: ChangeActionId): React.ReactNode {
       return (
         <Svg {...common}><Path d="M12 5v14M5 12h14" /></Svg>
       );
-    case 'move':
-      return (
-        <Svg {...common}>
-          <Path d="M4 12h15" /><Path d="m14 7 5 5-5 5" />
-        </Svg>
-      );
-    // A minus in a circle — removal, not deletion of the day.
-    case 'remove':
-      return (
-        <Svg {...common}>
-          <Path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" /><Path d="M8 12h8" />
-        </Svg>
-      );
   }
 }
 
@@ -209,6 +199,7 @@ export function SessionChangeHub({
   testID = 'session-change-hub',
   rowTestID,
   subline,
+  editAction,
   style,
 }: {
   actions: readonly SessionChangeAction[];
@@ -217,6 +208,8 @@ export function SessionChangeHub({
   rowTestID?: string;
   /** Defaults to the signed sub-line. The session surface narrows it to today. */
   subline?: string;
+  /** Day-only doorway into the deterministic Add / Move / Remove menu. */
+  editAction?: SessionChangeEditAction;
   /**
    * ⚠ **THE GAP ABOVE THIS CARD IS THE SURFACE'S, NOT THIS COMPONENT'S** —
    * Sam, 2026-08-22, on the Day view: *"make them all the same gap as the gap
@@ -231,7 +224,7 @@ export function SessionChangeHub({
    */
   style?: StyleProp<ViewStyle>;
 }) {
-  if (actions.length === 0) return null;
+  if (actions.length === 0 && !editAction) return null;
   return (
     <Card tone="default" padding="lg" radius="lg" style={style} testID={testID}>
       {/* ⚠ **THE WORDS COME FROM THE SHEET, NOT FROM HERE.** They were literals
@@ -276,6 +269,27 @@ export function SessionChangeHub({
           );
         })}
       </View>
+      {editAction && (
+        <Pressable
+          onPress={editAction.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={editAction.label}
+          accessibilityHint={editAction.accessibilityHint}
+          testID={editAction.testID}
+          style={({ pressed }) => [styles.editDoor, pressed && { opacity: 0.7 }]}
+        >
+          <Text style={styles.editDoorLabel}>{editAction.label}</Text>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="m9 5 7 7-7 7"
+              stroke="#8A8A8A"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </Pressable>
+      )}
     </Card>
   );
 }
@@ -298,5 +312,23 @@ const styles = StyleSheet.create({
   chipLabel: {
     color: '#8A8F98', fontSize: 12, lineHeight: 16, fontWeight: '600',
     letterSpacing: 0.2, textAlign: 'center',
+  },
+  editDoor: {
+    minHeight: 48,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#101010',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editDoorLabel: {
+    color: '#F5F5F5',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '700',
   },
 });

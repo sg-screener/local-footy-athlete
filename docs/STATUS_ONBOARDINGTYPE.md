@@ -1473,3 +1473,38 @@ filter.
 - Physical-iPhone Release acceptance, every injury body area/severity, injury
   update/resolution, a real process kill during the settle, and the broader
   scrolling/faulty-click/onboarding reports outside this injury coordinate.
+
+---
+
+## R-194 — separate athlete status from day scheduling
+
+The Day change card now shows only Tired, Sick and Injured as immediate status
+controls. One full-width **Edit day** doorway sits separately beneath them and
+opens the existing Add / Move / Remove capability menu. No plan-edit chip or
+second mutation path was added: the existing PlanChangeSheet still validates,
+previews, confirms and commits the action.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: retain six equal-weight chips and explain the difference
+  through labels, or separate state from scheduling while reusing the canonical
+  menu. The second landed because it makes the athlete's choice clearer and
+  deletes presentation complexity without duplicating program logic.
+- TEST FIRST: the revised hub contract produced five reds against the old six-
+  chip Day card. AFTER: `test:session-change-hub` is 60/60. Its final cell was
+  added after the first simulator run caught the optional action silently
+  defaulting to Add instead of showing the menu.
+- `test:day-first-timeline` remains at its exact inherited 54/2 baseline; its
+  Edit day cell passes and the two existing failures still name mobility review
+  wiring and a missing generated Gunshow fixture.
+- `test:signed-copy-extraction` is 7/7. **Edit day** is a signed R-194 copy row.
+- LIVE SIMULATOR, no screenshots: Tired, Sick and Injured were reachable; the
+  direct Add id was absent; Edit day was present; tapping it showed Add, Move
+  and Remove together. The corrected interaction flow passed end to end.
+- `test:compile` remains at the concurrent 483-error / 60-worsened-pair
+  baseline and names none of this slice's changed product files.
+
+### NOT COVERED
+
+- Physical-iPhone Release, VoiceOver order, every day capability combination
+  and a real committed Add/Move/Remove sequence.

@@ -77,8 +77,9 @@ import { getSessionComponents } from '../../utils/sessionComponents';
  * session?" and no longer reads a workout's name or `sessionTier` to decide what
  * an athlete may do with it. Two things went with that:
  *
- *   - THE INTERMEDIATE MENU IS GONE (ruling 7/8, updated 2026-08-24). The Day
- *     card now owns Add, Move and Remove directly. The editable-session branch that chose between
+ *   - THE OLD INTERMEDIATE MENU IS GONE (ruling 7/8). The Day card now enters
+ *     the canonical Add, Move and Remove action menu through one Edit day
+ *     doorway. The editable-session branch that chose between
  *     "Edit this session" and "Add optional session" went with it — it was a
  *     capability question answered by comparing a workout's type and tier against
  *     the word recovery and lowercasing its name, which is the second-derivation
@@ -207,14 +208,14 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, initialAction = 'add', fromWeek = false, onClose,
+  visible, date, weekDays, initialAction, fromWeek = false, onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const activeConstraints = useCoachUpdatesStore((state) => state.activeConstraints);
 
-  // Fresh state every time the sheet opens for a (new) day. The Day or Week
-  // surface has already selected Add, Move or Remove.
+  // Fresh state every time the sheet opens for a (new) day. Week may already
+  // have selected Add, Move or Remove; Day intentionally starts on this menu.
   useEffect(() => {
     if (visible) {
       setStep({ kind: 'actions' });
@@ -300,11 +301,12 @@ export function PlanChangeSheet({
     setStep({ kind: 'pick_move_scope' });
   };
 
-  // External entry points choose only the action and date. From there they
-  // enter the same Add, Move or Remove sequence. There is no separate Day
-  // action menu and no dedicated whole-session Swap entry.
+  // Week deep links choose an action and date, then enter the same Add, Move or
+  // Remove sequence. Day's Edit day doorway intentionally omits initialAction,
+  // so the canonical three-action menu remains visible. There is no dedicated
+  // whole-session Swap entry.
   useEffect(() => {
-    if (!visible || !options || options.locked !== null) return;
+    if (!visible || !options || options.locked !== null || !initialAction) return;
     if (initialAction === 'add') {
       startAdd();
       return;
@@ -584,10 +586,10 @@ export function PlanChangeSheet({
         </Text>
       )}
 
-      {/* INTERNAL FALLBACK — direct Day and Week buttons skip this step. It is
-          retained only as a safe Back destination for nested Add / Move /
-          Remove questions; the dedicated whole-session Swap action is gone.
-          This IS the first step. Every row's availability is a capability the
+      {/* EDIT DAY'S FIRST STEP. Week deep links may still skip it after the
+          athlete has already chosen Add / Move / Remove there; nested questions
+          return here on Back. The dedicated whole-session Swap action is gone.
+          Every row's availability is a capability the
           projection computed for this day (`PlanChangeDayOptions`), rendered
           here; a row the athlete cannot use is shown OFF with the reason under
           it rather than hidden, because a menu that changes shape day to day is

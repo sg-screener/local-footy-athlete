@@ -44,9 +44,8 @@ tags:
 # `day-timeline` is the day shape's new witness: it exists in this shape only,
 # which is the property `week-strip` used to carry.
 #
-# `make-change-link` is asserted, not tapped: it is the door rulings 4/6 are
-# about to rearrange, and its presence at the top level of the day shape is the
-# thing a merge could quietly cost.
+# `home-edit-day` is asserted, not tapped: R-194 makes it the one doorway from
+# this Day shape into deterministic Add / Move / Remove edits.
 - assertNotVisible:
     id: "week-strip"
 - assertVisible:
@@ -56,7 +55,7 @@ tags:
 - assertVisible:
     id: "view-workout-button"
 - assertVisible:
-    id: "make-change-link"
+    id: "home-edit-day"
 - assertVisible:
     id: "home-life-fact-chips"
 - takeScreenshot: "artifacts/ui-walk/walk-1-day"

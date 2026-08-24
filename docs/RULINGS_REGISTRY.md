@@ -5102,3 +5102,19 @@ small eyebrow/status labels and intentional acronyms such as LFA remain their
 authored brand/label treatment. This supersedes R-151's carve-out that left
 authored all-capitals answer copy untouched. · `WORKING` —
 `test:onboarding-presentation`. Seat `onboardingtype`.
+
+---
+
+**R-194** · Status stays immediate; day scheduling gets one doorway (Sam, 2026-08-24) ·
+**STATE AND SCHEDULE ARE RELATED, NOT THE SAME ACTION.**
+
+The Day **Need to make a change?** card exposes **Tired**, **Sick** and
+**Injured** as its only direct status buttons. **Add**, **Move** and **Remove**
+do not sit beside them as equal-weight buttons; one visually separate
+**Edit day** doorway opens the existing deterministic Add / Move / Remove menu.
+The legacy **Want to change something?** link and dedicated whole-session Swap
+remain absent. The menu continues to derive capability from the selected day
+and commits through the accepted-state transaction owner. This supersedes only
+R-181's six-direct-button presentation; its movement and Team Training rules
+remain standing. · `WORKING` — `test:session-change-hub` +
+`test:day-first-timeline` + `test:move-scoping`. Seat `onboardingtype`.

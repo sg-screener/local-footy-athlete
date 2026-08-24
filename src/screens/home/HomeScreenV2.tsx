@@ -368,7 +368,7 @@ export default function HomeScreenV2() {
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetEntry, setChangeSheetEntry] = useState<{
     date: string;
-    initialAction: PlanChangeInitialAction;
+    initialAction?: PlanChangeInitialAction;
     origin?: 'week';
   } | null>(null);
   const [weekEditVisible, setWeekEditVisible] = useState(false);
@@ -1127,14 +1127,13 @@ export default function HomeScreenV2() {
           </View>
         )}
 
-        {/* ONE DAY CARD, SIX DIRECT DOORS — Sam, 2026-08-24. Status facts stay
-            beside Add / Move / Remove, so the separate change link and its
-            redundant action menu are gone. Unavailable plan actions are absent:
-            a rest day can Add but cannot Move or Remove; a game uses its own
-            fixture controls. The Week shape keeps its separate Edit this week
-            entry because these chips act on the day currently in front of the
-            athlete. The open workout still reuses this visual component for its
-            narrower Equipment / Injury / Add set. */}
+        {/* ONE DAY STATUS CARD + ONE EDIT DOOR — Sam, 2026-08-24. Tired, Sick
+            and Injured remain immediate facts about the athlete. Add / Move /
+            Remove are a different concern, so one Edit day row opens the
+            existing capability-driven menu instead of mixing three scheduling
+            chips into the status row. Game days keep their fixture controls.
+            The open workout still reuses this visual component for its narrower
+            Equipment / Injury / Add set. */}
         {isNormal && dayFirst && (
           <SessionChangeHub
             testID="home-change-card"
@@ -1150,6 +1149,13 @@ export default function HomeScreenV2() {
                coordinate five Maestro flows and the day-first gate reach this
                row by; a card that renamed it would silently break every one. */
             rowTestID="home-life-fact-chips"
+            editAction={dayFirstDay && dayFirstDay.workout?.workoutType !== 'Game'
+              ? {
+                  label: signedCopy('day.change_card.edit_day'),
+                  testID: 'home-edit-day',
+                  onPress: () => setChangeSheetEntry({ date: dayFirstDay.date }),
+                }
+              : undefined}
             actions={[
               { id: 'tired' as const,
                 testID: 'home-tired-entry',
@@ -1177,30 +1183,6 @@ export default function HomeScreenV2() {
                 testID: 'home-injured-entry',
                 accessibilityLabel: "I'm injured",
                 onPress: () => setReadinessInjuryVisible(true) },
-              ...(dayFirstDay && dayFirstDay.workout?.workoutType !== 'Game'
-                ? [{ id: 'add' as const,
-                    testID: 'home-plan-change-add',
-                    onPress: () => setChangeSheetEntry({
-                      date: dayFirstDay!.date,
-                      initialAction: 'add',
-                    }) }]
-                : []),
-              ...(dayFirstDay?.workout && dayFirstDay.workout.workoutType !== 'Game'
-                ? [
-                    { id: 'move' as const,
-                      testID: explorerTestId.sessionMoveIngress(dayFirstDay.workout.id),
-                      onPress: () => setChangeSheetEntry({
-                        date: dayFirstDay.date,
-                        initialAction: 'move',
-                      }) },
-                    { id: 'remove' as const,
-                      testID: explorerTestId.sessionDeleteIngress(dayFirstDay.workout.id),
-                      onPress: () => setChangeSheetEntry({
-                        date: dayFirstDay.date,
-                        initialAction: 'remove',
-                      }) },
-                  ]
-                : []),
             ]}
           />
         )}

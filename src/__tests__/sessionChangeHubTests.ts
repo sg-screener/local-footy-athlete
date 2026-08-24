@@ -1,10 +1,11 @@
 /**
  * ONE PLACE TO CHANGE THE SESSION, AND EVERY BUTTON IN IT GOES SOMEWHERE.
  *
- * Sam, 2026-08-24: the Day card owns Tired · Sick · Injured · Add · Move ·
- * Remove. The old separate "Want to change something?" link and dedicated
- * session Swap action are gone. The open-session card keeps only Equipment ·
- * Injury · Add because Quick Swap and Quick Remove live on each exercise row.
+ * Sam, 2026-08-24: the Day card keeps Tired · Sick · Injured as direct status
+ * controls, then owns one separate Edit day doorway into Add · Move · Remove.
+ * The old "Want to change something?" link and dedicated session Swap action
+ * are gone. The open-session card keeps only Equipment · Injury · Add because
+ * Quick Swap and Quick Remove live on each exercise row.
  *
  * ## WHY THIS SUITE READS SOURCE
  *
@@ -195,8 +196,8 @@ console.log('\n[8] PARITY — one hub component, rendered by BOTH surfaces');
   /* THE VOCABULARY IS THE COMPONENT'S, NOT EACH SCREEN'S. */
   ok('the shared owner names the three open-session actions',
     /'equipment', 'injury', 'add'/.test(hubLive));
-  ok('and it names the six Day actions beside them',
-    /'tired', 'sick', 'injured', 'add', 'move', 'remove'/.test(hubLive));
+  ok('and it names the three Day status actions beside them',
+    /'tired', 'sick', 'injured'/.test(hubLive));
   ok('and it owns the LABELS, so the two surfaces cannot say different words',
     /CHANGE_ACTION_LABEL/.test(hubLive)
       && !/label: 'Equipment'/.test(live) && !/label: 'Equipment'/.test(dayLive));
@@ -247,7 +248,7 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
   const dayLive = daySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const hubLive = hubSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  const DAY = ['tired', 'sick', 'injured', 'add', 'move', 'remove'];
+  const DAY = ['tired', 'sick', 'injured'];
   const SESSION = ['equipment', 'injury', 'add'];
 
   /** The ids a surface actually hands the hub, read off its own `actions` list. */
@@ -255,6 +256,7 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
     const at = surface.indexOf('<SessionChangeHub');
     if (at < 0) return [];
     const end = surface.indexOf('/>', at);
+    if (end < 0) return [];
     return [...surface.slice(at, end).matchAll(/id: '(\w+)' as const/g)]
       .map((match) => match[1]!);
   };
@@ -268,18 +270,19 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
     dayOffered.length > 0 && sessionOffered.length > 0,
     `day ${JSON.stringify(dayOffered)} session ${JSON.stringify(sessionOffered)}`);
 
-  ok('the Day surface offers status plus Add, Move and Remove',
+  ok('the Day surface offers EXACTLY the three direct status controls',
     JSON.stringify(dayOffered) === JSON.stringify(DAY),
     JSON.stringify(dayOffered));
   ok('the session surface offers EXACTLY its three session-wide actions',
     JSON.stringify(sessionOffered) === JSON.stringify(SESSION),
     JSON.stringify(sessionOffered));
-  ok('Add is deliberately shared; every other action belongs to one surface',
-    dayOffered.filter((id) => sessionOffered.includes(id)).join(',') === 'add');
+  ok('the direct Day and open-session action sets are disjoint',
+    dayOffered.filter((id) => sessionOffered.includes(id)).length === 0);
 
-  ok('the Day surface has no Equipment, Injury or dedicated Swap action',
+  ok('the Day status row has no plan edit, Equipment, Injury or Swap action',
     !dayOffered.includes('equipment') && !dayOffered.includes('injury')
-      && !dayOffered.includes('swap'));
+      && !dayOffered.includes('swap') && !dayOffered.includes('add')
+      && !dayOffered.includes('move') && !dayOffered.includes('remove'));
 
   /* THE SEPARATE ROW IS GONE — the other half of "no separate readiness row".
    * Deleting the five from the Day hub while leaving Tired and Sick outside it
@@ -295,10 +298,19 @@ console.log('\n[9] EACH SURFACE OFFERS ITS OWN EXACT SET');
   ok('the old separate change link is deleted from the Day card',
     !/Want to change something\?/.test(dayLive)
       && !/testID="make-change-link"/.test(dayLive));
-  ok('the three plan actions enter their existing sheets directly',
-    /initialAction: 'add'/.test(dayLive)
-      && /initialAction: 'move'/.test(dayLive)
-      && /initialAction: 'remove'/.test(dayLive));
+  ok('one clear Edit day doorway opens the existing three-action menu',
+    /editAction=\{[\s\S]{0,500}testID: 'home-edit-day'/.test(dayLive)
+      && /setChangeSheetEntry\(\{\s*date: dayFirstDay\.date\s*\}\)/.test(dayLive)
+      && planSheetSource.includes('testID="plan-change-add"')
+      && planSheetSource.includes('sessionMoveIngress(selectedWorkout.id)')
+      && /label="Remove this session"/.test(planSheetSource));
+  ok('Edit day cannot silently default to Add instead of showing that menu',
+    !/initialAction\s*=\s*'add'/.test(planSheetSource)
+      && /!initialAction\) return;/.test(planSheetSource));
+  ok('the shared owner renders Edit day separately from the status-chip row',
+    /editAction\?: SessionChangeEditAction/.test(hubLive)
+      && /testID=\{editAction\.testID\}/.test(hubLive)
+      && /styles\.editDoor/.test(hubLive));
   ok('there is no dedicated whole-session Swap entry on Day or Week',
     !/Swap this session|Swap a session|plan-change-swap|edit-week-action-swap/.test(
       `${dayLive}\n${planSheetSource}`,

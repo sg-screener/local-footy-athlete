@@ -921,6 +921,13 @@ export function registerProjectionCopy(): void {
         + 'line of the same panel in the signed prototype.',
       text: 'Update your status to modify your program.',
     },
+    {
+      id: 'day.change_card.edit_day',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-24, R-194: replace the three direct '
+        + 'scheduling buttons with one clear “Edit day” doorway.',
+      text: 'Edit day',
+    },
 
     // ── The injury review's two section headings, R-124. ──
     //

@@ -1640,7 +1640,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries status plus direct Add Move Remove doors', () => {
+run('the chip row carries status and one separate Edit day doorway', () => {
   const home = homeScreenSource();
   const hub = changeHubSource();
   const rowStart = home.indexOf('<SessionChangeHub');
@@ -1653,9 +1653,7 @@ run('the chip row carries status plus direct Add Move Remove doors', () => {
     'the chip row region could not be delimited — this gate is reading the wrong '
     + 'span and would pass on anything');
   const chips = [...row.matchAll(/id: '(\w+)' as const/g)].map((match) => match[1]!);
-  assert(JSON.stringify(chips) === JSON.stringify([
-    'tired', 'sick', 'injured', 'add', 'move', 'remove',
-  ]),
+  assert(JSON.stringify(chips) === JSON.stringify(['tired', 'sick', 'injured']),
   `the Day card renders the wrong action set: ${JSON.stringify(chips)}`);
   for (const door of LIFE_FACT_DOORS) {
     assert(chips.includes(door.id),
@@ -1682,15 +1680,18 @@ run('the chip row carries status plus direct Add Move Remove doors', () => {
     + 'whole component and pass on any quoted string');
   const table = hub.slice(labelAt, hub.indexOf('};', labelAt));
   const labels = [...table.matchAll(/: '([^']*)'/g)].map((match) => match[1]!);
-  assert(labels.length === 8,
-    `found ${labels.length} chip label(s) in the shared table, expected 8 — the `
-    + 'Day and open-session sets share Add and otherwise own distinct actions');
+  assert(labels.length === 6,
+    `found ${labels.length} chip label(s) in the shared table, expected 6 — the `
+    + 'Day and open-session direct-action sets are now disjoint');
   for (const label of labels) {
     assert(/^[A-Z][a-z]+$/.test(label),
       `chip label "${label}" is not one Title Case word. The labels ship PROPOSED `
       + 'under the copy regime and are Sam\'s to sign; a sentence smuggled in here '
       + 'is unsigned copy on the busiest row of the screen.');
   }
+  assert(/editAction=\{[\s\S]{0,500}testID: 'home-edit-day'/.test(row)
+    && /signedCopy\('day\.change_card\.edit_day'\)/.test(row),
+  'the Day card does not expose one separately styled, signed Edit day doorway');
 });
 
 run('the old status bars did not survive alongside their own chips', () => {
@@ -1802,7 +1803,7 @@ run('the add-fixture control shows in BOTH competitive phases, labelled by phase
     + 'already have a game.');
 });
 
-run('Week keeps one edit menu while Day owns Add Move Remove directly', () => {
+run('Week keeps one edit menu while Day enters it through Edit day', () => {
   const home = homeScreenSource();
   const hook = fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
@@ -1817,10 +1818,9 @@ run('Week keeps one edit menu while Day owns Add Move Remove directly', () => {
     'Edit this week is no longer a subtly distinct, left-aligned button');
   assert(!home.includes('Want to change something?')
     && !home.includes('testID="make-change-link"')
-    && home.includes("initialAction: 'add'")
-    && home.includes("initialAction: 'move'")
-    && home.includes("initialAction: 'remove'"),
-  'Day did not replace the retired link with direct Add, Move and Remove doors');
+    && home.includes("testID: 'home-edit-day'")
+    && /setChangeSheetEntry\(\{\s*date: dayFirstDay\.date\s*\}\)/.test(home),
+  'Day does not enter the existing Add / Move / Remove menu through Edit day');
 
   const sheetStart = home.indexOf('function WeekEditSheet');
   const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);
