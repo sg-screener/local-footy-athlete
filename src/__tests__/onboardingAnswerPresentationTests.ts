@@ -61,6 +61,7 @@ import {
 } from '../utils/onboardingSteps';
 import { validateOnboardingMeasurement } from '../data/onboardingNumericBounds';
 import { validateTwoKmTime } from '../data/twoKmTimeTrial';
+import { numberPickerIndexFromOffset } from '../components/horizontalNumberPickerMath';
 import { stripComments } from './support/sourceText';
 import type { OnboardingData } from '../types/domain';
 
@@ -515,9 +516,9 @@ console.log('\n[12] The Review screen renders the owner rather than a second lis
 console.log('\n[13] Training availability asks about gym access, not total training days');
 {
   const commitment = read('src/screens/onboarding/TrainingCommitmentScreen.tsx');
-  const discreteSliderPath = path.join(repoRoot, 'src/components/DiscreteSlider.tsx');
-  const discreteSlider = fs.existsSync(discreteSliderPath)
-    ? read('src/components/DiscreteSlider.tsx')
+  const numberPickerPath = path.join(repoRoot, 'src/components/HorizontalNumberPicker.tsx');
+  const numberPicker = fs.existsSync(numberPickerPath)
+    ? read('src/components/HorizontalNumberPicker.tsx')
     : '';
   const preferredDays = read('src/screens/onboarding/PreferredTrainingDaysScreen.tsx');
   const steps = read('src/utils/onboardingSteps.ts');
@@ -533,18 +534,31 @@ console.log('\n[13] Training availability asks about gym access, not total train
     ));
   ok('the old total-training-days question is gone',
     !commitment.includes('HOW MANY DAYS PER WEEK CAN YOU TRAIN?'));
-  ok('gym availability is one empty seven-stop horizontal slider',
-    /<DiscreteSlider/.test(commitment)
+  ok('gym availability is one centre-snapping 1-to-7 number picker starting on 4',
+    /useState<number>\(4\)/.test(commitment)
+      && /<HorizontalNumberPicker/.test(commitment)
       && /value=\{selectedDays\}/.test(commitment)
       && /min=\{1\}/.test(commitment)
-      && /max=\{7\}/.test(commitment)
-      && /showStepLabels/.test(commitment));
+      && /max=\{7\}/.test(commitment));
   ok('the retired six-card picker is absent',
     !/COMMITMENT_OPTIONS|<SelectableTile|styles\.grid|styles\.card/.test(commitment));
-  ok('the shared slider owns touch-to-step behaviour and visible step labels',
-    /PanResponder\.create/.test(discreteSlider)
-      && /Math\.round\(ratio \* steps\)/.test(discreteSlider)
-      && /stepLabels/.test(discreteSlider));
+  ok('the retired rail-and-thumb slider is absent from gym availability',
+    !/<DiscreteSlider|showStepLabels/.test(commitment));
+  ok('the number picker snaps each value into the centre',
+    /Animated\.FlatList/.test(numberPicker)
+      && /snapToInterval=\{ITEM_WIDTH\}/.test(numberPicker)
+      && /decelerationRate="fast"/.test(numberPicker)
+      && /numberPickerIndexFromOffset\(offsetX, ITEM_WIDTH, values\.length\)/.test(numberPicker));
+  ok('the snapping owner rounds to the nearest value and clamps both edges',
+    numberPickerIndexFromOffset(0, 56, 7) === 0
+      && numberPickerIndexFromOffset(3 * 56, 56, 7) === 3
+      && numberPickerIndexFromOffset(3.6 * 56, 56, 7) === 4
+      && numberPickerIndexFromOffset(-500, 56, 7) === 0
+      && numberPickerIndexFromOffset(500, 56, 7) === 6);
+  ok('numbers grow and become fully opaque as they approach the centre',
+    /scrollX\.interpolate/.test(numberPicker)
+      && /transform:\s*\[\{ scale \}\]/.test(numberPicker)
+      && /opacity/.test(numberPicker));
 
   ok('the follow-up asks which gym-access days usually work',
     preferredDays.includes('Which days can you usually get there?'));

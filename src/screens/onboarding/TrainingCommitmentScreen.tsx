@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text } from '../../components/common';
-import { DiscreteSlider } from '../../components/DiscreteSlider';
+import { HorizontalNumberPicker } from '../../components/HorizontalNumberPicker';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -19,9 +19,9 @@ type TrainingCommitmentScreenProps = NativeStackScreenProps<
 /**
  * How-many-days picker.
  *
- * Uses the same shared discrete slider mechanism as the feedback forms, with
- * seven visible stops. The answer still starts empty and is only committed on
- * Continue.
+ * Uses a centred number wheel with seven snapping values. It opens on the
+ * middle value (4); numbers grow and become clearer as they reach the centre.
+ * The answer remains local and is only committed on Continue.
  *
  * The "Not sure" escape hatch below is a secondary pill that selects a
  * sensible default without advancing automatically.
@@ -29,7 +29,7 @@ type TrainingCommitmentScreenProps = NativeStackScreenProps<
 export const TrainingCommitmentScreen: React.FC<
   TrainingCommitmentScreenProps
 > = ({ navigation }) => {
-  const [selectedDays, setSelectedDays] = useState<number | null>(null);
+  const [selectedDays, setSelectedDays] = useState<number>(4);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('TrainingCommitment');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
@@ -41,17 +41,15 @@ export const TrainingCommitmentScreen: React.FC<
   }, []);
 
   const handleNotSure = useCallback(() => {
-    setSelectedDays(null);
     setNotSure(true);
   }, []);
 
   // The pick is local until Continue: one commit, awaited, tied to the advance.
   // "Not sure" is an answer too — 3 days, flagged as unsure.
   const handleContinue = useCallback(() => {
-    if (selectedDays === null && !notSure) return;
     void commitAndAdvance({
-      trainingDaysPerWeek: selectedDays ?? 3,
-      trainingDaysUnsure: selectedDays === null,
+      trainingDaysPerWeek: notSure ? 3 : selectedDays,
+      trainingDaysUnsure: notSure,
     }, () => navigation.navigate('PreferredTrainingDays'));
   }, [commitAndAdvance, navigation, notSure, selectedDays]);
 
@@ -63,7 +61,6 @@ export const TrainingCommitmentScreen: React.FC<
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}
-      continueDisabled={selectedDays === null && !notSure}
     >
       <View style={styles.section}>
         <Text
@@ -81,15 +78,13 @@ export const TrainingCommitmentScreen: React.FC<
           A gym session can be on the same day as team training. Lifting in the morning or before training is completely fine.
         </Text>
 
-        <DiscreteSlider
-          testID="training-commitment-slider"
+        <HorizontalNumberPicker
+          testID="training-commitment-picker"
           value={selectedDays}
           onChange={handleSelect}
           min={1}
           max={7}
-          showReadout={false}
-          showStepLabels
-          style={styles.slider}
+          style={[styles.picker, notSure && styles.pickerInactive]}
         />
 
         <Pressable
@@ -122,9 +117,12 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: spacing.lg,
   },
-  slider: {
-    marginHorizontal: 4,
+  picker: {
+    marginHorizontal: -4,
     marginBottom: spacing.sm,
+  },
+  pickerInactive: {
+    opacity: 0.35,
   },
   notSureButton: {
     marginTop: spacing.lg,

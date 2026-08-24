@@ -4625,3 +4625,16 @@ CHOICES ARE LEFT ALIGNED.**
 All five full-width Position choices align their labels to the left. The shared
 selected-state tick remains in the top-right corner. · `WORKING` —
 `test:role-buckets`. Seat `onboardingtype`.
+
+---
+
+**R-155** · Gym-days wheel picker clarification (Sam, 2026-08-24) · **GYM
+DAYS SNAP THROUGH THE CENTRE.**
+
+The gym-days answer is a horizontal 1–7 number wheel that opens on **4**. The
+number nearest the centre grows and becomes fully visible; numbers fade and
+shrink toward the edges. Dragging or tapping snaps the nearest number into the
+centre. The earlier rail-and-thumb control is absent, while feedback forms keep
+their own existing sliders. This supersedes R-145's empty/shared-control detail
+but retains its range, subtitle and stored answer. · `WORKING` —
+`test:onboarding-presentation` + `test:effort-scale`. Seat `onboardingtype`.

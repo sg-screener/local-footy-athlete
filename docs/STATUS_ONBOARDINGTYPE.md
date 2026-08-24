@@ -167,3 +167,43 @@ SelectableTile continues to own the selected border, fill and top-right tick.
 
 - Simulator pixels after the alignment change.
 - Physical-iPhone Release rebuild.
+
+---
+
+## R-155 — replace the gym-days slider with a wheel picker
+
+Sam clarified that the reference interaction is a horizontal wheel, not a
+rail-and-thumb slider. Two options were compared:
+
+1. Add a visual variant to `DiscreteSlider`, mixing two unrelated interaction
+   models inside the feedback control.
+2. Give the centred wheel its own small reusable component and leave feedback
+   sliders unchanged.
+
+Option 2 landed. The picker opens on **4**, snaps 1–7 through the centre, and
+animates scale and opacity continuously while the athlete drags. Tapping a
+number also centres it. The offset-to-value calculation has a separate pure
+owner so its rounding and edge clamping run headlessly.
+
+### Evidence
+
+- TEST FIRST: `test:onboarding-presentation` — 81/85; the four revised picker
+  cells were the only failures against the rail-and-thumb screen.
+- AFTER: `test:onboarding-presentation` — 86/86, including the added headless
+  rounding and both-edge clamp cell.
+- `test:effort-scale` — 42/42; feedback sliders and their 1–10 contract are
+  unchanged.
+- `test:compile` remains at the concurrent baseline of 483 errors and 60
+  worsened file/scope pairs. Neither new picker file nor TrainingCommitment is
+  named.
+- `test:law-registry` — 11/14 with the same three existing reds: one missing
+  script, one unregistered LR-18 guard and 21 UNENFORCED laws. The renamed law
+  remains guarded and in-chain.
+- `test:ruling-registry` — 6/8 with the same nine UNENFORCED rulings and 16
+  uncited historic question sites. R-155 adds neither.
+
+### NOT COVERED
+
+- Simulator pixels and physical drag/tap feel.
+- Small-screen clipping and Dynamic Type.
+- Physical-iPhone Release rebuild.

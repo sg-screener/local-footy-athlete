@@ -1944,14 +1944,14 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
-    id: 'LAW-gym-availability-is-a-seven-stop-slider',
-    law: 'The onboarding gym-availability answer uses one initially empty horizontal discrete slider with seven visible stops, 1 through 7, and no selectable-card grid. It keeps writing the existing trainingDaysPerWeek field. Its subtitle says: "A gym session can be on the same day as team training. Lifting in the morning or before training is completely fine." Feedback and onboarding sliders share one touch-to-step owner.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-145 — Sam, 2026-08-24, requested 1–7 and then clarified: "make it a horizontal slider instead of the buttons - like we have on the feedback forms".',
+    id: 'LAW-gym-availability-is-a-seven-value-picker',
+    law: 'The onboarding gym-availability answer uses one horizontal snapping number wheel with values 1 through 7 and opens on 4. The value nearest the centre grows and becomes fully opaque; values shrink and fade toward the edges; release or tap snaps the nearest value into the centre. No selectable-card grid or rail-and-thumb slider remains. It keeps writing trainingDaysPerWeek. Its subtitle says: "A gym session can be on the same day as team training. Lifting in the morning or before training is completely fine." Feedback forms retain their separate existing DiscreteSlider.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-145 + R-155 — Sam first requested a 1–7 horizontal control, then clarified the centred wheel interaction and middle-value start. R-155 supersedes R-145\'s empty/shared-control detail.',
     guard: {
       state: 'guarded',
       by: 'test:onboarding-presentation + test:effort-scale',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-24 by seat `commitmentslider`. The onboarding presentation cells pin the exact subtitle, nullable selectedDays input, 1/7 bounds, visible labels, absence of the retired card picker, and the shared PanResponder rounding owner. TEST-FIRST LIVENESS: those cells produced the suite\'s only four reds against the old six-card screen (61/65); the slider returned it to 65/65. The pre-existing feedback slider now wraps the same DiscreteSlider owner, while `test:effort-scale` remains 42/42. NOT COVERED: simulator pixels, physical drag/tap feel and the next physical-phone Release.',
+      receipt: 'BORN GUARDED 2026-08-24 by seat `commitmentslider`; UPDATED UNDER R-155 by `onboardingtype`. The onboarding presentation cells pin the exact subtitle, 4 default, 1/7 bounds, dedicated HorizontalNumberPicker, absence of the retired card and rail/thumb controls, Animated.FlatList snapping, scale/opacity interpolation, and a live pure offset-to-index owner that rounds and clamps both edges. R-145 TEST-FIRST LIVENESS: four cells were red against the old six-card screen (61/65). R-155 TEST-FIRST LIVENESS: the four revised interaction cells were the suite\'s only reds against the rail-and-thumb implementation (81/85); the final suite adds the headless snap arithmetic cell and is 86/86. `test:effort-scale` remains 42/42, proving the separate feedback scale did not change. `test:compile` remains at its concurrent baseline of 483 errors and 60 worsened file/scope pairs; neither new picker file nor TrainingCommitment is named. NOT COVERED: simulator pixels, physical drag/tap feel, small-screen clipping and the next physical-phone Release.',
     },
   },
   {
