@@ -983,16 +983,6 @@ export default function DayWorkoutScreenV2() {
     setInjuryFlowOpen(true);
   }, [editableExercises.length, isTeamOnly]);
 
-  const openExerciseSwapPicker = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'pick_exercise', action: 'swap' });
-  }, [editableExercises.length, isTeamOnly]);
-
-  const openExerciseRemovePicker = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'pick_exercise', action: 'remove' });
-  }, [editableExercises.length, isTeamOnly]);
-
   // Per-row swap/remove buttons. Replace `openSpecificExerciseEditor`,
   // which routed every row tap through the now-deleted `exercise_menu`
   // step. The row already tells us which exercise AND which action, so
@@ -2198,15 +2188,11 @@ export default function DayWorkoutScreenV2() {
           </View>
         ) : null}
 
-        {/* ── ONE PLACE TO CHANGE THE SESSION ────────────────────────────
+        {/* ── SESSION-WIDE CHANGES ───────────────────────────────────────
           *
-          * Sam, 2026-08-19: *"Build one 'Need to make a change?' section:
-          * Equipment · Injury · Add · Remove · Swap. No dead buttons."*
-          *
-          * It replaces three unlabelled icons in the sticky header and two more
-          * on every single row. Five doors, five words, one place — and below
-          * the session, because a change is what the athlete reaches for AFTER
-          * reading what they have been given, not instead of reading it.
+          * Equipment, Injury and Add still describe the session as a whole.
+          * Swap and Remove now live on the exact exercise row they change, so
+          * repeating them here would ask the athlete to choose that row again.
           *
           * **NO DEAD BUTTONS** is enforced by construction: `SessionChangeHub`
           * takes the actions as a list and renders exactly the ones handed to
@@ -2229,8 +2215,6 @@ export default function DayWorkoutScreenV2() {
                 : []),
               { id: 'injury' as const, onPress: openSessionInjuryFlow },
               { id: 'add' as const, onPress: openExerciseAdd },
-              { id: 'remove' as const, onPress: openExerciseRemovePicker },
-              { id: 'swap' as const, onPress: openExerciseSwapPicker },
             ]}
           />
         ) : null}

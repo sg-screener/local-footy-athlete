@@ -4859,7 +4859,10 @@ Swap applies the best legal match immediately; each later tap advances through
 the same ranked list for that original slot and wraps only after every legal
 answer has been tried. Quick Remove removes first, then asks whether the athlete
 wants a replacement. **No** leaves the row out; **Yes** offers the existing
-ranked legal matches. The controls are shortcuts into the existing safety,
+ranked legal matches. Because those two actions now belong to each exercise
+row, the session-wide **Need to make a change?** hub contains only Equipment,
+Injury and Add — it does not repeat Swap or Remove and make the athlete choose
+the row twice. The controls are shortcuts into the existing safety,
 durable program-control, ledger, exclusion and Undo owners — never a second
 swap/remove engine. Derived warm-up and recovery rows store only the athlete's
 decision and apply it to the live projection. · `WORKING` —

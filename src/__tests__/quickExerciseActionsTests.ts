@@ -230,6 +230,16 @@ assert(/controlsRow: \{[\s\S]*?position: 'absolute'[\s\S]*?right: 0[\s\S]*?botto
   'the bottom-right controls overlay the card without changing its height');
 assert(/<View style=\{styles\.controlsRow\}>[\s\S]*?styles\.weightControl[\s\S]*?\{checkbox\}[\s\S]*?<\/View>/.test(source),
   'the weight toggle and checkbox are siblings on one exact centreline');
+const hubStart = source.indexOf('testID="day-workout-change-hub"');
+const hubEnd = source.indexOf('/>', hubStart);
+const hubSource = source.slice(hubStart, hubEnd);
+assert(hubStart >= 0 && hubEnd > hubStart
+  && /id: 'equipment'/.test(hubSource)
+  && /id: 'injury'/.test(hubSource)
+  && /id: 'add'/.test(hubSource)
+  && !/id: 'remove'/.test(hubSource)
+  && !/id: 'swap'/.test(hubSource),
+  'the session-wide change hub keeps Equipment, Injury and Add without duplicate Swap or Remove');
 for (const renderer of [
   'MobilityExerciseList', 'StrengthExerciseCard', 'ConditioningPhaseRow',
   'ConditioningRow', 'AddonRow',

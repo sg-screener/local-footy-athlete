@@ -782,13 +782,14 @@ one ranked list.
 - TEST FIRST: the new tape initially stopped on the missing projection module;
   after the pure decision fold existed it reached 13/22, with the nine remaining
   reds all naming absent UI/prompt wiring.
-- `test:quick-exercise-actions` — 33/33. It covers real Strength, Mobility and
+- `test:quick-exercise-actions` — 34/34. It covers real Strength, Mobility and
   Conditioning ranking/family retention, repeated A→B→C→A choice,
   exact-date isolation, reversal, derived warm-up swap/remove, optional recovery
   swap/remove, stable ids, every live row renderer, icon identity and the
   post-remove replacement ask, top-right icon geometry/size, bottom-right
   completion placement without added card height, exact checkbox/weight-control
-  centring, the single-circle Remove glyph, and the ledger-only durable branch.
+  centring, the single-circle Remove glyph, the session-wide hub retaining only
+  Equipment/Injury/Add, and the ledger-only durable branch.
 - MUTATION: changing the exhausted-list wrap from first-ranked back to the
   second answer made the A-after-wrap cell red (21/22); restoring it returned
   the then-22-cell tape to green; the final six real-family cells bring it to
