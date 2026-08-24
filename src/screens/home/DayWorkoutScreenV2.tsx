@@ -3063,7 +3063,7 @@ function SessionExecutionSection({ section, completedItemIds, onQuickAdd, childr
                 hitSlop={10}
                 style={({ pressed }) => [styles.quickAddButton, pressed && { opacity: 0.6 }]}
               >
-                <MaterialCommunityIcons name="plus" size={16} color={colors.text.secondary} />
+                <MaterialCommunityIcons name="plus" size={14} color={colors.text.secondary} />
               </Pressable>
             </View>
           ) : null}
@@ -5478,17 +5478,22 @@ const styles = StyleSheet.create({
   },
   /* R-217 — the quick-add plus. A hairline drops from the last card to a small
    * outlined circle, the same "one more of these" shape the Week card uses. */
-  quickAddRow: { alignItems: 'center', paddingTop: spacing.sm },
+  /* R-217a (Sam, 2026-08-25), all three tightened together on his eye pass:
+   * *"the little gap between the line and the last exercise needs to be
+   * smaller, the line itself can be slightly smaller, and the + button itself
+   * can be slightly smaller"*. Gap sm -> xs, connector 10 -> 6, button 28 -> 24
+   * with its glyph 16 -> 14 and its own top gap 6 -> 4. */
+  quickAddRow: { alignItems: 'center', paddingTop: spacing.xs },
   quickAddConnector: {
     width: StyleSheet.hairlineWidth,
-    height: 10,
+    height: 6,
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
   quickAddButton: {
-    marginTop: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    marginTop: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',

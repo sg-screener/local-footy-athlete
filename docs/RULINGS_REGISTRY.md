@@ -5537,3 +5537,16 @@ sentence to an absence. · `WORKING` — `test:session-change-hub` §5b, **55
 passed, 0 failed**. Mutation-proven: dropping the plus from the `SessionList`
 route reds the both-routes cell, and removing the legality check reds the
 families cell — each alone. Seat `warmup`.
+
+---
+
+**R-217a** · *"the little gap between the line and the last exercise needs to be
+smaller, the line itself can be slightly smaller, and the + button itself can be
+slightly smaller"* (Sam, 2026-08-25, eye pass on R-217) · **THE QUICK-ADD BLOCK
+TIGHTENS AS ONE.**
+
+Gap above the connector `sm` -> `xs`, connector 10 -> 6, button 28 -> 24 with its
+glyph 16 -> 14 and its own top gap 6 -> 4. The tap target is unchanged: the
+`hitSlop={10}` was already doing that work, which is why the visible circle
+could shrink without the control getting harder to hit. · `WORKING` —
+`test:session-change-hub`, ALL GREEN 55. Seat `warmup`.
