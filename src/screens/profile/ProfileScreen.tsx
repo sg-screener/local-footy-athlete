@@ -33,7 +33,7 @@ import { Text } from '../../components/common/Text';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
-import { Button as V2Button, Sheet, SheetDescription, SheetHeader } from '../../components/ui';
+import { Button as V2Button, SheetDescription, SheetHeader } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
 import { WEEK_DAYS, DAY_SHORT, REBUILD_MSG_INTERVAL_MS } from '../home/homeScreenConstants';
 import { storedGameAnchor } from '../../rules/gameAnchor';
@@ -55,7 +55,7 @@ import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { EquipmentEditorSheet } from './EquipmentEditorSheet';
 import { formatEquipmentProfileSummary } from '../../rules/equipmentVocabulary';
 
-type SetupSheetStep =
+type SetupPageStep =
   | 'overview'
   | 'playerName'
   | 'playerPosition'
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
   });
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
-  const [setupSheetVisible, setSetupSheetVisible] = useState(false);
+  const [setupPageVisible, setSetupPageVisible] = useState(false);
   const [equipmentEditorVisible, setEquipmentEditorVisible] = useState(false);
   const [equipmentSaving, setEquipmentSaving] = useState(false);
   const [equipmentSaveError, setEquipmentSaveError] = useState<string | null>(null);
@@ -153,7 +153,7 @@ export default function ProfileScreen() {
    * down is a SEPARATE 2026-07-30 concern with its own reasoning, and
    * SEAT_INBOX item 14 says so explicitly. Read its own comment before touching
    * it. */
-  const [setupSheetStep, setSetupSheetStep] = useState<SetupSheetStep>('overview');
+  const [setupPageStep, setSetupPageStep] = useState<SetupPageStep>('overview');
   // The 2km time trial (D14). Held as the two boxes the athlete types into,
   // committed as one answer through `recordTwoKmTime`. `null` seconds is the
   // real answer "haven't tested", so an athlete can also RETRACT a time here.
@@ -285,7 +285,7 @@ export default function ProfileScreen() {
     setDraftExperience(pendingExperience);
     seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
-    setSetupSheetStep('playerName');
+    setSetupPageStep('playerName');
   };
 
   const openProgramDetailsEditor = () => {
@@ -294,7 +294,7 @@ export default function ProfileScreen() {
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
     setSetupUpdateError(null);
-    setSetupSheetStep('programPhase');
+    setSetupPageStep('programPhase');
   };
 
   const onProgramSetupChanged = () => {
@@ -324,16 +324,14 @@ export default function ProfileScreen() {
     setDraftGameDay(currentGameDay);
     setProgramDetailsSaved(false);
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
-    setSetupSheetVisible(true);
+    setSetupPageStep('overview');
+    setSetupPageVisible(true);
   };
 
   const openEquipmentEditor = () => {
-    // Equipment is one of the setup changes, but keeps its existing atomic
-    // editor and transaction. Close the overview sheet before opening that
-    // editor so two native sheets never compete for the same presentation.
-    setSetupSheetVisible(false);
-    setSetupSheetStep('overview');
+    // Equipment keeps its existing atomic editor and transaction. The setup
+    // PAGE remains underneath it, so closing or saving the focused equipment
+    // editor returns the athlete to the review page rather than Profile home.
     setEquipmentSaveError(null);
     setEquipmentEditorVisible(true);
   };
@@ -385,45 +383,45 @@ export default function ProfileScreen() {
     ? profileSetupBlockCopy(setupDecision.blockedBy[0])
     : null;
 
-  const closeSetupSheet = () => {
+  const closeSetupPage = () => {
     if (isSetupUpdating) return;
-    setSetupSheetVisible(false);
-    setSetupSheetStep('overview');
+    setSetupPageVisible(false);
+    setSetupPageStep('overview');
     setSetupUpdateError(null);
   };
 
-  const goBackInSetupSheet = () => {
+  const goBackInSetupPage = () => {
     if (isSetupUpdating) return;
     setSetupUpdateError(null);
-    if (setupSheetStep === 'playerTimeTrial') {
-      setSetupSheetStep('playerExperience');
+    if (setupPageStep === 'playerTimeTrial') {
+      setSetupPageStep('playerExperience');
       return;
     }
-    if (setupSheetStep === 'playerExperience') {
-      setSetupSheetStep('playerPosition');
+    if (setupPageStep === 'playerExperience') {
+      setSetupPageStep('playerPosition');
       return;
     }
-    if (setupSheetStep === 'playerPosition') {
-      setSetupSheetStep('playerName');
+    if (setupPageStep === 'playerPosition') {
+      setSetupPageStep('playerName');
       return;
     }
-    if (setupSheetStep === 'programGameDay') {
-      setSetupSheetStep('programTeamDays');
+    if (setupPageStep === 'programGameDay') {
+      setSetupPageStep('programTeamDays');
       return;
     }
-    if (setupSheetStep === 'programTeamDays') {
-      setSetupSheetStep('programLfaDays');
+    if (setupPageStep === 'programTeamDays') {
+      setSetupPageStep('programLfaDays');
       return;
     }
-    if (setupSheetStep === 'programLfaDays') {
-      setSetupSheetStep('programPhase');
+    if (setupPageStep === 'programLfaDays') {
+      setSetupPageStep('programPhase');
       return;
     }
-    if (setupSheetStep === 'programPhase') {
+    if (setupPageStep === 'programPhase') {
       cancelProgramDetailsEdit();
       return;
     }
-    setSetupSheetStep('overview');
+    setSetupPageStep('overview');
   };
 
   const cancelPlayerDetailsEdit = () => {
@@ -432,7 +430,7 @@ export default function ProfileScreen() {
     setDraftExperience(pendingExperience);
     seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
+    setSetupPageStep('overview');
   };
 
   const cancelProgramDetailsEdit = () => {
@@ -441,7 +439,7 @@ export default function ProfileScreen() {
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
+    setSetupPageStep('overview');
   };
 
   /**
@@ -474,7 +472,7 @@ export default function ProfileScreen() {
     if (!result.ok) return;
     setPendingTwoKm(result.answer);
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
+    setSetupPageStep('overview');
   };
 
   /**
@@ -498,7 +496,7 @@ export default function ProfileScreen() {
     setPendingExperience(draftExperience);
 
     setSetupUpdateError(null);
-    setSetupSheetStep('playerTimeTrial');
+    setSetupPageStep('playerTimeTrial');
   };
 
   const saveProgramDetails = () => {
@@ -511,7 +509,7 @@ export default function ProfileScreen() {
     setPendingGameDay(draftSeasonPhase === 'In-season' ? draftGameDay : null);
     setProgramDetailsSaved(true);
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
+    setSetupPageStep('overview');
   };
 
   const toggleDraftPreferredDay = (day: DayOfWeek) => {
@@ -537,7 +535,7 @@ export default function ProfileScreen() {
     setSetupUpdateError(null);
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
-    setSetupSheetStep('building');
+    setSetupPageStep('building');
     setIsSetupUpdating(true);
     try {
       const result = await commitProfileProgramTransaction({
@@ -552,7 +550,7 @@ export default function ProfileScreen() {
         const refusal = classifyProgramMutationRefusal({ reason: result.reason });
         logger.error('[profile-setup-update] refused', refusal.diagnostic ?? result.message);
         setSetupUpdateError(refusal.userMessage);
-        setSetupSheetStep('confirm');
+        setSetupPageStep('confirm');
         return;
       }
       if (!result.changedProgram) {
@@ -562,16 +560,16 @@ export default function ProfileScreen() {
         setSetupUpdateError(
           classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
         );
-        setSetupSheetStep('confirm');
+        setSetupPageStep('confirm');
         return;
       }
-      setSetupSheetVisible(false);
-      setSetupSheetStep('overview');
+      setSetupPageVisible(false);
+      setSetupPageStep('overview');
       setProgramDetailsSaved(false);
     } catch (err: any) {
       logger.error('[profile-setup-update] rebuild_failed', err?.diagnostic || err?.message || err);
       setSetupUpdateError(classifyProgramMutationRefusal({ error: err }).userMessage);
-      setSetupSheetStep('confirm');
+      setSetupPageStep('confirm');
     } finally {
       setIsSetupUpdating(false);
     }
@@ -579,12 +577,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: 88 + insets.bottom },
-        ]}
-      >
+      {!setupPageVisible ? (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 88 + insets.bottom },
+          ]}
+        >
         <View style={styles.brandHeader}>
           <LfaWordmark />
         </View>
@@ -757,10 +756,11 @@ export default function ProfileScreen() {
             MVP 0.1
           </Text>
         </View>
-      </ScrollView>
-      <SetupUpdateSheet
-        visible={setupSheetVisible}
-        step={setupSheetStep}
+        </ScrollView>
+      ) : null}
+      {setupPageVisible ? (
+        <SetupUpdatePage
+        step={setupPageStep}
         currentPhase={pendingSeasonPhase}
         displayName={pendingName}
         position={pendingPosition}
@@ -781,9 +781,9 @@ export default function ProfileScreen() {
         isUpdating={isSetupUpdating}
         updateMsgIdx={setupUpdateMsgIdx}
         updateMsgOpacity={setupUpdateMsgOpacity}
-        onClose={closeSetupSheet}
-        onBack={goBackInSetupSheet}
-        onOpenStep={setSetupSheetStep}
+        onClose={closeSetupPage}
+        onBack={goBackInSetupPage}
+        onOpenStep={setSetupPageStep}
         onSetDraftName={setDraftName}
         onSetDraftPosition={setDraftPosition}
         onSetDraftExperience={setDraftExperience}
@@ -809,10 +809,11 @@ export default function ProfileScreen() {
         onEditEquipment={openEquipmentEditor}
         onReviewUpdate={() => {
           setSetupUpdateError(null);
-          setSetupSheetStep('confirm');
+          setSetupPageStep('confirm');
         }}
         onConfirmUpdate={executeSetupUpdate}
       />
+      ) : null}
       <EquipmentEditorSheet
         visible={equipmentEditorVisible}
         saving={equipmentSaving}
@@ -882,9 +883,8 @@ function SecondaryActionRow({
   );
 }
 
-interface SetupUpdateSheetProps {
-  visible: boolean;
-  step: SetupSheetStep;
+interface SetupUpdatePageProps {
+  step: SetupPageStep;
   currentPhase: SeasonPhase;
   displayName: string;
   position: RoleBucket | null;
@@ -913,7 +913,7 @@ interface SetupUpdateSheetProps {
   updateMsgOpacity: Animated.Value;
   onClose: () => void;
   onBack: () => void;
-  onOpenStep: (step: SetupSheetStep) => void;
+  onOpenStep: (step: SetupPageStep) => void;
   onSetDraftName: (name: string) => void;
   onSetDraftPosition: (position: RoleBucket) => void;
   onSetDraftExperience: (experience: ExperienceLevel) => void;
@@ -939,8 +939,7 @@ interface SetupUpdateSheetProps {
   onConfirmUpdate: () => void;
 }
 
-function SetupUpdateSheet({
-  visible,
+function SetupUpdatePage({
   step,
   currentPhase,
   displayName,
@@ -990,7 +989,7 @@ function SetupUpdateSheet({
   onEditEquipment,
   onReviewUpdate,
   onConfirmUpdate,
-}: SetupUpdateSheetProps) {
+}: SetupUpdatePageProps) {
   const building = step === 'building' || isUpdating;
   const showBack = !building && step !== 'overview';
   const preferredValid = preferredDays.length >= 1;
@@ -1411,49 +1410,42 @@ function SetupUpdateSheet({
   );
 
   return (
-    <Sheet
-      visible={visible}
-      onClose={onClose}
-      dismissable={!building}
-      // The body is a KeyboardSafeArea (root `flex: 1`) on every step except
-      // `building`, which renders plain content and can hug it. Without this
-      // the flexing body resolved to zero height and the sheet opened as a
-      // sliver — grab handle, no content, nothing to dismiss.
-      flexibleBody={!building}
-      contentStyle={styles.setupSheetSurface}
-      testID="profile-setup-update-sheet"
-    >
-      {showBack ? (
+    <View style={styles.setupPage} testID="profile-setup-update-page">
+      <View style={styles.setupPageHeader}>
         <TouchableOpacity
-          style={styles.sheetBackButton}
+          style={[
+            styles.setupPageBackButton,
+            building && styles.setupPageBackButtonDisabled,
+          ]}
           activeOpacity={0.72}
-          onPress={onBack}
-          accessibilityLabel="Back to setup update"
+          onPress={showBack ? onBack : onClose}
+          disabled={building}
+          testID="profile-setup-update-back"
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          accessibilityState={{ disabled: building }}
         >
-          <Text style={styles.sheetBackText}>‹</Text>
+          <Feather name="chevron-left" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
-      ) : null}
+      </View>
 
       {building ? (
-        content
+        <View style={styles.setupPageBuilding}>{content}</View>
       ) : (
-        // Route the setup-sheet inputs through the shared keyboard owner so they
+        // Route the setup-page inputs through the shared keyboard owner so they
         // get scroll-into-view and the one Done bar (census finding #9).
-        // Device-verify the sheet layout (L10).
+        // Device-verify the page layout (L10).
         <KeyboardSafeArea
-          style={styles.setupSheetScroll}
+          style={styles.setupPageScroll}
           scrollProps={{
-            contentContainerStyle: [
-              styles.setupSheetScrollContent,
-              showBack && styles.setupSheetScrollContentWithBack,
-            ],
+            contentContainerStyle: styles.setupPageScrollContent,
             showsVerticalScrollIndicator: false,
           }}
         >
           {content}
         </KeyboardSafeArea>
       )}
-    </Sheet>
+    </View>
   );
 }
 
@@ -1625,38 +1617,37 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 28,
   },
-  // `setupSheetContent: { maxHeight: '92%' }` lived here. It read like the
-  // height cap for this sheet and did nothing: a cap on a parent that is still
-  // deriving its height from its children never binds against a flex-basis-0
-  // child. The definite height belongs to the Sheet primitive's `flexibleBody`
-  // mode, where the constraint is stated once for every caller.
-  setupSheetScroll: {
-    maxHeight: '100%',
-  },
-  setupSheetSurface: {
+  setupPage: {
+    flex: 1,
     backgroundColor: colors.surface.primary,
   },
-  setupSheetScrollContent: {
-    paddingBottom: spacing.xs,
+  // The same page-level navigation geometry as My Status: one quiet header,
+  // one back control, and the scroll owner below it. This replaces the modal
+  // grab handle and its height negotiation entirely.
+  setupPageHeader: {
+    minHeight: 54,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
   },
-  setupSheetScrollContentWithBack: {
-    paddingTop: 34,
-  },
-  sheetBackButton: {
-    position: 'absolute',
-    top: 18,
-    left: spacing.lg,
-    zIndex: 2,
-    width: 34,
-    height: 34,
+  setupPageBackButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sheetBackText: {
-    color: colors.text.secondary,
-    fontSize: 30,
-    fontWeight: '300',
-    lineHeight: 32,
+  setupPageBackButtonDisabled: {
+    opacity: 0.35,
+  },
+  setupPageScrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+  },
+  setupPageBuilding: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  setupPageScroll: {
+    flex: 1,
   },
   sheetTitle: {
     color: colors.text.primary,

@@ -4998,3 +4998,18 @@ The full-width lime **Something changed? Tell the coach** button keeps the same
 shared medium primary treatment and behaviour, but has no decorative pencil
 icon. This supersedes only the pencil requirement in R-182. · `WORKING` —
 `test:profile-reset-ui`. Seat `onboardingtype`.
+
+---
+
+**R-185** · Profile setup is a page, not a popup (Sam, 2026-08-24) ·
+**THE REVIEW FLOW IS A REAL DESTINATION.**
+
+Tapping **Something changed? Tell the coach** opens a full-height Profile
+subpage rather than a Sheet. It keeps the bottom tab bar and uses the same
+top-left Back geometry as My Status. On the overview, Back returns to Profile;
+inside an edit step, Back returns through that flow. The existing setup decision,
+save transaction and focused equipment editor remain unchanged, and closing the
+equipment editor returns to the setup page. This supersedes R-183's popup
+presentation while retaining its approved colours and typography. · `WORKING`
+— `test:profile-reset-ui` + `.maestro/golden/profile-setup-equipment.yaml`. Seat
+`onboardingtype`.

@@ -1,5 +1,5 @@
 /**
- * ONE decision behind the Profile setup sheet's Save button.
+ * ONE decision behind the Profile setup page's Save button.
  *
  * The screen used to carry two. `setupHasChanges` decided whether Save was
  * enabled; `buildSetupPatch` decided what would actually be committed. Two

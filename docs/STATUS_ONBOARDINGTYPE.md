@@ -1184,3 +1184,39 @@ label, press behaviour and accessibility label are unchanged.
 
 - Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
 - Real VoiceOver speech and the next Release rebuild.
+
+---
+
+## R-185 — make Profile setup a real page
+
+The setup review is no longer hosted by the modal Sheet. Profile now swaps its
+main content for a full-height setup subpage, following My Status' existing
+tab-local page pattern. The tab bar stays present; the top-left Back button exits
+from the overview and walks backwards through nested edit steps.
+
+The one existing setup decision and profile-program transaction remain in
+place. Equipment keeps its focused editor, but that editor now closes back onto
+the setup page instead of dropping the athlete at Profile home.
+
+### Evidence
+
+- TWO OPTIONS COMPARED: a new stack route would require extracting the setup's
+  coupled draft state and transaction into another screen; the established My
+  Status-style local subpage removes the popup without creating another state
+  owner.
+- TEST FIRST: five page-ownership cells made `test:profile-reset-ui` 171/176
+  against the Sheet implementation.
+- AFTER: `test:profile-reset-ui` is 176/176 and its chained LFA wordmark tape is
+  15/15.
+- `test:equipment-answer` reaches 42/43; its sole existing SeasonFinished
+  resume-order failure is unrelated to this surface.
+- `test:phase-shift-atomicity` and `test:phase-skew-repair` still stop on their
+  existing incomplete gender/profile fixtures before this UI surface runs.
+- `test:compile` remains at the shared 483-error / 60-worsened-pair baseline and
+  does not name ProfileScreen or the two setup transaction owners changed here.
+
+### NOT COVERED
+
+- Simulator or physical-iPhone pixels (Sam requested no screenshot loop).
+- Hardware/gesture Back, real VoiceOver order, the updated golden tape on a
+  device and the next Release rebuild.

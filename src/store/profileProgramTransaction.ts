@@ -412,7 +412,7 @@ export async function commitProfileProgramTransaction(
   // athlete's selection (that is what skew means), so any request to re-own
   // the program under it produces an identical profile — and was discarded as
   // `no_change` while the program stayed built for the phase they left. The
-  // skew-repair button, the Profile setup-sheet Save, and the phase-shift
+  // skew-repair button, the Profile setup-page Save, and the phase-shift
   // sheet all short-circuited here.
   //
   // The transaction publishes the profile AND the program, so its

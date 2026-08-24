@@ -223,12 +223,12 @@ ok(
     && !/setupChangeButton:\s*\{[^}]*backgroundColor:\s*'#1A1E18'/s.test(src),
 );
 ok(
-  'Program setup CTA opens guided setup sheet',
-  /onProgramSetupChanged[\s\S]*setSetupSheetVisible\(true\)/.test(src)
-    && /testID="profile-setup-update-sheet"/.test(src),
+  'Program setup CTA opens the guided setup page',
+  /onProgramSetupChanged[\s\S]*setSetupPageVisible\(true\)/.test(src)
+    && /testID="profile-setup-update-page"/.test(src),
 );
 ok(
-  'equipment editing lives inside the setup-change sheet',
+  'equipment editing lives inside the setup-change page',
   /testID="profile-setup-equipment-edit"/.test(src)
     && /onEditEquipment=\{openEquipmentEditor\}/.test(src),
 );
@@ -248,7 +248,7 @@ ok(
 }
 // INVERTED BY R5.7 — THE BETA COACH CUT, and inverted OUT LOUD.
 //
-// This cell pinned the setup sheet's coach fallback as SURVIVING. The beta
+// This cell pinned the setup flow's coach fallback as SURVIVING. The beta
 // scope cut (§6, decision C(a), signed; boundary ruled by Sam 2026-08-06;
 // "MAKE THE CUT" 2026-08-07) removes every path to a chat surface, and this
 // was one of them.
@@ -264,7 +264,7 @@ ok(
 // fallback cannot return without a gate noticing. Restoring it is a decision,
 // not an accident.
 ok(
-  'Setup sheet has NO coach fallback (R5.7 beta cut — supersedes the 2026-07-30 pin)',
+  'Setup page has NO coach fallback (R5.7 beta cut — supersedes the 2026-07-30 pin)',
   !/Need to explain something\? Ask Coach/.test(src)
     && !/prefill:\s*'I need to update something about my setup\.'/.test(src),
 );
@@ -276,35 +276,41 @@ ok(
 );
 
 // ═════════════════════════════════════════════════════════════════════
-// 1c. Guided setup sheet owns routine setup changes
+// 1c. Guided setup page owns routine setup changes
 // ═════════════════════════════════════════════════════════════════════
-section('[1c] Guided setup update sheet');
+section('[1c] Guided setup update page');
 ok(
-  'setup sheet title and subtitle present',
+  'setup page title and subtitle present',
   /title="Program setup" subtitle="Review your setup"/.test(src)
     && /Change the details your program is built around\./.test(src),
 );
 ok(
-  'setup sheet reuses shared Sheet and SelectableTile controls',
-  /<Sheet[\s\S]*testID="profile-setup-update-sheet"/.test(src)
+  'setup is a full page rather than a popup and reuses shared controls',
+  /<View style=\{styles\.setupPage\} testID="profile-setup-update-page"/.test(src)
+    && /<KeyboardSafeArea/.test(src)
     && /<DayChipGrid/.test(src)
-    && /<SelectableTile/.test(src),
+    && /<SelectableTile/.test(src)
+    && !/<Sheet[\s\S]{0,500}testID="profile-setup-update-page"/.test(src),
 );
 ok(
-  'setup review uses the same dark surface and row typography as Profile',
-  /<Sheet[\s\S]{0,420}contentStyle=\{styles\.setupSheetSurface\}[\s\S]{0,420}testID="profile-setup-update-sheet"/.test(src)
-    && /setupSheetSurface:\s*\{[^}]*backgroundColor:\s*colors\.surface\.primary/.test(src)
+  'setup page uses the same dark surface and row typography as Profile',
+  /setupPage:\s*\{[^}]*flex:\s*1[^}]*backgroundColor:\s*colors\.surface\.primary/s.test(src)
     && /sheetCard:\s*\{[^}]*backgroundColor:\s*'#101010'[^}]*borderRadius:\s*12/s.test(src)
     && /setupSheetLabel:\s*\{[^}]*fontSize:\s*13[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*18/s.test(src)
     && /setupSheetValue:\s*\{[^}]*fontSize:\s*14[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*20/s.test(src)
     && /sheetCardAction:\s*\{[^}]*backgroundColor:\s*'#101010'/s.test(src),
 );
 ok(
-  'setup sheet includes LFA and team day selectors',
+  'setup page includes LFA and team day selectors',
     /What days can you train\?/.test(src)
     && /We.ll build your LFA work around these days\./.test(src)
     && /title="Team training" subtitle="Which days does your team train\?"/.test(src)
     && /We.ll work your program around these days\./.test(src),
+);
+ok(
+  'setup page has one My Status-style back button',
+  /testID="profile-setup-update-back"[\s\S]{0,180}accessibilityLabel="Back"/.test(src)
+    && /onPress=\{showBack \? onBack : onClose\}/.test(src),
 );
 ok(
   'program details edit opens a batched structured setup flow',
@@ -330,10 +336,10 @@ ok(
 );
 ok(
   'program details cancel resets drafts without applying pending setup',
-  /const cancelProgramDetailsEdit = \(\) => \{[\s\S]*setDraftSeasonPhase\(pendingSeasonPhase\)[\s\S]*setDraftPreferredDays\(pendingPreferredDays\)[\s\S]*setSetupSheetStep\('overview'\)/.test(src),
+  /const cancelProgramDetailsEdit = \(\) => \{[\s\S]*setDraftSeasonPhase\(pendingSeasonPhase\)[\s\S]*setDraftPreferredDays\(pendingPreferredDays\)[\s\S]*setSetupPageStep\('overview'\)/.test(src),
 );
 ok(
-  'setup sheet includes structured player detail edit steps',
+  'setup page includes structured player detail edit steps',
   /What should I call you\?/.test(src)
     && /What position fits you best\?/.test(src)
     && /What’s your training experience\?/.test(src)
@@ -373,7 +379,7 @@ ok(
 // remains here is the wiring a source assertion can honestly speak to: that
 // the screen reads that owner and commits through the atomic transaction.
 ok(
-  'the setup sheet reads the one setup-change decision',
+  'the setup page reads the one setup-change decision',
   /decideProfileSetupChange\(/.test(src),
 );
 ok(
@@ -851,8 +857,10 @@ section('[13] Sheets hosting a flexing body declare it');
     offenders.join(', '),
   );
   ok(
-    'the setup sheet declares it, and only while its body actually flexes',
-    /flexibleBody=\{!building\}/.test(src),
+    'the setup flow is no longer a Sheet caller',
+    /<SetupUpdatePage/.test(src)
+      && !/testID="profile-setup-update-sheet"/.test(src)
+      && !/flexibleBody=\{!building\}/.test(src),
   );
   ok(
     'the dead maxHeight cap is gone from the caller',
