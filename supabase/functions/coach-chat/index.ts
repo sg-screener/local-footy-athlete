@@ -4,6 +4,7 @@ import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponses
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
 import { evaluateCoachResponseContract } from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
+import { createSlidingWindowRateLimiter } from '../_shared/slidingWindowRateLimit.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -17,11 +18,34 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-function json(status: number, body: Record<string, unknown>): Response {
+const coachChatRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 20,
+  maxKeys: 5_000,
+});
+
+function json(
+  status: number,
+  body: Record<string, unknown>,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', ...extraHeaders },
   });
+}
+
+function opaqueClientKey(request: Request): string {
+  const source = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('cf-connecting-ip')?.trim()
+    || request.headers.get('authorization')
+    || 'unknown';
+  let hash = 2_166_136_261;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -77,6 +101,12 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
   if (Deno.env.get('COACH_CHAT_ENABLED') !== 'true') {
     return json(503, { error: 'coach_chat_disabled' });
+  }
+  const rateLimit = coachChatRateLimiter.check(opaqueClientKey(request));
+  if (!rateLimit.allowed) {
+    return json(429, { error: 'coach_chat_rate_limited' }, {
+      'Retry-After': String(rateLimit.retryAfterSeconds),
+    });
   }
 
   let body: Record<string, unknown>;

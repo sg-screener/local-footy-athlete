@@ -458,6 +458,7 @@ async function main(): Promise<void> {
     const gateway = new SupabaseCoachLabClient({
       supabaseUrl: 'https://project.supabase.co/',
       anonKey: 'public-anon-key',
+      labSecret: 'private-lab-secret-at-least-32-characters',
       fetch: async (url, init) => {
         capturedUrl = url;
         capturedHeaders = init.headers;
@@ -491,6 +492,8 @@ async function main(): Promise<void> {
       capturedUrl === 'https://project.supabase.co/functions/v1/coach-lab');
     ok('Supabase auth is present but the OpenAI secret is not sent by the Lab',
       capturedHeaders.Authorization === 'Bearer public-anon-key'
+        && capturedHeaders['x-coach-lab-secret'] === 'private-lab-secret-at-least-32-characters'
+        && !capturedBody.includes('private-lab-secret-at-least-32-characters')
         && !/OPENAI_API_KEY|sk-/.test(capturedBody));
     ok('the gateway returns the typed OpenAI receipt',
       result.totalTokens === 900
@@ -499,6 +502,7 @@ async function main(): Promise<void> {
 
     const edgeSource = readFileSync(resolve(__dirname, '../../supabase/functions/coach-lab/index.ts'), 'utf8');
     const config = readFileSync(resolve(__dirname, '../../supabase/config.toml'), 'utf8');
+    const labRunnerSource = readFileSync(resolve(__dirname, '../../scripts/run-openai-coach-lab.ts'), 'utf8');
     ok('only the new server endpoint reads the existing OpenAI secret',
       /Deno\.env\.get\('OPENAI_API_KEY'\)/.test(edgeSource)
         && !/ANTHROPIC_API_KEY|COACH_LLM_PROVIDER|coach-chat/.test(edgeSource));
@@ -512,6 +516,15 @@ async function main(): Promise<void> {
     ok('the paid endpoint is disabled between controlled Lab runs',
       /Deno\.env\.get\('COACH_LAB_ENABLED'\) !== 'true'/.test(edgeSource)
         && /return json\(503, \{ error: 'coach_lab_disabled' \}\)/.test(edgeSource));
+    ok('the paid Lab refuses before parsing unless the private local-runner secret matches',
+      /Deno\.env\.get\('COACH_LAB_SECRET'\)/.test(edgeSource)
+        && /x-coach-lab-secret/.test(edgeSource)
+        && /if \(expectedSecret\.length < 32 \|\| providedSecret !== expectedSecret\) \{\s*return json\(401, \{ error: 'coach_lab_unauthorized' \}\)/.test(edgeSource)
+        && edgeSource.indexOf("error: 'coach_lab_unauthorized'")
+          < edgeSource.indexOf('request.json()'));
+    ok('the Lab runner reads a private variable that Expo cannot bundle as public config',
+      /COACH_LAB_SECRET/.test(labRunnerSource)
+        && !/EXPO_PUBLIC_COACH_LAB_SECRET/.test(labRunnerSource));
     ok('provider failures do not return internal details to the caller',
       /return json\(502, \{ error: 'coach_lab_provider_failed' \}\)/.test(edgeSource)
         && !edgeSource.includes('syntheticSmokeDetail'));

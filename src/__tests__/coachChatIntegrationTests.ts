@@ -8,6 +8,7 @@ import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../rules/coachKnowledgeManifest';
 import { askCoachReadOnly } from '../services/api/coachChat';
 import { coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { evaluateCoachResponseContract } from '../rules/coachResponseContract';
+import { createSlidingWindowRateLimiter } from '../../supabase/functions/_shared/slidingWindowRateLimit';
 
 armTotalsOrRed();
 
@@ -54,6 +55,11 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && !/const automaticChecks: CoachLabAutomaticChecks/.test(read('src/dev/coachLab/coachLab.ts')));
   ok('an automatic production failure is refused before any answer is returned',
     /if \(!evaluation\.ok\) return json\(502/.test(edge));
+  ok('a bounded request window refuses before the paid provider call',
+    /createSlidingWindowRateLimiter/.test(edge)
+      && /if \(!rateLimit\.allowed\) \{\s*return json\(429/.test(edge)
+      && /Retry-After/.test(edge)
+      && edge.indexOf('return json(429') < edge.indexOf('new OpenAIResponsesClient'));
 }
 
 console.log('\n[2] THE DEPLOYED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
@@ -250,6 +256,27 @@ async function finish(): Promise<void> {
   }, { allowedKnowledgeSourceIds: ['bible:L1-L2'] });
   ok('a read-only answer claiming it changed the program fails closed',
     !falseChange.ok && !falseChange.automaticChecks.changeClaimsTruthful);
+
+  console.log('\n[7] THE LIVE RATE WINDOW IS BOUNDED AND ROLLS FORWARD');
+  let now = 10_000;
+  const limiter = createSlidingWindowRateLimiter({
+    windowMs: 1_000,
+    maxRequests: 2,
+    maxKeys: 3,
+    now: () => now,
+  });
+  const first = limiter.check('athlete-a');
+  const second = limiter.check('athlete-a');
+  const blocked = limiter.check('athlete-a');
+  ok('the configured number pass and the next request is refused with a retry receipt',
+    first.allowed && second.allowed
+      && !blocked.allowed && blocked.retryAfterSeconds === 1,
+    blocked);
+  ok('one noisy client does not spend another client\'s allowance',
+    limiter.check('athlete-b').allowed);
+  now = 11_001;
+  ok('an expired window releases the same client without permanent state',
+    limiter.check('athlete-a').allowed);
 
   console.log(`\nCoach chat integration totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

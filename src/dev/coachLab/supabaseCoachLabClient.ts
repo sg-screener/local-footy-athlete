@@ -30,28 +30,32 @@ function parseTokenReceipt(value: unknown): OpenAITokenReceipt {
 export class SupabaseCoachLabClient {
   private readonly endpoint: string;
   private readonly anonKey: string;
+  private readonly labSecret: string;
   private readonly fetcher: CoachLabFetch;
 
   constructor(args: {
     readonly supabaseUrl: string;
     readonly anonKey: string;
+    readonly labSecret: string;
     readonly fetch?: CoachLabFetch;
   }) {
     const baseUrl = args.supabaseUrl.trim().replace(/\/$/, '');
     this.endpoint = `${baseUrl}/functions/v1/coach-lab`;
     this.anonKey = args.anonKey.trim();
+    this.labSecret = args.labSecret.trim();
     this.fetcher = args.fetch ?? (globalThis.fetch as unknown as CoachLabFetch);
   }
 
   async create(request: OpenAIResponseRequest): Promise<OpenAIResponseResult> {
-    if (!this.endpoint.startsWith('https://') || !this.anonKey) {
-      throw new Error('Coach Lab needs EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.');
+    if (!this.endpoint.startsWith('https://') || !this.anonKey || this.labSecret.length < 32) {
+      throw new Error('Coach Lab needs Supabase config and a private COACH_LAB_SECRET (32+ characters).');
     }
     const response = await this.fetcher(this.endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.anonKey}`,
         apikey: this.anonKey,
+        'x-coach-lab-secret': this.labSecret,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),

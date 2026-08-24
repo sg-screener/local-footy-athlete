@@ -8,7 +8,7 @@ declare const Deno: {
 const ALLOWED_MODELS = new Set(['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']);
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-coach-lab-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -24,6 +24,11 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
   if (Deno.env.get('COACH_LAB_ENABLED') !== 'true') {
     return json(503, { error: 'coach_lab_disabled' });
+  }
+  const expectedSecret = Deno.env.get('COACH_LAB_SECRET') ?? '';
+  const providedSecret = request.headers.get('x-coach-lab-secret') ?? '';
+  if (expectedSecret.length < 32 || providedSecret !== expectedSecret) {
+    return json(401, { error: 'coach_lab_unauthorized' });
   }
 
   let body: Record<string, unknown>;

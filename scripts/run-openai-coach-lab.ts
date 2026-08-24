@@ -140,6 +140,7 @@ async function main(): Promise<void> {
   const client = new SupabaseCoachLabClient({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
     anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    labSecret: process.env.COACH_LAB_SECRET ?? '',
   });
   const report = await runCasesWithPaidCheckpoints({
     cases,
