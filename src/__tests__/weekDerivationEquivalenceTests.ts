@@ -313,6 +313,22 @@ async function main(): Promise<void> {
     bareCalls.length === 0,
     `statement-position writeCoachOverride at line(s) ${bareCalls.map((c) => c.index + 1).join(', ')}`);
 
+  console.log('\n[7] S4 — the live week has ONE door');
+  // The retired shape: hand-assembling the live pair. Candidate/what-if reads
+  // passing their OWN state are views of the same machinery and stay legal;
+  // dev/e2e is frozen and excluded.
+  const glob = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => entry.isDirectory()
+      ? (entry.name === '__tests__' || entry.name === 'dev' ? [] : glob(path.join(dir, entry.name)))
+      : /\.(ts|tsx)$/.test(entry.name) ? [path.join(dir, entry.name)] : []);
+  const offenders = glob(path.join(__dirname, '..'))
+    .filter((file) => !file.endsWith('deriveVisibleWeek.ts'))
+    .filter((file) => /resolveWeekWithConditioning\([^;]{0,120}buildScheduleStateImperative\(\)/s
+      .test(fs.readFileSync(file, 'utf8')));
+  ok('no production file hand-assembles the live week pair',
+    offenders.length === 0,
+    `the pair is back at: ${offenders.join(', ')}`);
+
   console.log(`\nWeek derivation equivalence: ${pass} passed, ${fail} failed`);
   for (const line of failures) console.log(`  ✗ ${line}`);
   totalsPrinted(fail);

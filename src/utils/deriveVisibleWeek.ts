@@ -226,3 +226,19 @@ export function deriveVisibleWeek(
 ): ResolvedDay[] {
   return resolveWeekWithConditioning(weekStart, assembleScheduleState(inputs));
 }
+
+/**
+ * R-229 S4: THE LIVE WEEK HAS ONE DOOR. Every production read of "the week
+ * the athlete sees, from the live stores" enters here — boot equivalence is
+ * then definitional at the entry, not a property four call sites have to
+ * keep re-earning. Candidate/what-if reads still use `deriveVisibleWeek`
+ * with their own inputs; a caller hand-assembling the live pair
+ * (`resolveWeekWithConditioning(x, buildScheduleStateImperative())`) is the
+ * scattered shape this door retires, and the equivalence suite greps for it.
+ */
+export function deriveVisibleWeekLive(
+  weekStart: string,
+  todayISO?: string,
+): ResolvedDay[] {
+  return deriveVisibleWeek(weekStart, gatherDeriveInputs(todayISO));
+}

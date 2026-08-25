@@ -59,6 +59,7 @@ import {
   type TeamNightFlaggedRow,
 } from '../rules/teamNightContentAsk';
 import { weekdayNameForDate } from '../rules/teamNightMoveAsk';
+import { deriveVisibleWeekLive } from './deriveVisibleWeek';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { liveAthleteContext } from './liveAthleteContext';
 import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
@@ -2683,8 +2684,7 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
  */
 function visibleSessionNameOn(date: string): string | null {
   try {
-    const week = resolveWeekWithConditioning(
-      getMondayForDate(date), buildScheduleStateImperative());
+    const week = deriveVisibleWeekLive(getMondayForDate(date));
     return week.find((day) => day.date === date)?.workout?.name ?? null;
   } catch {
     return null;
@@ -2773,8 +2773,7 @@ function commitVerifiedAgainstVisibleWeek<T>(args: {
 /** The week the athlete would see right now, covering every claimed date. */
 function liveVisibleWeekFor(dates: readonly string[]): ResolvedDay[] {
   const weekStarts = Array.from(new Set(dates.map((date) => getMondayForDate(date))));
-  const state = buildScheduleStateImperative();
-  return weekStarts.flatMap((weekStart) => resolveWeekWithConditioning(weekStart, state));
+  return weekStarts.flatMap((weekStart) => deriveVisibleWeekLive(weekStart));
 }
 
 function visibleVerificationFailedResult(

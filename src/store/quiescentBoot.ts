@@ -195,12 +195,15 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { executeProgramControlAction } = require('../utils/programControlActions');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+    const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek');
     const weeks = [...new Set(replayDates(entry).map(mondayOf))];
-    const state = buildScheduleStateImperative();
-    const visibleWeek = weeks.flatMap((week) => resolveWeekWithConditioning(week, state));
+    // R-229 S4: the replay reads the SAME live-week door every production
+    // surface reads — boot equivalence by construction, not by discipline.
+    // Deliberately NO todayISO arg: the old pair assembled at the REAL today,
+    // and resolving as-of `occurredOn` would be a semantics change smuggled
+    // into a repoint. If replay-as-of-decision-day is ever wanted, it is its
+    // own measured slice.
+    const visibleWeek = weeks.flatMap((week: string) => deriveVisibleWeekLive(week));
     const result = executeProgramControlAction(decision.action, {
       visibleWeek,
       todayISO: occurredOn,
@@ -223,14 +226,12 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { applyPlanChange } = require('../utils/planChangeProducer');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+    const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { applyProgramOverrideWrite } = require('./programStore');
     const weeks = [...new Set(replayDates(entry).map(mondayOf))];
-    const state = buildScheduleStateImperative();
-    const visibleWeek = weeks.flatMap((week) => resolveWeekWithConditioning(week, state));
+    // R-229 S4: same one door as above (and the same deliberate no-arg).
+    const visibleWeek = weeks.flatMap((week: string) => deriveVisibleWeekLive(week));
     const result = applyPlanChange({
       change: decision.change,
       visibleWeek,
