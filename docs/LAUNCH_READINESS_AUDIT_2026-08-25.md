@@ -452,3 +452,7 @@ unique `dl-2` on a relaunched world that would previously have re-minted
 published-week half — both behind the item-68 composition-ownership decision;
 plus findings #7-#12 (undo homes, copy honesty, club-log placeholder,
 TT-night selection ruling, dev error leak, past-day rendering).
+
+**2026-08-26, Sam on glass: "yes that worked."** Finding #5 is CLOSED — both
+halves (scheduler window `c96be8cf`, published-week displacement `ff26dbae`),
+device-accepted per L10.
