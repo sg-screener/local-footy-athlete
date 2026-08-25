@@ -94,6 +94,7 @@
     "test:weak-point-focus": "TZ=Australia/Melbourne sucrase-node src/__tests__/weakPointFocusTests.ts",
     "test:strength-answer-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/strengthAnswerAuthorityTests.ts",
     "test:motivation-goals": "TZ=Australia/Melbourne sucrase-node src/__tests__/motivationGoalsTests.ts",
+    "test:week-derivation-equivalence": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekDerivationEquivalenceTests.ts",
     "test:pre-program-days": "TZ=Australia/Melbourne sucrase-node src/__tests__/preProgramDaysTests.ts",
     "test:team-night-content": "TZ=Australia/Melbourne sucrase-node src/__tests__/teamNightContentAskTests.ts",
     "test:team-night-size": "TZ=Australia/Melbourne sucrase-node src/__tests__/teamNightSizeTests.ts",
