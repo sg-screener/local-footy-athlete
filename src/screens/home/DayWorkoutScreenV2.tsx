@@ -1639,9 +1639,16 @@ export default function DayWorkoutScreenV2() {
         kind: 'result',
         ok: true,
         title: 'Saved',
+        // `exclusionExpiryLabel` already SAYS the scope for a today_only
+        // exclusion ("Today only (date)"), so restating the scope label first
+        // printed "— today only. Today only (2026-08-27)." — launch audit
+        // 2026-08-25, finding #8. The label leads only when the expiry line
+        // does not already carry it.
         message: `${displayExerciseName(exercise.name)} — ${
-          EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()
-        }. ${exclusionExpiryLabel(result.exclusion)}. You can change or undo this in My Status.`,
+          scope === 'today_only'
+            ? exclusionExpiryLabel(result.exclusion)
+            : `${EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()}. ${exclusionExpiryLabel(result.exclusion)}`
+        }. You can change or undo this in My Status.`,
       });
     },
     [date],

@@ -58,9 +58,24 @@ export function buildReadinessAcknowledgment(
     if (result.changedProgram && disclosure) {
       return { tone: 'success', message: disclosure };
     }
+    /**
+     * THE EFFECT CLAUSE IS SELECTED BY THE COMMITTED RESULT — the same law the
+     * schedule-door half below already states. Launch audit 2026-08-25,
+     * finding #8: a record-only "bit tired" report was acknowledged with
+     * "Your week's adjusted to match", a claim about an adjustment that did
+     * not happen. A record-only success says it was logged, no more; only a
+     * result that CHANGED the program earns the adjustment clause.
+     * Guard: test:readiness-acknowledgment.
+     */
+    if (result.changedProgram) {
+      return {
+        tone: 'success',
+        message: "Got it — logged how you're feeling. Your week's adjusted to match.",
+      };
+    }
     return {
       tone: 'success',
-      message: "Got it — logged how you're feeling. Your week's adjusted to match.",
+      message: "Got it — logged how you're feeling.",
     };
   }
   return {
