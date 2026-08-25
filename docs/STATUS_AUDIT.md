@@ -2770,3 +2770,30 @@ and reports nothing: `test:section18-v2`, `test:section18-gateway`,
 deleted in `3f97cc67` with importers left behind). `test:injury-authority`
 is alive but 2/23 red on the R-130 gender-gate fixture rot. The evaluator and
 gateway — the app's safety spine — are effectively unguarded today.
+
+## Audit finding #7 — the promised undo home now exists (WORKING)
+
+`789f8448`. A removal decided in advance (bin Thursday's exercise on Tuesday)
+now shows on My Status before its day, with Restore / Change scope live on the
+row, and its body says `Starts <date>` instead of reading as active.
+
+Root: the status listing filtered by `exclusionIsActiveOn(today)`
+(src/rules/exerciseExclusions.ts:162), whose lower bound — correct for
+program effect, it protects completed sessions — hid a not-yet-started
+decision. The listing (src/utils/activeProgramModifiers.ts:1503) now selects
+STANDING decisions via new `standingExclusionsOn` (any remaining effect,
+started or not). The one program-effect predicate is untouched; sessions
+before the decided day are still immutable.
+
+Guard: `test:exercise-exclusions` section [12], born red, now green — 59/1
+(the 1 is the pre-existing bare-legacy-name red, unchanged from baseline
+53/1 + 6 new cells). `test:my-status-modifiers` 10/0,
+`test:program-tab-read-only-modifiers` 9/0, compile gate NEW-file count 36 =
+baseline. Consumer sweep: useHomeScreen's two reads filter by readiness
+source / constraint id; the `affects` reader is equipment-only — exclusion
+rows reach only My Status and the read-only program-tab surface, whose guard
+is green.
+
+Copy note: the `Starts <date>` clause is functional copy, PROPOSED — queued
+for Sam's words with the #8 batch. The audit's wider "#7b: no undo toast on
+bin/move/drag" is a design decision, parked for Sam with #10.
