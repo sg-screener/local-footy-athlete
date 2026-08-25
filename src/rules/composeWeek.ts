@@ -302,6 +302,25 @@ export interface ComposedDay {
    * the day or be lost.
    */
   readonly declaredSlots: readonly SessionSlot[];
+  /**
+   * ⚠ **THE TYPED PLAN THIS DAY WAS COMPOSED FROM — R-225 (Sam, 2026-08-25).**
+   *
+   * *"why the fuck would monday be different"*. It was not Monday: it was WHICH
+   * BUILDER made the day. A club night is retained from the adapter and carries
+   * its intent; a pure strength day is COMPOSER-owned, and the composer read
+   * `planned.strengthIntent` to decide the whole session and then **did not
+   * carry it out**. `assembleAuthoredWeek` makes the composer's workout the base
+   * and `name` is composer-owned, so nothing downstream could name the session
+   * and every composer day in the app read "Strength".
+   *
+   * ⚠ **THIS IS THE SAME MISTAKE THIS FILE ALREADY FIXED ONCE, ON THE FIELD
+   * DIRECTLY ABOVE.** `kind` was *"computed and thrown away, and every reader
+   * guessed it back out of prose"* — measured at 24 wrong days in a 180-world
+   * sweep. Same layer, same shape, different field. `strengthIntent` is
+   * REQUIRED on `ComposerPlannedDay`, so there was never a day without one to
+   * carry.
+   */
+  readonly strengthIntent: StrengthIntent;
   readonly rows: readonly ComposedRow[];
 }
 
@@ -1637,6 +1656,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       // never report a miss. R-087's coverage day has no static table to fall back
       // on, which is why it travels with the day.
       declaredSlots: declaredForJudge,
+      // R-225 — carried, not recomputed. It is the plan this day was composed
+      // from, and the only reason it ever left the day is that nobody asked.
+      strengthIntent: planned.strengthIntent,
       rows,
     });
   }

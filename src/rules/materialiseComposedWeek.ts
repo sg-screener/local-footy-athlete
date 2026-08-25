@@ -287,6 +287,19 @@ export function materialiseComposedWeek(
       workoutType: day.workoutType,
       sessionTier: day.sessionTier,
       planEntryId: day.planEntryId,
+      /**
+       * ⚠ **R-225 — THE PLAN THE DAY WAS COMPOSED FROM, ONTO THE WORKOUT.**
+       *
+       * Without it every composer-owned day reached the athlete as "Strength":
+       * `assembleAuthoredWeek` makes this workout the merge BASE, so the
+       * adapter's copy of the intent never lands on a day the composer owns,
+       * and `resolveSessionDisplayName` had nothing typed to read. Measured
+       * across three season phases: 16 of 42 sessions unnamed for this reason.
+       *
+       * Carried, never recomputed — the same correction `kind` received in this
+       * file after it was computed and thrown away.
+       */
+      strengthIntent: day.strengthIntent,
       // ── THE COMPOSER'S DECLARED SHAPE, CARRIED (2026-08-14) ────────────────
       //
       // **IT WAS COMPUTED AND THROWN AWAY, AND EVERY READER GUESSED IT BACK OUT

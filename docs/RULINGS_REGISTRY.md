@@ -5926,3 +5926,36 @@ caught this** — it proves the board reads `headline`, with fixtures that suppl
 one. The cell is on the NAMER, where the disagreement was. It lives in
 `test:week-board` because `test:session-naming` reports nothing; move it back
 when that suite is alive. Seat `warmup`.
+
+---
+
+**R-225** · *"why the fuck would monday be different"* (Sam, 2026-08-25) · **IT
+WAS NOT MONDAY. IT WAS WHICH BUILDER MADE THE DAY.**
+
+A club night is retained from the ADAPTER and carries its typed plan. A pure
+strength day is COMPOSER-owned, and `assembleAuthoredWeek` makes the composer's
+workout the merge BASE — so the adapter's copy of `strengthIntent` never lands
+on it. **The composer read `planned.strengthIntent` to decide the entire session
+and then did not carry it out**, so every composer day in the app reached the
+athlete as "Strength" while the two club nights named themselves.
+
+⚠ **THE SAME MISTAKE THIS FILE ALREADY FIXED ONCE, ON THE FIELD DIRECTLY
+ABOVE.** `ComposedDay.kind` was *"computed and thrown away, and every reader
+guessed it back out of prose"* — 24 wrong days in a 180-world sweep. Same layer,
+same shape, different field. `strengthIntent` is REQUIRED on
+`ComposerPlannedDay`, so there was never a day without one to carry.
+
+**MEASURED END TO END: 42 of 42 sessions unnamed → 0.** With R-224 (the namer's
+planned-pattern fallback) that is the whole of it: Sam's week now reads
+**Lower Body Strength / Upper Pull / Upper Push**. The day and week cards keep
+their bucket words untouched, which is what he asked for and needed no work —
+`VisiblePart` has always carried both.
+
+⚠ **AND A THIRD DEAD SUITE.** `test:generated-week-assembly` dies at import at
+HEAD, on a `composeWeek` call with incomplete inputs — after
+`test:athlete-session-move` (one stale fixture, all 20 cells dark) and
+`test:session-naming` (throws `B1-PIVOT`). **Three suites over one day, each
+reporting nothing while `test:bible` counted them.** The cells for this ruling
+live in `test:week-board` because a rule filed in a suite that reports nothing
+is filed in the dark. · `WORKING` — `test:week-board` §9, 68 passed / 0 failed,
+mutation-proven. Seat `warmup`.

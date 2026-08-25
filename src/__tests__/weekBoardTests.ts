@@ -413,6 +413,77 @@ console.log('\n[8] A typed plan names its session, even with no delivery record'
     'inferring a name from planner prose is a different defect, still closed');
 }
 
+/* ══ 9. A composer-owned day keeps its own plan ══ */
+
+/**
+ * ⚠ **SAM, 2026-08-25: *"why the fuck would monday be different"* — R-225.**
+ *
+ * It was not Monday, it was WHICH BUILDER made the day. A club night is retained
+ * from the adapter and carries its typed plan. A pure strength day is
+ * COMPOSER-owned, and `assembleAuthoredWeek` makes the composer's workout the
+ * merge BASE, so the adapter's copy never lands on it. The composer read
+ * `planned.strengthIntent` to decide the entire session and then did not carry
+ * it out — so every composer day in the app reached the athlete as "Strength",
+ * while the two club nights named themselves.
+ *
+ * **THE CELL IS ON THE MERGE, NOT ON THE NAME.** The name was the symptom; any
+ * reader of a composed day's typed identity had the same hole. `strengthIntent`
+ * is already an adapter-contributable field, which is exactly why this looked
+ * fine on a club night and failed everywhere else.
+ *
+ * ⚠ **IT RUNS HERE BECAUSE `test:generated-week-assembly` DIES AT IMPORT** — at
+ * HEAD, before this work, on a `composeWeek` call with incomplete inputs. It is
+ * the THIRD suite found dead today (`athlete-session-move`, `session-naming`,
+ * this one). A rule filed in a suite that reports nothing is filed in the dark.
+ */
+console.log('\n[9] The composer carries the plan it composed from');
+{
+  const { assembleAuthoredWeek } = require('../rules/assembleAuthoredWeek');
+  const workoutish = (over: any = {}) => ({
+    id: 'w', microcycleId: 'mc', dayOfWeek: 2, name: 'Lower Body Strength',
+    description: '', durationMinutes: 0, intensity: 'High',
+    workoutType: 'Strength', exercises: [], ...over,
+  });
+  const lower = {
+    archetype: 'lower', primaryPattern: 'squat',
+    plannedPatterns: ['squat', 'hinge'], effectivePatterns: ['squat', 'hinge'],
+  };
+
+  const composed = assembleAuthoredWeek({
+    composerWorkouts: [workoutish({ strengthIntent: lower })],
+    adapterWorkouts: [workoutish({ id: 'a', name: 'Conditioning' })],
+  }).workouts.find((w: any) => w.dayOfWeek === 2);
+  ok('a composer-owned day keeps its own typed plan through the merge',
+    !!composed?.strengthIntent && composed.strengthIntent.primaryPattern === 'squat',
+    'without it every reader falls back to the generic word');
+
+  /* THE CLUB-NIGHT CASE — the one that always worked, and must keep working. */
+  const fromAdapter = assembleAuthoredWeek({
+    composerWorkouts: [workoutish()],
+    adapterWorkouts: [workoutish({
+      id: 'a', name: 'Team Training',
+      strengthIntent: { archetype: 'upper', primaryPattern: 'pull',
+        plannedPatterns: ['pull'], effectivePatterns: ['pull'] },
+    })],
+  }).workouts.find((w: any) => w.dayOfWeek === 2);
+  ok('and the adapter still supplies the plan where the composer has none',
+    fromAdapter?.strengthIntent?.primaryPattern === 'pull');
+
+  /* THE CARRY IS AT THE SOURCE TOO: the materialiser must put the composed
+     day's plan onto the workout, or the merge above has nothing to keep. */
+  const fs = require('fs');
+  const path = require('path');
+  const materialiser = fs.readFileSync(
+    path.resolve(__dirname, '..', 'rules', 'materialiseComposedWeek.ts'), 'utf8');
+  ok('the materialiser carries the composed day\'s plan onto the workout',
+    /strengthIntent: day\.strengthIntent/.test(materialiser));
+  const composer = fs.readFileSync(
+    path.resolve(__dirname, '..', 'rules', 'composeWeek.ts'), 'utf8');
+  ok('and the composed day carries it from the planned day, never recomputed',
+    /strengthIntent: planned\.strengthIntent/.test(composer)
+      && /readonly strengthIntent: StrengthIntent;/.test(composer));
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
   console.log('\nFailures:');
