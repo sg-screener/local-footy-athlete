@@ -1029,27 +1029,21 @@ function canonicaliseAcceptedBoundaryState(
         exposureContractV2: accepted.contract,
         updatedAt: now,
       };
-    } else {
-      // The accepted contract is the persisted ledger for a base-owned week that
-      // needed no repair. Nothing changed, so no overlay is minted, but the
-      // achieved/reduction ledger must not remain stranded in the transient
-      // gateway result.
-      if (currentProgram && baseMicrocycle) {
-        currentProgram = {
-          ...currentProgram,
-          microcycles: currentProgram.microcycles.map((microcycle) =>
-            microcycle.id === baseMicrocycle.id
-              ? { ...microcycle, exposureContractV2: accepted.contract }
-              : microcycle),
-        };
-      }
-      if (currentMicrocycle && currentMicrocycle.id === baseMicrocycle?.id) {
-        currentMicrocycle = {
-          ...currentMicrocycle,
-          exposureContractV2: accepted.contract,
-        };
-      }
     }
+    /* ── R-229 S5: THE MICROCYCLE STAMP IS DELETED ──────────────────────────
+     *
+     * The else-branch here wrote `accepted.contract` — the gateway's DERIVED
+     * result — over the microcycle's generation-authored declaration ("the
+     * achieved/reduction ledger must not remain stranded in the transient
+     * gateway result"). MEASURED 2026-08-26 (S4b probe): that write is how a
+     * severe illness's optional_week permanently replaced the in-season
+     * declaration, surviving the illness itself. With S4c every judge derives
+     * from the stored declaration + the facts at read, so the stranded-ledger
+     * concern is answered by derivation, and the stamp was a stored rewrite of
+     * a derived value — the north star's named defect. The generation-authored
+     * declaration is an INPUT and now comes through boot untouched (held by
+     * the equivalence suite's S5 cell). Overlay writes are transaction
+     * artifacts and are not this deletion's subject. */
   }
   const hydratedTodayWorkout = persistedState.todayWorkout
     ? applyUserRemovalConstraintsToWeek({

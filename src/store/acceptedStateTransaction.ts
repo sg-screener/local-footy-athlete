@@ -1331,12 +1331,27 @@ function decisionDerivedLinkedReductions(args: {
   });
 }
 
+/**
+ * R-229 S5: THE LINKED-REDUCTION READ DERIVES. The raw stored read this
+ * replaces was "empty by construction" under leg (i) (the deriver's
+ * arithmetic is not persisted), so before/after diffs over the stored
+ * surface compared two blanks. The derived contract is the same answer the
+ * judges use; the stored read remains only as the cannot-derive fallback,
+ * matching the ownedWeeks pattern below.
+ */
 function acceptedLinkedReductions(
-  surfaces: AcceptedProgramSurfaces,
+  args: {
+    surfaces: AcceptedProgramSurfaces;
+    context: AcceptedMaterialContext;
+    profile?: OnboardingData | null;
+  },
   weekStarts: readonly string[],
 ): ReversibleAdjustmentLinkedReduction[] {
-  return weekStarts.flatMap((weekStart) =>
-    (contractForAcceptedWeek(surfaces, weekStart)?.authorisedReductions ?? []).map((entry) => {
+  return weekStarts.flatMap((weekStart) => {
+    const contract = derivedContractForAcceptedWeek({
+      surfaces: args.surfaces, context: args.context, profile: args.profile, weekStart,
+    }) ?? contractForAcceptedWeek(args.surfaces, weekStart);
+    return (contract?.authorisedReductions ?? []).map((entry) => {
       const reduction = {
         weekStart,
         metric: entry.metric,
@@ -1347,7 +1362,8 @@ function acceptedLinkedReductions(
         deletionIdentity: entry.deletionIdentity ?? null,
       };
       return { ...reduction, fingerprint: semanticFingerprint(reduction) };
-    }));
+    });
+  });
 }
 
 function provenanceReferences(
@@ -1475,7 +1491,7 @@ export function stageReversibleAdjustmentCreationTransaction(
   const linkedProvenanceIds = provenanceReferences(afterWorkouts)
     .filter((id) => !beforeProvenance.has(id));
   const beforeReductions = new Set(acceptedLinkedReductions(
-    beforeProgram,
+    { surfaces: beforeProgram, context: beforeContext, profile },
     rollingDependencyWeeks,
   ).map(linkedReductionSignature));
   // Leg (iv), install site 1 of 2 — THE LINK DERIVES FROM THE DECISION.
@@ -1763,9 +1779,11 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
     sourceActionOrIntentId: args.sourceActionOrIntentId,
     createdAt,
   });
-  const beforeReductions = new Set(acceptedLinkedReductions(args.baseline.program, weeks)
+  const beforeReductions = new Set(acceptedLinkedReductions(
+    { surfaces: args.baseline.program, context: args.baseline.context, profile }, weeks)
     .map(linkedReductionSignature));
-  const linkedTypedReductions = acceptedLinkedReductions(afterProgram, weeks)
+  const linkedTypedReductions = acceptedLinkedReductions(
+    { surfaces: afterProgram, context: afterContext, profile }, weeks)
     .filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
   const record: ReversibleAdjustmentRecord = {
     protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,

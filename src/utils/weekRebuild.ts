@@ -96,7 +96,6 @@ import {
   type AthleteActionTraceContext,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
-import { SCAFFOLD as LEGV_SCAFFOLD } from '../rules/derivedWeekContract';
 import { storedGameAnchor } from '../rules/gameAnchor';
 
 // ─── Canonical context ───────────────────────────────────────────────
@@ -242,9 +241,13 @@ export function buildWeekScopedWorkoutOverlay(args: {
     // consumers already derive (08212473). Inert without the flag.
     // The persisted v1 -> v2 upgrade is deleted (demolition area 4): a stored
     // world predating the v2 declaration has no one to serve.
-    exposureContractV2: LEGV_SCAFFOLD.writer ? undefined : (
-      sourceMicrocycle.exposureContractV2
-    ),
+    // R-229 S5: the LEGV writer flag is DEMOLISHED, un-landed. Its premise
+    // ("the stored declaration stops being written") belonged to a world where
+    // the declaration was one durable input; boot now regenerates the program
+    // wholesale under live facts, so the declaration is re-authored per boot
+    // and every judge derives on read (S4c) — retiring this write would only
+    // blind the cannot-derive fallback. Priced, measured, and closed.
+    exposureContractV2: sourceMicrocycle.exposureContractV2,
     workoutsByDate,
     createdAt: now,
     updatedAt: now,
@@ -678,8 +681,6 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       const committedAdjustment = commitWeekScopedOverlay({
         ...projection.overlay,
         workoutsByDate: {},
-        // LEG (v) WRITER, PRICING SCAFFOLD — publication site 2 of 2.
-        ...(LEGV_SCAFFOLD.writer ? { exposureContractV2: undefined } : {}),
       }, sweep, {
         targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,

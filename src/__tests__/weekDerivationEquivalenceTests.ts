@@ -375,6 +375,22 @@ async function main(): Promise<void> {
         derived.identity?.mode !== 'optional_week',
         `derived identity: ${derived.identity?.mode}`);
     }
+    /* ── S5: THE STORED WORLD CONVERGES TO THE FACTS AT THE NEXT BOOT ──────
+     * Boot regenerates the whole program under live facts (quiescentBoot
+     * clean-slate + generateProgramLocally), so a relaunch DURING the illness
+     * legitimately authors optional_week microcycles — that is not a stamp,
+     * it is generation consuming the fact. The property one-owner requires:
+     * once the illness is CLEARED, the next boot re-authors the healthy
+     * declaration. Between clear and that boot, the S4c judges derive over
+     * the stale store — the two mechanisms meet with no gap. */
+    await relaunch();
+    const microcycleContract = (useProgramStore.getState() as never as {
+      currentMicrocycle?: { exposureContractV2?: { identity?: { mode?: string } } };
+    }).currentMicrocycle?.exposureContractV2;
+    ok('S5: the post-clear boot re-authors the healthy declaration',
+      microcycleContract?.identity?.mode !== 'optional_week',
+      `microcycle identity after clear+relaunch: ${microcycleContract?.identity?.mode}`);
+
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const validatorSrc = (require('fs') as typeof import('fs')).readFileSync(
       // eslint-disable-next-line @typescript-eslint/no-var-requires
