@@ -2655,7 +2655,8 @@ function DayRow({
             )}
             {timeline}
             {/* R-227: a pre-start day is visible but INERT — no Start, no Log,
-                no Add. Copy functional, PROPOSED. */}
+                no Add. Copy APPROVED (Sam, 2026-08-26: 'the rest of the
+                wording is good'). */}
             {preProgram ? (
               <Text style={styles.expandedMeta} testID="day-pre-program-note">
                 Before your start date — nothing to do here.

@@ -27,9 +27,10 @@
  * vocabulary and shares the flagged exercise's slot family — held by
  * test:team-night-content, which asks the vocabulary itself.
  *
- * Copy: functional, PROPOSED — not Sam-signed. Popup shape mirrors the G-1
- * ask per R-226's own instruction ("make sure these pop ups and language
- * match the rest of the app").
+ * Copy: SIGNED VERBATIM by Sam, 2026-08-26 (he rewrote the proposed set —
+ * title, body, both routes, the keep warning and the done sentence are his
+ * words). The dynamic slots are the flagged exercise names and the landing
+ * weekday; nothing else may drift without a new signature.
  */
 
 import type { Workout, WorkoutExercise } from '../types/domain';
@@ -120,24 +121,34 @@ export function applyTeamNightSafeSwaps(
 
 /* ── THE ASK'S WORDS — functional copy, PROPOSED (not Sam-signed) ─────────── */
 
+/** "Back Squat and Nordic Lower" / "A, B and C" — Sam's body reads as a
+ *  sentence, so the list joins with "and" before the last name. */
+function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 export const TEAM_NIGHT_CONTENT_ASK = {
-  title: 'That lands on a team night',
+  title: 'Team training tonight',
   body: (flagged: readonly TeamNightFlaggedRow[]): string => {
-    const names = flagged.map((row) => row.name).join(', ');
-    return `This session has lifts that leave your legs sore before training with the team: ${names}. Want the team-night-safe versions instead?`;
+    const names = joinNames(flagged.map((row) => row.name));
+    return `This session includes ${names}, which may leave your legs heavy for team training. Want to swap them for lower-fatigue options?`;
   },
   routes: {
     swap_safe: {
-      label: 'Swap to team-night-safe versions',
-      sub: 'Same session, gentler leg picks — from your usual options.',
+      label: 'Use lower-fatigue options',
+      sub: 'Keep the session, change the leg exercises.',
     },
     keep_regular: {
-      label: 'Keep my exercises',
-      sub: 'Land the session exactly as it is.',
+      label: 'Keep as is',
+      sub: 'Move the session without changing anything.',
     },
   },
-  /** Sam: "Nothing long just a clear warning about added risk." Shown when
-   *  the athlete keeps the regular exercises — through the existing
-   *  confirm-warning step, so the popup shape matches the rest of the app. */
-  keepWarning: 'Heavy leg work right before team training adds soreness and injury risk. Your call.',
+  /** Shown when the athlete keeps the regular exercises — through the
+   *  existing confirm-warning step. */
+  keepWarning: 'Doing heavy leg work before team training may affect how your legs feel and perform. Continue anyway?',
+  /** The done sentence names the landing WEEKDAY, per Sam's signed example
+   *  ("Done. Moved to Thursday with lower-fatigue leg options."). */
+  swappedDone: (weekday: string): string =>
+    `Done. Moved to ${weekday} with lower-fatigue leg options.`,
 } as const;

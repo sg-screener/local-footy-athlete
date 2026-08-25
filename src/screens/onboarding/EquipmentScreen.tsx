@@ -225,7 +225,8 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}
-      /* R-230: no strength kit, no program. Copy functional, PROPOSED. */
+      /* R-230: no strength kit, no program. Copy APPROVED (Sam, 2026-08-26:
+         'the rest of the wording is good'). */
       continueDisabled={tickedTags.size === 0}
       footerHelperText={tickedTags.size === 0
         ? 'LFA programs real gym training — tick at least one piece of strength kit to continue.'

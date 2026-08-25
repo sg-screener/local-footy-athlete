@@ -1285,7 +1285,8 @@ function athleteExclusionModifier(
    * Thursday's exercise on Tuesday) now shows before its day — the row must
    * say it has not started rather than read as active. A one-day span's
    * expiry label would just repeat the start date, so it yields to the
-   * `Starts` clause. Functional copy, PROPOSED — not Sam-signed. */
+   * `Starts` clause. Copy APPROVED (Sam, 2026-08-26: 'the rest of the
+   * wording is good'). */
   const notYetStarted = todayISO.slice(0, 10) < exclusion.decidedOnISO;
   return {
     id: modifierId('athlete_preferences', `exclusion:${exclusion.exercise}`),

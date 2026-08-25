@@ -58,6 +58,7 @@ import {
   TEAM_NIGHT_CONTENT_ASK,
   type TeamNightFlaggedRow,
 } from '../rules/teamNightContentAsk';
+import { weekdayNameForDate } from '../rules/teamNightMoveAsk';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { liveAthleteContext } from './liveAthleteContext';
 import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
@@ -3334,10 +3335,11 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
  */
 function moveDoneMessage(change: Extract<PlanChange, { kind: 'move_session' }>): string {
   // R-226: the swap_safe route changed rows, and a change the athlete chose is
-  // still a change the sentence names. keep_regular was warned BEFORE commit
+  // still a change the sentence names — Sam's SIGNED sentence (2026-08-26),
+  // which names the landing weekday. keep_regular was warned BEFORE commit
   // (the confirm-warning step), so its done-sentence stays plain.
   if (change.teamNightContentRoute === 'swap_safe') {
-    return `Done. Session moved to ${change.toDate} — swapped to team-night-safe versions.`;
+    return TEAM_NIGHT_CONTENT_ASK.swappedDone(weekdayNameForDate(change.toDate));
   }
   return `Done. Session moved to ${change.toDate}.`;
 }

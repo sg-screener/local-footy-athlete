@@ -6051,3 +6051,32 @@ governed permanently is no longer reachable.
 gym membership, sign up to a gym, away holiday equipment, R-083.
 · `WORKING` — gate at the equipment step, held by `test:onboarding-bounds`
 family cell (see commit).
+
+---
+
+**R-231** · *"won't this result in them never hitting those exercises though and getting a boring program that just selects the same exercises over and over again? if that's the case then I'd prefer that get the real exercises - just spread throughout the week instead of all on one night"* (Sam, 2026-08-26, answering the generation-side half of the R-226 question) · **GENERATION KEEPS THE REAL EXERCISES AND SPREADS THEM — NO AUTOMATIC TEAM-NIGHT PICK FILTER.**
+
+The composer must NOT silently substitute the Bible :156 sore-making lifts
+on team nights (that would starve variety and progression on club-heavy
+weeks). Instead, PLACEMENT prefers the non-team-night strength day for the
+flagged picks when the week has one — the athlete still back-squats, just
+not right before club training. The R-226 ask remains the athlete-move
+behaviour and is untouched.
+
+**Known edge, named not asked:** the R-093 athlete whose EVERY strength day
+is a club night has nowhere to spread to; there the picks stay real (Sam's
+stated preference) and the R-083-style disclosure is available if it is
+ever ruled wanted. Build owed at the composer's placement layer, consuming
+`rules/teamNightContentAsk.teamNightFlaggedRows` as the one vocabulary.
+
+**Same day, copy signing:** Sam rewrote the R-226 ask copy verbatim (title
+"Team training tonight", routes "Use lower-fatigue options" / "Keep as is",
+the warning, and the weekday done-sentence) and approved every other
+sentence proposed on 2026-08-26 ("the rest of the wording is good"):
+the Starts clause, the pre-start day note, the three failure sentences,
+the readiness standing sentence, the club-log blocked reasons, and the
+equipment-gate sentence. All are SIGNED as shipped.
+
+**Search words:** team night picks, spread through the week, boring program,
+variety, back squat placement, lower-fatigue, R-226, R-093.
+· `WRITTEN` — placement build owed; copy half is `WORKING` (shipped + guards).
