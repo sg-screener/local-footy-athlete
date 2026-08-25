@@ -80,6 +80,17 @@ export interface FixtureConditionedAvailability {
   effectiveAvailableDayNumbers: number[];
   effectiveAvailableDayNames: DayOfWeek[];
   effectiveWeeklyTrainingCapacity: number;
+  /**
+   * THE REAL fixtures of the two ADJACENT weeks, derived by the same owner
+   * that answers this week's (`targetWeekFixtures`: explicit marks beat a
+   * bye beats the recurring day). Launch audit 2026-08-25, finding #5: the
+   * scheduler's cross-week G+1/G-1 window was synthesised as "usual game day
+   * ±7", so a game MOVED to Sunday was invisible to the following week and
+   * its Monday kept a full strength session on G+1. Fabricating neighbouring
+   * fixtures from the usual day is the ±7-invention pattern by name; these
+   * are read from the calendar instead.
+   */
+  adjacentFixtureDates: string[];
 }
 
 export interface ResolveFixtureConditionedAvailabilityInput {
@@ -273,6 +284,24 @@ export function resolveFixtureConditionedAvailability(
   }
 
   const available = days.filter((day) => day.available);
+  // The adjacent weeks' fixtures, through the SAME derivation this week uses.
+  // `proposedMarkedDays` carries the calendar the caller is deciding against;
+  // absent marks degrade to the recurring day, which is exactly what the old
+  // ±7 synthesis assumed always held.
+  const adjacentFixtureDates = [
+    ...targetWeekFixtures({
+      profile: input.profile,
+      weekStart: addDays(weekStart, -7),
+      markedDays: input.proposedMarkedDays,
+      ownedPhase: input.ownedPhase,
+    }),
+    ...targetWeekFixtures({
+      profile: input.profile,
+      weekStart: addDays(weekStart, 7),
+      markedDays: input.proposedMarkedDays,
+      ownedPhase: input.ownedPhase,
+    }),
+  ].map((fixture) => fixture.date).sort();
   return {
     weekStart,
     storedPreferredTrainingDays: [...(input.profile.preferredTrainingDays ?? [])],
@@ -286,6 +315,7 @@ export function resolveFixtureConditionedAvailability(
     effectiveAvailableDayNumbers: available.map((day) => day.dayNumber),
     effectiveAvailableDayNames: available.map((day) => day.dayOfWeek),
     effectiveWeeklyTrainingCapacity: available.length,
+    adjacentFixtureDates,
   };
 }
 

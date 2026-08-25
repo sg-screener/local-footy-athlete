@@ -38,6 +38,10 @@ import {
   type SessionPurpose,
 } from '../rules/weeklyProgrammingContract';
 import { materialiseAuthoredSessions } from '../rules/materialiseAuthoredSessions';
+import type { OnboardingData } from '../types/domain';
+import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
+import { weeklySchedulerInputsFrom } from '../rules/weeklySchedulerInputs';
 import {
   scheduleRefused,
   scheduleWeek,
@@ -769,6 +773,64 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
   ok('[boundary] an unmaterialised session is typed, and its day still exists', [],
     materialised.every((session) => session.unmaterialised === null
       || typeof session.unmaterialised === 'string'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[cross-week] A MOVED GAME PROTECTS THE ADJACENT WEEK (launch audit #5)');
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Bible: G+1 is rest or recovery only, and a Sunday fixture protects the
+// FOLLOWING Monday. Measured on the simulator 2026-08-25: moving this week's
+// game to Sunday left next Monday's full CORE strength session in place — the
+// morning after the game. The cause is in `weeklySchedulerInputsFrom`: for an
+// explicit target week it synthesised adjacent-week fixture proximity as the
+// USUAL game day ±7 (a fabrication, the same ±7-invention pattern the craft
+// tier was cured of), so the real marked Sunday game next door was invisible
+// and Monday computed G+2 against a phantom Saturday. The availability owner
+// (`targetWeekFixtures`, which already knows explicit marks beat byes beat
+// the recurring day) now derives the adjacent weeks' REAL fixtures, and the
+// inputs builder consumes them.
+{
+  const profile = {
+    seasonPhase: 'In-season',
+    gender: 'male',
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    teamTrainingDaysPerWeek: 2,
+    trainingDaysPerWeek: 3,
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+    ageRange: '22-26',
+  } as unknown as OnboardingData;
+  // The athlete moved this week's game from Sat 29 Aug to Sun 30 Aug. Week
+  // under audit: the FOLLOWING week, Mon 31 Aug.
+  const markedDays = { '2026-08-30': 'game' as const };
+  const availability = resolveProfileTargetWeekAvailability({
+    profile,
+    weekStart: '2026-08-31',
+    markedDays,
+    ownedPhase: ownSeasonPhaseForGeneration(profile),
+  });
+  const built = weeklySchedulerInputsFrom({
+    profile,
+    weekStartISO: '2026-08-31',
+    offseasonSubphase: null,
+    targetWeekAvailability: availability,
+  });
+  ok('the REAL adjacent Sunday game reaches fixture proximity', [],
+    (built.fixtureProximityDates ?? []).includes('2026-08-30'),
+    `fixtureProximityDates=${JSON.stringify(built.fixtureProximityDates)}`);
+  ok('the phantom usual-day date the move vacated does NOT', [],
+    !(built.fixtureProximityDates ?? []).includes('2026-08-29'),
+    `fixtureProximityDates=${JSON.stringify(built.fixtureProximityDates)}`);
+  const week = scheduleWeek(built);
+  const mondayStrength = !scheduleRefused(week) && week.days.some((day) =>
+    day.dayOfWeek === MON && day.owner === 'strength');
+  ok('Monday after the moved Sunday game carries NO strength session (G+1)', [],
+    !scheduleRefused(week) && !mondayStrength,
+    scheduleRefused(week)
+      ? `schedule refused: ${JSON.stringify(week)}`
+      : `Monday owner=${JSON.stringify(week.days.find((day) => day.dayOfWeek === MON))}`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

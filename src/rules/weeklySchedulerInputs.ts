@@ -250,13 +250,32 @@ export function weeklySchedulerInputsFrom(args: {
   const usualGameDay = dayNumber(storedGameAnchor(profile));
   const usualDateThisWeek = usualGameDay === null
     ? null : dateForDayNumber(args.weekStartISO, usualGameDay);
+  /**
+   * CROSS-WEEK PROXIMITY COMES FROM THE CALENDAR, NOT FROM A ±7 GUESS.
+   *
+   * Launch audit 2026-08-25, finding #5. This list used to append the usual
+   * game day shifted ±7 — a fabricated neighbouring fixture, the same
+   * ±7-invention pattern the craft tier was cured of. A game MOVED to Sunday
+   * was therefore invisible to the FOLLOWING week's plan: its Monday computed
+   * proximity against a phantom Saturday (G+2) instead of the real Sunday
+   * (G+1), and the athlete was given a full strength session the morning
+   * after their game — a Bible hard line ("G+1: rest or recovery only; a
+   * Sunday fixture protects the following Monday").
+   *
+   * The availability owner now derives the adjacent weeks' REAL fixtures with
+   * the same rules it uses for this week (explicit marks beat a bye beats the
+   * recurring day). The ±7 synthesis survives only as the fallback for the
+   * legacy `targetFixtureDay` path, which carries no calendar to read.
+   */
   const fixtureProximityDates = explicitTargetWeek
     ? Array.from(new Set([
         ...actualFixtureDates,
-        ...(usualDateThisWeek === null ? [] : [
-          shiftedDateISO(usualDateThisWeek, -7),
-          shiftedDateISO(usualDateThisWeek, 7),
-        ]),
+        ...(args.targetWeekAvailability
+          ? args.targetWeekAvailability.adjacentFixtureDates
+          : usualDateThisWeek === null ? [] : [
+              shiftedDateISO(usualDateThisWeek, -7),
+              shiftedDateISO(usualDateThisWeek, 7),
+            ]),
       ]))
     : undefined;
   // R-130: read off the profile, one field, no derivation. Only 'female'
