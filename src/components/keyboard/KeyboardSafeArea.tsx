@@ -119,6 +119,34 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
     paddingBottom: Math.abs(reanimated.height.value),
   }));
 
+  /**
+   * ── THE DISMISS-TAP EXISTS ONLY WHILE THERE IS A KEYBOARD TO DISMISS ──────
+   *
+   * The background `Pressable` used to wrap the scroll body PERMANENTLY, and a
+   * responder wrapper competes with the scroll view for every pan — measured
+   * on the simulator, launch audit 2026-08-25: the Profile "Review your setup"
+   * page would not scroll AT ALL, so the game-day / team-days / phase editors
+   * and the Update button below the fold were unreachable. The workout screen
+   * scrolled only because it opts out (`dismissOnBackgroundTap={false}`), and
+   * every other consumer only LOOKED fine because its content happened to fit
+   * one screen. Sam's 2026-08-09 device report — *"the chat history is stuck …
+   * it doesn't scroll down"* — is this same wrapper on the Coach tab.
+   *
+   * A tap-to-dismiss affordance has no job while the keyboard is down, so the
+   * wrapper now mounts only while one is up. While typing, background tap
+   * still dismisses (the E4 behaviour this Pressable exists for); the moment
+   * the keyboard is away, the scroll view owns every gesture again.
+   */
+  const [keyboardVisible, setKeyboardVisible] = React.useState(false);
+  React.useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
   const body = scrollable ? (
     <KeyboardAwareScrollView
       style={styles.body}
@@ -137,7 +165,7 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
 
   return (
     <View style={[styles.root, style]}>
-      {dismissOnBackgroundTap ? (
+      {dismissOnBackgroundTap && keyboardVisible ? (
         <Pressable
           style={styles.body}
           onPress={() => Keyboard.dismiss()}
