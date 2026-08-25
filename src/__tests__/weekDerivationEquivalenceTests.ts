@@ -269,9 +269,13 @@ async function main(): Promise<void> {
   if (binFirst) {
     await door({ type: 'bin_session', payload: { date: binFirst, scope: 'whole_day' } });
     const secondStrength = strengthDate();
-    const landing = emptyDate();
+    const landing = teamNightDate();
     if (secondStrength && landing) {
-      await door({ type: 'move_session', payload: { fromDate: secondStrength, toDate: landing } });
+      await door({
+        type: 'move_session',
+        payload: { fromDate: secondStrength, toDate: landing, scope: 'whole_day' },
+        teamNightContentRoute: 'keep_regular',
+      });
     }
     await relaunch();
     const afterReplay = fingerprint();
