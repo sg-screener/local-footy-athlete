@@ -267,6 +267,22 @@ run('11 the toast is a READING of the ledger, so no door has to raise it', () =>
     `the toast did not use the phrase owner's words: ${toast?.sentence}`);
 });
 
+run('11b a board bin raises its toast in the door’s own vocabulary', () => {
+  // Launch audit 2026-08-25, finding #7b: Sam saw NO undo toast on any board
+  // edit. Probed at HEAD (2026-08-26, device snapshot, real doors): the bin
+  // appends `plan_change`/`remove_session`, phraseFor maps it, the model
+  // appears and the undo restores the week byte-identically — the silence he
+  // saw keyed on finding #6's relaunch-duplicated ledger ids. This cell pins
+  // the door's LIVE vocabulary to the phrase owner: if the bin ever appends a
+  // kind phraseFor does not map, the toast goes silent again and this reds.
+  const ledger = [entry('dl-1',
+    { kind: 'plan_change', change: { kind: 'remove_session', date: '2026-08-24', scope: 'whole_day' } } as never)];
+  const toast = undoToastFor(ledger, null);
+  assert(toast?.entryId === 'dl-1', 'a landed bin raised no toast');
+  assert(toast?.sentence === 'removed a session',
+    `the toast did not use the phrase owner's words: ${toast?.sentence}`);
+});
+
 run('12 a toast appears only when the newest decision CHANGES', () => {
   // Transience without a clock. A timestamp window would raise a toast for a
   // change made in a previous session if the app relaunched quickly enough,
@@ -560,9 +576,16 @@ run('19 undoing a removal reaches the EXCLUSION, not just the ledger entry', () 
     // The rejected alternative, named so it cannot come back quietly: sending
     // the athlete to the Day page after a session change so the old single
     // mount could be reached. Sam refused it outright.
-    const hubAt = session.indexOf('<SessionChangeHub');
-    const region = session.slice(hubAt, hubAt + 1200);
-    assert(hubAt > 0, 'the session hub is gone; this cell is reading nothing');
+    //
+    // RE-ANCHORED 2026-08-26: the hub MOUNT moved from DayWorkoutScreenV2 to
+    // HomeScreenV2's day-first card (Sam's 2026-08-25 one-day-status-card
+    // ruling); this cell read the old surface and was red on the anchor, not
+    // on the law. It now follows the mount: wherever `<SessionChangeHub`
+    // renders, its region must not navigate.
+    const hubHost = [session, day].find((text) => text.includes('<SessionChangeHub'));
+    const hubAt = hubHost ? hubHost.indexOf('<SessionChangeHub') : -1;
+    const region = hubHost ? hubHost.slice(hubAt, hubAt + 1200) : '';
+    assert(hubAt > 0, 'the change hub is mounted on neither surface; this cell is reading nothing');
     assert(!/navigation\.(navigate|goBack|popTo)\(/.test(region),
       'a change control on the session screen navigates away. R-107: "Do not '
       + 'send them back to the Day page."');
