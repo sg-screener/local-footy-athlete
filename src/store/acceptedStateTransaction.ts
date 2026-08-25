@@ -2445,7 +2445,23 @@ export function stageRollingHorizonFixtureRepair(args: {
       evaluationSurfaces: args.evaluationSurfaces,
       mutationIntent: primary.has(weekStart)
         ? args.primaryMutationIntent ?? 'fixture_transition'
-        : args.dependentMutationIntent ?? 'remove_from_date',
+        /**
+         * A FIXTURE-CAUSED DEPENDENT RESHAPE ACCEPTS AND REDUCES; an athlete
+         * deletion's stays strict. `remove_from_date` makes the replan THROW
+         * (`required_core_relocation_failed`) when displaced required core has
+         * no legal landing — the right refusal for an athlete deleting work,
+         * and exactly wrong for a week squeezed by the athlete's own game
+         * move: launch audit 2026-08-26, a game moved to Sunday made the
+         * following week a Sunday-game/Saturday-game sandwich, its G+1 Monday
+         * strength had nowhere legal to go, the dependent replan threw, and
+         * the WHOLE game move came back "couldn't update your week" (and its
+         * boot replay dropped as impossible). The Bible's answer to the
+         * squeeze is the reduced week, disclosed — the accept-and-reduce path
+         * `fixture_transition` already takes. Scoped by the existing
+         * `appliesFixtureDecision` flag, which only the fixture door sets.
+         */
+        : args.dependentMutationIntent ??
+          (args.appliesFixtureDecision ? 'fixture_transition' : 'remove_from_date'),
       appliesFixtureDecision: !!args.appliesFixtureDecision && primary.has(weekStart),
     }),
   }));

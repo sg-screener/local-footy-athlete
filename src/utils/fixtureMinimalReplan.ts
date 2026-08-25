@@ -256,6 +256,36 @@ function releaseProvenance(provenance: AvailabilityProvenance): boolean {
     provenance === 'bye_usual_game_day';
 }
 
+/**
+ * The day numbers of THIS week that fall one day after any real fixture the
+ * replan can see — this week's own, the caller's cross-week authority, and the
+ * adjacent weeks' calendar-derived fixtures the availability owner carries.
+ * Date-exact deliberately: a weekday-ring shortcut would mark this week's
+ * Sunday as G+1 of NEXT week's Saturday game, the cyclic bug the scheduler's
+ * proximity rewrite documents. A day that is itself a fixture is the game's,
+ * not G+1's.
+ */
+function gamePlusOneDayNumbers(args: BuildFixtureMinimalReplanInput): Set<number> {
+  const fixtureDates = new Set<string>([
+    ...args.proposedFixtures.map((fixture) => fixture.date.slice(0, 10)),
+    ...Array.from(args.activeFixtureDates ?? [], (date) => date.slice(0, 10)),
+    ...args.availability.adjacentFixtureDates,
+  ]);
+  const weekMonday = new Date(`${args.weekStart.slice(0, 10)}T12:00:00`);
+  const days = new Set<number>();
+  for (let offset = 0; offset < 7; offset++) {
+    const date = new Date(weekMonday);
+    date.setDate(date.getDate() + offset);
+    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    if (fixtureDates.has(iso)) continue;
+    const before = new Date(date);
+    before.setDate(before.getDate() - 1);
+    const beforeISO = `${before.getFullYear()}-${String(before.getMonth() + 1).padStart(2, '0')}-${String(before.getDate()).padStart(2, '0')}`;
+    if (fixtureDates.has(beforeISO)) days.add(date.getDay());
+  }
+  return days;
+}
+
 /** Remove only fixture-owned content; unaffected app sessions remain byte-stable inputs. */
 function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
   // Calendar/availability resolution owns whether a retained session is
@@ -267,9 +297,40 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
   const unavailable = new Set(args.availability.days
     .filter((day) => !day.available && day.blockedBy.length > 0)
     .map((day) => day.dayNumber));
+  /**
+   * ── THE G+1 LAW, APPLIED AT THE CANDIDATE — launch audit 2026-08-26 ──────
+   *
+   * Bible: G+1 is rest or recovery only, and a Sunday fixture protects the
+   * FOLLOWING Monday. `displacedStrengthTemplates` below has always known the
+   * example ("Monday strength after a one-off Sunday game") — but it inferred
+   * displacement from the PROJECTION, and the 2026-08-19 demolition deleted
+   * read-time game proximity, so the projection stopped hiding that Monday
+   * and the inference lost its trigger. Measured on glass twice: the moved
+   * game left next Monday's full strength session standing.
+   *
+   * So the collision is computed here from the FIXTURE LAW, date-exact — the
+   * weekday-ring shortcut (`dayAfter`) would mark this week's Sunday as G+1
+   * of NEXT week's Saturday game, the exact cyclic bug the scheduler's
+   * proximity rewrite documents. The fixture set is everything real this
+   * replan can see: this week's fixtures, the caller's cross-week authority
+   * when supplied, and the adjacent weeks' calendar-derived fixtures that
+   * `FixtureConditionedAvailability` now always carries.
+   *
+   * Dropping a G+1 main-strength day from the candidate empties the day and
+   * hands the session to the EXISTING displacement machinery — it re-enters
+   * as a relocation template and the shortfall search re-homes it, with every
+   * landing judged by the same §18 + craft gate as any other candidate. Team
+   * Training anchors are never touched (the club's night is the club's), and
+   * athlete/Coach-authored sessions keep the same protection they have in the
+   * collision branch below. Guard: test:g-plus1-dependent-week.
+   */
+  const gamePlusOneDays = gamePlusOneDayNumbers(args);
   return args.sourceWorkouts.filter((workout) => {
     if (workout.workoutType === 'Game') return false;
-    const collides = occupied.has(workout.dayOfWeek) || (
+    const gamePlusOne = !isTeamTraining(workout) &&
+      hasMainStrength(workout) &&
+      gamePlusOneDays.has(workout.dayOfWeek);
+    const collides = occupied.has(workout.dayOfWeek) || gamePlusOne || (
       workout.workoutType !== 'Team Training' && unavailable.has(workout.dayOfWeek)
     );
     if (!collides) return true;
@@ -706,9 +767,15 @@ function addStrengthDeltaVariants(args: {
   ];
   if (templates.length < shortfall) return [];
   const sourceMap = byDay(args.source);
+  // A relocated strength session may not LAND on G+1 either — without this the
+  // day the candidate seed just vacated is immediately re-filled from the
+  // generated target (measured: the born-red guard's Monday came back as
+  // "Lower Body Strength" through this very search).
+  const gamePlusOneDays = gamePlusOneDayNumbers(args.input);
   const placementDays = args.input.availability.effectiveAvailableDayNumbers
     .filter((day) => {
       if (args.occupied.has(day)) return false;
+      if (gamePlusOneDays.has(day)) return false;
       const existing = sourceMap.get(day);
       return !existing || isOptional(existing) ||
         existing.workoutType === 'Recovery' || existing.workoutType === 'Rest' ||
