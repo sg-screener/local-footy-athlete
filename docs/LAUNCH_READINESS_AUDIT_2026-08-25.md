@@ -408,3 +408,47 @@ corrupted) on moved sessions after a relaunch.
   now PASS — that is the fix landing, not the audit misfiring).
 - Root cause B: Sam's direction (item 68 composition ownership) before code.
 - Findings #2–#12 of the main report: untouched, still open.
+
+---
+
+# ADDENDUM 2 — 2026-08-26, overnight fix session (Sam testing deferred to morning)
+
+Three more fixes landed overnight, on top of the four from yesterday. Every
+one has a born-red guard and a both-arms blast-radius measurement; details in
+the commit messages.
+
+- **#4 FIXED and seen on glass — the un-scrollable screens.** The shared
+  keyboard container wrapped every scrolling screen in a tap-to-dismiss layer
+  that swallowed scroll gestures; it now exists only while a keyboard is up.
+  The Profile setup page scrolls to its last control (the game-day editor and
+  the Update button are reachable), and the same wrapper sat under the coach
+  chat — Sam's 2026-08-09 "chat history is stuck" device report. Commit
+  `6e838f37`.
+- **#5 HALF-FIXED — the moved-game cross-week protection.** Root cause found
+  and named: the scheduler's cross-week fixture window was fabricated as
+  "usual game day ±7" (the ±7-invention pattern), so a game moved to Sunday
+  was invisible to the following week. The scheduler now receives the REAL
+  adjacent fixtures from the calendar (guard: three cells in
+  weeklySchedulerTests, born red on the exact device shape — Monday now
+  schedules NO strength after an adjacent Sunday game). Commit `c96be8cf`.
+  **What remains, verified on glass 2026-08-26:** an ALREADY-PUBLISHED
+  adjacent week is not re-authored when a game moves next door — the
+  dependent-week repair is a minimal replan by design (it relocates displaced
+  work; it does not re-plan days), so the stored Monday session survives the
+  move. Every path that actually re-enters the scheduler (fresh generation,
+  regeneration, availability/bye rebuilds, block rollover) is protected; the
+  fixture-move-next-door path needs the week re-authored, which is the same
+  composition-ownership seam as root cause B and is parked on the item-68
+  decision with it.
+- **Sighting for the dead-suite ledger:** `test:away-flow` now also dies at
+  import (`validateWorkoutAgainstActiveConstraints is not a function`) — it
+  was 49/0 at seat-inbox time.
+
+Fix tally against the original report: #1 root A fixed · #2 fixed · #3 fixed
+(same root as #1A) · #4 fixed · #5 half-fixed (generation side) · #6 fixed —
+and the #6 fix is visible in production data (the fixture move minted a
+unique `dl-2` on a relaunched world that would previously have re-minted
+`dl-1`). Open: #1 root B (swap on relaunched moved sessions) and #5's
+published-week half — both behind the item-68 composition-ownership decision;
+plus findings #7-#12 (undo homes, copy honesty, club-log placeholder,
+TT-night selection ruling, dev error leak, past-day rendering).
