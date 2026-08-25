@@ -122,6 +122,27 @@ for (const bad of [0, EFFORT_MAX + 1, -1, 2.5]) {
   ok(`the team-training transaction refuses ${bad}`, teamAt(bad) === null);
 }
 
+// ── THE SLIDER'S TOUCH CONTRACT (Sam, 2026-08-26: the feedback continuums
+// were glitchy). The one owner is DiscreteSlider; both defects red here if
+// they return: a visual child that can become the touch target makes
+// `locationX` change meaning mid-drag (the thumb-jump stutter), and a
+// responder that does not hold its grant lets the scrolling sheet steal the
+// drag mid-slide.
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs') as typeof import('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path') as typeof import('path');
+  const slider = fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'DiscreteSlider.tsx'), 'utf8');
+  ok('every visual child of the track is pointerEvents="none"',
+    (slider.match(/pointerEvents="none"/g) ?? []).length >= 3);
+  ok('the slider holds its gesture once granted',
+    /onPanResponderTerminationRequest: \(\) => false/.test(slider));
+  ok('the emission dedup (lastEmitted) is still in place',
+    /lastEmitted/.test(slider));
+}
+
 console.log(`\nEffort scale totals: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (fail > 0) {

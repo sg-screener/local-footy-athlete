@@ -61,9 +61,23 @@ export function DiscreteSlider({
     onChange(nextValue);
   }, [min, onChange, steps]);
 
+  /* ── THE TWO GLITCHES (Sam, 2026-08-26: the feedback continuums) ──────────
+   *
+   * 1. `locationX` is relative to WHICHEVER child the finger is over. The
+   *    track renders a rail, a fill and an absolutely-positioned thumb; the
+   *    moment a drag crossed the thumb, `locationX` became thumb-relative
+   *    (≈0-28), the value teleported toward `min`, the thumb jumped away from
+   *    the finger, and the next event snapped it back — the visible stutter.
+   *    The visual children are now `pointerEvents="none"`, so the track is
+   *    the only event target and `locationX` keeps one meaning.
+   * 2. The responder never HELD the gesture: the scrolling sheet under the
+   *    form could take the responder mid-drag (default termination-request
+   *    is yes), freezing the thumb mid-slide. Once granted, the drag is held.
+   */
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
     onPanResponderGrant: (event) => commitFromTouch(event.nativeEvent.locationX),
     onPanResponderMove: (event) => commitFromTouch(event.nativeEvent.locationX),
   }), [commitFromTouch]);
@@ -91,11 +105,12 @@ export function DiscreteSlider({
         onLayout={onLayout}
         {...responder.panHandlers}
       >
-        <View style={styles.rail} />
-        <View style={[styles.fill, { width: thumbLeft }]} />
+        <View pointerEvents="none" style={styles.rail} />
+        <View pointerEvents="none" style={[styles.fill, { width: thumbLeft }]} />
         {value !== null ? (
           <View
             testID={`${testID}-thumb`}
+            pointerEvents="none"
             style={[styles.thumb, { left: thumbLeft - THUMB_SIZE / 2 }]}
           />
         ) : null}
