@@ -1600,10 +1600,35 @@ export function buildGeneratedMicrocycles(args: {
         }),
       });
       if (validation.verdict === 'refused') {
-        throw new GeneratedWeekRefusedError(
-          generatedWeekFailureSignature(validation),
-          validation.findings,
-        );
+        /**
+         * A FORWARD ATHLETE DECISION IS NEVER VETOED BY ITS OWN WEEK.
+         *
+         * `weekAcceptance` documented this contract from the day it was added
+         * (§18 ownership reassessment 2026-08-05, D3, approved by Sam): a
+         * caller carrying out a forward athlete decision "publishes the best
+         * achievable week instead of throwing", because the transaction
+         * downstream owns accept-and-disclose. The option was passed by both
+         * of its callers (`weekRebuild`, the temporary-source-fact scoped
+         * regen) and read by NOTHING — so an athlete who said "I'm properly
+         * sick" on a week whose reduced remainder missed any clause had the
+         * fact rolled back and was told to try again, forever. Launch audit
+         * 2026-08-25; guarded by `test:forward-decision-acceptance`.
+         *
+         * The findings are not swallowed: they are logged with their
+         * signature here, and the §18 effective-week evaluator judges the
+         * published week again downstream, where shortfalls become athlete
+         * disclosures.
+         */
+        if (args.weekAcceptance === 'forward_decision') {
+          logger.warn('[ProgramGen] forward_decision publishes a contract-failing week; findings disclosed downstream', {
+            signature: generatedWeekFailureSignature(validation),
+          });
+        } else {
+          throw new GeneratedWeekRefusedError(
+            generatedWeekFailureSignature(validation),
+            validation.findings,
+          );
+        }
       }
     }
     // ── THE NEED-BASED TOP-UP PASS ──
