@@ -5959,3 +5959,75 @@ reporting nothing while `test:bible` counted them.** The cells for this ruling
 live in `test:week-board` because a rule filed in a suite that reports nothing
 is filed in the dark. · `WORKING` — `test:week-board` §9, 68 passed / 0 failed,
 mutation-proven. Seat `warmup`.
+
+---
+
+**R-226** · *"give them the option of swapping to the safer team night versions. But allow them to say no and keep the regular ones. If they choose the regular ones then they should again be given a warning about it. Nothing long just a clear warning about added risk. Also make sure these pop ups and language match the rest of the app."* (Sam, 2026-08-26, answering launch-audit finding #10) · **A MOVED SESSION LANDING ON A TEAM NIGHT ASKS, NEVER SILENTLY REWRITES AND NEVER SILENTLY KEEPS.**
+
+The collision this settles: conservation (a moved session keeps its content)
+vs the Bible's TT-day filter (avoid high-soreness picks — RFE split squats,
+Nordics, back squats, heavy RDLs; Bible line 156). Neither law wins alone —
+the ATHLETE decides, at move time:
+
+- **Offer**: swap the sore-making picks for team-night-safe versions from the
+  existing pools (box squat, low-rep RDLs, hamstring curls, step-ups /
+  reverse lunges — Bible's own lists, §Squat/§Single-leg/§Hamstring).
+- **Decline path**: keeping the originals is allowed, followed by ONE short,
+  clear added-risk warning. Not long.
+- **Copy and popup shape must match the app's existing language** — same
+  sheet idiom as the G-1 landing ask / team-night route ask, words through
+  the signed-copy owner.
+
+**Search words:** team night move, swap, sore, RDL, split squat, conservation,
+moved session, TT day filter. · `WRITTEN` — build owed; guard owed with it.
+
+---
+
+**R-227** · *"grey them out - shows the athlete they are there without being able to do something in the past."* (Sam, 2026-08-26, answering launch-audit finding #12) · **DAYS BEFORE THE ATHLETE'S START ARE VISIBLE BUT INERT.**
+
+A brand-new athlete's first week keeps its Monday-to-Sunday shape; days
+before the program's start day render greyed, with no Start Session control
+and no readiness chips — present, not actionable. Copy for the short note is
+functional until Sam signs it.
+
+**Search words:** first week, past days, before start, grey, dead days,
+onboarding week. · `WRITTEN` — build owed; guard owed with it.
+
+---
+
+**R-228** · *(Sam, 2026-08-26, answering launch-audit finding #8 leftovers)* · **A FAILED SAVE SAYS IT DIDN'T WORK — NO RETRY PROMISE; A BIN NEVER CLAIMS THE WEEK IS STILL COVERED.**
+
+- **(a)** Save failures are engineering defects to eliminate, and when one
+  happens anyway the sentence says plainly that it didn't work. It must NOT
+  promise that trying again in a moment will work ("give it another go in a
+  moment" is retired — that promise is unverifiable). Sam verbatim: *"don't
+  [lie] to them, say it didn't work."*
+- **(c)** The bin result must not claim *"Your remaining sessions already
+  cover this week's target."* Sam verbatim: *"no it shouldn't say that …
+  that's just untrue."* The reduced-target disclosure variant ("…strength
+  target has been reduced at your request") was not challenged and stands.
+- **(b) was withdrawn as asked**: the "contradictory lighten sheet" question
+  hit Sam's belief that the lighter-day offer left the app weeks ago. The
+  offer is still in the code (`home-week-readiness-lighter-offer`,
+  HomeScreenV2) — its removal or retention is being verified as its own
+  item, not re-asked as copy.
+
+**Search words:** save failed, give it another go, retry promise, bin result,
+already cover, weekly target, lighter day. · `WRITTEN` — copy edits owed.
+
+---
+
+**R-229** · *"yes one owner obviously - i feel like we have done this over and over again - making everything one owner"* (Sam, 2026-08-26, answering the item-68 escalation from launch-audit finding #1 root B) · **ONE OWNER FOR REBUILDING THE VISIBLE WEEK WHEN FACTS CHANGE.**
+
+There is to be exactly one composition path: given the stored decisions and
+facts, ONE owner derives the visible week, and every door, boot replay and
+edit goes through it. The re-gate write-back loop, `writeCoachOverride`'s
+discarded outcome, and duplicated reduction records are the named
+retirements (STATUS_AUDIT root-B reassessment, 2026-08-25). Sam's tone in
+the ruling is itself the instruction: one-owner is the STANDING default for
+this app's architecture — new state with two writers should never reach him
+as a question again.
+
+**Search words:** one owner, item 68, vertical composer, rebuild week, re-gate,
+writeCoachOverride, root B. · `WRITTEN` — the build is the largest open unit;
+slice plan owed before code.
