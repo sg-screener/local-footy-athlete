@@ -156,8 +156,14 @@ console.log('\n[1] The convention exists and owns the primitives');
     'E7: the field must stay visible above the keypad AND the bar above it',
   );
   ok(
-    'KeyboardSafeArea provides tap-to-dismiss',
-    /Keyboard\.dismiss/.test(safeArea),
+    // RE-ANCHORED 2026-08-26: the background tap-to-dismiss is DELETED —
+    // measured fatal twice (permanent wrapper killed scroll; conditional
+    // wrapper reparented the focused input and locked Sam's phone in a
+    // keyboard loop on the first Release build). Dismissal's two owners are
+    // the scroll view's interactive drag and the Done accessory; this cell
+    // now holds the drag half.
+    'KeyboardSafeArea dismisses via the scroll view\'s interactive drag',
+    /keyboardDismissMode="interactive"/.test(safeArea),
   );
   ok(
     'KeyboardSafeArea renders the dismiss affordance itself',

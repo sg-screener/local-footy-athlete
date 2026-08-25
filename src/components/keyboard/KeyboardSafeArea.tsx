@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  Keyboard,
-  Pressable,
   ScrollViewProps,
   StyleProp,
   StyleSheet,
@@ -120,32 +118,31 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
   }));
 
   /**
-   * ── THE DISMISS-TAP EXISTS ONLY WHILE THERE IS A KEYBOARD TO DISMISS ──────
+   * ── THE BACKGROUND DISMISS-TAP IS DELETED — MEASURED FATAL, TWICE ────────
    *
-   * The background `Pressable` used to wrap the scroll body PERMANENTLY, and a
-   * responder wrapper competes with the scroll view for every pan — measured
-   * on the simulator, launch audit 2026-08-25: the Profile "Review your setup"
-   * page would not scroll AT ALL, so the game-day / team-days / phase editors
-   * and the Update button below the fold were unreachable. The workout screen
-   * scrolled only because it opts out (`dismissOnBackgroundTap={false}`), and
-   * every other consumer only LOOKED fine because its content happened to fit
-   * one screen. Sam's 2026-08-09 device report — *"the chat history is stuck …
-   * it doesn't scroll down"* — is this same wrapper on the Coach tab.
+   * Its two lives, both measured:
    *
-   * A tap-to-dismiss affordance has no job while the keyboard is down, so the
-   * wrapper now mounts only while one is up. While typing, background tap
-   * still dismisses (the E4 behaviour this Pressable exists for); the moment
-   * the keyboard is away, the scroll view owns every gesture again.
+   * 1. PERMANENT wrapper (pre-2026-08-25): a responder wrapper around the
+   *    scroll view competed for every pan — the Profile "Review your setup"
+   *    page would not scroll AT ALL (launch-audit #4), and Sam's 2026-08-09
+   *    "the chat history is stuck" was the same wrapper on the Coach tab.
+   * 2. CONDITIONAL wrapper (2026-08-25 → 2026-08-26): mounting it only while
+   *    the keyboard was up REPARENTED the subtree holding the focused input
+   *    on every keyboard transition — the input lost focus, the keyboard
+   *    hid, autofocus re-raised it, and the loop locked the first onboarding
+   *    screen solid on Sam's PHONE (Release build, 2026-08-26: "the keyboard
+   *    popping up and disappearing and now i cant tap anything", Continue
+   *    frozen mid-screen at its keyboard-open offset). The simulator never
+   *    showed it because its hardware keyboard means the software keyboard —
+   *    and therefore the toggle — never appears.
+   *
+   * A mechanism that breaks scroll when permanent and breaks focus when
+   * conditional is the wrong mechanism. Dismissal keeps its two working
+   * paths: the scroll view's own `keyboardDismissMode="interactive"` (drag
+   * down) and the Done accessory bar. `dismissOnBackgroundTap` remains in
+   * the props so no call site churns; it now gates nothing.
    */
-  const [keyboardVisible, setKeyboardVisible] = React.useState(false);
-  React.useEffect(() => {
-    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
+  void dismissOnBackgroundTap;
 
   const body = scrollable ? (
     <KeyboardAwareScrollView
@@ -165,18 +162,7 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
 
   return (
     <View style={[styles.root, style]}>
-      {dismissOnBackgroundTap && keyboardVisible ? (
-        <Pressable
-          style={styles.body}
-          onPress={() => Keyboard.dismiss()}
-          accessible={false}
-          importantForAccessibility="no"
-        >
-          {body}
-        </Pressable>
-      ) : (
-        body
-      )}
+      {body}
       {footer ? <KeyboardStickyView>{footer}</KeyboardStickyView> : null}
       {/*
         The Done bar and a sticky CTA both want the strip directly above the
