@@ -43,6 +43,7 @@ import { join } from 'path';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { seedManualOverride } from './support/programOverrideHarness';
+import { teamNightFlaggedRows } from '../rules/teamNightContentAsk';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -362,13 +363,35 @@ run('moving onto a team night lands a combined day, keeping the anchor', () => {
   const sourceWorkoutOnTeamDay = visibleWeek(weekStart)
     .find((day) => day.date === teamDay)?.workout;
 
-  const result = quiet(() => applyPlanChange({
+  /* ⚠ **R-226 (Sam, 2026-08-26) INTERPOSED THE CONTENT ASK.** A moved session
+   * carrying Bible :156 flagged lifts no longer lands on a team night
+   * unasked — the routeless change raises the ask instead of applying. This
+   * cell's subject is the DOUBLING LAW's landing shape, so it answers the ask
+   * (`keep_regular` — content byte-conserved) and asserts the same landing it
+   * always did. Whether the ask itself fires is test:team-night-content's. */
+  const routeless = quiet(() => applyPlanChange({
     change: { kind: 'move_session', fromDate: monday, toDate: teamDay },
     visibleWeek: visibleWeek(weekStart),
     todayISO: weekStart,
     applyOverride: (date, workout, context) =>
       seedManualOverride(date, workout, context),
   }));
+  const sourceCarriesFlaggedLifts = teamNightFlaggedRows(source).length > 0;
+  if (sourceCarriesFlaggedLifts) {
+    assert(!routeless.ok, 'flagged content landed on a team night without the R-226 ask');
+  }
+  const result = sourceCarriesFlaggedLifts
+    ? quiet(() => applyPlanChange({
+        change: {
+          kind: 'move_session', fromDate: monday, toDate: teamDay,
+          teamNightContentRoute: 'keep_regular',
+        },
+        visibleWeek: visibleWeek(weekStart),
+        todayISO: weekStart,
+        applyOverride: (date, workout, context) =>
+          seedManualOverride(date, workout, context),
+      }))
+    : routeless;
   assert(result.ok,
     `the doubling law's own shape was refused: "${result.message}" `
     + `${JSON.stringify(result.rejected)}`);

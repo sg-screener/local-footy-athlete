@@ -129,6 +129,13 @@ export type PlanChange =
        * what every caller meant before session-scoped Move existed.
        */
       scope?: PlanChangeMoveScopeId;
+      /**
+       * R-226: the athlete's answer when the moved content carries Bible :156
+       * team-night-flagged lifts and the destination is a team night. Absent
+       * means "not asked yet" — the producer answers with the ask instead of
+       * applying anything, the same shape as `g1Route` above.
+       */
+      teamNightContentRoute?: 'swap_safe' | 'keep_regular';
     } & G1RoutedPlanChange)
   | { kind: 'shutdown_week'; date: string }
   | { kind: 'clear_days'; dates: string[] }

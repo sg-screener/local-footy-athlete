@@ -1074,10 +1074,15 @@ run('23 a move onto a team night carrying gym work SWAPS, losing nothing', () =>
   assert(names(source).length > 0, 'CONTROL: the source must carry work');
 
   const sourceNames = names(source);
+  /* R-226 (Sam, 2026-08-26): flagged lifts landing on a team night ask
+   * swap-or-keep before applying. This cell's subject is CONSERVATION, so it
+   * answers `keep_regular` — content byte-conserved, every assertion below
+   * unchanged. The ask itself is test:team-night-content's subject. */
   const result = realDoor({
     kind: 'move_session',
     fromDate: dateForDay(FUTURE_WEEK, source.dayOfWeek),
     toDate: dateForDay(FUTURE_WEEK, anchor.dayOfWeek),
+    teamNightContentRoute: 'keep_regular',
   }, FUTURE_WEEK);
   assert(result.commit?.ok, `the swap was refused: ${JSON.stringify(result.commit)}`);
 

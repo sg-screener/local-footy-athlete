@@ -44,6 +44,10 @@ import {
   type TeamNightMoveAskContext,
 } from '../../rules/teamNightMoveAsk';
 import {
+  TEAM_NIGHT_CONTENT_ASK,
+  type TeamNightFlaggedRow,
+} from '../../rules/teamNightContentAsk';
+import {
   emitAthleteActionEvent,
   type AthleteActionTraceContext,
 } from '../../utils/athleteActionDiagnostics';
@@ -146,6 +150,18 @@ type Step =
       change: G1RoutedChange;
       context: G1LandingAskContext;
       backStep: Step;
+    }
+  | {
+      // R-226's team-night content ask: the moved session carries Bible :156
+      // flagged lifts and the destination is a team night. Two routes + back,
+      // same funnel shape as the G-1 ask; keep_regular detours through the
+      // existing confirm-warning step so the athlete is "again given a
+      // warning" (Sam's words) before anything commits.
+      kind: 'team_night_content_ask';
+      change: Extract<PlanChange, { kind: 'move_session' }>;
+      flagged: TeamNightFlaggedRow[];
+      backStep: Step;
+      trace: AthleteActionTraceContext;
     }
   | {
       // The second, stronger warning. Route (c) alone, whatever was landed.
@@ -504,6 +520,18 @@ export function PlanChangeSheet({
     // their game and has not been asked yet. Nothing has been applied.
     if (preview.g1Ask && isG1RoutedChange(change)) {
       setStep({ kind: 'g1_ask', change, context: preview.g1Ask, backStep });
+      return;
+    }
+    // R-226: flagged lifts landing on a team night — swap or keep, athlete's
+    // call, nothing applied until they answer.
+    if (preview.teamNightContentAsk && change.kind === 'move_session') {
+      setStep({
+        kind: 'team_night_content_ask',
+        change,
+        flagged: preview.teamNightContentAsk.flagged,
+        backStep,
+        trace: preview.trace,
+      });
       return;
     }
     // The team-night ask (Sam, signed 2026-08-02): moving a team night asks
@@ -1105,6 +1133,39 @@ export function PlanChangeSheet({
             onPress={() => setStep(step.backStep)}
             style={{ marginTop: 8 }}
           />
+        </View>
+      )}
+
+      {step.kind === 'team_night_content_ask' && (
+        <View>
+          <Text style={styles.blockingTitle}>{TEAM_NIGHT_CONTENT_ASK.title}</Text>
+          <Text style={styles.confirmText}>
+            {TEAM_NIGHT_CONTENT_ASK.body(step.flagged)}
+          </Text>
+          <MenuOption
+            label={TEAM_NIGHT_CONTENT_ASK.routes.swap_safe.label}
+            sub={TEAM_NIGHT_CONTENT_ASK.routes.swap_safe.sub}
+            testID="team-night-content-route-swap-safe"
+            onPress={() => apply(
+              { ...step.change, teamNightContentRoute: 'swap_safe' },
+              { backStep: step.backStep, closeOnSuccess: true },
+            )}
+          />
+          <MenuOption
+            label={TEAM_NIGHT_CONTENT_ASK.routes.keep_regular.label}
+            sub={TEAM_NIGHT_CONTENT_ASK.routes.keep_regular.sub}
+            testID="team-night-content-route-keep-regular"
+            onPress={() => setStep({
+              kind: 'confirm_warning',
+              change: { ...step.change, teamNightContentRoute: 'keep_regular' },
+              title: 'Quick warning',
+              reasons: [TEAM_NIGHT_CONTENT_ASK.keepWarning],
+              closeOnSuccess: true,
+              backStep: step.backStep,
+              trace: step.trace,
+            })}
+          />
+          <MenuOption label="Back" onPress={() => setStep(step.backStep)} />
         </View>
       )}
 

@@ -52,6 +52,12 @@ import {
   type CanonicalPlanChangeCandidateResult,
 } from './canonicalPlanChangeCandidateMaterializer';
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
+import {
+  applyTeamNightSafeSwaps,
+  teamNightFlaggedRows,
+  TEAM_NIGHT_CONTENT_ASK,
+  type TeamNightFlaggedRow,
+} from '../rules/teamNightContentAsk';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { liveAthleteContext } from './liveAthleteContext';
 import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
@@ -1435,6 +1441,14 @@ export interface PlanChangeRiskPreviewResult {
    */
   g1Ask?: G1LandingAskContext | null;
   /**
+   * Present when a move lands Bible :156 team-night-flagged lifts on a team
+   * night and the athlete has not yet answered swap-or-keep (R-226). NOTHING
+   * has been applied. The caller shows the two routes, re-issues the change
+   * with `teamNightContentRoute` set — and warns once more on `keep_regular`
+   * before committing, per the ruling.
+   */
+  teamNightContentAsk?: { flagged: TeamNightFlaggedRow[] } | null;
+  /**
    * Present when the athlete is moving a TEAM NIGHT and has not yet answered
    * "just this once, or permanent?". NOTHING has been applied. The caller
    * shows the two routes (+ back) and re-issues the change with
@@ -1576,10 +1590,17 @@ function athleteMoveInput(args: {
     targetWorkout = targetSplit.remainingWorkout;
     if (!targetWorkout) return null;
   }
+  /* R-226 swap_safe: the athlete chose the team-night-safe versions, so the
+   * ARRIVING content is transformed before it stacks — same seam the G-1
+   * route transform uses, and nothing but the arriving rows changes. */
+  const arrivingContent = placedWorkout ?? componentSplit?.movedWorkout ?? sourceWorkout;
+  const arrivingForAnchor = args.change.teamNightContentRoute === 'swap_safe'
+    ? applyTeamNightSafeSwaps(arrivingContent).workout
+    : arrivingContent;
   const combinedOntoAnchor = targetHoldsTeamAnchor && targetWorkout
     ? stackSessionOntoTeamAnchor({
       anchorDay: targetWorkout,
-      addition: placedWorkout ?? componentSplit?.movedWorkout ?? sourceWorkout,
+      addition: arrivingForAnchor,
     })
     : null;
   return {
@@ -1950,6 +1971,27 @@ export function resolveAthleteMutation(args: {
     if (isResolverOwnedDerivedSession(targetDay.workout) && !g1Ask) {
       return { ok: false, error: 'move_destination_resolver_owned' };
     }
+    /* ── R-226: FLAGGED CONTENT LANDING ON A TEAM NIGHT ASKS FIRST ─────────
+     * The destination asks, typed routes, one funnel — the G-1 shape exactly.
+     * The check runs on what MOVES (the scoped split when there is one), so a
+     * conditioning-part move past a flagged strength day is not asked about.
+     * G-1 outranks this ask (it sits above every branch); a day that is both
+     * G-1 and a team night asks G-1 first, then lands here on the re-issue. */
+    const movedContentForAsk = (() => {
+      const moveScopeForAsk = change.scope ?? 'whole_day';
+      if (moveScopeForAsk === 'whole_day') return sourceDay.workout;
+      const split = splitAcceptedSessionForAthleteMove({
+        day: sourceDay,
+        scope: ATHLETE_REMOVAL_SCOPE[moveScopeForAsk],
+      });
+      return split.ok === false ? null : split.movedWorkout;
+    })();
+    const targetIsTeamNight = projectedDay(targetDay).parts
+      .some((part) => part.kind === 'team_training');
+    if (targetIsTeamNight && !change.teamNightContentRoute &&
+      teamNightFlaggedRows(movedContentForAsk).length > 0) {
+      return { ok: false, error: 'team_night_content_route_required' };
+    }
     const input = athleteMoveInput({
       change,
       visibleWeek: args.visibleWeek,
@@ -2311,6 +2353,27 @@ export function previewPlanChangeRisk(args: {
             proposedWeek: args.visibleWeek,
             assessment: emptyAssessment,
             g1Ask: ask,
+          }, { internalResultCode: resolution.error });
+        }
+      }
+      // R-226's ask surfaces the same way G-1's does: not a refusal, not a
+      // risk finding — the athlete simply has not answered yet.
+      if (resolution.ok === false &&
+        resolution.error === 'team_night_content_route_required' &&
+        args.change.kind === 'move_session') {
+        const moveChange = args.change;
+        const flaggedSource = args.visibleWeek.find((day) =>
+          day.date === moveChange.fromDate)?.workout ?? null;
+        const flagged = teamNightFlaggedRows(flaggedSource);
+        if (flagged.length > 0) {
+          return finish({
+            ok: true,
+            message: TEAM_NIGHT_CONTENT_ASK.title,
+            appliedDates: [],
+            rejected: [],
+            proposedWeek: args.visibleWeek,
+            assessment: emptyAssessment,
+            teamNightContentAsk: { flagged },
           }, { internalResultCode: resolution.error });
         }
       }
@@ -3270,5 +3333,11 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
  * report that an ADD of conditioning was confirmed with "moved Upper Pull".
  */
 function moveDoneMessage(change: Extract<PlanChange, { kind: 'move_session' }>): string {
+  // R-226: the swap_safe route changed rows, and a change the athlete chose is
+  // still a change the sentence names. keep_regular was warned BEFORE commit
+  // (the confirm-warning step), so its done-sentence stays plain.
+  if (change.teamNightContentRoute === 'swap_safe') {
+    return `Done. Session moved to ${change.toDate} — swapped to team-night-safe versions.`;
+  }
   return `Done. Session moved to ${change.toDate}.`;
 }
