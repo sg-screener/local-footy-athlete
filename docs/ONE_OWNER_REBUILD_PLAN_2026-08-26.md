@@ -68,9 +68,16 @@ adjustment and a removal constraint — stable across relaunch; these have
 distinct jobs (undo bookkeeping vs read-time effect) and are NOT the
 duplication the reassessment named. `authorisedReductions` duplication is
 minted only by accept-and-reduce flows (illness, fixture squeezes), so S4b
-needs an accept-and-reduce probe world before any edit. *S4c OPEN:* the
-canonicaliser's remaining derived writes (overlay repair minting, contract
-stamping) become derivations.
+needs an accept-and-reduce probe world before any edit. *S4c WORKING in part
+(2026-08-26, `931d36cb`):* both live write boundaries judge the DERIVED
+contract, and a cleared illness week recovers its in-season family — the
+measured forever-optional_week defect is closed at the judge. *S4c-2 OPEN
+(the writer half):* the stored declaration still gets stamped with derived
+modes (canonicaliser contract stamping; overlay contract writes; the
+LFA_SCAFFOLD_LEGV_WRITER flag covers only weekRebuild's two sites) — the
+stamp becomes harmless once every reader derives, and its retirement is
+S5's demolition. Non-in-season optional_week recovery is named debt beside
+it (subphase mode not reconstructible at the derivation).
 
 **S5 — Demolition + census.**
 Delete the retired representations; writer census around the owner to zero

@@ -2903,3 +2903,16 @@ bin world mints NO authorisedReductions — its two stored representations
 survive relaunch identically. The contract-reduction duplication the
 reassessment named belongs to accept-and-reduce worlds; S4b starts with
 that probe world, not with code.
+
+## S4b measured, S4c WORKING at the judge (2026-08-26)
+
+The accept-and-reduce census found the real duplication: TWO stored
+contract homes for one week (microcycle + overlay), divergent until boot
+copies the overlay's over the generation-authored one, and NEVER restored
+on illness clear — the healthy week judged as optional_week forever.
+S4c `931d36cb`: both live write boundaries now judge deriveWeekContract's
+answer, and the derivation stops inheriting optional_week as a family
+(recovered from the owned phase, in-season). Equivalence harness grew the
+acted bin+sick+relaunch+clear world — 20/0, chained. derived-week-lawfulness
+measured 0/16 dead on BOTH arms — dead-suite ledger. S4c-2 (retire the
+stamp) folds into S5.
