@@ -2821,3 +2821,39 @@ suspect is the component/mount layer (remount marker reset), not the model.
 Also probed and worth keeping: bin/move on the combined team+gym day REFUSE
 with the protected-anchor sentence — correct, and no ledger entry is
 appended on refusal.
+
+## 2026-08-26 — Sam's four rulings landed (R-226..R-229), and the builds they unlocked
+
+Registered `0e558035`. Same-day builds, each with its own commit + receipts:
+
+- **R-228 copy** (`c634b039`): retry promises retired from all three failure
+  sentences; the bin's "already cover this week's target" claim retired.
+- **Lighter-day honesty** (`434ff4e3`): the tired/sick softening is KEPT per
+  Sam and now works — the offer stands on the same predicate as the apply
+  (no more offered-then-refused), and the standing "Today is adjusted"
+  sentence is selected by the reversible-adjustment ledger, not by the
+  fact's existence. NOTE: Sam believed the lighter-day offer left the app
+  weeks ago; it is live (`home-week-readiness-lighter-offer`), he ruled
+  keep-and-fix when told.
+- **R-226 team-night content ask** (`be088bf8`): new one-vocabulary module
+  `rules/teamNightContentAsk`; move funnel asks swap-or-keep; keep detours
+  through the confirm-warning step. **Correction on the record: I told Sam
+  the composer already filtered TT-day picks — measured false.** The
+  composer reads `isTeamDay` only for the full-body shape; Bible :156 had no
+  enforcement anywhere. Generation-side consumption of the same module is
+  the natural follow-up (not yet ordered).
+- **R-227 pre-start days** (`da63367d`): visible but inert — day row note,
+  status card stands down, board rows frozen. `dayPredatesProgram` beside
+  the navigation bounds.
+- **R-229 one-owner plan**: `docs/ONE_OWNER_REBUILD_PLAN_2026-08-26.md`
+  (S1 equivalence harness → S2 re-gate retirement → S3 coach-override
+  outcome → S4 single entry → S5 demolition). S1 is this seat's next unit.
+
+Also this day: the audit regression flow pack (`cf56364a`, 4/4 green on
+simulator, `npm run qa:audit-flows`), finding #7 both halves closed
+(`789f8448`, `b9e44c72`).
+
+PROPOSED (functional, unsigned) copy awaiting Sam: "Starts <date>" status
+row clause; "Before your start date — nothing to do here."; the team-night
+ask title/body/routes/keep-warning; "That didn't work — nothing was
+logged."; "Logged how you're feeling — your sessions are unchanged...".
