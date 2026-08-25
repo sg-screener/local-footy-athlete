@@ -195,6 +195,7 @@ export default function HomeScreenV2() {
     closeGameModal,
     handleOpenGameDayActions,
     handleMoveGameDay,
+    handleMoveGameFromWeek,
     handleRemoveGameDay,
     handleSetByeWeek,
     rebuildModalVisible,
@@ -1606,6 +1607,10 @@ export default function HomeScreenV2() {
         hasFixture={weekHasFixture}
         onClose={() => setWeekEditVisible(false)}
         onBye={handleSetByeWeek}
+        onMoveFixture={() => {
+          setWeekEditVisible(false);
+          handleMoveGameFromWeek();
+        }}
         onAddFixture={() => {
           setWeekEditVisible(false);
           handleAddGameMode();
@@ -3308,6 +3313,8 @@ interface WeekEditSheetProps {
   hasFixture: boolean;
   onClose: () => void;
   onBye: () => Promise<boolean>;
+  /** Sam, 2026-08-26: bye → move the game → add a game, in that order. */
+  onMoveFixture: () => void;
   onAddFixture: () => void;
   onAway: () => void;
   /** R-218 — Manage sessions goes straight to the board. */
@@ -3320,6 +3327,7 @@ function WeekEditSheet({
   hasFixture,
   onClose,
   onBye,
+  onMoveFixture,
   onAddFixture,
   onAway,
   onOpenBoard,
@@ -3362,6 +3370,20 @@ function WeekEditSheet({
               disabled={!hasFixture || savingBye}
               onPress={() => { void applyBye(); }}
               testID="edit-week-bye"
+            />
+          ) : null}
+          {(phase === 'In-season' || phase === 'Pre-season') ? (
+            <SheetOption
+              /* Copy functional, PROPOSED — Sam ordered the button and the
+               * order; the words await his pass. */
+              label="Move the game to a different day"
+              sub={hasFixture
+                ? 'Pick its new day — the week reshapes around it.'
+                : 'No game this week to move'}
+              icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14" /><Path d="M12 5l7 7-7 7" /></Svg>}
+              disabled={!hasFixture}
+              onPress={onMoveFixture}
+              testID="edit-week-move-fixture"
             />
           ) : null}
           {(phase === 'In-season' || phase === 'Pre-season') ? (

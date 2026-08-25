@@ -1576,6 +1576,16 @@ export function useHomeScreen() {
     setMode({ type: 'moveGame', fromDate: gameModalDate, fromIdx });
   };
 
+  /** Sam, 2026-08-26: the WEEK ⋯ sheet gets its own move-game entry — the
+   *  day-card door needs the game's card tapped first, and on the weekly view
+   *  there was no route at all. Same picker mode, the week's own fixture. */
+  const handleMoveGameFromWeek = () => {
+    const fromIdx = weekDays.findIndex((day) =>
+      day.indicator === 'game' || day.workout?.workoutType === 'Game');
+    if (fromIdx < 0) return;
+    setMode({ type: 'moveGame', fromDate: weekDays[fromIdx].date, fromIdx });
+  };
+
   const handleRemoveGameDay = async () => {
     if (!gameModalDate) return;
     const removedDate = gameModalDate;
@@ -1749,6 +1759,7 @@ export function useHomeScreen() {
     handleOpenGameDayActions,
     handleLogGame,
     handleMoveGameDay,
+    handleMoveGameFromWeek,
     handleRemoveGameDay,
     handleSetByeWeek,
 

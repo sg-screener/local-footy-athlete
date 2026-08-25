@@ -1,0 +1,50 @@
+appId: com.localfootyathlete.app
+name: AUDIT - the weekly menu moves the game (Sam's phone finding)
+tags:
+  - e2e
+  - audit
+---
+# Sam, on his phone, 2026-08-26: "there's no way to move a game on weekly
+# view." The ⋯ sheet gains the entry (bye → MOVE game → add a game). This
+# proves the door on glass: open the week menu, tap Move, land on the picker,
+# tap Sunday, and the game is on Sunday.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# Switch to the WEEK view (the seed lands day-first), then the ⋯ menu.
+- tapOn:
+    id: "program-view-week"
+- tapOn:
+    id: "edit-week-button"
+- extendedWaitUntil:
+    visible:
+      id: "edit-week-move-fixture"
+    timeout: 10000
+# Sam's order: bye first, then move, then add.
+- assertVisible:
+    id: "edit-week-bye"
+- assertVisible:
+    id: "edit-week-add-fixture"
+- tapOn:
+    id: "edit-week-move-fixture"
+# The picker mode is live — tap Sunday to land the game there.
+- extendedWaitUntil:
+    visible: "Tap to move here"
+    timeout: 10000
+# In picker mode a target row renames to its fixture-target identity.
+# WEDNESDAY, deliberately: it sits mid-screen. Sunday lives below the fold
+# and an off-screen tap reports COMPLETED while hitting nothing (two failure
+# frames proved it) — a flow taps what a thumb can reach.
+- tapOn:
+    id: "fixture-target-2026-07-15"
+# The game day's state token is 'fixture' (dayStateToken), and Saturday
+# reverting to rest is the other half of the move.
+- extendedWaitUntil:
+    visible:
+      id: "day-row-wed-state-fixture"
+    timeout: 25000
+- assertVisible:
+    id: "day-row-sat-state-rest"
+- takeScreenshot: artifacts/audit/week-move-game
