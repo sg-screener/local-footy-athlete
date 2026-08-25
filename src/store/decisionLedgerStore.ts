@@ -274,8 +274,26 @@ export function appendDecisionEntry(args: {
   occurredAt?: string;
 }): AppendDecisionOutcome {
   if (ledgerReplayActive()) return { ok: true };
+  /**
+   * THE NEXT ID IS DERIVED FROM WHAT IS STORED, NEVER FROM MEMORY ALONE.
+   *
+   * `nextEntrySequence` is module state and restarts at 1 every launch, while
+   * the entries it numbers persist. Launch audit 2026-08-25, finding #6,
+   * measured on a real ledger: dl-1, dl-2, dl-3, relaunch, then dl-1 and dl-2
+   * AGAIN — duplicate ids in an append-only history that undo, replay and the
+   * reversal door all key on. The stored entries are the authority; the
+   * counter only ever moves forward past them.
+   */
+  const existing = useDecisionLedgerStore.getState().entries;
+  let maxStoredSequence = 0;
+  for (const stored of existing) {
+    const match = /^dl-(\d+)$/.exec(stored.id);
+    if (match) maxStoredSequence = Math.max(maxStoredSequence, Number(match[1]));
+  }
+  const sequence = Math.max(nextEntrySequence, maxStoredSequence + 1);
+  nextEntrySequence = sequence + 1;
   const entry: DecisionLedgerEntry = {
-    id: `dl-${nextEntrySequence++}`,
+    id: `dl-${sequence}`,
     occurredAt: args.occurredAt ?? new Date().toISOString(),
     provenance: args.provenance,
     decision: args.decision,

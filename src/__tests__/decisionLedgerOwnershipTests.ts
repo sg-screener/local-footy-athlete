@@ -187,6 +187,31 @@ run('appendDecisionEntry appends one typed decision with identity and time', () 
   assert(again.id !== entry.id, 'two appends shared one id');
 });
 
+run('entry ids never collide with hydrated history (the relaunch counter reset)', () => {
+  // LAUNCH AUDIT 2026-08-25, finding #6, measured on a real device ledger:
+  // dl-1, dl-2, dl-3, then a relaunch, then dl-1 and dl-2 AGAIN. The id was
+  // minted from a module-level counter that restarts every launch while the
+  // entries it numbers persist. This cell hydrates a ledger the way boot
+  // does — entries whose sequence numbers a fresh counter would re-mint —
+  // and appends through the door. Every id must stay unique.
+  resetLedger();
+  const hydrated: DecisionLedgerEntry[] = Array.from({ length: 250 }, (_, i) => ({
+    id: `dl-${i + 1}`,
+    occurredAt: '2026-08-25T00:00:00.000Z',
+    provenance: 'athlete_tap' as const,
+    decision: {
+      kind: 'plan_change' as const,
+      change: { kind: 'remove_session' as const, date: '2026-08-24', scope: 'whole_day' as const },
+    },
+  } as DecisionLedgerEntry));
+  const install = applyDecisionLedgerWrite({ next: hydrated, writer: 'harness' });
+  assert(install.ok, `hydration-shaped install refused: ${JSON.stringify(install)}`);
+  const appended = appendRemoveSession('2026-08-26');
+  const ids = decisionLedgerEntries().map((entry) => entry.id);
+  assert(new Set(ids).size === ids.length,
+    `duplicate ids after append onto hydrated history (appended ${appended.id})`);
+});
+
 run('every ledger write is on the tape, refused or not — counts and door labels, never dates', () => {
   resetLedger();
   appendRemoveSession('2026-08-08');
