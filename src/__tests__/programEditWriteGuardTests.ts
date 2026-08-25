@@ -254,8 +254,13 @@ console.log('\n[6] user-facing write-path sources import/use the hard-stop guard
     },
     {
       rel: 'src/utils/planChangeProducer.ts',
-      pattern: /programEditWriteGuard/,
-      label: 'plan-change preview uses shared write guard',
+      // RE-ANCHORED 2026-08-26 (R-229 S5): the producer's shared boundary is
+      // the RISK ASSESSOR (previewPlanChangeRisk consumes
+      // ProgramEditRiskAssessment); its direct write-guard use was retired
+      // when the assessor took the funnel. The suite was DARK when the anchor
+      // rotted — it is wired into the chain in the same commit as this line.
+      pattern: /ProgramEditRiskAssessment/,
+      label: 'plan-change preview judges through the shared risk assessment',
     },
   ];
   for (const { rel, pattern, label } of expectations) {

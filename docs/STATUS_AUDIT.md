@@ -2916,3 +2916,16 @@ answer, and the derivation stops inheriting optional_week as a family
 acted bin+sick+relaunch+clear world — 20/0, chained. derived-week-lawfulness
 measured 0/16 dead on BOTH arms — dead-suite ledger. S4c-2 (retire the
 stamp) folds into S5.
+
+## S5: census done, demolition gated on ONE migration (2026-08-26)
+
+Full close-out in docs/ONE_OWNER_REBUILD_PLAN_2026-08-26.md. Delivered this
+sitting: programEditWriteGuardTests un-darkened (re-anchored + wired,
+12/0; orphan ratchet 17/391 vs baseline 21). Named gate for the remaining
+demolition: the reduction bookkeeping
+(acceptedStateTransaction.contractForAcceptedWeek + reversible
+adjustments) still reads the STORED contract's authorisedReductions; once
+it derives from constraints (withRemovalLedger already exists at the
+judges), the contract stamp + LEGV flag deletion is mechanical. R-229 arc
+status: S1 ✓ S2 ✓ S3 ✓ S4a ✓ S4c-judge ✓ · open: S4c-2/S5 stamp+reduction
+retirement (one gated unit).

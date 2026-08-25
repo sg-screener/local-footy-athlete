@@ -84,6 +84,30 @@ Delete the retired representations; writer census around the owner to zero
 (the "no writer around the owner" instrument), memory-law: a caller census
 needs an absolute root.
 
+*S5 census DONE, demolition part-done (2026-08-26):*
+- Retired representations from the reassessment: the re-gate write-back
+  (S2 ✓ deleted), writeCoachOverride's discarded outcome (S3 ✓ deleted),
+  duplicated reduction records (**GATED, open** — see below).
+- `exposureContractV2` WRITERS (8 files) and raw `selectStoredWeekDeclaration`
+  READERS (12 sites) censused. Classification: presence-gates (safe:
+  sessionResolver:1491, acceptedStateTransaction:516), derive-wrapped
+  (safe: postGenerationConstraintValidation ×2, acceptedEffectiveWeek), and
+  RAW consumers in the reduction bookkeeping
+  (acceptedStateTransaction.contractForAcceptedWeek → authorisedReductions
+  reads at :1317/:1339/:2985, plus reversibleAdjustmentTransaction's 14
+  refs). **THE GATE:** retiring the contract stamp and the stored reduction
+  copies requires that bookkeeping to derive from constraints (the
+  machinery exists — derivedWeekContract.withRemovalLedger — installed at
+  the judges, not yet at the bookkeeping). One migration, then the stamp
+  deletion is mechanical. The LEGV writer flag stays un-landed for the same
+  reason (readers are not absence-ready; its own pricing said so).
+- Dark-suite work: programEditWriteGuardTests re-anchored (its producer
+  expectation had rotted to a retired symbol while dark) and WIRED into the
+  chain (12/0) — the orphan ratchet credits it (17 of 391, baseline 21).
+  coachActionsTests.ts remains the pre-existing orphan on both arms and
+  dies at import (stale fixture, `undefined.exclusions`) — dead-suite
+  ledger, its repair is its own unit.
+
 ## Sequencing and ownership
 
 S1 next in this seat (audit). S2 after S1's baseline is recorded. S3 can
