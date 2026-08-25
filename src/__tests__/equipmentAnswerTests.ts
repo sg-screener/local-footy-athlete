@@ -370,6 +370,23 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
   ok('the deleted footnote leaves no hidden Pressable or footNote style behind',
     !/Pressable|styles\.footNote|footNote:/.test(equipmentScreen));
 
+  // ── R-230 (Sam, 2026-08-26): bodyweight-only is NOT a supported athlete ──
+  // "Continuing with nothing ticked is a real answer" is retired: the step
+  // requires at least one piece of strength kit, and the disabled Continue
+  // states its reason (the layout's footerHelperText law — never a silent
+  // lock-out). The away/holiday window is the only bodyweight span, and it
+  // is not this screen's question.
+  ok('R-230: no strength kit ticked disables Continue',
+    /continueDisabled=\{tickedTags\.size === 0\}/.test(equipmentScreen),
+    'the equipment step completes bodyweight-only again');
+  ok('R-230: the disabled Continue states its reason',
+    /footerHelperText=\{tickedTags\.size === 0/.test(equipmentScreen) &&
+      /strength kit/.test(equipmentScreen),
+    'a silent disabled Continue is the dead-affordance defect #9 already paid for');
+  ok('R-230: the retired bodyweight-only sentence is gone',
+    !/nothing ticked is a real answer/.test(equipmentScreen)
+      || /RETIRED the "nothing ticked/.test(equipmentScreen));
+
   const editor = read('screens/profile/EquipmentEditorSheet.tsx');
   ok('NEVER lives on the profile editor (the tri-state cycle), not onboarding',
     /'never'/.test(editor) &&

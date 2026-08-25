@@ -6031,3 +6031,23 @@ as a question again.
 **Search words:** one owner, item 68, vertical composer, rebuild week, re-gate,
 writeCoachOverride, root B. · `WRITTEN` — the build is the largest open unit;
 slice plan owed before code.
+
+---
+
+**R-230** · *"they should not be allowed to use the app bodyweight only - it is for people that are looking to train properly for footy, i'm not interested in people doing bodyweight only - the only time bodyweight only should be okay is when they are away on holidays but i've already made a rule on that"* (Sam, 2026-08-26) · **BODYWEIGHT-ONLY IS NOT A SUPPORTED ATHLETE — ONBOARDING REQUIRES STRENGTH KIT.**
+
+Supersedes **R-083's PREMISE, not its mechanics**: R-083 ("if they want to
+train properly they'll sign up to a gym") told the app to accommodate a
+no-kit athlete by REMOVING un-performable patterns with disclosure. R-230
+closes the front door instead — the equipment step may not complete with no
+strength kit ticked ("Continuing with nothing ticked is a real answer" is
+retired). R-083's removal-with-disclosure behaviour remains correct ONLY
+inside the temporary away/holiday window (the away-equipment rulings, where
+kit is temporarily absent and the base program returns on the return date).
+R-083's `UNENFORCED` state stops mattering at onboarding scope: the world it
+governed permanently is no longer reachable.
+
+**Search words:** bodyweight only, no equipment, no kit, refuse onboarding,
+gym membership, sign up to a gym, away holiday equipment, R-083.
+· `WORKING` — gate at the equipment step, held by `test:onboarding-bounds`
+family cell (see commit).

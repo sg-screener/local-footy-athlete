@@ -68,8 +68,15 @@ type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Eq
  * (`rules/equipmentVocabulary`); the presets are seeds over that derived list
  * (`rules/equipmentLocationPresets`). Ticks only at onboarding: an untick is
  * simply HAVE = no. Permanent NEVER exclusions live on the profile equipment
- * surface. Continuing with nothing ticked is a real answer — bodyweight-only
- * programming, never a refusal.
+ * surface.
+ *
+ * R-230 (Sam, 2026-08-26) RETIRED the "nothing ticked is a real answer" line
+ * that used to end this header: bodyweight-only is not a supported athlete —
+ * "it is for people that are looking to train properly for footy" — so the
+ * step requires at least one piece of strength kit, with the reason stated on
+ * the disabled Continue (the layout's own footerHelperText law). The only
+ * legitimate bodyweight window is the temporary away/holiday equipment fact,
+ * which is not this screen's question.
  */
 export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, onDone }) => {
   // Seeded once on mount from the store's own named door.
@@ -218,7 +225,11 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}
-      continueDisabled={false}
+      /* R-230: no strength kit, no program. Copy functional, PROPOSED. */
+      continueDisabled={tickedTags.size === 0}
+      footerHelperText={tickedTags.size === 0
+        ? 'LFA programs real gym training — tick at least one piece of strength kit to continue.'
+        : undefined}
     >
       <View style={styles.section}>
         <Text variant="h1" color={colors.text.primary} style={styles.title}>
