@@ -2693,3 +2693,80 @@ to happen — that is how R-084 was re-asked verbatim on the day it was ruled.
 **MEASURED BEFORE COMMITTING, BOTH TIMES:** `test:ruling-registry` cell [3] is
 red at HEAD and **identical with or without my rows** — 7 re-asking questions,
 8 sites either way. Not mine, and not made worse.
+
+---
+
+# 2026-08-25 — FIX SESSION AFTER THE LAUNCH AUDIT (audit seat; Codex away)
+
+Sam ordered fixes started on the audit's findings. Landed, each with a
+born-red guard and both-arms blast radius in a detached worktree:
+
+- `bf8aef53` — forward_decision honored in generation (audit #1 root A).
+- `fb878e98` — Full reset wipes the histories (audit #2).
+- `574343f7` — ledger ids derive from stored entries (audit #6).
+- `ecc547ac` — reduction overshoot discloses, never blocks (root B slice 1).
+
+## ARCHITECTURE REASSESSMENT — the swap on an overlay-owned week (root B)
+
+Required by `.claude/rules/coach-and-plan-edits.md` before further code. Every
+claim below was MEASURED this session on the failing device world's storage
+snapshot, hydrated headlessly through the app's own boot (repro scripts in the
+session scratchpad `audit/`).
+
+**The failing journey:** move a session, relaunch, quick-swap an exercise on
+the moved session → "That change didn't go through", forever.
+
+**1. What is the current source of truth?** Four authorities compose one week
+at commit time: the base microcycle; the week overlay (boot-replay/fact
+authored); `dateOverrides` (the athlete's surface); and the §18 gateway's
+re-derived canonical week, which the re-gate loop writes BACK over the
+athlete's override in place (`programStore.ts:1044`, D2_PROBE's own subject).
+
+**2. How many representations of the athlete's edit exist?** The swap alone:
+the ledger decision; the dateOverride write; the overlay rewrite at re-gate;
+the frozen `authorisedReductions` records (duplicated twice in the stored
+contract); and the semantic projection the wrapper diffs.
+
+**3. Where can intent be reinterpreted?** (a) `writeCoachOverride`
+(`coachActions.ts`) DISCARDS the write outcome and reports success
+unconditionally — measured: `{ok:true}` returned, store unchanged. (b) The
+re-gate loop overwrites the acknowledged override with the gateway's
+re-derived day, whose canonicalisation restore-before-decide brings the
+block-recorded exercise back — the athlete's swap is reverted inside the
+commit that acknowledged it. (c) The coach-mutation wrapper then correctly
+observes "no material semantic change" and rolls back, laundering the reason
+to "try again". Every layer behaves defensibly; the composition is the lie.
+
+**4. Which layer should own the decision?** One composer. The boot's
+`rebaseAcceptedEffectiveWeek` composition (override > overlay > base,
+exclusions at read) is the proven candidate: it is what the athlete sees and
+what boot reproduces. Acceptance stores a decision; it does not author one
+(Sam's own signed sentence).
+
+**5. What simpler architecture removes representations?** A door appends its
+decision and re-derives the visible week through THE one composer, then
+publishes. The re-gate write-back loop (`programStore.ts:1013-1065`) and the
+frozen reduction ceilings become derivations, not stored rewrites. This IS
+item 68's vertical composer, entered through its smallest slice.
+
+**6. What should be retired rather than patched?** The in-place override
+rewrite at re-gate; `writeCoachOverride`'s discarded outcome; duplicate
+reduction records in stored contracts.
+
+**7. What tests prove the new boundary?** D6b (landed); "an acknowledged
+override write reads back byte-identical"; "a door-committed week equals the
+boot-derived week for the same ledger" — the equivalence the audit's #1
+finding asked for by name.
+
+**Parked until Sam picks item 68's direction. No further patches in this
+pipeline from this seat.**
+
+## The §18 guard family is substantially DEAD at import (extends audit dead-suite finding)
+
+Measured while attributing blast radius — each crashes before its first cell
+and reports nothing: `test:section18-v2`, `test:section18-gateway`,
+`test:craft-tier`, `test:week-rebuild`, `test:fixture-mutation-transaction`,
+`test:game-local-rebuild` (all `Cannot find module 'section18ProgramObservation'`,
+deleted in `3f97cc67` with importers left behind). `test:injury-authority`
+is alive but 2/23 red on the R-130 gender-gate fixture rot. The evaluator and
+gateway — the app's safety spine — are effectively unguarded today.
