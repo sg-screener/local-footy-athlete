@@ -122,16 +122,33 @@ function fixtureIdentityForWeek(args: {
   const fixtures = awaySpans.length === 0
     ? allFixtures
     : allFixtures.filter((candidate) => !dateIsInsideAwaySpan(candidate.date, awaySpans));
+  /* ── `optional_week` IS NEVER AN INHERITED FAMILY — R-229 S4c ────────────
+   *
+   * It is the illness wrapper's OWN answer (`deriveIllnessRecoveryWeekMode`
+   * is its sole author), so a stored `optional_week` reaching this branch is
+   * a stamped DERIVED value surviving in the declaration (the S4c-2 writer
+   * debt), not a phase family to carry. MEASURED 2026-08-26 on an acted
+   * world: severe illness → relaunch → CLEAR left both stored homes saying
+   * `optional_week core.min=0`, and this function faithfully carried it, so
+   * the healthy in-season game week could never judge as itself again. The
+   * family is recovered from the owned phase; a non-in-season stored
+   * optional_week keeps today's behaviour (its subphase mode is not
+   * reconstructible here) and stays named S4c-2 debt.
+   */
+  const storedFamilyMode: Section18WeekMode =
+    args.storedMode === 'optional_week' && ownedPhase.phase === 'In-season'
+      ? 'in_season_game_week'
+      : args.storedMode;
   const fixture = fixtures[0] ?? null;
   if (!fixture) {
     // No fixture: an in-season week becomes a bye, a pre-season week keeps its
     // phase mode. The stored mode's own phase family decides which.
-    const inSeason = args.storedMode.startsWith('in_season') ||
-      args.storedMode === 'practice_match_week';
-    const mode: Section18WeekMode = args.storedMode === 'in_season_game_week' ||
-      args.storedMode === 'practice_match_week'
+    const inSeason = storedFamilyMode.startsWith('in_season') ||
+      storedFamilyMode === 'practice_match_week';
+    const mode: Section18WeekMode = storedFamilyMode === 'in_season_game_week' ||
+      storedFamilyMode === 'practice_match_week'
       ? 'in_season_bye_build'
-      : args.storedMode;
+      : storedFamilyMode;
     // A pre-season week with no fixture has anchor state `none`, not `bye`:
     // `bye` is an IN-SEASON fact (the round exists and this team is not in it).
     return { anchorState: inSeason ? 'bye' : 'none', fixtureDays: [], mode };
@@ -152,9 +169,9 @@ function fixtureIdentityForWeek(args: {
   if (fixture.kind === 'practice_match') {
     return { anchorState: 'practice_match', fixtureDays, mode: 'practice_match_week' };
   }
-  const mode: Section18WeekMode = args.storedMode.startsWith('in_season')
+  const mode: Section18WeekMode = storedFamilyMode.startsWith('in_season')
     ? 'in_season_game_week'
-    : args.storedMode;
+    : storedFamilyMode;
   return { anchorState: 'game', fixtureDays, mode };
 }
 

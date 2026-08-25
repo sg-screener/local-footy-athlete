@@ -313,6 +313,77 @@ async function main(): Promise<void> {
     bareCalls.length === 0,
     `statement-position writeCoachOverride at line(s) ${bareCalls.map((c) => c.index + 1).join(', ')}`);
 
+  console.log('\n[8] S4c — the healthy week judges as itself again');
+  // The accept-and-reduce world, acted: bin, properly sick (week-scoped),
+  // relaunch, then CLEAR. Measured 2026-08-26: the sick week stamps
+  // optional_week/core.min=0 into both stored contract homes and the clear
+  // restores neither — so the write boundary must judge the DERIVED contract,
+  // whose fact-input being gone is exactly what makes the week healthy again.
+  installWorld();
+  const s4cBin = strengthDate();
+  if (s4cBin) {
+    await door({ type: 'bin_session', payload: { date: s4cBin, scope: 'whole_day' } });
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readinessActionForKind } = require('../utils/weekReadinessActions');
+    const sick = await quiet(() => executeProgramControlActionDurably(
+      readinessActionForKind('illness_severe', { anchorDateISO: WEEK, todayISO: TODAY }),
+      { visibleWeek: visibleWeekArg(), todayISO: TODAY } as never,
+    )) as { ok: boolean };
+    ok('CONTROL: the severe illness lands', sick.ok === true);
+    await relaunch();
+    const facts = (useProgramStore.getState() as never as {
+      acceptedMaterialContext?: { temporarySourceFacts?: Array<{ factId: string; factKind?: string; kind?: string }> };
+    }).acceptedMaterialContext?.temporarySourceFacts ?? [];
+    const illnessFact = facts.find((fact) => (fact.factKind ?? fact.kind) === 'illness');
+    ok('CONTROL: the illness fact survived the relaunch', !!illnessFact);
+    const clearedResult = await door({
+      type: 'clear_fatigue_status', scope: 'current_week',
+      payload: { modifierId: illnessFact?.factId ?? 'unknown', date: WEEK },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    });
+    ok('CONTROL: the clear lands', clearedResult.ok === true, clearedResult.message);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { selectStoredWeekDeclaration } = require('../rules/storedWeekDeclaration');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { deriveWeekContract } = require('../rules/derivedWeekContract');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { factsForWorld } = require('../rules/acceptedEffectiveWeek');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { liveAcceptedEffectiveWeekSurfaces } = require('../utils/liveEvaluationSurfaces');
+    const st = useProgramStore.getState() as never as Record<string, never>;
+    const stored = selectStoredWeekDeclaration({
+      overlay: (st.weekScopedOverlays as never as Record<string, unknown>)?.[WEEK],
+      coveringMicrocycle: st.currentMicrocycle,
+      weekStart: WEEK,
+      reader: 'weekDerivationEquivalenceTests',
+    });
+    ok('CONTROL: a stored declaration exists for the week', !!stored);
+    if (stored) {
+      // The stale store is a KNOWN S4c-2 debt (the writer half is still
+      // scaffold-flagged); the law this suite holds is that the DERIVED judge
+      // recovers the healthy identity from it.
+      console.log(`  (stored identity after clear: ${(stored as { identity?: { mode?: string } }).identity?.mode})`);
+      const derived = deriveWeekContract({
+        contract: stored,
+        weekStart: WEEK,
+        profile: (useProfileStore.getState() as never as { onboardingData?: unknown }).onboardingData,
+        markedDays: (st.acceptedMaterialContext as never as { markedDays?: Record<string, string> })?.markedDays ?? {},
+        userRemovalConstraints: st.userRemovalConstraints,
+        temporarySourceFacts: factsForWorld(liveAcceptedEffectiveWeekSurfaces()),
+      });
+      ok('the derived contract is no longer the sick week\'s once the illness is cleared',
+        derived.identity?.mode !== 'optional_week',
+        `derived identity: ${derived.identity?.mode}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const validatorSrc = (require('fs') as typeof import('fs')).readFileSync(
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      (require('path') as typeof import('path')).join(__dirname, '..', 'utils', 'postGenerationConstraintValidation.ts'), 'utf8');
+    ok('both live write boundaries judge the DERIVED contract',
+      (validatorSrc.match(/contract: deriveWeekContract\(\{/g) ?? []).length === 2,
+      'a validator hands the raw stored declaration to the gateway again');
+  }
+
   console.log('\n[7] S4 — the live week has ONE door');
   // The retired shape: hand-assembling the live pair. Candidate/what-if reads
   // passing their OWN state are views of the same machinery and stay legal;

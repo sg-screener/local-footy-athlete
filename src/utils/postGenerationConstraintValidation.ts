@@ -55,6 +55,8 @@ import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2
 import { liveAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import { requireSection18AcceptedWeek } from '../rules/section18AcceptedWeekGateway';
 import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
+import { deriveWeekContract } from '../rules/derivedWeekContract';
+import { factsForWorld } from '../rules/acceptedEffectiveWeek';
 
 // ─── Pure date / constraint predicates ───────────────────────────────────────
 
@@ -340,12 +342,32 @@ function assertLiveDateCandidateAgainstWeek(args: {
   // The candidate is deliberately last: an explicit edit may not displace
   // already-authorised sessions to bypass a safety frequency ceiling.
   workouts.push(args.workout);
+  /* ── R-229 S4c: THE WRITE BOUNDARY JUDGES THE DERIVED CONTRACT ───────────
+   *
+   * Leg (iii)'s missing validator install. MEASURED 2026-08-26 (S4b probe,
+   * acted world): severe illness stamps `optional_week core.min=0` into BOTH
+   * stored contract homes, a relaunch copies it over the generation-authored
+   * microcycle declaration, and CLEARING the illness restores neither — the
+   * stored declaration stays the sick week's forever. A validator reading it
+   * raw judges every later edit on a healthy week against `optional_week`.
+   * `deriveWeekContract` is the one owner already installed at the accepted
+   * reader and the replan publisher; the facts being gone IS the derivation's
+   * input, so the healthy week judges as itself again. */
+  const surfaces = liveAcceptedEffectiveWeekSurfaces();
   requireSection18AcceptedWeek({
-    contract,
+    contract: deriveWeekContract({
+      contract,
+      weekStart,
+      profile: args.context.profile,
+      markedDays: state.acceptedMaterialContext?.markedDays ?? {},
+      userRemovalConstraints: state.userRemovalConstraints,
+      workouts,
+      temporarySourceFacts: factsForWorld(surfaces),
+    }),
     workouts,
     weekStart,
     profile: args.context.profile,
-    surfaces: liveAcceptedEffectiveWeekSurfaces(),
+    surfaces,
   });
 }
 
@@ -458,12 +480,22 @@ export function assertLiveWeekOverlayWrite(overlay: WeekScopedWorkoutOverlay): v
       datedWorkouts.push({ date, workout });
     }
   }
+  // R-229 S4c: same derived judge as the date-candidate boundary above.
+  const overlaySurfaces = liveAcceptedEffectiveWeekSurfaces();
   requireSection18AcceptedWeek({
-    contract,
+    contract: deriveWeekContract({
+      contract,
+      weekStart: overlay.weekStart,
+      profile: context.profile,
+      markedDays: state.acceptedMaterialContext?.markedDays ?? {},
+      userRemovalConstraints: state.userRemovalConstraints,
+      workouts: effectiveWorkouts,
+      temporarySourceFacts: factsForWorld(overlaySurfaces),
+    }),
     workouts: effectiveWorkouts,
     weekStart: overlay.weekStart,
     profile: context.profile,
-    surfaces: liveAcceptedEffectiveWeekSurfaces(),
+    surfaces: overlaySurfaces,
   });
   assertTemporaryScheduleConstraintsHonoured({
     weekStart: overlay.weekStart,
