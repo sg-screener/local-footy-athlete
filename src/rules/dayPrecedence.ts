@@ -187,7 +187,26 @@ export function removalConstraintForComposedDay(args: {
   const { date, dayOfWeek } = args.composed;
   const speaking = (args.constraints ?? []).filter((constraint) =>
     constraint.status === 'active' &&
-    (constraint.targetDate === date || constraint.moveTargetDate === date));
+    (constraint.targetDate === date ||
+      /* ── R-229 S2: A LATER EDIT OUTRANKS THE MOVE'S STORED COPY ──────────
+       *
+       * A move constraint's placement half replays `movedWorkout` — a stored
+       * clone of the session AS IT WAS WHEN MOVED — onto the landing day, and
+       * `applyUserRemovalConstraintsToWeek` clears the day first. MEASURED
+       * 2026-08-26 (S2 probe, acted world): the athlete swapped an exercise
+       * on the landed session, the swap's override was WRITTEN and then
+       * invisible — this replay stamped the old copy back over it on every
+       * read, the transaction's diff saw "no programming change", and the
+       * whole edit rolled back. Launch-audit finding #1 root B.
+       *
+       * A `date_override` on the landing day is the athlete's NEWER decision
+       * about that day's content (the move transaction owns the target date's
+       * overrides at move time, so one present afterwards postdates the
+       * move). The placement therefore YIELDS to it; the constraint's other
+       * halves — emptying its source day — key on `targetDate` and are
+       * untouched. */
+      (constraint.moveTargetDate === date &&
+        args.composed.owner !== 'date_override')));
   if (speaking.length === 0) return null;
 
   const resolved = applyUserRemovalConstraintsToWeek({

@@ -987,30 +987,28 @@ function canonicaliseAcceptedBoundaryState(
       });
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
-        // D-2 PROBE (Sam's ruling: measure first, LR-27 method). An INSTRUMENT,
-        // not a gate: it prints only under D2_PROBE=1 and is inert otherwise.
-        // What it answers is the parked question — does this branch overwrite
-        // content the athlete authored, how often, and with what?
-        if (process.env.D2_PROBE === '1') {
-          const stored = (dateOverrides as Record<string, unknown>)[date] as
-            { id?: string; name?: string; exercises?: unknown[] } | null;
-          const replacement = after as
-            { id?: string; name?: string; exercises?: unknown[] } | null;
-          // eslint-disable-next-line no-console
-          console.log('[D2_PROBE] in_place_repair', JSON.stringify({
-            date,
-            action: after ? 'overwrite' : 'delete',
-            storedName: stored?.name ?? null,
-            storedRows: (stored?.exercises ?? []).length,
-            storedBytes: JSON.stringify(stored ?? null).length,
-            replacementName: replacement?.name ?? null,
-            replacementRows: (replacement?.exercises ?? []).length,
-            replacementBytes: JSON.stringify(replacement ?? null).length,
-            sameId: !!stored?.id && stored.id === replacement?.id,
-          }));
-        }
-        if (after) dateOverrides[date] = after;
-        else delete dateOverrides[date];
+        /* ── R-229 S2: THE RE-GATE NEVER REWRITES A STORED DECISION ─────────
+         *
+         * This branch used to write the gateway's re-derived day OVER the
+         * athlete's stored `dateOverride` ("the repair updates it in place"),
+         * and the D-2 probe that lived here was Sam's measure-first
+         * instrument for exactly that question. MEASURED 2026-08-26 (S2
+         * probe, acted world): the athlete swaps an exercise, the swap's own
+         * commit re-gates the week, this write regressed the override to the
+         * pre-swap day INSIDE the same transaction, the semantic diff then
+         * saw "no programming change" and rolled the whole edit back —
+         * launch-audit finding #1 root B, refusing every swap on a
+         * moved-session day, relaunch or not.
+         *
+         * The override IS the decision (north star: store decisions, derive
+         * everything else). A derived repair of an override-owned day is a
+         * DERIVATION and must behave like one: applied at read time (the
+         * resolver's injury/equipment adjustment lens already does this),
+         * never written over the athlete's signature. `derivedRepairOwnership`
+         * holds the two sides: the override survives and is what the screen
+         * shows; no override the athlete did not author appears.
+         */
+        continue;
       } else {
         overlayWorkouts[date] = after;
         if (!overlay) repairedBaseOwnedWeek = true;

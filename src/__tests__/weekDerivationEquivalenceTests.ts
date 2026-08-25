@@ -15,10 +15,10 @@
  * relaunch — the same instrument the exclusion-scope suite uses for its
  * relaunch cells.
  *
- * EXPECTED RED (M-pattern, like athlete-move-occupied M2): the cells naming
- * root B stay red until S2 retires the re-gate write-back. They are the
- * drift census; S2's success criterion is exactly these cells going green
- * WITHOUT the control cells moving.
+ * S2 PAID ITS RED (2026-08-26, same day): the re-gate write-back is retired
+ * and the move-placement copy yields to a later override (dayPrecedence),
+ * so every cell here is green and the suite joined the bible chain. A red
+ * here now means a SECOND rebuilder has crept back in.
  *
  * Run: npm run test:week-derivation-equivalence
  */
@@ -259,6 +259,14 @@ async function main(): Promise<void> {
         ok('the refused swap at least left the week untouched (no corruption)',
           fingerprint() === beforeSwap,
           `before: ${beforeSwap}\nafter:  ${fingerprint()}`);
+      } else {
+        ok('the landed swap actually changed the visible week',
+          fingerprint() !== beforeSwap, fingerprint());
+        const afterSwap = fingerprint();
+        await relaunch();
+        ok('and the landed swap SURVIVES the boot derivation byte-identical',
+          fingerprint() === afterSwap,
+          `door:   ${afterSwap}\nreplay: ${fingerprint()}`);
       }
     }
   }
