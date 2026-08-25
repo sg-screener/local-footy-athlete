@@ -6079,4 +6079,6 @@ equipment-gate sentence. All are SIGNED as shipped.
 
 **Search words:** team night picks, spread through the week, boring program,
 variety, back squat placement, lower-fatigue, R-226, R-093.
-· `WRITTEN` — placement build owed; copy half is `WORKING` (shipped + guards).
+· `WORKING` — built 2026-08-26 at the composer's R-093 pair assignment (the
+sorer B shape lands on the non-club strength day; identity permutation when
+there is nowhere to spread). Guard: week-derivation-equivalence [9].
