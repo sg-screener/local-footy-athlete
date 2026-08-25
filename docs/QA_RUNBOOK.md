@@ -40,6 +40,14 @@ E2E_METRO_URL=http://127.0.0.1:8081 scripts/dev-e2e/run-maestro-ios.sh \
    happens to be, note the branch in the report, and let doc commits ride
    feature branches into main at merge.
 
+## Before any session: the launch-audit regression pack
+
+`npm run qa:audit-flows` (with `npm run lfa:dev` running) — one PASS/FAIL
+line per flow, each proving one fixed finding from
+`docs/LAUNCH_READINESS_AUDIT_2026-08-25.md` on glass. The flow-to-finding
+map is `.maestro/audit/README.md`. A FAIL here means a fixed defect is back;
+triage it before spending device time on new ground.
+
 ## Audit order
 
 1. Program (seeds + golden flows exist — validates the loop)

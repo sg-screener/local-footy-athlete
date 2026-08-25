@@ -1,0 +1,42 @@
+appId: com.localfootyathlete.app
+name: AUDIT - a readiness report is acknowledged honestly, never in silence
+tags:
+  - e2e
+  - audit
+---
+# LAUNCH AUDIT 2026-08-25, FINDING #8 (the readiness half). A record-only
+# "bit tired" report was acknowledged with "Your week's adjusted to match" —
+# a claim about an adjustment that did not happen. Fixed 7174a6b6: the effect
+# clause is selected by the COMMITTED result (test:readiness-acknowledgment
+# holds the sentence table). This flow proves the on-glass half: the tap is
+# acknowledged (the old defect was silence), and a record-only report shows
+# the honest sentence, not the adjustment claim.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+- scrollUntilVisible:
+    element:
+      id: "home-life-fact-chips"
+    direction: DOWN
+    visibilityPercentage: 40
+- tapOn:
+    id: "home-tired-entry"
+- extendedWaitUntil:
+    visible:
+      id: "readiness-option-tired-today"
+    timeout: 10000
+- tapOn:
+    id: "readiness-option-tired-today"
+
+# ── ACKNOWLEDGED, AND HONESTLY ────────────────────────────────────────────
+# The success ack container carries the sentence. "Bit tired" is record-only
+# in this seed world, so the honest sentence is the logged one; the adjustment
+# clause may only appear on a result that changed the program.
+- extendedWaitUntil:
+    visible:
+      id: "home-week-readiness-ack-success"
+    timeout: 10000
+- assertVisible: "Got it — logged how you're feeling."
+- takeScreenshot: artifacts/audit/readiness-honest-ack

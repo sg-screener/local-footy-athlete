@@ -158,6 +158,7 @@ ruling that will vanish, and that is the trap Sam has actually been in.
 | one suite | `npm run test:<name>` |
 | the whole chain, without stopping at the first red | `scripts/sweep.sh <label>` — `npm run test:bible` stops at the first failing suite and hides the rest |
 | scenarios | `npm run test:scenarios`, and `npm run test:qa` for the full report |
+| the launch-audit regression flows, on the simulator | `npm run qa:audit-flows` — one PASS/FAIL line per flow; needs `npm run lfa:dev` first. Flows + their map to audit findings: `.maestro/audit/README.md` |
 
 ## Coach chat, program edits and plan adjustment
 

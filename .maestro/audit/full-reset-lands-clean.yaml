@@ -1,0 +1,62 @@
+appId: com.localfootyathlete.app
+name: AUDIT - full reset returns to onboarding, with an edit on the books
+tags:
+  - e2e
+  - audit
+---
+# LAUNCH AUDIT 2026-08-25, FINDING #2. "Full reset" left the next athlete
+# inheriting the previous athlete's edits: the decision ledger, block
+# selection history, workout log and journal notes survived the wipe. Fixed
+# fb878e98 (runFullReset clears all four; test:reset-coach section [13] holds
+# the store list).
+#
+# WHAT THIS FLOW PROVES, AND WHAT IT LEAVES TO THE SUITE. On glass: an edit
+# is made (so there is a ledger entry to inherit), the reset is taken through
+# the athlete's own control and its native confirm, and the app lands back on
+# onboarding. That the stores are actually empty is the unit suite's claim —
+# a flow asserting store internals would just be a weaker copy of it.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── AN EDIT EXISTS TO INHERIT ─────────────────────────────────────────────
+- assertVisible:
+    id: "day-timeline-part-strength"
+# R-218: plan changes enter from the selected session card's plan-options
+# dots ("make-change-link" is the retired pre-board entry; learned by running).
+- tapOn:
+    id: "home-plan-options"
+- tapOn:
+    id: "session-delete-action-.*"
+- extendedWaitUntil:
+    visible:
+      id: "session-delete-scope-.*-confirm-whole-day"
+    timeout: 10000
+- tapOn:
+    id: "session-delete-scope-.*-confirm-whole-day"
+- runFlow:
+    when:
+      visible:
+        id: "plan-change-done"
+    commands:
+      - tapOn:
+          id: "plan-change-done"
+
+# ── THE RESET, THROUGH THE ATHLETE'S OWN CONTROL ──────────────────────────
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-full-reset"
+    direction: DOWN
+    visibilityPercentage: 40
+- tapOn:
+    id: "profile-full-reset"
+# The native Alert's destructive button, tapped by its exact label.
+- tapOn: "Reset everything"
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-welcome-cta"
+    timeout: 30000
+- takeScreenshot: artifacts/audit/full-reset-lands-clean

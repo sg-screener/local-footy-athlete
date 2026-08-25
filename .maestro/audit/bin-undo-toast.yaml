@@ -1,0 +1,70 @@
+appId: com.localfootyathlete.app
+name: AUDIT - binning a session raises the undo toast, and undo brings it back
+tags:
+  - e2e
+  - audit
+---
+# LAUNCH AUDIT 2026-08-25, FINDING #7b. Sam: across every edit in the audit
+# (bin, drag-move, add, swap) no undo toast ever appeared — a wrong bin had no
+# one-tap way back. The model chain was proven WORKING headlessly on
+# 2026-08-26 (probe: bin appends plan_change, phraseFor maps it, undo restores
+# the week byte-identical); the silence keyed on finding #6's
+# relaunch-duplicated ledger ids, fixed 574343f7. This flow is the on-glass
+# proof: toast visible after the sheet closes, undo tap, session back.
+#
+# TWO THINGS LEARNED BY RUNNING (2026-08-26):
+# - A day with ONE deletable scope SKIPS the "remove what?" list and lands on
+#   its confirm — so the tap below matches scope OR confirm and a conditional
+#   handles whichever appears (same lesson lower-body-deletion.yaml recorded).
+# - A bin that reduces the week's target shows a RESULT sheet with the
+#   disclosure ("…reduced at your request") instead of auto-closing. The
+#   toast's six-second life runs behind that sheet, so Done is tapped the
+#   moment it exists — this flow measures whether an athlete who reads the
+#   sheet at human speed still has an undo, and a FAIL here is the product
+#   answer, not a harness flake.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── BIN TODAY, THE ATHLETE'S WAY ──────────────────────────────────────────
+- assertVisible:
+    id: "day-timeline-part-strength"
+# R-218: plan changes enter from the selected session card's plan-options
+# dots ("make-change-link" is the retired pre-board entry; learned by running).
+- tapOn:
+    id: "home-plan-options"
+- tapOn:
+    id: "session-delete-action-.*"
+# THIS DAY OFFERS ONE DELETABLE SCOPE, so the sheet SKIPS the "remove what?"
+# list and lands directly on its confirm ("Yes, remove it") — learned by
+# running, same lesson lower-body-deletion.yaml recorded. Wait for the
+# confirm's exact id; a wildcard that also matches the scope spelling commits
+# a step early and races everything after it.
+- extendedWaitUntil:
+    visible:
+      id: "session-delete-scope-.*-confirm-whole-day"
+    timeout: 10000
+- tapOn:
+    id: "session-delete-scope-.*-confirm-whole-day"
+# The disclosure result sheet, when the bin reduced the week's target.
+- runFlow:
+    when:
+      visible:
+        id: "plan-change-done"
+    commands:
+      - tapOn:
+          id: "plan-change-done"
+
+# ── THE TOAST IS THERE, AND IT IS THE WAY BACK ────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "undo-toast"
+    timeout: 8000
+- takeScreenshot: artifacts/audit/bin-undo-toast
+- tapOn:
+    id: "undo-toast-action"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline-part-strength"
+    timeout: 20000

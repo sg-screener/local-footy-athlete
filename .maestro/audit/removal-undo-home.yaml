@@ -1,0 +1,92 @@
+appId: com.localfootyathlete.app
+name: AUDIT - a removed exercise is findable in My Status, where the app promised
+tags:
+  - e2e
+  - audit
+---
+# LAUNCH AUDIT 2026-08-25, FINDING #7a. The removal confirmation says "You can
+# change or undo this in My Status", and on Sam's device My Status said
+# "0 ACTIVE" — the promised undo home did not exist. Fixed 789f8448: the
+# status listing selects STANDING decisions (any remaining effect, started or
+# not), so the row is there the moment the athlete decides.
+#
+# THE FUTURE-DAY NUANCE IS GUARDED BY THE UNIT SUITE, NOT HERE. The sharpest
+# case (remove Thursday's exercise on Tuesday) needs a future day's session,
+# and `test:exercise-exclusions` section [12] holds it. This flow proves the
+# PROMISE end to end on glass: remove → the app names My Status → My Status
+# shows the row with its restore control live.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── REMOVE AN EXERCISE, THE ATHLETE'S WAY ─────────────────────────────────
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+# The strength list may already be OPEN — an unconditional toggle tap CLOSES
+# it (learned by running; exclusion-restore-undo.yaml guards the same way).
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+# NON-VACUITY without pinning a NAME: the generator chooses the exercises, so
+# a named row ("…-back-squat") is red whenever it minted a different one —
+# learned by running this. Any strength row proves the list is there; the
+# delete below may land on any exercise row, which is all the promise-proof
+# needs (every removal owns a "left out" Status row).
+- assertVisible:
+    id: "session-strength-position-.*"
+# The remove ingress is the per-row trash (`quick-remove-exercise-…`) since
+# Sam's 2026-08-19 hub rework; `component-delete-action-…` now names the
+# PICKER path rows, which this flow does not travel. Learned by running.
+- tapOn:
+    id: "quick-remove-exercise-.*"
+# The quick-remove lands on "Replace it?" first (decide_removal). Declining
+# the replacement is the removal path; the buttons carry labels, not ids.
+- extendedWaitUntil:
+    visible: "No, remove it"
+    timeout: 10000
+- tapOn: "No, remove it"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-scope-.*-block"
+    timeout: 10000
+- tapOn:
+    id: "component-delete-scope-.*-block"
+# The "Saved" result sheet carries the promise this flow exists to hold:
+# "…You can change or undo this in My Status."
+- extendedWaitUntil:
+    visible: ".*You can change or undo this in My Status.*"
+    timeout: 15000
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+
+# ── THE PROMISED HOME HOLDS THE DECISION ──────────────────────────────────
+- tapOn:
+    id: "tab-coach"
+- tapOn:
+    id: "modifiers-strip-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+# The row's title is Sam's signed phrase "<Exercise> left out". Text selectors
+# are regexes matched whole, so the wildcard carries whichever exercise the
+# generator minted.
+- assertVisible: ".*left out.*"
+- takeScreenshot: artifacts/audit/removal-undo-home
+
+# ── AND ITS RESTORE CONTROL IS LIVE, NOT DECORATION ───────────────────────
+- tapOn: ".*left out.*"
+- assertNotVisible:
+    id: "coach-note-actions-not-yet"
