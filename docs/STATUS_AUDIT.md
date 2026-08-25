@@ -2929,3 +2929,14 @@ it derives from constraints (withRemovalLedger already exists at the
 judges), the contract stamp + LEGV flag deletion is mechanical. R-229 arc
 status: S1 ✓ S2 ✓ S3 ✓ S4a ✓ S4c-judge ✓ · open: S4c-2/S5 stamp+reduction
 retirement (one gated unit).
+
+## R-229 ARC COMPLETE (2026-08-26, `810e86c8`)
+
+S5's gated migration delivered: linked-reduction reads derive (both raw
+pairs), the canonicalise microcycle stamp is deleted, the LEGV scaffold is
+demolished un-landed. Measurement corrected the architecture story
+mid-build: a mid-illness boot AUTHORS optional_week (regeneration under
+live facts — legitimate), so one-owner's property is CONVERGENCE (post-
+clear boot re-authors healthy; S4c judges cover the between-boot window) —
+now held by the harness's S5 cell (21/0, chained). Launch-audit #1 is
+fully closed in code; Sam's glass check remains the L10 close.

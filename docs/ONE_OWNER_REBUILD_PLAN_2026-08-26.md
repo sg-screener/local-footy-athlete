@@ -108,6 +108,18 @@ needs an absolute root.
   dies at import (stale fixture, `undefined.exclusions`) — dead-suite
   ledger, its repair is its own unit.
 
+## ARC COMPLETE — 2026-08-26
+
+S1 ✓ (harness, chained) · S2 ✓ (re-gate write-back + move-copy yield) ·
+S3 ✓ (outcomes flow) · S4a ✓ (one live-week door) · S4c ✓ (derived judges +
+family recovery) · S5 ✓ (`810e86c8`: reduction reads derive; microcycle
+stamp deleted; LEGV scaffold demolished un-landed with its reasoning on the
+record). Settled architecture statement: the stored declaration is
+re-authored by boot regeneration under live facts; judges DERIVE between
+boots; the store CONVERGES at the next boot (held by the S5 cell). Named
+residue, none gating: non-in-season optional_week family recovery;
+coachActionsTests.ts orphan; the dead-suite ledger.
+
 ## Sequencing and ownership
 
 S1 next in this seat (audit). S2 after S1's baseline is recorded. S3 can
