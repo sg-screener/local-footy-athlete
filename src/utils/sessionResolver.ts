@@ -388,6 +388,26 @@ export function programWeekOffsetBounds(
   };
 }
 
+/**
+ * R-227 (Sam, 2026-08-26, launch-audit finding #12): days before the program's
+ * own start are VISIBLE BUT INERT — *"grey them out - shows the athlete they
+ * are there without being able to do something in the past."* A Tuesday
+ * signup's first week keeps its Monday-Sunday shape, and its Monday (before
+ * the app held a program at all) presents nothing startable.
+ *
+ * The anchor is the program's OWN dated span — the same `startDate` the
+ * navigation bounds above read — so the two cannot disagree about where the
+ * program begins.
+ */
+export function dayPredatesProgram(
+  dateISO: string,
+  program: Pick<TrainingProgram, 'startDate'> | null | undefined,
+): boolean {
+  const start = program?.startDate?.slice(0, 10);
+  if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return false;
+  return dateISO.slice(0, 10) < start;
+}
+
 export function clampProgramWeekOffset(
   requestedOffset: number,
   bounds: ProgramWeekOffsetBounds,

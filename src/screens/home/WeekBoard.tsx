@@ -46,6 +46,9 @@ export interface WeekBoardRow {
   readonly short: string;
   readonly dayNumber: string;
   readonly isToday: boolean;
+  /** R-227: the date is before the program's start — drawn dimmed, with no
+   *  add, no bin and no drag. Visible but inert (Sam, 2026-08-26). */
+  readonly preProgram?: boolean;
   readonly board: WeekBoardDay;
 }
 
@@ -150,12 +153,16 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
             <Text style={[styles.weekday, row.isToday && styles.weekdayToday]}>{row.short}</Text>
             <Text style={styles.dayNumber}>{row.dayNumber}</Text>
           </View>
-          <View style={styles.boxes} onLayout={rememberBoxesContainer(row.date)}>
+          <View
+            style={[styles.boxes, row.preProgram && { opacity: 0.45 }]}
+            onLayout={rememberBoxesContainer(row.date)}
+          >
             {row.board.boxes.map((box) => (
               <BoardBox
                 key={box.id}
                 box={box}
                 date={row.date}
+                frozen={!!row.preProgram}
                 onLayout={rememberBox(row.date, box.id)}
                 onAdd={onAdd}
                 onRemove={onRemove}
@@ -177,15 +184,21 @@ const DROP_REFUSAL_COPY: Record<string, string> = {
   day_full: "That day is full — two sessions is the most.",
 };
 
-function BoardBox({ box, date, onLayout, onAdd, onRemove, onDrop }: {
+function BoardBox({ box, date, frozen = false, onLayout, onAdd, onRemove, onDrop }: {
   box: WeekBoardBox;
   date: string;
+  /** R-227: a pre-start day's box renders, and does nothing. */
+  frozen?: boolean;
   onLayout: (event: LayoutChangeEvent) => void;
   onAdd: (date: string) => void;
   onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
   onDrop: (fromDate: string, boxId: string, px: number, py: number) => void;
 }) {
   if (box.kind === 'empty') {
+    if (frozen) {
+      // R-227: no add doorway before the program's start — an empty label only.
+      return <View onLayout={onLayout} style={[styles.box, styles.emptyBox]} />;
+    }
     return (
       <Pressable
         onPress={() => onAdd(date)}
@@ -204,8 +217,8 @@ function BoardBox({ box, date, onLayout, onAdd, onRemove, onDrop }: {
 
   /* A FIXTURE IS A LABEL HERE. It carries no bin and no drag: the game moves
    * and clears through its own door, which this board does not replace. */
-  const removable = box.kind !== 'game';
-  const draggable = box.kind !== 'game';
+  const removable = box.kind !== 'game' && !frozen;
+  const draggable = box.kind !== 'game' && !frozen;
 
   /* THE BOX FOLLOWS THE FINGER ON THE UI THREAD. Only the DROP crosses back to
    * JS — a drag that re-rendered the week on every frame would fight the list

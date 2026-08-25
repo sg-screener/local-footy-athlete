@@ -79,6 +79,7 @@ import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, readinessSta
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
 import { useProgramStore } from '../../store/programStore';
+import { dayPredatesProgram } from '../../utils/sessionResolver';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -551,11 +552,12 @@ export default function HomeScreenV2() {
     short: day.short,
     dayNumber: String(Number(day.date.slice(8, 10))),
     isToday: day.isToday,
+    preProgram: dayPredatesProgram(day.date, currentProgram),
     board: buildWeekBoardDay(
       visibleWeek.days.find((visible) => visible.date === day.date)
         ?? { date: day.date, parts: [] } as any,
     ),
-  })), [visibleWeek, weekDays]);
+  })), [currentProgram, visibleWeek, weekDays]);
 
   /* ⚠ **THE SAME DOORS THE RETIRED MENU ROWS RAISED — SAM: *"follow the same
    * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
@@ -686,6 +688,7 @@ export default function HomeScreenV2() {
         key={day.date}
         day={day}
         visibleDay={visibleDay}
+        preProgram={dayPredatesProgram(day.date, currentProgram)}
         isSelected={isSelected}
         isMoveSource={isMoveSource}
         isMoveTarget={isMoveTarget}
@@ -1280,7 +1283,9 @@ export default function HomeScreenV2() {
             plan-options control. Game days keep their fixture controls.
             The open workout still reuses this visual component for its narrower
             Equipment / Injury / Add set. */}
-        {isNormal && dayFirst && (
+        {isNormal && dayFirst
+          && !dayPredatesProgram(weekDays[selectedIdx]?.date ?? todayISOLocal(), currentProgram)
+          && (
           <SessionChangeHub
             testID="home-change-card"
             /* ── ONE GAP FOR THE WHOLE DAY SCREEN ──
@@ -1914,6 +1919,8 @@ interface DayRowProps {
   feedbackReceipts: string[];
   /** The day's OWN work is logged — see the note at the call site. */
   sessionLogged?: boolean;
+  /** R-227: the date is before the program's start — visible but inert. */
+  preProgram?: boolean;
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
   /**
    * The day's component timeline, rendered inside the expanded block above the
@@ -2162,6 +2169,8 @@ interface DayStateLeavesProps {
   feedbackReceipts: string[];
   /** The day's OWN work is logged — see the note at the call site. */
   sessionLogged?: boolean;
+  /** R-227: the date is before the program's start — visible but inert. */
+  preProgram?: boolean;
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
   stateToken: string;
 }
@@ -2382,6 +2391,7 @@ function DayRow({
   hasWorkout, isGame, normal, onPress, onViewWorkout, onPlanOptions, onAddSession, onFinishTeam,
   onLogGame, onGameDayActions, staleWarning,
   feedbackReceipts, sessionLogged, progressionReceipts, timeline, dayShape = false,
+  preProgram = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
@@ -2606,6 +2616,7 @@ function DayRow({
         !dayShape && cardSelected && styles.weekDayCardToday,
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
+        preProgram && { opacity: 0.45 },
         dayShape && emphasized && styles.dayRowCalm,
       ]}
     >
@@ -2643,7 +2654,13 @@ function DayRow({
               />
             )}
             {timeline}
-            {isCompleted ? (
+            {/* R-227: a pre-start day is visible but INERT — no Start, no Log,
+                no Add. Copy functional, PROPOSED. */}
+            {preProgram ? (
+              <Text style={styles.expandedMeta} testID="day-pre-program-note">
+                Before your start date — nothing to do here.
+              </Text>
+            ) : isCompleted ? (
               <>
                 <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
                   <MaterialCommunityIcons
