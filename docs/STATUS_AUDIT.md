@@ -2857,3 +2857,29 @@ PROPOSED (functional, unsigned) copy awaiting Sam: "Starts <date>" status
 row clause; "Before your start date — nothing to do here."; the team-night
 ask title/body/routes/keep-warning; "That didn't work — nothing was
 logged."; "Logged how you're feeling — your sessions are unchanged...".
+
+## R-229 S1+S2 — the last audit defect (#1 root B) is WORKING (2026-08-26)
+
+S1 `5caf89f3`/`3d7032d0`: test:week-derivation-equivalence, acted in-season
+worlds, reproduced root B headlessly — and proved the relaunch was
+INCIDENTAL: a swap on a moved-onto day failed identically pre-relaunch.
+
+S2 `622ef5d5`: two writers retired. (a) The re-gate loop's overwrite of
+athlete dateOverrides (canonicaliseAcceptedBoundaryState) — with its D-2
+probe, question answered. (b) The REAL root-B mechanism, found by probe
+chain (scratchpad audit/probe-s2-boot-mutation.ts): the move constraint's
+placement half replays `movedWorkout` — a stored clone — onto the landing
+day via removalConstraintForComposedDay's `moveTargetDate` arm, clearing
+the day first; the athlete's swap override was WRITTEN (direct-write probe:
+{ok:true}, override held Goblet Squat) and INVISIBLE (resolved source
+'template', old rows) — the copy stamped it out on every read, the
+coachMutationTransaction diff saw 'no programming change'
+(route coach_mutation_no_material_semantic_change) and rolled the edit
+back. Fix: the placement yields to a date_override on the landing day.
+
+Harness 11/0 incl. swap-survives-relaunch; suite joined the bible chain.
+Blast radius: ten neighbouring suites at exact baselines (list in the S2
+commit). Sam's device case (audit #1 root B) is ready for his glass check.
+S3 (writeCoachOverride outcome honored) and S4/S5 remain per the plan —
+S3's defect class is real (the discarded {ok:false} shape was measured
+here), S4 consolidates, S5 demolishes.
