@@ -78,9 +78,14 @@ export function buildReadinessAcknowledgment(
       message: "Got it — logged how you're feeling.",
     };
   }
+  /**
+   * R-228a (Sam, 2026-08-26): a failure says it didn't work and stops. The
+   * retired clause promised that "another go in a moment" would land — a
+   * claim about the future no committed result can back.
+   */
   return {
     tone: 'error',
-    message: "Couldn't log that just now — give it another go in a moment.",
+    message: "That didn't work — nothing was logged.",
   };
 }
 
@@ -190,9 +195,10 @@ export function buildScheduleAcknowledgment(
         : "Got it — logged that you're short on time today.",
     };
   }
+  // R-228a: the failure states itself; no retry promise.
   return {
     tone: 'error',
-    message: "That didn't save — your week is unchanged. Give it another go in a moment.",
+    message: "That didn't save — your week is unchanged.",
   };
 }
 
@@ -214,7 +220,8 @@ export function buildRolloverAcknowledgment(
   if (!result?.refusal) return null;
   return {
     tone: 'error',
-    message: "Your next training block couldn't be built — your current weeks are "
-      + 'unchanged. Try again in a moment.',
+    // R-228a: no retry promise here either — the refusal claims only what is
+    // true (the current weeks stand untouched).
+    message: "Your next training block couldn't be built — your current weeks are unchanged.",
   };
 }

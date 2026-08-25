@@ -1204,9 +1204,10 @@ run('regression', '17 existing alternative pull exposure avoids duplicate repair
   assert(after.visibleWorkouts.filter((workout) =>
     workout.strengthIntent?.effectivePatterns.includes('pull')).length === 1,
   'unnecessary duplicate pull was created');
-  assert(result.message ===
-    'Upper Pull was removed. Your remaining sessions already cover this week’s target.',
-  `message=${result.message}`);
+  // R-228c (Sam, 2026-08-26): the bin result no longer claims the week is
+  // still covered — the removal states itself and stops.
+  assert(result.message === 'Upper Pull was removed.',
+    `message=${result.message}`);
 });
 
 run('regression', '18 CORE conditioning stacks onto compatible strength before reduction', () => {

@@ -3175,10 +3175,11 @@ function athleteDeletionDoneMessage(
     return `${removed} This week’s ${target} has been reduced at your request.${residual}`;
   }
   if (outcome.kind === 'already_satisfied') {
-    const base = outcome.affectedMetric === 'session'
-      ? removed
-      : `${removed} Your remaining sessions already cover this week’s target.`;
-    return `${base}${residual}`;
+    // R-228c (Sam, 2026-08-26): a bin result never claims the week is still
+    // covered — "that's just untrue". The removal states itself and stops;
+    // the reduced-target disclosure above stands, because it names a change
+    // the app actually recorded.
+    return `${removed}${residual}`;
   }
   const day = outcomeWeekday(outcome.destinationDate);
   if (patterns.has('squat') || patterns.has('hinge')) {

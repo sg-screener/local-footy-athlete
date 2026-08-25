@@ -16,7 +16,11 @@ process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
-import { buildReadinessAcknowledgment } from '../utils/readinessAcknowledgment';
+import {
+  buildReadinessAcknowledgment,
+  buildRolloverAcknowledgment,
+  buildScheduleAcknowledgment,
+} from '../utils/readinessAcknowledgment';
 
 let passes = 0;
 const failures: string[] = [];
@@ -63,6 +67,20 @@ run('a failed report is acknowledged as an error, never silence', () => {
   const ack = buildReadinessAcknowledgment({ ok: false });
   assert(ack && ack.tone === 'error' && ack.message.trim().length > 0,
     'a failure must be acknowledged honestly');
+});
+
+run('R-228a — no failure sentence promises that a retry will work', () => {
+  // Sam, 2026-08-26: a failed save says it didn't work and stops. "Give it
+  // another go in a moment" promised a future no committed result can back.
+  const sentences = [
+    buildReadinessAcknowledgment({ ok: false })?.message,
+    buildScheduleAcknowledgment({ ok: false }, 'short_on_time').message,
+    buildRolloverAcknowledgment({ rolledOver: false, refusal: { code: 'x' } })?.message,
+  ];
+  for (const sentence of sentences) {
+    assert(sentence && !/another go|try again/i.test(sentence),
+      `a failure sentence still promises a retry: "${sentence}"`);
+  }
 });
 
 console.log(`\n${passes} passed, ${failures.length} failed`);
