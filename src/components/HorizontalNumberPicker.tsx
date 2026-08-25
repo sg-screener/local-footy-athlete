@@ -47,30 +47,57 @@ export function HorizontalNumberPicker({
     Math.min(values.length - 1, Math.max(0, index))
   ), [values.length]);
 
+  /* ── ONE SETTLE OWNER (Sam, 2026-08-26: "super glitchy") ──────────────────
+   *
+   * Three snap mechanisms used to fight over every flick: native
+   * `snapToInterval` settled the wheel, then `settleFromScroll` re-scrolled
+   * to the same offset (a second animated settle, which itself fired another
+   * momentum-end), and then the `value`-sync effect saw the `onChange` echo
+   * come back through props and JUMPED the list a third time without
+   * animation. Native snapping is now the ONLY physics owner: scroll-end
+   * handlers are pure READS that report the landed value, the sync effect
+   * ignores the picker's own echo (`lastReported`), and programmatic scrolls
+   * happen only for a tap or a genuinely external value change. */
+  const lastReported = useRef(value);
+
+  const reportIndex = useCallback((index: number) => {
+    if (values.length === 0) return;
+    const nextValue = values[boundedIndex(index)];
+    if (nextValue === lastReported.current) return;
+    lastReported.current = nextValue;
+    onChange(nextValue);
+  }, [boundedIndex, onChange, values]);
+
   const selectIndex = useCallback((index: number, animated: boolean) => {
     if (values.length === 0) return;
     const nextIndex = boundedIndex(index);
-    const nextValue = values[nextIndex];
     listRef.current?.scrollToOffset({
       offset: nextIndex * ITEM_WIDTH,
       animated,
     });
-    if (nextValue !== value) onChange(nextValue);
-  }, [boundedIndex, onChange, value, values]);
+    reportIndex(nextIndex);
+  }, [boundedIndex, reportIndex, values.length]);
 
   const settleFromScroll = useCallback((
     event: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    selectIndex(numberPickerIndexFromOffset(offsetX, ITEM_WIDTH, values.length), true);
-  }, [selectIndex, values.length]);
+    // READ ONLY — `snapToInterval` has already parked the wheel on a slot.
+    reportIndex(numberPickerIndexFromOffset(offsetX, ITEM_WIDTH, values.length));
+  }, [reportIndex, values.length]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setViewportWidth(event.nativeEvent.layout.width);
   }, []);
 
+  const centeredOnce = useRef(false);
   useEffect(() => {
     if (viewportWidth <= 0) return;
+    // The picker's own report echoing back through props is not a reason to
+    // move the wheel the athlete just parked.
+    if (centeredOnce.current && value === lastReported.current) return;
+    centeredOnce.current = true;
+    lastReported.current = value;
     const index = boundedIndex(value - min);
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({

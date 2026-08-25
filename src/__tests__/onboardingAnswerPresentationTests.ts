@@ -649,6 +649,21 @@ console.log('\n[13] Training availability asks about gym access, not total train
     !/COMMITMENT_OPTIONS|<SelectableTile|styles\.grid|styles\.card/.test(commitment));
   ok('the retired rail-and-thumb slider is absent from gym availability',
     !/<DiscreteSlider|showStepLabels/.test(commitment));
+  // ── R-232-candidate (Sam, 2026-08-26: the wheel was "super glitchy") ──
+  // ONE settle owner: native snapToInterval parks the wheel; the scroll-end
+  // handlers are pure READS (no scrollToOffset), and the value-sync effect
+  // ignores the picker's own onChange echo. Three competing settles was the
+  // glitch; these anchors red if any one of them comes back.
+  ok('the scroll-end settle is a pure READ — native snapping owns the physics',
+    (() => {
+      // `read()` strips comments, so the anchor is the CODE: the body reports
+      // the landed index and never scrolls — native snapping owns the physics.
+      const body = /const settleFromScroll = useCallback\(([\s\S]*?)\}, \[/.exec(numberPicker)?.[1] ?? '';
+      return body.length > 0 && /reportIndex\(/.test(body) && !/scrollToOffset/.test(body);
+    })());
+  ok('the value-sync effect skips the picker\'s own echo',
+    /lastReported/.test(numberPicker)
+      && /value === lastReported\.current\) return;/.test(numberPicker));
   ok('the number picker snaps each value into the centre',
     /Animated\.FlatList/.test(numberPicker)
       && /snapToInterval=\{ITEM_WIDTH\}/.test(numberPicker)
