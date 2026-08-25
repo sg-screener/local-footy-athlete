@@ -6082,3 +6082,29 @@ variety, back squat placement, lower-fatigue, R-226, R-093.
 · `WORKING` — built 2026-08-26 at the composer's R-093 pair assignment (the
 sorer B shape lands on the non-club strength day; identity permutation when
 there is nowhere to spread). Guard: week-derivation-equivalence [9].
+
+---
+
+**R-232** · *"i just want session feedback saved, monitored in progress tab, and then that should effect future programming - for both strength and condiitoning"* → proposal approved verbatim: *"yes build it - draft the wording and I'll approve"* (Sam, 2026-08-26) · **CONDITIONING FEEDBACK PICKS AMONG AUTHORED TIERS — NEVER EDITS A DOSE.**
+
+Two rough logs of a tier (high effort ≥8 AND incomplete — Sam's approved
+pair) inside the 28-day block window ease that tier off the resolver's
+preference ladder, only while an authored easier tier can still serve the
+day. Nothing stored — the ease derives from feedback each run, so comfort
+returning IS the step back up (no ratchet state, no restore event). Every
+outranking law (game proximity, weekly caps, strength interaction,
+injuries) filters tiers BEFORE the ladder, so the ease can never override
+one. The 2026-07-27 dose-adjustment retirement (Bible :4966) and Section
+6's "doses come from authored templates" stand untouched — this picks
+WHICH authored dose, never a number. Strength-side feedback wiring was
+already WORKING (Sam's 2026-08-16 "feed the real persisted history").
+
+Disclosure on the eased session (coachNotes), PROPOSED awaiting Sam:
+*"Eased back today — your last couple of conditioning sessions looked like
+a lot."*
+
+**Search words:** conditioning feedback, rough session, ease tier, RPE,
+too much, dose adjustment, authored templates, progress tab, step up.
+· `WORKING` — rules/conditioningFeedbackEase + resolver ladder + builder
+disclosure; test:conditioning-feedback-ease 10/0 in the chain, mutation-
+checked (threshold flip killed 3 cells).

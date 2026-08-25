@@ -120,6 +120,9 @@ export interface ConditioningResult {
   tier: ConditioningTier;
   /** The conditioning metadata. */
   meta: ConditioningMeta;
+  /** R-232: set when the preference ladder eased past this tier on the
+   *  athlete's own feedback — the builder turns it into the disclosure. */
+  easedFromTier?: ConditioningTier;
 }
 
 // ─── Weekly Caps by Season Phase ───
@@ -568,6 +571,17 @@ function mapToInjuryKey(area: string): string | null {
 export function resolveConditioning(
   ctx: ConditioningContext,
   weekLog: WeekLog,
+  options?: {
+    /**
+     * R-232: tiers the athlete's own recent feedback has EASED (two rough
+     * logs of that tier in the block window — `rules/conditioningFeedbackEase`
+     * is the one owner). The preference ladder skips an eased tier when an
+     * authored easier tier still has a legal candidate for this day; it never
+     * empties the day, and it runs AFTER every law above, so game proximity,
+     * caps, strength interaction and injuries all outrank it by construction.
+     */
+    easedTiers?: ReadonlySet<ConditioningTier>;
+  },
 ): ConditioningResult | null {
   // Step 1: Date-level tier filtering
   const dateTiers = getAllowedTiersForDate(ctx);
@@ -617,7 +631,22 @@ export function resolveConditioning(
   // Step 7: Select — prefer highest eligible tier, then deterministic within tier
   // Priority: A > B-high > B-low > C
   const tierPriority: ConditioningTier[] = ['A', 'B-high', 'B-low', 'C'];
+  // R-232: an eased tier yields its ladder position only when an EASIER
+  // authored tier can still serve the day. Precomputed so easing can never
+  // empty the day (a coverage law must not lose a session to a preference).
+  const eased = options?.easedTiers ?? new Set<ConditioningTier>();
+  const tiersWithCandidates = tierPriority.filter((tier) =>
+    injuryFiltered.some((name) => CONDITIONING_META[name]?.tier === tier));
+  let easedFrom: ConditioningTier | null = null;
   for (const tier of tierPriority) {
+    if (eased.has(tier)) {
+      const easierExists = tiersWithCandidates.some((candidate) =>
+        tierPriority.indexOf(candidate) > tierPriority.indexOf(tier));
+      if (easierExists) {
+        easedFrom = easedFrom ?? tier;
+        continue;
+      }
+    }
     const tierCandidates = injuryFiltered.filter(name => CONDITIONING_META[name]?.tier === tier);
     if (tierCandidates.length > 0) {
       // Prefer low-impact alternatives when running injuries exist
@@ -634,7 +663,12 @@ export function resolveConditioning(
         selected = tierCandidates[seed % tierCandidates.length];
       }
       const meta = CONDITIONING_META[selected];
-      return { exerciseName: selected, tier: meta.tier, meta };
+      return {
+        exerciseName: selected,
+        tier: meta.tier,
+        meta,
+        ...(easedFrom ? { easedFromTier: easedFrom } : {}),
+      };
     }
   }
 

@@ -1454,6 +1454,24 @@ function completionQualityFromFeedback(
   return 'full';
 }
 
+/** R-232: stored feedback → the ease module's plain entries. Effort and
+ *  completion come from the SAME readers the progression overrides use, so
+ *  the two consumers cannot classify one log differently. */
+function conditioningFeedbackEaseEntries(
+  feedbackMap: Record<string, SessionFeedback> | undefined,
+): import('../rules/conditioningFeedbackEase').ConditioningFeedbackEntry[] {
+  if (!feedbackMap) return [];
+  return Object.values(feedbackMap)
+    .filter(hasConditioningFeedback)
+    .map((feedback) => ({
+      date: feedback.dateStr,
+      tier: conditioningTierForFeedback(feedback) as import('../data/exerciseTags').ConditioningTier,
+      effort: feedback.conditioning?.rpe ?? feedback.difficulty
+        ?? feedbackFeelingToConditioningRPE(feedback.feeling),
+      completedFully: conditioningComponentCompletion(feedback) === 'full',
+    }));
+}
+
 function recentConditioningFeedback(
   feedbackMap: Record<string, SessionFeedback> | undefined,
   beforeDate: string,
@@ -1878,7 +1896,17 @@ export function buildConditioningSession(
   };
 
   // Resolve conditioning
-  const result = resolveConditioning(ctx, weekLog);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { easedConditioningTiers } = require('../rules/conditioningFeedbackEase') as
+    typeof import('../rules/conditioningFeedbackEase');
+  const result = resolveConditioning(ctx, weekLog, {
+    // R-232: the athlete's own rough logs ease the tier ladder; the module
+    // header carries the law and the guard suite carries the boundaries.
+    easedTiers: easedConditioningTiers({
+      dateStr,
+      entries: conditioningFeedbackEaseEntries(progressionData.sessionFeedback),
+    }),
+  });
   if (!result) return null;
 
   // Build Workout from result
@@ -1957,6 +1985,14 @@ export function buildConditioningSession(
     workoutType,
     sessionTier: result.tier === 'C' ? 'recovery' : 'core',
     exercises,
+    /* R-232's disclosure: an eased pick says why, in the athlete's own
+     * feedback terms. PROPOSED wording, awaiting Sam's approval. */
+    ...(result.easedFromTier
+      ? {
+          coachNotes: [(require('../rules/conditioningFeedbackEase') as
+            typeof import('../rules/conditioningFeedbackEase')).CONDITIONING_EASE_NOTE],
+        }
+      : {}),
     createdAt: now,
     updatedAt: now,
     // The `_progression*` metadata went with the layer that produced it. It had
