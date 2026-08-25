@@ -331,3 +331,80 @@ The foundations are genuinely good: generation obeys the coaching rules, decisio
 ---
 
 *Audit artifacts: session scratchpad `audit/` — `recordings/01-onboarding.mp4` (full session), `storage-after-onboarding/`, `storage-before-full-reset/`, `storage-final-clean-world/`, `app-data-backup-before-wipe/` (pre-audit state, restorable).*
+
+---
+
+# ADDENDUM — same day, after the fix session (late afternoon)
+
+Sam ordered the #1 fix started while he drove the simulator checklist. Codex is
+away; the `audit` seat did the work. Everything below is measured, not recalled.
+
+## Finding #1 splits into TWO root causes — one is FIXED, one is diagnosed
+
+**Root cause A — generation vetoed the athlete's own statement. FIXED, commit
+`bf8aef53`.** The generator's `weekAcceptance: 'forward_decision'` option has
+documented, Sam-approved behaviour ("publish the best achievable week instead
+of throwing — it is not generation's place to veto a fact the athlete stated")
+and was passed by both of its callers and read by NOTHING. Any sick/fatigue/bye
+rebuild whose reduced week missed any contract clause threw, rolled the
+athlete's fact back, and showed "give it another go in a moment" forever.
+Proof, device-exact: the failing simulator world's storage snapshot was
+hydrated headlessly through the app's own boot; "Pretty flat" and "Properly
+sick" reproduced the exact refusal (`main_strength_required_minimum` /
+`required_safe_patterns_present:squat` rollback), and with the fix both commit
+("safely recomposed", fact + 7-day window created). New guard in the chain:
+`test:forward-decision-acceptance` — born red, green with the fix; the default
+strict path provably still refuses. Blast radius measured both arms in a
+detached worktree at HEAD: every neighbouring suite's failures are
+IDENTICAL with and without the fix.
+
+**Root cause B — the plan-edit transaction contradicts the athlete's own
+edits. DIAGNOSED, deliberately not patched.** The swap on a moved session
+commits, then the transaction's §18 post-apply verification rejects the whole
+candidate week: `Section 18 final-week rejection
+(reduction_contradiction:main_strength:3)` — the candidate the transaction
+re-derives RE-ADDS sessions the athlete removed/moved, which contradicts the
+authorised-reduction records those same edits wrote, so the verifier
+(correctly, by its own lights) rolls the swap back. The boot replay rebuilds
+the athlete's week faithfully; the door transaction's internal re-derivation
+does not — two rebuilders of one week, disagreeing. Fixing it means making
+the transaction's candidate equal the week the athlete sees, which is the
+composition-ownership seam item 68 already puts to Sam; per the stop-patching
+law this is his architecture call, not a guard to bolt on. Until then: swap
+works on added sessions and un-edited weeks; it refuses (honestly, nothing
+corrupted) on moved sessions after a relaunch.
+
+## New measured facts for the launch picture (all pre-existing at HEAD)
+
+- **Three chain suites are DEAD at import** — `test:week-rebuild`,
+  `test:fixture-mutation-transaction`, `test:game-local-rebuild` crash on
+  `Cannot find module 'section18ProgramObservation'` (deleted by commit
+  `3f97cc67` with its importers left behind). They report nothing and read as
+  known-red.
+- **The gender gate (R-130) has rotted a band of suites**: 13 red cells in
+  `test:readiness-ownership`, 8 in `test:illness-recovery-mode` — every one
+  failing with "I still need to know your gender", i.e. fixture athletes
+  predating the required field. Same class the move-suite fix hit earlier.
+- **`test:scenarios` fails 12 scenarios at HEAD; `test:accepted-state-transactions`
+  reports failures=25 at HEAD** — identical before and after the fix.
+- **`test:compile` is red at HEAD** on `src/utils/exerciseFilter.ts` (1 error
+  over baseline), before any of this session's edits.
+
+## Corrections to the main report
+
+- #1's "How I think we should fix it" was half right: the boot-vs-door
+  disagreement is real (root cause B), but the sick/flat/bye deaths were the
+  simpler root cause A. The report's claim that one fix revives six doors
+  holds for A's five (sick, flat, cooked-on-edited-worlds, illness, bye
+  pending on-glass confirmation); the swap needs B.
+- The bye's `hard_day_permitted_maximum:6` was generation refusing its own
+  best week under A — the athlete-decision replay-stacking hypothesis was
+  wrong for A (and right in spirit for B).
+
+## Still owed
+
+- On-glass confirmation of the fixed doors and the bye (Sam is driving the
+  simulator checklist; Metro hot-reloads the fix, so checklist items 6–8 may
+  now PASS — that is the fix landing, not the audit misfiring).
+- Root cause B: Sam's direction (item 68 composition ownership) before code.
+- Findings #2–#12 of the main report: untouched, still open.
