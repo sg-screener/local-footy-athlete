@@ -411,6 +411,12 @@ function planChangeForAction(action: ProgramControlAction): PlanChange | null {
       fromDate: action.payload.fromDate,
       toDate: action.payload.toDate,
       ...(action.payload.scope ? { scope: action.payload.scope } : {}),
+      // R-226: the answer travels; dropping it here re-raised the ask as a
+      // refusal on the durable path (caught by the equivalence harness when
+      // R-231 made the standard world's moved session carry flagged lifts).
+      ...(action.payload.teamNightContentRoute
+        ? { teamNightContentRoute: action.payload.teamNightContentRoute }
+        : {}),
     };
   }
   if (action.type === 'bin_session') {
@@ -462,6 +468,10 @@ export function programControlActionForPlanChange(
         // the sheet offered "just the gym session", the payload could not say
         // so, and the whole day moved.
         ...(change.scope ? { scope: change.scope } : {}),
+        // R-226: the swap-or-keep answer rides the same boundary.
+        ...(change.teamNightContentRoute
+          ? { teamNightContentRoute: change.teamNightContentRoute }
+          : {}),
       },
     } as ProgramControlAction;
   }

@@ -187,6 +187,10 @@ export type ProgramControlAction =
       fromDate: string;
       toDate: string;
       scope?: PlanChangeMoveScopeId;
+      /** R-226/R-231: the athlete's swap-or-keep answer when flagged lifts
+       *  land on a team night. Travels the action so the durable door and the
+       *  boot replay carry the SAME answer the sheet carried. */
+      teamNightContentRoute?: 'swap_safe' | 'keep_regular';
     }>
   /**
    * A team night leaving its day, WITH the athlete's answer to the typed ask

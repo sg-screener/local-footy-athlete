@@ -1135,6 +1135,55 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // 22 unmatched single-leg knees starting them on B. Coverage selection has no such
   // failure mode because it walks a PAIRED order and never ends mid-pair.
   let fullBodyIndex = 0;
+  /* ── R-231: THE SORER SHAPE LANDS OFF THE CLUB NIGHT ──────────────────────
+   *
+   * Sam, 2026-08-26 (rejecting an automatic pick filter): *"they get the real
+   * exercises - just spread throughout the week instead of all on one night."*
+   * Shape B carries TWO of Bible :156's named sore-making families (hinge —
+   * heavy RDLs — and single_leg_knee — RFE/Bulgarian split squats); shape A
+   * carries one (squat). The bare `fullBodyIndex % 2` alternation assigned
+   * shapes by planned-day ORDER, so B routinely landed on the combined club
+   * night (the launch audit photographed exactly that: RDLs + Bulgarians on
+   * the Thursday team night).
+   *
+   * The fix moves NOTHING but the pairing: the same multiset of shapes, the
+   * same slots, the same block-stable selections (they key on SLOT, which
+   * travels with the shape) — non-team days simply take the B shapes first.
+   * A week whose every strength day is a club night (R-093's own athlete)
+   * gets the identity permutation and keeps today's alternation, which is
+   * R-231's named edge: the picks stay real when there is nowhere to spread.
+   * The parity note above is untouched — the SEQUENCE of shapes is the same
+   * alternation; only which day wears which changes.
+   */
+  const r093ShapeByDay = (() => {
+    const pairDays = inputs.plannedDays.filter((planned) =>
+      composedDayIsStrength(planned.strengthIntent) &&
+      fullBody && planned.strengthIntent.archetype !== 'upper');
+    const shapes = pairDays.map((_, index) =>
+      (index % 2 === 0 ? 'full_body_a' : 'full_body_b') as ComposedDayShape);
+    // R-231 applies only when there is somewhere to spread TO: a week whose
+    // strength days are all club nights (R-093's own athlete) or none keeps
+    // today's alternation untouched — the identity permutation, by
+    // construction rather than by accident of the sort below.
+    const mixed = pairDays.some((planned) => planned.isTeamDay)
+      && pairDays.some((planned) => !planned.isTeamDay);
+    if (!mixed) {
+      return new Map(pairDays.map((planned, index) => [planned, shapes[index]]));
+    }
+    // Non-team days first, original order preserved inside each half; the
+    // sorer shapes (B) are handed out first.
+    const daysByPreference = [
+      ...pairDays.filter((planned) => !planned.isTeamDay),
+      ...pairDays.filter((planned) => planned.isTeamDay),
+    ];
+    const shapesSorerFirst = [...shapes].sort((left, right) =>
+      (left === 'full_body_b' ? 0 : 1) - (right === 'full_body_b' ? 0 : 1));
+    const map = new Map<ComposerPlannedDay, ComposedDayShape>();
+    daysByPreference.forEach((planned, index) => {
+      map.set(planned, shapesSorerFirst[index] ?? 'full_body_a');
+    });
+    return map;
+  })();
   const weekPairCounts: Record<string, number> = {
     squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
 
@@ -1251,7 +1300,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       && coverageGapsMakeAFullBodySession(plannedCoverageGaps);
     const isFullBodyDay = isR093Shape || isCoverageDay;
     const kind: ComposedDayShape = isR093Shape
-      ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
+      // R-231: the precomputed pairing above — same shapes, spread so the
+      // sorer one sits off the club night. Falls back to the alternation for
+      // a day the map has never seen (defensive; the filters match).
+      ? (r093ShapeByDay.get(planned)
+        ?? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b'))
       : isCoverageDay
         ? 'full_body_coverage'
         : composedDayKind(planned.strengthIntent) ?? 'lower';

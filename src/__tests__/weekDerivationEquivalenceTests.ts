@@ -191,8 +191,10 @@ async function main(): Promise<void> {
   if (from && to) {
     const moved = await door({
       type: 'move_session',
-      payload: { fromDate: from, toDate: to, scope: 'whole_day' },
-      teamNightContentRoute: 'keep_regular',
+      payload: {
+        fromDate: from, toDate: to, scope: 'whole_day',
+        teamNightContentRoute: 'keep_regular',
+      },
     });
     ok('the move lands', moved.ok === true, moved.message);
     const afterDoor = fingerprint();
@@ -220,8 +222,10 @@ async function main(): Promise<void> {
   if (rootFrom && rootTo) {
     await door({
       type: 'move_session',
-      payload: { fromDate: rootFrom, toDate: rootTo, scope: 'whole_day' },
-      teamNightContentRoute: 'keep_regular',
+      payload: {
+        fromDate: rootFrom, toDate: rootTo, scope: 'whole_day',
+        teamNightContentRoute: 'keep_regular',
+      },
     });
     await relaunch();
     // A real replacement, same slot — the device case swapped a chosen
@@ -281,8 +285,10 @@ async function main(): Promise<void> {
     if (secondStrength && landing) {
       await door({
         type: 'move_session',
-        payload: { fromDate: secondStrength, toDate: landing, scope: 'whole_day' },
-        teamNightContentRoute: 'keep_regular',
+        payload: {
+          fromDate: secondStrength, toDate: landing, scope: 'whole_day',
+          teamNightContentRoute: 'keep_regular',
+        },
       });
     }
     await relaunch();
@@ -294,6 +300,56 @@ async function main(): Promise<void> {
     ok('a twice-derived edited world is stable (derivation is idempotent)',
       fingerprint() === afterReplay,
       `first:  ${afterReplay}\nsecond: ${fingerprint()}`);
+  }
+
+  console.log('\n[9] R-231 — the sorer full-body shape lands OFF the club night');
+  // Sam, 2026-08-26: "they get the real exercises - just spread throughout the
+  // week instead of all on one night." The R-093 pair's B shape carries the
+  // Bible :156 families (hinge + single-leg-knee: heavy RDLs, Bulgarians);
+  // its assignment must prefer the non-team-night strength day. The exercises
+  // stay REAL — asserted present in the week — just not stacked pre-club.
+  // A world where exactly ONE strength day coincides with a club night:
+  // club Wed/Fri, gym Mon/Wed — Wednesday combines, Monday stays plain.
+  quiet(() => {
+    resetStoresToFreshInstall('week-derivation-equivalence-r231');
+    const profile = {
+      ...athlete(),
+      trainingDaysPerWeek: 2,
+      preferredTrainingDays: ['Monday', 'Wednesday'],
+      teamTrainingDays: ['Wednesday', 'Friday'],
+    } as unknown as OnboardingData;
+    useProfileStore.setState({ onboardingData: profile, isOnboardingComplete: true } as never);
+    const program = generateProgramLocally(profile, { todayISO: WEEK, blockNumber: 2 }) as TrainingProgram;
+    useProgramStore.setState({
+      currentProgram: program,
+      currentMicrocycle: program.microcycles[0],
+      blockState: { blockStartDate: WEEK, blockNumber: 2 },
+      generationAnchorISO: WEEK,
+    } as never);
+  });
+  {
+    const week = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()) as Array<{
+      date: string;
+      workout?: { name?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string }> } | null;
+    }>;
+    const names = (day: typeof week[number]): string[] =>
+      (day.workout?.exercises ?? []).map((row) => row.exercise?.name ?? row.name ?? '');
+    const ttDay = week.find((day) => /team training/i.test(String(day.workout?.name ?? ''))
+      && (day.workout?.exercises?.length ?? 0) > 0);
+    const gymDay = week.find((day) => (day.workout?.exercises?.length ?? 0) > 0
+      && !/team|game/i.test(String(day.workout?.name ?? '')));
+    ok('CONTROL: the week has a combined club night and a plain strength day',
+      !!ttDay && !!gymDay, fingerprint());
+    if (ttDay && gymDay) {
+      const ttNames = names(ttDay);
+      const weekNames = week.flatMap(names);
+      ok('the Bulgarians are NOT on the club night',
+        !ttNames.includes('Bulgarian Split Squats'), ttNames.join(', '));
+      ok('and the athlete still trains them that week — real exercises, spread',
+        weekNames.includes('Bulgarian Split Squats'), weekNames.join(', '));
+      ok('the heavy hinge main is NOT on the club night',
+        !ttNames.includes('RDLs'), ttNames.join(', '));
+    }
   }
 
   console.log('\n[6] S3 — the override writer\'s outcome FLOWS (source anchors)');
