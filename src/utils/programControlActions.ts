@@ -2207,6 +2207,22 @@ async function executeProgramControlActionDurablyWithinTrace(
       sourceSurface,
     });
     const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    /* ── R-229: A SPAN FACT SETTLES THE WORLD IT CHANGES ──────────────────
+     *
+     * The travel and no-team-training spans commit record-only; their effect
+     * is authored at GENERATION (Sam, item 37: "Away has to replace the work
+     * it removes, not just delete it"). Until this settle, the door-time week
+     * was only the read filter (club stripped, Rest holes) while the NEXT
+     * BOOT regenerated the real away week with replacement conditioning —
+     * the two-rebuilders divergence, away flavour, measured by the
+     * equivalence harness [10] on 2026-08-26 (door: Rest holes; replay:
+     * Speed Conditioning / Tempo Intervals). Settling through the boot's own
+     * machinery makes door-committed equal boot-derived by construction. */
+    if (ok && (awaySpan || breakSpan)) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { settleDerivedWorldAfterDecision } = require('../store/quiescentBoot');
+      await settleDerivedWorldAfterDecision();
+    }
     return {
       ok,
       changedProgram: result.changedProgram,

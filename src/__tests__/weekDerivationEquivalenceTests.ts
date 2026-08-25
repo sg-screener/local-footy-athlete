@@ -109,8 +109,8 @@ function installWorld(): TrainingProgram {
   });
 }
 
-function fingerprint(): string {
-  const week = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()) as Array<{
+function fingerprint(weekStart: string = WEEK): string {
+  const week = resolveWeekWithConditioning(weekStart, buildScheduleStateImperative()) as Array<{
     date: string;
     workout?: { name?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string }> } | null;
   }>;
@@ -300,6 +300,74 @@ async function main(): Promise<void> {
     ok('a twice-derived edited world is stable (derivation is idempotent)',
       fingerprint() === afterReplay,
       `first:  ${afterReplay}\nsecond: ${fingerprint()}`);
+  }
+
+  console.log('\n[10] AWAY — the trip takes the club off, keeps the gym, and survives boot');
+  // The audit's NOT-COVERED item 1, now covered by the same equivalence law
+  // as every door: away next Mon-Fri via the real door
+  // (set_schedule_modifier + awaySpan, Sam's item-28 shape).
+  installWorld();
+  {
+    const NEXT_WEEK = '2026-08-10';
+    const thisWeekBefore = fingerprint(WEEK);
+    const awayResult = await door({
+      type: 'set_schedule_modifier',
+      scope: 'current_week',
+      payload: { date: NEXT_WEEK, todayISO: TODAY, awaySpan: { from: '2026-08-10', until: '2026-08-14' } },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    });
+    ok('the away door lands', awayResult.ok === true, awayResult.message);
+    const nextWeek = () => resolveWeekWithConditioning(NEXT_WEEK, buildScheduleStateImperative()) as Array<{
+      date: string; workout?: { name?: string } | null;
+    }>;
+    const clubDaysAway = nextWeek().filter((day) =>
+      day.date >= '2026-08-10' && day.date <= '2026-08-14'
+      && /team training/i.test(String(day.workout?.name ?? '')));
+    ok('AWAY: the club days inside the trip carry no Team Training',
+      clubDaysAway.length === 0,
+      nextWeek().map((day) => `${day.date.slice(8)}=${day.workout?.name ?? 'Rest'}`).join(' '));
+    ok('AWAY: the current week is untouched',
+      fingerprint(WEEK) === thisWeekBefore);
+    const awayWeekAfterDoor = fingerprint(NEXT_WEEK);
+    await relaunch();
+    ok('AWAY: the trip survives the boot derivation byte-identical',
+      fingerprint(NEXT_WEEK) === awayWeekAfterDoor,
+      `door:   ${awayWeekAfterDoor}\nreplay: ${fingerprint(NEXT_WEEK)}`);
+  }
+
+  console.log('\n[11] ADD A GAME — the fixture lands, the week reshapes, and it survives boot');
+  // The audit's NOT-COVERED item 2, through the one fixture door.
+  installWorld();
+  {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { executeFixtureMutationTransaction } = require('../store/fixtureMutationTransaction');
+    // The add door serves NO-GAME weeks (a week with a fixture offers move,
+    // not add — the transaction's own refusal, learned on the first run). So
+    // the athlete's real sequence: remove Saturday's game, then add Wednesday
+    // — which covers the REMOVE door as well.
+    const removed = await quiet(() => executeFixtureMutationTransaction({
+      action: 'remove', fixtureKind: 'game', sourceDate: '2026-08-08',
+      source: { requestedBy: 'athlete', producer: 'tap', surface: 'program_tab', commandId: 'equivalence-remove-game' },
+    })) as { outcome: string; error?: unknown };
+    ok('the remove-game door lands', removed.outcome === 'accepted' || removed.outcome === 'applied',
+      `${removed.outcome} ${String((removed.error as Error)?.message ?? '')}`);
+    const added = await quiet(() => executeFixtureMutationTransaction({
+      action: 'add', fixtureKind: 'game', targetDate: '2026-08-05',
+      source: { requestedBy: 'athlete', producer: 'tap', surface: 'program_tab', commandId: 'equivalence-add-game' },
+    })) as { outcome: string; error?: unknown };
+    ok('the add-a-game door lands on the now-gameless week', added.outcome === 'accepted' || added.outcome === 'applied',
+      `${added.outcome} ${String((added.error as Error)?.message ?? '')}`);
+    const midweekGame = (resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()) as Array<{
+      date: string; workout?: { name?: string } | null;
+    }>).find((day) => day.date === '2026-08-05');
+    ok('ADD GAME: the target day resolves as a game day',
+      /game/i.test(String(midweekGame?.workout?.name ?? '')),
+      fingerprint(WEEK));
+    const afterAdd = fingerprint(WEEK);
+    await relaunch();
+    ok('ADD GAME: the reshaped week survives the boot derivation byte-identical',
+      fingerprint(WEEK) === afterAdd,
+      `door:   ${afterAdd}\nreplay: ${fingerprint(WEEK)}`);
   }
 
   console.log('\n[9] R-231 — the sorer full-body shape lands OFF the club night');
