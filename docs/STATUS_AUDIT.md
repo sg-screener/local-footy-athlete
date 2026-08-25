@@ -2892,3 +2892,14 @@ write-guard anchors run nowhere); `exerciseRestoreOwnerTests` dies at
 import-time TypeError (`startsWith` on undefined, line 437) on both arms
 at HEAD. Neither is this unit's to fix; recorded so the next census
 doesn't rediscover them.
+
+## S4a WORKING; S4b censused (2026-08-26)
+
+S4a `d0f9e1c8` — one live-week door (deriveVisibleWeekLive), boot replay
+included, retired-shape guard in the chain (equivalence suite 14/0). S4b
+census receipt (scratchpad audit/probe-s4b-reduction-duplicates.ts): the
+bin world mints NO authorisedReductions — its two stored representations
+(reversible adjustment + removal constraint) have distinct jobs and
+survive relaunch identically. The contract-reduction duplication the
+reassessment named belongs to accept-and-reduce worlds; S4b starts with
+that probe world, not with code.

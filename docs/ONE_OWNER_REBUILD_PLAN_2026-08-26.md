@@ -59,6 +59,19 @@ it; duplicate reduction records collapse into derivations. This is the
 biggest slice and lands only after S1's harness holds the drift count at
 zero for S2/S3's worlds — the harness is what makes the refactor honest.
 
+*S4a WORKING (2026-08-26, `d0f9e1c8`):* `deriveVisibleWeekLive` is the one
+live-week door; the four hand-assembled pairs (planChangeProducer ×2, boot
+replay ×2) repointed; guard cell [7] greps the retired shape out of
+production. *S4b OPEN:* the reduction-record collapse. First census
+(probe-s4b, bin world): a bin stores TWO representations — a reversible
+adjustment and a removal constraint — stable across relaunch; these have
+distinct jobs (undo bookkeeping vs read-time effect) and are NOT the
+duplication the reassessment named. `authorisedReductions` duplication is
+minted only by accept-and-reduce flows (illness, fixture squeezes), so S4b
+needs an accept-and-reduce probe world before any edit. *S4c OPEN:* the
+canonicaliser's remaining derived writes (overlay repair minting, contract
+stamping) become derivations.
+
 **S5 — Demolition + census.**
 Delete the retired representations; writer census around the owner to zero
 (the "no writer around the owner" instrument), memory-law: a caller census
