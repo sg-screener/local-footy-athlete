@@ -117,6 +117,10 @@ import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
 import { signedCopy } from '../rules/signedCopy';
 import { STRENGTH_FEEDBACK_COPY } from '../rules/strengthSessionFeedback';
 import { parseSessionDurationMinutes } from '../rules/sessionDuration';
+import {
+  clubTrainingFeedbackDecision,
+  clubTrainingSaveBlockCopy,
+} from '../rules/clubTrainingFeedbackDecision';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -299,13 +303,20 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
   const duration = parseSessionDurationMinutes(minutes);
   const attended = completion === 'full' || completion === 'partial';
   const recordableRefusal = sessionOutcomeRecordableRefusal(date);
-  /* A SKIP NEEDS NO NUMBERS. "I did not go" is a complete answer, and demanding
-     a duration for it is the coupling this split exists to remove. */
-  const canSave = !recordableRefusal && (
-    completion === 'skipped'
-      ? true
-      : attended && duration.valid && isSessionEffortRating(effort)
-  );
+  /* THE ENABLE RULE HAS ONE OWNER AND A DISABLED SAVE SAYS WHY. Launch audit
+     2026-08-25, finding #9: the minutes box shows a placeholder "90" styled
+     like a value, so the form looked complete while Save sat dead saying
+     nothing. The decision (including the skip-needs-no-numbers rule this
+     comment used to state inline) lives in
+     `rules/clubTrainingFeedbackDecision`, beside its athlete-facing reasons,
+     so the condition and its explanation cannot drift apart. */
+  const decision = clubTrainingFeedbackDecision({
+    completion,
+    minutesText: minutes,
+    effort,
+    recordableRefusal,
+  });
+  const canSave = decision.canSave;
 
   const handleSave = useCallback(async () => {
     if (!canSave || completion === null) return;
@@ -429,6 +440,11 @@ export const ClubTrainingFeedbackPanel: React.FC<Props> = ({ date, workout, onSa
 
       {saveRefusal ? <Text style={styles.inputError}>{saveRefusal}</Text> : null}
       {recordableRefusal ? <Text style={styles.inputError}>{recordableRefusal.message}</Text> : null}
+      {completion !== null && !canSave && decision.blockedBy[0] !== 'not_recordable' ? (
+        <Text testID="club-training-blocked-reason" style={styles.inputError}>
+          {clubTrainingSaveBlockCopy(decision.blockedBy[0])}
+        </Text>
+      ) : null}
 
       {/* The button that set the pattern, now wearing the shared label and the
           shared size. It was 48pt tall and said "Save" while the other two were

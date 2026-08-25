@@ -723,6 +723,65 @@ section('13. Power primer completion stays separate from strength and conditioni
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+section('Club-training Save decision — a disabled Save always says why (audit #9)');
+// ═══════════════════════════════════════════════════════════════════════════
+// Launch audit 2026-08-25: the club-training form showed a placeholder "90"
+// styled like a value, everything looked answered, and Save & Finish sat dead
+// with no explanation. These cells hold the ONE owner of the enable rule and
+// its stated reasons (`rules/clubTrainingFeedbackDecision`), the same shape
+// the profile setup sheet already carries.
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {
+    clubTrainingFeedbackDecision,
+    clubTrainingSaveBlockCopy,
+  } = require('../rules/clubTrainingFeedbackDecision');
+
+  const looksCompleteButMinutesEmpty = clubTrainingFeedbackDecision({
+    completion: 'full', minutesText: '', effort: 7, recordableRefusal: null,
+  });
+  assert(!looksCompleteButMinutesEmpty.canSave,
+    'empty minutes behind a placeholder must not enable Save');
+  assert(looksCompleteButMinutesEmpty.blockedBy[0] === 'minutes_unanswered',
+    'the audit shape names the minutes as what to fix next');
+  assert(clubTrainingSaveBlockCopy('minutes_unanswered') === 'Add how many minutes you trained.',
+    'the minutes reason speaks in athlete words');
+
+  const effortMissing = clubTrainingFeedbackDecision({
+    completion: 'full', minutesText: '90', effort: null, recordableRefusal: null,
+  });
+  assert(!effortMissing.canSave && effortMissing.blockedBy[0] === 'effort_unanswered',
+    'missing effort blocks with its own named reason');
+
+  const complete = clubTrainingFeedbackDecision({
+    completion: 'full', minutesText: '90', effort: 7, recordableRefusal: null,
+  });
+  assert(complete.canSave && complete.blockedBy.length === 0,
+    'a fully answered form enables Save with no reason left');
+
+  const skipped = clubTrainingFeedbackDecision({
+    completion: 'skipped', minutesText: '', effort: null, recordableRefusal: null,
+  });
+  assert(skipped.canSave,
+    'a skip needs no numbers — "I did not go" is a complete answer');
+
+  const notRecordable = clubTrainingFeedbackDecision({
+    completion: 'full', minutesText: '90', effort: 7,
+    recordableRefusal: { message: 'Session outcomes can only be recorded for today or a past session.' },
+  });
+  assert(!notRecordable.canSave && notRecordable.blockedBy[0] === 'not_recordable',
+    'a transaction-level refusal blocks and is surfaced first');
+  assert(clubTrainingSaveBlockCopy('not_recordable', 'why not').includes('why not'),
+    'the refusal reason passes through to the athlete');
+
+  const unanswered = clubTrainingFeedbackDecision({
+    completion: null, minutesText: '', effort: null, recordableRefusal: null,
+  });
+  assert(!unanswered.canSave && unanswered.blockedBy.includes('completion_unanswered'),
+    'no completion answer yet: blocked on the first question');
+}
+
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log('\nFailures:');
