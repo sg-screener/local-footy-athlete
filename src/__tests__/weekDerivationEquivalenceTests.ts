@@ -296,6 +296,23 @@ async function main(): Promise<void> {
       `first:  ${afterReplay}\nsecond: ${fingerprint()}`);
   }
 
+  console.log('\n[6] S3 — the override writer\'s outcome FLOWS (source anchors)');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs') as typeof import('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path') as typeof import('path');
+  const coachActionsSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'utils', 'coachActions.ts'), 'utf8');
+  ok('writeCoachOverride returns the writer\'s outcome, not void',
+    /function writeCoachOverride\([\s\S]{0,200}\): ProgramOverrideWriteOutcome/.test(coachActionsSrc),
+    'the wrapper is void again — the discarded-outcome shape (R-229 S3)');
+  const bareCalls = coachActionsSrc.split('\n')
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => /^\s+writeCoachOverride\(/.test(line));
+  ok('no call site discards the outcome (every call is consumed)',
+    bareCalls.length === 0,
+    `statement-position writeCoachOverride at line(s) ${bareCalls.map((c) => c.index + 1).join(', ')}`);
+
   console.log(`\nWeek derivation equivalence: ${pass} passed, ${fail} failed`);
   for (const line of failures) console.log(`  ✗ ${line}`);
   totalsPrinted(fail);

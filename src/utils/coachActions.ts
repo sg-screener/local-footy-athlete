@@ -32,7 +32,7 @@ import type { MainStrengthPattern } from '../rules/strengthPatternContributions'
  *       in the AI's reply pipeline.
  */
 
-import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore, type ProgramOverrideWriteOutcome } from '../store/programStore';
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
@@ -273,9 +273,29 @@ function finitePositiveNumber(value: unknown, fallback: number): number {
  * at the call sites (LR-1). Behaviour is the retired primitive's, unchanged —
  * this is store ownership, not a coach-pipeline change (LR-6).
  */
-function writeCoachOverride(date: string, workout: Workout, context?: OverrideContext): void {
-  applyProgramOverrideWrite({ date, workout, context, writer: 'coach_action' });
+/**
+ * R-229 S3 (2026-08-26): THE OUTCOME FLOWS. This wrapper was `void` and every
+ * caller returned `{ success: true }` over whatever the writer actually said —
+ * the discarded-outcome shape the root-B reassessment named. Today the only
+ * returnable refusals are the wipe-guard reasons (unreachable from these
+ * callers, which always write a non-empty map) — the propagation is defence:
+ * a refusal reason added to the slice write tomorrow surfaces at six doors
+ * instead of vanishing at six doors. Failures inside the accepted-state
+ * transaction still THROW and were never swallowed here.
+ */
+function writeCoachOverride(
+  date: string,
+  workout: Workout,
+  context?: OverrideContext,
+): ProgramOverrideWriteOutcome {
+  return applyProgramOverrideWrite({ date, workout, context, writer: 'coach_action' });
 }
+
+/** R-228's signed failure sentence — the writer refused, nothing changed. */
+const OVERRIDE_WRITE_REFUSED: ActionResult = {
+  success: false,
+  reason: "That didn't save — your week is unchanged.",
+};
 
 function workoutsAreEquivalent(a: Workout, b: Workout): boolean {
   if (a.name !== b.name) return false;
@@ -504,7 +524,9 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
     }
     const blocked = blockedByHardStopRisk([{ date, workout: recoveryShell }], date);
     if (blocked) return blocked;
-    writeCoachOverride(date, recoveryShell, { intent: 'dismissed', label: 'Coach-lightened' });
+    if (!writeCoachOverride(date, recoveryShell, { intent: 'dismissed', label: 'Coach-lightened' }).ok) {
+      return OVERRIDE_WRITE_REFUSED;
+    }
     return { success: true };
   }
 
@@ -522,7 +544,9 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
   }
   const blocked = blockedByHardStopRisk([{ date, workout: lightened }], date);
   if (blocked) return blocked;
-  writeCoachOverride(date, lightened, { intent: 'dismissed', label: 'Coach-lightened' });
+  if (!writeCoachOverride(date, lightened, { intent: 'dismissed', label: 'Coach-lightened' }).ok) {
+    return OVERRIDE_WRITE_REFUSED;
+  }
   return { success: true };
 }
 
@@ -567,9 +591,16 @@ export function moveSession(input: MoveSessionInput): ActionResult {
   const blocked = blockedByHardStopRisk(riskWrites, [fromDate, toDate].sort()[0]);
   if (blocked) return blocked;
 
-  writeCoachOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' });
+  if (!writeCoachOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' }).ok) {
+    return OVERRIDE_WRITE_REFUSED;
+  }
   if (swappedIn) {
-    writeCoachOverride(fromDate, swappedIn, { intent: 'dismissed', label: 'Swapped session' });
+    /* A refused second half would leave the pair torn — the transactional
+     * pairing of the two writes is S4's consolidation; today the refusal is
+     * unreachable (non-empty map), so propagation without rollback is honest. */
+    if (!writeCoachOverride(fromDate, swappedIn, { intent: 'dismissed', label: 'Swapped session' }).ok) {
+      return OVERRIDE_WRITE_REFUSED;
+    }
   } else {
     // Empty target → just clear the source so the resolver's default applies
     // (which will likely be the same template workout that's about to be
@@ -595,7 +626,9 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
   });
   const blocked = blockedByHardStopRisk([{ date, workout: optional }], date);
   if (blocked) return blocked;
-  writeCoachOverride(date, optional, { intent: 'dismissed', label: 'Marked optional' });
+  if (!writeCoachOverride(date, optional, { intent: 'dismissed', label: 'Marked optional' }).ok) {
+    return OVERRIDE_WRITE_REFUSED;
+  }
   return { success: true };
 }
 
@@ -853,7 +886,9 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     ? null
     : blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });
+  if (!writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' }).ok) {
+    return OVERRIDE_WRITE_REFUSED;
+  }
   return { success: true };
 }
 
@@ -959,7 +994,9 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' });
+  if (!writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' }).ok) {
+    return OVERRIDE_WRITE_REFUSED;
+  }
   return { success: true };
 }
 
@@ -1071,7 +1108,9 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
     // Proposal is identical to current state → skip the write so the day
     // stays template-driven and no new override is recorded.
     if (workoutsAreEquivalent(current, next)) continue;
-    writeCoachOverride(date, next, { intent: 'dismissed', label: `Weekly: ${rule}` });
+    if (!writeCoachOverride(date, next, { intent: 'dismissed', label: `Weekly: ${rule}` }).ok) {
+      return OVERRIDE_WRITE_REFUSED;
+    }
     touched++;
   }
 
