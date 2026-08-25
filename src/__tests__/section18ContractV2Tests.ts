@@ -494,6 +494,20 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
   ]);
   ok('3a. readiness reduction overshoot is detected',
     has(witnesses.reductionAndPower, 'reduction_contradiction'));
+  // 3a-ii. AN AUTHORISED REDUCTION IS A FLOOR THE ATHLETE MAY EXCEED, NOT A
+  // CEILING THAT KILLS THEIR DOORS. Launch audit 2026-08-25: a stored
+  // strength_pattern_count reduction (frozen when a session was MOVED off its
+  // day) sat below the week the athlete actually has, and because the
+  // overshoot was a BLOCKING violation, every later transaction on that week
+  // — including a one-exercise swap — was rejected and rolled back with "try
+  // again". Exceeding a reduced minimum means the athlete is training MORE
+  // than the authorised worst case; the finding stays (3a proves detection,
+  // the mutation arm still kills its deletion) but it is disclosed, never
+  // blocking.
+  ok('3a-ii. reduction overshoot is advisory — it may not block the week',
+    !witnesses.reductionAndPower.blockingViolations.some(
+      (finding) => finding.code === 'reduction_contradiction'),
+    witnesses.reductionAndPower.blockingViolations.map((finding) => finding.code));
   ok('3b. cooked-readiness primers are detected',
     has(witnesses.reductionAndPower, 'power_policy_breach'));
 }

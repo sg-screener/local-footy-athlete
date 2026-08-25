@@ -1640,8 +1640,22 @@ export function evaluateSection18EffectiveWeek(
           : reduction.metric.startsWith('conditioning')
             ? 'conditioning'
             : 'sprint_high_speed';
+    /**
+     * ADVISORY, NOT BLOCKING — AN AUTHORISED REDUCTION IS A FLOOR THE ATHLETE
+     * MAY EXCEED. This branch only ever fires when `actual > reducedTarget`:
+     * the week carries MORE of the metric than the authorised worst case. As a
+     * blocking verdict it vetoed the athlete's own world: launch audit
+     * 2026-08-25, measured on a real stored device world, a
+     * `strength_pattern_count` reduction was frozen at 2 when a session was
+     * MOVED off its day, the relocated session legitimately kept its patterns
+     * (actual 3), and every later transaction on that week — a one-exercise
+     * swap included — was rejected and rolled back with "That change didn't go
+     * through". The finding stays: it is the restore-detector's receipt, and
+     * the disclosure path reads it. It may inform; it may not refuse.
+     * Guarded by `section18DeliveredRemainingTests` D6b.
+     */
     addFinding(findings, {
-      code: 'reduction_contradiction', severity: 'blocking',
+      code: 'reduction_contradiction', severity: 'advisory',
       domain,
       expected: reduction.reducedTarget, actual,
       detail: `Final week exceeds its authorised ${reduction.reason} reduction.`,

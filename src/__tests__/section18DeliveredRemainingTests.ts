@@ -311,6 +311,43 @@ run('D6 an authorised reduction is evaluated against app-authored prescribed exp
     JSON.stringify(result.blockingViolations));
 });
 
+// ── D6b — AN AUTHORISED REDUCTION IS A FLOOR THE ATHLETE MAY EXCEED, NOT A
+// CEILING THAT KILLS THEIR DOORS. Launch audit 2026-08-25, measured on a real
+// stored world: a `strength_pattern_count` reduction was frozen at 2 when a
+// session was MOVED off its day, the relocated session kept its patterns, the
+// week measured 3, and because the overshoot was a BLOCKING violation every
+// later transaction on that week — including a one-exercise swap — was
+// rejected and rolled back with "That change didn't go through". Exceeding a
+// reduced minimum means the athlete is training MORE than the authorised
+// worst case. The finding must remain (it is the restore-detector's receipt)
+// but as a DISCLOSED advisory, never a blocking veto of the athlete's week.
+run('D6b a week that EXCEEDS its authorised reduction is disclosed, not refused', () => {
+  const contract = baseContract([{
+    metric: 'strength_pattern_count',
+    originalApprovedTarget: 4,
+    reducedTarget: 1,
+    reason: 'explicit_user_override',
+    scope: 'pattern',
+    change: 'frequency',
+    detail: 'Athlete removed whole_session from 2026-08-26; relocation and substitution were exhausted.',
+    provenance: 'live_typed_reduction',
+  }]);
+  const result = evaluate({
+    contract,
+    workouts: [strengthWorkout('fri', 5, ['Back Squat', 'Romanian Deadlift', 'Bench Press'])],
+    governedFromISO: GOVERNED_FROM,
+    deliveredDates: [],
+  });
+  assert(result.findings.some((finding) =>
+    finding.code === 'reduction_contradiction' && finding.domain === 'main_strength'),
+    'the overshoot stopped being DETECTED — the restore-detector receipt is gone: '
+    + JSON.stringify(result.findings.map((finding) => finding.code)));
+  assert(!has(result, 'reduction_contradiction', 'main_strength'),
+    'exceeding an authorised reduction still BLOCKS the week — the athlete trains '
+    + 'more than the authorised worst case and every door on this week dies: '
+    + JSON.stringify(result.blockingViolations));
+});
+
 // ── D7 — THE BOUNDARY TWIN. The coverage hole this suite carried, named by the
 // §18 ownership reassessment (2026-08-05, defect D2): every cell above tests
 // DOSE across the governed boundary, and none tested PATTERN COVERAGE. The two
