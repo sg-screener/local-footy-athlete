@@ -84,8 +84,8 @@ export function easedConditioningTiers(args: {
 
 /**
  * The athlete-facing WHY, shown on the eased session (coach-note line).
- * PROPOSED — awaiting Sam's approval; drafted 2026-08-26 as ordered
- * ("draft the wording and I'll approve").
+ * SIGNED — Sam approved this sentence verbatim, 2026-08-26 ("approve").
+ * It may not drift without a new signature.
  */
 export const CONDITIONING_EASE_NOTE =
   'Eased back today — your last couple of conditioning sessions looked like a lot.';

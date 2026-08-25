@@ -143,9 +143,10 @@ run('the builder feeds the ease from stored feedback and discloses the pick', ()
     'an eased pick ships without its why');
 });
 
-run('the disclosure is one short sentence (PROPOSED for Sam)', () => {
-  assert(CONDITIONING_EASE_NOTE.length < 100 && /Eased/i.test(CONDITIONING_EASE_NOTE),
-    CONDITIONING_EASE_NOTE);
+run('the disclosure is the SIGNED sentence (Sam, 2026-08-26)', () => {
+  assert(CONDITIONING_EASE_NOTE ===
+    'Eased back today — your last couple of conditioning sessions looked like a lot.',
+    `the signed sentence drifted: "${CONDITIONING_EASE_NOTE}"`);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -6099,9 +6099,11 @@ one. The 2026-07-27 dose-adjustment retirement (Bible :4966) and Section
 WHICH authored dose, never a number. Strength-side feedback wiring was
 already WORKING (Sam's 2026-08-16 "feed the real persisted history").
 
-Disclosure on the eased session (coachNotes), PROPOSED awaiting Sam:
-*"Eased back today — your last couple of conditioning sessions looked like
-a lot."*
+Disclosure on the eased session (coachNotes), SIGNED verbatim (Sam,
+2026-08-26, "approve"): *"Eased back today — your last couple of
+conditioning sessions looked like a lot."* No step-up line exists by
+design — nothing is stored, so the regular session's return has no event
+to announce; Sam approved that shape with the sentence.
 
 **Search words:** conditioning feedback, rough session, ease tier, RPE,
 too much, dose adjustment, authored templates, progress tab, step up.
