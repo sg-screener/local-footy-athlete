@@ -51,7 +51,7 @@ import {
 } from '../store/acceptedStateTransaction';
 import { resolveDateWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
-import { applyLighterDayTrim } from '../utils/lighterDayTrim';
+import { applyLighterDayTrim, lighterDayTrimAvailable } from '../utils/lighterDayTrim';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { selectReadinessFactForDate } from '../rules/temporarySourceFact';
 
@@ -181,4 +181,15 @@ export async function applyLighterDayForToday(args: {
     changes,
     adjustmentId: record?.id,
   };
+}
+
+/**
+ * Is there anything the lighter-day trim could do for `date`? Same resolver
+ * lens as `applyLighterDayForToday`, same pure predicate as the trim — so the
+ * OFFER and the APPLY cannot disagree. Offered-then-refused ("There is no
+ * session to lighten today") was launch-audit finding #8's dead-end.
+ */
+export function lighterDayAvailableForDate(date: string): boolean {
+  const resolved = resolveDateWithConditioning(date, buildScheduleStateImperative());
+  return lighterDayTrimAvailable(resolved?.workout);
 }

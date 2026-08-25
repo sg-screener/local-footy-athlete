@@ -400,6 +400,33 @@ async function main(): Promise<void> {
     assert(trimmedMon.changes.length > 0, 'real MON trim must name a change (accessory volume)');
   });
 
+  // ── R-228 / audit #8 dead-end: the OFFER stands on the same predicate as
+  // the APPLY. `lighterDayTrimAvailable` is that predicate — offered-then-
+  // refused ("There is no session to lighten today") is the defect it retires.
+  // Sam, 2026-08-26: the tired/sick softening is KEPT and must actually work.
+  await run('R-228 offer predicate: available exactly when the trim would change something', async () => {
+    const mod = require('../utils/lighterDayTrim') as {
+      applyLighterDayTrim: (w: unknown) => { workout: any; changes: string[] };
+      lighterDayTrimAvailable: (w: unknown) => boolean;
+    };
+    const trimmable = {
+      id: 'w-a', name: 'Lower Body Strength', workoutType: 'Strength', sessionTier: 'core',
+      dayOfWeek: 1, date: WEEK,
+      exercises: [
+        { exerciseId: 'ex-squat', exercise: { name: 'Back Squat' }, prescribedSets: 4, prescribedRepsMin: 3, prescribedRepsMax: 4, prescribedWeightKg: 100, section18Evidence: { role: 'main_strength' } },
+        { exerciseId: 'ex-rdl', exercise: { name: 'Romanian Deadlift' }, prescribedSets: 4, prescribedRepsMin: 8, prescribedRepsMax: 10, prescribedWeightKg: 80, section18Evidence: { role: 'strength_accessory' } },
+      ],
+    };
+    assert(mod.lighterDayTrimAvailable(trimmable) === true,
+      'a day the trim would change must be offerable');
+    assert(mod.lighterDayTrimAvailable(null) === false, 'no workout, no offer');
+    assert(mod.lighterDayTrimAvailable({ ...trimmable, exercises: [] }) === false,
+      'a day with no exercises (team training / rest) must not be offered');
+    const mainOnly = { ...trimmable, exercises: [trimmable.exercises[0]] };
+    assert(mod.lighterDayTrimAvailable(mainOnly) === mod.applyLighterDayTrim(mainOnly).changes.length > 0,
+      'the offer and the apply must answer identically for the same workout');
+  });
+
   // ── Invariant R5 (part c — progression-baseline guard): a trimmed day must NOT
   // drag the athlete's future progression baseline down. The baseline builder
   // reads ONLY `weightOverrides`, so next week's strength prescription must be

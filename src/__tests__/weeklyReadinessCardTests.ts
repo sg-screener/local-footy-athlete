@@ -563,6 +563,19 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     src.includes('sickIcon') && src.includes('flatTodayIcon') &&
     (src.match(/pulseIcon\(/g) || []).length <= 4);
 
+  // ── R-228 on this sheet (Sam, 2026-08-26: keep the tired/sick softening
+  // and make it WORK). Two source anchors, both learned from audit #8:
+  // the OFFER stands on the same predicate as the apply (no dead-end offer),
+  // and the standing sentence is selected by committed state, not fact
+  // existence (no "Today is adjusted" over an unadjusted day).
+  ok('[R-228] the lighter-day offer is gated on the shared availability predicate',
+    /todayScoped && lighterDayAvailableForDate\(/.test(src));
+  ok('[R-228] the standing description reads committed state through the copy owner',
+    /readinessStandingDescription\(\{ scope: active\.scope, adjusted: activeAdjusted \}\)/.test(src) &&
+    !/adjusted around how you said/.test(src));
+  ok('[R-228] activeAdjusted derives from the reversible ledger, never the fact alone',
+    /adjustment\.status === 'active' && adjustment\.sourceFactId === weekReadiness\.id/.test(src));
+
   // Device finding #3: the illness_recovery week keeps its sessions (sessionTier
   // 'optional') rather than clearing to Rest, so the day card must surface an
   // optional-tier session as OPTIONAL (de-emphasised, "only if you feel like it"),

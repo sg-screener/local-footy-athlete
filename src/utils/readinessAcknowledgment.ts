@@ -89,6 +89,28 @@ export function buildReadinessAcknowledgment(
   };
 }
 
+/**
+ * The STANDING description on the readiness sheet — what the athlete reads
+ * when they reopen it while a report is active. Launch audit 2026-08-25,
+ * finding #8: this sentence claimed "Today is adjusted around how you said
+ * you're feeling" whenever the FACT existed, including when the trim had
+ * refused and nothing was adjusted — seconds after "There is no session to
+ * lighten today". Same law as everything in this module (now R-228): the
+ * effect clause is selected by the COMMITTED state, never by the fact alone.
+ * `adjusted` comes from the reversible-adjustment ledger / programming-effect
+ * constraints, i.e. from what the app actually did.
+ */
+export function readinessStandingDescription(args: {
+  scope: 'today' | 'week';
+  adjusted: boolean;
+}): string {
+  const span = args.scope === 'today' ? 'Today is' : 'This week is';
+  if (args.adjusted) {
+    return `${span} adjusted around how you said you're feeling. Clear the adjustment when you're good again.`;
+  }
+  return "Logged how you're feeling — your sessions are unchanged. Clear this when you're good again.";
+}
+
 /** Which schedule door is speaking. Both write the same fact kind; they promise
  *  the athlete different things, so they acknowledge differently. */
 export type ScheduleDoor = 'short_on_time' | 'away' | 'away_equipment'

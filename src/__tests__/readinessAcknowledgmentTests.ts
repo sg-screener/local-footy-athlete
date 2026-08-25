@@ -20,6 +20,7 @@ import {
   buildReadinessAcknowledgment,
   buildRolloverAcknowledgment,
   buildScheduleAcknowledgment,
+  readinessStandingDescription,
 } from '../utils/readinessAcknowledgment';
 
 let passes = 0;
@@ -67,6 +68,19 @@ run('a failed report is acknowledged as an error, never silence', () => {
   const ack = buildReadinessAcknowledgment({ ok: false });
   assert(ack && ack.tone === 'error' && ack.message.trim().length > 0,
     'a failure must be acknowledged honestly');
+});
+
+run('the standing sheet sentence claims an adjustment only when one exists', () => {
+  // Audit #8: "Today is adjusted around how you said you're feeling" rendered
+  // for a fact whose trim had REFUSED, seconds after "There is no session to
+  // lighten today". The sentence is selected by committed state (R-228).
+  const unadjusted = readinessStandingDescription({ scope: 'today', adjusted: false });
+  assert(!/adjust/i.test(unadjusted),
+    `the unadjusted sentence claims an adjustment: "${unadjusted}"`);
+  const adjusted = readinessStandingDescription({ scope: 'today', adjusted: true });
+  assert(/^Today is adjusted/.test(adjusted), `the adjusted sentence changed: "${adjusted}"`);
+  assert(/^This week is adjusted/.test(readinessStandingDescription({ scope: 'week', adjusted: true })),
+    'the week scope lost its span word');
 });
 
 run('R-228a — no failure sentence promises that a retry will work', () => {

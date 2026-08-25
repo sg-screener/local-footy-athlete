@@ -95,3 +95,16 @@ export function applyLighterDayTrim(workout: Workout): LighterDayTrimResult {
     changes: summaryChanges,
   };
 }
+
+/**
+ * Would the lighter-day trim actually CHANGE this workout? Pure, and the ONE
+ * predicate the offer and the apply both stand on (R-228's class: an offer is
+ * an effect claim, so it is selected by what the commit would do, never by the
+ * fact alone). Launch audit 2026-08-25, finding #8: the offer was made after
+ * every today-scoped report, so a team-training or rest day offered a lighter
+ * day whose accept could only answer "There is no session to lighten today."
+ */
+export function lighterDayTrimAvailable(workout: Workout | null | undefined): boolean {
+  if (!workout || (workout.exercises ?? []).length === 0) return false;
+  return applyLighterDayTrim(workout).changes.length > 0;
+}

@@ -75,9 +75,10 @@ import {
   applyRecoveryAddonExerciseDecisions,
 } from '../../utils/derivedExerciseDecisions';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
-import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, readinessStandingDescription, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
-import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
+import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
+import { useProgramStore } from '../../store/programStore';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -431,6 +432,19 @@ export default function HomeScreenV2() {
   const readinessProgrammingEffectFactIds = useMemo(() => new Set(
     activeConstraints.flatMap((constraint) => constraint.temporarySourceFactIds ?? []),
   ), [activeConstraints]);
+  /* Did the app actually CHANGE anything for the active readiness fact? True
+   * only when committed state says so — an active reversible adjustment keyed
+   * on the fact, or a constraint carrying the fact with programming effect.
+   * The standing sheet sentence selects on this (R-228); the fact's existence
+   * alone claimed an adjustment the audit proved absent. */
+  const reversibleAdjustments = useProgramStore(
+    (s) => s.reversibleAdjustmentLedger?.adjustments) ?? [];
+  const weekReadinessAdjusted = useMemo(() => {
+    if (!weekReadiness) return false;
+    return reversibleAdjustments.some((adjustment) =>
+      adjustment.status === 'active' && adjustment.sourceFactId === weekReadiness.id)
+      || readinessProgrammingEffectFactIds.has(weekReadiness.id);
+  }, [readinessProgrammingEffectFactIds, reversibleAdjustments, weekReadiness]);
   const activeFixtureId = gameModalDate
     ? weekDays.find((day) => day.date === gameModalDate)?.workout?.id ?? `calendar-game-${gameModalDate}`
     : 'calendar-game-unknown';
@@ -1616,6 +1630,7 @@ export default function HomeScreenV2() {
         visible={readinessEntry !== null}
         initialBucket={readinessEntry ?? 'flat'}
         active={weekReadiness}
+        activeAdjusted={weekReadinessAdjusted}
         acknowledgment={readinessAck}
         lighterDayOffer={lighterDayOffer}
         lighterDayBusy={lighterDayBusy}
@@ -1629,7 +1644,11 @@ export default function HomeScreenV2() {
           // Opt-in lighter-day / "soften today" offer after a today-scoped report.
           const todayScoped = kind === 'tired_today' || kind === 'flat_today' || kind === 'poor_sleep_today' ||
             kind === 'sore_today' || kind === 'illness_mild';
-          setLighterDayOffer(result?.ok && todayScoped
+          /* Offered ONLY when the trim would change something — the offer and
+           * the apply share `lighterDayAvailableForDate`, so "accept" can no
+           * longer answer "There is no session to lighten today" (audit #8's
+           * dead-end; Sam 2026-08-26: keep it and make it work). */
+          setLighterDayOffer(result?.ok && todayScoped && lighterDayAvailableForDate(todayISOLocal())
             ? { date: todayISOLocal(), factId: result.createdModifierIds?.[0] }
             : null);
         }}
@@ -3621,6 +3640,10 @@ interface WeekReadinessSheetProps {
   visible: boolean;
   initialBucket: 'flat' | 'sick';
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
+  /** Did the app actually change the program for the active fact? Derived from
+   *  committed state (reversible-adjustment ledger / programming-effect
+   *  constraints), never from the fact's existence — R-228. */
+  activeAdjusted: boolean;
   acknowledgment: ReadinessAcknowledgment | null;
   lighterDayOffer: { date: string; factId?: string } | null;
   lighterDayBusy: boolean;
@@ -3639,6 +3662,7 @@ function WeekReadinessSheet({
   visible,
   initialBucket,
   active,
+  activeAdjusted,
   acknowledgment,
   lighterDayOffer,
   lighterDayBusy,
@@ -3768,9 +3792,12 @@ function WeekReadinessSheet({
       {!showOptions && !lighterDayOffer && !justConfirmed && active && (
         <View>
           <SheetHeader title="Readiness" subtitle={active.title} />
+          {/* The effect clause is selected by COMMITTED state (R-228): during
+              the audit this block claimed "Today is adjusted" for a fact whose
+              trim had refused, seconds after "There is no session to lighten
+              today". `readinessStandingDescription` owns both sentences. */}
           <SheetDescription>
-            {active.scope === 'today' ? 'Today is' : 'This week is'} adjusted around how you said you're feeling. Clear
-            the adjustment when you're good again.
+            {readinessStandingDescription({ scope: active.scope, adjusted: activeAdjusted })}
           </SheetDescription>
           <SheetOption
             label="Update — how I'm feeling changed"
