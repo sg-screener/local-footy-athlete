@@ -2883,3 +2883,12 @@ commit). Sam's device case (audit #1 root B) is ready for his glass check.
 S3 (writeCoachOverride outcome honored) and S4/S5 remain per the plan —
 S3's defect class is real (the discarded {ok:false} shape was measured
 here), S4 consolidates, S5 demolishes.
+
+## S3 WORKING (2026-08-26) — and two dark-suite sightings
+
+S3 committed (see commit for receipts). Dead-suite ledger additions:
+`programEditWriteGuardTests.ts` has NO package.json script (dark; its
+write-guard anchors run nowhere); `exerciseRestoreOwnerTests` dies at
+import-time TypeError (`startsWith` on undefined, line 437) on both arms
+at HEAD. Neither is this unit's to fix; recorded so the next census
+doesn't rediscover them.
