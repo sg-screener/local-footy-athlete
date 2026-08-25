@@ -32,8 +32,8 @@ import {
 import { buildDeterministicCoachNoteDescriptors } from './deterministicCoachNoteFactory';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import {
-  activeExclusionsOn,
   exclusionExpiryLabel,
+  standingExclusionsOn,
   EXERCISE_EXCLUSION_SCOPE_LABEL,
   type ExerciseExclusion,
 } from '../rules/exerciseExclusions';
@@ -1275,9 +1275,18 @@ function athletePreferenceModifier(
  * true for one of Sam's three scopes and wrong for the other two, with no expiry
  * to show and nothing to change the scope with.
  */
-function athleteExclusionModifier(exclusion: ExerciseExclusion): ActiveProgramModifier {
+function athleteExclusionModifier(
+  exclusion: ExerciseExclusion,
+  todayISO: string,
+): ActiveProgramModifier {
   const displayExercise = formatExerciseDisplayName(exclusion.exercise);
   const scopeLabel = EXERCISE_EXCLUSION_SCOPE_LABEL[exclusion.scope];
+  /* A removal decided IN ADVANCE (launch audit 2026-08-25, finding #7: bin
+   * Thursday's exercise on Tuesday) now shows before its day — the row must
+   * say it has not started rather than read as active. A one-day span's
+   * expiry label would just repeat the start date, so it yields to the
+   * `Starts` clause. Functional copy, PROPOSED — not Sam-signed. */
+  const notYetStarted = todayISO.slice(0, 10) < exclusion.decidedOnISO;
   return {
     id: modifierId('athlete_preferences', `exclusion:${exclusion.exercise}`),
     source: 'athlete_preferences',
@@ -1289,7 +1298,10 @@ function athleteExclusionModifier(exclusion: ExerciseExclusion): ActiveProgramMo
     title: `${displayExercise} left out`,
     body: sentence([
       `${scopeLabel}.`,
-      `${exclusionExpiryLabel(exclusion)}.`,
+      notYetStarted ? `Starts ${exclusion.decidedOnISO}.` : null,
+      notYetStarted && exclusion.scope === 'today_only'
+        ? null
+        : `${exclusionExpiryLabel(exclusion)}.`,
       exclusion.reason ? `You said: ${exclusion.reason}.` : null,
     ]),
     // `today_only` changes today's session and nothing beyond it; the other two
@@ -1496,13 +1508,18 @@ export function selectActiveProgramModifiers(
    * stored object this snapshot carries, so reading it here would silently show
    * an athlete with ten exclusions no rows at all. The decisions are the truth.
    *
-   * Filtered to the ones ACTIVE TODAY, which is what makes a `today_only`
-   * exclusion "leave active Status after that day but remain in history"
-   * (Sam's contract) with no sweep to run — the decision stays stored, the
-   * arithmetic stops matching, the row goes. */
-  for (const exclusion of activeExclusionsOn(snapshot.athletePrefs?.exclusions, todayISO)) {
+   * Filtered to STANDING decisions — every exclusion with remaining effect,
+   * including one decided in advance whose day has not arrived (launch audit
+   * 2026-08-25, finding #7: the removal confirmation promises an undo home
+   * here, so hiding the decision until its start day left "0 ACTIVE" and no
+   * way back). A `today_only` exclusion still "leaves active Status after
+   * that day but remains in history" (Sam's contract) with no sweep to run —
+   * the decision stays stored, the arithmetic stops matching, the row goes.
+   * `exclusionIsActiveOn` remains the ONE program-effect predicate; standing
+   * answers the different question "is there a decision left to change?". */
+  for (const exclusion of standingExclusionsOn(snapshot.athletePrefs?.exclusions, todayISO)) {
     if (!activePreferenceExercises.has(exclusion.exercise)) {
-      addUnique(out, seen, athleteExclusionModifier(exclusion));
+      addUnique(out, seen, athleteExclusionModifier(exclusion, todayISO));
     }
   }
   for (const exercise of snapshot.athletePrefs?.pinned ?? []) {

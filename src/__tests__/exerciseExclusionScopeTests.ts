@@ -68,6 +68,7 @@ import {
   activeExclusionsOn,
   exclusionIsActiveOn,
   resolveWeekExclusions,
+  standingExclusionsOn,
   upsertExclusion,
   type ExerciseExclusion,
 } from '../rules/exerciseExclusions';
@@ -780,6 +781,40 @@ async function main(): Promise<void> {
   ok('activeExclusionsOn is the same predicate, applied to a list',
     activeExclusionsOn([wednesday], '2026-08-06').length === 1
       && activeExclusionsOn([wednesday], BLOCK_3_START).length === 0);
+
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  console.log('\n[12] STANDING vs ACTIVE — a decision made in advance is still a decision');
+
+  /* Launch audit 2026-08-25, finding #7: remove Thursday's exercise on Tuesday
+   * and the confirmation says "change or undo this in My Status" — but Status
+   * filters by exclusionIsActiveOn(today), whose lower bound hides the
+   * not-yet-started decision. Standing = any exclusion with remaining effect,
+   * started or not. The program-effect predicate above is untouched. */
+  ok('a Wednesday decision is STANDING on Monday even though not ACTIVE',
+    standingExclusionsOn([wednesday], BLOCK_2_START).length === 1
+      && activeExclusionsOn([wednesday], BLOCK_2_START).length === 0);
+  ok('a spent exclusion is neither standing nor active',
+    standingExclusionsOn([wednesday], BLOCK_3_START).length === 0);
+  ok('an open-ended exclusion is always standing',
+    standingExclusionsOn([{ ...wednesday, activeThroughISO: null }], BLOCK_3_START).length === 1);
+
+  const decidedInAdvance: ExerciseExclusion = {
+    exercise: canonicalExerciseName('Back Squat'), scope: 'today_only',
+    decidedOnISO: '2026-08-27', activeThroughISO: '2026-08-27', blockNumber: 2,
+  };
+  const advanceRows = selectActiveProgramModifiers({
+    athletePrefs: { excluded: [], pinned: [], exclusions: [decidedInAdvance] } as never,
+    todayISO: '2026-08-25',
+  }).filter((m) => m.payload?.exercise === decidedInAdvance.exercise);
+  ok('the removal decided in advance SHOWS on Status before its day — the promised undo home exists',
+    advanceRows.length === 1, JSON.stringify(advanceRows));
+  ok("and its row says when it STARTS instead of claiming it is active today",
+    /Starts 2026-08-27/.test(advanceRows[0]?.body ?? ''), advanceRows[0]?.body);
+  ok('a not-yet-started row still leaves Status once spent — no new lower bound',
+    !selectActiveProgramModifiers({
+      athletePrefs: { excluded: [], pinned: [], exclusions: [decidedInAdvance] } as never,
+      todayISO: '2026-08-28',
+    }).some((m) => m.payload?.exercise === decidedInAdvance.exercise));
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);

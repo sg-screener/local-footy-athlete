@@ -175,6 +175,29 @@ export function activeExclusionsOn(
   return (exclusions ?? []).filter((e) => exclusionIsActiveOn(e, dateISO));
 }
 
+/**
+ * Every exclusion that still has ANY effect from `dateISO` onward — active
+ * today OR decided in advance for a day that has not arrived yet.
+ *
+ * THE STATUS SURFACE LISTS STANDING DECISIONS, NOT TODAY'S SLICE. Launch
+ * audit 2026-08-25, finding #7: an athlete removed Thursday's exercise on
+ * Tuesday, the confirmation said *"You can change or undo this in My
+ * Status"*, and My Status showed **0 active** — `exclusionIsActiveOn(today)`
+ * is the program-effect predicate, and its lower bound (rightly protecting
+ * completed sessions) hides a decision whose window is still ahead. The one
+ * predicate above is untouched; this is a different question — "is there a
+ * standing decision the athlete may want to change?" — and the answer stops
+ * being yes only when the window has fully passed.
+ */
+export function standingExclusionsOn(
+  exclusions: readonly ExerciseExclusion[] | null | undefined,
+  dateISO: string,
+): ExerciseExclusion[] {
+  const day = dateISO.slice(0, 10);
+  return (exclusions ?? []).filter((e) =>
+    e.activeThroughISO === null || day <= e.activeThroughISO);
+}
+
 export function excludedExerciseNamesOn(
   exclusions: readonly ExerciseExclusion[] | null | undefined,
   dateISO: string,
