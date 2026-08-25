@@ -44,6 +44,8 @@ import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useJournalNoteStore } from '../store/journalNoteStore';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
+import { useBlockSelectionHistoryStore } from '../store/blockSelectionHistoryStore';
 import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { useReadinessStore } from '../store/readinessStore';
@@ -90,6 +92,19 @@ export interface ResetDeps {
     setActiveInjuries: (keys: any[]) => void;
     clear: () => void;
   };
+  /**
+   * THE HISTORIES. Launch audit 2026-08-25, finding #2: Full reset left the
+   * decision ledger and the block-selection history behind, so the NEXT
+   * athlete's first relaunch replayed the previous athlete's edits onto their
+   * brand-new program (sessions binned, game moved — measured on glass).
+   * `resetDevE2EWorldThroughPublicAPIs` had already written the law down:
+   * "Leaving either one behind makes the next generated athlete inherit
+   * decisions from the last one." These deps make the product reset obey it.
+   */
+  decisionLedgerStore: { clear: () => void };
+  blockSelectionHistoryStore: { clear: () => void };
+  workoutLogStore: { clear: () => void };
+  journalNoteStore: { clear: () => void };
 }
 
 export interface DevPostOnboardingResetDeps {
@@ -137,6 +152,18 @@ function defaultDeps(): ResetDeps {
       setActiveInjuries: (keys) =>
         useAthletePreferencesStore.getState().setActiveInjuries(keys),
       clear: () => useAthletePreferencesStore.getState().clear(),
+    },
+    decisionLedgerStore: {
+      clear: () => useDecisionLedgerStore.getState().clear(),
+    },
+    blockSelectionHistoryStore: {
+      clear: () => useBlockSelectionHistoryStore.getState().clear(),
+    },
+    workoutLogStore: {
+      clear: () => useWorkoutLogStore.getState().clear(),
+    },
+    journalNoteStore: {
+      clear: () => useJournalNoteStore.getState().clear(),
     },
   };
 }
@@ -463,6 +490,21 @@ function runFullReset(
   // 1. First do a surgical coach clear so the per-feature logs fire
   //    (so the audit trail shows what was cleared, not just "everything").
   const surgical = clearCoachAdjustments({ deps: opts?.deps });
+
+  // 1b. The athlete's HISTORIES, before the program they explain. Launch
+  //     audit 2026-08-25, finding #2: these four were not on this list, and
+  //     the surviving decision ledger replayed the previous athlete's edits
+  //     onto the next athlete's program at their first relaunch. The dev
+  //     world reset already stated the law; the product reset now clears the
+  //     same inputs.
+  deps.decisionLedgerStore.clear();
+  logger.debug('[reset] decision_ledger_cleared');
+  deps.blockSelectionHistoryStore.clear();
+  logger.debug('[reset] block_selection_history_cleared');
+  deps.workoutLogStore.clear();
+  logger.debug('[reset] workout_log_cleared');
+  deps.journalNoteStore.clear();
+  logger.debug('[reset] journal_notes_cleared');
 
   // 2. Program store (base program + all overrides).
   deps.programStore.clear();

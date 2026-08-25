@@ -19,6 +19,10 @@ import {
   type ResetSummary,
 } from '../utils/resetCoach';
 import type { OverrideContext, TrainingProgram, Workout } from '../types/domain';
+import { appendDecisionEntry, decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { recordBlockSelections, blockSelectionHistory } from '../store/blockSelectionHistoryStore';
+import { useWorkoutLogStore } from '../store/workoutLogStore';
+import { useJournalNoteStore } from '../store/journalNoteStore';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -89,6 +93,12 @@ function makeFakeDeps(stores: FakeStores): ResetDeps {
         stores.athletePreferencesStore.activeInjuries = [];
       },
     },
+    // The histories (launch audit finding #2). The stubbed sections only need
+    // them present; section [13] exercises the REAL stores.
+    decisionLedgerStore: { clear: () => undefined },
+    blockSelectionHistoryStore: { clear: () => undefined },
+    workoutLogStore: { clear: () => undefined },
+    journalNoteStore: { clear: () => undefined },
   };
 }
 
@@ -348,6 +358,48 @@ async function runAsyncSections() {
     eq('result message success', result.message, 'Reset to clean post-onboarding state.');
     eq('current profile survives reset', result.onboardingData.firstName, 'Riley');
     eq('dev default profile fields backfilled', result.onboardingData.position, 'inside_mid');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 13. FULL RESET wipes the athlete HISTORIES (launch audit finding #2).
+  //
+  // Measured on the simulator 2026-08-25: Full reset left
+  // `decision-ledger-store` and `block-selection-history-store` behind, and
+  // the next athlete's first relaunch replayed the previous athlete's edits
+  // onto their brand-new program — sessions binned, the game moved. These
+  // cells drive the REAL stores through their own doors and run the real
+  // `resetProgramAndOnboarding` with its default deps, so they fail on the
+  // wipe list itself, not on a stub of it.
+  // ═══════════════════════════════════════════════════════════════════
+  section('[13] Full reset clears decision ledger + block history + logs (real stores)');
+  {
+    const append = appendDecisionEntry({
+      decision: {
+        kind: 'plan_change',
+        change: { kind: 'remove_session', date: '2026-08-24', scope: 'whole_day' },
+      } as never,
+      provenance: 'athlete_tap' as never,
+      writer: 'harness',
+    });
+    ok('seed: a decision landed in the real ledger',
+      append.ok === true && decisionLedgerEntries().length > 0);
+    recordBlockSelections('2026-08-24', [
+      { blockStartISO: '2026-08-24', slotId: 'hinge', exerciseName: 'RDLs' } as never,
+    ]);
+    ok('seed: a block selection is recorded', blockSelectionHistory().length > 0);
+    useWorkoutLogStore.getState().startWorkout(workout('Leak probe'));
+    ok('seed: a workout log is active', useWorkoutLogStore.getState().activeWorkout !== null);
+
+    resetProgramAndOnboarding();
+
+    ok('decision ledger is EMPTY after full reset — the next athlete inherits nothing',
+      decisionLedgerEntries().length === 0);
+    ok('block-selection history is EMPTY after full reset',
+      blockSelectionHistory().length === 0);
+    ok('workout log is cleared after full reset',
+      useWorkoutLogStore.getState().activeWorkout === null);
+    ok('journal notes are empty after full reset',
+      useJournalNoteStore.getState().notes.length === 0);
   }
 }
 
