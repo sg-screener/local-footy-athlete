@@ -2797,3 +2797,27 @@ is green.
 Copy note: the `Starts <date>` clause is functional copy, PROPOSED — queued
 for Sam's words with the #8 batch. The audit's wider "#7b: no undo toast on
 bin/move/drag" is a design decision, parked for Sam with #10.
+
+## Audit finding #7b — the undo toast chain is WORKING at HEAD (probe receipt)
+
+`b9e44c72`. Probed device-snapshot world through the real doors
+(scratchpad `audit/probe-bin-move-undo.ts`): bin_session and move_session
+both append `plan_change` ledger entries, `phraseFor` maps them ("removed a
+session" / "moved a session"), `undoToastFor` yields a model, and
+`undoLastDecision` restores the week byte-identical (`BIN UNDO RESTORES
+WEEK: YES`, `MOVE UNDO RESTORES WEEK: YES`). The silence Sam observed on
+2026-08-25 keyed on finding #6's relaunch-duplicated ledger ids (fixed
+`574343f7`): `undoToastFor` and `annulledEntryIds` both key on entry id
+identity, which duplicate ids corrupt. Guard added: undoReversalTests 11b
+pins the bin's live vocabulary to the phrase owner. Also repaired the
+pre-existing undo-reversal red: the R-107 no-navigation cell was anchored
+on DayWorkoutScreenV2 after the SessionChangeHub mount moved to
+HomeScreenV2 (Sam's 2026-08-25 one-day-status-card ruling) — re-anchored to
+follow the mount, assertion unchanged, new host region has no navigation
+calls. Suite 25/0 from baseline 23/1. The VISIBLE toast on-device is Sam's
+morning pass to confirm (L10); if it is still absent there, the next
+suspect is the component/mount layer (remount marker reset), not the model.
+
+Also probed and worth keeping: bin/move on the combined team+gym day REFUSE
+with the protected-anchor sentence — correct, and no ledger entry is
+appended on refusal.
