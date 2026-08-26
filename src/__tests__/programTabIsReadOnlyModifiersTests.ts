@@ -305,6 +305,18 @@ run('the Program notice is a doorway, not a control surface', () => {
     + 'Coach boolean cannot be opened by Program at all');
 });
 
+run('the Day view header carries the permanent My Status doorway (Sam, 2026-08-26)', () => {
+  // "day view should have a my status button at the top of the page the
+  // exact same spot and size as the coach tab" — the coach VARIANT of the
+  // one strip, mounted in the brand header, permanent at zero like coach.
+  const home = read(HOME);
+  assert(/surface="day_header"/.test(home),
+    'the day header doorway is gone from the Program screen');
+  const strip = read('src/components/ModifiersStrip.tsx');
+  assert(/surface === 'coach' \|\| surface === 'day_header'/.test(strip),
+    'day_header no longer wears the coach doorway variant (look + zero state)');
+});
+
 console.log(`\nprogram tab read-only modifiers: ${passed} passed, ${failed} failed`);
 if (failures.length) {
   console.log('\nFAILURES:');

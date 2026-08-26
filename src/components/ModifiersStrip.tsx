@@ -35,19 +35,24 @@ export interface ModifiersStripProps {
   readonly count: number;
   readonly onPress: () => void;
   /**
-   * Distinguishes the three mounts for the walker and the flows. The component
+   * Distinguishes the mounts for the walker and the flows. The component
    * is one; its coordinates must not be, or a flow cannot say WHICH surface it
-   * asserted.
+   * asserted. `day_header` is the Day view's permanent doorway (Sam,
+   * 2026-08-26: *"day view should have a my status button at the top of the
+   * page the exact same spot and size as the coach tab"*) — it wears the
+   * coach variant's look and, like coach, stays mounted at zero.
    */
-  readonly surface: 'day' | 'week' | 'coach';
+  readonly surface: 'day' | 'week' | 'coach' | 'day_header';
 }
 
 export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps) {
-  // Program only needs a notice when something is active. Coach owns the
-  // permanent My Status doorway, including the honest zero state.
-  if (count <= 0 && surface !== 'coach') return null;
+  // Program's notices appear only when something is active. The DOORWAY
+  // surfaces (coach, and the day header that mirrors it) stay mounted at
+  // zero, stating the honest zero condition.
+  const doorway = surface === 'coach' || surface === 'day_header';
+  if (count <= 0 && !doorway) return null;
   const weekSurface = surface === 'week';
-  const coachSurface = surface === 'coach';
+  const coachSurface = doorway;
   const countLabel = signedCopy(
     count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
     { count },

@@ -845,6 +845,19 @@ export default function HomeScreenV2() {
         >
         <View style={styles.brandHeader}>
           <LfaWordmark />
+          {/* Sam, 2026-08-26: "day view should have a my status button at the
+              top of the page the exact same spot and size as the coach tab".
+              The coach variant of the ONE strip, permanent at zero like the
+              coach doorway, opening the same read-only modifiers sheet the
+              day notice opens (controls stay in My Status — the read-only
+              Program law). */}
+          {dayFirst ? (
+            <ModifiersStrip
+              surface="day_header"
+              count={modifierCount}
+              onPress={() => setModifiersSheetOpen(true)}
+            />
+          ) : null}
         </View>
         {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
@@ -4340,7 +4353,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
-  brandHeader: { minHeight: 32, justifyContent: 'center', marginBottom: spacing.md },
+  brandHeader: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
 
   // Program shape controls. Day pays only for the toggle. Week adds this
   // compact navigation row underneath it, matching the accepted hierarchy
