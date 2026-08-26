@@ -10,14 +10,21 @@
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { registerProjectionCopy } from '../rules/projectionCopy';
+
 import {
   WEEK_BOARD_MAX_BOXES,
   buildWeekBoard,
   buildWeekBoardDay,
+  weekBoardEditFingerprint,
   weekBoardDropRefusal,
   weekBoardMoveScope,
   type WeekBoardBox,
 } from '../rules/weekBoard';
+import { signedCopy } from '../rules/signedCopy';
+
+// Registers the ruled athlete-facing strings before the direct copy checks.
+registerProjectionCopy();
 
 let passed = 0;
 const failures: string[] = [];
@@ -296,6 +303,57 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     'Sam, 2026-08-25: dragging it moves it for this week, no question');
   ok('and it travels by move_team_night, never by move_session',
     /initialMove\.scope === 'team'[\s\S]{0,120}kind: 'move_team_night'/.test(sheet));
+}
+
+/* ══ 5a. Finish editing explicitly ══ */
+
+/**
+ * R-245 — the transactions beneath Manage Week still save immediately, but the
+ * ATHLETE finishes the editing visit explicitly. The dirty signal is derived
+ * from the same board projection they are looking at, so a new add/move/remove
+ * door cannot forget to set a private boolean.
+ */
+console.log('\n[5a] A changed Week board finishes through Save changes');
+{
+  const baseline = [
+    buildWeekBoardDay(day('mon', [part('strength', 'Strength', 'Lower Squat')])),
+    buildWeekBoardDay(day('tue', [])),
+  ];
+  const sameVisibleWeek = [
+    buildWeekBoardDay(day('mon', [part('strength', 'Strength', 'Lower Squat')])),
+    buildWeekBoardDay(day('tue', [])),
+  ];
+  const moved = [
+    buildWeekBoardDay(day('mon', [])),
+    buildWeekBoardDay(day('tue', [part('strength', 'Strength', 'Lower Squat')])),
+  ];
+
+  ok('an unchanged re-projection is not a pending edit',
+    weekBoardEditFingerprint(baseline) === weekBoardEditFingerprint(sameVisibleWeek));
+  ok('a visible add, move or removal changes the edit fingerprint',
+    weekBoardEditFingerprint(baseline) !== weekBoardEditFingerprint(moved));
+
+  const fs = require('fs');
+  const path = require('path');
+  const home = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  const boardRegion = home.slice(
+    home.indexOf('{weekBoardOpen\n              ? ('),
+    home.indexOf(': weekViewDays.map', home.indexOf('{weekBoardOpen\n              ? (')),
+  );
+  ok('Manage Week owns an explicit Save changes action',
+    home.includes("'week.board.save'")
+      && home.includes('testID="week-board-save"')
+      && signedCopy('week.board.save') === 'Save changes');
+  ok('Save appears only after the visible board differs from its opening state',
+    /weekBoardOpen && \(weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'\)/.test(home)
+      && /weekBoardEditFingerprint\(weekBoardRows\.map\(\(row\) => row\.board\)\)/.test(home));
+  ok('saving briefly confirms, then returns to the ordinary Week view',
+    home.includes("'week.board.saved'")
+      && signedCopy('week.board.saved') === 'Changes saved'
+      && /setWeekBoardFinishState\('confirmed'\)[\s\S]{0,1000}setWeekBoardOpen\(false\)/.test(home));
+  ok('a changed board cannot silently leave through the old Cancel action',
+    /onCancel=\{weekBoardHasChanges \? undefined : closeWeekBoard\}/.test(home));
 }
 
 /* ══ 6. The scope a dragged box travels under ══ */

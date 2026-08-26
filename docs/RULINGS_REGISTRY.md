@@ -6348,3 +6348,21 @@ occupied day, fixture precedence, no headings, no separator lines.
 · `WORKING` — `test:week-board` guards both game operations and fixture
 precedence; `test:day-first-timeline` guards the two-row divider-free popup and
 the one add chooser.
+
+**R-245** · *"when you make a change in weekly view you should have to click
+save changes - even though it is already saved - it's better UX for the athlete
+to know that - and then be given a confirmed quickly then snap back to regular
+weekly view"*; *"just a save changes button after making a change is enough"*
+(Sam, 2026-08-26, Manage Week finish review) · **A CHANGED WEEK EDIT VISIT ENDS
+WITH ONE SIMPLE SAVE BUTTON.**
+The existing add, move and remove transactions remain immediate and durable.
+Manage Week compares its current visible board with the board that opened the
+visit; refused actions and no-op re-projections do not count as changes. The
+button is absent before a change and appears as `Save changes` afterwards.
+Tapping it briefly shows `Changes saved` before returning to the ordinary Week
+view. The opening board and confirmation are transient screen state only and
+are never persisted.
+**Search words:** Save changes, Changes saved, Manage Week confirmation,
+weekly edit finish, snap back, dirty board, immediate save.
+· `WORKING` — `test:week-board` compares real board projections, binds both
+signed strings and pins the one-button finish/return flow.

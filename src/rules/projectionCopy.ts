@@ -805,6 +805,20 @@ export function registerProjectionCopy(): void {
       text: 'Add, move or remove sessions and games',
     },
     {
+      id: 'week.board.save',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-245: the athlete explicitly '
+        + 'finishes a changed Manage Week visit.',
+      text: 'Save changes',
+    },
+    {
+      id: 'week.board.saved',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-245: briefly confirm before '
+        + 'returning to the ordinary Week view.',
+      text: 'Changes saved',
+    },
+    {
       id: 'week.board.add.title',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-26, R-244: the board plus asks what '

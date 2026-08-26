@@ -205,6 +205,36 @@ export function buildWeekBoard(days: readonly VisibleDay[]): WeekBoardDay[] {
 }
 
 /**
+ * The visible identity of one Manage Week visit.
+ *
+ * R-245 keeps the transactions beneath the board immediate, but asks the
+ * athlete to finish the editing visit with Save changes. The finish control
+ * therefore needs to know whether the BOARD THEY CAN SEE differs from the one
+ * they opened. Deriving that from this projection is deliberately preferable
+ * to setting a private `dirty` flag in every add/move/remove handler: a future
+ * handler then participates automatically, and a refused/no-op action does not
+ * pretend there is something to save.
+ *
+ * Empty boxes are included because room is part of the visible board shape;
+ * every field the box renderer uses is included, so a renamed or re-scoped
+ * session is still recognised as a changed board even when it stays on the
+ * same date. This fingerprint is presentation state only and is never stored.
+ */
+export function weekBoardEditFingerprint(days: readonly WeekBoardDay[]): string {
+  return JSON.stringify(days.map((day) => ({
+    date: day.date,
+    isFull: day.isFull,
+    boxes: day.boxes.map((box) => ({
+      id: box.id,
+      kind: box.kind,
+      label: box.label,
+      scope: box.scope,
+      binScope: box.binScope,
+    })),
+  })));
+}
+
+/**
  * May `box` on `from` be dropped onto `target` on `to`?
  *
  * ⚠ **THIS ANSWERS THE BOARD'S OWN SHAPE RULES ONLY.** Whether the PROGRAM

@@ -343,7 +343,7 @@
     "test:coach-tab-slice1": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice1Tests.ts",
     "test:coach-tab-slice2": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice2Tests.ts",
     "test:weekly-plan-display": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklyPlanDisplayTests.ts",
-    "test:day-first-timeline": "TZ=Australia/Melbourne sucrase-node src/__tests__/dayFirstTimelineTests.ts",
+    "test:day-first-timeline": "TZ=Australia/Melbourne sucrase-node src/__tests__/dayFirstTimelineTests.ts && npm run test:week-board",
     "test:prototype-typography": "TZ=Australia/Melbourne sucrase-node src/__tests__/prototypeTypographyTests.ts",
     "test:journal-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/journalWeekTests.ts",
     "test:journal-load": "TZ=Australia/Melbourne sucrase-node src/__tests__/journalLoadTests.ts",

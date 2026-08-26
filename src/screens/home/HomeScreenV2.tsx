@@ -71,7 +71,12 @@ import { useAthletePreferencesStore } from '../../store/athletePreferencesStore'
 import { excludedExerciseNamesOn } from '../../rules/exerciseExclusions';
 import type { PlanChangeBinScopeId, PlanChangeMoveScopeId } from '../../utils/planChangeTypes';
 import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
-import { buildWeekBoardDay, weekBoardMoveScope, type WeekBoardBox } from '../../rules/weekBoard';
+import {
+  buildWeekBoardDay,
+  weekBoardEditFingerprint,
+  weekBoardMoveScope,
+  type WeekBoardBox,
+} from '../../rules/weekBoard';
 import { WeekBoard, type WeekBoardRow } from './WeekBoard';
 import {
   applyMobilityFlowExerciseDecisions,
@@ -360,6 +365,16 @@ export default function HomeScreenV2() {
    * the screen exactly as the session sections' expanded state does.
    */
   const [weekBoardOpen, setWeekBoardOpen] = useState(false);
+  /**
+   * R-245 — opening fingerprint plus a short finish state. Neither is stored:
+   * they describe this editing visit, while every underlying transaction keeps
+   * saving through its established owner as soon as the athlete confirms it.
+   */
+  const [weekBoardOpeningFingerprint, setWeekBoardOpeningFingerprint] =
+    useState<string | null>(null);
+  const [weekBoardFinishState, setWeekBoardFinishState] =
+    useState<'idle' | 'confirmed'>('idle');
+  const weekBoardCloseTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Checklist #14, second round: bumped when the plan-change flow ends, so a
   // board box still HELD at its drop point (its move was not applied) glides
   // home. See WeekBoard.settleNonce.
@@ -571,6 +586,54 @@ export default function HomeScreenV2() {
         ?? { date: day.date, parts: [] } as any,
     ),
   })), [visibleWeek, weekViewDays]);
+  const currentWeekBoardFingerprint = useMemo(
+    () => weekBoardEditFingerprint(weekBoardRows.map((row) => row.board)),
+    [weekBoardRows],
+  );
+  const weekBoardHasChanges = weekBoardOpeningFingerprint !== null
+    && currentWeekBoardFingerprint !== weekBoardOpeningFingerprint;
+
+  const closeWeekBoard = useCallback(() => {
+    if (weekBoardCloseTimerRef.current) {
+      clearTimeout(weekBoardCloseTimerRef.current);
+      weekBoardCloseTimerRef.current = null;
+    }
+    setWeekBoardOpen(false);
+    setWeekBoardOpeningFingerprint(null);
+    setWeekBoardFinishState('idle');
+    setBoardRefusal(null);
+  }, []);
+
+  const openWeekBoard = useCallback(() => {
+    if (weekBoardCloseTimerRef.current) {
+      clearTimeout(weekBoardCloseTimerRef.current);
+      weekBoardCloseTimerRef.current = null;
+    }
+    setWeekBoardOpeningFingerprint(currentWeekBoardFingerprint);
+    setWeekBoardFinishState('idle');
+    setBoardRefusal(null);
+    setExpandedWeekIdx(-1);
+    setWeekBoardOpen(true);
+  }, [currentWeekBoardFingerprint]);
+
+  const handleSaveWeekBoard = useCallback(() => {
+    if (!weekBoardHasChanges || weekBoardFinishState === 'confirmed'
+      || weekBoardCloseTimerRef.current) return;
+    // The transactions are already durable. This is the athlete-visible end of
+    // the editing visit: acknowledge it briefly, then restore the normal week.
+    setWeekBoardFinishState('confirmed');
+    weekBoardCloseTimerRef.current = setTimeout(() => {
+      setWeekBoardOpen(false);
+      setWeekBoardOpeningFingerprint(null);
+      setWeekBoardFinishState('idle');
+      setBoardRefusal(null);
+      weekBoardCloseTimerRef.current = null;
+    }, 1000);
+  }, [weekBoardFinishState, weekBoardHasChanges]);
+
+  React.useEffect(() => () => {
+    if (weekBoardCloseTimerRef.current) clearTimeout(weekBoardCloseTimerRef.current);
+  }, []);
 
   /* ⚠ **THE SAME DOORS THE RETIRED MENU ROWS RAISED — SAM: *"follow the same
    * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
@@ -862,7 +925,7 @@ export default function HomeScreenV2() {
              with nothing expanded. In the day-first shape the selection is WHICH
              DAY the screen is about, so a tap on whitespace would silently snap
              the athlete off the Thursday they picked and back to today. */
-          onPress={dayFirst ? undefined : handleClearWeekPresentation}
+          onPress={dayFirst || weekBoardOpen ? undefined : handleClearWeekPresentation}
           accessible={false}
         >
         <View style={styles.brandHeader}>
@@ -899,6 +962,9 @@ export default function HomeScreenV2() {
                   <Pressable
                     key={option}
                     onPress={() => {
+                      // Manage Week is a deliberate editing visit. Once a
+                      // change is visible, Save changes is its only finish.
+                      if (weekBoardOpen) return;
                       if (option === 'today' && expandedWeekIdx >= 0) {
                         setPreferredDayIdx(expandedWeekIdx);
                       }
@@ -1114,7 +1180,7 @@ export default function HomeScreenV2() {
         {weekBoardOpen && (
           <MoveBanner
             text={signedCopy('week.board.banner')}
-            onCancel={() => setWeekBoardOpen(false)}
+            onCancel={weekBoardHasChanges ? undefined : closeWeekBoard}
           />
         )}
         {/* ⚠ **A REFUSED DROP SAYS WHY.** The box springs home either way, and a
@@ -1313,14 +1379,16 @@ export default function HomeScreenV2() {
               * thing whose whole-row tap he is replacing. */}
             {weekBoardOpen
               ? (
-                <WeekBoard
-                  rows={weekBoardRows}
-                  onAdd={handleBoardAdd}
-                  onRemove={handleBoardRemove}
-                  onMove={handleBoardMove}
-                  onRefused={setBoardRefusal}
-                  settleNonce={boardSettleNonce}
-                />
+                <View style={styles.weekBoardEdit}>
+                  <WeekBoard
+                    rows={weekBoardRows}
+                    onAdd={handleBoardAdd}
+                    onRemove={handleBoardRemove}
+                    onMove={handleBoardMove}
+                    onRefused={setBoardRefusal}
+                    settleNonce={boardSettleNonce}
+                  />
+                </View>
               )
               : weekViewDays.map((day) => renderDayRow(day, weekDays.indexOf(day)))}
           </View>
@@ -1616,6 +1684,20 @@ export default function HomeScreenV2() {
         </Pressable>
       </ScrollView>
 
+      {(weekBoardOpen && (weekBoardHasChanges || weekBoardFinishState === 'confirmed')) ? (
+        <Button
+          label={signedCopy(weekBoardFinishState === 'confirmed'
+            ? 'week.board.saved'
+            : 'week.board.save')}
+          onPress={handleSaveWeekBoard}
+          leftIcon={weekBoardFinishState === 'confirmed'
+            ? <MaterialCommunityIcons name="check" size={18} color="#0C0C0C" />
+            : undefined}
+          testID="week-board-save"
+          style={styles.weekBoardSave}
+        />
+      ) : null}
+
       {/* ── Sheets ── */}
       {/* SAM'S TWO-STEP (2026-08-13). The notice opens this; this opens My
           Status. "Not now" closes it and leaves the athlete on their session,
@@ -1766,8 +1848,7 @@ export default function HomeScreenV2() {
         }}
         onOpenBoard={() => {
           setWeekEditVisible(false);
-          setExpandedWeekIdx(-1);
-          setWeekBoardOpen(true);
+          openWeekBoard();
         }}
       />
 
@@ -1982,14 +2063,16 @@ export default function HomeScreenV2() {
 
 // ───────── Sub-components ─────────
 
-interface MoveBannerProps { text: string; onCancel: () => void; }
+interface MoveBannerProps { text: string; onCancel?: () => void; }
 function MoveBanner({ text, onCancel }: MoveBannerProps) {
   return (
     <View style={styles.moveBanner}>
       <Text style={styles.moveText}>{text}</Text>
-      <Pressable onPress={onCancel} hitSlop={8}>
-        <Text style={styles.moveCancel}>Cancel</Text>
-      </Pressable>
+      {onCancel ? (
+        <Pressable onPress={onCancel} hitSlop={8}>
+          <Text style={styles.moveCancel}>Cancel</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -4501,6 +4584,14 @@ const styles = StyleSheet.create({
   },
   moveText: { color: '#C8FF00', fontSize: 14, fontWeight: '600' },
   moveCancel: { color: '#B0B0B0', fontSize: 14, fontWeight: '600' },
+  weekBoardEdit: { gap: spacing.md },
+  weekBoardSave: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    zIndex: 20,
+  },
 
   // THE FOUR `addGame*` RULES THAT STOOD HERE WENT WITH THEIR CARD
   // (SEAT_INBOX item 19, 2026-08-13). The in-season add-game card merged into
