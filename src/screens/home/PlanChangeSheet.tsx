@@ -1145,6 +1145,7 @@ export function PlanChangeSheet({
           <MenuOption
             label={TEAM_NIGHT_CONTENT_ASK.routes.swap_safe.label}
             sub={TEAM_NIGHT_CONTENT_ASK.routes.swap_safe.sub}
+            boxed
             testID="team-night-content-route-swap-safe"
             onPress={() => apply(
               { ...step.change, teamNightContentRoute: 'swap_safe' },
@@ -1154,6 +1155,7 @@ export function PlanChangeSheet({
           <MenuOption
             label={TEAM_NIGHT_CONTENT_ASK.routes.keep_regular.label}
             sub={TEAM_NIGHT_CONTENT_ASK.routes.keep_regular.sub}
+            boxed
             testID="team-night-content-route-keep-regular"
             onPress={() => setStep({
               kind: 'confirm_warning',
@@ -1165,7 +1167,19 @@ export function PlanChangeSheet({
               trace: step.trace,
             })}
           />
-          <MenuOption label="Back" onPress={() => setStep(step.backStep)} />
+          {/* Checklist #7 also picked up the R-221/R-223 back treatment this
+            * step never got: the answers are boxes now, so a list-row Back
+            * read as a third answer. Same centred ghost Button as the G-1
+            * landing and the other popups. */}
+          <Button
+            label="Back"
+            variant="ghost"
+            size="md"
+            glow={false}
+            testID="team-night-content-back"
+            onPress={() => setStep(step.backStep)}
+            style={{ marginTop: 8 }}
+          />
         </View>
       )}
 
@@ -1383,13 +1397,22 @@ export function PlanChangeSheet({
  * handler at all, `accessibilityState` set — because a row that looks dead and
  * still fires is worse than either.
  */
-function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, onPress, testID }: {
+function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, boxed, onPress, testID }: {
   label: string;
   sub?: string;
   icon?: React.ReactNode;
   danger?: boolean;
   neutralIconChip?: boolean;
   disabled?: boolean;
+  /**
+   * Bordered-card look for ASK steps, where the rows are the answers to a
+   * question rather than a menu. Sam's phone, 2026-08-26 (checklist #7):
+   * *"the buttons should be a bit more obvious tho for the slections
+   * available - kind of like how they are obvious boxes in the other
+   * screenshot 'today only' 'this block'"* — the same card the exercise
+   * sheet's scope options wear.
+   */
+  boxed?: boolean;
   onPress: () => void;
   testID?: string;
 }) {
@@ -1424,7 +1447,8 @@ function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, onPre
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         icon ? styles.optionWithIcon : styles.option,
-        pressed && !disabled && { opacity: 0.7 },
+        boxed && styles.optionBoxed,
+        pressed && !disabled && (boxed ? styles.optionBoxedPressed : { opacity: 0.7 }),
       ]}
     >
       {icon ? (
@@ -1619,6 +1643,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  /* The exercise sheet's scope-option card (`exerciseEditOption` in
+   * DayWorkoutScreenV2), worn here by ask-step answers. Checklist #7.
+   * Literal radius/padding to match that card exactly (borderRadius.lg = 12,
+   * spacing.md = 16, spacing.sm = 8 — this file styles with literals). */
+  optionBoxed: {
+    minHeight: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#1B1B1B',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  optionBoxedPressed: {
+    backgroundColor: 'rgba(200, 255, 0, 0.06)',
+    borderColor: 'rgba(200, 255, 0, 0.28)',
   },
   optionWithIcon: {
     flexDirection: 'row',
