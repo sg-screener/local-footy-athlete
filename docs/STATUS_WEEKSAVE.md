@@ -314,3 +314,31 @@ do you train, with Commercial gym still selected.
 - Physical-iPhone Release acceptance.
 - Android hardware Back.
 - Existing-answer Profile equipment editing on glass.
+
+---
+
+# STATUS — Commercial gym equipment subtitle (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Commercial gym selects every checklist option, so its subtitle must not tell the
+athlete to tick anything extra.
+
+## Decision and receipt
+
+The screen now derives its instruction from the selected location. Commercial
+gym says `Everything is ticked. Untick anything your gym doesn't have.` Club,
+Home and custom existing answers retain the two-way instruction because they can
+still have unchecked choices.
+
+The new copy cell was the only added red before the change and is green after
+it. The existing vocabulary guard independently proves Commercial gym selects
+the complete checklist. TypeScript and the 111-cell onboarding presentation
+suite are green. The iPhone 17 Pro simulator displayed the new sentence and no
+`tick anything extra` copy.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- VoiceOver speech and small-screen wrapping.
+- Manual Club and Home gym copy inspection on glass.

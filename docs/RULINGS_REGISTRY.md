@@ -6487,3 +6487,20 @@ answer existed on entry and rejects a live answer read that can change Back
 semantics after Continue. A fresh iPhone 17 Pro simulator flow walked Commercial
 gym → checklist → Gym Experience → Back → checklist → Back → Where do you train
 and found Commercial gym still selected.
+
+**R-253** · *"Commercial gym = everything is ticked already so subtitle needs
+some work i.e. you can't tick any more things so what it says doesn't make
+sense"* (Sam, 2026-08-26, onboarding Equipment copy review) · **THE INSTRUCTION
+MATCHES WHAT THE ATHLETE CAN ACTUALLY DO.**
+Commercial gym preselects the complete equipment and cardio checklist, so its
+subtitle reads `Everything is ticked. Untick anything your gym doesn't have.`
+It does not tell the athlete to tick anything extra. Club gym, Home gym and an
+existing custom answer keep the two-way instruction because unchecked choices
+remain available on those paths.
+**Search words:** Commercial gym, Equipment, subtitle, everything ticked,
+untick, tick anything extra, equipment checklist.
+· `WORKING` — `test:equipment-vocabulary` proves Commercial gym selects the
+whole current vocabulary; `test:equipment-answer` requires the Commercial-only
+subtitle, retains the two-way fallback and requires the rendered subtitle to use
+that owner. An iPhone 17 Pro simulator displayed the new sentence and found no
+`tick anything extra` instruction.

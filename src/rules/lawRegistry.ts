@@ -2054,6 +2054,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-commercial-equipment-copy-matches-all-selected-state',
+    law: 'Commercial gym preselects the whole current equipment and cardio checklist, so its checklist subtitle says "Everything is ticked. Untick anything your gym doesn\'t have." and never asks the athlete to tick extra items. Club gym, Home gym and an existing custom answer retain the two-way untick-or-tick instruction.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-253 — Sam found that the generic tick-extra instruction was impossible on the all-selected Commercial gym preset.',
+    guard: {
+      state: 'guarded',
+      by: 'test:equipment-vocabulary + test:equipment-answer',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 by seat `weeksave`. TWO OPTIONS COMPARED: add presentation copy to every equipment preset, or derive the one exceptional sentence beside the screen that renders it. The local derived copy landed because only Commercial gym differs and putting sentences into the programming preset would mix UI language into equipment data. `test:equipment-vocabulary` already proves Commercial gym preselects the complete current vocabulary. TEST-FIRST LIVENESS: the new copy cell was the only additional Equipment-suite red, moving its existing 45/47 state to 45/48; after the conditional copy it is green and the suite is 46/48 with the same two inherited unrelated reds. TypeScript and test:onboarding-presentation (111/111) are green. LIVE SIMULATOR: the Commercial checklist displayed the exact new sentence and no tick-anything-extra instruction. NOT COVERED: physical-iPhone Release, VoiceOver speech, small-screen wrapping and manual Club/Home gym copy inspection on glass.',
+    },
+  },
+  {
     id: 'LAW-generation-card-icons-centre-on-full-message',
     law: 'Each onboarding generation education card places its icon beside one text block containing both title and supporting sentence. The shared row vertically centres the icon against that complete text block. Horizontally, a fixed column spans from the card edge to the words and centres the icon inside it while preserving the text position; the body owns no separate left inset.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-157 + R-161 — Sam first centred the icons vertically against the full message, then centred them horizontally between the card edge and words.',

@@ -221,6 +221,10 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
     </SelectableTile>
   );
 
+  const checklistSubtitle = location === 'commercial_gym'
+    ? "Everything is ticked. Untick anything your gym doesn't have."
+    : `We've ticked the usual kit${location ? ` for a ${equipmentLocationPreset(location).label.toLowerCase()}` : ''}. Untick anything your place doesn't have, and tick anything extra it does.`;
+
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
@@ -241,8 +245,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
           What can you train with?
         </Text>
         <Text variant="body" color={colors.text.secondary} style={styles.subtitle}>
-          We've ticked the usual kit{location ? ` for a ${equipmentLocationPreset(location).label.toLowerCase()}` : ''}.
-          Untick anything your place doesn't have, and tick anything extra it does.
+          {checklistSubtitle}
         </Text>
 
         <Text variant="bodyEmphasis" color={colors.text.primary} style={styles.groupHeading}>

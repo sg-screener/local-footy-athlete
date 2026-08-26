@@ -368,6 +368,12 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
       && !/const existing = savedEquipmentAnswer\(\)/.test(equipmentScreen),
     'the screen is re-reading the answer it just saved, so Back changes from '
       + 'return-to-location to leave-Equipment while the athlete is still in the same flow');
+  ok('Commercial gym copy only asks the athlete to untick the all-selected preset',
+    /const checklistSubtitle = location === 'commercial_gym'\s*\? "Everything is ticked\. Untick anything your gym doesn't have\."/.test(equipmentScreen)
+      && /: `We've ticked the usual kit\$\{location \? ` for a \$\{equipmentLocationPreset\(location\)\.label\.toLowerCase\(\)\}` : ''\}\. Untick anything your place doesn't have, and tick anything extra it does\.`/.test(equipmentScreen)
+      && /\{checklistSubtitle\}/.test(equipmentScreen),
+    'Commercial gym preselects the complete checklist, but its subtitle still '
+      + 'tells the athlete to tick additional equipment when nothing is left');
   ok('onboarding still passes no exit of its own',
     !/onDone=/.test(read('navigation/OnboardingNavigator.tsx')),
     'the onboarding navigator now supplies an exit. It must pass NOTHING — that '
