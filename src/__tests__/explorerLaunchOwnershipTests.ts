@@ -94,8 +94,13 @@ function expandedClearStateCount(plan: ExplorerAppLaunchPlan): number {
 
 function repositoryFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    // `.claude` holds OTHER CHECKOUTS (`.claude/worktrees/<name>` from agent
+    // worktrees, July–August 2026) — each carrying its own copy of every
+    // production file. A census that walks a second checkout reports its
+    // copies as extra owners in THIS one; measured 2026-08-26, when three
+    // stale worktrees turned the one launch-flow owner into four.
     if (entry.name === '.git' || entry.name === 'node_modules' ||
-      entry.name === 'artifacts') return [];
+      entry.name === 'artifacts' || entry.name === '.claude') return [];
     const path = join(directory, entry.name);
     return entry.isDirectory() ? repositoryFiles(path) : [path];
   });

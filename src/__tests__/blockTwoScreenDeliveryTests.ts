@@ -71,6 +71,29 @@ require.cache[require.resolve('react-native')] = {
   exports: reactNativeStub,
 } as unknown as NodeModule;
 
+/* The `ui` barrel now reaches `Sheet`, which rides the native keyboard frame
+ * (reanimated + keyboard-controller — the checklist-#12 keypad inset,
+ * 2026-08-26). Neither library resolves under plain Node, so both are primed
+ * the same way react-native is. The stubs answer only what `Sheet` renders:
+ * an inert animated style and a zero-height keyboard. */
+const animatedStub = {
+  __esModule: true,
+  default: new Proxy({}, { get: () => (props: unknown) => props, has: () => true }),
+  useAnimatedStyle: (factory: () => unknown) => factory(),
+  useSharedValue: (initial: unknown) => ({ value: initial }),
+  withTiming: (value: unknown) => value,
+  runOnJS: (fn: unknown) => fn,
+};
+require.cache[require.resolve('react-native-reanimated')] = {
+  id: 'react-native-reanimated', filename: 'react-native-reanimated', loaded: true,
+  exports: animatedStub,
+} as unknown as NodeModule;
+require.cache[require.resolve('react-native-keyboard-controller')] = {
+  id: 'react-native-keyboard-controller', filename: 'react-native-keyboard-controller',
+  loaded: true,
+  exports: { useKeyboardContext: () => ({ reanimated: { height: { value: 0 } } }) },
+} as unknown as NodeModule;
+
 import { generateProgramLocally } from '../services/api/generateProgram';
 /* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
  * what they selected. Speculative calls stay on `generateProgramLocally` and
