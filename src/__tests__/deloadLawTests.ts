@@ -126,6 +126,25 @@ console.log('\n[2] MAIN LIFTS — half the sets, weight held, RPE 5-6');
   ok('4 sets become 2 — half, not "one fewer"',
     squat?.prescribedSets === 2, `got ${squat?.prescribedSets}`);
 
+  // ── THE CLUB-NIGHT MAIN LIFT IS NOT A ROWING MACHINE ──────────────────────
+  // Measured 2026-08-27 (Sam's deload-not-halving order): the conditioning
+  // classifier's regex fallback matched `\brow\b` in "Barbell Row" and
+  // "Chest-Supported DB Row", so the deload passed the club-night MAIN LIFT
+  // through unhalved while halving the pulldowns beside it. A name the
+  // registry knows answers from the registry ONLY — the regex is for
+  // unregistered names.
+  ok('"Barbell Row" is a strength row, not conditioning',
+    !isConditioningExerciseRow(row('Barbell Row', 3)));
+  const clubNight = applyStrengthDeloadToExercises(
+    [row('Barbell Row', 3), row('Lat Pulldown', 3)], policy);
+  const barbellRow = clubNight.find((entry) => entry.exercise?.name === 'Barbell Row');
+  ok('the club-night main lift halves like every other lift',
+    barbellRow?.prescribedSets === 2, `got ${barbellRow?.prescribedSets}`);
+  ok('and carries the deload sentence',
+    /RPE 5-6/.test(barbellRow?.notes ?? ''), `got "${barbellRow?.notes}"`);
+  ok('an UNREGISTERED rowing-machine name still classifies as conditioning',
+    isConditioningExerciseRow(row('Row Ergometer Intervals', 3)));
+
   const odd = applyStrengthDeloadToExercises([row('Back Squat', 3)], policy);
   ok('3 sets round to 2, never below the 1-set floor',
     odd[0].prescribedSets === 2, `got ${odd[0].prescribedSets}`);

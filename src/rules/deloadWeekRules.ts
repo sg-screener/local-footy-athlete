@@ -199,6 +199,13 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
   // authored template names answer from CONDITIONING_META — the same
   // registry-first shape as the EXERCISE_TAGS line above.
   if (CONDITIONING_META[name]) return true;
+  // A REGISTERED NAME'S ANSWER IS FINAL. The regex below is a fallback for
+  // names neither registry knows — asking it about a registered strength lift
+  // let `\brow\b` classify "Barbell Row" and "Chest-Supported DB Row" as
+  // conditioning (rowing machine), and the deload transform passed the
+  // club-night MAIN LIFT through unhalved while halving the rows beside it
+  // (measured 2026-08-27, readiness-deload Tuesday club night).
+  if (tags) return false;
   return /\b(conditioning|sprint|tempo|aerobic|interval|run|bike|row|ski|swim|vo2|mas|cool-?down|warm-?up)\b/i
     .test(`${name} ${authoredNotesOnly(exercise.notes)}`);
 }
