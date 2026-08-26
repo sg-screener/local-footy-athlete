@@ -29,6 +29,17 @@ export const DEV_E2E_SEED_IDS = [
    * and the long name is `Half-Kneeling Single-Arm Overhead Press`, 39
    * characters and already in the authored pool. Nothing is invented. */
   'session-layout-showcase',
+  /* ── SANCTIONED 2026-08-26 FOR THE BLOCK-ROLLOVER DEVICE RUN (Sam: "do the
+   * rollover test world now"). THE FIRST TWO-DATE SEED: its program is
+   * generated at its own start (2026-07-13, block 1, four microcycles ending
+   * 2026-08-09) while the clock anchors TODAY at 2026-08-10 — the Monday
+   * AFTER the block's last day. Every other seed conflates "program start"
+   * and "today's week", which is structurally why the block 2→3 changeover
+   * has never been watched on a device: the state "an old program plus a
+   * later today" was inexpressible. `DEV_E2E_PROGRAM_START_OVERRIDES` below
+   * is the semantic; the app's own boot performs the rollover the athlete
+   * would see. */
+  'block-rollover',
   /* ── DEV-ONLY, THE CONDITIONING HALF OF THE SAME EVIDENCE ─────────────────
    * Sam, 2026-08-20: *"Select a real authored conditioning template and pass it
    * through the canonical production materialisation/projection path into a
@@ -78,7 +89,29 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   'exercise-removal-restart': '2026-07-13',
   'session-layout-showcase': '2026-07-13',
   'conditioning-showcase': '2026-07-13',
+  // The Monday AFTER block 1's four weeks (program start 2026-07-13 via the
+  // override below) — today is rollover day.
+  'block-rollover': '2026-08-10',
 };
+
+/**
+ * THE SECOND DATE — a seed whose PROGRAM starts earlier than its "today".
+ *
+ * Absent for every ordinary seed: the program starts in the anchor's own week
+ * (`devE2EWeekStartForSeed`), exactly as before. Present only where the seed's
+ * whole point is the gap between the two — `block-rollover` installs a
+ * four-week block that ENDED yesterday, so the app's own boot must roll it
+ * over. Week-relative arithmetic about TODAY stays on
+ * `devE2EWeekStartForSeed`; program construction goes through
+ * `devE2EProgramStartForSeed`.
+ */
+export const DEV_E2E_PROGRAM_START_OVERRIDES: Partial<Record<DevE2ESeedId, string>> = {
+  'block-rollover': '2026-07-13',
+};
+
+export function devE2EProgramStartForSeed(seedId: DevE2ESeedId): string {
+  return DEV_E2E_PROGRAM_START_OVERRIDES[seedId] ?? devE2EWeekStartForSeed(seedId);
+}
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {
   return DEV_E2E_SEED_IDS.includes(value as DevE2ESeedId);

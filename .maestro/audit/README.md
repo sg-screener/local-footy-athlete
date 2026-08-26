@@ -23,3 +23,12 @@ fixture worlds — headless suites `test:forward-decision-acceptance` and
 the standard seed is not a team night; `test:session-feedback-form` owns the
 decision); #4 profile-setup scroll (keyboard family, `.maestro/keyboard/`
 owns that surface).
+
+## block-rollover.yaml
+The block changeover, on glass (2026-08-26, Sam: "do the rollover test
+world now"). Seeds the first TWO-DATE world — a four-week block that ended
+yesterday with today pinned to the next Monday — and asserts the app's own
+boot rolls it over: today carries a real session, the week view shows the
+new block's first week with the R-236 Friday Gunshow, and a checkpoint
+cold-reload lands on the same week. Closes the audit blind spot "block 2
+rolling into block 3 has never been watched on a device".

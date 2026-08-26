@@ -1,0 +1,51 @@
+appId: com.localfootyathlete.app
+name: AUDIT - block changeover greets the athlete with the new block
+tags:
+  - e2e
+  - audit
+---
+# The first two-date seed (2026-08-26): a four-week block that ENDED yesterday
+# (program 2026-07-13 .. 2026-08-09) with today pinned to Monday 2026-08-10.
+# The app's own boot must roll the block over — the athlete opens the app on
+# changeover morning and finds a real week, never a dead end.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: block-rollover
+# Day view: TODAY carries a real session from the NEW block.
+- extendedWaitUntil:
+    visible:
+      id: "view-workout-button"
+    timeout: 20000
+# Week view: the new block's first week, with the R-236 G-1 Gunshow in place.
+- tapOn:
+    id: "program-view-week"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-mon"
+    timeout: 10000
+# The Friday row carries the R-236 optional Gunshow; its a11y label is the
+# row's own words, matched by full-string regex.
+- assertVisible:
+    text: "Day FRI Gunshow.*"
+# And the rolled world survives a relaunch byte-for-byte at the surface:
+# checkpoint, cold-reload, same week.
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: block-rollover
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 15000
+- tapOn:
+    id: "program-view-week"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-mon"
+    timeout: 10000
+# The Friday row carries the R-236 optional Gunshow; its a11y label is the
+# row's own words, matched by full-string regex.
+- assertVisible:
+    text: "Day FRI Gunshow.*"
+- takeScreenshot: artifacts/audit/block-rollover

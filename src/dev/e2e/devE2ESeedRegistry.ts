@@ -25,6 +25,7 @@ import { composeDaySurfaces } from '../../rules/dayPrecedence';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import {
   DEV_E2E_DATE_ANCHORS,
+  devE2EProgramStartForSeed,
   devE2EWeekStartForSeed,
   isDevE2ESeedId,
   type DevE2ESeedId,
@@ -293,19 +294,26 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
   // therefore installs a world whose accepted block disagrees with the one boot
   // writes over it, and the reload gate compares exactly that. Four microcycles
   // is what makes the seeded world and the booted world the same world.
+  // AND `block-rollover` NEEDS ALL FOUR because its whole point is a block
+  // that has genuinely ENDED: today (2026-08-10) must fall after the last
+  // microcycle's Sunday, which only a full four-week block can express.
   return seedId === 'spent-week-friday' ||
     seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
     seedId === 'coach-production-replay' ||
     seedId === 'exercise-removal-restart' ||
-    seedId === 'christmas-break-ask'
+    seedId === 'christmas-break-ask' ||
+    seedId === 'block-rollover'
     ? 4
     : 1;
 }
 
 function stabilizeProgram(program: TrainingProgram, seedId: DevE2ESeedId): TrainingProgram {
   const result = stabilizeAuditTimestamps(clone(program));
-  const anchorDate = devE2EWeekStartForSeed(seedId);
+  // The PROGRAM's own start — identical to the anchor week for every ordinary
+  // seed; earlier for the two-date `block-rollover` seed (see
+  // DEV_E2E_PROGRAM_START_OVERRIDES).
+  const anchorDate = devE2EProgramStartForSeed(seedId);
   const lastWeekIndex = Math.max(0, result.microcycles.length - 1);
   result.id = `dev-e2e-${seedId}`;
   result.userId = 'dev-e2e-athlete';
@@ -411,7 +419,7 @@ function deterministicProgram(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
 ): TrainingProgram {
-  const anchorDate = devE2EWeekStartForSeed(seedId);
+  const anchorDate = devE2EProgramStartForSeed(seedId);
   return stabilizeProgram(generateProgramLocally(profile, {
     // A dev seed installs a world; it is never restoring one.
     weekAcceptance: 'forward_decision',
@@ -781,7 +789,11 @@ function baseWitness(seedId: DevE2ESeedId): DevE2EWitness {
   return {
     kind: 'program',
     programId: `dev-e2e-${seedId}`,
-    weekStart: devE2EWeekStartForSeed(seedId),
+    // The PROGRAM's own first week — identical to the anchor week for every
+    // ordinary seed. For the two-date `block-rollover` seed the program
+    // deliberately does NOT cover today (that gap IS the seed), so asserting
+    // the anchor week here refused the exact world the seed installs.
+    weekStart: devE2EProgramStartForSeed(seedId),
   };
 }
 
@@ -940,6 +952,14 @@ export function witnessesForDevE2ESeed(
   switch (seedId) {
     case 'standard-in-season-week':
       witnesses.push({ kind: 'calendar_mark', date: fixtureDate, mark: 'game' });
+      break;
+    case 'block-rollover':
+      // Four REAL consecutive microcycles — the ended block the boot must
+      // roll over. Nothing else is pinned: what the ROLLOVER produces is the
+      // flow's question (on-glass asserts), not an install witness — a
+      // witness about block 2's content would hand-build the very world the
+      // app is supposed to derive.
+      witnesses.push({ kind: 'accepted_week_count', minimum: 4, consecutive: true });
       break;
     case 'exercise-removal-restart': {
       // ── EVERY WITNESS HERE IS DERIVED. NONE IS HAND-BUILT. ──────────────────
