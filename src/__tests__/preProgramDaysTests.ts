@@ -53,6 +53,22 @@ run('the audit case: Tuesday signup, Monday predates the program', () => {
     'a later day is in the program');
 });
 
+run("the block's Monday is not the athlete's start — Sam's phone case", () => {
+  // Measured 2026-08-26: program.startDate is the block's MONDAY, so a
+  // Wednesday signup left Mon/Tue tappable and Tuesday raised a missed-
+  // session ask on signup morning. The athlete's own start day (signup /
+  // generation anchor) outranks the block Monday.
+  const mondayProgram = { startDate: '2026-08-24T09:00:00.000Z' } as never;
+  assert(dayPredatesProgram('2026-08-25', mondayProgram, '2026-08-26') === true,
+    'Tuesday predates a Wednesday signup even though the block began Monday');
+  assert(dayPredatesProgram('2026-08-26', mondayProgram, '2026-08-26') === false,
+    'the signup day itself is IN the program');
+  assert(dayPredatesProgram('2026-08-25', mondayProgram, null) === false,
+    'without an athlete start, the block Monday remains the boundary');
+  assert(dayPredatesProgram('2026-08-23', mondayProgram, '2026-08-20') === true,
+    'an anchor EARLIER than the block start never un-greys pre-block days');
+});
+
 run('no program, no gate — nothing is greyed while nothing exists yet', () => {
   assert(dayPredatesProgram('2026-08-24', null) === false, 'null program');
   assert(dayPredatesProgram('2026-08-24', {} as never) === false, 'no startDate');
@@ -69,7 +85,7 @@ const board = fs.readFileSync(path.join(repoRoot, 'screens', 'home', 'WeekBoard.
 run('the day row is inert before the start — note instead of Start Session', () => {
   assert(/preProgram \? \(/.test(home) && home.includes('day-pre-program-note'),
     'the pre-program branch is gone from the day row action cluster');
-  assert(/preProgram=\{dayPredatesProgram\(day\.date, currentProgram\)\}/.test(home),
+  assert(/preProgram=\{dayPredatesProgram\(day\.date, currentProgram, athleteStartISO\)\}/.test(home),
     'the row no longer derives the flag from the program span');
 });
 
@@ -79,7 +95,7 @@ run('the day-first status card (Tired/Sick/Injured) stands down on a pre-start d
 });
 
 run('the board freezes pre-start rows — no add, no bin, no drag', () => {
-  assert(/preProgram: dayPredatesProgram\(day\.date, currentProgram\)/.test(home),
+  assert(/preProgram: dayPredatesProgram\(day\.date, currentProgram, athleteStartISO\)/.test(home),
     'the board rows no longer carry the flag');
   assert(/box\.kind !== 'game' && !frozen/.test(board),
     'the bin/drag gates no longer respect frozen');

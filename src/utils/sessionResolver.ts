@@ -402,10 +402,22 @@ export function programWeekOffsetBounds(
 export function dayPredatesProgram(
   dateISO: string,
   program: Pick<TrainingProgram, 'startDate'> | null | undefined,
+  /**
+   * THE ATHLETE'S OWN START DAY — signup (Sam's stored fact, 2026-08-22) or
+   * the generation anchor. `program.startDate` is the BLOCK'S Monday, so a
+   * Wednesday signup left Monday and Tuesday "inside" the program — measured
+   * on Sam's phone 2026-08-26 (checklist #3): the pre-start days were fully
+   * tappable and Tuesday raised a missed-session ask on signup morning.
+   */
+  athleteStartISO?: string | null,
 ): boolean {
   const start = program?.startDate?.slice(0, 10);
   if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return false;
-  return dateISO.slice(0, 10) < start;
+  const athleteStart = athleteStartISO?.slice(0, 10);
+  const boundary = athleteStart && /^\d{4}-\d{2}-\d{2}$/.test(athleteStart) && athleteStart > start
+    ? athleteStart
+    : start;
+  return dateISO.slice(0, 10) < boundary;
 }
 
 export function clampProgramWeekOffset(

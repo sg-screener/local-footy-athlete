@@ -281,6 +281,7 @@ export function useHomeScreen() {
   /* The day this athlete signed up — stamped once by `completeOnboarding` and
      the most precise history boundary there is. READER: the memo below. */
   const signupDateISO = useProfileStore((s) => s.signupDateISO);
+  const storedGenerationAnchorISO = useProgramStore((s) => s.generationAnchorISO);
 
   // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
   // that used to sit here claimed the clock was "the single source of truth
@@ -709,12 +710,23 @@ export function useHomeScreen() {
               the program is rebuilt on every launch, so that date is always
               today, which is what made this rule exclude every past day there
               is and left the follow-up unable to fire at all. */
-        programHistoryBeforeISO:
-          signupDateISO
-          ?? programHistoryBoundaryFromAcceptedBlocks(Object.keys(acceptedBlocks ?? {}))
-          ?? programHistoryBoundaryFromCreatedAt(currentProgram?.createdAt),
+        /* + THE GENERATION ANCHOR, belt-and-braces: measured on Sam's phone
+           2026-08-26 — a Wednesday-morning signup was asked about Tuesday's
+           team training, so the signup stamp alone was not holding. The
+           anchor is store-persisted and stamped at generation; the boundary
+           takes the LATEST of the two so neither gap re-opens the ask. */
+        programHistoryBeforeISO: (() => {
+          const chain = signupDateISO
+            ?? programHistoryBoundaryFromAcceptedBlocks(Object.keys(acceptedBlocks ?? {}))
+            ?? programHistoryBoundaryFromCreatedAt(currentProgram?.createdAt);
+          const anchor = storedGenerationAnchorISO?.slice(0, 10) ?? null;
+          if (!chain) return anchor;
+          if (!anchor) return chain;
+          return anchor > chain ? anchor : chain;
+        })(),
       }).reverse(),
-    [weekDays, sessionFeedback, signupDateISO, acceptedBlocks, currentProgram?.createdAt],
+    [weekDays, sessionFeedback, signupDateISO, storedGenerationAnchorISO, acceptedBlocks,
+      currentProgram?.createdAt],
   );
 
 

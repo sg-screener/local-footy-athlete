@@ -79,6 +79,7 @@ import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, readinessSta
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
 import { useProgramStore } from '../../store/programStore';
+import { useProfileStore } from '../../store/profileStore';
 import { dayPredatesProgram } from '../../utils/sessionResolver';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
@@ -439,6 +440,12 @@ export default function HomeScreenV2() {
    * on the fact, or a constraint carrying the fact with programming effect.
    * The standing sheet sentence selects on this (R-228); the fact's existence
    * alone claimed an adjustment the audit proved absent. */
+  /* R-227's anchor is the ATHLETE'S start day, not the block's Monday —
+   * signup first (Sam's stored fact), generation anchor as the fallback.
+   * Measured wrong on Sam's phone (checklist #3). */
+  const signupDateISO = useProfileStore((s) => s.signupDateISO);
+  const storedGenerationAnchorISO = useProgramStore((s) => s.generationAnchorISO);
+  const athleteStartISO = signupDateISO ?? storedGenerationAnchorISO ?? null;
   const reversibleAdjustments = useProgramStore(
     (s) => s.reversibleAdjustmentLedger?.adjustments) ?? [];
   const weekReadinessAdjusted = useMemo(() => {
@@ -553,12 +560,12 @@ export default function HomeScreenV2() {
     short: day.short,
     dayNumber: String(Number(day.date.slice(8, 10))),
     isToday: day.isToday,
-    preProgram: dayPredatesProgram(day.date, currentProgram),
+    preProgram: dayPredatesProgram(day.date, currentProgram, athleteStartISO),
     board: buildWeekBoardDay(
       visibleWeek.days.find((visible) => visible.date === day.date)
         ?? { date: day.date, parts: [] } as any,
     ),
-  })), [currentProgram, visibleWeek, weekDays]);
+  })), [athleteStartISO, currentProgram, visibleWeek, weekDays]);
 
   /* ⚠ **THE SAME DOORS THE RETIRED MENU ROWS RAISED — SAM: *"follow the same
    * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
@@ -689,7 +696,7 @@ export default function HomeScreenV2() {
         key={day.date}
         day={day}
         visibleDay={visibleDay}
-        preProgram={dayPredatesProgram(day.date, currentProgram)}
+        preProgram={dayPredatesProgram(day.date, currentProgram, athleteStartISO)}
         isSelected={isSelected}
         isMoveSource={isMoveSource}
         isMoveTarget={isMoveTarget}
@@ -1285,7 +1292,7 @@ export default function HomeScreenV2() {
             The open workout still reuses this visual component for its narrower
             Equipment / Injury / Add set. */}
         {isNormal && dayFirst
-          && !dayPredatesProgram(weekDays[selectedIdx]?.date ?? todayISOLocal(), currentProgram)
+          && !dayPredatesProgram(weekDays[selectedIdx]?.date ?? todayISOLocal(), currentProgram, athleteStartISO)
           && (
           <SessionChangeHub
             testID="home-change-card"
