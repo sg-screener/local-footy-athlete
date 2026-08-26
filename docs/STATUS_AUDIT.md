@@ -3146,3 +3146,32 @@ program's own first week (asserting the anchor week refused the seed's
 own world — measured before fixing). Blind-spot item 2 CLOSED for the
 simulator; Sam's phone doesn't carry the dev rig, so device-device
 verification remains sim-only by construction.
+
+## 2026-08-26 — long-horizon audit (audit round 4) GREEN
+
+Instrument: scratchpad long-horizon-probe.ts — the L13 shape, honestly:
+DevE2EClock pinned per week (the same clock the simulator rides), block
+rollovers through rolloverProgramBlock (the home screen's own boundary),
+session logs through commitSessionOutcomeTransaction, edits through
+executeProgramControlActionDurably, boots through rebuildDerivedWorld.
+
+THIRTEEN WEEKS LIVED (2026-06-01 → 2026-08-24): 3 automatic block
+rollovers (block 1 → 4), 35 sessions logged (0 refused), 8 door edits
+(bins + tired facts, 0 refused), and after EVERY week a full boot with
+athlete-visible byte-stability — 13/13 identical.
+
+PROGRESS DERIVATION over the worn store (deriveCoachSnapshot, the live
+hook's own function + project()): per-lift progress with directions
+(rotation reads as "new" correctly), strengthHistory series spanning
+June–August (recorded weeks as the authority), thisWeek with attached
+outcomes. No errors, no empty states where data exists.
+
+Observation (not a defect claim): Back Squat topSet flat at 100kg across
+block-1 weeks — probe logs carried no per-set weights, so topSet reads
+prescriptions; in-block load progression under real logged weights is
+covered by test:strength-progression-integration.
+
+With this, the original blind-spot list stands: profiles ✓ (rounds 1-2),
+block changeover on glass ✓, long-horizon ✓, practice match + deload ✓,
+release builds on two real phones ✓, dead suites binned ✓. Remaining:
+coach chat (Codex's rebuild) and an older/slower physical device.
