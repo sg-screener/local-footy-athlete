@@ -112,6 +112,13 @@ function quiet<T>(body: () => T): T {
 
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    // R-130 made these required with no default; the fixture predated it and
+    // every cell died at generation ("I still need to know your gender…").
+    firstName: 'Readiness',
+    gender: 'male',
+    heightCm: 183,
+    weightKg: 85,
+    twoKmTimeTrial: { seconds: 465, recordedOn: '2026-08-01', source: 'onboarding' },
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -386,11 +393,19 @@ async function main(): Promise<void> {
 
     // Real MON (Back Squat + Deadlift main_strength, Pallof trunk_support accessory).
     seed();
-    const mon = useProgramStore.getState().currentProgram!.microcycles[0].days
-      ? (useProgramStore.getState().currentProgram as any).microcycles[0].days.find((d: any) => (d.workout ?? d)?.name === 'Lower Body Strength')?.workout
-      : undefined;
-    const monWorkout = mon ?? (useProgramStore.getState().currentProgram as any).microcycles[0].workouts?.find((w: any) => w.name === 'Lower Body Strength');
-    assert(monWorkout, 'precondition: seeded MON Lower Body Strength present');
+    // World drift, 2026-08-26: the generated lower day is now named
+    // 'lower_squat' / 'lower' rather than 'Lower Body Strength'. The cell's
+    // subject is "the real Monday lower session's main lift survives the trim",
+    // so the day is found by its CONTENT (it carries Back Squat) rather than by
+    // a display name the generator no longer emits.
+    const findLower = (list: any[] | undefined) => (list ?? []).find((entry: any) => {
+      const w = entry?.workout ?? entry;
+      return (w?.exercises ?? []).some((r: any) => r.exercise?.name === 'Back Squat');
+    });
+    const monDay = findLower((useProgramStore.getState().currentProgram as any).microcycles[0].days);
+    const monWorkout = (monDay?.workout ?? monDay)
+      ?? findLower((useProgramStore.getState().currentProgram as any).microcycles[0].workouts);
+    assert(monWorkout, 'precondition: seeded lower day carrying Back Squat present');
     const trimmedMon = mod.applyLighterDayTrim(monWorkout);
     const squatBefore = (monWorkout.exercises ?? []).find((r: any) => r.exercise?.name === 'Back Squat');
     const squatAfter = (trimmedMon.workout.exercises ?? []).find((r: any) => r.exercise?.name === 'Back Squat');
@@ -1157,6 +1172,37 @@ async function main(): Promise<void> {
       'the coach note must read the shared owner');
     assert(!/'Recovery mode active'/.test(read('activeProgramModifiers.ts')),
       'the derived-title path must no longer mint "Recovery mode active"');
+  });
+
+  await run('R23 THE READINESS LAW: a Friday "cooked" mints a 7-day window from the DECLARATION day, crossing the weekend', async () => {
+    // Sam, 2026-07-27, Bible: "a ROLLING WINDOW from the day of the
+    // declaration, not the remainder of the calendar week: declaring on a
+    // Friday deloads the following week". Measured 2026-08-26 before the fix:
+    // the door derived the window from the WEEK ANCHOR (payload.date = the
+    // viewed Monday), so a Friday tap stored from=Friday until=Sunday — a
+    // 3-day stump — and the athlete got full loading the next Monday.
+    seed();
+    const friday = '2026-07-17'; // Friday of the seeded WEEK (Mon 2026-07-13)
+    const result = await executeProgramControlActionDurably({
+      type: 'set_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { date: WEEK, todayISO: friday, level: 'cooked' },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as never, { todayISO: friday });
+    assert(result.ok === true, `the cooked declaration must land (got ${JSON.stringify(result.message)})`);
+    const fact = activeReadinessFacts().find((candidate) =>
+      'factKind' in candidate && (candidate as { factKind?: string }).factKind === 'fatigue');
+    assert(!!fact, 'the fatigue fact must exist');
+    const scope = (fact as { scope?: { kind?: string; from?: string; until?: string } }).scope;
+    assert(scope?.kind === 'window', `the cooked scope must be a window (got ${JSON.stringify(scope)})`);
+    assert(scope?.from === friday,
+      `the window starts on the DECLARATION day (got from=${scope?.from})`);
+    assert(scope?.until === '2026-07-23',
+      `the window runs 7 days from Friday — until Thursday 2026-07-23, crossing the `
+      + `calendar week (got until=${scope?.until})`);
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);

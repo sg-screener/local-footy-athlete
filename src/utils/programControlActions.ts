@@ -2340,8 +2340,20 @@ async function executeProgramControlActionDurablyWithinTrace(
             // `reportedLevelDeloads` asks the law (level -> severity -> tier ->
             // directive) instead of matching a literal, so a new level or a
             // moved threshold cannot silently lose its window again.
+            // ⚠ `declaredOnISO` IS TODAY, NEVER THE WEEK ANCHOR. The cooked
+            // payload carries `date` = the viewed week's Monday, and deriving
+            // the window from it produced Monday→Sunday — so a Friday
+            // declaration minted a 3-day stump (laterOf clamped the front) and
+            // the athlete was back at full load the next Monday. That is the
+            // exact calendar-week snap THE READINESS LAW forbids: "a ROLLING
+            // WINDOW from the day of the declaration … declaring on a Friday
+            // deloads the following week". Measured 2026-08-26: fact scope was
+            // from 08-14 until 08-16 for a Friday tap; now 08-14 → 08-20.
             scope: reportedLevelDeloads(reportedReadinessLevel)
-              ? readinessDeloadFactScope({ declaredOnISO: date, todayISO })
+              ? readinessDeloadFactScope({
+                  declaredOnISO: todayISO.slice(0, 10),
+                  todayISO,
+                })
               : temporaryFactScope({ kind: 'date', date }),
             athleteReportedLevel: reportedReadinessLevel,
             reportKind: action.payload.level === 'cooked' ? 'cooked' : 'fatigue',
