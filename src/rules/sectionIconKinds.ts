@@ -46,7 +46,10 @@ export const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
   // strength glyph — the same one the work it sits beside carries, which is the
   // visual half of "power is part of the Strength work".
   speed: 'bolt',
-  conditioning: 'flame',
+  // Sam, 2026-08-26: "conditioning on a day view is a little fire icon =
+  // should be the pulse as well" — one pulse for conditioning on every
+  // surface (the weekly card already wears it).
+  conditioning: 'pulse',
   support: 'core',
   recovery: 'recovery',
   team_training: 'team',
@@ -69,7 +72,7 @@ export const SESSION_SECTION_ICON_KIND:
   mobility: 'mobility',
   strength: 'strength',
   accessories: 'core',
-  conditioning: 'flame',
+  conditioning: 'pulse',
   team_training: 'team',
   recovery: 'recovery',
   optional: 'activity',
