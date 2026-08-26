@@ -3058,3 +3058,45 @@ refusals on the replan worlds; its own unit (Codex-scale).
 Also: test:scenarios prints 12 scenario failures and EXITS 0 —
 harness-lie, pre-existing (identical on committed tree); dead-suite
 ledger candidate.
+
+## 2026-08-26 — dead-suite triage (Sam asked "are they even useful?")
+
+Instrument: unrunnable-suite ratchet (baseline 21, now 17 + coachActions
+newly recorded). Death causes captured per file (scratchpad run):
+
+FAMILY 1 — OLD-APP WORLDS, "B1-PIVOT: the legacy strength-content builder
+is severed" (6): beginnerDeterministicProgram, byeWeekClassification,
+offseasonSubphaseConditioningIntegration, phaseRepPrescription,
+sprintExposureGate, teamTrainingRendering. Subjects LIVE, worlds are the
+pre-composer app. Reviving as-is is the dark-suite trap; verdict per file:
+REWRITE against the composer where the subject is uncovered, DELETE where
+live suites already own it (candidates: sprint gates → WC-124 cells;
+offseason conditioning → newer suites). 
+
+FAMILY 2 — COACH FAMILY (4): coachNoteLifecycle, gameChangeCoachNotes,
+injuryReadinessCoachNotes, coachActions (+coachRevisionProposal dead at
+null.items). Coach rebuild territory → CODEX with the rebuild.
+
+FAMILY 3 — EXPLORER TOOLING SELF-TESTS (2): explorerChainShrinker,
+explorerGenerator. The explorer itself runs daily; low value; fix-cheap
+or delete.
+
+FAMILY 4 — MISC (3): generationConstraintReentry (ProgramGenError, old
+inputs), weekPlanQAAllowedFindings (QA config drift),
+recoveryContentIntegrity (recovery is a charter-DELETED type — delete
+candidate). programmingBias exits 1 (red, not dead).
+
+ALSO: test:scenarios prints 12 failures and exits 0 — harness lie;
+12 failing scenarios are the old TEMPLATE engine's G-1/G+1 override
+expectations (source=template) — same old-app class, needs its own
+triage row before anyone "fixes" the app to satisfy it.
+
+Deletions await Sam's word (destructive); rewrites priced per-file.
+
+## 2026-08-26 — audit round 3 opened (practice match + block shape)
+
+Pre-season + Saturday fixture world: generates 4 microcycles, weeks 1-3
+High, week 4 Moderate — the deload week visible headlessly; fixture
+weeks compose the full-body pair; no G-1 offer in pre-season (per rule).
+Doors/long-term passes queued next; block 2→3 device run (dev clock)
+queued with them.
