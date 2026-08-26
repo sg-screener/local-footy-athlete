@@ -2084,7 +2084,24 @@ export function buildFixtureProjection(args: {
         // repair owner — not target generation — must decide. Left unstated
         // this relied on generation's default; stated, the reliance is visible
         // to anyone changing either side.
-        weekAcceptance: 'restoration',
+        //
+        // ⚠ EXCEPT FOR A FIXTURE DECISION, WHICH IS THE ATHLETE'S FORWARD
+        // DECISION AND IS NEVER VETOED BY ITS OWN WEEK (the documented
+        // `forward_decision` contract at the generator, and Sam's launch-audit
+        // ruling behind `test:forward-decision-acceptance`). MEASURED
+        // 2026-08-27 (Sam's overnight item 1): a no-club in-season athlete's
+        // bye — remove the Saturday game — was refused outright with
+        // `full_rest_required_minimum:0`, because the bye-week stub the
+        // scheduler builds fails the rest clause and the refusal below is a
+        // `GeneratedWeekRefusedError`, which the catch does NOT consume. The
+        // athlete could not tell the app about their own bye. Under
+        // `forward_decision` the generator publishes the best achievable week
+        // and the §18 effective-week evaluator discloses the shortfall
+        // downstream — the same route the temporary-source-fact door already
+        // uses for "I'm properly sick".
+        weekAcceptance: (args.mutationIntent ?? 'fixture_transition') === 'fixture_transition'
+          ? 'forward_decision'
+          : 'restoration',
         todayISO: args.weekStart,
         previousProgram: args.program,
         seasonPhaseClock: args.program.seasonPhaseClock,

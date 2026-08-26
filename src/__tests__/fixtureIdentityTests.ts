@@ -673,6 +673,108 @@ async function main(): Promise<void> {
     assertOneComposer(await twoDecisionWorld('fixture_then_removal'));
   });
 
+  await runAsync('fixture-identity-7 a no-club athlete CAN declare a bye — the forward '
+    + 'decision is never vetoed by its own week', async () => {
+    /* Sam's overnight item 1, 2026-08-27. MEASURED: an in-season athlete with
+     * NO club nights removed their Saturday game and the door refused outright
+     * — `impossible (full_rest_required_minimum:0)` — because the repair's
+     * stub regeneration ran strict and its bye-week candidate failed the rest
+     * clause. A fixture change is the athlete's FORWARD decision (the game is
+     * gone whether the app likes the week or not), so the stub now generates
+     * under `forward_decision` and the projection's own accepted week — Mon-Fri
+     * kept, Saturday rest — publishes. */
+    // A fresh in-season world with NO club nights and a usual Saturday game.
+    // NOTE the path: onboarding's TeamTrainingDays screen requires >=1 club
+    // night for a pre/in-season athlete (`selectedDays.length > 0`), so "no
+    // club team" is only reachable by onboarding OFF-season — where the
+    // question is not asked — and living into In-season. That gap is recorded
+    // in STATUS_AUDIT; this world takes the reachable path.
+    const NOCLUB_INSTALL = '2026-08-03'; // a Monday — the measured world's anchor
+    todayISO = NOCLUB_INSTALL;
+    weekStart = NOCLUB_INSTALL;
+    localStorageData.clear();
+    resetStoresToFreshInstall('fixture-identity:noclub-install');
+    useProfileStore.getState().updateOnboardingData({
+      ...restSaturdayProfile(),
+      // The measured athlete's own answers — the refusal was profile-shaped
+      // (this experience/conditioning band's bye-week stub misses the rest
+      // clause).
+      ageRange: '22-26',
+      experienceLevel: '2-5 years',
+      squatStrength: '1.25x bodyweight',
+      benchStrength: 'Around bodyweight',
+      conditioningLevel: 'Good',
+      sprintExposure: 'Occasionally',
+      recentTrainingLoad: 'Pretty consistent',
+      twoKmTimeTrial: { seconds: 465, recordedOn: '2026-08-01', source: 'onboarding' },
+      seasonPhase: 'Off-season',
+      seasonFinishedOn: null,
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
+      usualGameDay: 'Saturday',
+      gameDay: 'Saturday',
+    } as never);
+    const completion = useProfileStore.getState().completeOnboarding();
+    if (completion && typeof completion === 'object'
+      && (completion as { ok?: boolean }).ok === false) {
+      throw new Error('world-builder: onboarding completion REFUSED — '
+        + JSON.stringify((completion as { missingAnswers?: unknown }).missingAnswers));
+    }
+    useProfileStore.getState().updateOnboardingData({
+      seasonPhase: 'In-season',
+    } as never);
+    const program = quiet(() => generateProgramLocally(
+      useProfileStore.getState().onboardingData,
+      {
+        todayISO: NOCLUB_INSTALL, previousProgram: null,
+        seasonPhaseClock: {
+          protocolVersion: 1,
+          selectedPhase: 'In-season' as never,
+          phaseEntryWeekStartISO: NOCLUB_INSTALL,
+          originProvenance: 'explicit_user_phase_change',
+          persistenceProvenance: 'preserved_persisted_state',
+        },
+      },
+    )) as TrainingProgram;
+    const settled = program.microcycles[1] ?? program.microcycles[0]!;
+    weekStart = settled.startDate.slice(0, 10);
+    todayISO = weekStart;
+    quiet(() => commitRebuiltProgram(
+      program,
+      { preserve: [], clear: [], conflictsRemoved: [] },
+      {
+        markedDays: useCalendarStore.getState().markedDays ?? {},
+        selectedDate: todayISO,
+        reason: 'fixture-identity:regenerate-noclub',
+      },
+    ));
+    useProgramStore.setState({ currentMicrocycle: settled } as never);
+
+    const saturday = derivedWeek()[5]!;
+    assert(saturday.includes('Game'),
+      `CONTROL — the no-club in-season Saturday carries the game (got ${saturday})`);
+
+    const gameDate = saturday.split('=')[0]!;
+    const revision = useProgramStore.getState().acceptedMaterialContext.revision;
+    const outcome = await quietAsync(() => executeFixtureMutationTransaction({
+      action: 'remove',
+      fixtureKind: 'game',
+      sourceDate: gameDate,
+      expectedAcceptedRevision: revision,
+      source: {
+        requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+        commandId: `fixture-identity:bye:${gameDate}`,
+      },
+      todayISO,
+    })) as unknown as { outcome: string; reason?: string };
+    assert(outcome.outcome === 'accepted',
+      `the bye is ACCEPTED, not refused (got ${outcome.outcome} ${outcome.reason ?? ''})`);
+
+    const after = derivedWeek();
+    assert(!after[5]!.includes('Game'),
+      `the game is gone from the derived Saturday (got ${after[5]})`);
+  });
+
   console.log(`\nFixture identity totals: ${passed} passed, ${failed} failed`);
 
   // THE RATCHET DIRECTION: a declared red that no longer reds is a cell that
