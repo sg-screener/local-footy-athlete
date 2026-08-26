@@ -290,6 +290,12 @@ ok(
     && /<SetupEditAction\s+label="Edit program details"/.test(src)
     && !/leftIcon|pencil-outline/.test(setupCtaSource),
 );
+const profileValueFontSize = /profileRowValue:\s*\{[\s\S]*?fontSize:\s*(\d+)/.exec(src)?.[1];
+const setupActionFontSize = /sheetCardActionText:\s*\{[\s\S]*?fontSize:\s*(\d+)/.exec(src)?.[1];
+ok(
+  'Something changed uses the same font size as the Program Setup answers',
+  profileValueFontSize === '14' && setupActionFontSize === profileValueFontSize,
+);
 ok(
   'Program setup CTA opens the guided setup page',
   /onProgramSetupChanged[\s\S]*setSetupPageVisible\(true\)/.test(src)

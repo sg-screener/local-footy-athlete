@@ -6406,3 +6406,17 @@ patch; `test:phase-clock` guards exact-date phase-week derivation. A determinist
 iPhone 17 Pro simulator flow displayed the exact white title and shared calendar,
 then completed My Status → Off-season → finish date → availability → build →
 ready and proved the team-training question absent.
+
+**R-248** · *"something changed tell the coach should be same size font as the
+text about it i.e. commerical gym"* (Sam, 2026-08-26, Profile review) · **THE
+SETUP ACTION MATCHES THE SETUP ANSWERS.**
+`Something changed? Tell the coach` uses the same 14-point text size as Profile's
+Program Setup values such as `Commercial gym`. Because R-186 makes the doorway
+and its three destination edit rows one shared action family, the shared owner
+sets that size for all four rather than styling the doorway independently. This
+supersedes only R-183's old 15-point action-size number; its surface, spacing and
+shared-component requirements remain.
+**Search words:** Profile, Something changed, Tell the coach, Commercial gym,
+font size, Program Setup, setup edit action.
+· `WORKING` — `test:profile-reset-ui` compares the two owned font-size values
+and requires both to remain 14.

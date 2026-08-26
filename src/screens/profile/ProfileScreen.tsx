@@ -1968,7 +1968,7 @@ const styles = StyleSheet.create({
   },
   sheetCardActionText: {
     color: colors.accent.lime,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
   },

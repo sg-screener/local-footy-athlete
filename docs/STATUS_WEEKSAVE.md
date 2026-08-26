@@ -165,3 +165,27 @@ Both subjects were restored and the complete guard returned green.
 - Exact frame timing if the app is backgrounded during the ten-second hold.
 - VoiceOver announcement order and locale-specific calendar presentation.
 - Editing only the finish date while already inside Off-season.
+
+---
+
+# STATUS — Profile setup action typography (`weeksave`, 2026-08-26)
+
+## Owner request
+
+`Something changed? Tell the coach` must use the same font size as the Program
+Setup answer beside Equipment, for example `Commercial gym`.
+
+## Decision and receipt
+
+The setup answer was 14pt and the shared setup-edit action was 15pt. A one-off
+doorway override would have broken the one-action-family ruling, so the shared
+action owner now uses 14pt for the doorway and the three edit rows inside its
+destination.
+
+The new equality cell first made `test:profile-reset-ui` 187/1 and named the
+15pt-versus-14pt mismatch. After changing the shared owner it returned green.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- Dynamic Type and non-phone widths.
