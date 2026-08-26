@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
-import { Sheet, SheetDescription, SheetHeader } from '../../components/ui';
+import { SheetDescription } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -146,12 +146,7 @@ export type EquipmentLimitationDecision =
     }
   | { kind: 'available_again' };
 
-interface EquipmentLimitationSheetProps {
-  visible: boolean;
-  /** Gapless handoff: fires when this sheet's window is up, so the opener
-   *  (the away sheet) can close underneath it. Checklist #5. */
-  onShow?: () => void;
-  onClose: () => void;
+interface EquipmentLimitationBodyProps {
   onApply: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   activeFactId?: string | null;
   targetFactId?: string | null;
@@ -165,18 +160,23 @@ interface EquipmentLimitationSheetProps {
   span?: { from: string; until: string } | null;
 }
 
-export function EquipmentLimitationSheet({
-  visible,
-  onShow,
-  onClose,
+/**
+ * THE ONE EQUIPMENT MENU'S BODY — no modal of its own. Checklist #5, second
+ * round (Sam, 2026-08-26): the away flow renders this INSIDE the week-edit
+ * sheet's single modal, because iOS cannot present two sibling modals without
+ * flashing the screen between their windows. The list, the marking, and the
+ * decision the apply button emits are byte-identical to what the standalone
+ * sheet emitted — one menu, one owner, a different host.
+ */
+export function EquipmentLimitationBody({
   onApply,
   activeFactId,
   targetFactId,
   span = null,
-}: EquipmentLimitationSheetProps) {
-  // Read once per open: the sheet lists the athlete's baseline kit, which a
-  // mid-sheet store change cannot legitimately alter.
-  const kit = useMemo(() => ownedEquipmentKit(), [visible]);
+}: EquipmentLimitationBodyProps) {
+  // Read once per mount: the list is the athlete's baseline kit, which a
+  // mid-flow store change cannot legitimately alter.
+  const kit = useMemo(() => ownedEquipmentKit(), []);
   const [missingTags, setMissingTags] = useState<ReadonlySet<EquipmentTag>>(new Set());
   const [missingModalities, setMissingModalities] =
     useState<ReadonlySet<ConditioningEquipmentModality>>(new Set());
@@ -232,12 +232,7 @@ export function EquipmentLimitationSheet({
   const rowMissingLabel = span ? 'Missing while away' : 'Missing this week';
 
   return (
-    <Sheet visible={visible} onShow={onShow} onClose={onClose} testID="home-equipment-limitation-sheet" cappedBody>
-      <View style={styles.sheetBody}>
-        <SheetHeader
-          title="Equipment"
-          subtitle={span ? 'What will you be without?' : 'Missing equipment this week?'}
-        />
+      <View style={styles.sheetBody} testID="home-equipment-limitation-sheet">
         <SheetDescription>
           {activeFactId
             ? 'A restriction is active. Mark what is missing, or clear it below.'
