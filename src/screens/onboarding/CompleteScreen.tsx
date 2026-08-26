@@ -320,6 +320,11 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
     // See docs/ONBOARDING_GENERATION_OWNERSHIP_REASSESSMENT_2026-07-25.md.
     const outcome = await runOnboardingProgramGeneration({
       generate: () => generateProgramFromProfile(onboardingData, {
+        // Onboarding authors the athlete's first block. Recording the selected
+        // identities here preserves the healthy base beneath later temporary
+        // injury/equipment facts, so clearing a fact restores rather than
+        // turning the temporary substitute into the block's history.
+        recordSelections: 'author',
         // DECLARED strict, deliberately. A FIRST week that cannot meet its own
         // contract is a generation defect, not a consequence of anything the
         // athlete has done to their calendar yet — and the onboarding

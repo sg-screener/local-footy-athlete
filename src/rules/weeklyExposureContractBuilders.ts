@@ -1,18 +1,13 @@
 import type {
-  InjurySeverity,
   CapacityBand,
   SeasonPhase,
   WeekKind,
 } from '../types/domain';
 import { resolveWeekIntensityMultiplier } from './deloadWeekRules';
-import {
-  injurySeverityPausesAffectedTraining,
-  injurySeverityRemovesRiskyWork,
-  onboardingInjurySeverityScore,
-} from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import type { CanonicalWeeklyInjuryPolicy } from './canonicalWeeklyInjuryState';
 import {
   resolveSection18PhasePlannerSelection,
   type Section18PhasePlannerSelection,
@@ -47,20 +42,8 @@ export interface WeeklyExposureContractInput {
   appConditioningFeasible?: boolean;
   /** Ordered substitution proof recorded when feasibility is exhausted. */
   attemptedConditioningSubstitutions?: readonly string[];
-  profileInjuries?: ReadonlyArray<{
-    bodyArea: string;
-    description?: string;
-    severity?: InjurySeverity;
-  }>;
-  activeInjuries?: ReadonlyArray<{
-    region: 'lower_body' | 'upper_body' | 'back_midline' | 'other';
-    pauseAffectedTraining: boolean;
-    removeRiskyWork?: boolean;
-    /** Compatibility projection used by GenerationConstraintContext. */
-    severity?: number;
-    triggers?: readonly string[];
-    injuryKeys?: readonly string[];
-  }>;
+  /** Canonical compiler input. Raw injury copy and severity never reach this builder. */
+  injuryPolicy?: CanonicalWeeklyInjuryPolicy;
   /**
    * The athlete's answer to the bye ask, and the ONLY producer of
    * `in_season_bye_recovery` (Sam, 2026-07-29). Omitted means unanswered, which
@@ -234,43 +217,9 @@ function reduceAllocationTarget(
 
 /** Shared typed constraint projection; policy consumers must not reclassify injuries independently. */
 export function resolveRestrictedMainStrengthPatterns(
-  input: Pick<WeeklyExposureContractInput, 'activeInjuries' | 'profileInjuries'>,
+  input: Pick<WeeklyExposureContractInput, 'injuryPolicy'>,
 ): Set<MainStrengthPattern> {
-  const restricted = new Set<MainStrengthPattern>();
-  for (const injury of input.activeInjuries ?? []) {
-    // The band edge lives in `injurySeverityBands`, the Bible's owner for it.
-    // This site used to restate it as a bare `< 6` — a second representation of
-    // an already-ruled fact, and the kind that drifts without anyone noticing.
-    if (!injury.pauseAffectedTraining &&
-        !injurySeverityRemovesRiskyWork(injury.severity ?? 0)) continue;
-    const keys = new Set(injury.injuryKeys ?? []);
-    if (injury.region === 'upper_body') {
-      restricted.add('push');
-      if (injury.pauseAffectedTraining) restricted.add('pull');
-    }
-    if (injury.region === 'lower_body' || injury.region === 'back_midline') {
-      restricted.add('squat');
-      restricted.add('hinge');
-    }
-    if (keys.has('shoulder')) restricted.add('push');
-    if (keys.has('hamstring')) restricted.add('hinge');
-    if (keys.has('knee')) restricted.add('squat');
-  }
-  for (const injury of input.profileInjuries ?? []) {
-    const severity = onboardingInjurySeverityScore(injury);
-    if (!injurySeverityRemovesRiskyWork(severity)) continue;
-    const paused = injurySeverityPausesAffectedTraining(severity);
-    const text = `${injury.bodyArea} ${injury.description ?? ''}`.toLowerCase();
-    if (/shoulder|elbow|wrist|hand|pec|upper/.test(text)) {
-      restricted.add('push');
-      if (paused) restricted.add('pull');
-    }
-    if (/hip|knee|ankle|hamstring|groin|calf|achilles|lower back|lumbar|leg/.test(text)) {
-      restricted.add('squat');
-      restricted.add('hinge');
-    }
-  }
-  return restricted;
+  return new Set(input.injuryPolicy?.prohibitedPatterns ?? []);
 }
 
 function applyCommonSafetyReductions(
@@ -358,12 +307,7 @@ function applyCommonSafetyReductions(
     }
   }
 
-  const activeInjuryBlocksSprint = (input.activeInjuries ?? []).some((injury) => {
-    if (injury.region !== 'lower_body' && injury.region !== 'back_midline') return false;
-    const sprintTrigger = /\b(sprint|speed|max velocity|running|cod|change of direction|cutting|jumping)\b/i
-      .test((injury.triggers ?? []).join(' '));
-    return injury.pauseAffectedTraining || injury.removeRiskyWork === true || sprintTrigger;
-  });
+  const activeInjuryBlocksSprint = input.injuryPolicy?.blocksAppSprint === true;
   if (activeInjuryBlocksSprint) {
     contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit),
       'injury_restriction',

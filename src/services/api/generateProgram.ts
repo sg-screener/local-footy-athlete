@@ -56,11 +56,10 @@ import {
   type BlockBounds,
 } from '../../utils/programBlockState';
 import {
-  applyGenerationConstraintsToProfile,
   buildGenerationConstraintContext,
-  mergeAthletePrefsWithGenerationConstraints,
   type GenerationConstraintContext,
 } from '../../utils/generationConstraints';
+import { canonicalWeeklyInjuryStateFrom } from '../../rules/canonicalWeeklyInjuryState';
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
 import type { ReadinessSignal } from '../../utils/readiness';
 import type { EquipmentTag } from '../../data/exercisePools';
@@ -614,16 +613,20 @@ export function buildInitialGeneratedCoachingPlan(args: {
     offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
   });
   const agePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
+  const weeklyInjury = canonicalWeeklyInjuryStateFrom({
+    profile: { injuries: inputs.injuries ?? [] },
+    generationConstraints: inputs.generationConstraints,
+  });
   const compiled = compileCanonicalWeek({
     scheduler: schedInputs,
     coaching: inputs,
     readiness: canonicalReadinessFactFrom(inputs.generationConstraints),
     illness: canonicalIllnessFactFrom(inputs.generationConstraints),
+    injury: weeklyInjury,
     materialisation: {
       weekStartISO,
       miniCycleNumber: firstState?.miniCycleNumber,
       powerGoalNudge: false,
-      injuries: (inputs.injuries ?? []) as never,
       runOnly: false,
       phase: inputs.seasonPhase as never,
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
@@ -650,8 +653,6 @@ export function buildInitialGeneratedCoachingPlan(args: {
         offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
         preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
         maxStrengthSessions: agePolicy.maxCoreSessions,
-        profileInjuries: inputs.injuries ?? [],
-        activeInjuries: inputs.generationConstraints?.injuries,
         byeMode: inputs.byeMode,
       } as never,
     },
@@ -1055,7 +1056,14 @@ export function buildGeneratedMicrocycles(args: {
     const targetWeekAvailability = blockState.weekStart === targetWeekStartISO
       ? args.targetWeekAvailability
       : undefined;
-    const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
+    const weeklyInjury = canonicalWeeklyInjuryStateFrom({
+      profile: args.profile,
+      generationConstraints,
+    });
+    const profile: OnboardingData = {
+      ...args.profile,
+      injuries: [...weeklyInjury.mergedProfileInjuries],
+    };
     /* ── THE ONE EQUIPMENT OWNER, ASKED FOR THE WHOLE WEEK ───────────────────
      *
      * ⚠ **THE KIT USED TO BE ONE ANSWER RESOLVED AT `blockState.weekStart`, AND
@@ -1097,8 +1105,8 @@ export function buildGeneratedMicrocycles(args: {
       offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
       preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
       equipment,
-      profile,
-      generationConstraints,
+      injury: weeklyInjury,
+      readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
     });
     // ── B1-PIVOT: THE COMPOSER IS THE ONLY STRENGTH-CONTENT BUILDER ─────────
     //
@@ -1128,6 +1136,7 @@ export function buildGeneratedMicrocycles(args: {
     let compiledDosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>> = {};
     let compiledPlanDoseResolved = false;
     let compiledDoseDoor: 'readiness' | 'illness' | null = null;
+    let compiledActiveInjuryKeys = weeklyInjury.activeInjuryKeys;
     if (cutoverInputs) {
       const schedulerInputs = weeklySchedulerInputsFrom({
         profile,
@@ -1144,6 +1153,7 @@ export function buildGeneratedMicrocycles(args: {
         coaching: cutoverInputs,
         readiness: canonicalReadinessFactFrom(generationConstraints),
         illness: canonicalIllnessFactFrom(generationConstraints),
+        injury: weeklyInjury,
         fixture: canonicalFixtureStateFrom({
           weekStartISO: blockState.weekStart,
           availability: targetWeekAvailability,
@@ -1155,7 +1165,6 @@ export function buildGeneratedMicrocycles(args: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
           powerGoalNudge: false,
-          injuries: (profile.injuries ?? []) as never,
           availableMachines: undefined,
           runOnly: false,
           phase: profile.seasonPhase as never,
@@ -1191,8 +1200,6 @@ export function buildGeneratedMicrocycles(args: {
             maxStrengthSessions: agePolicy.maxCoreSessions,
             appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
             attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
-            profileInjuries: profile.injuries ?? [],
-            activeInjuries: generationConstraints?.injuries,
             byeMode: cutoverInputs.byeMode,
           } as never,
         },
@@ -1201,8 +1208,6 @@ export function buildGeneratedMicrocycles(args: {
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
           equipment,
-          profile,
-          generationConstraints,
         },
       });
       if (compiled.ok === false) throw new WeeklyScheduleRefusedError(compiled.refusal);
@@ -1211,6 +1216,7 @@ export function buildGeneratedMicrocycles(args: {
       compiledDosePolicyByDay = compiled.dosePolicyByDay;
       compiledPlanDoseResolved = compiled.planDoseResolved;
       compiledDoseDoor = compiled.doseDoor;
+      compiledActiveInjuryKeys = compiled.activeInjuryKeys;
     } else {
       if (!args.plan) throw new Error('canonical week compilation requires coaching inputs or an explicit plan');
       if (generationConstraints?.illness) {
@@ -1401,7 +1407,11 @@ export function buildGeneratedMicrocycles(args: {
               : {}),
           },
           {
-            ...mergeAthletePrefsWithGenerationConstraints(args.athletePrefs, generationConstraints),
+            ...args.athletePrefs,
+            activeInjuries: Array.from(new Set([
+              ...(args.athletePrefs?.activeInjuries ?? []),
+              ...compiledActiveInjuryKeys,
+            ])),
             availableEquipment: equipment.tags,
             conditioningModalities: equipment.conditioningModalities,
           },
@@ -1810,10 +1820,14 @@ export function generateProgramLocally(
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
   const baseProfile = normalizeOnboardingRole(onboardingData);
-  const generationProfile = applyGenerationConstraintsToProfile(
-    baseProfile,
+  const generationInjury = canonicalWeeklyInjuryStateFrom({
+    profile: baseProfile,
     generationConstraints,
-  );
+  });
+  const generationProfile: OnboardingData = {
+    ...baseProfile,
+    injuries: [...generationInjury.mergedProfileInjuries],
+  };
   const resolvedEquipment = generationEquipmentInputOrThrow(
     generationProfile,
     resolveEquipmentCapabilities(
@@ -1827,8 +1841,8 @@ export function generateProgramLocally(
   const substitutionPolicy = resolveConditioningSubstitutionPolicy({
     phase: generationProfile.seasonPhase,
     equipment: resolvedEquipment,
-    profile: baseProfile,
-    generationConstraints,
+    injury: generationInjury,
+    readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
   });
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
@@ -2685,7 +2699,7 @@ export function buildGenerationPrompt(
     offseasonSubphase: plan.offseasonSubphase,
     preseasonSubphase: plan.preseasonSubphase,
     equipment,
-    profile: data,
+    injury: canonicalWeeklyInjuryStateFrom({ profile: data }),
   });
 
   parts.push('Generate my initial training program using the update_program tool.');

@@ -120,6 +120,7 @@ import {
   applyResolvedConditioningSubstitution,
   resolveWeeklyConditioningFeasibility,
 } from '../rules/conditioningFeasibility';
+import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
 
 /**
  * Default exercises used in the training program
@@ -1625,7 +1626,9 @@ export function buildWorkoutsFromCoach(
             phase: onboardingData?.seasonPhase,
             offseasonSubphase,
             equipment: equipmentCapabilities,
-            profile: onboardingData,
+            injury: onboardingData
+              ? canonicalWeeklyInjuryStateFrom({ profile: onboardingData })
+              : undefined,
           },
         )
     : undefined;

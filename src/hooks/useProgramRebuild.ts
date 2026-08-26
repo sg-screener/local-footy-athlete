@@ -116,6 +116,9 @@ export function useProgramRebuild(): ProgramRebuild {
   const runRebuild = useCallback(async (profileOverride?: OnboardingData) => {
     const profile = profileOverride ?? onboardingData;
     const program = await generateProgramFromProfile(profile, {
+      // This is an athlete-requested rebuild, so it authors the block rather
+      // than replaying a temporary fact over an unrecorded selection history.
+      recordSelections: 'author',
       // The athlete asked for this rebuild (onboarding, phase shift). A week
       // that cannot meet its contract is disclosed downstream, not refused.
       weekAcceptance: 'forward_decision',

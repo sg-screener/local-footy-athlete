@@ -19,6 +19,7 @@ import {
   type CoachingInputs,
   type CoachingPlan,
 } from '../utils/coachingEngine';
+import type { InjuryKey } from '../data/exerciseTags';
 import {
   materialiseAuthoredSessions,
   type MaterialisationFacts,
@@ -45,6 +46,7 @@ import {
   schedulerInputsWithFixtureState,
   type CanonicalWeeklyFixtureState,
 } from './canonicalWeeklyFixtureState';
+import type { CanonicalWeeklyInjuryState } from './canonicalWeeklyInjuryState';
 import {
   scheduleRefused,
   scheduleWeek,
@@ -57,10 +59,11 @@ import {
   type BuildFixtureMinimalReplanInput,
   type FixtureMinimalReplanResult,
 } from '../utils/fixtureMinimalReplan';
+import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
 
 type DerivedMaterialisationFacts = Omit<
   MaterialisationFacts,
-  'capacity' | 'isBeginner' | 'experienced'
+  'capacity' | 'isBeginner' | 'experienced' | 'injuries'
 >;
 
 type DerivedConnectorInput = Omit<
@@ -76,7 +79,8 @@ type DerivedConnectorInput = Omit<
 > & {
   readonly v1Input: Omit<ConnectorInput['v1Input'],
     'capacity' | 'readinessDeloaded' | 'weekModeOverride'
-    | 'selectedDayNumbers' | 'teamTrainingDayNumbers' | 'hasGame' | 'gameDay'>;
+    | 'selectedDayNumbers' | 'teamTrainingDayNumbers' | 'hasGame' | 'gameDay'
+    | 'injuryPolicy'>;
 };
 
 /**
@@ -114,6 +118,7 @@ export interface CanonicalWeeklyCompilerInput {
   readonly readiness?: CanonicalWeeklyReadinessFact | null;
   readonly illness?: CanonicalWeeklyIllnessFact | null;
   readonly fixture?: CanonicalWeeklyFixtureState | null;
+  readonly injury?: CanonicalWeeklyInjuryState | null;
   /** Optional specialist projection, still executed inside the compiler. */
   readonly conditioningFeasibility?: ConditioningFeasibilityContext;
 }
@@ -130,6 +135,8 @@ export type CanonicalWeeklyCompilerResult =
       readonly planDoseResolved: boolean;
       /** The accepted fact door, carried so metadata never re-infers it. */
       readonly doseDoor: 'readiness' | 'illness' | null;
+      /** Compiler-authored semantic keys consumed by exercise selection. */
+      readonly activeInjuryKeys: readonly InjuryKey[];
     }
   | {
       readonly ok: false;
@@ -159,6 +166,7 @@ export function compileCanonicalWeek(
       capacity,
       isBeginner: agePolicy.level === 'new',
       experienced: agePolicy.level !== 'new',
+      injuries: [...(input.injury?.powerInjuries ?? [])],
     },
     gameDay: scheduler.gameDay,
     gameDays: scheduler.gameDays,
@@ -194,6 +202,7 @@ export function compileCanonicalWeek(
         input.readiness?.sessionsOptional === true || input.illness?.sessionsOptional === true
           ? 'optional_week'
           : undefined,
+      injuryPolicy: input.injury ?? undefined,
     },
     schedule,
     materialised,
@@ -201,6 +210,15 @@ export function compileCanonicalWeek(
     capacity,
     capacityFactors,
   });
+  const injuryResolvedPlan = input.injury && connected.weeklyExposureContractV2
+    ? {
+        ...connected,
+        weeklyExposureContractV2: applyGenerationSafetyToSection18Contract({
+          contract: connected.weeklyExposureContractV2,
+          injuryPolicy: input.injury,
+        }),
+      }
+    : connected;
   const readinessPolicy = input.readiness?.deloaded
     ? resolveDoorDeloadPolicy({
         door: 'readiness',
@@ -237,8 +255,8 @@ export function compileCanonicalWeek(
   const planDoseResolved = !legacyScheduledPolicy;
   const doseResolvedPlan = factPolicy
     ? {
-        ...connected,
-        weeklyPlan: connected.weeklyPlan.map((entry) =>
+        ...injuryResolvedPlan,
+        weeklyPlan: injuryResolvedPlan.weeklyPlan.map((entry) =>
           applyDeloadPolicyToSessionAllocation(
             entry,
             entry.dayOfWeek
@@ -249,13 +267,18 @@ export function compileCanonicalWeek(
               : null,
           )),
       }
-    : connected;
+    : injuryResolvedPlan;
   const plan = input.conditioningFeasibility
     ? {
         ...doseResolvedPlan,
         weeklyPlan: resolveWeeklyConditioningFeasibility(
           doseResolvedPlan.weeklyPlan,
-          input.conditioningFeasibility,
+          {
+            ...input.conditioningFeasibility,
+            injury: input.injury ?? undefined,
+            readinessDeloaded:
+              input.readiness?.deloaded === true || input.illness?.deloaded === true,
+          },
         ),
       }
     : doseResolvedPlan;
@@ -270,6 +293,7 @@ export function compileCanonicalWeek(
     doseDoor: factPolicy?.door === 'readiness' || factPolicy?.door === 'illness'
       ? factPolicy.door
       : null,
+    activeInjuryKeys: input.injury?.activeInjuryKeys ?? [],
   };
 }
 

@@ -2,17 +2,12 @@ import type {
   ConditioningEquipmentModality,
   ConditioningFeasibilityDecision,
   ConditioningSubstitutionFamily,
-  OnboardingData,
   SeasonPhase,
   Workout,
 } from '../types/domain';
 import type { SessionAllocation } from '../utils/coachingEngine';
-import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import type { ResolvedEquipmentCapabilities } from '../utils/equipmentAvailability';
-import {
-  injurySeverityReducesAffectedWork,
-  onboardingInjurySeverityScore,
-} from './injurySeverityBands';
+import type { CanonicalWeeklyInjuryPolicy } from './canonicalWeeklyInjuryState';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { Section18ConditioningStress, Section18EquipmentPolicyState } from './weeklyExposureContractV2';
@@ -27,8 +22,8 @@ export interface ConditioningFeasibilityContext {
   offseasonSubphase?: OffseasonSubphase | null;
   preseasonSubphase?: PreseasonSubphase | null;
   equipment: ResolvedEquipmentCapabilities;
-  profile?: OnboardingData | null;
-  generationConstraints?: GenerationConstraintContext;
+  injury?: CanonicalWeeklyInjuryPolicy;
+  readinessDeloaded?: boolean;
 }
 
 export interface ConditioningSubstitutionPolicy extends Section18EquipmentPolicyState {
@@ -116,37 +111,12 @@ function stableHash(value: string): number {
   return Math.abs(hash);
 }
 
-function upperLimbRestriction(
-  profile: OnboardingData | null | undefined,
-  constraints?: GenerationConstraintContext,
-): boolean {
-  return (profile?.injuries ?? []).some((injury) =>
-    injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(injury))
-      && /shoulder|elbow|wrist|upper arm|pec/i.test(injury.bodyArea)) ||
-    !!constraints?.injuries.some((injury) =>
-      injurySeverityReducesAffectedWork(injury.severity) &&
-      injury.region === 'upper_body');
-}
-
-function lowerLimbRestriction(
-  profile: OnboardingData | null | undefined,
-  constraints?: GenerationConstraintContext,
-): boolean {
-  return (profile?.injuries ?? []).some((injury) =>
-    injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(injury)) &&
-    /foot|ankle|achilles|calf|shin|knee|quad|hamstring|groin|hip|lower back|back/i.test(injury.bodyArea)) ||
-    !!constraints?.injuries.some((injury) =>
-      injurySeverityReducesAffectedWork(injury.severity) &&
-      (injury.region === 'lower_body' || injury.region === 'back_midline'));
-}
-
 function allowedErgs(
   equipmentModalities: readonly ConditioningEquipmentModality[],
-  profile: OnboardingData | null | undefined,
-  constraints?: GenerationConstraintContext,
+  injury?: CanonicalWeeklyInjuryPolicy,
 ): AllowedErgModality[] {
   const available = new Set(equipmentModalities);
-  const upperRestricted = upperLimbRestriction(profile, constraints);
+  const upperRestricted = injury?.upperBodyRestricted === true;
   // The session-side 'bike' family renders on EITHER bike machine; the
   // athlete's answer distinguishes them (ruling 2, 2026-07-31) so that
   // native-air-bike rows can require air_bike specifically at selection.
@@ -253,19 +223,18 @@ export function substitutionDecision(args: {
 
   const modalities = new Set(context.equipment.conditioningModalities);
   attempted.push('treadmill');
-  if (modalities.has('treadmill') && !lowerLimbRestriction(context.profile, context.generationConstraints)) {
+  if (modalities.has('treadmill') && !context.injury?.lowerBodyRestricted) {
     return { family: 'treadmill', attempted };
   }
 
-  const lowerRestricted = lowerLimbRestriction(context.profile, context.generationConstraints);
-  const upperRestricted = upperLimbRestriction(context.profile, context.generationConstraints);
-  const readiness = context.generationConstraints?.readiness;
+  const lowerRestricted = context.injury?.lowerBodyRestricted === true;
+  const upperRestricted = context.injury?.upperBodyRestricted === true;
   const stress = stressFor(entry);
   const genuineSprint = entry.conditioningCategory === 'sprint';
   const runningSafe = !lowerRestricted && !entry.conditioningOffFeet &&
     // A deloaded week caps quality exposures at one, and sprint is a quality
     // exposure — so "deloaded" is the whole question here now.
-    !(genuineSprint && readiness?.deloaded);
+    !(genuineSprint && context.readinessDeloaded);
 
   attempted.push('outdoor_running');
   if (runningSafe) return { family: 'outdoor_running', attempted };
@@ -308,12 +277,11 @@ export function resolveConditioningSubstitutionPolicy(
   // Readiness can no longer pause training — only serious injury or an explicit
   // force can, through §18's safety.trainingPaused.
   const trainingPaused = false;
-  const lowerRestricted = lowerLimbRestriction(context.profile, context.generationConstraints);
-  const upperRestricted = upperLimbRestriction(context.profile, context.generationConstraints);
+  const lowerRestricted = context.injury?.lowerBodyRestricted === true;
+  const upperRestricted = context.injury?.upperBodyRestricted === true;
   const ergs = allowedErgs(
     context.equipment.conditioningModalities,
-    context.profile,
-    context.generationConstraints,
+    context.injury,
   );
   const treadmill = context.equipment.conditioningModalities.includes('treadmill') && !lowerRestricted;
   const running = !lowerRestricted;
@@ -354,12 +322,10 @@ export function resolveConditioningFeasibility(
   const requested = entry.ergModality;
   const allowed = allowedErgs(
     context.equipment.conditioningModalities,
-    context.profile,
-    context.generationConstraints,
+    context.injury,
   );
-  const readiness = context.generationConstraints?.readiness;
   if ((
-    readiness?.deloaded && stressFor(entry) === 'hard'
+    context.readinessDeloaded && stressFor(entry) === 'hard'
   )) {
     return removeConditioning(entry, {
       status: 'removed',

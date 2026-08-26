@@ -8,6 +8,10 @@
  */
 
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
+import {
+  canonicalWeeklyInjuryStateFrom,
+  type CanonicalWeeklyInjuryPolicy,
+} from './canonicalWeeklyInjuryState';
 import { resolveRestrictedMainStrengthPatterns } from './weeklyExposureContractBuilders';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import {
@@ -153,13 +157,19 @@ function participationForConstraint(args: {
 export function applyGenerationSafetyToSection18Contract(args: {
   contract: WeeklyExposureContractV2;
   generationConstraints?: GenerationConstraintContext;
+  injuryPolicy?: CanonicalWeeklyInjuryPolicy;
   forceFullPause?: boolean;
 }): WeeklyExposureContractV2 {
   let contract = cloneContract(args.contract);
   const context = args.generationConstraints;
+  const injuryPolicy = args.injuryPolicy ?? (context?.injuries.length
+    ? canonicalWeeklyInjuryStateFrom({
+        profile: { injuries: [] },
+        generationConstraints: context,
+      })
+    : undefined);
   const derivedProhibited = resolveRestrictedMainStrengthPatterns({
-    activeInjuries: context?.injuries,
-    profileInjuries: [],
+    injuryPolicy,
   });
   const prohibited = unique([
     ...(contract.strengthPatterns.prohibitedPatterns ?? []),
@@ -202,10 +212,8 @@ export function applyGenerationSafetyToSection18Contract(args: {
   // here would restore the full-pause tier under a different name.
   const trainingPaused = args.forceFullPause === true ||
     contract.safety?.trainingPaused === true;
-  const lowerBodyRestriction = prohibited.includes('squat') || prohibited.includes('hinge') ||
-    context?.injuries.some((injury) =>
-      (injury.region === 'lower_body' || injury.region === 'back_midline') &&
-      (injury.removeRiskyWork || injury.pauseAffectedTraining)) === true;
+  const lowerBodyRestriction = injuryPolicy?.blocksAppSprint === true ||
+    prohibited.includes('squat') || prohibited.includes('hinge');
   const upperBodyRestriction = prohibited.includes('push') || prohibited.includes('pull');
   const significantReadinessRestriction = readiness?.deloaded === true ||
     cookedReadiness || trainingPaused;

@@ -120,6 +120,7 @@ import {
   buildWeeklyExposureContract,
   resolveRestrictedMainStrengthPatterns,
 } from '../rules/weeklyExposureContractBuilders';
+import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
 import {
   buildSection18WeeklyExposureContractV2,
   resolveSection18PhasePlannerSelection,
@@ -1043,8 +1044,10 @@ function buildWeeklyPlan(
     // contract uses, so the placer and the contract can never disagree about
     // what the injury blocked.
     const restrictedPatterns = resolveRestrictedMainStrengthPatterns({
-      activeInjuries: inputs.generationConstraints?.injuries,
-      profileInjuries: inputs.injuries,
+      injuryPolicy: canonicalWeeklyInjuryStateFrom({
+        profile: { injuries: inputs.injuries },
+        generationConstraints: inputs.generationConstraints,
+      }),
     });
     // Reachable ONLY when the slot has nothing else it could carry:
     //   - both upper patterns are prohibited, so no upper substitute exists;

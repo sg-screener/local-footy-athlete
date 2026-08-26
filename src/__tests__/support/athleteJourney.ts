@@ -222,6 +222,8 @@ export async function coldStartThroughOnboarding(args: {
 
   // THE PROGRAM, through the screen's own generator call — argument for argument.
   const program = await quietAsync(() => generateProgramFromProfile(args.profile, {
+    // Exact parity with CompleteScreen: onboarding authors the first block.
+    recordSelections: 'author',
     weekAcceptance: 'restoration',
     todayISO: args.installDayISO,
   } as never)) as TrainingProgram;

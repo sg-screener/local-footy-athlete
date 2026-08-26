@@ -585,3 +585,76 @@ specialist call; each kills its named ownership cell.
   claimed zero.
 - The full-year archetype compiler acceptance gate has not been built.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 8: injury is the fourth complete compiler family
+
+### Two options weighed
+
+1. Keep merging injury copy into the profile and let power, exposure-contract,
+   conditioning and exercise-pool code each interpret it again.
+2. Translate onboarding injuries plus accepted injury facts once into a semantic
+   weekly injury state, then make every weekly specialist consume that state.
+
+Option 2 landed. It removes the disagreement class: one policy now carries the
+prohibited strength patterns, app-sprint block, lower/upper conditioning limits,
+power inputs and typed exercise-pool keys.
+
+### Ownership result
+
+Instrument unit: distinct production sites which graduate raw injury severity,
+infer a weekly restriction from body-area copy, or write the injury-derived
+weekly contract outside the compiler.
+
+- Rival weekly-injury authors in the guarded production path: **0**.
+- Conditioning severity/body-area classifiers outside the semantic state: **0**.
+- Exposure-contract severity/body-area classifiers outside the semantic state:
+  **0**.
+- Contract v2 receives its injury policy from the compiler; it no longer stays
+  healthy while the visible rows are injured.
+- The existing session-level injury recomposition specialist remains intact. It
+  answers which rows are swapped/withheld; it does not author weekly policy.
+
+### Tests-first and findings caught before acceptance
+
+The first expanded run stopped red because the semantic state did not exist.
+After the first implementation it printed **86 green / 3 red**. The real action
+journey then found two additional product defects:
+
+1. Contract v2 was never given the compiler's injury policy, so a 7/10 knee
+   changed visible rows while the accepted contract still published zero
+   prohibited patterns.
+2. onboarding generated the healthy block but did not record its exercise
+   selections. The first later temporary injury replay therefore became the
+   first selection-history author; clearing the injury kept its Hamstring Curl
+   substitute instead of restoring Single-Leg RDL.
+
+Both are now closed. Onboarding and an athlete-requested rebuild explicitly
+author block selections. The witness cold-starts a real athlete, reports a 7/10
+knee through `set_injury_modifier`, observes one semantic policy and the accepted
+contract agree on squat/hinge plus app-sprint restrictions, verifies unaffected
+work remains, clears the exact episode, and gets the original visible week back
+byte-for-byte.
+
+Mutations remove the compiler injury handoff and the separate Contract-v2
+handoff; each kills its named cell.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **102/102**.
+- `npm run test:injury-latest-severity`: **48/48**.
+- `npm run test:injury-recomposition`: **41/41**.
+- `npm run test:off-feet-walking`: **6/6**.
+- `npm run test:release`: **4/4 units green**, `RELEASE_GATE_EXIT=0`.
+- `test:section18-v2` is independently unrunnable because its imported
+  `src/utils/section18ProgramObservation` module is absent. Per the test-truth
+  rule, that obsolete diagnostic did not direct product changes.
+- The repository-wide typecheck remains red from shared/inherited files. Raw
+  compiler output reports no error in any product file changed by this slice.
+
+### NOT COVERED
+
+- Travel, athlete-edit and scheduled-deload families have not moved.
+- Global rival-author and derived-output-writer counts across those unmigrated
+  families are not zero and are not claimed zero.
+- The full-year archetype compiler acceptance gate has not been built.
+- Pixels, simulator and physical iPhone are not covered.

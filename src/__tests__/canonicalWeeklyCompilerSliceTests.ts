@@ -30,6 +30,8 @@ import { join, relative } from 'path';
 import type { OnboardingData, Workout } from '../types/domain';
 import { compileCanonicalWeek } from '../rules/canonicalWeeklyCompiler';
 import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
+import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
+import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore } from '../store/programStore';
 import {
   coldStartThroughOnboarding,
@@ -41,6 +43,7 @@ import { executeProgramControlActionDurably } from '../utils/programControlActio
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
+import { blockSelectionHistory } from '../store/blockSelectionHistoryStore';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -288,6 +291,95 @@ async function main(): Promise<void> {
       'illness: canonicalIllnessFactFrom(generationConstraints)',
       'illness_REMOVED: canonicalIllnessFactFrom(generationConstraints)',
     ).includes('illness: canonicalIllnessFactFrom(generationConstraints)'));
+
+  console.log('\n[injury ownership] one semantic policy enters the compiler; specialists do not reclassify it');
+  const injuryPolicySource = readFileSync(
+    join(ROOT, 'rules/canonicalWeeklyInjuryState.ts'), 'utf8',
+  );
+  const exposureBuilderSource = readFileSync(
+    join(ROOT, 'rules/weeklyExposureContractBuilders.ts'), 'utf8',
+  );
+  const conditioningSource = readFileSync(
+    join(ROOT, 'rules/conditioningFeasibility.ts'), 'utf8',
+  );
+  const section18SafetySource = readFileSync(
+    join(ROOT, 'rules/section18SafetyPolicy.ts'), 'utf8',
+  );
+  const onboardingCompleteSource = readFileSync(
+    join(ROOT, 'screens/onboarding/CompleteScreen.tsx'), 'utf8',
+  );
+  const journeySupportSource = readFileSync(
+    join(ROOT, '__tests__/support/athleteJourney.ts'), 'utf8',
+  );
+  ok('the compiler accepts one semantic injury policy',
+    compilerSource.includes('readonly injury?: CanonicalWeeklyInjuryState | null'));
+  ok('the injury policy owns strength, sprint, conditioning, power and exercise-pool outputs',
+    injuryPolicySource.includes('prohibitedPatterns:') &&
+      injuryPolicySource.includes('blocksAppSprint:') &&
+      injuryPolicySource.includes('lowerBodyRestricted:') &&
+      injuryPolicySource.includes('upperBodyRestricted:') &&
+      injuryPolicySource.includes('powerInjuries:') &&
+      injuryPolicySource.includes('activeInjuryKeys:'));
+  ok('product generation hands the semantic injury policy to the compiler',
+    generatorSource.includes('injury: weeklyInjury'));
+  ok('the compiler derives power inputs instead of receiving another injury projection',
+    compilerSource.includes("'injuries'") &&
+      compilerSource.includes('injuries: [...(input.injury?.powerInjuries ?? [])]'));
+  ok('the compiler derives contract injury inputs instead of receiving raw injuries',
+    compilerSource.includes("| 'injuryPolicy'>") &&
+      !compilerSource.includes('profileInjuries') &&
+      !compilerSource.includes('activeInjuries') &&
+      compilerSource.includes('injuryPolicy: input.injury ?? undefined'));
+  ok('the exposure contract consumes semantic injury policy when supplied',
+    exposureBuilderSource.includes('injuryPolicy?: CanonicalWeeklyInjuryPolicy') &&
+      exposureBuilderSource.includes('new Set(input.injuryPolicy?.prohibitedPatterns ?? [])'));
+  ok('the compiler stamps the semantic injury policy onto Contract v2',
+    compilerSource.includes('applyGenerationSafetyToSection18Contract({') &&
+      compilerSource.includes('injuryPolicy: input.injury'));
+  ok('onboarding records the healthy block selections temporary injuries must preserve',
+    onboardingCompleteSource.includes("recordSelections: 'author'") &&
+      journeySupportSource.includes("recordSelections: 'author'"));
+  ok('conditioning consumes semantic restriction flags and does not graduate injury severity',
+    conditioningSource.includes('injury?: CanonicalWeeklyInjuryPolicy') &&
+      !conditioningSource.includes('onboardingInjurySeverityScore') &&
+      !conditioningSource.includes('injurySeverityReducesAffectedWork'));
+  const generationInjuryRivalAuthors = [
+    generatorSource.includes('applyGenerationConstraintsToProfile(')
+      ? 'generator merges raw injury facts into profile' : null,
+    generatorSource.includes('mergeAthletePrefsWithGenerationConstraints(')
+      ? 'generator separately derives exercise-pool injury keys' : null,
+    generatorSource.includes('profileInjuries:')
+      ? 'generator hands raw profile injuries to the contract' : null,
+    generatorSource.includes('activeInjuries: generationConstraints')
+      ? 'generator hands raw active injuries to the contract' : null,
+    conditioningSource.includes('onboardingInjurySeverityScore')
+      ? 'conditioning graduates profile injury severity' : null,
+    conditioningSource.includes('injurySeverityReducesAffectedWork')
+      ? 'conditioning graduates active injury severity' : null,
+    exposureBuilderSource.includes('onboardingInjurySeverityScore') ||
+      exposureBuilderSource.includes('injurySeverityRemovesRiskyWork')
+      ? 'exposure contract graduates raw injury severity' : null,
+    section18SafetySource.includes('injury.region ===')
+      ? 'Contract v2 independently classifies an injury region' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-injury rival-author count is literally zero',
+    generationInjuryRivalAuthors.length === 0,
+    JSON.stringify(generationInjuryRivalAuthors));
+  ok('[MUTATION] dropping the typed injury compiler handover is detected',
+    generatorSource.includes('injury: weeklyInjury') &&
+      !generatorSource.replace(/injury: weeklyInjury/g, 'injury_REMOVED: weeklyInjury')
+        .includes('injury: weeklyInjury'));
+  ok('[MUTATION] dropping the Contract v2 injury handoff is detected',
+    /applyGenerationSafetyToSection18Contract\(\{[\s\S]{0,180}injuryPolicy: input\.injury,/
+      .test(compilerSource) &&
+      !/applyGenerationSafetyToSection18Contract\(\{[\s\S]{0,180}injuryPolicy: input\.injury,/
+        .test(compilerSource.replace(
+          'injuryPolicy: input.injury,\n        })',
+          'injuryPolicy_REMOVED: input.injury,\n        })',
+        )));
+  ok('[MUTATION] letting onboarding omit its selection authority is detected',
+    !onboardingCompleteSource.replace("recordSelections: 'author'", '')
+      .includes("recordSelections: 'author'"));
 
   console.log('\n[fixture ownership] one typed target-week state enters the compiler');
   ok('the compiler accepts a semantic fixture state',
@@ -590,6 +682,86 @@ async function main(): Promise<void> {
     visibleSignature(quiet(() =>
       resolvedDays(illnessInstall.blockOneStart, declarationDay))) ===
       illnessBaselineSignature);
+
+  console.log('\n[injury slice] healthy -> knee restriction -> recovered');
+  const injuryInstall = await coldStartThroughOnboarding({
+    profile: athlete(), installDayISO: INSTALL_DAY,
+  });
+  ok('the injury witness reaches a real generated week through onboarding',
+    injuryInstall.onboardingRefusal === null, injuryInstall.onboardingRefusal);
+  const injuryBaseline = quiet(() =>
+    resolvedDays(injuryInstall.blockOneStart, INSTALL_DAY));
+  const injuryBaselineSignature = visibleSignature(injuryBaseline);
+  const injurySelectionHistoryBefore = blockSelectionHistory();
+  ok('the accepted healthy block recorded the selections injury must preserve underneath',
+    injurySelectionHistoryBefore.some((selection) =>
+      selection.blockStartISO === injuryInstall.blockOneStart),
+    JSON.stringify(injurySelectionHistoryBefore));
+  const injuryConstraint = buildGuidedInjuryConstraint({
+    region: 'lower_body', area: 'knee', severity: 7,
+    severityBand: 'avoid', adjustmentLevel: 'remove_risky',
+    triggers: ['running', 'change of direction'], seriousSymptoms: false,
+  } as never, { todayISO: declarationDay });
+  const injurySet = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_injury_modifier',
+    source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+    scope: 'current_and_future',
+    payload: { constraint: injuryConstraint },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO: declarationDay }));
+  ok('the athlete injury action commits through the production door',
+    injurySet.ok === true, injurySet.message);
+  const injuryEpisodeId = injurySet.createdModifierIds?.[0] ?? null;
+  ok('the injury door returns the exact episode it authored',
+    Boolean(injuryEpisodeId), JSON.stringify(injurySet.createdModifierIds));
+  const injuryContext = buildGenerationConstraintContext({
+    activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints,
+    temporarySourceFacts:
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts,
+    todayISO: injuryInstall.blockOneStart,
+    periodEndISO: '2026-07-19',
+  });
+  const acceptedInjuryPolicy = canonicalWeeklyInjuryStateFrom({
+    profile: athlete(), generationConstraints: injuryContext,
+  });
+  ok('one accepted injury policy carries the lower-body decisions for every weekly specialist',
+    acceptedInjuryPolicy.lowerBodyRestricted && acceptedInjuryPolicy.blocksAppSprint &&
+      acceptedInjuryPolicy.prohibitedPatterns.includes('squat') &&
+      acceptedInjuryPolicy.prohibitedPatterns.includes('hinge') &&
+      acceptedInjuryPolicy.activeInjuryKeys.includes('knee'),
+    JSON.stringify(acceptedInjuryPolicy));
+  const injuryOverlay = useProgramStore.getState()
+    .weekScopedOverlays[injuryInstall.blockOneStart];
+  const prohibitedAfterInjury =
+    injuryOverlay?.exposureContractV2?.strengthPatterns.prohibitedPatterns ?? [];
+  ok('the accepted compiler contract carries the same prohibited patterns',
+    prohibitedAfterInjury.includes('squat') && prohibitedAfterInjury.includes('hinge'),
+    JSON.stringify(prohibitedAfterInjury));
+  const injuryVisible = quiet(() =>
+    resolvedDays(injuryInstall.blockOneStart, declarationDay));
+  ok('the affected week retains real unaffected training instead of being emptied',
+    injuryVisible.some((day) => day.rows.length > 0));
+  const injuryCleared = injuryEpisodeId
+    ? await quietAsync(() => executeProgramControlActionDurably({
+        type: 'clear_injury_modifier',
+        source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+        scope: 'current_and_future',
+        payload: { episodeId: injuryEpisodeId },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+      }, { todayISO: declarationDay }))
+    : null;
+  ok('the athlete can clear the exact injury episode',
+    injuryCleared?.ok === true, injuryCleared?.message);
+  const injuryRecovered = quiet(() =>
+    resolvedDays(injuryInstall.blockOneStart, declarationDay));
+  ok('clearing injury restores the visible accepted week exactly',
+    visibleSignature(injuryRecovered) === injuryBaselineSignature,
+    JSON.stringify({
+      before: injuryBaseline.map((day) => [day.dateISO, day.rows.map((row) => row.name)]),
+      after: injuryRecovered.map((day) => [day.dateISO, day.rows.map((row) => row.name)]),
+      historyBefore: injurySelectionHistoryBefore,
+      historyAfter: blockSelectionHistory(),
+    }));
 
   console.log('\n[fixture slice] move onto occupied day -> move back');
   const fixtureInstall = await coldStartThroughOnboarding({
