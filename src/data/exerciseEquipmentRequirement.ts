@@ -197,12 +197,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   // carrying load.
   "Single-Leg RDL": [['dumbbells', 'kettlebell', 'barbell']],
   "Single-Leg Squat (to Box)": ['plyo_box'],
-  // Sam, 2026-08-18, ruling on the cue/sheet conflict this branch surfaced:
-  // *"Skull Crushers: legal with dumbbells OR barbell. Straight/EZ bar belongs
-  // to the barbell option."* The CUE was already right and the SHEET was behind.
-  // Dumbbells stay first: that is what the sheet has always said, so no athlete's
-  // current selection moves — this only widens what is legal.
-  "Skull Crushers": [['dumbbells', 'barbell']],
+  // Sam, 2026-08-26: keep the athlete-facing name "Skull Crushers" for the
+  // straight/EZ-bar variation. "Dumbbell Skull Crusher" already exists as its
+  // own movement with its own requirement and cue, so this row is barbell-only.
+  "Skull Crushers": ['barbell'],
   "Slant Board Step-Down": [],
   "Spanish Squat Hold": ['bands'],
   "Speed Bench": ['barbell', 'bench'],

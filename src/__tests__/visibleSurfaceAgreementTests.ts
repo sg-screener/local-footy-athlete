@@ -353,15 +353,14 @@ function run(): void {
 
   // THE CLASS CENSUS. This is what answers "any other exercises?" without
   // relying on the one Crab Walks report. On a full kit every curated cue must
-  // reach the control except the one authored variant Sam explicitly ruled
-  // absent: Skull Crushers selects dumbbells first, while its existing cue is
-  // the barbell variant and must remain withheld.
+  // reach the control. Skull Crushers is now the bar/EZ-bar variation and the
+  // separately named Dumbbell Skull Crusher owns the dumbbell cue.
   const fullKitCueOmissions = Object.keys(EXERCISE_CUES).filter((name) => {
     const selected = resolveSelectedImplement({ exerciseName: name, availableTags: FULL_KIT });
     return cueForImplement(name, selected.implement, FULL_KIT).text === null;
   }).sort();
-  check('FULL-KIT CUE CENSUS: only the ruled Skull Crushers variant is absent',
-    JSON.stringify(fullKitCueOmissions) === '["Skull Crushers"]',
+  check('FULL-KIT CUE CENSUS: every curated cue reaches the control',
+    JSON.stringify(fullKitCueOmissions) === '[]',
     JSON.stringify(fullKitCueOmissions));
 
   // ⚠ THE COVERAGE GATE. `CUE_ASSUMED_IMPLEMENT` is a hand-kept reading of the
@@ -600,20 +599,21 @@ function run(): void {
   const BB_ONLY: EquipmentTag[] = ['bodyweight', 'barbell', 'bench', 'rack'];
   const RINGS: EquipmentTag[] = ['bodyweight', 'rings_trx' as EquipmentTag];
 
-  // RULING 1 — Skull Crushers: dumbbells OR barbell.
-  check('SKULL CRUSHERS is legal on dumbbells alone',
-    exerciseAllowedByEquipment('Skull Crushers', DB_ONLY) === true);
-  check('AND NOW ALSO ON A BARBELL ALONE — the widening Sam ruled',
+  // CURRENT RULING — keep the name Skull Crushers for the bar/EZ-bar version;
+  // Dumbbell Skull Crusher is the separate dumbbell movement.
+  check('SKULL CRUSHERS is not the dumbbell variation',
+    exerciseAllowedByEquipment('Skull Crushers', DB_ONLY) === false);
+  check('SKULL CRUSHERS is legal on a barbell alone',
     exerciseAllowedByEquipment('Skull Crushers', BB_ONLY) === true);
-  check('a barbell athlete SELECTS the barbell, and its bar cue then fits',
+  check('a barbell athlete selects the barbell, and its bar cue fits',
     resolveSelectedImplement({ exerciseName: 'Skull Crushers', availableTags: BB_ONLY })
       .implement === 'barbell'
       && cueForImplement('Skull Crushers', 'barbell').text !== null);
-  check('a dumbbell athlete selects dumbbells, and the BAR cue stands down',
-    resolveSelectedImplement({ exerciseName: 'Skull Crushers', availableTags: DB_ONLY })
-      .implement === 'dumbbells'
-      && cueForImplement('Skull Crushers', 'dumbbells').missingCueForImplement === true,
-    'the cue is the barbell variant; suppressing it is the ruling, not a defect');
+  check('DUMBBELL SKULL CRUSHER remains legal and cued on dumbbells',
+    exerciseAllowedByEquipment('Dumbbell Skull Crusher', DB_ONLY) === true
+      && resolveSelectedImplement({ exerciseName: 'Dumbbell Skull Crusher', availableTags: DB_ONLY })
+        .implement === 'dumbbells'
+      && cueForImplement('Dumbbell Skull Crusher', 'dumbbells').text !== null);
 
   // RULING 2 — Z-Press: barbell OR dumbbells, and its cue covers both.
   check('Z-PRESS is legal on either implement alone',

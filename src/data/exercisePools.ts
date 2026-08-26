@@ -177,7 +177,7 @@ export const TRICEPS_POOL: PoolExercise[] = [
   ex('kickback',          'Dumbbell Kickback',          2, 12, 15, 30, 'Hinge forward, lock elbow. Squeeze at top.',  ['dumbbells'], ['elbow']),
   ex('band-pushdown',     'Banded Tricep Pushdown',     3, 15, 20, 30, 'Anchor band overhead. Constant tension.',     ['bands'],     ['elbow']),
   ex('skull-crusher-db',  'Dumbbell Skull Crusher',     3, 10, 12, 45, 'Lying on bench. Lower toward temples, press up.', ['dumbbells', 'bench'], ['elbow', 'shoulder']),
-  ex('skull-crushers',    'Skull Crushers',             3, 10, 12, 45, 'Lower beside the head. Keep the elbows in place.', [['dumbbells', 'barbell']], ['elbow', 'shoulder']),
+  ex('skull-crushers',    'Skull Crushers',             3, 10, 12, 45, 'Lower beside the head. Keep the elbows in place.', ['barbell'], ['elbow', 'shoulder']),
   ex('dirty-30',          'Tricep Circuit (Dirty 30)',  2, 30, 30, 45, 'Move through all three positions without rest.', ['barbell'], ['elbow', 'shoulder']),
 ];
 

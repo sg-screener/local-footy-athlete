@@ -261,7 +261,7 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Concentration Curl':         { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Pushdown':            { anchor: 'bench', ratio: 0.20, equipment: 'cable' },
   'Overhead Tricep Extension':  { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
-  'Skull Crushers':             { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },  // Usually EZ bar or DBs, not full barbell
+  'Skull Crushers':             { anchor: 'bench', ratio: 0.2, equipment: 'barbell' },
   'Dumbbell Skull Crusher':     { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
   'Dumbbell Kickback':          { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Circuit (Dirty 30)':  { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },

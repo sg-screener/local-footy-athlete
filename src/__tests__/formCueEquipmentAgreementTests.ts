@@ -11,12 +11,13 @@
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 
-import type { EquipmentTag } from '../data/exercisePools';
+import { POOL_REGISTRY, type EquipmentTag } from '../data/exercisePools';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import { CUE_REQUIRED_APPARATUS } from '../data/cueImplement';
 import { resolveSelectedImplement } from '../rules/selectedImplement';
 import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
+import { equipmentClassFor } from '../utils/loadEstimation';
 
 let passed = 0;
 let failed = 0;
@@ -94,16 +95,36 @@ const fullKitCueOmissions = Object.keys(EXERCISE_CUES).filter((name) => {
   return cueForImplement(name, selected.implement, FULL_KIT).text === null;
 }).sort();
 
-check('full-kit census leaves only the ruled dumbbell Skull Crushers gap',
-  JSON.stringify(fullKitCueOmissions) === '["Skull Crushers"]',
+check('full-kit census leaves no curated Form cue missing',
+  JSON.stringify(fullKitCueOmissions) === '[]',
   JSON.stringify(fullKitCueOmissions));
 
 check('the safety guard still withholds the barbell RDL cue on dumbbells',
   cueForImplement('RDLs', 'dumbbells', FULL_KIT).text === null);
-check('the safety guard still withholds the barbell Skull Crushers cue on dumbbells',
-  cueForImplement('Skull Crushers', 'dumbbells', FULL_KIT).text === null);
+const skullCrushers = resolveSelectedImplement({
+  exerciseName: 'Skull Crushers',
+  availableTags: FULL_KIT,
+});
+const dumbbellSkullCrusher = resolveSelectedImplement({
+  exerciseName: 'Dumbbell Skull Crusher',
+  availableTags: FULL_KIT,
+});
+check('Skull Crushers is the bar/EZ-bar variation and keeps that name',
+  skullCrushers.implement === 'barbell'
+    && cueForImplement('Skull Crushers', skullCrushers.implement, FULL_KIT).text !== null,
+  String(skullCrushers.implement));
+const skullCrushersPoolRow = POOL_REGISTRY.triceps.find((row) => row.name === 'Skull Crushers');
+check('Skull Crushers has one barbell answer across requirement, pool and load',
+  JSON.stringify(equipmentRequiredFor('Skull Crushers')) === '["barbell"]'
+    && JSON.stringify(skullCrushersPoolRow?.equipment) === '["barbell"]'
+    && equipmentClassFor('Skull Crushers') === 'barbell',
+  `${JSON.stringify(equipmentRequiredFor('Skull Crushers'))} / `
+    + `${JSON.stringify(skullCrushersPoolRow?.equipment)} / ${String(equipmentClassFor('Skull Crushers'))}`);
+check('Dumbbell Skull Crusher remains the separate dumbbell variation',
+  dumbbellSkullCrusher.implement === 'dumbbells'
+    && cueForImplement('Dumbbell Skull Crusher', dumbbellSkullCrusher.implement, FULL_KIT).text !== null,
+  String(dumbbellSkullCrusher.implement));
 
 console.log(`\nForm cue equipment totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
 if (failed > 0) process.exitCode = 1;
-

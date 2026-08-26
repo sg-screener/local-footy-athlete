@@ -84,11 +84,9 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
   // They were listed for his decision rather than silently picked; these rows
   // are now the ruling's consequences, not my readings.
 
-  // RULED: *"legal with dumbbells OR barbell. Straight/EZ bar belongs to the
-  // barbell option."* So the cue IS the barbell variant, and on a dumbbell
-  // selection it is suppressed and flagged — which is the honest outcome and
-  // surfaces that a dumbbell Skull Crushers cue is owed. **Not reworded here:
-  // splitting his sentence would be inventing the coaching copy he forbade.**
+  // Sam, 2026-08-26: keep this named "Skull Crushers" as the straight/EZ-bar
+  // variation. The separately named Dumbbell Skull Crusher owns the dumbbell
+  // movement and cue, so this cue and its equipment answer now agree outright.
   'Skull Crushers': 'barbell',
 
   // RULED: *"legal with barbell OR dumbbells."* Its cue OFFERS the alternative

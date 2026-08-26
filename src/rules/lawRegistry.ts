@@ -142,6 +142,17 @@ export interface LawRow {
 export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
+    id: 'LAW-skull-crushers-name-and-implement',
+    law: 'The straight/EZ-bar triceps movement is athlete-facing "Skull Crushers" and barbell-only; "Dumbbell Skull Crusher" remains the separately named dumbbell movement.',
+    ruledAt: 'NOT STATED IN THE REPO before this guarded registry row — Sam, 2026-08-26 in the Codex item-1 follow-up: "just call it skull crushers not EZ bar skull crushers". This row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:visible-surfaces',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 in section 10 of src/__tests__/visibleSurfaceAgreementTests.ts and the focused cue/equipment census it invokes. The visible-surface cells pin the generic name to the barbell implementation, refuse that identity on a dumbbell-only kit, and keep Dumbbell Skull Crusher legal and cued as the separate dumbbell movement. The focused census additionally binds the equipment requirement, triceps pool, load class and authored cue. MUTATION: restoring the generic load class to dumbbell red the named cross-source agreement cell; restoring barbell returned the focused suite to 23/23. The authored load workbook is independently held in both directions by test:load-ratio-rulings.',
+    },
+  },
+  {
     id: 'LAW-gunshow-pools-and-pairing',
     law: 'The authored normal-gym Gunshow is 2 biceps + 2 triceps + 2 shoulders at 2-3 sets, draws only from the exact signed 8/7/8 pools, and never selects a forbidden same-pattern pair.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-052 and docs/LFA_PROGRAMMING_BIBLE.md Section 20.3; Sam 2026-08-21 supplied the replacement pools and the do-not-pair list.',
