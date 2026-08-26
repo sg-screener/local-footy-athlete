@@ -3471,3 +3471,42 @@ Measured tonight, correcting the audit's list:
 - Pre-existing reds unchanged and control-proven not mine everywhere
   measured; test:compile breach set (programControlActions 5-vs-4,
   exerciseFilter 1-vs-0) exists on HEAD too.
+
+---
+
+## 2026-08-27 (later) — SAM: "NO YOU DO THIS" — Q2/Q3 BUILT BY THIS SEAT
+
+### Q2 — WORKING. `a7444ddb` (WC-143, R-256)
+Built at the LIVE scheduler (`weeklyScheduler`) after measurement showed the
+first landing site (`coachingEngine.buildWeeklyPlan`) has ZERO callers — a
+dead layer; those edits were reverted before commit. The tt=0 in-season
+game week now authors: EARLY upper day = strength + Fly 20/30 flying-run
+sprint rider + rotating glycolytic intervals (Sam's sentence, typed as
+clause WC-143); G-2 = moderate tempo running/off-leg. Supersedes the
+2026-07-29 game-carries-hard reading for tt=0 only. Contract intensity
+minimum deliberately NOT raised (blocking + geometry-blind — the item-1
+lesson). Mutant killed; y5 full year 0 problems with the shape in every
+in-season week.
+
+### Q3 — RULED + BLOCKED, measured. (R-257)
+WC-144 (hard runner leaves the all-lower receiver set for a free weekend
+day) was BUILT and produced the ruled shape (Mon lower + easy off-leg,
+Sat standalone Hard Intervals, rest + streak guards, mutants killed). It
+was BACKED OUT on a measured collision: with Saturday occupied, a dated
+practice-match landing there makes the fixture replan overlay and the
+pure deriver compose different weeks (the overlay's Monday lost its
+conditioning component) and fixture-identity 5/6 red — Sam's own
+add-then-remove identity law. Root: the projection/derivation seam
+already recorded as the R-075 allocations-vs-final unit (the pure deriver
+schedules dated-fixture weeks fixture-blind; instrumented and proven —
+the same week scheduled with gameDay=6 in transaction passes and
+gameDay=null in derivation passes). OWNER: whoever takes the R-075 seam;
+the backed-out build is recoverable from this branch's history at the
+WC-144 marker in weeklyScheduler.ts.
+
+### Layer discovery, recorded
+`coachingEngine.buildWeeklyPlan` (and its §18 conditioning allocation +
+repair passes, ~5000 lines) has NO production callers — the live chain is
+weeklyScheduler → materialiseAuthoredSessions → scheduleToCoachingPlan.
+The preseason-subphase / preseason-exposure / strength-sequencing suites
+partly test that dead layer. Deletion census owed (its own unit).
