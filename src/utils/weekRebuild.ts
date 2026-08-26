@@ -674,13 +674,29 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       // rather than a re-composition. No stored contract outlives a fixture
       // decision.
       //
-      // `projection` is otherwise still a decision aid, not a published output:
-      // it decides the sweep, the gateway status the door reports, and the
-      // rolling horizon this transaction must validate. Only its contract is
-      // published.
+      // ⚠ **THE SESSIONS ARE PUBLISHED TOO — Sam, 2026-08-26: "it removes the
+      // game then becomes a bye or build week", ordered fixed after the year
+      // audit measured the empty publication's athlete-visible consequence.**
+      //
+      // The previous cut published `workoutsByDate: {}` on the theory that the
+      // sessions expressing a fixture decision are DERIVED from the published
+      // contract. The reader that would derive them was never built, so the
+      // measured athlete outcome was: remove Saturday's game → transaction
+      // accepted, `noGame` persisted, contract updated — and the week the
+      // athlete SEES unchanged, with the stored template's `Game` workout
+      // still rendering on the byed date and no bye-build work anywhere
+      // (probe 2026-08-26; the replan itself had already produced a
+      // gateway-accepted bye week with Saturday Hard Conditioning that was
+      // then thrown away at this line).
+      //
+      // Publishing the replan's own dated workouts is Sam's 2026-08-20 law
+      // applied here — "Stored truth and visible truth must agree… must not
+      // rely on projection to hide it" — and is what every sibling overlay
+      // writer (athlete move/deletion repair, illness scoped regen) already
+      // does. When a derived-declaration reader lands, this publication can
+      // shrink back to the contract in the same change that builds the reader.
       const committedAdjustment = commitWeekScopedOverlay({
         ...projection.overlay,
-        workoutsByDate: {},
       }, sweep, {
         targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,

@@ -926,6 +926,30 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     base: currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null,
   });
 
+  // ── A STORED GAME NEVER RENDERS ON A DAY THE ATHLETE BYED OUT ────────────
+  //
+  // Sam, 2026-08-26 ("it removes the game then becomes a bye or build week"),
+  // after the year audit measured the phantom: the fixture-remove door writes
+  // the `noGame` mark, but generation authors a `Game` workout INTO the base
+  // microcycle on the usual fixture day, and only the VIRTUAL game respected
+  // the mark — the stored template's Game rode straight through composition,
+  // so the athlete's declared bye still showed a core Game card for a game
+  // that does not exist (and the week kept protecting freshness around it).
+  //
+  // The repair overlay normally wins the compose with real bye content; this
+  // guard is the fence for every path that carries the mark without a repair
+  // overlay (older worlds, dropped replays). Narrow on purpose: only a
+  // TEMPLATE/OVERLAY-owned `Game` is suppressed — a date override is
+  // athlete-authored and `noGame` on the same date is contradictory input the
+  // athlete's own later mark resolves, and non-Game content on a byed date is
+  // legitimate bye-week work and stays.
+  const byedOutStoredGame = mark === 'noGame'
+    && composed.owner !== 'date_override'
+    && composed.workout?.workoutType === 'Game';
+  if (byedOutStoredGame) {
+    composed.workout = null;
+  }
+
   // ── Priority 1, constraint half: the athlete emptied or trimmed this day ──
   //
   // `userRemovalConstraints` was not a field on `ScheduleState` and appeared

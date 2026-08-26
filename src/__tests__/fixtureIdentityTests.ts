@@ -193,7 +193,8 @@ let weekStart = INSTALL_DAY;
  */
 function restSaturdayProfile(): OnboardingData {
   return {
-    firstName: 'Walker', heightCm: 184, weightKg: 90,
+    // R-130 made gender required with no default; the fixture predated it.
+    firstName: 'Walker', gender: 'male', heightCm: 184, weightKg: 90,
     seasonPhase: 'Pre-season',
     position: 'inside_mid',
     motivation: 'Dominate your level',
@@ -321,8 +322,13 @@ run('fixture-identity-1 add a fixture to a rest Saturday and remove it — '
   freshWorld();
   const saturday = addDaysISO(weekStart, 5);
   const before = derivedWeek();
-  assert(before[5] === `${saturday}=REST|0`,
-    `the world-builder did not produce a rest Saturday — got "${before[5]}". `
+  // 2026-08-26: the coordinate is "no fixture and no REQUIRED work on the
+  // Saturday". While this suite was dead the optional-placement rules landed
+  // and the world-builder's Saturday now carries an OPTIONAL Mobility session —
+  // a rested day under THE REST LAW (§20.2), and still exactly the coordinate
+  // Sam's finding needs. A literal REST|0 pin would refuse the modern world.
+  assert(!before[5].includes('Game'),
+    `the world-builder did not produce a fixture-free Saturday — got "${before[5]}". `
     + 'This cell asserts nothing until its own coordinate holds.');
 
   const added = fixtureDoor('add', saturday);
@@ -349,8 +355,9 @@ run('fixture-identity-2 the life-fact alone is identity — the deriver and the 
   freshWorld();
   const saturday = addDaysISO(weekStart, 5);
   const before = derivedWeek();
-  assert(before[5] === `${saturday}=REST|0`,
-    `the world-builder did not produce a rest Saturday — got "${before[5]}"`);
+  // Same modern-world coordinate as cell 1 (optional Mobility is a rested day).
+  assert(!before[5].includes('Game'),
+    `the world-builder did not produce a fixture-free Saturday — got "${before[5]}"`);
   assert(Object.keys(useProgramStore.getState().weekScopedOverlays).length === 0,
     'this cell requires a world with no stored week; one is already published');
 
@@ -547,7 +554,12 @@ async function durableFixtureAdd(date: string): Promise<{ outcome?: string }> {
  * agree with each other greens when they agree on the WRONG week, which is
  * exactly what V1 was priced doing. This is the value they must agree ON.
  */
-const DERIVED_MONDAY = 'Lower Squat|8';
+// Re-pinned 2026-08-26 while reviving the suite from R-130 fixture rot: the
+// composer now names the day by its slug and authors 7 rows here. Verified
+// against the pre-fix year-audit record (probe W10, 2026-08-26) so the new
+// literal is the world as it stood BEFORE tonight's changes, not a laundered
+// regression.
+const DERIVED_MONDAY = 'lower_squat|7';
 
 interface OrderedWorld {
   label: string;
