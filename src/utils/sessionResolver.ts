@@ -42,6 +42,7 @@ import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
+import { sessionsOptionalOnDate } from '../rules/illnessRecoveryWeekMode';
 import {
   applyInjurySessionAdjustment,
   injurySessionAdjustmentForDay,
@@ -1047,9 +1048,30 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     }),
     })
   );
-  const withhold = <T extends Workout | null>(workout: T): T => adjust(markInjuryWithheldRows({
-    workout, dateISO: date, facts: dayInjuryFacts,
-  }));
+  /* ── "EVERY SESSION BECOMES OPTIONAL" IS A DERIVED DECORATION, HERE ──────
+   *
+   * The law's second flag (severe illness while active; "Absolutely cooked"
+   * inside its 7-day window) was consumed only at generation time, so any week
+   * not regenerated after the declaration — most visibly NEXT week — kept
+   * rendering `core` sessions (measured 2026-08-26, durableFactHorizonTests
+   * A3a). Same seam and same discipline as the injury marks directly above:
+   * facts travel on VIEW-door state only, a canonicalising caller carries none
+   * and decorates nothing, so the accepted week is never written down changed.
+   * Game days are untouched (the anchor survives byte-identical — Sam's A1),
+   * and days already optional/recovery keep their own tier. */
+  const factsMakeOptional = dayInjuryFacts.length > 0
+    && sessionsOptionalOnDate({ temporarySourceFacts: dayInjuryFacts as never, dateISO: date });
+  const optionality = <T extends Workout | null>(workout: T): T => {
+    if (!factsMakeOptional || !workout) return workout;
+    if (workout.workoutType === 'Rest' || workout.workoutType === 'Game') return workout;
+    if (workout.sessionTier === 'optional' || workout.sessionTier === 'recovery') return workout;
+    return { ...workout, sessionTier: 'optional' } as T;
+  };
+  const withhold = <T extends Workout | null>(workout: T): T => optionality(
+    adjust(markInjuryWithheldRows({
+      workout, dateISO: date, facts: dayInjuryFacts,
+    })),
+  );
   const composedWorkout = withhold(applyExclusionsToAuthoredDay({
     workout: composed.workout,
     dateISO: date,

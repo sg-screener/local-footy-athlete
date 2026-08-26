@@ -314,9 +314,30 @@ function registerScenarios(): void {
     assert(fact.effectiveUntil !== null,
       'cooked_week minted an OPEN horizon — that is the A1 defect, one tap '
       + 'deloading the athlete forever');
-    assert(!factHorizonCoversWeek(fact, WEEK_2),
-      `cooked_week still reaches next week (until=${fact.effectiveUntil}) — Sam's `
-      + 'ruling is a fixed 7-day rolling window, not illness\'s open hold');
+    // ⚠ RE-PINNED 2026-08-26. The 2026-08-13 inversion fixed the open hold by
+    // asserting "never reaches next week" — which contradicts the law's OWN
+    // sentence: "a ROLLING WINDOW from the day of the declaration … declaring
+    // on a Friday deloads the following week" (Bible :3698). This seed
+    // declares on FRIDAY, so the window lawfully crosses into WEEK_2 and must
+    // stop exactly 7 days after the declaration. The property that kills the
+    // A1 defect is the FIXED END, not week-boundary containment.
+    const declaredOn = (fact.effectiveFrom ?? '').slice(0, 10);
+    const expectedUntil = (() => {
+      const parsed = new Date(`${declaredOn}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + 6);
+      return parsed.toISOString().slice(0, 10);
+    })();
+    assert(fact.effectiveUntil === expectedUntil,
+      `cooked_week's window is not 7 days from the declaration — `
+      + `from=${declaredOn} until=${fact.effectiveUntil}, expected ${expectedUntil}`);
+    const WEEK_3 = (() => {
+      const parsed = new Date(`${WEEK_2}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + 7);
+      return parsed.toISOString().slice(0, 10);
+    })();
+    assert(!factHorizonCoversWeek(fact, WEEK_3),
+      `cooked_week reaches week 3 (until=${fact.effectiveUntil}) — the rolling `
+      + 'window is 7 days, not an open hold');
   });
 
   // ── T2 — the sibling invariant. A3a is week-scope-wide, not illness-specific:

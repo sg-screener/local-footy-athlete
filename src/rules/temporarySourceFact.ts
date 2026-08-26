@@ -727,6 +727,18 @@ export function reportedLevelDeloads(level: TemporaryAthleteReportedLevel): bool
   return resolveReadinessDirective(readinessTierForSeverity(levelScore(level))).deloaded;
 }
 
+/**
+ * Whether this reported readiness level makes every session OPTIONAL — the
+ * law's second flag ("Absolutely cooked" lifts the minimums; the sessions
+ * remain, offered). Same one-owner chain as `reportedLevelDeloads`, asked of
+ * the law rather than a literal, so a moved threshold cannot strand it.
+ */
+export function reportedLevelMakesSessionsOptional(
+  level: TemporaryAthleteReportedLevel,
+): boolean {
+  return resolveReadinessDirective(readinessTierForSeverity(levelScore(level))).sessionsOptional;
+}
+
 function levelScore(level: TemporaryAthleteReportedLevel): number {
   if (typeof level === 'number') return level;
   if (level === 'slight') return 3;

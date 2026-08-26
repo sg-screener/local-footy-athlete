@@ -11,9 +11,12 @@
  * derived mode is.
  */
 
-import { activeTemporarySourceFacts } from './temporarySourceFact';
+import {
+  activeTemporarySourceFacts,
+  reportedLevelMakesSessionsOptional,
+} from './temporarySourceFact';
 import type { TemporarySourceFact } from './temporarySourceFact';
-import { factHorizonCoversWeek } from './durableFactHorizon';
+import { factHorizonCoversDate, factHorizonCoversWeek } from './durableFactHorizon';
 import {
   ILLNESS_SEVERITY_TIERS,
   resolveIllnessDirective,
@@ -91,4 +94,48 @@ export function deriveIllnessRecoveryWeekMode(args: {
   // is authored — "severity decides exactly TWO things" — and it is the reason a
   // single boolean could never have carried the law.
   return deriveIllnessWeekDirective(args).sessionsOptional;
+}
+
+/**
+ * ── EVERY SESSION OPTIONAL ON THIS DATE? — the per-DATE read of the law's
+ * second flag, for the VIEW doors. ─────────────────────────────────────────
+ *
+ * Sam's laws give two producers of "nothing is required today": a SEVERE
+ * illness while active ("deloaded AND every session becomes optional"), and an
+ * "Absolutely cooked" readiness declaration inside its 7-day rolling window.
+ * Both flags existed and were consumed at GENERATION time only, so a week that
+ * was never regenerated after the declaration — most visibly the NEXT week —
+ * kept rendering its sessions as required. Measured 2026-08-26
+ * (durableFactHorizonTests A3a): a severe illness reported Friday left next
+ * Monday's lower session and both club nights showing `core` on the program
+ * screen.
+ *
+ * This is the read-side owner: coverage is asked of `durableFactHorizon`,
+ * tier consequences of the law (`resolveIllnessDirective`,
+ * `reportedLevelMakesSessionsOptional`) — nothing here re-derives a horizon
+ * or a threshold. Callers are the VIEW doors (facts travel on the view
+ * state only), so the decoration is derived on every read and never persisted.
+ */
+export function sessionsOptionalOnDate(args: {
+  temporarySourceFacts: readonly TemporarySourceFact[] | null | undefined;
+  dateISO: string;
+}): boolean {
+  const facts = activeTemporarySourceFacts(args.temporarySourceFacts ?? []);
+  for (const fact of facts) {
+    if (!('factKind' in fact)) continue;
+    if (fact.factKind === 'illness'
+      && factHorizonCoversDate(fact, args.dateISO)
+      && resolveIllnessDirective(
+        (fact as { severity: IllnessSeverityTier }).severity).sessionsOptional) {
+      return true;
+    }
+    if (fact.factKind === 'fatigue'
+      && factHorizonCoversDate(fact, args.dateISO)
+      && reportedLevelMakesSessionsOptional(
+        (fact as { athleteReportedLevel: Parameters<
+          typeof reportedLevelMakesSessionsOptional>[0] }).athleteReportedLevel)) {
+      return true;
+    }
+  }
+  return false;
 }
