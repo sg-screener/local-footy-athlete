@@ -2940,3 +2940,29 @@ live facts — legitimate), so one-owner's property is CONVERGENCE (post-
 clear boot re-authors healthy; S4c judges cover the between-boot window) —
 now held by the harness's S5 cell (21/0, chained). Launch-audit #1 is
 fully closed in code; Sam's glass check remains the L10 close.
+
+## 2026-08-26 — checklist batch 2 + same-day follow-ups (audit)
+
+Sam's checklist fixes all WORKING, each with its own commit + cells:
+#3 pre-start anchor (0649c887), #6 doubled name (1ef6fd65), #12 sheet
+keypad inset (af0d96e2), #7 boxed ask + R-221 back (c9689f78), #9
+sick-vs-tired chip routing (501da722), #10 away clear settle + equipment
+cascade (79ecac51, harness [10] cancelled-trip leg 39/0) + away UI
+redesign (3ea3e0e2, proven on glass incl. clear-from-My-Status restoring
+the week without relaunch), #14 confirm flash (29f0ec16), pulse icon
+(7e458ad9), "Travel period active" rename (b7b9ae80), board closes on
+shape change + drag glide (2ad23fa9, glass-proven), R-233 RDL pairing
+(2fed07fa, test:rdl-family chained).
+
+BLAST RADIUS, both arms: full sweep on the batch tree (174 reds) vs
+control sweep at 93fa246b in a detached worktree (172 reds). Two diffs,
+both closed (ece2dc65): blockTwoScreenDelivery died at import off the
+Sheet's new reanimated/keyboard-controller imports (primed in
+require.cache); explorerLaunchOwnership's census walked
+`.claude/worktrees/` stale checkouts (census now skips `.claude`). The
+172 control reds are the branch's standing red set — includes dead-at-
+import test:slot-coverage (applyPoolRotation not a function) and the
+ruling-registry ratchet (9 UNENFORCED > ceiling 4), both red in BOTH
+arms, neither owned by this batch.
+
+Sam's phone build is STALE: everything above ships on his say-so.
