@@ -1008,8 +1008,10 @@ function scheduleProjection(
     maxSessionsThisWeek: fact.maxSessions ?? undefined,
     teamNightFromDate: fact.teamNightFromDate ?? undefined,
     teamNightToDate: fact.teamNightToDate ?? undefined,
+    // Sam, 2026-08-26: "just call it 'travel period active' not 'away /
+    // travel period active'" — the My Status row title.
     modifierTitle: fact.scheduleKind === 'travel'
-      ? 'Away / travel period active'
+      ? 'Travel period active'
       : fact.scheduleKind === 'busy_week'
         ? (scheduleFactIsSingleDay(fact) ? 'Short on time today' : 'Busy week active')
         : fact.scheduleKind === 'team_night_move'
