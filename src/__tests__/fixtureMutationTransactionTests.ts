@@ -58,7 +58,7 @@ import {
   configureAthleteActionDiagnosticsForTests,
   getAthleteActionTracesV2,
 } from '../utils/athleteActionDiagnostics';
-import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
+import { executeHomeGameMutation } from './support/homeGameMutationCompat';
 
 const WEEK_START = '2026-03-23';
 const SATURDAY = '2026-03-28';
@@ -88,6 +88,7 @@ function profile(args: {
 } = {}): OnboardingData {
   const withFixture = args.withFixture ?? true;
   return {
+    gender: 'male',
     seasonPhase: args.phase ?? 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: [
@@ -617,10 +618,16 @@ async function main(): Promise<void> {
     };
     visit(screensRoot);
     const screenSource = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    const controller = fs.readFileSync(
-      `${screensRoot}/home/homeGameMutationController.ts`,
-      'utf8',
-    ) as string;
+    // The screen compatibility wrapper was BURNED in 3f97cc67 (zero
+    // production importers) and lives on only as test support
+    // (`./support/homeGameMutationCompat`). An absent file owns no
+    // transaction stages, which is exactly what this cell asserts — so the
+    // wrapper's source is read from wherever it still exists, or stands
+    // empty when it is gone from src/screens entirely.
+    const controllerPath = `${screensRoot}/home/homeGameMutationController.ts`;
+    const controller = fs.existsSync(controllerPath)
+      ? fs.readFileSync(controllerPath, 'utf8') as string
+      : '';
     const home = fs.readFileSync(
       `${screensRoot}/home/useHomeScreen.ts`,
       'utf8',
@@ -629,10 +636,12 @@ async function main(): Promise<void> {
       `${__dirname}/../store/calendarStore.ts`,
       'utf8',
     ) as string;
-    const coachAdapter = fs.readFileSync(
-      `${__dirname}/../utils/coachFixtureChange.ts`,
-      'utf8',
-    ) as string;
+    // Same treatment as the controller: a burned adapter cannot own a second
+    // fixture mutation engine.
+    const coachAdapterPath = `${__dirname}/../utils/coachFixtureChange.ts`;
+    const coachAdapter = fs.existsSync(coachAdapterPath)
+      ? fs.readFileSync(coachAdapterPath, 'utf8') as string
+      : '';
     assert(FIXTURE_MUTATION_TRANSACTION_NAME === 'FixtureMutationTransaction',
       'canonical transaction name drifted');
     assert(!/runCoachMutationTransaction|rebuildLocalWeek|upsertGameChangeCoachNoteFromDiff/
@@ -644,8 +653,13 @@ async function main(): Promise<void> {
     'live Home fixture UI bypasses FixtureMutationTransaction');
     assert(/COMPATIBILITY-ONLY FIXTURE WRITE/.test(calendar),
       'direct CalendarStore fixture doors are not marked compatibility-only');
-    assert(/executeFixtureMutationTransaction\(command\)/.test(coachAdapter) &&
-      !/rebuildLocalWeek|runCoachMutationTransaction|upsertGameChangeCoachNoteFromDiff/.test(coachAdapter),
+    // `utils/coachFixtureChange` was torn down with the frozen coach systems
+    // (202de26f, the coach rebuild). While no adapter exists there IS no
+    // second engine; when the rebuild lands one, it must route through the
+    // canonical transaction like its predecessor did.
+    assert(coachAdapter === '' || (
+      /executeFixtureMutationTransaction\(command\)/.test(coachAdapter) &&
+      !/rebuildLocalWeek|runCoachMutationTransaction|upsertGameChangeCoachNoteFromDiff/.test(coachAdapter)),
     'Coach adapter introduced a second fixture mutation engine');
   });
 }

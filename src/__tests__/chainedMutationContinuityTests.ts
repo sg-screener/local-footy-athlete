@@ -40,7 +40,7 @@ import {
 } from '../utils/gameChangeCoachNotes';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
-import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
+import { executeHomeGameMutation } from './support/homeGameMutationCompat';
 
 const WEEK = '2026-03-23';
 const NEXT_WEEK = '2026-03-30';
@@ -81,6 +81,7 @@ function athlete(args: {
     3: ['Tuesday', 'Wednesday', 'Thursday'],
   };
   return {
+    gender: 'male',
     seasonPhase: args.phase ?? 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

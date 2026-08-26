@@ -56,7 +56,7 @@ import {
   clearReversibleAdjustment,
   commitClearReversibleAdjustment,
 } from '../store/reversibleAdjustmentTransaction';
-import { executeHomeGameMutationDurably } from '../screens/home/homeGameMutationController';
+import { executeHomeGameMutationDurably } from './support/homeGameMutationCompat';
 import type { GameChangeVisibleDay } from '../utils/gameChangeCoachNotes';
 import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
@@ -102,6 +102,7 @@ function profile(args: {
   };
   const withFixture = args.withFixture ?? true;
   return {
+    gender: 'male',
     seasonPhase: args.phase ?? 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: args.preferred ?? [
@@ -116,6 +117,17 @@ function profile(args: {
     experienceLevel: 'Advanced',
     injuries: [],
     motivation: 'Get stronger',
+    // The equipment door is a required step now (the same world-completion
+    // fix fixtureMutationTransactionTests carries).
+    equipmentAnswer: {
+      tags: {
+        barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+        bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+        foam_roller: 'have', plyo_box: 'have',
+      },
+      modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+      answeredOn: '2026-03-01',
+    },
     usualGameDay: withFixture ? 'Saturday' : undefined,
     gameDay: withFixture ? 'Saturday' : undefined,
   };
