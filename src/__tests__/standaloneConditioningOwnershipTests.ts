@@ -178,6 +178,7 @@ const profile: OnboardingData = {
   position: 'inside_mid',
   motivation: 'Build strength and fitness',
   goals: ['stronger_and_fitter', 'build_muscle'],
+  gender: 'male', // R-130 required; fixture predates the rule
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 6,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -266,6 +267,7 @@ ok('canonical standalone rebuild is idempotent', JSON.stringify(rebuilt) === JSO
 {
   const permittedWorld: OnboardingData = {
     ...profile,
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season',
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],

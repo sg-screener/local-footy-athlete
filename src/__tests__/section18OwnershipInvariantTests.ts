@@ -96,6 +96,7 @@ function quiet<T>(body: () => T): T {
 
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -401,6 +402,7 @@ run('8a relocated-disclosure: strength-displacing Swap relocates the displaced s
 // against an authorised reduction — owned + disclosed by the transaction, like Bin.
 run('8b disclosed-reduction: an unrelocatable strength-displacing Swap reduces the target and discloses it', () => {
   const constrained = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season',
     usualGameDay: undefined,
     gameDay: undefined,

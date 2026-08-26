@@ -170,6 +170,7 @@ function matrixProfile(
     trainingLocation: 'Commercial gym',
     equipmentSelectionCompleteness: 'complete',
     equipment: ['Full Gym'],
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday'],

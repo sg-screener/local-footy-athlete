@@ -131,6 +131,7 @@ function dateForDay(dayOfWeek: number): string {
 
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Off-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -166,6 +167,7 @@ function program(args: {
   const phase = args.phase ?? 'Off-season';
   const teamCount = args.teamTrainingCount ?? 0;
   const data = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: phase,
     teamTrainingDaysPerWeek: teamCount,
     teamTrainingDays: [...TEAM_DAYS.slice(0, teamCount)],

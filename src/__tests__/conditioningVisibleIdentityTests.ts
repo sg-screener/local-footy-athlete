@@ -237,6 +237,7 @@ const profile: OnboardingData = {
   firstName: 'ConditioningIdentityAudit',
   position: 'inside_mid',
   goals: ['stronger_and_fitter', 'build_muscle'],
+  gender: 'male', // R-130 required; fixture predates the rule
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 6,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],

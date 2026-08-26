@@ -98,6 +98,7 @@ function profile(
   overrides: Partial<OnboardingData> = {},
 ): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: phase,
     firstName: 'Sam',
     position: 'inside_mid',

@@ -90,6 +90,7 @@ function withoutRoutineLogs<T>(run: () => T): T {
 const OFF_PROFILE: OnboardingData = {
   // Generation refuses a profile with no equipment input (2026-07-31).
   equipmentAnswer: fullKitEquipmentAnswer(),
+  gender: 'male', // R-130 required; fixture predates the rule
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],

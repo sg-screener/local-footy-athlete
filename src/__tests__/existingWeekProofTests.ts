@@ -74,6 +74,7 @@ const PROFILE = {
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
   equipmentSelectionCompleteness: 'complete',
+  gender: 'male', // R-130 required; fixture predates the rule
   seasonPhase: 'In-season',
   trainingDaysPerWeek: 5,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

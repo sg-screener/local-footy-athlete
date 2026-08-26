@@ -189,6 +189,7 @@ function profile() {
     trainingLocation: 'Commercial gym' as const,
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete' as const,
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season' as const,
     trainingDaysPerWeek: 5,
     teamTrainingDays: ['Tuesday', 'Thursday'] as import('../types/domain').DayOfWeek[],
@@ -348,6 +349,7 @@ async function main(): Promise<void> {
     trainingLocation: 'Commercial gym' as const,
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete' as const,
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season' as const,
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

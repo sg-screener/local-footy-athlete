@@ -34,6 +34,18 @@ import type { OnboardingData } from '../types/domain';
 import { seedManualOverride } from './support/programOverrideHarness';
 
 const PROFILE: Partial<OnboardingData> = {
+  equipmentAnswer: { tags: { barbell: 'have', dumbbells: 'have', bench: 'have', rack: 'have', cables: 'have', machine: 'have', bands: 'have', pullup_bar: 'have', kettlebell: 'have' }, modalities: { bike_erg: 'have', row: 'have', treadmill: 'have' }, answeredOn: '2026-01-01' },
+  firstName: 'Fixture',
+  heightCm: 183,
+  weightKg: 85,
+  position: 'inside_mid',
+  squatStrength: 'Around bodyweight',
+  benchStrength: 'Around bodyweight',
+  experienceLevel: '2-5 years',
+  trainingLocation: 'Commercial gym',
+  twoKmTimeTrial: { seconds: 465, recordedOn: '2026-01-01', source: 'onboarding' },
+  seasonFinishedOn: '2026-01-01',
+  gender: 'male', // R-130 required; fixture predates the rule
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],

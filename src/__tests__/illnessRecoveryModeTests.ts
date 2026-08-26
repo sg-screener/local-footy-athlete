@@ -87,6 +87,7 @@ function captureEngineValidate<T>(body: () => T): T {
 
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',

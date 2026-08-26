@@ -137,6 +137,10 @@ function ok(name: string, condition: boolean, detail?: string): void {
  */
 function profileFor(seasonPhase: SeasonPhase): OnboardingData {
   return {
+    // R-130 required fields; fixture predates the rule
+    gender: 'male',
+    twoKmTimeTrial: { seconds: 465, recordedOn: '2026-01-01', source: 'onboarding' },
+    seasonFinishedOn: seasonPhase === 'Off-season' ? '2026-01-01' : undefined,
     firstName: 'DeloadAudit',
     position: 'inside_mid',
     heightCm: 183,

@@ -158,6 +158,7 @@ function quiet<T>(body: () => T): T {
 
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -592,6 +593,7 @@ run('regression', '1 exact Sunday CORE conditioning deletion relocates to Saturd
 
 run('regression', '2 CORE strength deletion repairs on another valid day', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Off-season',
     usualGameDay: undefined,
     gameDay: undefined,
@@ -638,6 +640,7 @@ run('regression', '3 optional session deletes without replacement', () => {
 
 run('regression', '4 component deletion preserves the rest of a stacked day', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season',
     usualGameDay: undefined,
     gameDay: undefined,
@@ -693,6 +696,7 @@ run('regression', '4 component deletion preserves the rest of a stacked day', ()
 
 run('regression', '5 whole-session deletion on a stacked day leaves Rest', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 4,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],
@@ -803,6 +807,7 @@ run('regression', '7 fixture, practice-match, readiness, injury and equipment ru
     {
       name: 'practice match',
       athlete: profile({
+        gender: 'male', // R-130 required; fixture predates the rule
         seasonPhase: 'Pre-season',
         usualGameDay: undefined,
         gameDay: undefined,
@@ -916,6 +921,7 @@ run('regression', '10 reload, rebuild and rollover do not resurrect target', () 
 
 run('regression', '11 impossible relocation records typed reduction and keeps deletion', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
@@ -1374,6 +1380,7 @@ run('regression', '20 Upper Pull restoration preserves Team Training and removes
 
 run('regression', '21 conditioning component restoration preserves the stacked strength component', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season',
     usualGameDay: undefined,
     gameDay: undefined,
@@ -1407,6 +1414,7 @@ run('regression', '21 conditioning component restoration preserves the stacked s
 
 run('regression', '22 Restore removes only its typed reduction and preserves an unrelated reduction', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
@@ -1531,6 +1539,7 @@ run('regression', '22 Restore removes only its typed reduction and preserves an 
 
 run('regression', '23 restoration gateway rejection publishes no partial accepted state', () => {
   const athlete = profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],

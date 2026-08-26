@@ -132,6 +132,7 @@ function quiet<T>(body: () => T): T {
 
 function profile(overrides: Record<string, unknown> = {}): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Off-season',
     trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -222,6 +223,7 @@ const healthyWeeks = weeksOf({ restricted: false });
  */
 function inSeasonAthlete(): OnboardingData {
   return profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
@@ -255,6 +257,7 @@ const fixtureWeeks = [
  */
 function practiceMatchAthlete(): OnboardingData {
   return profile({
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

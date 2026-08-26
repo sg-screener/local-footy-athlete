@@ -72,6 +72,7 @@ function profile(
   overrides: Partial<OnboardingData> = {},
 ): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: phase,
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',

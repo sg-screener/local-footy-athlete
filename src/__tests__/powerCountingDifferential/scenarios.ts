@@ -43,6 +43,13 @@ const TEAM_DAYS = ['Tuesday', 'Thursday', 'Wednesday'] as const;
 
 function baseProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
+    // R-130 required fields; fixture predates the rule
+    firstName: 'Power',
+    gender: 'male',
+    heightCm: 183,
+    weightKg: 85,
+    seasonFinishedOn: '2026-01-01',
+    twoKmTimeTrial: { seconds: 465, recordedOn: '2026-01-01', source: 'onboarding' },
     seasonPhase: 'Off-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',

@@ -103,6 +103,7 @@ function addDaysISO(date: string, days: number): string {
 
 function syntheticProfile(): OnboardingData {
   return {
+    gender: 'male', // R-130 required; fixture predates the rule
     seasonPhase: 'In-season', position: 'inside_mid',
     motivation: 'Build strength and football fitness', trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
