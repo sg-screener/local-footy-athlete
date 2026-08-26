@@ -222,8 +222,8 @@ console.log('\n[0bc] Team-session intensity is learned from session feedback, no
   ok('team-training days advance directly to gym availability',
     /navigation\.navigate\('TrainingCommitment'\)/.test(teamDays)
       && !/navigation\.navigate\('TeamTrainingDuration'\)|navigation\.navigate\('TeamTrainingIntensity'\)/.test(teamDays));
-  ok('team-training days use the same seven-across first-letter row',
-    /<DayGrid[\s\S]{0,220}layout="single-row"/.test(teamDays));
+  ok('team-training days use the shared three-letter day grid',
+    /<DayGrid/.test(teamDays) && !/layout=/.test(teamDays));
   ok('Review no longer shows or links to the retired answer',
     !/Team Sessions|formatTeamSessions|formatTeamIntensity|TeamTrainingDuration|TeamTrainingIntensity/.test(reviewRows));
 }
@@ -283,28 +283,36 @@ console.log('\n[0e] Generation-card icons centre against the complete text block
       && !/educationRow:\s*\{[\s\S]{0,140}gap:/.test(completeScreen));
 }
 
-console.log('\n[0f] Game day is one compact seven-day row');
+console.log('\n[0f] Day pickers match the phase-shift 4-over-3 grid');
 {
   const gameDayScreen = read('src/screens/onboarding/GameDayScreen.tsx');
+  const teamDaysScreen = read('src/screens/onboarding/TeamTrainingDaysScreen.tsx');
+  const preferredDaysScreen = read('src/screens/onboarding/PreferredTrainingDaysScreen.tsx');
   const dayGrid = read('src/components/onboarding/DayGrid.tsx');
 
   ok('Game Day carries the approved instruction line',
     gameDayScreen.includes('Select the day you play most often.'));
-  ok('Game Day explicitly requests the dedicated single-row layout',
-    /<DayGrid[\s\S]{0,220}layout="single-row"/.test(gameDayScreen));
-  ok('the single-row layout renders the entire canonical week in one container',
-    /if \(layout === 'single-row'\)\s*\{[\s\S]{0,180}<View style=\{styles\.singleRow\}>\{DAYS\.map\(renderDay\)\}<\/View>/.test(dayGrid));
-  ok('single-row days are compact rounded-square tiles, not circles or a wrapped grid',
-    /singleRow:\s*\{[\s\S]{0,100}flexDirection:\s*'row'[\s\S]{0,100}gap:\s*6/.test(dayGrid)
-      && /singleRowTile:\s*\{[\s\S]{0,160}flex:\s*1[\s\S]{0,120}aspectRatio:\s*1[\s\S]{0,120}paddingHorizontal:\s*0[\s\S]{0,120}paddingVertical:\s*0/.test(dayGrid)
-      && !/borderRadius:\s*999/.test(dayGrid));
-  ok('single-row days show M T W T F S S while accessibility keeps full weekday names',
-    /compactLabel:\s*day\.slice\(0,\s*1\)/.test(dayGrid)
+  ok('the shared picker renders the canonical week once in one wrapping grid',
+    /<View style=\{styles\.dayGrid\}>\{DAYS\.map\(renderDay\)\}<\/View>/.test(dayGrid));
+  ok('the grid matches the phase-shift four-over-three geometry',
+    /dayGrid:\s*\{[\s\S]{0,180}flexDirection:\s*'row'[\s\S]{0,120}flexWrap:\s*'wrap'[\s\S]{0,120}justifyContent:\s*'center'[\s\S]{0,120}gap:\s*8/.test(dayGrid)
+      && /dayTile:\s*\{[\s\S]{0,180}width:\s*'22%'[\s\S]{0,120}minWidth:\s*58[\s\S]{0,120}alignItems:\s*'center'/.test(dayGrid));
+  ok('day tiles show Mon Tue Wed while accessibility keeps full weekday names',
+    /label:\s*day\.slice\(0,\s*3\)/.test(dayGrid)
       && /accessibilityLabel=\{day\.id\}/.test(dayGrid)
-      && /layout === 'single-row' \? day\.compactLabel : day\.label/.test(dayGrid));
-  ok('the shared picker retains its 3-3-1 default for consumers that do not request the row',
-    /DAYS\.slice\(0, 6\)\.map\(renderDay\)/.test(dayGrid)
-      && /<View style=\{styles\.lastRow\}>\{renderDay\(DAYS\[6\]\)\}<\/View>/.test(dayGrid));
+      && /\{day\.label\}/.test(dayGrid)
+      && /shape="chip"/.test(dayGrid)
+      && /color=\{isSelected \? colors\.accent\.lime : colors\.text\.primary\}/.test(dayGrid)
+      && !/compactLabel|slice\(0,\s*1\)/.test(dayGrid));
+  ok('Game, Team and usual gym days all use the same canonical picker with no layout override',
+    /<DayGrid/.test(gameDayScreen)
+      && /<DayGrid/.test(teamDaysScreen)
+      && /<DayGrid/.test(preferredDaysScreen)
+      && !/layout=/.test(gameDayScreen)
+      && !/layout=/.test(teamDaysScreen)
+      && !/layout=/.test(preferredDaysScreen));
+  ok('the retired seven-across and 3-3-1 variants are absent',
+    !/singleRow|single-row|lastRow|DAYS\.slice\(0, 6\)/.test(dayGrid));
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -705,8 +713,9 @@ console.log('\n[13] Training availability asks about gym access, not total train
     preferredDays.includes('Which days can you usually get there?'));
   ok('the follow-up describes gym or usual strength-equipment days',
     preferredDays.includes('gym or your usual strength equipment'));
-  ok('the usual gym-day picker uses the same seven-across rounded-square row',
-    /<DayGrid[\s\S]{0,260}layout="single-row"/.test(preferredDays));
+  ok('the usual gym-day picker uses the same shared day grid',
+    /<DayGrid[\s\S]{0,260}isDimmed=/.test(preferredDays)
+      && !/layout=/.test(preferredDays));
 
   ok('the step registry describes the answers as gym access',
     steps.includes('how many days a week you can get to a gym or your usual strength equipment')

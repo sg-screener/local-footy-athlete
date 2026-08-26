@@ -27,9 +27,9 @@ type GameDayScreenProps = NativeStackScreenProps<
  * day. The list is `DAYS_OF_WEEK` from the game-anchor owner, so the picker and
  * everything that reads the answer cannot disagree about what a day is.
  *
- * Visuals come from the shared <DayGrid /> but request its compact seven-across
- * layout. Other onboarding day pickers keep the 3-3-1 multi-select layout.
- * This screen remains single-select and advances immediately.
+ * Visuals come from the shared <DayGrid /> and therefore match every other
+ * onboarding weekday question and the in-app season-shift picker. This screen
+ * remains single-select and advances immediately.
  */
 
 export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
@@ -70,7 +70,6 @@ export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
       <DayGrid
         selectedDays={selectedGameDay ? [selectedGameDay] : []}
         onToggleDay={handleSelect}
-        layout="single-row"
       />
     </OnboardingLayout>
   );

@@ -10,23 +10,16 @@ import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
  * Canonical day-of-week picker used across onboarding and anywhere else the
  * athlete picks days of the week.
  *
- * Layout is Mon–Sat in a 3-up grid (12px gap, 31% tile width), then Sunday
- * sits centered on its own row underneath so the final row feels
- * deliberate rather than orphaned on the left.
+ * Layout matches the in-app season-shift picker: four compact chips on the
+ * first row and three centred underneath, all using three-letter labels.
  *
- *   Mon  Tue  Wed
- *   Thu  Fri  Sat
- *        Sun
- *
- * The default remains a 3-3-1 grid. Game Day and usual gym days ask for the
- * explicit `single-row` layout: the same canonical seven answers and selection
- * behaviour, presented as seven compact rounded-square tiles.
+ *   Mon  Tue  Wed  Thu
+ *      Fri  Sat  Sun
  */
 
-const DAYS: { id: DayOfWeek; label: string; compactLabel: string }[] = DAYS_OF_WEEK.map((day) => ({
+const DAYS: { id: DayOfWeek; label: string }[] = DAYS_OF_WEEK.map((day) => ({
   id: day,
   label: day.slice(0, 3),
-  compactLabel: day.slice(0, 1),
 }));
 
 export interface DayGridProps {
@@ -40,92 +33,52 @@ export interface DayGridProps {
    * selected.
    */
   isDimmed?: (day: DayOfWeek) => boolean;
-  /** `grid` keeps the 3-3-1 default; `single-row` places all seven days across. */
-  layout?: 'grid' | 'single-row';
 }
 
 export const DayGrid: React.FC<DayGridProps> = ({
   selectedDays,
   onToggleDay,
   isDimmed,
-  layout = 'grid',
 }) => {
-  const renderDay = (day: { id: DayOfWeek; label: string; compactLabel: string }) => {
+  const renderDay = (day: { id: DayOfWeek; label: string }) => {
     const isSelected = selectedDays.includes(day.id);
     const dimmed = !isSelected && (isDimmed?.(day.id) ?? false);
     return (
       <SelectableTile
         key={day.id}
+        shape="chip"
         isSelected={isSelected}
         dimmed={dimmed}
         onPress={() => onToggleDay(day.id)}
         accessibilityLabel={day.id}
         hideCheckmark
-        style={[
-          styles.dayTile,
-          layout === 'single-row' ? styles.singleRowTile : styles.gridTile,
-        ]}
+        style={styles.dayTile}
       >
         <Text
           variant="bodyEmphasis"
-          color={colors.text.primary}
+          color={isSelected ? colors.accent.lime : colors.text.primary}
           style={styles.dayLabel}
         >
-          {layout === 'single-row' ? day.compactLabel : day.label}
+          {day.label}
         </Text>
       </SelectableTile>
     );
   };
 
-  if (layout === 'single-row') {
-    return <View style={styles.singleRow}>{DAYS.map(renderDay)}</View>;
-  }
-
-  // 7 days don't divide evenly into a 3-column grid. Splitting the render
-  // (Mon–Sat in the wrap container, Sunday centered alone) keeps the lone
-  // tile from looking like an accidental orphan on the left edge — and
-  // critically, every tile keeps its identical 31% width.
-  return (
-    <>
-      <View style={styles.daysContainer}>{DAYS.slice(0, 6).map(renderDay)}</View>
-      <View style={styles.lastRow}>{renderDay(DAYS[6])}</View>
-    </>
-  );
+  return <View style={styles.dayGrid}>{DAYS.map(renderDay)}</View>;
 };
 
 const styles = StyleSheet.create({
-  singleRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  daysContainer: {
+  dayGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-  },
-  // Sunday's standalone row — sits the same 12px below the Mon–Sat grid
-  // (mirrors `daysContainer.gap`) and centers the lone tile horizontally.
-  // Sunday keeps the same width:'31%' as every other tile; we only
-  // centre-align it inside a full-width wrapper.
-  lastRow: {
-    marginTop: 12,
-    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   dayTile: {
-    justifyContent: 'center',
+    width: '22%',
+    minWidth: 58,
     alignItems: 'center',
-  },
-  gridTile: {
-    width: '31%',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  singleRowTile: {
-    flex: 1,
-    aspectRatio: 1,
-    minWidth: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
   },
   dayLabel: {
     fontWeight: '600',

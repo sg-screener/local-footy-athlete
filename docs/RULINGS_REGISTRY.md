@@ -6504,3 +6504,25 @@ whole current vocabulary; `test:equipment-answer` requires the Commercial-only
 subtitle, retains the two-way fallback and requires the rendered subtitle to use
 that owner. An iPhone 17 Pro simulator displayed the new sentence and found no
 `tick anything extra` instruction.
+
+**R-254** · *"on all the days where there is the line of 7 days with just the
+letter on them Make pick a day = a row of 4 and a row of 3 with Mon Tue Wed
+instead of just the letter - make it like shifting season mode pop up is"*
+(Sam, 2026-08-26, onboarding weekday-picker review) · **WEEKDAY QUESTIONS USE
+THE SEASON-SHIFT 4-OVER-3 GRID.**
+Game Day, Team Training Days and usual gym days all show the canonical week as
+`Mon Tue Wed Thu` followed by a centred `Fri Sat Sun` row. They use the same
+compact chip geometry and three-letter labels as the in-app season-shift picker;
+the seven-across `M T W T F S S` row and the unused 3-3-1 variant are retired.
+Full weekday accessibility labels, single-versus-multiple selection, the gym-day
+cap, Team Training feedback and each screen's existing Continue behaviour are
+unchanged. This supersedes the layout and visible-label requirements in R-159,
+R-160, R-168 and R-169 while retaining their behavioural requirements.
+**Search words:** weekday picker, Pick a day, Mon Tue Wed, four over three,
+4-3 grid, seven across, Game Day, Team Training Days, usual gym days, season
+shift.
+· `WORKING` — `test:onboarding-presentation` requires all three screens to use
+one shared DayGrid, pins the wrapping 22%-width four-over-three geometry,
+three-letter labels, full accessibility names and retirement of both former
+variants. An iPhone 17 Pro simulator displayed the exact 4-over-3 usual-gym-day
+grid with selection retained.

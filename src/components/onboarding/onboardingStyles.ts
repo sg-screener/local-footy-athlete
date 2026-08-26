@@ -18,8 +18,8 @@ import { TextStyle } from 'react-native';
  *   },
  *
  * Day-picker layout lives in `<DayGrid>` (../onboarding/DayGrid.tsx). That
- * component owns both the default Mon–Sat 3-up grid + centered Sunday and the
- * explicit seven-across rounded-square row used by Game Day and usual gym days.
+ * component owns the single canonical four-over-three, three-letter layout
+ * used by every onboarding weekday question.
  */
 
 export const headingXL: TextStyle = {

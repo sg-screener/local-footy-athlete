@@ -342,3 +342,31 @@ suite are green. The iPhone 17 Pro simulator displayed the new sentence and no
 - Physical-iPhone Release acceptance.
 - VoiceOver speech and small-screen wrapping.
 - Manual Club and Home gym copy inspection on glass.
+
+---
+
+# STATUS — onboarding weekday grid (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Every onboarding picker using the one-letter seven-across row must instead match
+the season-shift popup: four days above three, labelled Mon Tue Wed and so on.
+
+## Decision and receipt
+
+All three affected screens already used one DayGrid. Keeping two obsolete layout
+branches would leave the old shapes available to return, so the shared owner now
+has one presentation only: Mon–Thu on top and centred Fri–Sun below. Game Day,
+Team Training and usual gym days retain their existing answer behaviour.
+
+The revised contract first produced six named presentation failures against the
+old layouts. After replacing the shared picker, all 111 presentation cells and
+TypeScript pass. The iPhone 17 Pro simulator showed the 4-over-3 usual-gym-day
+grid with three-letter labels and selected Monday retained.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- Dynamic Type, smallest-screen clipping and Android.
+- Game Day and Team Training screens manually viewed on glass; their shared
+  source and mounts are guard-covered.

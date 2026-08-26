@@ -18,9 +18,9 @@ type TeamTrainingDaysScreenProps = NativeStackScreenProps<
 >;
 
 /**
- * Multi-select day-of-week picker using the shared 3-3-1 grid. This screen
- * keeps its explicit Continue behaviour while matching the other onboarding
- * day pickers.
+ * Multi-select day-of-week picker using the shared 4-over-3 grid. This screen
+ * keeps its explicit Continue behaviour while matching the other weekday
+ * questions and the in-app season-shift picker.
  */
 export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
   navigation,
@@ -78,7 +78,6 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
       <DayGrid
         selectedDays={selectedDays}
         onToggleDay={toggleDay}
-        layout="single-row"
       />
 
       {selectedDays.length > 0 && (
