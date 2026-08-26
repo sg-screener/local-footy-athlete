@@ -49,8 +49,9 @@ All strings signed as extracted, except:
 All strings signed as extracted, except:
 
 1. Line 541 REPLACED. Old: "Remove it - the day becomes rest" (can lie on
-   combined days). **New (Sam-signed): "Remove it — anything else on the day
-   stays."** Principle recorded: a signed sentence must never be able to lie —
+   combined days). **New (Sam-signed): "Pick a session to remove"** (current
+   wording, revised 2026-08-26 from the earlier “anything else stays” line).
+   Principle recorded: a signed sentence must never be able to lie —
    copy makes no claims about outcomes that depend on state it can't see.
    **AMENDED 2026-07-31 (ruling 6-IV-3):** the replacement could lie in the
    other direction — on a day whose only content IS the session being removed,
@@ -369,8 +370,8 @@ describes — a signed sentence never claims a state-dependent outcome, and
 | Swap (off, empty day) / Remove (off) | "There's nothing on this day yet." | `PlanChangeSheet.tsx:521,563` | NEW, one string for both. `canRemove` is false only when the day holds nothing, and the Swap row uses it on the same condition, so neither can show over a day that has work on it. |
 | Add row | "Put another session on this day" | `PlanChangeSheet.tsx:535` | REWRITE. Used to name extra strength or conditioning work — two of the five types behind it (ruling 9); retired wording in 6-III. **RULED 6-IV-2:** the neutral form is signed as shipped. |
 | Strength row | "Upper, lower or full body" | `PlanChangeSheet.tsx:647` | REWRITE. Used to end by naming accessories too (6-III). Accessories and Gunshow now have rows of their own, so the strength bucket is three buckets and says so. |
-| Remove (live, day has more on it) | "Remove it — anything else on the day stays." | `PlanChangeSheet.tsx` Remove row | Batch-3-signed, now the MULTI-CONTENT half of a state-selected pair (ruling 6-IV-3). |
-| Remove (live, sole-content day) | "Make this a rest day" | `PlanChangeSheet.tsx` Remove row | REVISED AND SIGNED 2026-08-25 (R-198), replacing the earlier day-becomes-rest sentence. The cause remains typed: this line appears only when removing the programmed session leaves the day empty. |
+| Remove (live, day has more on it) | "Pick a session to remove" | `PlanChangeSheet.tsx` Remove row | REVISED AND SIGNED 2026-08-26. The next step is the session picker, so the row now says what the tap does. |
+| Remove (live, sole-content day) | "Remove it — day becomes rest" | `PlanChangeSheet.tsx` Remove row | REVISED AND SIGNED 2026-08-26. The cause remains typed: this line appears only when removing the programmed session leaves the day empty. |
 
 The Move row has no sub-line of its own: when the move door refuses, the row
 renders the producer's own TYPED refusal sentence. Two of those changed.
@@ -693,8 +694,8 @@ time leaving a signed sentence describing a menu that had moved.
 surfaced again by this unit]**
 
 > Remove sub-line: STATE-SELECTED variant approved — multi-content day:
-> **"Remove it — anything else on the day stays."**; sole-content day:
-> **"Make this a rest day"** (revised by R-198). A typed cause picks the sentence —
+> **"Pick a session to remove"**; sole-content day:
+> **"Remove it — day becomes rest"** (revised 2026-08-26). A typed cause picks the sentence —
 > this unit's own pattern, like the swap sub selected by `hasSession`.
 
 Batch 3's single sentence was false on a day whose only content IS the session
@@ -2558,3 +2559,51 @@ come from facts already owned by the Journal or modifier projection:
 words necessarily coincide with that old screen, but every Batch 15–26 Journal
 surface batch remains withdrawn under the clean-room ruling. Batch 38 is a new
 surface for a different purpose, signed by Sam's 2026-08-24 answer above.
+
+## Batch 39 — session removal outcome copy (2026-08-26): SIGNED
+
+**STATUS: SIGNED BY SAM, 2026-08-26.** The top-level Remove row now says what
+the next tap does. A typed predicate still owns whether this is a one-session
+or multi-session day; only the two athlete-facing explanations change.
+
+- Old: "Remove it — anything else on the day stays." **New (Sam-signed): "Pick a session to remove"**
+- Old: "Make this a rest day" **New (Sam-signed): "Remove it — day becomes rest"**
+
+| Where | string | status |
+| --- | --- | --- |
+| Remove row, two sessions | "Pick a session to remove" | SIGNED — Sam's exact words |
+| Remove row, one session | "Remove it — day becomes rest" | SIGNED — Sam's exact words |
+
+## Batch 40 — one clean Week manager (2026-08-26): SIGNED
+
+**STATUS: SIGNED BY SAM, 2026-08-26.** Games and training no longer have
+separate management rows. The Week popup has two plain choices with no section
+headings and no separator lines; its one management row opens a board that can
+add, move and remove either kind of planned content.
+
+| Where | string | status |
+| --- | --- | --- |
+| Week popup, travel row | "I’m going away" | SIGNED — retained |
+| Week popup, travel explanation | "Adjust around travel or time away" | SIGNED — retained |
+| Week popup, management row | "Manage week" | SIGNED — new single management row |
+| Week popup, management explanation | "Add, move or remove what’s planned" | SIGNED — games and training together |
+| Week board banner | "Add, move or remove sessions and games" | SIGNED — names both managed kinds |
+| Board plus heading | "Add to this day" | SIGNED |
+| Board plus, training choice | "Training session" | SIGNED |
+| Board plus, training explanation | "Strength, conditioning or optional work" | SIGNED |
+| Board plus, fixture choice | "Game" | SIGNED |
+| Board plus, fixture explanation | "Replaces anything already on this day" | SIGNED |
+
+The following strings are **WITHDRAWN** from this popup because the shared
+board now owns those actions directly:
+
+- **WITHDRAWN: "Schedule changes"**
+- **WITHDRAWN: "I have a bye"**
+- **WITHDRAWN: "Remove this week’s game"**
+- **WITHDRAWN: "Move the game to a different day"**
+- **WITHDRAWN: "Pick its new day — the week reshapes around it."**
+- **WITHDRAWN: "Add a game"**
+- **WITHDRAWN: "Add another game to this week"**
+- **WITHDRAWN: "Manage sessions"**
+- **WITHDRAWN: "Add, move or remove training"**
+- **WITHDRAWN: "Add, bin or move your sessions"**

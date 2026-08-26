@@ -104,6 +104,7 @@ function quiet<T>(body: () => T): T {
 
 function profile(): OnboardingData {
   return {
+    gender: 'male',
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -180,7 +181,7 @@ function seed(): string {
     weightOverrides: {},
   } as never);
   // The SECOND microcycle is a settled in-season week: Mon strength, Tue/Thu
-  // team nights, Fri derived Gunshow (G-1), Sat game, Sun G+1 recovery.
+  // team nights, Fri scheduler-authored Gunshow (G-1), Sat game, Sun mobility.
   return program.microcycles[1]!.startDate.slice(0, 10);
 }
 
@@ -346,8 +347,8 @@ for (const fixture of FIXTURE_KINDS) {
     if (fixture.explicit) markExplicitFixture(weekStart);
     const friday = addDaysISO(weekStart, 4);
     const before = visibleFriday(weekStart);
-    assert(before?.workout && isResolverOwnedDerivedSession(before.workout),
-      `this seed no longer puts a derived filler on G-1: ${describe(before)}`);
+    assert(before?.workout?.name === 'Gunshow' && !isAthletePlacedSession(before.workout),
+      `this seed no longer puts the untouched authored Gunshow on G-1: ${describe(before)}`);
 
     const result = commit(weekStart, {
       kind: 'swap_category', date: friday, category: 'conditioning_hard',
@@ -467,7 +468,7 @@ for (const fixture of FIXTURE_KINDS) {
 
 // ── Ruling (5): storage form never decides who owns G-1 ───────────────────
 
-run('an untouched engine-planned core exposure on G-1 is treated identically by both fixture kinds', () => {
+run('reading an untouched engine-planned G-1 exposure never rewrites it for either fixture kind', () => {
   const outcomes = FIXTURE_KINDS.map((fixture) => {
     const weekStart = seed();
     const planted = protectedCoreOnFriday(weekStart);
@@ -482,25 +483,26 @@ run('an untouched engine-planned core exposure on G-1 is treated identically by 
   });
   assert(outcomes[0]!.name === outcomes[1]!.name && outcomes[0]!.derived === outcomes[1]!.derived,
     `G-1 ownership still depends on how the fixture is stored: ${JSON.stringify(outcomes)}`);
-  // Non-vacuous, and the direction matters: the ask-flow is the ONLY door onto
-  // G-1, so work the ATHLETE did not place there does not hold the day —
-  // whatever its name or tier. The displaced exposure is §18's to relocate.
-  assert(outcomes.every((outcome) => outcome.derived === true),
-    `an engine-planned session held G-1 without the athlete placing it: ${JSON.stringify(outcomes)}`);
-  assert(outcomes[0]!.name !== outcomes[0]!.planted,
-    `the planted core exposure was not displaced: ${JSON.stringify(outcomes)}`);
+  // The resolver used to invent a replacement while drawing the day. That
+  // owner was retired: generation/repair decides the week, and reading it is
+  // not allowed to author a different session. This hand-planted invalid world
+  // therefore remains visible for the write-side gate to reject or repair.
+  assert(outcomes.every((outcome) => outcome.derived === false),
+    `reading the week invented a derived G-1 replacement: ${JSON.stringify(outcomes)}`);
+  assert(outcomes[0]!.name === outcomes[0]!.planted,
+    `reading the week displaced the authored exposure: ${JSON.stringify(outcomes)}`);
 });
 
 // ── Non-vacuity: the stamp means "the athlete put this here" ──────────────
 
-run('an untouched G-1 still belongs to the derived filler, unstamped', () => {
+run('an untouched G-1 still belongs to the scheduler-authored optional session, unstamped', () => {
   const weekStart = seed();
   markExplicitFixture(weekStart);
   const friday = visibleFriday(weekStart);
-  assert(friday?.workout && isResolverOwnedDerivedSession(friday.workout),
-    `G-1 is owned by ${describe(friday)}, not the derived game-proximity filler`);
+  assert(friday?.workout?.name === 'Gunshow' && !isResolverOwnedDerivedSession(friday.workout),
+    `G-1 is owned by ${describe(friday)}, not the authored optional session`);
   assert(!isAthletePlacedSession(friday.workout),
-    'an untouched derived filler was reported as athlete-placed');
+    'an untouched authored optional session was reported as athlete-placed');
 });
 
 run('days the athlete never touched are never stamped', () => {

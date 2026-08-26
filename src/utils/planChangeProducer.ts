@@ -526,9 +526,9 @@ export interface PlanChangeDayOptions {
  * is here rather than in the sheet.
  *
  * Sam ruled (2026-07-31, copy sheet §6-IV-3) that the Remove row's sub-line is
- * STATE-SELECTED: "Make this a rest day" on a day whose only content
- * is the thing being removed, "Remove it — anything else on the day stays." on a
- * day with more on it. Batch 3's principle — a signed sentence must never be able
+ * STATE-SELECTED: "Remove it — day becomes rest" on a day whose only content
+ * is the thing being removed, "Pick a session to remove" on a day with more on
+ * it. Batch 3's principle — a signed sentence must never be able
  * to lie — applied to itself, using this unit's own pattern: a typed cause picks
  * the sentence, nothing guesses.
  *
@@ -1438,8 +1438,9 @@ export interface PlanChangeRiskPreviewResult {
   /**
    * Present when the athlete has put a session on the day before a game and has
    * not yet chosen a route. NOTHING has been applied. The caller must show the
-   * warning and the three routes, then re-issue the change with `g1Route` set —
-   * or, for "keep the Gunshow", issue nothing at all.
+   * warning and its gender-appropriate routes, then commit the same change with
+   * `g1Route` set and this preview's trace. The warning is already the
+   * confirmation, so the caller must not preview the answered change again.
    */
   g1Ask?: G1LandingAskContext | null;
   /**
@@ -1775,6 +1776,12 @@ type AthleteOwnedPlanChange = Extract<PlanChange,
   { kind: 'move_session' } | { kind: 'remove_session' } |
   { kind: 'swap_category' } | { kind: 'swap_template' } |
   { kind: 'add_category' } | { kind: 'add_template' }>;
+
+function isAthleteOwnedPlanChange(change: PlanChange): change is AthleteOwnedPlanChange {
+  return change.kind === 'move_session' || change.kind === 'remove_session' ||
+    change.kind === 'swap_category' || change.kind === 'swap_template' ||
+    change.kind === 'add_category' || change.kind === 'add_template';
+}
 
 export type AthleteMutationResolution =
   | {
@@ -2327,12 +2334,7 @@ export function previewPlanChangeRisk(args: {
     // directly from the accepted visible snapshot. This branch is before
     // proposal construction, template-policy construction and the legacy
     // date-override writer by design.
-    const wantsTypedSwap = args.change.kind === 'swap_category' ||
-      args.change.kind === 'swap_template';
-    const wantsTypedAdd = args.change.kind === 'add_category' ||
-      args.change.kind === 'add_template';
-    if (args.change.kind === 'move_session' || args.change.kind === 'remove_session' ||
-      wantsTypedSwap || wantsTypedAdd) {
+    if (isAthleteOwnedPlanChange(args.change)) {
       const resolution = resolveAthleteMutation({
         change: args.change,
         visibleWeek: args.visibleWeek,
@@ -2820,12 +2822,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
   // Commit through the same typed owner used by preview. This is intentionally
   // before proposal/template policy construction and before the legacy
   // revision override writer.
-  const wantsTypedSwap = args.change.kind === 'swap_category' ||
-    args.change.kind === 'swap_template';
-  const wantsTypedAdd = args.change.kind === 'add_category' ||
-    args.change.kind === 'add_template';
-  if (args.change.kind === 'move_session' || args.change.kind === 'remove_session' ||
-    wantsTypedSwap || wantsTypedAdd) {
+  if (isAthleteOwnedPlanChange(args.change)) {
     const resolution = resolveAthleteMutation({
       change: args.change,
       visibleWeek: args.visibleWeek,

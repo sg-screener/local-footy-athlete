@@ -16,8 +16,8 @@ import { buildDerivedSession, type AthleteContext } from '../utils/sessionBuilde
  * Generation never plans hard strength or conditioning on the day before a game.
  * That law is untouched. This owns the OTHER case: the athlete deliberately puts
  * a session there. The app does not silently substitute it and does not silently
- * relocate it. It warns once, offers three routes, and whichever the athlete
- * picks lands on the day they chose.
+ * relocate it. It warns once, offers the gender-appropriate typed routes, and
+ * whichever the athlete picks lands on the day they chose.
  *
  * IT IS THE DESTINATION THAT ASKS, NOT THE DOOR. This began as the MOVE ask,
  * and a swap onto the same day therefore reported "Done." and changed nothing —
@@ -27,11 +27,10 @@ import { buildDerivedSession, type AthleteContext } from '../utils/sessionBuilde
  * information about that. Move, Swap and Add now funnel through
  * `resolveG1LandingAsk` once, in `resolveAthleteMutation`.
  *
- * WHY A TYPED LIST rather than three branches: a fourth route — a pre-game
- * PRIMER, short sharp activation over Sam's authored power pool — is ruled in
- * principle and parked pending his authored prescription. Adding it must be one
- * entry in `G1_LANDING_ROUTES` plus one case in `placeSessionForRoute`, not a
- * fourth branch threaded through the producer and the sheet.
+ * WHY A TYPED LIST rather than branches: Gunshow and Primer are different
+ * authored sessions and therefore different route ids. The screen filters that
+ * one list for the athlete; the producer materialises the chosen id. No label
+ * is allowed to stand in for a different session type.
  *
  * COPY PROVENANCE: every athlete-facing string here was authored and signed off
  * by Sam on 2026-07-29. `g1LandingAskFlowTests` binds them to the design document
@@ -43,24 +42,10 @@ export type { G1LandingRouteId } from '../utils/planChangeTypes';
 
 export interface G1LandingRoute {
   id: G1LandingRouteId;
-  /**
-   * The option title. A function of the context because Sam's signed copy NAMES
-   * the day and what is on it — "Keep Friday's Gunshow", not "Keep the
-   * Gunshow". A day-blind label was the first thing the copy-equality test
-   * caught; a CONTENT-blind one was the second, once swap and add started
-   * raising the ask over days that hold a recovery session or nothing at all.
-   */
+  /** Athlete-facing option title. Context remains available for future signed copy. */
   label: (context: G1LandingAskContext) => string;
-  /**
-   * The sub-line under the label. A function of the context, because two of the
-   * three routes have to name a real day: (a) tells the athlete their session
-   * stays put, and it is not honest to say that without saying where.
-   */
-  detail: (context: G1LandingAskContext) => string;
-  /** Does picking this route commit a transaction? Only (a) does not. */
+  /** Visible routes commit; the retained legacy keep route does not. */
   commits: boolean;
-  /** Does this route need the second, stronger warning first? */
-  requiresSecondWarning: boolean;
 }
 
 export interface G1LandingAskContext {
@@ -87,19 +72,20 @@ export interface G1LandingAskContext {
    * derived Gunshow. Once swap and add ask too, that label is a lie on any day
    * that holds something else. Sam signed the PATTERN on 2026-07-30 rather than
    * the four strings: name what the day would keep, or say the day is left free.
+   *
+   * Retained as decision context for existing transactions and diagnostics. It
+   * no longer creates a visible no-op option; Go back owns that outcome.
    */
   keptSessionName: string | null;
   /**
-   * R-130a item 3 (Sam: *"yes offer females the primer"*): the one switch,
-   * carried so the empty-day route can name what it will actually place —
-   * the Primer for her, the Gunshow for him. Absent behaves male, which is
-   * the pre-R-130 ask verbatim; the real flows always carry it.
+   * Filters the visible list. Male sees Gunshow and Primer; female sees Primer
+   * without Gunshow. Absent retains the historic male/default behaviour.
    */
   athleteGender?: AthleteGender;
   /**
    * True when the landing session has no accessory work to keep, so route (b)
    * yields the derived pump session rather than a stripped-down version of
-   * their own session. This changes only the sub-line, never the menu shape.
+   * their own session. Retained for diagnostics; option subtitles are gone.
    */
   accessoriesComeFromPumpSession: boolean;
 }
@@ -113,96 +99,29 @@ export function dayNameForDate(dateISO: string): string {
 }
 
 /**
- * Sam's authored warnings. Signed 2026-07-29.
- *
- * The first is the ask. The second gates route (c) alone, and it is deliberately
- * blunter than the first — a deloaded session is still a session the day before
- * a game, and the athlete has already chosen to ignore one warning to get here.
+ * Sam's authored warning, revised 2026-08-26. The ask itself is the one
+ * confirmation; every displayed choice applies directly.
  */
 export const G1_LANDING_WARNING = {
   ask: {
-    headline: 'Big session the day before your game.',
+    headline: 'Are you sure?',
     body: (context: G1LandingAskContext): string =>
-      `Train hard ${context.g1DayName} and you'll feel it ${context.gameDayName}. Pick one:`,
-  },
-  deloadConfirm: {
-    headline: (context: G1LandingAskContext): string =>
-      `This still costs you ${context.gameDayName}.`,
-    body:
-      'Half the sets is easier, not light. The day before a game is built for a '
-      + 'pump and nothing else. Go ahead only if this session matters more than '
-      + 'the game.',
+      `Train hard ${context.g1DayName} and you'll feel it ${context.gameDayName}`,
   },
 } as const;
 
-/**
- * The menu. UNIFORM for every session type (Sam, 2026-07-29): the athlete gets
- * the same three choices whatever they moved. Only route (b)'s CONTENT varies,
- * and when it varies the sub-line says so rather than dressing the pump session
- * up as theirs.
- */
-/**
- * "Your Monday session stays where it is." — Sam's clause, and the ONE place
- * the source day is spoken about. It renders only when there is a source day.
- */
-function sourceStaysClause(context: G1LandingAskContext): string {
-  return context.sourceDayName
-    ? ` Your ${context.sourceDayName} session stays where it is.`
-    : '';
-}
-
-/**
- * Sam's fourth route, signed 2026-07-30. An athlete adding work the day before
- * a game should be offered the session that day was built for — the menu had
- * three ways to place THEIR choice and never offered the day's own.
- *
- * Only on an EMPTY G-1: when the day already holds something, route (a) keeps
- * it, and offering both would be two names for one outcome.
- */
-export function g1LandingRoutesFor(
-  context: G1LandingAskContext,
-): readonly G1LandingRoute[] {
-  return context.keptSessionName
-    ? G1_LANDING_ROUTES
-    : [G1_LANDING_ROUTES[0]!, GUNSHOW_ROUTE, ...G1_LANDING_ROUTES.slice(1)];
-  // NB: every id returned here must resolve through `g1LandingRoute`, which is
-  // what `ALL_G1_LANDING_ROUTES` guarantees. A route the sheet can show and the
-  // producer cannot look up is a crash on selection — it was, on Sam's phone.
-}
-
 const GUNSHOW_ROUTE: G1LandingRoute = {
-  // ⚠ THE ID IS A PERSISTED ROUTE KEY AND PREDATES R-130 — it stays
-  // `take_the_gunshow` for BOTH paths. What the athlete READS (the label) and
-  // what the route PLACES (`placeSessionForRoute`) are per-path: R-130a item
-  // 3, *"yes offer females the primer"*. Renaming the id would fork every
-  // suite and stored decision that carries it, to fix a word no athlete sees.
+  // Persisted key. Historical female decisions under this id still materialise
+  // a Primer in `placeSessionForRoute`; the current female menu never offers it.
   id: 'take_the_gunshow',
-  /**
-   * ⚠ **"INSTEAD", NOT "KEEP" — SAM, 2026-08-25 (R-223), VERBATIM: *"friday's
-   * gunshow instead"*.**
-   *
-   * He read *"Keep Friday's Gunshow"* on an empty Friday and said *"it always
-   * says keep fridays gunshow even if there is no gunshow programmed"*. He is
-   * right, and the fault is the VERB, not the route: this route is offered
-   * **only on an EMPTY G-1** (see `g1LandingRoutesFor`), where its job is to
-   * PLACE the session the day is built for. "Keep" promises something is
-   * already there. Route (a) — the one that really does keep what the day
-   * holds — is the only row entitled to that word.
-   *
-   * The female path takes the same correction: Sam noted it *"probably says
-   * this on the female pathway too even though it's never programmed"*, and it
-   * did.
-   */
-  label: (context) => (context.athleteGender === 'female'
-    ? `${context.g1DayName}'s Primer instead`
-    : `${context.g1DayName}'s Gunshow instead`),
-  // The female sub-line is R-129's SIGNED Primer sentence, reused verbatim
-  // from the Add menu (`planChangeProducer` CATEGORY_COPY) — no new words.
-  detail: (context) => (context.athleteGender === 'female'
-    ? 'Short, sharp session to feel ready for game day.'
-    : 'light upper-body pump, what the day before a game is built for.'),
+  label: () => 'Gunshow',
   commits: true,
-  requiresSecondWarning: false,
+};
+
+const PRIMER_ROUTE: G1LandingRoute = {
+  id: 'take_the_primer',
+  label: () => 'Primer',
+  commits: true,
 };
 
 /**
@@ -221,61 +140,59 @@ export const G1_LANDING_BACK_ROW = {
   label: (): string => 'Go back',
 } as const;
 
+const LEGACY_KEEP_DAY_ROUTE: G1LandingRoute = {
+  /* Persisted compatibility only. It is no longer a visible choice: Go back
+   * already performs this no-op, and rendering both created two exits. */
+  id: 'keep_the_day',
+  label: () => 'Go back',
+  commits: false,
+};
+
+const ACCESSORIES_ROUTE: G1LandingRoute = {
+  id: 'accessories_only',
+  label: () => 'Accessories only',
+  commits: true,
+};
+
+const EASIER_ROUTE: G1LandingRoute = {
+  id: 'deloaded',
+  label: () => 'Same session but easier',
+  commits: true,
+};
+
+/** Male sees all four choices; female sees the same list without Gunshow. */
 export const G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
-  {
-    id: 'keep_the_day',
-    label: (context) => context.keptSessionName
-      ? `Keep ${context.g1DayName}'s ${context.keptSessionName}`
-      : `Leave ${context.g1DayName} free`,
-    detail: (context) => (context.keptSessionName
-      ? 'what the day before a game is built for.'
-      : 'rest before the game.') + sourceStaysClause(context),
-    commits: false,
-    requiresSecondWarning: false,
-  },
-  {
-    id: 'accessories_only',
-    label: () => 'Accessories only',
-    detail: (context) => context.accessoriesComeFromPumpSession
-      // Honest labelling (Sam's ruling): a conditioning session has no
-      // accessories to keep, so this route is the pump session under its own
-      // name. It is NOT an easy version wearing the athlete's session name —
-      // that identity swap stays banned.
-      // "Pump" is reserved for Gunshow's own description (Sam, 2026-07-29) so
-      // route (a) and route (b) can never read as the same thing.
-      ? 'Light accessory work before the game.' + (context.sourceDayName
-          ? ` Your ${context.sourceDayName} session is dropped, not moved.`
-          : '')
-      : 'Your session with the main lifts stripped out. Pump and prehab, nothing heavy.',
-    commits: true,
-    requiresSecondWarning: false,
-  },
-  {
-    id: 'deloaded',
-    label: () => 'Same session, deloaded',
-    detail: () => 'Half the sets at RPE 5–6, weight stays. Conditioning halved.',
-    commits: true,
-    requiresSecondWarning: true,
-  },
+  EASIER_ROUTE,
+  GUNSHOW_ROUTE,
+  PRIMER_ROUTE,
+  ACCESSORIES_ROUTE,
+];
+
+export function g1LandingRoutesFor(
+  context: G1LandingAskContext,
+): readonly G1LandingRoute[] {
+  return context.athleteGender === 'female'
+    ? G1_LANDING_ROUTES.filter((route) => route.id !== 'take_the_gunshow')
+    : G1_LANDING_ROUTES;
+}
+
+/*
+ * Every route the producer may receive, including the retired visible no-op.
+ * A historical decision remains readable even though the current sheet no
+ * longer offers it.
+ */
+export const ALL_G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
+  LEGACY_KEEP_DAY_ROUTE,
+  ...G1_LANDING_ROUTES,
 ];
 
 /**
  * EVERY route, not just the ones on the default menu.
  *
- * The Gunshow route lives outside `G1_LANDING_ROUTES` because it is offered
- * only on an empty G-1 — and this lookup only knew the default list, so the
- * moment Sam picked it the app THREW: "Unknown G-1 move route:
- * take_the_gunshow". A menu the sheet can render and this function cannot
- * resolve is two lists disagreeing about what exists.
- *
- * `ALL_G1_LANDING_ROUTES` is now the single membership answer, and
- * `g1LandingRoutesFor` decides only which of them a given day OFFERS.
+ * `ALL_G1_LANDING_ROUTES` is the membership answer, including the retired
+ * visible keep route. `g1LandingRoutesFor` decides which current choices the
+ * athlete sees.
  */
-export const ALL_G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
-  GUNSHOW_ROUTE,
-  ...G1_LANDING_ROUTES,
-];
-
 export function g1LandingRoute(id: G1LandingRouteId): G1LandingRoute {
   const route = ALL_G1_LANDING_ROUTES.find((candidate) => candidate.id === id);
   if (!route) throw new Error(`Unknown G-1 landing route: ${id}`);
@@ -366,7 +283,7 @@ function shiftISO(dateISO: string, days: number): string {
  * the LANDING content — the moved session for Move, the registry template for
  * Swap and Add — because the transformation is the same either way.
  *
- * IDENTITY IS PRESERVED. All three routes place the athlete's own session SLOT
+ * IDENTITY IS PRESERVED. All committing routes place the athlete's own session SLOT
  * — same `planEntryId`, same stable id — carrying the content they chose. That
  * is what lets the move stay one atomic transaction with one undo, and it is
  * why the conservation post-condition still sees the athlete's session survive:
@@ -383,13 +300,15 @@ export function placeSessionForRoute(args: {
   profile: OnboardingData | null | undefined;
 }): Workout | null {
   if (args.route === 'keep_the_day') return null;
-  if (args.route === 'take_the_gunshow') {
+  if (args.route === 'take_the_gunshow' || args.route === 'take_the_primer') {
     // The day's own session, in the athlete's slot. Same identity rule as every
     // other committing route: their session moved, carrying what they chose.
     // R-130a item 3: the route PLACES per path — her Primer, his Gunshow —
     // through the same builder each path's Add door uses.
     const pump = buildDerivedSession(
-      args.profile?.gender === 'female' ? 'primer' : 'arms_pump',
+      args.route === 'take_the_primer' || args.profile?.gender === 'female'
+        ? 'primer'
+        : 'arms_pump',
       args.targetDate, args.landingWorkout.microcycleId,
       'Pre-game day', args.athlete,
     );
@@ -439,23 +358,14 @@ export function placeSessionForRoute(args: {
     JSON.stringify(rowIdentities(placed)) === JSON.stringify(rowIdentities(args.landingWorkout))) {
     return null;
   }
-  // A ROUTE IS A SMALLER SESSION, NEVER NO SESSION. Returning an empty workout
+  // A ROUTE IS A LIGHTER SESSION, NEVER NO SESSION. Returning an empty workout
   // here would publish a day that renders as rest while the sheet said "Done",
   // and the athlete would have picked a route in order to be given nothing.
   //
-  // It is reachable: DELOAD_LAW's row-level `isConditioningExerciseRow` is a
-  // NAME regex, and the registry's own conditioning templates are named "Flush
-  // Out - 2min On / 1min Off" and "3 x 8min zone 2 Rower", which it does not
-  // match. Those rows are then classified as strength accessories, and the
-  // accessory trim deletes the only row in the session. The workout ITSELF
-  // knows better — `conditioningBlock.options[].exerciseIds` names those exact
-  // rows.
-  //
-  // Sam ruled this a NAME-DECIDES-IDENTITY instance and queued the fix as
-  // MASTER_PLAN 5D.4: the classification reads the authored structure, and the
-  // regex is NOT widened. This boundary holds until then, and
-  // `g1LandingAskFlowTests` 26 goes red when 5D.4 lands — that is the signal to
-  // delete these three lines, not a regression.
+  // Same session but easier now preserves every selected row before it reaches
+  // this post-condition. The guard remains for Accessories only and any future
+  // route: a materialiser regression must still refuse rather than publish an
+  // empty success.
   return placed.exercises.length > 0 ? placed : null;
 }
 
@@ -533,6 +443,7 @@ function deloadedSession(args: {
   const policy = resolveDoorDeloadPolicy({
     door: 'readiness',
     seasonPhase: args.profile?.seasonPhase,
+    preserveExerciseSelection: true,
   })!;
   const strengthApplied = applyStrengthDeloadToExercises(
     args.landingWorkout.exercises,
@@ -541,6 +452,7 @@ function deloadedSession(args: {
   return {
     ...args.landingWorkout,
     intensity: 'Light',
+    g1Adjustment: 'same_session_easier',
     exercises: applyConditioningDeloadToExercises(strengthApplied, policy),
   };
 }

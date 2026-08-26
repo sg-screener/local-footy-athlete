@@ -91,6 +91,13 @@ export interface DeloadWeekPolicy {
    * the weight. Absent/false means hold the weight.
    */
   athleteIsBeatUp?: boolean;
+  /**
+   * The G-1 choice is literally “Same session but easier”: every selected
+   * exercise stays and its dose shrinks. Scheduled/readiness WEEK deloads keep
+   * the existing accessory-count trim unless their caller explicitly asks for
+   * this day-scoped mode.
+   */
+  preserveExerciseSelection?: boolean;
 }
 
 export function resolveWeekKind(
@@ -148,6 +155,7 @@ export function resolveDoorDeloadPolicy(args: {
   door: Exclude<DeloadDoor, 'scheduled'>;
   seasonPhase: SeasonPhase | null | undefined;
   athleteIsBeatUp?: boolean;
+  preserveExerciseSelection?: boolean;
 }): DeloadWeekPolicy | null {
   const seasonPhase = args.seasonPhase ?? 'In-season';
   return {
@@ -156,6 +164,7 @@ export function resolveDoorDeloadPolicy(args: {
     seasonPhase,
     intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, 'deload'),
     athleteIsBeatUp: args.athleteIsBeatUp,
+    preserveExerciseSelection: args.preserveExerciseSelection,
   };
 }
 
@@ -334,7 +343,9 @@ export function applyStrengthDeloadToExercises(
     DELOAD_LAW.accessoryMaxKept,
     Math.floor(accessoryIndexes.length * DELOAD_LAW.accessoryKeepMultiplier),
   );
-  const removeIndexes = new Set(accessoryIndexes.slice(keepCount));
+  const removeIndexes = policy.preserveExerciseSelection
+    ? new Set<number>()
+    : new Set(accessoryIndexes.slice(keepCount));
 
   return exercises
     .filter((_, index) => !removeIndexes.has(index))

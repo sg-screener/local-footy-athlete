@@ -10,7 +10,6 @@ import Animated, {
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import type { PlanChangeBinScopeId } from '../../utils/planChangeTypes';
 import { weekBoardDropRefusal, type WeekBoardBox, type WeekBoardDay } from '../../rules/weekBoard';
 
 /**
@@ -59,7 +58,7 @@ type Frame = { x: number; y: number; width: number; height: number };
 export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonce = 0 }: {
   rows: readonly WeekBoardRow[];
   onAdd: (date: string) => void;
-  onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
+  onRemove: (date: string, box: WeekBoardBox) => void;
   /** R-218b — a completed drag. The BOARD decides the shape is legal; the
    *  producer still decides whether the program allows it. */
   onMove: (args: { fromDate: string; toDate: string; box: WeekBoardBox }) => void;
@@ -195,7 +194,7 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
   );
 }
 
-/** Why a drop was refused, in words the athlete reads. One per typed refusal. */
+/** Why a training-session drop was refused, in words the athlete reads. */
 const DROP_REFUSAL_COPY: Record<string, string> = {
   not_movable: "That one can't be moved from here.",
   onto_team_training: "Team training stays put — drop it on a free day instead.",
@@ -211,7 +210,7 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
   settleNonce?: number;
   onLayout: (event: LayoutChangeEvent) => void;
   onAdd: (date: string) => void;
-  onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
+  onRemove: (date: string, box: WeekBoardBox) => void;
   onDrop: (fromDate: string, boxId: string, px: number, py: number) => 'held' | 'returned';
 }) {
   if (box.kind === 'empty') {
@@ -223,7 +222,7 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
       <Pressable
         onPress={() => onAdd(date)}
         accessibilityRole="button"
-        accessibilityLabel={`Add a session on ${date}`}
+        accessibilityLabel={`Add to ${date}`}
         testID={`week-board-add-${date}`}
         onLayout={onLayout}
         style={({ pressed }) => [
@@ -235,10 +234,11 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
     );
   }
 
-  /* A FIXTURE IS A LABEL HERE. It carries no bin and no drag: the game moves
-   * and clears through its own door, which this board does not replace. */
-  const removable = box.kind !== 'game' && !frozen;
-  const draggable = box.kind !== 'game' && !frozen;
+  /* Every real box can be managed here. The parent distinguishes fixture
+   * transactions from training transactions; this component only reports the
+   * box and date the athlete acted on. */
+  const removable = !frozen;
+  const draggable = !frozen;
 
   /* THE BOX FOLLOWS THE FINGER ON THE UI THREAD. Only the DROP crosses back to
    * JS — a drag that re-rendered the week on every frame would fight the list
@@ -361,7 +361,7 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
       <Text style={styles.boxLabel} numberOfLines={2}>{box.label}</Text>
       {removable ? (
         <Pressable
-          onPress={() => onRemove(date, box.binScope)}
+          onPress={() => onRemove(date, box)}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${box.label ?? 'this session'} on ${date}`}
           testID={`week-board-remove-${date}-${box.kind}`}

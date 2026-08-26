@@ -8,6 +8,7 @@ import type { TemplatePlanChange } from './planChangeTypes';
 import type { ResolvedDay } from './sessionResolver';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectVisibleDay } from './visibleProgramProjection';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 export interface CanonicalPlanChangeCandidateInput {
   change: TemplatePlanChange;
@@ -165,6 +166,7 @@ function stackTemplate(args: {
   const templateHasConditioning = hasConditioning(args.template);
   const baseHasStrength = hasStrength(args.base);
   const templateHasStrength = hasStrength(args.template);
+  const baseIsLowStress = classifyVisibleSession(args.base).stressLevel === 'low';
   const conditioningOwner = templateHasConditioning
     ? args.template
     : baseHasConditioning
@@ -226,6 +228,16 @@ function stackTemplate(args: {
     strengthIntent: strengthOwner?.strengthIntent,
     strengthIntentDiagnostics: strengthOwner?.strengthIntentDiagnostics,
     strengthPatternContributions: strengthOwner?.strengthPatternContributions,
+    // “Same session but easier” is a fact about the whole flattened day only
+    // when the content already on that day is low stress too. That is the
+    // normal G-1 add shape (Gunshow, Primer, Mobility or Recovery + the easier
+    // session). Carrying the marker over a team night or an existing hard gym
+    // session would falsely make that separate work low stress, so those
+    // stacks deliberately lose it and remain subject to the normal guard.
+    g1Adjustment:
+      args.template.g1Adjustment === 'same_session_easier' && baseIsLowStress
+        ? 'same_session_easier'
+        : undefined,
     recoveryAddons: [
       ...(args.base.recoveryAddons ?? []),
       ...(args.template.recoveryAddons ?? []),

@@ -146,8 +146,12 @@ console.log('\n[4] Drop rules — the board\'s own shape, not the program\'s leg
     refuse(strengthBox, openDay, teamBox, fullDay) === 'onto_team_training');
   ok('nothing may be dropped onto game day',
     refuse(strengthBox, openDay, gameBox, gameDay) === 'onto_game');
-  ok('a fixture cannot be dragged from the board',
-    refuse(gameBox, gameDay, emptyBox, openDay) === 'not_movable');
+  ok('a fixture can be dragged onto an empty day',
+    refuse(gameBox, gameDay, emptyBox, openDay) === null);
+  ok('a fixture can be dragged onto training and replaces that day',
+    refuse(gameBox, gameDay, strengthBox, fullDay) === null);
+  ok('a fixture can be dragged onto team training and replaces that day',
+    refuse(gameBox, gameDay, teamBox, fullDay) === null);
   /* Across two days — dragging an empty box onto its OWN day would be caught by
      the same-day rule first and prove nothing about whether it can be lifted. */
   ok('an empty box is not a thing you can pick up',
@@ -180,6 +184,8 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     path.resolve(__dirname, '..', 'screens', 'home', 'WeekBoard.tsx'), 'utf8');
   const home = fs.readFileSync(
     path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  const hook = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
   const sheet = fs.readFileSync(
     path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'), 'utf8');
 
@@ -219,9 +225,10 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
   ok('and onEnd does not pass its own x/y through to the hit-test',
     !/runOnJS\(onDrop\)\(\s*date, box\.id, event\.x, event\.y/.test(board));
 
-  ok('a fixture is neither dragged nor binned',
-    /const draggable = box\.kind !== 'game'/.test(board)
-      && /const removable = box\.kind !== 'game'/.test(board));
+  ok('a fixture is both draggable and removable on the Week board',
+    /const draggable = !frozen/.test(board)
+      && /const removable = !frozen/.test(board)
+      && !/box\.kind !== 'game'/.test(board));
 
   // #14, SECOND ROUND (Sam's phone, 2026-08-26: "nope still not working
   // properly"): the immediate glide still landed the box on its OLD day
@@ -255,6 +262,16 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     /initialAction: 'move'[\s\S]{0,200}move: \{ toDate: args\.toDate, scope \}/.test(home)
       && /if \(initialMove\) \{[\s\S]{0,600}apply\(/.test(sheet),
     'the producer still refuses an illegal move and still raises the G-1 ask');
+  ok('a dragged game goes through the canonical fixture transaction owner',
+    /if \(args\.box\.kind === 'game'\)[\s\S]{0,500}handleMoveGameOnBoard/.test(home)
+      && /executeFixtureMutationTransaction\(/.test(hook),
+    'the board must route a fixture by date, never through move_session');
+  ok('a game bin uses the same canonical fixture transaction owner',
+    /if \(box\.kind === 'game'\)[\s\S]{0,300}handleRemoveGameOnDate/.test(home));
+  ok('the board plus offers training or a game through one add chooser',
+    /function WeekBoardAddSheet/.test(home)
+      && /label=\{signedCopy\('week\.board\.add\.training\.label'\)\}/.test(home)
+      && /label=\{signedCopy\('week\.board\.add\.game\.label'\)\}/.test(home));
 
   /* ⚠ **THE BOARD ASKS THE PRODUCER WHETHER THE DESTINATION WAS EVER OFFERED.**
    * This was in the plan and was NOT built in the first drag commit, so a drag

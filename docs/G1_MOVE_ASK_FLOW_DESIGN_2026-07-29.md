@@ -5,7 +5,7 @@
 Generation never plans hard strength or conditioning on G-1. That law is
 unchanged. This unit is about what happens when the ATHLETE puts a session
 there: the app stops silently substituting or refusing, warns once, and offers
-three named routes.
+the current gender-appropriate named routes.
 
 ---
 
@@ -98,46 +98,42 @@ The ask fires only for sessions that classifier already calls hard. A recovery
 or mobility session moved onto G-1 passes straight through as it does today —
 the existing G-1 branch already preserves recovery and rest.
 
-### 3.3 The three routes — a UNIFORM menu (Sam, 2026-07-29)
+### 3.3 The current routes — one direct menu (Sam, revised 2026-08-26)
 
-Every session type gets the same three options. Route (b)'s CONTENT differs by
-session type; the menu shape does not.
+Every landing type reaches the same typed route owner. Male athletes see Same
+session but easier, Gunshow, Primer and Accessories only. Female athletes see
+the same ordered menu without Gunshow. Go back is the only no-op; the historical
+keep-day route remains readable but is no longer rendered.
 
-| Route | Strength move | Conditioning / sprint move | Transaction |
-|---|---|---|---|
-| **(a) Gunshow** | Move abandoned | Move abandoned | **None.** Source session stays where it is; the derived Gunshow stays on G-1. Nothing to undo. |
-| **(b) Accessories** | Their session, main lifts stripped | The derived accessories/pump session, labelled as its own thing | Move transaction, placed workout transformed |
-| **(c) Same session deloaded** | DELOAD_LAW dose | DELOAD_LAW dose | Move transaction, placed workout transformed; second warning first |
+Accessories only keeps accessory work when the source can be split honestly;
+otherwise it materialises the authored pump session or refuses rather than
+claiming an unchanged full session is accessories. Gunshow and Primer each
+materialise their own authored session.
 
-Route (b) for a conditioning move is **not** an easy-aerobic version wearing the
-athlete's session name. That identity-swap class stays banned. It is the derived
-pump session under its own name, and the copy says the original session is being
-given up.
-
-(a) and (b) therefore differ for every session type: (a) keeps the source day's
-session, (b) trades it for the pump session on G-1.
-
-Route (c) carries the second, stronger warning regardless of session type.
-
-**Reduction mechanism:** exactly one. Route (c) applies
+**Reduction mechanism:** exactly one. Same session but easier applies
 `applyStrengthDeloadToExercises` + `applyConditioningDeloadToExercises`
 (`rules/deloadWeekRules.ts`) under a `resolveDoorDeloadPolicy`-shaped policy.
-`DELOAD_LAW` is untouched. Route (b)'s strength stripping reuses the accessory /
-main-lift classification that already lives in that same module.
+Its day-scoped `preserveExerciseSelection` mode keeps every selected row while
+reducing its dose. A typed G-1 adjustment tells the shared stress classifier
+that this athlete-chosen result is low stress. The Add stack keeps that marker
+only when the content already on the day is also low stress, so it cannot mask a
+team night or a separate hard session. Accessories only continues to reuse the
+accessory/main-lift classification in the same module.
 
 ### 3.4 Typed option list, extensible by construction
 
-The menu is a typed list of options, not three hardcoded branches. A fourth
-option — **pre-game PRIMER**, short sharp activation reusing the power-primer
-machinery and Sam's authored power pool — is PARKED pending Sam's authored
-prescription, and is to be addable as one list entry plus one transformation.
+The menu is a typed list, not hardcoded UI branches. Primer is now an authored
+route in that list. Gender filtering changes only which typed route is offered;
+the producer and materialiser still read the same registry.
 
 ### 3.5 Transaction ownership
 
-All committing routes go through `commitAthleteSessionMoveTransaction`. The
-constraint's `originalWorkout` stays the FULL accepted source session, so Undo
-restores exactly what was there. Disclosure and the reversible-adjustment ledger
-are unchanged.
+All committing routes go through the accepted plan-change transaction. Move's
+constraint keeps the FULL accepted source session so Undo restores exactly what
+was there; Add and Swap use their existing canonical candidate materialiser.
+The route button commits with the trace from the preview that raised the ask,
+instead of previewing the same action again. That is what makes the warning one
+warning while leaving the commit boundary responsible for the real write.
 
 ## 4. Warning copy — authored, signed by Sam 2026-07-29 and 2026-07-30
 
@@ -168,71 +164,24 @@ reason: it is prose about the copy, not copy.
 Every rendering the pattern produces is filed below and pinned in both
 directions by `g1LandingAskFlowTests` 18.
 
-**Warning 1 — the ask**
+**The one confirmation — revised by Sam 2026-08-26.**
 
-> **Big session the day before your game.**
-> Train hard Friday and you'll feel it Saturday. Pick one:
+> **Are you sure?**
+> Train hard Friday and you'll feel it Saturday
 >
-> - **Keep Friday's Gunshow** — what the day before a game is built for. Your
->   Monday session stays where it is.
-> - **Accessories only** — Your session with the main lifts stripped out. Pump
->   and prehab, nothing heavy.
-> - **Same session, deloaded** — Half the sets at RPE 5–6, weight stays.
->   Conditioning halved.
-
-**Route (a) over the other three shapes G-1 can be in.** The day's own content
-is named, or the day is offered free; the source clause renders only for a Move.
-
-> - **Keep Friday's Gunshow** — what the day before a game is built for.
-> - **Keep Friday's Recovery Session** — what the day before a game is built
->   for. Your Monday session stays where it is.
-> - **Keep Friday's Recovery Session** — what the day before a game is built
->   for.
-> - **Leave Friday free** — rest before the game. Your Monday session stays
->   where it is.
-> - **Leave Friday free** — rest before the game.
-
-**Route (b) sub-line when the landing session has NO accessories** — a
-conditioning or sprint session. Signed by Sam 2026-07-29 with his rewording:
-"pump" is reserved for Gunshow's own description, so routes (a) and (b) never
-read as the same thing. The second form is a Swap or an Add, which took nothing
-off another day.
-
-> - **Accessories only** — Light accessory work before the game. Your Monday
->   session is dropped, not moved.
-> - **Accessories only** — Light accessory work before the game.
-
-**Route offered only on an EMPTY G-1 — the day's own session (Sam, 2026-07-30).**
-An athlete adding work the day before a game should be offered the session that
-day was built for; the menu had three ways to place *their* choice and never
-offered the day's own. Not shown on an occupied day, where route (a) already
-keeps what is there.
-
-> - **Friday's Gunshow instead** — light upper-body pump, what the day before a
->   game is built for.
-
-**The back row.** On a warning screen "Back" reads as "cancel"; what leaving
-actually does is leave the day the way the day was built.
-
+> - **Same session but easier**
+> - **Gunshow**
+> - **Primer**
+> - **Accessories only**
 > - **Go back**
 
-**R-221 (Sam, 2026-08-25), VERBATIM:** *"the bottom button should just say 'go
-back' too not double up on leave frday free"*. It read **Go back — leave Friday
-free**, signed 2026-07-30 on the reasoning that "Back" on a warning screen reads
-as "cancel" so the row should say what it DOES. That reasoning stopped applying
-the moment route (a) on the same screen was already **Leave Friday free** — the
-back row was repeating an option three lines above it, so the athlete read two
-ways to do one thing. The day name goes with it; the row takes no context now.
-
-**Warning 2 — before route (c) applies**
-
-> **This still costs you Saturday.**
-> Half the sets is easier, not light. The day before a game is built for a pump
-> and nothing else. Go ahead only if this session matters more than the game.
-
-No unauthored copy reaches a card. The option (b) sub-line for a
-conditioning/sprint landing names the pump session honestly rather than reusing
-the athlete's session name.
+The male menu shows all four choices. The female menu is identical except that
+Gunshow is absent. Every choice is an obvious bordered box with no subtitle.
+Go back is the only way to abandon the change, so **Leave Friday free** is no
+longer duplicated as a visible option. The ask itself is the confirmation;
+Same session but easier does not open a second warning. It keeps every exercise
+the athlete selected and reduces the work inside the session; a one-row session
+therefore remains one row instead of becoming an empty refusal.
 
 ## 5. Escalation boundary
 

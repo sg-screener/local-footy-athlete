@@ -1785,26 +1785,18 @@ run('the old status bars did not survive alongside their own chips', () => {
 // card turned into a LABEL for the first fixture at the same moment. The defect
 // is real — no route to a SECOND game — but it was a CAP, not an absence, and
 // these cells hold the cap down rather than holding a third card up.
-run('the add-fixture control never caps the week at one game', () => {
+run('the Week board game choice never caps the week at one game', () => {
   const home = homeScreenSource();
-  const sheetStart = home.indexOf('function WeekEditSheet');
-  const sheetEnd = home.indexOf('function GameDaySheet', sheetStart);
+  const sheetStart = home.indexOf('function WeekBoardAddSheet');
+  const sheetEnd = home.indexOf('function WeekEditSheet', sheetStart);
   assert(sheetStart >= 0 && sheetEnd > sheetStart,
-    'the Edit this week sheet could not be bounded');
+    'the Week board Add sheet could not be bounded');
   const sheet = home.slice(sheetStart, sheetEnd);
-  assert(sheet.includes("title={signedCopy('week.edit_sheet.title')}")
-    // R-218 final slice — the subtitle no longer switches on a nested step, so
-    // it is a plain call rather than the `? …` ternary this used to match.
-    && sheet.includes("subtitle={signedCopy('week.edit_sheet.question')}")
-    && signedCopy('week.edit_sheet.title') === 'Adjust this week'
-    && signedCopy('week.edit_sheet.question') === 'What do you want to change?',
-  'the Week dots sheet no longer opens with the signed Adjust this week / What do you want to change wording');
-  assert(/phase === 'In-season' \|\| phase === 'Pre-season'/.test(sheet)
-    && sheet.includes('testID="edit-week-add-fixture"'),
-  'the add-fixture row is no longer available in both competitive phases');
-  assert(!/hasFixture[\s\S]{0,160}edit-week-add-fixture/.test(sheet),
-    'the add-fixture row is gated on whether the week already has a fixture — '
-    + 'that silently restores the one-game cap');
+  assert(sheet.includes("label={signedCopy('week.board.add.game.label')}")
+    && sheet.includes('testID="week-board-add-game"'),
+  'the Week board plus no longer offers Game');
+  assert(!/hasFixture[\s\S]{0,200}week-board-add-game/.test(sheet),
+    'the Game choice is gated on whether the week already has a fixture — that silently restores the one-game cap');
   assert(!/practiceMatchDay/.test(home),
     'the screen has re-grown a `find`-the-first-fixture binding. A week may hold '
     + 'several fixtures; the first of a set is how the one-game assumption gets '
@@ -1832,15 +1824,16 @@ run('the add-fixture control is on the WEEK shape only', () => {
     'Week options has more than one visible entry, so it may have leaked onto Day');
 });
 
-run('the add-fixture control shows in BOTH competitive phases with one signed label', () => {
+run('the Week board Game choice shows in BOTH competitive phases with one signed label', () => {
   const home = homeScreenSource();
   assert(!/showPracticeMatchCTA|showAddGameCTA|showAddFixtureCTA/.test(home),
     'the two old CTA flags are back. They were one decision wearing two names, '
     + 'and two names is how the two cards drifted into disagreeing about '
     + 'whether a week may have a second game.');
   assert(!home.includes("'Add a practice match'")
-    && signedCopy('week.edit_sheet.game.label') === 'Add a game',
-    'the Week popup has regrown phase-specific Add wording instead of one Add a game label');
+    && signedCopy('week.board.add.game.label') === 'Game'
+    && /currentPhase === 'In-season' \|\| currentPhase === 'Pre-season'/.test(home),
+    'the board has regrown phase-specific game wording or lost a competitive phase');
   assert(!/No game this week/.test(home),
     'the old in-season copy is back. "No game this week - add one" is FALSE on '
     + 'exactly the weeks this control now has to appear on — the ones that '
@@ -1870,44 +1863,34 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   assert(sheetStart >= 0 && sheetEnd > sheetStart,
     'the Week edit sheet could not be bounded');
   const sheet = home.slice(sheetStart, sheetEnd);
-  assert(sheet.includes("label={signedCopy('week.edit_sheet.bye.label')}")
-    && /phase === 'In-season'/.test(sheet),
-  'the bye row is missing or is not limited to In-season');
   assert(sheet.includes("label={signedCopy('week.edit_sheet.away.label')}")
     && sheet.includes("label={signedCopy('week.edit_sheet.manage_sessions.label')}"),
   'the Away or session-edit row is missing from Edit this week');
+  assert(!sheet.includes("week.edit_sheet.bye.label")
+    && !sheet.includes("week.edit_sheet.move_game.label")
+    && !sheet.includes("week.edit_sheet.game.label"),
+  'separate Bye / Move game / Add game rows survived beside the unified Week board');
   assert(sheet.indexOf("label={signedCopy('week.edit_sheet.manage_sessions.label')}")
     > sheet.indexOf("label={signedCopy('week.edit_sheet.away.label')}"),
   'session editing is no longer the bottom option in Edit this week');
   const expectedWeekOptionCopy = [
-    ['week.edit_sheet.schedule_heading', 'Schedule changes'],
-    ['week.edit_sheet.training_heading', 'Training'],
-    ['week.edit_sheet.bye.label', 'I have a bye'],
-    ['week.edit_sheet.bye.subline', 'Remove this week’s game'],
-    ['week.edit_sheet.game.label', 'Add a game'],
-    ['week.edit_sheet.game.subline', 'Add another game to this week'],
     ['week.edit_sheet.away.label', 'I’m going away'],
     ['week.edit_sheet.away.subline', 'Adjust around travel or time away'],
-    ['week.edit_sheet.manage_sessions.label', 'Manage sessions'],
-    ['week.edit_sheet.manage_sessions.subline', 'Add, move or remove training'],
+    ['week.edit_sheet.manage_sessions.label', 'Manage week'],
+    ['week.edit_sheet.manage_sessions.subline', 'Add, move or remove what’s planned'],
   ] as const;
   assert(expectedWeekOptionCopy.every(([id, text]) => signedCopy(id) === text)
     && expectedWeekOptionCopy.every(([id]) => sheet.includes(`signedCopy('${id}')`)),
-  'the Week adjustment sheet no longer renders both headings and all eight signed option values');
-  assert(sheet.indexOf("signedCopy('week.edit_sheet.schedule_heading')")
-      < sheet.indexOf("signedCopy('week.edit_sheet.bye.label')")
-    && sheet.indexOf("signedCopy('week.edit_sheet.away.label')")
-      < sheet.indexOf("signedCopy('week.edit_sheet.training_heading')")
-    && sheet.indexOf("signedCopy('week.edit_sheet.training_heading')")
-      < sheet.indexOf("signedCopy('week.edit_sheet.manage_sessions.label')")
-    && home.includes('weekEditTrainingSection: {')
-    && /weekEditTrainingSection:\s*\{[\s\S]{0,180}borderTopWidth: StyleSheet\.hairlineWidth[\s\S]{0,180}marginTop: spacing\.md/.test(home),
-  'Schedule changes and Training are no longer separated in the requested order by a quiet divider and gap');
-  assert(sheet.includes('name="calendar-remove-outline" size={18} color={hasFixture ? \'#67D7FF\' : \'#666666\'}')
-    && sheet.includes('icon={<RowIcon kind="game" size={18} color={rowIconColor(\'game\')} />}')
-    && sheet.includes('name="airplane" size={18} color="#B9A7FF"')
+  'the Week adjustment sheet no longer renders its four signed option values');
+  assert(!sheet.includes("signedCopy('week.edit_sheet.schedule_heading')")
+    && !sheet.includes("signedCopy('week.edit_sheet.training_heading')")
+    && !home.includes('weekEditSectionLabel: {')
+    && !home.includes('weekEditTrainingSection: {')
+    && (sheet.match(/divider=\{false\}/g) ?? []).length === 2,
+  'the retired Week section headings or option dividers are still rendered');
+  assert(sheet.includes('name="airplane" size={18} color="#B9A7FF"')
     && sheet.includes('name="pencil-outline" size={18} color="#5BD98A"'),
-  'the Week edit rows no longer use the established bye, game, away and session icon treatment');
+  'the two remaining Week edit rows no longer use the established away and management icons');
   /* ⚠ **R-218 — MANAGE SESSIONS NOW LANDS ON THE BOARD, NOT ON A CHOICE OF
    * THREE.** Sam, 2026-08-25: *"you hit manage sessions — you get taken
    * straight here"*. This assertion REQUIRED the opposite and is inverted, not
@@ -1976,16 +1959,17 @@ run('Week keeps one edit menu while Day enters it through the session card menu'
   assert(plan.includes('name="plus-circle-outline" size={18} color={options.canAdd ? \'#5BD98A\' : MUTED}')
     && plan.includes('name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : \'#67D7FF\'}')
     && plan.includes('name="delete-outline" size={18} color={options.canRemove ? \'#FF7A85\' : MUTED}'),
-  'the Day action menu no longer matches the Week icon and colour system');
+  'the plan-change action menu no longer uses the shared icon and colour system');
   const dayActions = plan.slice(
     plan.indexOf("step.kind === 'actions'"),
     plan.indexOf("step.kind === 'add_blocked_max_sessions'"),
   );
   assert(dayActions.indexOf("label={signedCopy('plan_change.add_to_session')}") < dayActions.indexOf('label="Move this session"')
     && dayActions.indexOf('label="Move this session"') < dayActions.indexOf("label={signedCopy('plan_change.remove_session')}")
+    && /\{fromWeek && \(\s*<MenuOption\s+label="Move this session"/.test(dayActions)
     && !dayActions.includes('Swap this session')
     && /<Button[\s\S]{0,120}label="Back"[\s\S]{0,160}variant="ghost"/.test(dayActions),
-  'the Day action menu no longer matches the Week order and centred Back treatment');
+  'Move this session is not confined to Week while Add, Remove and Back keep their shared order');
 
   assert(/const handleSetByeWeek = async \(\): Promise<boolean> =>/.test(hook)
     && /fixtureDates[\s\S]{0,500}rebuildForGameChange\(null, \{ targetDate: fixtureDate \}\)/.test(hook),

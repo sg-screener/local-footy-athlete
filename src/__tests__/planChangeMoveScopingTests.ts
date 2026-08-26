@@ -51,6 +51,8 @@ import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+import { registerProjectionCopy } from '../rules/projectionCopy';
+import { signedCopy } from '../rules/signedCopy';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import {
@@ -61,6 +63,8 @@ import {
 } from '../utils/planChangeProducer';
 
 const CURRENT_WEEK = '2026-07-13';
+
+registerProjectionCopy();
 
 let passed = 0;
 let failed = 0;
@@ -630,11 +634,14 @@ run('the row sub-line and the remove confirmation cannot disagree', () => {
     'utf8',
   );
   assert(/signedCopy\('plan_change\.remove_to_rest'\)/.test(sheet)
-    && /'Remove it — anything else on the day stays\.'/.test(sheet),
+    && /signedCopy\('plan_change\.remove_pick_session'\)/.test(sheet),
     'both of Sam\'s signed Remove sub-lines are no longer in the sheet');
   assert(/removeEmptiesTheDay\(options\)\s*\n?\s*\?\s*signedCopy\('plan_change\.remove_to_rest'\)/.test(sheet),
     'the Remove row no longer selects its sub-line from removeEmptiesTheDay — if it '
     + 'derives the claim any other way it can contradict the confirmation');
+  assert(signedCopy('plan_change.remove_to_rest') === 'Remove it — day becomes rest'
+    && signedCopy('plan_change.remove_pick_session') === 'Pick a session to remove',
+  'the one-session and multi-session Remove explanations no longer match Sam\'s copy');
 
   const startBin = sheet.slice(sheet.indexOf('const startBin'), sheet.indexOf('return ('));
   assert(startBin.length > 0, 'startBin no longer exists in the sheet');

@@ -140,8 +140,9 @@ type Step =
     }
   | {
       // Sam's G-1 ask. The athlete has put a session on the day before their
-      // game. Warn once, offer the three ruled routes, apply nothing until they
-      // answer. All copy comes from rules/g1LandingAsk — the sheet holds none.
+      // game. Warn once, offer the gender-appropriate ruled routes, apply
+      // nothing until they answer.
+      // All copy comes from rules/g1LandingAsk — the sheet holds none.
       //
       // The change is any door that can land content, not Move alone. A swap
       // onto the same day asks the same question, and while this step was typed
@@ -150,6 +151,7 @@ type Step =
       change: G1RoutedChange;
       context: G1LandingAskContext;
       backStep: Step;
+      trace: AthleteActionTraceContext;
     }
   | {
       // R-226's team-night content ask: the moved session carries Bible :156
@@ -162,13 +164,6 @@ type Step =
       flagged: TeamNightFlaggedRow[];
       backStep: Step;
       trace: AthleteActionTraceContext;
-    }
-  | {
-      // The second, stronger warning. Route (c) alone, whatever was landed.
-      kind: 'g1_deload_confirm';
-      change: G1RoutedChange;
-      context: G1LandingAskContext;
-      backStep: Step;
     }
   | {
       // Sam's team-night ask (signed 2026-08-02): moving a team night asks
@@ -519,7 +514,10 @@ export function PlanChangeSheet({
     // Before any risk framing: the athlete has put a session on the day before
     // their game and has not been asked yet. Nothing has been applied.
     if (preview.g1Ask && isG1RoutedChange(change)) {
-      setStep({ kind: 'g1_ask', change, context: preview.g1Ask, backStep });
+      setStep({
+        kind: 'g1_ask', change, context: preview.g1Ask, backStep,
+        trace: preview.trace,
+      });
       return;
     }
     // R-226: flagged lifts landing on a team night — swap or keep, athlete's
@@ -699,7 +697,9 @@ export function PlanChangeSheet({
     <Sheet visible={visible && !runningSilently} onClose={onClose} testID="plan-change-sheet">
       <SheetHeader
         title={fromWeek ? weekdayLabel(date) : signedCopy('plan_change.session_options')}
-        subtitle={fromWeek ? 'What do you want to do with it?' : weekdayLabel(date)}
+        subtitle={step.kind === 'g1_ask'
+          ? G1_LANDING_WARNING.ask.headline
+          : fromWeek ? 'What do you want to do with it?' : weekdayLabel(date)}
       />
 
       {options?.locked === 'outside_horizon' && (
@@ -739,22 +739,24 @@ export function PlanChangeSheet({
             testID="plan-change-add"
             onPress={startAdd}
           />
-          <MenuOption
-            label="Move this session"
-            // The move refusal is the producer's own sentence, and it is the
-            // most specific thing anyone can say about this day — so the
-            // disabled row says it rather than a generic line.
-            sub={options.move.refusal
-              ? options.move.refusal.message
-              : 'Move it to another day or trade places'}
-            icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : '#67D7FF'} />}
-            neutralIconChip
-            disabled={!!options.move.refusal}
-            testID={selectedWorkout
-              ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
-              : undefined}
-            onPress={() => startMove()}
-          />
+          {fromWeek && (
+            <MenuOption
+              label="Move this session"
+              // Moving is a Week-view action. If a weekly route returns here,
+              // the producer's own refusal remains the most specific answer
+              // available for this session and day.
+              sub={options.move.refusal
+                ? options.move.refusal.message
+                : 'Move it to another day or trade places'}
+              icon={<MaterialCommunityIcons name="arrow-right-bold-outline" size={18} color={options.move.refusal ? MUTED : '#67D7FF'} />}
+              neutralIconChip
+              disabled={!!options.move.refusal}
+              testID={selectedWorkout
+                ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
+                : undefined}
+              onPress={() => startMove()}
+            />
+          )}
           {/* THE REMOVE ROW'S THREE SENTENCES.
 
               `canRemove` is false only when the day holds nothing at all (a
@@ -762,19 +764,17 @@ export function PlanChangeSheet({
               nothing-here sentence cannot be shown over a day that has work on it.
 
               THE OTHER TWO ARE STATE-SELECTED, by the SAME predicate `startBin`
-              uses (Sam, 2026-07-31, closing copy sheet §6-IV-3). Batch 3's
-              "anything else on the day stays" was false on a day whose only
-              content IS the session being removed — the very next screen says the
-              day becomes rest — and batch 3's own principle is that a signed
-              sentence must never be able to lie. A typed cause picks it now, the
-              pattern this unit used for the Swap row's disabled lines. */}
+              uses. A one-session day says it becomes rest; a multi-session day
+              says the next step is choosing which session to remove. A typed
+              cause picks the sentence so this row cannot contradict the picker
+              or confirmation that follows. */}
           <MenuOption
             label={signedCopy('plan_change.remove_session')}
             sub={!options.canRemove
               ? "There's nothing on this day yet."
               : removeEmptiesTheDay(options)
                 ? signedCopy('plan_change.remove_to_rest')
-                : 'Remove it — anything else on the day stays.'}
+                : signedCopy('plan_change.remove_pick_session')}
             icon={<MaterialCommunityIcons name="delete-outline" size={18} color={options.canRemove ? '#FF7A85' : MUTED} />}
             neutralIconChip
             disabled={!options.canRemove}
@@ -1080,7 +1080,6 @@ export function PlanChangeSheet({
 
       {step.kind === 'g1_ask' && (
         <View>
-          <Text style={styles.blockingTitle}>{G1_LANDING_WARNING.ask.headline}</Text>
           <Text style={styles.confirmText}>
             {G1_LANDING_WARNING.ask.body(step.context)}
           </Text>
@@ -1088,28 +1087,13 @@ export function PlanChangeSheet({
             <MenuOption
               key={route.id}
               label={route.label(step.context)}
-              sub={route.detail(step.context)}
+              boxed
               testID={`g1-route-${route.id}`}
               onPress={() => {
-                // (a) commits nothing. The day keeps what it already holds and
-                // any source session stays where it is, so there is no
-                // transaction and nothing to undo — the sheet simply closes.
-                if (!route.commits) {
-                  onClose();
-                  return;
-                }
-                if (route.requiresSecondWarning) {
-                  setStep({
-                    kind: 'g1_deload_confirm',
-                    change: step.change,
-                    context: step.context,
-                    backStep: step,
-                  });
-                  return;
-                }
-                apply(
+                void commitPlanChange(
                   { ...step.change, g1Route: route.id },
-                  { backStep: step.backStep, closeOnSuccess: true },
+                  { closeOnSuccess: true },
+                  step.trace,
                 );
               }}
             />
@@ -1180,24 +1164,6 @@ export function PlanChangeSheet({
             onPress={() => setStep(step.backStep)}
             style={{ marginTop: 8 }}
           />
-        </View>
-      )}
-
-      {step.kind === 'g1_deload_confirm' && (
-        <View>
-          <Text style={styles.blockingTitle}>
-            {G1_LANDING_WARNING.deloadConfirm.headline(step.context)}
-          </Text>
-          <Text style={styles.confirmText}>{G1_LANDING_WARNING.deloadConfirm.body}</Text>
-          <MenuOption
-            label="Do it anyway"
-            testID="g1-route-deloaded-confirm"
-            onPress={() => apply(
-              { ...step.change, g1Route: 'deloaded' },
-              { backStep: step.backStep, closeOnSuccess: true },
-            )}
-          />
-          <MenuOption label="Back" onPress={() => setStep(step.backStep)} />
         </View>
       )}
 

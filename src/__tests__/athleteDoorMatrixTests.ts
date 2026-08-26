@@ -551,6 +551,7 @@ const ROUTES = [
   undefined,
   'keep_the_day',
   'take_the_gunshow',
+  'take_the_primer',
   'accessories_only',
   'deloaded',
 ] as const;

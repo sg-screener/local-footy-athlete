@@ -114,6 +114,7 @@ const WEEK_4_MON = '2026-07-20'; // outside this week + next 2
  */
 function seedAcceptedStores(): void {
   const athlete = {
+    gender: 'male',
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -820,6 +821,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /label="Move this session"/.test(actionsBlock)
       && /label=\{signedCopy\('plan_change\.remove_session'\)\}/.test(actionsBlock)
       && !/label="Edit this session"|label="Add optional session"|label="I'm not 100%"|ask the coach/.test(actionsBlock));
+  ok('[9] Move this session is a Week-view action, not a Day-view option',
+    /\{fromWeek && \(\s*<MenuOption\s+label="Move this session"/.test(actionsBlock));
   ok('[9] the sheet no longer decides capability from a workout name or type',
     !/workoutType === 'Recovery'/.test(sheet)
       && !/sessionTier === 'recovery'/.test(sheet)
@@ -837,7 +840,9 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && (actionsBlock.match(/neutralIconChip/g) ?? []).length === 3
       && /label=\{signedCopy\('plan_change\.remove_session'\)\}[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
-  ok('[9] Day uses the same Add, Move, Remove visual order as Week',
+  ok('[9] Remove explains the actual one-session or two-session next step',
+    /removeEmptiesTheDay\(options\)[\s\S]{0,100}signedCopy\('plan_change\.remove_to_rest'\)[\s\S]{0,100}signedCopy\('plan_change\.remove_pick_session'\)/.test(actionsBlock));
+  ok('[9] the shared sheet keeps Add, gated Week Move, then Remove in source order',
     actionsBlock.indexOf("label={signedCopy('plan_change.add_to_session')}")
       < actionsBlock.indexOf('label="Move this session"')
       && actionsBlock.indexOf('label="Move this session"')

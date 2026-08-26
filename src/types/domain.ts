@@ -1030,6 +1030,13 @@ export interface Workout {
    * second truth — see `rules/athletePlacement.ts` before adding a writer.
    */
   athletePlacement?: AthletePlacement;
+  /**
+   * Written only by the G-1 “Same session but easier” materialiser and read by
+   * the canonical stress classifier. The session keeps its strength identity
+   * and exercise list, while this athlete-chosen dose is treated as low stress
+   * for the day-before-game rule.
+   */
+  g1Adjustment?: 'same_session_easier';
   /** Canonical planned/effective strength contract. Existing typed intent always wins. */
   strengthIntent?: StrengthIntent;
   /**

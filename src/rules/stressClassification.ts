@@ -53,6 +53,7 @@ export function classifySessionStress(
   workout?: Workout | null,
   ctx: StressContext = {},
 ): StressLevel {
+  if (workout?.g1Adjustment === 'same_session_easier') return 'low';
   switch (unit.category) {
     // ── Always high (Section 17.A high-stress list) ──
     case 'game':

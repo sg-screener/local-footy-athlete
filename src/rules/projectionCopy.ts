@@ -800,12 +800,42 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.board.banner',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-218a, VERBATIM: "make this say '
-        + '\'add, bin or move your sessions\'". The seat had proposed '
-        + '"Add, remove or drag your sessions"; his words replace it. "Bin" is '
-        + 'the glyph the athlete taps and "move" is what a drag DOES, so the '
-        + 'banner now names the outcome rather than the gesture.',
-      text: 'Add, bin or move your sessions',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: the one Week board now '
+        + 'manages both training sessions and games.',
+      text: 'Add, move or remove sessions and games',
+    },
+    {
+      id: 'week.board.add.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: the board plus asks what '
+        + 'belongs on the chosen day.',
+      text: 'Add to this day',
+    },
+    {
+      id: 'week.board.add.training.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: the training branch keeps '
+        + 'the existing session-add pathway.',
+      text: 'Training session',
+    },
+    {
+      id: 'week.board.add.training.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: training choice scope.',
+      text: 'Strength, conditioning or optional work',
+    },
+    {
+      id: 'week.board.add.game.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: game branch label.',
+      text: 'Game',
+    },
+    {
+      id: 'week.board.add.game.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: fixture precedence is '
+        + 'made explicit before the athlete chooses it.',
+      text: 'Replaces anything already on this day',
     },
     {
       id: 'session.quick_add.label',
@@ -1029,59 +1059,6 @@ export function registerProjectionCopy(): void {
       text: 'What do you want to change?',
     },
     {
-      id: 'week.edit_sheet.schedule_heading',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-204: the first three Week '
-        + 'adjustments sit under “Schedule changes”.',
-      text: 'Schedule changes',
-    },
-    {
-      id: 'week.edit_sheet.training_heading',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-204: session management sits '
-        + 'in its own “Training” section.',
-      text: 'Training',
-    },
-    {
-      id: 'week.edit_sheet.bye.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: first Week option label.',
-      text: 'I have a bye',
-    },
-    {
-      id: 'week.edit_sheet.bye.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: active Bye option explanation.',
-      text: 'Remove this week’s game',
-    },
-    {
-      id: 'week.edit_sheet.game.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: one label in both competitive phases.',
-      text: 'Add a game',
-    },
-    {
-      id: 'week.edit_sheet.game.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-204: Add-game option explanation.',
-      text: 'Add another game to this week',
-    },
-    {
-      id: 'week.edit_sheet.move_game.label',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-26: ordered the button ("it should go '
-        + "'we have a bye' then the next one should be move game to a different "
-        + 'day"); label proposed with it and approved 2026-08-26 ("yes thats fine").',
-      text: 'Move the game to a different day',
-    },
-    {
-      id: 'week.edit_sheet.move_game.subline',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-26: proposed with the button, approved '
-        + '2026-08-26 ("yes thats fine").',
-      text: 'Pick its new day — the week reshapes around it.',
-    },
-    {
       id: 'week.edit_sheet.away.label',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-202: Away option label.',
@@ -1096,14 +1073,16 @@ export function registerProjectionCopy(): void {
     {
       id: 'week.edit_sheet.manage_sessions.label',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-202: session-management option label.',
-      text: 'Manage sessions',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: sessions and games now '
+        + 'share one Week management surface.',
+      text: 'Manage week',
     },
     {
       id: 'week.edit_sheet.manage_sessions.subline',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-204: session-management explanation.',
-      text: 'Add, move or remove training',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-244: the single management '
+        + 'surface covers everything planned on the week.',
+      text: 'Add, move or remove what’s planned',
     },
     /* ⚠ **THE SIX `week.edit_sheet.session_action.*` STRINGS ARE DEREGISTERED
      * — R-218 FINAL SLICE.** They were the nested *"Add a session / Move a
@@ -1147,9 +1126,16 @@ export function registerProjectionCopy(): void {
     {
       id: 'plan_change.remove_to_rest',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-25, R-198: when removal empties the '
-        + 'day, explain the result as “Make this a rest day”.',
-      text: 'Make this a rest day',
+      provenance: 'SIGNED — Sam, 2026-08-26: when the day has one session, '
+        + 'explain removal as “Remove it — day becomes rest”.',
+      text: 'Remove it — day becomes rest',
+    },
+    {
+      id: 'plan_change.remove_pick_session',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26: when the day has two sessions, '
+        + 'the Remove row says “Pick a session to remove”.',
+      text: 'Pick a session to remove',
     },
 
     // ── The injury review's two section headings, R-124. ──

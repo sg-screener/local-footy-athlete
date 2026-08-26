@@ -56,7 +56,7 @@ export type WeekBoardBoxKind =
   | 'session'
   /** The club night. A drop TARGET it never is; draggable it is (R-218). */
   | 'team_training'
-  /** A fixture. One box, no empty beside it, neither dragged nor dropped on. */
+  /** A fixture. One box, no empty beside it; it moves through the fixture door. */
   | 'game'
   /** Room. Carries the `+`, and accepts a drop. */
   | 'empty';
@@ -221,8 +221,11 @@ export function weekBoardDropRefusal(args: {
   to: WeekBoardDay;
 }): 'same_day' | 'not_movable' | 'onto_team_training' | 'onto_game' | 'day_full' | null {
   if (args.from.date === args.to.date) return 'same_day';
-  // A fixture never travels through this board, and neither does an empty box.
-  if (args.box.kind === 'game' || args.box.kind === 'empty') return 'not_movable';
+  // Empty boxes are room, not content. A fixture DOES travel here, through the
+  // canonical fixture door in the parent, and takes precedence over whatever
+  // box it lands on.
+  if (args.box.kind === 'empty') return 'not_movable';
+  if (args.box.kind === 'game') return null;
   // Sam: *"you can't move a strength/conditioning/mobility etc session to where
   // a team training box [is]"*.
   if (args.target.kind === 'team_training') return 'onto_team_training';
@@ -281,4 +284,3 @@ export function weekBoardMoveScope(args: {
     && !args.day.boxes.some((box) => box.kind === 'team_training' || box.kind === 'game');
   return isTheWholeOfTheDay && offered.has('whole_day') ? 'whole_day' : null;
 }
-

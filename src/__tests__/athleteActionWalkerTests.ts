@@ -412,7 +412,7 @@ const CATEGORIES = ['conditioning_light', 'conditioning_hard', 'strength_upper',
   'strength_lower', 'strength_full', 'gunshow', 'prehab', 'mobility',
   'recovery'] as const;
 const G1_ROUTES = [undefined, 'keep_the_day', 'take_the_gunshow',
-  'accessories_only', 'deloaded'] as const;
+  'take_the_primer', 'accessories_only', 'deloaded'] as const;
 
 function performAction(action: WalkerAction): WalkerStepResult {
   const base = { action, outcome: null as string | null, message: null as string | null, threw: null as Error | null };

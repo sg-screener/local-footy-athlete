@@ -11,6 +11,8 @@ export type G1LandingRouteId =
    * on an occupied day route (a) already keeps what is there (Sam, 2026-07-30).
    */
   | 'take_the_gunshow'
+  /** Place the authored pre-game Primer, regardless of athlete gender. */
+  | 'take_the_primer'
   /** Keep the derived Gunshow. The move is ABANDONED — no transaction at all. */
   | 'keep_the_day'
   /** Accessories only: pump and prehab, nothing heavy. */

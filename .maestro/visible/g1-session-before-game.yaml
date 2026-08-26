@@ -1,0 +1,75 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - G-1 easier add warns once and lands
+tags:
+  - e2e
+  - visible
+  - plan-change
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "program-view-week"
+- tapOn:
+    id: "edit-week-button"
+- extendedWaitUntil:
+    visible: "Manage week"
+    timeout: 10000
+- assertNotVisible: "Schedule changes"
+- tapOn:
+    id: "edit-week-session"
+- extendedWaitUntil:
+    visible:
+      id: "week-board"
+    timeout: 10000
+- tapOn:
+    id: "week-board-add-2026-07-17"
+- extendedWaitUntil:
+    visible:
+      id: "week-board-add-training"
+    timeout: 10000
+- tapOn:
+    id: "week-board-add-training"
+- extendedWaitUntil:
+    visible:
+      id: "plan-change-type-conditioning"
+    timeout: 10000
+- tapOn:
+    id: "plan-change-type-conditioning"
+- tapOn: "Hard session"
+- extendedWaitUntil:
+    visible: "Are you sure?"
+    timeout: 15000
+- assertVisible: "Train hard Friday and you'll feel it Saturday"
+- assertVisible:
+    id: "g1-route-deloaded"
+- assertVisible: "Same session but easier"
+- assertVisible:
+    id: "g1-route-take_the_gunshow"
+- assertVisible: "Gunshow"
+- assertVisible:
+    id: "g1-route-take_the_primer"
+- assertVisible: "Primer"
+- assertVisible:
+    id: "g1-route-accessories_only"
+- assertVisible: "Accessories only"
+- assertVisible:
+    id: "g1-route-back"
+- assertNotVisible: "Leave Friday free"
+- assertNotVisible: "Big session the day before your game."
+- assertNotVisible: ".*RPE 5–6.*"
+- assertNotVisible: ".*Pump and prehab.*"
+- takeScreenshot: artifacts/visible/g1-session-before-game
+- tapOn:
+    id: "g1-route-deloaded"
+- extendedWaitUntil:
+    visible:
+      id: "week-board"
+    timeout: 25000
+- assertNotVisible: "Are you sure?"
+- assertNotVisible: "Big game tomorrow"
+- assertNotVisible: "I couldn't safely make that change, so the plan is untouched."
+- assertVisible:
+    id: "week-board-box-2026-07-17-session"
+- takeScreenshot: artifacts/visible/g1-same-session-easier-landed

@@ -6283,3 +6283,67 @@ test-first state counted 64 repeated weekly exercise identities across 20 of 40
 worlds; after the shared-key correction it counts zero, pins the real DB Bench
 and Pull-Up control, checks four-week seat stability, accepted multi-seat
 history and legacy ingress. The guard is in the Bible chain.
+
+**R-242** · *"title 'are you sure?' subtitle train hard friday and you'll feel
+it saturday"*; *"Same session but easier / Gunshow / Primer / Accessories
+only"*; *"make this the same on males and females but leave out gunshow for
+females"*; *"no subtitles needed for each option"*; *"Fix adding stuff to the
+g-1, the deloaded sessions suck or can't be placed — a deloaded session which
+results in 1 exercise sometimes — and i just tried to do it now — went through
+two warnings then told 'big game tomorrow, can't do that'"* (Sam, 2026-08-26,
+G-1 warning and placement review) · **THE G-1 WARNING IS ONE SHORT, DIRECT
+CHOICE, AND “SAME SESSION” KEEPS THE SESSION.**
+It says `Are you sure?` and `Train hard Friday and you'll feel it Saturday`.
+The choices are obvious boxed rows with no explanatory sub-lines and apply
+immediately: Same session but easier, Gunshow, Primer and Accessories only.
+Female athletes see the same order without Gunshow. `Go back` owns leaving the
+day alone, so the menu does not repeat that as an option. Historical persisted
+keep-day decisions remain readable but are not visible choices. Same session
+but easier preserves every selected exercise and reduces the dose through the
+existing deload appliers. It is typed as low stress for G-1. Selecting it
+commits from the warning already shown: it does not reopen preview, show a
+second warning or finish with the game-tomorrow refusal. When it is added beside
+an already-low G-1 session, the saved combined day retains that low-stress fact;
+it may not hide a separate hard session or team night.
+**Search words:** G-1 warning, are you sure, same session easier, Gunshow,
+Primer, accessories only, female, boxed options, day before game, two warnings,
+one exercise, big game tomorrow, deload refused.
+· `WORKING` — `test:g1-landing-ask-flow` binds the exact warning, gendered
+route list, boxed presentation, direct commit, full exercise preservation,
+five-category Add matrix, one-row conditioning regression, low-stress saved
+day and persisted legacy route.
+
+**R-243** · *"remove move this session on day view - move should only be
+available on weekly view"*; *"if two sessions on the day = Pick a session to
+remove / If just one session - Remove it - day becomes rest"* (Sam, 2026-08-26,
+Day session-options review) · **DAY DOES NOT MOVE SESSIONS, AND REMOVE SAYS
+WHAT THE NEXT TAP WILL DO.**
+Move remains available from the Week board only. Day retains Add and Remove.
+When removal needs a component choice the row says `Pick a session to remove`;
+when the one programmed session would empty the day it says
+`Remove it — day becomes rest`. The existing typed removal predicate chooses
+between them.
+**Search words:** Day move session, Week-only move, remove session copy, pick a
+session, day becomes rest.
+· `WORKING` — `test:day-first-timeline` pins the Week-only Move mount and
+`test:move-scoping` pins both signed removal outcomes to the typed predicate.
+
+**R-244** · *"add move and remove games are the exact same thing as add move
+and remove training - so they should just be one button"*; *"dragging a game
+or adding a game onto a day with something already on it just replaces what
+was on that day"*; *"that pop up then doesn't need the lines seperating them
+or the mini headings as seperators"* (Sam, 2026-08-26, Week management review)
+· **ONE WEEK BOARD MANAGES TRAINING AND GAMES.**
+The Week popup contains only Away and `Manage week`; it has no mini section
+headings and no divider lines. The board can add, drag and remove training or
+games. Adding or dragging a game onto an occupied day replaces that day's
+content through the canonical fixture transaction, because a fixture owns its
+day; an empty target simply receives it. Training continues through the
+existing plan-change owner. The plus asks Training session or Game in both
+competitive phases, and the game row warns that it replaces anything already
+on the day.
+**Search words:** Manage week, games and sessions, drag game, add game, replace
+occupied day, fixture precedence, no headings, no separator lines.
+· `WORKING` — `test:week-board` guards both game operations and fixture
+precedence; `test:day-first-timeline` guards the two-row divider-free popup and
+the one add chooser.

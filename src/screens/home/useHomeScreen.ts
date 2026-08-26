@@ -938,8 +938,8 @@ export function useHomeScreen() {
           ].join(':'),
         },
       });
-      if (mutation.outcome === 'no_change') return true;
-      if (mutation.outcome === 'conflicted' || mutation.outcome === 'impossible') {
+      if (mutation.outcome !== 'accepted') {
+        if (mutation.outcome === 'no_change') return true;
         throw mutation.error;
       }
       if (mutation.traceId) {
@@ -1598,6 +1598,36 @@ export function useHomeScreen() {
     setMode({ type: 'moveGame', fromDate: weekDays[fromIdx].date, fromIdx });
   };
 
+  /** Week-board fixture move. The board already names both dates, so no picker
+   * mode is needed; the canonical fixture transaction still owns the rebuild,
+   * calendar facts, accepted program and Coach Note. */
+  const handleMoveGameOnBoard = async (args: {
+    fromDate: string;
+    toDate: string;
+  }): Promise<boolean> => {
+    if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return false;
+    const target = weekDays.find((day) => day.date === args.toDate);
+    if (!target || args.fromDate === args.toDate) return false;
+    return rebuildForGameChange(DAY_NUM_TO_NAME[target.dayOfWeek], {
+      targetDate: args.toDate,
+      clearOverlayDate: args.fromDate,
+    });
+  };
+
+  /** Week-board fixture add. A fixture is day-owning content, so the canonical
+   * rebuild replaces any training already projected on the target date. */
+  const handleAddGameOnDate = async (targetDate: string): Promise<boolean> => {
+    if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return false;
+    const target = weekDays.find((day) => day.date === targetDate);
+    if (!target) return false;
+    return rebuildForGameChange(DAY_NUM_TO_NAME[target.dayOfWeek], { targetDate });
+  };
+
+  const handleRemoveGameOnDate = async (date: string): Promise<boolean> => {
+    if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return false;
+    return rebuildForGameChange(null, { targetDate: date });
+  };
+
   const handleRemoveGameDay = async () => {
     if (!gameModalDate) return;
     const removedDate = gameModalDate;
@@ -1609,10 +1639,7 @@ export function useHomeScreen() {
     // Deterministic local rebuild via the NO-game branch (Saturday becomes
     // a core peak + conditioning day). Pre-season practice matches use the
     // same anchor logic.
-    if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return;
-    await rebuildForGameChange(null, {
-      targetDate: removedDate,
-    });
+    await handleRemoveGameOnDate(removedDate);
   };
 
   /**
@@ -1772,6 +1799,9 @@ export function useHomeScreen() {
     handleLogGame,
     handleMoveGameDay,
     handleMoveGameFromWeek,
+    handleMoveGameOnBoard,
+    handleAddGameOnDate,
+    handleRemoveGameOnDate,
     handleRemoveGameDay,
     handleSetByeWeek,
 

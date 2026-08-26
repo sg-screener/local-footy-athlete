@@ -157,7 +157,6 @@ export default function HomeScreenV2() {
     handleSelectDayOnly,
     handleClearSelection,
     handleCancelMove,
-    handleAddGameMode,
     handleViewWorkout,
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
@@ -199,9 +198,10 @@ export default function HomeScreenV2() {
     closeGameModal,
     handleOpenGameDayActions,
     handleMoveGameDay,
-    handleMoveGameFromWeek,
+    handleMoveGameOnBoard,
+    handleAddGameOnDate,
+    handleRemoveGameOnDate,
     handleRemoveGameDay,
-    handleSetByeWeek,
     rebuildModalVisible,
     isRebuilding,
     rebuildError,
@@ -215,28 +215,6 @@ export default function HomeScreenV2() {
   } = useHomeScreen();
 
   const isNormal = mode.type === 'normal';
-  /* ── ITEM 19: THE ADD-FIXTURE CONTROL NAMES THE PHASE AND NOTHING ELSE ──
-     Sam, 2026-08-12: *"a user should be able to have as many games as needed in
-     their week"*.
-
-     WHAT THIS REPLACED, AND WHY IT WAS THE WHOLE DEFECT. `practiceMatchDay` was
-     `weekDays.find(...)` — the FIRST fixture — and the label and the handler
-     both branched on it. So the moment a week had one game, the control stopped
-     offering to add and became a label pointing at that game. The in-season
-     card next door was gated `!weekHasGame` and simply disappeared for the same
-     reason. **Two cards, two spellings of "you may have one game".**
-
-     A `find` for the first of a set is the tell. The week may hold several
-     fixtures and the engine already carries every one of them; only these two
-     surfaces still believed in a single game.
-
-     EXISTING FIXTURES ARE REACHED BY TAPPING THEIR OWN DAY, which is a door
-     that already works and is per-fixture rather than first-fixture. This
-     control's job is adding, so it only ever adds. */
-  const weekHasFixture = weekDays.some(
-    (day) => day.indicator === 'game' || day.workout?.workoutType === 'Game',
-  );
-
   // ── Day-first vs week (Sam's day-first direction, 2026-08-01) ──
   //
   // TODAY LEADS, AND THE WEEK IS THE ZOOM-OUT — the direction's own words: "the
@@ -383,6 +361,7 @@ export default function HomeScreenV2() {
   // board box still HELD at its drop point (its move was not applied) glides
   // home. See WeekBoard.settleNonce.
   const [boardSettleNonce, setBoardSettleNonce] = useState(0);
+  const [boardAddDate, setBoardAddDate] = useState<string | null>(null);
   const [changeSheetEntry, setChangeSheetEntry] = useState<{
     date: string;
     initialAction?: PlanChangeInitialAction;
@@ -586,30 +565,49 @@ export default function HomeScreenV2() {
    * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
    * the Add and Remove rows sent; only the thing the athlete touched changed.
    * There is no second add flow and no second remove flow to drift. */
-  const handleBoardAdd = useCallback((date: string) => {
+  const handleBoardTrainingAdd = useCallback((date: string) => {
     setChangeSheetEntry({ date, initialAction: 'add', origin: 'week' });
   }, []);
+  const handleBoardAdd = useCallback((date: string) => {
+    if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
+      setBoardAddDate(date);
+      return;
+    }
+    handleBoardTrainingAdd(date);
+  }, [currentPhase, handleBoardTrainingAdd]);
   /* R-218a — the bin icon carries WHICH. Sam, on seeing the sheet ask anyway:
    * *"it should know which one I'm trying to delete because i hit the bin icon
    * on that day"*. The scope travels with the entry; `PlanChangeSheet` still
    * validates it against the producer's offer before honouring it. */
-  const handleBoardRemove = useCallback((date: string, scope: PlanChangeBinScopeId | null) => {
+  const handleBoardRemove = useCallback((date: string, box: WeekBoardBox) => {
+    if (box.kind === 'game') {
+      void handleRemoveGameOnDate(date);
+      return;
+    }
     setChangeSheetEntry({
       date,
       initialAction: 'remove',
       origin: 'week',
-      ...(scope ? { binScope: scope } : {}),
+      ...(box.binScope ? { binScope: box.binScope } : {}),
     });
-  }, []);
+  }, [handleRemoveGameOnDate]);
 
   /* ⚠ **A DRAGGED MOVE ENTERS THE ONE MOVE DOOR — R-218b.** The drag chose the
    * change (which session, which day); `PlanChangeSheet` still applies it
    * through the producer, so an illegal move refuses and a G-1 landing still
    * raises its ask. The board never commits anything itself. */
-  const handleBoardMove = useCallback((args: {
+  const handleBoardMove = useCallback(async (args: {
     fromDate: string; toDate: string; box: WeekBoardBox;
   }) => {
     setBoardRefusal(null);
+    if (args.box.kind === 'game') {
+      const moved = await handleMoveGameOnBoard({
+        fromDate: args.fromDate,
+        toDate: args.toDate,
+      });
+      if (!moved) setBoardSettleNonce((nonce) => nonce + 1);
+      return;
+    }
     /**
      * ⚠ **THE PRODUCER MUST HAVE OFFERED THIS DESTINATION. THIS CHECK WAS IN
      * THE PLAN AND WAS NOT BUILT, AND THAT GAP IS RECORDED HERE RATHER THAN
@@ -662,7 +660,7 @@ export default function HomeScreenV2() {
       origin: 'week',
       move: { toDate: args.toDate, scope },
     });
-  }, [weekBoardRows, weekDays]);
+  }, [handleMoveGameOnBoard, weekBoardRows, weekDays]);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
@@ -1643,10 +1641,27 @@ export default function HomeScreenV2() {
         }}
       />
 
+      <WeekBoardAddSheet
+        visible={boardAddDate !== null}
+        date={boardAddDate}
+        allowGame={currentPhase === 'In-season' || currentPhase === 'Pre-season'}
+        onClose={() => setBoardAddDate(null)}
+        onTraining={() => {
+          if (!boardAddDate) return;
+          const date = boardAddDate;
+          setBoardAddDate(null);
+          handleBoardTrainingAdd(date);
+        }}
+        onGame={() => {
+          if (!boardAddDate) return;
+          const date = boardAddDate;
+          setBoardAddDate(null);
+          void handleAddGameOnDate(date);
+        }}
+      />
+
       <WeekEditSheet
         visible={weekEditVisible}
-        phase={currentPhase}
-        hasFixture={weekHasFixture}
         awayMode={awayVisible}
         awayKitSpan={awayEquipmentSpan}
         onClose={() => {
@@ -1732,15 +1747,6 @@ export default function HomeScreenV2() {
           }
         }}
         onAwayKitBack={() => setAwayEquipmentSpan(null)}
-        onBye={handleSetByeWeek}
-        onMoveFixture={() => {
-          setWeekEditVisible(false);
-          handleMoveGameFromWeek();
-        }}
-        onAddFixture={() => {
-          setWeekEditVisible(false);
-          handleAddGameMode();
-        }}
         onAway={() => {
           // Checklist #5, second round: the away flow is a MODE of this
           // sheet's one modal — content swaps, no window ever closes.
@@ -3384,10 +3390,53 @@ interface GameDaySheetProps {
   onRemove: () => void;
 }
 
+interface WeekBoardAddSheetProps {
+  visible: boolean;
+  date: string | null;
+  allowGame: boolean;
+  onClose: () => void;
+  onTraining: () => void;
+  onGame: () => void;
+}
+
+function WeekBoardAddSheet({
+  visible, date, allowGame, onClose, onTraining, onGame,
+}: WeekBoardAddSheetProps) {
+  const dateLabel = date
+    ? new Date(`${date}T12:00:00`).toLocaleDateString('en-AU', {
+        weekday: 'long', day: 'numeric', month: 'short',
+      })
+    : '';
+  return (
+    <Sheet visible={visible} onClose={onClose} testID="week-board-add-sheet">
+      <SheetHeader
+        title={signedCopy('week.board.add.title')}
+        subtitle={dateLabel}
+      />
+      <SheetOption
+        label={signedCopy('week.board.add.training.label')}
+        sub={signedCopy('week.board.add.training.subline')}
+        icon={<MaterialCommunityIcons name="dumbbell" size={18} color="#5BD98A" />}
+        onPress={onTraining}
+        testID="week-board-add-training"
+        divider={false}
+      />
+      {allowGame ? (
+        <SheetOption
+          label={signedCopy('week.board.add.game.label')}
+          sub={signedCopy('week.board.add.game.subline')}
+          icon={<RowIcon kind="game" size={18} color={rowIconColor('game')} />}
+          onPress={onGame}
+          testID="week-board-add-game"
+          divider={false}
+        />
+      ) : null}
+    </Sheet>
+  );
+}
+
 interface WeekEditSheetProps {
   visible: boolean;
-  phase: SeasonPhase;
-  hasFixture: boolean;
   /** Checklist #5, second round: the away flow is a MODE of this one modal —
    *  iOS cannot present sibling modals without a bare-week flash between
    *  their windows, so the chain never leaves this sheet. */
@@ -3397,10 +3446,6 @@ interface WeekEditSheetProps {
   onAwayKitApply: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   onAwayKitBack: () => void;
   onClose: () => void;
-  onBye: () => Promise<boolean>;
-  /** Sam, 2026-08-26: bye → move the game → add a game, in that order. */
-  onMoveFixture: () => void;
-  onAddFixture: () => void;
   onAway: () => void;
   /** R-218 — Manage sessions goes straight to the board. */
   onOpenBoard: () => void;
@@ -3408,36 +3453,17 @@ interface WeekEditSheetProps {
 
 function WeekEditSheet({
   visible,
-  phase,
-  hasFixture,
   awayMode,
   awayKitSpan,
   onAwayDone,
   onAwayKitApply,
   onAwayKitBack,
   onClose,
-  onBye,
-  onMoveFixture,
-  onAddFixture,
   onAway,
   onOpenBoard,
 }: WeekEditSheetProps) {
   /* R-218 final slice — `step` is gone with the nested Add / Move / Remove
    * screen it switched to. A state with one possible value is not a state. */
-  const [savingBye, setSavingBye] = React.useState(false);
-
-  React.useEffect(() => {
-    if (visible) setSavingBye(false);
-  }, [visible]);
-
-  const applyBye = async () => {
-    if (!hasFixture || savingBye) return;
-    setSavingBye(true);
-    const applied = await onBye();
-    setSavingBye(false);
-    if (applied) onClose();
-  };
-
   if (awayMode) {
     return (
       <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet" cappedBody>
@@ -3462,62 +3488,22 @@ function WeekEditSheet({
 
       {(
         <View>
-          <Text style={styles.weekEditSectionLabel}>
-            {signedCopy('week.edit_sheet.schedule_heading')}
-          </Text>
-          {phase === 'In-season' ? (
-            <SheetOption
-              label={signedCopy('week.edit_sheet.bye.label')}
-              sub={hasFixture
-                ? savingBye ? 'Updating this week…' : signedCopy('week.edit_sheet.bye.subline')
-                : 'This week is already a bye'}
-              icon={<MaterialCommunityIcons name="calendar-remove-outline" size={18} color={hasFixture ? '#67D7FF' : '#666666'} />}
-              disabled={!hasFixture || savingBye}
-              onPress={() => { void applyBye(); }}
-              testID="edit-week-bye"
-            />
-          ) : null}
-          {(phase === 'In-season' || phase === 'Pre-season') ? (
-            <SheetOption
-              /* SIGNED 2026-08-26 ("yes thats fine") — rows in projectionCopy. */
-              label={signedCopy('week.edit_sheet.move_game.label')}
-              sub={hasFixture
-                ? signedCopy('week.edit_sheet.move_game.subline')
-                : 'No game this week to move'}
-              icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14" /><Path d="M12 5l7 7-7 7" /></Svg>}
-              disabled={!hasFixture}
-              onPress={onMoveFixture}
-              testID="edit-week-move-fixture"
-            />
-          ) : null}
-          {(phase === 'In-season' || phase === 'Pre-season') ? (
-            <SheetOption
-              label={signedCopy('week.edit_sheet.game.label')}
-              sub={signedCopy('week.edit_sheet.game.subline')}
-              icon={<RowIcon kind="game" size={18} color={rowIconColor('game')} />}
-              onPress={onAddFixture}
-              testID="edit-week-add-fixture"
-            />
-          ) : null}
           <SheetOption
             label={signedCopy('week.edit_sheet.away.label')}
             sub={signedCopy('week.edit_sheet.away.subline')}
             icon={<MaterialCommunityIcons name="airplane" size={18} color="#B9A7FF" />}
             onPress={onAway}
             testID="edit-week-away"
+            divider={false}
           />
-          <View style={styles.weekEditTrainingSection}>
-            <Text style={styles.weekEditSectionLabel}>
-              {signedCopy('week.edit_sheet.training_heading')}
-            </Text>
-            <SheetOption
-              label={signedCopy('week.edit_sheet.manage_sessions.label')}
-              sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
-              icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
-              onPress={onOpenBoard}
-              testID="edit-week-session"
-            />
-          </View>
+          <SheetOption
+            label={signedCopy('week.edit_sheet.manage_sessions.label')}
+            sub={signedCopy('week.edit_sheet.manage_sessions.subline')}
+            icon={<MaterialCommunityIcons name="pencil-outline" size={18} color="#5BD98A" />}
+            onPress={onOpenBoard}
+            testID="edit-week-session"
+            divider={false}
+          />
         </View>
       )}
       {/* ⚠ **THE NESTED Add / Move / Remove STEP IS DELETED — R-218 FINAL
@@ -3582,11 +3568,12 @@ interface SheetOptionProps {
   accent?: boolean;
   danger?: boolean;
   disabled?: boolean;
+  divider?: boolean;
   onPress: () => void;
   testID?: string;
 }
 function SheetOption({
-  label, icon, sub, accent, danger, disabled = false, onPress, testID,
+  label, icon, sub, accent, danger, disabled = false, divider = true, onPress, testID,
 }: SheetOptionProps) {
   return (
     <Pressable
@@ -3605,6 +3592,7 @@ function SheetOption({
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.sheetOption,
+        !divider && styles.sheetOptionWithoutDivider,
         disabled && { opacity: 0.45 },
         pressed && !disabled && { opacity: 0.7 },
       ]}
@@ -5151,10 +5139,6 @@ const styles = StyleSheet.create({
   },
   sheetCurrentText: { color: '#B0B0B0', fontSize: 13, fontWeight: '500' },
 
-  weekEditSectionLabel: {
-    color: '#B0B0B0', fontSize: 13, fontWeight: '700', lineHeight: 18,
-    paddingTop: spacing.xs, paddingBottom: 4,
-  },
   /* R-218b — the board's own refusal line, under its banner. */
   boardRefusal: {
     color: '#FFB4B4',
@@ -5163,15 +5147,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
-  weekEditTrainingSection: {
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#353535',
-    marginTop: spacing.md, paddingTop: spacing.sm,
-  },
-
   sheetOption: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#2A2A2A',
   },
+  sheetOptionWithoutDivider: { borderBottomWidth: 0 },
   sheetOptionIcon: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#222222',
