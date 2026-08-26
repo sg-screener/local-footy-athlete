@@ -1320,7 +1320,22 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       : null;
     const isCoverageDay = plannedCoverageGaps !== null
       && coverageGapsMakeAFullBodySession(plannedCoverageGaps);
-    const isFullBodyDay = isR093Shape || isCoverageDay;
+    /* ── R-234: A FULL-BODY DAY WITH NOTHING MISSING BALANCES ─────────────
+     * Sam, 2026-08-26: *"lowers + uppers + full body (full body - should
+     * match whats missing in rest of week or balance out program as well as
+     * possible)"*. The case R-087 left open: when the week's genuine gaps do
+     * NOT make a full-body session (lower + upper already cover everything),
+     * this day used to fall through `composedDayKind(...) ?? 'lower'` — a
+     * day NAMED full_body carrying Monday's exact mains and zero upper rows
+     * (measured on the profiles audit, both genders, pre- and off-season
+     * 3-day). It now takes a real full-body shape: the same A/B ladders,
+     * alternating, so the day balances the week instead of doubling one
+     * half. Coverage still outranks balance — a week with body-spanning
+     * gaps keeps R-087's coverage day untouched. */
+    const isBalanceShape = !fullBody
+      && planned.strengthIntent.archetype === 'full_body'
+      && !isCoverageDay;
+    const isFullBodyDay = isR093Shape || isCoverageDay || isBalanceShape;
     const kind: ComposedDayShape = isR093Shape
       // R-231: the precomputed pairing above — same shapes, spread so the
       // sorer one sits off the club night. Falls back to the alternation for
@@ -1329,8 +1344,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         ?? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b'))
       : isCoverageDay
         ? 'full_body_coverage'
-        : composedDayKind(planned.strengthIntent) ?? 'lower';
-    if (isR093Shape) fullBodyIndex += 1;
+        : isBalanceShape
+          ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
+          : composedDayKind(planned.strengthIntent) ?? 'lower';
+    if (isR093Shape || isBalanceShape) fullBodyIndex += 1;
     const required: SessionSlot[] = [];
     // ── WHAT THE DAY DECLARES IT OWES, AFTER THE KIT HAS HAD ITS SAY ────────
     //
@@ -1581,10 +1598,21 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           && entry.blockStartISO < inputs.blockStartISO)
         .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
       /* This block's OWN recorded choice, when it has been authored before —
-       * a relaunch restores it rather than re-deciding against today's world. */
+       * a relaunch restores it rather than re-deciding against today's world.
+       *
+       * ⚠ THE IN-RUN RECORD COUNTS TOO (R-234's balance day found the hole).
+       * The record is keyed by SLOT, and until the balance day no two days in
+       * a split week shared one. Now the balance day repeats the upper day's
+       * planes, and the two runs saw different worlds: at install the later
+       * day could not see the earlier day's record (it was still in
+       * `selectionsThisBlock`, persisted only at the end) and picked fresh
+       * from its own candidate head; at boot it COULD and replayed the
+       * record. Measured: bin Monday, relaunch — the full-body day's pull
+       * flips Pull-Ups → Lat Pulldown. One slot, one answer per block, on
+       * both sides of a boot. */
       const recordedForThisBlock = inputs.selectionHistory.find(
         (entry) => entry.slot === slot && entry.blockStartISO === inputs.blockStartISO,
-      ) ?? null;
+      ) ?? selectionsThisBlock.find((entry) => entry.slot === slot) ?? null;
       /* The base candidate list narrows to the day's variety preferences only
        * for slots outside the main/secondary budget, exactly as before. */
       const distinctSplitAccessoryCandidates = SPLIT_UPPER_ACCESSORY_SLOTS.has(slot)
