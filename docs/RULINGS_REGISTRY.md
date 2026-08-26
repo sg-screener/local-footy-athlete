@@ -6153,16 +6153,20 @@ preferred gym day illegal, the session RELOCATES to the best legal day
 (combining onto a club night is a legal relocation — Sam's own seed world
 trains combined club nights); only what genuinely cannot be placed is
 reduced, and a reduction is DISCLOSED.
-**Search words:** training days, gym days, four sessions, club nights
-count, footy training, required strength sessions, reduction disclosure.
-· `WORKING` (slice 1) — the silent shortfall is DISCLOSED from the athlete's
-own gym-day answer (weeklyScheduler accessIntended record; the reduction
-ladder also consults the authored smaller structures instead of slicing).
-SLICE 2 OPEN, its own unit: sizing the base layout from the answer sends
-replan worlds through A/B-half weeks that §18 refuses — the scheduler's
-intent, the composer's shapes and §18's demand need one alignment before
-delivered counts can rise. Measured both ways on the Wednesday-game replan
-world, 2026-08-26.
+**REFINED THE SAME DAY, IN SAM'S OWN WORDS:** *"just because it says i CAN
+train 4 days doesn't mean it HAS to = it just gives the ceiling and you fit
+the fucking program in to whats left"*. The gym-day answer is a CEILING,
+never a quota. The scheduler's existing behaviour — fit the program into
+the legal days, fewer sessions around games — is the ruled behaviour. The
+former "slice 2" (forcing delivered counts up to the answer) is
+**CANCELLED — do not build it**; the measured three-authority refusals it
+produced are moot. What stands from this ruling: the shortfall is
+DISCLOSED, never silent, from the athlete's own answer.
+**Search words:** training days, gym days, four sessions, ceiling, quota,
+club nights count, footy training, required strength sessions, reduction
+disclosure.
+· `WORKING` — weeklyScheduler accessIntended disclosure + the reduction
+ladder consulting the authored smaller structures. Nothing further owed.
 
 **R-236** · *"men should be given optional gunshow instead of optional primer"* (Sam, 2026-08-26, profiles-audit finding F-B) · **THE G-1 OPTIONAL SESSION IS GENDERED: WOMEN GET THE PRIMER (R-129), MEN GET THE GUNSHOW.**
 The female path already places the R-129 Primer on G-1; the male optional
