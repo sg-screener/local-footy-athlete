@@ -1565,14 +1565,12 @@ export function buildWorkoutsFromCoach(
     seasonPhase: onboardingData?.seasonPhase,
     explicitSubphase: rotationContext?.offseasonSubphase,
   });
-  // Scheduled and fact doors, ONE transformation. The scheduled door is
-  // phase-gated (D16: no scheduled in-season deloads); the readiness and
-  // illness doors are not, and in-season they are the only way a week deloads
-  // at all. Routing them through
-  // the phase-gated resolver would silently return null and drop the deload.
-  const deloadPolicy = rotationContext?.deloadDoor
+  // Scheduled and readiness doors share ONE transformation. Scheduled is
+  // phase-gated (D16); readiness is not. Illness is compiler-authored before
+  // this retained adapter is called.
+  const deloadPolicy = rotationContext?.deloadDoor === 'readiness'
     ? resolveDoorDeloadPolicy({
-        door: rotationContext.deloadDoor,
+        door: 'readiness',
         seasonPhase: onboardingData?.seasonPhase,
       })
     : resolveDeloadWeekPolicy(

@@ -88,6 +88,7 @@ import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
 import {
   compileCanonicalWeek,
+  type CanonicalWeeklyIllnessFact,
   type CanonicalWeeklyReadinessFact,
 } from '../../rules/canonicalWeeklyCompiler';
 import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
@@ -98,7 +99,7 @@ import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySch
 // retained adapter uses, so a composed week answers to one table and not a
 // second copy of it.
 import {
-  resolveDoorDeloadPolicy,
+  resolveDeloadWeekPolicy,
   type DeloadWeekPolicy,
 } from '../../rules/deloadWeekRules';
 import { generatedWeekContractFrom } from '../../rules/generatedWeekContract';
@@ -616,6 +617,7 @@ export function buildInitialGeneratedCoachingPlan(args: {
     scheduler: schedInputs,
     coaching: inputs,
     readiness: canonicalReadinessFactFrom(inputs.generationConstraints),
+    illness: canonicalIllnessFactFrom(inputs.generationConstraints),
     materialisation: {
       weekStartISO,
       miniCycleNumber: firstState?.miniCycleNumber,
@@ -626,10 +628,6 @@ export function buildInitialGeneratedCoachingPlan(args: {
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
     },
     connector: {
-      nonReadinessDeloaded: anotherDeloadFamilyIsActive(inputs.generationConstraints),
-      nonReadinessWeekModeOverride: anotherDeloadFamilyIsActive(inputs.generationConstraints)
-        ? inputs.generationConstraints?.weekMode
-        : undefined,
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? undefined,
       preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? undefined,
       section18Identity: {
@@ -809,10 +807,19 @@ function canonicalReadinessFactFrom(
   };
 }
 
-function anotherDeloadFamilyIsActive(
+/** Translation only: the illness door already made both policy decisions. */
+function canonicalIllnessFactFrom(
   context: GenerationConstraintContext | undefined,
-): boolean {
-  return context?.weekDeloaded === true && context.readiness?.deloaded !== true;
+): CanonicalWeeklyIllnessFact | null {
+  const illness = context?.illness;
+  if (!illness) return null;
+  return {
+    kind: 'illness',
+    id: illness.id,
+    activeFromISO: illness.activeFromISO,
+    deloaded: illness.deloaded,
+    sessionsOptional: illness.sessionsOptional,
+  };
 }
 
 /**
@@ -1040,13 +1047,6 @@ export function buildGeneratedMicrocycles(args: {
           temporarySourceFacts: args.temporarySourceFacts,
         })
       : args.generationConstraints;
-    // THE ILLNESS LAW's first answer, applied. The illness door has no phase gate
-    // (D16 names readiness/bye recovery as the in-season way to back off), so an
-    // active moderate-or-severe illness deloads this week whatever the block plan
-    // scheduled. Deriving `weekDeloaded` and not consuming it here would look
-    // identical to never deriving it — the week would be normal-dose and merely
-    // optional, which Sam ruled out.
-    const doorDeload = generationConstraints?.weekDeloaded === true;
     // The door changes the DOSE, not the week's identity. `weekKind` is
     // structure — the block plan's own statement about what this week is — and
     // Sam's law holds structure constant while the work shrinks. Overwriting it
@@ -1132,6 +1132,7 @@ export function buildGeneratedMicrocycles(args: {
     let compiledSchedule: WeeklySchedule | null = null;
     let compiledDosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>> = {};
     let compiledPlanDoseResolved = false;
+    let compiledDoseDoor: 'readiness' | 'illness' | null = null;
     if (cutoverInputs) {
       const schedulerInputs = weeklySchedulerInputsFrom({
         profile,
@@ -1149,6 +1150,7 @@ export function buildGeneratedMicrocycles(args: {
         scheduler: schedulerInputs,
         coaching: cutoverInputs,
         readiness: canonicalReadinessFactFrom(generationConstraints),
+        illness: canonicalIllnessFactFrom(generationConstraints),
         materialisation: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
@@ -1160,10 +1162,6 @@ export function buildGeneratedMicrocycles(args: {
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         },
         connector: {
-          nonReadinessDeloaded: anotherDeloadFamilyIsActive(generationConstraints),
-          nonReadinessWeekModeOverride: anotherDeloadFamilyIsActive(generationConstraints)
-            ? generationConstraints?.weekMode
-            : undefined,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
           section18Identity: {
@@ -1218,8 +1216,12 @@ export function buildGeneratedMicrocycles(args: {
       allocatedWeekPlan = compiled.plan;
       compiledDosePolicyByDay = compiled.dosePolicyByDay;
       compiledPlanDoseResolved = compiled.planDoseResolved;
+      compiledDoseDoor = compiled.doseDoor;
     } else {
       if (!args.plan) throw new Error('canonical week compilation requires coaching inputs or an explicit plan');
+      if (generationConstraints?.illness) {
+        throw new Error('illness facts require canonical weekly compilation');
+      }
       allocatedWeekPlan = args.plan;
     }
     const weekPlan: CoachingPlan = allocatedWeekPlan;
@@ -1396,7 +1398,6 @@ export function buildGeneratedMicrocycles(args: {
             weekKind: effectiveWeekKind,
             intensityMultiplier: blockState.intensityMultiplier,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
-            deloadDoor: !compiledPlanDoseResolved && doorDeload ? 'illness' : undefined,
             composedStrengthDays,
             ...(compiledPlanDoseResolved
               ? {
@@ -1416,19 +1417,17 @@ export function buildGeneratedMicrocycles(args: {
       // the adapter's day, which keeps everything non-strength it built.
       // ── THE GOVERNED DOSE INSTRUCTION, RESOLVED ONCE BY THE EXISTING OWNER ──
       //
-      // Same two resolvers `buildWorkoutsFromCoach` uses, in the same order and
-      // for the same reason: the readiness and illness doors are not
-      // phase-gated, so routing them through the scheduled resolver would
-      // silently return null and drop the deload. Nothing here is a second
-      // table — this READS the owner and hands its answer to the composer,
-      // which had been the only week-builder the instruction never reached.
-      const legacyOtherDoorPolicy = !compiledPlanDoseResolved && doorDeload
-        ? resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: profile.seasonPhase })
+      // Fact-door dose is already compiler-authored. Only a scheduled deload
+      // still reaches this retained adapter path; it stays phase-gated here
+      // until its own compiler slice lands.
+      const legacyScheduledPolicy = !compiledPlanDoseResolved
+        ? resolveDeloadWeekPolicy(profile.seasonPhase, effectiveWeekKind)
         : null;
       const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
         if (compiledPlanDoseResolved) return compiledDosePolicyByDay[dayOfWeek] ?? null;
-        // Illness remains explicit legacy debt until that fact family moves.
-        return legacyOtherDoorPolicy;
+        // Scheduled deload remains the next non-fact family; it keeps its
+        // established adapter path until its own acceptance slice moves.
+        return legacyScheduledPolicy;
       };
       const authored = assembleAuthoredWeek({
         composerWorkouts: materialiseComposedWeek(composedWeek, {
@@ -1767,10 +1766,15 @@ export function buildGeneratedMicrocycles(args: {
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: effectiveWeekKind,
-      deloadDoor: generationConstraints?.readiness?.deloaded
-        ? 'readiness'
-        : doorDeload ? 'illness' : undefined,
-      readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
+      deloadDoor: compiledDoseDoor ?? undefined,
+      readinessDeloadWindow: generationConstraints?.readiness?.deloaded &&
+        generationConstraints.readiness.windowStartISO &&
+        generationConstraints.readiness.windowEndISO
+        ? {
+            startISO: generationConstraints.readiness.windowStartISO,
+            endISO: generationConstraints.readiness.windowEndISO,
+          }
+        : undefined,
       exposureContract,
       exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,

@@ -7,8 +7,8 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: fixtures, injuries, readiness, edits, later compiler families,
- * pixels, simulator and physical iPhone.
+ * NOT COVERED: fixtures, injuries, travel, edits, scheduled deloads, later
+ * compiler families, pixels, simulator and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -38,6 +38,7 @@ import {
 } from './support/athleteJourney';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
+import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -128,6 +129,21 @@ function athlete(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
+function illnessAthlete(): OnboardingData {
+  return {
+    ...athlete(),
+    firstName: 'Illness compiler',
+    seasonPhase: 'In-season',
+    seasonFinishedOn: undefined,
+    trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+  };
+}
+
 function rowSignature(workout: Workout): string[] {
   return (workout.exercises ?? []).map((row) => [
     row.exercise?.name ?? '',
@@ -181,6 +197,10 @@ async function main(): Promise<void> {
 
   console.log('\n[readiness ownership] the fact enters the compiler and no later layer re-decides it');
   const schedulerInputsSource = readFileSync(join(ROOT, 'rules/weeklySchedulerInputs.ts'), 'utf8');
+  const constraintsSource = readFileSync(join(ROOT, 'utils/generationConstraints.ts'), 'utf8');
+  const illnessModeSource = readFileSync(join(ROOT, 'rules/illnessRecoveryWeekMode.ts'), 'utf8');
+  const derivedContractSource = readFileSync(join(ROOT, 'rules/derivedWeekContract.ts'), 'utf8');
+  const sessionResolverSource = readFileSync(join(ROOT, 'utils/sessionResolver.ts'), 'utf8');
   ok('the scheduler-input translator no longer interprets readiness facts',
     !schedulerInputsSource.includes('generationConstraints?.readiness'));
   ok('the compiler accepts the typed readiness directive',
@@ -221,6 +241,50 @@ async function main(): Promise<void> {
       'canonicalDosePolicyByDay: compiledDosePolicyByDay',
       'canonicalDosePolicyByDay_REMOVED: compiledDosePolicyByDay',
     ).includes('canonicalDosePolicyByDay: compiledDosePolicyByDay'));
+
+  console.log('\n[illness ownership] one typed directive enters the compiler; no read-side rival rewrites it');
+  ok('generation context carries illness as its own typed directive',
+    constraintsSource.includes('illness?: GenerationIllnessConstraint'));
+  ok('the compiler accepts the typed illness directive',
+    compilerSource.includes('readonly illness?: CanonicalWeeklyIllnessFact | null'));
+  ok('product generation hands illness to the compiler as a typed fact',
+    generatorSource.includes('illness: canonicalIllnessFactFrom(generationConstraints)'));
+  ok('combined weekDeloaded and weekMode compatibility outputs are retired',
+    !constraintsSource.includes('weekDeloaded?:') && !constraintsSource.includes("weekMode?: 'optional_week'"));
+  ok('the compiler connector no longer carries a non-readiness compatibility family',
+    !compilerSource.includes('nonReadinessDeloaded') &&
+      !compilerSource.includes('nonReadinessWeekModeOverride'));
+  ok('product generation no longer classifies another deload family',
+    !generatorSource.includes('anotherDeloadFamilyIsActive'));
+  ok('product generation has no private illness dose policy',
+    !generatorSource.includes('legacyOtherDoorPolicy') &&
+      !generatorSource.includes("resolveDoorDeloadPolicy({ door: 'illness'"));
+  ok('the derived contract no longer re-reads illness facts to rewrite compiler identity',
+    !derivedContractSource.includes('deriveIllnessRecoveryWeekMode'));
+  ok('the retired illness mode selector has zero production callers',
+    productionCallers('deriveIllnessRecoveryWeekMode').length === 0,
+    JSON.stringify(productionCallers('deriveIllnessRecoveryWeekMode')));
+  const illnessViewRewrite = /fact\.factKind === 'illness'[\s\S]{0,260}sessionsOptional/.test(
+    illnessModeSource,
+  );
+  ok('the session resolver has no illness-specific optional rewrite after compilation',
+    !illnessViewRewrite && !sessionResolverSource.includes("factKind === 'illness'"));
+  const illnessRivalAuthors = [
+    constraintsSource.includes('weekDeloaded?:') ? 'combined context authors illness dose' : null,
+    constraintsSource.includes("weekMode?: 'optional_week'") ? 'combined context authors illness mode' : null,
+    generatorSource.includes('legacyOtherDoorPolicy') ? 'generator authors illness dose' : null,
+    derivedContractSource.includes('deriveIllnessRecoveryWeekMode')
+      ? 'derived contract rewrites illness mode' : null,
+    illnessViewRewrite ? 'session resolver rewrites illness optionality' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-illness rival-author count is literally zero',
+    illnessRivalAuthors.length === 0, JSON.stringify(illnessRivalAuthors));
+  ok('[MUTATION] dropping the typed illness compiler handover is detected',
+    generatorSource.includes('illness: canonicalIllnessFactFrom(generationConstraints)') &&
+    !generatorSource.replace(
+      'illness: canonicalIllnessFactFrom(generationConstraints)',
+      'illness_REMOVED: canonicalIllnessFactFrom(generationConstraints)',
+    ).includes('illness: canonicalIllnessFactFrom(generationConstraints)'));
 
   console.log('\n[refusal] no partial compiler output escapes');
   const refusal = compileCanonicalWeek({
@@ -332,6 +396,103 @@ async function main(): Promise<void> {
   const recoveredVisible = quiet(() => resolvedDays(install.blockOneStart, declarationDay));
   ok('clearing readiness restores the accepted visible prescriptions exactly',
     visibleSignature(recoveredVisible) === baselineSignature);
+
+  console.log('\n[illness slice] mild -> moderate -> severe -> recovered');
+  const illnessInstall = await coldStartThroughOnboarding({
+    profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+  });
+  ok('the illness witness reaches a required in-season week through onboarding',
+    illnessInstall.onboardingRefusal === null, illnessInstall.onboardingRefusal);
+  const illnessBaseline = quiet(() =>
+    resolvedDays(illnessInstall.blockOneStart, INSTALL_DAY));
+  const illnessBaselineSignature = visibleSignature(illnessBaseline);
+  const clearFact = async (modifierId: string, date: string) => quietAsync(() =>
+    executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { modifierId, date },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: false,
+    }, { todayISO: date }));
+  const applyIllness = async (kind: 'illness_mild' | 'illness_moderate' | 'illness_severe') =>
+    quietAsync(() => executeProgramControlActionDurably(
+      readinessActionForKind(kind, {
+        anchorDateISO: illnessInstall.blockOneStart,
+        todayISO: declarationDay,
+      }),
+      { todayISO: declarationDay },
+    ));
+  const landingMicrocycle = () => useProgramStore.getState().currentProgram?.microcycles.find(
+    (candidate) => candidate.startDate.slice(0, 10) === illnessInstall.blockOneStart,
+  );
+  const landingOverlay = () =>
+    useProgramStore.getState().weekScopedOverlays[illnessInstall.blockOneStart];
+
+  const mild = await applyIllness('illness_mild');
+  ok('mild illness commits through the production door', mild.ok === true, mild.message);
+  ok('mild illness is record-only and leaves the visible week exact',
+    visibleSignature(quiet(() =>
+      resolvedDays(illnessInstall.blockOneStart, declarationDay))) ===
+      illnessBaselineSignature);
+  const mildId = mild.createdModifierIds?.[0] ?? null;
+  if (mildId) await clearFact(mildId, declarationDay);
+
+  const moderate = await applyIllness('illness_moderate');
+  ok('moderate illness commits through the production door', moderate.ok === true,
+    moderate.message);
+  const moderateVisible = quiet(() =>
+    resolvedDays(illnessInstall.blockOneStart, declarationDay));
+  ok('moderate illness reduces real prescribed dose',
+    visibleSignature(moderateVisible) !== illnessBaselineSignature &&
+      moderateVisible.reduce((sum, day) =>
+        sum + day.rows.reduce((sets, row) => sets + Number(row.sets ?? 0), 0), 0) <
+      illnessBaseline.reduce((sum, day) =>
+        sum + day.rows.reduce((sets, row) => sets + Number(row.sets ?? 0), 0), 0));
+  ok('moderate illness keeps the normal week mode and its required structure',
+    landingOverlay()?.exposureContractV2?.identity.mode !== 'optional_week');
+  const moderateId = moderate.createdModifierIds?.[0] ?? null;
+  if (moderateId) await clearFact(moderateId, declarationDay);
+  ok('clearing moderate illness restores the visible week exactly',
+    visibleSignature(quiet(() =>
+      resolvedDays(illnessInstall.blockOneStart, declarationDay))) ===
+      illnessBaselineSignature);
+
+  const severe = await applyIllness('illness_severe');
+  ok('severe illness commits through the production door', severe.ok === true, severe.message);
+  const severeContext = buildGenerationConstraintContext({
+    activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints,
+    temporarySourceFacts:
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts,
+    todayISO: illnessInstall.blockOneStart,
+  });
+  ok('the accepted severe fact translates once into both compiler flags',
+    severeContext?.illness?.deloaded === true &&
+      severeContext.illness.sessionsOptional === true,
+    JSON.stringify(severeContext?.illness));
+  const severeWeek = landingMicrocycle();
+  const severeOverlay = landingOverlay();
+  const surviving = Object.values(severeOverlay?.workoutsByDate ?? {})
+    .filter((workout): workout is Workout => !!workout)
+    .filter((workout) =>
+    workout.workoutType !== 'Rest' && workout.workoutType !== 'Game');
+  ok('severe illness keeps offered sessions but makes every survivor optional',
+    surviving.length > 0 && surviving.every((workout) =>
+      workout.sessionTier === 'optional' || workout.sessionTier === 'recovery'));
+  ok('severe illness authors the optional-week contract through the compiler',
+    severeOverlay?.exposureContractV2?.identity.mode === 'optional_week',
+    JSON.stringify({
+      base: severeWeek?.exposureContractV2?.identity.mode,
+      overlay: severeOverlay?.exposureContractV2?.identity.mode,
+      tiers: surviving.map((workout) => [workout.name, workout.sessionTier]),
+    }));
+  const severeId = severe.createdModifierIds?.[0] ?? null;
+  if (severeId) await clearFact(severeId, declarationDay);
+  ok('clearing severe illness restores the visible week exactly',
+    visibleSignature(quiet(() =>
+      resolvedDays(illnessInstall.blockOneStart, declarationDay))) ===
+      illnessBaselineSignature);
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

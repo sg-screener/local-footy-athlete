@@ -3,12 +3,10 @@
  * (`docs/THREE_LEG_CONFORMANCE_RULING_2026-08-06.md`), landed under the
  * four-leg convergence ruling (`docs/FOUR_LEG_CONVERGENCE_RULING_2026-08-07.md`).
  *
- * THE CONVERGENCE RULE, applied: a week's contract is not stored state to be
- * read back — it is DERIVED from the athlete's decisions and the week's facts,
- * at read, every time. The stored contract survives only as the identity to
- * derive FROM; when the facts have moved under it (a fixture marked, a
- * fixture released, a session binned) the derived answer wins, because the
- * facts are what the athlete can see.
+ * THE CONVERGENCE RULE, applied: fixture and athlete-removal state is derived
+ * at read around the accepted compiler-authored family identity. A fact family
+ * that has moved into the compiler is consumed from that accepted declaration;
+ * it is not re-authored here to make stale output look correct.
  *
  * `deriveWeekContract` is the ONE owner of that question, and it is installed
  * at exactly the three contract-SELECTION lines the app has: the accepted
@@ -29,7 +27,6 @@ import { targetWeekFixtures } from './fixtureConditionedAvailability';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from './awaySpans';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import { applyAthleteRemovalTypedReduction } from './userRemovalConstraints';
-import { deriveIllnessRecoveryWeekMode } from './illnessRecoveryWeekMode';
 import type { TemporarySourceFact } from './temporarySourceFact';
 
 /* LEG (v)'s WRITER-HALF SCAFFOLD IS DEMOLISHED, UN-LANDED (R-229 S5,
@@ -112,23 +109,11 @@ function fixtureIdentityForWeek(args: {
   const fixtures = awaySpans.length === 0
     ? allFixtures
     : allFixtures.filter((candidate) => !dateIsInsideAwaySpan(candidate.date, awaySpans));
-  /* ── `optional_week` IS NEVER AN INHERITED FAMILY — R-229 S4c ────────────
-   *
-   * It is the illness wrapper's OWN answer (`deriveIllnessRecoveryWeekMode`
-   * is its sole author), so a stored `optional_week` reaching this branch is
-   * a stamped DERIVED value surviving in the declaration (the S4c-2 writer
-   * debt), not a phase family to carry. MEASURED 2026-08-26 on an acted
-   * world: severe illness → relaunch → CLEAR left both stored homes saying
-   * `optional_week core.min=0`, and this function faithfully carried it, so
-   * the healthy in-season game week could never judge as itself again. The
-   * family is recovered from the owned phase; a non-in-season stored
-   * optional_week keeps today's behaviour (its subphase mode is not
-   * reconstructible here) and stays named S4c-2 debt.
-   */
-  const storedFamilyMode: Section18WeekMode =
-    args.storedMode === 'optional_week' && ownedPhase.phase === 'In-season'
-      ? 'in_season_game_week'
-      : args.storedMode;
+  // The accepted declaration is compiler output. Illness used to be re-read
+  // below to repair this mode at view time, which could make a stale compiler
+  // answer look correct. Fact transactions now recompile on create/clear, so
+  // this derivation consumes the accepted family instead of authoring another.
+  const storedFamilyMode: Section18WeekMode = args.storedMode;
   const fixture = fixtures[0] ?? null;
   if (!fixture) {
     // No fixture: an in-season week becomes a bye, a pre-season week keeps its
@@ -168,18 +153,9 @@ function fixtureIdentityForWeek(args: {
 /**
  * THE WEEK'S IDENTITY, DERIVED FROM EVERY FACT THAT OWNS A PIECE OF IT.
  *
- * The fixtures own anchor state, fixture day and the fixture family of the
- * mode. The athlete's SOURCE FACTS own one thing the fixtures cannot see: a
- * severe illness makes the week optional, and until leg (v) that answer reached
- * a reader only because generation had WRITTEN it onto the overlay's stored
- * declaration. The read side derives it here instead, from the same single
- * owner generation asks (`deriveIllnessRecoveryWeekMode`) — one predicate, two
- * callers, so a stored week and a derived week cannot disagree about what kind
- * of week the athlete is in.
- *
- * PRECEDENCE, and it is the law's, not this file's: the illness answer wins
- * over the fixture answer, because `weekModeOverride` is exactly what
- * generation does with it ("when set it wins over readiness/injury/bye logic").
+ * The fixtures own anchor state and fixture day around the compiler-authored
+ * family mode. Illness is already part of that accepted declaration; re-reading
+ * its raw facts here would make this function a second identity writer.
  */
 function weekIdentityForWeek(args: {
   profile: OnboardingData;
@@ -188,12 +164,7 @@ function weekIdentityForWeek(args: {
   storedMode: Section18WeekMode;
   temporarySourceFacts?: readonly TemporarySourceFact[];
 }): { anchorState: Section18AnchorState; fixtureDays: number[]; mode: Section18WeekMode } {
-  const fixture = fixtureIdentityForWeek(args);
-  const optional = deriveIllnessRecoveryWeekMode({
-    temporarySourceFacts: args.temporarySourceFacts ?? [],
-    weekStartISO: args.weekStart,
-  });
-  return optional ? { ...fixture, mode: 'optional_week' } : fixture;
+  return fixtureIdentityForWeek(args);
 }
 
 /**

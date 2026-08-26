@@ -23,7 +23,6 @@ import { useProfileStore } from './profileStore';
 import type { WeekScopedWorkoutOverlay } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
-import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
 import {
   factHorizon,
   factHorizonWeeks,

@@ -193,11 +193,11 @@ export interface RotationContext {
   intensityMultiplier?: number;
   /**
    * Which door opened this deload, when it was not the scheduled one. The
-   * scheduled door is phase-gated by D16; the readiness and illness doors are
-   * not, and in-season they are the ONLY way a week deloads. Absent means the
-   * scheduled door (or no deload at all).
+   * scheduled door is phase-gated by D16; readiness is not. Illness is already
+   * compiled before this retained adapter is called. Absent means the scheduled
+   * door (or no deload at all).
    */
-  deloadDoor?: 'readiness' | 'illness';
+  deloadDoor?: 'readiness';
   /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
   offseasonSubphase?: OffseasonSubphase;
 }

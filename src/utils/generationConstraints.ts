@@ -21,7 +21,10 @@ import {
   onboardingInjurySeverityScore,
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
-import { deriveIllnessWeekDirective } from '../rules/illnessRecoveryWeekMode';
+import {
+  deriveActiveIllnessDirective,
+  type ActiveIllnessDirective,
+} from '../rules/illnessRecoveryWeekMode';
 import {
   READINESS_TIERS,
   resolveReadinessDirective,
@@ -110,35 +113,15 @@ export interface GenerationReadinessConstraint {
   windowEndISO?: string;
 }
 
+/** Typed illness fact for the compiler; raw tier/severity stays at the door. */
+export interface GenerationIllnessConstraint extends ActiveIllnessDirective {}
+
 export interface GenerationConstraintContext {
   activeConstraintIds: string[];
   injuries: GenerationInjuryConstraint[];
   readiness?: GenerationReadinessConstraint;
+  illness?: GenerationIllnessConstraint;
   activeInjuryKeys: InjuryKey[];
-  /**
-   * §18 week mode minted by the single fact-reading owner
-   * (`deriveIllnessRecoveryWeekMode`). Only the generation path supplies the
-   * facts to derive it; the validation path preserves the mode off the built
-   * contract instead of re-reading facts.
-   */
-  weekMode?: 'optional_week';
-  /**
-   * THE ILLNESS LAW's FIRST answer: is this week deloaded?
-   *
-   * Deliberately separate from `weekMode`, which carries the SECOND answer
-   * (sessions optional). MODERATE illness sets this WITHOUT setting the mode —
-   * it deloads a week whose minimums all stand — so one field could never have
-   * carried both. The transformation itself is DELOAD_LAW's, applied through the
-   * illness door, which has no phase gate (D16).
-   */
-  weekDeloaded?: boolean;
-  /**
-   * The readiness deload's ROLLING WINDOW, when readiness is what opened it.
-   * ABSENT MEANS EVERY DAY, and that is load-bearing: the illness door deloads
-   * while the fact is ACTIVE (R-036) and the scheduled door deloads an authored
-   * week, so neither carries a window and neither may be narrowed by this.
-   */
-  readinessDeloadWindow?: { startISO: string; endISO: string };
 }
 
 /** Schedule-history notes describe an accepted mutation; they are not load/readiness inputs. */
@@ -178,44 +161,19 @@ export function buildGenerationConstraintContext(args: {
   // ONE read of the facts produces BOTH of the law's answers. Asking twice is how
   // the deload and the optional stamp drift apart.
   const illness = args.temporarySourceFacts
-    ? deriveIllnessWeekDirective({
+    ? deriveActiveIllnessDirective({
         temporarySourceFacts: args.temporarySourceFacts,
         weekStartISO: args.todayISO.slice(0, 10),
       })
-    : { deloaded: false, sessionsOptional: false };
-  // BOTH doors answer the same two questions, so both feed the same two
-  // outputs. "Absolutely cooked" and bed-bound illness produce an identical
-  // week — nothing required, everything offered — and routing only one of them
-  // through the optional week mode would leave the other with a planner-selected
-  // CORE target it can never meet, which §18 rightly rejects.
-  //
-  // NAMING DEBT, deliberate and recorded: the mode is still called
-  // `illness_recovery` while it now means "optional-only week" and can be minted
-  // by readiness. Renaming it touches the §18 mode union, the subphase union and
-  // the reduction reasons, so it is its own unit — not smuggled into this pass.
-  const sessionsOptional = illness.sessionsOptional || readiness?.sessionsOptional === true;
-  const weekMode = sessionsOptional ? ('optional_week' as const) : undefined;
-  const weekDeloaded = illness.deloaded || readiness?.deloaded === true ? true : undefined;
+    : null;
 
-  if (injuries.length === 0 && !readiness && !weekMode && !weekDeloaded) return undefined;
+  if (injuries.length === 0 && !readiness && !illness) return undefined;
   return {
     activeConstraintIds: live.map((constraint) => constraint.id),
     injuries,
     readiness,
+    ...(illness ? { illness } : {}),
     activeInjuryKeys,
-    weekMode,
-    weekDeloaded,
-    // ONLY when readiness is what deloaded. If illness also deloads, the week
-    // stays whole — the narrower door must not shrink the wider one.
-    ...(readiness?.deloaded && !illness.deloaded
-      && readiness.windowStartISO && readiness.windowEndISO
-      ? {
-          readinessDeloadWindow: {
-            startISO: readiness.windowStartISO,
-            endISO: readiness.windowEndISO,
-          },
-        }
-      : {}),
   };
 }
 

@@ -438,3 +438,69 @@ accepted output. This changes generated prescriptions but adds no UI or copy.
   not claimed zero.
 - Full-year archetype acceptance, pixels, simulator and physical iPhone are not
   covered.
+
+## 2026-08-27 — step 6: illness is the second complete fact family
+
+### Two options weighed
+
+1. Keep the combined `weekMode` / `weekDeloaded` compatibility outputs and let
+   generation, the retained adapter and the visible reader repair one another.
+2. Translate the strongest active illness fact once, pass its typed two-flag
+   directive into the compiler, and delete every later illness author in the
+   same change.
+
+Option 2 landed. The compiler now owns both illness consequences: dose reduction
+for moderate/severe illness, and optional sessions for severe illness.
+
+### Ownership result
+
+Instrument unit: distinct executable production authors of weekly illness dose,
+mode or optionality.
+
+- Rival illness authors outside the compiler: **0**.
+- Production callers of the retired illness-mode selector: **0**.
+- The combined compatibility outputs, generator illness policy, retained
+  adapter illness door, derived-contract illness rewrite and session-view
+  illness rewrite were removed.
+
+This is an illness-family result only. It is not the prohibited global
+one-owner-complete claim.
+
+### Tests-first and the real action journey
+
+Before production changes, the expanded compiler witness printed **46 green / 11
+red**. After migration it prints **60/60 green**.
+
+The witness cold-starts a real in-season athlete, then uses the production action
+and accepted-overlay transaction for mild, moderate, severe and clear. Mild is
+record-only and leaves the visible week exact. Moderate reduces real prescribed
+sets while preserving the normal contract. Severe preserves offered sessions,
+makes every surviving session optional, and authors the optional-week contract.
+Clearing each exact fact restores the original visible prescriptions exactly.
+
+The first version of this witness inspected the immutable base microcycle after
+the action. It correctly stayed normal: accepted fact mutations live in the
+week-scoped overlay. The instrument was corrected to inspect the accepted
+overlay rather than treating the right base behaviour as a product failure.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **60/60**.
+- `npm run test:readiness-illness-law`: **121/121**.
+- `npm run test:illness-recovery-mode`: **17/17**.
+- `npm run test:fact-horizon`: **14/14**.
+- `npm run test:deload-law`: **68/68**.
+- Adjacent scheduler group remains green, including scheduler **102/102** and
+  spare-day options **20/20**.
+- `npm run test:release`: **4/4 units green**, `RELEASE_GATE_EXIT=0`.
+- The repository-wide typecheck remains inherited red; raw typecheck output has
+  no error in any file changed by this slice.
+
+### NOT COVERED
+
+- Fixture, injury, travel, athlete-edit and scheduled-deload families have not
+  moved.
+- Global rival-author and derived-output-writer counts are not zero and are not
+  claimed zero.
+- Full-year archetype acceptance, pixels, simulator and physical iPhone are not
+  covered.

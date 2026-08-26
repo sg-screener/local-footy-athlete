@@ -15,7 +15,7 @@ import {
   activeTemporarySourceFacts,
   reportedLevelMakesSessionsOptional,
 } from './temporarySourceFact';
-import type { TemporarySourceFact } from './temporarySourceFact';
+import type { TemporaryIllnessFact, TemporarySourceFact } from './temporarySourceFact';
 import { factHorizonCoversDate, factHorizonCoversWeek } from './durableFactHorizon';
 import {
   ILLNESS_SEVERITY_TIERS,
@@ -36,17 +36,49 @@ export function deriveActiveIllnessTier(args: {
   temporarySourceFacts: readonly TemporarySourceFact[];
   weekStartISO: string;
 }): IllnessSeverityTier | null {
+  return strongestActiveIllnessFact(args)?.severity ?? null;
+}
+
+/**
+ * One active illness fact translated into the law's two authorised outputs.
+ * The compiler receives this typed directive; raw severity never crosses that
+ * boundary and no later layer is allowed to reinterpret it.
+ */
+export interface ActiveIllnessDirective extends IllnessDirective {
+  readonly kind: 'illness';
+  readonly id: string;
+  readonly activeFromISO: string;
+}
+
+function strongestActiveIllnessFact(args: {
+  temporarySourceFacts: readonly TemporarySourceFact[];
+  weekStartISO: string;
+}): TemporaryIllnessFact | null {
   const covering = activeTemporarySourceFacts(args.temporarySourceFacts)
-    .filter((fact) =>
-      fact.factKind === 'illness' && factHorizonCoversWeek(fact, args.weekStartISO))
-    .map((fact) => (fact as { severity: IllnessSeverityTier }).severity);
+    .filter((fact): fact is TemporaryIllnessFact =>
+      'factKind' in fact && fact.factKind === 'illness' &&
+        factHorizonCoversWeek(fact, args.weekStartISO));
   if (covering.length === 0) return null;
-  // ILLNESS_SEVERITY_TIERS is authored mild -> moderate -> severe, so the
-  // highest index is the strongest. The order is the law's, not this file's.
-  return covering.reduce((strongest, tier) =>
-    ILLNESS_SEVERITY_TIERS.indexOf(tier) > ILLNESS_SEVERITY_TIERS.indexOf(strongest)
-      ? tier
-      : strongest);
+  return covering.reduce((strongest, fact) => {
+    const strongestRank = ILLNESS_SEVERITY_TIERS.indexOf(strongest.severity);
+    const candidateRank = ILLNESS_SEVERITY_TIERS.indexOf(fact.severity);
+    if (candidateRank !== strongestRank) return candidateRank > strongestRank ? fact : strongest;
+    return fact.updatedAt > strongest.updatedAt ? fact : strongest;
+  });
+}
+
+export function deriveActiveIllnessDirective(args: {
+  temporarySourceFacts: readonly TemporarySourceFact[];
+  weekStartISO: string;
+}): ActiveIllnessDirective | null {
+  const fact = strongestActiveIllnessFact(args);
+  if (!fact) return null;
+  return {
+    kind: 'illness',
+    id: fact.factId,
+    activeFromISO: fact.effectiveFrom.slice(0, 10),
+    ...resolveIllnessDirective(fact.severity),
+  };
 }
 
 /**
@@ -62,9 +94,9 @@ export function deriveIllnessWeekDirective(args: {
   temporarySourceFacts: readonly TemporarySourceFact[];
   weekStartISO: string;
 }): IllnessDirective {
-  const tier = deriveActiveIllnessTier(args);
-  return tier
-    ? resolveIllnessDirective(tier)
+  const directive = deriveActiveIllnessDirective(args);
+  return directive
+    ? { deloaded: directive.deloaded, sessionsOptional: directive.sessionsOptional }
     : { deloaded: false, sessionsOptional: false };
 }
 
@@ -100,19 +132,14 @@ export function deriveIllnessRecoveryWeekMode(args: {
  * ── EVERY SESSION OPTIONAL ON THIS DATE? — the per-DATE read of the law's
  * second flag, for the VIEW doors. ─────────────────────────────────────────
  *
- * Sam's laws give two producers of "nothing is required today": a SEVERE
- * illness while active ("deloaded AND every session becomes optional"), and an
- * "Absolutely cooked" readiness declaration inside its 7-day rolling window.
- * Both flags existed and were consumed at GENERATION time only, so a week that
- * was never regenerated after the declaration — most visibly the NEXT week —
- * kept rendering its sessions as required. Measured 2026-08-26
- * (durableFactHorizonTests A3a): a severe illness reported Friday left next
- * Monday's lower session and both club nights showing `core` on the program
- * screen.
+ * Readiness is still decorated per date because its rolling window can begin
+ * inside a week. Illness is deliberately absent: its open-horizon directive is
+ * now compiled into every governed accepted week, so re-reading illness facts
+ * here would create a second derived-output writer that could mask stale state.
  *
  * This is the read-side owner: coverage is asked of `durableFactHorizon`,
- * tier consequences of the law (`resolveIllnessDirective`,
- * `reportedLevelMakesSessionsOptional`) — nothing here re-derives a horizon
+ * tier consequences of the law (`reportedLevelMakesSessionsOptional`) —
+ * nothing here re-derives a horizon
  * or a threshold. Callers are the VIEW doors (facts travel on the view
  * state only), so the decoration is derived on every read and never persisted.
  */
@@ -123,12 +150,6 @@ export function sessionsOptionalOnDate(args: {
   const facts = activeTemporarySourceFacts(args.temporarySourceFacts ?? []);
   for (const fact of facts) {
     if (!('factKind' in fact)) continue;
-    if (fact.factKind === 'illness'
-      && factHorizonCoversDate(fact, args.dateISO)
-      && resolveIllnessDirective(
-        (fact as { severity: IllnessSeverityTier }).severity).sessionsOptional) {
-      return true;
-    }
     if (fact.factKind === 'fatigue'
       && factHorizonCoversDate(fact, args.dateISO)
       && reportedLevelMakesSessionsOptional(
