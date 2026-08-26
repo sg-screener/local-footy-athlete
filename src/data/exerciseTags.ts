@@ -219,6 +219,10 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  // Sam, 2026-08-26: "front squats are arguably worse [for a shoulder] if you
+  // do them with a different grip ... remove it from good". The rack-position
+  // squats (Front/Box/High Box) now match Back Squat's own shoulder: 'caution'
+  // — the sheet's existing convention for a bar carried on the shoulders.
   'Front Squat': {
     movement: 'squat', region: 'lower', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'moderate', unilateral: false,
@@ -234,7 +238,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
-      'shoulder': 'good',
+      'shoulder': 'caution',
       'elbow': 'good',
       'wrist/hand': 'caution',
     },
@@ -255,7 +259,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
-      'shoulder': 'good',
+      'shoulder': 'caution',
       'elbow': 'good',
       'wrist/hand': 'good',
     },
@@ -318,7 +322,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
-      'shoulder': 'good',
+      'shoulder': 'caution',
       'elbow': 'good',
       'wrist/hand': 'good',
     },
