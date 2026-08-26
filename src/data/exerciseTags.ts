@@ -252,7 +252,10 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: quad-dominant work is the Bible's own hamstring swap
+      // ("Usually okay: non-painful quad-dominant lower work"; deadlift ->
+      // box squat). Matrix exception rules it good.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
@@ -273,7 +276,8 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
@@ -315,7 +319,8 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
@@ -399,7 +404,9 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: the Bible's own swap for single-leg hinge work
+      // ("Single-leg RDL -> step-up"). Quad-dominant hamstring exception.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
@@ -506,7 +513,8 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
@@ -770,7 +778,8 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      'hamstring': 'caution',
+      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
+      'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',

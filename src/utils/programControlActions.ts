@@ -1628,36 +1628,55 @@ function recomposeSessionForInjury(args: {
 
     for (const substitution of stagePlan.substitutions) {
       const origin = authoredOrigin.get(substitution.from) ?? substitution.from;
-      const outcome = executeProgramControlAction({
-        type: 'swap_exercise',
-        source: args.source,
-        scope: 'today_only',
-        payload: {
-          date: args.date,
-          fromExercise: substitution.from,
-          toExercise: {
-            name: substitution.to.name!,
-            sets: substitution.to.prescription?.sets ?? 3,
-            repsMin: substitution.to.prescription?.repsMin ?? 8,
-            repsMax: substitution.to.prescription?.repsMax ?? 12,
+      /**
+       * ⚠ **A REFUSAL THAT ARRIVES AS A THROW IS STILL A REFUSAL.** The comment
+       * above this loop already states the law — "each write goes through the
+       * ordinary action owner and can be refused by it" — but the ordinary
+       * owner's week-acceptance boundary refuses by THROWING
+       * (`Section18WeekAcceptanceError`), and an uncaught throw here does not
+       * refuse one substitution, it kills the whole injury transaction.
+       * MEASURED 2026-08-27: hamstring 8/10 on a week whose write boundary
+       * reds `planner_selected_target_miss:conditioning:3` for ANY swap
+       * (control-proven with no injury declared) — the ladder's lawful
+       * `RDLs -> Goblet Squat` swap took the entire door down instead of
+       * landing in `refused` with the others. The row falls through to the
+       * honest-refusal sentence exactly like an `ok:false`.
+       */
+      let outcome: { ok: boolean; message?: string };
+      try {
+        outcome = executeProgramControlAction({
+          type: 'swap_exercise',
+          source: args.source,
+          scope: 'today_only',
+          payload: {
+            date: args.date,
+            fromExercise: substitution.from,
+            toExercise: {
+              name: substitution.to.name!,
+              sets: substitution.to.prescription?.sets ?? 3,
+              repsMin: substitution.to.prescription?.repsMin ?? 8,
+              repsMax: substitution.to.prescription?.repsMax ?? 12,
+            },
+            /**
+             * R-121: the name the athlete reads is the row this substitution
+             * actually replaced, and because the stage planned against the
+             * session they could see, `substitution.from` IS that row.
+             * `originExerciseName` carries the authored exercise when the two
+             * differ — internal history, rendered nowhere.
+             */
+            substitutedFrom: {
+              baseExerciseName: substitution.from,
+              ...(origin !== substitution.from ? { originExerciseName: origin } : {}),
+              cause: 'injury',
+            },
           },
-          /**
-           * R-121: the name the athlete reads is the row this substitution
-           * actually replaced, and because the stage planned against the
-           * session they could see, `substitution.from` IS that row.
-           * `originExerciseName` carries the authored exercise when the two
-           * differ — internal history, rendered nowhere.
-           */
-          substitutedFrom: {
-            baseExerciseName: substitution.from,
-            ...(origin !== substitution.from ? { originExerciseName: origin } : {}),
-            cause: 'injury',
-          },
-        },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      } as ProgramControlAction);
+          requiresRebuild: false,
+          createsActiveModifier: false,
+          oneOffOnly: true,
+          } as ProgramControlAction);
+      } catch (error) {
+        outcome = { ok: false, message: (error as Error).message };
+      }
       if (outcome.ok) {
         if (substitution.to.name) authoredOrigin.set(substitution.to.name, origin);
         // A row this pass already replaced is superseded, not listed twice.

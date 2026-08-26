@@ -392,6 +392,42 @@ async function main(): Promise<void> {
         path.resolve(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8')));
   }
 
+  console.log('\n[8] THE BLOCK ROTATES BY DAY — the week is not the same replacement five times');
+  {
+    /* Sam, 2026-08-27 (injury over-restriction fix): every affected day derived
+     * the SAME addition, because the chooser always took the first legal
+     * candidate. The date rotates the starting point; the same date always
+     * answers the same way (the review's promise), different days differ when
+     * the pool offers more than one candidate. Asked through the same owner
+     * both doors call, with a synthetic environment so the cell owns its world. */
+    const { chooseInjurySessionAdditions } = require('../utils/injurySessionAdjustment') as
+      typeof import('../utils/injurySessionAdjustment');
+    const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy') as
+      typeof import('../utils/tapSwapHierarchy');
+    const environment = quiet(() => resolveTapSwapEnvironment({
+      date: TARGET, profile: useProfileStore.getState().onboardingData,
+      activeConstraints: [], readinessSignal: null,
+      primaryInjury: { bucket: 'knee', severity: 6 } as never,
+    }));
+    const askOn = (dateISO?: string) => chooseInjurySessionAdditions({
+      environment, profile: useProfileStore.getState().onboardingData,
+      keptRowNames: ['Band Pallof Press'], pausedRowNames: ['Back Squat', 'RDLs', 'Leg Press'],
+      weekExerciseNames: ['Back Squat', 'RDLs', 'Leg Press', 'Band Pallof Press'],
+      excludedByAthlete: [], pausedCount: 3, originalRowCount: 6,
+      injuredHalf: 'lower', keptSets: 2, dateISO,
+    }).map((candidate) => candidate.name);
+    const monday = askOn('2026-07-13');
+    const wednesday = askOn('2026-07-15');
+    ok('CONTROL — both days really do get an added block',
+      monday.length > 0 && wednesday.length > 0, { monday, wednesday });
+    ok('the same date always answers the same way — the review stays a promise',
+      JSON.stringify(monday) === JSON.stringify(askOn('2026-07-13')), monday);
+    ok('two affected days do not open with the same compound',
+      monday[0] !== wednesday[0], { monday, wednesday });
+    ok('a dateless ask still answers — rotation is an offset, not a requirement',
+      askOn(undefined).length > 0);
+  }
+
   console.log(`\nInjury session adjustment totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
   totalsPrinted(failures.length);
   if (failures.length > 0) {

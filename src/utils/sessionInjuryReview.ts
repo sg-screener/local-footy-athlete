@@ -230,6 +230,7 @@ export function buildSessionInjuryReview(args: {
     weekExerciseNames,
     excludedByAthlete,
     pausedRowNames: plan.pausedRows,
+    dateISO: args.date,
   });
   const added = adjustment?.added ? [...adjustment.added] : [];
 

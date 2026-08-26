@@ -214,8 +214,17 @@ for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Regi
 // 24 → 27 on 2026-08-26: Sam ruled the rack-position squats (Front/Box/High
 // Box) match Back Squat's existing shoulder 'caution' exception — verbatim,
 // on Front Squat for a bad shoulder: "remove it from good".
-ok('snapshot', '27 exceptions (incl. singletons lifted when their thin rule died)',
-  exceptionRows.length === 27, `got ${exceptionRows.length}`);
+// 27 → 33 on 2026-08-27 (Sam's hamstring over-restriction fix): the Bible's
+// hamstring section rules "Usually okay: non-painful quad-dominant lower
+// work" and names box squat / controlled squat / step-up as GOOD swaps, so
+// Leg Press, Box Squat, High Box Squat, Goblet Squat, Step Ups and Leg
+// Extension carry hamstring 'good' — the first LOOSER exceptions, because a
+// pattern rule was over-reaching what the Bible authored.
+ok('snapshot', '33 exceptions (incl. singletons lifted when their thin rule died)',
+  exceptionRows.length === 33, `got ${exceptionRows.length}`);
+ok('structural', 'every quad-dominant hamstring exception is ruled good',
+  ['Leg Press', 'Box Squat', 'High Box Squat', 'Goblet Squat', 'Step Ups', 'Leg Extension']
+    .every((name) => exceptions[`${name}|hamstring`] === 'good'));
 ok('structural', 'Shrugs carries the neck exception that replaced the inert Traps rule',
   exceptions['Shrugs|neck'] === 'caution', exceptions['Shrugs|neck'] ?? '(absent)');
 // Bench-compressed PULLS: the pressing rule cannot reach them, so Sam named them.
@@ -272,8 +281,10 @@ ok('structural', 'every code entry authors all 13 regions — no omissions possi
 ok('structural', '149 x 13 = 1937 cells compared', cells === 1937, `got ${cells}`);
 // 872/24/1041 → 875/24/1038 on 2026-08-26: the three rack-squat shoulder
 // cells moved good → caution (Sam's ruling above).
-ok('snapshot', 'final distribution: 875 caution / 24 avoid / 1038 good',
-  distribution.caution === 875 && distribution.avoid === 24 && distribution.good === 1038,
+// 875/24/1038 → 869/24/1044 on 2026-08-27: the six quad-dominant hamstring
+// cells moved caution → good (Sam's hamstring over-restriction fix above).
+ok('snapshot', 'final distribution: 869 caution / 24 avoid / 1044 good',
+  distribution.caution === 869 && distribution.avoid === 24 && distribution.good === 1044,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.

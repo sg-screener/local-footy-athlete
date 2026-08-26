@@ -213,6 +213,15 @@ export function chooseInjurySessionAdditions(args: {
   injuredHalf: 'upper' | 'lower' | null;
   /** Sets already on the session after pausing — the ceiling is per session. */
   keptSets: number;
+  /**
+   * The day being adjusted. Sam, 2026-08-27 (injury over-restriction fix):
+   * every affected day of the week derived the SAME replacement, because this
+   * chooser always took the first legal candidate. The date rotates the
+   * starting point of each candidate list — deterministic per day (the review
+   * and the view door pass the same date, so the promise still holds), varied
+   * across the week. Absent, the pool order stands as before.
+   */
+  dateISO?: string;
 }): AddCandidate[] {
   /**
    * ⚠ **THREE CAPS, AND THE SMALLEST WINS.** Sam: *"Cap newly added work at
@@ -249,14 +258,23 @@ export function chooseInjurySessionAdditions(args: {
     return true;
   };
 
-  const legal = (leaf: AddLeafId): AddCandidate[] => legalAddCandidates({
+  /* Day-of-month, so consecutive affected days start at different points of
+   * the same pool. Deterministic: the same date always rotates the same way. */
+  const dayOffset = args.dateISO ? Number(args.dateISO.slice(8, 10)) || 0 : 0;
+  const rotated = (list: AddCandidate[]): AddCandidate[] => {
+    if (list.length <= 1 || dayOffset === 0) return list;
+    const offset = dayOffset % list.length;
+    return [...list.slice(offset), ...list.slice(0, offset)];
+  };
+
+  const legal = (leaf: AddLeafId): AddCandidate[] => rotated(legalAddCandidates({
     leaf,
     environment: args.environment,
     profile: args.profile ?? null,
     // Everything the week already has is "existing" as far as the door is
     // concerned, so it never offers a duplicate in the first place.
     existingExerciseNames: [...inTheWeek],
-  }).filter((candidate) => !inTheWeek.has(normalise(candidate.name)));
+  }).filter((candidate) => !inTheWeek.has(normalise(candidate.name))));
 
   // ── 1. ONE COMPOUND, FROM THE UNAFFECTED HALF ────────────────────────────
   //
@@ -455,6 +473,11 @@ export interface InjurySessionAdjustmentInputs {
   /** The same rows in the day's own names. Defaults to `pausedRowNames`, which
    *  is correct whenever no earlier injury renamed a slot. */
   pausedOnTheDay?: readonly string[];
+  /** The day being adjusted — rotates the added block's candidate pool so
+   *  consecutive affected days do not all receive the same replacement. Both
+   *  callers (the review and the view door) pass the same date, so the review
+   *  stays an exact promise. */
+  dateISO?: string;
 }
 
 export function injuryAdjustmentEnvironment(args: {
@@ -537,6 +560,7 @@ export function deriveInjurySessionAdjustment(
     originalRowCount: rows.length,
     injuredHalf: pausedRegion,
     keptSets,
+    dateISO: args.dateISO,
   });
 
   return {
@@ -742,5 +766,6 @@ export function injurySessionAdjustmentForDay(args: {
     excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: plan.pausedRows,
     pausedOnTheDay,
+    dateISO: args.dateISO,
   });
 }
