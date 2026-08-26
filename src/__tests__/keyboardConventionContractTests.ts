@@ -378,6 +378,33 @@ console.log(
   );
 }
 
+console.log('\n[9] The Sheet primitive rides above the keypad');
+{
+  /* Sam's phone, 2026-08-26 (checklist #12): the session feedback sheet's
+   * minutes field hid behind the numeric keypad — the bottom-anchored Sheet
+   * modal knew nothing about keyboards, and every sheet with an input shared
+   * the hole. The fix is at the primitive: the overlay carries the SAME
+   * reanimated keyboard frame KeyboardSafeArea rides, as bottom padding, and
+   * the content shrinks instead of overflowing the top. */
+  const sheet = read('components/ui/Sheet.tsx');
+  ok(
+    'the sheet overlay carries the keyboard height as an animated bottom inset',
+    /useKeyboardContext\(\)/.test(sheet) &&
+      /paddingBottom:\s*Math\.abs\(reanimated\.height\.value\)/.test(sheet),
+    'without the inset a bottom-anchored sheet leaves its inputs behind the keypad',
+  );
+  ok(
+    'the inset rides the ONE native keyboard frame (no second clock)',
+    /from 'react-native-keyboard-controller'/.test(sheet),
+    'a Keyboard.addListener clock beside the reanimated frame is the two-clock defect',
+  );
+  ok(
+    'a tall sheet gives space back instead of overflowing the top',
+    /flexShrink:\s*1/.test(sheet),
+    'with the keypad eating overlay height, content must shrink, not push off-screen',
+  );
+}
+
 const total = passed + failures.length;
 console.log(`\nKeyboard convention totals: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

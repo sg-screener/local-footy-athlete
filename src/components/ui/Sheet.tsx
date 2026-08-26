@@ -7,6 +7,8 @@ import {
   ViewStyle,
   StyleProp,
 } from 'react-native';
+import { useKeyboardContext } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { Text } from '../common/Text';
@@ -135,6 +137,26 @@ export function Sheet({
 }: V2SheetProps) {
   const handleClose = dismissable ? onClose : undefined;
 
+  /* ── THE SHEET RIDES ABOVE THE KEYPAD ────────────────────────────────────
+   * Sam's phone, 2026-08-26 (checklist #12): typing minutes into the session
+   * feedback sheet hid the field behind the numeric keypad — the sheet is
+   * bottom-anchored and nothing here ever knew a keyboard existed. Every
+   * sheet with a text input shared the hole, so the owner is this primitive,
+   * not the feedback form.
+   *
+   * The inset is the SAME native keyboard frame KeyboardSafeArea rides
+   * (`useKeyboardContext().reanimated`) — one source, never a second clock.
+   * The overlay gains the keypad's height as bottom padding, and `content`
+   * carries `flexShrink: 1` so a sheet taller than the remaining space
+   * compresses instead of pushing its top off-screen (its scrolling child is
+   * already required to be `flexShrink: 1` — see `cappedBody`). Keyboard
+   * closed → padding 0 → nothing changes.
+   */
+  const { reanimated } = useKeyboardContext();
+  const keyboardInset = useAnimatedStyle(() => ({
+    paddingBottom: Math.abs(reanimated.height.value),
+  }));
+
   return (
     <Modal
       visible={visible}
@@ -142,8 +164,8 @@ export function Sheet({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View
-        style={styles.overlay}
+      <Animated.View
+        style={[styles.overlay, keyboardInset]}
         accessible={false}
         importantForAccessibility="no"
         collapsable={false}
@@ -169,7 +191,7 @@ export function Sheet({
           <View style={styles.handle} />
           {children}
         </View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -187,6 +209,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 40,
     paddingHorizontal: spacing.lg,
+    /* With the keypad inset eating overlay height, a tall sheet must give
+     * space back rather than overflow the top of the screen. Auto basis, so
+     * a short sheet still hugs exactly as before. */
+    flexShrink: 1,
   },
   /**
    * A DEFINITE height, not `maxHeight`. `maxHeight` caps a size the parent is
