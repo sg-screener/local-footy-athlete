@@ -82,7 +82,7 @@ function mondayFor(d: string): string {
 
 function theAthlete(): OnboardingData {
   return {
-    firstName: 'Sim', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
+    firstName: 'Sim', gender: 'male', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
     position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
