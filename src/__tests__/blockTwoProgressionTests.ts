@@ -55,8 +55,11 @@ import {
   blockBoundaryLoadMovedSentence,
 } from '../rules/projectionCopy';
 import {
+  decideBlockBoundaryLoads,
+  decideBlockBoundarySetAdditions,
   isLoadExplanationRow,
   smallestPracticalIncrementKg,
+  type BlockHistorySignal,
 } from '../rules/blockBoundaryProgression';
 import type { SessionFeedback } from '../store/programStore';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
@@ -749,6 +752,69 @@ ok(
   'projection does not move when handed a contradictory history (control)',
   visibleLoadOf(aBlock2, TRACKED, contradictory, BLOCK_2_START) === storedA,
   'the screen still recalculates — projection has authority it should not have',
+);
+
+console.log('\n[13] CLUB NIGHTS ARE READ BY THE PARTS, NOT THE LABEL (Sam, 2026-08-26)');
+
+/**
+ * Sam, 2026-08-26, verbatim: *"it should be considered team training and
+ * strength like 2 separate things just on the same fucking day"*. The measured
+ * defect: upper strength rides club nights (workoutType 'Team Training'), the
+ * old `seedableStrengthRows` filter read the DAY label, so club-night lifts got
+ * no load decision — a compliant athlete's bench held 67.5kg for ten simulated
+ * months. These cells drive the PURE decision functions directly so the guard
+ * cannot be satisfied by which day the composer happened to choose.
+ */
+const clubNightHistory: BlockHistorySignal = {
+  completedStrengthSessions: 16,
+  requiredStrengthSessions: 16,
+  recoveryVerdict: 'good',
+  qualifies: true,
+  reduces: false,
+  byQuality: { strength: 'good', conditioningEasy: false },
+  lastRecordedLoadByExercise: { 'Bench Press': 67.5 },
+  prescribedSetsByExercise: {},
+} as unknown as BlockHistorySignal;
+const clubNightRow = {
+  id: 'row-club-bench', exerciseId: 'ex-bench',
+  exercise: { name: 'Bench Press', category: 'strength' },
+  prescribedSets: 3, prescribedRepsMin: 3, prescribedRepsMax: 5, prescribedWeightKg: 67.5,
+};
+const clubSessionRow = {
+  id: 'row-club-session', exerciseId: 'ex-club',
+  exercise: { name: 'Team Training', category: 'conditioning' },
+  role: 'team_training', prescribedSets: 1,
+};
+const clubNightWorkout = {
+  workoutType: 'Team Training',
+  exercises: [clubSessionRow, clubNightRow],
+} as never;
+const clubDecisions = decideBlockBoundaryLoads({
+  history: clubNightHistory,
+  nextBlockWorkouts: [clubNightWorkout],
+});
+const clubBench = clubDecisions.find((d) => d.exerciseName === 'Bench Press');
+ok(
+  'a club-night bench with qualifying history PROGRESSES from its own number',
+  clubBench?.kind === 'history_progressed' && clubBench.nextLoadKg === 70,
+  `got ${JSON.stringify(clubBench ?? clubDecisions)}`,
+);
+ok(
+  'the club session row itself gets NO load decision (role fence holds)',
+  !clubDecisions.some((d) => d.exerciseName === 'Team Training'),
+  'the team_training row leaked into load decisions',
+);
+ok(
+  'in-season closes the set-addition rung (Bible §5/§16: maintain)',
+  decideBlockBoundarySetAdditions({
+    history: clubNightHistory,
+    nextBlockWorkouts: [clubNightWorkout],
+    weekIndex: 0,
+    loadDecisions: [],
+    authoredSetsByRowId: {},
+    seasonPhase: 'In-season',
+  }).length === 0,
+  'an in-season rollover still added a set',
 );
 
 console.log(`\nBlock two progression: ${pass} passed, ${fail} failed`);

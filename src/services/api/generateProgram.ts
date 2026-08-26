@@ -2152,6 +2152,8 @@ export function generateProgramLocally(
         ...(microcycle.weekKind !== undefined ? { weekKind: microcycle.weekKind } : {}),
         loadDecisions: decisions,
         authoredSetsByRowId,
+        // In-season maintains — the set rung is closed there (Bible §5/§16).
+        seasonPhase: generationProfile.seasonPhase ?? null,
       });
       microcycle.workouts = applyBlockBoundarySetAdditions({
         workouts: microcycle.workouts,

@@ -797,10 +797,32 @@ export function readBlockHistory(args: {
  * estimate that exists for it. **Two different questions were sharing one
  * predicate.**
  */
+/**
+ * ⚠ **READ THE PARTS, NEVER THE DAY'S LABEL** (Sam, 2026-08-26, verbatim: *"it
+ * should be considered team training and strength like 2 separate things just
+ * on the same fucking day"*).
+ *
+ * A club night stores ONE workout typed `'Team Training'` whose row list
+ * carries the club session (role `team_training`, exempt from counting) AND the
+ * app-authored strength component (counted roles). The old filter here read the
+ * DAY'S label — `Strength`/`Mixed` only — so every lift riding a club night got
+ * no load decision at all. Measured over a simulated year: a fully compliant
+ * athlete's bench stayed at 67.5 kg from the day upper strength moved onto club
+ * nights (pre-season entry) to season's end, and `progressedFromOwnHistory`
+ * being permanently false forced every main lift to rotate every block.
+ *
+ * `participatesInCounting` is the row-level fence that makes this safe: club
+ * rows, conditioning, mobility and power are role-exempt, so widening to Team
+ * Training days admits exactly the strength component and nothing else. Game /
+ * Conditioning / Mobility / Recovery days stay out — they author no counted
+ * strength rows this pass may seed.
+ */
 function seedableStrengthRows(workouts: readonly Workout[]): WorkoutExercise[] {
   const rows: WorkoutExercise[] = [];
   for (const workout of workouts) {
-    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+    if (workout.workoutType !== 'Strength'
+      && workout.workoutType !== 'Mixed'
+      && workout.workoutType !== 'Team Training') continue;
     for (const exercise of workout.exercises ?? []) {
       if (!participatesInCounting(exercise)) continue;
       if (!(exercise.exercise?.name ?? '')) continue;
@@ -1042,7 +1064,11 @@ export function applyBlockBoundaryProgression(args: {
   const byName = new Map(decisions.map((decision) => [decision.exerciseName, decision]));
 
   return workouts.map((workout) => {
-    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') return workout;
+    // Club nights included — see seedableStrengthRows: the decision side reads
+    // them now, so the apply side must reach the same rows (Sam, 2026-08-26).
+    if (workout.workoutType !== 'Strength'
+      && workout.workoutType !== 'Mixed'
+      && workout.workoutType !== 'Team Training') return workout;
     let touched = false;
     const exercises = (workout.exercises ?? []).map((exercise) => {
       const decision = byName.get(exercise.exercise?.name ?? '');
@@ -1246,7 +1272,10 @@ export function applyBlockBoundaryVolume(args: {
   if (byRowId.size === 0) return [...workouts];
 
   return workouts.map((workout) => {
-    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') return workout;
+    // Club nights included — see seedableStrengthRows (Sam, 2026-08-26).
+    if (workout.workoutType !== 'Strength'
+      && workout.workoutType !== 'Mixed'
+      && workout.workoutType !== 'Team Training') return workout;
     let touched = false;
     const exercises = (workout.exercises ?? []).map((exercise) => {
       const decision = byRowId.get(exercise.id);
@@ -1412,10 +1441,21 @@ export function decideBlockBoundarySetAdditions(args: {
    * either set.
    */
   authoredSetsByRowId: Readonly<Record<string, number>>;
+  /**
+   * IN-SEASON ADDS NO SETS (Bible §5/§16: in-season progression "should be
+   * slower. The goal is mainly to maintain strength and stay fresh"; "Do not
+   * chase high-rep lower-body soreness in-season"). Measured before this gate:
+   * a compliant athlete's midweek squat grew 4×5-8 → 5×5-8 at week 36 of the
+   * simulated year and held 5 sets to season's end — volume ratcheting in the
+   * one phase whose law is maintain. Omitted/undefined keeps the old behaviour
+   * for callers that do not know the phase.
+   */
+  seasonPhase?: SeasonPhase | null;
 }): BlockBoundarySetAdditionDecision[] {
   const {
     history, nextBlockWorkouts, weekIndex, weekKind, loadDecisions, authoredSetsByRowId,
   } = args;
+  if (args.seasonPhase === 'In-season') return [];
 
   // ── THE THREE STATE GATES, IN THE CONTRACT'S OWN ORDER ──
   //
@@ -1452,7 +1492,10 @@ export function decideBlockBoundarySetAdditions(args: {
   const decisions: BlockBoundarySetAdditionDecision[] = [];
 
   for (const workout of nextBlockWorkouts) {
-    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+    // Club nights included — see seedableStrengthRows (Sam, 2026-08-26).
+    if (workout.workoutType !== 'Strength'
+      && workout.workoutType !== 'Mixed'
+      && workout.workoutType !== 'Team Training') continue;
 
     const before = countMainSecondarySets(workout);
 
@@ -1541,7 +1584,10 @@ export function applyBlockBoundarySetAdditions(args: {
   if (byRowId.size === 0) return [...workouts];
 
   return workouts.map((workout) => {
-    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') return workout;
+    // Club nights included — see seedableStrengthRows (Sam, 2026-08-26).
+    if (workout.workoutType !== 'Strength'
+      && workout.workoutType !== 'Mixed'
+      && workout.workoutType !== 'Team Training') return workout;
     let touched = false;
     const exercises = (workout.exercises ?? []).map((exercise) => {
       const decision = byRowId.get(exercise.id);
