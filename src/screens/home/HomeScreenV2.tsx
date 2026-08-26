@@ -83,7 +83,10 @@ import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
 import { useProgramStore } from '../../store/programStore';
 import { ownedEquipmentKit, useProfileStore } from '../../store/profileStore';
-import { dayPredatesProgram } from '../../utils/sessionResolver';
+import {
+  dayPredatesProgram,
+  weekViewDaysFromAthleteStart,
+} from '../../utils/sessionResolver';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -549,17 +552,25 @@ export default function HomeScreenV2() {
    * pairs its answer with the dated head the resolved day already carries, so
    * no date is formatted here and no day is decomposed here.
    */
-  const weekBoardRows: WeekBoardRow[] = useMemo(() => weekDays.map((day) => ({
+  /** R-227 revised: both Week surfaces begin on the athlete's actual start day.
+   * The program retains its complete authored week; this is the one display
+   * boundary that prevents pre-entry sessions becoming grey obligations. */
+  const weekViewDays = useMemo(() => weekViewDaysFromAthleteStart(
+    weekDays,
+    currentProgram,
+    athleteStartISO,
+  ), [athleteStartISO, currentProgram, weekDays]);
+
+  const weekBoardRows: WeekBoardRow[] = useMemo(() => weekViewDays.map((day) => ({
     date: day.date,
     short: day.short,
     dayNumber: String(Number(day.date.slice(8, 10))),
     isToday: day.isToday,
-    preProgram: dayPredatesProgram(day.date, currentProgram, athleteStartISO),
     board: buildWeekBoardDay(
       visibleWeek.days.find((visible) => visible.date === day.date)
         ?? { date: day.date, parts: [] } as any,
     ),
-  })), [athleteStartISO, currentProgram, visibleWeek, weekDays]);
+  })), [visibleWeek, weekViewDays]);
 
   /* ⚠ **THE SAME DOORS THE RETIRED MENU ROWS RAISED — SAM: *"follow the same
    * pathway"*.** `changeSheetEntry` with `origin: 'week'` is byte-for-byte what
@@ -1311,7 +1322,7 @@ export default function HomeScreenV2() {
                   settleNonce={boardSettleNonce}
                 />
               )
-              : weekDays.map((day, idx) => renderDayRow(day, idx))}
+              : weekViewDays.map((day) => renderDayRow(day, weekDays.indexOf(day)))}
           </View>
         )}
 

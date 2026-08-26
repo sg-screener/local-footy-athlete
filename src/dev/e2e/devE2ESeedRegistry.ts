@@ -1272,6 +1272,7 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
     case 'fixture-move':
     case 'multi-reload-fixture-chain':
     case 'coach-production-replay':
+    case 'midweek-signup':
     // A quiescent accepted block and nothing else: no feedback, no injury, no
     // equipment fact. The Remove slice must start from a world where the only
     // decision on record is the one the athlete is about to make.

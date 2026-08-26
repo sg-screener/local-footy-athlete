@@ -67,6 +67,7 @@ const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
   // back out of the program it was handed, which is why it installs.
   'exercise-removal-restart':
     'program,profile_exact,workout,accepted_week_count,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state',
+  'midweek-signup': 'program,profile_exact',
 };
 
 const originalFetch = globalThis.fetch;
@@ -92,8 +93,12 @@ try {
     // numbers — and the reload gate compares exactly that. The two existing
     // four-week seeds cannot be used: both refuse to install at all. This seed
     // is the smallest thing that closes the gap without altering either of them.
-    'Explorer campaign adds exactly the two requested seed IDs',
-    DEV_E2E_SEED_IDS.length === 13 &&
+    // 13 -> 16 was already present on arrival (session-layout-showcase,
+    // block-rollover, conditioning-showcase) while this stale count remained
+    // red. 16 -> 17 is the R-227 revised Wednesday-signup glass world.
+    'the seed registry count names the dedicated midweek-signup addition',
+    DEV_E2E_SEED_IDS.length === 17 &&
+      DEV_E2E_SEED_IDS.includes('midweek-signup') &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===
       EXPLORER_SEEDS.join(','),

@@ -46,9 +46,6 @@ export interface WeekBoardRow {
   readonly short: string;
   readonly dayNumber: string;
   readonly isToday: boolean;
-  /** R-227: the date is before the program's start — drawn dimmed, with no
-   *  add, no bin and no drag. Visible but inert (Sam, 2026-08-26). */
-  readonly preProgram?: boolean;
   readonly board: WeekBoardDay;
 }
 
@@ -170,16 +167,12 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
             <Text style={[styles.weekday, row.isToday && styles.weekdayToday]}>{row.short}</Text>
             <Text style={styles.dayNumber}>{row.dayNumber}</Text>
           </View>
-          <View
-            style={[styles.boxes, row.preProgram && { opacity: 0.45 }]}
-            onLayout={rememberBoxesContainer(row.date)}
-          >
+          <View style={styles.boxes} onLayout={rememberBoxesContainer(row.date)}>
             {row.board.boxes.map((box) => (
               <BoardBox
                 key={box.id}
                 box={box}
                 date={row.date}
-                frozen={!!row.preProgram}
                 settleNonce={settleNonce}
                 onLayout={rememberBox(row.date, box.id)}
                 onAdd={onAdd}
@@ -202,11 +195,9 @@ const DROP_REFUSAL_COPY: Record<string, string> = {
   day_full: "That day is full — two sessions is the most.",
 };
 
-function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd, onRemove, onDrop }: {
+function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDrop }: {
   box: WeekBoardBox;
   date: string;
-  /** R-227: a pre-start day's box renders, and does nothing. */
-  frozen?: boolean;
   settleNonce?: number;
   onLayout: (event: LayoutChangeEvent) => void;
   onAdd: (date: string) => void;
@@ -214,10 +205,6 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
   onDrop: (fromDate: string, boxId: string, px: number, py: number) => 'held' | 'returned';
 }) {
   if (box.kind === 'empty') {
-    if (frozen) {
-      // R-227: no add doorway before the program's start — an empty label only.
-      return <View onLayout={onLayout} style={[styles.box, styles.emptyBox]} />;
-    }
     return (
       <Pressable
         onPress={() => onAdd(date)}
@@ -237,9 +224,6 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
   /* Every real box can be managed here. The parent distinguishes fixture
    * transactions from training transactions; this component only reports the
    * box and date the athlete acted on. */
-  const removable = !frozen;
-  const draggable = !frozen;
-
   /* THE BOX FOLLOWS THE FINGER ON THE UI THREAD. Only the DROP crosses back to
    * JS — a drag that re-rendered the week on every frame would fight the list
    * it is being dragged over. */
@@ -359,22 +343,20 @@ function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd,
       onLayout={onLayout}
     >
       <Text style={styles.boxLabel} numberOfLines={2}>{box.label}</Text>
-      {removable ? (
-        <Pressable
-          onPress={() => onRemove(date, box)}
-          accessibilityRole="button"
-          accessibilityLabel={`Remove ${box.label ?? 'this session'} on ${date}`}
-          testID={`week-board-remove-${date}-${box.kind}`}
-          hitSlop={8}
-          style={({ pressed }) => [styles.binButton, pressed && { opacity: 0.6 }]}
-        >
-          <MaterialCommunityIcons name="trash-can-outline" size={15} color="#FF7A85" />
-        </Pressable>
-      ) : null}
+      <Pressable
+        onPress={() => onRemove(date, box)}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${box.label ?? 'this session'} on ${date}`}
+        testID={`week-board-remove-${date}-${box.kind}`}
+        hitSlop={8}
+        style={({ pressed }) => [styles.binButton, pressed && { opacity: 0.6 }]}
+      >
+        <MaterialCommunityIcons name="trash-can-outline" size={15} color="#FF7A85" />
+      </Pressable>
     </Animated.View>
   );
 
-  return draggable ? <GestureDetector gesture={pan}>{content}</GestureDetector> : content;
+  return <GestureDetector gesture={pan}>{content}</GestureDetector>;
 }
 
 const styles = StyleSheet.create({

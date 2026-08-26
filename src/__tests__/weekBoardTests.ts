@@ -226,8 +226,8 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     !/runOnJS\(onDrop\)\(\s*date, box\.id, event\.x, event\.y/.test(board));
 
   ok('a fixture is both draggable and removable on the Week board',
-    /const draggable = !frozen/.test(board)
-      && /const removable = !frozen/.test(board)
+    /return <GestureDetector gesture=\{pan\}>\{content\}<\/GestureDetector>/.test(board)
+      && /onPress=\{\(\) => onRemove\(date, box\)\}/.test(board)
       && !/box\.kind !== 'game'/.test(board));
 
   // #14, SECOND ROUND (Sam's phone, 2026-08-26: "nope still not working

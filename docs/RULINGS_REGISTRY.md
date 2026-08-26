@@ -5983,15 +5983,16 @@ moved session, TT day filter. · `WRITTEN` — build owed; guard owed with it.
 
 ---
 
-**R-227** · *"grey them out - shows the athlete they are there without being able to do something in the past."* (Sam, 2026-08-26, answering launch-audit finding #12) · **DAYS BEFORE THE ATHLETE'S START ARE VISIBLE BUT INERT.**
+**R-227 REVISED** · *"Hide any sessions before you entered i.e. Wednesday should not show any sessions on Monday or Tuesday on weekly view"* and *"sessions in the app that are currently programmed but greyed out because you sign up after that date should just be removed from weekly view entirely"* (Sam, 2026-08-26, replacing the earlier grey-card answer) · **WEEK VIEW BEGINS ON THE ATHLETE'S START DAY.**
 
-A brand-new athlete's first week keeps its Monday-to-Sunday shape; days
-before the program's start day render greyed, with no Start Session control
-and no readiness chips — present, not actionable. Copy for the short note is
-functional until Sam signs it.
+A brand-new athlete's first Week view starts on their signup/generation day.
+Earlier days and their generated sessions are absent from both the ordinary
+Week list and Manage Week; they are not dimmed placeholders. This is a read
+boundary, not destructive program editing: the authored program remains intact
+for identity, replay and historical accounting.
 
-**Search words:** first week, past days, before start, grey, dead days,
-onboarding week. · `WRITTEN` — build owed; guard owed with it.
+**Search words:** first week, past days, before start, hidden, grey, dead days,
+onboarding week, Manage Week. · `BUILT` — guarded by `test:pre-program-days`.
 
 ---
 

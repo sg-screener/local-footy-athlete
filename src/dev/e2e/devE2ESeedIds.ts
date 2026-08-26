@@ -48,6 +48,12 @@ export const DEV_E2E_SEED_IDS = [
    * and then does nothing else. The template, its name, its dose and its
    * section all arrive through production code. */
   'conditioning-showcase',
+  /* ── DEV-ONLY, R-227 REVISED WEEK-VISIBILITY PROOF ────────────────────────
+   * A Wednesday signup inside a Monday-starting generated week. Unlike the
+   * older spent-week seed, this world carries no historical outcome/move
+   * witness: its only job is to prove Week and Manage Week begin on the actual
+   * athlete start day while the generated program still contains Mon/Tue. */
+  'midweek-signup',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -89,6 +95,7 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   'exercise-removal-restart': '2026-07-13',
   'session-layout-showcase': '2026-07-13',
   'conditioning-showcase': '2026-07-13',
+  'midweek-signup': '2026-07-15',
   // The Monday AFTER block 1's four weeks (program start 2026-07-13 via the
   // override below) — today is rollover day.
   'block-rollover': '2026-08-10',
@@ -107,6 +114,7 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
  */
 export const DEV_E2E_PROGRAM_START_OVERRIDES: Partial<Record<DevE2ESeedId, string>> = {
   'block-rollover': '2026-07-13',
+  'midweek-signup': '2026-07-13',
 };
 
 export function devE2EProgramStartForSeed(seedId: DevE2ESeedId): string {

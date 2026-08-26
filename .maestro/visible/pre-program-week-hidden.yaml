@@ -1,0 +1,42 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - Week begins on signup day
+tags:
+  - e2e
+  - visible
+  - program
+---
+# Wednesday signup inside a Monday-starting generated week. The program still
+# contains real Mon/Tue content; Week must begin on Wednesday rather than
+# drawing those earlier sessions as grey cards.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: midweek-signup
+- tapOn:
+    id: "program-view-week"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-wed"
+    timeout: 10000
+- assertNotVisible:
+    id: "day-row-mon"
+- assertNotVisible:
+    id: "day-row-tue"
+- takeScreenshot: artifacts/visible/week-begins-on-signup-day
+
+# Manage Week consumes the same filtered dated read; it cannot bring the grey
+# sessions back through its own presentation.
+- tapOn:
+    id: "edit-week-button"
+- assertVisible: "Manage week"
+- tapOn:
+    id: "edit-week-session"
+- extendedWaitUntil:
+    visible:
+      id: "week-board-day-2026-07-15"
+    timeout: 10000
+- assertNotVisible:
+    id: "week-board-day-2026-07-13"
+- assertNotVisible:
+    id: "week-board-day-2026-07-14"
+- takeScreenshot: artifacts/visible/manage-week-begins-on-signup-day

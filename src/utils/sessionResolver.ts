@@ -389,15 +389,13 @@ export function programWeekOffsetBounds(
 }
 
 /**
- * R-227 (Sam, 2026-08-26, launch-audit finding #12): days before the program's
- * own start are VISIBLE BUT INERT — *"grey them out - shows the athlete they
- * are there without being able to do something in the past."* A Tuesday
- * signup's first week keeps its Monday-Sunday shape, and its Monday (before
- * the app held a program at all) presents nothing startable.
+ * The one boundary predicate for dates before the athlete had a program.
+ * R-227 was revised on 2026-08-26: Week hides these dates entirely through
+ * `weekViewDaysFromAthleteStart`; a defensive Day-view reach remains inert.
  *
- * The anchor is the program's OWN dated span — the same `startDate` the
- * navigation bounds above read — so the two cannot disagree about where the
- * program begins.
+ * The anchor begins with the program's own dated span — the same `startDate`
+ * the navigation bounds above read — then narrows to the athlete's later
+ * signup/generation date when one exists.
  */
 export function dayPredatesProgram(
   dateISO: string,
@@ -418,6 +416,22 @@ export function dayPredatesProgram(
     ? athleteStart
     : start;
   return dateISO.slice(0, 10) < boundary;
+}
+
+/**
+ * R-227 REVISED (Sam, 2026-08-26): Week view begins on the athlete's actual
+ * start day. Earlier generated rows stay in the stored program for identity and
+ * replay, but neither Week nor Manage Week receives them to render.
+ *
+ * Generic over a dated read so both weekly surfaces consume one answer without
+ * coupling this domain boundary to React or to either card shape.
+ */
+export function weekViewDaysFromAthleteStart<T extends { readonly date: string }>(
+  days: readonly T[],
+  program: Pick<TrainingProgram, 'startDate'> | null | undefined,
+  athleteStartISO?: string | null,
+): T[] {
+  return days.filter((day) => !dayPredatesProgram(day.date, program, athleteStartISO));
 }
 
 export function clampProgramWeekOffset(

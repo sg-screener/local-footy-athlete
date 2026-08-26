@@ -56,3 +56,48 @@
 - Every game drag-and-drop combination on simulator; the domain board matrix
   covers empty, training and team-training targets, but this glass pass drove
   the G-1 Add route only.
+
+## 2026-08-26 — Week begins on the athlete's actual start day
+
+### What landed
+
+- R-227's earlier grey-card answer is superseded by Sam's later instruction.
+- Ordinary Week and Manage Week now consume one dated collection filtered at
+  the existing signup/program-start boundary.
+- A Wednesday signup displays Wednesday onward. Monday and Tuesday are not
+  rendered as sessions, rest placeholders, grey cards or frozen board boxes.
+- The filter is read-only; the authored program remains stored for replay and
+  history rather than being destructively edited.
+- A dedicated `midweek-signup` dev world makes the state repeatable without
+  weakening the older spent-week seed's unrelated stale witness.
+
+### Measured verification
+
+- `test:pre-program-days`: 8/8.
+- `test:week-board`: 75/75.
+- Mutation: returning all dated rows changes the first tape to 6/2; both dated
+  behavior cells name Monday/Tuesday returning.
+- Simulator: `.maestro/visible/pre-program-week-hidden.yaml` passed on iPhone 17
+  Pro simulator. Normal Week and Manage Week both began on Wednesday; Monday
+  and Tuesday were absent from both accessibility trees.
+- `test:dev-e2e-seeds` reaches and passes the new seed-count cell, then retains
+  its inherited spent-week witness failure and later crashes on the inherited
+  stacked-team fixture before reaching the new seed in its loop. The product
+  seed door itself validated `midweek-signup` successfully in the simulator.
+- `test:law-registry`: 11 passing / 3 inherited failures; 190 distinct law rows,
+  169 guarded and the same 21 UNENFORCED rows.
+- `test:ruling-registry`: 6 passing / 2 inherited failures.
+- TypeScript compilation retains the same unrelated temporary-fact,
+  transaction and old Home-screen errors; this change introduces no new
+  compiler error.
+- `test:maestro-element-contract` retains its existing dead-id list and names
+  nothing from the new flow. `test:dev-e2e-testids` retains its two existing
+  equipment-id failures.
+
+### NOT COVERED
+
+- Physical iPhone Release acceptance.
+- VoiceOver reading order for a five-row first week.
+- Missing/corrupt signup dates beyond the existing program-start fallback.
+- Weeks before the signup week; current navigation bounds continue to own
+  whether those weeks can be reached.
