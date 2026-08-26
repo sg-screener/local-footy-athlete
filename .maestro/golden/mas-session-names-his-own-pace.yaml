@@ -53,10 +53,11 @@ tags:
     visible:
       id: "home-away-sheet"
     timeout: 10000
-# Leave Tuesday. The seed is anchored Monday 2026-07-13, so Tuesday the 14th is
-# inside the week already on screen.
+# Leave Tuesday the 14th. The leave date comes from the shared month grid now
+# (Sam's checklist #10, 2026-08-26) — cells are id'd by ISO date, same as the
+# return calendar. The seed is anchored Monday 2026-07-13.
 - tapOn:
-    id: "home-away-leave-tue"
+    id: "home-away-leave-2026-07-14"
 # Return a fortnight out, so the whole anchored week sits inside the trip.
 - tapOn:
     id: "home-away-return-2026-07-27"

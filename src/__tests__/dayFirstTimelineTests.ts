@@ -1115,8 +1115,22 @@ run('Away is a week-shape control, and it asks leave, return, then equipment', (
     && /When do you return\?/.test(sheet)
     && /Do you have your normal equipment\?/.test(sheet),
     'the away sheet no longer asks Sam\'s three questions in his words');
-  assert(/date >= todayISO/.test(sheet) && /weekDays/.test(sheet),
-    'the leave date is no longer bounded to the week on screen');
+  // SUPERSEDED FROM SAM'S PHONE, 2026-08-26 (checklist #10): "You can't
+  // select next monday as start date - only this week shows up ... You
+  // should just be given the same calendar and then select when you leave
+  // and return". The leave date comes from the SAME month grid as the
+  // return date, floored at today — the week-bound day list this cell used
+  // to pin is the defect now.
+  assert(/minISO=\{todayISO\}/.test(sheet)
+    && /testIDPrefix="home-away-leave"/.test(sheet)
+    && !/weekDays/.test(sheet),
+    'the leave date is not picked from the shared calendar floored at today');
+  // And his three equipment answers, in his order: "same gear, some gear
+  // (taken to a scrollable pop up ...) or bodyweight only".
+  assert(/home-away-equipment-yes/.test(sheet)
+    && /home-away-equipment-no/.test(sheet)
+    && /home-away-equipment-bodyweight/.test(sheet),
+    'the equipment question no longer offers Sam\'s three answers');
   // READ THE COMPONENT, NOT THE LITERAL. This matched the composed testID
   // `home-away-return-calendar`, and reddened the day a neighbour parameterised
   // the prefix so a second sheet could reuse the same month grid — correct work,

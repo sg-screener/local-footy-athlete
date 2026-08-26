@@ -79,7 +79,7 @@ import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, readinessSta
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
 import { useProgramStore } from '../../store/programStore';
-import { useProfileStore } from '../../store/profileStore';
+import { ownedEquipmentKit, useProfileStore } from '../../store/profileStore';
 import { dayPredatesProgram } from '../../utils/sessionResolver';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
@@ -1792,26 +1792,49 @@ export default function HomeScreenV2() {
 
       <AwaySheet
         visible={awayVisible}
-        weekDays={weekDays}
         onClose={() => setAwayVisible(false)}
-        onDone={async ({ leaveISO, returnISO, hasNormalEquipment }) => {
+        onDone={async ({ leaveISO, returnISO, equipment }) => {
           setAwayVisible(false);
           // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
           // home on the day they return, and the program is normal again that
           // morning without them clearing anything.
           const span = { from: leaveISO, until: addDaysISO(returnISO, -1) };
-          // THE TRIP IS WRITTEN IN BOTH BRANCHES (Sam, 2026-08-13: *"yes clear
+          // THE TRIP IS WRITTEN FOR EVERY ANSWER (Sam, 2026-08-13: *"yes clear
           // team training and games while away"*). The club is shut to him
           // whatever is in his suitcase; the equipment answer only decides what
           // his OWN sessions look like.
           const result = await handleApplyAwaySpan(span);
           const ack = buildScheduleAcknowledgment(
-            result, hasNormalEquipment ? 'away' : 'away_equipment');
+            result, equipment === 'same' ? 'away' : 'away_equipment');
           recordScheduleAckPresented({
             traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
           });
-          if (!result?.ok || hasNormalEquipment) {
+          if (!result?.ok || equipment === 'same') {
             setScheduleAck(ack);
+            return;
+          }
+          if (equipment === 'bodyweight') {
+            // Checklist #10: "bodyweight only as anohter option". The whole
+            // kit goes through the same missing_for_span door the equipment
+            // sheet uses — the fullest version of the same answer, no new
+            // fact shape. An already-bodyweight athlete has nothing to mark.
+            const kit = ownedEquipmentKit();
+            if (kit.tags.length === 0 && kit.conditioningModalities.length === 0) {
+              setScheduleAck(ack);
+              return;
+            }
+            const equipmentResult = await handleApplyAwayEquipment({
+              kind: 'missing_for_span',
+              tags: kit.tags,
+              conditioningModalities: kit.conditioningModalities,
+              from: span.from,
+              until: span.until,
+            });
+            const equipmentAck = buildScheduleAcknowledgment(equipmentResult, 'away_equipment');
+            recordScheduleAckPresented({
+              traceId: equipmentResult?.traceId, surface: 'away_this_week', tone: equipmentAck.tone,
+            });
+            setScheduleAck(equipmentAck);
             return;
           }
           setAwayEquipmentSpan(span);
@@ -3960,22 +3983,32 @@ function WeekReadinessSheet({
  * — "away for ten days" was unsayable. The return date is unbounded precisely
  * so that it can be.
  *
- * THE TWO BOUNDS ARE HIS, NOT A DESIGN CHOICE: leave is limited to the week on
- * screen (the athlete is looking at that week; a trip starting three months out
- * is not a thing this control is for), and return is any future date.
+ * THE LEAVE BOUND IS GONE — SAM SUPERSEDED HIS OWN 2026-08-13 RULING FROM HIS
+ * PHONE, 2026-08-26 (checklist #10): *"You can't select next monday as start
+ * date - only this week shows up ... You should just be given the same
+ * calendar and then select when you leave and return"*. Both dates now come
+ * from the same month grid; leave floors at today, return floors at the day
+ * after leaving.
+ *
+ * THE EQUIPMENT QUESTION IS HIS THREE ANSWERS, VERBATIM SHAPE (same order):
+ * *"It should give option - same gear, some gear (taken to a scrollable pop
+ * up that lists all the equipment which you can untick to remove) or
+ * bodyweight only as anohter option"*. "Some gear" still hands the span to
+ * `EquipmentLimitationSheet` (one menu, never two); "bodyweight only" marks
+ * the athlete's WHOLE kit missing for the span through the same door — no
+ * new fact shape, just the fullest version of the same answer.
  */
 type AwayAnswer = {
   leaveISO: string;
   returnISO: string;
-  hasNormalEquipment: boolean;
+  equipment: 'same' | 'some' | 'bodyweight';
 };
 interface AwaySheetProps {
   visible: boolean;
-  weekDays: any[];
   onClose: () => void;
   onDone: (answer: AwayAnswer) => void;
 }
-function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
+function AwaySheet({ visible, onClose, onDone }: AwaySheetProps) {
   const [leaveISO, setLeaveISO] = useState<string | null>(null);
   const [returnISO, setReturnISO] = useState<string | null>(null);
 
@@ -3984,14 +4017,10 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
   }, [visible]);
 
   const todayISO = todayISOLocal();
-  // LEAVING IS BOUNDED BY THE WEEK ON SCREEN — Sam: *"limited to that week in
-  // dates"*. Every day of it, not only training days: a trip starts when it
-  // starts, and the old sheet's training-days-only list is exactly why a
-  // Saturday departure could not be said.
-  const leaveCandidates = weekDays
-    .map((day) => day.date as string)
-    .filter((date) => date >= todayISO);
-
+  // THE SAME CALENDAR FOR BOTH DATES — Sam's phone, 2026-08-26 (checklist
+  // #10): "You should just be given the same calendar and then select when
+  // you leave and return". The week-bound day list this replaces could not
+  // say "I leave next Monday" at all. Leave floors at today.
   const step: 'leave' | 'return' | 'equipment' =
     leaveISO === null ? 'leave' : returnISO === null ? 'return' : 'equipment';
 
@@ -4001,22 +4030,14 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
         {step === 'leave' && (
           <>
             <SheetHeader title="Away" subtitle="When do you leave?" />
-            {leaveCandidates.length === 0 ? (
-              <SheetDescription testID="home-away-leave-empty">
-                This week is already behind you. Move to next week to set a trip.
-              </SheetDescription>
-            ) : leaveCandidates.map((date) => (
-              <Pressable
-                key={date}
-                onPress={() => setLeaveISO(date)}
-                testID={`home-away-leave-${dayOfWeekTestIdToken(dayOfWeekForISODate(date))}`}
-                accessibilityRole="button"
-                accessibilityLabel={shortDayMonthLabel(date)}
-                style={({ pressed }) => [styles.awayDayRow, pressed && { opacity: 0.75 }]}
-              >
-                <Text style={styles.awayDayText}>{shortDayMonthLabel(date)}</Text>
-              </Pressable>
-            ))}
+            <SheetDescription>
+              Pick the day you leave — any day from today.
+            </SheetDescription>
+            <AwayReturnCalendar
+              minISO={todayISO}
+              onPick={setLeaveISO}
+              testIDPrefix="home-away-leave"
+            />
           </>
         )}
 
@@ -4047,22 +4068,33 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
             <SheetDescription>
               Away {shortDayMonthLabel(leaveISO)} to {shortDayMonthLabel(returnISO)}.
             </SheetDescription>
-            {/* YES IS A REAL ANSWER AND IT STORES NOTHING. Sam: *"if yes, follow
-                same program"*. */}
+            {/* THREE ANSWERS, SAM'S OWN LIST (checklist #10, 2026-08-26):
+                "same gear, some gear (taken to a scrollable pop up ... which
+                you can untick to remove) or bodyweight only". Same gear stores
+                nothing; some gear hands the span to the equipment sheet;
+                bodyweight marks the whole kit missing through the same door. */}
             <Button
-              label="Yes, same as usual"
+              label="Same gear as usual"
               size="lg"
               glow={false}
               testID="home-away-equipment-yes"
-              onPress={() => onDone({ leaveISO, returnISO, hasNormalEquipment: true })}
+              onPress={() => onDone({ leaveISO, returnISO, equipment: 'same' })}
               style={{ marginTop: spacing.md }}
             />
             <Button
-              label="No, I'll be without some gear"
+              label="Some gear missing"
               variant="secondary"
               size="lg"
               testID="home-away-equipment-no"
-              onPress={() => onDone({ leaveISO, returnISO, hasNormalEquipment: false })}
+              onPress={() => onDone({ leaveISO, returnISO, equipment: 'some' })}
+              style={{ marginTop: spacing.sm }}
+            />
+            <Button
+              label="Bodyweight only"
+              variant="secondary"
+              size="lg"
+              testID="home-away-equipment-bodyweight"
+              onPress={() => onDone({ leaveISO, returnISO, equipment: 'bodyweight' })}
               style={{ marginTop: spacing.sm }}
             />
             <Button
@@ -4422,14 +4454,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
     marginVertical: spacing.sm,
   },
-  awayDayRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-  },
-  awayDayText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', flex: 1 },
-
   // ── ITEM 28: THE RETURN-DATE CALENDAR ──
   // Seven columns, Monday first, same as every other week shape in the app.
   awayCalendarHead: {

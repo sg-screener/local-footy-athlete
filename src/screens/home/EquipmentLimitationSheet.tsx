@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Sheet, SheetDescription, SheetHeader } from '../../components/ui';
@@ -228,8 +228,8 @@ export function EquipmentLimitationSheet({
   const rowMissingLabel = span ? 'Missing while away' : 'Missing this week';
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet">
-      <View>
+    <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet" cappedBody>
+      <View style={styles.sheetBody}>
         <SheetHeader
           title="Equipment"
           subtitle={span ? 'What will you be without?' : 'Missing equipment this week?'}
@@ -247,6 +247,16 @@ export function EquipmentLimitationSheet({
           <ExplorerRenderWitness testID={explorerTestId.equipmentActive(activeFactId)} />
         ) : null}
 
+        {/* Sam's phone, 2026-08-26 (checklist #10): "lists all the equipment
+          * again on an unscrollable page... not the best UX". A full kit is
+          * ~20 rows — far taller than any phone. The list scrolls; the apply
+          * bar stays reachable below it. `flexShrink: 1`, never `flex: 1`,
+          * per the cappedBody rule on the Sheet primitive. */}
+        <ScrollView
+          style={styles.scrollList}
+          showsVerticalScrollIndicator={false}
+          testID="home-equipment-limitation-list"
+        >
         {kit.tags.map((tag) => (
           <MissingToggle
             key={tag}
@@ -269,6 +279,7 @@ export function EquipmentLimitationSheet({
             onPress={() => toggleModality(modality)}
           />
         ))}
+        </ScrollView>
 
         {!kitIsEmpty ? (
           <Pressable
@@ -362,6 +373,14 @@ function MissingToggle({
 }
 
 const styles = StyleSheet.create({
+  /* The sheet's own children flex inside cappedBody; both follow the Sheet
+   * primitive's rule: flexShrink with auto basis, never flex: 1. */
+  sheetBody: {
+    flexShrink: 1,
+  },
+  scrollList: {
+    flexShrink: 1,
+  },
   title: {
     color: colors.text.primary,
     fontSize: 22,
