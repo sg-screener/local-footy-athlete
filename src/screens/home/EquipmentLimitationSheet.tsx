@@ -325,7 +325,6 @@ export function EquipmentLimitationSheet({
           </Pressable>
         ) : null}
       </View>
-    </Sheet>
   );
 }
 

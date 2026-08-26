@@ -61,7 +61,10 @@ import {
   todayISOLocal,
 } from '../../utils/appDate';
 import { addDaysISO } from '../../utils/programBlockState';
-import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
+import {
+  EquipmentLimitationBody,
+  type EquipmentLimitationDecision,
+} from './EquipmentLimitationSheet';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
@@ -1644,7 +1647,91 @@ export default function HomeScreenV2() {
         visible={weekEditVisible}
         phase={currentPhase}
         hasFixture={weekHasFixture}
-        onClose={() => setWeekEditVisible(false)}
+        awayMode={awayVisible}
+        awayKitSpan={awayEquipmentSpan}
+        onClose={() => {
+          setWeekEditVisible(false);
+          setAwayVisible(false);
+          setAwayEquipmentSpan(null);
+          awayApplyBusyRef.current = false;
+        }}
+        onAwayDone={async ({ leaveISO, returnISO, equipment }) => {
+          // Checklist #5, second round: the whole away flow lives inside THIS
+          // sheet's one modal, so there is no window gap anywhere in the
+          // chain. The sheet stays up through the applies (double-tap
+          // guarded); each branch closes it at its own end; "some gear"
+          // advances to the embedded kit step instead.
+          if (awayApplyBusyRef.current) return;
+          awayApplyBusyRef.current = true;
+          // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
+          // home on the day they return, and the program is normal again that
+          // morning without them clearing anything.
+          const span = { from: leaveISO, until: addDaysISO(returnISO, -1) };
+          // THE TRIP IS WRITTEN FOR EVERY ANSWER (Sam, 2026-08-13: *"yes clear
+          // team training and games while away"*). The club is shut to him
+          // whatever is in his suitcase; the equipment answer only decides what
+          // his OWN sessions look like.
+          const result = await handleApplyAwaySpan(span);
+          const ack = buildScheduleAcknowledgment(
+            result, equipment === 'same' ? 'away' : 'away_equipment');
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
+          const closeAll = () => {
+            setAwayVisible(false);
+            setWeekEditVisible(false);
+            awayApplyBusyRef.current = false;
+          };
+          if (!result?.ok || equipment === 'same') {
+            closeAll();
+            setScheduleAck(ack);
+            return;
+          }
+          if (equipment === 'bodyweight') {
+            // Checklist #10: "bodyweight only as anohter option". The whole
+            // kit goes through the same missing_for_span door the kit step
+            // uses — the fullest version of the same answer, no new fact
+            // shape. An already-bodyweight athlete has nothing to mark.
+            const kit = ownedEquipmentKit();
+            if (kit.tags.length === 0 && kit.conditioningModalities.length === 0) {
+              closeAll();
+              setScheduleAck(ack);
+              return;
+            }
+            const equipmentResult = await handleApplyAwayEquipment({
+              kind: 'missing_for_span',
+              tags: kit.tags,
+              conditioningModalities: kit.conditioningModalities,
+              from: span.from,
+              until: span.until,
+            });
+            const equipmentAck = buildScheduleAcknowledgment(equipmentResult, 'away_equipment');
+            recordScheduleAckPresented({
+              traceId: equipmentResult?.traceId, surface: 'away_this_week', tone: equipmentAck.tone,
+            });
+            closeAll();
+            setScheduleAck(equipmentAck);
+            return;
+          }
+          setAwayEquipmentSpan(span);
+          awayApplyBusyRef.current = false;
+        }}
+        onAwayKitApply={async (decision) => {
+          // CLOSING IS THE CONFIRMATION, so it may only happen on success — the
+          // athlete must never watch a sheet dismiss over a refused commit.
+          const result = await handleApplyAwayEquipment(decision);
+          const ack = buildScheduleAcknowledgment(result, 'away_equipment');
+          setScheduleAck(ack);
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
+          if (result?.ok) {
+            setAwayEquipmentSpan(null);
+            setAwayVisible(false);
+            setWeekEditVisible(false);
+          }
+        }}
+        onAwayKitBack={() => setAwayEquipmentSpan(null)}
         onBye={handleSetByeWeek}
         onMoveFixture={() => {
           setWeekEditVisible(false);
@@ -1655,10 +1742,8 @@ export default function HomeScreenV2() {
           handleAddGameMode();
         }}
         onAway={() => {
-          // Checklist #5 (Sam's phone, 2026-08-26): closing this menu in the
-          // same tick that opens the away sheet flashed the week between the
-          // two windows. The menu stays up; the away sheet's onShow closes it
-          // once its own window exists — gapless handoff.
+          // Checklist #5, second round: the away flow is a MODE of this
+          // sheet's one modal — content swaps, no window ever closes.
           setScheduleAck(null);
           setAwayVisible(true);
         }}
@@ -1825,71 +1910,6 @@ export default function HomeScreenV2() {
         </ScrollView>
       </Sheet>
 
-      <AwaySheet
-        visible={awayVisible}
-        onShow={() => setWeekEditVisible(false)}
-        onClose={() => setAwayVisible(false)}
-        onDone={async ({ leaveISO, returnISO, equipment }) => {
-          // Checklist #5: the sheet STAYS OPEN while the span applies — closing
-          // it first left seconds of bare week view before the ack or the
-          // equipment sheet arrived. Each branch below closes it at its end;
-          // the "some gear" branch hands off to the equipment sheet, whose
-          // onShow closes this one under it.
-          if (awayApplyBusyRef.current) return;
-          awayApplyBusyRef.current = true;
-          // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
-          // home on the day they return, and the program is normal again that
-          // morning without them clearing anything.
-          const span = { from: leaveISO, until: addDaysISO(returnISO, -1) };
-          // THE TRIP IS WRITTEN FOR EVERY ANSWER (Sam, 2026-08-13: *"yes clear
-          // team training and games while away"*). The club is shut to him
-          // whatever is in his suitcase; the equipment answer only decides what
-          // his OWN sessions look like.
-          const result = await handleApplyAwaySpan(span);
-          const ack = buildScheduleAcknowledgment(
-            result, equipment === 'same' ? 'away' : 'away_equipment');
-          recordScheduleAckPresented({
-            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
-          });
-          if (!result?.ok || equipment === 'same') {
-            setAwayVisible(false);
-            setScheduleAck(ack);
-            awayApplyBusyRef.current = false;
-            return;
-          }
-          if (equipment === 'bodyweight') {
-            // Checklist #10: "bodyweight only as anohter option". The whole
-            // kit goes through the same missing_for_span door the equipment
-            // sheet uses — the fullest version of the same answer, no new
-            // fact shape. An already-bodyweight athlete has nothing to mark.
-            const kit = ownedEquipmentKit();
-            if (kit.tags.length === 0 && kit.conditioningModalities.length === 0) {
-              setAwayVisible(false);
-              setScheduleAck(ack);
-              awayApplyBusyRef.current = false;
-              return;
-            }
-            const equipmentResult = await handleApplyAwayEquipment({
-              kind: 'missing_for_span',
-              tags: kit.tags,
-              conditioningModalities: kit.conditioningModalities,
-              from: span.from,
-              until: span.until,
-            });
-            const equipmentAck = buildScheduleAcknowledgment(equipmentResult, 'away_equipment');
-            recordScheduleAckPresented({
-              traceId: equipmentResult?.traceId, surface: 'away_this_week', tone: equipmentAck.tone,
-            });
-            setAwayVisible(false);
-            setScheduleAck(equipmentAck);
-            awayApplyBusyRef.current = false;
-            return;
-          }
-          setAwayEquipmentSpan(span);
-          awayApplyBusyRef.current = false;
-        }}
-      />
-
       {/* ── ITEM 31 PART 5: THE CHRISTMAS-BREAK ANSWER ──
           ONE SHEET FOR BOTH QUESTIONS, because they are one span answered in
           two sittings. The sheet is told which half it is asking and turns the
@@ -1913,29 +1933,6 @@ export default function HomeScreenV2() {
           }}
         />
       )}
-
-      {/* ── ITEM 28 STEP 4: THE EQUIPMENT QUESTION IS THE DOOR THAT ALREADY
-          EXISTS ── Sam: *"the athlete just removes the equipment they don't
-          have while on the trip and it's kept that way until they turn the
-          modifier off and say 'i'm back now'"*. No second equipment menu was
-          built; this is the same sheet, handed the span. */}
-      <EquipmentLimitationSheet
-        visible={awayEquipmentSpan !== null}
-        onShow={() => setAwayVisible(false)}
-        span={awayEquipmentSpan}
-        onClose={() => setAwayEquipmentSpan(null)}
-        onApply={async (decision) => {
-          // CLOSING IS THE CONFIRMATION, so it may only happen on success — the
-          // athlete must never watch a sheet dismiss over a refused commit.
-          const result = await handleApplyAwayEquipment(decision);
-          const ack = buildScheduleAcknowledgment(result, 'away_equipment');
-          setScheduleAck(ack);
-          recordScheduleAckPresented({
-            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
-          });
-          if (result?.ok) setAwayEquipmentSpan(null);
-        }}
-      />
 
       <RebuildSheet
         visible={rebuildModalVisible}
@@ -3391,6 +3388,14 @@ interface WeekEditSheetProps {
   visible: boolean;
   phase: SeasonPhase;
   hasFixture: boolean;
+  /** Checklist #5, second round: the away flow is a MODE of this one modal —
+   *  iOS cannot present sibling modals without a bare-week flash between
+   *  their windows, so the chain never leaves this sheet. */
+  awayMode: boolean;
+  awayKitSpan: { from: string; until: string } | null;
+  onAwayDone: (answer: AwayAnswer) => void;
+  onAwayKitApply: (decision: EquipmentLimitationDecision) => void | Promise<void>;
+  onAwayKitBack: () => void;
   onClose: () => void;
   onBye: () => Promise<boolean>;
   /** Sam, 2026-08-26: bye → move the game → add a game, in that order. */
@@ -3405,6 +3410,11 @@ function WeekEditSheet({
   visible,
   phase,
   hasFixture,
+  awayMode,
+  awayKitSpan,
+  onAwayDone,
+  onAwayKitApply,
+  onAwayKitBack,
   onClose,
   onBye,
   onMoveFixture,
@@ -3427,6 +3437,21 @@ function WeekEditSheet({
     setSavingBye(false);
     if (applied) onClose();
   };
+
+  if (awayMode) {
+    return (
+      <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet" cappedBody>
+        <AwayFlowBody
+          visible={visible && awayMode}
+          kitSpan={awayKitSpan}
+          onApplyKit={onAwayKitApply}
+          onKitBack={onAwayKitBack}
+          onClose={onClose}
+          onDone={onAwayDone}
+        />
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="edit-week-sheet">
@@ -4061,15 +4086,24 @@ type AwayAnswer = {
   returnISO: string;
   equipment: 'same' | 'some' | 'bodyweight';
 };
-interface AwaySheetProps {
+interface AwayFlowBodyProps {
+  /** The flow resets its dates each time the away mode opens. */
   visible: boolean;
-  /** Gapless handoff: fires when this sheet's window is up, so the opener
-   *  (the week edit menu) can close underneath it. Checklist #5. */
-  onShow?: () => void;
+  /**
+   * Checklist #5, second round: the away flow is a MODE INSIDE the week-edit
+   * sheet's one modal, never a sibling modal. iOS cannot present two sibling
+   * modals at once, so a close-A-open-B handoff always flashes the week
+   * between the two windows (and an onShow-chained handoff deadlocks — B's
+   * window never opens while A is up). One modal, content swap: zero gap.
+   * The kit step is the same one equipment menu, embedded (`kitSpan`).
+   */
+  kitSpan: { from: string; until: string } | null;
+  onApplyKit: (decision: EquipmentLimitationDecision) => void | Promise<void>;
+  onKitBack: () => void;
   onClose: () => void;
   onDone: (answer: AwayAnswer) => void;
 }
-function AwaySheet({ visible, onShow, onClose, onDone }: AwaySheetProps) {
+function AwayFlowBody({ visible, kitSpan, onApplyKit, onKitBack, onClose, onDone }: AwayFlowBodyProps) {
   const [leaveISO, setLeaveISO] = useState<string | null>(null);
   const [returnISO, setReturnISO] = useState<string | null>(null);
 
@@ -4085,9 +4119,24 @@ function AwaySheet({ visible, onShow, onClose, onDone }: AwaySheetProps) {
   const step: 'leave' | 'return' | 'equipment' =
     leaveISO === null ? 'leave' : returnISO === null ? 'return' : 'equipment';
 
+  if (kitSpan) {
+    return (
+      <View testID="home-away-sheet">
+        <SheetHeader title="Away" subtitle="What will you be without?" />
+        <EquipmentLimitationBody span={kitSpan} onApply={onApplyKit} />
+        <Button
+          label="Back"
+          variant="secondary"
+          size="md"
+          onPress={onKitBack}
+          style={{ marginTop: spacing.sm }}
+        />
+      </View>
+    );
+  }
+
   return (
-    <Sheet visible={visible} onShow={onShow} onClose={onClose} testID="home-away-sheet">
-      <View>
+      <View testID="home-away-sheet">
         {step === 'leave' && (
           <>
             <SheetHeader title="Away" subtitle="When do you leave?" />
@@ -4170,7 +4219,6 @@ function AwaySheet({ visible, onShow, onClose, onDone }: AwaySheetProps) {
 
         <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
       </View>
-    </Sheet>
   );
 }
 

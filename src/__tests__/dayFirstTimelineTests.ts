@@ -1104,8 +1104,13 @@ run('Away is a week-shape control, and it asks leave, return, then equipment', (
     && home.includes('onPress={() => setWeekEditVisible(true)}'),
   'the weekly edit button no longer opens the menu that owns Away');
 
-  const sheetAt = home.indexOf('interface AwaySheetProps');
-  assert(sheetAt >= 0, 'the away sheet is gone; the entry opens nothing');
+  // Checklist #5, second round: the away flow is a MODE inside the week-edit
+  // sheet's one modal (AwayFlowBody) — iOS sibling modals flash the week
+  // between their windows, so the chain never leaves that sheet.
+  const sheetAt = home.indexOf('interface AwayFlowBodyProps');
+  assert(sheetAt >= 0, 'the away flow body is gone; the entry opens nothing');
+  assert(/awayMode \? \(/.test(home) || /if \(awayMode\) \{/.test(home),
+    'the week-edit sheet no longer hosts the away flow in its own modal');
   const calendarAt = home.indexOf('function AwayReturnCalendar', sheetAt);
   assert(calendarAt >= 0 && calendarAt > sheetAt,
     'the return-date calendar no longer follows the away sheet, so this cell '
