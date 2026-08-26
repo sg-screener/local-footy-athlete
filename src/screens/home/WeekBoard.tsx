@@ -56,7 +56,7 @@ export interface WeekBoardRow {
 /** Where a box sits, in board coordinates. Filled by `onLayout`, never guessed. */
 type Frame = { x: number; y: number; width: number; height: number };
 
-export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
+export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonce = 0 }: {
   rows: readonly WeekBoardRow[];
   onAdd: (date: string) => void;
   onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
@@ -65,6 +65,13 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
   onMove: (args: { fromDate: string; toDate: string; box: WeekBoardBox }) => void;
   /** Why a drop was refused, in the athlete's words. */
   onRefused: (message: string) => void;
+  /**
+   * Bumped by the parent when a dispatched move's flow ENDS (the plan-change
+   * sheet closes) — the signal for a box still held at its drop point to
+   * glide home. A box the accepted move re-homed has already unmounted, so
+   * the bump is a no-op for it. Checklist #14, second round.
+   */
+  settleNonce?: number;
 }) {
   /**
    * ⚠ **THE FRAMES ARE MEASURED, NOT COMPUTED FROM THE STYLESHEET.** A hit-test
@@ -114,25 +121,35 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
    * same offset inside every row — a bug that looks like "the drop went to the
    * wrong day" and is really "the two numbers were never in the same space".
    */
+  /**
+   * Returns the box's marching orders — checklist #14, second round (Sam,
+   * 2026-08-26: *"nope still not working properly"*). A drop that DISPATCHES a
+   * move answers `'held'`: the box stays at the drop point while the program
+   * decides, and either unmounts when the re-derived week lands it on its new
+   * day, or glides home when `settleNonce` says the flow ended without a
+   * change. Everything that ends here and now answers `'returned'` and the
+   * box glides home immediately.
+   */
   const handleDrop = React.useCallback((
     fromDate: string, boxId: string, localX: number, localY: number,
-  ) => {
+  ): 'held' | 'returned' => {
     const from = rows.find((row) => row.date === fromDate);
     const box = from?.board.boxes.find((entry) => entry.id === boxId);
-    if (!from || !box) return;
+    if (!from || !box) return 'returned';
     const origin = frames.current[`${fromDate}:${boxId}`];
     const rowTop = rowTops.current[fromDate];
     const left = boxesLeft.current[fromDate];
-    if (!origin || rowTop === undefined || left === undefined) return;
+    if (!origin || rowTop === undefined || left === undefined) return 'returned';
     const landed = boxAt(left + origin.x + localX, rowTop + origin.y + localY);
     // Dropped on nothing — the athlete changed their mind. Silence, not an error.
-    if (!landed) return;
+    if (!landed) return 'returned';
     const refusal = weekBoardDropRefusal({
       box, from: from.board, target: landed.box, to: landed.row.board,
     });
-    if (refusal === 'same_day') return;
-    if (refusal) { onRefused(DROP_REFUSAL_COPY[refusal]); return; }
+    if (refusal === 'same_day') return 'returned';
+    if (refusal) { onRefused(DROP_REFUSAL_COPY[refusal]); return 'returned'; }
     onMove({ fromDate, toDate: landed.row.date, box });
+    return 'held';
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onMove, onRefused, rows]);
 
@@ -164,6 +181,7 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused }: {
                 box={box}
                 date={row.date}
                 frozen={!!row.preProgram}
+                settleNonce={settleNonce}
                 onLayout={rememberBox(row.date, box.id)}
                 onAdd={onAdd}
                 onRemove={onRemove}
@@ -185,15 +203,16 @@ const DROP_REFUSAL_COPY: Record<string, string> = {
   day_full: "That day is full — two sessions is the most.",
 };
 
-function BoardBox({ box, date, frozen = false, onLayout, onAdd, onRemove, onDrop }: {
+function BoardBox({ box, date, frozen = false, settleNonce = 0, onLayout, onAdd, onRemove, onDrop }: {
   box: WeekBoardBox;
   date: string;
   /** R-227: a pre-start day's box renders, and does nothing. */
   frozen?: boolean;
+  settleNonce?: number;
   onLayout: (event: LayoutChangeEvent) => void;
   onAdd: (date: string) => void;
   onRemove: (date: string, scope: PlanChangeBinScopeId | null) => void;
-  onDrop: (fromDate: string, boxId: string, px: number, py: number) => void;
+  onDrop: (fromDate: string, boxId: string, px: number, py: number) => 'held' | 'returned';
 }) {
   if (box.kind === 'empty') {
     if (frozen) {
@@ -239,6 +258,35 @@ function BoardBox({ box, date, frozen = false, onLayout, onAdd, onRemove, onDrop
    * likely to bite, and it is answered by the gesture's own contract rather
    * than by fighting the parent for the responder.
    */
+  /** 1 the moment `onEnd` hands the drop to JS — tells `onFinalize` the
+   *  return-home decision belongs to `finishDrop`/`settleNonce` now. */
+  const dropDecided = useSharedValue(0);
+
+  const glideHome = React.useCallback(() => {
+    dropDecided.value = 0;
+    dx.value = withTiming(0, { duration: 180 });
+    dy.value = withTiming(0, { duration: 180 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** JS side of the drop: ask the board, then either hold or glide home. */
+  const finishDrop = React.useCallback((px: number, py: number) => {
+    if (onDrop(date, box.id, px, py) === 'returned') glideHome();
+    // A 'held' box keeps its offset: the accepted move unmounts it onto its
+    // new day, and settleNonce covers the flow ending without a change.
+  }, [onDrop, date, box.id, glideHome]);
+
+  /* The flow this box's drop dispatched has ENDED (plan-change sheet closed).
+   * If the box is still mounted it was not moved — glide it home. Skips the
+   * mount render; a box at rest glides 0 → 0 harmlessly anyway. */
+  const lastSettle = React.useRef(settleNonce);
+  React.useEffect(() => {
+    if (settleNonce !== lastSettle.current) {
+      lastSettle.current = settleNonce;
+      glideHome();
+    }
+  }, [settleNonce, glideHome]);
+
   const pan = Gesture.Pan()
     .activateAfterLongPress(220)
     .onStart((event) => {
@@ -269,28 +317,28 @@ function BoardBox({ box, date, frozen = false, onLayout, onAdd, onRemove, onDrop
        * and neither is affected by the transform. Where the finger let go is
        * where it pressed, plus how far it travelled.
        */
-      runOnJS(onDrop)(
-        date, box.id,
+      dropDecided.value = 1;
+      runOnJS(finishDrop)(
         startX.value + event.translationX,
         startY.value + event.translationY,
       );
     })
     .onFinalize(() => {
-      // The box always returns home. What the drop CHANGED is re-derived and
-      // re-rendered from the program, never from where the finger stopped.
-      //
-      // ⚠ **HOME BY GLIDE, NEVER BY TELEPORT — Sam's phone, 2026-08-26
-      // (checklist #14):** *"it snaps back for a micro second to where it
-      // came before finalising on the right spot"*. `dx.value = 0` moved the
-      // box to its origin IN ONE FRAME while the accepted drop was still
-      // re-deriving the week — an instant flash of the old layout. A short
-      // timed return reads as deliberate motion, and an accepted drop's
-      // re-render lands while (or before) the glide finishes, so the old
-      // position never flashes. Refused and abandoned drops keep the same
-      // glide — one return, one look.
+      // ⚠ **THE BOX DOES NOT RETURN HOME ON ITS OWN — checklist #14, second
+      // round.** The first fix glided it home immediately, but the accepted
+      // move re-derives SLOWER than any glide (the plan-change flow runs a
+      // whole transaction), so the athlete still watched the box land on its
+      // OLD day and then jump. Now the DROP VERDICT decides (`finishDrop`):
+      // a dispatched move HOLDS the box at the drop point until the flow
+      // ends — the re-derived week unmounts it onto its new day, or
+      // `settleNonce` sends it home when nothing changed. Only a gesture
+      // that ended with NO drop (touch cancelled before `onEnd`) returns
+      // here, because nobody else will.
       lifted.value = 0;
-      dx.value = withTiming(0, { duration: 180 });
-      dy.value = withTiming(0, { duration: 180 });
+      if (!dropDecided.value) {
+        dx.value = withTiming(0, { duration: 180 });
+        dy.value = withTiming(0, { duration: 180 });
+      }
     });
 
   const dragStyle = useAnimatedStyle(() => ({

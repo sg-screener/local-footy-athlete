@@ -34,6 +34,15 @@ export interface V2SheetProps {
   contentStyle?: StyleProp<ViewStyle>;
   testID?: string;
   /**
+   * Fires when the modal's window is actually up (RN Modal onShow). The
+   * SHEET-TO-SHEET HANDOFF hook — Sam's phone, 2026-08-26 (checklist #5):
+   * closing sheet A in the same tick that opens sheet B leaves frames where
+   * NEITHER window exists, so the screen behind flashes through. The gapless
+   * order is: open B, and close A from B's `onShow` — A stays underneath
+   * until B's window is really there.
+   */
+  onShow?: () => void;
+  /**
    * Set when the sheet body FLEXES — a `ScrollView`, or anything built on
    * `KeyboardSafeArea`, whose root is `flex: 1`.
    *
@@ -132,6 +141,7 @@ export function Sheet({
   dismissable = true,
   contentStyle,
   testID,
+  onShow,
   flexibleBody = false,
   cappedBody = false,
 }: V2SheetProps) {
@@ -163,6 +173,7 @@ export function Sheet({
       transparent
       animationType="fade"
       onRequestClose={handleClose}
+      onShow={onShow}
     >
       <Animated.View
         style={[styles.overlay, keyboardInset]}

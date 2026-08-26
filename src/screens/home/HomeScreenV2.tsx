@@ -376,6 +376,10 @@ export default function HomeScreenV2() {
    * the screen exactly as the session sections' expanded state does.
    */
   const [weekBoardOpen, setWeekBoardOpen] = useState(false);
+  // Checklist #14, second round: bumped when the plan-change flow ends, so a
+  // board box still HELD at its drop point (its move was not applied) glides
+  // home. See WeekBoard.settleNonce.
+  const [boardSettleNonce, setBoardSettleNonce] = useState(0);
   const [changeSheetEntry, setChangeSheetEntry] = useState<{
     date: string;
     initialAction?: PlanChangeInitialAction;
@@ -394,6 +398,9 @@ export default function HomeScreenV2() {
   // the equipment sheet is closed; a span means the athlete said they will not
   // have their normal kit and is now marking which parts.
   const [awayVisible, setAwayVisible] = useState(false);
+  // Checklist #5: the away sheet stays open while its span/equipment applies
+  // run, so a double tap during the settle must not dispatch twice.
+  const awayApplyBusyRef = React.useRef(false);
   const [awayEquipmentSpan, setAwayEquipmentSpan] =
     useState<{ from: string; until: string } | null>(null);
   // ONE ACK STATE FOR BOTH SCHEDULE DOORS. They are two buttons writing one fact
@@ -641,6 +648,9 @@ export default function HomeScreenV2() {
     if (!scope || !destination) {
       setBoardRefusal(offered?.move.refusal?.message
         ?? "That move isn't available on this week.");
+      // The box was told 'held' the moment onMove dispatched; nothing else
+      // will end this flow (no sheet opens), so send it home from here.
+      setBoardSettleNonce((nonce) => nonce + 1);
       return;
     }
     setChangeSheetEntry({
@@ -1297,6 +1307,7 @@ export default function HomeScreenV2() {
                   onRemove={handleBoardRemove}
                   onMove={handleBoardMove}
                   onRefused={setBoardRefusal}
+                  settleNonce={boardSettleNonce}
                 />
               )
               : weekDays.map((day, idx) => renderDayRow(day, idx))}
@@ -1623,7 +1634,10 @@ export default function HomeScreenV2() {
         initialBinScope={changeSheetEntry?.binScope}
         initialMove={changeSheetEntry?.move}
         fromWeek={changeSheetEntry?.origin === 'week'}
-        onClose={() => setChangeSheetEntry(null)}
+        onClose={() => {
+          setChangeSheetEntry(null);
+          setBoardSettleNonce((nonce) => nonce + 1);
+        }}
       />
 
       <WeekEditSheet
@@ -1641,7 +1655,10 @@ export default function HomeScreenV2() {
           handleAddGameMode();
         }}
         onAway={() => {
-          setWeekEditVisible(false);
+          // Checklist #5 (Sam's phone, 2026-08-26): closing this menu in the
+          // same tick that opens the away sheet flashed the week between the
+          // two windows. The menu stays up; the away sheet's onShow closes it
+          // once its own window exists — gapless handoff.
           setScheduleAck(null);
           setAwayVisible(true);
         }}
@@ -1810,9 +1827,16 @@ export default function HomeScreenV2() {
 
       <AwaySheet
         visible={awayVisible}
+        onShow={() => setWeekEditVisible(false)}
         onClose={() => setAwayVisible(false)}
         onDone={async ({ leaveISO, returnISO, equipment }) => {
-          setAwayVisible(false);
+          // Checklist #5: the sheet STAYS OPEN while the span applies — closing
+          // it first left seconds of bare week view before the ack or the
+          // equipment sheet arrived. Each branch below closes it at its end;
+          // the "some gear" branch hands off to the equipment sheet, whose
+          // onShow closes this one under it.
+          if (awayApplyBusyRef.current) return;
+          awayApplyBusyRef.current = true;
           // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
           // home on the day they return, and the program is normal again that
           // morning without them clearing anything.
@@ -1828,7 +1852,9 @@ export default function HomeScreenV2() {
             traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
           });
           if (!result?.ok || equipment === 'same') {
+            setAwayVisible(false);
             setScheduleAck(ack);
+            awayApplyBusyRef.current = false;
             return;
           }
           if (equipment === 'bodyweight') {
@@ -1838,7 +1864,9 @@ export default function HomeScreenV2() {
             // fact shape. An already-bodyweight athlete has nothing to mark.
             const kit = ownedEquipmentKit();
             if (kit.tags.length === 0 && kit.conditioningModalities.length === 0) {
+              setAwayVisible(false);
               setScheduleAck(ack);
+              awayApplyBusyRef.current = false;
               return;
             }
             const equipmentResult = await handleApplyAwayEquipment({
@@ -1852,10 +1880,13 @@ export default function HomeScreenV2() {
             recordScheduleAckPresented({
               traceId: equipmentResult?.traceId, surface: 'away_this_week', tone: equipmentAck.tone,
             });
+            setAwayVisible(false);
             setScheduleAck(equipmentAck);
+            awayApplyBusyRef.current = false;
             return;
           }
           setAwayEquipmentSpan(span);
+          awayApplyBusyRef.current = false;
         }}
       />
 
@@ -1890,6 +1921,7 @@ export default function HomeScreenV2() {
           built; this is the same sheet, handed the span. */}
       <EquipmentLimitationSheet
         visible={awayEquipmentSpan !== null}
+        onShow={() => setAwayVisible(false)}
         span={awayEquipmentSpan}
         onClose={() => setAwayEquipmentSpan(null)}
         onApply={async (decision) => {
@@ -4031,10 +4063,13 @@ type AwayAnswer = {
 };
 interface AwaySheetProps {
   visible: boolean;
+  /** Gapless handoff: fires when this sheet's window is up, so the opener
+   *  (the week edit menu) can close underneath it. Checklist #5. */
+  onShow?: () => void;
   onClose: () => void;
   onDone: (answer: AwayAnswer) => void;
 }
-function AwaySheet({ visible, onClose, onDone }: AwaySheetProps) {
+function AwaySheet({ visible, onShow, onClose, onDone }: AwaySheetProps) {
   const [leaveISO, setLeaveISO] = useState<string | null>(null);
   const [returnISO, setReturnISO] = useState<string | null>(null);
 
@@ -4051,7 +4086,7 @@ function AwaySheet({ visible, onClose, onDone }: AwaySheetProps) {
     leaveISO === null ? 'leave' : returnISO === null ? 'return' : 'equipment';
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-away-sheet">
+    <Sheet visible={visible} onShow={onShow} onClose={onClose} testID="home-away-sheet">
       <View>
         {step === 'leave' && (
           <>

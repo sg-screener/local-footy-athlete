@@ -148,6 +148,9 @@ export type EquipmentLimitationDecision =
 
 interface EquipmentLimitationSheetProps {
   visible: boolean;
+  /** Gapless handoff: fires when this sheet's window is up, so the opener
+   *  (the away sheet) can close underneath it. Checklist #5. */
+  onShow?: () => void;
   onClose: () => void;
   onApply: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   activeFactId?: string | null;
@@ -164,6 +167,7 @@ interface EquipmentLimitationSheetProps {
 
 export function EquipmentLimitationSheet({
   visible,
+  onShow,
   onClose,
   onApply,
   activeFactId,
@@ -228,7 +232,7 @@ export function EquipmentLimitationSheet({
   const rowMissingLabel = span ? 'Missing while away' : 'Missing this week';
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet" cappedBody>
+    <Sheet visible={visible} onShow={onShow} onClose={onClose} testID="home-equipment-limitation-sheet" cappedBody>
       <View style={styles.sheetBody}>
         <SheetHeader
           title="Equipment"

@@ -223,12 +223,23 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     /const draggable = box\.kind !== 'game'/.test(board)
       && /const removable = box\.kind !== 'game'/.test(board));
 
-  // #14 (Sam's phone, 2026-08-26): the return is a GLIDE, never a one-frame
-  // teleport — `dx.value = 0` flashed the old layout before the accepted
-  // drop's re-render landed ("it snaps back for a micro second").
-  ok('the box always returns home by glide — the program re-renders the result, not the finger',
-    /onFinalize\(\(\) => \{[\s\S]{0,900}dx\.value = withTiming\(0[\s\S]{0,80}dy\.value = withTiming\(0/.test(board)
+  // #14, SECOND ROUND (Sam's phone, 2026-08-26: "nope still not working
+  // properly"): the immediate glide still landed the box on its OLD day
+  // before the slower re-derivation moved it. The drop VERDICT decides now —
+  // a dispatched move HOLDS the box at the drop point ('held'); everything
+  // that ends immediately returns it by glide ('returned'); a held box whose
+  // flow ended without a change glides home on settleNonce; and only a
+  // cancelled gesture (no drop) returns from onFinalize.
+  ok('a dispatched move HOLDS the box; only a verdict or settleNonce sends it home',
+    /'held' \| 'returned'/.test(board)
+      && /return 'held';/.test(board)
+      && /=== 'returned'\) glideHome\(\)/.test(board)
+      && /if \(!dropDecided\.value\) \{/.test(board)
+      && /settleNonce !== lastSettle\.current/.test(board)
       && !/dx\.value = 0;/.test(board));
+  ok('the parent ends a held box\'s flow from BOTH exits — sheet close and board refusal',
+    /setChangeSheetEntry\(null\);\s*setBoardSettleNonce/.test(home)
+      && /setBoardRefusal\(offered[\s\S]{0,300}setBoardSettleNonce/.test(home));
 
   ok('a refused drop gives a reason, one per typed refusal',
     /DROP_REFUSAL_COPY/.test(board)
@@ -252,7 +263,7 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
   ok('a drop the producer never offered is refused, not committed',
     /listPlanChangeOptionsForDay\(\{[\s\S]{0,160}date: args\.fromDate/.test(home)
       && /offer\?\.destinations\.find\(\(entry\) => entry\.date === args\.toDate\)/.test(home)
-      && /if \(!scope \|\| !destination\) \{[\s\S]{0,220}return;/.test(home),
+      && /if \(!scope \|\| !destination\) \{[\s\S]{0,420}return;/.test(home),
     'the board must ask the owner, not answer for it');
   ok('and it repeats the producer\'s own refusal rather than inventing words',
     /setBoardRefusal\(offered\?\.move\.refusal\?\.message/.test(home));
