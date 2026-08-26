@@ -3339,3 +3339,135 @@ with zero lower lifts while an injury is active).
   ~130 other reds individually real; test:compile ratchet breach-set is
   UNSTABLE run-to-run on identical trees (control-measured) — the gate
   itself needs a look.
+
+---
+
+## 2026-08-27 — SAM'S SIX-ITEM MORNING ORDER, WORKED ONE BY ONE
+
+Sam's operative order: fix items 1/2/3/6 now, make 5 actionable without
+asking him, save 4 (dead inputs) for last. All worked in sequence, one
+scoped commit each, `Agent: audit`.
+
+### ITEM 2 — deload not halving the club-night main lift. WORKING. `6bec7b82`
+Root cause was NOT a later pass un-halving (that hypothesis is withdrawn;
+the speculative final-enforcement pass and idempotence rework were built,
+control-proven unnecessary, and REVERTED). The real cause:
+`deloadWeekRules.isConditioningExerciseRow`'s regex fallback matched
+`\brow\b` in "Barbell Row" / "Chest-Supported DB Row" and classified the
+club-night MAIN LIFT as rowing-machine conditioning, which the strength
+deload passes through untouched. One line: a name EXERCISE_TAGS knows
+answers from the registry only. Guard: deloadLawTests club-night cells
+(68/68, mutant killed). deload-week's 9 reds are pre-existing
+(control-proven; the fix adds 2 passes there).
+
+### ITEM 3 — injury over-restriction while active. WORKING. `63958d24`
+Three parts. (a) MATRIX: Bible hamstring section ("Usually okay:
+non-painful quad-dominant lower work"; swaps deadlift→box squat,
+SL-RDL→step-up) → Leg Press, Box Squat, High Box Squat, Goblet Squat,
+Step Ups, Leg Extension move hamstring caution→good. First LOOSER
+exceptions; pins 27→33, 875/24/1038→869/24/1044; MATRIX VERIFIED 0.
+(b) VARIETY: `chooseInjurySessionAdditions` rotates its candidate pool by
+the day's date — different affected days no longer receive the identical
+replacement; review and view door pass the same date so the review stays
+an exact promise (injurySessionAdjustmentTests [8], mutant killed).
+(c) TRANSACTION: the injury recomposition now treats a THROWN
+week-acceptance refusal as a per-swap refusal instead of dying — the
+newly-legal hamstring swaps exposed a week whose write boundary refuses
+ANY swap (`planner_selected_target_miss:conditioning:3`, control-proven
+with no injury declared; recorded below). injury-recomposition 41/0.
+Measured: hamstring 6/10 keeps Leg Press on the hinge day; only true
+hamstring rows replaced. Residual recorded: Trap Bar Deadlift (caution)
+survives a hamstring 8 while Single-Leg RDL pauses — the ladder's
+pre-existing pause selection, not touched.
+
+### ITEM 6 — beginner block-2 load re-seed. WORKING. `55076fd6`
+Two defects, one family. (a) `strengthLogging.isMainStrengthExercise`
+required `load !== 'low'` — a beginner's main lifts ARE the low-load
+variants, so NO lift of theirs ever produced a strength log and every
+block boundary re-seeded from estimates (Goblet 12.5 → 6). The same
+function's regex ran before the registry, so `row` also silenced every
+rowing lift for EVERY athlete — Barbell Row never recorded a load all
+year. (b) the pool-sibling weight transfer passed loads RAW onto
+loadRatio-0 targets — Bodyweight Squat prescribed wearing 12.5kg.
+Measured after: beginner Goblet 10→47.5 across 54 weeks with a rise at
+every qualifying boundary; standard athlete's Barbell Row 42.5→67.5
+(previously flat); both years 0 problems. Guards in trainingLoggingTests
++ strengthProgressionIntegrationTests [22], mutants killed.
+
+### ITEM 1 — no-club bye refusal. WORKING. `7b8f1099`
+`full_rest_required_minimum:0` came from the accepted-state repair's stub
+regeneration running strict (`weekAcceptance: 'restoration'`) and its
+catch consuming only Section18WeekAcceptanceError — the
+GeneratedWeekRefusedError from the bye-week stub killed the whole fixture
+transaction. A fixture change is the athlete's FORWARD decision, so the
+'fixture_transition' intent now generates under 'forward_decision' (the
+documented contract; same route as "I'm properly sick"). Measured: the
+bye is ACCEPTED, athlete keeps Mon–Fri, Saturday resolves REST, Sunday
+optional Mobility, boot-stable. Guard: fixture-identity-7 through the
+real transaction door (mutant reds with the exact measured signature).
+Recorded, not fixed: the scheduler's own bye-week stub packs 7 active
+days (0 rest) — the bye SHAPE (stacked conditioning, fast work early:
+Sam's Q2/Q3) belongs to the scheduler owner mid-R-235.
+
+### ITEM 5 — red-test archaeology, tranche worked. `bbba9ff5` + `59b62737`
+Not a plan — fixes. (a) session-injury-review was DEAD at install (21st
+gender-rot fixture); revived to 71 green / 2 red, and the 2 reds are real
+pre-existing athlete-facing findings the dead suite hid: [7] close/reopen
+does not re-derive the same session, [9] withheld-row naming disagreement
+(R-121). (b) Three fixture guard suites died at import since the
+2026-08-19 burn (dangling homeGameMutationController import); the
+controller lives on as TEST SUPPORT ONLY and the suites run again:
+fixture-mutation-transaction 10/14, fixture-conditioned-replan 21/34,
+chained-mutation-continuity runs (28 red — pre-composer expectations,
+rewrite-or-delete verdict owed). Newly visible, recorded: restore
+fingerprint mismatch on patterns metadata ([9]/[11b-e]; live
+undo-reversal is 25/0 green so not escalated), coach-note metadata (coach
+teardown, Codex rebuild in flight), 0TT-bye shape cells (scheduler owner).
+(c) persistent-injury's subject (`getInjuryRules`) no longer exists in
+the product — dead suite over deleted code; deletion owed, not revival.
+Remaining pile unchanged otherwise; the compile ratchet's instability and
+the write-boundary conditioning-count disagreement (below) are the two
+instrument-level defects worth their own units.
+
+### NEW FINDING (control-proven) — the write boundary refuses ALL swaps on some weeks
+On the injury-recomposition suite's world, an ordinary no-injury swap
+through the door is refused: the §18 candidate-week assembly at
+`assertLiveDateCandidateAgainstWeek` counts conditioning against the
+planner target over STORED workouts, while conditioning days are DERIVED
+— so `planner_selected_target_miss:conditioning:3` fires on any write.
+Previously invisible because nothing in those worlds ever wrote. Its own
+unit; owner: §18 write-boundary.
+
+### ITEM 4 — dead inputs. CENSUS CORRECTED; two real gaps, owners named.
+Measured tonight, correcting the audit's list:
+- WIRED (not dead): soreness + poor-sleep doors
+  (`set_poor_sleep_status` / soreness facts through programControlActions),
+  sprint-exposure gating, MAS→per-athlete pace personalisation
+  (DayWorkoutScreenV2 `personalPaceLine`, derived at view — north-star
+  conformant), goals/motivation bias (coachingEngine
+  `motivationBiasTokens`; motivation-goals 45/0).
+- DEAD: `position` reaches only the RETIRED LLM-prompt path; local
+  generation ignores it. The Bible's own words ("position can slightly
+  bias ... do not overcomplicate") make doing nothing defensible; wiring
+  a slight bias needs Sam's coaching content, not code archaeology.
+- UNBUILT: the 2km TT retest every 6-8 weeks (Bible §"MAS and the 2km
+  time trial" — "may prescribe ... to recalibrate MAS and feed the
+  fitness trend") plus result ingestion (needs a small UI to log the
+  time). Placement is scheduler work — owner: scheduler owner (with
+  Q2/Q3), NOT built tonight to avoid overlapping the in-flight R-235
+  rebuild, per Sam's own "don't build overlapping shit".
+
+### RE-VERIFICATION (after all commits)
+- Scenario battery S-A..S-K: all run, no throws; fixture doors accepted.
+- Six 54-week archetype years: y1..y6 all `0 problems`.
+- Loads: beginner Goblet 10→47.5; standard Bench 50→75, Barbell Row
+  42.5→67.5 (newly progressing), Lat Pulldown 45→67.5.
+- Suites green: deload-law 68, injury-recomposition 41, tap-swap 26,
+  severity-bands 35, injury-latest-severity 48, fixture-identity 7,
+  forward-decision-acceptance 2, undo-reversal 25, training-logging 14,
+  workout-log-progression-wiring 37, strength-progression-inputs 18,
+  block-two-progression 41, missed-sessions 21, motivation-goals 45,
+  readiness families, MATRIX VERIFIED 0.
+- Pre-existing reds unchanged and control-proven not mine everywhere
+  measured; test:compile breach set (programControlActions 5-vs-4,
+  exerciseFilter 1-vs-0) exists on HEAD too.
