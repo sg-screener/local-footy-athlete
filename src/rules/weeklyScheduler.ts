@@ -196,15 +196,17 @@ export interface SessionIntention {
   /** True when the athlete may skip it — the early off-season block. */
   readonly optional: boolean;
   /**
-   * R-130: a composed optional session OFFERED on this day — today only the
-   * female G−1 Primer. The day's `owner` stays `rest_or_recovery` on purpose:
-   * a composed optional counts toward no load, no hard-day budget and no rest
-   * arithmetic (the charter's counting row), so the day remains a rest-class
-   * day carrying an offer, exactly as the old G−1 Gunshow day did. The typed
-   * marker travels scheduler → materialiser → connector → builder, where
-   * `buildDerivedSession` composes the signed session — never a name.
+   * R-130 + R-236: the composed optional session OFFERED on this day — the
+   * G−1 offer, gendered: her Primer, his Gunshow (Sam, 2026-08-26: *"men
+   * should be given optional gunshow instead of optional primer"*). The
+   * day's `owner` stays `rest_or_recovery` on purpose: a composed optional
+   * counts toward no load, no hard-day budget and no rest arithmetic (the
+   * charter's counting row), so the day remains a rest-class day carrying an
+   * offer. The typed marker travels scheduler → materialiser → connector →
+   * builder, where `buildDerivedSession` composes the signed session —
+   * never a name.
    */
-  readonly composedOptional?: 'primer';
+  readonly composedOptional?: 'primer' | 'gunshow';
   /** Which contract clause put this here. */
   readonly clauseId: string;
 }
@@ -1207,33 +1209,35 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     return topUp && entry.owner === 'rest_or_recovery' ? topUp : entry;
   });
 
-  // ── R-130: THE FEMALE G−1 PRIMER — placed LAST, so "if no other sessions
+  // ── R-130 + R-236: THE G−1 OFFER — placed LAST, so "if no other sessions
   // exist there" is checked against the finished week, not a draft of it ─────
   //
   // Sam, 2026-08-23: *"place primer as optional on g-1 if no other sessions
-  // exist there - if multi game week = no primer unless they add it"*. Scoped
-  // exactly as the old male G−1 Gunshow was: IN-SEASON and fixture-relative
-  // (no fixture, no G−1, no offer; a pre-season practice match deliberately
-  // gets none, matching the rule this mirrors — widening that is a new
-  // ruling). A Monday game has no G−1 inside this Monday-first week, so it
-  // gets none rather than a reach into last week. The day's counted facts are
-  // untouched — owner, conditioning and flags all stay rest-class — so the
-  // demand tally below cannot move by construction; only the offer marker and
-  // the clause change. Males: this block does not exist for them.
+  // exist there - if multi game week = no primer unless they add it"*, and
+  // 2026-08-26 (profiles audit F-B): *"men should be given optional gunshow
+  // instead of optional primer"* — the male arm was the ledgered dead
+  // branch; R-236 revives it as the GUNSHOW under the same placement rule.
+  // IN-SEASON and fixture-relative (no fixture, no G−1, no offer; a
+  // pre-season practice match deliberately gets none — widening that is a
+  // new ruling). A Monday game has no G−1 inside this Monday-first week, so
+  // it gets none rather than a reach into last week. The day's counted facts
+  // are untouched — owner, conditioning and flags all stay rest-class — so
+  // the demand tally below cannot move by construction; only the offer
+  // marker and the clause change.
   const femaleG1PrimerDays = (() => {
-    if (inputs.athleteGender !== 'female') return withRunning;
     if (inputs.phase !== 'In-season') return withRunning;
     const fixtureDays = scheduledGameDays(inputs);
     if (fixtureDays.length !== 1) return withRunning;
     const gameIdx = orderIndex(fixtureDays[0]);
     if (gameIdx <= 0) return withRunning;
     const g1Day = WEEK_ORDER[gameIdx - 1];
+    const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
     return withRunning.map((entry) => (
       entry.dayOfWeek === g1Day
         && entry.owner === 'rest_or_recovery'
         && !entry.clubTraining
         && !entry.game
-        ? { ...entry, composedOptional: 'primer' as const, clauseId: 'R-130' }
+        ? { ...entry, composedOptional: offer, clauseId: 'R-130' }
         : entry
     ));
   })();

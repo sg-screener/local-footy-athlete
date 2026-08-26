@@ -564,16 +564,12 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
   // exactly as they are for the female-path job, and the restoration is its
   // own later order. The scheduler's R-130 primer pass makes it a small flip
   // when that order comes.
-  {
-    type: 'gunshow',
-    question: 'placement',
-    path: 'male',
-    deviation: 'the male charter claims generator placement and no generated '
-      + 'week contains a generator-placed gunshow — the G−1 placement died '
-      + 'with the 2026-08-19 demolition and its rebuild is a stated later order',
-    paidBy: "R-130a item 1, Sam's 'bring gunshow back later' order — "
-      + 'unscheduled, deliberately, so the female-path job cannot move males',
-  },
+  // ── Gunshow: DEBT PAID 2026-08-26 (R-236). Sam's "bring gunshow back
+  // later" order arrived as *"men should be given optional gunshow instead
+  // of optional primer"* — the scheduler's G−1 offer pass now stamps
+  // `composedOptional: 'gunshow'` for males on the same placement rule the
+  // female Primer uses. Entry deleted and ceiling lowered in the same
+  // commit, per the ratchet's own instruction.
 
   // ── Prehab: the generator claim has no living placer either ──
   //
@@ -615,7 +611,9 @@ export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   // entry is male-path debt awaiting R-130a's restoration order; prehab's has
   // no owner and says so. Raised in the same commit as the entries.
   prehab: 1,
-  gunshow: 1,
+  // 1 -> 0 on 2026-08-26 (R-236): the male G−1 generator placement is live
+  // again, so the generator claim is earned and the debt above is deleted.
+  gunshow: 0,
   // PRIMER IS BORN AT ZERO, AND THAT IS A CLAIM, NOT A COURTESY. It arrives with
   // all four answers signed in one message (R-129), so there is nothing for a
   // debt entry to excuse — and a new type given slack "to start with" is slack

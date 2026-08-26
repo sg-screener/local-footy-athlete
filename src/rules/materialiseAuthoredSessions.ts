@@ -65,7 +65,7 @@ export interface MaterialisedSession {
   readonly game: boolean;
   readonly optional: boolean;
   /** R-130: the scheduler's composed-optional offer, copied verbatim. */
-  readonly composedOptional?: 'primer';
+  readonly composedOptional?: 'primer' | 'gunshow';
   /** The scheduler's clause, carried so a session can name who authorised it. */
   readonly clauseId: string;
   /** Specialist content. Null when the day authorises none. */
