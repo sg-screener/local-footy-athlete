@@ -50,9 +50,14 @@ export function weeklyConditioningIconKind(
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
-  return WEEKLY_CONDITIONING_LABEL_KEYS.has(key)
-    ? WEEKLY_CONDITIONING_ICON_KIND
-    : null;
+  if (WEEKLY_CONDITIONING_LABEL_KEYS.has(key)) return WEEKLY_CONDITIONING_ICON_KIND;
+  // Sam, 2026-08-26: "conditioing on weekly view has like a list icon - it
+  // should be a pulse icon". A bare "Conditioning" title (and any future
+  // conditioning-flavoured name outside the canonical set) fell through the
+  // enumerated keys to the generic activity glyph. Anything that SAYS
+  // conditioning wears the pulse.
+  if (key.includes('conditioning')) return WEEKLY_CONDITIONING_ICON_KIND;
+  return null;
 }
 
 /** Controlled display-only fallback for genuinely legacy, untyped records. */

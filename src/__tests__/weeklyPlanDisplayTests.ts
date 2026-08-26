@@ -210,6 +210,11 @@ for (const label of [
   eq(`attached ${label} icon`, weeklyConditioningIconKind(`+ ${label}`), 'pulse');
 }
 eq('legacy Aerobic Base keeps original icon', weeklyConditioningIconKind('Aerobic Base'), 'pulse');
+// Sam, 2026-08-26: "conditioing on weekly view has like a list icon - it
+// should be a pulse icon". The bare title fell outside the enumerated keys.
+eq('a bare Conditioning title wears the pulse', weeklyConditioningIconKind('Conditioning'), 'pulse');
+eq('any conditioning-flavoured name wears the pulse',
+  weeklyConditioningIconKind('Away Conditioning'), 'pulse');
 eq('strength icon remains outside conditioning mapping', weeklyConditioningIconKind('Full Body Strength'), null);
 eq('game icon remains outside conditioning mapping', weeklyConditioningIconKind('Game Day'), null);
 eq('team icon remains outside conditioning mapping', weeklyConditioningIconKind('Team Training'), null);
