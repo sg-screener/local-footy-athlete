@@ -25,6 +25,10 @@ const unrunnableBaseline = JSON.parse(fs.readFileSync(
   path.join(ROOT, 'scripts/unrunnable-suite-baseline.json'),
   'utf8',
 ));
+const decisionRegistry = JSON.parse(fs.readFileSync(
+  path.join(ROOT, 'scripts/test-truth-decisions.json'),
+  'utf8',
+));
 const emptyRegistry = { schemaVersion: 1, decisions: {} };
 
 let pass = 0;
@@ -51,17 +55,11 @@ ok('the truth audit is the first unit in the official chain',
 ok('the audit derives the large chain instead of transcribing a second suite list',
   inventory.units.length > 300 && inventory.duplicateLabels.length === 0,
   { units: inventory.units.length, duplicates: inventory.duplicateLabels });
-ok('missing commands are separated from product assertions',
-  JSON.stringify(inventory.missingChainScripts) === JSON.stringify([
-    'test:exposure-engine-priority',
-    'test:in-season-midweek-row-verification',
-  ]),
+ok('the official chain contains no missing commands',
+  inventory.missingChainScripts.length === 0,
   inventory.missingChainScripts);
-ok('chain-runner aggregates are separated from individual suite verdicts',
-  JSON.stringify(inventory.chainRunnerAggregates) === JSON.stringify([
-    'test:bible:parallel',
-    'test:bible:serial-set',
-  ]),
+ok('the official chain contains no chain-runner aggregates',
+  inventory.chainRunnerAggregates.length === 0,
   inventory.chainRunnerAggregates);
 
 const audit = buildAudit({
@@ -72,9 +70,9 @@ const audit = buildAudit({
   unrunnableBaseline,
 });
 ok('known structural debt is visible without making the audit itself red',
-  audit.ok && audit.structuralDebt.missingChainScripts.current.length === 2
-    && audit.structuralDebt.chainRunnerAggregates.current.length === 2
-    && audit.unrunnableSuiteBaseline.count === 6,
+  audit.ok && audit.structuralDebt.missingChainScripts.current.length === 0
+    && audit.structuralDebt.chainRunnerAggregates.current.length === 0
+    && audit.unrunnableSuiteBaseline.count === 0,
   audit.faults);
 
 const inventedPackage = JSON.parse(JSON.stringify(pkg));
@@ -91,19 +89,20 @@ ok('liveness: a newly missing command makes the audit red',
     && mutationAudit.faults.includes('new missing chain script: test:new-ghost-suite'),
   mutationAudit.faults);
 
-const unreviewed = classifyFailure('test:weekly-scheduler', inventory, {});
+const unreviewed = classifyFailure('test:weekly-scheduler', inventory, {}, pkg, ROOT);
 ok('an unreviewed assertion failure cannot direct a product-code change',
   unreviewed.kind === 'unreviewed_failure'
     && unreviewed.blocksOfficialChain
     && !unreviewed.mayDirectProductCodeChange,
   unreviewed);
 
-const structural = classifyFailure('test:exposure-engine-priority', inventory, {
-  'test:exposure-engine-priority': {
+const inventedInventory = deriveChainInventory(inventedPackage);
+const structural = classifyFailure('test:new-ghost-suite', inventedInventory, {
+  'test:new-ghost-suite': {
     kind: 'current_contract',
     reason: 'an attempted invalid promotion',
   },
-});
+}, inventedPackage, ROOT);
 ok('structural faults cannot be promoted into product verdicts by a decision row',
   structural.kind === 'test_infrastructure' && !structural.mayDirectProductCodeChange,
   structural);
@@ -121,9 +120,18 @@ const invalidRegistry = {
   },
 };
 const invalidErrors = validateDecisions(invalidRegistry, pkg, ROOT);
+const invalidCurrent = classifyFailure(
+  'test:weekly-scheduler',
+  inventory,
+  invalidRegistry.decisions,
+  pkg,
+  ROOT,
+);
 ok('a current-contract decision without product, contract and witness receipts is refused',
-  invalidErrors.length === 3,
-  invalidErrors);
+  invalidErrors.length === 3
+    && invalidCurrent.kind === 'invalid_decision'
+    && !invalidCurrent.mayDirectProductCodeChange,
+  { invalidErrors, invalidCurrent });
 
 const validRegistry = {
   schemaVersion: 1,
@@ -138,18 +146,59 @@ const validRegistry = {
   },
 };
 const validErrors = validateDecisions(validRegistry, pkg, ROOT);
-const current = classifyFailure('test:law-registry', inventory, validRegistry.decisions);
+const current = classifyFailure('test:law-registry', inventory, validRegistry.decisions, pkg, ROOT);
 ok('only a fully evidenced current-contract decision may direct product work',
   validErrors.length === 0
     && current.kind === 'current_contract'
     && current.mayDirectProductCodeChange,
   { validErrors, current });
 
+const invalidRetirement = {
+  schemaVersion: 1,
+  decisions: {
+    'test:weekly-scheduler': {
+      kind: 'retire_test',
+      reason: 'tries to retire a suite without actually replacing it',
+      retiredTestPaths: ['src/__tests__/weeklySchedulerTests.ts'],
+      replacementScripts: ['test:not-real'],
+    },
+  },
+};
+const invalidRetirementErrors = validateDecisions(invalidRetirement, pkg, ROOT);
+ok('liveness: retirement is refused while the old test exists or its replacement is absent',
+  invalidRetirementErrors.length === 2
+    && invalidRetirementErrors.some((error: string) => error.includes('retired test still exists'))
+    && invalidRetirementErrors.some((error: string) => error.includes('replacementScripts')),
+  invalidRetirementErrors);
+
+const decisionErrors = validateDecisions(decisionRegistry, pkg, ROOT);
+const censusCounts = Object.values(
+  decisionRegistry.decisions as Record<string, { kind: string }>,
+).reduce<Record<string, number>>(
+  (counts, decision) => {
+    counts[decision.kind] = (counts[decision.kind] || 0) + 1;
+    return counts;
+  },
+  {},
+);
+ok('the measured failure census has a valid decision for every reviewed label',
+  decisionRegistry.measuredCheckpoint === 'aa2167e2'
+    && Object.keys(decisionRegistry.decisions).length === 175
+    && decisionErrors.length === 0,
+  { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
+ok('only the two witnessed current contracts can direct product work',
+  censusCounts.current_contract === 2
+    && censusCounts.retire_test === 2
+    && censusCounts.test_infrastructure === 3
+    && censusCounts.aggregate === 2
+    && censusCounts.rewrite_test === 166,
+  censusCounts);
+
 const reportAudit = buildAudit({
-  pkg,
+  pkg: inventedPackage,
   baseline,
   decisionRegistry: emptyRegistry,
-  failureLabels: ['test:exposure-engine-priority', 'test:weekly-scheduler'],
+  failureLabels: ['test:new-ghost-suite', 'test:weekly-scheduler'],
   repo: ROOT,
   unrunnableBaseline,
 });

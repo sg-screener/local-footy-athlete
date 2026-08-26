@@ -1,4 +1,909 @@
 {
   "schemaVersion": 1,
-  "decisions": {}
+  "measuredCheckpoint": "aa2167e2",
+  "decisions": {
+    "test:accepted-state-transactions": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:accessibility-contracts": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:action-walker": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:action-walker:deep": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:action-walker:extended": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:adjustment-engine": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:anchor-participation-owner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:apply-events": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:approved-icons": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:athlete-door-matrix": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:athlete-journey": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:athlete-move-occupied-content-loss": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:athlete-session-deletion": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:athlete-session-move": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:authored-cues": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:away-flow": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:away-span-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:bible-anchors": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:bible-coverage": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:bible:parallel": {
+      "kind": "aggregate",
+      "reason": "This command launches the complete Bible runner and is not an individual product verdict; it has been removed from inside its own chain.",
+      "evidenceKind": "aggregate"
+    },
+    "test:bible:serial-set": {
+      "kind": "aggregate",
+      "reason": "This command launches the complete Bible runner and is not an individual product verdict; it has been removed from inside its own chain.",
+      "evidenceKind": "aggregate"
+    },
+    "test:block-rollover": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:block-state": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:block-two-extra-session": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:chained-mutation-continuity": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:christmas-break": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:clause-enforcement": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-actions": {
+      "kind": "rewrite_test",
+      "reason": "The helpers still have live callers, but the suite centres the retired coach dispatcher. Rewrite it around executeProgramControlAction and the live helper seams.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:coach-note-display": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:coach-note-lifecycle": {
+      "kind": "rewrite_test",
+      "reason": "Coach notes remain visible product state, but this previously unreachable suite is red. Rewrite it against the current note lifecycle owner.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-phrase-ratchet": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-prompt": {
+      "kind": "retire_test",
+      "reason": "The suite treated a deleted static SYSTEM_PROMPT as the coach source of truth. Retrieved coach knowledge and the response contract now own this behaviour.",
+      "retiredTestPaths": [
+        "src/__tests__/coachPromptContractTests.ts"
+      ],
+      "replacementScripts": [
+        "test:coach-chat-integration",
+        "test:coach-lab"
+      ],
+      "evidenceKind": "runtime_failure"
+    },
+    "test:coach-revision-proposal": {
+      "kind": "rewrite_test",
+      "reason": "Revision proposals still feed current plan-change production, but this previously unreachable suite is red. Rewrite it against the current proposal shape.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-snapshot": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-updates-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:coach-weekly-reduction": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:composer-b1": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:composer-severance": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:conditioning-equipment-consistency": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:conditioning-identity": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:conditioning-rotation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:copy-rulings-binding": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:craft-tier": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:day-first-timeline": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:decision-ledger-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:deload-week": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:derived-week-lawfulness": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:deriving-device-commit": {
+      "kind": "current_contract",
+      "reason": "The stable rerun executes the current deriving source-fact commit boundary and is green now.",
+      "productionPaths": [
+        "src/store/temporarySourceFactTransaction.ts"
+      ],
+      "contractRefs": [
+        "docs/NORTH_STAR.md"
+      ],
+      "witnessScript": "test:deriving-device-commit",
+      "evidenceKind": "green_now"
+    },
+    "test:dev-e2e-clock": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:dev-e2e-default-installation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:dev-e2e-metro-isolation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:dev-e2e-reset-hydration": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:dev-e2e-scenario-session": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:dev-e2e-seeds": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:dev-e2e-testids": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:dev-e2e-witnesses": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:device-findings": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:equipment-answer": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:equipment-scopes": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:exercise-canonicalisation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:exercise-edit-entry-surface": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exercise-exclusions": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exercise-name-lock": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exercise-removal-owner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exercise-restore-owner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:existing-week-proof": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-live-runner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-live-wiring": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-render-bindings": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-runtime": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-scenario-artifacts": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:explorer-scenario-runner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exposure-contract-equality": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:exposure-engine": {
+      "kind": "rewrite_test",
+      "reason": "The broken alias is repaired and the suite now runs; its current red is tied to retired projection or builder behaviour, so rewrite it against the current owner.",
+      "evidenceKind": "wired_and_red"
+    },
+    "test:exposure-engine-priority": {
+      "kind": "test_infrastructure",
+      "reason": "The chain used an obsolete alias. It now points to the existing canonical test script instead of inventing a second command.",
+      "evidenceKind": "missing_command"
+    },
+    "test:fact-door-inputs": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:fact-horizon": {
+      "kind": "current_contract",
+      "reason": "The stable rerun executes current durable-fact horizons through real state transitions and is green now.",
+      "productionPaths": [
+        "src/rules/durableFactHorizon.ts"
+      ],
+      "contractRefs": [
+        "docs/NORTH_STAR.md"
+      ],
+      "witnessScript": "test:fact-horizon",
+      "evidenceKind": "green_now"
+    },
+    "test:finisher-eligibility": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:fixture-conditioned-replan": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:fixture-mutation-transaction": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:g1-landing-ask-flow": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:game-anchor": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:game-change-coach-notes": {
+      "kind": "rewrite_test",
+      "reason": "Fixture transactions still create game-change notes, but this previously unreachable suite is red. Rewrite it against the current transaction metadata.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:game-local-rebuild": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:generated-program-normalizer": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:generated-week-assembly": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:generation-classification": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:generation-vocabulary": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:guided-injury-totality": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:illness-clear-game-week": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:illness-recovery-mode": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:in-season-midweek-row": {
+      "kind": "rewrite_test",
+      "reason": "The broken alias is repaired and the suite now runs; its current red is tied to retired projection or builder behaviour, so rewrite it against the current owner.",
+      "evidenceKind": "wired_and_red"
+    },
+    "test:in-season-midweek-row-verification": {
+      "kind": "test_infrastructure",
+      "reason": "The chain used an obsolete alias. It now points to the existing canonical test script instead of inventing a second command.",
+      "evidenceKind": "missing_command"
+    },
+    "test:injury-authority": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:injury-fallback-journey": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:injury-readiness-coach-notes": {
+      "kind": "rewrite_test",
+      "reason": "Injury and readiness notes remain current, but this previously unreachable suite is red. Rewrite it against the current note projection.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:ladder-wide": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:law-registry": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:legacy-census": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:maestro-element-contract": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:missed-session-prompt": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:missed-signup": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:mobility-flow": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:move-scoping": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:no-rebuild-affordance": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:nonstrength-tripwire": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:onboarding-cold-start": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:onboarding-field-influence": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:onboarding-reliability": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:operation-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:pending-lists": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:persisted-inputs-schema": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:persistent-injury": {
+      "kind": "retire_test",
+      "reason": "The suite asserted the retired activeInjury snapshot and read-time injury filter. Injury episodes plus injury-fallback journeys now own this behaviour.",
+      "retiredTestPaths": [
+        "src/__tests__/persistentInjuryStateTests.ts"
+      ],
+      "replacementScripts": [
+        "test:injury-fallback-journey",
+        "test:injury-latest-severity"
+      ],
+      "evidenceKind": "startup_failure"
+    },
+    "test:phase-clock": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:phase-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:phase-shift-atomicity": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:phase-skew-repair": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:phase-structure": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:plan-change-producer": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:pools": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:poor-sleep": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:power-counting": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:power-primer-policy": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:preseason-exposure": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:preseason-subphase": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:profile-mirror-narrowing": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:program-control-decisions": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:program-control-durable": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:program-hydration-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:program-override-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:programming-bias": {
+      "kind": "rewrite_test",
+      "reason": "Programming bias still has a production caller, but this previously unreachable suite is red. Rewrite it against the current compiler inputs.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:prototype-typography": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:qa": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:quiescent-boot": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:repo-law-guards": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:role-buckets": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:rules-kernel": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:ruling-registry": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:section18-gateway": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:section18-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:section18-planner": {
+      "kind": "rewrite_test",
+      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
+      "evidenceKind": "runtime_failure"
+    },
+    "test:section18-recovery-neutrality": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:section18-v2": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:session-change-sequence": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:session-classification": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:session-execution": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:session-execution-checklist": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:session-feedback-form": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:session-naming": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:settings-persistence": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:slot-coverage": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:stage-b-generation-differential": {
+      "kind": "test_infrastructure",
+      "reason": "The stable run printed completed assertions but retained an open handle for 180 seconds; repair the harness lifecycle before reading it as a product verdict.",
+      "evidenceKind": "timed_out"
+    },
+    "test:standalone-conditioning-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:stored-state-writer-audit": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:strength-answer-authority": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:strength-intent": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:strength-progression-integration": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:strength-sequencing": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:stress-placement": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:temporary-source-facts": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:testing-bias": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:time-trial": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:totals-or-red-law": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:variation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:visible-program-projection": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:visible-surfaces": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:vocabulary-census": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:week-budget-placement": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:week-rebuild": {
+      "kind": "rewrite_test",
+      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
+      "evidenceKind": "startup_failure"
+    },
+    "test:week-validator": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:weekly-dose-ownership": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:weekly-readiness": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:weekly-spacing": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:work-bill": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:workout-canonicalisation": {
+      "kind": "rewrite_test",
+      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "evidenceKind": "assertion_or_late_runtime_failure"
+    }
+  }
 }

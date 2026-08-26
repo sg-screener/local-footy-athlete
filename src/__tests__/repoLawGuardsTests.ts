@@ -3328,7 +3328,6 @@ function unguardedSourceAnchors(
  * and a file absent from this list may never gain its first unguarded anchor.
  */
 const UNGUARDED_ANCHOR_DEBT: Readonly<Record<string, number>> = {
-  'coachPromptContractTests.ts': 1,
   'dayFirstTimelineTests.ts': 47,
   'devE2ECoordinatorTests.ts': 1,
   'explorerLiveRunnerTests.ts': 3,

@@ -1,11 +1,4 @@
 {
-  "count": 6,
-  "files": [
-    "coachActionsTests.ts",
-    "coachNoteLifecycleTests.ts",
-    "coachRevisionProposalTests.ts",
-    "gameChangeCoachNotesTests.ts",
-    "injuryReadinessCoachNotesTests.ts",
-    "programmingBiasTests.ts"
-  ]
+  "count": 0,
+  "files": []
 }

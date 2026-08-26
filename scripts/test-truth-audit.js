@@ -89,13 +89,33 @@ function validateDecisions(registry, pkg, repo = REPO) {
   }
 
   for (const [label, decision] of Object.entries(registry.decisions)) {
-    if (!pkg.scripts[label]) errors.push(`${label}: no package.json script exists`);
     if (!decision || !DECISION_KINDS.has(decision.kind)) {
       errors.push(`${label}: unknown decision kind ${decision && decision.kind}`);
       continue;
     }
+    const scriptExists = !!pkg.scripts[label];
+    const mayNameAbsentScript = decision.kind === 'retire_test'
+      || decision.kind === 'test_infrastructure';
+    if (!scriptExists && !mayNameAbsentScript) {
+      errors.push(`${label}: no package.json script exists`);
+    }
     if (typeof decision.reason !== 'string' || decision.reason.trim().length < 12) {
       errors.push(`${label}: reason must explain the decision`);
+    }
+    if (decision.kind === 'retire_test') {
+      if (!Array.isArray(decision.retiredTestPaths) || decision.retiredTestPaths.length === 0) {
+        errors.push(`${label}: retire_test must name the removed test path`);
+      } else {
+        for (const relativePath of decision.retiredTestPaths) {
+          if (fs.existsSync(path.join(repo, relativePath))) {
+            errors.push(`${label}: retired test still exists at ${relativePath}`);
+          }
+        }
+      }
+      if (!Array.isArray(decision.replacementScripts) || decision.replacementScripts.length === 0
+          || decision.replacementScripts.some((script) => !pkg.scripts[script])) {
+        errors.push(`${label}: retire_test must name existing replacementScripts`);
+      }
     }
     if (decision.kind !== 'current_contract') continue;
 
@@ -126,7 +146,7 @@ function validateDecisions(registry, pkg, repo = REPO) {
   return errors;
 }
 
-function classifyFailure(label, inventory, decisions) {
+function classifyFailure(label, inventory, decisions, pkg = loadJson(path.join(REPO, 'package.json')), repo = REPO) {
   if (inventory.missingChainScripts.includes(label)) {
     return {
       label,
@@ -154,6 +174,19 @@ function classifyFailure(label, inventory, decisions) {
       blocksOfficialChain: true,
       mayDirectProductCodeChange: false,
       reason: 'the failure has not been checked against the current product contract',
+    };
+  }
+  const decisionErrors = validateDecisions({
+    schemaVersion: 1,
+    decisions: { [label]: decision },
+  }, pkg, repo);
+  if (decisionErrors.length > 0) {
+    return {
+      label,
+      kind: 'invalid_decision',
+      blocksOfficialChain: true,
+      mayDirectProductCodeChange: false,
+      reason: decisionErrors.join('; '),
     };
   }
   return {
@@ -188,7 +221,7 @@ function buildAudit({
   };
   const classifications = failureLabels
     .filter(Boolean)
-    .map((label) => classifyFailure(label, inventory, decisions));
+    .map((label) => classifyFailure(label, inventory, decisions, pkg, repo));
   const counts = classifications.reduce((result, item) => {
     result[item.kind] = (result[item.kind] || 0) + 1;
     return result;

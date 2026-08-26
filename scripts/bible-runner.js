@@ -96,7 +96,10 @@ const EXCLUSIVE = [
  * LIMIT, stated: this scans each unit's ENTRY file only, not its transitive
  * imports. A ceiling asserted inside a shared helper would not be caught here.
  */
-const WALL_CLOCK_MARKER = /RUNTIME_MS|hard ceiling|harness runtime/;
+// Match timing identifiers or the harness's own timing phrase. Generic copy
+// such as a training set-budget "hard ceiling" is a product assertion, not a
+// wall-clock measurement, and must not be forced into the exclusive lane.
+const WALL_CLOCK_MARKER = /\b(?:TARGET|WARNING|HARD)(?:_RUNTIME)?_MS\b|\bharness runtime\b/;
 
 function parseArgs(argv) {
   const args = { jobs: 1, out: null, only: null, drop: [] };

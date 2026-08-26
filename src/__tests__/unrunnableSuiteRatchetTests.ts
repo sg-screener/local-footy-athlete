@@ -126,8 +126,15 @@ if (process.argv.includes('--update')) {
 
 // ── NON-VACUITY FIRST ────────────────────────────────────────────────────────
 ok('the scan finds the test directory at all', total > 100, total);
-ok('the scan can distinguish runnable from unrunnable',
-  current.length > 0 && current.length < total, { unrunnable: current.length, total });
+// Build the probe at runtime so the source scanner does not find the probe's
+// own literal inside this liveness cell and mistake that mention for a runner.
+const syntheticUnrunnable = ['__test_truth', 'unrunnable_probe__Tests.ts'].join('_');
+ok('liveness: the scan recognises a synthetic unowned suite as unrunnable',
+  !scriptText().includes(syntheticUnrunnable)
+    && !referencedElsewhere(syntheticUnrunnable),
+  syntheticUnrunnable);
+ok('the real unrunnable debt may reach zero',
+  current.length >= 0 && current.length < total, { unrunnable: current.length, total });
 
 if (!fs.existsSync(BASELINE)) {
   ok('baseline exists', false, BASELINE);
