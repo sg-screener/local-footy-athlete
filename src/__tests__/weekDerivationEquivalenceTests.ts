@@ -83,7 +83,7 @@ function athlete(): OnboardingData {
     teamTrainingDays: ['Tuesday', 'Thursday'],
     usualGameDay: 'Saturday',
     equipmentAnswer: fullKitEquipmentAnswer(),
-    injuries: [], goals: ['Get stronger'], experienceLevel: 'Intermediate',
+    injuries: [], goals: ['Get stronger'], experienceLevel: '2-5 years',
     sprintExposure: 'Occasionally', conditioningLevel: 'Good',
     recentTrainingLoad: 'Pretty consistent',
     squatStrength: '1.5x bodyweight', benchStrength: '1.25x bodyweight', weightKg: 85,

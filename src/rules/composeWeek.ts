@@ -1460,10 +1460,17 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * the hamstring pair to take the row. Preference, not a veto: a kit
        * with neither hamstring row keeps the repeated variant, because a
        * declared slot left silently empty is the bigger wrong (R-080's own
-       * fallback shape). Applied to BOTH lists: the hinge is block-stable,
-       * so this day property is block-constant for the days that declare
-       * this slot, and the recorded base must be a row the athlete will
-       * actually meet. */
+       * fallback shape).
+       *
+       * ⚠ THE FILTER TOUCHES ONLY THE DAY'S OWN LIST, NEVER THE BASE — and
+       * the first cut got this wrong by arguing the day property was
+       * "block-constant". It is not: the week RESHAPES (the equivalence
+       * harness's add-game world measured door Single-Leg RDL vs boot
+       * Hamstring Curl the same afternoon), and filtering the BASE list
+       * invalidated the recorded selection in whichever derivation saw an
+       * RDL on the day. The record stands; the colliding day swaps its row
+       * through the existing temporary-substitute path — deterministic from
+       * the same inputs on both sides of a boot. */
       const rdlAlreadyOnDay = slot === 'single_leg_hip'
         && [...identitiesThisDay].some((id) => RDL_FAMILY_IDENTITIES.has(id));
       const withoutRdlFamily = (
@@ -1473,7 +1480,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         const filtered = list.filter((id) => !RDL_FAMILY_IDENTITIES.has(id));
         return filtered.length > 0 ? filtered : list;
       };
-      const baseLegal = withoutRdlFamily(legalUnder(excluded, inputs.kit));
+      const baseLegal = legalUnder(excluded, inputs.kit);
       const legal = withoutRdlFamily(legalUnder(excludedToday, kitToday));
       /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
        * The PERMANENT list is empty, so the slot is not this athlete's to have
