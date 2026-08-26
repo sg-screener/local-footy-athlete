@@ -3,7 +3,10 @@ import { EXERCISE_TAGS } from '../../data/exerciseTags';
 import { getExerciseCue } from '../../data/exerciseCues';
 import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import { logger } from '../../utils/logger';
-import { cueFitsImplement } from '../../data/cueImplement';
+import {
+  cueFitsImplement,
+  cueFitsRequiredApparatus,
+} from '../../data/cueImplement';
 import type { EquipmentTag } from '../../data/exercisePools';
 
 /**
@@ -45,16 +48,20 @@ export function joinCueClauses(primary: string, secondary: string): string {
  * So the row renders NO cue and `missingCueForImplement` says why — which is the
  * same loud failure the generic-fallback branch below already chose over filler.
  *
- * `selectedImplement` is optional so every existing caller keeps its behaviour
- * unchanged: an undefined implement is "not asked", and a cue is never
- * suppressed for a question nobody put.
+ * `selectedImplement` and `availableEquipment` are optional so existing
+ * non-session callers keep their behaviour unchanged: an omitted context is
+ * "not asked", and a cue is never suppressed for a question nobody put. The
+ * dated session screen supplies both, because a cue may agree with the
+ * performing implement while still requiring support apparatus such as a bench.
  */
 export function cueForImplement(
   exerciseName: string,
   selectedImplement?: EquipmentTag | null,
+  availableEquipment?: readonly EquipmentTag[] | null,
 ): { text: string | null; missingCueForImplement: boolean } {
   const name = canonicalExerciseName(exerciseName);
-  if (selectedImplement && !cueFitsImplement(name, selectedImplement)) {
+  if ((selectedImplement && !cueFitsImplement(name, selectedImplement))
+    || !cueFitsRequiredApparatus(name, availableEquipment)) {
     return { text: null, missingCueForImplement: true };
   }
   return { text: buildCueText(exerciseName), missingCueForImplement: false };

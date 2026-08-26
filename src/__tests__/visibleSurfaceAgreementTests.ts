@@ -69,7 +69,11 @@ import {
   selectedImplementLabel,
 } from '../rules/selectedImplement';
 import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
-import { CUE_ASSUMED_IMPLEMENT, CUE_IMPLEMENT_NEUTRAL } from '../data/cueImplement';
+import {
+  CUE_ASSUMED_IMPLEMENT,
+  CUE_IMPLEMENT_NEUTRAL,
+  CUE_REQUIRED_APPARATUS,
+} from '../data/cueImplement';
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { EXERCISE_CUES } from '../data/exerciseCues';
@@ -260,7 +264,8 @@ function run(): void {
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n[6] The selected implement, and cues that agree with it');
   const FULL_KIT: EquipmentTag[] = ['bodyweight', 'dumbbells', 'barbell', 'cables',
-    'machine', 'bands', 'bench', 'pullup_bar', 'kettlebell', 'plyo_box', 'rack'];
+    'machine', 'bands', 'bench', 'pullup_bar', 'kettlebell', 'plyo_box', 'rack',
+    'trap_bar', 'rings_trx'];
   const NO_BARBELL: EquipmentTag[] = FULL_KIT.filter((tag) => tag !== 'barbell');
 
   const rdlFull = resolveSelectedImplement({ exerciseName: 'RDLs', availableTags: FULL_KIT });
@@ -293,6 +298,71 @@ function run(): void {
   check('a fixed-implement row is unmoved by an unrelated kit change',
     kbFull.implement === 'kettlebell' && kbNoBar.implement === 'kettlebell'
       && cueForImplement('Kettlebell Swings', kbNoBar.implement).text !== null);
+
+  // THE REBUILD REGRESSION, 2026-08-26. The cue was present in Sam's library,
+  // but the control disappeared because three equipment owners disagreed. The
+  // screen must resolve the same setup for the row and the cue.
+  const setupAgreementCases: ReadonlyArray<{
+    name: string;
+    implement: EquipmentTag;
+  }> = [
+    { name: 'Crab Walks', implement: 'bands' },
+    { name: 'Side Plank Row', implement: 'bands' },
+    { name: 'Inverted Row (Bodyweight)', implement: 'rings_trx' },
+    { name: 'Speed Trap Bar Deadlift', implement: 'trap_bar' },
+  ];
+  for (const example of setupAgreementCases) {
+    const selected = resolveSelectedImplement({
+      exerciseName: example.name,
+      availableTags: FULL_KIT,
+    });
+    const cue = cueForImplement(example.name, selected.implement, FULL_KIT);
+    check(`${example.name}: selected setup and authored cue agree`,
+      selected.implement === example.implement && cue.text !== null,
+      `selected ${String(selected.implement)}, cue ${String(cue.text)}`);
+  }
+  check('CRAB WALKS AND SIDE PLANK ROW HAVE ONE CANONICAL BAND REQUIREMENT',
+    JSON.stringify(equipmentRequiredFor('Crab Walks')) === '["bands"]'
+      && JSON.stringify(equipmentRequiredFor('Side Plank Row')) === '["bands"]',
+    `${JSON.stringify(equipmentRequiredFor('Crab Walks'))} / ${JSON.stringify(equipmentRequiredFor('Side Plank Row'))}`);
+
+  // A bench is apparatus, not the implement. These exercises remain
+  // bodyweight, but their bench-authored cues render only when today's kit has
+  // the apparatus the wording requires.
+  const NO_BENCH = FULL_KIT.filter((tag) => tag !== 'bench');
+  const benchCueNames = [
+    'Copenhagen Plank (Half)',
+    'RFE Split Squat Jump',
+    'Single-Leg Hip Thrust',
+    'Pigeon Stretch',
+  ] as const;
+  for (const name of benchCueNames) {
+    const selected = resolveSelectedImplement({ exerciseName: name, availableTags: FULL_KIT });
+    const withBench = cueForImplement(name, selected.implement, FULL_KIT);
+    const withoutBench = cueForImplement(name, selected.implement, NO_BENCH);
+    check(`${name}: bodyweight row keeps its cue when the required bench exists`,
+      selected.implement === 'bodyweight' && withBench.text !== null,
+      `selected ${String(selected.implement)}, cue ${String(withBench.text)}`);
+    check(`${name}: the same cue stands down when the bench is unavailable`,
+      withoutBench.text === null && withoutBench.missingCueForImplement === true,
+      String(withoutBench.text));
+  }
+  check('the apparatus contract is explicit rather than inferred from cue prose',
+    benchCueNames.every((name) => CUE_REQUIRED_APPARATUS[name]?.includes('bench')),
+    JSON.stringify(CUE_REQUIRED_APPARATUS));
+
+  // THE CLASS CENSUS. This is what answers "any other exercises?" without
+  // relying on the one Crab Walks report. On a full kit every curated cue must
+  // reach the control except the one authored variant Sam explicitly ruled
+  // absent: Skull Crushers selects dumbbells first, while its existing cue is
+  // the barbell variant and must remain withheld.
+  const fullKitCueOmissions = Object.keys(EXERCISE_CUES).filter((name) => {
+    const selected = resolveSelectedImplement({ exerciseName: name, availableTags: FULL_KIT });
+    return cueForImplement(name, selected.implement, FULL_KIT).text === null;
+  }).sort();
+  check('FULL-KIT CUE CENSUS: only the ruled Skull Crushers variant is absent',
+    JSON.stringify(fullKitCueOmissions) === '["Skull Crushers"]',
+    JSON.stringify(fullKitCueOmissions));
 
   // ⚠ THE COVERAGE GATE. `CUE_ASSUMED_IMPLEMENT` is a hand-kept reading of the
   // authored library, so it can fall behind it silently — this re-runs the scan
@@ -363,7 +433,9 @@ function run(): void {
     // without it, so its cue can name it freely.
     const declaresNothing = !requirement || requirement.length === 0;
     if (!declaresNothing) continue;
-    if (!CUE_ASSUMED_IMPLEMENT[name] && !CUE_IMPLEMENT_NEUTRAL.has(name)) {
+    if (!CUE_ASSUMED_IMPLEMENT[name]
+      && !CUE_REQUIRED_APPARATUS[name]
+      && !CUE_IMPLEMENT_NEUTRAL.has(name)) {
       unfiledApparatus.push(name);
     }
   }
@@ -374,7 +446,8 @@ function run(): void {
   check('NO ZERO-EQUIPMENT EXERCISE MANDATES APPARATUS IN ITS PRIMARY CUE UNFILED',
     unfiledApparatus.length === 0,
     `unfiled: ${unfiledApparatus.join(', ')} — each must be filed in `
-    + 'CUE_ASSUMED_IMPLEMENT (so the renderer withholds it) or ruled neutral');
+    + 'CUE_REQUIRED_APPARATUS (so the renderer checks today\'s kit), '
+    + 'CUE_ASSUMED_IMPLEMENT, or ruled neutral');
 
   // THE LOAD RULING, HELD NEGATIVELY. Sam: *"do not split load history by
   // implement."* The implement owner must not take load as an input or return
@@ -407,8 +480,9 @@ function run(): void {
   //     which reads the per-day gap sentences ("No vertical push today — that
   //     would need Kettlebell") rather than a plan object.
   // The non-vacuity check below stays: its subject is the authored sheet.
+  const NO_RINGS = NO_BARBELL.filter((tag) => tag !== 'rings_trx');
   check('non-vacuity: the rung that used to be offered really is illegal here',
-    exerciseAllowedByEquipment('Inverted Row (Bodyweight)', NO_BARBELL) === false,
+    exerciseAllowedByEquipment('Inverted Row (Bodyweight)', NO_RINGS) === false,
     `authored requirement ${JSON.stringify(equipmentRequiredFor('Inverted Row (Bodyweight)'))}`);
 
 

@@ -85,7 +85,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Concentration Curl": ['dumbbells'],
   "Copenhagen Plank (Half)": [],
   "Cossack Squat": [],
-  "Crab Walks": [],
+  // The current equipment census, the pool and Sam's authored cue all prescribe
+  // a band. The older filled-in sheet still says bodyweight; following that
+  // stale row made the selected-implement owner suppress the band cue entirely.
+  "Crab Walks": ['bands'],
   "DB Bench Press": ['bench', 'dumbbells'],
   "DB Shoulder Press": ['dumbbells'],
   "Dead Bug": [],
@@ -166,6 +169,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Seated DB Press": ['dumbbells'],
   "Shrugs": ['dumbbells'],
   "Side Plank": [],
+  // The current equipment census and pool both prescribe bands. This spelling
+  // was absent from the older filled-in sheet, so it fell through to the
+  // bodyweight load classifier and its authored band cue was suppressed.
+  "Side Plank Row": ['bands'],
   "Single-Arm DB Bench Press": ['bench', 'dumbbells'],
   "Single-Arm DB Floor Press": ['dumbbells'],
   "Single-Arm DB Row": ['dumbbells'],

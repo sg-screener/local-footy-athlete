@@ -52,9 +52,11 @@ import {
 import { equipmentClassFor } from '../utils/loadEstimation';
 
 /**
- * The tags that answer *"what is in the athlete's hands"*. A bench, a rack, a
- * plyo box and a pull-up bar are SUPPORT — they are required, they are not the
- * implement, and a row that needs a bench is not "a bench exercise".
+ * The tags that answer *"what is the athlete performing the row with"*. A
+ * bench, rack, plyo box and pull-up bar are SUPPORT — they are required, but a
+ * row that needs a bench is not "a bench exercise". Rings/TRX and a trap bar
+ * are the performing implement, even though they are not part of the original
+ * plate/dumbbell increment vocabulary.
  */
 export const LOAD_BEARING_TAGS: readonly EquipmentTag[] = [
   'barbell',
@@ -63,6 +65,8 @@ export const LOAD_BEARING_TAGS: readonly EquipmentTag[] = [
   'cables',
   'machine',
   'bands',
+  'trap_bar',
+  'rings_trx',
 ];
 
 const CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {

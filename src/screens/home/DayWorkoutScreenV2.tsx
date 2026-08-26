@@ -2195,6 +2195,7 @@ export default function DayWorkoutScreenV2() {
               completedItemIds={completedExerciseIds}
               onToggleItem={toggleExerciseComplete}
               implementFor={implementFor}
+              availableEquipment={effectiveKitTags}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               editingWeightId={editingWeightId}
@@ -2679,6 +2680,8 @@ interface SessionListProps {
   onToggleItem: (itemId: string) => void;
   /** R-104. Resolved by the screen against the EFFECTIVE kit for this date. */
   implementFor: (exerciseName: string, prescribedWeightKg?: number | null) => SelectedImplementToday;
+  /** The same effective dated kit, used only for cue-required apparatus. */
+  availableEquipment: readonly EquipmentTag[];
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2821,6 +2824,7 @@ function SessionList({
   completedItemIds,
   onToggleItem,
   implementFor,
+  availableEquipment,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2890,6 +2894,7 @@ function SessionList({
         exercise={item.row}
         checkbox={checkbox}
         selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
+        availableEquipment={availableEquipment}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
         prescriptionLabel={isLowLoad ? formatLowLoadSetsReps(item.row) : undefined}
@@ -3386,6 +3391,8 @@ interface StrengthExerciseCardProps {
    * no kit in hand, keep rendering exactly as they did.
    */
   selectedImplement?: SelectedImplementToday | null;
+  /** Today's effective kit; apparatus in a cue must be present here. */
+  availableEquipment?: readonly EquipmentTag[] | null;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -3413,6 +3420,7 @@ function StrengthExerciseCard({
   prescriptionLabel,
   cueTextOverride,
   selectedImplement,
+  availableEquipment,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -3438,7 +3446,11 @@ function StrengthExerciseCard({
   // SUPPRESSED and flagged rather than reworded. There is no authored dumbbell
   // RDL cue and `EXERCISE_CUES` is gated to Sam's sheet, so inventing one here
   // is the thing his ruling forbids.
-  const resolvedCue = cueForImplement(exerciseName, selectedImplement?.implement ?? null);
+  const resolvedCue = cueForImplement(
+    exerciseName,
+    selectedImplement?.implement ?? null,
+    availableEquipment,
+  );
   const cueText = cueTextOverride !== undefined ? cueTextOverride : resolvedCue.text;
   // ── SAM'S UI CORRECTION: TYPED ALWAYS, SHOWN ONLY WHEN IT EXPLAINS A CHANGE.
   //
@@ -6245,7 +6257,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.tertiary,
     marginTop: 2,
-    marginLeft: 44,
   },
   exerciseEditOptions: {
     gap: 10,

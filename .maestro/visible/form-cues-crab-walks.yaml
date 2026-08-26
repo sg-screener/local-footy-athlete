@@ -1,0 +1,64 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - Crab Walks keeps its authored Form cues
+tags:
+  - e2e
+  - visible
+  - workout
+  - cues
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "session-quick-add-strength"
+    direction: DOWN
+- swipe:
+    start: 50%,75%
+    end: 50%,55%
+    duration: 500
+- tapOn:
+    id: "session-quick-add-strength"
+- extendedWaitUntil:
+    visible: "Lower body"
+    timeout: 10000
+- tapOn: "Lower body"
+- extendedWaitUntil:
+    visible: "Accessories"
+    timeout: 10000
+- tapOn: "Accessories"
+- scrollUntilVisible:
+    element:
+      text: "Crab Walks"
+    direction: DOWN
+- tapOn: "Crab Walks"
+- extendedWaitUntil:
+    visible: "Add Crab Walks to today’s session."
+    timeout: 10000
+- tapOn: "Add exercise"
+- extendedWaitUntil:
+    visible: "Apply this change to future weeks?"
+    timeout: 15000
+- tapOn: "Today only"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "workout-exercise-row-ex-coach-add-crab-walks-.*"
+    direction: DOWN
+- assertVisible:
+    id: "exercise-cue-toggle-ex-coach-add-crab-walks-.*"
+- assertNotVisible: "1:30 rest"
+- tapOn:
+    id: "exercise-cue-toggle-ex-coach-add-crab-walks-.*"
+- assertVisible: "Sit back into athletic position, band around feet, push off outside leg, keep knees slightly pointed out."
+- takeScreenshot: artifacts/visible/form-cues-crab-walks

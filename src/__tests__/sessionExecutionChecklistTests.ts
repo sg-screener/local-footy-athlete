@@ -988,6 +988,11 @@ ok('[10] ALL THREE text lines are children of the ONE content column',
       && inside.indexOf('<CueDisclosure') > inside.indexOf('styles.statsRow');
   })(),
   'name line, dose line and cues must all sit inside the content column');
+ok('[10] the affected-row notice shares that content column left edge',
+  /implementBadge:\s*\{[^}]*marginTop:\s*2[^}]*\}/.test(screen)
+    && !/implementBadge:\s*\{[^}]*marginLeft/.test(screen)
+    && !/implementBadge:\s*\{[^}]*paddingLeft/.test(screen),
+  'the swapped-from line is context for the exercise, not a nested child');
 ok('[10] a wrapping name cannot push the lower lines back into the gutter',
   /exerciseContentColumn:\s*\{\s*flex:\s*1,\s*minWidth:\s*0/.test(screen)
     && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen));

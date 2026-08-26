@@ -961,7 +961,10 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
     prescribedWeightKg: Number.isFinite(Number(exercise.weight)) ? Number(exercise.weight) : 0,
     prescriptionType: exercise.prescriptionType,
     perSide: exercise.perSide,
-    restSeconds: finitePositiveNumber(exercise.restSeconds, 90),
+    // An athlete-added row has no rest prescription unless its chosen payload
+    // actually carries one. The old 90-second fallback invented a visible
+    // "1:30 rest" line on every Add-menu exercise, regardless of its source.
+    restSeconds: finitePositiveNumber(exercise.restSeconds, 0),
     notes: exercise.notes,
     exercise: {
       id: exerciseId,
