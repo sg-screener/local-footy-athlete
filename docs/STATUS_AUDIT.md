@@ -3133,3 +3133,16 @@ rollover state — is inexpressible. NEXT UNIT: a two-date seed semantic
 install; witnesses: block-2 content + BlockBoundaryNoticeCard). Headless
 rollover machinery is covered (block-two family incl. the revived
 screen-delivery suite, block-rollover, block-state — all chained).
+
+## 2026-08-26 — block rollover watched on glass (ef9519e9)
+
+The two-date seed semantic landed (DEV_E2E_PROGRAM_START_OVERRIDES);
+'block-rollover' installs a block that ended yesterday with today the
+next Monday. On the simulator: boot rolls the block, today carries a
+real session, the new week shows the R-236 Gunshow + game, checkpoint
+cold-reload reproduces it. Permanent flow .maestro/audit/block-rollover
+runs it in one command. The base program witness re-anchored to the
+program's own first week (asserting the anchor week refused the seed's
+own world — measured before fixing). Blind-spot item 2 CLOSED for the
+simulator; Sam's phone doesn't carry the dev rig, so device-device
+verification remains sim-only by construction.
