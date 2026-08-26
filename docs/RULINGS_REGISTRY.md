@@ -6526,3 +6526,29 @@ one shared DayGrid, pins the wrapping 22%-width four-over-three geometry,
 three-letter labels, full accessibility names and retirement of both former
 variants. An iPhone 17 Pro simulator displayed the exact 4-over-3 usual-gym-day
 grid with selection retained.
+
+**R-255** · *"Little green lines next to the titles are useless - remove …
+there should be 4 main lifts as graphs - even if no data yet - pull up bench
+press RDL back squat - these should be predicted 1RM on these lifts … that way
+the progress chart is clear and unaffected by changing program when you do 3
+reps or 5 reps or 8 reps"* (Sam, 2026-08-26, Progress-tab review) · **FOUR
+FIXED PREDICTED-1RM GRAPHS REPLACE RAW WORKING WEIGHT.**
+Progress headings have no decorative lime dash. Main lifts always contains, in
+order, Pull-Up, Bench Press, RDL and Back Squat; a lift with no usable history
+keeps its graph card and says `No data yet` rather than disappearing. Each point
+is the week's best Brzycki predicted 1RM from a completed set of 1–10 reps, so
+different low-rep prescriptions share one strength scale. A real logged
+weight-and-reps pair wins; when set detail is absent, a fully completed
+prescription supplies its performed load and top prescribed rep target. Partial
+work without set detail and sets above ten reps do not invent a point. Pull-Up
+uses total system load (bodyweight plus added weight) for the calculation, then
+shows the predicted added-load maximum with a `+` prefix.
+**Search words:** Progress, green title line, main lifts, predicted 1RM,
+estimated 1RM, Brzycki, Pull-Up, Bench Press, RDL, Back Squat, empty graph,
+reps, bodyweight, added load.
+· `WORKING` — `test:coach-snapshot` pins the formula, rep limit, fixed ordered
+histories, empty histories, Pull-Up system-load calculation and absence of the
+title marks; `test:workout-log-progression-wiring` pins the real set pair and
+completed-prescription fallback. The iPhone 17 Pro simulator displayed the four
+ordered cards, a `+28 kg` Pull-Up estimate, an empty Back Squat card and no lime
+heading dashes.

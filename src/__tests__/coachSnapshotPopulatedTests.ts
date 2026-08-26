@@ -88,6 +88,7 @@ function athlete(): OnboardingData {
     motivation: 'Dominate your level',
     gender: 'male',
     seasonPhase: 'Off-season',
+    seasonFinishedOn: '2026-07-12',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0,

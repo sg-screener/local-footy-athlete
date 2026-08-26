@@ -38,6 +38,10 @@ import {
 } from './journalStrengthTrend';
 import { countWeeklyExposures } from './weeklyExposureCounts';
 import type { TwoKmTimeTrialAnswer } from '../types/domain';
+import {
+  buildProgressMainLiftHistories,
+  type ProgressMainLiftHistory,
+} from './progressMainLiftStrength';
 
 export type CoachSnapshotReadinessState =
   | ReadinessQuickOption
@@ -77,6 +81,8 @@ export interface CoachSnapshot {
   readonly progress: readonly StrengthLiftTrend[];
   /** Every recorded main-lift top set, grouped by lift for the Progress chart. */
   readonly strengthHistory: readonly StrengthProgressHistory[];
+  /** The four fixed Progress graphs, including honest empty histories. */
+  readonly mainLiftEstimates: readonly ProgressMainLiftHistory[];
   /** The one recorded 2km answer. An array would falsely imply stored history. */
   readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly restrictions: readonly ActiveCoachNote[];
@@ -89,6 +95,7 @@ export interface BuildCoachSnapshotInput {
   readonly loadModel: JournalLoadModel;
   readonly strengthLifts: readonly StrengthLiftTrend[];
   readonly strengthHistory: readonly StrengthProgressHistory[];
+  readonly mainLiftEstimates?: readonly ProgressMainLiftHistory[];
   readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly readinessSignal: ReadinessSignal | null;
   readonly activeModifiers: readonly ActiveCoachNote[];
@@ -124,6 +131,7 @@ export interface DeriveCoachSnapshotInput {
   readonly experienceLevel?: OnboardingData['experienceLevel'];
   readonly conditioningLevel?: OnboardingData['conditioningLevel'];
   readonly twoKmTimeTrial?: OnboardingData['twoKmTimeTrial'];
+  readonly bodyWeightKg?: OnboardingData['weightKg'];
 }
 
 function countRecordedWeeks(
@@ -212,6 +220,11 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
   const strengthHistory = Array.from(strengthSeries.entries())
     .map(([exerciseName, points]) => ({ exerciseName, points }))
     .sort((left, right) => left.exerciseName.localeCompare(right.exerciseName));
+  const mainLiftEstimates = buildProgressMainLiftHistories({
+    weekStart: journalWeek.weekStart,
+    sessions: strengthSessions,
+    bodyWeightKg: input.bodyWeightKg,
+  });
 
   return buildCoachSnapshot({
     asOfDateISO: input.asOfDateISO,
@@ -220,6 +233,7 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     loadModel,
     strengthLifts: progress,
     strengthHistory,
+    mainLiftEstimates,
     twoKmTimeTrial: input.twoKmTimeTrial ?? null,
     readinessSignal: input.readinessSignal,
     activeModifiers: input.activeModifiers,
@@ -262,6 +276,13 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
     progress: [...input.strengthLifts],
     strengthHistory: input.strengthHistory.map((history) => ({
       exerciseName: history.exerciseName,
+      points: [...history.points],
+    })),
+    mainLiftEstimates: (input.mainLiftEstimates ?? buildProgressMainLiftHistories({
+      weekStart,
+      sessions: [],
+    })).map((history) => ({
+      ...history,
       points: [...history.points],
     })),
     twoKmTimeTrial: input.twoKmTimeTrial,

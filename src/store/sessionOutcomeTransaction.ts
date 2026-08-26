@@ -32,6 +32,7 @@ import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { injurySessionOutcomeRefusal } from '../rules/injuryWithheldRows';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
+import { useProfileStore } from './profileStore';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import {
   beginAthleteActionTrace,
@@ -477,6 +478,8 @@ function normalizeIntent(
             target.workout,
             useProgramStore.getState().weightOverrides[intent.date] ?? {},
             strengthCompletion,
+            undefined,
+            { bodyWeightKg: useProfileStore.getState().onboardingData?.weightKg },
           )
         : undefined;
   const conditioning = conditioningCompletion === 'skipped'

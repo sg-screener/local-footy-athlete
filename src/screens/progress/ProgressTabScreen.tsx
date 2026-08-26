@@ -7,10 +7,8 @@ import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import { useLiveAthleteSnapshot } from '../coach/useLiveAthleteSnapshot';
-import type {
-  CoachSnapshotLoad,
-  StrengthProgressHistory,
-} from '../../rules/liveAthleteSnapshot';
+import type { CoachSnapshotLoad } from '../../rules/liveAthleteSnapshot';
+import type { ProgressMainLiftHistory } from '../../rules/progressMainLiftStrength';
 import {
   coachLoadEvidence,
   coachLoadMarkerFraction,
@@ -35,7 +33,6 @@ const LOAD_MARKER_SIZE = 18;
 function ProgressHeading({ title, testID }: { title: string; testID?: string }) {
   return (
     <View style={styles.heading} testID={testID}>
-      <View style={styles.headingMark} />
       <Text variant="labelSmall" style={styles.kicker}>{title}</Text>
     </View>
   );
@@ -86,7 +83,13 @@ function LineChart({ points: recordedPoints, higherIsBetter = true }: {
     height: CHART_HEIGHT,
     padding: CHART_PAD,
   }, higherIsBetter);
-  if (points.length === 0) return null;
+  if (points.length === 0) {
+    return (
+      <View style={styles.emptyChart} testID="progress-chart-empty">
+        <Text variant="caption" style={styles.emptyText}>{PROGRESS_TAB_COPY.noLiftHistory}</Text>
+      </View>
+    );
+  }
   const rangeLabel = progressChartDateRangeLabel(recordedPoints);
   return (
     <>
@@ -126,21 +129,28 @@ function LineChart({ points: recordedPoints, higherIsBetter = true }: {
   );
 }
 
-function StrengthChart({ history }: { history: StrengthProgressHistory }) {
+function StrengthChart({ history }: { history: ProgressMainLiftHistory }) {
   const latest = history.points[history.points.length - 1];
-  const weight = latest?.topSet.weightKg ?? 0;
-  const formatted = Number.isInteger(weight) ? String(weight) : weight.toFixed(1);
+  const estimate = latest?.predictedOneRepMaxKg;
+  const formatted = estimate === undefined
+    ? '—'
+    : `${history.valuePrefix}${Number.isInteger(estimate) ? String(estimate) : estimate.toFixed(1)} kg`;
   return (
-    <View style={[styles.chartCard, styles.liftCard]} testID={`progress-lift-${history.exerciseName}`}>
+    <View style={[styles.chartCard, styles.liftCard]} testID={`progress-lift-${history.id}`}>
       <View style={styles.liftChartHeader}>
-        <Text variant="bodySmallEmphasis" style={styles.chartTitle} numberOfLines={2}>
-          {history.exerciseName}
-        </Text>
-        <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted} kg</Text>
+        <View style={styles.liftTitleBlock}>
+          <Text variant="bodySmallEmphasis" style={styles.chartTitle} numberOfLines={2}>
+            {history.exerciseName}
+          </Text>
+          <Text variant="caption" style={styles.estimateLabel}>
+            {PROGRESS_TAB_COPY.predictedOneRepMax}
+          </Text>
+        </View>
+        <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted}</Text>
       </View>
       <LineChart points={history.points.map((point) => ({
         dateISO: point.weekStart,
-        value: point.topSet.weightKg,
+        value: point.predictedOneRepMaxKg,
       }))} />
     </View>
   );
@@ -192,19 +202,11 @@ export default function ProgressTabScreen() {
         <TwoKmChart answer={snapshot.twoKmTimeTrial} />
 
         <ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />
-        {snapshot.strengthHistory.length > 0 ? (
-          <View style={styles.liftGrid}>
-            {snapshot.strengthHistory.map((history) => (
-              <StrengthChart key={history.exerciseName} history={history} />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text variant="bodySmallEmphasis" style={styles.emptyText}>
-              {PROGRESS_TAB_COPY.noLiftHistory}
-            </Text>
-          </View>
-        )}
+        <View style={styles.liftGrid}>
+          {snapshot.mainLiftEstimates.map((history) => (
+            <StrengthChart key={history.id} history={history} />
+          ))}
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -227,15 +229,8 @@ const styles = StyleSheet.create({
   heading: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
     minHeight: spacing.lg,
     marginTop: spacing.sm,
-  },
-  headingMark: {
-    backgroundColor: colors.accent.lime,
-    borderRadius: borderRadius.full,
-    height: spacingValues.xxs,
-    width: spacingValues.xxl,
   },
   kicker: { color: colors.text.secondary, textTransform: 'uppercase' },
   heroCard: {
@@ -293,6 +288,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 54,
   },
+  liftTitleBlock: { flex: 1, minWidth: 0 },
+  estimateLabel: { color: colors.text.tertiary, marginTop: spacingValues.xxs },
   liftGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -307,14 +304,10 @@ const styles = StyleSheet.create({
   chartTitle: { color: colors.text.primary, flex: 1 },
   chartValue: { color: colors.text.accent },
   chartRange: { color: colors.text.tertiary, textAlign: 'center' },
-  emptyCard: {
-    backgroundColor: colors.surface.secondary,
-    borderColor: colors.neutral.gray700,
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    minHeight: 88,
+  emptyChart: {
+    alignItems: 'center',
+    height: CHART_HEIGHT,
     justifyContent: 'center',
-    padding: spacing.md,
   },
   emptyText: { color: colors.text.secondary },
 });

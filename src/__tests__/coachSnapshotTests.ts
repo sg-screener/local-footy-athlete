@@ -291,7 +291,7 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
       && glassFlow.includes('id: "progress-load-track"')
       && glassFlow.includes('id: "progress-load-sweet-spot"'));
   ok('Progress renders chart-ready main-lift history and the recorded 2km answer',
-    /snapshot\.strengthHistory/.test(progress)
+    /snapshot\.mainLiftEstimates/.test(progress)
       && /snapshot\.twoKmTimeTrial/.test(progress)
       && progressUsesTwoColumnLiftGrid(progress)
       && glassFlow.includes('id: "progress-main-lifts"')

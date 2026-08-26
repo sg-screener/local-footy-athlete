@@ -8,6 +8,12 @@ import {
   buildProgressChartPoints,
   progressChartDateRangeLabel,
 } from '../rules/progressChartTimeline';
+import {
+  bestOneRepMaxBasis,
+  estimateExternalOneRepMaxKg,
+  estimateOneRepMaxKg,
+} from '../rules/estimatedOneRepMax';
+import { buildProgressMainLiftHistories } from '../rules/progressMainLiftStrength';
 
 armTotalsOrRed();
 const ROOT = path.resolve(__dirname, '../..');
@@ -71,6 +77,11 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('the Snapshot derives multi-week main-lift history from the existing owner',
     /buildJournalStrengthSeries/.test(snapshot)
       && /strengthHistory/.test(snapshot));
+  ok('decorative lime title marks are absent from every Progress heading',
+    !/headingMark/.test(progress));
+  ok('Progress renders the fixed predicted-1RM histories even when every graph is empty',
+    /snapshot\.mainLiftEstimates\.map/.test(progress)
+      && !/snapshot\.strengthHistory\.length\s*>\s*0/.test(progress));
   ok('the 2km card receives the athlete\'s recorded answer, never an invented series',
     /twoKmTimeTrial/.test(snapshot)
       && /snapshot\.twoKmTimeTrial/.test(progress)
@@ -91,6 +102,61 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('removing the Progress load owner kills the surface guard',
     progressOwnsVisibleTracking(progress, coach)
       && !progressOwnsVisibleTracking(brokenProgress, coach));
+}
+
+console.log('\n[PREDICTED 1RM] ONE LOW-REP ESTIMATE ACROSS EVERY PRESCRIPTION');
+{
+  ok('a true one-rep set stays the exact load lifted',
+    estimateOneRepMaxKg(120, 1) === 120);
+  ok('equivalent 3, 5 and 8-rep loads resolve to the same predicted maximum',
+    [3, 5, 8].every((reps) => {
+      const workingLoad = 120 * (37 - reps) / 36;
+      return Math.abs((estimateOneRepMaxKg(workingLoad, reps) ?? 0) - 120) < 0.0001;
+    }));
+  ok('sets above ten reps are excluded instead of wearing false precision',
+    estimateOneRepMaxKg(80, 11) === null);
+
+  const best = bestOneRepMaxBasis([
+    { externalLoadKg: 110, reps: 3 },
+    { externalLoadKg: 100, reps: 8 },
+  ]);
+  ok('the best set is selected by predicted strength rather than raw bar weight',
+    best?.externalLoadKg === 100 && best.reps === 8);
+
+  ok('pull-up strength uses bodyweight plus added load, then reports added-load 1RM',
+    Math.abs((estimateExternalOneRepMaxKg({
+      externalLoadKg: 10,
+      reps: 5,
+      bodyWeightKg: 80,
+    }) ?? 0) - 21.25) < 0.0001);
+
+  const histories = buildProgressMainLiftHistories({
+    weekStart: '2026-08-24',
+    bodyWeightKg: 80,
+    sessions: [{
+      date: '2026-08-18',
+      strength: [{
+        exerciseId: 'bench', workoutExerciseId: 'bench-row', exerciseName: 'Bench Press',
+        prescribedSets: 3, prescribedRepsMin: 5, prescribedRepsMax: 5,
+        weightKg: 96, completion: 'full',
+      }, {
+        exerciseId: 'pull', workoutExerciseId: 'pull-row', exerciseName: 'Pull-Ups',
+        prescribedSets: 3, prescribedRepsMin: 5, prescribedRepsMax: 5,
+        weightKg: 10, completion: 'full',
+      }],
+    }],
+  });
+  ok('all four ruled lift graphs exist in order even when two have no data',
+    histories.map((history) => history.exerciseName).join(',') ===
+      'Pull-Up,Bench Press,RDL,Back Squat'
+      && histories.length === 4
+      && histories[2].points.length === 0
+      && histories[3].points.length === 0);
+  ok('a completed prescribed set becomes a chart point when actual set detail is absent',
+    histories[1]?.points[0]?.predictedOneRepMaxKg === 108);
+  ok('the Pull-Up graph is clearly an added-load estimate',
+    histories[0]?.valuePrefix === '+'
+      && histories[0]?.points[0]?.predictedOneRepMaxKg === 21.3);
 }
 
 console.log('\n[TIMELINE] REAL DATES OWN HORIZONTAL SPACE');

@@ -370,3 +370,43 @@ grid with three-letter labels and selected Monday retained.
 - Dynamic Type, smallest-screen clipping and Android.
 - Game Day and Team Training screens manually viewed on glass; their shared
   source and mounts are guard-covered.
+
+---
+
+# STATUS — Progress predicted 1RM graphs (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Remove the decorative lime lines beside Progress headings and always show four
+main-lift graphs — Pull-Up, Bench Press, RDL and Back Squat — on a predicted 1RM
+scale that stays comparable across different rep prescriptions.
+
+## Decision and receipt
+
+The old screen graphed raw working weight and only rendered lifts already found
+in history. It now reads one pure four-lift estimate owner. Brzycki is limited to
+completed sets of 1–10 reps; actual set detail wins, while a fully completed
+prescription is the fallback because the normal session flow does not recollect
+each set's reps. Partial work without set detail creates no point. Pull-Up uses
+bodyweight plus added load internally and displays the added-load result.
+
+The Progress guard first reported seven named failures. It now passes 24/24;
+the save-path guard passes 37/37 and plain TypeScript reports no errors. A 36 →
+30 formula mutation killed five cells; removing Back Squat killed the fixed-four
+cell. The iPhone 17 Pro simulator showed all four cards in order, Back Squat
+still present without history, Pull-Up as `+28 kg`, and no decorative title
+lines. The existing populated simulator world also needed `seasonFinishedOn`
+added after the new off-season question made that diagnostic fixture incomplete.
+
+Research receipt: lower-rep multiple-RM tests are more predictive than 10- or
+20-rep tests, and published comparisons support Brzycki as a practical low-rep
+estimate. No one equation is universally best across all four requested lifts;
+velocity methods were rejected because LFA records no bar-speed data.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- Calibration against a tested 1RM for this athlete or sets taken far from failure.
+- More than ten reps, historical bodyweight changes, Dynamic Type and Android.
+- The populated Coach history tape still reports its existing load-ratio gap;
+  it does not prevent the Progress derivation or simulator surface from running.

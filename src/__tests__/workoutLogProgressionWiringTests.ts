@@ -63,6 +63,10 @@ function loggedSet(n: number, reps: number, weight: number): LoggedSet {
   ok('captures completed set count from logs', squat.completedSets === 3, String(squat.completedSets));
   ok('captures conservative (min) actual reps', squat.actualReps === 3, String(squat.actualReps));
   ok('captures top logged load over prescribed', squat.weightKg === 102.5, String(squat.weightKg));
+  ok('keeps one real set pair for predicted 1RM instead of mixing summary fields',
+    squat.oneRepMaxBasis?.externalLoadKg === 102.5
+      && squat.oneRepMaxBasis.reps === 5,
+    JSON.stringify(squat.oneRepMaxBasis));
 }
 
 // ── 2. Without logged sets → no actuals captured (fallback to prescribed) ──
@@ -71,6 +75,16 @@ function loggedSet(n: number, reps: number, weight: number): LoggedSet {
   ok('no logged sets → completedSets omitted', logs[0].completedSets === undefined);
   ok('no logged sets → actualReps omitted', logs[0].actualReps === undefined);
   ok('no logged sets → prescribed weight kept', logs[0].weightKg === 100);
+  ok('a fully completed prescription remains an honest predicted-1RM fallback',
+    logs[0].oneRepMaxBasis?.externalLoadKg === 100
+      && logs[0].oneRepMaxBasis.reps === 5);
+}
+
+// ── 2b. Partial sessions never pretend every prescribed rep was completed ──
+{
+  const logs = buildStrengthPerformanceLogs(strengthWorkout(), {}, 'partial');
+  ok('partial session without set detail has no predicted-1RM basis',
+    logs[0].oneRepMaxBasis === undefined);
 }
 
 // ── 3. Strength history prefers real logged reps/sets when snapshot carries them ──
@@ -233,7 +247,7 @@ function condRow(): WorkoutExercise[] {
   ok('panel imports collectLoggedStrengthSets', /collectLoggedStrengthSets/.test(src));
   ok('panel reads the workout-log store', /useWorkoutLogStore\.getState\(\)/.test(src));
   ok('panel passes collected logged sets into buildStrengthPerformanceLogs',
-    /buildStrengthPerformanceLogs\(\s*workout,\s*weightOverrides,\s*strengthCompletion,\s*loggedStrengthSets\s*\)/s.test(src));
+    /buildStrengthPerformanceLogs\(\s*workout,\s*weightOverrides,\s*strengthCompletion,\s*loggedStrengthSets,\s*\{ bodyWeightKg \},\s*\)/s.test(src));
 }
 
 console.log(`\nWorkout-log progression wiring tests: ${pass} passed, ${fail} failed`);

@@ -83,6 +83,7 @@ import {
 } from '../utils/sessionComponents';
 import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
+import { useProfileStore } from '../store/profileStore';
 import { measuredMinutesFor } from '../store/sessionStopwatchStore';
 import {
   commitSessionOutcomeTransaction,
@@ -695,6 +696,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     | SessionFeedback
     | undefined;
   const weightOverrides = useProgramStore((s: any) => s.weightOverrides[date]);
+  const bodyWeightKg = useProfileStore((s) => s.onboardingData?.weightKg);
   const conditioningConfig = useMemo(
     () => getConditioningLoggingConfig(workout),
     [workout],
@@ -1109,7 +1111,13 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     );
     const strength = !strengthCompletion
       ? []
-      : buildStrengthPerformanceLogs(workout, weightOverrides, strengthCompletion, loggedStrengthSets);
+      : buildStrengthPerformanceLogs(
+          workout,
+          weightOverrides,
+          strengthCompletion,
+          loggedStrengthSets,
+          { bodyWeightKg },
+        );
     const feedback = buildSessionFeedbackPayload({
       dateStr: date,
       completion: activeCompletion,
@@ -1224,6 +1232,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     buildConditioningLog,
     workout,
     weightOverrides,
+    bodyWeightKg,
     notes,
     date,
     onSave,
