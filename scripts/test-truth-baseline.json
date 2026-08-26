@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "missingChainScripts": [
+    "test:exposure-engine-priority",
+    "test:in-season-midweek-row-verification"
+  ],
+  "chainRunnerAggregates": [
+    "test:bible:parallel",
+    "test:bible:serial-set"
+  ]
+}
