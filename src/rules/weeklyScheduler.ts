@@ -628,6 +628,29 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     };
   }
 
+  /* ── R-235 (Sam, 2026-08-26), FIRST SLICE: THE SHORTFALL IS DISCLOSED
+   * FROM THE ATHLETE'S OWN GYM-DAY ANSWER ─────────────────────────────────
+   *
+   * *"they list how many days they can get to the gym ... so they should be
+   * able to receive 4 sessions on those days"*. Clamping the layout to
+   * `usableGymDays` chose a SMALLER base before the reduction ladder ever
+   * ran — so a 4-gym-day athlete with a Saturday game was authored a 2-day
+   * layout, `authored === required`, and `reductionDisclosure` stayed null:
+   * a real reduction reported as nothing at all (measured on the profiles
+   * audit: required=2 authored=2 disclosure=null for a Mon/Wed/Fri/Sun
+   * athlete).
+   *
+   * ⚠ THE LAYOUT ITSELF STAYS CLAMPED, DELIBERATELY, FOR NOW. The un-clamped
+   * cut was built and MEASURED the same day: sizing the base from the
+   * athlete's answer sends replan worlds through the reduction ladder into
+   * A/B-half weeks whose intended patterns §18 then refuses
+   * (`required_safe_patterns_present:hinge|squat` on the Wednesday-game
+   * replan — the scheduler's intent, the composer's shapes and §18's demand
+   * disagree three ways). Aligning those three authorities is R-235's
+   * SECOND slice and its own unit. This slice makes the shortfall HONEST:
+   * `accessIntended` below is what the athlete's answer would author, and
+   * when fewer sessions are delivered the reduction is DISCLOSED through
+   * the same record fixture-compressed weeks already use. */
   const effectiveGymDays = Math.min(
     Math.max(inputs.gymAccessDays.length, 0),
     Math.max(usableGymDays.length, SMALLEST_APPROVED_LAYOUT),
@@ -706,23 +729,47 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       });
     }
   }
-  // Rung 2+ — fewer sessions, keeping the highest-priority purposes first.
+  // Rung 2+ — fewer sessions. ⚠ **THE SMALLER WEEK IS THE AUTHORED SMALLER
+  // STRUCTURE, NEVER A SLICE OF THE BIGGER ONE (R-235's second measurement,
+  // 2026-08-26).** §6's reference structures differ by count — the 2-session
+  // in-season week is TWO FULL-BODY days, not the first two purposes of the
+  // 3-session split. Slicing shipped a 3-gym-day athlete `lower + upper` with
+  // no push main anywhere the week; consulting `baseLayoutFor` at the reduced
+  // count returns the pair of full-body days Sam's contract names for that
+  // size. The slice remains only as the fallback for a count the table does
+  // not author.
   for (let count = authored - 1; count >= 1; count -= 1) {
+    const smaller = baseLayoutFor({
+      phase: inputs.phase,
+      gymDayCount: count,
+      weekendAvailable,
+      fourthSession: {
+        gymDayCount: count,
+        age: inputs.age,
+        consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
+        highReadiness: inputs.readiness.highReadiness,
+        lowFatigue: inputs.readiness.lowFatigue,
+        lowReadiness: inputs.readiness.lowReadiness,
+      },
+    });
+    const reducedPurposes = smaller
+      ? [...smaller.purposes]
+      : layout.purposes.slice(0, count);
     rungs.push({
-      purposes: layout.purposes.slice(0, count),
-      omitted: layout.purposes[count],
+      purposes: [...reducedPurposes],
+      omitted: layout.purposes[count] ?? null,
       reason: `reduced from ${authored} to ${count} strength session(s) — game `
         + 'freshness and availability leave no legal placement for the rest',
     });
-    const reducedLower = layout.purposes.slice(0, count)
+    const reducedLower = reducedPurposes
       .map((purpose, index) => (lowerish(purpose) ? index : -1))
       .filter((index) => index >= 0);
     for (const index of reducedLower) {
-      const purposes = layout.purposes.slice(0, count);
+      const purposes = [...reducedPurposes];
       purposes[index] = 'upper';
       rungs.push({
         purposes,
-        omitted: layout.purposes[count],
+        omitted: layout.purposes[count] ?? null,
         reason: `reduced from ${authored} to ${count} strength session(s), one `
           + 'offered as upper — the legal day(s) may not hold heavy lower work',
       });
@@ -1336,12 +1383,46 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     };
   }
 
+  /* R-235 slice 1: the athlete's OWN gym-day answer is the intended count.
+   * When the clamped layout silently authored fewer sessions than the
+   * athlete's answer would (game freshness took the days), the reduction is
+   * disclosed through the same record fixture-compressed weeks already use —
+   * a real reduction reported as nothing at all is the measured defect. An
+   * existing ladder disclosure (which carries the more specific reason)
+   * stands; only the silent case gains one. */
+  const accessLayout = inputs.gymAccessDays.length > layoutGymDays
+    ? baseLayoutFor({
+      phase: inputs.phase,
+      gymDayCount: Math.min(inputs.gymAccessDays.length, 6),
+      weekendAvailable,
+      fourthSession: {
+        gymDayCount: Math.min(inputs.gymAccessDays.length, 6),
+        age: inputs.age,
+        consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
+        highReadiness: inputs.readiness.highReadiness,
+        lowFatigue: inputs.readiness.lowFatigue,
+        lowReadiness: inputs.readiness.lowReadiness,
+      },
+    })
+    : null;
+  const accessIntended = accessLayout ? accessLayout.purposes.length : authored;
+  const disclosureWithAccess = reductionDisclosure === null
+    && accessIntended > needed
+    ? {
+      intendedStrengthCount: accessIntended,
+      deliveredStrengthCount: needed,
+      omittedPurpose: accessLayout?.purposes[needed] ?? null,
+      reason: `you can get to the gym ${inputs.gymAccessDays.length} day(s), but game `
+        + `freshness around this week's fixture leaves ${needed} legal session(s)`,
+    }
+    : reductionDisclosure;
+
   return {
     weekStartISO: inputs.weekStartISO,
     layoutClauseId: layout.clauseId,
     requiredStrengthSessions: needed,
     authoredStrengthSessions: authored,
-    reductionDisclosure,
+    reductionDisclosure: disclosureWithAccess,
     days: femaleG1PrimerDays,
     intendedPatterns: [...intended],
     demand,

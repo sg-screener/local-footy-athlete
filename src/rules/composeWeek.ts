@@ -1335,6 +1335,45 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     const isBalanceShape = !fullBody
       && planned.strengthIntent.archetype === 'full_body'
       && !isCoverageDay;
+    /* Which balance shape? *"match whats missing in rest of week"* is the
+     * ruling's own first clause. A LONE balance day beside an upper-only day
+     * (the Wednesday-game replan world) alternated blindly to shape A and
+     * composed a week with NO HINGE — which §18 rightly refuses
+     * (`required_safe_patterns_present:hinge`; the old silent-shrink
+     * accounting used to slip the same week past it). Hinge is the named
+     * required-safe pattern (R-093 anchors it), so: hinge missing from the
+     * other days → B; else squat missing → A; else the alternation stands. */
+    const balanceShape = (() => {
+      if (!isBalanceShape) return null;
+      // TWO OR MORE balance days pair up: A + B together supply the whole
+      // ladder, so the plain alternation is already the balanced answer.
+      // Asking each to "match what's missing" made BOTH take the lower
+      // ladder (each is blind to its sibling — coverage/balance days are
+      // deliberately absent from `suppliedByDay`), and the doubled lower
+      // week refused `pattern_balance:2` (measured, pre-season 4-day).
+      const balanceSiblings = inputs.plannedDays.filter((candidate) =>
+        composedDayIsStrength(candidate.strengthIntent)
+        && !fullBody
+        && candidate.strengthIntent.archetype === 'full_body').length;
+      if (balanceSiblings >= 2) {
+        return (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b') as ComposedDayShape;
+      }
+      const othersSupply = new Set<SessionSlot>();
+      for (const [day, supplied] of suppliedByDay) {
+        if (day === planned) continue;
+        for (const suppliedSlot of supplied) othersSupply.add(suppliedSlot);
+      }
+      // BOTH lower mains missing (the compressed [upper, X] week): an A/B
+      // half supplies one and §18 rightly refuses the other
+      // (`required_safe_patterns_present` — measured both ways on the
+      // Wednesday-game replan). The day that must carry the week's whole
+      // lower work takes the LOWER ladder — squat + hinge on one day is
+      // Sam's own :227 fill order.
+      if (!othersSupply.has('hinge') && !othersSupply.has('squat')) return 'lower' as const;
+      if (!othersSupply.has('hinge')) return 'full_body_b' as const;
+      if (!othersSupply.has('squat')) return 'full_body_a' as const;
+      return (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b') as ComposedDayShape;
+    })();
     const isFullBodyDay = isR093Shape || isCoverageDay || isBalanceShape;
     const kind: ComposedDayShape = isR093Shape
       // R-231: the precomputed pairing above — same shapes, spread so the
@@ -1344,9 +1383,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         ?? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b'))
       : isCoverageDay
         ? 'full_body_coverage'
-        : isBalanceShape
-          ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
-          : composedDayKind(planned.strengthIntent) ?? 'lower';
+        : balanceShape
+          ?? (composedDayKind(planned.strengthIntent) ?? 'lower');
     if (isR093Shape || isBalanceShape) fullBodyIndex += 1;
     const required: SessionSlot[] = [];
     // ── WHAT THE DAY DECLARES IT OWES, AFTER THE KIT HAS HAD ITS SAY ────────

@@ -6155,7 +6155,14 @@ trains combined club nights); only what genuinely cannot be placed is
 reduced, and a reduction is DISCLOSED.
 **Search words:** training days, gym days, four sessions, club nights
 count, footy training, required strength sessions, reduction disclosure.
-· `BUILT` — see scheduler change; disclosure path pre-existing.
+· `WORKING` (slice 1) — the silent shortfall is DISCLOSED from the athlete's
+own gym-day answer (weeklyScheduler accessIntended record; the reduction
+ladder also consults the authored smaller structures instead of slicing).
+SLICE 2 OPEN, its own unit: sizing the base layout from the answer sends
+replan worlds through A/B-half weeks that §18 refuses — the scheduler's
+intent, the composer's shapes and §18's demand need one alignment before
+delivered counts can rise. Measured both ways on the Wednesday-game replan
+world, 2026-08-26.
 
 **R-236** · *"men should be given optional gunshow instead of optional primer"* (Sam, 2026-08-26, profiles-audit finding F-B) · **THE G-1 OPTIONAL SESSION IS GENDERED: WOMEN GET THE PRIMER (R-129), MEN GET THE GUNSHOW.**
 The female path already places the R-129 Primer on G-1; the male optional
