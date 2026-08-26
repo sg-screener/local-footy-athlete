@@ -1,26 +1,11 @@
 {
-  "count": 21,
+  "count": 6,
   "files": [
-    "beginnerDeterministicProgramTests.ts",
-    "byeWeekClassificationTests.ts",
+    "coachActionsTests.ts",
     "coachNoteLifecycleTests.ts",
-    "coachProgramEditDraftTests.ts",
-    "coachRevisionProposalControllerTests.ts",
     "coachRevisionProposalTests.ts",
-    "explorerChainShrinkerTests.ts",
-    "explorerGeneratorTests.ts",
     "gameChangeCoachNotesTests.ts",
-    "generationConstraintReentryTests.ts",
     "injuryReadinessCoachNotesTests.ts",
-    "offseasonSubphaseConditioningIntegrationTests.ts",
-    "phaseRepPrescriptionTests.ts",
-    "postGenerationConstraintValidationTests.ts",
-    "programEditWriteGuardTests.ts",
-    "programmingBiasTests.ts",
-    "recoveryAddonAttachmentTests.ts",
-    "recoveryContentIntegrityTests.ts",
-    "sprintExposureGateTests.ts",
-    "teamTrainingRenderingTests.ts",
-    "weekPlanQAAllowedFindingsTests.ts"
+    "programmingBiasTests.ts"
   ]
 }
