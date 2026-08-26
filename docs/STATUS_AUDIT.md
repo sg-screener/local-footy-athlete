@@ -2991,3 +2991,45 @@ WORKING:
 - Board closes on Day/Week toggle + R-233 already in round 1.
 
 Phone rebuild dispatched with all of it.
+
+## 2026-08-26 — profiles audit, round 1 (audit)
+
+Method: headless probe (scratchpad profiles-audit.ts), 7 worlds —
+pre/off-season male, in/pre/off-season female, in-season 4-day both
+genders. Per world: full week print, boot byte-stability, bin/move/tired
+doors each re-checked against boot. LEGAL fixtures only after two probe
+artifacts bit ('Intermediate' is not an ExperienceLevel; the shared
+fullKit fixture is rack-less — its own file documents both traps).
+
+GREEN: all 7 generate cleanly; boot-stable; doors boot-stable; R-233
+visible (RDL days carry Hamstring Curl); female seats visible (Banded
+TKE / Bosch Hold / Copenhagen rows); Back Squat anchors with a real gym.
+
+REAL DEFECT FOUND+FIXED (eec4e54e): R-233's filter narrowed the BASE
+list — door/boot divergence in the add-game world (SL RDL vs Hamstring
+Curl). Day-list-only now; equivalence 39/0.
+
+FINDINGS OPEN:
+- F-A "Full Body" that is a duplicate lower day: pre/off-season 3-day
+  (both genders), the full_body plan day devolves to kind 'lower' when
+  the week has no coverage gaps (composedDayKind null ?? 'lower'), so
+  the athlete sees "full_body" carrying Back Squat/RDLs/Bulgarians/
+  Hamstring Curl — the same mains as Monday, zero upper rows. The
+  composer's own comment says this world should refuse honestly; it
+  ships instead. Needs Sam's ruling: real full-body shape (A/B), a
+  different 3rd-day plan, or at least the honest name.
+- F-B G-1 Primer asymmetry: female worlds place the R-129 Primer on
+  G-1; male placement is the ledgered dead optional-session branch
+  (pathway seat's R-130 plan). Known, owned elsewhere; noted here as
+  athlete-visible asymmetry.
+- F-C 4-day in-season = 2 gym sessions: scheduler authors required=2
+  (club nights + game counting), reductionDisclosure null because
+  nothing was reduced by its own law. Lawful; may deserve an in-app
+  sentence. Not a defect.
+- Fixture debt: shared fullKitEquipmentAnswer (rack-less) still under
+  many suites — the fixture file itself names the migration as its own
+  unit.
+
+NOT YET AUDITED in this pass: practice-match weeks, deload microcycles,
+away/game doors on these worlds, second-block rollover, long-lived
+histories.
