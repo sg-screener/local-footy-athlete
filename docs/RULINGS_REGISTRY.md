@@ -6130,3 +6130,38 @@ double up, hinge, single leg hip, pairing.
 · `WORKING` — composeWeek family guard + sessionSlotCoverage vocabulary;
 test:rdl-family 7/0 in the chain (3 previously-colliding worlds generated
 live; replaced-not-lost and survives-where-legal both pinned).
+
+**R-234** · *"a - so its lowers + uppers + full body (full body - should match whats missing in rest of week or balance out program as well as possible)"* (Sam, 2026-08-26, profiles-audit finding F-A) · **A FULL-BODY DAY WITH NOTHING MISSING BALANCES — IT IS NEVER A DUPLICATE LOWER DAY.**
+Extends R-087, which it does not reopen: when the week's genuine gaps span
+the body, the coverage day still asks the week what is open (R-087
+verbatim). The case R-087 left open — lower + upper already cover
+everything — no longer falls to `composedDayKind(...) ?? 'lower'` (the
+measured result: a day NAMED full_body carrying Monday's exact mains and
+zero upper rows, both genders, pre- and off-season 3-day). It takes a real
+full-body shape (the A/B ladders) and balances the week.
+**Search words:** full body, duplicate lower, third day, 3-day split,
+lowers uppers full body, balance, coverage day, R-087.
+· `WORKING` — see the balance arm in composeWeek + test:full-body-balance.
+
+**R-235** · *"nobody ever asks for training days - they list how many days they can get to the gym which is obviously 4 DAYS THEY CAN GET TO THE FUCKING GYM - so they should be able to receive 4 sessions on those days - footy training does not count as gym"* (Sam, 2026-08-26, profiles-audit finding F-C) · **`trainingDaysPerWeek` IS GYM DAYS. CLUB NIGHTS NEVER COUNT TOWARD IT.**
+The measured violation: an in-season athlete answering 4 gym days
+(Mon/Wed/Fri/Sun, game Saturday) was authored required=2 with no
+disclosure, because the layout counted the two club nights toward the
+athlete's number. The gym-day count is the athlete's own capacity answer;
+club training is a separate obligation. Where game-adjacency laws make a
+preferred gym day illegal, the session RELOCATES to the best legal day
+(combining onto a club night is a legal relocation — Sam's own seed world
+trains combined club nights); only what genuinely cannot be placed is
+reduced, and a reduction is DISCLOSED.
+**Search words:** training days, gym days, four sessions, club nights
+count, footy training, required strength sessions, reduction disclosure.
+· `BUILT` — see scheduler change; disclosure path pre-existing.
+
+**R-236** · *"men should be given optional gunshow instead of optional primer"* (Sam, 2026-08-26, profiles-audit finding F-B) · **THE G-1 OPTIONAL SESSION IS GENDERED: WOMEN GET THE PRIMER (R-129), MEN GET THE GUNSHOW.**
+The female path already places the R-129 Primer on G-1; the male optional
+placement was the ledgered dead branch. Sam's answer revives it as the
+GUNSHOW, not the Primer. Optional tier on both — no load, no fatigue
+contribution (R-129's own words), never breaks a rest day.
+**Search words:** gunshow, primer, G-1, optional session, day before game,
+men, women, arms pump.
+· `BUILT` — see generator optional placement + cells.
