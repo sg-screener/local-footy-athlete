@@ -168,8 +168,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(200,255,0,0.42)',
-    backgroundColor: '#11150D',
+    /* NO LIME EDGE ON THE DOORWAY — Sam, 2026-08-27: the header pill was
+       carrying a lime border over a green-tinted fill, which read as a glow and
+       pulled the eye above the day card. The doorway is a route, not the
+       subject of the screen, so it takes the SAME neutral card treatment as
+       `strip` above. No new token: both values are already on this screen. */
+    borderColor: '#1F1F1F',
+    backgroundColor: '#101010',
   },
   coachLabel: {
     flexGrow: 1,

@@ -7,7 +7,7 @@ import {
   Animated,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { Text } from '../../components/common/Text';
@@ -91,6 +91,14 @@ const MESSAGE_INTERVAL = 5000; // ~5s per status line (in the 4–6s window)
 const FADE_DURATION = 175;      // crossfade between messages
 const LONG_WAIT_THRESHOLD = 50000; // inject long-wait line once at ~50s
 const MIN_DISPLAY_MS = 20_000;  // deliberate build experience after fast local generation
+// How far above its centred resting place the ready group starts, in points.
+// Far enough to read as a drop, short enough that the tick never leaves the
+// middle third of the screen on the smallest phone we support.
+const READY_SLIDE_FROM = -44;
+// The footer's own top padding, above the CTA. Named because the ready state's
+// centring subtracts it: the athlete's eye measures to the TOP OF THE BUTTON,
+// not to the top of the bar the button sits in.
+const FOOTER_TOP_PADDING = 12;
 
 export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) => {
   const [phase, setPhase] = useState<'generating' | 'ready' | 'error'>('generating');
@@ -104,6 +112,10 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   // The currently-displayed loading line. Held in state so the fade-in
   // re-renders with the new copy.
   const [currentMessage, setCurrentMessage] = useState(BASE_SEQUENCE[0]);
+  // MEASURED, NOT ASSUMED. The ready group is centred in the band the athlete
+  // actually sees — screen top to the top of the CTA — and that band's lower
+  // edge depends on how tall the footer renders, which is a device question.
+  const [footerHeight, setFooterHeight] = useState(0);
   const hasStarted = useRef(false);
 
   // Sequence + long-wait state lives in refs because the rotation interval
@@ -131,6 +143,12 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   // slightly behind readyOpacity so the CTA settles last.
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const readyOpacity = useRef(new Animated.Value(0)).current;
+  // The ready group DROPS INTO THE MIDDLE OF THE SCREEN — Sam, 2026-08-27.
+  // The three education cards are the generating state's company; once the
+  // program exists they leave, and the tick + "your program is ready" is the
+  // only thing on the screen, centred. The slide is the manner of that: the
+  // group enters from READY_SLIDE_FROM above its centred resting place.
+  const readyTranslateY = useRef(new Animated.Value(READY_SLIDE_FROM)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const loadingMsgOpacity = useRef(new Animated.Value(1)).current;
   const card1Opacity = useRef(new Animated.Value(0)).current;
@@ -139,6 +157,8 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   const card1TranslateY = useRef(new Animated.Value(12)).current;
   const card2TranslateY = useRef(new Animated.Value(12)).current;
   const card3TranslateY = useRef(new Animated.Value(12)).current;
+
+  const insets = useSafeAreaInsets();
 
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const completeOnboarding = useProfileStore((state) => state.completeOnboarding);
@@ -390,6 +410,11 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
             duration: 350,
             useNativeDriver: true,
           }),
+          Animated.timing(readyTranslateY, {
+            toValue: 0,
+            duration: 420,
+            useNativeDriver: true,
+          }),
           Animated.timing(buttonOpacity, {
             toValue: 1,
             duration: 400,
@@ -451,6 +476,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
     hasStarted.current = false;
     loadingOpacity.setValue(1);
     readyOpacity.setValue(0);
+    readyTranslateY.setValue(READY_SLIDE_FROM);
     buttonOpacity.setValue(0);
     loadingMsgOpacity.setValue(1);
     sequenceModeRef.current = 'base';
@@ -509,14 +535,32 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.root}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            /* READY OWNS THE WHOLE SCREEN. With the cards gone there is
+               nothing to scroll, so the content grows to fill and centres
+               its one group instead of sitting under a top padding.
+               THE BAND IS SCREEN-TOP TO BUTTON-TOP — Sam, 2026-08-27: "equal
+               padding between top of screen and top of 'start your program'".
+               Centring inside the scroll view alone lands too low, because the
+               scroll view starts BELOW the notch inset and runs UNDER the
+               absolutely-positioned footer. The bottom padding pays back both:
+               the inset the content never had, and the footer above its CTA. */
+            phase === 'ready' && styles.scrollContentReady,
+            phase === 'ready' && {
+              paddingBottom: insets.top + Math.max(0, footerHeight - FOOTER_TOP_PADDING),
+            },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Spinner / Ready indicator */}
           {/* Two phase-specific Animated.Views share the same headerSection
               slot. The loading group fades out, then the ready group fades
               in — no layout jump, no abrupt content swap. */}
-          <View style={styles.headerSection}>
+          <View style={[
+            styles.headerSection,
+            phase === 'ready' && styles.headerSectionReady,
+          ]}>
             {phase === 'generating' && (
               <Animated.View style={[styles.phaseGroup, { opacity: loadingOpacity }]}>
                 {/* Spinner kept but de-emphasised — the rotating status
@@ -548,7 +592,12 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
             )}
 
             {phase === 'ready' && (
-              <Animated.View style={[styles.phaseGroup, { opacity: readyOpacity }]}>
+              <Animated.View
+                style={[
+                  styles.phaseGroup,
+                  { opacity: readyOpacity, transform: [{ translateY: readyTranslateY }] },
+                ]}
+              >
                 <View style={styles.readyCircle}>
                   <Feather name="check" size={28} color={colors.text.inverse} />
                 </View>
@@ -572,8 +621,12 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
             )}
           </View>
 
-          {/* Education cards — staggered entrance */}
-          <View style={styles.cardsSection}>
+          {/* Education cards — staggered entrance, and they belong to the
+              WAIT. They read while the program is being built; the moment it
+              exists they fade out on the same `loadingOpacity` as the spinner
+              and unmount, leaving the ready group alone on the screen. */}
+          {phase === 'generating' && (
+          <Animated.View style={[styles.cardsSection, { opacity: loadingOpacity }]}>
             <Animated.View style={{ opacity: card1Opacity, transform: [{ translateY: card1TranslateY }] }}>
               <EducationCard
                 icon="zap"
@@ -595,11 +648,15 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
                 body="Designed for performance, durability, and game day readiness."
               />
             </Animated.View>
-          </View>
+          </Animated.View>
+          )}
         </ScrollView>
 
         {/* Fixed bottom — loading hint or CTA */}
-        <View style={styles.footer}>
+        <View
+          style={styles.footer}
+          onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+        >
           {phase === 'generating' && (
             <Text variant="bodySmall" color={colors.text.tertiary} align="center" style={styles.footerHint}>
               This takes about 20 seconds
@@ -660,11 +717,26 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 120,
   },
+  // The ready screen holds ONE group and nothing else, so it fills the scroll
+  // area and centres it. The paddings are symmetrical on purpose: an uneven
+  // pair would put the tick off-centre by half the difference.
+  scrollContentReady: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingTop: 0,
+    // paddingBottom is supplied at render time — it depends on the device's
+    // top inset and the measured footer.
+  },
 
   // ── Header ──
   headerSection: {
     alignItems: 'center',
     marginBottom: 36,
+  },
+  // The 36pt gap exists to separate the header from the cards. With the cards
+  // gone it would lift the group off centre, so it goes with them.
+  headerSectionReady: {
+    marginBottom: 0,
   },
   // Wrapper for each phase's children. Inherits the centred layout from
   // headerSection so swapping groups in/out via opacity stays in place.
@@ -752,7 +824,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: FOOTER_TOP_PADDING,
     paddingBottom: 34,
     backgroundColor: colors.surface.primary,
     borderTopWidth: StyleSheet.hairlineWidth,
