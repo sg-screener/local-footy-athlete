@@ -3175,3 +3175,55 @@ With this, the original blind-spot list stands: profiles ✓ (rounds 1-2),
 block changeover on glass ✓, long-horizon ✓, practice match + deload ✓,
 release builds on two real phones ✓, dead suites binned ✓. Remaining:
 coach chat (Codex's rebuild) and an older/slower physical device.
+
+## 2026-08-26 — FULL-YEAR PROGRAMMING AUDIT (Sam's order) — measured at 77367cff
+
+Instrument: scratchpad year-audit.ts + scenarios.ts + probes (session
+9ff06b83-era L13 shape, extended): 6 archetypes × 54 weeks each through the
+REAL doors (generateProgramLocally, rolloverProgramBlock,
+commitSessionOutcomeTransaction with per-set logging,
+executeProgramControlActionDurably, executeFixtureMutationTransaction,
+applyPhaseShift→commitProfileProgramTransaction, DevE2EClock,
+rebuildDerivedWorld). Full report delivered to Sam (artifact). Headlines,
+each MEASURED not recalled:
+
+1. **CRITICAL — injury clear + rollover deletes lower body.** hamstring 6/10
+   → clear → rolloverProgramBlock: both lower days regenerate as
+   row/dead-bug/plank filler (removals live on as athlete exclusions; known
+   parked question in STATUS_FINISH_INJURY.md — year-scale consequence new).
+2. **CRITICAL — TT-day strength invisible to boundary progression.**
+   `seedableStrengthRows` (blockBoundaryProgression.ts) filters
+   workoutType Strength|Mixed; canonical upper strength rides Team Training
+   days → zero load decisions → upper loads flat W9→W51 in every archetype;
+   `progressedFromOwnHistory` false → forced rotation every block. Minimal
+   repro: identical bench row gets +2.5 on Strength day, nothing on TT day.
+   Same filter class: deload halving misses TT-day mains; set-additions
+   target only the lower days (in-season Wed squat 4x5-8 → 5x5-8 at W36,
+   permanent).
+3. **HIGH — bye is inert on the live door.** fixture remove accepted, noGame
+   persisted, week unchanged, Sat still renders core Game; survives
+   rebuildDerivedWorld. 0-TT athlete: remove REFUSED
+   (full_rest_required_minimum:0). Generation-time bye (printed-weeks/4) is
+   correct — the live repair path never restructures. Extends R-075/item-28.
+4. **HIGH — readiness 7-day window dies at week boundary.** cooked declared
+   Friday → next week full dose after boot (fact-horizon A3a red agrees).
+   Declared Monday, transform lands (mains halved on Strength days only;
+   Wed lower REPLACED by Mobility — structure change vs deload law).
+5. **HIGH — shoulder 8/10 recomposition** adds Front Squat to all four
+   emptied upper slots incl. G-1 gunshow slot; hamstring 6/10 also removes
+   Bible-safe quad work.
+6. Practice match add: no restructure (PM-1 full lower stands).
+   Pre-season hard runner rides the lower_squat day 21 weeks (WEEK-08).
+   Equipment missing_this_week: DB Shoulder Press ×3 in one session.
+7. Sweep at this commit: **171 of ~390 red** (21 gender-fixture rot, 16
+   import death, 133 individually red) — classification in scratchpad
+   fail-triage.txt. Was ~10 on 2026-08-12.
+8. GREEN under the year: phase tables, top-ups, anchors, G-1/G-2/G+1 (incl.
+   Sunday cross-week Monday), running law, erg caps, deload cadence +
+   no-in-season-deloads, early off-season optional block, gunshow pools,
+   mobility composition, beginner gating, bodyweight legality, move/bin/
+   game-move chains byte-stable across boot.
+
+NOT COVERED: on-glass rendering this session, coach chat (Codex rebuild),
+soreness/poor-sleep doors (no UI ingress — dead), missed-session prompt,
+christmas-break + midweek-game doors (their suites red at this commit).
