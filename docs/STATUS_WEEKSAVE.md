@@ -257,3 +257,30 @@ from the right when advancing and Welcome return from the left when going Back.
 
 - Physical-iPhone acceptance.
 - Reduce Motion, Android and interactive swipe-back inspection.
+
+---
+
+# STATUS — live gym-wheel focus (`weeksave`, 2026-08-26)
+
+## Owner request
+
+The lime gym-days highlight must follow the number moving into focus rather than
+waiting until the wheel is released.
+
+## Decision and receipt
+
+The wheel previously styled lime from the committed answer, while size and
+opacity already followed the scroll. A separate nearest-centre visual index now
+tracks the drag. It changes only presentation; the existing tap/release handler
+still owns the answer and native snapping still owns the motion.
+
+The two new cells first failed against the release-only highlight. After the
+change, onboarding presentation passes 111/111, the separate feedback-scale
+suite passes 45/45 and TypeScript is green. A slow iPhone 17 Pro simulator drag
+shows 5 turn lime while travelling toward centre, before release, then settle on
+lime 5.
+
+## NOT COVERED
+
+- Physical-iPhone acceptance.
+- Rapid multi-value flings, VoiceOver announcements and Android.

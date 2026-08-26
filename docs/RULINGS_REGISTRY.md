@@ -6454,3 +6454,17 @@ questionnaire uses the destination screen's shared slide.
 native stack.
 · `WORKING` — `test:onboarding-presentation` requires the shared horizontal
 transition and rejects the retired fade.
+
+**R-251** · *"lime green highlight should not only come when released - should
+move with number in focus i.e. moving from 4 to 5 the 5 should flick to the lime
+green before it's locked on there so the colour follows the movement"* (Sam,
+2026-08-26, gym-days wheel review) · **THE WHEEL'S COLOUR FOLLOWS LIVE FOCUS.**
+The number nearest the centre turns lime while the athlete is dragging, as soon
+as focus crosses to it; the highlight does not wait for release or snapping to
+finish. Visual focus is separate from the committed gym-days answer: following
+the drag cannot save an answer, scroll the list or add another settle owner.
+The existing native snap and tap/release answer paths remain unchanged.
+**Search words:** gym-days wheel, number picker, lime, live focus, drag, release,
+snap, committed answer.
+· `WORKING` — `test:onboarding-presentation` requires scroll-driven focus,
+focus-driven lime styling and separation from the answer/scroll writers.

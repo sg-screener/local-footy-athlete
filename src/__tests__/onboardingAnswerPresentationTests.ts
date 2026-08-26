@@ -658,7 +658,7 @@ console.log('\n[13] Training availability asks about gym access, not total train
     !/COMMITMENT_OPTIONS|<SelectableTile|styles\.grid|styles\.card/.test(commitment));
   ok('the retired rail-and-thumb slider is absent from gym availability',
     !/<DiscreteSlider|showStepLabels/.test(commitment));
-  // ── R-232-candidate (Sam, 2026-08-26: the wheel was "super glitchy") ──
+  // ── R-251 + the earlier settle fix ──────────────────────────────────────
   // ONE settle owner: native snapToInterval parks the wheel; the scroll-end
   // handlers are pure READS (no scrollToOffset), and the value-sync effect
   // ignores the picker's own onChange echo. Three competing settles was the
@@ -673,6 +673,18 @@ console.log('\n[13] Training availability asks about gym access, not total train
   ok('the value-sync effect skips the picker\'s own echo',
     /lastReported/.test(numberPicker)
       && /value === lastReported\.current\) return;/.test(numberPicker));
+  ok('the lime focus follows the nearest number during the scroll',
+    /const \[focusedIndex, setFocusedIndex\]/.test(numberPicker)
+      && /listener:\s*trackFocusedIndex/.test(numberPicker)
+      && /extraData=\{focusedIndex\}/.test(numberPicker)
+      && /index === focusedIndex && styles\.numberSelected/.test(numberPicker));
+  ok('tracking visual focus cannot commit an answer or move the wheel',
+    (() => {
+      const body = /const trackFocusedIndex = useCallback\(([\s\S]*?)\}, \[/.exec(numberPicker)?.[1] ?? '';
+      return body.length > 0
+        && /setFocusedIndex\(/.test(body)
+        && !/onChange|reportIndex|scrollToOffset/.test(body);
+    })());
   ok('the number picker snaps each value into the centre',
     /Animated\.FlatList/.test(numberPicker)
       && /snapToInterval=\{ITEM_WIDTH\}/.test(numberPicker)

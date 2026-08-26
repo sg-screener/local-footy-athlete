@@ -42,6 +42,15 @@ export function HorizontalNumberPicker({
     () => Array.from({ length: Math.max(0, max - min + 1) }, (_, index) => min + index),
     [max, min],
   );
+  // Visual focus is deliberately separate from the committed answer. It tracks
+  // whichever number is nearest the centre during a drag; `reportIndex` still
+  // owns the answer and only runs through the existing tap/settle paths.
+  const initialFocusedIndex = Math.max(
+    0,
+    Math.min(Math.max(0, max - min), value - min),
+  );
+  const [focusedIndex, setFocusedIndex] = useState(initialFocusedIndex);
+  const focusedIndexRef = useRef(initialFocusedIndex);
 
   const boundedIndex = useCallback((index: number) => (
     Math.min(values.length - 1, Math.max(0, index))
@@ -86,6 +95,20 @@ export function HorizontalNumberPicker({
     reportIndex(numberPickerIndexFromOffset(offsetX, ITEM_WIDTH, values.length));
   }, [reportIndex, values.length]);
 
+  const trackFocusedIndex = useCallback((
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    if (values.length === 0) return;
+    const nextIndex = numberPickerIndexFromOffset(
+      event.nativeEvent.contentOffset.x,
+      ITEM_WIDTH,
+      values.length,
+    );
+    if (nextIndex === focusedIndexRef.current) return;
+    focusedIndexRef.current = nextIndex;
+    setFocusedIndex(nextIndex);
+  }, [values.length]);
+
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setViewportWidth(event.nativeEvent.layout.width);
   }, []);
@@ -99,6 +122,8 @@ export function HorizontalNumberPicker({
     centeredOnce.current = true;
     lastReported.current = value;
     const index = boundedIndex(value - min);
+    focusedIndexRef.current = index;
+    setFocusedIndex(index);
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({
         offset: index * ITEM_WIDTH,
@@ -134,8 +159,9 @@ export function HorizontalNumberPicker({
         })}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true },
+          { useNativeDriver: true, listener: trackFocusedIndex },
         )}
+        extraData={focusedIndex}
         scrollEventThrottle={16}
         onScrollEndDrag={settleFromScroll}
         onMomentumScrollEnd={settleFromScroll}
@@ -161,14 +187,14 @@ export function HorizontalNumberPicker({
           return (
             <Pressable
               accessibilityRole="radio"
-              accessibilityState={{ selected: item === value }}
+              accessibilityState={{ selected: index === focusedIndex }}
               accessibilityLabel={`${item} days per week`}
               onPress={() => selectIndex(index, true)}
               style={styles.item}
               testID={`${testID}-value-${item}`}
             >
               <Animated.View style={{ opacity, transform: [{ scale }] }}>
-                <Text style={[styles.number, item === value && styles.numberSelected]}>
+                <Text style={[styles.number, index === focusedIndex && styles.numberSelected]}>
                   {item}
                 </Text>
               </Animated.View>
