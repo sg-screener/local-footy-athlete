@@ -187,6 +187,13 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     /Gesture\.Pan\(\)\s*\n?\s*\.activateAfterLongPress\(\d+\)/.test(board),
     'a pan that claimed the touch immediately would steal every scroll past the board');
 
+  // Sam's phone, 2026-08-26: leave the week for Day view with the board up,
+  // come back — the board was still there. The board is transient week
+  // detail; the shape-change owner closes it with the rest.
+  ok('a Day/Week shape change closes the board',
+    /const handleClearWeekPresentation = \(\) => \{[\s\S]{0,600}setWeekBoardOpen\(false\)/.test(home),
+    'the board outlives the week shape it belongs to');
+
   ok('the frames are MEASURED by onLayout, not computed from the stylesheet',
     /const frames = React\.useRef/.test(board)
       && /event\.nativeEvent\.layout/.test(board)
@@ -216,8 +223,12 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     /const draggable = box\.kind !== 'game'/.test(board)
       && /const removable = box\.kind !== 'game'/.test(board));
 
-  ok('the box always springs home — the program re-renders the result, not the finger',
-    /onFinalize\(\(\) => \{[\s\S]{0,220}dx\.value = 0;[\s\S]{0,60}dy\.value = 0;/.test(board));
+  // #14 (Sam's phone, 2026-08-26): the return is a GLIDE, never a one-frame
+  // teleport — `dx.value = 0` flashed the old layout before the accepted
+  // drop's re-render landed ("it snaps back for a micro second").
+  ok('the box always returns home by glide — the program re-renders the result, not the finger',
+    /onFinalize\(\(\) => \{[\s\S]{0,900}dx\.value = withTiming\(0[\s\S]{0,80}dy\.value = withTiming\(0/.test(board)
+      && !/dx\.value = 0;/.test(board));
 
   ok('a refused drop gives a reason, one per typed refusal',
     /DROP_REFUSAL_COPY/.test(board)

@@ -350,6 +350,11 @@ export default function HomeScreenV2() {
   const handleClearWeekPresentation = () => {
     setExpandedWeekIdx(-1);
     handleClearSelection();
+    // Sam's phone, 2026-08-26: leave the week for Day view with the move
+    // board up, come back, and the board was still there instead of the
+    // regular week. The board is transient week detail like the rest of what
+    // this owner clears — a shape change closes it.
+    setWeekBoardOpen(false);
   };
   const handleCompactPrev = () => {
     setExpandedWeekIdx(-1);

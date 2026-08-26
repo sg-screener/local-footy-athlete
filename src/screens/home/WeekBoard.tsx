@@ -5,6 +5,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../theme/colors';
@@ -277,9 +278,19 @@ function BoardBox({ box, date, frozen = false, onLayout, onAdd, onRemove, onDrop
     .onFinalize(() => {
       // The box always returns home. What the drop CHANGED is re-derived and
       // re-rendered from the program, never from where the finger stopped.
+      //
+      // ⚠ **HOME BY GLIDE, NEVER BY TELEPORT — Sam's phone, 2026-08-26
+      // (checklist #14):** *"it snaps back for a micro second to where it
+      // came before finalising on the right spot"*. `dx.value = 0` moved the
+      // box to its origin IN ONE FRAME while the accepted drop was still
+      // re-deriving the week — an instant flash of the old layout. A short
+      // timed return reads as deliberate motion, and an accepted drop's
+      // re-render lands while (or before) the glide finishes, so the old
+      // position never flashes. Refused and abandoned drops keep the same
+      // glide — one return, one look.
       lifted.value = 0;
-      dx.value = 0;
-      dy.value = 0;
+      dx.value = withTiming(0, { duration: 180 });
+      dy.value = withTiming(0, { duration: 180 });
     });
 
   const dragStyle = useAnimatedStyle(() => ({
