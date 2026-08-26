@@ -3254,3 +3254,88 @@ work.
 Questions 2 (no-club in-season week), 3 (hard-runner placement) and 5
 (standing 5-hard-day in-season shape) are being re-explained to Sam in
 plain words; not yet ruled.
+
+## 2026-08-26/27 — OVERNIGHT FIX RUN (Sam's order: "work one item after the other until done")
+
+Sam lifted the audit-only constraint. Sequential, no parallel builders, each
+unit committed scoped + green before the next. Commits, this branch:
+f63b964a (progression label fix), 63cc38e4 (rack-squat shoulder cells),
+609e1aa1 (readiness 7-day window), c7e59fe5 (bye publication + phantom-game
+fence), 98152b30 (20 suite fixtures revived), plus readiness-ownership +
+fixture-identity revivals inside those commits.
+
+### RULINGS RECEIVED TONIGHT (verbatim, recorded; registry rows + guards owed by build seat)
+- Q2 (no-club in-season conditioning): "they should be doing something fast
+  earlier in the week - something like a short sprint workout into so flying
+  runs or glycolytic sessions in the 30 second to 2 min interval range -
+  total session length 30-45 min after warm up. then later in the week on
+  say a g-2 they can do some runnign intervals or off leg conditioning keep
+  this moderate intensity - no more than say 6 or 7km". NOT BUILT TONIGHT:
+  lands in weeklyScheduler/conditioning selection, which is mid-R-235
+  slice 2 (Codex, same day) — building there overnight = the overlap Sam
+  banned. Pointers: in-season policy already carries
+  requiredAppMediumHardMinimum (tt===0 → 2) unenforced at selection; the
+  speed-into-glyco session = Anaerobic-tab template + existing speed
+  warm-up-rider mechanism; G-2 session needs a 6-7km cap. Supersedes, for
+  0-TT only, the 2026-07-29 "game carries the hard exposure" reading.
+- Q3 (pre-season placement): "why can't you put work on the weekend here?
+  why can't you put lowers on thursday and hard running friday?" = ruled
+  direction: pre-season may use the weekend; separate the hard runner from
+  the lower day (lowers Thu, hard running Fri shape). Same scheduler
+  surface (BASE_LAYOUTS pre-season rows + quality-day picker). OWNER: build
+  seat with R-235.
+- Q5 (in-season 2-lower-day week): ANSWERED, not a bug — decision 14 /
+  WC-141 gives a 4th session to athletes ≤27 with 4+ gym days, and WC-103
+  makes that 4th a split Lower Squat / Lower Hinge pair. Sam's own weeks
+  show the 3-session layout because his profile fails the selector. OPEN
+  CONFLICT for Sam: WC-103's split-lower 4th vs Bible §2's 4-day row ("4
+  days: as above plus optional accessories/prehab Wednesday").
+
+### RETRACTION
+Audit finding #1 ("cleared injury permanently deletes lower body") was MY
+HARNESS'S ERROR: the clear call passed constraintId (not episodeId/noteId),
+the door correctly refused, and the still-active injury shaped the next
+block. Measured with the correct payload: clear FULLY RESTORES the week,
+survives boot, and the next block regenerates healthy. The UI passes
+episodeId. What STANDS from that family: over-restriction while active
+(hamstring 6/10 removes Bible-safe quad work; a "lower" day can regenerate
+with zero lower lifts while an injury is active).
+
+### FIXED TONIGHT, MEASURED BEFORE+AFTER
+1. Club-night strength invisible to progression (seedableStrengthRows +
+   3 apply passes read the day LABEL): year-long upper flatline → loads now
+   climb per qualifying block (pulldown 45→67.5 across the season, bench
+   50→75 across the year). Guard: blockTwoProgression [13], mutation-killed.
+2. In-season set-additions gated off (Bible maintain): the 4→5-set
+   mid-season squat ratchet is gone; Wed first lift now 3x5-8 all season.
+3. Rack-squat shoulder cells good→caution (sheet+code+pins): shoulder 8/10
+   replacement is Goblet 2x10-12, not Front Squat 3x5-8. Residual: the
+   same replacement still repeats on each affected day (derived per-day, no
+   week memory) and may land at G-1.
+4. Readiness 7-day window derived from declaration day (was week anchor):
+   Friday "cooked" now stores an 08-14→08-20 window and next Mon-Thu derive
+   deloaded, with and without a boot. Guard: readiness-ownership R23.
+5. Bye: fixture-remove publishes the replan's sessions (was
+   workoutsByDate: {}) + resolver suppresses a template Game on a noGame
+   date. Live bye → Saturday Hard Conditioning bye-build, boot-stable;
+   year run W40 is a true bye week. fixture-identity revived 6/6 incl.
+   add-then-remove identity and published==derived.
+6. 20 gender-rot suites revived (5 fully green, rest now red on real cells).
+
+### REMAINING (diagnosed, owners needed)
+- 0-TT bye still REFUSED (full_rest_required_minimum:0) — §18 bye-build
+  allocator packs 7 required days; the R-075 / SEAT_INBOX-28 blocked unit.
+- Deload transform on club nights: main lift NOT halved while accessories
+  are (mixed producers on TT days — same label-class family); optional-week
+  mode still replaces one lower session with Mobility (structure law says
+  sessions survive).
+- Injury: over-restriction at 6/10 (safe quad work removed); replacement
+  week-dedup + G-1 guard.
+- Dead-logic dossier from the audit (MAS in generation, 2km TT retest,
+  role buckets, goals, injury triggers UI, soreness/poor-sleep doors,
+  coach mutation door) — unchanged tonight.
+- Suite archaeology: game-local-rebuild imports retired validators;
+  power-counting golden drift (9/13); block-state throws mid-run;
+  ~130 other reds individually real; test:compile ratchet breach-set is
+  UNSTABLE run-to-run on identical trees (control-measured) — the gate
+  itself needs a look.
