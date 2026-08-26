@@ -3686,7 +3686,14 @@ function MissedChip({ testID, label, primary, onPress }: {
 interface WeekReadinessSheetProps {
   visible: boolean;
   initialBucket: 'flat' | 'sick';
-  active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
+  active: {
+    id: string;
+    isRecovery: boolean;
+    title: string;
+    scope: 'today' | 'week';
+    /** Chip family of the active fact — see VisibleReadinessState.bucket. */
+    bucket: 'flat' | 'sick';
+  } | null;
   /** Did the app actually change the program for the active fact? Derived from
    *  committed state (reversible-adjustment ledger / programming-effect
    *  constraints), never from the fact's existence — R-228. */
@@ -3741,9 +3748,16 @@ function WeekReadinessSheet({
   // A failed report must NOT read as confirmation — the error acknowledgment
   // stays in place over the options so the athlete can try again.
   const justConfirmed = confirmed && acknowledgment?.tone === 'success' && !lighterDayOffer;
+  // Checklist #9 (Sam's phone, 2026-08-26): the manage view is about the
+  // ACTIVE fact, so it only stands in for the chip that asks about the same
+  // family. With a tired fact active, the Sick chip must still open the sick
+  // options — "Writing i'm flat today should not effect me or change the
+  // steps to filling in I'm sick?" A different-family chip reports a NEW
+  // fact; the active one keeps its own manage view behind its own chip.
+  const activeMatchesBucket = !!active && active.bucket === bucket;
   // While the opt-in lighter-day offer or the just-confirmed disclosure is
   // showing, don't re-show the option list.
-  const showOptions = (!active || updating) && !lighterDayOffer && !justConfirmed;
+  const showOptions = (!activeMatchesBucket || updating) && !lighterDayOffer && !justConfirmed;
 
   const pulseIcon = (color: string) => (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

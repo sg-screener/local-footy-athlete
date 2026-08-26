@@ -605,6 +605,24 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('active state update/clear affordances present',
     src.includes('Clear adjustment'));
 
+  // Checklist #9 (Sam's phone, 2026-08-26): with a tired fact active, tapping
+  // Sick showed the tired fact's manage view instead of the sick options —
+  // "Writing i'm flat today should not effect me or change the steps to
+  // filling in I'm sick?" The manage view stands in only for the chip that
+  // asks about the SAME fact family; a different-family chip opens its own
+  // report options. The projection carries the family (illness → 'sick',
+  // everything else → 'flat') and the sheet gates on the match.
+  {
+    const projectionSrc = fs.readFileSync(
+      `${__dirname}/../utils/visibleReadinessState.ts`, 'utf8') as string;
+    ok('[#9] the visible readiness projection carries its chip family',
+      /bucket: 'flat' \| 'sick'/.test(projectionSrc) &&
+      /factKind === 'illness' \? 'sick' : 'flat'/.test(projectionSrc));
+    ok('[#9] a different-family chip opens its options, not the manage view',
+      /activeMatchesBucket = !!active && active\.bucket === bucket/.test(src) &&
+      /showOptions = \(!activeMatchesBucket \|\| updating\)/.test(src));
+  }
+
   // SUPERSEDED 2026-08-11. My Status in Coach is now the only modifier and
   // coach-note home; Program owns only the direct status doors.
   ok('[A4] active-state notes do not duplicate My Status on Program',

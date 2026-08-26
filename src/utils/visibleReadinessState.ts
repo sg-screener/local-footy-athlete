@@ -28,6 +28,16 @@ export interface VisibleReadinessState {
   isRecovery: boolean;
   title: string;
   scope: 'today' | 'week';
+  /**
+   * Which chip family the active fact belongs to: illness → 'sick',
+   * everything else (fatigue / soreness / poor sleep / recovery) → 'flat'.
+   * Sam's phone, 2026-08-26 (checklist #9): with a tired fact active, tapping
+   * Sick showed the tired fact's manage view instead of the sick options —
+   * *"Writing i'm flat today should not effect me or change the steps to
+   * filling in I'm sick?"* The sheet needs the KIND to know whether the
+   * tapped chip is asking about the same fact or a different report.
+   */
+  bucket: 'flat' | 'sick';
 }
 
 interface LegacyConstraintLike {
@@ -116,6 +126,7 @@ export function resolveVisibleReadinessState(
       isRecovery: false,
       title: factKindTitle((chosen as { factKind: string }).factKind, scope),
       scope,
+      bucket: (chosen as { factKind: string }).factKind === 'illness' ? 'sick' : 'flat',
     };
   }
 
@@ -137,6 +148,7 @@ export function resolveVisibleReadinessState(
       isRecovery: match.id === ids[0],
       title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
       scope: 'week',
+      bucket: 'flat',
     };
   }
 
@@ -150,6 +162,7 @@ export function resolveVisibleReadinessState(
       isRecovery: false,
       title: String(todayPoorSleep.modifierTitle ?? 'Poor sleep adjustment active'),
       scope: 'today',
+      bucket: 'flat',
     };
   }
 
@@ -160,6 +173,7 @@ export function resolveVisibleReadinessState(
       isRecovery: false,
       title: input.todayReadinessModifier.title,
       scope: 'today',
+      bucket: 'flat',
     };
   }
 
