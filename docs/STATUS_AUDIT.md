@@ -3227,3 +3227,30 @@ each MEASURED not recalled:
 NOT COVERED: on-glass rendering this session, coach chat (Codex rebuild),
 soreness/poor-sleep doors (no UI ingress — dead), missed-session prompt,
 christmas-break + midweek-game doors (their suites red at this commit).
+
+## 2026-08-26 — SAM RULED ON TWO AUDIT QUESTIONS (verbatim, from chat)
+
+Recorded here so the rulings are not lost; **registry rows + guards are OWED
+and are NOT mine to write** (audit seat, audit-only order — no rule/test
+changes). OWNER: the building seat (Codex/terminal), next time it lands law
+work.
+
+1. **DELOAD POWER — Sam, 2026-08-26, verbatim: "keep power on deloads".**
+   Resolves the Bible's internal conflict: THE DELOAD LAW ("power KEPT — a
+   deload is not a reason to lose sharpness") WINS over §18F's "Remove power
+   primers" lines (§18E low-readiness and §18F deload rules). The app's
+   current behaviour (halved, small sharp dose kept) is the ruled behaviour.
+   Bible amendment owed: strike/patch the two "remove power primers" lines.
+
+2. **INJURY CLEAR RESTORES — Sam, 2026-08-26, verbatim: "yes"** to "restore
+   everything the injury took out" when the athlete clears the injury.
+   Closes the parked ownership question in STATUS_FINISH_INJURY.md. This is
+   the ruling behind audit finding #1 (CRITICAL: cleared hamstring + block
+   rollover permanently deletes lower-body training — the injury's
+   remove_exercise decisions live on as permanent athlete exclusions).
+   Fix must reverse BOTH facts a removal writes (exclusion + ledger entry)
+   per the 2026-08-20 restore finding, and must survive rollover.
+
+Questions 2 (no-club in-season week), 3 (hard-runner placement) and 5
+(standing 5-hard-day in-season shape) are being re-explained to Sam in
+plain words; not yet ruled.
