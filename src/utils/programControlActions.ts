@@ -2414,6 +2414,56 @@ async function executeProgramControlActionDurablyWithinTrace(
       sourceSurface: action.source.surface ?? action.source.screen,
     });
     const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
+    /* ── R-229, THE CLEAR HALF — Sam's phone, 2026-08-26 (checklist #10) ────
+     *
+     * "removing the going away modifier from my status seemed to not update
+     * the prorgam back to what it was". The SET half of a travel /
+     * no-team-training span settles the derived world (the away week is
+     * AUTHORED at generation — replacement conditioning, not just a read
+     * filter), so after the settle the stored week IS the away week. Resolving
+     * the fact here only flipped its status: the athlete kept looking at the
+     * away week until the next boot regenerated. A clear is a decision too —
+     * it settles through the same machinery, symmetrically.
+     *
+     * And the trip's own equipment answer travels WITH the trip: the away flow
+     * writes a second fact (equipment missing_for_span, surface
+     * `away_this_week`, window = the trip). Cancelling the trip while that
+     * fact stayed active left a phantom restriction over days the athlete
+     * will now be home for — Sam's own suspicion, and correct. Cascade-resolve
+     * it by its provenance (surface + identical window), then settle once.
+     */
+    const clearedSpanFact = ok
+      ? accepted.temporarySourceFacts
+          .filter(isNonInjuryTemporarySourceFact)
+          .find((fact) => fact.factId === factId
+            && fact.factKind === 'schedule'
+            && ((fact as { scheduleKind?: string }).scheduleKind === 'travel'
+              || (fact as { scheduleKind?: string }).scheduleKind === 'no_team_training'))
+      : undefined;
+    if (clearedSpanFact) {
+      const spanScope = clearedSpanFact.scope as { kind: string; from?: string; until?: string };
+      const linkedEquipment = useProgramStore.getState().acceptedMaterialContext
+        .temporarySourceFacts
+        .filter((fact) => isTemporaryEquipmentFact(fact)
+          && fact.status === 'active'
+          && fact.sourceSurface === 'away_this_week'
+          && fact.scope.kind === 'window'
+          && spanScope.kind === 'window'
+          && fact.scope.from === spanScope.from
+          && fact.scope.until === spanScope.until);
+      for (const equipmentFact of linkedEquipment) {
+        await transactTemporarySourceFact({
+          operation: 'resolve',
+          factId: equipmentFact.factId,
+          todayISO: action.payload.date ?? context.todayISO,
+          sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+          sourceSurface: action.source.surface ?? action.source.screen,
+        });
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { settleDerivedWorldAfterDecision } = require('../store/quiescentBoot');
+      await settleDerivedWorldAfterDecision();
+    }
     return {
       ok,
       changedProgram: factResult.changedProgram || revertedAdjustment,

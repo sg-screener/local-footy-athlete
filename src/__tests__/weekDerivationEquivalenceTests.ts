@@ -310,6 +310,7 @@ async function main(): Promise<void> {
   {
     const NEXT_WEEK = '2026-08-10';
     const thisWeekBefore = fingerprint(WEEK);
+    const nextWeekBefore = fingerprint(NEXT_WEEK);
     const awayResult = await door({
       type: 'set_schedule_modifier',
       scope: 'current_week',
@@ -333,6 +334,57 @@ async function main(): Promise<void> {
     ok('AWAY: the trip survives the boot derivation byte-identical',
       fingerprint(NEXT_WEEK) === awayWeekAfterDoor,
       `door:   ${awayWeekAfterDoor}\nreplay: ${fingerprint(NEXT_WEEK)}`);
+
+    // ── THE CANCELLED TRIP — Sam's phone, 2026-08-26 (checklist #10) ──
+    // "removing the going away modifier from my status seemed to not update
+    // the prorgam back to what it was - it may have something to do with the
+    // equipment list modifier that was also added". Both suspicions were
+    // real: the clear path never settled the derived world (the set path
+    // does, R-229), and the trip's span-scoped equipment fact stayed active
+    // after the trip was cancelled. Here: add the trip's equipment answer,
+    // clear the away modifier the way My Status does, and require the away
+    // week to read as the never-away week again — with the equipment fact
+    // resolved alongside.
+    const equipped = await door({
+      type: 'set_equipment_modifier',
+      scope: 'current_week',
+      source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
+      payload: {
+        date: NEXT_WEEK, todayISO: TODAY,
+        decision: {
+          kind: 'missing_for_span', tags: ['barbell'], conditioningModalities: [],
+          from: '2026-08-10', until: '2026-08-14',
+        },
+      },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    });
+    ok('AWAY CLEAR: the trip equipment answer lands', equipped.ok === true, equipped.message);
+    const factsNow = () => useProgramStore.getState().acceptedMaterialContext
+      .temporarySourceFacts as Array<{
+        factId?: string; factKind?: string; scheduleKind?: string; status?: string;
+      }>;
+    const travelFact = factsNow().find((fact) =>
+      fact.factKind === 'schedule' && fact.scheduleKind === 'travel' && fact.status === 'active');
+    ok('AWAY CLEAR: the travel fact is live before clearing', !!travelFact);
+    const cleared = await door({
+      type: 'clear_fatigue_status',
+      scope: 'current_and_future',
+      source: { screen: 'coach_tab', surface: 'coach_notes_resolved', initiatedBy: 'tap' },
+      payload: { modifierId: travelFact?.factId, date: TODAY },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    });
+    ok('AWAY CLEAR: the clear door lands', cleared.ok === true, cleared.message);
+    ok('AWAY CLEAR: the trip equipment fact resolved with the trip',
+      !factsNow().some((fact) => fact.factKind === 'equipment' && fact.status === 'active'),
+      JSON.stringify(factsNow().filter((fact) => fact.factKind === 'equipment')));
+    ok('AWAY CLEAR: the cancelled trip restores the never-away week at the door',
+      fingerprint(NEXT_WEEK) === nextWeekBefore,
+      `before: ${nextWeekBefore}\nafter:  ${fingerprint(NEXT_WEEK)}`);
+    const restoredAtDoor = fingerprint(NEXT_WEEK);
+    await relaunch();
+    ok('AWAY CLEAR: the restored week survives the boot derivation byte-identical',
+      fingerprint(NEXT_WEEK) === restoredAtDoor,
+      `door:   ${restoredAtDoor}\nreplay: ${fingerprint(NEXT_WEEK)}`);
   }
 
   console.log('\n[11] ADD A GAME — the fixture lands, the week reshapes, and it survives boot');
