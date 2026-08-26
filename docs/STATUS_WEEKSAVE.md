@@ -189,3 +189,46 @@ The new equality cell first made `test:profile-reset-ui` 187/1 and named the
 
 - Physical-iPhone Release acceptance.
 - Dynamic Type and non-phone widths.
+
+---
+
+# STATUS — My Status direct Program route (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Day must open My Status without an intermediate popup. My Status must leave the
+Coach tab, stay on Day and be added to Week.
+
+## Decision and receipt
+
+Keeping Coach as a hidden owner would still make a Program action switch tabs.
+Instead, My Status is now a real Program-stack page. Its existing modifier
+controls, season-phase flow and accepted transactions moved together without a
+second implementation. Day and Week use the same permanent header doorway and
+all Program status notices call the same direct route. Coach is chat-only.
+
+Test first produced five named Program failures plus missing-destination stops
+in the Coach and My Status suites. After the ownership move:
+
+- `test:program-tab-read-only-modifiers`: 10/10.
+- `test:coach-tab-slice3`: 147/147.
+- `test:my-status-modifiers`: 10/10.
+- Progress ownership source pass: 14/14.
+- Coach read-only slices 1 and 2: 75/75 and 72/72.
+- Coach Snapshot source ownership: 35/35; coach-note action source: 4/4.
+- TypeScript: green.
+- iPhone 17 Pro simulator: Day opened My Status directly with no popup, Week
+  opened the same page, and Coach showed its conversation with no My Status
+  doorway.
+
+The full Coach Snapshot command retains three unrelated accumulated-walk
+failures after the new season-finish onboarding requirement. The ruling and law
+registry commands retain their previously recorded enforcement debt (two and
+three failed cells respectively); this change introduced no new registry row in
+an unenforced state.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- VoiceOver traversal and deep-link restoration into My Status.
+- Non-phone widths.

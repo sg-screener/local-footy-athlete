@@ -6420,3 +6420,23 @@ shared-component requirements remain.
 font size, Program Setup, setup edit action.
 · `WORKING` — `test:profile-reset-ui` compares the two owned font-size values
 and requires both to remain 14.
+
+**R-249** · *"hitting my status on day view has a pop up it doesn't need =
+should just take me straight to the page"*; *"My status should also be removed
+from coach tab only showing on the day view / weekly view (it's not on weekly
+view yet)"* (Sam, 2026-08-26, Program navigation review) · **MY STATUS BELONGS
+TO PROGRAM, ONE TAP AWAY.**
+Day and Week each keep the same permanent My Status doorway in the Program
+header, including when no modifiers are active. Either doorway opens a real
+Program-stack My Status page directly. The intermediate modifier popup is
+retired from this route. Coach is chat-only and renders neither the doorway nor
+the status overlay. My Status keeps the existing active-modifier controls,
+season-phase review and accepted transactions unchanged. This supersedes the
+old Coach placement and the old two-step `Go to my status` popup route.
+**Search words:** My Status, Day view, Week view, Coach tab, direct navigation,
+modifier popup, Program stack, status doorway.
+· `WORKING` — `test:program-tab-read-only-modifiers` guards both permanent
+Program doorways, the direct route and popup retirement; `test:coach-tab-slice3`
+guards the Program-stack destination and chat-only Coach; `test:my-status-modifiers`
+guards the re-homed controls. `.maestro/golden/my-status-direct-navigation.yaml` walks Day
+and Week into the same destination and proves Coach has no status doorway.

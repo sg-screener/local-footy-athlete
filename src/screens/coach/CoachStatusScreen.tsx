@@ -15,12 +15,10 @@
  * **A second door here would be a second representation of a decision that
  * already has one.**
  *
- * WHY IT IS A SCREEN AND NOT A PANEL ON THE CONVERSATION. `CoachTabScreen` is a
- * ScrollView that PINS TO BOTTOM on new content: anything inside it is
- * unreachable after three exchanges, and a door the athlete cannot find is not a
- * door. Her prototype's strip is a doorway that opens a status screen, so the
- * strip stays fixed under the header and the detail lives here.
- * docs/UI_MERGE_SLICE3_PLAN_2026-08-10.md.
+ * R-249 moved the route-level owner from Coach to the Program stack. The
+ * filename and test ids remain stable because existing modifier actions and
+ * device flows address them, but CoachTabScreen no longer imports or mounts
+ * this content.
  *
  * THE SEASON-PHASE CONTROL LIVES HERE. Its existing atomic flow was extracted
  * intact from `useHomeScreen`; Program's old card leaves in the same checkpoint.

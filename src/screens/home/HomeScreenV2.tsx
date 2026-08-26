@@ -16,7 +16,6 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
-import { ModifiersSheet } from '../../components/ModifiersSheet';
 import { Button, Card, Sheet, SheetDescription, SheetHeader, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import {
@@ -181,7 +180,6 @@ export default function HomeScreenV2() {
     staleByDate,
     currentPhase,
     coachNotes,
-    programModifiers,
     modifierCount,
     handleOpenMyStatus,
     activeConstraints,
@@ -321,19 +319,6 @@ export default function HomeScreenV2() {
       mobilityFlow: mobilityFlowByDate.get(day.date) ?? null,
     })] as const];
   })), [mobilityFlowByDate, projectedWorkoutByDate, weekDays]);
-  /* ── SAM'S SHEET, RULED 2026-08-13: *"add the popup"* ──
-     The day/week notice used to navigate straight to My Status. It now opens
-     this sheet first, which lists WHICH modifiers are acting and offers "Go to
-     my status" or "Not now" — his prototype's two-step.
-
-     LOCAL STATE, NOT A NAVIGATION PARAM, and the difference is deliberate. My
-     Status is opened by `navigation.setParams({ status: 'open' })` because TWO
-     tabs must be able to open it and one of them is not its owner. This sheet
-     has exactly one owner and one opener: the notice on this screen. A
-     navigation param would make a private presentation detail addressable from
-     anywhere, which is the disconnected-handoff shape cell [9] of
-     `test:coach-tab-slice3` exists to prevent, pointed the other way. */
-  const [modifiersSheetOpen, setModifiersSheetOpen] = useState(false);
   const [expandedWeekIdx, setExpandedWeekIdx] = useState(-1);
   const handleClearWeekPresentation = () => {
     setExpandedWeekIdx(-1);
@@ -929,19 +914,22 @@ export default function HomeScreenV2() {
         >
         <View style={styles.brandHeader}>
           <LfaWordmark />
-          {/* Sam, 2026-08-26: "day view should have a my status button at the
-              top of the page the exact same spot and size as the coach tab".
-              The coach variant of the ONE strip, permanent at zero like the
-              coach doorway, opening the same read-only modifiers sheet the
-              day notice opens (controls stay in My Status — the read-only
-              Program law). */}
+          {/* My Status has one permanent Program doorway in either shape.
+              Day and Week use the same strip treatment and both navigate
+              directly to the same Program-stack page. */}
           {dayFirst ? (
             <ModifiersStrip
-              surface="day_header"
+              surface="day-header"
               count={modifierCount}
-              onPress={() => setModifiersSheetOpen(true)}
+              onPress={handleOpenMyStatus}
             />
-          ) : null}
+          ) : (
+            <ModifiersStrip
+              surface="week-header"
+              count={modifierCount}
+              onPress={handleOpenMyStatus}
+            />
+          )}
         </View>
         {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
@@ -1298,7 +1286,7 @@ export default function HomeScreenV2() {
             <ModifiersStrip
               surface="day"
               count={modifierCount}
-              onPress={() => setModifiersSheetOpen(true)}
+              onPress={handleOpenMyStatus}
             />
             {dayFirstDay ? renderDayRow(dayFirstDay, dayFirstIdx) : null}
             {/* THE SIX DAYS THE STRIP STANDS IN FOR STILL REPORT THEMSELVES.
@@ -1368,7 +1356,7 @@ export default function HomeScreenV2() {
             <ModifiersStrip
               surface="week"
               count={modifierCount}
-              onPress={() => setModifiersSheetOpen(true)}
+              onPress={handleOpenMyStatus}
             />
             {/* ⚠ **R-218 — MANAGE SESSIONS LANDS HERE, AND THE DAY ROWS STAND
               * DOWN WHILE IT IS OPEN.** Sam, 2026-08-25: *"you hit manage
@@ -1698,27 +1686,6 @@ export default function HomeScreenV2() {
       ) : null}
 
       {/* ── Sheets ── */}
-      {/* SAM'S TWO-STEP (2026-08-13). The notice opens this; this opens My
-          Status. "Not now" closes it and leaves the athlete on their session,
-          which is the half of his design that makes a sheet on the day screen
-          acceptable rather than an obstacle.
-
-          `coachNotes` IS the list the notice counted — the same
-          `useActiveModifiers` derivation, not a second read — so the sheet can
-          never list a different number of things than the row that opened it. */}
-      <ModifiersSheet
-        visible={modifiersSheetOpen}
-        modifiers={programModifiers}
-        onClose={() => setModifiersSheetOpen(false)}
-        onGoToStatus={() => {
-          // CLOSED BEFORE NAVIGATING, and it matters on a real device: a modal
-          // left mounted across a tab change is the "hidden surface leaves
-          // state outside the app" shape — the athlete comes back to Program
-          // and finds a sheet they already finished with.
-          setModifiersSheetOpen(false);
-          handleOpenMyStatus();
-        }}
-      />
       <PlanChangeSheet
         visible={changeSheetEntry !== null}
         date={changeSheetEntry?.date ?? null}

@@ -132,14 +132,14 @@ run('the day screen defines no coach-note handler or sheet state', () => {
 // outright, which would take My Status's confirmation flow with it — five of
 // its eight controls open exactly this component.
 
-run('the shared confirmation sheet still exists and Coach still mounts it', () => {
+run('the shared confirmation sheet still exists and My Status still mounts it', () => {
   const sheet = read('src/components/CoachNoteSheet.tsx');
   assert(/export function CoachNoteSheet\b/.test(sheet),
     'components/CoachNoteSheet no longer exports the component — (c) deleted '
     + 'the thing (a) made five controls depend on');
-  const coachTab = read('src/screens/coach/CoachTabScreen.tsx');
-  assert(/<CoachNoteSheet\b/.test(coachTab),
-    'the Coach tab no longer mounts the confirmation sheet, so every clear and '
+  const myStatus = read('src/screens/home/MyStatusScreen.tsx');
+  assert(/<CoachNoteSheet\b/.test(myStatus),
+    'the My Status page no longer mounts the confirmation sheet, so every clear and '
     + 'update control on My Status opens nothing');
 });
 
@@ -162,27 +162,13 @@ run('the shared confirmation sheet still exists and Coach still mounts it', () =
 // weaken [5]: a notice that grew a control would satisfy neither, which is why
 // `ActiveModifiersSection` is still named below and still forbidden here.
 
-// THE SHEET LISTS AND IT DOES NOT ACT.
-//
-// Sam's *"add the popup"* overruled the ROUTE, not the reason behind it. Rule
-// (c) exists to keep the modifier list's eight ACTIONS on My Status alone, and
-// a sheet is exactly where those actions would creep back in — it already has
-// the list and it already has buttons. So the sheet is pinned to the two
-// controls Sam drew, and reading `note.actions` there is forbidden by name.
-run('the modifier sheet is read-only — it lists, and it does not act', () => {
-  const sheet = read('src/components/ModifiersSheet.tsx');
-  assert(!/note\.actions/.test(sheet),
-    'the modifier sheet renders the modifiers\' ACTIONS. Those eight controls '
-    + 'have one home and it is My Status — a read-only summary that grew a '
-    + '"clear" button is the exact drift rule (c) was written to stop');
-  assert(!/<ActiveModifiersSection\b/.test(sheet),
-    'the sheet mounts the full My Status list component, which brings its '
-    + 'controls with it');
-  const buttons = sheet.match(/<Button\b/g) ?? [];
-  assert(buttons.length === 2,
-    `the sheet has ${buttons.length} buttons; Sam's prototype has exactly two — `
-    + '"Go to my status" and "Not now". A third is a control this surface is '
-    + 'not allowed to own.');
+run('Program has no modifier popup between its doorway and My Status', () => {
+  const home = read(HOME);
+  assert(!/import \{ ModifiersSheet \}/.test(home) && !/<ModifiersSheet\b/.test(home),
+    'Program still mounts the old modifier popup, so tapping My Status does not '
+    + 'go straight to the page');
+  assert(!/modifiersSheetOpen|setModifiersSheetOpen/.test(home),
+    'the popup mount is gone but its private open state survived on Program');
 });
 
 run('the modifier list and its controls have exactly one home', () => {
@@ -218,14 +204,14 @@ run('the modifier list and its controls have exactly one home', () => {
 const stripMounts = (source: string): readonly string[] =>
   source.match(/<ModifiersStrip[\s\S]*?\/>/g) ?? [];
 
-run('the day and week screens both mount the read-only modifier notice', () => {
+run('the day and week screens both mount their notice and permanent My Status doorway', () => {
   const home = read(HOME);
   assert(/import \{ ModifiersStrip \}/.test(home),
     'Program no longer imports ModifiersStrip, so the day/week notice Sam asked '
     + 'for ("one line on week, small card on day") is gone from the screen again');
   const mounts = stripMounts(home);
   const surfaces = mounts
-    .map((mount) => mount.match(/surface="(\w+)"/)?.[1])
+    .map((mount) => mount.match(/surface="([\w-]+)"/)?.[1])
     .filter((surface): surface is string => !!surface)
     .sort();
   assert(surfaces.length === mounts.length,
@@ -238,9 +224,10 @@ run('the day and week screens both mount the read-only modifier notice', () => {
   assert(surfaces.includes('week'),
     'the WEEK screen no longer mounts the notice — the week is the shape that '
     + 'shows all seven days, so it is the shape most able to hide a change');
+  assert(surfaces.includes('day-header') && surfaces.includes('week-header'),
+    'My Status is not permanently available from both Program shapes');
   assert(!surfaces.includes('coach'),
-    'Program mounts the COACH surface, which draws the permanent doorway that '
-    + 'never hides at zero — a quiet week would carry a notice saying nothing');
+    'Program mounts a retired Coach surface instead of its own Day/Week doorway');
 });
 
 // THE COUNT IS THE LIST'S OWN LENGTH, ON PROGRAM TOO.
@@ -264,7 +251,7 @@ run('Program counts modifiers through the one hook, not beside it', () => {
   const mounts = stripMounts(home);
   assert(mounts.length > 0, 'Program mounts no ModifiersStrip at all');
   for (const mount of mounts) {
-    const surface = mount.match(/surface="(\w+)"/)?.[1] ?? 'unknown';
+    const surface = mount.match(/surface="([\w-]+)"/)?.[1] ?? 'unknown';
     assert(/count=\{modifierCount\}/.test(mount),
       `the ${surface} notice is no longer fed the hook-derived count; a literal, `
       + 'a second selector call or a locally recomputed number here is the exact '
@@ -274,47 +261,30 @@ run('Program counts modifiers through the one hook, not beside it', () => {
 });
 
 // READ-ONLY MEANS THE NOTICE OPENS A DOOR AND OWNS NOTHING BEHIND IT.
-run('the Program notice is a doorway, not a control surface', () => {
-  // RE-AIMED 2026-08-13. Sam saw the one-hop route, sent his prototype, and
-  // ruled *"add the popup"*: the notice now opens a sheet listing WHICH
-  // modifiers are acting, and the sheet's own button goes to My Status. So the
-  // doorway is TWO hops and this cell walks both — asserting only the first
-  // would leave the second free to open nothing, which is the same dead
-  // affordance one step further along.
+run('every Program status doorway opens My Status directly', () => {
   const home = read(HOME);
   const mounts = stripMounts(home);
   assert(mounts.length > 0, 'Program mounts no ModifiersStrip at all');
   for (const mount of mounts) {
-    const surface = mount.match(/surface="(\w+)"/)?.[1] ?? 'unknown';
-    assert(/onPress=\{\(\) => setModifiersSheetOpen\(true\)\}/.test(mount),
-      `the ${surface} notice no longer opens the modifier sheet, so Program `
-      + 'shows the athlete that something changed and gives them nowhere to go '
-      + 'and see what — LAW-L5-no-dead-affordances, on a row that looks tappable');
+    const surface = mount.match(/surface="([\w-]+)"/)?.[1] ?? 'unknown';
+    assert(/onPress=\{handleOpenMyStatus\}/.test(mount),
+      `the ${surface} doorway does not open My Status directly`);
   }
-  assert(/<ModifiersSheet[\s\S]*?onGoToStatus=\{[\s\S]*?handleOpenMyStatus\(\)/.test(home),
-    'the sheet\'s "Go to my status" no longer reaches My Status. The notice now '
-    + 'stops at the sheet, so this is the ONLY remaining route from Program to '
-    + 'the screen that owns the controls');
-  assert(/setModifiersSheetOpen\(false\);[\s\S]{0,80}handleOpenMyStatus\(\)/.test(home),
-    'the sheet is left open while navigating to another tab — the athlete '
-    + 'returns to Program and finds a sheet they already finished with');
   const hook = read('src/screens/home/useHomeScreen.ts');
-  assert(/navigation\.navigate\('CoachTab', \{ status: 'open' \}\)/.test(hook),
-    'My Status is opened by something other than the navigation-owned `status` '
-    + 'param — cell [9] of test:coach-tab-slice3 owns that route, and a private '
-    + 'Coach boolean cannot be opened by Program at all');
+  assert(/navigation\.navigate\('MyStatus'\)/.test(hook),
+    'Program still changes tabs or opens an intermediate surface instead of '
+    + 'navigating straight to its My Status page');
 });
 
-run('the Day view header carries the permanent My Status doorway (Sam, 2026-08-26)', () => {
-  // "day view should have a my status button at the top of the page the
-  // exact same spot and size as the coach tab" — the coach VARIANT of the
-  // one strip, mounted in the brand header, permanent at zero like coach.
+run('Day and Week headers carry the same permanent My Status doorway', () => {
   const home = read(HOME);
-  assert(/surface="day_header"/.test(home),
-    'the day header doorway is gone from the Program screen');
+  assert(/surface="day-header"/.test(home) && /surface="week-header"/.test(home),
+    'the permanent My Status doorway is missing from Day or Week');
   const strip = read('src/components/ModifiersStrip.tsx');
-  assert(/surface === 'coach' \|\| surface === 'day_header'/.test(strip),
-    'day_header no longer wears the coach doorway variant (look + zero state)');
+  assert(/surface === 'day-header' \|\| surface === 'week-header'/.test(strip),
+    'Day and Week headers no longer share the permanent doorway treatment');
+  assert(!/surface === 'coach'/.test(strip),
+    'the shared strip still carries the retired Coach doorway variant');
 });
 
 console.log(`\nprogram tab read-only modifiers: ${passed} passed, ${failed} failed`);

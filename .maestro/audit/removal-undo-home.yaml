@@ -73,9 +73,7 @@ tags:
 
 # ── THE PROMISED HOME HOLDS THE DECISION ──────────────────────────────────
 - tapOn:
-    id: "tab-coach"
-- tapOn:
-    id: "modifiers-strip-coach"
+    id: "modifiers-strip-day-header"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"

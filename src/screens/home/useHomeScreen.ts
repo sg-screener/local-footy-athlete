@@ -505,13 +505,12 @@ export function useHomeScreen() {
   /**
    * WHAT PROGRAM SHOWS, AND THEREFORE WHAT PROGRAM COUNTS — SEAT_INBOX 22(b).
    *
-   * **Sam, 2026-08-13:** *"hide time caps from the Program count and the popup
-   * together, keep them on My Status."*
+   * **Sam, 2026-08-13:** *"hide time caps from the Program count ... keep them
+   * on My Status."* The popup named in that older wording was retired by R-249;
+   * this filter now owns the Program notice count only.
    *
-   * ONE FILTER, APPLIED ONCE, FEEDING BOTH. The notice's number and the sheet's
-   * rows are the same array here, so they cannot disagree — which was the whole
-   * risk in hiding a row. `isShownOnProgram` lives beside the sheet that renders
-   * the rows, so there is no second copy of the rule to drift.
+   * ONE FILTER, APPLIED ONCE, feeding the notice count. My Status deliberately
+   * reads the whole unfiltered list through its own shared selector.
    *
    * `coachNotes` STAYS WHOLE for `coachNoteActions` below: the action router is
    * about what CAN be acted on, not what Program draws, and narrowing it here
@@ -521,11 +520,10 @@ export function useHomeScreen() {
    * that clears a time cap, so filtering there would strand an active
    * constraint with no door at all.
    */
-  const programModifiers = useMemo(
-    () => coachNotes.filter(isShownOnProgram),
+  const modifierCount = useMemo(
+    () => coachNotes.filter(isShownOnProgram).length,
     [coachNotes],
   );
-  const modifierCount = programModifiers.length;
 
   useEffect(() => {
     if (!pendingFixtureObservation) return;
@@ -1151,17 +1149,9 @@ export function useHomeScreen() {
     navigation.navigate('ProfileTab');
   }, [navigation]);
 
-  /**
-   * THE DAY/WEEK NOTICE IS A DOORWAY, AND THIS IS THE DOOR IT OPENS.
-   *
-   * `status: 'open'` is a NAVIGATION param, not a Coach-private boolean, and
-   * that is the whole reason Program can open My Status at all — cell [9] of
-   * `test:coach-tab-slice3` holds that ownership ("a private Coach boolean
-   * cannot be opened by Program"). `CoachTabScreen` reads the param, opens the
-   * screen, and clears it; Program only has to ask.
-   */
+  /** Day and Week open their own Program-stack My Status destination directly. */
   const handleOpenMyStatus = useCallback(() => {
-    navigation.navigate('CoachTab', { status: 'open' });
+    navigation.navigate('MyStatus');
   }, [navigation]);
 
   const registerSourceFactRenderObservation = useCallback((args: {
@@ -1775,7 +1765,6 @@ export function useHomeScreen() {
     // Week context / derived
     currentPhase,
     coachNotes,
-    programModifiers,
     modifierCount,
     handleOpenMyStatus,
     activeConstraints,

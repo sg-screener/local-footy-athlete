@@ -6,6 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import { logger } from '../utils/logger';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
+import MyStatusScreen from '../screens/home/MyStatusScreen';
 import CoachTabScreen from '../screens/coach/CoachTabScreen';
 import ProgressTabScreen from '../screens/progress/ProgressTabScreen';
 import { useCoachWeeklyCommitment } from '../screens/coach/useCoachWeeklyCommitment';
@@ -15,11 +16,12 @@ import FAQScreen from '../screens/profile/FAQScreen';
 import { PrivacyScreen } from '../screens/profile/PrivacyScreen';
 import { TermsScreen } from '../screens/profile/TermsScreen';
 
-type ProgramStackParamList = {
+export type ProgramStackParamList = {
   Home: { initialDate?: string } | undefined;
   DayWorkout: {
     workoutId: string; date?: string; startFinished?: boolean;
   };
+  MyStatus: undefined;
 };
 
 type ProfileStackParamList = {
@@ -31,7 +33,7 @@ type ProfileStackParamList = {
 
 export type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
-  CoachTab: { status?: 'open' } | undefined;
+  CoachTab: undefined;
   ProgressTab: undefined;
   ProfileTab: undefined;
 };
@@ -83,6 +85,7 @@ function ProgramStackNavigator() {
     <ProgramStack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
       <ProgramStack.Screen name="Home" component={HomeScreen} />
       <ProgramStack.Screen name="DayWorkout" component={DayWorkoutScreen} />
+      <ProgramStack.Screen name="MyStatus" component={MyStatusScreen} />
     </ProgramStack.Navigator>
   );
 }

@@ -1,27 +1,19 @@
 /**
- * THE ACTIVE-MODIFIERS STRIP — ONE COMPONENT, THREE SURFACES.
+ * THE ACTIVE-MODIFIERS STRIP — ONE COMPONENT, FOUR PROGRAM SURFACES.
  *
  * Her prototype calls it `dayModifierNotification`: an info glyph, a bold count
  * line, a quiet second line, and the WHOLE strip is the tap target. It appears
  * above the day card (ruling 4), at the top of the week view (the seat's note on
- * ruling 7) and under the coach header (ruling 9).
+ * ruling 7), plus a permanent My Status doorway in both Program headers.
  *
  * **THE SEAT'S OWN WORDS ARE THE SPEC: "same component as the day screen's, not
- * a second one."** Three copies of a four-line row is three places for the count
+ * a second one."** Multiple copies of a four-line row are multiple places for the count
  * to disagree with the list, and the copy that would drift is the one nobody
  * opens.
  *
- * IT IS A DOORWAY, NOT THE CONTENT, AND THAT IS WHAT MAKES IT SAFE ON THE COACH
- * TAB. `CoachTabScreen` is a conversation that PINS TO BOTTOM on new content, so
- * anything placed inside its scroll is unreachable after three exchanges. One
- * row outside the scroll costs a fixed strip and never scrolls away; the detail
- * lives on the screen it opens. Read out of the prototype, not invented —
- * docs/UI_MERGE_SLICE3_PLAN_2026-08-10.md.
- *
- * NOTHING WHEN THERE IS NOTHING ON PROGRAM. Coach is different by explicit
- * ruling: My Status remains a permanent doorway and states the zero condition.
- * That keeps status reachable without making the day or week pay for an empty
- * notice.
+ * Header doorways stay present at zero. The smaller Day/Week notices still hide
+ * when there is nothing active, so a quiet program does not carry an empty
+ * notification beneath the permanent route.
  */
 
 import React from 'react';
@@ -37,22 +29,19 @@ export interface ModifiersStripProps {
   /**
    * Distinguishes the mounts for the walker and the flows. The component
    * is one; its coordinates must not be, or a flow cannot say WHICH surface it
-   * asserted. `day_header` is the Day view's permanent doorway (Sam,
-   * 2026-08-26: *"day view should have a my status button at the top of the
-   * page the exact same spot and size as the coach tab"*) — it wears the
-   * coach variant's look and, like coach, stays mounted at zero.
+   * asserted. The two header surfaces are the permanent Day/Week doorways and
+   * stay mounted at zero.
    */
-  readonly surface: 'day' | 'week' | 'coach' | 'day_header';
+  readonly surface: 'day' | 'week' | 'day-header' | 'week-header';
 }
 
 export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps) {
   // Program's notices appear only when something is active. The DOORWAY
-  // surfaces (coach, and the day header that mirrors it) stay mounted at
-  // zero, stating the honest zero condition.
-  const doorway = surface === 'coach' || surface === 'day_header';
+  // surfaces stay mounted at zero, stating the honest zero condition.
+  const doorway = surface === 'day-header' || surface === 'week-header';
   if (count <= 0 && !doorway) return null;
   const weekSurface = surface === 'week';
-  const coachSurface = doorway;
+  const headerSurface = doorway;
   const countLabel = signedCopy(
     count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
     { count },
@@ -61,8 +50,8 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
     count === 1 ? 'modifiers.strip.week_one' : 'modifiers.strip.week',
     { count },
   );
-  const primaryLabel = coachSurface ? signedCopy('coach.status.title') : countLabel;
-  const secondaryLabel = coachSurface
+  const primaryLabel = headerSurface ? signedCopy('coach.status.title') : countLabel;
+  const secondaryLabel = headerSurface
     ? (count <= 0 ? signedCopy('modifiers.strip.none') : countLabel)
     : signedCopy('modifiers.strip.subline');
   return (
@@ -75,7 +64,7 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
         : `${primaryLabel}. ${secondaryLabel}`}
       style={({ pressed }) => [weekSurface
         ? styles.weekStrip
-        : coachSurface
+        : headerSurface
           ? styles.coachStrip
           : styles.strip,
         pressed && { opacity: 0.7 }]}
@@ -92,7 +81,7 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
             {weekLabel}
           </Text>
         </>
-      ) : coachSurface ? (
+      ) : headerSurface ? (
         <>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
             stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

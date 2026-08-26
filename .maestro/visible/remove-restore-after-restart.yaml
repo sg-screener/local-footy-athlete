@@ -55,13 +55,13 @@ tags:
 # By its FULL accessibility label, for the reason recorded in
 # `assert-strength-rows.yaml`: the bare word does not resolve.
 - tapOn:
-    text: "Coach tab"
+    text: "Program tab"
 - extendedWaitUntil:
     visible:
-      id: "modifiers-strip-coach"
+      id: "modifiers-strip-day-header"
     timeout: 20000
 - tapOn:
-    id: "modifiers-strip-coach"
+    id: "modifiers-strip-day-header"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"

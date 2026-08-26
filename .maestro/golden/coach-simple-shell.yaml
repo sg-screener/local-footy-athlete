@@ -15,7 +15,7 @@ tags:
     visible:
       id: "coach-tab-input"
     timeout: 15000
-- assertVisible:
+- assertNotVisible:
     id: "modifiers-strip-coach"
 - assertVisible:
     id: "coach-tab-greeting"

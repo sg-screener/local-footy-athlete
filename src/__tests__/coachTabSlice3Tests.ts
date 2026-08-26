@@ -1229,6 +1229,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
   const phaseSheet = read('components/SeasonPhaseShiftSheet.tsx');
   const homeHook = read('screens/home/useHomeScreen.ts');
   const coachTab = read('screens/coach/CoachTabScreen.tsx');
+  const myStatus = read('screens/home/MyStatusScreen.tsx');
+  const navigator = read('navigation/AppNavigator.tsx');
   const status = read('screens/coach/CoachStatusScreen.tsx');
   const phaseControl = read('hooks/useSeasonPhaseControl.ts');
   const projectionCopy = read('rules/projectionCopy.ts');
@@ -1238,14 +1240,17 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     'three copies of this row is three places for the count to disagree with '
       + 'the list it opens');
 
-  ok('Coach mounts the one My Status strip',
-    /import \{ ModifiersStrip \}/.test(coachTab) && /<ModifiersStrip/.test(coachTab),
-    'the permanent status doorway has left the Coach header');
+  ok('Coach is chat-only and mounts no My Status doorway or overlay',
+    !/import \{ ModifiersStrip \}/.test(coachTab)
+      && !/<ModifiersStrip/.test(coachTab)
+      && !/<CoachStatusScreen/.test(coachTab)
+      && !/route\.params\?\.status/.test(coachTab),
+    'My Status is still presented as part of the Coach tab');
 
-  ok('Coach keeps My Status reachable at zero',
-    /signedCopy\('modifiers\.strip\.none'\)/.test(strip),
-    'LAW-coach-status-is-a-real-destination: zero modifiers must not delete the '
-      + 'only doorway to status');
+  ok('Day and Week keep My Status reachable at zero',
+    /surface === 'day-header' \|\| surface === 'week-header'/.test(strip)
+      && /signedCopy\('modifiers\.strip\.none'\)/.test(strip),
+    'zero modifiers must not delete either Program doorway to status');
 
   // SPLIT 2026-08-13 (SEAT_INBOX item 16), AND THE SPLIT IS THE FINDING.
   //
@@ -1266,18 +1271,17 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && !/<ActiveModifiersSection/.test(home),
     'My Status is not the single destination while Program still repeats its contents');
 
-  ok('the Coach doorway addresses one navigation-owned open state',
-    /route\.params\?\.status === 'open'/.test(coachTab)
-      && /navigation\.setParams\(\{ status: 'open' \}\)/.test(coachTab)
-      && /navigation\.setParams\(\{ status: undefined \}\)/.test(coachTab)
-      && !/setStatusVisible/.test(coachTab),
-    'a private Coach boolean cannot be opened by Program; a second event owner '
-      + 'would recreate the disconnected handoff');
+  ok('My Status is a real Program-stack destination reached directly from Program',
+    /MyStatus:\s*undefined/.test(navigator)
+      && /name="MyStatus"\s+component=\{MyStatusScreen\}/.test(navigator)
+      && /navigation\.navigate\('MyStatus'\)/.test(homeHook)
+      && !/status\?:\s*'open'/.test(navigator),
+    'My Status still depends on a Coach-tab parameter or an intermediate popup');
 
   // THE COUNT IS THE LIST'S OWN LENGTH. A separately-carried number is the
   // `a count taken for a record` shape, sighting 14 in this repo.
   ok('the strip count is the list length, never a separately-counted number',
-    /count=\{modifierCount\}/.test(coachTab) && /count: modifiers\.length/.test(
+    /count=\{modifierCount\}/.test(home) && /count: modifiers\.length/.test(
       read('hooks/useActiveModifiers.ts')),
     'the count and the list it opens cannot disagree if one is the other\'s length');
 
@@ -1298,8 +1302,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
   ok('phase review moved to My Status in the same slice Program removed it',
     /testID="coach-status-season-phase"/.test(status)
       && /onReviewPhase/.test(status)
-      && /useSeasonPhaseControl\(\)/.test(coachTab)
-      && /<SeasonPhaseShiftSheet/.test(coachTab)
+      && /useSeasonPhaseControl\(\)/.test(myStatus)
+      && /<SeasonPhaseShiftSheet/.test(myStatus)
       && !/styles\.phaseCard/.test(home)
       && !/<PhaseShiftSheet/.test(home),
     'LAW-removal-ships-with-its-replacement: status must mount the working '
@@ -1315,8 +1319,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     'moving the surface must not replace the established atomic phase decision');
 
   ok('phase review selects any phase before the existing questions',
-    /currentPhase=\{phaseControl\.currentPhase\}/.test(coachTab)
-      && /onSelectTargetPhase=\{phaseControl\.selectTargetPhase\}/.test(coachTab)
+    /currentPhase=\{phaseControl\.currentPhase\}/.test(myStatus)
+      && /onSelectTargetPhase=\{phaseControl\.selectTargetPhase\}/.test(myStatus)
       // RE-AIMED 2026-08-12 (SEAT_INBOX item 15). These read the phase SHEET,
       // which lived inside HomeScreenV2 only because its move was never
       // finished — the surface has been on the Coach tab since the merge. The
@@ -1334,9 +1338,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     'Review still forces the next phase, or selecting a target bypasses the '
       + 'availability/team/game questions');
 
-  ok('Renee hierarchy is explicit on both coach surfaces',
-    /styles\.brand/.test(coachTab)
-      && /surface="coach"/.test(coachTab)
+  ok('Renee hierarchy is explicit on Coach chat and the Program-owned status page',
+    /<LfaWordmark/.test(coachTab)
       && /SEASON PHASE/.test(status)
       && /ACTIVE MODIFIERS/.test(status)
       && /coach-status-modifier-/.test(status),
@@ -1362,11 +1365,10 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
   // `coachNoteActionRoute`, which cell [2] of the new suite pins against the
   // day screen's own branches.
 
-  ok('the strip is outside the conversation scroll',
-    coachTab.indexOf('<ModifiersStrip') < coachTab.indexOf('testID="coach-tab-conversation"'),
-    'CoachTabScreen pins to bottom on new content: a strip inside that scroll '
-      + 'is unreachable after three exchanges, and a door the athlete cannot '
-      + 'find is not a door');
+  ok('Coach conversation contains no status doorway before or inside its scroll',
+    !/<ModifiersStrip/.test(coachTab)
+      && /testID="coach-tab-conversation"/.test(coachTab),
+    'Coach is no longer chat-only');
 }
 
 const total = passed + failures.length;

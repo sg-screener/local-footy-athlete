@@ -1,5 +1,5 @@
 appId: com.localfootyathlete.app
-name: Golden - my status, reached from the coach tab
+name: Golden - my status, reached directly from Day and Week
 tags:
   - e2e
   - golden
@@ -19,7 +19,7 @@ tags:
     env:
       SEED_ID: standard-in-season-week
 
-# ── NOTHING ACTIVE: PROGRAM IS QUIET; COACH STATUS IS STILL A DOOR ──
+# ── NOTHING ACTIVE: THE DAY HEADER STILL OPENS MY STATUS DIRECTLY ──
 #
 # THIS LINE IS NOT INVERTED, AND THAT IS DELIBERATE — READ BEFORE "FIXING" IT.
 # SEAT_INBOX item 16 lists this assertion among four to flip when the day/week
@@ -38,12 +38,10 @@ tags:
 # zero deletes Program's notice, and never My Status's doorway.
 - assertNotVisible:
     id: "modifiers-strip-day"
-- tapOn:
-    id: "tab-coach"
 - assertVisible:
-    id: "modifiers-strip-coach"
+    id: "modifiers-strip-day-header"
 - tapOn:
-    id: "modifiers-strip-coach"
+    id: "modifiers-strip-day-header"
 - assertVisible:
     id: "coach-status-screen"
 - assertVisible:
@@ -67,14 +65,12 @@ tags:
 - tapOn: "Confirm phase"
 - assertVisible: "What days can you train?"
 - tapOn: "Continue"
-- assertVisible: "Team training days"
+- assertVisible: "Which days does your team train?"
 - tapOn: "Cancel"
 - assertVisible:
     id: "coach-status-screen"
 - tapOn:
     id: "coach-status-close"
-- tapOn:
-    id: "tab-program"
 
 # ── THE ATHLETE MAKES ONE, THROUGH A DOOR THEY ALREADY HAD ──
 # RE-ROUTED 2026-08-12 THROUGH THE READINESS DOOR, AND THE OLD ROUTE IS A
@@ -111,7 +107,7 @@ tags:
     text: "Done"
     optional: true
 
-# ── PROGRAM NOW SAYS SO; COACH STILL OWNS THE DETAIL ──
+# ── PROGRAM NOW SAYS SO; MY STATUS OWNS THE DETAIL ──
 #
 # INVERTED 2026-08-13 (SEAT_INBOX item 16), and this is the one of the four
 # named assertions that had a real modifier under it. A "cooked week" readiness
@@ -140,11 +136,11 @@ tags:
 - tapOn:
     id: "coach-status-close"
 - tapOn:
-    id: "tab-program"
+    id: "program-view-week"
+- assertVisible:
+    id: "modifiers-strip-week-header"
 - tapOn:
-    id: "tab-coach"
-- tapOn:
-    id: "modifiers-strip-coach"
+    id: "modifiers-strip-week-header"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"
@@ -153,7 +149,7 @@ tags:
     id: "program-active-coach-notes"
 - assertVisible:
     id: "coach-status-season-phase"
-- takeScreenshot: artifacts/ui-walk/coach-my-status
+- takeScreenshot: artifacts/ui-walk/week-my-status
 
 # ── (a) THE CONTROLS ARE LIVE, AND THIS IS WHERE THAT IS PROVEN ON GLASS ──
 #
@@ -191,10 +187,16 @@ tags:
 - assertVisible:
     id: "coach-status-screen"
 
-# ── AND IT CLOSES BACK TO THE CONVERSATION ──
+# ── AND IT CLOSES BACK TO WEEK; COACH REMAINS CHAT-ONLY ──
 - tapOn:
     id: "coach-status-close"
 - assertNotVisible:
     id: "coach-status-screen"
 - assertVisible:
+    id: "program-screen"
+- tapOn:
+    id: "tab-coach"
+- assertVisible:
     id: "coach-tab-conversation"
+- assertNotVisible:
+    id: "modifiers-strip-coach"

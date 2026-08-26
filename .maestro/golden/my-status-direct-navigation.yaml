@@ -1,0 +1,44 @@
+appId: com.localfootyathlete.app
+name: Golden - direct My Status navigation from Day and Week
+tags:
+  - e2e
+  - golden
+  - program
+  - my-status
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# Day owns a permanent doorway and there is no intermediate popup.
+- assertVisible:
+    id: "modifiers-strip-day-header"
+- tapOn:
+    id: "modifiers-strip-day-header"
+- assertVisible:
+    id: "coach-status-screen"
+- assertNotVisible: "Go to my status"
+- tapOn:
+    id: "coach-status-close"
+
+# Week owns the same doorway and reaches the same destination.
+- tapOn:
+    id: "program-view-week"
+- assertVisible:
+    id: "modifiers-strip-week-header"
+- tapOn:
+    id: "modifiers-strip-week-header"
+- assertVisible:
+    id: "coach-status-screen"
+- tapOn:
+    id: "coach-status-close"
+
+# Coach is conversation-only.
+- tapOn:
+    id: "tab-coach"
+- assertVisible:
+    id: "coach-tab-conversation"
+- assertNotVisible:
+    id: "modifiers-strip-coach"
+- takeScreenshot: artifacts/ui-walk/coach-chat-only

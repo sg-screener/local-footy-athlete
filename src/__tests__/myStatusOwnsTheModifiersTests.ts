@@ -184,19 +184,19 @@ run('the caption that sent athletes to the program screen is retired', () => {
 // of the eight controls the WRONG testIDs, so every flow that resolved them on
 // this screen was looking for coordinates that could not exist.
 
-run('the coach tab passes real equipment fact ids, not an empty set', () => {
-  const screen = read('src/screens/coach/CoachTabScreen.tsx');
+run('My Status passes real equipment fact ids, not an empty set', () => {
+  const screen = read('src/screens/home/MyStatusScreen.tsx');
   assert(!/EMPTY_EQUIPMENT_FACT_IDS/.test(screen),
-    'CoachTabScreen still hands ActiveModifiersSection an empty equipment set, '
+    'MyStatusScreen still hands ActiveModifiersSection an empty equipment set, '
     + 'so `equipmentClear` and `equipmentUpdate` resolve to fallback ids on the '
     + 'one screen that owns those controls');
   const anchor = screen.indexOf('equipmentFactIds=');
   assert(anchor > -1,
-    'the `equipmentFactIds` prop is gone from CoachTabScreen — this assertion '
+    'the `equipmentFactIds` prop is gone from MyStatusScreen — this assertion '
     + 'has lost its anchor and is measuring nothing (anchoring law)');
   const passed_ = screen.slice(anchor, anchor + 80);
   assert(/equipmentFactIds=\{(?!\s*new Set)/.test(passed_),
-    `CoachTabScreen passes \`${passed_.split('\n')[0].trim()}\` — a set built at `
+    `MyStatusScreen passes \`${passed_.split('\n')[0].trim()}\` — a set built at `
     + 'the call site is a second derivation of the athlete\'s equipment facts');
 });
 
@@ -268,10 +268,10 @@ run('My Status reads accepted injury state, never the CoachUpdates mirror', () =
 });
 
 run('My Status is unfiltered even when the visible program week is absent', () => {
-  const screen = read('src/screens/coach/CoachTabScreen.tsx');
+  const screen = read('src/screens/home/MyStatusScreen.tsx');
   const anchor = screen.indexOf('useActiveModifiers(');
   assert(anchor > -1,
-    'CoachTabScreen no longer calls useActiveModifiers — this cell has lost its anchor');
+    'MyStatusScreen no longer calls useActiveModifiers — this cell has lost its anchor');
   const call = screen.slice(anchor, screen.indexOf(';', anchor) + 1);
   assert(call.length > 1,
     'the My Status modifier call could not be bounded — this assertion reads nothing');

@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -23,20 +21,9 @@ import {
 } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
-import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
-import { useProgramRebuild } from '../../hooks/useProgramRebuild';
-import { useCoachNoteActions } from './useCoachNoteActions';
-import { CoachNoteSheet } from '../../components/CoachNoteSheet';
-import { GuidedInjuryFlowSheet } from '../home/GuidedInjuryFlowSheet';
-import { RebuildSheet } from '../../components/RebuildSheet';
-import { useRebuildNotice } from '../../hooks/useRebuildNotice';
-import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
-import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
-import type { TabParamList } from '../../navigation/AppNavigator';
-import { SeasonPhaseShiftSheet } from '../../components/SeasonPhaseShiftSheet';
 import { useCoachWeeklyCommitment } from './useCoachWeeklyCommitment';
 import { CommitmentCard } from '../../components/CommitmentCard';
 import {
@@ -52,8 +39,6 @@ import {
   COACH_CHAT_MAX_MESSAGE_CHARACTERS,
   coachChatMessageWithinLimit,
 } from '../../rules/coachChatLimits';
-
-type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
 /**
  * THE COACH TAB — SLICE 1. IT TALKS, AND IT CHANGES NOTHING.
@@ -160,7 +145,7 @@ function SendIcon({ color }: { color: string }) {
   );
 }
 
-export default function CoachTabScreen({ route, navigation }: CoachTabScreenProps) {
+export default function CoachTabScreen() {
   // BOTH HALVES COME FROM ONE PROJECTION. `weekDays` feeds the existing modifier
   // selector and `visibleWeek` is the athlete-facing projection carried by the
   // Snapshot; neither the dashboard nor Terra derives another week.
@@ -173,7 +158,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // status/control surface cannot disappear with the program output. This was
   // already the written ruling in `useHomeScreen`; the old argument below was
   // the implementation contradicting it.
-  const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers();
+  const { modifiers } = useActiveModifiers();
   // ONE LIVE PICTURE FOR THE CONVERSATION. Progress renders the same live
   // derivation on its own tab; Coach keeps readiness and consistency available
   // to Terra without turning them back into visible dashboard furniture.
@@ -182,33 +167,8 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     visibleWeek,
     activeModifiers: modifiers,
   });
-  // ── (a) THE SEVEN GO LIVE, THROUGH THE DAY SCREEN'S OWN WRITERS ───────────
-  //
-  // SEAT_INBOX item 8. Until 2026-08-12 only `dismiss_note` worked here and the
-  // other seven were dimmed under a caption pointing at the Program screen —
-  // which had already stopped rendering the modifier list, so the caption sent
-  // athletes to an empty room. `useCoachNoteActions` is `useHomeScreen`'s two
-  // writers, extracted with their source injected; NOTHING here is a new door.
-  //
-  // `screen: 'my_status'` and NOT `'coach_tab'`. The coach-tab id maps to the
-  // diagnostic label `'coach'` — the field Sam asked for so an investigation can
-  // tell a coach-authored change from his own tap. These are his taps.
-  const rebuild = useProgramRebuild();
-  const rebuildNotice = useRebuildNotice();
-  const coachNoteActions = useCoachNoteActions({
-    screen: 'my_status',
-    notes: modifiers,
-    onResult: rebuild.handleProgramControlResult,
-    notifyRefusal: Alert.alert,
-  });
-  // MY STATUS IS NAVIGATION STATE, NOT PRIVATE SCREEN STATE. Program and Coach
-  // now address the same destination, so one surface cannot merely switch tabs
-  // while the other opens the detail. Closing clears the same state that opened
-  // it, which also makes a second Program tap work after returning.
-  const statusVisible = route.params?.status === 'open';
   // R-105. Derived every render from the stores; no unread flag, no expiry job.
   const weeklyCommitment = useCoachWeeklyCommitment();
-  const phaseControl = useSeasonPhaseControl();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
@@ -376,23 +336,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
       <KeyboardSafeArea scrollable={false} footer={composer}>
         <View style={styles.header}>
           <LfaWordmark />
-        {/* ── RULINGS 4 + 9: "MY STATUS" ──
-            OUTSIDE THE CONVERSATION SCROLL, AND THAT IS THE WHOLE DESIGN
-            DECISION. The ScrollView below pins to the bottom on new content, so
-            a status block placed inside it is unreachable after three exchanges
-            — a door the athlete cannot find is not a door. One fixed row costs a
-            strip and never scrolls away; the detail lives on the screen it
-            opens, which is her prototype's own shape.
-
-            IT STAYS WHEN THERE IS NOTHING. Sam's 2026-08-11 correction makes
-            My Status a permanent Coach doorway; the zero state says plainly
-            that no modifiers are currently impacting the program. Program's
-            day/week notices still disappear at zero. */}
-          <ModifiersStrip
-            surface="coach"
-            count={modifierCount}
-            onPress={() => navigation.setParams({ status: 'open' })}
-          />
         </View>
         <ScrollView
           ref={scrollRef}
@@ -465,91 +408,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           ) : null}
         </ScrollView>
       </KeyboardSafeArea>
-      {/* THE STATUS SCREEN, OVER THE TAB RATHER THAN BESIDE IT.
-          A full-screen overlay and not a navigator route, deliberately: ruling 8
-          protects the composer and the keyboard matrix is the one guard that
-          already works — adding a route to this stack moves the keyboard's
-          container, and disturbing it costs that guard for a screen that is a
-          detail view of a strip. The back journey is the same tab. */}
-      {statusVisible ? (
-        <View style={StyleSheet.absoluteFill}>
-          <CoachStatusScreen
-            modifiers={modifiers}
-            equipmentFactIds={equipmentFactIds}
-            currentPhase={phaseControl.currentPhase}
-            onReviewPhase={() => phaseControl.open()}
-            // ALL EIGHT KINDS, THROUGH THE DAY SCREEN'S OWN ROUTER. Not a
-            // branch written here: `coachNoteActions.onAction` is the same
-            // `coachNoteActionRoute` the Program tab has always used, so the
-            // two surfaces cannot disagree about what a tap means.
-            onAction={coachNoteActions.onAction}
-            onClose={() => navigation.setParams({ status: undefined })}
-          />
-        </View>
-      ) : null}
-      {/* THE THREE SHEETS MY STATUS'S CONTROLS OPEN.
-          Mounted OUTSIDE the `statusVisible` block on purpose: a rebuild
-          triggered by a clear outlives the screen the athlete cleared from, and
-          a progress sheet that unmounts mid-rebuild is a blank wait. */}
-      <CoachNoteSheet
-        state={coachNoteActions.sheet}
-        equipmentFactIds={equipmentFactIds}
-        onClose={coachNoteActions.closeSheet}
-        onConfirmClear={coachNoteActions.confirmClear}
-        onUpdateStatus={coachNoteActions.updateStatus}
-        onChangeExclusionScope={coachNoteActions.changeExclusionScope}
-      />
-      <GuidedInjuryFlowSheet
-        visible={coachNoteActions.injuryNote !== null}
-        onClose={coachNoteActions.closeInjuryFlow}
-        initial={coachNoteActions.injuryInitial}
-        episodeId={coachNoteActions.injuryNote?.injuryEpisodeId}
-        titlePrefix="Injury"
-        onComplete={async (result) => {
-          await coachNoteActions.applyGuidedInjury(
-            result,
-            coachNoteActions.injuryConstraint?.id ?? coachNoteActions.injuryNote?.constraintId,
-          );
-          coachNoteActions.closeInjuryFlow();
-        }}
-      />
-      <RebuildSheet
-        visible={rebuild.rebuildModalVisible}
-        onClose={rebuild.handleCancelRebuild}
-        isRebuilding={rebuildNotice.isRebuilding}
-        error={rebuildNotice.rebuildError}
-        canRetry={rebuildNotice.rebuildErrorCanRetry}
-        msgIdx={rebuildNotice.rebuildMsgIdx}
-        msgOpacity={rebuildNotice.rebuildMsgOpacity}
-        onConfirm={rebuild.handleConfirmRebuild}
-      />
-      <SeasonPhaseShiftSheet
-        visible={phaseControl.visible}
-        step={phaseControl.step}
-        currentPhase={phaseControl.currentPhase}
-        targetPhase={phaseControl.targetPhase}
-        isRebuilding={phaseControl.isRebuilding}
-        error={phaseControl.error}
-        canRetry={phaseControl.canRetry}
-        msgIdx={phaseControl.msgIdx}
-        msgOpacity={phaseControl.msgOpacity}
-        pendingPreferredDays={phaseControl.pendingPreferredDays}
-        pendingTeamDays={phaseControl.pendingTeamDays}
-        pendingGameDay={phaseControl.pendingGameDay}
-        gameAnchorAnswered={phaseControl.gameAnchorAnswered}
-        pendingSeasonFinishDate={phaseControl.pendingSeasonFinishDate}
-        seasonFinishAttempted={phaseControl.seasonFinishAttempted}
-        onClose={phaseControl.close}
-        onBack={phaseControl.back}
-        onTogglePendingPreferredDay={phaseControl.togglePreferredDay}
-        onTogglePendingTeamDay={phaseControl.toggleTeamDay}
-        onSetPendingGameDay={phaseControl.answerGameDay}
-        onAnswerNoUsualGameDay={phaseControl.answerNoGameDay}
-        onChangeSeasonFinishDate={phaseControl.setPendingSeasonFinishDate}
-        onAnswerSeasonFinishNotSure={phaseControl.answerSeasonFinishNotSure}
-        onSelectTargetPhase={phaseControl.selectTargetPhase}
-        onAdvance={() => { void phaseControl.advance(); }}
-      />
     </SafeAreaView>
   );
 }

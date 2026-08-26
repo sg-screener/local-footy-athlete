@@ -41,6 +41,7 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
 {
   const navigator = read('src/navigation/AppNavigator.tsx');
   const coach = read('src/screens/coach/CoachTabScreen.tsx');
+  const myStatus = read('src/screens/home/MyStatusScreen.tsx');
   const progress = read('src/screens/progress/ProgressTabScreen.tsx');
   const snapshot = read('src/rules/liveAthleteSnapshot.ts');
 
@@ -55,11 +56,15 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
       && /tabBarButtonTestID:\s*'tab-progress'/.test(navigator));
   ok('Progress owns the visible load continuum, main lifts and 2km sections',
     progressOwnsVisibleTracking(progress, coach));
-  ok('Coach visibly keeps My Status and chat while its live Snapshot remains private',
-    /<ModifiersStrip/.test(coach)
+  ok('Coach visibly keeps chat only while its live Snapshot remains private',
+    !/<ModifiersStrip/.test(coach)
+      && !/<CoachStatusScreen/.test(coach)
       && /testID="coach-tab-conversation"/.test(coach)
       && /const snapshot = useLiveAthleteSnapshot/.test(coach)
       && /await askCoachReadOnly\(\{[\s\S]*?\n\s*snapshot,\s*\n/.test(coach));
+  ok('My Status is a Program-owned page rather than part of Coach',
+    /name="MyStatus"\s+component=\{MyStatusScreen\}/.test(navigator)
+      && /<CoachStatusScreen/.test(myStatus));
   ok('Progress and Coach both read the same live Snapshot adapter',
     (progress.match(/useLiveAthleteSnapshot\s*\(/g) ?? []).length === 1
       && (coach.match(/useLiveAthleteSnapshot\s*\(/g) ?? []).length === 1);
