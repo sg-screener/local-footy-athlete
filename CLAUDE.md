@@ -156,7 +156,8 @@ ruling that will vanish, and that is the trap Sam has actually been in.
 | start the app | `npm run lfa:dev` |
 | typecheck | `npm run test:compile` — the ratchet, and the gate. `npm run typecheck` is the raw compiler over a documented backlog; it is not the gate |
 | one suite | `npm run test:<name>` |
-| the whole chain, without stopping at the first red | `scripts/sweep.sh <label>` — `npm run test:bible` stops at the first failing suite and hides the rest |
+| release gate | `npm run test:release` — the small green gate derived from validated current-contract witnesses |
+| diagnostic test fleet, without stopping at the first red | `scripts/sweep.sh <label>` — `npm run test:bible` is historical diagnostic evidence, stops at the first red and has no release authority |
 | scenarios | `npm run test:scenarios`, and `npm run test:qa` for the full report |
 | the launch-audit regression flows, on the simulator | `npm run qa:audit-flows` — one PASS/FAIL line per flow; needs `npm run lfa:dev` first. Flows + their map to audit findings: `.maestro/audit/README.md` |
 

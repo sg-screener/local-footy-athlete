@@ -142,6 +142,17 @@ export interface LawRow {
 export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
+    id: 'LAW-release-gate-runs-only-validated-current-contracts',
+    law: 'The release gate is npm run test:release and derives every product witness from validated current-contract census rows; the red test:bible fleet remains diagnostic evidence and has no authority to change product behaviour.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md "step 3: one small green release gate"; Sam, 2026-08-27: "Establish one small, genuinely green release gate" after ordering the current red fleet to stop acting as a product to-do list.',
+    guard: {
+      state: 'guarded',
+      by: 'test:test-truth',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-27 by seat `testtruth`. TWO OPTIONS COMPARED: hand-write three green commands into another shell chain, or derive release witnesses from the already validated test-truth decision registry. The derived gate landed because a second list would drift back into the failure this law forbids. `releaseGateContractTests` runs inside the in-chain test:test-truth bootstrap and has 11/11 cells: exact command ownership; agent-command-table authority plus its removal mutation; test-truth first; no test:bible command; every current contract included automatically; every rewrite/retirement/aggregate/tooling row excluded; an unevidenced promotion refused; infrastructure refused as a product witness; redirecting release to test:bible refused; fail-fast execution; and all-units-green execution. MUTATIONS: deleting npm run test:release from the agent contract is detected; promoting test:weekly-scheduler with empty product/contract receipts refuses before execution; replacing a product witness with test:release refuses recursion; redirecting the package command to npm run test:bible refuses the gate definition; a fake red second unit stops the runner and returns red. LIVE RUN: npm run test:release printed 3/3 units green and RELEASE_GATE_EXIT=0 — test:test-truth (14 test-truth + 11 release-contract + 5 runnable-suite cells), test:deriving-device-commit (9 invariants), and test:fact-horizon (14 invariants). NOT COVERED: the 349-unit diagnostic fleet remains broadly red; the gate does not yet contain the canonical weekly compiler slice, full-year archetypes, UI glass, simulator, or physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-skull-crushers-name-and-implement',
     law: 'The straight/EZ-bar triceps movement is athlete-facing "Skull Crushers" and barbell-only; "Dumbbell Skull Crusher" remains the separately named dumbbell movement.',
     ruledAt: 'NOT STATED IN THE REPO before this guarded registry row — Sam, 2026-08-26 in the Codex item-1 follow-up: "just call it skull crushers not EZ bar skull crushers". This row is the durable ruling site.',

@@ -49,16 +49,16 @@ function ok(name: string, condition: boolean, detail?: unknown): void {
 console.log('testTruthAuditTests');
 
 const inventory = deriveChainInventory(pkg);
-ok('the truth audit is the first unit in the official chain',
+ok('the truth audit is the first unit in the diagnostic fleet',
   inventory.units[0]?.label === 'test:test-truth',
   inventory.units.slice(0, 3).map((unit: { label: string }) => unit.label));
 ok('the audit derives the large chain instead of transcribing a second suite list',
   inventory.units.length > 300 && inventory.duplicateLabels.length === 0,
   { units: inventory.units.length, duplicates: inventory.duplicateLabels });
-ok('the official chain contains no missing commands',
+ok('the diagnostic fleet contains no missing commands',
   inventory.missingChainScripts.length === 0,
   inventory.missingChainScripts);
-ok('the official chain contains no chain-runner aggregates',
+ok('the diagnostic fleet contains no chain-runner aggregates',
   inventory.chainRunnerAggregates.length === 0,
   inventory.chainRunnerAggregates);
 

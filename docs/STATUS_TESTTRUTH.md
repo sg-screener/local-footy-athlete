@@ -181,3 +181,75 @@ there is deliberately no simulator or phone change.
   fallback failures named above were measured but not silently fixed.
 - No product code, weekly compiler, coach behaviour, UI, simulator or physical
   iPhone path was changed or tested.
+
+## 2026-08-27 — step 3: one small green release gate
+
+### LOOP CHECK
+
+This is the third sighting of a test list acquiring authority because it is
+large rather than because its members are current. The compression is now
+mechanical: release authority is derived from validated `current_contract`
+rows, while the 349-unit Bible fleet remains diagnostic evidence.
+
+### Two options weighed
+
+1. Incremental: write a new three-command shell chain. It would be green today,
+   but it would immediately become another list that can drift from the census.
+2. Source-of-truth redesign: keep one bootstrap command, derive every product
+   witness from the existing validated decision register, and refuse the gate
+   before execution if any promoted row lacks its production path, current
+   contract and witness receipts.
+
+Option 2 landed as `npm run test:release`. The agent command table names it as
+the release gate and explicitly names `test:bible` as historical diagnostic
+evidence with no release authority.
+
+### Gate shape and guard
+
+The gate currently derives three executable units:
+
+1. `test:test-truth` — validates the census, release-gate architecture and
+   runnable test roster.
+2. `test:deriving-device-commit` — the first validated current product witness.
+3. `test:fact-horizon` — the second validated current product witness.
+
+`releaseGateContractTests` has 11 cells. It proves the command has one owner,
+the agent instructions point to it, all current contracts enter automatically,
+all rewrite/retirement/tooling/aggregate rows stay out, and execution stops on
+the first red. Its mutations remove the documented command, promote an old red
+without evidence, substitute release itself as a witness, redirect release to
+the diagnostic fleet, and inject a red second unit; each mutation is detected.
+
+The governing row is
+`LAW-release-gate-runs-only-validated-current-contracts`, guarded by the
+in-fleet `test:test-truth` bootstrap. No hand-written product-suite list was
+added.
+
+### Verification
+
+- `npm run test:release`: 3/3 derived units green and
+  `RELEASE_GATE_EXIT=0`.
+- Bootstrap: 14/14 test-truth cells, 11/11 release-contract cells and 5/5
+  runnable-roster cells.
+- Product witnesses: 9/9 deriving-device invariants and 14/14 durable-horizon
+  invariants.
+- `npm run test:law-registry`: the new law row is well formed, its guard exists
+  and its in-chain declaration is truthful. The suite remains red on three
+  inherited fleet-wide debts: one missing guard command, LR-18 without a law
+  row, and 21 older UNENFORCED laws.
+
+### North star and visibility
+
+This removes a second release-authority list rather than adding one. Promoting
+a compiler slice later is a census decision with receipts, and the gate picks
+it up automatically. **NOT-VISIBLE:** no product behaviour or athlete screen
+changed.
+
+### NOT COVERED
+
+- The canonical weekly compiler vertical slice is not built yet; it is the next
+  unit.
+- The 349-unit diagnostic fleet remains broadly red and is not claimed green.
+- The gate currently covers two current product contracts, not the whole app.
+- Full-year archetypes, rival-author deletion, derived-output-writer counts,
+  simulator and physical-iPhone acceptance are not part of this step.

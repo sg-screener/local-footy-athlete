@@ -261,7 +261,7 @@ function formatAudit(audit) {
   const lines = [
     'TEST TRUTH AUDIT',
     'A red suite is evidence to review. It is not permission to change product behaviour.',
-    `Chain: ${audit.chain.unitCount} units (${audit.chain.scriptedUnitCount} npm scripts).`,
+    `Diagnostic fleet: ${audit.chain.unitCount} units (${audit.chain.scriptedUnitCount} npm scripts).`,
     `Known broken chain entries: ${audit.structuralDebt.missingChainScripts.current.length} missing commands; `
       + `${audit.structuralDebt.chainRunnerAggregates.current.length} chain-runner aggregates.`,
     `Known unrunnable test files: ${audit.unrunnableSuiteBaseline.count} `
