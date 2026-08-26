@@ -6468,3 +6468,22 @@ The existing native snap and tap/release answer paths remain unchanged.
 snap, committed answer.
 · `WORKING` — `test:onboarding-presentation` requires scroll-driven focus,
 focus-driven lime styling and separation from the answer/scroll writers.
+
+**R-252** · *"Equipment in onboarding section - when selecting commercial gym
+and then tapping through to next page - you cant go back to commercial gym page
+- it takes you to the step before that = should take you back to the commercial
+gym option page"* (Sam, 2026-08-26, onboarding Equipment review) · **SAVING
+EQUIPMENT CANNOT CHANGE THE BACK PATH MID-FLOW.**
+On a fresh onboarding pass, Back from Gym Experience returns to the equipment
+checklist and Back from that checklist returns to `Where do you train?`, with
+the athlete's selected gym still shown. Saving the equipment answer while moving
+forward cannot turn that second Back into an exit from Equipment. Opening
+Equipment with an answer that already existed remains an edit and keeps its
+established single-page Back behaviour.
+**Search words:** onboarding, Equipment, Commercial gym, Back, Gym Experience,
+equipment checklist, Where do you train, saved answer, navigation.
+· `WORKING` — `test:equipment-answer` requires Equipment to snapshot whether an
+answer existed on entry and rejects a live answer read that can change Back
+semantics after Continue. A fresh iPhone 17 Pro simulator flow walked Commercial
+gym → checklist → Gym Experience → Back → checklist → Back → Where do you train
+and found Commercial gym still selected.

@@ -79,27 +79,31 @@ type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Eq
  * which is not this screen's question.
  */
 export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, onDone }) => {
-  // Seeded once on mount from the store's own named door.
-  const existing = savedEquipmentAnswer();
+  // Entry mode is a snapshot, not a live store question. On a fresh pass this
+  // remains `undefined` even after Continue saves the new answer, so returning
+  // from Gym Experience cannot silently change Back from “location choices”
+  // to “leave Equipment”. An athlete who arrived with an existing answer still
+  // keeps the established edit behaviour and exits Equipment on Back.
+  const [existingOnEntry] = useState(() => savedEquipmentAnswer());
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Equipment');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const [location, setLocation] = useState<EquipmentLocationChoice | null>(null);
   const [tickedTags, setTickedTags] = useState<ReadonlySet<AskableEquipmentTag>>(() =>
     new Set(
-      Object.entries(existing?.tags ?? {})
+      Object.entries(existingOnEntry?.tags ?? {})
         .filter(([, possession]) => possession === 'have')
         .map(([tag]) => tag as AskableEquipmentTag),
     ));
   const [tickedModalities, setTickedModalities] = useState<ReadonlySet<ConditioningEquipmentModality>>(() =>
     new Set(
-      Object.entries(existing?.modalities ?? {})
+      Object.entries(existingOnEntry?.modalities ?? {})
         .filter(([, possession]) => possession === 'have')
         .map(([modality]) => modality as ConditioningEquipmentModality),
     ));
   // Editing an already-given answer skips the location question — the ticks on
   // screen ARE the athlete's saved decision, and re-seeding would overwrite it.
-  const [showChecklist, setShowChecklist] = useState<boolean>(!!existing);
+  const [showChecklist, setShowChecklist] = useState<boolean>(!!existingOnEntry);
 
   const askableTags = useMemo(
     () => derivedEquipmentChecklistTags() as AskableEquipmentTag[],
@@ -137,12 +141,12 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
     const tags: Record<string, EquipmentAnswer['tags'][AskableEquipmentTag]> = {};
     for (const tag of askableTags) {
       if (tickedTags.has(tag)) tags[tag] = 'have';
-      else if (existing?.tags[tag] === 'never') tags[tag] = 'never';
+      else if (existingOnEntry?.tags[tag] === 'never') tags[tag] = 'never';
     }
     const modalities: Record<string, EquipmentAnswer['modalities'][ConditioningEquipmentModality]> = {};
     for (const modality of askableModalities) {
       if (tickedModalities.has(modality)) modalities[modality] = 'have';
-      else if (existing?.modalities[modality] === 'never') modalities[modality] = 'never';
+      else if (existingOnEntry?.modalities[modality] === 'never') modalities[modality] = 'never';
     }
     const answer: EquipmentAnswer = { tags, modalities, answeredOn: todayISOLocal() };
     void commitAndAdvance(
@@ -156,7 +160,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
       // so this resolves to exactly what shipped before item 24.
       onDone ?? (() => navigation.navigate('GymExperience')),
     );
-  }, [askableTags, askableModalities, tickedTags, tickedModalities, existing, location,
+  }, [askableTags, askableModalities, tickedTags, tickedModalities, existingOnEntry, location,
     commitAndAdvance, navigation, onDone]);
 
   if (!showChecklist) {
@@ -221,7 +225,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
-      onBack={() => (existing ? navigation.goBack() : setShowChecklist(false))}
+      onBack={() => (existingOnEntry ? navigation.goBack() : setShowChecklist(false))}
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}

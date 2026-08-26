@@ -361,6 +361,13 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
     /onDone \?\? \(\(\) => navigation\.navigate\('GymExperience'\)\)/.test(equipmentScreen),
     'the fallback is no longer the original `GymExperience` navigate, so an '
       + 'onboarding athlete who ticks their equipment lands somewhere new');
+  ok('fresh-entry Back semantics cannot change after the equipment answer is saved',
+    /const \[existingOnEntry\] = useState\(\(\) => savedEquipmentAnswer\(\)\)/.test(equipmentScreen)
+      && /useState<boolean>\(!!existingOnEntry\)/.test(equipmentScreen)
+      && /existingOnEntry \? navigation\.goBack\(\) : setShowChecklist\(false\)/.test(equipmentScreen)
+      && !/const existing = savedEquipmentAnswer\(\)/.test(equipmentScreen),
+    'the screen is re-reading the answer it just saved, so Back changes from '
+      + 'return-to-location to leave-Equipment while the athlete is still in the same flow');
   ok('onboarding still passes no exit of its own',
     !/onDone=/.test(read('navigation/OnboardingNavigator.tsx')),
     'the onboarding navigator now supplies an exit. It must pass NOTHING — that '

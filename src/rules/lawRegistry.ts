@@ -2043,6 +2043,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-equipment-back-preserves-entry-path',
+    law: 'Equipment navigation is determined by how the athlete entered the screen, not by a live re-read of the answer the screen just saved. In fresh onboarding, Gym Experience Back returns to the checklist and checklist Back returns to Where do you train with the selected gym retained. An answer that already existed on entry remains a direct equipment edit whose Back exits Equipment.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-252 — Sam found that saving Commercial gym made the checklist Back skip its location-choice page.',
+    guard: {
+      state: 'guarded',
+      by: 'test:equipment-answer',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 by seat `weeksave`. TWO OPTIONS COMPARED: split the location and checklist into separate navigator routes, or freeze the screen\'s entry mode while keeping its existing two-page local flow and optional external exit. Freezing entry mode landed because it removes the live-store timing bug without duplicating a reused editor route. TEST-FIRST LIVENESS: the new named Back-semantics cell was red against the live savedEquipmentAnswer read; after the entry snapshot it is green. The targeted suite is 45/47 with two inherited unrelated reds: interrupted resume currently resolves SeasonFinished, and NEVER remains absent from the Profile editor. TypeScript and test:onboarding-presentation (111/111) are green; test:onboarding-reliability retains its inherited persisted-store parser red at D1. LIVE SIMULATOR: a fresh iPhone 17 Pro flow walked Commercial gym -> checklist -> Gym Experience -> Back -> checklist -> Back -> Where do you train, with Commercial gym still selected. NOT COVERED: physical-iPhone Release, Android hardware Back and an existing-answer Profile editor walk on glass.',
+    },
+  },
+  {
     id: 'LAW-generation-card-icons-centre-on-full-message',
     law: 'Each onboarding generation education card places its icon beside one text block containing both title and supporting sentence. The shared row vertically centres the icon against that complete text block. Horizontally, a fixed column spans from the card edge to the words and centres the icon inside it while preserving the text position; the body owns no separate left inset.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-157 + R-161 — Sam first centred the icons vertically against the full message, then centred them horizontally between the card edge and words.',

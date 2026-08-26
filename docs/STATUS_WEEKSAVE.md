@@ -284,3 +284,33 @@ lime 5.
 
 - Physical-iPhone acceptance.
 - Rapid multi-value flings, VoiceOver announcements and Android.
+
+---
+
+# STATUS — Equipment Back path (`weeksave`, 2026-08-26)
+
+## Owner request
+
+After choosing Commercial gym and continuing, Back must return through the
+Commercial gym location-choice page rather than skip to the previous onboarding
+step.
+
+## Decision and receipt
+
+Equipment contains two local pages. It was deciding what Back meant from the
+live saved answer, so Continue changed the screen from "fresh onboarding" to
+"existing edit" while the athlete was still inside the same visit. The screen
+now remembers how it was entered; saving cannot rewrite that navigation path.
+
+The new named Equipment cell was red against the live answer read and is green
+after the entry snapshot. The targeted suite now passes that cell while retaining
+two unrelated existing failures. TypeScript and the 111-cell onboarding
+presentation suite are green. On an iPhone 17 Pro simulator, the fresh path ran
+Commercial gym → checklist → Gym Experience → Back → checklist → Back → Where
+do you train, with Commercial gym still selected.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- Android hardware Back.
+- Existing-answer Profile equipment editing on glass.
