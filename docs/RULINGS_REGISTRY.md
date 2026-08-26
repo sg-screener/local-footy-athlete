@@ -6440,3 +6440,17 @@ Program doorways, the direct route and popup retirement; `test:coach-tab-slice3`
 guards the Program-stack destination and chat-only Coach; `test:my-status-modifiers`
 guards the re-homed controls. `.maestro/golden/my-status-direct-navigation.yaml` walks Day
 and Week into the same destination and proves Coach has no status doorway.
+
+**R-250** · *"Page transitions in onboarding = not fade - move forward or
+backward like a slide"* (Sam, 2026-08-26, onboarding review) · **ONBOARDING
+MOVEMENT FOLLOWS NAVIGATION DIRECTION.**
+The shared onboarding stack uses a horizontal push transition rather than a
+cross-fade. Advancing slides the next page in from the right; Back uses the
+native stack reversal, returning in the opposite direction. This is owned once
+by the navigator rather than reimplemented on each questionnaire screen.
+Welcome's initial entrance remains unanimated; moving from Welcome into the
+questionnaire uses the destination screen's shared slide.
+**Search words:** onboarding, page transition, slide, fade, forward, Back,
+native stack.
+· `WORKING` — `test:onboarding-presentation` requires the shared horizontal
+transition and rejects the retired fade.

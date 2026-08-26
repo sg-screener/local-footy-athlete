@@ -1933,6 +1933,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-onboarding-navigation-slides-with-direction',
+    law: 'Onboarding questionnaire pages never cross-fade. The shared native stack pushes forward pages horizontally from the right, and Back uses that stack transition in reverse. The direction is owned by the navigator rather than by per-screen animation state. Welcome may keep an unanimated initial entrance, but its next questionnaire page uses the shared slide.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-250 — Sam replaced onboarding page fades with directional forward/back slides.',
+    guard: {
+      state: 'guarded',
+      by: 'test:onboarding-presentation',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 by seat `weeksave`. TWO OPTIONS COMPARED: animate every onboarding screen from a locally tracked direction, or change the existing native-stack transition owner once. The native stack landed because it already knows whether navigation is a push or pop and reverses Back without a second direction state. TEST FIRST: the two new cells were the suite\'s only reds against `animation: fade` (107/109). AFTER: the navigator uses `slide_from_right`, the fade is absent and the complete presentation suite is 109/109. SIMULATOR: an iPhone 17 Pro recording shows Welcome → Name entering from the right and Back returning Welcome from the left; the tap flow completed both destinations. NOT COVERED: gesture-driven interactive Back, Android device motion, Reduce Motion and physical-iPhone acceptance.',
+    },
+  },
+  {
     id: 'LAW-position-copy-is-shared',
     law: 'The onboarding Position screen asks "What position fits you best?" and says "Your position gives LFA a small programming bias." The matching Profile edit step asks the same position question, and the retired "footy role" / "your role" wording is absent from onboarding. All five full-width Position choices align their labels to the left while the shared selected-state tick remains at the top right.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-143 + R-154 — Sam approved the Position wording, then required its five choice labels to be uncentred and left aligned.',

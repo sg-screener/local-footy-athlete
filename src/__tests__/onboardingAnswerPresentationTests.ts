@@ -88,6 +88,15 @@ console.log('\n[0] The name question stands on its own');
     !/So I can coach you properly\./.test(nameScreen));
 }
 
+console.log('\n[0a] Onboarding pages move with navigation direction');
+{
+  const navigator = read('src/navigation/OnboardingNavigator.tsx');
+  ok('the shared onboarding stack pushes each next page in horizontally',
+    /animation:\s*'slide_from_right'/.test(navigator));
+  ok('the retired cross-fade is absent from the onboarding stack',
+    !/animation:\s*'fade'/.test(navigator));
+}
+
 console.log('\n[0b] Season phase choices are text-only');
 {
   const seasonPhaseScreen = read('src/screens/onboarding/SeasonPhaseScreen.tsx');

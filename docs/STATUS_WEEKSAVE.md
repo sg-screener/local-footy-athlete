@@ -232,3 +232,28 @@ an unenforced state.
 - Physical-iPhone Release acceptance.
 - VoiceOver traversal and deep-link restoration into My Status.
 - Non-phone widths.
+
+---
+
+# STATUS — directional onboarding pages (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Onboarding page changes must slide forward and backward rather than fade.
+
+## Decision and receipt
+
+The onboarding native stack already owns every page transition and knows whether
+navigation is advancing or going Back. Its shared transition now pushes pages
+horizontally instead of cross-fading; individual screens carry no duplicate
+direction or animation state.
+
+The two new presentation cells first failed against the fade. After changing
+the shared navigator the complete onboarding presentation suite passes 109/109
+and TypeScript is green. An iPhone 17 Pro simulator recording shows Name enter
+from the right when advancing and Welcome return from the left when going Back.
+
+## NOT COVERED
+
+- Physical-iPhone acceptance.
+- Reduce Motion, Android and interactive swipe-back inspection.

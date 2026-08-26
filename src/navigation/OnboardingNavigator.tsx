@@ -64,7 +64,11 @@ export default function OnboardingNavigator() {
           contentStyle: {
             backgroundColor: colors.surface.primary,
           },
-          animation: 'fade',
+          // One stack transition owns the whole questionnaire. Native-stack
+          // pushes the next page from the right and reverses that motion when
+          // Back pops it, so direction comes from navigation rather than from
+          // a second per-screen animation state.
+          animation: 'slide_from_right',
         }}
       >
       <Stack.Screen
