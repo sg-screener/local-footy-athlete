@@ -604,6 +604,18 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       // not: the seats are lower-body work, not loaded carries. Males never
       // declare either seat, so the memberships are inert on the male path.
       out.push('accessory_or_core', 'lower_accessory', 'second_lower_accessory');
+      // ── R-233 (Sam, 2026-08-26): the hamstring pair may hold the
+      // single-leg hip row. His words: *"I'd rather it be RDL's and nordics,
+      // or Single leg RDL's as the main hinge and then hamstring curls or
+      // nordics as the other one"* — so when the day's hinge is already an
+      // RDL variant, Nordic Lower / Hamstring Curl take that row instead of
+      // the other RDL variant. DERIVED from the pool's own hamstring group,
+      // not name literals, so an authored addition joins by itself. The
+      // composer still prefers Single-Leg RDL when there is no collision
+      // (weightedFirst puts the loaded lift ahead of these two).
+      if (authoredPoolMembership(name)?.group === 'hamstring') {
+        out.push('single_leg_hip');
+      }
       break;
     case 'carry':
       out.push('accessory_or_core');

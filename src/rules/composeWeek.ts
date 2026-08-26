@@ -528,6 +528,28 @@ function experiencePreferred(
 const HINGE_PRIORITY: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
 
 /**
+ * ── R-233: ONE RDL VARIANT PER DAY (Sam, 2026-08-26) ────────────────────────
+ *
+ * *"why RDL's and Single leg RDLs are in the same session? this should not be
+ * happening. I'd rather it be RDL's and nordics, or Single leg RDL's as the
+ * main hinge and then hamstring curls or nordics as the other one."*
+ *
+ * Why the collision was structural: in-season the hinge is pinned to RDLs
+ * (R-093 continuity, `HINGE_PRIORITY`), his :227 fill order ALSO owes a
+ * single-leg hip row, and that pool is deliberately one exercise (R-084) —
+ * Single-Leg RDL. Two requirements, one family, every hinge day.
+ *
+ * The SINGLE-LEG HIP ROW YIELDS, never the hinge: filtering a block-stable
+ * main lift per day would break the block-stability contract. When the day
+ * already carries an RDL-family lift, this slot's candidates drop the family
+ * and the hamstring pair (Nordic Lower / Hamstring Curl — now in the slot's
+ * vocabulary, `sessionSlotCoverage`) takes the row.
+ */
+const RDL_FAMILY_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
+  ['RDLs', 'Single-Leg RDL'].map((name) => composedIdentityFor(name)),
+);
+
+/**
  * Slots the SEASON PHASE pins to one movement, overriding the two-block cap.
  *
  * *"RDLs are the default bilateral hinge. An in-season RDL must not rotate out
@@ -1432,8 +1454,27 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * against what they can reach THAT DAY. A trip therefore swaps rows and
        * records nothing, and the base returns on the return date by expiry
        * alone — see `temporaryKitByDayOfWeek`. */
-      const baseLegal = legalUnder(excluded, inputs.kit);
-      const legal = legalUnder(excludedToday, kitToday);
+      /* ── R-233: ONE RDL VARIANT PER DAY — see `RDL_FAMILY_IDENTITIES` ─────
+       * The single-leg hip slot yields when the day already carries an
+       * RDL-family lift (in-season that is every hinge day, R-093), leaving
+       * the hamstring pair to take the row. Preference, not a veto: a kit
+       * with neither hamstring row keeps the repeated variant, because a
+       * declared slot left silently empty is the bigger wrong (R-080's own
+       * fallback shape). Applied to BOTH lists: the hinge is block-stable,
+       * so this day property is block-constant for the days that declare
+       * this slot, and the recorded base must be a row the athlete will
+       * actually meet. */
+      const rdlAlreadyOnDay = slot === 'single_leg_hip'
+        && [...identitiesThisDay].some((id) => RDL_FAMILY_IDENTITIES.has(id));
+      const withoutRdlFamily = (
+        list: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => {
+        if (!rdlAlreadyOnDay) return list;
+        const filtered = list.filter((id) => !RDL_FAMILY_IDENTITIES.has(id));
+        return filtered.length > 0 ? filtered : list;
+      };
+      const baseLegal = withoutRdlFamily(legalUnder(excluded, inputs.kit));
+      const legal = withoutRdlFamily(legalUnder(excludedToday, kitToday));
       /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */

@@ -6110,3 +6110,23 @@ too much, dose adjustment, authored templates, progress tab, step up.
 · `WORKING` — rules/conditioningFeedbackEase + resolver ladder + builder
 disclosure; test:conditioning-feedback-ease 10/0 in the chain, mutation-
 checked (threshold flip killed 3 cells).
+
+**R-233** · *"why RDL's and Single leg RDLs are in the same session? this should not be happening / I'd rather it be RDL"s and nordics, or Single leg RDL's as the main hinge and then hamstring curls or nordics as the other one"* (Sam, 2026-08-26) · **ONE RDL VARIANT PER DAY — THE SINGLE-LEG HIP ROW YIELDS TO THE HAMSTRING PAIR.**
+Why it was structural: R-093 pins the in-season hinge to RDLs, the :227 fill
+order also owes a single-leg hip row, and R-084's pool is deliberately one
+exercise — Single-Leg RDL. Measured pre-fix over 12 worlds: 6 shipped the
+pair, up to 8 colliding days per program. The build: Nordic Lower / Hamstring
+Curl join the single-leg hip slot's vocabulary (derived from the pool's own
+hamstring group), and when the day already carries an RDL-family lift the
+slot's candidates drop the family — hamstring row takes the spot. The HINGE
+never yields (block stability). Preference, not a veto: a kit with neither
+hamstring row keeps the repeated variant rather than an empty slot (R-080's
+fallback shape). R-084's "meant to repeat" stands where no collision exists —
+Single-Leg RDL still owns its day in worlds that never pair it.
+Sam also re-ruled the same day: RDLs stay on team nights, dose-trimmed
+("leave RDL's" — R-226 unchanged).
+**Search words:** RDL, Single-Leg RDL, nordic, hamstring curl, same session,
+double up, hinge, single leg hip, pairing.
+· `WORKING` — composeWeek family guard + sessionSlotCoverage vocabulary;
+test:rdl-family 7/0 in the chain (3 previously-colliding worlds generated
+live; replaced-not-lost and survives-where-legal both pinned).
