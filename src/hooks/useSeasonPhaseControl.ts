@@ -17,6 +17,7 @@ import { todayISOLocal } from '../utils/appDate';
 import { logger } from '../utils/logger';
 import {
   NEXT_PHASE,
+  PHASE_SHIFT_MIN_DISPLAY_MS,
   WEEK_DAYS,
   type PhaseShiftStep,
 } from '../screens/home/homeScreenConstants';
@@ -149,6 +150,7 @@ export function useSeasonPhaseControl() {
   };
 
   const execute = async () => {
+    const startedAt = Date.now();
     beginRebuildNotice();
     setStep('building');
     const interactiveStep: PhaseShiftStep = targetPhase === 'In-season'
@@ -190,8 +192,12 @@ export function useSeasonPhaseControl() {
         setStep(interactiveStep);
         return;
       }
-      setVisible(false);
-      setStep('confirm');
+      const elapsed = Date.now() - startedAt;
+      const wait = Math.max(0, PHASE_SHIFT_MIN_DISPLAY_MS - elapsed);
+      if (wait > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, wait));
+      }
+      setStep('complete');
     } catch (error: any) {
       const refusal = classifyProgramMutationRefusal({ error });
       logger.error('[PhaseShift] failed:', error?.diagnostic || error?.message || error);

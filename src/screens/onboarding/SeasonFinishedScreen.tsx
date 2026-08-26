@@ -17,6 +17,7 @@ import { borderRadius, spacing } from '../../theme/spacing';
 import type { OnboardingStackParamList } from '../../types/navigation';
 import { todayISOLocal } from '../../utils/appDate';
 import { useProfileStore } from '../../store/profileStore';
+import { signedCopy } from '../../rules/signedCopy';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'SeasonFinished'>;
 
@@ -60,7 +61,7 @@ export const SeasonFinishedScreen: React.FC<Props> = ({ navigation }) => {
     >
       <View style={styles.titleSection}>
         <Text variant="h1" color={colors.text.primary} style={styles.title}>
-          When did your season finish?
+          {signedCopy('phase.offseason.finish.title')}
         </Text>
         <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
           This helps LFA start you at the right point of your off-season.

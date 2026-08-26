@@ -89,3 +89,79 @@ the exact behavior cell fail at 10/1; restoring it returned 11/0.
 - Physical-iPhone Release acceptance.
 - External YouTube playback, which remains YouTube-owned.
 - VoiceOver traversal inside the YouTube player.
+
+---
+
+# STATUS — Season phase rebuild and Off-season entry (`weeksave`, 2026-08-26)
+
+## Owner request
+
+Every in-app season-phase change should show a deliberate ten-second build
+state with `Takes up to 20 seconds`, then an explicit ready screen rather than
+silently closing. Entering Off-season must ask with the white title `Select the
+date of your last game`, use the Going Away calendar rather than typed date
+fields, use that answer so a late change begins at the correct Off-season week,
+and never ask for team-training days.
+
+## Options compared
+
+1. Change only My Status, where the finish-date question already existed, and
+   add separate timer/success markup to each phase editor.
+2. Complete the same phase-change contract in both live editors, retain their
+   established transaction owners, and share the timing constant plus the
+   existing build presentation and one completion component.
+
+Option 2 landed. It removes the duplicate presentation decision without
+rewriting either transaction architecture. Both editors now use the same signed
+title, shared calendar owner and validator, and Profile's existing one setup
+decider carries the date while retiring team and game anchors.
+
+## Test-first and liveness receipt
+
+My Status began with three named reds: no ten-second minimum, the old one-minute
+copy and no explicit completion state. Profile then began with four named reds:
+no finish-date step, no team-day retirement, no date in its patch and no shared
+phase-change build/completion treatment.
+
+After the change, `test:profile-reset-ui` is 187/187. Its executed Profile
+decision proves a 2026-08-10 finish date survives in the patch and that two
+stored team days plus the game anchor are cleared.
+
+Mutation checks:
+
+- Changing the shared minimum from 10,000 ms to zero made the duration cell red.
+- Changing Profile's team-anchor retirement from Off-season to In-season made
+  both the source-routing and executed decision cells red.
+
+Both subjects were restored and the complete guard returned green.
+
+## Verification
+
+- TypeScript: green.
+- `test:profile-reset-ui`: 187/187, plus the chained LFA wordmark 15/15.
+- `test:onboarding-presentation`: 107/107; the same title and calendar owner
+  are used during first setup without typed Day / Month / Year fields.
+- `test:offseason-subphase-policy`: 35/35.
+- `test:season-finish-date`: 12/12, including a mid-Off-season signup deriving
+  Phase Week 4 and real generation consuming the exact date.
+- `test:signed-copy-extraction`: 7/7.
+- iPhone 17 Pro simulator, iOS 26.3: the deterministic My Status flow passed
+  end to end. It entered Off-season from In-season, displayed the exact white
+  `Select the date of your last game` title and shared calendar, proved Team
+  training absent before and after it, showed the 20-second copy, reached the
+  ready screen, stayed for Done and returned to My Status with Off-season
+  displayed. The earlier Profile route also completed through finish date,
+  build, ready and Done. Both screenshots were visually inspected.
+- `test:phase-shift-atomicity`, the later half of `test:phase-clock`, and
+  `test:phase-skew-repair` still stop in their old generated fixtures because
+  those fixtures do not supply the now-required gender/profile fields.
+- Registry baselines remain inherited red: rulings 6/2, laws 11/3, and copy
+  binding 8/1 on three stale proposed strings. This unit added no new registry
+  red.
+
+## NOT COVERED
+
+- Physical-iPhone Release acceptance.
+- Exact frame timing if the app is backgrounded during the ten-second hold.
+- VoiceOver announcement order and locale-specific calendar presentation.
+- Editing only the finish date while already inside Off-season.

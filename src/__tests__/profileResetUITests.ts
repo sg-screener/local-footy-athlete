@@ -26,6 +26,7 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../utils/resetCoach';
+import { decideProfileSetupChange } from '../rules/profileSetupChange';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -103,6 +104,21 @@ section('[0] Season phase shift day-grid geometry');
 // empty string — which is why it checks the region was FOUND first.
 const phaseSheetSource = fs.readFileSync(
   path.resolve(__dirname, '..', 'components', 'SeasonPhaseShiftSheet.tsx'), 'utf8');
+const phaseControlSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'hooks', 'useSeasonPhaseControl.ts'), 'utf8');
+const rebuildSheetSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'RebuildSheet.tsx'), 'utf8');
+const projectionCopySource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'rules', 'projectionCopy.ts'), 'utf8');
+const profileSetupRuleSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'rules', 'profileSetupChange.ts'), 'utf8');
+const seasonFinishDateSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'season', 'SeasonFinishDateFields.tsx'), 'utf8');
+const dateCalendarSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'calendar', 'DateCalendarPicker.tsx'), 'utf8');
+const phaseExecuteAt = phaseControlSource.indexOf('const execute = async () => {');
+const phaseAdvanceAt = phaseControlSource.indexOf('const advance = async () => {', phaseExecuteAt);
+const phaseExecuteRegion = phaseControlSource.slice(phaseExecuteAt, phaseAdvanceAt);
 const phaseSheetAt = phaseSheetSource.indexOf('export function SeasonPhaseShiftSheet(');
 // RE-AIMED 2026-08-12. The end anchor was `interface BuildingStateProps`, and
 // `BuildingState` MOVED to `components/RebuildSheet` with SEAT_INBOX item 8 —
@@ -133,12 +149,61 @@ ok(
 ok(
   'entering Off-season asks for the finish date before availability',
   /step === 'seasonFinish'/.test(phaseSheet)
-    && /When did your season finish\?/.test(phaseSheet)
+    && /signedCopy\('phase\.offseason\.finish\.title'\)/.test(phaseSheet)
+    && /text: 'Select the date of your last game'/.test(projectionCopySource)
     && /SeasonFinishDateFields/.test(phaseSheet)
     && /I'm not sure/.test(phaseSheet)
     && /targetPhase === 'Off-season' \? 'seasonFinish' : 'availability'/.test(
-      fs.readFileSync(path.resolve(__dirname, '..', 'hooks', 'useSeasonPhaseControl.ts'), 'utf8'),
+      phaseControlSource,
     ),
+);
+ok(
+  'the season-finish answer uses the same calendar owner as Away, with no typed year field',
+  /DateCalendarPicker/.test(seasonFinishDateSource)
+    && /maxISO=\{todayISOLocal\(\)\}/.test(seasonFinishDateSource)
+    && /selectedISO=/.test(seasonFinishDateSource)
+    && !/AppTextInput/.test(seasonFinishDateSource)
+    && !/label: 'Year'/.test(seasonFinishDateSource)
+    && /export function DateCalendarPicker/.test(dateCalendarSource)
+    && /<DateCalendarPicker/.test(homeV2),
+  'the phase editor must not make the athlete type Day / Month / Year beside a second calendar implementation',
+);
+ok(
+  'Off-season carries that finish date into the rebuild and skips team-training questions',
+  /seasonFinishedOn:\s*targetPhase === 'Off-season' \? pendingSeasonFinishedOn : undefined/.test(
+    phaseControlSource,
+  )
+    && /if \(targetPhase === 'Off-season'\) await execute\(\);\s*else setStep\('teamDays'\)/.test(
+      phaseControlSource,
+    ),
+  'a late phase change must retain the real finish date and must not route Off-season through teamDays',
+);
+ok(
+  'a successful phase shift holds the build screen for ten seconds',
+  /export const PHASE_SHIFT_MIN_DISPLAY_MS = 10_000/.test(homeConstants)
+    && /PHASE_SHIFT_MIN_DISPLAY_MS/.test(phaseControlSource)
+    && /Math\.max\(0, PHASE_SHIFT_MIN_DISPLAY_MS - elapsed\)/.test(phaseControlSource)
+    && /setStep\('complete'\)/.test(phaseControlSource),
+);
+ok(
+  'phase building says it can take up to twenty seconds',
+  /durationText=\{signedCopy\('phase\.shift\.build\.duration'\)\}/.test(phaseSheet)
+    && /durationText\?: string/.test(rebuildSheetSource)
+    && /text: 'Takes up to 20 seconds'/.test(projectionCopySource),
+);
+ok(
+  'success stays on an explicit completion screen until the athlete closes it',
+  phaseExecuteAt > 0
+    && phaseAdvanceAt > phaseExecuteAt
+    && phaseExecuteRegion.length > 1000
+    && /\| 'complete'/.test(homeConstants)
+    && /step === 'complete'/.test(phaseSheet)
+    && /testID="phase-shift-complete"/.test(phaseSheet)
+    && /signedCopy\('phase\.shift\.complete\.title'\)/.test(phaseSheet)
+    && /signedCopy\('phase\.shift\.complete\.body'\)/.test(phaseSheet)
+    && /signedCopy\('phase\.shift\.complete\.action'\)/.test(phaseSheet)
+    && !/setVisible\(false\)/.test(phaseExecuteRegion),
+  'success may not silently close the sheet and snap back to the previous screen',
 );
 ok(
   'seven day chips wrap as four then three, centred rather than six plus one',
@@ -335,7 +400,7 @@ ok(
     && /programDetailsSaved/.test(src)
     && /setPendingSeasonPhase\(draftSeasonPhase\)/.test(src)
     && /setPendingPreferredDays\(sortDays\(draftPreferredDays\)\)/.test(src)
-    && /setPendingTeamDays\(sortDays\(draftTeamDays\)\)/.test(src),
+    && /setPendingTeamDays\(\s*draftSeasonPhase === 'Off-season' \? \[\] : sortDays\(draftTeamDays\)/.test(src),
 );
 ok(
   'program details cancel resets drafts without applying pending setup',
@@ -369,6 +434,78 @@ ok(
 ok(
   'usual game day row is shown only in-season',
   /currentPhase === 'In-season' \? \([\s\S]*label="Usual game day"/.test(src),
+);
+ok(
+  'Profile phase editing also asks for the finish date when entering Off-season',
+  /\| 'programSeasonFinish'/.test(src)
+    && /step === 'programSeasonFinish'/.test(src)
+    && /signedCopy\('phase\.offseason\.finish\.title'\)/.test(src)
+    && /SeasonFinishDateFields/.test(src)
+    && /draftSeasonPhase === 'Off-season'[\s\S]{0,160}'programSeasonFinish'/.test(src),
+);
+ok(
+  'Profile Off-season editing skips team-training days and clears their stored anchors',
+  /draftSeasonPhase === 'Off-season'[\s\S]{0,220}onSaveProgramDetails\(\)[\s\S]{0,140}programTeamDays/.test(src)
+    && /selection\.seasonPhase === 'Off-season'[\s\S]{0,300}teamTrainingDays = \[\]/.test(
+      profileSetupRuleSource,
+    ),
+);
+ok(
+  'Profile carries the finish date into the same phase-changing patch',
+  /seasonFinishedOn:\s*pendingSeasonFinishedOn/.test(src)
+    && /selection\.seasonFinishedOn !== undefined[\s\S]{0,200}patch\.seasonFinishedOn/.test(
+      profileSetupRuleSource,
+    ),
+);
+ok(
+  'Profile phase changes use the same ten-second build and explicit completion experience',
+  /PHASE_SHIFT_MIN_DISPLAY_MS/.test(src)
+    && /setupUpdateIsPhaseShift/.test(src)
+    && /setSetupPageStep\('complete'\)/.test(src)
+    && /testID="profile-phase-shift-complete"/.test(src)
+    && /<BuildingState/.test(src)
+    && /<BuildCompleteState/.test(src),
+);
+const profileOffSeasonDecision = decideProfileSetupChange({
+  stored: {
+    firstName: 'Sam',
+    seasonPhase: 'In-season',
+    seasonFinishedOn: undefined,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    trainingDaysPerWeek: 3,
+    trainingDaysUnsure: false,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    teamTrainingDaysPerWeek: 2,
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+  } as never,
+  ownedPhase: 'In-season',
+  storedPosition: null,
+  lfaDayCountNeedsSync: false,
+  selection: {
+    name: 'Sam',
+    position: null,
+    experience: null,
+    twoKmSeconds: null,
+    twoKmAnswer: null,
+    seasonPhase: 'Off-season',
+    seasonFinishedOn: '2026-08-10',
+    preferredDays: ['Monday', 'Wednesday', 'Friday'],
+    teamDays: ['Tuesday', 'Thursday'],
+    gameDay: null,
+  },
+});
+ok(
+  'the Profile decider carries the real finish date into Off-season',
+  profileOffSeasonDecision.patch.seasonFinishedOn === '2026-08-10',
+);
+ok(
+  'the Profile decider retires team and game anchors when Off-season takes ownership',
+  Array.isArray(profileOffSeasonDecision.patch.teamTrainingDays)
+    && profileOffSeasonDecision.patch.teamTrainingDays.length === 0
+    && profileOffSeasonDecision.patch.teamTrainingDaysPerWeek === 0
+    && profileOffSeasonDecision.patch.usualGameDay === undefined
+    && profileOffSeasonDecision.patch.gameDay === undefined,
 );
 // The six assertions that used to sit here spelled out, in regex, the exact
 // shape of a `buildSetupPatch` closure inside ProfileScreen. That closure is

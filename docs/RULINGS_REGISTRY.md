@@ -6378,3 +6378,31 @@ external YouTube fallback remains YouTube-owned and is unchanged.
 player mute, no autoplay.
 · `WORKING` — `test:video-modal-fill` pins JavaScript API enablement, the
 on-ready mute command and the absence of autoplay.
+
+**R-247** · *"When changing season phase there should be a 10 sec build screen
+similiar to the 20 sec onboarding fake pause and then some sort of completion
+screen"*; *"the copy should say ... 'takes up to 20 seconds'"*; *"off season
+should STOP ... ASKING FOR TEAM TRAINING DAYS"*; *"EDITING INTO OFF SEASON FROM
+INSIDE THE APP SHOULD STILL ASK WHEN LAST GAME WAS TOO"* (Sam, 2026-08-26,
+season-phase change review) · **A PHASE CHANGE FEELS DELIBERATE, AND OFF-SEASON
+STARTS FROM THE ATHLETE'S REAL FINISH DATE.**
+Every in-app season-phase change holds the rebuild state for at least ten
+seconds, says `Takes up to 20 seconds`, and then remains on an explicit
+`Your program is ready` screen until the athlete taps Done. Entering Off-season
+asks with the white title `Select the date of your last game` before availability
+on both My Status and Profile setup. That answer uses the shared Going Away
+calendar rather than separate Day / Month / Year fields. The exact date feeds
+the canonical phase clock, so an athlete changing
+two weeks late begins two weeks into Off-season rather than restarting at Week
+1. `I'm not sure` remains an explicit fallback. Off-season never asks for team
+training days and clears any stored team-training and game-day anchors as part
+of the same accepted phase-change patch.
+**Search words:** season phase build, ten seconds, takes up to 20 seconds,
+program ready, Off-season finish date, last game, team training days, late
+phase change, Profile setup, My Status.
+· `WORKING` — `test:profile-reset-ui` guards both live entry points, the shared
+timing/copy/completion owners, the Off-season routing and the saved Profile
+patch; `test:phase-clock` guards exact-date phase-week derivation. A deterministic
+iPhone 17 Pro simulator flow displayed the exact white title and shared calendar,
+then completed My Status → Off-season → finish date → availability → build →
+ready and proved the team-training question absent.

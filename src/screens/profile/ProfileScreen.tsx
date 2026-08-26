@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motivationGoalLabel, resolveMotivation } from '../../rules/motivationGoals';
 import {
-  ActivityIndicator,
   Animated,
   View,
   ScrollView,
@@ -35,7 +34,12 @@ import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
 import { Button as V2Button, SheetDescription, SheetHeader } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
-import { WEEK_DAYS, DAY_SHORT, REBUILD_MSG_INTERVAL_MS } from '../home/homeScreenConstants';
+import {
+  WEEK_DAYS,
+  DAY_SHORT,
+  PHASE_SHIFT_MIN_DISPLAY_MS,
+  REBUILD_MSG_INTERVAL_MS,
+} from '../home/homeScreenConstants';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { logger } from '../../utils/logger';
 import {
@@ -54,6 +58,15 @@ import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { EquipmentEditorSheet } from './EquipmentEditorSheet';
 import { formatEquipmentProfileSummary } from '../../rules/equipmentVocabulary';
+import { signedCopy } from '../../rules/signedCopy';
+import { BuildingState, BuildCompleteState } from '../../components/RebuildSheet';
+import {
+  EMPTY_SEASON_FINISH_DATE,
+  SeasonFinishDateFields,
+  seasonFinishDateDraft,
+  type SeasonFinishDateDraft,
+} from '../../components/season/SeasonFinishDateFields';
+import { validateSeasonFinishDateParts } from '../../rules/seasonPhaseClock';
 
 type SetupPageStep =
   | 'overview'
@@ -62,11 +75,13 @@ type SetupPageStep =
   | 'playerExperience'
   | 'playerTimeTrial'
   | 'programPhase'
+  | 'programSeasonFinish'
   | 'programLfaDays'
   | 'programTeamDays'
   | 'programGameDay'
   | 'confirm'
-  | 'building';
+  | 'building'
+  | 'complete';
 
 const SEASON_PHASE_OPTIONS: SeasonPhase[] = ['Off-season', 'Pre-season', 'In-season'];
 const EXPERIENCE_OPTIONS: { id: ExperienceLevel; label: string }[] = [
@@ -214,10 +229,18 @@ export default function ProfileScreen() {
   const [draftPreferredDays, setDraftPreferredDays] = useState<DayOfWeek[]>([]);
   const [draftTeamDays, setDraftTeamDays] = useState<DayOfWeek[]>([]);
   const [draftGameDay, setDraftGameDay] = useState<DayOfWeek | null>(null);
+  const [pendingSeasonFinishedOn, setPendingSeasonFinishedOn] =
+    useState<string | null | undefined>(onboardingData.seasonFinishedOn);
+  const [draftSeasonFinishDate, setDraftSeasonFinishDate] = useState<SeasonFinishDateDraft>(
+    seasonFinishDateDraft(onboardingData.seasonFinishedOn),
+  );
+  const [draftSeasonFinishedOn, setDraftSeasonFinishedOn] =
+    useState<string | null | undefined>(onboardingData.seasonFinishedOn);
   const [programDetailsSaved, setProgramDetailsSaved] = useState(false);
   const [setupUpdateError, setSetupUpdateError] = useState<string | null>(null);
   const [isSetupUpdating, setIsSetupUpdating] = useState(false);
   const [setupUpdateMsgIdx, setSetupUpdateMsgIdx] = useState(0);
+  const [setupUpdateIsPhaseShift, setSetupUpdateIsPhaseShift] = useState(false);
   const setupUpdateMsgOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -293,6 +316,8 @@ export default function ProfileScreen() {
     setDraftPreferredDays(pendingPreferredDays);
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
+    setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
+    setDraftSeasonFinishedOn(pendingSeasonFinishedOn);
     setSetupUpdateError(null);
     setSetupPageStep('programPhase');
   };
@@ -318,10 +343,13 @@ export default function ProfileScreen() {
     setPendingPreferredDays(currentPreferredDays);
     setPendingTeamDays(currentTeamDays);
     setPendingGameDay(currentGameDay);
+    setPendingSeasonFinishedOn(onboardingData.seasonFinishedOn);
     setDraftSeasonPhase(currentSeasonPhase);
     setDraftPreferredDays(currentPreferredDays);
     setDraftTeamDays(currentTeamDays);
     setDraftGameDay(currentGameDay);
+    setDraftSeasonFinishDate(seasonFinishDateDraft(onboardingData.seasonFinishedOn));
+    setDraftSeasonFinishedOn(onboardingData.seasonFinishedOn);
     setProgramDetailsSaved(false);
     setSetupUpdateError(null);
     setSetupPageStep('overview');
@@ -370,6 +398,7 @@ export default function ProfileScreen() {
       twoKmSeconds: pendingTwoKm?.seconds ?? null,
       twoKmAnswer: pendingTwoKm,
       seasonPhase: pendingSeasonPhase,
+      seasonFinishedOn: pendingSeasonFinishedOn,
       preferredDays: pendingPreferredDays,
       teamDays: pendingTeamDays,
       gameDay: pendingGameDay,
@@ -388,6 +417,7 @@ export default function ProfileScreen() {
     setSetupPageVisible(false);
     setSetupPageStep('overview');
     setSetupUpdateError(null);
+    setSetupUpdateIsPhaseShift(false);
   };
 
   const goBackInSetupPage = () => {
@@ -414,6 +444,14 @@ export default function ProfileScreen() {
       return;
     }
     if (setupPageStep === 'programLfaDays') {
+      setSetupPageStep(
+        draftSeasonPhase === 'Off-season' && pendingSeasonPhase !== 'Off-season'
+          ? 'programSeasonFinish'
+          : 'programPhase',
+      );
+      return;
+    }
+    if (setupPageStep === 'programSeasonFinish') {
       setSetupPageStep('programPhase');
       return;
     }
@@ -438,6 +476,8 @@ export default function ProfileScreen() {
     setDraftPreferredDays(pendingPreferredDays);
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
+    setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
+    setDraftSeasonFinishedOn(pendingSeasonFinishedOn);
     setSetupUpdateError(null);
     setSetupPageStep('overview');
   };
@@ -505,8 +545,13 @@ export default function ProfileScreen() {
 
     setPendingSeasonPhase(draftSeasonPhase);
     setPendingPreferredDays(sortDays(draftPreferredDays));
-    setPendingTeamDays(sortDays(draftTeamDays));
+    setPendingTeamDays(
+      draftSeasonPhase === 'Off-season' ? [] : sortDays(draftTeamDays),
+    );
     setPendingGameDay(draftSeasonPhase === 'In-season' ? draftGameDay : null);
+    setPendingSeasonFinishedOn(
+      draftSeasonPhase === 'Off-season' ? draftSeasonFinishedOn : pendingSeasonFinishedOn,
+    );
     setProgramDetailsSaved(true);
     setSetupUpdateError(null);
     setSetupPageStep('overview');
@@ -527,14 +572,47 @@ export default function ProfileScreen() {
     );
   };
 
+  const selectDraftSeasonPhase = (phase: SeasonPhase) => {
+    setDraftSeasonPhase(phase);
+    if (phase === 'Off-season' && pendingSeasonPhase !== 'Off-season') {
+      setDraftSeasonFinishDate({ ...EMPTY_SEASON_FINISH_DATE });
+      setDraftSeasonFinishedOn(undefined);
+    }
+  };
+
+  const changeDraftSeasonFinishDate = (value: SeasonFinishDateDraft) => {
+    setDraftSeasonFinishDate(value);
+    setDraftSeasonFinishedOn(undefined);
+  };
+
+  const continueFromSeasonFinish = () => {
+    const validation = validateSeasonFinishDateParts(
+      draftSeasonFinishDate.day,
+      draftSeasonFinishDate.month,
+      draftSeasonFinishDate.year,
+      todayISOLocal(),
+    );
+    if (!validation.ok) return;
+    setDraftSeasonFinishedOn(validation.dateISO);
+    setSetupPageStep('programLfaDays');
+  };
+
+  const answerSeasonFinishNotSure = () => {
+    setDraftSeasonFinishedOn(null);
+    setSetupPageStep('programLfaDays');
+  };
+
   const executeSetupUpdate = async () => {
     if (!canUpdateSetup && !setupUpdateError) return;
     // The very same decision the button read. There is no second comparison
     // left that could produce an empty patch behind an enabled Save.
     const patch = setupDecision.patch;
+    const phaseIsChanging = patch.seasonPhase !== undefined;
+    const startedAt = Date.now();
     setSetupUpdateError(null);
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
+    setSetupUpdateIsPhaseShift(phaseIsChanging);
     setSetupPageStep('building');
     setIsSetupUpdating(true);
     try {
@@ -563,9 +641,18 @@ export default function ProfileScreen() {
         setSetupPageStep('confirm');
         return;
       }
-      setSetupPageVisible(false);
-      setSetupPageStep('overview');
       setProgramDetailsSaved(false);
+      if (phaseIsChanging) {
+        const elapsed = Date.now() - startedAt;
+        const wait = Math.max(0, PHASE_SHIFT_MIN_DISPLAY_MS - elapsed);
+        if (wait > 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, wait));
+        }
+        setSetupPageStep('complete');
+      } else {
+        setSetupPageVisible(false);
+        setSetupPageStep('overview');
+      }
     } catch (err: any) {
       logger.error('[profile-setup-update] rebuild_failed', err?.diagnostic || err?.message || err);
       setSetupUpdateError(classifyProgramMutationRefusal({ error: err }).userMessage);
@@ -766,6 +853,7 @@ export default function ProfileScreen() {
         draftPosition={draftPosition}
         draftExperience={draftExperience}
         draftSeasonPhase={draftSeasonPhase}
+        draftSeasonFinishDate={draftSeasonFinishDate}
         draftPreferredDays={draftPreferredDays}
         draftTeamDays={draftTeamDays}
         draftGameDay={draftGameDay}
@@ -776,6 +864,7 @@ export default function ProfileScreen() {
         blockedCopy={setupBlockedCopy}
         error={setupUpdateError}
         isUpdating={isSetupUpdating}
+        setupUpdateIsPhaseShift={setupUpdateIsPhaseShift}
         updateMsgIdx={setupUpdateMsgIdx}
         updateMsgOpacity={setupUpdateMsgOpacity}
         onClose={closeSetupPage}
@@ -784,7 +873,10 @@ export default function ProfileScreen() {
         onSetDraftName={setDraftName}
         onSetDraftPosition={setDraftPosition}
         onSetDraftExperience={setDraftExperience}
-        onSetDraftSeasonPhase={setDraftSeasonPhase}
+        onSetDraftSeasonPhase={selectDraftSeasonPhase}
+        onChangeSeasonFinishDate={changeDraftSeasonFinishDate}
+        onContinueSeasonFinish={continueFromSeasonFinish}
+        onAnswerSeasonFinishNotSure={answerSeasonFinishNotSure}
         draftTwoKmMinutes={draftTwoKmMinutes}
         draftTwoKmSeconds={draftTwoKmSeconds}
         draftTwoKmRefusal={draftTwoKmRefusals.time}
@@ -921,6 +1013,7 @@ interface SetupUpdatePageProps {
   draftTwoKmRefusal: string | null;
   draftTwoKmContinueDisabled: boolean;
   draftSeasonPhase: SeasonPhase;
+  draftSeasonFinishDate: SeasonFinishDateDraft;
   draftPreferredDays: DayOfWeek[];
   draftTeamDays: DayOfWeek[];
   draftGameDay: DayOfWeek | null;
@@ -932,6 +1025,7 @@ interface SetupUpdatePageProps {
   blockedCopy: string | null;
   error: string | null;
   isUpdating: boolean;
+  setupUpdateIsPhaseShift: boolean;
   updateMsgIdx: number;
   updateMsgOpacity: Animated.Value;
   onClose: () => void;
@@ -947,6 +1041,9 @@ interface SetupUpdatePageProps {
   /** Direct commit for "I haven't tested it", which no bound applies to. */
   onCommitTwoKm: (seconds: number | null) => void;
   onSetDraftSeasonPhase: (phase: SeasonPhase) => void;
+  onChangeSeasonFinishDate: (value: SeasonFinishDateDraft) => void;
+  onContinueSeasonFinish: () => void;
+  onAnswerSeasonFinishNotSure: () => void;
   onCancelPlayerDetails: () => void;
   onSavePlayerDetails: () => void;
   onToggleDraftPreferredDay: (day: DayOfWeek) => void;
@@ -976,6 +1073,7 @@ function SetupUpdatePage({
   draftTwoKmRefusal,
   draftTwoKmContinueDisabled,
   draftSeasonPhase,
+  draftSeasonFinishDate,
   draftPreferredDays,
   draftTeamDays,
   draftGameDay,
@@ -986,6 +1084,7 @@ function SetupUpdatePage({
   blockedCopy,
   error,
   isUpdating,
+  setupUpdateIsPhaseShift,
   updateMsgIdx,
   updateMsgOpacity,
   onClose,
@@ -999,6 +1098,9 @@ function SetupUpdatePage({
   onSaveTwoKm,
   onCommitTwoKm,
   onSetDraftSeasonPhase,
+  onChangeSeasonFinishDate,
+  onContinueSeasonFinish,
+  onAnswerSeasonFinishNotSure,
   onCancelPlayerDetails,
   onSavePlayerDetails,
   onToggleDraftPreferredDay,
@@ -1014,15 +1116,28 @@ function SetupUpdatePage({
   onConfirmUpdate,
 }: SetupUpdatePageProps) {
   const building = step === 'building' || isUpdating;
-  const showBack = !building && step !== 'overview';
+  const showBack = !building && step !== 'overview' && step !== 'complete';
   const preferredValid = preferredDays.length >= 1;
   const draftPreferredValid = draftPreferredDays.length >= 1;
   const draftGameDayValid = draftSeasonPhase !== 'In-season' || Boolean(draftGameDay);
 
   const content = building ? (
-    <SetupUpdateBuildingState
+    <BuildingState
+      title="Updating your program…"
       msgIdx={updateMsgIdx}
       msgOpacity={updateMsgOpacity}
+      messages={PROFILE_SETUP_UPDATE_MESSAGES}
+      durationText={setupUpdateIsPhaseShift
+        ? signedCopy('phase.shift.build.duration')
+        : undefined}
+    />
+  ) : step === 'complete' ? (
+    <BuildCompleteState
+      title={signedCopy('phase.shift.complete.title')}
+      body={signedCopy('phase.shift.complete.body')}
+      actionLabel={signedCopy('phase.shift.complete.action')}
+      onDone={onClose}
+      testID="profile-phase-shift-complete"
     />
   ) : step === 'playerName' ? (
     <>
@@ -1211,7 +1326,46 @@ function SetupUpdatePage({
       <V2Button
         label="Continue"
         size="lg"
-        onPress={() => onOpenStep('programLfaDays')}
+        onPress={() => onOpenStep(
+          draftSeasonPhase === 'Off-season' && currentPhase !== 'Off-season'
+            ? 'programSeasonFinish'
+            : 'programLfaDays',
+        )}
+      />
+      <V2Button
+        label="Cancel"
+        variant="secondary"
+        size="md"
+        onPress={onCancelProgramDetails}
+        style={styles.sheetSecondaryButton}
+      />
+    </>
+  ) : step === 'programSeasonFinish' ? (
+    <>
+      <SheetHeader
+        title="Off-season"
+        subtitle={signedCopy('phase.offseason.finish.title')}
+      />
+      <SheetDescription>
+        This helps LFA start you at the right point of your off-season.
+      </SheetDescription>
+      <SeasonFinishDateFields
+        value={draftSeasonFinishDate}
+        onChange={onChangeSeasonFinishDate}
+      />
+      <V2Button
+        label="Continue"
+        size="lg"
+        disabled={!draftSeasonFinishDate.day || !draftSeasonFinishDate.month || !draftSeasonFinishDate.year}
+        onPress={onContinueSeasonFinish}
+        style={{ marginTop: spacing.lg }}
+      />
+      <V2Button
+        label="I'm not sure"
+        variant="secondary"
+        size="md"
+        onPress={onAnswerSeasonFinishNotSure}
+        style={styles.sheetSecondaryButton}
       />
       <V2Button
         label="Cancel"
@@ -1236,10 +1390,16 @@ function SetupUpdatePage({
         Pick at least one day.
       </Text>
       <V2Button
-        label="Continue"
+        label={draftSeasonPhase === 'Off-season' ? 'Save program details' : 'Continue'}
         size="lg"
         disabled={!draftPreferredValid}
-        onPress={() => onOpenStep('programTeamDays')}
+        onPress={() => {
+          if (draftSeasonPhase === 'Off-season') {
+            onSaveProgramDetails();
+            return;
+          }
+          onOpenStep('programTeamDays');
+        }}
       />
       <V2Button
         label="Cancel"
@@ -1501,31 +1661,6 @@ function DayChipGrid({
           </SelectableTile>
         );
       })}
-    </View>
-  );
-}
-
-function SetupUpdateBuildingState({
-  msgIdx,
-  msgOpacity,
-}: {
-  msgIdx: number;
-  msgOpacity: Animated.Value;
-}) {
-  return (
-    <View style={styles.setupBuildingState}>
-      <ActivityIndicator
-        color={colors.accent.lime}
-        size="large"
-        style={styles.setupBuildingSpinner}
-      />
-      <SheetHeader title="Program setup" subtitle="Updating your program…" centered />
-      <Text style={styles.setupBuildingSubtext}>This can take up to 1 minute</Text>
-      <Animated.View style={[styles.setupBuildingMsgSlot, { opacity: msgOpacity }]}>
-        <Text style={styles.setupBuildingMsg} numberOfLines={1}>
-          {PROFILE_SETUP_UPDATE_MESSAGES[msgIdx]}
-        </Text>
-      </Animated.View>
     </View>
   );
 }
@@ -1914,41 +2049,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 19,
     marginBottom: spacing.md,
-  },
-  setupBuildingState: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  setupBuildingSpinner: {
-    marginBottom: spacing.md,
-  },
-  setupBuildingTitle: {
-    color: colors.text.primary,
-    fontSize: 19,
-    fontWeight: '700',
-    lineHeight: 25,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  setupBuildingSubtext: {
-    color: colors.text.tertiary,
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  setupBuildingMsg: {
-    color: colors.accent.lime,
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'center',
-    letterSpacing: 0.2,
-  },
-  setupBuildingMsgSlot: {
-    height: 20,
-    justifyContent: 'center',
-    alignSelf: 'stretch',
   },
   resetRow: {
     paddingVertical: spacing.md,

@@ -44,6 +44,7 @@ export const DAY_NUM_TO_NAME: DayOfWeek[] = [
  *
  * Order:
  *   confirm → [seasonFinish (Off-season)] → availability → [teamDays (non-Off-season)] → [gameDay (In-season)] → building
+ *   → complete
  *
  * `availability` re-asks "what days can you train?" before rebuild. Onboarding
  * may have happened months ago and the athlete's real schedule drifts, so we
@@ -57,7 +58,8 @@ export type PhaseShiftStep =
   | 'availability'
   | 'teamDays'
   | 'gameDay'
-  | 'building';
+  | 'building'
+  | 'complete';
 
 /** Next phase in the fixed transition order. */
 export const NEXT_PHASE: Record<SeasonPhase, SeasonPhase> = {
@@ -116,6 +118,9 @@ export const PHASE_SHIFT_MESSAGES = [
 
 /** Rotation interval for rebuild messages. */
 export const REBUILD_MSG_INTERVAL_MS = 2500;
+
+/** The deliberate minimum progress experience for any in-app phase change. */
+export const PHASE_SHIFT_MIN_DISPLAY_MS = 10_000;
 
 export type HomeQuickActionId =
   | 'missed_session'

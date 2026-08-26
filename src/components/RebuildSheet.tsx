@@ -33,17 +33,52 @@ export interface BuildingStateProps {
   msgIdx: number;
   msgOpacity: Animated.Value;
   messages: string[];
+  durationText?: string;
 }
 
-export function BuildingState({ title, msgIdx, msgOpacity, messages }: BuildingStateProps) {
+export function BuildingState({
+  title,
+  msgIdx,
+  msgOpacity,
+  messages,
+  durationText = 'This can take up to 1 minute',
+}: BuildingStateProps) {
   return (
     <View style={styles.building}>
       <ActivityIndicator size="large" color="#C8FF00" style={styles.buildingSpinner} />
       <SheetHeader title="Program" subtitle={title} centered />
-      <Text style={styles.sheetSubtext}>This can take up to 1 minute</Text>
+      <Text style={styles.sheetSubtext}>{durationText}</Text>
       <Animated.View style={{ opacity: msgOpacity }}>
         <Text style={styles.buildingMsg}>{messages[msgIdx]}</Text>
       </Animated.View>
+    </View>
+  );
+}
+
+export interface BuildCompleteStateProps {
+  title: string;
+  body: string;
+  actionLabel: string;
+  onDone: () => void;
+  testID: string;
+}
+
+/** One explicit ready state for rebuild flows that must not disappear silently. */
+export function BuildCompleteState({
+  title,
+  body,
+  actionLabel,
+  onDone,
+  testID,
+}: BuildCompleteStateProps) {
+  return (
+    <View style={styles.complete} testID={testID}>
+      <View style={styles.completeMark}>
+        <Text style={styles.completeTick}>✓</Text>
+      </View>
+      <SheetHeader title="Program" subtitle={title} centered />
+      <Text style={styles.completeBody}>{body}</Text>
+      <Button label={actionLabel} size="lg" onPress={onDone} />
     </View>
   );
 }
@@ -127,5 +162,17 @@ const styles = StyleSheet.create({
   buildingMsg: {
     color: '#C8FF00', fontSize: 14, fontWeight: '500',
     textAlign: 'center', minHeight: 20, letterSpacing: 0.2,
+  },
+  complete: {
+    alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.sm,
+  },
+  completeMark: {
+    width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#C8FF00', marginBottom: spacing.lg,
+  },
+  completeTick: { color: '#0C0C0C', fontSize: 30, lineHeight: 34, fontWeight: '800' },
+  completeBody: {
+    color: '#B0B0B0', fontSize: 14, lineHeight: 20, textAlign: 'center',
+    marginBottom: spacing.xl,
   },
 });

@@ -54,6 +54,8 @@ export interface ProfileSetupSelection {
   twoKmSeconds: number | null;
   twoKmAnswer: OnboardingData['twoKmTimeTrial'] | null;
   seasonPhase: SeasonPhase;
+  /** Exact answer collected when entering Off-season; null means not sure. */
+  seasonFinishedOn?: string | null;
   preferredDays: readonly DayOfWeek[];
   teamDays: readonly DayOfWeek[];
   gameDay: DayOfWeek | null;
@@ -125,6 +127,14 @@ export function decideProfileSetupChange(
   }
 
   if (
+    selection.seasonPhase === 'Off-season'
+    && selection.seasonFinishedOn !== undefined
+    && selection.seasonFinishedOn !== stored.seasonFinishedOn
+  ) {
+    patch.seasonFinishedOn = selection.seasonFinishedOn;
+  }
+
+  if (
     input.lfaDayCountNeedsSync ||
     !sameSetupDays(preferredDays, stored.preferredTrainingDays as DayOfWeek[] | undefined)
   ) {
@@ -133,7 +143,15 @@ export function decideProfileSetupChange(
     patch.trainingDaysUnsure = false;
   }
 
-  if (!sameSetupDays(teamDays, stored.teamTrainingDays as DayOfWeek[] | undefined)) {
+  if (selection.seasonPhase === 'Off-season') {
+    if (
+      (stored.teamTrainingDays?.length ?? 0) > 0
+      || (stored.teamTrainingDaysPerWeek ?? 0) > 0
+    ) {
+      patch.teamTrainingDays = [];
+      patch.teamTrainingDaysPerWeek = 0;
+    }
+  } else if (!sameSetupDays(teamDays, stored.teamTrainingDays as DayOfWeek[] | undefined)) {
     patch.teamTrainingDays = teamDays;
     patch.teamTrainingDaysPerWeek = teamDays.length;
   }

@@ -1399,6 +1399,36 @@ export function registerProjectionCopy(): void {
       text: 'Confirm phase',
     },
     {
+      id: 'phase.shift.build.duration',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-247: phase rebuild timing copy.',
+      text: 'Takes up to 20 seconds',
+    },
+    {
+      id: 'phase.offseason.finish.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-247: exact white calendar title.',
+      text: 'Select the date of your last game',
+    },
+    {
+      id: 'phase.shift.complete.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-247: phase rebuild completion.',
+      text: 'Your program is ready',
+    },
+    {
+      id: 'phase.shift.complete.body',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-247: phase rebuild completion.',
+      text: 'Your program has been rebuilt for your new season phase.',
+    },
+    {
+      id: 'phase.shift.complete.action',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26, R-247: explicit completion exit.',
+      text: 'Done',
+    },
+    {
       id: 'modifiers.strip.week',
       source: 'sam_ruling',
       provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam compared the built week '

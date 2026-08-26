@@ -118,7 +118,7 @@ console.log('\n[0ba] Off-season asks when the athlete finished');
   ok('choosing Off-season goes to the finish-date question',
     /phase\s*===\s*'Off-season'[\s\S]{0,160}navigate\('SeasonFinished'\)/.test(seasonPhase));
   ok('the finish-date screen asks the approved question and stores an exact date or not sure',
-    /When did your season finish\?/.test(screen)
+    /phase\.offseason\.finish\.title/.test(screen)
       && /This helps LFA start you at the right point of your off-season\./.test(screen)
       && /seasonFinishedOn/.test(screen)
       && /I'm not sure/.test(screen));

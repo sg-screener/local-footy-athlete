@@ -27,6 +27,7 @@ import {
 } from '../../components/icons/SectionIcon';
 import { SessionChangeHub } from '../../components/SessionChangeHub';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
+import { DateCalendarPicker } from '../../components/calendar/DateCalendarPicker';
 import { ClubTrainingFeedbackPanel, GameSessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
@@ -54,9 +55,7 @@ import {
 } from './BlockBoundaryCards';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import {
-  MONTH_NAMES,
   dayOfMonthLabel,
-  dayOfWeekForISODate,
   shortDayMonthLabel,
   todayISOLocal,
 } from '../../utils/appDate';
@@ -4224,7 +4223,7 @@ function AwayFlowBody({ visible, kitSpan, onApplyKit, onKitBack, onClose, onDone
             <SheetDescription>
               Pick the day you leave — any day from today.
             </SheetDescription>
-            <AwayReturnCalendar
+            <DateCalendarPicker
               minISO={todayISO}
               onPick={setLeaveISO}
               testIDPrefix="home-away-leave"
@@ -4239,7 +4238,7 @@ function AwayFlowBody({ visible, kitSpan, onApplyKit, onKitBack, onClose, onDone
               Leaving {shortDayMonthLabel(leaveISO)}. Pick any day — it can be
               weeks away.
             </SheetDescription>
-            <AwayReturnCalendar
+            <DateCalendarPicker
               minISO={addDaysISO(leaveISO, 1)}
               onPick={setReturnISO}
             />
@@ -4304,120 +4303,6 @@ function AwayFlowBody({ visible, kitSpan, onApplyKit, onKitBack, onClose, onDone
 }
 
 /**
- * THE RETURN DATE HAS NO CEILING, SO IT CANNOT BE A LIST OF CHIPS.
- *
- * Sam: *"the return date can be any date in the future"*. A month grid with no
- * forward stop is the only shape that answers that honestly; a "next 14 days"
- * row would quietly reintroduce the bound this whole item exists to remove.
- * There is no date-picker dependency in this app, and this is the one screen
- * that needs one, so it is built from the same primitives as everything else.
- */
-function AwayReturnCalendar({
-  minISO,
-  onPick,
-  testIDPrefix = 'home-away-return',
-  initialMonthISO,
-}: {
-  minISO: string;
-  onPick: (dateISO: string) => void;
-  /**
-   * WHICH MONTH IT OPENS ON, when that is not the month of `minISO`.
-   *
-   * **FOUND ON GLASS 2026-08-13, on the first device run of the Christmas ask.**
-   * The grid anchored on `minISO` and nothing else. For AWAY that is right —
-   * the earliest return is the day after leaving, so it opens on the month the
-   * athlete is about to pick in. **For the Christmas question the floor is 30
-   * days BACK, so on 10 December it opened on NOVEMBER** and the athlete had to
-   * page forward to reach the answer. The floor and the opening month are two
-   * different questions and this is the second one.
-   */
-  initialMonthISO?: string;
-  /**
-   * IT HAS A SECOND DOOR NOW (item 31 part 5) — the Christmas-break sheet asks
-   * for two unbounded dates and this is already the app's only month grid.
-   * The prefix defaults to the away one so every existing testID is unchanged
-   * byte for byte; a second calendar would have been a second set of bugs.
-   */
-  testIDPrefix?: string;
-}) {
-  const [monthAnchorISO, setMonthAnchorISO] = useState(initialMonthISO ?? minISO);
-  const anchor = monthAnchorISO.slice(0, 10);
-  const year = Number(anchor.slice(0, 4));
-  const month = Number(anchor.slice(5, 7));
-  const firstOfMonth = `${anchor.slice(0, 7)}-01`;
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  // Monday-first, matching every other week shape in this app.
-  const leadingBlanks = (dayOfWeekForISODate(firstOfMonth) + 6) % 7;
-  const cells: (string | null)[] = [
-    ...Array.from({ length: leadingBlanks }, () => null),
-    ...Array.from({ length: daysInMonth }, (_unused, index) =>
-      `${anchor.slice(0, 7)}-${String(index + 1).padStart(2, '0')}`),
-  ];
-
-  return (
-    <View testID={`${testIDPrefix}-calendar`}>
-      <View style={styles.awayCalendarHead}>
-        <Pressable
-          onPress={() => setMonthAnchorISO(addDaysISO(firstOfMonth, -1))}
-          testID={`${testIDPrefix}-prev-month`}
-          accessibilityRole="button"
-          accessibilityLabel="Previous month"
-          style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
-        >
-          <Text style={styles.awayCalendarNavLabel}>‹</Text>
-        </Pressable>
-        <Text style={styles.awayCalendarMonth}>
-          {MONTH_NAMES[month - 1]} {year}
-        </Text>
-        <Pressable
-          onPress={() => setMonthAnchorISO(addDaysISO(`${anchor.slice(0, 7)}-${String(daysInMonth).padStart(2, '0')}`, 1))}
-          testID={`${testIDPrefix}-next-month`}
-          accessibilityRole="button"
-          accessibilityLabel="Next month"
-          style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
-        >
-          <Text style={styles.awayCalendarNavLabel}>›</Text>
-        </Pressable>
-      </View>
-      <View style={styles.awayCalendarGrid}>
-        {WEEK_DAYS.map((day) => (
-          <View key={`head-${day}`} style={styles.awayCalendarCell}>
-            <Text style={styles.awayCalendarWeekday}>{DAY_SHORT[day]}</Text>
-          </View>
-        ))}
-        {cells.map((dateISO, index) => {
-          if (dateISO === null) {
-            return <View key={`blank-${index}`} style={styles.awayCalendarCell} />;
-          }
-          const selectable = dateISO >= minISO;
-          return (
-            <Pressable
-              key={dateISO}
-              disabled={!selectable}
-              onPress={() => onPick(dateISO)}
-              testID={`${testIDPrefix}-${dateISO}`}
-              accessibilityRole="button"
-              accessibilityLabel={shortDayMonthLabel(dateISO)}
-              style={({ pressed }) => [
-                styles.awayCalendarCell,
-                pressed && selectable && { opacity: 0.6 },
-              ]}
-            >
-              <Text style={[
-                styles.awayCalendarDay,
-                !selectable && styles.awayCalendarDayDisabled,
-              ]}>
-                {Number(dateISO.slice(8, 10))}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-/**
  * THE CHRISTMAS-BREAK SHEET — SEAT_INBOX item 31 part 5, Sam 2026-08-13.
  *
  * **HIS SHAPE, VERBATIM:** *"an athlete can select when their last team
@@ -4470,7 +4355,7 @@ function ChristmasBreakSheet({ visible, ask, onClose, onDone }: ChristmasBreakSh
             ? 'Pick the last night your club trains. Everything after it comes off until you tell us it is back.'
             : 'Pick the first night your club trains again. It can be a day that has already passed.'}
         </SheetDescription>
-        <AwayReturnCalendar
+        <DateCalendarPicker
           minISO={minISO}
           // OPEN ON THE MONTH THE ANSWER IS IN, not on the floor's month.
           // December's answer is a day this month; January's is on or after the
@@ -4658,28 +4543,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
     marginVertical: spacing.sm,
   },
-  // ── ITEM 28: THE RETURN-DATE CALENDAR ──
-  // Seven columns, Monday first, same as every other week shape in the app.
-  awayCalendarHead: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: spacing.sm, marginBottom: spacing.xs,
-  },
-  awayCalendarNav: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  awayCalendarNavLabel: { color: '#FFFFFF', fontSize: 22, lineHeight: 24 },
-  awayCalendarMonth: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  awayCalendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  awayCalendarCell: {
-    width: `${100 / 7}%`, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  awayCalendarWeekday: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '600' },
-  awayCalendarDay: { color: '#FFFFFF', fontSize: 15 },
-  awayCalendarDayDisabled: { color: 'rgba(255,255,255,0.22)' },
-
   /* The strip's `text` column: it takes the rest of the row. */
   missedRow: { flex: 1, gap: 10 },
   /* ⚠ **THESE ARE `ModifiersStrip`'S OWN VALUES, TO THE NUMBER** — Sam,

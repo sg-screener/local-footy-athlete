@@ -1111,11 +1111,11 @@ run('Away is a week-shape control, and it asks leave, return, then equipment', (
   assert(sheetAt >= 0, 'the away flow body is gone; the entry opens nothing');
   assert(/awayMode \? \(/.test(home) || /if \(awayMode\) \{/.test(home),
     'the week-edit sheet no longer hosts the away flow in its own modal');
-  const calendarAt = home.indexOf('function AwayReturnCalendar', sheetAt);
-  assert(calendarAt >= 0 && calendarAt > sheetAt,
-    'the return-date calendar no longer follows the away sheet, so this cell '
-    + 'cannot bound the sheet region and would read to the end of the file');
-  const sheet = home.slice(sheetAt, calendarAt);
+  const sheetEnd = home.indexOf('interface ChristmasBreakSheetProps', sheetAt);
+  assert(sheetEnd >= 0 && sheetEnd > sheetAt,
+    'the Christmas sheet anchor after Away is gone, so this cell cannot bound '
+    + 'the Away region and would read to the end of the file');
+  const sheet = home.slice(sheetAt, sheetEnd);
   assert(/When do you leave\?/.test(sheet)
     && /When do you return\?/.test(sheet)
     && /Do you have your normal equipment\?/.test(sheet),
@@ -1142,10 +1142,15 @@ run('Away is a week-shape control, and it asks leave, return, then equipment', (
   // and reusing it is better than a second calendar with a second set of bugs.
   // What this cell actually cares about is that the return date is picked from an
   // UNBOUNDED month grid, which is the component's identity.
-  assert(/function AwayReturnCalendar/.test(home) && /<AwayReturnCalendar/.test(home),
+  const calendar = fs.readFileSync(
+    path.resolve(__dirname, '..', 'components', 'calendar', 'DateCalendarPicker.tsx'),
+    'utf8',
+  );
+  assert(/DateCalendarPicker/.test(home) && /<DateCalendarPicker/.test(sheet)
+    && /export function DateCalendarPicker/.test(calendar),
     'the unbounded return-date calendar is gone — a bounded picker is the exact '
     + 'defect item 28 exists to remove ("away for ten days" was unsayable)');
-  assert(/testIDPrefix = 'home-away-return'/.test(home),
+  assert(/testIDPrefix = 'home-away-return'/.test(calendar),
     'the away calendar no longer answers to its own testID prefix, so the flows '
     + 'and the explorer cannot find it');
 

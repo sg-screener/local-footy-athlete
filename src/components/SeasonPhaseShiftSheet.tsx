@@ -37,7 +37,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Text } from './common/Text';
 import { SelectableTile } from './common';
 import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
-import { BuildingState } from './RebuildSheet';
+import { BuildingState, BuildCompleteState } from './RebuildSheet';
 import { borderRadius, spacing } from '../theme/spacing';
 import {
   DAY_SHORT,
@@ -118,7 +118,7 @@ export function SeasonPhaseShiftSheet({
   // Back is meaningful on every interactive step except the first. Hide on
   // `confirm` (no previous step) and `building` (irreversible) to keep the
   // chrome honest — never show a control that would no-op.
-  const showBack = !building && step !== 'confirm';
+  const showBack = !building && step !== 'confirm' && step !== 'complete';
   // Availability minimum: reuse onboarding's "at least 1 day" baseline.
   // Stricter caps (e.g. enforcing `trainingDaysPerWeek`) would punish
   // athletes who legitimately need to drop a day mid-season — the engine
@@ -143,6 +143,15 @@ export function SeasonPhaseShiftSheet({
           msgIdx={msgIdx}
           msgOpacity={msgOpacity}
           messages={PHASE_SHIFT_MESSAGES}
+          durationText={signedCopy('phase.shift.build.duration')}
+        />
+      ) : step === 'complete' ? (
+        <BuildCompleteState
+          title={signedCopy('phase.shift.complete.title')}
+          body={signedCopy('phase.shift.complete.body')}
+          actionLabel={signedCopy('phase.shift.complete.action')}
+          onDone={onClose}
+          testID="phase-shift-complete"
         />
       ) : step === 'confirm' ? (
         <>
@@ -201,7 +210,10 @@ export function SeasonPhaseShiftSheet({
         </>
       ) : step === 'seasonFinish' ? (
         <>
-          <SheetHeader title="When did your season finish?" subtitle="Start at the right point" />
+          <SheetHeader
+            title="Off-season"
+            subtitle={signedCopy('phase.offseason.finish.title')}
+          />
           <SheetDescription>
             This helps LFA start you at the right point of your off-season.
           </SheetDescription>

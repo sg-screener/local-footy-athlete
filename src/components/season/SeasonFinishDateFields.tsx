@@ -1,9 +1,6 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { AppTextInput } from '../keyboard/AppTextInput';
-import { Text } from '../common/Text';
-import { colors } from '../../theme/colors';
-import { borderRadius, spacing } from '../../theme/spacing';
+import { DateCalendarPicker } from '../calendar/DateCalendarPicker';
+import { todayISOLocal } from '../../utils/appDate';
 
 export interface SeasonFinishDateDraft {
   day: string;
@@ -29,53 +26,21 @@ interface Props {
   onChange: (value: SeasonFinishDateDraft) => void;
 }
 
-/** One visual owner for the same DD / MM / YYYY fact on every entry surface. */
+/** One calendar owner for the same season-finish fact on every entry surface. */
 export function SeasonFinishDateFields({ value, onChange }: Props) {
-  const fields = [
-    { key: 'day' as const, label: 'Day', placeholder: '24', maxLength: 2 },
-    { key: 'month' as const, label: 'Month', placeholder: '8', maxLength: 2 },
-    { key: 'year' as const, label: 'Year', placeholder: '2026', maxLength: 4 },
-  ];
+  const selectedISO = /^\d{4}-\d{1,2}-\d{1,2}$/.test(
+    `${value.year}-${value.month}-${value.day}`,
+  )
+    ? `${value.year}-${value.month.padStart(2, '0')}-${value.day.padStart(2, '0')}`
+    : null;
 
   return (
-    <View style={styles.dateRow}>
-      {fields.map((field) => (
-        <View key={field.key} style={styles.dateField}>
-          <Text variant="bodySmall" color={colors.text.secondary} style={styles.dateLabel}>
-            {field.label}
-          </Text>
-          <AppTextInput
-            style={styles.dateInput}
-            value={value[field.key]}
-            onChangeText={(text) => onChange({
-              ...value,
-              [field.key]: text.replace(/\D/g, ''),
-            })}
-            placeholder={field.placeholder}
-            placeholderTextColor={colors.text.tertiary}
-            keyboardType="number-pad"
-            maxLength={field.maxLength}
-            textAlign="center"
-          />
-        </View>
-      ))}
-    </View>
+    <DateCalendarPicker
+      maxISO={todayISOLocal()}
+      initialMonthISO={selectedISO ?? todayISOLocal()}
+      selectedISO={selectedISO}
+      testIDPrefix="season-finish"
+      onPick={(dateISO) => onChange(seasonFinishDateDraft(dateISO))}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  dateRow: { flexDirection: 'row', gap: 10 },
-  dateField: { flex: 1, minWidth: 0 },
-  dateLabel: { marginBottom: spacing.sm },
-  dateInput: {
-    height: 58,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
-    backgroundColor: colors.surface.secondary,
-    color: colors.text.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-  },
-});
