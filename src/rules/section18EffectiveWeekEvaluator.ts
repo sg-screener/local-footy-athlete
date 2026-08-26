@@ -7,6 +7,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { isExplicitRestStub } from '../utils/workoutContent';
 import { classifyVisibleSession } from './sessionClassificationAdapter';
 import {
   emptyMainStrengthLedger,
@@ -234,13 +235,6 @@ function dateForDay(weekStart: string, dayOfWeek: number): string {
   const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   date.setDate(date.getDate() + offset);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function isExplicitRestStub(workout: Workout): boolean {
-  return workout.workoutType === 'Rest' &&
-    (workout.exercises ?? []).length === 0 &&
-    !workout.conditioningBlock &&
-    !workout.speedBlock;
 }
 
 function typedWorkoutActive(workout: Workout): boolean {

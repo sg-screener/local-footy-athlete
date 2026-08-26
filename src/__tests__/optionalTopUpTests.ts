@@ -36,7 +36,10 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import type { Workout } from '../types/domain';
 import { applyOptionalTopUps } from '../utils/optionalTopUpPlacement';
-import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import {
+  buildWorkoutsFromCoach,
+  type CoachGeneratedWorkoutInput,
+} from '../data/defaultProgram';
 import { BICEPS_POOL, DELTS_POOL, TRICEPS_POOL } from '../data/exercisePools';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -143,10 +146,10 @@ run('V1. IN-SESSION rows count — a strength day carrying prehab silences the n
   const covered = accessoryRegionsCovered([strengthDay]);
   assert(covered.size === 3,
     `a strength day with three prehab rows covered ${covered.size} regions`);
-  const placements = computeOptionalTopUps(baseInput([strengthDay]));
+  const placements = computeOptionalTopUps(baseInput([strengthDay]))
+    .filter((placement) => placement.type === 'accessories');
   assert(placements.length === 0,
-    'the top-up fired on a week that already covers three regions — it is a '
-    + 'default, not a top-up');
+    'the Accessories top-up fired on a week that already covers three regions');
 });
 
 run('V1. non-prehab rows do not count toward coverage', () => {
@@ -216,14 +219,13 @@ run('N2. one existing mobility session leaves room for exactly one more', () => 
     `a week with one mobility session produced ${placements.length} top-ups`);
 });
 
-run('N2. NEVER in-season or pre-season (`:104`)', () => {
+run('R-237. in-season and pre-season each offer one optional Mobility', () => {
   for (const seasonPhase of ['In-season', 'Pre-season'] as const) {
     const placements = computeOptionalTopUps(
       baseInput([workoutWith(1, ['Back Squat'])], { seasonPhase }),
     ).filter((placement) => placement.type === 'mobility');
-    assert(placements.length === 0,
-      `${seasonPhase} planned ${placements.length} mobility session(s). The Bible at `
-      + ':104 says chasing mobility outside the off-season risks injury.');
+    assert(placements.length === 1,
+      `${seasonPhase} planned ${placements.length} mobility session(s); R-237 offers one`);
   }
 });
 
@@ -260,18 +262,21 @@ run('CAP. never on the game day, never on G-1', () => {
     + 'session(s)');
 });
 
-run('CAP. never on G+1 — the Bible reserves it for complete rest or recovery', () => {
-  // NOT in the signed caps sheet, which named the game day and G-1 and stopped.
-  // `BIBLE_ANCHOR g_plus_1_rest_or_recovery` (§2, "Rules around G+1: complete rest
-  // or recovery") settles it: accessories are neither, so this is an anchor the
-  // sheet omitted rather than a cap being invented.
-  //
-  // The cost of the omission was real — see the comment on `dayIsAvailable`.
-  const placements = computeOptionalTopUps(
-    baseInput([workoutWith(1, ['Back Squat'])], { gameDayOfWeek: 0, candidateDays: [1] }),
-  );
-  assert(placements.length === 0,
-    `a week whose only free day is G+1 placed ${placements.length} session(s)`);
+run('CAP. G+1 permits recovery Mobility but never Accessories', () => {
+  const covered = workoutWith(2, [
+    GROIN_ADDUCTORS_POOL[0].name,
+    CALVES_POOL[0].name,
+    TRUNK_ANTI_ROTATION_POOL[0].name,
+  ]);
+  const placements = computeOptionalTopUps(baseInput([covered], {
+    gameDayOfWeek: 0,
+    candidateDays: [1],
+    equipmentFreeCandidateDays: [1],
+  }));
+  assert(placements.length === 1
+    && placements[0].type === 'mobility'
+    && placements[0].dayOfWeek === 1,
+  `G+1 produced ${JSON.stringify(placements)}; only recovery Mobility is legal`);
 });
 
 run('CAP. never on a day that already has a session', () => {
@@ -288,6 +293,19 @@ run('CAP. two top-ups never land on the same day', () => {
   const days = placements.map((placement) => placement.dayOfWeek);
   assert(new Set(days).size === days.length,
     `two top-ups landed on the same day: ${days.join(', ')}`);
+});
+
+run('R-237. Mobility may use a non-gym spare day; Accessories remain gym-only', () => {
+  const placements = computeOptionalTopUps(baseInput([workoutWith(1, ['Back Squat'])], {
+    candidateDays: [4],
+    equipmentFreeCandidateDays: [2, 4],
+  }));
+  const mobility = placements.find((placement) => placement.type === 'mobility');
+  const accessories = placements.find((placement) => placement.type === 'accessories');
+  assert(mobility?.dayOfWeek === 2,
+    `Mobility did not use the non-gym spare day: ${JSON.stringify(placements)}`);
+  assert(accessories?.dayOfWeek === 4,
+    `Accessories escaped the gym-day set: ${JSON.stringify(placements)}`);
 });
 
 run('CAP. SHRINK, never pad — fewer free days means fewer sessions', () => {
@@ -329,7 +347,9 @@ run('EVERY placement names the need that produced it', () => {
   );
   assert(placements.length > 0, 'nothing was placed, so this proves nothing');
   for (const placement of placements) {
-    assert(placement.need === 'accessory_coverage' || placement.need === 'offseason_mobility',
+    assert(placement.need === 'accessory_coverage'
+      || placement.need === 'spare_day_mobility'
+      || placement.need === 'offseason_mobility',
       `a placement carries no need: ${JSON.stringify(placement)}`);
   }
 });
@@ -370,9 +390,8 @@ const rowNames = (workout: Workout): string[] =>
 run('APPLY. a lacking week gains a composed Accessories session, drawn from the six pools', () => {
   const week = [workoutWith(1, ['Back Squat'])];
   const result = applied(week);
-  assert(result.workouts.length === 2,
-    `the week has ${result.workouts.length} sessions; one top-up was expected`);
-  const placed = result.workouts[1];
+  const placed = result.workouts.find((workout) => workout.composedOptionalKind === 'prehab');
+  assert(placed, `no Accessories session in ${result.workouts.length} workouts`);
   const strangers = rowNames(placed).filter((name) => !PREHAB_POOL_NAMES.has(name));
   assert(rowNames(placed).length > 0, 'the placed session has no rows at all');
   assert(strangers.length === 0,
@@ -410,7 +429,7 @@ run('APPLY. every placed session is VISIBLY OPTIONAL — one of the five conditi
   }
 });
 
-run('APPLY. the accepted week is never mutated — the top-up only APPENDS', () => {
+run('APPLY. the accepted real sessions are never mutated', () => {
   // The seam is the argument, and this is the half of it a test can see: the
   // sessions the contract accepted come out byte-identical, so nothing the pass
   // does can change what was accepted.
@@ -422,7 +441,7 @@ run('APPLY. the accepted week is never mutated — the top-up only APPENDS', () 
     'the accepted sessions came back changed');
 });
 
-run('APPLY. a week that lacks nothing gains nothing', () => {
+run('APPLY. covered Accessories do not suppress the one Mobility offer', () => {
   const covered = [workoutWith(1, [
     'Back Squat',
     GROIN_ADDUCTORS_POOL[0].name,
@@ -430,10 +449,56 @@ run('APPLY. a week that lacks nothing gains nothing', () => {
     CALVES_POOL[0].name,
   ])];
   const result = applied(covered);
-  assert(result.workouts.length === 1,
-    `${result.workouts.length - 1} session(s) placed on a week that lacked nothing — that `
-    + 'is a default, not a top-up');
-  assert(result.placements.length === 0, 'a placement was decided with nothing lacking');
+  assert(result.placements.length === 1 && result.placements[0].type === 'mobility',
+    `a covered week produced ${JSON.stringify(result.placements)}`);
+});
+
+run('APPLY. auto Mobility is bodyweight-only even when the athlete has full equipment', () => {
+  const equipmentByName = new Map(MOBILITY_POOL.map((entry) => [
+    canonicalExerciseName(entry.name), entry.equipment,
+  ]));
+  for (let week = 0; week < 28; week += 1) {
+    const monday = new Date('2026-07-27T12:00:00');
+    monday.setDate(monday.getDate() + week * 7);
+    const weekStartISO = monday.toISOString().slice(0, 10);
+    const result = applyOptionalTopUps({
+      workouts: [workoutWith(1, ['Back Squat'])],
+      seasonPhase: 'In-season',
+      athlete: DEFAULT_ATHLETE_CONTEXT,
+      microcycleId: `mc-topup-${week}`,
+      weekStartISO,
+      gameDayOfWeek: null,
+      candidateDays: ALL_DAYS,
+    });
+    const mobility = result.workouts.find((workout) =>
+      workout.composedOptionalKind === 'mobility');
+    assert(mobility, `no Mobility session was composed for ${weekStartISO}`);
+    const invalid = rowNames(mobility).filter((name) =>
+      !(equipmentByName.get(name) ?? []).every((requirement) =>
+        Array.isArray(requirement)
+          ? requirement.every((tag) => tag === 'bodyweight')
+          : requirement === 'bodyweight'));
+    assert(invalid.length === 0,
+      `${weekStartISO} auto Mobility included equipment-dependent rows: ${invalid.join(', ')}`);
+  }
+});
+
+run('APPLY. an optional offer replaces an explicit Rest shell on its day', () => {
+  const rest = {
+    ...workoutWith(3, []),
+    name: 'Rest',
+    workoutType: 'Rest',
+    sessionTier: 'recovery',
+  } as Workout;
+  const result = applied([workoutWith(1, ['Back Squat']), rest], {
+    candidateDays: [3],
+    equipmentFreeCandidateDays: [3],
+  });
+  assert(result.workouts.filter((workout) => workout.dayOfWeek === 3).length === 1,
+    `day 3 has ${result.workouts.filter((workout) => workout.dayOfWeek === 3).length} rows`);
+  assert(result.workouts.some((workout) =>
+    workout.dayOfWeek === 3 && workout.composedOptionalKind === 'mobility'),
+  'the Rest shell remained instead of the Mobility offer');
 });
 
 run('APPLY. every placement lands on the day the DECISION chose', () => {
@@ -488,9 +553,12 @@ const allocationProfile = {
   injuries: [],
 } as never;
 
-const builtFrom = (allocation: Record<string, unknown>): Workout | undefined =>
+const builtFrom = (
+  allocation: Record<string, unknown>,
+  coachWorkouts: CoachGeneratedWorkoutInput[] = [],
+): Workout | undefined =>
   buildWorkoutsFromCoach(
-    [],
+    coachWorkouts,
     'mc-composed',
     [allocation as never],
     allocationProfile,
@@ -559,7 +627,13 @@ run('COHERENCE. a day PROMOTED to required strength never composes prehab over i
     strengthPattern: 'lower_combined',
     // Deliberately stale — this is what a mutator that forgot to clear it leaves.
     composedOptionalKind: 'prehab',
-  });
+  }, [{
+    dayOfWeek: 3,
+    name: 'Lower Body Strength',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    exercises: [{ name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 5 }],
+  }]);
   assert(promoted, 'the promoted allocation built nothing');
   const names = (promoted.exercises ?? []).map((row) =>
     canonicalExerciseName((row as { exercise?: { name?: string } }).exercise?.name ?? ''));

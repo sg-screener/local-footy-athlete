@@ -25,6 +25,18 @@ export function hasMeaningfulWorkoutContent(
   return false;
 }
 
+/**
+ * An explicit empty Rest placeholder, as opposed to a recovery session that
+ * happens to carry a rest-class tier. Generated weeks persist these shells so
+ * every calendar day has a row; an optional offer may replace one without
+ * double-booking the day.
+ */
+export function isExplicitRestStub(
+  workout: Workout | null | undefined,
+): boolean {
+  return !!workout && workout.workoutType === 'Rest' && !hasMeaningfulWorkoutContent(workout);
+}
+
 export function shouldCollapseWorkoutToRest(
   workout: Workout | null | undefined,
 ): boolean {

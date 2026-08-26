@@ -1256,35 +1256,46 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     return topUp && entry.owner === 'rest_or_recovery' ? topUp : entry;
   });
 
-  // ── R-130 + R-236: THE G−1 OFFER — placed LAST, so "if no other sessions
-  // exist there" is checked against the finished week, not a draft of it ─────
+  // ── R-130 + R-236 + R-237: THE GENDERED OPTIONAL OFFER ─────────────────
   //
   // Sam, 2026-08-23: *"place primer as optional on g-1 if no other sessions
   // exist there - if multi game week = no primer unless they add it"*, and
   // 2026-08-26 (profiles audit F-B): *"men should be given optional gunshow
   // instead of optional primer"* — the male arm was the ledgered dead
   // branch; R-236 revives it as the GUNSHOW under the same placement rule.
-  // IN-SEASON and fixture-relative (no fixture, no G−1, no offer; a
-  // pre-season practice match deliberately gets none — widening that is a
-  // new ruling). A Monday game has no G−1 inside this Monday-first week, so
-  // it gets none rather than a reach into last week. The day's counted facts
-  // are untouched — owner, conditioning and flags all stay rest-class — so
-  // the demand tally below cannot move by construction; only the offer
-  // marker and the clause change.
-  const femaleG1PrimerDays = (() => {
-    if (inputs.phase !== 'In-season') return withRunning;
+  // A one-game in-season week preserves the signed G−1 placement. A no-game
+  // week in any phase may instead use ONE genuinely spare gym-access day: the
+  // core week has already been solved, so this offer cannot inflate its target.
+  // Multi-game weeks still receive no automatic offer. The day's counted facts
+  // remain rest-class by construction.
+  const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
-    if (fixtureDays.length !== 1) return withRunning;
-    const gameIdx = orderIndex(fixtureDays[0]);
-    if (gameIdx <= 0) return withRunning;
-    const g1Day = WEEK_ORDER[gameIdx - 1];
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
+    if (inputs.phase === 'In-season' && fixtureDays.length === 1) {
+      const gameIdx = orderIndex(fixtureDays[0]);
+      if (gameIdx <= 0) return withRunning;
+      const g1Day = WEEK_ORDER[gameIdx - 1];
+      return withRunning.map((entry) => (
+        entry.dayOfWeek === g1Day
+          && entry.owner === 'rest_or_recovery'
+          && !entry.clubTraining
+          && !entry.game
+          ? { ...entry, composedOptional: offer, clauseId: 'R-130' }
+          : entry
+      ));
+    }
+    if (fixtureDays.length !== 0) return withRunning;
+    const spareGymDay = [5, 3, ...WEEK_ORDER].find((day, index, order) =>
+      order.indexOf(day) === index
+        && inputs.gymAccessDays.includes(day)
+        && withRunning.some((entry) => entry.dayOfWeek === day
+          && entry.owner === 'rest_or_recovery'
+          && !entry.clubTraining
+          && !entry.game));
+    if (spareGymDay === undefined) return withRunning;
     return withRunning.map((entry) => (
-      entry.dayOfWeek === g1Day
-        && entry.owner === 'rest_or_recovery'
-        && !entry.clubTraining
-        && !entry.game
-        ? { ...entry, composedOptional: offer, clauseId: 'R-130' }
+      entry.dayOfWeek === spareGymDay
+        ? { ...entry, composedOptional: offer, clauseId: 'R-237' }
         : entry
     ));
   })();
@@ -1307,9 +1318,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // hard session but it is a second piece of conditioning, and Sam counts it:
   // *"Monday aerobic + Tuesday sprint + Tuesday hard conditioning + Saturday
   // game"* is four. Counting days rather than components lost it.
-  const appConditioningDays = femaleG1PrimerDays.filter((day) => day.conditioning !== null).length
-    + femaleG1PrimerDays.filter((day) => day.sprintComponent).length;
-  const runningDayCount = femaleG1PrimerDays.filter((day) => day.conditioning === 'running').length;
+  const appConditioningDays = withComposedOptional.filter((day) => day.conditioning !== null).length
+    + withComposedOptional.filter((day) => day.sprintComponent).length;
+  const runningDayCount = withComposedOptional.filter((day) => day.conditioning === 'running').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //
   // §3, Sprint/high-speed: *"At least 1 except early off-season. **Games and club
@@ -1324,17 +1335,17 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // worlds, the dominant refusal at zero legacy executions.
   //
   // The game and every club night carry the credit the contract says they carry.
-  const appSprintDays = femaleG1PrimerDays.filter(
+  const appSprintDays = withComposedOptional.filter(
     (day) => day.conditioning === 'sprint_high_speed' || day.sprintComponent).length;
   const sprintCount = appSprintDays + anchorConditioning;
   const hardDaySet = new Set<number>([
-    ...femaleG1PrimerDays.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
+    ...withComposedOptional.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
     ...inputs.clubNights,
     ...scheduledGameDays(inputs),
   ]);
   // A day OFFERING a composed optional is still a full rest day — the charter's
   // counting row: optional work never breaks rest.
-  const fullRestDays = femaleG1PrimerDays.filter((day) =>
+  const fullRestDays = withComposedOptional.filter((day) =>
     day.owner === 'rest_or_recovery' && !day.clubTraining && !day.game).length;
 
   const demand = {
@@ -1362,10 +1373,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   //
   // The loops above still COMPUTE these facts. They no longer render the verdict.
   const weekViolation = firstWeekLegalityViolation({
-    strengthDays: femaleG1PrimerDays
+    strengthDays: withComposedOptional
       .filter((day) => day.owner === 'strength' && day.purpose !== null)
       .map((day) => ({ day: day.dayOfWeek, purpose: day.purpose as SessionPurpose })),
-    runningDays: femaleG1PrimerDays
+    runningDays: withComposedOptional
       .filter((day) => day.conditioning === 'running'
         || day.conditioning === 'sprint_high_speed'
         || day.sprintComponent)
@@ -1423,7 +1434,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     requiredStrengthSessions: needed,
     authoredStrengthSessions: authored,
     reductionDisclosure: disclosureWithAccess,
-    days: femaleG1PrimerDays,
+    days: withComposedOptional,
     intendedPatterns: [...intended],
     demand,
   };

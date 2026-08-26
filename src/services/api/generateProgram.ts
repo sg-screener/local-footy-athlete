@@ -433,6 +433,16 @@ function topUpCandidateDays(args: {
   });
 }
 
+/** Equipment-free offers may use any future day, not only a gym-access day. */
+function equipmentFreeTopUpCandidateDays(args: {
+  weekStart: string;
+  governedFromISO: string | null;
+}): number[] {
+  return [0, 1, 2, 3, 4, 5, 6].filter((day) =>
+    !args.governedFromISO
+      || dateForWeekday(args.weekStart, day) >= args.governedFromISO);
+}
+
 function dateFromISO(todayISO: string): Date {
   return new Date(`${todayISO}T12:00:00`);
 }
@@ -1670,6 +1680,10 @@ export function buildGeneratedMicrocycles(args: {
       weakPointFocus: weakPointFocusFor(profile.biggestLimitation),
       candidateDays: topUpCandidateDays({
         profile,
+        weekStart: blockState.weekStart,
+        governedFromISO: boundary?.governedFromISO ?? null,
+      }),
+      equipmentFreeCandidateDays: equipmentFreeTopUpCandidateDays({
         weekStart: blockState.weekStart,
         governedFromISO: boundary?.governedFromISO ?? null,
       }),

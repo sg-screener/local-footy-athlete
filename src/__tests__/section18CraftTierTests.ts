@@ -75,6 +75,7 @@ function dateForDay(dayOfWeek: number): string {
 
 function inSeasonSaturdayGameProfile(): OnboardingData {
   return {
+    gender: 'male',
     seasonPhase: 'In-season',
     position: 'inside_mid',
     motivation: 'Build strength and football fitness',
@@ -372,18 +373,31 @@ const innocuousTopUp: Workout = {
   createdAt: NOW,
   updatedAt: NOW,
 } as unknown as Workout;
+const restStub = (dayOfWeek: number, id: string): Workout => ({
+  ...innocuousTopUp,
+  id,
+  dayOfWeek,
+  name: 'Rest',
+  workoutType: 'Rest',
+  sessionTier: 'recovery',
+  exercises: [],
+});
 
 const withheldBatch = withCraftSafeTopUps({
   contract,
   weekStart: WEEK_START,
   profile: athlete,
   governableDates: ALL_DAYS_GOVERNABLE,
-  base: cleanWeek.filter((workout) => workout.dayOfWeek !== G_MINUS_2),
+  base: [
+    ...cleanWeek.filter((workout) => workout.dayOfWeek !== G_MINUS_2),
+    restStub(G_MINUS_2, 'rest-g2'),
+  ],
   placed: [topUpThatBreaksCraft],
 });
 check('E1 a top-up that introduces a craft violation is withheld',
   withheldBatch.withheld.some((workout) => workout.id === 'craft-topup-bad') &&
-    !withheldBatch.workouts.some((workout) => workout.id === 'craft-topup-bad'),
+    !withheldBatch.workouts.some((workout) => workout.id === 'craft-topup-bad') &&
+    withheldBatch.workouts.some((workout) => workout.id === 'rest-g2'),
   withheldBatch.withheld.map((workout) => workout.id));
 
 const keptBatch = withCraftSafeTopUps({
@@ -391,12 +405,18 @@ const keptBatch = withCraftSafeTopUps({
   weekStart: WEEK_START,
   profile: athlete,
   governableDates: ALL_DAYS_GOVERNABLE,
-  base: cleanWeek,
+  base: [
+    ...cleanWeek.filter((workout) => workout.dayOfWeek !== innocuousTopUp.dayOfWeek),
+    restStub(innocuousTopUp.dayOfWeek, 'rest-good-day'),
+  ],
   placed: [innocuousTopUp],
 });
 check('E2 an innocuous top-up is kept',
   keptBatch.withheld.length === 0 &&
-    keptBatch.workouts.some((workout) => workout.id === 'craft-topup-good'),
+    keptBatch.workouts.some((workout) => workout.id === 'craft-topup-good') &&
+    !keptBatch.workouts.some((workout) => workout.id === 'rest-good-day') &&
+    keptBatch.workouts.filter((workout) =>
+      workout.dayOfWeek === innocuousTopUp.dayOfWeek).length === 1,
   keptBatch.withheld.map((workout) => workout.id));
 
 // A finding the week ALREADY had is not the top-up's fault. Without this the

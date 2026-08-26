@@ -6176,3 +6176,22 @@ contribution (R-129's own words), never breaks a rest day.
 **Search words:** gunshow, primer, G-1, optional session, day before game,
 men, women, arms pump.
 · `BUILT` — see generator optional placement + cells.
+
+**R-237** · *"it should fill the gym days with 1. what is optimal ... then also fill up the next two ie gunshow or primer, and one day of mobility"*; *"if an athlete ... can only train 3 times then that would be 3 gym days, + 1 optional session requiring no equipment"*; *"it doesn't matter what time of the season it is"*; *"on spare days, it could add in mobility sessions that are optional and bodyweight only too"* (Sam, 2026-08-26, audit item 2) · **THE CORE WEEK STAYS OPTIMAL; SPARE CAPACITY OFFERS GENDERED GYM WORK AND EQUIPMENT-FREE MOBILITY.**
+R-235's gym answer remains a ceiling, never a quota: the scheduler first
+authors the best legal core week. If a gym-access day is still genuinely
+spare, a no-game week offers one gendered optional session — male Gunshow,
+female Primer. The existing one-game G-1 placement remains unchanged and
+multi-game weeks still receive none automatically. Separately, every phase
+offers one optional Mobility session on a spare governable day; Off-season
+keeps its signed target of two total. Auto-placed Mobility is composed through
+the existing Mobility owner with bodyweight-only eligibility, may sit outside
+the athlete's gym-day answer, and replaces an empty Rest shell rather than
+double-booking a date. G+1 may take Mobility because it is recovery-class;
+Accessories remain gym-only and cannot use G+1. Existing running ownership is
+unchanged.
+**Search words:** spare gym days, optional mobility, bodyweight only, no
+equipment, Gunshow, Primer, gym ceiling, every season, G+1 recovery.
+· `WORKING` — weeklyScheduler gendered offer + need-based optional top-up;
+test:weekly-scheduler (spare-day-options) is in the Bible chain and mutation-
+checked.

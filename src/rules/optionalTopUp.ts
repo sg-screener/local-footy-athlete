@@ -7,10 +7,10 @@
  *    session to make up for it. Strength and conditioning is the 90% —
  *    accessories, mobility etc. is the final 10%."
  *
- * It runs AFTER the core week is built, computes what the week LACKS, and places
- * at most what fills the lack. No day-based or default placement of optional work
- * exists anywhere — the six placement rows that did are deleted in the same
- * commit as this file (`docs/OPTIONAL_PLACEMENT_RULINGS_2026-07-30.md`).
+ * It runs AFTER the core week is built. Accessories still compute what the week
+ * lacks; R-237 additionally guarantees one equipment-free Mobility offer when a
+ * spare day exists (two total in Off-season). These are optional offers and never
+ * a quota the core scheduler must fill.
  *
  * WHERE IT RUNS, AND WHY THAT PLACEMENT IS THE ARGUMENT. It runs after
  * `requireSection18AcceptedWeek` has accepted the week. So a top-up session is
@@ -27,6 +27,7 @@
 import type { Workout } from '../types/domain';
 import type { SeasonPhase } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { isExplicitRestStub } from '../utils/workoutContent';
 import {
   WEAK_POINT_ACCESSORY_REGION_THRESHOLD,
   weakPointLeansOptionalTopUps,
@@ -136,7 +137,7 @@ export interface OptionalTopUpPlacement {
   readonly type: OptionalTopUpType;
   readonly dayOfWeek: number;
   /** Which need produced it. Travels so a placement can always name its rule. */
-  readonly need: 'accessory_coverage' | 'offseason_mobility';
+  readonly need: 'accessory_coverage' | 'spare_day_mobility' | 'offseason_mobility';
 }
 
 export interface OptionalTopUpInput {
@@ -144,6 +145,11 @@ export interface OptionalTopUpInput {
   readonly seasonPhase: SeasonPhase | null | undefined;
   /** Day-of-week values the week may place on, already excluding fixtures. */
   readonly candidateDays: readonly number[];
+  /**
+   * Days an equipment-free Mobility offer may use. Defaults to `candidateDays`
+   * for pure legacy callers; generation supplies every still-governable day.
+   */
+  readonly equipmentFreeCandidateDays?: readonly number[];
   /** The game's day-of-week, or null. */
   readonly gameDayOfWeek: number | null;
   /**
@@ -166,15 +172,18 @@ export interface OptionalTopUpInput {
  * Never on a game day (`:90`, `:132`), never on G-1 — the authored Gunshow owns
  * that day (`:153`) — and never on a day the week already filled.
  */
-function dayIsAvailable(day: number, input: OptionalTopUpInput): boolean {
+function dayIsAvailable(
+  day: number,
+  type: OptionalTopUpType,
+  input: OptionalTopUpInput,
+): boolean {
   if (input.gameDayOfWeek !== null) {
     if (day === input.gameDayOfWeek) return false;
     const gMinusOne = (input.gameDayOfWeek + 6) % 7;
     if (day === gMinusOne) return false;
-    // AND NEVER G+1. The signed caps did not name it — the sheet listed the game
-    // day and G-1 and stopped — but the Bible does: "Rules around G+1: complete
-    // rest or recovery" (`BIBLE_ANCHOR g_plus_1_rest_or_recovery`, §2). Accessories
-    // are neither, so a top-up there breaches an anchor rather than filling a gap.
+    // G+1 is complete rest OR recovery. Accessories are neither; Mobility is a
+    // recovery-class, bodyweight-only offer and may use the day without changing
+    // its rest arithmetic.
     //
     // It was not a theoretical gap. On a Sunday-fixture week the pass put an
     // Accessories session on the Monday; the resolver's G+1 rule then converted it
@@ -183,9 +192,10 @@ function dayIsAvailable(day: number, input: OptionalTopUpInput): boolean {
     // `visible_change_unverified`. Found by `athleteSessionDeletionTests`
     // regression 6, which is the second time that cell has caught a G+1 placement.
     const gPlusOne = (input.gameDayOfWeek + 1) % 7;
-    if (day === gPlusOne) return false;
+    if (day === gPlusOne && type !== 'mobility') return false;
   }
-  return !input.workouts.some((workout) => workout.dayOfWeek === day);
+  return !input.workouts.some((workout) =>
+    workout.dayOfWeek === day && !isExplicitRestStub(workout));
 }
 
 /**
@@ -196,7 +206,7 @@ function dayIsAvailable(day: number, input: OptionalTopUpInput): boolean {
  * G-relative first, because the Wednesday in the Bible IS the G-3 of a Saturday
  * game week.
  */
-function preferredDays(input: OptionalTopUpInput): number[] {
+function preferredDays(input: OptionalTopUpInput, candidateDays: readonly number[]): number[] {
   const preferred: number[] = [];
   // PLACED EARLY for a mobility / injury-history weakness (Sam's ruling 3). Monday and
   // Tuesday come first, ahead of the G-3 / Wednesday preference, so the work the athlete
@@ -210,23 +220,22 @@ function preferredDays(input: OptionalTopUpInput): number[] {
   preferred.push(3);
   const ordered = [
     ...preferred,
-    ...[...input.candidateDays].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)),
+    ...[...candidateDays].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)),
   ];
   const seen = new Set<number>();
   return ordered.filter((day) => {
     if (seen.has(day)) return false;
     seen.add(day);
-    return input.candidateDays.includes(day);
+    return candidateDays.includes(day);
   });
 }
 
 /**
  * WHAT THE WEEK LACKS, AND AT MOST WHAT FILLS IT.
  *
- * Two needs, because two are what the Bible answers. Nothing measures recovery
- * (no authored composition), nothing measures in-season mobility (`:104` — the
- * off-season is when mobility gains are safe to chase), and nothing measures
- * strength or conditioning, which are the 90% and belong to the contract.
+ * Two session types: Accessories when regional coverage is lacking, and Mobility
+ * as the spare-day recovery offer. Nothing measures strength or conditioning,
+ * which are the 90% and belong to the contract.
  *
  * SAM'S RULING 3: a week may take BOTH an Accessories and a Mobility top-up.
  * SAM'S RULING 4: mobility tops up TOWARD TWO, not one — "just want to get the
@@ -238,15 +247,32 @@ export function computeOptionalTopUps(
 ): OptionalTopUpPlacement[] {
   const placements: OptionalTopUpPlacement[] = [];
   const usedDays = new Set<number>();
-  const available = preferredDays(input).filter((day) => dayIsAvailable(day, input));
+  const mobilityCandidateDays = input.equipmentFreeCandidateDays ?? input.candidateDays;
 
   const take = (type: OptionalTopUpType, need: OptionalTopUpPlacement['need']): boolean => {
-    const day = available.find((candidate) => !usedDays.has(candidate));
+    const candidates = type === 'mobility' ? mobilityCandidateDays : input.candidateDays;
+    const day = preferredDays(input, candidates).find((candidate) =>
+      !usedDays.has(candidate) && dayIsAvailable(candidate, type, input));
     if (day === undefined) return false;
     usedDays.add(day);
     placements.push({ type, dayOfWeek: day, need });
     return true;
   };
+
+  // R-237 — every phase may OFFER one no-equipment mobility session on a spare
+  // day. It is recovery, not a required training exposure. Off-season keeps the
+  // previously signed aim of two total mobility sessions. Mobility goes first:
+  // it can serve a non-gym spare day, while Accessories must never consume the
+  // only gym slot and push this explicitly requested offer elsewhere.
+  let mobility = mobilitySessionCount(input.workouts);
+  const mobilityTarget = input.seasonPhase === 'Off-season'
+    ? OFFSEASON_MOBILITY_TARGET
+    : 1;
+  while (mobility < mobilityTarget) {
+    const need = mobility === 0 ? 'spare_day_mobility' : 'offseason_mobility';
+    if (!take('mobility', need)) break;
+    mobility += 1;
+  }
 
   // N1 — accessory region coverage. At most ONE, and it does not aim to reach
   // six: one session is what fills the lack.
@@ -261,17 +287,6 @@ export function computeOptionalTopUps(
     : ACCESSORY_REGION_THRESHOLD;
   if (accessoryRegionsCovered(input.workouts).size < accessoryThreshold) {
     take('accessories', 'accessory_coverage');
-  }
-
-  // N2 — off-season mobility. `:104` is why there is no in-season equivalent:
-  // chasing mobility while games and change-of-direction demands are live risks
-  // injury, so the app does not plan it then.
-  if (input.seasonPhase === 'Off-season') {
-    let mobility = mobilitySessionCount(input.workouts);
-    while (mobility < OFFSEASON_MOBILITY_TARGET) {
-      if (!take('mobility', 'offseason_mobility')) break;
-      mobility += 1;
-    }
   }
 
   return placements;

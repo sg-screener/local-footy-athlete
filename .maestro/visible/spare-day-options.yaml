@@ -1,0 +1,16 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - spare days offer Mobility and Gunshow
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "day-row-wed"
+    text: "Day WED Mobility"
+- assertVisible:
+    id: "day-row-fri"
+    text: "Day FRI Gunshow"
+- takeScreenshot: artifacts/visible/spare-day-options-week

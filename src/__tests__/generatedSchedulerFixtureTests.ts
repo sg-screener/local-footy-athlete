@@ -11,6 +11,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import { weeklySchedulerInputsFrom } from '../rules/weeklySchedulerInputs';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -200,7 +201,7 @@ ok('every accepted target-week fixture reaches the scheduler and authored week',
     === JSON.stringify([3, 6]),
   games(doubleFixtureWeek).map((workout) => ({ day: workout.dayOfWeek, name: workout.name })));
 const doubleStrengthDays = doubleFixtureWeek.microcycles[0].workouts
-  .filter((workout) => (workout.exercises?.length ?? 0) > 0)
+  .filter((workout) => classifyVisibleSession(workout).contributions.mainStrength > 0)
   .map((workout) => workout.dayOfWeek);
 ok('double-fixture proximity protects both games from adjacent strength work',
   JSON.stringify(doubleStrengthDays) === JSON.stringify([1]),
@@ -225,7 +226,7 @@ const sundayBye = generateProgramLocally(sundayByeProfile as never, {
   targetFixtureDay: null,
 } as never);
 const sundayByeStrengthDays = sundayBye.microcycles[0].workouts
-  .filter((workout) => (workout.exercises?.length ?? 0) > 0)
+  .filter((workout) => classifyVisibleSession(workout).contributions.mainStrength > 0)
   .map((workout) => workout.dayOfWeek);
 ok('a Sunday bye keeps Monday clear as G+1 from the previous Sunday fixture',
   games(sundayBye).length === 0

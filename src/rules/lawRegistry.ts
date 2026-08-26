@@ -2197,6 +2197,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-spare-capacity-offers-gendered-gym-and-equipment-free-mobility',
+    law: 'The gym-days answer is a ceiling for the optimal core week, not a session quota. After that core is authored, genuinely spare gym capacity may offer one gendered optional session — male Gunshow or female Primer — while every season may offer one bodyweight-only Mobility session on any spare governable day, including outside the gym-day answer; Off-season keeps two total Mobility sessions. An offer replaces an empty Rest shell, remains optional and does not alter rest or compliance counts. Multi-game weeks receive no automatic gendered offer, and Accessories remain gym-only and off G+1.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-237 — Sam asked for the optimal core first, then Gunshow/Primer and optional no-equipment Mobility on spare days regardless of season.',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 by seat `gymfill`. TWO OPTIONS COMPARED: add a final fill-empty-days planner, or extend the existing weekly-scheduler owner for the gendered offer and the existing post-acceptance top-up owner for Mobility. The existing-owner design landed, keeping composition in buildDerivedSession and running in its existing scheduler path. TEST FIRST: five real generated profiles produced 8 passing / 6 failing cells; the failures named missing in-season, pre-season and three-day Mobility, missing pre/off-season Gunshow, and the dead Off-season Rest-shell placement. AFTER: the real generation tape is 20/20, including explicit three-, four-, five- and six-gym-day worlds plus both no-game gender arms, and the direct optional-owner tape is 30/30 across candidate separation, G+1 recovery, Rest replacement and 28 dated bodyweight compositions. MUTATION/LIVENESS: setting the all-phase Mobility target to zero killed four generated cells; disabling the no-game gendered branch killed the pre-season and Off-season cells; removing the bodyweight equipment narrowing selected Dumbbell Pullovers on 2026-08-03 and killed the dated equipment cell. Restoring each subject returned the guards to green. NOT COVERED: physical-iPhone Release acceptance, every injury/equipment combination, athlete-added multi-game offers, and long-term adherence to optional sessions.',
+    },
+  },
+  {
     id: 'LAW-main-tabs-share-supplied-lfa-wordmark',
     law: 'The supplied three-path LFA wordmark has one reusable vector owner. It defaults to white on the dark app and accepts a colour rather than duplicating black and white path sets. Program, Coach, Progress and Profile render that owner at the top left; styled text may not imitate the logo. Profile proceeds directly from that mark to Program Setup rather than repeating its tab name as a page title or keeping an orphaned subtitle. Programmed workout detail renders the mark beneath Back instead of a generic workout title while retaining its work-section headings, and My Status renders it before status content. Onboarding steps and sheets keep their own navigation/title hierarchy and do not repeat the mark.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-175, R-177 and R-180 — Sam supplied the wordmark, approved the four-tab placement, removed Profile\'s duplicate heading, then extended the brand to programmed workouts and My Status.',

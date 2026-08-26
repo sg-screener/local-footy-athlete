@@ -3,8 +3,8 @@
  *
  * `rules/optionalTopUp.ts` DECIDES — what the week lacks, and at most what fills
  * the lack, every threshold signed in `docs/NEED_COMPUTATION_SHEET_2026-07-30.md`.
- * This module MATERIALISES that decision into real composed sessions and appends
- * them to the accepted week. The split is deliberate: the decision is logic Sam
+ * This module MATERIALISES that decision into real composed sessions and places
+ * them into the accepted week (replacing an empty Rest shell when present). The split is deliberate: the decision is logic Sam
  * signs and must be readable in one place without a generator, and the
  * materialisation is plumbing that must never be able to change the decision.
  *
@@ -19,7 +19,7 @@
  *
  * The other three are properties of what is placed: `sessionTier` is `optional` or
  * `recovery`, never `core`; the composition comes from Sam's pools; and the day it
- * lands on carried nothing, so binning it in one tap returns the day to empty.
+ * lands on carried no meaningful content, so binning it in one tap returns the day to empty.
  *
  * ## Composition has ONE owner per session type
  *
@@ -45,6 +45,7 @@ import {
 import { buildDerivedSession, type AthleteContext } from './sessionBuilder';
 import { isoDateForWeekday } from './appDate';
 import type { WeakPointFocus } from '../rules/weakPointFocus';
+import { isExplicitRestStub } from './workoutContent';
 
 /**
  * The words a placed session carries as its reason — they land in its description.
@@ -78,6 +79,8 @@ export interface ApplyOptionalTopUpsArgs {
    * a top-up on a pinned past day would be the app editing a day that has been.
    */
   readonly candidateDays: readonly number[];
+  /** Every still-governable day; Mobility is deliberately equipment-free. */
+  readonly equipmentFreeCandidateDays?: readonly number[];
   /** The athlete's stated weakness as a `:105` focus, or null. Leans the needs only. */
   readonly weakPointFocus?: WeakPointFocus | null;
 }
@@ -99,6 +102,7 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
     workouts: args.workouts,
     seasonPhase: args.seasonPhase,
     candidateDays: args.candidateDays,
+    equipmentFreeCandidateDays: args.equipmentFreeCandidateDays,
     gameDayOfWeek: args.gameDayOfWeek,
     weakPointFocus: args.weakPointFocus ?? null,
   });
@@ -109,12 +113,15 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
   const placed: Workout[] = [];
   for (const placement of placements) {
     const date = isoDateForWeekday(args.weekStartISO, placement.dayOfWeek);
+    const athlete = placement.type === 'mobility'
+      ? { ...args.athlete, equipmentTags: ['bodyweight' as const] }
+      : args.athlete;
     const session = buildDerivedSession(
       DERIVED_TYPE[placement.type],
       date,
       args.microcycleId,
       TOP_UP_REASON,
-      args.athlete,
+      athlete,
     );
     // An empty composition is no session rather than an empty card: equipment and
     // injury filtering can thin a pool, and the app shrinks rather than padding.
@@ -136,7 +143,15 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
     });
   }
 
-  return { workouts: [...args.workouts, ...placed], placements };
+  const placedDays = new Set(placed.map((workout) => workout.dayOfWeek));
+  return {
+    workouts: [
+      ...args.workouts.filter((workout) =>
+        !placedDays.has(workout.dayOfWeek) || !isExplicitRestStub(workout)),
+      ...placed,
+    ],
+    placements,
+  };
 }
 
 /**

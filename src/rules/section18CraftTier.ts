@@ -64,6 +64,7 @@
 
 import type { OnboardingData, Workout } from '../types/domain';
 import { isoDateForWeekday } from '../utils/appDate';
+import { isExplicitRestStub } from '../utils/workoutContent';
 import { resolverMayDisplace } from './athletePlacement';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
 import {
@@ -347,12 +348,20 @@ export function withCraftSafeTopUps(args: {
   const before = new Set(assess(args.base).blocking.map(craftFindingKey));
   const weekStart = args.weekStart.slice(0, 10);
   const dateOf = (workout: Workout) => isoDateForWeekday(weekStart, workout.dayOfWeek);
+  const compose = (placed: readonly Workout[]): Workout[] => {
+    const placedDays = new Set(placed.map((workout) => workout.dayOfWeek));
+    return [
+      ...args.base.filter((workout) =>
+        !placedDays.has(workout.dayOfWeek) || !isExplicitRestStub(workout)),
+      ...placed,
+    ];
+  };
 
   let kept = [...args.placed];
   // Bounded by construction: every pass either finishes or drops at least one
   // placement, and a placement is never re-added.
   for (let pass = 0; pass <= args.placed.length; pass += 1) {
-    const introduced = assess([...args.base, ...kept]).blocking
+    const introduced = assess(compose(kept)).blocking
       .filter((finding) => !before.has(craftFindingKey(finding)));
     if (introduced.length === 0) break;
     const implicated = new Set(introduced.flatMap((finding) => finding.dates));
@@ -366,7 +375,7 @@ export function withCraftSafeTopUps(args: {
 
   const keptIds = new Set(kept.map((workout) => workout.id));
   return {
-    workouts: [...args.base, ...kept],
+    workouts: compose(kept),
     withheld: args.placed.filter((workout) => !keptIds.has(workout.id)),
   };
 }
