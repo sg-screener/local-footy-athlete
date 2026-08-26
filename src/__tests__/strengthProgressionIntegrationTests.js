@@ -885,6 +885,34 @@ assert(liveSquat.prescribedSets <= EARLY_OFF_BAND.setsMax,
   `[21h] the ceiling holds through the live context assembler: ${liveSquat.prescribedSets} <= ${EARLY_OFF_BAND.setsMax}`);
 
 // ═══════════════════════════════════════════════════════════════
+// [22] A BODYWEIGHT TARGET INHERITS NO SIBLING LOAD
+// Sam's overnight item 6, 2026-08-27: the pool-sibling weight transfer
+// passed a load through RAW when the target's loadRatio was 0, and a
+// beginner's Bodyweight Squat was prescribed wearing Goblet Squat's
+// 12.5kg dumbbell. loadRatio 0 is "authored unloaded" — the athlete may
+// add weight; the transfer may not.
+// ═══════════════════════════════════════════════════════════════
+section('[22] bodyweight target inherits no sibling load');
+{
+  const { findOrCreateExercise } = require('../data/defaultProgram');
+  const gobletId = findOrCreateExercise('Goblet Squat').id;
+  const bwWorkout = {
+    id: 'w-bw', name: 'Full Body', workoutType: 'Strength', dayOfWeek: 1,
+    exercises: [{
+      id: 'we-bw-1', workoutId: 'w-bw', exerciseId: 'ex-bodyweight-squat',
+      exerciseOrder: 1, prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 12,
+      restSeconds: 90,
+      exercise: { id: 'ex-bodyweight-squat', name: 'Bodyweight Squat' },
+    }],
+  };
+  const ctx = buildProgressionContext('Off-season', 'medium', [], '2026-10-05', [], {}, [], null, [], null, {});
+  const progressed = applyStrengthProgression(bwWorkout, ctx, { [gobletId]: 12.5 });
+  const bwRow = progressed.exercises.find(e => e.exercise?.name === 'Bodyweight Squat');
+  assert(!(bwRow.prescribedWeightKg > 0),
+    `Bodyweight Squat carries no transferred load (got ${bwRow.prescribedWeightKg})`);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RESULTS
 // ═══════════════════════════════════════════════════════════════
 

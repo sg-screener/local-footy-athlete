@@ -51,11 +51,31 @@ const CONDITIONING_NAME_RE =
 
 function isMainStrengthExercise(exercise: WorkoutExercise, index: number): boolean {
   const name = exercise.exercise?.name ?? '';
-  if (!name || CONDITIONING_NAME_RE.test(name)) return false;
+  if (!name) return false;
 
+  // ⚠ A REGISTERED NAME'S ANSWER IS FINAL — the name regex is a fallback for
+  // names the registry doesn't know. Asked first, its unbounded `row` matched
+  // "Chest-Supported DB Row" and "Barbell Row" as rowing-machine conditioning,
+  // so no rowing lift ever recorded a load (measured 2026-08-27 — the same
+  // classifier defect as deloadWeekRules.isConditioningExerciseRow, found the
+  // same day).
   const tags = getExerciseTags(name);
+  if (!tags && CONDITIONING_NAME_RE.test(name)) return false;
+
   if (tags) {
-    return MAIN_STRENGTH_MOVEMENTS.has(tags.movement) && tags.load !== 'low';
+    if (tags.movement === 'conditioning') return false;
+    // ⚠ THIS USED TO ALSO REQUIRE `tags.load !== 'low'`, AND THAT CLAUSE LOST
+    // A BEGINNER'S ENTIRE LIFTING HISTORY. "Low load" was standing in for
+    // "accessory", but on a beginner program the MAIN lifts are the low-load
+    // variants — Goblet Squat is authored `load: 'low'` — so none of their
+    // lifts ever entered the feedback logs, the block boundary saw no
+    // recorded history, and block 2 re-seeded Goblet Squat at the authored
+    // 6kg estimate BELOW the athlete's recorded 12.5 (measured 2026-08-27,
+    // Sam's overnight item 6). The movement pattern is the honest test:
+    // a squat is a strength lift whatever its authored load rating, and
+    // Sam's 2026-08-16 law — "recorded history for the EXACT exercise
+    // always outranks the estimate" — needs the history to be recorded.
+    return MAIN_STRENGTH_MOVEMENTS.has(tags.movement);
   }
 
   // Fallback for untagged generated exercises: early multi-set rows are

@@ -416,7 +416,14 @@ function resolveSiblingPerformedWeight(
     const weight = lastPerformedWeights[siblingId];
     if (weight === null) return null; // sibling is bodyweight
     if (weight === undefined) continue;
-    if (sibling.loadRatio <= 0 || targetEntry.loadRatio <= 0) {
+    // ⚠ A BODYWEIGHT TARGET INHERITS NO SIBLING LOAD. This branch used to pass
+    // the sibling's weight through raw, and a beginner's Bodyweight Squat was
+    // prescribed wearing Goblet Squat's 12.5kg dumbbell (measured 2026-08-27,
+    // Sam's overnight item 6). loadRatio 0 means the movement is authored
+    // unloaded — the athlete may still ADD weight (Sam, 2026-08-16: "never a
+    // prohibition"), but nothing may be transferred onto it.
+    if (targetEntry.loadRatio <= 0) return undefined;
+    if (sibling.loadRatio <= 0) {
       return weight; // translation undefined — pass through
     }
     return weight * (targetEntry.loadRatio / sibling.loadRatio);

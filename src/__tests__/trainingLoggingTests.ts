@@ -138,6 +138,28 @@ section('2. Strength logging snapshot');
   assert(logs[0].prescribedSets === 4, 'sets captured');
   assert(logs[0].prescribedRepsMin === 5 && logs[0].prescribedRepsMax === 5, 'rep range captured');
   assert(logs.every((entry) => entry.completion === 'full'), 'completion stamped on all main-lift logs');
+
+  /* ── A BEGINNER'S MAIN LIFTS ARE LOW-LOAD, AND THEY STILL LOG ────────────
+   * Sam's overnight item 6, 2026-08-27: the predicate used to require
+   * `tags.load !== 'low'`, so a beginner's whole program — Goblet Squat is
+   * authored `load: 'low'` — produced NO strength logs, the block boundary
+   * saw no recorded history, and block 2 re-seeded Goblet Squat at the 6kg
+   * estimate below the athlete's recorded 12.5. The movement pattern is the
+   * test; the load rating is not. */
+  const beginner = workout({
+    name: 'Full Body',
+    workoutType: 'Strength',
+    exercises: [
+      ex('ex-goblet', 'Goblet Squat', 3, 6, 8, 12.5),
+      ex('ex-csr', 'Chest-Supported DB Row', 3, 8, 10, 10),
+    ],
+  });
+  const beginnerLogs = buildStrengthPerformanceLogs(beginner, {}, 'full');
+  assert(beginnerLogs.some((entry) => entry.exerciseName === 'Goblet Squat'
+      && entry.weightKg === 12.5),
+    'a low-load main lift (Goblet Squat) records its load');
+  assert(beginnerLogs.some((entry) => entry.exerciseName === 'Chest-Supported DB Row'),
+    'a low-load pull main records too');
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
