@@ -348,3 +348,93 @@ claimed.**
   that is explicitly outside the healthy slice.
 - Full-year archetype acceptance, global rival-author/output-writer zero counts,
   pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 5: readiness is the first complete fact family
+
+### Two options weighed
+
+1. Incremental: leave readiness as a flag interpreted independently by the
+   scheduler-input translator, generator and retained workout adapter, then add
+   a compiler marker so those answers are expected to agree.
+2. Ownership redesign: translate the athlete action into one typed readiness
+   directive, let the compiler author schedule mode, the rolling per-day dose
+   policy and the conditioning-plan transform, and delete every downstream
+   readiness author in the same change.
+
+Option 2 landed. It removes the disagreement class rather than documenting it.
+
+### What moved, and what was deleted
+
+The production readiness action still owns the athlete-language decision. Its
+typed output now enters `compileCanonicalWeek`; raw severity does not. The
+compiler alone applies low-readiness scheduling, optional-week mode, the
+seven-day window, per-day strength dose and the plan-level conditioning deload
+before conditioning feasibility.
+
+The scheduler-input translator no longer reads readiness. The retained adapter
+no longer has `deloadPlanEntry`, no longer receives or resolves a readiness
+window, and consumes the compiler's per-day dose handover. The generator no
+longer resolves that window or applies the plan transform.
+
+Instrument unit: distinct executable production authors of this weekly
+readiness family.
+
+- Rival readiness-policy authors outside the compiler: **0**.
+- Derived readiness plan writers outside the compiler: **0**.
+- The existing scheduler/materialiser/connector ownership remains **1 distinct
+  caller each**, all in `canonicalWeeklyCompiler.ts`.
+
+This is a family-level statement, not the prohibited global “one owner
+complete” claim.
+
+### Tests-first and liveness
+
+Before production changes, the expanded compiler witness printed **18 green / 7
+red**: the new ownership and athlete-action cells failed against the old
+architecture. After the migration it prints **36/36 green**.
+
+The behaviour witness uses the real production door: ordinary generated week →
+`cooked_week` → accepted readiness overlay → visibly reduced prescriptions only
+inside the rolling window → clear that exact fact → original visible
+prescriptions restored exactly. It authors real rows and proves the window
+reaches a real training day.
+
+Mutations remove the compiler scheduler call, the feasibility ownership marker
+and the per-day dose handover; each kills its named cell.
+
+### The release gate caught a real semantic collision
+
+The first release run failed the durable fact-horizon contract: illness uses a
+legacy `fatigue` transport shape with `readinessKind: 'illness'`, and the new
+readiness slice initially swallowed it. That would have shortened illness's
+open horizon to a readiness window and removed the illness-owned optional week.
+The fix respects the typed discriminator: illness is excluded from readiness
+translation and remains with the illness family until that slice moves.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **36/36**.
+- `npm run test:readiness-illness-law`: **121/121**.
+- `npm run test:fact-horizon`: **14/14**.
+- `npm run test:release`: **4/4 units green**, `RELEASE_GATE_EXIT=0`.
+- Adjacent scheduler group: scheduler **102/102**, generated fixture **11/11**,
+  travel zero-equipment **10/10**, Off-season continuity **9/9**, spare-day
+  options **20/20**.
+- `npm run test:compile`: inherited/shared fleet remains **468 errors** and red;
+  none of this slice's changed compiler, generator, adapter, policy or witness
+  files appears in the worsened list.
+
+### North star and visibility
+
+Readiness is now one compiler-owned fact family, with one typed input and one
+accepted output. This changes generated prescriptions but adds no UI or copy.
+**WORKING at guarded headless scope; physical-phone acceptance is not claimed.**
+
+### NOT COVERED
+
+- Illness remains deliberately separate and is the next clean family candidate.
+- Fixture, injury, travel and athlete-edit families have not moved.
+- The global rival-author and derived-output-writer counts are not zero and are
+  not claimed zero.
+- Full-year archetype acceptance, pixels, simulator and physical iPhone are not
+  covered.

@@ -10,11 +10,7 @@
  */
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
-import type {
-  SchedulerReadiness,
-  WeeklyScheduleRefusal,
-  WeeklySchedulerInputs,
-} from './weeklyScheduler';
+import type { WeeklyScheduleRefusal, WeeklySchedulerInputs } from './weeklyScheduler';
 import type { ContractPhase, OffseasonBlock } from './weeklyProgrammingContract';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
@@ -160,9 +156,6 @@ export function weeklySchedulerInputsFrom(args: {
   readonly profile: OnboardingData;
   readonly weekStartISO: string;
   readonly offseasonSubphase: OffseasonSubphase | null;
-  readonly generationConstraints?: {
-    readonly readiness?: { readonly deloaded?: boolean } | null;
-  } | null;
   readonly activeConstraints?: readonly unknown[];
   readonly exposureContract?: { readonly anchors?: unknown } | null;
   /**
@@ -195,8 +188,10 @@ export function weeklySchedulerInputsFrom(args: {
   // signal; it has no typed "consistently completes three comfortably" signal, so
   // that arm is FALSE until one exists rather than assumed true. The effect is
   // that an older athlete stays on three sessions — the contract's default.
-  const readiness: SchedulerReadiness = {
-    lowReadiness: args.generationConstraints?.readiness?.deloaded === true,
+  const readiness = {
+    // Readiness is a compiler fact now. This translator has no fact input and
+    // therefore cannot independently reinterpret it.
+    lowReadiness: false,
     highReadiness: false,
     lowFatigue: false,
     consistentlyCompletesThree: false,

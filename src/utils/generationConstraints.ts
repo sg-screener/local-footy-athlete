@@ -405,7 +405,12 @@ function readinessTierFromConstraint(
   // reading its severity as a readiness magnitude let a busy day deload a whole
   // week. Time is a SESSION fact and shrinks its own session (see
   // `readinessConstraints`, `scheduleKind: 'time_cap'`).
-  if (constraint.type !== 'fatigue') return null;
+  // Illness still shares the compatibility constraint's transport shape, but
+  // its typed discriminator is authoritative. Treating it as readiness here
+  // made the readiness compiler slice swallow illness's open horizon and call
+  // it a seven-day readiness window. The illness directive below remains that
+  // family's sole owner until its own compiler slice lands.
+  if (constraint.type !== 'fatigue' || constraint.readinessKind === 'illness') return null;
   const c = constraint as ActiveFatigueConstraint | ActiveScheduleConstraint;
   const severity = clampSeverity(c.severity);
   const tier: ReadinessTier = severity >= 8

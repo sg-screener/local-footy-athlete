@@ -32,7 +32,15 @@ import {
   resolveWeeklyConditioningFeasibility,
   type ConditioningFeasibilityContext,
 } from './conditioningFeasibility';
+import {
+  applyDeloadPolicyToSessionAllocation,
+  resolveDeloadWeekPolicy,
+  resolveDoorDeloadPolicy,
+  type DeloadWeekPolicy,
+} from './deloadWeekRules';
+import { isDateInReadinessDeloadWindow } from './readinessIllnessLaw';
 import { resolveTrainingAgePolicy } from './trainingAgePolicy';
+import { isoDateForWeekday } from '../utils/appDate';
 import {
   scheduleRefused,
   scheduleWeek,
@@ -55,8 +63,25 @@ type DerivedConnectorInput = Omit<
   | 'capacityFactors'
   | 'v1Input'
 > & {
-  readonly v1Input: Omit<ConnectorInput['v1Input'], 'capacity'>;
+  readonly v1Input: Omit<ConnectorInput['v1Input'],
+    'capacity' | 'readinessDeloaded' | 'weekModeOverride'>;
+  /** Other fact families stay explicit until their own compiler slice lands. */
+  readonly nonReadinessDeloaded?: boolean;
+  readonly nonReadinessWeekModeOverride?: ConnectorInput['v1Input']['weekModeOverride'];
 };
+
+/**
+ * The readiness door's authorised output. Raw severity is deliberately absent:
+ * it remains private to the door that maps the athlete's words to these flags.
+ */
+export interface CanonicalWeeklyReadinessFact {
+  readonly kind: 'readiness';
+  readonly id: string;
+  readonly deloaded: boolean;
+  readonly sessionsOptional: boolean;
+  readonly windowStartISO?: string;
+  readonly windowEndISO?: string;
+}
 
 export interface CanonicalWeeklyCompilerInput {
   /** WRITER: the generation boundary. READER: the weekly scheduler. */
@@ -67,6 +92,8 @@ export interface CanonicalWeeklyCompilerInput {
   readonly materialisation: DerivedMaterialisationFacts;
   /** Contract/provenance inputs that are translations, never schedule policy. */
   readonly connector: DerivedConnectorInput;
+  /** One typed fact family; illness/injury/fixture inputs move in later slices. */
+  readonly readiness?: CanonicalWeeklyReadinessFact | null;
   /** Optional specialist projection, still executed inside the compiler. */
   readonly conditioningFeasibility?: ConditioningFeasibilityContext;
 }
@@ -77,6 +104,10 @@ export type CanonicalWeeklyCompilerResult =
       readonly schedule: WeeklySchedule;
       readonly materialised: readonly MaterialisedSession[];
       readonly plan: CoachingPlan;
+      /** Compiler-authored instruction; materialisers consume without re-deciding. */
+      readonly dosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>>;
+      /** False only while another deload door still belongs to a later slice. */
+      readonly planDoseResolved: boolean;
     }
   | {
       readonly ok: false;
@@ -86,7 +117,13 @@ export type CanonicalWeeklyCompilerResult =
 export function compileCanonicalWeek(
   input: CanonicalWeeklyCompilerInput,
 ): CanonicalWeeklyCompilerResult {
-  const schedule = scheduleWeek(input.scheduler);
+  const schedule = scheduleWeek({
+    ...input.scheduler,
+    readiness: {
+      ...input.scheduler.readiness,
+      lowReadiness: input.readiness?.deloaded === true,
+    },
+  });
   if (scheduleRefused(schedule)) return { ok: false, refusal: schedule };
 
   const { level: capacity, factors: capacityFactors } =
@@ -106,27 +143,77 @@ export function compileCanonicalWeek(
 
   const connected = scheduleToCoachingPlan({
     ...input.connector,
-    v1Input: { ...input.connector.v1Input, capacity },
+    v1Input: {
+      ...input.connector.v1Input,
+      capacity,
+      readinessDeloaded:
+        input.readiness?.deloaded === true || input.connector.nonReadinessDeloaded === true,
+      weekModeOverride: input.readiness?.sessionsOptional === true
+        ? 'optional_week'
+        : input.connector.nonReadinessWeekModeOverride,
+    },
     schedule,
     materialised,
     coachingInputs: input.coaching,
     capacity,
     capacityFactors,
   });
-  const plan = input.conditioningFeasibility
+  const anotherDeloadFamilyIsActive = input.connector.nonReadinessDeloaded === true;
+  const readinessPolicy = input.readiness?.deloaded
+    ? resolveDoorDeloadPolicy({
+        door: 'readiness',
+        seasonPhase: input.coaching.seasonPhase,
+      })
+    : null;
+  // Scheduled deloads are not silently absorbed by this readiness slice. They
+  // remain with the retained adapter until that family moves with its own
+  // acceptance witness. We resolve only enough to make the handover honest.
+  const legacyScheduledPolicy = !anotherDeloadFamilyIsActive && !readinessPolicy
+    ? resolveDeloadWeekPolicy(input.coaching.seasonPhase, input.scheduler.weekKind)
+    : null;
+  const dosePolicyByDay: Partial<Record<number, DeloadWeekPolicy>> = {};
+  if (readinessPolicy) {
+    for (let day = 0; day < 7; day += 1) {
+      if (input.readiness?.windowStartISO && input.readiness.windowEndISO &&
+        !isDateInReadinessDeloadWindow(
+          isoDateForWeekday(input.scheduler.weekStartISO, day),
+          { startISO: input.readiness.windowStartISO, endISO: input.readiness.windowEndISO },
+        )) continue;
+      dosePolicyByDay[day] = readinessPolicy;
+    }
+  }
+  const planDoseResolved = !anotherDeloadFamilyIsActive && !legacyScheduledPolicy;
+  const doseResolvedPlan = readinessPolicy
     ? {
         ...connected,
+        weeklyPlan: connected.weeklyPlan.map((entry) =>
+          applyDeloadPolicyToSessionAllocation(
+            entry,
+            entry.dayOfWeek
+              ? dosePolicyByDay[
+                  ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                    .indexOf(entry.dayOfWeek)
+                ] ?? null
+              : null,
+          )),
+      }
+    : connected;
+  const plan = input.conditioningFeasibility
+    ? {
+        ...doseResolvedPlan,
         weeklyPlan: resolveWeeklyConditioningFeasibility(
-          connected.weeklyPlan,
+          doseResolvedPlan.weeklyPlan,
           input.conditioningFeasibility,
         ),
       }
-    : connected;
+    : doseResolvedPlan;
 
   return {
     ok: true,
     schedule,
     materialised,
     plan,
+    dosePolicyByDay,
+    planDoseResolved,
   };
 }

@@ -86,7 +86,10 @@ import {
 } from '../../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
-import { compileCanonicalWeek } from '../../rules/canonicalWeeklyCompiler';
+import {
+  compileCanonicalWeek,
+  type CanonicalWeeklyReadinessFact,
+} from '../../rules/canonicalWeeklyCompiler';
 import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
 import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
 import { scheduledGameDays, type WeeklySchedule } from '../../rules/weeklyScheduler';
@@ -95,11 +98,9 @@ import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySch
 // retained adapter uses, so a composed week answers to one table and not a
 // second copy of it.
 import {
-  resolveDeloadWeekPolicy,
   resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
 } from '../../rules/deloadWeekRules';
-import { isDateInReadinessDeloadWindow } from '../../rules/readinessIllnessLaw';
 import { generatedWeekContractFrom } from '../../rules/generatedWeekContract';
 import {
   generatedWeekFailureSignature,
@@ -614,6 +615,7 @@ export function buildInitialGeneratedCoachingPlan(args: {
   const compiled = compileCanonicalWeek({
     scheduler: schedInputs,
     coaching: inputs,
+    readiness: canonicalReadinessFactFrom(inputs.generationConstraints),
     materialisation: {
       weekStartISO,
       miniCycleNumber: firstState?.miniCycleNumber,
@@ -624,6 +626,10 @@ export function buildInitialGeneratedCoachingPlan(args: {
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
     },
     connector: {
+      nonReadinessDeloaded: anotherDeloadFamilyIsActive(inputs.generationConstraints),
+      nonReadinessWeekModeOverride: anotherDeloadFamilyIsActive(inputs.generationConstraints)
+        ? inputs.generationConstraints?.weekMode
+        : undefined,
       offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? undefined,
       preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? undefined,
       section18Identity: {
@@ -650,12 +656,10 @@ export function buildInitialGeneratedCoachingPlan(args: {
         weekKind: firstState?.weekKind,
         offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
         preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
-        readinessDeloaded: inputs.generationConstraints?.readiness?.deloaded === true,
         maxStrengthSessions: agePolicy.maxCoreSessions,
         profileInjuries: inputs.injuries ?? [],
         activeInjuries: inputs.generationConstraints?.injuries,
         byeMode: inputs.byeMode,
-        weekModeOverride: inputs.generationConstraints?.weekMode,
       } as never,
     },
   });
@@ -694,7 +698,8 @@ function coachingInputsToSchedulerInputs(
     // from the profile) — translation, not a decision.
     athleteGender: inputs.gender,
     readiness: {
-      lowReadiness: inputs.generationConstraints?.readiness?.deloaded === true,
+      // The compiler owns the readiness fact and overwrites this neutral value.
+      lowReadiness: false,
       highReadiness: false, lowFatigue: false, consistentlyCompletesThree: false,
     },
     unavailableDays: [] as number[],
@@ -786,6 +791,28 @@ function resolveGenerationConstraints(
       require('../../store/programStore').useProgramStore.getState()
         .acceptedMaterialContext?.temporarySourceFacts,
   });
+}
+
+/** Translation only: the readiness door already made the policy decision. */
+function canonicalReadinessFactFrom(
+  context: GenerationConstraintContext | undefined,
+): CanonicalWeeklyReadinessFact | null {
+  const readiness = context?.readiness;
+  if (!readiness) return null;
+  return {
+    kind: 'readiness',
+    id: readiness.id,
+    deloaded: readiness.deloaded,
+    sessionsOptional: readiness.sessionsOptional,
+    ...(readiness.windowStartISO ? { windowStartISO: readiness.windowStartISO } : {}),
+    ...(readiness.windowEndISO ? { windowEndISO: readiness.windowEndISO } : {}),
+  };
+}
+
+function anotherDeloadFamilyIsActive(
+  context: GenerationConstraintContext | undefined,
+): boolean {
+  return context?.weekDeloaded === true && context.readiness?.deloaded !== true;
 }
 
 /**
@@ -1103,12 +1130,13 @@ export function buildGeneratedMicrocycles(args: {
     const cutoverInputs = args.coachingInputs;
     let allocatedWeekPlan: CoachingPlan;
     let compiledSchedule: WeeklySchedule | null = null;
+    let compiledDosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>> = {};
+    let compiledPlanDoseResolved = false;
     if (cutoverInputs) {
       const schedulerInputs = weeklySchedulerInputsFrom({
         profile,
         weekStartISO: blockState.weekStart,
         offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-        generationConstraints,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
         targetFixtureDay,
@@ -1120,6 +1148,7 @@ export function buildGeneratedMicrocycles(args: {
       const compiled = compileCanonicalWeek({
         scheduler: schedulerInputs,
         coaching: cutoverInputs,
+        readiness: canonicalReadinessFactFrom(generationConstraints),
         materialisation: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
@@ -1131,6 +1160,10 @@ export function buildGeneratedMicrocycles(args: {
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         },
         connector: {
+          nonReadinessDeloaded: anotherDeloadFamilyIsActive(generationConstraints),
+          nonReadinessWeekModeOverride: anotherDeloadFamilyIsActive(generationConstraints)
+            ? generationConstraints?.weekMode
+            : undefined,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
           section18Identity: {
@@ -1163,14 +1196,12 @@ export function buildGeneratedMicrocycles(args: {
             weekKind: effectiveWeekKind,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
             preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
-            readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
             maxStrengthSessions: agePolicy.maxCoreSessions,
             appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
             attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
             profileInjuries: profile.injuries ?? [],
             activeInjuries: generationConstraints?.injuries,
             byeMode: cutoverInputs.byeMode,
-            weekModeOverride: generationConstraints?.weekMode,
           } as never,
         },
         conditioningFeasibility: {
@@ -1185,6 +1216,8 @@ export function buildGeneratedMicrocycles(args: {
       if (compiled.ok === false) throw new WeeklyScheduleRefusedError(compiled.refusal);
       compiledSchedule = compiled.schedule;
       allocatedWeekPlan = compiled.plan;
+      compiledDosePolicyByDay = compiled.dosePolicyByDay;
+      compiledPlanDoseResolved = compiled.planDoseResolved;
     } else {
       if (!args.plan) throw new Error('canonical week compilation requires coaching inputs or an explicit plan');
       allocatedWeekPlan = args.plan;
@@ -1363,9 +1396,14 @@ export function buildGeneratedMicrocycles(args: {
             weekKind: effectiveWeekKind,
             intensityMultiplier: blockState.intensityMultiplier,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
-            deloadDoor: doorDeload ? 'illness' : undefined,
+            deloadDoor: !compiledPlanDoseResolved && doorDeload ? 'illness' : undefined,
             composedStrengthDays,
-            readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
+            ...(compiledPlanDoseResolved
+              ? {
+                  canonicalDosePolicyByDay: compiledDosePolicyByDay,
+                  canonicalPlanDoseResolved: true as const,
+                }
+              : {}),
           },
           {
             ...mergeAthletePrefsWithGenerationConstraints(args.athletePrefs, generationConstraints),
@@ -1384,24 +1422,13 @@ export function buildGeneratedMicrocycles(args: {
       // silently return null and drop the deload. Nothing here is a second
       // table — this READS the owner and hands its answer to the composer,
       // which had been the only week-builder the instruction never reached.
-      const composedDeloadPolicy = doorDeload
+      const legacyOtherDoorPolicy = !compiledPlanDoseResolved && doorDeload
         ? resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: profile.seasonPhase })
-        : resolveDeloadWeekPolicy(profile.seasonPhase, effectiveWeekKind);
-      const composedReadinessWindow = generationConstraints?.readinessDeloadWindow ?? null;
+        : null;
       const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
-        if (!composedDeloadPolicy) return null;
-        // R-035: the deload applies to the DAYS IN THE WINDOW, not to the week.
-        // An absent window means every day, and that is load-bearing — the
-        // illness door governs while the fact is active and the scheduled door
-        // governs a whole authored week; neither carries a window.
-        if (!composedReadinessWindow) return composedDeloadPolicy;
-        return isDateInReadinessDeloadWindow(
-          isoDateForWeekday(blockState.weekStart, dayOfWeek),
-          { startISO: composedReadinessWindow.startISO,
-            endISO: composedReadinessWindow.endISO },
-        )
-          ? composedDeloadPolicy
-          : null;
+        if (compiledPlanDoseResolved) return compiledDosePolicyByDay[dayOfWeek] ?? null;
+        // Illness remains explicit legacy debt until that fact family moves.
+        return legacyOtherDoorPolicy;
       };
       const authored = assembleAuthoredWeek({
         composerWorkouts: materialiseComposedWeek(composedWeek, {
@@ -1740,8 +1767,10 @@ export function buildGeneratedMicrocycles(args: {
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: effectiveWeekKind,
-      deloadDoor: doorDeload ? 'illness' : undefined,
-            readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
+      deloadDoor: generationConstraints?.readiness?.deloaded
+        ? 'readiness'
+        : doorDeload ? 'illness' : undefined,
+      readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
       exposureContract,
       exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,

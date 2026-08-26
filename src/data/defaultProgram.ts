@@ -69,7 +69,6 @@ import {
   applyConditioningDeloadToExercises,
 } from '../rules/deloadWeekRules';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
-import { isDateInReadinessDeloadWindow } from '../rules/readinessIllnessLaw';
 import {
   ACCESSORY_REP_GUIDELINES,
   LOWER_SECONDARY_REP_GUIDELINES,
@@ -83,10 +82,8 @@ import {
 } from '../rules/offseasonSubphase';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
+  applyDeloadPolicyToSessionAllocation,
   applyStrengthDeloadToExercises,
-  deloadConditioningCategory,
-  deloadConditioningFlavour,
-  isHardDeloadConditioningCategory,
   resolveDeloadWeekPolicy,
   resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
@@ -1534,103 +1531,6 @@ interface PowerBlockSelectionInput {
   blockId?: string;
 }
 
-function stripConditioningSuffix(focus: string): string {
-  return focus
-    .replace(/\s+\+\s+.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone\s*2).*$/i, '')
-    .trim();
-}
-
-function deloadPlanEntry(
-  entry: SessionAllocation,
-  policy: DeloadWeekPolicy | null,
-): SessionAllocation {
-  if (!policy) return entry;
-  const category = entry.conditioningCategory;
-  const isHardConditioning =
-    isHardDeloadConditioningCategory(category) ||
-    entry.conditioningFlavour === 'high-intensity';
-  if (!isHardConditioning) return entry;
-
-  const next: SessionAllocation = {
-    ...entry,
-    isHardExposure: false,
-  };
-
-  // ⚠ **THIS MUST OUTRANK THE COMBINED-DAY BRANCH BELOW.** It used to sit under
-  // it, and once WC-138 put the sprint ON an upper strength day the combined
-  // branch fired first and wiped every conditioning field off the day — the
-  // deload week lost its sprint again and the week refused
-  // `sprint_high_speed_required_minimum:0`. The sprint is answered before any
-  // question about what else the day carries.
-  // ── THE SPRINT IS REDUCED IN VOLUME, NEVER CONVERTED TO AEROBIC ──────────
-  //
-  // **Sam's ruling, 2026-08-17:** a mid/late off-season deload *"may remove or
-  // downgrade the hard conditioning session to authored tempo/easy work"* and
-  // *"reduce sprint VOLUME using an authored legal dose"*, but *"must not erase
-  // the required genuine sprint exposure or convert sprint into aerobic work"*.
-  //
-  // ⚠ **IT WAS DOING EXACTLY THAT.** `deloadConditioningCategory` maps
-  // `sprint -> aerobic_base`, so the deload week's ONLY sprint became an easy
-  // aerobic session — and §3 floors sprint at *"at least 1 except early
-  // off-season"* every week, so the week then refused
-  // `sprint_high_speed_required_minimum:0`. Measured on the no-club, no-fixture
-  // later-off-season athlete: weeks 1 and 2 accepted, week 3 (the deload)
-  // refused, with `d0:sprint` arriving as `d0:aerobic_base`.
-  //
-  // The reduction it gets instead is ALREADY AUTHORED and already built:
-  // `conditioningVariant: 'reduced'` on a sprint-family template composes
-  // `20 m Acceleration Reps` (`SPEED_FALLBACK_TEMPLATE`), a real row from the
-  // sheet. **The quality stays `sprint`; only the volume falls.** Nothing here
-  // invents a dose and no §18 count is patched.
-  //
-  // `vo2` and `glycolytic` still downgrade — they are the fatiguing work the
-  // deload exists to remove, and Sam's rule permits exactly that.
-  //
-  // ⚠ **THAT DOWNGRADE IS UNREACHABLE FOR A SCHEDULER-AUTHORED WEEK, AND ITS
-  // MUTATION SAYS SO.** WC-136 already refuses to AUTHOR a hard conditioning
-  // quality into a deload (`weekIsReduced` in `weeklyScheduler`), so no `vo2`
-  // ever arrives here to be downgraded — removing `vo2`/`glycolytic` from
-  // `isHardDeloadConditioningCategory` reddens nothing. It is left in place for
-  // plan entries that do NOT come from the scheduler, and recorded here rather
-  // than deleted blind or claimed as a receipt it does not have.
-  if (category === 'sprint') {
-    return {
-      ...next,
-      conditioningVariant: 'reduced',
-      conditioningFeel: undefined,
-    };
-  }
-
-  if (entry.hasCombinedConditioning) {
-    const strengthFocus = stripConditioningSuffix(entry.focus);
-    return {
-      ...next,
-      focus: strengthFocus || entry.focus,
-      hasCombinedConditioning: false,
-      attachedConditioningKind: undefined,
-      conditioningFlavour: undefined,
-      conditioningCategory: undefined,
-      conditioningVariant: undefined,
-      conditioningFeel: undefined,
-      conditioningOffFeet: undefined,
-      ergModality: undefined,
-    };
-  }
-
-  const safeCategory = deloadConditioningCategory(category) ?? 'aerobic_base';
-  const safeFlavour = deloadConditioningFlavour(category) ?? 'aerobic';
-  return {
-    ...next,
-    focus: safeCategory === 'tempo'
-      ? 'Tempo conditioning (deload week, controlled 6-7/10)'
-      : 'Easy aerobic conditioning (deload week)',
-    conditioningCategory: safeCategory,
-    conditioningFlavour: safeFlavour,
-    conditioningVariant: safeCategory === 'aerobic_base' ? 'reduced' : 'standard',
-    conditioningFeel: safeCategory === 'tempo' ? 'flowing' : undefined,
-  };
-}
-
 export function buildWorkoutsFromCoach(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   microcycleId: string = 'mc-1',
@@ -1665,9 +1565,10 @@ export function buildWorkoutsFromCoach(
     seasonPhase: onboardingData?.seasonPhase,
     explicitSubphase: rotationContext?.offseasonSubphase,
   });
-  // Two doors, ONE transformation. The scheduled door is phase-gated (D16: no
-  // scheduled in-season deloads); the readiness and illness doors are not, and
-  // in-season they are the only way a week deloads at all. Routing them through
+  // Scheduled and fact doors, ONE transformation. The scheduled door is
+  // phase-gated (D16: no scheduled in-season deloads); the readiness and
+  // illness doors are not, and in-season they are the only way a week deloads
+  // at all. Routing them through
   // the phase-gated resolver would silently return null and drop the deload.
   const deloadPolicy = rotationContext?.deloadDoor
     ? resolveDoorDeloadPolicy({
@@ -1678,31 +1579,11 @@ export function buildWorkoutsFromCoach(
         onboardingData?.seasonPhase,
         rotationContext?.weekKind,
       );
-  /**
-   * R-035: THE DELOAD APPLIES TO THE DAYS IN THE WINDOW, NOT TO THE WEEK.
-   *
-   * `deloadPolicy` above is RESOLVED once for the week, which is correct — the
-   * TRANSFORMATION is week-shaped by R-034 and is untouched here. What was wrong
-   * is that it was then APPLIED to every day, so a Thursday declaration
-   * retro-deloaded Monday to Wednesday and stopped at Sunday instead of reaching
-   * the following Wednesday.
-   *
-   * ABSENT WINDOW MEANS EVERY DAY, and that is load-bearing: the illness door
-   * deloads while the fact is ACTIVE (R-036) and the scheduled door deloads a
-   * whole authored week, so neither carries a window and neither may be narrowed.
-   *
-   * The predicate is readinessIllnessLaw's own — nothing here re-derives seven.
-   */
-  const readinessWindow = rotationContext?.readinessDeloadWindow ?? null;
   function deloadPolicyForDayOfWeek(dayOfWeek: number | undefined): DeloadWeekPolicy | null {
-    if (!deloadPolicy) return null;
-    if (!readinessWindow || dayOfWeek === undefined) return deloadPolicy;
-    return isDateInReadinessDeloadWindow(syntheticDateStr(dayOfWeek), {
-      startISO: readinessWindow.startISO,
-      endISO: readinessWindow.endISO,
-    })
-      ? deloadPolicy
-      : null;
+    if (dayOfWeek !== undefined && rotationContext?.canonicalDosePolicyByDay) {
+      return rotationContext.canonicalDosePolicyByDay[dayOfWeek] ?? null;
+    }
+    return deloadPolicy;
   }
 
   const profileEquipment = resolveEquipmentCapabilities(onboardingData);
@@ -1727,12 +1608,15 @@ export function buildWorkoutsFromCoach(
     .filter((modality) => modality !== 'treadmill')
     .map((modality) => (modality === 'bike_erg' ? 'bike' : modality)) as
       Array<'bike' | 'air_bike' | 'row' | 'ski'>;
-  const deloadedWeeklyPlan = weeklyPlan?.map((entry) => deloadPlanEntry(
-    entry,
-    deloadPolicyForDayOfWeek(entry.dayOfWeek ? PLAN_DAY_MAP[entry.dayOfWeek] : undefined),
-  ));
+  const deloadedWeeklyPlan = rotationContext?.canonicalPlanDoseResolved
+    ? weeklyPlan
+    : weeklyPlan?.map((entry) => applyDeloadPolicyToSessionAllocation(
+        entry,
+        deloadPolicyForDayOfWeek(entry.dayOfWeek ? PLAN_DAY_MAP[entry.dayOfWeek] : undefined),
+      ));
   const effectiveWeeklyPlan = deloadedWeeklyPlan
-    ? rotationContext?.conditioningFeasibilityResolved && !deloadPolicy
+    ? rotationContext?.conditioningFeasibilityResolved &&
+        (rotationContext.canonicalPlanDoseResolved || !deloadPolicy)
       // The compiler already authored this derived output. Re-running the
       // specialist here would make the retained adapter a second writer of the
       // same plan, even when its answer happened to be idempotent.

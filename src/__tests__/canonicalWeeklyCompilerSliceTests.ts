@@ -33,8 +33,11 @@ import { useProgramStore } from '../store/programStore';
 import {
   coldStartThroughOnboarding,
   quiet,
+  quietAsync,
   resolvedDays,
 } from './support/athleteJourney';
+import { executeProgramControlActionDurably } from '../utils/programControlActions';
+import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -150,8 +153,8 @@ async function main(): Promise<void> {
   ok('the ownership instrument found a real compiler source region',
     compilerSource.length > 1_000 && compilerSource.includes('compileCanonicalWeek'));
   const scheduleMutation = compilerSource.replace(
-    'const schedule = scheduleWeek(input.scheduler);',
-    'const schedule = scheduleWeek_REMOVED(input.scheduler);',
+    'const schedule = scheduleWeek({',
+    'const schedule = scheduleWeek_REMOVED({',
   );
   ok('[MUTATION] removing the compiler scheduler call makes ownership red',
     productionCallers('scheduleWeek', { [COMPILER_PATH]: scheduleMutation }).length === 0);
@@ -170,10 +173,54 @@ async function main(): Promise<void> {
     generatorSource.includes('conditioningFeasibilityResolved: true'));
   const adapterSource = readFileSync(join(ROOT, 'data/defaultProgram.ts'), 'utf8');
   ok('the retained adapter stands down instead of rewriting a healthy compiler plan',
-    adapterSource.includes('rotationContext?.conditioningFeasibilityResolved && !deloadPolicy'));
+    adapterSource.includes('rotationContext?.conditioningFeasibilityResolved &&') &&
+      adapterSource.includes('(rotationContext.canonicalPlanDoseResolved || !deloadPolicy)'));
   ok('[MUTATION] dropping the compiler-to-adapter ownership marker is detected',
     !generatorSource.replace('conditioningFeasibilityResolved: true', '')
       .includes('conditioningFeasibilityResolved: true'));
+
+  console.log('\n[readiness ownership] the fact enters the compiler and no later layer re-decides it');
+  const schedulerInputsSource = readFileSync(join(ROOT, 'rules/weeklySchedulerInputs.ts'), 'utf8');
+  ok('the scheduler-input translator no longer interprets readiness facts',
+    !schedulerInputsSource.includes('generationConstraints?.readiness'));
+  ok('the compiler accepts the typed readiness directive',
+    compilerSource.includes('readonly readiness?: CanonicalWeeklyReadinessFact | null'));
+  ok('the compiler authors the conditioning-plan deload before feasibility',
+    compilerSource.includes('applyDeloadPolicyToSessionAllocation'));
+  ok('product generation hands readiness to the compiler as a typed fact',
+    generatorSource.includes('readiness: canonicalReadinessFactFrom(generationConstraints)'));
+  ok('product generation consumes compiler-authored per-day dose policy',
+    generatorSource.includes('compiledDosePolicyByDay'));
+  ok('the retained adapter has no private readiness plan author',
+    !adapterSource.includes('function deloadPlanEntry('));
+  ok('the retained adapter consumes the compiler dose handover',
+    adapterSource.includes('rotationContext?.canonicalDosePolicyByDay'));
+  const readinessRivalAuthors = [
+    schedulerInputsSource.includes('generationConstraints?.readiness')
+      ? 'weeklySchedulerInputs interprets readiness' : null,
+    adapterSource.includes('function deloadPlanEntry(')
+      ? 'retained adapter owns a private plan transform' : null,
+    adapterSource.includes('readinessDeloadWindow')
+      ? 'retained adapter re-resolves the readiness window' : null,
+    generatorSource.includes('isDateInReadinessDeloadWindow')
+      ? 'generator re-resolves the readiness window' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-readiness rival-author count is literally zero',
+    readinessRivalAuthors.length === 0, JSON.stringify(readinessRivalAuthors));
+  const readinessDerivedOutputWritersOutsideCompiler = [
+    generatorSource.includes('applyDeloadPolicyToSessionAllocation(')
+      ? 'generator writes the plan transform' : null,
+    adapterSource.includes('function deloadPlanEntry(')
+      ? 'adapter writes the plan transform' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-readiness derived-plan writer count outside the compiler is literally zero',
+    readinessDerivedOutputWritersOutsideCompiler.length === 0,
+    JSON.stringify(readinessDerivedOutputWritersOutsideCompiler));
+  ok('[MUTATION] dropping the per-day dose handover is detected',
+    !generatorSource.replace(
+      'canonicalDosePolicyByDay: compiledDosePolicyByDay',
+      'canonicalDosePolicyByDay_REMOVED: compiledDosePolicyByDay',
+    ).includes('canonicalDosePolicyByDay: compiledDosePolicyByDay'));
 
   console.log('\n[refusal] no partial compiler output escapes');
   const refusal = compileCanonicalWeek({
@@ -222,6 +269,69 @@ async function main(): Promise<void> {
     mismatches.map((workout) => `${workout.dayOfWeek}:${workout.name}`).join(','));
   ok('the journey was non-vacuous and authored real training rows',
     (microcycle?.workouts ?? []).some((workout) => (workout.exercises?.length ?? 0) > 0));
+
+  console.log('\n[readiness slice] normal -> cooked rolling window -> recovered');
+  const visibleSignature = (days: ReturnType<typeof resolvedDays>): string => JSON.stringify(
+    days.map((day) => [day.dateISO, day.rows.map((row) => [
+      row.name, row.sets ?? '', row.repsMin ?? '', row.repsMax ?? '', row.weightKg ?? '',
+    ])]),
+  );
+  const baselineSignature = visibleSignature(visible);
+  const baselineSetsByDate = new Map(visible.map((day) => [
+    day.dateISO,
+    day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),
+  ]));
+  const declarationDay = '2026-07-15';
+  const cooked = await quietAsync(() => executeProgramControlActionDurably(
+    readinessActionForKind('cooked_week', {
+      anchorDateISO: install.blockOneStart,
+      todayISO: declarationDay,
+    }),
+    { todayISO: declarationDay },
+  ));
+  ok('the athlete readiness action commits through the production door', cooked.ok === true,
+    cooked.message);
+  const factId = cooked.createdModifierIds?.[0] ?? null;
+  ok('the readiness door returns the exact fact it authored', Boolean(factId),
+    JSON.stringify(cooked.createdModifierIds));
+  ok('the accepted mutation is a readiness-owned week overlay',
+    useProgramStore.getState().weekScopedOverlays[install.blockOneStart]?.reason ===
+      'readiness_reduction');
+  const cookedVisible = quiet(() => resolvedDays(install.blockOneStart, declarationDay));
+  const cookedSetsByDate = new Map(cookedVisible.map((day) => [
+    day.dateISO,
+    day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),
+  ]));
+  const governedStrengthDays = cookedVisible.filter((day) =>
+    day.dateISO >= declarationDay &&
+    (baselineSetsByDate.get(day.dateISO) ?? 0) > 0);
+  ok('the rolling readiness window reaches real authored training days',
+    governedStrengthDays.length > 0);
+  ok('the compiler-authored readiness week reduces dose inside the window',
+    governedStrengthDays.some((day) =>
+      (cookedSetsByDate.get(day.dateISO) ?? 0) < (baselineSetsByDate.get(day.dateISO) ?? 0)));
+  const beforeWindow = cookedVisible.filter((day) => day.dateISO < declarationDay);
+  ok('readiness does not rewrite days before the declaration',
+    beforeWindow.every((day) =>
+      JSON.stringify(day.rows.map((row) => [row.name, row.sets, row.repsMin, row.repsMax, row.weightKg])) ===
+      JSON.stringify(visible.find((base) => base.dateISO === day.dateISO)?.rows
+        .map((row) => [row.name, row.sets, row.repsMin, row.repsMax, row.weightKg]) ?? [])));
+
+  const cleared = factId
+    ? await quietAsync(() => executeProgramControlActionDurably({
+        type: 'clear_fatigue_status',
+        source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+        scope: 'current_week',
+        payload: { modifierId: factId, date: declarationDay },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: false,
+      }, { todayISO: declarationDay }))
+    : null;
+  ok('the athlete can clear the exact readiness fact', cleared?.ok === true, cleared?.message);
+  const recoveredVisible = quiet(() => resolvedDays(install.blockOneStart, declarationDay));
+  ok('clearing readiness restores the accepted visible prescriptions exactly',
+    visibleSignature(recoveredVisible) === baselineSignature);
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

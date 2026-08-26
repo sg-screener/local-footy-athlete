@@ -34,6 +34,7 @@ import type { EquipmentTag } from './exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
 import type { ExperienceLevel, WeekKind } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
+import type { DeloadWeekPolicy } from '../rules/deloadWeekRules';
 import { equipmentClassFor, type EquipmentClass } from '../utils/loadEstimation';
 // AVAILABILITY, which is a different question from LOAD. Pure data, no cycle.
 import {
@@ -162,6 +163,13 @@ export interface RotationContext {
    */
   conditioningFeasibilityResolved?: true;
   /**
+   * The compiler-authored dose instruction for each governed weekday.
+   * Consumers apply it; they do not resolve a readiness door or window again.
+   */
+  canonicalDosePolicyByDay?: Readonly<Partial<Record<number, DeloadWeekPolicy>>>;
+  /** The compiler already transformed the plan-level conditioning declaration. */
+  canonicalPlanDoseResolved?: true;
+  /**
    * The days whose STRENGTH content the composer owns.
    *
    * **The retained adapter still receives the WHOLE planner week.** This app
@@ -190,12 +198,6 @@ export interface RotationContext {
    * scheduled door (or no deload at all).
    */
   deloadDoor?: 'readiness' | 'illness';
-  /**
-   * The READINESS deload's rolling window (R-035), when that is the door.
-   * ABSENT MEANS EVERY DAY — the illness door deloads while the fact is active
-   * (R-036), not for seven days, so a missing window must never narrow a week.
-   */
-  readinessDeloadWindow?: { startISO: string; endISO: string };
   /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
   offseasonSubphase?: OffseasonSubphase;
 }

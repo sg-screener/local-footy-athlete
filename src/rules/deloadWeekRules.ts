@@ -7,6 +7,7 @@ import { CONDITIONING_META, EXERCISE_TAGS } from '../data/exerciseTags';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
+import type { SessionAllocation } from '../utils/coachingEngine';
 
 export type DeloadConditioningCategory =
   | 'aerobic_base'
@@ -189,6 +190,69 @@ export function deloadConditioningFlavour(
   if (deloaded === 'aerobic_base') return 'aerobic';
   if (deloaded === 'tempo') return 'tempo';
   return undefined;
+}
+
+/**
+ * Apply the shared deload law to the plan-level conditioning declaration.
+ *
+ * This used to live privately in the retained workout adapter, after the
+ * canonical compiler had already returned. That made the adapter a second
+ * author of readiness output and forced conditioning feasibility to run twice.
+ * It is exported from the deload owner so the compiler can apply the decision
+ * before feasibility and every materialiser can consume the same result.
+ */
+export function applyDeloadPolicyToSessionAllocation(
+  entry: SessionAllocation,
+  policy: DeloadWeekPolicy | null,
+): SessionAllocation {
+  if (!policy) return entry;
+  const category = entry.conditioningCategory;
+  const isHardConditioning =
+    isHardDeloadConditioningCategory(category) ||
+    entry.conditioningFlavour === 'high-intensity';
+  if (!isHardConditioning) return entry;
+
+  const next: SessionAllocation = { ...entry, isHardExposure: false };
+  // Sprint quality survives with reduced volume. VO2/glycolytic work may be
+  // downgraded, exactly as the existing deload law already specifies.
+  if (category === 'sprint') {
+    return {
+      ...next,
+      conditioningVariant: 'reduced',
+      conditioningFeel: undefined,
+    };
+  }
+
+  if (entry.hasCombinedConditioning) {
+    const strengthFocus = entry.focus
+      .replace(/\s+\+\s+.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone\s*2).*$/i, '')
+      .trim();
+    return {
+      ...next,
+      focus: strengthFocus || entry.focus,
+      hasCombinedConditioning: false,
+      attachedConditioningKind: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningVariant: undefined,
+      conditioningFeel: undefined,
+      conditioningOffFeet: undefined,
+      ergModality: undefined,
+    };
+  }
+
+  const safeCategory = deloadConditioningCategory(category) ?? 'aerobic_base';
+  const safeFlavour = deloadConditioningFlavour(category) ?? 'aerobic';
+  return {
+    ...next,
+    focus: safeCategory === 'tempo'
+      ? 'Tempo conditioning (deload week, controlled 6-7/10)'
+      : 'Easy aerobic conditioning (deload week)',
+    conditioningCategory: safeCategory,
+    conditioningFlavour: safeFlavour,
+    conditioningVariant: safeCategory === 'aerobic_base' ? 'reduced' : 'standard',
+    conditioningFeel: safeCategory === 'tempo' ? 'flowing' : undefined,
+  };
 }
 
 export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
