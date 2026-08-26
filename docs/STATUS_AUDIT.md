@@ -3033,3 +3033,28 @@ FINDINGS OPEN:
 NOT YET AUDITED in this pass: practice-match weeks, deload microcycles,
 away/game doors on these worlds, second-block rollover, long-lived
 histories.
+
+## 2026-08-26 — profiles audit round 2: Sam's three rulings (audit)
+
+R-234 WORKING (685905c4 + 2a3412b7): the full-body day balances — real
+A/B shape when the week covers everything; missing-first chooser for a
+lone balance day (B for missing hinge, A for missing squat, LOWER ladder
+when both missing — the compressed [upper,X] week); plain alternation
+with a balance sibling. Each arm born from a measured red (equivalence
+[11] Wednesday-replan refusals both ways; rdl-family pre-season 4-day
+pattern_balance). test:full-body-balance chained 10/0.
+
+R-236 WORKING (f40dd4a0): the G-1 offer is gendered — her Primer, his
+Gunshow, same placement rule. The charter's F1 stale-debt ratchet fired
+on the paid gunshow debt exactly as designed; entry deleted, ceiling
+1→0 same commit. Probe: male G-1 reads Gunshow, 21/21 stable.
+
+R-235 slice 1 WORKING (2a3412b7): silent shortfall disclosed from the
+athlete's own gym-day answer; ladder consults authored smaller
+structures. SLICE 2 OPEN (registry row): un-clamped base sizing needs
+scheduler-intent / composer-shape / §18-demand alignment — measured
+refusals on the replan worlds; its own unit (Codex-scale).
+
+Also: test:scenarios prints 12 scenario failures and EXITS 0 —
+harness-lie, pre-existing (identical on committed tree); dead-suite
+ledger candidate.
