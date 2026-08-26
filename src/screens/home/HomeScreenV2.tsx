@@ -3816,8 +3816,16 @@ function WeekReadinessSheet({
   // so it is recorded at the one boundary every tier already goes through rather
   // than at eight call sites. Whether the report SUCCEEDED is still the
   // acknowledgment's to say — see `justConfirmed`.
+  //
+  // RECORDED AT THE TAP, NOT AFTER THE AWAIT — Sam's phone, 2026-08-26
+  // (checklist #14): "there was a split second in between that something else
+  // popped up and then was removed". The write commits the new fact BEFORE
+  // the acknowledgment state lands, so for those frames `active` was set with
+  // `confirmed` still false and the manage view flashed between the options
+  // and the confirmation. The tap itself is the report-in-this-visit fact.
   const onApply = (kind: WeekReadinessAction) => {
-    void Promise.resolve(onApplyProp(kind)).then(() => setConfirmed(true));
+    setConfirmed(true);
+    void Promise.resolve(onApplyProp(kind));
   };
 
   return (
@@ -3873,7 +3881,7 @@ function WeekReadinessSheet({
         </View>
       )}
 
-      {!showOptions && !lighterDayOffer && !justConfirmed && active && (
+      {!showOptions && !lighterDayOffer && !justConfirmed && !confirmed && active && (
         <View>
           <SheetHeader title="Readiness" subtitle={active.title} />
           {/* The effect clause is selected by COMMITTED state (R-228): during

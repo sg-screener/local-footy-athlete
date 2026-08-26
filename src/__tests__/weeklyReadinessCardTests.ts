@@ -534,13 +534,18 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     src.includes('home-week-readiness-confirmed'));
   ok('[A2] confirming suppresses BOTH the option list and the manage view',
     /showOptions =[^;]*!justConfirmed/.test(src) &&
-    /!showOptions && !lighterDayOffer && !justConfirmed && active/.test(src));
+    // #14 (Sam's phone, 2026-08-26): `confirmed` is set at the TAP and the
+    // manage view gates on it — the async write used to land the new fact
+    // before the ack state, flashing the manage view between the options and
+    // the confirmation.
+    /!showOptions && !lighterDayOffer && !justConfirmed && !confirmed && active/.test(src) &&
+    /const onApply = \(kind: WeekReadinessAction\) => \{\s*setConfirmed\(true\);/.test(src));
   // Extract the just-confirmed block itself rather than testing source
   // proximity — the manage view follows it in the file, so a windowed regex
   // would happily read the manage view's clear action as belonging to it.
   const confirmedBlock = (() => {
     const start = src.indexOf('{justConfirmed && acknowledgment && (');
-    const end = src.indexOf('{!showOptions && !lighterDayOffer && !justConfirmed && active && (');
+    const end = src.indexOf('{!showOptions && !lighterDayOffer && !justConfirmed && !confirmed && active && (');
     return start >= 0 && end > start ? src.slice(start, end) : '';
   })();
   ok('[A2] the just-confirmed state offers a close/return and no clear',
