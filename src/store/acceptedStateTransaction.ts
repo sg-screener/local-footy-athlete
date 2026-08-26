@@ -88,11 +88,11 @@ import {
   storedWorldSurfaces,
 } from '../utils/liveEvaluationSurfaces';
 import {
-  buildFixtureMinimalReplan,
   type FixtureMutationIntent,
   type FixtureReplanEditCost,
   type FixtureMinimalReplanResult,
 } from '../utils/fixtureMinimalReplan';
+import { compileCanonicalFixtureMutationWeek } from '../rules/canonicalWeeklyCompiler';
 import {
   effectiveFixtureDatesForWeeks,
   rollingHorizonDependencyClosure,
@@ -2187,7 +2187,7 @@ export function buildFixtureProjection(args: {
       updatedAt: appDateNow().toISOString(),
     };
   }
-  const replan = buildFixtureMinimalReplan({
+  const replan = compileCanonicalFixtureMutationWeek({
     profile: args.profile,
     weekStart: args.weekStart,
     sourceWorkouts: sourceCanonicalWorkouts,

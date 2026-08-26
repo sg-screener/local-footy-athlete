@@ -6,7 +6,7 @@ import type {
   Workout,
 } from '../types/domain';
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
-import { deriveWeekContract } from '../rules/derivedWeekContract';
+import { applyRemovalLedgerToWeekContract } from '../rules/derivedWeekContract';
 // ONE OWNER: the relocation template rule moved to
 // `rules/strengthRelocationTemplate` when the deriver acquired the repair
 // search. This file no longer keeps a copy.
@@ -30,7 +30,6 @@ import type {
   TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
-import { factsForWorld } from '../rules/acceptedEffectiveWeek';
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { getSessionComponentRows } from './sessionComponents';
@@ -1104,33 +1103,17 @@ export function buildFixtureMinimalReplan(
   const args: BuildFixtureMinimalReplanInput = {
     ...input,
     sourceWorkouts: withoutPlannerOffers(input.sourceWorkouts),
-    // Leg (iii), install site 3 of 3 — THE PUBLISHER's own
-    // contract-selection line.
-    //
-    // Sites 1 and 2 are both READ sites. Installing only there left the
-    // publisher composing and repairing against the STORED contract, so the
-    // week it published carried the stored contract's pattern requirements
-    // while the deriver read the derived ones — which is `Lower Hinge|7`
-    // published against `Lower Squat|8` derived, exactly the fixture-identity
-    // residual. Under the pattern-identity ruling pattern selection reads the
-    // DERIVED contract, and the publisher is where selection happens.
-    //
-    // Replacing the microcycle's contract once here rather than at each of the
-    // six readers below is deliberate: they must not be able to disagree.
+    // Fixture identity is already compiler-authored on the target microcycle.
+    // This seam may apply accepted athlete removals, but it cannot re-read the
+    // calendar and rewrite the compiler's mode or anchors.
     targetMicrocycle: input.targetMicrocycle.exposureContractV2
       ? {
         ...input.targetMicrocycle,
-        exposureContractV2: deriveWeekContract({
+        exposureContractV2: applyRemovalLedgerToWeekContract({
           contract: input.targetMicrocycle.exposureContractV2,
           weekStart: input.weekStart,
-          profile: input.profile,
-          markedDays: input.proposedMarkedDays,
           userRemovalConstraints: input.surfaces.userRemovalConstraints,
           workouts: input.sourceWorkouts,
-          // Leg (v) read side, install site 3 of 3 — the PUBLISHER. Sites 1 and
-          // 2 deriving while this one composes against a stored identity is the
-          // same residual leg (iii) already paid for once.
-          temporarySourceFacts: factsForWorld(input.surfaces),
         }),
       }
       : input.targetMicrocycle,

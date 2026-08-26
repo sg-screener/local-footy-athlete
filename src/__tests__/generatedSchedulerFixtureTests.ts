@@ -11,6 +11,10 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import { weeklySchedulerInputsFrom } from '../rules/weeklySchedulerInputs';
+import {
+  canonicalFixtureStateFrom,
+  schedulerInputsWithFixtureState,
+} from '../rules/canonicalWeeklyFixtureState';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
@@ -106,13 +110,17 @@ ok('profile default authors the recurring Saturday fixture',
 
 const bye = generated(null);
 const byeAvailability = availabilityFor(null)!;
-const byeSchedulerInputs = weeklySchedulerInputsFrom({
+const byeSchedulerInputs = schedulerInputsWithFixtureState(weeklySchedulerInputsFrom({
   profile: profile as never,
   weekStartISO: WEEK_MONDAY,
   offseasonSubphase: null,
+}), canonicalFixtureStateFrom({
+  weekStartISO: WEEK_MONDAY,
+  availability: byeAvailability,
   targetFixtureDay: null,
-  targetWeekAvailability: byeAvailability,
-});
+  seasonPhase: profile.seasonPhase,
+  activeConstraints: [],
+}));
 ok('the availability owner releases Saturday into the scheduler input',
   byeSchedulerInputs.gymAccessDays.includes(6)
     && byeSchedulerInputs.releasedFixtureDays?.includes(6),
@@ -244,7 +252,7 @@ ok('the target-week bye does not erase recurring fixtures from later weeks',
   targetByeBlock.microcycles.map((_, index) =>
     games(targetByeBlock, index).map((workout) => workout.dayOfWeek)));
 
-totalsPrinted();
+totalsPrinted(failures.length);
 console.log(`\nGenerated scheduler fixtures: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
 if (failures.length > 0) {
   console.error(`Failed: ${failures.join(', ')}`);

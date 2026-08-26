@@ -8,14 +8,13 @@
  * generation constraints, and explicit unavailability from the active constraints
  * the away/busy doors already write.
  */
-import type { DayOfWeek, OnboardingData } from '../types/domain';
+import type { OnboardingData } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { WeeklyScheduleRefusal, WeeklySchedulerInputs } from './weeklyScheduler';
 import type { ContractPhase, OffseasonBlock } from './weeklyProgrammingContract';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
 import { storedGameAnchor } from './gameAnchor';
-import type { FixtureConditionedAvailability } from './fixtureConditionedAvailability';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
   'Friday', 'Saturday'];
@@ -36,13 +35,6 @@ function dateForDayNumber(weekStartISO: string, dayOfWeek: number): string {
   monday.setDate(monday.getDate() + offset);
   return `${monday.getFullYear()}-${String(monday.getMonth() + 1)
     .padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
-}
-
-function shiftedDateISO(dateISO: string, days: number): string {
-  const date = new Date(`${dateISO.slice(0, 10)}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    + `-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -158,15 +150,6 @@ export function weeklySchedulerInputsFrom(args: {
   readonly offseasonSubphase: OffseasonSubphase | null;
   readonly activeConstraints?: readonly unknown[];
   readonly exposureContract?: { readonly anchors?: unknown } | null;
-  /**
-   * The accepted calendar's fixture for THIS week. `undefined` means the
-   * profile's recurring default, `null` means a bye, and a day means an actual
-   * or moved fixture. The distinction is material: collapsing `null` into the
-   * profile default silently resurrects a game the athlete removed.
-   */
-  readonly targetFixtureDay?: DayOfWeek | null;
-  /** Canonical effective app-training days for this target week, when resolved. */
-  readonly targetWeekAvailability?: FixtureConditionedAvailability;
   /** WC-136. Rotates the authored hard conditioning quality at the block boundary. */
   readonly miniCycleNumber?: number | null;
   /** WC-136. A scheduled deload week is never authored hard conditioning. */
@@ -212,67 +195,12 @@ export function weeklySchedulerInputsFrom(args: {
     }
   }
 
-  // R-020: a live trip takes the club's work off the facts the scheduler plans
-  // from. See `clubInputsAfterTravel` for what this replaces and why.
-  const targetGameDays = offSeason
+  // The standing profile fixture is baseline input only. Dated fixture moves,
+  // byes, releases and adjacent dates travel as a typed compiler fact.
+  const recurringGameDay = dayNumber(storedGameAnchor(profile));
+  const targetGameDays = offSeason || recurringGameDay === null
     ? []
-    : args.targetWeekAvailability
-    ? args.targetWeekAvailability.proposedFixtures.map((fixture) =>
-        new Date(`${fixture.date}T12:00:00`).getDay())
-    : [args.targetFixtureDay === undefined
-        // THE ONE OWNER, not the legacy field. This read was
-        // `dayNumber(profile.gameDay)`, which ignored `usualGameDay` — so an
-        // athlete whose only anchor is the usual game day (the phase-shift
-        // flow's field, and `storedGameAnchor`'s PREFERRED field) got a BYE
-        // week from this path while `onboardingToCoachingInputs` said
-        // `hasGame: true` for the same profile. Two owners for "what day is
-        // the game on" is the exact disease `rules/gameAnchor.ts` was ruled
-        // to end (Sam, 2026-08-12). Measured: every in-season stage-b
-        // scenario built `in_season_bye_build` where the pre-demolition
-        // planner built `in_season_game_week`. An explicit `null` still means
-        // "the athlete removed the game" and still wins over the profile.
-        ? dayNumber(storedGameAnchor(profile))
-        : dayNumber(args.targetFixtureDay)]
-      .filter((day): day is number => day !== null);
-  const explicitTargetWeek = args.targetWeekAvailability !== undefined
-    || args.targetFixtureDay !== undefined;
-  const actualFixtureDates = args.targetWeekAvailability
-    ? args.targetWeekAvailability.proposedFixtures.map((fixture) => fixture.date)
-    : args.targetFixtureDay !== undefined && args.targetFixtureDay !== null
-      ? [dateForDayNumber(args.weekStartISO, dayNumber(args.targetFixtureDay)!)]
-      : [];
-  // Same owner as the fallback above — this read also skipped `usualGameDay`.
-  const usualGameDay = dayNumber(storedGameAnchor(profile));
-  const usualDateThisWeek = usualGameDay === null
-    ? null : dateForDayNumber(args.weekStartISO, usualGameDay);
-  /**
-   * CROSS-WEEK PROXIMITY COMES FROM THE CALENDAR, NOT FROM A ±7 GUESS.
-   *
-   * Launch audit 2026-08-25, finding #5. This list used to append the usual
-   * game day shifted ±7 — a fabricated neighbouring fixture, the same
-   * ±7-invention pattern the craft tier was cured of. A game MOVED to Sunday
-   * was therefore invisible to the FOLLOWING week's plan: its Monday computed
-   * proximity against a phantom Saturday (G+2) instead of the real Sunday
-   * (G+1), and the athlete was given a full strength session the morning
-   * after their game — a Bible hard line ("G+1: rest or recovery only; a
-   * Sunday fixture protects the following Monday").
-   *
-   * The availability owner now derives the adjacent weeks' REAL fixtures with
-   * the same rules it uses for this week (explicit marks beat a bye beats the
-   * recurring day). The ±7 synthesis survives only as the fallback for the
-   * legacy `targetFixtureDay` path, which carries no calendar to read.
-   */
-  const fixtureProximityDates = explicitTargetWeek
-    ? Array.from(new Set([
-        ...actualFixtureDates,
-        ...(args.targetWeekAvailability
-          ? args.targetWeekAvailability.adjacentFixtureDates
-          : usualDateThisWeek === null ? [] : [
-              shiftedDateISO(usualDateThisWeek, -7),
-              shiftedDateISO(usualDateThisWeek, 7),
-            ]),
-      ]))
-    : undefined;
+    : [recurringGameDay];
   // R-130: read off the profile, one field, no derivation. Only 'female'
   // changes anything downstream (the scheduler's G−1 Primer pass).
   const athleteGender = profile.gender === 'male' || profile.gender === 'female'
@@ -282,7 +210,7 @@ export function weeklySchedulerInputsFrom(args: {
     weekStartISO: args.weekStartISO,
     clubNights: offSeason ? [] : dayNumbers(profile.teamTrainingDays),
     gameDays: targetGameDays,
-    fixtureProximityDates,
+    fixtureProximityDates: undefined,
     activeConstraints: args.activeConstraints,
   });
 
@@ -290,9 +218,7 @@ export function weeklySchedulerInputsFrom(args: {
     weekStartISO: args.weekStartISO,
     phase: profile.seasonPhase as ContractPhase,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
-    gymAccessDays: args.targetWeekAvailability
-      ? [...args.targetWeekAvailability.effectiveAvailableDayNumbers]
-      : dayNumbers(profile.preferredTrainingDays),
+    gymAccessDays: dayNumbers(profile.preferredTrainingDays),
     clubNights: club.clubNights,
     gameDay: club.gameDays[0] ?? null,
     gameDays: club.gameDays,
@@ -306,12 +232,7 @@ export function weeklySchedulerInputsFrom(args: {
     athleteGender,
     readiness,
     unavailableDays: [...unavailableDays],
-    releasedFixtureDays: args.targetWeekAvailability?.days
-      .filter((day) => day.provenance.some((value) =>
-        value === 'released_game_day'
-        || value === 'released_practice_match_day'
-        || value === 'bye_usual_game_day'))
-      .map((day) => day.dayNumber) ?? [],
+    releasedFixtureDays: [],
     miniCycleNumber: args.miniCycleNumber ?? null,
     weekKind: args.weekKind ?? null,
   };

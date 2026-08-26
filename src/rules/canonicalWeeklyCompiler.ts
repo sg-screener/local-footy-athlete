@@ -42,12 +42,21 @@ import { isDateInReadinessDeloadWindow } from './readinessIllnessLaw';
 import { resolveTrainingAgePolicy } from './trainingAgePolicy';
 import { isoDateForWeekday } from '../utils/appDate';
 import {
+  schedulerInputsWithFixtureState,
+  type CanonicalWeeklyFixtureState,
+} from './canonicalWeeklyFixtureState';
+import {
   scheduleRefused,
   scheduleWeek,
   type WeeklySchedule,
   type WeeklyScheduleRefusal,
   type WeeklySchedulerInputs,
 } from './weeklyScheduler';
+import {
+  buildFixtureMinimalReplan,
+  type BuildFixtureMinimalReplanInput,
+  type FixtureMinimalReplanResult,
+} from '../utils/fixtureMinimalReplan';
 
 type DerivedMaterialisationFacts = Omit<
   MaterialisationFacts,
@@ -62,9 +71,12 @@ type DerivedConnectorInput = Omit<
   | 'capacity'
   | 'capacityFactors'
   | 'v1Input'
+  | 'clubNights'
+  | 'gameDays'
 > & {
   readonly v1Input: Omit<ConnectorInput['v1Input'],
-    'capacity' | 'readinessDeloaded' | 'weekModeOverride'>;
+    'capacity' | 'readinessDeloaded' | 'weekModeOverride'
+    | 'selectedDayNumbers' | 'teamTrainingDayNumbers' | 'hasGame' | 'gameDay'>;
 };
 
 /**
@@ -101,6 +113,7 @@ export interface CanonicalWeeklyCompilerInput {
   /** Typed fact families already migrated into this compiler. */
   readonly readiness?: CanonicalWeeklyReadinessFact | null;
   readonly illness?: CanonicalWeeklyIllnessFact | null;
+  readonly fixture?: CanonicalWeeklyFixtureState | null;
   /** Optional specialist projection, still executed inside the compiler. */
   readonly conditioningFeasibility?: ConditioningFeasibilityContext;
 }
@@ -126,8 +139,9 @@ export type CanonicalWeeklyCompilerResult =
 export function compileCanonicalWeek(
   input: CanonicalWeeklyCompilerInput,
 ): CanonicalWeeklyCompilerResult {
+  const scheduler = schedulerInputsWithFixtureState(input.scheduler, input.fixture);
   const schedule = scheduleWeek({
-    ...input.scheduler,
+    ...scheduler,
     readiness: {
       ...input.scheduler.readiness,
       lowReadiness: input.readiness?.deloaded === true,
@@ -146,8 +160,8 @@ export function compileCanonicalWeek(
       isBeginner: agePolicy.level === 'new',
       experienced: agePolicy.level !== 'new',
     },
-    gameDay: input.scheduler.gameDay,
-    gameDays: input.scheduler.gameDays,
+    gameDay: scheduler.gameDay,
+    gameDays: scheduler.gameDays,
   });
   const materialised = materialisedBase.map((session): MaterialisedSession => {
     const readinessOptional = input.readiness?.sessionsOptional === true &&
@@ -165,8 +179,14 @@ export function compileCanonicalWeek(
 
   const connected = scheduleToCoachingPlan({
     ...input.connector,
+    clubNights: scheduler.clubNights,
+    gameDays: [...scheduler.gameDays],
     v1Input: {
       ...input.connector.v1Input,
+      selectedDayNumbers: [...scheduler.gymAccessDays],
+      teamTrainingDayNumbers: [...scheduler.clubNights],
+      hasGame: scheduler.gameDays.length > 0,
+      gameDay: scheduler.gameDays[0] ?? null,
       capacity,
       readinessDeloaded:
         input.readiness?.deloaded === true || input.illness?.deloaded === true,
@@ -199,12 +219,12 @@ export function compileCanonicalWeek(
   // remain with the retained adapter until that family moves with its own
   // acceptance witness. We resolve only enough to make the handover honest.
   const legacyScheduledPolicy = !factPolicy
-    ? resolveDeloadWeekPolicy(input.coaching.seasonPhase, input.scheduler.weekKind)
+    ? resolveDeloadWeekPolicy(input.coaching.seasonPhase, scheduler.weekKind)
     : null;
   const dosePolicyByDay: Partial<Record<number, DeloadWeekPolicy>> = {};
   if (factPolicy) {
     for (let day = 0; day < 7; day += 1) {
-      const dateISO = isoDateForWeekday(input.scheduler.weekStartISO, day);
+      const dateISO = isoDateForWeekday(scheduler.weekStartISO, day);
       if (illnessPolicy && input.illness && dateISO < input.illness.activeFromISO) continue;
       if (!illnessPolicy && input.readiness?.windowStartISO && input.readiness.windowEndISO &&
         !isDateInReadinessDeloadWindow(
@@ -251,4 +271,15 @@ export function compileCanonicalWeek(
       ? factPolicy.door
       : null,
   };
+}
+
+/**
+ * Final-workout fixture specialist, owned by the same compiler boundary.
+ * The specialist may preserve accepted athlete decisions and enumerate legal
+ * candidates; no transaction or read surface may invoke it independently.
+ */
+export function compileCanonicalFixtureMutationWeek(
+  input: BuildFixtureMinimalReplanInput,
+): FixtureMinimalReplanResult {
+  return buildFixtureMinimalReplan(input);
 }

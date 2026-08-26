@@ -7,7 +7,7 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: fixtures, injuries, travel, edits, scheduled deloads, later
+ * NOT COVERED: injuries, travel, edits, scheduled deloads, later
  * compiler families, pixels, simulator and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
@@ -29,6 +29,7 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import type { OnboardingData, Workout } from '../types/domain';
 import { compileCanonicalWeek } from '../rules/canonicalWeeklyCompiler';
+import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
 import { useProgramStore } from '../store/programStore';
 import {
   coldStartThroughOnboarding,
@@ -39,6 +40,7 @@ import {
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
+import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -201,6 +203,7 @@ async function main(): Promise<void> {
   const illnessModeSource = readFileSync(join(ROOT, 'rules/illnessRecoveryWeekMode.ts'), 'utf8');
   const derivedContractSource = readFileSync(join(ROOT, 'rules/derivedWeekContract.ts'), 'utf8');
   const sessionResolverSource = readFileSync(join(ROOT, 'utils/sessionResolver.ts'), 'utf8');
+  const fixtureReplanSource = readFileSync(join(ROOT, 'utils/fixtureMinimalReplan.ts'), 'utf8');
   ok('the scheduler-input translator no longer interprets readiness facts',
     !schedulerInputsSource.includes('generationConstraints?.readiness'));
   ok('the compiler accepts the typed readiness directive',
@@ -285,6 +288,100 @@ async function main(): Promise<void> {
       'illness: canonicalIllnessFactFrom(generationConstraints)',
       'illness_REMOVED: canonicalIllnessFactFrom(generationConstraints)',
     ).includes('illness: canonicalIllnessFactFrom(generationConstraints)'));
+
+  console.log('\n[fixture ownership] one typed target-week state enters the compiler');
+  ok('the compiler accepts a semantic fixture state',
+    compilerSource.includes('readonly fixture?: CanonicalWeeklyFixtureState | null'));
+  ok('product generation hands the target-week fixture state to the compiler',
+    generatorSource.includes('fixture: canonicalFixtureStateFrom('));
+  ok('the scheduler translator no longer accepts a second target-fixture input',
+    !schedulerInputsSource.includes('readonly targetFixtureDay?:') &&
+      !schedulerInputsSource.includes('readonly targetWeekAvailability?:'));
+  ok('the compiler derives connector fixture fields from its own resolved schedule',
+    compilerSource.includes("| 'selectedDayNumbers' | 'teamTrainingDayNumbers' | 'hasGame' | 'gameDay'") &&
+      compilerSource.includes("| 'clubNights'") && compilerSource.includes("| 'gameDays'") &&
+      compilerSource.includes('clubNights: scheduler.clubNights') &&
+      compilerSource.includes('gameDays: [...scheduler.gameDays]'));
+  ok('generation no longer restates fixture fields into the connector',
+    !generatorSource.includes('gameDays: scheduledGameDays(schedulerInputs)') &&
+      !generatorSource.includes('hasGame: scheduledGameDays(schedulerInputs).length > 0'));
+  ok('the accepted contract reader no longer rebuilds identity from calendar fixture facts',
+    !derivedContractSource.includes('fixtureIdentityForWeek') &&
+      !derivedContractSource.includes('targetWeekFixtures'));
+  ok('fixture publication consumes the compiler-authored contract without a read-side rewrite',
+    !fixtureReplanSource.includes('deriveWeekContract({'));
+  const fixtureReplanCallers = productionCallers('buildFixtureMinimalReplan');
+  ok('the final-workout fixture specialist has one production caller: the compiler',
+    JSON.stringify(fixtureReplanCallers) === JSON.stringify([COMPILER_PATH]),
+    JSON.stringify(fixtureReplanCallers));
+  const fixtureRivalAuthors = [
+    schedulerInputsSource.includes('readonly targetFixtureDay?:')
+      ? 'scheduler translator independently interprets target fixture' : null,
+    schedulerInputsSource.includes('readonly targetWeekAvailability?:')
+      ? 'scheduler translator independently interprets fixture availability' : null,
+    generatorSource.includes('gameDays: scheduledGameDays(schedulerInputs)')
+      ? 'generator independently authors connector fixture days' : null,
+    derivedContractSource.includes('fixtureIdentityForWeek')
+      ? 'accepted reader rewrites fixture identity' : null,
+    fixtureReplanSource.includes('deriveWeekContract({')
+      ? 'fixture publisher rewrites fixture identity' : null,
+    ...fixtureReplanCallers
+      .filter((caller) => caller !== COMPILER_PATH)
+      .map((caller) => `fixture replan invoked outside compiler: ${caller}`),
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-fixture rival-author count is literally zero',
+    fixtureRivalAuthors.length === 0, JSON.stringify(fixtureRivalAuthors));
+  ok('[MUTATION] dropping the typed fixture compiler handover is detected',
+    generatorSource.includes('fixture: canonicalFixtureStateFrom(') &&
+    !generatorSource.replace(
+      'fixture: canonicalFixtureStateFrom(',
+      'fixture_REMOVED: canonicalFixtureStateFrom(',
+    ).includes('fixture: canonicalFixtureStateFrom('));
+  ok('[MUTATION] bypassing the compiler-owned final fixture specialist is detected',
+    compilerSource.includes('return buildFixtureMinimalReplan(input)') &&
+    !compilerSource.replace(
+      'return buildFixtureMinimalReplan(input)',
+      'return buildFixtureMinimalReplan_REMOVED(input)',
+    ).includes('return buildFixtureMinimalReplan(input)'));
+  const offSeasonFixture = canonicalFixtureStateFrom({
+    weekStartISO: INSTALL_DAY,
+    seasonPhase: 'Off-season',
+    targetFixtureDay: 'Saturday',
+  });
+  ok('standing game answers stay dormant at the Off-season compiler boundary',
+    offSeasonFixture?.fixtures.length === 0 &&
+      offSeasonFixture.adjacentFixtureDates.length === 0 &&
+      offSeasonFixture.releasedFixtureDayNumbers.length === 0,
+    JSON.stringify(offSeasonFixture));
+  const offSeasonAvailability = canonicalFixtureStateFrom({
+    weekStartISO: INSTALL_DAY,
+    seasonPhase: 'Off-season',
+    availability: {
+      proposedFixtures: [{ date: '2026-07-18', kind: 'game' }],
+      releasedFixtures: [{
+        date: '2026-07-18', kind: 'game', provenance: 'released_game_day',
+      }],
+      adjacentFixtureDates: ['2026-07-11', '2026-07-25'],
+      effectiveAvailableDayNumbers: [1],
+      days: [
+        {
+          dayNumber: 1, provenance: ['explicit_available'], blockedBy: [],
+        },
+        {
+          dayNumber: 6, provenance: ['explicit_available'],
+          blockedBy: ['fixture_occupied'],
+        },
+        {
+          dayNumber: 3, provenance: ['explicit_available'],
+          blockedBy: ['explicit_unavailable'],
+        },
+      ],
+    } as never,
+  });
+  ok('Off-season releases only fixture occupancy while preserving real availability blocks',
+    JSON.stringify(offSeasonAvailability?.effectiveAvailableDayNumbers) ===
+      JSON.stringify([1, 6]),
+    JSON.stringify(offSeasonAvailability));
 
   console.log('\n[refusal] no partial compiler output escapes');
   const refusal = compileCanonicalWeek({
@@ -493,6 +590,66 @@ async function main(): Promise<void> {
     visibleSignature(quiet(() =>
       resolvedDays(illnessInstall.blockOneStart, declarationDay))) ===
       illnessBaselineSignature);
+
+  console.log('\n[fixture slice] move onto occupied day -> move back');
+  const fixtureInstall = await coldStartThroughOnboarding({
+    profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+  });
+  ok('the fixture witness reaches a real Saturday-game week through onboarding',
+    fixtureInstall.onboardingRefusal === null, fixtureInstall.onboardingRefusal);
+  const fixtureSignature = (days: ReturnType<typeof resolvedDays>): string => JSON.stringify(
+    days.map((day) => [day.dateISO, day.sessionName, day.components, day.rows.map((row) => [
+      row.name, row.sets ?? '', row.repsMin ?? '', row.repsMax ?? '', row.weightKg ?? '',
+    ])]),
+  );
+  const fixtureBaseline = quiet(() => resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY));
+  const fixtureBaselineSignature = fixtureSignature(fixtureBaseline);
+  const saturday = '2026-07-18';
+  const wednesday = '2026-07-15';
+  const mutateFixture = async (sourceDate: string, targetDate: string, commandId: string) =>
+    quietAsync(() => executeFixtureMutationTransaction({
+      action: 'move',
+      fixtureKind: 'game',
+      sourceDate,
+      targetDate,
+      expectedAcceptedRevision:
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      source: {
+        requestedBy: 'athlete',
+        producer: 'tap',
+        surface: 'program_tab',
+        commandId,
+      },
+      todayISO: INSTALL_DAY,
+    }));
+  const moved = await mutateFixture(saturday, wednesday, 'compiler-fixture:move-to-wed');
+  ok('the athlete fixture move commits through the production door',
+    moved.outcome === 'accepted', 'reason' in moved ? moved.reason : moved.outcome);
+  const movedVisible = quiet(() => resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY));
+  const movedWednesday = movedVisible.find((day) => day.dateISO === wednesday);
+  const movedSaturday = movedVisible.find((day) => day.dateISO === saturday);
+  ok('the moved game takes precedence over the session formerly on Wednesday',
+    movedWednesday?.sessionName === 'Game Day' && movedWednesday.rows.length === 0,
+    JSON.stringify(movedWednesday));
+  ok('the old Saturday is no longer a game',
+    movedSaturday?.sessionName !== 'Game Day', JSON.stringify(movedSaturday));
+  const movedContract = useProgramStore.getState()
+    .weekScopedOverlays[fixtureInstall.blockOneStart]?.exposureContractV2;
+  const movedFixtureDays = movedContract?.anchors
+    .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
+    .map((anchor) => anchor.dayOfWeek) ?? [];
+  ok('the accepted compiler contract carries exactly the moved fixture anchor',
+    JSON.stringify(movedFixtureDays) === JSON.stringify([3]),
+    JSON.stringify(movedFixtureDays));
+  const restoredFixture = await mutateFixture(
+    wednesday, saturday, 'compiler-fixture:move-back-to-sat',
+  );
+  ok('the reverse fixture move commits through the same production door',
+    restoredFixture.outcome === 'accepted',
+    'reason' in restoredFixture ? restoredFixture.reason : restoredFixture.outcome);
+  ok('moving the fixture back restores the visible week exactly',
+    fixtureSignature(quiet(() =>
+      resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature);
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

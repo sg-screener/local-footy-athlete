@@ -504,3 +504,84 @@ overlay rather than treating the right base behaviour as a product failure.
   claimed zero.
 - Full-year archetype acceptance, pixels, simulator and physical iPhone are not
   covered.
+
+## 2026-08-27 — step 7: fixtures and games are the third complete fact family
+
+### Two options weighed
+
+1. Keep target-game overrides in the scheduler translator, let generation
+   restate the same game fields for the connector, rebuild fixture identity when
+   reading the accepted contract, and leave the transaction calling its final
+   replan specialist directly.
+2. Translate accepted target-week availability into one semantic fixture state,
+   pass it into the compiler, and make the compiler the only owner of the
+   scheduler inputs, connector fields, accepted fixture identity and final
+   specialist call.
+
+Option 2 landed. It removes four opportunities for the same game move to mean
+different things.
+
+### Ownership result
+
+Instrument unit: distinct executable production authors of target-week fixture
+identity, fixture-conditioned schedule fields or final fixture replan.
+
+- Rival weekly-fixture authors outside the compiler: **0**.
+- Production callers of the final fixture specialist: **1**, the canonical
+  compiler.
+- Scheduler, materialiser and connector remain **1 distinct production caller
+  each**, also the canonical compiler.
+
+The scheduler translator no longer accepts target fixture day or target-week
+availability. Generation no longer restates game/club/selected-day fields into
+the connector. The accepted-contract reader no longer reads calendar fixture
+facts to rebuild identity. The fixture publisher no longer derives a second
+contract, and the accepted transaction no longer invokes the specialist around
+the compiler.
+
+This is a fixture-family result only. It is not a claim that every compiler
+family has one owner yet.
+
+### Tests-first and the real action journey
+
+Before production changes, the expanded compiler witness printed **66 green / 10
+red**. One red was an invalid instrument assumption that Game Day needed a
+particular presentation component; it was corrected to test the semantic Game
+Day and zero training rows. The final witness prints **80/80 green**.
+
+The witness cold-starts a real in-season athlete with a Saturday game. It moves
+the game through the production transaction onto an occupied Wednesday. The
+accepted visible Wednesday becomes Game Day with no training rows, Saturday is
+no longer a game, and the accepted contract has exactly one Wednesday fixture
+anchor. Moving the game back through the same door restores the complete visible
+week exactly.
+
+The Off-season acceptance cells also prove a standing game answer, released
+fixture and adjacent fixture dates stay dormant. Fixture occupancy is released
+back into availability, while genuine unavailable blocks remain blocked.
+
+Mutations remove the typed fixture handover and bypass the compiler's final
+specialist call; each kills its named ownership cell.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **80/80**.
+- Scheduler group: scheduler **102/102**, generated fixture **11/11**, travel
+  zero-equipment **10/10**, Off-season continuity **9/9**, spare-day options
+  **20/20**.
+- `npm run test:fixture-identity`: **7/7**.
+- `npm run test:g-plus1-dependent-week`: **3/3**.
+- `npm run test:derived-week-ownership`: **6/6**.
+- `npm run test:release`: **4/4 units green**, `RELEASE_GATE_EXIT=0`.
+- The old `test:fixture-mutation-transaction` suite remains exactly **10/14**:
+  its four pre-existing failures are unchanged. The test-truth register marks
+  it `rewrite_test`, so those old assertions remain diagnostic evidence and
+  cannot direct product changes.
+
+### NOT COVERED
+
+- Injury, travel, athlete-edit and scheduled-deload families have not moved.
+- Global rival-author and derived-output-writer counts are not zero and are not
+  claimed zero.
+- The full-year archetype compiler acceptance gate has not been built.
+- Pixels, simulator and physical iPhone are not covered.

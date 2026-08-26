@@ -43,6 +43,10 @@ import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditione
 import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import { weeklySchedulerInputsFrom } from '../rules/weeklySchedulerInputs';
 import {
+  canonicalFixtureStateFrom,
+  schedulerInputsWithFixtureState,
+} from '../rules/canonicalWeeklyFixtureState';
+import {
   scheduleRefused,
   scheduleWeek,
   type WeeklySchedule,
@@ -846,12 +850,17 @@ console.log('\n[cross-week] A MOVED GAME PROTECTS THE ADJACENT WEEK (launch audi
     markedDays,
     ownedPhase: ownSeasonPhaseForGeneration(profile),
   });
-  const built = weeklySchedulerInputsFrom({
+  const baseline = weeklySchedulerInputsFrom({
     profile,
     weekStartISO: '2026-08-31',
     offseasonSubphase: null,
-    targetWeekAvailability: availability,
   });
+  const built = schedulerInputsWithFixtureState(baseline, canonicalFixtureStateFrom({
+    weekStartISO: '2026-08-31',
+    availability,
+    seasonPhase: profile.seasonPhase,
+    activeConstraints: [],
+  }));
   ok('the REAL adjacent Sunday game reaches fixture proximity', [],
     (built.fixtureProximityDates ?? []).includes('2026-08-30'),
     `fixtureProximityDates=${JSON.stringify(built.fixtureProximityDates)}`);

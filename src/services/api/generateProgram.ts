@@ -91,9 +91,10 @@ import {
   type CanonicalWeeklyIllnessFact,
   type CanonicalWeeklyReadinessFact,
 } from '../../rules/canonicalWeeklyCompiler';
+import { canonicalFixtureStateFrom } from '../../rules/canonicalWeeklyFixtureState';
 import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
 import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
-import { scheduledGameDays, type WeeklySchedule } from '../../rules/weeklyScheduler';
+import type { WeeklySchedule } from '../../rules/weeklyScheduler';
 import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
@@ -643,14 +644,8 @@ export function buildInitialGeneratedCoachingPlan(args: {
         participationProvenance: 'derived_healthy_unrestricted',
         currentProductionClaimsAnchorCredit: true,
       } as never,
-      clubNights: schedInputs.clubNights,
-      gameDays: scheduledGameDays(schedInputs),
       v1Input: {
         seasonPhase: inputs.seasonPhase,
-        selectedDayNumbers: [...schedInputs.gymAccessDays],
-        teamTrainingDayNumbers: [...schedInputs.clubNights],
-        hasGame: scheduledGameDays(schedInputs).length > 0,
-        gameDay: scheduledGameDays(schedInputs)[0] ?? null,
         weekKind: firstState?.weekKind,
         offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
         preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
@@ -1140,8 +1135,6 @@ export function buildGeneratedMicrocycles(args: {
         offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
-        targetFixtureDay,
-        targetWeekAvailability,
         miniCycleNumber: blockState.miniCycleNumber ?? null,
         weekKind: effectiveWeekKind,
       });
@@ -1151,6 +1144,13 @@ export function buildGeneratedMicrocycles(args: {
         coaching: cutoverInputs,
         readiness: canonicalReadinessFactFrom(generationConstraints),
         illness: canonicalIllnessFactFrom(generationConstraints),
+        fixture: canonicalFixtureStateFrom({
+          weekStartISO: blockState.weekStart,
+          availability: targetWeekAvailability,
+          targetFixtureDay,
+          seasonPhase: profile.seasonPhase,
+          activeConstraints: args.activeConstraints,
+        }),
         materialisation: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
@@ -1183,14 +1183,8 @@ export function buildGeneratedMicrocycles(args: {
             kitUnachievablePatterns: kitUnachievablePatterns(
               equipmentWindow.reachableAcrossWindow),
           } as never,
-          clubNights: schedulerInputs.clubNights,
-          gameDays: scheduledGameDays(schedulerInputs),
           v1Input: {
             seasonPhase: profile.seasonPhase,
-            selectedDayNumbers: [...schedulerInputs.gymAccessDays],
-            teamTrainingDayNumbers: [...schedulerInputs.clubNights],
-            hasGame: scheduledGameDays(schedulerInputs).length > 0,
-            gameDay: scheduledGameDays(schedulerInputs)[0] ?? null,
             weekKind: effectiveWeekKind,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
             preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
@@ -1846,8 +1840,6 @@ export function generateProgramLocally(
     phaseClockProvenance: phaseResolution.provenance,
     offseasonSubphase: phaseResolution.offseasonSubphase ?? undefined,
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
-    targetWeekAvailability: options.targetWeekAvailability,
-    targetFixtureDay: options.targetFixtureDay,
     awaySpans: awaySpansFromConstraints(options.activeConstraints),
     noTeamTrainingSpans: noTeamTrainingSpansFromConstraints(options.activeConstraints),
   });
