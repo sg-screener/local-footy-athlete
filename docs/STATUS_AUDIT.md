@@ -2966,3 +2966,28 @@ ruling-registry ratchet (9 UNENFORCED > ceiling 4), both red in BOTH
 arms, neither owned by this batch.
 
 Sam's phone build is STALE: everything above ships on his say-so.
+
+## 2026-08-26 — checklist round 2 (audit)
+
+Sam's re-check: 12 of 14 ok; two survivors + three new orders, all now
+WORKING:
+- #5 flashes: sibling-modal handoff is STRUCTURALLY impossible on iOS
+  (onShow-chaining deadlocks — measured; close-then-open IS the flash).
+  The away chain became a MODE of the week-edit sheet's one modal:
+  AwayFlowBody + EquipmentLimitationBody (the one equipment menu, no
+  modal of its own) hosted in WeekEditSheet (101900dc + 93241eb5 — the
+  first commit half-landed the extraction; Metro's red screen caught
+  what the compile gate cannot see, tsconfig excludes product files).
+  Glass-proven both paths: bodyweight, and some-gear with the kit list
+  INSIDE the same sheet, apply closing the chain.
+- #9 drag snap-back: glide was insufficient (re-derivation slower than
+  any glide). Drop VERDICT design: 'held' at drop point until the flow
+  ends (unmount on accepted; settleNonce glide-home on close/refusal);
+  'returned' glides at once; onFinalize only for cancelled gestures
+  (5cd7c36b). Proven with a real long-press drag on the simulator:
+  Mon strength → Wed, board re-derived.
+- Day/session conditioning icon flame → pulse (0ff92a3c).
+- Day-header My Status doorway, coach variant (a14616e8).
+- Board closes on Day/Week toggle + R-233 already in round 1.
+
+Phone rebuild dispatched with all of it.
