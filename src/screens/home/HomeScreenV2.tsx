@@ -3479,11 +3479,10 @@ function WeekEditSheet({
           ) : null}
           {(phase === 'In-season' || phase === 'Pre-season') ? (
             <SheetOption
-              /* Copy functional, PROPOSED — Sam ordered the button and the
-               * order; the words await his pass. */
-              label="Move the game to a different day"
+              /* SIGNED 2026-08-26 ("yes thats fine") — rows in projectionCopy. */
+              label={signedCopy('week.edit_sheet.move_game.label')}
               sub={hasFixture
-                ? 'Pick its new day — the week reshapes around it.'
+                ? signedCopy('week.edit_sheet.move_game.subline')
                 : 'No game this week to move'}
               icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14" /><Path d="M12 5l7 7-7 7" /></Svg>}
               disabled={!hasFixture}

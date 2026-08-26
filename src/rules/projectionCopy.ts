@@ -1066,6 +1066,21 @@ export function registerProjectionCopy(): void {
       text: 'Add another game to this week',
     },
     {
+      id: 'week.edit_sheet.move_game.label',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26: ordered the button ("it should go '
+        + "'we have a bye' then the next one should be move game to a different "
+        + 'day"); label proposed with it and approved 2026-08-26 ("yes thats fine").',
+      text: 'Move the game to a different day',
+    },
+    {
+      id: 'week.edit_sheet.move_game.subline',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-26: proposed with the button, approved '
+        + '2026-08-26 ("yes thats fine").',
+      text: 'Pick its new day — the week reshapes around it.',
+    },
+    {
       id: 'week.edit_sheet.away.label',
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-25, R-202: Away option label.',

@@ -2363,8 +2363,14 @@ about a trip, and the sentence the athlete gets back.
 | Away sheet, question 1 | "When do you leave?" |
 | Away sheet, question 2 | "When do you return?" |
 | Away sheet, question 3 | "Do you have your normal equipment?" |
-| Question 3, yes | "Yes, same as usual" |
-| Question 3, no | "No, I'll be without some gear" |
+| Question 3, yes | "Same gear as usual" |
+| Question 3, some | "Some gear missing" |
+| Question 3, bodyweight | "Bodyweight only" |
+
+*(Question 3's original two answers — "Yes, same as usual" / "No, I'll be
+without some gear" — were REPLACED 2026-08-26 by Sam's own three-answer list
+from his phone checklist #10: "same gear, some gear ... or bodyweight only".
+His words are the signature; the rows above carry them.)*
 | The week-shape control | "Away" |
 | Equipment sheet heading, when it is a trip | "What will you be without?" |
 | Equipment sheet apply, when it is a trip | "Apply while I'm away" |
