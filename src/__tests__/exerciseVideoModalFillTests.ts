@@ -25,6 +25,8 @@ import path from 'path';
 
 const src = path.resolve(__dirname, '..');
 const modal = fs.readFileSync(path.join(src, 'components/ExerciseVideoModal.tsx'), 'utf8');
+const videoService = fs.readFileSync(
+  path.join(src, 'services/exerciseVideoService.ts'), 'utf8');
 
 let passed = 0;
 const failures: string[] = [];
@@ -72,6 +74,27 @@ console.log('\n[video modal] the player frame is a true aspect-locked box');
   ok(
     'the WebView still fills the frame',
     /webview:\s*\{[\s\S]*?flex:\s*1/.test(modal),
+  );
+}
+
+console.log('\n[video modal] exercise demos start muted');
+{
+  ok(
+    'the embed enables YouTube’s supported JavaScript player API',
+    /['"]enablejsapi=1['"]/.test(videoService),
+  );
+  ok(
+    'the iframe has a stable player id and loads the YouTube iframe API',
+    /id="exercise-demo-player"/.test(modal)
+      && /https:\/\/www\.youtube\.com\/iframe_api/.test(modal),
+  );
+  ok(
+    'the official onReady callback mutes the player before the athlete presses play',
+    /onReady[\s\S]{0,160}target\.mute\(\)/.test(modal),
+  );
+  ok(
+    'muted-by-default does not turn into autoplay',
+    !/['"]autoplay=1['"]/.test(videoService),
   );
 }
 

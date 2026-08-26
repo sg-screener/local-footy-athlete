@@ -90,12 +90,26 @@ export default function ExerciseVideoModal({
   <body>
     <div class="wrap">
       <iframe
+        id="exercise-demo-player"
         src="${embedUrl}"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
         playsinline
       ></iframe>
     </div>
+    <script>
+      var exerciseDemoPlayer;
+      function onYouTubeIframeAPIReady() {
+        exerciseDemoPlayer = new YT.Player('exercise-demo-player', {
+          events: {
+            onReady: function(event) {
+              event.target.mute();
+            }
+          }
+        });
+      }
+    </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
   </body>
 </html>`
     : null;

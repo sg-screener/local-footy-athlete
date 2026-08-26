@@ -6366,3 +6366,15 @@ are never persisted.
 weekly edit finish, snap back, dirty board, immediate save.
 · `WORKING` — `test:week-board` compares real board projections, binds both
 signed strings and pins the one-button finish/return flow.
+
+**R-246** · *"YouTube shorts in session view should default to muted if thats
+possible"* (Sam, 2026-08-26, session demo review) · **EXERCISE DEMOS START
+MUTED, WITHOUT AUTOPLAY.**
+The inline YouTube player still waits for the athlete to press play. When the
+player becomes ready, the embed uses YouTube's supported player API to mute it.
+The athlete may turn sound back on with YouTube's ordinary control. Opening an
+external YouTube fallback remains YouTube-owned and is unchanged.
+**Search words:** YouTube Shorts, exercise demo, session view, muted by default,
+player mute, no autoplay.
+· `WORKING` — `test:video-modal-fill` pins JavaScript API enablement, the
+on-ready mute command and the absence of autoplay.

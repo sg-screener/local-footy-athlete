@@ -2306,6 +2306,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-26 by seat `pregamechoice`. TWO OPTIONS COMPARED: hide text/cards independently inside the normal Week and Manage Week renderers, or filter the dated Week read once at the existing start-boundary owner and feed both surfaces that same collection. The shared read filter landed because it removes the grey/frozen presentation and prevents the two weekly surfaces drifting, while leaving canonical stored sessions untouched. TEST FIRST: the revised tape was 4 passing / 4 failing cells; the missing pure filter failed both dated behavior cells and both UI ownership cells. AFTER: `test:pre-program-days` is 8/8 and `test:week-board` is 75/75. The tape pins Wednesday signup removing Monday/Tuesday, program-start fallback, source-array conservation, both Week consumers and deletion of Manage Week’s frozen/opacity mode. MUTATION/LIVENESS: returning the unfiltered dated array changed the tape from 8/0 to 6/2 and both behavior cells named the retained pre-start dates. SIMULATOR: the dedicated real-generated `midweek-signup` world anchors Wednesday inside a Monday-starting program. `.maestro/visible/pre-program-week-hidden.yaml` passed on iPhone 17 Pro simulator: ordinary Week showed Wednesday onward with no Monday/Tuesday rows, and Manage Week showed Wednesday onward with no Monday/Tuesday board rows. The older `spent-week-friday` seed was not weakened for this run: it currently refuses on its inherited Wednesday-eligible-target witness because the scheduler now places Mobility there. NOT COVERED: physical-iPhone Release, VoiceOver order, an athlete whose signup date is missing or corrupt beyond the existing program-start fallback, and historical sessions outside the currently displayed week.',
     },
   },
+  {
+    id: 'LAW-session-exercise-demos-default-muted',
+    law: 'Inline YouTube exercise demos in the live session view wait for the athlete to press play and start muted. The embed uses YouTube’s supported JavaScript player API to mute on ready, keeps YouTube’s ordinary sound control available, and does not enable autoplay. The external-YouTube fallback remains outside this inline-player default.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-246 — Sam required YouTube Shorts in session view to default to muted.',
+    guard: {
+      state: 'guarded',
+      by: 'test:video-modal-fill',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-26 by seat `weeksave`. TWO OPTIONS COMPARED: append an undocumented mute query parameter, or enable YouTube’s documented iframe JavaScript API and call the documented player.mute() method on ready. The supported API route landed; it keeps the existing native controls and deliberate tap-to-play behavior. TEST FIRST: the new section began 8 pass / 3 fail because the embed had no API enablement, stable player id or mute callback. AFTER: `test:video-modal-fill` is 11/0. MUTATION/LIVENESS: changing the callback from mute() to unMute() changed the tape to 10/1 and killed the exact on-ready-mute cell; restoring it returned 11/0. SIMULATOR: an iPhone 17 Pro run opened the Couch Stretch demo and the Short played inline without changing the modal layout or falling back externally. NOT COVERED: an automated audio-level instrument, the physical-iPhone Release build, external YouTube behavior and VoiceOver traversal inside YouTube’s WebView.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

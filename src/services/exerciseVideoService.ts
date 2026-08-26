@@ -627,6 +627,8 @@ export function extractYouTubeVideoId(url: string | null | undefined): string | 
  *   - fs=1:                 allow full-screen button (user can escalate
  *                           if they want the big view).
  *   - iv_load_policy=3:     suppress video annotations.
+ *   - enablejsapi=1:        let the modal use YouTube's supported player API
+ *                           to establish its muted default.
  *
  * We intentionally DO NOT autoplay — iOS/Android both block autoplay
  * with sound until a user gesture, and a muted auto-play would be worse
@@ -640,6 +642,7 @@ export function buildYouTubeEmbedUrl(videoId: string): string {
     'controls=1',
     'fs=1',
     'iv_load_policy=3',
+    'enablejsapi=1',
   ].join('&');
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params}`;
 }
