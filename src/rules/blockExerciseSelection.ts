@@ -60,10 +60,29 @@ export interface BlockExerciseSelection {
   /** Monday ISO the block started on — block identity a renumber cannot break. */
   readonly blockStartISO: string;
   readonly slot: SessionSlot;
+  /**
+   * Zero-based occurrence of this slot in the authored week.
+   *
+   * A slot is a movement pattern, not a complete weekly seat. Keying history by
+   * slot alone made every horizontal press in a four-day week restore the same
+   * Bench Press row. The occurrence keeps those seats distinct while each one
+   * remains stable for the block. Legacy rows pre-date this field and lift to 0
+   * at the store boundary via `selectionSeatIndex`.
+   */
+  readonly seatIndex: number;
   /** Authored muscle group, when the pool declares one. Scopes "same group". */
   readonly group: string | null;
   readonly role: SelectionRole;
   readonly identity: ComposedExerciseIdentity;
+}
+
+/** Read-ingress lift for selection rows written before weekly seats existed. */
+export function selectionSeatIndex(
+  selection: Pick<BlockExerciseSelection, 'seatIndex'> | { readonly seatIndex?: number },
+): number {
+  return Number.isInteger(selection.seatIndex) && Number(selection.seatIndex) >= 0
+    ? Number(selection.seatIndex)
+    : 0;
 }
 
 export type SelectionDecisionKind =

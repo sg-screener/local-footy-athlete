@@ -9,8 +9,8 @@
  * rows. R-087 is untouched: body-spanning gaps still make a coverage day.
  *
  * The same build closed the door/boot asymmetry the balance day exposed:
- * the block record is keyed by slot, and the in-run record is now visible to
- * later days in the same generation (one slot, one answer per block).
+ * the block record is keyed by weekly slot occurrence, and the in-run record is
+ * visible to later days in the same generation (one seat, one answer per block).
  *
  * Run: npm run test:full-body-balance
  */
@@ -69,24 +69,37 @@ function athlete(gender: 'male' | 'female', phase: string): OnboardingData {
 
 interface Day {
   readonly label: string;
-  readonly names: readonly string[];
+  readonly rows: ReadonlyArray<{
+    readonly name: string;
+    readonly slot: string;
+  }>;
 }
 function firstWeek(gender: 'male' | 'female', phase: string): Day[] {
   const program = quiet(() => generateProgramLocally(athlete(gender, phase), {
     todayISO: '2026-08-03', blockNumber: 1,
   })) as TrainingProgram;
   const cycle = program.microcycles[0] as {
-    workouts: Array<{ name?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string }> }>;
+    workouts: Array<{
+      name?: string;
+      exercises?: Array<{
+        exercise?: { name?: string };
+        name?: string;
+        section18Evidence?: { slot?: string };
+      }>;
+    }>;
   };
   return cycle.workouts.map((workout) => ({
     label: String(workout.name ?? ''),
-    names: (workout.exercises ?? []).map((row) => row.exercise?.name ?? row.name ?? ''),
+    rows: (workout.exercises ?? []).map((row) => ({
+      name: row.exercise?.name ?? row.name ?? '',
+      slot: String(row.section18Evidence?.slot ?? ''),
+    })),
   }));
 }
 
-const PUSHES = /Bench Press|Push-?up|Shoulder Press|Overhead Press|Dip/i;
-const PULLS = /Row|Pull-?Up|Pulldown|Chin/i;
-const LOWERS = /Squat|RDL|Deadlift|Lunge|Leg Press|Bulgarian|Step Up/i;
+const PUSH_SLOTS = new Set(['horizontal_push', 'vertical_push']);
+const PULL_SLOTS = new Set(['horizontal_pull', 'vertical_pull']);
+const LOWER_SLOTS = new Set(['squat', 'hinge', 'single_leg_knee']);
 
 for (const gender of ['male', 'female'] as const) {
   for (const phase of ['Pre-season', 'Off-season'] as const) {
@@ -94,12 +107,12 @@ for (const gender of ['male', 'female'] as const) {
       const days = firstWeek(gender, phase);
       const fullBody = days.find((day) => /full[_ ]?body/i.test(day.label));
       assert(fullBody, `no full-body day in: ${days.map((day) => day.label).join(', ')}`);
-      const names = fullBody.names.join(', ');
-      assert(fullBody.names.some((name) => LOWERS.test(name)),
+      const names = fullBody.rows.map((row) => row.name).join(', ');
+      assert(fullBody.rows.some((row) => LOWER_SLOTS.has(row.slot)),
         `no lower row on the full-body day: ${names}`);
-      assert(fullBody.names.some((name) => PUSHES.test(name)),
+      assert(fullBody.rows.some((row) => PUSH_SLOTS.has(row.slot)),
         `no push row on the full-body day (the pre-R-234 duplicate-lower shape): ${names}`);
-      assert(fullBody.names.some((name) => PULLS.test(name)),
+      assert(fullBody.rows.some((row) => PULL_SLOTS.has(row.slot)),
         `no pull row on the full-body day: ${names}`);
     });
 
@@ -108,8 +121,11 @@ for (const gender of ['male', 'female'] as const) {
       const fullBody = days.find((day) => /full[_ ]?body/i.test(day.label));
       const lower = days.find((day) => /^lower/i.test(day.label));
       assert(fullBody && lower, 'week no longer holds a lower day and a full-body day');
-      const shared = fullBody.names.filter((name) => lower.names.includes(name));
-      assert(shared.length < Math.min(fullBody.names.length, lower.names.length),
+      const lowerNames = lower.rows.map((row) => row.name);
+      const shared = fullBody.rows
+        .map((row) => row.name)
+        .filter((name) => lowerNames.includes(name));
+      assert(shared.length < Math.min(fullBody.rows.length, lower.rows.length),
         `the full-body day repeats the lower day wholesale: ${shared.join(', ')}`);
     });
   }
@@ -128,8 +144,8 @@ run('the balance arm exists and coverage still outranks it (R-087 untouched)', (
     'balance no longer yields to R-087 coverage');
 });
 
-run('the in-run block record is visible to later days (one slot, one answer per block)', () => {
-  assert(/\?\? selectionsThisBlock\.find\(\(entry\) => entry\.slot === slot\) \?\? null/.test(composer),
+run('the in-run block record is visible to later days (one seat, one answer per block)', () => {
+  assert(/\?\? selectionsThisBlock\.find\(\(entry\) =>[\s\S]*?entry\.slot === slot && selectionSeatIndex\(entry\) === seatIndex\) \?\? null/.test(composer),
     'the install-vs-boot record asymmetry is back — bin Monday, relaunch, and the '
     + "full-body day's pull flips (measured: Pull-Ups → Lat Pulldown)");
 });

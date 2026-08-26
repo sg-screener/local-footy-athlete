@@ -42,6 +42,7 @@ import {
 } from './composedRowLegality';
 import {
   decideExerciseForBlock,
+  selectionSeatIndex,
   type BlockExerciseSelection,
   type SelectionRole,
 } from './blockExerciseSelection';
@@ -341,7 +342,7 @@ export interface ComposedWeek {
   /** Clause (a)'s input, derived here so ONE deriver serves contract and rows. */
   readonly kitUnachievablePatterns: readonly MainStrengthPattern[];
   /**
-   * What this block SELECTED, one row per movement slot — handed back so
+   * What this block SELECTED, one row per weekly movement seat — handed back so
    * generation can RECORD it durably. The composer does not write it: a domain
    * rule that reaches into a store is the hidden-read the order forbids.
    */
@@ -1107,8 +1108,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Variety is a property of the WEEK: a day repeating last night's lift is the
   // shape Bible `:227` names to avoid.
   const usedThisWeek = new Set<ComposedExerciseIdentity>();
-  /* What this block chose, per slot — handed back so generation can RECORD it.
-   * One row per slot: the first day to fill a slot decides the block. */
+  /* The stable weekly seats for a repeated movement pattern. Slot alone is too
+   * broad: it made two horizontal presses restore one Bench Press decision. */
+  const seatCountBySlot = new Map<SessionSlot, number>();
+  /* Push and pull each have two planes. The old per-day "first row wins" rule
+   * meant horizontal ALWAYS won because it appears first in the ladder, so a
+   * multi-day athlete could get Barbell Row twice and never see Pull-Ups. This
+   * count alternates which available plane owns the main role across the week. */
+  const mainExposureCountByPattern = new Map<MainStrengthPattern, number>();
+  /* What this block chose, per weekly slot occurrence — handed back so
+   * generation can RECORD it. */
   const selectionsThisBlock: BlockExerciseSelection[] = [];
   // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
   // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
@@ -1404,6 +1413,26 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // (d): the day's FIRST row of a planned pattern takes the role, and a
     // supplementary row of the same pattern stays an accessory.
     const patternHasItsMainLift = new Set<MainStrengthPattern>();
+    const desiredMainPlaneFor = (
+      pattern: MainStrengthPattern,
+    ): SessionSlot | null => {
+      const planes = pattern === 'push'
+        ? (['horizontal_push', 'vertical_push'] as const)
+        : pattern === 'pull'
+          ? (['horizontal_pull', 'vertical_pull'] as const)
+          : null;
+      if (!planes) return null;
+      const exposure = mainExposureCountByPattern.get(pattern) ?? 0;
+      const preferred = exposure % 2 === 0 ? planes[0] : planes[1];
+      const other = preferred === planes[0] ? planes[1] : planes[0];
+      const canLead = (candidate: SessionSlot): boolean =>
+        shapeSlots.includes(candidate)
+          && slotCandidates(candidate).some((id) =>
+            !excludedToday.has(id) && composedRowIsLegal(id, kitToday));
+      if (canLead(preferred)) return preferred;
+      if (canLead(other)) return other;
+      return null;
+    };
     /* ⚠ **ONE IDENTITY, ONCE PER DAY — the last 4 of Sam's 52 (2026-08-20).**
      *
      * After the conditioning warm-up rename was fixed, four occurrences
@@ -1475,9 +1504,13 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const slot = planeChoice?.slot ?? declaredSlot;
       const pattern = PATTERN_FOR_SLOT[slot] ?? null;
       if (pattern && prohibited.has(pattern)) continue;   // safety, not kit
+      const seatIndex = seatCountBySlot.get(slot) ?? 0;
+      seatCountBySlot.set(slot, seatIndex + 1);
+      const desiredMainPlane = pattern ? desiredMainPlaneFor(pattern) : null;
       const isMainLift = !!pattern
         && plannedPatterns.has(pattern)
-        && !patternHasItsMainLift.has(pattern);
+        && !patternHasItsMainLift.has(pattern)
+        && (desiredMainPlane === null || desiredMainPlane === slot);
       const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
       /* ── LEGALITY, IN THE CONTRACT'S OWN ORDER ────────────────────────────
        * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
@@ -1633,6 +1666,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const countsTowardBudget = slotCountsTowardSetBudget(slot);
       const slotHistory = inputs.selectionHistory
         .filter((entry) => entry.slot === slot
+          && selectionSeatIndex(entry) === seatIndex
           && entry.blockStartISO < inputs.blockStartISO)
         .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
       /* This block's OWN recorded choice, when it has been authored before —
@@ -1646,20 +1680,27 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * `selectionsThisBlock`, persisted only at the end) and picked fresh
        * from its own candidate head; at boot it COULD and replayed the
        * record. Measured: bin Monday, relaunch — the full-body day's pull
-       * flips Pull-Ups → Lat Pulldown. One slot, one answer per block, on
+       * flips Pull-Ups → Lat Pulldown. One weekly seat, one answer per block, on
        * both sides of a boot. */
       const recordedForThisBlock = inputs.selectionHistory.find(
-        (entry) => entry.slot === slot && entry.blockStartISO === inputs.blockStartISO,
-      ) ?? selectionsThisBlock.find((entry) => entry.slot === slot) ?? null;
+        (entry) => entry.slot === slot
+          && selectionSeatIndex(entry) === seatIndex
+          && entry.blockStartISO === inputs.blockStartISO,
+      ) ?? selectionsThisBlock.find((entry) =>
+        entry.slot === slot && selectionSeatIndex(entry) === seatIndex) ?? null;
       /* The base candidate list narrows to the day's variety preferences only
        * for slots outside the main/secondary budget, exactly as before. */
+      /* A recorded seat restores from the whole legal bench. A NEW seat prefers
+       * what this week has not used yet, so a third exposure advances again
+       * instead of making seats one and two identical. */
+      const seatCandidates = recordedForThisBlock ? baseLegal : basePreferred;
       const distinctSplitAccessoryCandidates = SPLIT_UPPER_ACCESSORY_SLOTS.has(slot)
-        ? baseLegal.filter((id) => !identitiesThisDay.has(id))
-        : baseLegal;
+        ? seatCandidates.filter((id) => !identitiesThisDay.has(id))
+        : seatCandidates;
       const baseCandidates = countsTowardBudget
         ? (distinctSplitAccessoryCandidates.length > 0
           ? distinctSplitAccessoryCandidates
-          : baseLegal)
+          : seatCandidates)
         : baseLegal.filter((id) => basePreferred.includes(id) || basePreferred.length === 0);
       const selection = decideExerciseForBlock({
         phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
@@ -1678,11 +1719,13 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * *"A temporary injury/constraint substitution must not become the
        * athlete's new permanent rotation history merely because boot occurred."*
        * Written before the day-scoped swap below, so no path can record one. */
-      if (!selectionsThisBlock.some((entry) => entry.slot === slot)) {
+      if (!selectionsThisBlock.some((entry) =>
+        entry.slot === slot && selectionSeatIndex(entry) === seatIndex)) {
         selectionsThisBlock.push({
           blockNumber: inputs.blockNumber,
           blockStartISO: inputs.blockStartISO,
           slot,
+          seatIndex,
           group: POOL_GROUP_OF.get(selection.identity) ?? null,
           role,
           identity: selection.identity,
@@ -1759,7 +1802,13 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         offseasonSubphase: inputs.offseasonSubphase,
         authoredFallback,
       });
-      if (isMainLift && pattern) patternHasItsMainLift.add(pattern);
+      if (isMainLift && pattern) {
+        patternHasItsMainLift.add(pattern);
+        mainExposureCountByPattern.set(
+          pattern,
+          (mainExposureCountByPattern.get(pattern) ?? 0) + 1,
+        );
+      }
       rows.push({
         identity,
         ...(substitutionReason ? { substitutedFor: substitutionReason } : {}),

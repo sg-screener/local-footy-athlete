@@ -1317,7 +1317,9 @@ export function buildGeneratedMicrocycles(args: {
     /* What this block chose, carried out so the caller can RECORD it. The
      * composer decides; persistence is the caller's job. */
     for (const selection of composedWeek.selections) {
-      if (!blockSelectionsAuthored.some((entry) => entry.slot === selection.slot)) {
+      if (!blockSelectionsAuthored.some((entry) =>
+        entry.slot === selection.slot
+          && (entry.seatIndex ?? 0) === (selection.seatIndex ?? 0))) {
         blockSelectionsAuthored.push(selection);
       }
     }

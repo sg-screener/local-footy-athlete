@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { BlockExerciseSelection } from '../rules/blockExerciseSelection';
+import {
+  selectionSeatIndex,
+  type BlockExerciseSelection,
+} from '../rules/blockExerciseSelection';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { registerQuarantineBoundary } from './refusedPayloadQuarantine';
 
@@ -73,9 +76,12 @@ export const useBlockSelectionHistoryStore = create<BlockSelectionHistoryState>(
   ),
 );
 
-/** Read the recorded history. Treat the array as frozen. */
+/** Read canonical recorded history. Treat the returned rows as frozen. */
 export function blockSelectionHistory(): readonly BlockExerciseSelection[] {
-  return useBlockSelectionHistoryStore.getState().selections;
+  return useBlockSelectionHistoryStore.getState().selections.map((selection) => ({
+    ...selection,
+    seatIndex: selectionSeatIndex(selection),
+  }));
 }
 
 /**
@@ -113,10 +119,17 @@ export function recordBlockSelections(
 ): void {
   if (!blockStartISO) return;
   useBlockSelectionHistoryStore.setState((state) => {
-    const withoutThisBlock = state.selections.filter(
-      (entry) => entry.blockStartISO !== blockStartISO,
-    );
-    const next = [...selections, ...withoutThisBlock];
+    const withoutThisBlock = state.selections
+      .filter((entry) => entry.blockStartISO !== blockStartISO)
+      .map((selection) => ({
+        ...selection,
+        seatIndex: selectionSeatIndex(selection),
+      }));
+    const canonicalSelections = selections.map((selection) => ({
+      ...selection,
+      seatIndex: selectionSeatIndex(selection),
+    }));
+    const next = [...canonicalSelections, ...withoutThisBlock];
     // Newest first, and bounded — an unbounded history is a growing payload for
     // a question that only ever looks back a few blocks.
     next.sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
@@ -140,10 +153,13 @@ export function recordBlockSelections(
 export function recentSelectionsForSlot(args: {
   history: readonly BlockExerciseSelection[];
   slot: string;
+  seatIndex?: number;
   beforeBlockStartISO: string;
 }): readonly BlockExerciseSelection[] {
+  const seatIndex = args.seatIndex ?? 0;
   return args.history
     .filter((entry) => entry.slot === args.slot
+      && selectionSeatIndex(entry) === seatIndex
       && entry.blockStartISO < args.beforeBlockStartISO)
     .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
 }

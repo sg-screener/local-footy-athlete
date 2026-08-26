@@ -6254,3 +6254,32 @@ bold recovery, bold rounds, bold intensity, all templates.
 the equality suite pins the exact 4×4 cue, and the session-template guard pins
 the one shared label-emphasis renderer and its spacing. All are in the Bible
 chain.
+
+**R-241** · *"Programming is shit too = always just defaults to bench press and
+back squat and lat pull down for some reason ... over 3 days of strength work i
+got no pull ups or DB bench press but was given 2 benchs, two back squats, 2
+RDL's and maybe even bulgarian split squats ... Its like it goes 'i need a
+horizontal press' - top of list = bench press - okay put that in"* (Sam,
+2026-08-26, audit item 4) · **A REPEATED WEEKLY PATTERN GETS A DISTINCT,
+BLOCK-STABLE EXERCISE SEAT; PUSH AND PULL ALTERNATE WHICH PLANE LEADS.**
+The existing block selector and its recorded history remain the authority.
+What was too broad was its key: one row per movement slot meant every weekly
+occurrence of that slot restored the first answer. History is now keyed by slot
+plus zero-based weekly occurrence. Each seat remains deterministic and stable
+through the build block, while another occurrence uses a different legal
+same-pattern option. For push and pull, the main-lift role alternates between
+the available horizontal and vertical planes across the week, so source order
+cannot make horizontal win every day; a full-gym repeated upper week can carry
+`Bench Press` plus `DB Bench Press` and `Barbell Row`/`Seated Cable Row` plus
+`Lat Pulldown`/`Pull-Ups` rather than cloning the first rows. Legacy one-seat history
+lifts to seat zero at read ingress and every new write carries the canonical
+seat field.
+**Search words:** boring program, strength variety, top of list, repeated bench,
+repeated squat, repeated RDL, DB bench, pull ups, weekly exercise seat,
+horizontal always first.
+· `BUILT` — `test:weekly-strength-variety` drives 40 real full-gym profile
+worlds across both genders, all three phases and 3/4/5/6 gym-day answers. Its
+test-first state counted 64 repeated weekly exercise identities across 20 of 40
+worlds; after the shared-key correction it counts zero, pins the real DB Bench
+and Pull-Up control, checks four-week seat stability, accepted multi-seat
+history and legacy ingress. The guard is in the Bible chain.
