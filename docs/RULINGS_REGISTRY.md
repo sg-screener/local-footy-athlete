@@ -6552,3 +6552,44 @@ title marks; `test:workout-log-progression-wiring` pins the real set pair and
 completed-prescription fallback. The iPhone 17 Pro simulator displayed the four
 ordered cards, a `+28 kg` Pull-Up estimate, an empty Back Squat card and no lime
 heading dashes.
+
+**R-256** · *"they should be doing something fast earlier in the week -
+something like a short sprint workout into so flying runs or glycolytic
+sessions in the 30 second to 2 min interval range - total session length 30-45
+min after warm up. then later in the week on say a g-2 they can do some
+runnign intervals or off leg conditioning keep this moderate intensity - no
+more than say 6 or 7km"* (Sam, 2026-08-26, the audit's Q2, built on his direct
+order 2026-08-27) · **THE NO-CLUB IN-SEASON GAME WEEK AUTHORS SAM'S FAST
+SESSION AND A G-2 MODERATE.**
+Held by `weeklyScheduler` clause WC-143: the tt=0 game week authors ONE hard
+app exposure — glycolytic category, the WC-135 sprint riding the same day as
+its opener, placed early (G-4 or before, preferring an upper day) — and the
+second app exposure prefers the G-2 day at moderate intensity (tempo running
+on an upper day, off-leg on a lower day, per WC-115). Supersedes, for tt=0
+game weeks ONLY, the 2026-07-29 "the game carries the hard exposure" reading;
+club athletes keep that credit. A reduced week (deload or low readiness)
+authors neither. Guard: `test:weekly-scheduler` WC-143 cells, mutation-killed.
+**Search words:** no club, no-club, fast work, sprint into glycolytic, flying
+runs, G-2 moderate, 6-7km, in-season conditioning, Q2.
+
+**R-257** · *"why can't you put work on the weekend here? why can't you put
+lowers on thursday and hard running friday?"* (Sam, 2026-08-26, the audit's
+Q3, build ordered 2026-08-27) · **THE PRE-SEASON HARD RUNNER LEAVES THE
+HEAVY LOWER DAY — THE WEEKEND IS LEGAL GROUND. RULED; BUILD BLOCKED, MEASURED.**
+The intended enforcer (scheduler clause WC-144: when every receiving day
+carries a lower purpose, the hard exposure takes a free day — Saturday
+first — and the lowers keep easy off-leg work; gym access bounds STRENGTH,
+not running, per WC-060/decision 15) was BUILT on 2026-08-27, produced the
+ruled shape (Mon lower + easy off-leg, Sat standalone Hard Intervals,
+mutation-killed cells), and was BACKED OUT the same day on a measured
+collision: with a hard session occupying Saturday, a dated practice-match
+arriving on that Saturday makes the fixture transaction's replan overlay and
+the pure deriver compose DIFFERENT weeks (Monday lost its conditioning
+component in the overlay), and `fixture-identity` cells 5/6 red — the
+add-then-remove identity law Sam himself ruled. The block is the
+projection/derivation seam already recorded as the R-075
+allocations-vs-final-plan unit: fix that seam, then re-land WC-144 (the
+backed-out build is in this branch's history at the WC-144 marker in
+`weeklyScheduler.ts`).
+**Search words:** weekend, hard running friday, lower day hard runner,
+pre-season placement, separate hard runner, Q3, WC-144, blocked.

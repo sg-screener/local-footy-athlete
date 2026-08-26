@@ -474,10 +474,16 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   // mutation harness found it — flipping the rule reddened nothing.
   const noClub = built({ phase: 'In-season', gymAccessDays: [MON, TUE, THU],
     clubNights: [], gameDay: SAT });
-  const sprintDays = noClub.days.filter((d) => d.conditioning === 'sprint_high_speed');
+  // WC-143 (Sam's Q2 ruling, 2026-08-26) changed this exposure's SHAPE, not
+  // its existence: the no-club game week's sprint now OPENS the fast session
+  // — "a short sprint workout into ... glycolytic" — so it appears as a
+  // `sprintComponent` on the hard day, or as a standalone sprint day when no
+  // hard day could be authored. Either way the week carries EXACTLY ONE.
+  const sprintDays = noClub.days.filter((d) =>
+    d.conditioning === 'sprint_high_speed' || d.sprintComponent);
   ok('[WC-135] ...and a sprint IS added when there is no club training',
-    ['WC-135'], sprintDays.length === 1,
-    JSON.stringify(noClub.days.map((d) => [d.dayOfWeek, d.conditioning])));
+    ['WC-135', 'WC-143'], sprintDays.length === 1,
+    JSON.stringify(noClub.days.map((d) => [d.dayOfWeek, d.conditioning, d.sprintComponent])));
   const order = [MON, TUE, WED, THU, FRI, SAT, SUN];
   ok('[WC-135] ...placed G-3 or earlier', ['WC-135'],
     sprintDays.every((d) => order.indexOf(d.dayOfWeek) <= order.indexOf(SAT) - 3),
@@ -506,16 +512,45 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   // is gated on the week having NO game, so the same athlete must differ.
   const inseasonGame = built({ phase: 'In-season',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: SAT });
+  const inseasonClubGame = built({ phase: 'In-season',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [TUE, THU], gameDay: SAT });
   const inseasonBye = built({ phase: 'In-season',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
   const hardIn = (week: WeeklySchedule) => week.days.filter(
     (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory)).length;
-  ok('[WC-136] an in-season GAME week authors no hard conditioning', ['WC-136'],
-    hardIn(inseasonGame) === 0,
+  // WC-143 (Sam's Q2 ruling, 2026-08-26) SUPERSEDED the unqualified form of
+  // this cell for the no-club athlete: their only fast work all week was the
+  // game, and Sam ruled that is not enough. The CLUB game week keeps the
+  // 2026-07-29 credit — its two club nights supply the fast running.
+  ok('[WC-136/WC-143] a CLUB athlete\'s in-season game week authors no hard '
+    + 'conditioning — the game and club nights carry it', ['WC-136', 'WC-143'],
+    hardIn(inseasonClubGame) === 0,
+    JSON.stringify(inseasonClubGame.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  ok('[WC-143] the NO-CLUB game week authors exactly ONE hard exposure, and it '
+    + 'is GLYCOLYTIC — Sam: "a short sprint workout into ... glycolytic '
+    + 'sessions in the 30 second to 2 min interval range"', ['WC-143'],
+    hardIn(inseasonGame) === 1
+    && inseasonGame.days.some((d) => d.conditioningCategory === 'glycolytic'),
     JSON.stringify(inseasonGame.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
-  ok('[WC-136] ...and the same athlete\'s BYE week does', ['WC-136'],
+  {
+    const fastDay = inseasonGame.days.find((d) => d.conditioningCategory === 'glycolytic');
+    const gameIdx = order.indexOf(SAT);
+    ok('[WC-143] ...the fast session sits EARLY in the week (G-4 or earlier) '
+      + 'with the sprint riding the same day', ['WC-143'],
+      fastDay !== undefined && fastDay.sprintComponent === true
+      && order.indexOf(fastDay.dayOfWeek) <= gameIdx - 4,
+      JSON.stringify([fastDay?.dayOfWeek, fastDay?.sprintComponent]));
+    const g2 = inseasonGame.days.find((d) => order.indexOf(d.dayOfWeek) === gameIdx - 2);
+    ok('[WC-143] ...and the SECOND app exposure sits at G-2 at moderate '
+      + 'intensity — "then later in the week on say a g-2 ... keep this '
+      + 'moderate"', ['WC-143'],
+      g2 !== undefined && g2.conditioningCategory === 'tempo',
+      JSON.stringify(inseasonGame.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  }
+  ok('[WC-136] ...and the same athlete\'s BYE week authors one hard exposure', ['WC-136'],
     hardIn(inseasonBye) === 1,
     JSON.stringify(inseasonBye.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+
   // ── WC-138: the off-season sprint rides the LAST legal upper day ──────────
   const offRef = built({ phase: 'Off-season', offseasonBlock: 'normal_build',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });

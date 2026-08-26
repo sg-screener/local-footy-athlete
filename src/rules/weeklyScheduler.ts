@@ -890,6 +890,44 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const preseasonSprintRidesHardDay = inputs.phase === 'Pre-season'
     && overlay.sprintExposureRequired
     && inputs.clubNights.length === 0;
+  const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
+  // ── WC-143: THE NO-CLUB GAME WEEK GETS SAM'S FAST SESSION ────────────────
+  //
+  // **Sam's Q2 ruling, verbatim (2026-08-26):** *"they should be doing
+  // something fast earlier in the week - something like a short sprint workout
+  // into so flying runs or glycolytic sessions in the 30 second to 2 min
+  // interval range - total session length 30-45 min after warm up. then later
+  // in the week on say a g-2 they can do some runnign intervals or off leg
+  // conditioning keep this moderate intensity - no more than say 6 or 7km".*
+  //
+  // This SUPERSEDES, for the tt === 0 game week only, the 2026-07-29 reading
+  // that the game alone carries the week's hard exposure. A club athlete's two
+  // club nights already supply fast running; the no-club athlete's only fast
+  // work all week was the game, and Sam ruled that is not enough. Three
+  // consequences, each expressed through an existing owner:
+  //   1. the week AUTHORS one hard exposure (`weekAllowsHard` exception here),
+  //   2. its quality is GLYCOLYTIC — his 30s-2min interval range — with the
+  //      WC-135 sprint riding the same day as its opener (*"a short sprint
+  //      workout into"*), see `sprintRidesHardDay` below,
+  //   3. the SECOND app exposure prefers the G-2 day at moderate intensity —
+  //      the receiver ordering below; WC-115's modality pairing then renders
+  //      it as running on an upper day or off-leg on a lower day, which is
+  //      exactly his *"runnign intervals or off leg conditioning"* pair.
+  // A reduced week keeps every reduction rule: the arm sits behind
+  // `weekIsReduced` like every other hard authorisation.
+  const noClubGameWeek = inputs.phase === 'In-season'
+    && hasScheduledGame(inputs)
+    && inputs.clubNights.length === 0;
+  const weekAllowsHard =
+    ((!overlay.hardConditioning.requiresNoGameWeek || !hasScheduledGame(inputs))
+      || noClubGameWeek)
+    && !weekIsReduced;
+  const hardQuality = !weekAllowsHard
+    ? null
+    : noClubGameWeek
+      ? 'glycolytic'
+      : hardConditioningQualityFor(overlay, inputs.miniCycleNumber);
+
   let appConditioningBudget = Math.max(
     0,
     overlay.conditioningTarget.min
@@ -897,17 +935,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       // ⚠ ONLY A STANDALONE SPRINT COSTS AN EXTRA DAY. When the sprint rides an
       // upper strength day (WC-138) it occupies one of the component slots this
       // budget is already counting, so subtracting for it too spent the same
-      // exposure twice and the week came back one short.
-      - (sprintUpperDay !== null || plannedSprintDay === null ? 0 : 1),
+      // exposure twice and the week came back one short. The WC-143 ride is
+      // the same shape: the sprint opens the hard session's day, so it takes
+      // no day of its own and must not be charged one.
+      - (sprintUpperDay !== null || plannedSprintDay === null
+        || (noClubGameWeek && hardQuality !== null && overlay.sprintExposureRequired)
+        ? 0 : 1),
   );
 
-  const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
-  const weekAllowsHard =
-    (!overlay.hardConditioning.requiresNoGameWeek || !hasScheduledGame(inputs))
-    && !weekIsReduced;
-  const hardQuality = weekAllowsHard
-    ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
-    : null;
 
   // ── WHICH DAYS MAY CARRY APP CONDITIONING AT ALL, DECIDED BEFORE THE LOOP ─
   //
@@ -931,12 +966,34 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     && !isScheduledGameDay(day, inputs));
   const conditioningCandidates = Array.from(new Set([
     ...(hardQuality !== null ? releasedReceivers : []),
-    ...WEEK_ORDER.filter((day) => purposeByDay.has(day)),
+    // WC-143 consequence 3: the no-club game week's receivers are the early
+    // UPPER day (the fast session sprints on fresh legs and WC-115 keeps hard
+    // running off the lower day) and then the G-2 day for the moderate
+    // exposure — "later in the week on say a g-2". Every other week keeps
+    // plain week order.
+    ...(noClubGameWeek
+      ? WEEK_ORDER.filter((day) => purposeByDay.has(day)).sort((a, b) => {
+          const rank = (day: number): number =>
+            isGameMinusTwo(day, inputs) ? 1
+              : PURPOSE_IS_LOWER[purposeByDay.get(day)!] ? 2 : 0;
+          return rank(a) - rank(b) || WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b);
+        })
+      : WEEK_ORDER.filter((day) => purposeByDay.has(day))),
   ]));
   const conditioningDays = conditioningCandidates.filter((day) =>
     !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
     && !isScheduledGameDay(day, inputs)).slice(0, appConditioningBudget);
+  // WC-144 (Sam's Q3 ruling, 2026-08-26 — the pre-season hard runner leaving
+  // an all-lower receiver set for a free weekend day) was BUILT HERE and
+  // BACKED OUT 2026-08-27: the moved Saturday session collides with the
+  // fixture projection/derivation seam (a dated practice match arrives on the
+  // occupied Saturday, the transaction's replan overlay and the pure deriver
+  // then compose different weeks, and fixture-identity 5/6 red — Sam's own
+  // add-then-remove identity law). The build is recorded in R-257 and waits
+  // on that seam's owner (the R-075 allocations-vs-final unit); it is not a
+  // placement problem in this file.
+
   const conditioningDaySet = new Set(conditioningDays);
 
   // ── WC-060: THE SHORTFALL MAY LEAVE THE GYM DAYS ─────────────────────────
@@ -1015,7 +1072,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // WC-139 — the sprint joins the hard day when the phase asks for that shape,
   // and only when that day is legal for a sprint (never inside G-3, never a
   // club night; `hardEligible` has already excluded G-2, G-1 and G+1).
-  const sprintComponentDay = preseasonSprintRidesHardDay
+  // WC-143 consequence 2 — the no-club game week's sprint OPENS the fast
+  // session ("a short sprint workout into ... glycolytic"), the same
+  // one-day consolidation WC-139 gives pre-season. It wins over a standalone
+  // sprint day for this shape: Sam's Q2 sentence authors ONE session, and
+  // WC-139's own rule ("when the sprint rides the hard day it is NOT also
+  // placed elsewhere") already says the ride and the standalone never coexist.
+  const sprintRidesHardDay = preseasonSprintRidesHardDay
+    || (noClubGameWeek && overlay.sprintExposureRequired);
+  const sprintComponentDay = sprintRidesHardDay
     && hardDay !== null
     && sprintDayIsLegal(hardDay, inputs)
     ? hardDay

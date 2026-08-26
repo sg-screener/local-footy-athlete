@@ -751,7 +751,16 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
     statement: 'The phase owns how many conditioning exposures the app supplies and '
       + 'how many of them may be hard, and as which authored quality. Hard work is '
       + 'never within 48 hours of a game, never on a club night, never added in low '
-      + 'readiness, and in-season only in a week with no game.' },
+      + 'readiness, and in-season only in a week with no game — except the no-club '
+      + 'game week, which WC-143 rules.' },
+  { id: 'WC-143', provenance: '§8 In-season / Sam Q2 ruling 2026-08-26',
+    statement: 'A no-club in-season game week authors one hard app exposure: '
+      + 'something fast early in the week — a short sprint workout into glycolytic '
+      + 'intervals in the 30-second-to-2-minute range, 30-45 minutes after warm-up '
+      + '— and a second, moderate exposure later in the week, on or near G-2: '
+      + 'running intervals or off-leg conditioning, no more than 6-7 km. '
+      + 'Supersedes, for this shape only, the rule that the game alone carries '
+      + 'the hard exposure. A reduced week authors neither.' },
   // Layout rows, derived from BASE_LAYOUTS so the two cannot drift.
   ...BASE_LAYOUTS.map((row) => ({
     id: row.clauseId,
@@ -885,6 +894,15 @@ export const CLAUSE_MODALITY: Readonly<Record<string, ClauseModality>> = {
   WC_140: D('FOURTH_SESSION_AGE_CEILING'),
   WC_141: D('inSeasonUsesFourSessions selector'),
   WC_142: D('baseLayoutFor entry point'),
+  // ── Sam's Q2 ruling, 2026-08-26, verbatim: "they should be doing something
+  // fast earlier in the week - something like a short sprint workout into so
+  // flying runs or glycolytic sessions in the 30 second to 2 min interval
+  // range - total session length 30-45 min after warm up. then later in the
+  // week on say a g-2 they can do some runnign intervals or off leg
+  // conditioning keep this moderate intensity - no more than say 6 or 7km".
+  // Supersedes, for the NO-CLUB game week only, the 2026-07-29 reading that
+  // the game alone carries the week's hard exposure.
+  WC_143: R('no-club in-season game week: early glycolytic + sprint rider, G-2 moderate'),
 };
 
 /** `WC-043` -> the modality record key. Ids are stable; the underscore is not. */
