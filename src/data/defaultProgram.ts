@@ -1727,19 +1727,25 @@ export function buildWorkoutsFromCoach(
     .filter((modality) => modality !== 'treadmill')
     .map((modality) => (modality === 'bike_erg' ? 'bike' : modality)) as
       Array<'bike' | 'air_bike' | 'row' | 'ski'>;
-  const effectiveWeeklyPlan = weeklyPlan
-    ? resolveWeeklyConditioningFeasibility(
-        weeklyPlan.map((entry) => deloadPlanEntry(
-          entry,
-          deloadPolicyForDayOfWeek(entry.dayOfWeek ? PLAN_DAY_MAP[entry.dayOfWeek] : undefined),
-        )),
-        {
-          phase: onboardingData?.seasonPhase,
-          offseasonSubphase,
-          equipment: equipmentCapabilities,
-          profile: onboardingData,
-        },
-      )
+  const deloadedWeeklyPlan = weeklyPlan?.map((entry) => deloadPlanEntry(
+    entry,
+    deloadPolicyForDayOfWeek(entry.dayOfWeek ? PLAN_DAY_MAP[entry.dayOfWeek] : undefined),
+  ));
+  const effectiveWeeklyPlan = deloadedWeeklyPlan
+    ? rotationContext?.conditioningFeasibilityResolved && !deloadPolicy
+      // The compiler already authored this derived output. Re-running the
+      // specialist here would make the retained adapter a second writer of the
+      // same plan, even when its answer happened to be idempotent.
+      ? deloadedWeeklyPlan
+      : resolveWeeklyConditioningFeasibility(
+          deloadedWeeklyPlan,
+          {
+            phase: onboardingData?.seasonPhase,
+            offseasonSubphase,
+            equipment: equipmentCapabilities,
+            profile: onboardingData,
+          },
+        )
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
   const planIdentityLookup = effectiveWeeklyPlan

@@ -253,3 +253,98 @@ changed.
 - The gate currently covers two current product contracts, not the whole app.
 - Full-year archetypes, rival-author deletion, derived-output-writer counts,
   simulator and physical-iPhone acceptance are not part of this step.
+
+## 2026-08-27 — step 4: first canonical weekly compiler slice
+
+### Two options weighed
+
+1. Incremental: put a `compileWeek` name around `buildGeneratedMicrocycles`
+   while leaving its initial-plan prebuild, two scheduler runs per actual week,
+   and downstream conditioning rewrite intact.
+2. Ownership redesign: add one pure typed orchestration boundary, route every
+   live schedule/materialise/connect call through it, consume that exact schedule
+   during composition, remove the initial prebuild from product generation, and
+   make the retained adapter stand down after the compiler owns conditioning
+   feasibility.
+
+Option 2 landed. The scheduler and specialists keep their existing policy jobs;
+the compiler owns their ordering and the one output passed downstream.
+
+### Exact first slice
+
+The slice is one ordinary, healthy, full-commercial-gym Off-season athlete:
+
+profile/availability -> scheduler inputs -> one schedule -> specialist content
+-> connected coaching plan -> conditioning feasibility -> composed workouts ->
+generated-week validation -> accepted-state transaction -> visible resolver.
+
+The product generator no longer calls `buildInitialGeneratedCoachingPlan` before
+building the block. Each actual week is scheduled once. Diagnostics and prompt
+previews still use `buildInitialGeneratedCoachingPlan`, but that function itself
+now enters the canonical compiler instead of carrying a private orchestration.
+
+The retained workout adapter used to call conditioning feasibility again over
+the compiler result. `conditioningFeasibilityResolved: true` is now a typed
+writer/reader handover: the generator writes it, the adapter reads it, and the
+compiler witness holds both. A deload intentionally does not take this shortcut
+yet because its category transformation is the next fact family, not part of
+the healthy slice.
+
+### Ownership counts and liveness
+
+Instrument unit: distinct production source files containing an executable call
+site, excluding the function declaration and all tests.
+
+- `scheduleWeek`: 1 caller / 1 distinct file —
+  `src/rules/canonicalWeeklyCompiler.ts`.
+- `materialiseAuthoredSessions`: 1 / 1 — the same compiler.
+- `scheduleToCoachingPlan`: 1 / 1 — the same compiler.
+- Rival author count for those three stages inside this slice: **0**.
+- Downstream healthy-slice conditioning-plan writers after the compiler: **0**;
+  the retained adapter reads the typed handover and stands down.
+
+Mutation: replacing the compiler's scheduler call makes the ownership census
+report zero callers and turns the named cell red. Removing the adapter handover
+marker kills its ownership cell.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: 18/18 green. The journey enters
+  through production onboarding, advances the accepted revision, carries an
+  exposure contract, authors real rows, and visible exercise prescriptions are
+  exactly equal to accepted prescriptions.
+- `npm run test:weekly-scheduler`: scheduler 102/102; generated fixture ownership
+  11/11; travel zero-equipment 10/10; Off-season continuity 9/9; spare-day
+  options 20/20.
+- `npm run test:test-truth`: 14/14 census, 11/11 release architecture and 5/5
+  runnable-suite cells.
+- `npm run test:release`: 4/4 derived units green and
+  `RELEASE_GATE_EXIT=0`; the compiler witness entered automatically as the third
+  validated current contract.
+- `npm run test:law-registry`: the new compiler law is well formed, its command
+  exists and its chain membership is truthful. The gate remains red on the same
+  inherited missing `test:game-feedback`, LR-18 and 21 UNENFORCED-law debts.
+- `npm run test:totals-or-red-law`: the new suite is armed and clears correctly;
+  the gate remains 1/4 on its inherited fleet-wide lists.
+- `npm run test:compile`: 468 recorded errors and 62 worsened file/scope pairs
+  in the shared dirty tree; none names the compiler module, generator, handover
+  type or compiler witness. The gate remains red on concurrent/inherited files.
+
+### North star and visibility
+
+The source-of-truth direction improved: the same compiler-authored schedule now
+feeds validation, accepted state and the visible read for the first slice. This
+is a product-generation architecture change with no intended copy or UI-layout
+change. **WORKING at guarded headless scope; physical-phone acceptance is not
+claimed.**
+
+### NOT COVERED
+
+- Fixture, readiness, illness, injury, travel and athlete-edit fact families
+  still need to move through this compiler one family at a time.
+- The old dead `coachingEngine.buildWeeklyPlan` body still exists with zero
+  production callers. It is retirement debt, not an author in this slice.
+- Deload conditioning still re-enters feasibility after its category transform;
+  that is explicitly outside the healthy slice.
+- Full-year archetype acceptance, global rival-author/output-writer zero counts,
+  pixels, simulator and physical iPhone are not covered.

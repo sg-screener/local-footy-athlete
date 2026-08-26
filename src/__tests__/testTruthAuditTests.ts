@@ -183,11 +183,11 @@ const censusCounts = Object.values(
 );
 ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
-    && Object.keys(decisionRegistry.decisions).length === 175
+    && Object.keys(decisionRegistry.decisions).length === 176
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
-ok('only the two witnessed current contracts can direct product work',
-  censusCounts.current_contract === 2
+ok('only the three witnessed current contracts can direct product work',
+  censusCounts.current_contract === 3
     && censusCounts.retire_test === 2
     && censusCounts.test_infrastructure === 3
     && censusCounts.aggregate === 2

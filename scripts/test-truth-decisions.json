@@ -122,6 +122,19 @@
       "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
+    "test:canonical-weekly-compiler": {
+      "kind": "current_contract",
+      "reason": "The first canonical weekly compiler slice has one production author for scheduling, specialist materialisation and plan connection, and its real onboarding-to-visible witness is green.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyCompiler.ts",
+        "src/services/api/generateProgram.ts"
+      ],
+      "contractRefs": [
+        "LAW-canonical-weekly-compiler-first-slice"
+      ],
+      "witnessScript": "test:canonical-weekly-compiler",
+      "evidenceKind": "green_now"
+    },
     "test:chained-mutation-continuity": {
       "kind": "rewrite_test",
       "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",

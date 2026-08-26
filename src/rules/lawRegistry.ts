@@ -142,6 +142,17 @@ export interface LawRow {
 export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
+    id: 'LAW-canonical-weekly-compiler-first-slice',
+    law: 'An ordinary healthy Off-season week is authored through one canonical weekly compiler: the scheduler, specialist materialiser and connector each have that compiler as their only production caller; generation does not prebuild a rival initial plan or schedule the same week twice; refusal returns no partial plan; and visible prescriptions equal the accepted compiler-authored week.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md "step 4: first canonical weekly compiler slice"; Sam, 2026-08-27: "Build the first complete canonical weekly compiler slice."',
+    guard: {
+      state: 'guarded',
+      by: 'test:canonical-weekly-compiler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-27 by seat `testtruth`. TWO OPTIONS COMPARED: wrap the existing generator while leaving its repeated schedule/materialise/connect passes in place, or establish one pure orchestration boundary and make every live caller enter it. The single boundary landed because it removes rival derivations rather than naming them canonical. The 18-cell witness drives a healthy Off-season athlete through the production onboarding generator, accepted-state transaction and visible resolver; accepted and visible exercise prescriptions are exact, the accepted revision advances, the exposure contract exists and the journey authors real rows. Source ownership counts are stated in production-caller units: scheduleWeek 1/1, materialiseAuthoredSessions 1/1, scheduleToCoachingPlan 1/1, each canonicalWeeklyCompiler.ts. Generation no longer calls buildInitialGeneratedCoachingPlan before compiling the actual block. Conditioning feasibility now runs inside the compiler, and the typed compiler-to-adapter handover makes the retained adapter stand down on an ordinary healthy week instead of rewriting that derived plan. A typed impossible week returns the scheduler refusal with no schedule, materialisation or plan. MUTATIONS: removing the compiler scheduler call makes the ownership instrument report zero callers and turns the named cell red; removing the compiler-to-adapter ownership marker kills its handover cell. EXISTING CURRENT CONTRACT: test:weekly-scheduler remains 102/102, generated fixture ownership 11/11, travel zero-equipment 10/10, Off-season continuity 9/9 and spare-day options 20/20. NOT COVERED: fixtures/injuries/readiness/edit families have not moved into the compiler acceptance slice; full-year archetypes, pixels, simulator and physical iPhone remain outside this unit.',
+    },
+  },
+  {
     id: 'LAW-release-gate-runs-only-validated-current-contracts',
     law: 'The release gate is npm run test:release and derives every product witness from validated current-contract census rows; the red test:bible fleet remains diagnostic evidence and has no authority to change product behaviour.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md "step 3: one small green release gate"; Sam, 2026-08-27: "Establish one small, genuinely green release gate" after ordering the current red fleet to stop acting as a product to-do list.',

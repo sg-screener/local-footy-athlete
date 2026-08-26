@@ -152,6 +152,16 @@ export interface PoolDefinition {
 
 export interface RotationContext {
   /**
+   * WRITER: canonical weekly compiler call site in generateProgram.
+   * READER: buildWorkoutsFromCoach.
+   *
+   * True means the plan's conditioning feasibility has already been resolved
+   * inside the compiler. A healthy week must not write that derived output a
+   * second time in the retained adapter. Deloads still re-resolve after their
+   * category transformation until that family moves into the compiler.
+   */
+  conditioningFeasibilityResolved?: true;
+  /**
    * The days whose STRENGTH content the composer owns.
    *
    * **The retained adapter still receives the WHOLE planner week.** This app
