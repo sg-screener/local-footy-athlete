@@ -140,7 +140,7 @@ ok('pace is `60 / kmh` rounded to the nearest second',
   `${paceMinPerKm(15)} | ${paceMinPerKm(13.5)} | ${paceMinPerKm(20)}`);
 
 // ── 3. LABELS ──────────────────────────────────────────────────────────────
-const APPROVED_LABELS = ['Work', 'Recovery', 'Rounds', 'Reps', 'Sets', 'Blocks', 'Intensity', 'Heart rate'];
+const APPROVED_LABELS = ['Work', 'Recovery', 'Rounds', 'Reps', 'Sets', 'Blocks', 'Intensity'];
 sweep('every label is an approved athlete-facing word',
   (_text, label) => label !== null && !APPROVED_LABELS.includes(label));
 {
@@ -160,8 +160,8 @@ sweep('a bare dose quantity carries no redundant unit word',
     && /^[\d\s–\-]+\s*(reps?|rounds?|sets?|blocks?)$/i.test(text));
 
 // ── 4. SENTENCES ───────────────────────────────────────────────────────────
-// The cue and the heart-rate line are prose; the labelled dose lines are not.
-const isProse = (label: string | null) => label === null || label === 'Heart rate';
+// The cue is prose; the labelled dose lines are not.
+const isProse = (label: string | null) => label === null;
 sweep('every prose line ends in a full stop',
   (text, label) => isProse(label) && text.length > 0 && !/[.!?]$/.test(text));
 sweep('every prose line starts with a capital',
@@ -199,8 +199,8 @@ sweep('no abbreviated heart-rate note survives on a dose line',
    * `% max` pattern called both Fly sessions defective. The rule names the
    * abbreviation, not the percent sign. */
   (text, label) => label !== 'Heart rate' && /\bHR\b|\bHRmax\b|\bmax late\b/i.test(text));
-sweep('a heart-rate target is a sentence, not a fragment',
-  (text, label) => label === 'Heart rate' && !/\b(?:heart rate|maximum)\b/i.test(text));
+sweep('no heart-rate line reaches a conditioning card',
+  (_text, label) => label === 'Heart rate');
 
 // ── 5. INTERNAL VOCABULARY ─────────────────────────────────────────────────
 // Every one of these is a real word lifted from the sheet's maintenance notes.

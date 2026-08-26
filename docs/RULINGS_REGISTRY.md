@@ -6195,3 +6195,62 @@ equipment, Gunshow, Primer, gym ceiling, every season, G+1 recovery.
 · `WORKING` — weeklyScheduler gendered offer + need-based optional top-up;
 test:weekly-scheduler (spare-day-options) is in the Bible chain and mutation-
 checked.
+
+**R-238** · *"30:30 is 30 sec on 30 sec off, 1:1 is 1 min on 1 min off"*; *"It's okay to have 2 parts to a session but this looks like 1 session titled as 1 session with another part thrown in"*; *"Some conditioning sessions don't give a straight forward answer either — giving too many options and mixing up the prescription"* (Sam, 2026-08-26, audit item 3) · **CONDITIONING GIVES ONE PLAIN TITLE AND ONE PRESCRIPTION.**
+`workToRest` remains internal physiology and never renders. Athlete titles use
+plain duration words rather than colon shorthand, Work and Recovery spell the
+actual times, and a simple authored count range resolves to the same concrete
+round/repetition count materialised on the row. Merged workbook rows retain
+their internal alternatives but the shared athlete projection selects one
+already-authored branch, so no Work/Recovery/count line says “or” or “variant.”
+A single conditioning option is rendered directly as its authored row; only two
+or more genuine equivalents get a Choose one control. The structured Recovery
+line is the only rest display on a standalone conditioning row.
+**Search words:** conditioning title, 30:30, 1:1, work rest, one prescription,
+choose one, alternatives, rounds, duplicate recovery.
+· `WORKING` — shared conditioning projection + one-list composition;
+test:conditioning-templates and test:session-template are in the Bible chain
+and mutation-checked.
+
+**R-239** · *"is this the nordic vo2 max session? if so why the fuck did you
+change the name to classic 4x4 and why the fuck does it have 3 min easy jog in
+the rest period - it's a fucking complete rest period - no jogging"*; *"also,
+make sure that conditioning isn't like strength just choosing the top of the
+list each time"* (Sam, 2026-08-26, conditioning simulator review) · **THE 4×4
+SESSION IS NAMED 4×4 VO₂ MAX, ITS THREE-MINUTE RECOVERY IS COMPLETE REST, AND
+CONDITIONING ROTATES ITS ELIGIBLE POOL ACROSS MINI-CYCLES.**
+`Classic 4×4` remains the historical workbook identity so stored rows and
+selection keys do not split; the shared athlete projection names it `4×4 VO₂
+Max`. Sam's later prescription re-authors its Rest period to `3 min complete
+rest`, superseding the dated workbook snapshot's `3 min easy jog`. Template
+selection stays stable within one mini-cycle for progression, then advances by
+mini-cycle number through every eligible template in that category rather than
+restarting at index zero.
+**Search words:** 4×4 VO2 max, Classic 4×4, complete rest, easy jog,
+conditioning variety, top of list, rotation, mini-cycle.
+· `WORKING` — test:conditioning-templates holds the exact title/rest and drives
+all seven requestable categories through the real selector across twelve
+mini-cycles, proving each advances beyond its first eligible template while
+remaining stable inside one mini-cycle. It is in the Bible chain.
+
+**R-240** · *"this is way to long as well - heart rate doesn't need to be in
+the conditioning session and description can be simpler \"choose a pace you can
+repeat across all 4 rounds.\" work recovery reounds intensity can be bolded too
+- run through all the conditioning templates and make sure this is the case"*
+(Sam, 2026-08-26, conditioning simulator review) · **CONDITIONING CARDS ARE
+GLANCEABLE ACROSS THE WHOLE TEMPLATE LIBRARY.**
+No athlete-facing conditioning projection carries a Heart rate line. The
+sheet's HR clause remains internal source data; the actionable Intensity clause
+still renders. The 4×4 VO₂ Max cue is exactly `Choose a pace you can repeat
+across all 4 rounds.` One shared renderer bolds Work, Recovery, the applicable
+count label (Rounds, Reps or Blocks), and Intensity for standalone and genuine
+multi-option rows; it does not bold coaching prose.
+The prescription uses 23-point line height on the primary row (20 on the
+compact choice path), with a small gap below the session title so the bold
+labels do not crowd either each other or the heading.
+**Search words:** conditioning card length, heart rate, concise cue, bold work,
+bold recovery, bold rounds, bold intensity, all templates.
+· `WORKING` — the 55-template conditioning census forbids Heart rate globally,
+the equality suite pins the exact 4×4 cue, and the session-template guard pins
+the one shared label-emphasis renderer and its spacing. All are in the Bible
+chain.

@@ -377,6 +377,30 @@ console.log('\n[5] Conditioning — combined-day picker and conditioning-only ph
       combinedTemplate.items.length - 1,
   );
 
+  const singlePrescription = workoutOf({
+    workoutType: 'Strength',
+    hasCombinedConditioning: true,
+    conditioningBlock: {
+      intent: 'high-intensity',
+      options: [
+        { title: 'Hard Intervals', description: '', exerciseIds: ['only-c1'] },
+      ],
+    },
+    exercises: [
+      strengthRow('Back Squat'),
+      strengthRow('Classic 4×4', { id: 'only-c1', role: 'conditioning' }),
+    ],
+  });
+  const singleTemplate = buildSessionTemplate(singlePrescription);
+  ok(
+    'one conditioning prescription renders directly — no fake choice or generic wrapper title',
+    !singleTemplate.items.some((item) => item.kind === 'conditioning_choice')
+      && singleTemplate.items.some((item) => item.kind === 'exercise'
+        && item.presentation === 'conditioning_phase'
+        && item.row.exercise.name === 'Classic 4×4'),
+    `got ${JSON.stringify(names(singleTemplate.items))}`,
+  );
+
   const conditioningOnly = workoutOf({
     name: 'Tempo Run',
     workoutType: 'Tempo-Run',
@@ -766,6 +790,56 @@ console.log('\n[11] Optional work is ONE contiguous cluster at the end of the li
 console.log('\n[12] The screen renders one "Optional work" header, and no per-row label');
 {
   const screen = fs.readFileSync(path.join(src, 'screens/home/DayWorkoutScreenV2.tsx'), 'utf8');
+
+  const conditioningPhaseStart = screen.indexOf('function ConditioningPhaseRow(');
+  const conditioningPhaseEnd = screen.indexOf('interface ConditioningRowProps', conditioningPhaseStart);
+  ok(
+    'the standalone conditioning-row source region is present before its rendering contract is checked',
+    conditioningPhaseStart >= 0 && conditioningPhaseEnd > conditioningPhaseStart,
+    `${conditioningPhaseStart}:${conditioningPhaseEnd}`,
+  );
+  const conditioningPhaseSource = conditioningPhaseStart >= 0 && conditioningPhaseEnd > conditioningPhaseStart
+    ? screen.slice(conditioningPhaseStart, conditioningPhaseEnd)
+    : '';
+  ok(
+    'a standalone conditioning row does not print a second rest line beneath its structured Recovery line',
+    conditioningPhaseSource.length > 0
+      && !/formatRest\s*\(|styles\.conditioningRest/.test(conditioningPhaseSource),
+    conditioningPhaseSource,
+  );
+
+  const structuredCopyStart = screen.indexOf('function ConditioningPrescriptionCopy(');
+  const structuredCopyEnd = screen.indexOf('function ConditioningPhaseRow(', structuredCopyStart);
+  ok(
+    'the shared conditioning-copy renderer is present before its emphasis contract is checked',
+    structuredCopyStart >= 0 && structuredCopyEnd > structuredCopyStart,
+    `${structuredCopyStart}:${structuredCopyEnd}`,
+  );
+  const structuredCopySource = structuredCopyStart >= 0 && structuredCopyEnd > structuredCopyStart
+    ? screen.slice(structuredCopyStart, structuredCopyEnd)
+    : '';
+  ok(
+    'one shared renderer bolds Work, Recovery, count and Intensity labels',
+    structuredCopySource.length > 0
+      && /CONDITIONING_EMPHASISED_LABELS[\s\S]*Work[\s\S]*Recovery[\s\S]*Rounds[\s\S]*Reps[\s\S]*Blocks[\s\S]*Intensity/.test(screen)
+      && /styles\.conditioningPrescriptionLabel/.test(structuredCopySource),
+    structuredCopySource,
+  );
+  ok(
+    'both standalone and choice conditioning rows use the shared structured-copy renderer',
+    (screen.match(/<ConditioningPrescriptionCopy\b/g) ?? []).length === 2,
+    `${(screen.match(/<ConditioningPrescriptionCopy\b/g) ?? []).length} mount(s)`,
+  );
+  ok(
+    'conditioning prescription lines keep readable vertical breathing room in both row paths',
+    /conditioningPhaseBody:\s*\{[\s\S]*?lineHeight:\s*23\b/.test(screen)
+      && /conditioningRowNotes:\s*\{[\s\S]*?lineHeight:\s*20\b/.test(screen),
+  );
+  ok(
+    'the conditioning title and prescription keep a small visual gap',
+    /conditioningPhaseBody:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen)
+      && /conditioningRowNotes:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen),
+  );
 
   ok(
     'the per-row "Optional" marker is gone from the add-on row',

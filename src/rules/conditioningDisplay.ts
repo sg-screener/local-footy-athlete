@@ -40,21 +40,113 @@
  */
 
 import type { ConditioningQuality, ConditioningTemplate } from '../data/conditioningTemplates';
+import { doseMidpoint, parseConditioningDose } from './conditioningDose';
 
 export interface ConditioningDisplayLine {
-  /** `Work`, `Recovery`, `Rounds`, `Intensity`, `Heart rate`, `Your pace`. */
+  /** `Work`, `Recovery`, `Rounds`, `Intensity`, or an unlabelled cue. */
   readonly label: string | null;
   readonly text: string;
 }
 
 export interface ConditioningDisplayInput {
   readonly template: ConditioningTemplate;
+  /** The concrete count materialised on this row; absent callers use the same midpoint rule. */
+  readonly resolvedSetsRounds?: number | null;
   /**
    * The athlete's measured Maximal Aerobic Speed, km/h, from
    * `data/twoKmTimeTrial.deriveMas`. Absent when they have not recorded a time
    * trial — the pace line is then OMITTED rather than guessed.
    */
   readonly masKmh?: number | null;
+}
+
+/**
+ * The workbook keeps classification shorthand and a handful of merged source
+ * variants. The athlete gets neither: one plain title and one actionable dose.
+ *
+ * These are DISPLAY decisions only. Selection still keys the authored name,
+ * dated-sheet equality remains explicit through the test's narrow re-authored
+ * field registry, and `workToRest` remains available to the physiology checks.
+ * This boundary is intentionally the same one that already owns Work /
+ * Recovery / Rounds wording.
+ */
+export interface ConditioningAthletePrescription {
+  readonly title: string;
+  readonly work: string;
+  readonly recovery: string;
+  readonly setsRounds: string;
+  readonly totalSessionTime: string;
+}
+
+const CONDITIONING_DISPLAY_TITLES: Readonly<Record<string, string>> = {
+  'Classic 4×4': '4×4 VO₂ Max',
+  'MAS 15:15 Blocks': '15-Second MAS Blocks',
+  '30:30 Hard Intermittent': '30-Second Hard Intervals',
+  '30:30 Controlled Tempo Blocks': '30-Second Tempo Blocks',
+  'Flush Intervals 30:30': '30-Second Flush Intervals',
+  'Flush Intervals 1:1 (1 min / 1 min)': 'One-Minute Flush Intervals',
+  'Flush Intervals 2:1 (2 min / 1 min)': 'Two-Minute Flush Intervals',
+  'Steady Blocks (3×8 min or 4×6 min)': 'Steady Blocks',
+};
+
+/** A display title never doubles as the template's lookup identity. */
+export function conditioningDisplayTitleForName(name: string): string {
+  return CONDITIONING_DISPLAY_TITLES[name] ?? name;
+}
+
+/**
+ * Merged workbook rows that contain two possible prescriptions. Each override
+ * selects one dose already contained in the authored row; no number is added.
+ * The chosen Steady Blocks branch is the workbook's all-modality 4×6 rendering.
+ * The other three remove a parenthetical alternate while retaining the base
+ * prescription exactly as authored.
+ */
+const CONCRETE_DISPLAY_PRESCRIPTIONS: Readonly<Record<
+  string,
+  Partial<Omit<ConditioningAthletePrescription, 'title'>>
+>> = {
+  'Steady Blocks (3×8 min or 4×6 min)': {
+    work: '6 min',
+    recovery: '1–2 min easy',
+    setsRounds: '4 rounds',
+    totalSessionTime: '26–30 min',
+  },
+  'Hill Repeats — hard sustained': {
+    work: '40–60 s hill effort',
+    recovery: 'Walk-down, 2–3 min',
+    setsRounds: '4–6 reps',
+  },
+  'Easy Aerobic Flush': {
+    work: '20–30 min continuous',
+  },
+  'Erg Flush Blocks': {
+    work: '8 min easy',
+  },
+};
+
+export function conditioningAthletePrescription(
+  template: ConditioningTemplate,
+  resolvedSetsRounds?: number | null,
+): ConditioningAthletePrescription {
+  const override = CONCRETE_DISPLAY_PRESCRIPTIONS[template.name] ?? {};
+  const authoredCount = override.setsRounds
+    ?? stripAuthoringNotes(template.setsRounds ?? '');
+  const simpleCount = /^(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)\s+(reps?|rounds?|blocks?)(?:\s*\([^)]*\))?$/i
+    .exec(authoredCount);
+  const parsedCount = parseConditioningDose(authoredCount);
+  const chosenCount = resolvedSetsRounds
+    ?? (parsedCount.ok ? Math.max(1, Math.round(doseMidpoint(parsedCount.quantity))) : null);
+  const setsRounds = simpleCount && chosenCount !== null
+    ? `${chosenCount} ${simpleCount[3]}`
+    : authoredCount;
+  return {
+    title: conditioningDisplayTitleForName(template.name),
+    work: override.work ?? stripAuthoringNotes(template.workPeriod ?? ''),
+    recovery: override.recovery ?? stripAuthoringNotes(template.restPeriod ?? ''),
+    setsRounds,
+    totalSessionTime: override.totalSessionTime
+      ?? stripAuthoringNotes(template.totalSessionTime ?? ''),
+  };
 }
 
 /**
@@ -76,15 +168,6 @@ export function paceMinPerKm(speedKmh: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-const EN_DASH = '–';
-
-/** The `lo–hi` of a `NN–NN%` range, or null. */
-function percentRange(text: string): { lo: number; hi: number } | null {
-  const match = new RegExp(`(\\d+)\\s*[${EN_DASH}\\-]\\s*(\\d+)\\s*%`).exec(text);
-  if (!match) return null;
-  return { lo: Number(match[1]), hi: Number(match[2]) };
 }
 
 /**
@@ -175,23 +258,6 @@ export function athleteSentence(raw: string): string {
   return text;
 }
 
-/**
- * THE HEART-RATE CLAUSE, AS A SENTENCE.
- *
- * The sheet writes `HR 90–95% max late` — three abbreviations and no verb. The
- * athlete is told what to do with it. The RANGE is the sheet's; only the words
- * around it are this function's.
- */
-function heartRateSentence(clause: string): string | null {
-  const range = percentRange(clause);
-  if (!range) return null;
-  const band = `${range.lo}${EN_DASH}${range.hi}%`;
-  if (/\blate\b/.test(clause)) {
-    return `Build toward ${band} of maximum in the later rounds.`;
-  }
-  return `Keep your heart rate around ${band} of maximum.`;
-}
-
 function isHeartRateClause(clause: string): boolean {
   return /\bHR\b|HRmax/i.test(clause);
 }
@@ -267,25 +333,28 @@ export function conditioningDisplayLines(
   input: ConditioningDisplayInput,
 ): ConditioningDisplayLine[] {
   const { template } = input;
+  const prescription = conditioningAthletePrescription(
+    template,
+    input.resolvedSetsRounds,
+  );
   const lines: ConditioningDisplayLine[] = [];
 
-  const work = stripAuthoringNotes(template.workPeriod ?? '');
+  const work = prescription.work;
   if (work) lines.push({ label: 'Work', text: work });
 
-  const recovery = stripAuthoringNotes(template.restPeriod ?? '');
+  const recovery = prescription.recovery;
   if (recovery) lines.push({ label: 'Recovery', text: recovery });
 
-  const rounds = roundsLine(template);
+  const rounds = roundsLine({ ...template, setsRounds: prescription.setsRounds });
   if (rounds) lines.push(rounds);
 
-  /* THE INTENSITY FIELD CARRIES TWO MEASUREMENTS AND THEY ARE SPLIT HERE.
-   * `90–100% MAS; HR 90–95% max late` is a speed target AND a heart-rate
-   * target welded with a semicolon; an athlete reading one line cannot tell
-   * which number applies to what. */
+  /* The sheet's intensity field sometimes carries an HR clause after a
+   * semicolon. Sam removed heart-rate copy from conditioning cards on
+   * 2026-08-26, so that internal monitoring note is filtered here and the
+   * actionable intensity target is the only one rendered. */
   const clauses = stripAuthoringNotes(template.intensity ?? '')
     .split(';').map((clause) => clause.trim()).filter(Boolean);
   const intensityClauses = clauses.filter((clause) => !isHeartRateClause(clause));
-  const heartRateClauses = clauses.filter(isHeartRateClause);
 
   if (intensityClauses.length > 0) {
     lines.push({
@@ -293,11 +362,6 @@ export function conditioningDisplayLines(
       text: intensityClauses.join('; '),
     });
   }
-  for (const clause of heartRateClauses) {
-    const sentence = heartRateSentence(clause);
-    if (sentence) lines.push({ label: 'Heart rate', text: sentence });
-  }
-
   const cue = athleteSentence(template.effortCue ?? '');
   if (cue) lines.push({ label: null, text: cue });
 

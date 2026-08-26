@@ -53,9 +53,14 @@ import {
   renderableModalities,
   longestWorkIntervalMinutes,
   blockLengthMinutes,
+  composeConditioningRows,
   selectConditioningTemplate,
   codDecelPermitted,
 } from '../rules/conditioningSelection';
+import {
+  conditioningDisplayLines,
+  conditioningDisplayTitleForName,
+} from '../rules/conditioningDisplay';
 
 let passed = 0;
 const failures: string[] = [];
@@ -217,8 +222,14 @@ const RE_AUTHORED: ReadonlyArray<{
   {
     name: 'Classic 4×4',
     column: 'Effort Cue',
-    ruling: 'R-117, Sam 2026-08-20 — given verbatim in chat with the target card',
-    text: 'Run hard, but do not sprint. Choose a pace you can repeat across all four rounds. Round 4 should match Round 1.',
+    ruling: 'R-240, Sam 2026-08-26 — simplify the 4×4 card description',
+    text: 'Choose a pace you can repeat across all 4 rounds.',
+  },
+  {
+    name: 'Classic 4×4',
+    column: 'Rest period',
+    ruling: 'R-239, Sam 2026-08-26 — the 4×4 VO₂ Max session has complete rest, not jogging',
+    text: '3 min complete rest',
   },
 ];
 
@@ -885,6 +896,129 @@ ok(
   ok('[C11] the reader measures a template that does not declare the cap',
     blockLengthMinutes({ setsRounds: '12 rounds', workPeriod: '30 s hard',
       restPeriod: '30 s easy' } as never) === 12);
+}
+
+// ── C13: ONE CLEAR ATHLETE PRESCRIPTION, NEVER THE INTERNAL RATIO ──────────
+//
+// Sam, audit item 3 (2026-08-26): `30:30` means 30 seconds on / 30 seconds
+// off, while `1:1` reads as one minute on / one minute off. The workbook's
+// `workToRest` ratio is useful internal physiology, but putting ratio-looking
+// shorthand in the title beside explicit durations makes one dose look like
+// two. He also rejected prescriptions that hand the athlete alternatives such
+// as "3 x 8 min, or 4 x 6 min" instead of deciding what to do.
+{
+  const projected = CONDITIONING_TEMPLATES.map((template) => ({
+    template,
+    title: conditioningDisplayTitleForName(template.name),
+    lines: conditioningDisplayLines({ template }),
+  }));
+
+  ok('[C13] every authored conditioning row was projected — the sweep is live',
+    projected.length === CONDITIONING_TEMPLATES.length && projected.length === 55,
+    `${projected.length}/${CONDITIONING_TEMPLATES.length}`);
+
+  const ratioTitles = projected.filter(({ title }) => /\b\d+\s*:\s*\d+\b/.test(title));
+  ok('[C13] titles name the session in plain words, never ratio-looking shorthand',
+    ratioTitles.length === 0,
+    ratioTitles.map(({ template, title }) => `${template.name} -> ${title}`).join(' | '));
+
+  const prescriptionAlternatives = projected.flatMap(({ template, lines }) =>
+    lines
+      .filter((line) => line.label === 'Work' || line.label === 'Recovery'
+        || line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks')
+      .filter((line) => /\b(?:or|variant|alternative)\b/i.test(line.text))
+      .map((line) => `${template.name} :: ${line.label}: ${line.text}`));
+  ok('[C13] Work, Recovery and count lines prescribe one answer, not a menu',
+    prescriptionAlternatives.length === 0,
+    prescriptionAlternatives.join(' | '));
+
+  const heartRateLines = projected.flatMap(({ template, lines }) =>
+    lines
+      .filter((line) => line.label === 'Heart rate' || /\bHR(?:max)?\b/i.test(line.text))
+      .map((line) => `${template.name} :: ${line.label}: ${line.text}`));
+  ok('[C13] no conditioning card carries a heart-rate line',
+    heartRateLines.length === 0,
+    heartRateLines.join(' | '));
+
+  const controlledThirty = projected.find(({ template }) =>
+    template.name === '30:30 Controlled Tempo Blocks');
+  ok('[C13] the controlled 30-second session still says exactly 30 s work / 30 s recovery',
+    controlledThirty?.lines.some((line) => line.label === 'Work' && line.text === '30 s on')
+      && controlledThirty.lines.some((line) =>
+        line.label === 'Recovery' && line.text === '30 s easy')
+      && controlledThirty.lines.some((line) =>
+        line.label === 'Rounds' && line.text === '13'),
+    JSON.stringify(controlledThirty?.lines ?? []));
+
+  const controlledThirtyRow = controlledThirty
+    ? composeConditioningRows(controlledThirty.template, '2026-08-26', { omitWarmup: true })[0]
+    : null;
+  ok('[C13] the generated 30-second row stores and shows the same concrete round count',
+    controlledThirtyRow?.prescribedSets === 13
+      && controlledThirtyRow.notes?.split('\n').includes('Rounds: 13'),
+    JSON.stringify(controlledThirtyRow ?? null));
+
+  const fourByFour = projected.find(({ template }) => template.name === 'Classic 4×4');
+  ok('[C13] the 4×4 VO₂ Max session uses its proper athlete title and complete rest',
+    fourByFour?.title === '4×4 VO₂ Max'
+      && fourByFour.lines.some((line) =>
+        line.label === 'Recovery' && line.text === '3 min complete rest')
+      && fourByFour.lines.some((line) =>
+        line.label === null && line.text === 'Choose a pace you can repeat across all 4 rounds.')
+      && !fourByFour.lines.some((line) => /jog/i.test(line.text)),
+    `${fourByFour?.title} :: ${JSON.stringify(fourByFour?.lines ?? [])}`);
+
+  const oneMinuteFlush = projected.find(({ template }) =>
+    template.name === 'Flush Intervals 1:1 (1 min / 1 min)');
+  ok('[C13] the one-minute flush has one plain title and explicit one-minute work / recovery',
+    oneMinuteFlush?.title === 'One-Minute Flush Intervals'
+      && oneMinuteFlush.lines.some((line) => line.label === 'Work' && line.text === '1 min')
+      && oneMinuteFlush.lines.some((line) =>
+        line.label === 'Recovery' && line.text === '1 min easy')
+      && oneMinuteFlush.lines.some((line) =>
+        line.label === 'Rounds' && line.text === '12'),
+    `${oneMinuteFlush?.title} :: ${JSON.stringify(oneMinuteFlush?.lines ?? [])}`);
+}
+
+// ── C14: ROTATE THE ELIGIBLE POOL — NEVER RESTART AT THE FIRST ROW ─────────
+//
+// Sam, simulator review (2026-08-26): conditioning must not repeat strength's
+// old "take the top eligible entry" failure. The selector is intentionally
+// stable inside one mini-cycle, then advances at the block boundary. Exercise
+// every requestable category through that real owner; this is about behaviour,
+// not the order of an array literal.
+{
+  const categories = [
+    'aerobic_base', 'tempo', 'sprint', 'vo2', 'glycolytic',
+    'recovery_flush', 'cod_decel',
+  ] as const;
+  const stuck: string[] = [];
+  const unstable: string[] = [];
+  for (const category of categories) {
+    const picks = Array.from({ length: 12 }, (_, index) =>
+      selectConditioningTemplate({
+        category,
+        dateStr: '2026-08-26',
+        miniCycleNumber: index + 1,
+        noTeamTrainingWeek: true,
+      }).name);
+    if (new Set(picks).size < 2 || picks[0] === picks[1]) {
+      stuck.push(`${category}: ${picks.join(' | ')}`);
+    }
+    const repeat = selectConditioningTemplate({
+      category,
+      dateStr: '2030-01-01',
+      miniCycleNumber: 2,
+      noTeamTrainingWeek: true,
+    }).name;
+    if (repeat !== picks[1]) unstable.push(`${category}: ${picks[1]} / ${repeat}`);
+  }
+  ok('[C14] every conditioning category advances beyond its first eligible template',
+    stuck.length === 0,
+    stuck.join(' || '));
+  ok('[C14] the chosen template stays stable inside its mini-cycle',
+    unstable.length === 0,
+    unstable.join(' || '));
 }
 
 // ── [C12] A CATEGORY THE FLAVOUR MAP HAS NEVER HEARD OF RETURNS `undefined` ──

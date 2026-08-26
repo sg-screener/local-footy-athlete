@@ -3853,6 +3853,43 @@ function usePersonalPace(notes: string | null | undefined) {
   );
 }
 
+const CONDITIONING_EMPHASISED_LABELS = new Set([
+  'Work', 'Recovery', 'Rounds', 'Reps', 'Blocks', 'Intensity',
+]);
+
+/** One typography owner for every structured conditioning prescription. */
+function ConditioningPrescriptionCopy({
+  copy,
+  style,
+  testID,
+}: {
+  copy: string;
+  style: any;
+  testID?: string;
+}) {
+  const lines = copy.split('\n');
+  return (
+    <Text style={style} testID={testID}>
+      {lines.map((line, index) => {
+        const match = /^([^:]+):\s*(.*)$/.exec(line);
+        const label = match?.[1] ?? null;
+        const emphasised = label !== null && CONDITIONING_EMPHASISED_LABELS.has(label);
+        return (
+          <React.Fragment key={`${index}-${line}`}>
+            {index > 0 ? '\n' : null}
+            {emphasised ? (
+              <>
+                <Text style={styles.conditioningPrescriptionLabel}>{label}:</Text>
+                {` ${match?.[2] ?? ''}`}
+              </>
+            ) : line}
+          </React.Fragment>
+        );
+      })}
+    </Text>
+  );
+}
+
 /**
  * One conditioning phase, as a flat-list row.
  *
@@ -3872,7 +3909,6 @@ function ConditioningPhaseRow({
   const phaseName = exercise.exercise?.name || 'Phase';
   const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
   const description = exercise.notes || exercise.exercise?.description || '';
-  const restLabel = formatRest(exercise.restSeconds, 'recovery');
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
   const paceLine = usePersonalPace(description);
@@ -3890,12 +3926,11 @@ function ConditioningPhaseRow({
         </View>
       </View>
       {description ? (
-        <Text
+        <ConditioningPrescriptionCopy
+          copy={description}
           style={styles.conditioningPhaseBody}
           testID={`workout-exercise-prescription-${exerciseToken}`}
-        >
-          {description}
-        </Text>
+        />
       ) : null}
       {paceLine ? (
         <Text
@@ -3905,7 +3940,6 @@ function ConditioningPhaseRow({
           {paceLine}
         </Text>
       ) : null}
-      {restLabel ? <Text style={styles.conditioningRest}>{restLabel}</Text> : null}
       <QuickExerciseActions
         exercise={editableExerciseForRow(exercise)!}
         onQuickSwap={onQuickSwap}
@@ -3952,7 +3986,7 @@ function ConditioningRow({
         <View style={styles.conditioningRowHeader}>
           <Text style={styles.conditioningRowName}>{displayName}</Text>
         </View>
-        {prescription ? (
+        {!notes && prescription ? (
           <Text
             style={styles.conditioningRowPrescription}
             testID={`workout-exercise-prescription-${exerciseToken}`}
@@ -3961,7 +3995,11 @@ function ConditioningRow({
           </Text>
         ) : null}
         {notes ? (
-          <Text style={styles.conditioningRowNotes}>{cleanNotes(notes)}</Text>
+          <ConditioningPrescriptionCopy
+            copy={cleanNotes(notes)}
+            style={styles.conditioningRowNotes}
+            testID={`workout-exercise-prescription-${exerciseToken}`}
+          />
         ) : null}
         {paceLine ? (
           <Text
@@ -6058,8 +6096,13 @@ const styles = StyleSheet.create({
   conditioningPhaseBody: {
     color: '#D0D0D0',
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 23,
     fontWeight: '500',
+    marginTop: 5,
+  },
+  conditioningPrescriptionLabel: {
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   conditioningRest: {
     color: '#7A7A7A',
@@ -6157,8 +6200,8 @@ const styles = StyleSheet.create({
   conditioningRowNotes: {
     color: '#8A8A8A',
     fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
+    lineHeight: 20,
+    marginTop: 5,
   },
   // The derived pace is a PRESCRIPTION, not a note — it is the number the
   // athlete runs to — so it takes the prescription's accent rather than the

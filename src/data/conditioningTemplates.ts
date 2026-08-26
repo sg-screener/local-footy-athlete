@@ -853,18 +853,16 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
     name: 'Classic 4×4',
     quality: 'aerobic_power',
     workPeriod: '4 min hard',
-    restPeriod: '3 min easy jog',
+    restPeriod: '3 min complete rest',
     setsRounds: '4 reps',
     intensity: '90–100% MAS; HR 90–95% max late',
     workToRest: '4:3 (1.33:1)',
     totalSessionTime: '28 min (hard work 16 min)',
     properties: [],
-    /* ⚠ **RE-SIGNED BY SAM, 2026-08-20, VERBATIM.** The previous cue said the
-     * same thing in one long clause joined by an em dash and starting
-     * lower-case mid-thought. These are his exact words, and they are the
-     * ONLY authored cue this pass changed — every other template's wording is
-     * untouched and only its PUNCTUATION is repaired at the projection. */
-    effortCue: 'Run hard, but do not sprint. Choose a pace you can repeat across all four rounds. Round 4 should match Round 1.',
+    /* ⚠ **RE-SIGNED BY SAM, 2026-08-26, VERBATIM.** The longer 2026-08-20 cue
+     * made this card too long. His simulator ruling replaces it with this one
+     * sentence; this is a source change, not projection punctuation repair. */
+    effortCue: 'Choose a pace you can repeat across all 4 rounds.',
     baseUnit: 'time',
     modalityNotes: 'All 5 modalities — 4 min is inside the 8 min erg cap; Air Bike is time-native.',
     frameworkCheck: 'IN BAND (1–5 min, 1:1–2:1)',

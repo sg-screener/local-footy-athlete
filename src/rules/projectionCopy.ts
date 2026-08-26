@@ -73,6 +73,7 @@ import {
   conditioningVisibleDoseFor,
 } from './conditioningSelection';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { conditioningDisplayTitleForName } from './conditioningDisplay';
 import { FEMALE_SLOTS_FOR_KIND, SLOTS_FOR_KIND } from './sessionSlotCoverage';
 import type { GeneratedWeekClauseId } from './generatedWeekContract';
 import { EQUIPMENT_TAG_LABELS } from './equipmentVocabulary';
@@ -2045,7 +2046,7 @@ export function registerProjectionCopy(): void {
       source: 'authored_sheet',
       provenance: 'data/selectableExerciseVocabulary.ts selectableExerciseNames() — the '
         + 'locked exercise vocabulary; exercise-name-literal-lock unit.',
-      text: name,
+      text: conditioningDisplayTitleForName(name),
     });
     const cue = buildCueText(name);
     if (cue) {

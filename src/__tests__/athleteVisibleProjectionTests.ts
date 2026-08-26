@@ -223,10 +223,10 @@ run('a strength prescription is one number, and it is displayReps of the STORED 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 3. THE AUTHORED CONDITIONING DOSE, VERBATIM
+// 3. ONE ATHLETE-FACING CONDITIONING PRESCRIPTION
 // ═══════════════════════════════════════════════════════════════════════════
 
-run('every conditioning dose line is the authored template field, word for word', () => {
+run('every conditioning dose line is the shared resolved athlete prescription', () => {
   let checked = 0;
   for (const { slug, printed } of WORLDS) {
     for (const { date, row } of allRows(printed.visibleWeek)) {
@@ -234,7 +234,7 @@ run('every conditioning dose line is the authored template field, word for word'
       if (!dose) {
         assert(row.dose.length === 0,
           `${slug} ${date}: "${String(row.name)}" carries dose lines but resolves to no `
-          + 'authored template. A dose the sheet did not author is an invention.');
+          + 'authored template. A dose the projection cannot trace is an invention.');
         continue;
       }
       assert(row.dose.length === 4,
@@ -251,7 +251,7 @@ run('every conditioning dose line is the authored template field, word for word'
       for (let i = 0; i < want.length; i += 1) {
         assert(lines[i] === want[i],
           `${slug} ${date}: "${String(row.name)}" line ${i + 1} reads "${lines[i]}" but the `
-          + `authored template says "${want[i]}". The projection is rewriting Sam's sheet.`);
+          + `shared conditioning projection says "${want[i]}". A surface has drifted.`);
       }
       assert(row.prescription === null,
         `${slug} ${date}: "${String(row.name)}" shows BOTH an authored dose and the `

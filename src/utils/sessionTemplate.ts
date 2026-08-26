@@ -403,7 +403,17 @@ export function buildSessionTemplate(
       }
     } else {
       const options = resolveConditioningOptions(workout, componentRows.conditioningRows);
-      if (options.length > 0) {
+      if (options.length === 1) {
+        /* One prescription is not a choice. The old wrapper printed the
+         * category label (for example "Hard Intervals") and then nested the
+         * real row ("Classic 4×4") beneath it, making one session look like
+         * two mismatched parts. The row already owns its title and complete
+         * structured dose, so hand it straight to the ordinary phase renderer.
+         * Multiple genuinely equivalent options keep the picker below. */
+        for (const row of options[0].rows) {
+          items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
+        }
+      } else if (options.length > 1) {
         items.push({ kind: 'conditioning_choice', role: 'conditioning', options });
       }
     }

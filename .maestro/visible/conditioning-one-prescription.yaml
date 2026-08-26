@@ -1,0 +1,44 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - conditioning shows one title and one prescription
+tags:
+  - e2e
+  - visible
+  - conditioning
+---
+# A real pre-season/full-gym athlete whose production-generated Monday carries
+# Classic 4×4. No display row or prescription is hand-built by this seed.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: conditioning-showcase
+- tapOn:
+    id: "day-timeline-part-conditioning"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-conditioning"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: "4×4 VO₂ Max"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "workout-exercise-prescription-dev-e2e-conditioning-showcase-2026-07-13-dow-1-exercise-cond-2026-07-13-main-7"
+- assertVisible: ".*Work: 4 min hard.*"
+- assertVisible: ".*Recovery: 3 min complete rest.*"
+- assertVisible: ".*Rounds: 4.*"
+- assertVisible: ".*Choose a pace you can repeat across all 4 rounds.*"
+- assertNotVisible: "Hard Intervals"
+- assertNotVisible: "Choose one.*"
+- assertNotVisible: ".*1:1.*"
+- assertNotVisible: ".*easy jog.*"
+- assertNotVisible: ".*Heart rate.*"
+- assertNotVisible: ".*Run hard, but do not sprint.*"
+- takeScreenshot: artifacts/visible/conditioning-one-prescription

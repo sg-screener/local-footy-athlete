@@ -1,3 +1,5 @@
+import { conditioningDisplayTitleForName } from '../rules/conditioningDisplay';
+
 const KNOWN_EXERCISE_TERMS: Record<string, string> = {
   amrap: 'AMRAP',
   bb: 'BB',
@@ -88,6 +90,9 @@ export function formatExerciseDisplayName(name: string | null | undefined): stri
 
   const displayAlias = EXERCISE_DISPLAY_ALIASES[raw.toLowerCase()];
   if (displayAlias) return displayAlias;
+
+  const conditioningTitle = conditioningDisplayTitleForName(raw);
+  if (conditioningTitle !== raw) return conditioningTitle;
 
   return raw.replace(/[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g, formatExerciseToken);
 }

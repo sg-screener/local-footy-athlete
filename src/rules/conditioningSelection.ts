@@ -34,10 +34,12 @@ import {
   type ConditioningQuality,
   type ConditioningTemplate,
 } from '../data/conditioningTemplates';
-import { conditioningDisplayText } from './conditioningDisplay';
 import {
-  containsWorkRestRatio,
-  doseDisplayText,
+  conditioningAthletePrescription,
+  conditioningDisplayTitleForName,
+  conditioningDisplayText,
+} from './conditioningDisplay';
+import {
   doseMidpoint,
   doseSeconds,
   parseConditioningDose,
@@ -684,6 +686,14 @@ export function offFeetAlternative(
 export function resolveTemplateByName(name: string): ConditioningTemplate | null {
   const direct = byName.get(name);
   if (direct) return direct;
+  // Visible projections carry Sam's plain athlete-facing title while storage
+  // keeps the workbook identity. A reader handed the visible title must still
+  // resolve the same authored template; this is the one reverse bridge and it
+  // compares through the display owner rather than maintaining an alias table.
+  const displayed = CONDITIONING_TEMPLATES.find(
+    (template) => conditioningDisplayTitleForName(template.name) === name,
+  );
+  if (displayed) return displayed;
   const legacy = LEGACY_CONDITIONING_FORMAT_MAP.find((entry) => entry.legacyName === name);
   if (legacy && legacy.resolution.kind === 'template') {
     return byName.get(legacy.resolution.templateName) ?? null;
@@ -784,23 +794,6 @@ function joinNotes(...lines: Array<string | false | null | undefined>): string {
 }
 
 /**
- * THE DISPLAY RULE (docs/DISPLAY_TIMES_RULING_2026-08-05.md): a rendered dose
- * line spells the time; work:rest ratios never reach an athlete.
- *
- * The authored string is the athlete-visible truth and renders VERBATIM —
- * except when it carries a ratio (coach annotation like "2 min (Sam's 1:2
- * ruling)"), in which case the typed parse supplies the duration-spelled
- * text ("2 min") and the annotation stays workbook-internal. The narrow
- * condition is deliberate: deriving every line would collapse compound
- * authored doses ("15 s on / 15 s easy") to their leading quantity.
- */
-function doseLineForDisplay(authored: string): string {
-  if (!containsWorkRestRatio(authored)) return authored;
-  const parsed = parseConditioningDose(authored);
-  return parsed.ok ? doseDisplayText(parsed.quantity) : authored;
-}
-
-/**
  * THE WARM-UP SENTENCE — Sam's signed words, 2026-08-05 (ruling 4,
  * `docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md`).
  *
@@ -866,12 +859,15 @@ export function composeConditioningRows(
       CONDITIONING_WARMUP_COPY,
     ));
   }
+  const resolvedSetsRounds = opts.authoredMinimumDose
+    ? headlineSetsLow(template)
+    : headlineSets(template);
   rows.push(
     conditioningRow(
       `${prefix}-main`,
       template.name,
       base + rows.length,
-      opts.authoredMinimumDose ? headlineSetsLow(template) : headlineSets(template),
+      resolvedSetsRounds,
       headlineRest(template),
       /* ⚠ **THE SIX-FIELD PASTE IS GONE — SAM, 2026-08-20.** This built the
        * athlete's coaching copy by concatenating authored FIELDS, which is how
@@ -880,7 +876,11 @@ export function composeConditioningRows(
        * Air Bike is time-native"* — shipped as an instruction. The one
        * structured projection owns it now, so a wording fix lands on every
        * surface at once. */
-      conditioningDisplayText({ template, masKmh: opts.masKmh ?? null }),
+      conditioningDisplayText({
+        template,
+        masKmh: opts.masKmh ?? null,
+        resolvedSetsRounds,
+      }),
     ),
   );
   return rows;
@@ -1024,11 +1024,12 @@ export interface ConditioningVisibleDose {
 export function conditioningVisibleDoseFor(name: string): ConditioningVisibleDose | null {
   const template = resolveTemplateByName(name);
   if (!template) return null;
+  const prescription = conditioningAthletePrescription(template);
   return {
     templateName: template.name,
-    work: doseLineForDisplay(template.workPeriod),
-    rest: doseLineForDisplay(template.restPeriod),
-    setsRounds: template.setsRounds,
-    totalSessionTime: template.totalSessionTime,
+    work: prescription.work,
+    rest: prescription.recovery,
+    setsRounds: prescription.setsRounds,
+    totalSessionTime: prescription.totalSessionTime,
   };
 }
