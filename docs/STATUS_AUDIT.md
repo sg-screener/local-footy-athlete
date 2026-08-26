@@ -3100,3 +3100,36 @@ High, week 4 Moderate — the deload week visible headlessly; fixture
 weeks compose the full-body pair; no G-1 offer in pre-season (per rule).
 Doors/long-term passes queued next; block 2→3 device run (dev clock)
 queued with them.
+
+## 2026-08-26 — audit round 3 complete (headless halves); dead suites binned
+
+BINNED (f55e7e62, Sam: "BIN THEM DEAD TEST"): 11 orphaned dead-at-startup
+suites deleted (six old-engine B1-PIVOT worlds, charter-deleted Recovery
+content, two tooling self-tests, two config-drift orphans), 3,713 lines.
+Unrunnable ratchet re-baselined 17 → 6 of 383; the six that remain are
+ALL coach-family, kept for Codex's rebuild per Sam.
+
+ROUND 3A — doors on the new profiles: away+clear on off-season female
+(clear correctly changes nothing — no club work to restore), game move
+Sat→Wed on in-season female, severe illness on pre-season male. All
+accepted, all boot-stable.
+
+ROUND 3B — accumulated life: 4 weeks × every strength session logged
+through the REAL commitSessionOutcomeTransaction (12/12; the door
+correctly refused an illegal partial-reason word during probe bring-up —
+validation working). Worn world boots byte-identical on all four
+anchors, athlete-visible fingerprint (names+doses).
+
+PRACTICE MATCH + BLOCK SHAPE: pre-season with Saturday fixtures
+generates 4 microcycles, weeks 1-3 High / week 4 Moderate (deload
+visible headlessly); fixture weeks compose the full-body pair; no G-1
+offer in pre-season (per rule).
+
+ROUND 3C — block changeover ON DEVICE: blocked on a real rig gap. The
+seed system derives weekStart from the anchor's own week
+(devE2EWeekStartForSeed), so "an old program + a later today" — the
+rollover state — is inexpressible. NEXT UNIT: a two-date seed semantic
+(blockStartDate ≈ anchor−28d, generation at block 1, boot-rollover on
+install; witnesses: block-2 content + BlockBoundaryNoticeCard). Headless
+rollover machinery is covered (block-two family incl. the revived
+screen-delivery suite, block-rollover, block-state — all chained).
