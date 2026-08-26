@@ -5033,7 +5033,11 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
     case 'add_pick':
       return 'Everything here is legal with today’s kit and injuries.';
     case 'exclusion_scope':
-      return displayExerciseName(step.exercise.name);
+      /* Sam's phone, 2026-08-26 (checklist #6): the body already opens with
+       * "<Name> was removed from today's session", so a bare-name subtitle
+       * printed the exercise twice. The sentence keeps the name; the
+       * subtitle stands down. */
+      return null;
     case 'future_scope':
       return 'Default is today only.';
     case 'coach_fallback':
