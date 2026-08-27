@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motivationGoalLabel, resolveMotivation } from '../../rules/motivationGoals';
+import {
+  MAX_MOTIVATION_GOALS,
+  MOTIVATION_GOAL_OPTIONS,
+  motivationGoalLabel,
+  resolveMotivation,
+  type MotivationGoal,
+} from '../../rules/motivationGoals';
 import {
   Animated,
   View,
@@ -9,7 +15,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
@@ -32,7 +38,7 @@ import { Text } from '../../components/common/Text';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
-import { Button as V2Button, SheetDescription, SheetHeader } from '../../components/ui';
+import { Button as V2Button, Sheet, SheetDescription, SheetHeader } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
 import {
   WEEK_DAYS,
@@ -57,6 +63,9 @@ import {
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { EquipmentEditorSheet } from './EquipmentEditorSheet';
+import { ProfileFieldSheet, type ProfileFieldId } from './ProfileFieldSheet';
+import { SeasonPhaseShiftSheet } from '../../components/SeasonPhaseShiftSheet';
+import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
 import { formatEquipmentProfileSummary } from '../../rules/equipmentVocabulary';
 import { signedCopy } from '../../rules/signedCopy';
 import { BuildingState, BuildCompleteState } from '../../components/RebuildSheet';
@@ -68,20 +77,6 @@ import {
 } from '../../components/season/SeasonFinishDateFields';
 import { validateSeasonFinishDateParts } from '../../rules/seasonPhaseClock';
 
-type SetupPageStep =
-  | 'overview'
-  | 'playerName'
-  | 'playerPosition'
-  | 'playerExperience'
-  | 'playerTimeTrial'
-  | 'programPhase'
-  | 'programSeasonFinish'
-  | 'programLfaDays'
-  | 'programTeamDays'
-  | 'programGameDay'
-  | 'confirm'
-  | 'building'
-  | 'complete';
 
 const SEASON_PHASE_OPTIONS: SeasonPhase[] = ['Off-season', 'Pre-season', 'In-season'];
 const EXPERIENCE_OPTIONS: { id: ExperienceLevel; label: string }[] = [
@@ -136,7 +131,6 @@ function dayFromGameFields(data: OnboardingData): DayOfWeek | null {
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const onboardingData = useProfileStore((s) => s.onboardingData);
   // The phase this screen shows and compares against is the OWNED one — what
   // the program is actually built as. Reading `onboardingData.seasonPhase`
@@ -150,7 +144,6 @@ export default function ProfileScreen() {
   });
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
-  const [setupPageVisible, setSetupPageVisible] = useState(false);
   const [equipmentEditorVisible, setEquipmentEditorVisible] = useState(false);
   const [equipmentSaving, setEquipmentSaving] = useState(false);
   const [equipmentSaveError, setEquipmentSaveError] = useState<string | null>(null);
@@ -168,7 +161,45 @@ export default function ProfileScreen() {
    * down is a SEPARATE 2026-07-30 concern with its own reasoning, and
    * SEAT_INBOX item 14 says so explicitly. Read its own comment before touching
    * it. */
-  const [setupPageStep, setSetupPageStep] = useState<SetupPageStep>('overview');
+  /**
+   * TRUE when a step was opened by a ROW'S PEN rather than by walking the group
+   * from its first question — Sam, 2026-08-27. The step is the same screen
+   * either way; what changes is where its button goes. Walking, it continues to
+   * the next question. Pen, it saves and returns to the review, because the
+   * athlete came here to change ONE line.
+   */
+  const [setupFieldEdit, setSetupFieldEdit] = useState(false);
+  /**
+   * The athlete's motivation goals, editable from the Profile page since
+   * 2026-08-27 (Sam: *"make main goal/s editable too"*). Held as the same
+   * pending/draft pair as every other setup answer, so it commits through the
+   * one `decideProfileSetupChange` patch rather than writing on its own.
+   *
+   * ⚠ **`motivationOther` IS NOT TOUCHED HERE.** It is prose the athlete typed,
+   * not one of the seven tiles; an editor that silently dropped it would delete
+   * an answer the athlete never revisited.
+   */
+  /**
+   * Set by a single-field save. The commit CANNOT run in the same tick: the
+   * decision is computed from the `pending*` state this save just set, and that
+   * state has not flushed yet — running it here would rebuild against the
+   * previous answer. The effect below fires on the next render, when the new
+   * answer is what the decision reads.
+   */
+  const [commitAfterFieldEdit, setCommitAfterFieldEdit] = useState(false);
+  /**
+   * ⚠ **SEASON PHASE USES THE SHEET IT ALREADY HAS** — Sam, 2026-08-27: *"you
+   * can find the exact pop up to use by using the one in the 'shift season
+   * phase' inside 'my status'"*. Not a copy of it: the SAME
+   * `SeasonPhaseShiftSheet` driven by the SAME `useSeasonPhaseControl`, because
+   * a phase change is not a field edit — it asks follow-up questions (finish
+   * date, availability, game anchor) and rebuilds the whole season.
+   */
+  const phaseControl = useSeasonPhaseControl();
+  /** Which single answer the popup is asking about. `null` means it is closed. */
+  const [activeField, setActiveField] = useState<ProfileFieldId | null>(null);
+  const [pendingGoals, setPendingGoals] = useState<MotivationGoal[]>([]);
+  const [draftGoals, setDraftGoals] = useState<MotivationGoal[]>([]);
   // The 2km time trial (D14). Held as the two boxes the athlete types into,
   // committed as one answer through `recordTwoKmTime`. `null` seconds is the
   // real answer "haven't tested", so an athlete can also RETRACT a time here.
@@ -302,16 +333,19 @@ export default function ProfileScreen() {
     }
   };
 
+
   const openPlayerDetailsEditor = () => {
+    setSetupFieldEdit(false);
+    setDraftGoals(pendingGoals);
     setDraftName(pendingName);
     setDraftPosition(pendingPosition);
     setDraftExperience(pendingExperience);
     seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
-    setSetupPageStep('playerName');
   };
 
   const openProgramDetailsEditor = () => {
+    setSetupFieldEdit(false);
     setDraftSeasonPhase(pendingSeasonPhase);
     setDraftPreferredDays(pendingPreferredDays);
     setDraftTeamDays(pendingTeamDays);
@@ -319,7 +353,6 @@ export default function ProfileScreen() {
     setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
     setDraftSeasonFinishedOn(pendingSeasonFinishedOn);
     setSetupUpdateError(null);
-    setSetupPageStep('programPhase');
   };
 
   const onProgramSetupChanged = () => {
@@ -330,6 +363,9 @@ export default function ProfileScreen() {
     const currentPreferredDays = (onboardingData.preferredTrainingDays as DayOfWeek[]) || [];
     const currentTeamDays = (onboardingData.teamTrainingDays as DayOfWeek[]) || [];
     const currentGameDay = dayFromGameFields(onboardingData);
+    const currentGoals = [...resolveMotivation(onboardingData).goals];
+    setPendingGoals(currentGoals);
+    setDraftGoals(currentGoals);
     setPendingName(currentName);
     setPendingPosition(currentPosition);
     setPendingExperience(currentExperience);
@@ -352,14 +388,49 @@ export default function ProfileScreen() {
     setDraftSeasonFinishedOn(onboardingData.seasonFinishedOn);
     setProgramDetailsSaved(false);
     setSetupUpdateError(null);
-    setSetupPageStep('overview');
-    setSetupPageVisible(true);
+  };
+
+  /**
+   * THE ONE PEN. It only turns the rows on; the seeding happens when a row is
+   * actually tapped.
+   */
+  /**
+   * A PEN ON THE PROFILE PAGE. It seeds the whole setup the way the old
+   * "Something changed?" door did — that seeding is what makes the untouched
+   * lines save back unchanged — then opens the setup page directly on the one
+   * question the athlete tapped. Saving that question returns to the review,
+   * which is where the program-rebuild confirmation still lives.
+   */
+  /**
+   * A row's tap. Seeds every draft the way the old "Something changed?" door did
+   * — that seeding is what lets the untouched answers commit back unchanged —
+   * then opens the POPUP for the one field. There is no other setup surface
+   * left to open — the review page and its step machine are deleted.
+   */
+  const openProfileFieldEditor = (field: ProfileFieldId) => {
+    onProgramSetupChanged();
+    setSetupFieldEdit(true);
+    setActiveField(field);
+  };
+
+  const closeFieldSheet = () => {
+    if (isSetupUpdating) return;
+    setActiveField(null);
+    setSetupFieldEdit(false);
+    setSetupUpdateError(null);
+  };
+
+  /** The Equipment pen: the same atomic editor, opened over the setup page. */
+  const openEquipmentFromProfile = () => {
+    onProgramSetupChanged();
+    openEquipmentEditor();
   };
 
   const openEquipmentEditor = () => {
-    // Equipment keeps its existing atomic editor and transaction. The setup
-    // PAGE remains underneath it, so closing or saving the focused equipment
-    // editor returns the athlete to the review page rather than Profile home.
+    // Equipment keeps its existing atomic editor and transaction. It opens
+    // OVER THE PROFILE PAGE now — the review page that used to sit underneath
+    // it is deleted, which is what Sam hit on 2026-08-27: dismissing this
+    // editor dropped him onto a screen he had never asked for.
     setEquipmentSaveError(null);
     setEquipmentEditorVisible(true);
   };
@@ -370,10 +441,20 @@ export default function ProfileScreen() {
   const daysPerWeek = onboardingData.trainingDaysPerWeek;
   const teamDays = onboardingData.teamTrainingDays || [];
   const gameDay = onboardingData.gameDay || onboardingData.usualGameDay || '';
-  const mainFocus = onboardingData.biggestLimitation
-    || (resolveMotivation(onboardingData).goals[0]
-      ? motivationGoalLabel(resolveMotivation(onboardingData).goals[0])
-      : '')
+  /**
+   * ⚠ **ALL OF THEM — Sam, 2026-08-27: *"I HAVE SELECTED 3 GOALS AND IT'S ONLY
+   * SHOWING 1 HERE"*.** This line read `goals[0]` and dropped the rest, and it
+   * preferred `biggestLimitation` over the goals entirely — a DIFFERENT answer
+   * (the athlete's stated weakness) wearing the goals' label. The row says what
+   * the athlete picked, in the order they picked it, and their own words after
+   * it if they typed any.
+   */
+  const mainFocusMotivation = resolveMotivation(onboardingData);
+  const mainFocus = [
+    ...mainFocusMotivation.goals.map(motivationGoalLabel),
+    ...(mainFocusMotivation.other ? [mainFocusMotivation.other] : []),
+  ].join(', ')
+    || onboardingData.biggestLimitation
     || '';
   const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
   const lfaDayCountNeedsSync =
@@ -402,6 +483,7 @@ export default function ProfileScreen() {
       preferredDays: pendingPreferredDays,
       teamDays: pendingTeamDays,
       gameDay: pendingGameDay,
+      goals: pendingGoals,
     },
   });
   const setupHasChanges = setupDecision.hasChanges;
@@ -412,66 +494,20 @@ export default function ProfileScreen() {
     ? profileSetupBlockCopy(setupDecision.blockedBy[0])
     : null;
 
-  const closeSetupPage = () => {
-    if (isSetupUpdating) return;
-    setSetupPageVisible(false);
-    setSetupPageStep('overview');
-    setSetupUpdateError(null);
-    setSetupUpdateIsPhaseShift(false);
-  };
 
-  const goBackInSetupPage = () => {
-    if (isSetupUpdating) return;
-    setSetupUpdateError(null);
-    if (setupPageStep === 'playerTimeTrial') {
-      setSetupPageStep('playerExperience');
-      return;
-    }
-    if (setupPageStep === 'playerExperience') {
-      setSetupPageStep('playerPosition');
-      return;
-    }
-    if (setupPageStep === 'playerPosition') {
-      setSetupPageStep('playerName');
-      return;
-    }
-    if (setupPageStep === 'programGameDay') {
-      setSetupPageStep('programTeamDays');
-      return;
-    }
-    if (setupPageStep === 'programTeamDays') {
-      setSetupPageStep('programLfaDays');
-      return;
-    }
-    if (setupPageStep === 'programLfaDays') {
-      setSetupPageStep(
-        draftSeasonPhase === 'Off-season' && pendingSeasonPhase !== 'Off-season'
-          ? 'programSeasonFinish'
-          : 'programPhase',
-      );
-      return;
-    }
-    if (setupPageStep === 'programSeasonFinish') {
-      setSetupPageStep('programPhase');
-      return;
-    }
-    if (setupPageStep === 'programPhase') {
-      cancelProgramDetailsEdit();
-      return;
-    }
-    setSetupPageStep('overview');
-  };
 
   const cancelPlayerDetailsEdit = () => {
+    setSetupFieldEdit(false);
+    setDraftGoals(pendingGoals);
     setDraftName(pendingName);
     setDraftPosition(pendingPosition);
     setDraftExperience(pendingExperience);
     seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
-    setSetupPageStep('overview');
   };
 
   const cancelProgramDetailsEdit = () => {
+    setSetupFieldEdit(false);
     setDraftSeasonPhase(pendingSeasonPhase);
     setDraftPreferredDays(pendingPreferredDays);
     setDraftTeamDays(pendingTeamDays);
@@ -479,7 +515,6 @@ export default function ProfileScreen() {
     setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
     setDraftSeasonFinishedOn(pendingSeasonFinishedOn);
     setSetupUpdateError(null);
-    setSetupPageStep('overview');
   };
 
   /**
@@ -512,7 +547,6 @@ export default function ProfileScreen() {
     if (!result.ok) return;
     setPendingTwoKm(result.answer);
     setSetupUpdateError(null);
-    setSetupPageStep('overview');
   };
 
   /**
@@ -536,7 +570,32 @@ export default function ProfileScreen() {
     setPendingExperience(draftExperience);
 
     setSetupUpdateError(null);
-    setSetupPageStep('playerTimeTrial');
+    /* ⚠ **A ONE-LINE EDIT DOES NOT WALK THE OLD PATHWAY.** Sam, 2026-08-27:
+       editing his name carried him on to "what is your 2km time", then back to
+       the review page he had never asked for. Answering one question ends the
+       edit: the commit runs, and the athlete is returned to the menu. */
+    if (setupFieldEdit) {
+      setCommitAfterFieldEdit(true);
+      return;
+    }
+  };
+
+  const toggleDraftGoal = (goal: MotivationGoal) => {
+    setDraftGoals((current) => {
+      if (current.includes(goal)) return current.filter((entry) => entry !== goal);
+      if (current.length >= MAX_MOTIVATION_GOALS) return current;
+      return [...current, goal];
+    });
+  };
+
+  const saveGoals = () => {
+    if (draftGoals.length < 1) return;
+    setPendingGoals(draftGoals);
+    setSetupUpdateError(null);
+    if (setupFieldEdit) {
+      setCommitAfterFieldEdit(true);
+      return;
+    }
   };
 
   const saveProgramDetails = () => {
@@ -554,7 +613,10 @@ export default function ProfileScreen() {
     );
     setProgramDetailsSaved(true);
     setSetupUpdateError(null);
-    setSetupPageStep('overview');
+    if (setupFieldEdit) {
+      setCommitAfterFieldEdit(true);
+      return;
+    }
   };
 
   const toggleDraftPreferredDay = (day: DayOfWeek) => {
@@ -594,13 +656,72 @@ export default function ProfileScreen() {
     );
     if (!validation.ok) return;
     setDraftSeasonFinishedOn(validation.dateISO);
-    setSetupPageStep('programLfaDays');
   };
 
   const answerSeasonFinishNotSure = () => {
     setDraftSeasonFinishedOn(null);
-    setSetupPageStep('programLfaDays');
   };
+
+  /**
+   * WHY SAVE IS OFF, IN THE ATHLETE'S WORDS. A control that is disabled for an
+   * unstated reason is the same defect as one that is on and inert — the rule
+   * the setup page already follows for its own Save.
+   */
+  const activeFieldBlockedReason = (() => {
+    if (!activeField) return null;
+    if (activeField === 'name' && !draftName.trim()) return 'Type your name to save.';
+    if (activeField === 'role' && !draftPosition) return 'Pick the position that fits you.';
+    if (activeField === 'experience' && !draftExperience) return 'Pick your training experience.';
+    if (activeField === 'goals' && draftGoals.length < 1) return 'Pick at least one goal.';
+    if (activeField === 'lfaDays' && draftPreferredDays.length < 1) {
+      return 'Pick at least one day you can train.';
+    }
+    if (activeField === 'gameDay' && !draftGameDay) return 'Pick the day you usually play.';
+    return null;
+  })();
+
+  /**
+   * ONE ANSWER IN, ONE COMMIT OUT. Each field routes to the same group save the
+   * setup page uses, so the drafts this popup did not touch commit back exactly
+   * as they were, and the rebuild runs through the one transaction.
+   */
+  const saveActiveField = () => {
+    if (activeFieldBlockedReason) return;
+    switch (activeField) {
+      case 'name':
+      case 'role':
+      case 'experience':
+        savePlayerDetails();
+        return;
+      case 'goals':
+        saveGoals();
+        return;
+      case 'lfaDays':
+      case 'teamDays':
+      case 'gameDay':
+        saveProgramDetails();
+        return;
+      default:
+        return;
+    }
+  };
+
+  /**
+   * Runs the commit a single-field save asked for, one render later. If the new
+   * answer turned out to be no change at all, there is nothing to rebuild and
+   * the page simply closes.
+   */
+  useEffect(() => {
+    if (!commitAfterFieldEdit) return;
+    setCommitAfterFieldEdit(false);
+    if (!setupDecision.canSave) {
+      // The answer came back the same as it already was. Nothing to rebuild.
+      setActiveField(null);
+      setSetupFieldEdit(false);
+      return;
+    }
+    void executeSetupUpdate();
+  }, [commitAfterFieldEdit, setupDecision.canSave]);
 
   const executeSetupUpdate = async () => {
     if (!canUpdateSetup && !setupUpdateError) return;
@@ -613,7 +734,6 @@ export default function ProfileScreen() {
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
     setSetupUpdateIsPhaseShift(phaseIsChanging);
-    setSetupPageStep('building');
     setIsSetupUpdating(true);
     try {
       const result = await commitProfileProgramTransaction({
@@ -628,7 +748,6 @@ export default function ProfileScreen() {
         const refusal = classifyProgramMutationRefusal({ reason: result.reason });
         logger.error('[profile-setup-update] refused', refusal.diagnostic ?? result.message);
         setSetupUpdateError(refusal.userMessage);
-        setSetupPageStep('confirm');
         return;
       }
       if (!result.changedProgram) {
@@ -638,25 +757,24 @@ export default function ProfileScreen() {
         setSetupUpdateError(
           classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
         );
-        setSetupPageStep('confirm');
         return;
       }
       setProgramDetailsSaved(false);
+      /* A phase shift holds its building state for a beat, because rebuilding a
+         whole season is a bigger thing than changing a name and vanishing
+         instantly reads as "nothing happened". */
       if (phaseIsChanging) {
         const elapsed = Date.now() - startedAt;
         const wait = Math.max(0, PHASE_SHIFT_MIN_DISPLAY_MS - elapsed);
         if (wait > 0) {
           await new Promise<void>((resolve) => setTimeout(resolve, wait));
         }
-        setSetupPageStep('complete');
-      } else {
-        setSetupPageVisible(false);
-        setSetupPageStep('overview');
       }
+      setActiveField(null);
+      setSetupFieldEdit(false);
     } catch (err: any) {
       logger.error('[profile-setup-update] rebuild_failed', err?.diagnostic || err?.message || err);
       setSetupUpdateError(classifyProgramMutationRefusal({ error: err }).userMessage);
-      setSetupPageStep('confirm');
     } finally {
       setIsSetupUpdating(false);
     }
@@ -664,11 +782,17 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {!setupPageVisible ? (
-        <ScrollView
+      {/* THE PROFILE PAGE IS ALWAYS THE PAGE. Editing happens in a popup over
+          it — there is no second full-screen setup surface any more. */}
+      <ScrollView
+          /* ⚠ **NO TAB-BAR PADDING NEEDED.** This was `88 + insets.bottom`, which
+             is what a FLOATING tab bar would need cleared. This app's bar is a
+             normal 84pt bar that takes its own space and already sits below the
+             safe area, so that padding was pure empty screen under the last
+             card — Sam, 2026-08-27: *"still lots of space"*. */
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: 88 + insets.bottom },
+            { paddingBottom: spacing.lg },
           ]}
         >
         <View style={styles.brandHeader}>
@@ -679,10 +803,39 @@ export default function ProfileScreen() {
         <View style={styles.section} testID="profile-program-setup-section">
           <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>PROGRAM SETUP</Text>
           <Card style={[styles.summaryCard, styles.profilePageCardSurface]}>
-            <ProfileRow label="Name" value={displayName} />
-            {position ? <ProfileRow label="Footy role" value={position} /> : null}
-            {experienceLevel ? <ProfileRow label="Training Experience" value={experienceLevel} /> : null}
             <ProfileRow
+              onEdit={() => openProfileFieldEditor('name')}
+              editTestID="profile-edit-name"
+              label="Name"
+              value={displayName}
+            />
+            {position ? (
+              <ProfileRow
+                onEdit={() => openProfileFieldEditor('role')}
+                editTestID="profile-edit-role"
+                label="Footy role"
+                value={position}
+              />
+            ) : null}
+            {experienceLevel ? (
+              <ProfileRow
+                onEdit={() => openProfileFieldEditor('experience')}
+                editTestID="profile-edit-experience"
+                label="Training Experience"
+                value={experienceLevel}
+              />
+            ) : null}
+            {/* Season phase sits directly under Training experience, and its pen
+                opens the season-shift sheet rather than a field popup. */}
+            <ProfileRow
+              onEdit={() => phaseControl.open()}
+              editTestID="profile-edit-phase"
+              label="Season phase"
+              value={currentPhase}
+            />
+            <ProfileRow
+              onEdit={() => openProfileFieldEditor('lfaDays')}
+              editTestID="profile-edit-lfa-days"
               label="LFA Days"
               value={
                 daysPerWeek
@@ -691,19 +844,34 @@ export default function ProfileScreen() {
               }
             />
             {teamDays.length > 0 ? (
-              <ProfileRow label="Team Training" value={formatList(teamDays) ?? ''} />
+              <ProfileRow
+                onEdit={() => openProfileFieldEditor('teamDays')}
+                editTestID="profile-edit-team-days"
+                label="Team Training"
+                value={formatList(teamDays) ?? ''}
+              />
             ) : null}
-            {gameDay ? <ProfileRow label="Game Day" value={gameDay} /> : null}
-            {mainFocus ? <ProfileRow label="Main goal/s" value={mainFocus} /> : null}
+            {gameDay ? (
+              <ProfileRow
+                onEdit={() => openProfileFieldEditor('gameDay')}
+                editTestID="profile-edit-game-day"
+                label="Game Day"
+                value={gameDay}
+              />
+            ) : null}
+            {mainFocus ? (
+              <ProfileRow
+                onEdit={() => openProfileFieldEditor('goals')}
+                editTestID="profile-edit-goals"
+                label="Main goal/s"
+                value={mainFocus}
+              />
+            ) : null}
             <ProfileRow
+              onEdit={openEquipmentFromProfile}
+              editTestID="profile-edit-equipment"
               label="Equipment"
               value={formatEquipmentProfileSummary(onboardingData)}
-            />
-            <SetupEditAction
-              label="Something changed? Tell the coach"
-              onPress={onProgramSetupChanged}
-              testID="profile-program-setup-change"
-              accessibilityLabel="Something changed? Tell the coach"
             />
           </Card>
         </View>
@@ -833,76 +1001,89 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text variant="label" color={colors.accent.lime}>LFA</Text>
-          <Text variant="caption" color={colors.text.tertiary} style={{ marginTop: spacing.xs }}>
-            MVP 0.1
-          </Text>
-        </View>
-        </ScrollView>
+      </ScrollView>
+      {/* ONE ANSWER, IN THE APP'S OWN POPUP. */}
+      {activeField ? (
+        <ProfileFieldSheet
+          field={activeField}
+          visible
+          onClose={closeFieldSheet}
+          onSave={saveActiveField}
+          blockedReason={activeFieldBlockedReason}
+          saving={isSetupUpdating}
+          busyContent={isSetupUpdating ? (
+            <BuildingState
+              title="Updating your program…"
+              msgIdx={setupUpdateMsgIdx}
+              msgOpacity={setupUpdateMsgOpacity}
+              messages={PROFILE_SETUP_UPDATE_MESSAGES}
+              durationText={setupUpdateIsPhaseShift
+                ? signedCopy('phase.shift.build.duration')
+                : undefined}
+            />
+          ) : undefined}
+          name={draftName}
+          onChangeName={setDraftName}
+          role={draftPosition}
+          roleOptions={ROLE_BUCKET_OPTIONS}
+          onSelectRole={setDraftPosition}
+          experience={draftExperience}
+          /* ⚠ **THE YEARS, NOT THE GRADE** — Sam, 2026-08-27: *"change this to be
+             number of years instead … instead of advanced it says 5+ years"*.
+             The stored answer IS the year range, and the Profile row this popup
+             opened from already showed it — so "Advanced" in the popup and
+             "5+ years" on the row were two names for one answer. The id is the
+             label here; nothing new is authored. */
+          /* The same "Advanced · 5+ years" the onboarding tile now shows, built
+             the same way: the grade from the option, the years from the stored
+             id. Three surfaces, one name for one answer. */
+          experienceOptions={EXPERIENCE_OPTIONS.map((option) => ({
+            id: option.id,
+            label: option.id === 'Complete beginner'
+              ? option.label
+              : `${option.label} · ${option.id}`,
+          }))}
+          onSelectExperience={setDraftExperience}
+          goals={draftGoals}
+          onToggleGoal={toggleDraftGoal}
+          weekDays={WEEK_DAYS}
+          lfaDays={draftPreferredDays}
+          onToggleLfaDay={toggleDraftPreferredDay}
+          teamDays={draftTeamDays}
+          onToggleTeamDay={toggleDraftTeamDay}
+          gameDay={draftGameDay}
+          onSelectGameDay={setDraftGameDay}
+        />
       ) : null}
-      {setupPageVisible ? (
-        <SetupUpdatePage
-        step={setupPageStep}
-        currentPhase={pendingSeasonPhase}
-        displayName={pendingName}
-        position={pendingPosition}
-        experienceLevel={pendingExperience}
-        draftName={draftName}
-        draftPosition={draftPosition}
-        draftExperience={draftExperience}
-        draftSeasonPhase={draftSeasonPhase}
-        draftSeasonFinishDate={draftSeasonFinishDate}
-        draftPreferredDays={draftPreferredDays}
-        draftTeamDays={draftTeamDays}
-        draftGameDay={draftGameDay}
-        preferredDays={pendingPreferredDays}
-        teamDays={pendingTeamDays}
-        gameDay={pendingGameDay}
-        canUpdate={canUpdateSetup}
-        blockedCopy={setupBlockedCopy}
-        error={setupUpdateError}
-        isUpdating={isSetupUpdating}
-        setupUpdateIsPhaseShift={setupUpdateIsPhaseShift}
-        updateMsgIdx={setupUpdateMsgIdx}
-        updateMsgOpacity={setupUpdateMsgOpacity}
-        onClose={closeSetupPage}
-        onBack={goBackInSetupPage}
-        onOpenStep={setSetupPageStep}
-        onSetDraftName={setDraftName}
-        onSetDraftPosition={setDraftPosition}
-        onSetDraftExperience={setDraftExperience}
-        onSetDraftSeasonPhase={selectDraftSeasonPhase}
-        onChangeSeasonFinishDate={changeDraftSeasonFinishDate}
-        onContinueSeasonFinish={continueFromSeasonFinish}
-        onAnswerSeasonFinishNotSure={answerSeasonFinishNotSure}
-        draftTwoKmMinutes={draftTwoKmMinutes}
-        draftTwoKmSeconds={draftTwoKmSeconds}
-        draftTwoKmRefusal={draftTwoKmRefusals.time}
-        draftTwoKmContinueDisabled={draftTwoKmContinueDisabled}
-        onSetDraftTwoKmMinutes={(text) => { setDraftTwoKmMinutes(text); onAnswerEdited(); }}
-        onSetDraftTwoKmSeconds={(text) => { setDraftTwoKmSeconds(text); onAnswerEdited(); }}
-        onSaveTwoKm={saveTwoKm}
-        onCommitTwoKm={commitTwoKm}
-        onCancelPlayerDetails={cancelPlayerDetailsEdit}
-        onSavePlayerDetails={savePlayerDetails}
-        onToggleDraftPreferredDay={toggleDraftPreferredDay}
-        onToggleDraftTeamDay={toggleDraftTeamDay}
-        onSetDraftGameDay={setDraftGameDay}
-        onCancelProgramDetails={cancelProgramDetailsEdit}
-        onSaveProgramDetails={saveProgramDetails}
-        onEditPlayerDetails={openPlayerDetailsEditor}
-        onEditProgramDetails={openProgramDetailsEditor}
-        equipmentSummary={formatEquipmentProfileSummary(onboardingData)}
-        onEditEquipment={openEquipmentEditor}
-        onReviewUpdate={() => {
-          setSetupUpdateError(null);
-          setSetupPageStep('confirm');
-        }}
-        onConfirmUpdate={executeSetupUpdate}
+      {/* THE SAME SEASON-PHASE SHEET MY STATUS OPENS, driven by the same
+          control — one owner for a phase change, two doors into it. */}
+      <SeasonPhaseShiftSheet
+        visible={phaseControl.visible}
+        step={phaseControl.step}
+        currentPhase={phaseControl.currentPhase}
+        targetPhase={phaseControl.targetPhase}
+        isRebuilding={phaseControl.isRebuilding}
+        error={phaseControl.error}
+        canRetry={phaseControl.canRetry}
+        msgIdx={phaseControl.msgIdx}
+        msgOpacity={phaseControl.msgOpacity}
+        pendingPreferredDays={phaseControl.pendingPreferredDays}
+        pendingTeamDays={phaseControl.pendingTeamDays}
+        pendingGameDay={phaseControl.pendingGameDay}
+        gameAnchorAnswered={phaseControl.gameAnchorAnswered}
+        pendingSeasonFinishDate={phaseControl.pendingSeasonFinishDate}
+        seasonFinishAttempted={phaseControl.seasonFinishAttempted}
+        onClose={phaseControl.close}
+        onBack={phaseControl.back}
+        onTogglePendingPreferredDay={phaseControl.togglePreferredDay}
+        onTogglePendingTeamDay={phaseControl.toggleTeamDay}
+        onSetPendingGameDay={phaseControl.answerGameDay}
+        onAnswerNoUsualGameDay={phaseControl.answerNoGameDay}
+        onChangeSeasonFinishDate={phaseControl.setPendingSeasonFinishDate}
+        onAnswerSeasonFinishNotSure={phaseControl.answerSeasonFinishNotSure}
+        onSelectTargetPhase={phaseControl.selectTargetPhase}
+        onAdvance={() => { void phaseControl.advance(); }}
       />
-      ) : null}
       <EquipmentEditorSheet
         visible={equipmentEditorVisible}
         saving={equipmentSaving}
@@ -937,39 +1118,57 @@ export default function ProfileScreen() {
   );
 }
 
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.profileRow}>
+/**
+ * ONE LINE OF THE PROFILE, WITH ITS OWN PEN.
+ *
+ * Sam, 2026-08-27: *"why is the 'something changed? tell the coach' button even
+ * there? you could just tap the profile tab and then each line has a pen next to
+ * it instead"*. So the setup review is no longer a door the athlete has to find
+ * — every line here opens the one question that owns it.
+ *
+ * A line with no editor gets no pen, rather than a pen that goes nowhere.
+ */
+function ProfileRow({
+  label,
+  value,
+  onEdit,
+  editTestID,
+}: {
+  label: string;
+  value: string;
+  onEdit?: () => void;
+  editTestID?: string;
+}) {
+  /* ⚠ **NO MODE TO ENTER FIRST — Sam, 2026-08-27**: *"it would be cleaner if we
+     just had the grey side arrow thing like in the FAQ - on the right side of
+     each box - so you can just tap the arrow and the regular pop up still works
+     as before - it's really just cutting out the pen icon tap first"*.
+     The pen and its selectable mode are gone: an editable row LOOKS editable at
+     all times, wearing the same grey chevron the FAQ row wears, and one tap
+     opens its popup. A row with no editor keeps no chevron, so the arrow still
+     means "there is something behind this". */
+  const body = (
+    <>
       <Text style={styles.profileRowLabel}>{label}</Text>
       <Text style={styles.profileRowValue}>
         {value}
       </Text>
-    </View>
+      {onEdit ? (
+        <Text style={[styles.secondaryActionChevron, styles.profileRowChevron]}>›</Text>
+      ) : null}
+    </>
   );
-}
-
-function SetupEditAction({
-  label,
-  onPress,
-  testID,
-  accessibilityLabel = label,
-}: {
-  label: string;
-  onPress: () => void;
-  testID?: string;
-  accessibilityLabel?: string;
-}) {
+  if (!onEdit) return <View style={styles.profileRow}>{body}</View>;
   return (
     <TouchableOpacity
-      style={styles.sheetCardAction}
+      style={styles.profileRow}
       activeOpacity={0.72}
-      onPress={onPress}
-      testID={testID}
+      onPress={onEdit}
+      testID={editTestID}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={`Edit ${label}. ${value}`}
     >
-      <Text style={styles.sheetCardActionText}>{label}</Text>
-      <Text style={styles.sheetCardChevron}>›</Text>
+      {body}
     </TouchableOpacity>
   );
 }
@@ -998,633 +1197,46 @@ function SecondaryActionRow({
   );
 }
 
-interface SetupUpdatePageProps {
-  step: SetupPageStep;
-  currentPhase: SeasonPhase;
-  displayName: string;
-  position: RoleBucket | null;
-  experienceLevel: ExperienceLevel | null;
-  draftName: string;
-  draftPosition: RoleBucket | null;
-  draftExperience: ExperienceLevel | null;
-  draftTwoKmMinutes: string;
-  draftTwoKmSeconds: string;
-  /** Already gated by `useRefusalOnContinue` — render it or don't, no judgement. */
-  draftTwoKmRefusal: string | null;
-  draftTwoKmContinueDisabled: boolean;
-  draftSeasonPhase: SeasonPhase;
-  draftSeasonFinishDate: SeasonFinishDateDraft;
-  draftPreferredDays: DayOfWeek[];
-  draftTeamDays: DayOfWeek[];
-  draftGameDay: DayOfWeek | null;
-  preferredDays: DayOfWeek[];
-  teamDays: DayOfWeek[];
-  gameDay: DayOfWeek | null;
-  canUpdate: boolean;
-  /** Why Save is unavailable, or null when it is available. */
-  blockedCopy: string | null;
-  error: string | null;
-  isUpdating: boolean;
-  setupUpdateIsPhaseShift: boolean;
-  updateMsgIdx: number;
-  updateMsgOpacity: Animated.Value;
-  onClose: () => void;
-  onBack: () => void;
-  onOpenStep: (step: SetupPageStep) => void;
-  onSetDraftName: (name: string) => void;
-  onSetDraftPosition: (position: RoleBucket) => void;
-  onSetDraftExperience: (experience: ExperienceLevel) => void;
-  onSetDraftTwoKmMinutes: (value: string) => void;
-  onSetDraftTwoKmSeconds: (value: string) => void;
-  /** The step's CTA. Reveals the refusal, or commits — the owner decides which. */
-  onSaveTwoKm: () => void;
-  /** Direct commit for "I haven't tested it", which no bound applies to. */
-  onCommitTwoKm: (seconds: number | null) => void;
-  onSetDraftSeasonPhase: (phase: SeasonPhase) => void;
-  onChangeSeasonFinishDate: (value: SeasonFinishDateDraft) => void;
-  onContinueSeasonFinish: () => void;
-  onAnswerSeasonFinishNotSure: () => void;
-  onCancelPlayerDetails: () => void;
-  onSavePlayerDetails: () => void;
-  onToggleDraftPreferredDay: (day: DayOfWeek) => void;
-  onToggleDraftTeamDay: (day: DayOfWeek) => void;
-  onSetDraftGameDay: (day: DayOfWeek) => void;
-  onCancelProgramDetails: () => void;
-  onSaveProgramDetails: () => void;
-  onEditPlayerDetails: () => void;
-  onEditProgramDetails: () => void;
-  equipmentSummary: string;
-  onEditEquipment: () => void;
-  onReviewUpdate: () => void;
-  onConfirmUpdate: () => void;
-}
 
-function SetupUpdatePage({
-  step,
-  currentPhase,
-  displayName,
-  position,
-  experienceLevel,
-  draftName,
-  draftPosition,
-  draftExperience,
-  draftTwoKmMinutes,
-  draftTwoKmSeconds,
-  draftTwoKmRefusal,
-  draftTwoKmContinueDisabled,
-  draftSeasonPhase,
-  draftSeasonFinishDate,
-  draftPreferredDays,
-  draftTeamDays,
-  draftGameDay,
-  preferredDays,
-  teamDays,
-  gameDay,
-  canUpdate,
-  blockedCopy,
-  error,
-  isUpdating,
-  setupUpdateIsPhaseShift,
-  updateMsgIdx,
-  updateMsgOpacity,
-  onClose,
-  onBack,
-  onOpenStep,
-  onSetDraftName,
-  onSetDraftPosition,
-  onSetDraftExperience,
-  onSetDraftTwoKmMinutes,
-  onSetDraftTwoKmSeconds,
-  onSaveTwoKm,
-  onCommitTwoKm,
-  onSetDraftSeasonPhase,
-  onChangeSeasonFinishDate,
-  onContinueSeasonFinish,
-  onAnswerSeasonFinishNotSure,
-  onCancelPlayerDetails,
-  onSavePlayerDetails,
-  onToggleDraftPreferredDay,
-  onToggleDraftTeamDay,
-  onSetDraftGameDay,
-  onCancelProgramDetails,
-  onSaveProgramDetails,
-  onEditPlayerDetails,
-  onEditProgramDetails,
-  equipmentSummary,
-  onEditEquipment,
-  onReviewUpdate,
-  onConfirmUpdate,
-}: SetupUpdatePageProps) {
-  const building = step === 'building' || isUpdating;
-  const showBack = !building && step !== 'overview' && step !== 'complete';
-  const preferredValid = preferredDays.length >= 1;
-  const draftPreferredValid = draftPreferredDays.length >= 1;
-  const draftGameDayValid = draftSeasonPhase !== 'In-season' || Boolean(draftGameDay);
-
-  const content = building ? (
-    <BuildingState
-      title="Updating your program…"
-      msgIdx={updateMsgIdx}
-      msgOpacity={updateMsgOpacity}
-      messages={PROFILE_SETUP_UPDATE_MESSAGES}
-      durationText={setupUpdateIsPhaseShift
-        ? signedCopy('phase.shift.build.duration')
-        : undefined}
-    />
-  ) : step === 'complete' ? (
-    <BuildCompleteState
-      title={signedCopy('phase.shift.complete.title')}
-      body={signedCopy('phase.shift.complete.body')}
-      actionLabel={signedCopy('phase.shift.complete.action')}
-      onDone={onClose}
-      testID="profile-phase-shift-complete"
-    />
-  ) : step === 'playerName' ? (
-    <>
-      <SheetHeader title="Player details" subtitle="What should I call you?" />
-      <View style={styles.playerInputCard}>
-        <Feather name="user" size={19} color={colors.text.tertiary} />
-        <AppTextInput
-          style={styles.playerTextInput}
-          value={draftName}
-          onChangeText={onSetDraftName}
-          placeholder="Type your name..."
-          placeholderTextColor={colors.text.disabled}
-          autoFocus
-          autoCapitalize="words"
-          autoCorrect={false}
-          returnKeyType="next"
-          onSubmitEditing={() => {
-            if (draftName.trim()) onOpenStep('playerPosition');
-          }}
-          maxLength={30}
-        />
-      </View>
-      <V2Button
-        label="Continue"
-        size="lg"
-        disabled={!draftName.trim()}
-        onPress={() => onOpenStep('playerPosition')}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelPlayerDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'playerPosition' ? (
-    <>
-      <SheetHeader title="Player details" subtitle="What position fits you best?" />
-      <View style={styles.playerOptionGrid}>
-        {ROLE_BUCKET_OPTIONS.map((option) => {
-          const selected = draftPosition === option.id;
-          return (
-            <SelectableTile
-              key={option.id}
-              isSelected={selected}
-              onPress={() => onSetDraftPosition(option.id)}
-              style={styles.playerPositionTile}
-            >
-              <Text style={[styles.playerOptionText, selected && styles.playerOptionTextSelected]}>
-                {option.label}
-              </Text>
-            </SelectableTile>
-          );
-        })}
-      </View>
-      <V2Button
-        label="Continue"
-        size="lg"
-        disabled={!draftPosition}
-        onPress={() => onOpenStep('playerExperience')}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelPlayerDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'playerExperience' ? (
-    <>
-      <SheetHeader title="Player details" subtitle="What’s your training experience?" />
-      <View style={styles.playerExperienceStack}>
-        {EXPERIENCE_OPTIONS.map((option) => {
-          const selected = draftExperience === option.id;
-          return (
-            <SelectableTile
-              key={option.id}
-              isSelected={selected}
-              onPress={() => onSetDraftExperience(option.id)}
-              style={styles.playerExperienceTile}
-            >
-              <Text style={[styles.playerOptionText, selected && styles.playerOptionTextSelected]}>
-                {option.label}
-              </Text>
-            </SelectableTile>
-          );
-        })}
-      </View>
-      <V2Button
-        label="Continue"
-        size="lg"
-        disabled={!draftName.trim() || !draftPosition || !draftExperience}
-        onPress={onSavePlayerDetails}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelPlayerDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'playerTimeTrial' ? (
-    /* The 2km time trial (D14) -- the change-it-later door. Same two boxes as
-       onboarding, same ingress, same refusal sentence. The ruled numbers are
-       not restated here: whatever `validateTwoKmTime` says is what shows. */
-    <>
-      <SheetHeader title="Running" subtitle="What’s your recent 2km time?" />
-      <SheetDescription>
-        Sets your running paces. Leave it blank if you haven’t tested.
-      </SheetDescription>
-      <View style={styles.twoKmRow}>
-        <View style={styles.twoKmField}>
-          <Text style={styles.twoKmLabel}>Minutes</Text>
-          <AppTextInput
-            style={styles.twoKmInput}
-            placeholder="7"
-            placeholderTextColor={colors.text.tertiary}
-            value={draftTwoKmMinutes}
-            onChangeText={onSetDraftTwoKmMinutes}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.twoKmField}>
-          <Text style={styles.twoKmLabel}>Seconds</Text>
-          <AppTextInput
-            style={styles.twoKmInput}
-            placeholder="15"
-            placeholderTextColor={colors.text.tertiary}
-            value={draftTwoKmSeconds}
-            onChangeText={onSetDraftTwoKmSeconds}
-            keyboardType="numeric"
-          />
-        </View>
-      </View>
-      {/* Spoken on Save, never mid-keystroke — the owner has already decided
-          whether this may be shown at all. */}
-      {draftTwoKmRefusal ? (
-        <Text style={styles.twoKmError}>{draftTwoKmRefusal}</Text>
-      ) : null}
-      <V2Button
-        label="Save player details"
-        size="lg"
-        disabled={draftTwoKmContinueDisabled}
-        onPress={onSaveTwoKm}
-      />
-      {/* Retracting a time is an answer too -- an athlete who mistyped one
-          months ago must be able to say "actually, I haven't tested". */}
-      <V2Button
-        label="I haven’t tested it"
-        variant="secondary"
-        size="md"
-        onPress={() => onCommitTwoKm(null)}
-        style={styles.sheetSecondaryButton}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelPlayerDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'programPhase' ? (
-    <>
-      <SheetHeader title="Program setup" subtitle="What phase are you in?" />
-      <View style={styles.programOptionStack}>
-        {SEASON_PHASE_OPTIONS.map((option) => {
-          const selected = draftSeasonPhase === option;
-          return (
-            <SelectableTile
-              key={option}
-              isSelected={selected}
-              onPress={() => onSetDraftSeasonPhase(option)}
-              style={styles.programOptionTile}
-            >
-              <Text style={[styles.playerOptionText, selected && styles.playerOptionTextSelected]}>
-                {option}
-              </Text>
-            </SelectableTile>
-          );
-        })}
-      </View>
-      <V2Button
-        label="Continue"
-        size="lg"
-        onPress={() => onOpenStep(
-          draftSeasonPhase === 'Off-season' && currentPhase !== 'Off-season'
-            ? 'programSeasonFinish'
-            : 'programLfaDays',
-        )}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelProgramDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'programSeasonFinish' ? (
-    <>
-      <SheetHeader
-        title="Off-season"
-        subtitle={signedCopy('phase.offseason.finish.title')}
-      />
-      <SheetDescription>
-        This helps LFA start you at the right point of your off-season.
-      </SheetDescription>
-      <SeasonFinishDateFields
-        value={draftSeasonFinishDate}
-        onChange={onChangeSeasonFinishDate}
-      />
-      <V2Button
-        label="Continue"
-        size="lg"
-        disabled={!draftSeasonFinishDate.day || !draftSeasonFinishDate.month || !draftSeasonFinishDate.year}
-        onPress={onContinueSeasonFinish}
-        style={{ marginTop: spacing.lg }}
-      />
-      <V2Button
-        label="I'm not sure"
-        variant="secondary"
-        size="md"
-        onPress={onAnswerSeasonFinishNotSure}
-        style={styles.sheetSecondaryButton}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelProgramDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'programLfaDays' ? (
-    <>
-      <SheetHeader title="Program setup" subtitle="What days can you train?" />
-      <SheetDescription>
-        We’ll build your LFA work around these days.
-      </SheetDescription>
-      <DayChipGrid
-        days={WEEK_DAYS}
-        selectedDays={draftPreferredDays}
-        onToggleDay={onToggleDraftPreferredDay}
-      />
-      <Text style={styles.sheetHelperText}>
-        Pick at least one day.
-      </Text>
-      <V2Button
-        label={draftSeasonPhase === 'Off-season' ? 'Save program details' : 'Continue'}
-        size="lg"
-        disabled={!draftPreferredValid}
-        onPress={() => {
-          if (draftSeasonPhase === 'Off-season') {
-            onSaveProgramDetails();
-            return;
-          }
-          onOpenStep('programTeamDays');
-        }}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelProgramDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'programTeamDays' ? (
-    <>
-      <SheetHeader title="Team training" subtitle="Which days does your team train?" />
-      <SheetDescription>
-        We’ll work your program around these days.
-      </SheetDescription>
-      <DayChipGrid
-        days={WEEK_DAYS}
-        selectedDays={draftTeamDays}
-        onToggleDay={onToggleDraftTeamDay}
-      />
-      <Text style={styles.sheetHelperText}>
-        Leave blank if you don’t have team training this phase.
-      </Text>
-      <V2Button
-        label={draftSeasonPhase === 'In-season' ? 'Continue' : 'Save program details'}
-        size="lg"
-        onPress={() => {
-          if (draftSeasonPhase === 'In-season') {
-            onOpenStep('programGameDay');
-            return;
-          }
-          onSaveProgramDetails();
-        }}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelProgramDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'programGameDay' ? (
-    <>
-      <SheetHeader title="Game day" subtitle="Which day do you usually play?" />
-      <SheetDescription>
-        We’ll keep your week built around match day.
-      </SheetDescription>
-      <DayChipGrid
-        days={WEEK_DAYS}
-        selectedDays={draftGameDay ? [draftGameDay] : []}
-        onToggleDay={onSetDraftGameDay}
-      />
-      <V2Button
-        label="Save program details"
-        size="lg"
-        disabled={!draftGameDayValid}
-        onPress={onSaveProgramDetails}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onCancelProgramDetails}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : step === 'confirm' ? (
-    <>
-      <SheetHeader title="Program setup" subtitle="Update your program?" />
-      <SheetDescription>
-        Your program will rebuild around your updated setup.
-      </SheetDescription>
-      <View style={styles.setupNoteBlock}>
-        <Text style={styles.setupNotePreserved}>✓ Setup changes saved</Text>
-        <Text style={styles.setupNotePreserved}>✓ Team and game days preserved where possible</Text>
-        <Text style={styles.setupNoteWiped}>× Custom coach edits may be replaced</Text>
-      </View>
-      {error ? <Text style={styles.sheetError}>{error}</Text> : null}
-      <V2Button
-        label={error ? 'Try again' : 'Continue'}
-        size="lg"
-        onPress={onConfirmUpdate}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onClose}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  ) : (
-    <>
-      <SheetHeader title="Program setup" subtitle="Review your setup" />
-      <SheetDescription>
-        Change the details your program is built around.
-      </SheetDescription>
-
-      <View style={styles.sheetSection}>
-        <Text style={styles.sheetSectionTitle}>PLAYER DETAILS</Text>
-        <View style={styles.sheetCard}>
-          <SetupSummaryRow label="Name" value={formatPlayerDetail(displayName)} />
-          <SetupSummaryRow
-            label="Footy role"
-            value={formatPlayerDetail(position ? roleBucketLabel(position) : undefined)}
-          />
-          <SetupSummaryRow
-            label="Training Experience"
-            value={formatExperienceDetail(experienceLevel)}
-          />
-          <SetupEditAction
-            label="Edit player details"
-            onPress={onEditPlayerDetails}
-          />
-        </View>
-      </View>
-
-      <View style={styles.sheetSection}>
-        <Text style={styles.sheetSectionTitle}>EQUIPMENT</Text>
-        <View style={styles.sheetCard}>
-          <SetupSummaryRow label="Training setup" value={equipmentSummary} />
-          <SetupEditAction
-            label="Edit equipment"
-            onPress={onEditEquipment}
-            testID="profile-setup-equipment-edit"
-            accessibilityLabel="Edit equipment"
-          />
-        </View>
-      </View>
-
-      <View style={styles.sheetSection}>
-        <Text style={styles.sheetSectionTitle}>PROGRAM SETUP</Text>
-        <View style={styles.sheetCard}>
-          <SetupSummaryRow label="Current phase" value={currentPhase} />
-          <SetupSummaryRow
-            label="LFA work days"
-            value={formatDaySummary(preferredDays)}
-          />
-          <SetupSummaryRow
-            label="Team training days"
-            value={formatDaySummary(teamDays)}
-          />
-          {currentPhase === 'In-season' ? (
-            <SetupSummaryRow
-              label="Usual game day"
-              value={gameDay ? gameDay : 'Not set'}
-            />
-          ) : null}
-          <SetupEditAction
-            label="Edit program details"
-            onPress={onEditProgramDetails}
-          />
-        </View>
-      </View>
-
-      {/* A disabled Save states its reason. Before this, the button simply
-          went dead — on a phase-skewed device it went dead on the very
-          selection that would have repaired the skew, and said nothing. */}
-      {!canUpdate && blockedCopy ? (
-        <Text style={styles.sheetError} testID="profile-setup-blocked-reason">
-          {blockedCopy}
-        </Text>
-      ) : null}
-      <V2Button
-        label="Update program"
-        size="lg"
-        disabled={!canUpdate}
-        onPress={onReviewUpdate}
-      />
-      <V2Button
-        label="Cancel"
-        variant="secondary"
-        size="md"
-        onPress={onClose}
-        style={styles.sheetSecondaryButton}
-      />
-    </>
-  );
-
-  return (
-    <View style={styles.setupPage} testID="profile-setup-update-page">
-      <View style={styles.setupPageHeader}>
-        <TouchableOpacity
-          style={[
-            styles.setupPageBackButton,
-            building && styles.setupPageBackButtonDisabled,
-          ]}
-          activeOpacity={0.72}
-          onPress={showBack ? onBack : onClose}
-          disabled={building}
-          testID="profile-setup-update-back"
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          accessibilityState={{ disabled: building }}
-        >
-          <Feather name="chevron-left" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
-      </View>
-
-      {building ? (
-        <View style={styles.setupPageBuilding}>{content}</View>
-      ) : (
-        // Route the setup-page inputs through the shared keyboard owner so they
-        // get scroll-into-view and the one Done bar (census finding #9).
-        // Device-verify the page layout (L10).
-        <KeyboardSafeArea
-          style={styles.setupPageScroll}
-          scrollProps={{
-            contentContainerStyle: styles.setupPageScrollContent,
-            showsVerticalScrollIndicator: false,
-          }}
-        >
-          {content}
-        </KeyboardSafeArea>
-      )}
-    </View>
-  );
-}
-
-function SetupSummaryRow({ label, value }: { label: string; value: string }) {
+/**
+ * ONE LINE OF THE ATHLETE'S SETUP, AND ITS OWN WAY IN.
+ *
+ * Sam, 2026-08-27: *"instead of the 'edit player details' and having to go
+ * through each step again - you just have a lime green pen icon at the right
+ * side of each box which allows you to edit that line individually"*.
+ *
+ * The pen opens the ONE step that owns this line, and that step's button then
+ * saves and comes back here. A row with no `onEdit` simply has no pen — that is
+ * how a read-only line stays read-only, rather than by a disabled control.
+ */
+function SetupSummaryRow({
+  label,
+  value,
+  onEdit,
+  editTestID,
+}: {
+  label: string;
+  value: string;
+  onEdit?: () => void;
+  editTestID?: string;
+}) {
   return (
     <View style={styles.setupSheetRow}>
       <Text style={styles.setupSheetLabel}>{label}</Text>
       <Text style={styles.setupSheetValue}>{value}</Text>
+      {onEdit ? (
+        <TouchableOpacity
+          onPress={onEdit}
+          style={styles.setupRowPen}
+          hitSlop={10}
+          activeOpacity={0.6}
+          testID={editTestID}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${label}`}
+        >
+          <Feather name="edit-2" size={15} color={colors.accent.lime} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -1702,14 +1314,16 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   profileRowLabel: {
-    width: 118,
+    // 104, not 118. The column keeps every value aligned, but at 118 a short
+    // label like "Team Training" left a 40pt hole before its answer.
+    width: 104,
     color: colors.text.tertiary,
     fontSize: 13,
     fontWeight: '600',
@@ -1933,17 +1547,24 @@ const styles = StyleSheet.create({
     borderColor: colors.surface.tertiary,
     overflow: 'hidden',
   },
+  // The section heading and its one pen, on the same line.
+  profileRowChevron: { marginLeft: 'auto', paddingLeft: 8 },
+  setupRowPen: {
+    marginLeft: 'auto',
+    paddingLeft: 8,
+    alignSelf: 'center',
+  },
   setupSheetRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   setupSheetLabel: {
-    width: 118,
+    width: 104,
     color: colors.text.tertiary,
     fontSize: 13,
     fontWeight: '600',
@@ -2066,12 +1687,5 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: 'rgba(244, 67, 54, 0.45)',
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.surface.tertiary,
-    marginTop: spacing.lg,
   },
 });

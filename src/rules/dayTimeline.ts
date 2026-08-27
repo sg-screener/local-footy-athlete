@@ -37,7 +37,11 @@ import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackCompletion } from '../types/sessionOutcome';
 import { completionByComponentId } from '../utils/sessionFeedbackForm';
 import type { RecordedSessionExecutionReconciliation } from '../utils/sessionExecutionChecklist';
-import { PART_ICON_KIND, type RowIconKind } from './sectionIconKinds';
+import {
+  COMPOSED_OPTIONAL_ICON_KIND,
+  PART_ICON_KIND,
+  type RowIconKind,
+} from './sectionIconKinds';
 import { componentIdFromPartId } from './projectVisibleWeek';
 import { projectDayDetail } from './visibleDayDetail';
 import type { SignedCopy } from './signedCopy';
@@ -105,16 +109,10 @@ export interface DayTimelineEntry {
 /**
  * A composed optional session's own glyph, or the part kind's.
  *
- * A SET rather than an `if` so a second session type joins by being listed. The
- * fallback is the shared `PART_ICON_KIND` table, so nothing that does not opt in
- * moves a pixel.
+ * The table moved to `rules/sectionIconKinds` on 2026-08-27, beside the two maps
+ * it has to agree with. It lived here AND in `utils/sessionExecutionChecklist`
+ * as two hand-kept copies, which is the split R-116 exists to prevent.
  */
-const ICON_KIND_BY_COMPOSED_OPTIONAL: Readonly<Record<string, RowIconKind>> = {
-  // Sam chose the bolt for the Primer knowing it is also the Speed glyph
-  // (R-129, 2026-08-23: *"yeah a lightning bolt"*).
-  primer: 'bolt',
-};
-
 function iconKindForSection(
   kind: VisiblePartKind,
   workout: { composedOptionalKind?: string } | null | undefined,
@@ -131,7 +129,10 @@ function iconKindForSection(
   // the same two `partHeadline` names — so a team anchor on a combined day keeps
   // its own glyph.
   if (composed && (kind === 'strength' || kind === 'recovery')) {
-    const chosen = ICON_KIND_BY_COMPOSED_OPTIONAL[composed];
+    // The parameter takes a plain `string` so every existing caller still type
+    // checks; an unknown value simply misses the table and falls through.
+    const chosen = COMPOSED_OPTIONAL_ICON_KIND[
+      composed as keyof typeof COMPOSED_OPTIONAL_ICON_KIND];
     if (chosen) return chosen;
   }
   return PART_ICON_KIND[kind];

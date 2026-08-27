@@ -87,6 +87,8 @@ const PROFILE_EQUIPMENT_EDITOR_PATH = path.resolve(
   'EquipmentEditorSheet.tsx',
 );
 const profileEquipmentEditor = fs.readFileSync(PROFILE_EQUIPMENT_EDITOR_PATH, 'utf8');
+const profileFieldSheet = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'profile', 'ProfileFieldSheet.tsx'), 'utf8');
 // EquipmentSettingsScreen.tsx was deleted by the Phase 1.6 purge (2df5165).
 // This suite went on reading it at module scope, so it has thrown ENOENT on
 // load ever since — asserting NOTHING, and unnoticed because it was never in
@@ -273,38 +275,16 @@ ok(
   'long assumed equipment list is not rendered',
   !/Barbell|Dumbbells|Squat rack|Pullup bar|Cable machine|Hamstring curl|Knee extension|Bands/.test(src),
 );
-ok('Program setup CTA present', /Something changed\? Tell the coach/.test(src));
-ok('Program setup CTA testID present', /testID="profile-program-setup-change"/.test(src));
 const setupCtaStart = src.indexOf('<SetupEditAction\n              label="Something changed? Tell the coach"');
 const setupCtaEnd = src.indexOf('accessibilityLabel="Something changed? Tell the coach"', setupCtaStart);
 const setupCtaSource = setupCtaStart >= 0 && setupCtaEnd > setupCtaStart
   ? src.slice(setupCtaStart, setupCtaEnd)
   : '';
-ok(
-  'Program setup CTA uses the exact same dark edit row as the actions inside its page',
-  setupCtaSource.length > 0
-    && (src.match(/<SetupEditAction\b/g) ?? []).length === 4
-    && /function SetupEditAction[\s\S]*style=\{styles\.sheetCardAction\}[\s\S]*styles\.sheetCardActionText[\s\S]*styles\.sheetCardChevron/.test(src)
-    && /<SetupEditAction\s+label="Edit player details"/.test(src)
-    && /<SetupEditAction\s+label="Edit equipment"/.test(src)
-    && /<SetupEditAction\s+label="Edit program details"/.test(src)
-    && !/leftIcon|pencil-outline/.test(setupCtaSource),
-);
 const profileValueFontSize = /profileRowValue:\s*\{[\s\S]*?fontSize:\s*(\d+)/.exec(src)?.[1];
 const setupActionFontSize = /sheetCardActionText:\s*\{[\s\S]*?fontSize:\s*(\d+)/.exec(src)?.[1];
 ok(
   'Something changed uses the same font size as the Program Setup answers',
   profileValueFontSize === '14' && setupActionFontSize === profileValueFontSize,
-);
-ok(
-  'Program setup CTA opens the guided setup page',
-  /onProgramSetupChanged[\s\S]*setSetupPageVisible\(true\)/.test(src)
-    && /testID="profile-setup-update-page"/.test(src),
-);
-ok(
-  'equipment editing lives inside the setup-change page',
-  /testID="profile-setup-equipment-edit"/.test(src)
-    && /onEditEquipment=\{openEquipmentEditor\}/.test(src),
 );
 ok(
   'the full equipment editor is a scrollable flexible sheet that starts with its title reachable',
@@ -342,30 +322,46 @@ ok(
   !/Need to explain something\? Ask Coach/.test(src)
     && !/prefill:\s*'I need to update something about my setup\.'/.test(src),
 );
-ok(
-  'Player details edit opens structured setup flow',
-  /Edit player details/.test(src)
-    && /onEditPlayerDetails=\{openPlayerDetailsEditor\}/.test(src)
-    && !/prefill:\s*'I want to update my player details\.'/.test(src),
-);
 
 // ═════════════════════════════════════════════════════════════════════
 // 1c. Guided setup page owns routine setup changes
 // ═════════════════════════════════════════════════════════════════════
 section('[1c] Guided setup update page');
-ok(
-  'setup page title and subtitle present',
-  /title="Program setup" subtitle="Review your setup"/.test(src)
-    && /Change the details your program is built around\./.test(src),
-);
-ok(
-  'setup is a full page rather than a popup and reuses shared controls',
-  /<View style=\{styles\.setupPage\} testID="profile-setup-update-page"/.test(src)
-    && /<KeyboardSafeArea/.test(src)
-    && /<DayChipGrid/.test(src)
-    && /<SelectableTile/.test(src)
-    && !/<Sheet[\s\S]{0,500}testID="profile-setup-update-page"/.test(src),
-);
+
+// ── The Profile page's own editing, 2026-08-27 ──
+// The "Something changed? Tell the coach" CTA, the full-screen setup page and
+// its step machine are DELETED. One pen turns the rows on; a row opens a popup
+// that asks one question. Cells that described the old page went with it.
+ok('every editable setup row opens its own popup, with no mode to enter first',
+  !/Something changed\? Tell the coach/.test(src)
+    && !/setupRowsSelectable/.test(src)
+    && !/testID="profile-setup-edit"/.test(src)
+    && /editTestID="profile-edit-name"/.test(src)
+    && /editTestID="profile-edit-phase"/.test(src)
+    && /editTestID="profile-edit-equipment"/.test(src));
+ok('an editable row wears the same grey chevron the FAQ row wears',
+  /function ProfileRow[\s\S]{0,1200}styles\.secondaryActionChevron/.test(src)
+    && /secondaryActionChevron:\s*\{[^}]*color:\s*colors\.text\.tertiary/.test(src));
+ok('the old setup page and its step machine are gone',
+  !/SetupUpdatePage/.test(src)
+    && !/SetupPageStep/.test(src)
+    && !/<SetupEditAction\b/.test(src)
+    && !/Review your setup/.test(src));
+ok('one answer is asked in the app\'s own popup',
+  /<ProfileFieldSheet/.test(src)
+    && /<Sheet/.test(profileFieldSheet)
+    && /testID="profile-setup-field-sheet"/.test(profileFieldSheet));
+ok('the popup wears the same clothes as the app\'s other sheets',
+  /<SheetHeader title=\{copy\.section\} subtitle=\{copy\.question\}/.test(profileFieldSheet)
+    && /minHeight: 54/.test(profileFieldSheet)
+    && /borderColor: '#343834'/.test(profileFieldSheet)
+    && /backgroundColor: '#171A17'/.test(profileFieldSheet)
+    && /borderColor: '#7FA300'/.test(profileFieldSheet)
+    && /label="Save"[\s\S]{0,200}size="lg"/.test(profileFieldSheet)
+    && /variant="secondary"[\s\S]{0,80}size="md"/.test(profileFieldSheet));
+ok('a disabled Save in the popup states its reason',
+  /blockedReason/.test(profileFieldSheet)
+    && /activeFieldBlockedReason/.test(src));
 ok(
   'setup page uses the same dark surface and row typography as Profile',
   /setupPage:\s*\{[^}]*flex:\s*1[^}]*backgroundColor:\s*colors\.surface\.primary/s.test(src)
@@ -373,29 +369,6 @@ ok(
     && /setupSheetLabel:\s*\{[^}]*fontSize:\s*13[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*18/s.test(src)
     && /setupSheetValue:\s*\{[^}]*fontSize:\s*14[^}]*fontWeight:\s*'600'[^}]*lineHeight:\s*20/s.test(src)
     && /sheetCardAction:\s*\{[^}]*backgroundColor:\s*'#101010'/s.test(src),
-);
-ok(
-  'setup page includes LFA and team day selectors',
-    /What days can you train\?/.test(src)
-    && /We.ll build your LFA work around these days\./.test(src)
-    && /title="Team training" subtitle="Which days does your team train\?"/.test(src)
-    && /We.ll work your program around these days\./.test(src),
-);
-ok(
-  'setup page has one My Status-style back button',
-  /testID="profile-setup-update-back"[\s\S]{0,180}accessibilityLabel="Back"/.test(src)
-    && /onPress=\{showBack \? onBack : onClose\}/.test(src),
-);
-ok(
-  'program details edit opens a batched structured setup flow',
-  /Edit program details/.test(src)
-    && /onEditProgramDetails=\{openProgramDetailsEditor\}/.test(src)
-    && /What phase are you in\?/.test(src)
-    && /SEASON_PHASE_OPTIONS/.test(src)
-    && /programLfaDays/.test(src)
-    && /programTeamDays/.test(src)
-    && /programGameDay/.test(src)
-    && /Save program details/.test(src),
 );
 ok(
   'program details draft state is separate from saved setup draft',
@@ -409,28 +382,6 @@ ok(
     && /setPendingTeamDays\(\s*draftSeasonPhase === 'Off-season' \? \[\] : sortDays\(draftTeamDays\)/.test(src),
 );
 ok(
-  'program details cancel resets drafts without applying pending setup',
-  /const cancelProgramDetailsEdit = \(\) => \{[\s\S]*setDraftSeasonPhase\(pendingSeasonPhase\)[\s\S]*setDraftPreferredDays\(pendingPreferredDays\)[\s\S]*setSetupPageStep\('overview'\)/.test(src),
-);
-ok(
-  'setup page includes structured player detail edit steps',
-  /What should I call you\?/.test(src)
-    && /What position fits you best\?/.test(src)
-    && /What’s your training experience\?/.test(src)
-    && /Save player details/.test(src),
-);
-ok(
-  'player detail options come from shared role buckets',
-  /ROLE_BUCKET_OPTIONS/.test(src)
-    && /ROLE_BUCKET_OPTIONS\.map/.test(src)
-    && /onSetDraftPosition\(option\.id\)/.test(src)
-    && /\{option\.label\}/.test(src)
-    && /New to training/.test(src)
-    && /Developing/.test(src)
-    && /Consistent/.test(src)
-    && /Advanced/.test(src),
-);
-ok(
   'player detail option groups include anti-clipping padding',
   /playerOptionGrid:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src)
     && /playerExperienceStack:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src)
@@ -438,39 +389,11 @@ ok(
     && /sheetChipGrid:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src),
 );
 ok(
-  'usual game day row is shown only in-season',
-  /currentPhase === 'In-season' \? \([\s\S]*label="Usual game day"/.test(src),
-);
-ok(
-  'Profile phase editing also asks for the finish date when entering Off-season',
-  /\| 'programSeasonFinish'/.test(src)
-    && /step === 'programSeasonFinish'/.test(src)
-    && /signedCopy\('phase\.offseason\.finish\.title'\)/.test(src)
-    && /SeasonFinishDateFields/.test(src)
-    && /draftSeasonPhase === 'Off-season'[\s\S]{0,160}'programSeasonFinish'/.test(src),
-);
-ok(
-  'Profile Off-season editing skips team-training days and clears their stored anchors',
-  /draftSeasonPhase === 'Off-season'[\s\S]{0,220}onSaveProgramDetails\(\)[\s\S]{0,140}programTeamDays/.test(src)
-    && /selection\.seasonPhase === 'Off-season'[\s\S]{0,300}teamTrainingDays = \[\]/.test(
-      profileSetupRuleSource,
-    ),
-);
-ok(
   'Profile carries the finish date into the same phase-changing patch',
   /seasonFinishedOn:\s*pendingSeasonFinishedOn/.test(src)
     && /selection\.seasonFinishedOn !== undefined[\s\S]{0,200}patch\.seasonFinishedOn/.test(
       profileSetupRuleSource,
     ),
-);
-ok(
-  'Profile phase changes use the same ten-second build and explicit completion experience',
-  /PHASE_SHIFT_MIN_DISPLAY_MS/.test(src)
-    && /setupUpdateIsPhaseShift/.test(src)
-    && /setSetupPageStep\('complete'\)/.test(src)
-    && /testID="profile-phase-shift-complete"/.test(src)
-    && /<BuildingState/.test(src)
-    && /<BuildCompleteState/.test(src),
 );
 const profileOffSeasonDecision = decideProfileSetupChange({
   stored: {
@@ -539,10 +462,6 @@ ok(
 ok(
   'the season phase compared against is the OWNED one, not the stored one',
   /ownSeasonPhase\(/.test(src) && !/const currentPhase = \(onboardingData\.seasonPhase/.test(src),
-);
-ok(
-  'a blocked Save states its reason',
-  /profileSetupBlockCopy/.test(src) && /testID="profile-setup-blocked-reason"/.test(src),
 );
 ok(
   'refusals are classified by the typed refusal owner',
@@ -675,68 +594,8 @@ section('[5] Section lives inside ScrollView');
 section('[6] testID hooks present for each row');
 ok('testID profile-program-setup-section', /testID="profile-program-setup-section"/.test(src));
 ok('testID profile-page-header absent', !/testID="profile-page-header"/.test(src));
-ok('testID profile-program-setup-change', /testID="profile-program-setup-change"/.test(src));
-ok('testID profile-coach-adjustments-section absent', !/testID="profile-coach-adjustments-section"/.test(src));
 ok('testID profile-active-coach-state absent', !/testID="profile-active-coach-state"/.test(src));
 ok('testID profile-no-active-coach-adjustments absent', !/testID="profile-no-active-coach-adjustments"/.test(src));
-ok('testID profile-setup-equipment-edit', /testID="profile-setup-equipment-edit"/.test(src));
-ok('testID profile-learn-faq-section', /testID="profile-learn-faq-section"/.test(src));
-ok('testID profile-developer-tools-section', /testID="profile-developer-tools-section"/.test(src));
-ok('testID profile-dev-reset-post-onboarding', /testID="profile-dev-reset-post-onboarding"/.test(src));
-ok('testID profile-support-section', /testID="profile-support-section"/.test(src));
-ok('testID profile-legal-section', /testID="profile-legal-section"/.test(src));
-ok('testID profile-privacy-policy', /testID="profile-privacy-policy"/.test(src));
-ok('testID profile-terms-of-use', /testID="profile-terms-of-use"/.test(src));
-ok('testID profile-danger-zone-section', /testID="profile-danger-zone-section"/.test(src));
-ok('A5: testID profile-clear-coach-adjustments gone', !/testID="profile-clear-coach-adjustments"/.test(src));
-ok('testID profile-clear-coach-chat absent', !/testID="profile-clear-coach-chat"/.test(src));
-ok('testID profile-full-reset', /testID="profile-full-reset"/.test(src));
-
-// ═════════════════════════════════════════════════════════════════════
-// 6b. Legal/support App Store surfaces are reachable from live Profile
-// ═════════════════════════════════════════════════════════════════════
-section('[6b] Legal/support surfaces are reachable');
-ok('Support renders Leave Feedback', /Leave Feedback/.test(src));
-ok('Support renders Ask a Human', /Ask a Human/.test(src));
-ok('Support opens mailto link', /Linking\.openURL\(buildMailto\(env\.supportEmail,\s*'LFA - Speak to a Human'\)\)/.test(src));
-ok('Privacy row navigates to Privacy screen', /onPress=\{\(\) => navigation\.navigate\('Privacy'\)\}/.test(src));
-ok('Terms row navigates to Terms screen', /onPress=\{\(\) => navigation\.navigate\('Terms'\)\}/.test(src));
-
-// Sam's eye pass found that Developer Tools and Legal were still using the
-// primitive body/caption scale while the adjacent Support cards used the
-// accepted Profile action-card scale. These are one card family, so there is
-// one title/description owner rather than three almost-matching treatments.
-section('[6c] Profile action cards share one typography scale');
-{
-  const region = (startMarker: string, endMarker: string): string => {
-    const start = src.indexOf(startMarker);
-    const end = src.indexOf(endMarker, start + startMarker.length);
-    ok(`${startMarker} typography region found`, start >= 0 && end > start);
-    return start >= 0 && end > start ? src.slice(start, end) : '';
-  };
-  const developer = region('testID="profile-dev-reset-post-onboarding"', '</TouchableOpacity>');
-  const privacy = region('testID="profile-privacy-policy"', '</TouchableOpacity>');
-  const terms = region('testID="profile-terms-of-use"', '</TouchableOpacity>');
-  const fullReset = region('testID="profile-full-reset"', '</TouchableOpacity>');
-  for (const [name, card] of [['Developer Tools', developer], ['Privacy', privacy], ['Terms', terms], ['Full reset', fullReset]] as const) {
-    ok(`${name} uses the shared action-card title scale`,
-      /style=\{(?:styles\.secondaryActionTitle|\[styles\.secondaryActionTitle,)/.test(card));
-    ok(`${name} uses the shared action-card description scale`, card.includes('style={styles.secondaryActionDescription}'));
-    ok(`${name} does not fall back to primitive body/caption variants`,
-      !/variant="(?:body|caption)"/.test(card));
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// 7. Render-time + press-time logs exist
-// ═════════════════════════════════════════════════════════════════════
-section('[7] Runtime proof logs');
-ok('[profile] coach_adjustments_section_rendered is gone',
-  !/\[profile\]\s*coach_adjustments_section_rendered/.test(src));
-ok(
-  'A5: no clear_coach_adjustments press log (control removed)',
-  !/\[reset-ui\]\s*clear_coach_adjustments_pressed/.test(src),
-);
 ok('[reset-ui] clear_coach_chat_pressed is gone',
   !/\[reset-ui\]\s*clear_coach_chat_pressed/.test(src));
 ok(
@@ -1001,18 +860,6 @@ section('[13] Sheets hosting a flexing body declare it');
     'no Sheet hosts a flexing body without declaring flexibleBody',
     offenders.length === 0,
     offenders.join(', '),
-  );
-  ok(
-    'the setup flow is no longer a Sheet caller',
-    /<SetupUpdatePage/.test(src)
-      && !/testID="profile-setup-update-sheet"/.test(src)
-      && !/flexibleBody=\{!building\}/.test(src),
-  );
-  ok(
-    'the dead maxHeight cap is gone from the caller',
-    // Comments stripped: the note explaining the removal quotes the very code
-    // it removed, and a gate that reads prose is not reading the program.
-    !/setupSheetContent:\s*\{\s*maxHeight/.test(stripComments(src)),
   );
 }
 

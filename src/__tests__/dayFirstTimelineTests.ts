@@ -872,11 +872,36 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert(/<SessionTierBadge\s+compact=\{dayShape\}/.test(home),
     'the day header still uses the oversized category badge');
 
-  assert(!/dayEyebrow:\s*\{/.test(home),
-    'the retired eyebrow\'s style is back in the screen. Sam removed the '
-    + 'element on 2026-08-22; a style with no element is a value nobody can date.');
-  assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*19[^}]*lineHeight:\s*23/.test(home),
-    'the day session title does not match Renee\'s 19pt headline');
+  /* ── THE EYEBROW AND THE TITLE SIZE BOTH MOVED ON 2026-08-27 ──
+   *
+   * These two cells held the 2026-08-22 state: NO eyebrow, and Renee's 19pt
+   * headline. Sam replaced both against his template — *"Strength + Conditioning
+   * title needs to be bigger … but should remain on one line"* and *"a little
+   * 'today's focus' in lime green should sit above it too like the image"*.
+   *
+   * ⚠ **THE OLD EYEBROW IS STILL RETIRED.** What is back is a different string
+   * doing a different job (`day.card.focus_eyebrow`, "TODAY'S FOCUS"); batch
+   * 32's "TODAY'S SESSION" stays withdrawn and `test:copy-rulings-binding`
+   * still asserts it absent.
+   *
+   * ⚠ **AND IT IS ONE STRING ON EVERY DAY — RULED, NOT ASSUMED.** The first
+   * build branched on `day.isToday` so a walked-to day read "SESSION FOCUS",
+   * and this cell REQUIRED that branch. Sam overruled it within the hour:
+   * *"session focus should be 'today's focus'"*. The cell now holds the
+   * opposite, and holds it explicitly, so the branch cannot creep back in as
+   * somebody's tidy-up.
+   */
+  assert(/dayFocusEyebrow:\s*\{/.test(home),
+    'the day card lost its focus eyebrow. Sam asked for it on 2026-08-27.');
+  assert(/signedCopy\('day\.card\.focus_eyebrow'\)/.test(home)
+    && !/focus_eyebrow_other|focus_eyebrow_today/.test(home),
+    'the focus eyebrow is branching on the day again. Sam ruled ONE string, '
+    + '"TODAY\'S FOCUS", on every day that has a session.');
+  assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*22[^}]*lineHeight:\s*26/.test(home),
+    'the day session title is not the 22pt headline Sam approved on 2026-08-27');
+  assert(/testID="day-card-title"[\s\S]{0,400}numberOfLines=\{1\}[\s\S]{0,120}adjustsFontSizeToFit/.test(home),
+    'the day session title can wrap again. Sam ruled it stays on ONE line, and '
+    + 'at 26pt a two-word-plus name only fits by shrinking itself.');
   assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
     'the compact status-label scale has drifted');
   assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20[^}]*textTransform:\s*'none'[^}]*letterSpacing:\s*0/.test(home),
@@ -1369,13 +1394,39 @@ run('week navigation is absent from Today and compact below the toggle in Week',
   'the dots no longer sit at the right while the week range stays centred');
   assert(!/<IconButton\b/.test(nav) && !/<Badge\b/.test(nav),
     'the Week shape still uses the large circular buttons or relative-week badge');
+  /* ── THE ROW IS 32 TALL NOW, AND THE TARGET IS STILL 48 ──
+   *
+   * This cell pinned 40x40 against a REJECTED undersized navigator. Sam,
+   * 2026-08-27, tightening the day screen against his template: *"reduce the
+   * padding between the day week toggle and the … today … and the top of the
+   * strength box"*, then *"tighter"*. Halving the two margins moved 16pt and he
+   * could not see it — most of that air was this row's own height, 40pt around
+   * an 18pt line.
+   *
+   * ⚠ **WHAT THE OLD CELL WAS PROTECTING IS THE TAP TARGET, NOT THE NUMBER 40.**
+   * So the height comes down to 32 and the cell now pins the thing that
+   * actually matters: every one of these three controls carries `hitSlop={8}`,
+   * which keeps 48 points of touchable area around a 32pt control. Shrink the
+   * row again without the hitSlop and this reds.
+   */
   assert(/compactWeekNavLabel:\s*\{[^}]*fontSize:\s*13\b[^}]*lineHeight:\s*18\b/.test(home)
-    && /compactWeekNavButton:\s*\{[^}]*width:\s*40[^}]*height:\s*40/.test(home)
-    && /compactWeekNavCurrent:\s*\{[^}]*minWidth:\s*112[^}]*minHeight:\s*40/.test(home)
+    && /compactWeekNavButton:\s*\{[^}]*width:\s*40[^}]*height:\s*32/.test(home)
+    && /compactWeekNavCurrent:\s*\{[^}]*minWidth:\s*112[^}]*minHeight:\s*32/.test(home)
     && (home.match(/<Svg width=\{17\} height=\{17\}/g) ?? []).length >= 2,
     'the Week navigator has fallen back to the rejected undersized proportions');
-  assert(/topBar:\s*\{[^}]*marginBottom:\s*spacing\.md[^}]*gap:\s*spacing\.md/.test(home),
-    'the week range is not equally spaced between the Day / Week toggle and the week cards');
+  assert((nav.match(/hitSlop=\{8\}/g) ?? []).length >= 2,
+    'the week navigator\'s arrows lost their hitSlop. At a 32pt row height that '
+    + 'is what keeps the tap target at 48 points.');
+  /* The old cell required `spacing.md` on both sides — EQUAL air above and below
+   * the range row. Sam's 2026-08-27 pass replaced equal-and-loose with the
+   * template's measured proportions: the space below the row is not all paid
+   * here (`dayFirst.marginTop` pays 4 of it), so equality of these two numbers
+   * would now make the SCREEN unequal. What is pinned instead is that neither
+   * side goes back to 16. */
+  assert(/topBar:\s*\{[^}]*marginBottom:\s*0[^}]*gap:\s*6\b/.test(home)
+    && /dayFirst:\s*\{[^}]*gap:\s*spacing\.sm[^}]*marginTop:\s*spacing\.xs/.test(home),
+    'the week range is not spaced the way Sam approved on 2026-08-27 — 6 above '
+    + 'the row, and 4 below it paid by the day stack\'s own marginTop');
 });
 
 run('all seven week days use her one card head, including today', () => {

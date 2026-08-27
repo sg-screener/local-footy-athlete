@@ -27,6 +27,8 @@ import type {
   SeasonPhase,
 } from '../types/domain';
 import { DAYS_OF_WEEK, storedGameAnchor } from './gameAnchor';
+import { resolveMotivation } from './motivationGoals';
+import type { MotivationGoal } from './motivationGoals';
 
 /** An ALIAS of the canonical week, not a second copy of it. */
 export const SETUP_WEEK_DAYS: readonly DayOfWeek[] = DAYS_OF_WEEK;
@@ -59,6 +61,12 @@ export interface ProfileSetupSelection {
   preferredDays: readonly DayOfWeek[];
   teamDays: readonly DayOfWeek[];
   gameDay: DayOfWeek | null;
+  /**
+   * The athlete's motivation goals — editable from the Profile page since
+   * 2026-08-27. `undefined` means the caller is not offering them, and the
+   * decision leaves the stored answer alone.
+   */
+  goals?: readonly MotivationGoal[];
 }
 
 /** Why Save is not available. Empty means it is. */
@@ -119,6 +127,18 @@ export function decideProfileSetupChange(
   const storedTwoKmSeconds = stored.twoKmTimeTrial?.seconds ?? null;
   if (selection.twoKmAnswer && selection.twoKmSeconds !== storedTwoKmSeconds) {
     patch.twoKmTimeTrial = selection.twoKmAnswer;
+  }
+
+  /* Goals are a SET the athlete picked, so the comparison is order-insensitive
+     — re-picking the same three in a different order is not a change. */
+  if (selection.goals !== undefined) {
+    const chosen = [...selection.goals].sort();
+    const stored_ = [...resolveMotivation(stored).goals].sort();
+    const same = chosen.length === stored_.length
+      && chosen.every((goal, index) => goal === stored_[index]);
+    if (chosen.length > 0 && !same) {
+      patch.goals = [...selection.goals];
+    }
   }
 
   const phaseChanged = selection.seasonPhase !== ownedPhase;

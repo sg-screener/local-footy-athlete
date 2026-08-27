@@ -2855,11 +2855,21 @@ function SessionList({
     if (item.kind === 'team_training') {
       return <TeamTrainingRow key={key} checkbox={checkbox} />;
     }
+    /* ⚠ **CONDITIONING TAKES THE CHECKBOX TOO — Sam, 2026-08-27**: *"there's no
+       checkbox for the conditioning section like there is for all the exercises
+       above it"*. The checklist ALREADY made one for these rows — every
+       execution item is wrapped in `ExecutionChecklistItem`, which builds a
+       checkbox and hands it to `renderItem` — and these two branches were
+       simply dropping the argument on the floor. So the tick was never missing
+       from the model, only from the glass: `completedItemIds`, the section's
+       `0/1`, Select all and the saved receipt were all already counting a row
+       the athlete had no way to tick. */
     if (item.kind === 'conditioning_choice') {
       return (
         <ConditioningChoiceRow
           key={key}
           options={item.options}
+          checkbox={checkbox}
           onQuickSwap={onQuickSwap}
           onQuickRemove={onQuickRemove}
         />
@@ -2870,6 +2880,7 @@ function SessionList({
         <ConditioningPhaseRow
           key={key}
           exercise={item.row}
+          checkbox={checkbox}
           onQuickSwap={onQuickSwap}
           onQuickRemove={onQuickRemove}
         />
@@ -3296,10 +3307,19 @@ function AddonRow({
  */
 function ConditioningChoiceRow({
   options,
+  checkbox,
   onQuickSwap,
   onQuickRemove,
 }: {
   options: Array<{ title: string; description: string; rows: any[] }>;
+  /**
+   * The checklist's checkbox for this row. ⚠ **ONE TICK PER EXECUTION ITEM,
+   * NOT PER OPTION.** A choice row is "do one of these" — the checklist counts
+   * it as a single thing done, so the tick belongs on the card's own header
+   * beside the chooser, never inside each option where two ticks would claim
+   * the athlete did both.
+   */
+  checkbox?: React.ReactNode;
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
 }) {
@@ -3328,6 +3348,7 @@ function ConditioningChoiceRow({
         {isChoice ? (
           <Text style={styles.disclosureChevron}>{expanded ? '−' : '+'}</Text>
         ) : null}
+        {checkbox ? <View style={styles.addonCheckboxSlot}>{checkbox}</View> : null}
       </Pressable>
       {expanded
         ? options.map((option, optionIndex) => (
@@ -3899,10 +3920,13 @@ function ConditioningPrescriptionCopy({
  */
 function ConditioningPhaseRow({
   exercise,
+  checkbox,
   onQuickSwap,
   onQuickRemove,
 }: {
   exercise: any;
+  /** The checklist's own checkbox for this row. See `renderItem`. */
+  checkbox?: React.ReactNode;
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
 }) {
@@ -3924,6 +3948,13 @@ function ConditioningPhaseRow({
             {phaseDisplayName}
           </Text>
         </View>
+        {/* On the NAME line, because a conditioning block has no weight stepper
+            to sit beside. ⚠ **NOT `controlsRow`** — that style is the STRENGTH
+            card's single control line and a law counts its uses to keep it
+            single (R, Sam 2026-08-20). This reuses `addonCheckboxSlot`, the
+            shape the add-on row already uses for exactly this case: a tick with
+            no stepper beside it. */}
+        {checkbox ? <View style={styles.addonCheckboxSlot}>{checkbox}</View> : null}
       </View>
       {description ? (
         <ConditioningPrescriptionCopy

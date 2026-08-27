@@ -109,11 +109,33 @@ const repoRoot = path.join(__dirname, '..');
 const home = fs.readFileSync(path.join(repoRoot, 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
 const board = fs.readFileSync(path.join(repoRoot, 'screens', 'home', 'WeekBoard.tsx'), 'utf8');
 
-run('the normal Week list consumes the one filtered day collection', () => {
-  assert(/const weekViewDays = useMemo\(\(\) => weekViewDaysFromAthleteStart\(/.test(home),
-    'the shared Week-view collection is absent');
-  assert(/weekViewDays\.map\(\(day\) => renderDayRow\(day, weekDays\.indexOf\(day\)\)\)/.test(home),
-    'the normal Week list does not render the shared filtered collection');
+/**
+ * ⚠ **R-227 IS SUPERSEDED FOR THE WEEK LIST — Sam, 2026-08-27**: *"those days
+ * should still be there but just with 0 programming on them … grey them out
+ * slightly compared to the other days so it's obvious when the program
+ * started"*.
+ *
+ * R-227 hid pre-start days entirely so a session the athlete never had could
+ * not read as a missed obligation. His answer to that same risk is to show the
+ * DAY and withhold the SESSION — so this cell now holds the new shape: every
+ * day renders, and a pre-program row draws no glyph, no name, no count and no
+ * chevron. `weekViewDaysFromAthleteStart` still exists and still filters the
+ * BOARD, which is an editing surface and must not offer those days.
+ */
+run('the normal Week list shows every day, and a pre-start day shows no session', () => {
+  assert(/weekDays\.map\(\(day, idx\) => renderDayRow\(day, idx\)\)/.test(home),
+    'the Week list is filtering days out again');
+  assert(/preProgram \? null : \(\s*<View style=\{styles\.weekCardTitleLine\}/.test(home),
+    'a pre-program week row still draws its session name');
+  assert(/rowCount > 0 && !preProgram \?/.test(home),
+    'a pre-program week row still draws its exercise count');
+  assert(/const showsCategory = !preProgram &&/.test(home),
+    'a pre-program week row still draws its tier badge');
+  assert(/rowCount > 0 && !preProgram;/.test(home.replace(/\n\s*/g, ' '))
+    || /&& !preProgram;/.test(home),
+    'a pre-program row can still be expanded — a chevron onto nothing');
+  assert(/preProgram && \{ opacity: 0\.45 \}/.test(home),
+    'the pre-program row is no longer greyed');
 });
 
 run('the day-first status card (Tired/Sick/Injured) stands down on a pre-start day', () => {

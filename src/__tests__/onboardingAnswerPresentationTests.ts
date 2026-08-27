@@ -441,11 +441,15 @@ console.log('\n[7] Every screen that refuses a number uses the owner');
       file: 'src/screens/onboarding/TwoKmTimeTrialScreen.tsx',
       advanceGate: /continueDisabled=\{continueDisabled\}/,
     },
-    {
-      file: 'src/screens/profile/ProfileScreen.tsx',
-      advanceGate: /disabled=\{draftTwoKmContinueDisabled\}/,
-    },
   ];
+
+  /* ⚠ **THE PROFILE SCREEN IS NO LONGER IN THIS LIST — Sam, 2026-08-27**: *"the
+   * 2km — it doesn't need to be a pop up in the app - but it has to be an
+   * onboarding step"*. It asked for the time on the setup page that is now
+   * deleted, and he ruled against giving it a new door, so the law applies to
+   * the two ONBOARDING screens that still ask. The 2km step itself is asserted
+   * alive by `TwoKmTimeTrialScreen.tsx` above; if that ever disappears, this
+   * loop reads a missing file and reds. */
 
   for (const { file, advanceGate } of screens) {
     const screen = read(file);

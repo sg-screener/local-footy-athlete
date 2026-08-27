@@ -23,6 +23,17 @@ type GymExperienceScreenProps = NativeStackScreenProps<
   'GymExperience'
 >;
 
+/**
+ * THE YEARS BELONG ON THE TILE — Sam, 2026-08-27: *"just add the years to the
+ * tiles i.e. advance 5+ years then subtitle"*.
+ *
+ * The year range was ALWAYS the stored answer and was never shown here — see
+ * the initial build, where these tiles already read NEW TO TRAINING /
+ * BUILDING / CONSISTENT / ADVANCED. So the Profile page (which shows the stored
+ * value) said "5+ years" while this screen said "Advanced": one answer, two
+ * names. The tile now says both, and the beginner tile says only its title,
+ * because its stored value is not a span of years.
+ */
 const EXPERIENCE_OPTIONS: { id: ExperienceLevel; title: string; subtitle: string }[] = [
   // `id` is the persisted ExperienceLevel value AND gates navigation
   // (see handleSelect: 'Complete beginner' routes to a different next
@@ -49,6 +60,15 @@ const EXPERIENCE_OPTIONS: { id: ExperienceLevel; title: string; subtitle: string
     subtitle: 'High training loads, push hard consistently',
   },
 ];
+
+/**
+ * "Advanced · 5+ years". The years come from the STORED id, so the two can
+ * never drift; the beginner tile keeps its title alone, because its id is not a
+ * span of years and "New to training · Complete beginner" says one thing twice.
+ */
+function experienceTileTitle(option: { id: ExperienceLevel; title: string }): string {
+  return option.id === 'Complete beginner' ? option.title : `${option.title} · ${option.id}`;
+}
 
 export const GymExperienceScreen: React.FC<GymExperienceScreenProps> = ({
   navigation,
@@ -106,7 +126,7 @@ export const GymExperienceScreen: React.FC<GymExperienceScreenProps> = ({
                     color={isSelected ? colors.text.primary : colors.text.secondary}
                     style={styles.cardLabel}
                   >
-                    {option.title}
+                    {experienceTileTitle(option)}
                   </Text>
                   <Text
                     color={isSelected ? colors.text.secondary : colors.text.tertiary}

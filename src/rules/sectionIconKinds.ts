@@ -21,6 +21,7 @@
 
 import type { VisiblePartKind } from './visibleProjection';
 import type { SessionExecutionSectionId } from '../utils/sessionExecutionChecklist';
+import type { Workout } from '../types/domain';
 
 export type RowIconKind =
   | 'strength'
@@ -54,6 +55,44 @@ export const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
   recovery: 'recovery',
   team_training: 'team',
   game: 'game',
+};
+
+/**
+ * ── A COMPOSED OPTIONAL SESSION WEARS ITS OWN GLYPH ────────────────────────
+ *
+ * Sam, 2026-08-27: *"when mobility has its own day it shows a battery icon - it
+ * should show the same mobility / warm up icon as the person"*.
+ *
+ * A composed optional session has no part kind of its own — a Mobility day's
+ * rows project as `recovery` parts, so the card asked `PART_ICON_KIND` and got
+ * `recovery`'s battery. The workout's own `composedOptionalKind` is the typed
+ * fact that knows better, and it was already being read: **the table it was read
+ * from just held one row, `primer`.**
+ *
+ * ⚠ **THERE WERE TWO OF THESE TABLES.** `rules/dayTimeline` had one and
+ * `utils/sessionExecutionChecklist` had a hand-kept mirror, each `{ primer }`,
+ * each commented as matching the other. Adding a row to one would have re-made
+ * the exact split R-116 was written about — a Mobility day drawing the person on
+ * the card and the battery inside the session. There is now ONE table and both
+ * import it.
+ *
+ * ⚠ **TOTAL, LIKE ITS NEIGHBOURS.** A sixth composed kind stops this file
+ * compiling until somebody chooses its glyph, rather than falling back to the
+ * part kind's and reproducing this defect quietly.
+ */
+export const COMPOSED_OPTIONAL_ICON_KIND:
+  Readonly<Record<NonNullable<Workout['composedOptionalKind']>, RowIconKind>> = {
+  // Sam chose the bolt for the Primer knowing it is also the Speed glyph
+  // (R-129, 2026-08-23: *"yeah a lightning bolt"*). Unchanged.
+  primer: 'bolt',
+  mobility: 'mobility',
+  // Prehab was the same defect as mobility, one kind over: its rows also
+  // project as `recovery`, so a prehab day wore the battery too.
+  prehab: 'prehab',
+  // These two name what they already drew, so listing them changes nothing on
+  // glass — they are here because the record is total.
+  gunshow: 'strength',
+  recovery: 'recovery',
 };
 
 /**

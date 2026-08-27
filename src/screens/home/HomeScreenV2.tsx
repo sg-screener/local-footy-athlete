@@ -1377,7 +1377,15 @@ export default function HomeScreenV2() {
                   />
                 </View>
               )
-              : weekViewDays.map((day) => renderDayRow(day, weekDays.indexOf(day)))}
+              /* ⚠ **EVERY DAY OF THE WEEK, INCLUDING THE ONES BEFORE THE
+               * ATHLETE SIGNED UP — Sam, 2026-08-27**: *"those days should
+               * still be there but just with 0 programming on them … grey them
+               * out slightly compared to the other days so it's obvious when the
+               * program started"*. R-227 hid them entirely so pre-entry
+               * sessions could not read as missed obligations; his answer to
+               * that risk is to show the DAY and not the session. The row
+               * carries `preProgram`, which dims it and empties its head. */
+              : weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
 
@@ -1403,6 +1411,8 @@ export default function HomeScreenV2() {
             /* THE ROW KEEPS ITS OWN ID. `home-life-fact-chips` is the
                coordinate five Maestro flows and the day-first gate reach this
                row by; a card that renamed it would silently break every one. */
+            /* The template's square boxes. Same three doors, same handlers. */
+            variant="tiles"
             rowTestID="home-life-fact-chips"
             actions={[
               { id: 'tired' as const,
@@ -2087,6 +2097,24 @@ interface DayRowProps {
   dayShape?: boolean;
 }
 
+/**
+ * THE DAY CARD'S ROW GLYPHS, AT ONE SIZE — Sam, 2026-08-27: *"make the icons
+ * bigger to match the new template"*. They were 13pt beside a 10.5pt headline
+ * and read as punctuation rather than as the row's subject.
+ *
+ * ⚠ **ONE NUMBER, THREE ROWS.** The mobility row, the programmed-part row and
+ * the Team Training row each drew their own literal, so a change like this one
+ * had three places to miss. The completion tick sizes with them: it stands in
+ * the SAME marker slot, and a tick that stayed 15 would make a finished row
+ * look smaller than an unfinished one.
+ *
+ * COLOUR IS NOT TOUCHED. The template draws these lime; R-116's grey is a
+ * standing ruling from Sam (2026-08-20, again 2026-08-23) and size is not a
+ * licence to reopen it.
+ */
+const DAY_ROW_ICON_SIZE = 26;
+const DAY_ROW_CHECK_SIZE = 22;
+
 const DAY_ROW_ACCENT = {
   core: '#C6FF00',
   optional: '#5E6268',
@@ -2374,6 +2402,8 @@ function DayStateLeaves({
 
 interface WeekDayCardHeaderProps {
   day: any;
+  /** A day BEFORE the athlete started. It shows its date and nothing else. */
+  preProgram?: boolean;
   title: string | null;
   titleIcon: RowIconKind;
   accentColor: string;
@@ -2404,6 +2434,7 @@ interface WeekDayCardHeaderProps {
  */
 function WeekDayCardHeader({
   day,
+  preProgram = false,
   title,
   titleIcon,
   accentColor,
@@ -2422,9 +2453,9 @@ function WeekDayCardHeader({
   // Rest and fixtures are status rows, not empty training rows. Only reserve
   // the category tier when the row can actually render one; otherwise that
   // invisible line makes these two cards look needlessly tall.
-  const showsCategory = isMoveSource
+  const showsCategory = !preProgram && (isMoveSource
     || (!isGame && hasWorkout && Boolean(day.workout?.sessionTier))
-    || isCompleted;
+    || isCompleted);
 
   return (
     <View
@@ -2479,18 +2510,23 @@ function WeekDayCardHeader({
           </View>
         ) : null}
 
-        <View style={styles.weekCardTitleLine}>
-          <RowIcon kind={titleIcon} size={15} color={accentColor} />
-          <Text
-            style={[styles.weekCardTitle,
-              !hasWorkout && styles.weekCardRestTitle,
-              isMoveSource && { opacity: 0.4 }]}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {title}
-          </Text>
-        </View>
+        {/* A pre-program day draws NO session — no glyph, no name, no count.
+            Its date is the whole row, which is what "0 programming on them"
+            means. The card's own 0.45 opacity does the greying. */}
+        {preProgram ? null : (
+          <View style={styles.weekCardTitleLine}>
+            <RowIcon kind={titleIcon} size={15} color={accentColor} />
+            <Text
+              style={[styles.weekCardTitle,
+                !hasWorkout && styles.weekCardRestTitle,
+                isMoveSource && { opacity: 0.4 }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {title}
+            </Text>
+          </View>
+        )}
 
         {isMoveTarget ? (
           <Text style={[styles.moveTargetLabel, styles.weekCardPickerLabel]}>
@@ -2498,7 +2534,7 @@ function WeekDayCardHeader({
               * the three session modes and the words they showed here. */}
             {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
           </Text>
-        ) : rowCount > 0 ? (
+        ) : rowCount > 0 && !preProgram ? (
           <Text style={styles.weekCardMeta} testID={`day-row-${dayToken}-count`}>
             {signedCopy(
               rowCount === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
@@ -2649,7 +2685,9 @@ function DayRow({
     (total, part) => total + part.rows.length, 0);
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = dayStateToken({ day, isSelected, isMoveSource, isMoveTarget });
-  const canExpand = normal && hasWorkout && !isGame && rowCount > 0;
+  // A pre-program day cannot open: there is nothing on it to show, and a
+  // chevron over an empty row is a door to nowhere.
+  const canExpand = normal && hasWorkout && !isGame && rowCount > 0 && !preProgram;
   const compactWeekStatus = !dayShape && normal && (isGame || !hasWorkout) && !isMoveTarget;
   const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
   const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
@@ -2681,9 +2719,37 @@ function DayRow({
      lines rather than pushing CORE off the card. */
   const dayCardHeader = (
     <View style={styles.selectedHeader}>
+      {/* ── TWO FIXED ROWS — Sam, 2026-08-27 ──
+          *"the core / optional / recovery etc badges should now go above the
+          '...' on the same line as todays focus but in top right corner of the
+          box - so it matches how it looks on all days"*.
+
+          The badge and the dots used to share one cluster beside the title, so
+          where the badge landed depended on how tall that day's title block
+          was: it sat on the eyebrow line on a two-word day and on the title
+          line on a one-word day. **The rows are now fixed** — eyebrow left /
+          badge right, then title left / dots right — so every day reads the
+          same. */}
+      <View style={styles.selectedEyebrowRow}>
+        {/* THE FOCUS EYEBROW — ONE string on every day: Sam was shown the
+            day-aware version, which said "SESSION FOCUS" on a day he had walked
+            to, and ruled it out — *"session focus should be 'today's focus'"*.
+            A rest day still gets no eyebrow, because there is no focus to
+            label; the spacer keeps its badge in the same corner regardless. */}
+        {hasWorkout ? (
+          <Text style={styles.dayFocusEyebrow} testID="day-card-focus-eyebrow">
+            {signedCopy('day.card.focus_eyebrow')}
+          </Text>
+        ) : <View />}
+        {rowBadges}
+      </View>
       <View style={styles.selectedMetaRow}>
         <View style={[styles.selectedTitleBlock, styles.selectedTitleLead]}>
           <View style={styles.selectedTitleLine}>
+            {/* ONE LINE, ALWAYS — the second half of Sam's ruling. `numberOfLines`
+                alone would truncate "Strength + Conditioning" with an ellipsis at
+                26pt; shrinking to fit keeps the whole name, and the floor stops
+                a very long one from becoming unreadable. */}
             <Text
               testID="day-card-title"
               style={[
@@ -2692,7 +2758,9 @@ function DayRow({
                 styles.selectedWorkoutTitle,
                 isMoveSource && { opacity: 0.4 },
               ]}
-              numberOfLines={2}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.62}
               ellipsizeMode="tail"
             >
               {selectedTitle}
@@ -2700,7 +2768,6 @@ function DayRow({
           </View>
         </View>
         <View style={styles.selectedBadgeCluster}>
-          {rowBadges}
           {showPlanOptions ? (
             <Pressable
               onPress={onPlanOptions}
@@ -2724,6 +2791,7 @@ function DayRow({
   const weekCardHeader = (
     <WeekDayCardHeader
       day={day}
+      preProgram={preProgram}
       title={title}
       titleIcon={titleIcon}
       accentColor={accentColor}
@@ -2933,23 +3001,28 @@ function TeamTrainingCard({
       style={[styles.teamTrainingCard, styles.dayRowCalm]}
       testID="day-team-training-card"
     >
-      <Text style={styles.teamTrainingTitle}>{signedCopy('day.club_training.title')}</Text>
+      {/* ONE ROW, LIKE THE TEMPLATE — Sam, 2026-08-27. The title used to sit on
+          its own line above, which left the icon beside the status line and
+          nothing beside the title. Icon, then title over status, then button. */}
       <View style={styles.teamTrainingRow}>
         <View style={styles.timelineIconMarker}>
           {logged === 'full' || logged === 'partial' ? (
-            <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+            <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
           ) : (
-            <RowIcon kind="team" size={13} color={rowIconColor('team')} />
+            <RowIcon kind="team" size={DAY_ROW_ICON_SIZE} color={rowIconColor('team')} />
           )}
         </View>
         <View style={styles.timelinePartText}>
-          {/* THE LABEL IS THE QUESTION, THE LINE UNDER IT IS THE ANSWER (Sam,
-              2026-08-22): *"next to the icon it should say 'Session status' and
-              under that it should 'not logged yet' or 'logged' based on it's
-              status"*. It read "Team training" over the status, which restated
-              the card's own title one line below itself. */}
-          <Text style={styles.timelineHeadline} numberOfLines={1}>
-            {signedCopy('day.club_training.status_label')}
+          {/* ⚠ **"SESSION STATUS" IS GONE — Sam, 2026-08-27**, against the
+              template: *"remove 'session status' from team training box"*. He
+              asked FOR that label on 2026-08-22, when the line above it repeated
+              the card's own title; the template answers it differently — the
+              status stands on its own under the title. */}
+          <Text
+            style={[styles.timelineHeadline, styles.programmedPartHeadline]}
+            numberOfLines={1}
+          >
+            {signedCopy('day.club_training.title')}
           </Text>
           <Text style={styles.timelinePartMeta}>
             {logged === null
@@ -2972,10 +3045,13 @@ function TeamTrainingCard({
           * which loads what was saved — so the label is the only thing that
           * changes, and it is true in both directions.
           */}
+        {/* Outlined, not filled — the template's lime-bordered button. The tap
+            is unchanged: same handler, same testID, same label rule. */}
         <Button
           label={logged === null
             ? signedCopy('day.club_training.log_action')
             : signedCopy('day.club_training.view_action')}
+          variant="outline"
           size="sm"
           glow={false}
           onPress={onLog}
@@ -3190,9 +3266,9 @@ function DayTimeline({
             >
               <View style={styles.timelineIconMarker}>
                 {mobilityCompletion === 'full' || mobilityCompletion === 'partial' ? (
-                  <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+                  <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
-                  <RowIcon kind="mobility" size={13} color={rowIconColor('mobility')} />
+                  <RowIcon kind="mobility" size={DAY_ROW_ICON_SIZE} color={rowIconColor('mobility')} />
                 )}
               </View>
               <View style={styles.timelinePartText}>
@@ -3349,11 +3425,11 @@ function DayTimeline({
                 */}
               <View style={styles.timelineIconMarker}>
                 {entry.completion === 'full' || entry.completion === 'partial' ? (
-                  <MaterialCommunityIcons name="check" size={15} color="#5BD98A" />
+                  <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
                   <RowIcon
                     kind={iconKind}
-                    size={13}
+                    size={DAY_ROW_ICON_SIZE}
                     color={rowIconColor(iconKind)}
                   />
                 )}
@@ -4369,18 +4445,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
+  // 12, matching the air BELOW the toggle — Sam, 2026-08-27. That gap is not 6:
+  // `topBar.gap` is 6 plus the ~7pt the 32pt date row holds above its own 18pt
+  // line, so 12 is what the eye reads as the same distance on both sides.
   brandHeader: {
     minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
 
   // Program shape controls. Day pays only for the toggle. Week adds this
   // compact navigation row underneath it, matching the accepted hierarchy
   // without shrinking the actual tap targets below a comfortable size.
-  topBar: { marginBottom: spacing.md, gap: spacing.md },
+  // HALF THE GAP, BOTH SIDES OF THE DATE ROW — Sam, 2026-08-27, against the
+  // template: the toggle, the date and the day card are one block, and 16pt
+  // above and below the date row spread them into three.
+  //
+  // ⚠ **HALVING THESE TWO MARGINS ALONE MOVED 16pt AND SAM COULD NOT SEE IT.**
+  // Most of the air he was pointing at is INSIDE the date row — its controls
+  // were 40pt tall around an 18pt line, so ~11pt sat above and below the date
+  // itself. The row shrank to 32 and these went to 6 and 0, which measures 28pt
+  // from the toggle to the date and 21pt from the date to the card: the
+  // template's own proportions. The gap below the row is NOT all here —
+  // `dayFirst` pays 4 more as its own marginTop.
+  topBar: { marginBottom: 0, gap: 6 },
   compactWeekNav: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -4388,9 +4478,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  // 32, not 40 — the row's own height is most of the padding around the date.
+  // The tap target does NOT shrink with it: every one of these controls carries
+  // `hitSlop={8}`, so the touchable area stays 48pt.
   compactWeekNavButton: {
     width: 40,
-    height: 40,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4399,7 +4492,7 @@ const styles = StyleSheet.create({
   },
   compactWeekNavCurrent: {
     minWidth: 112,
-    minHeight: 40,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4711,7 +4804,10 @@ const styles = StyleSheet.create({
   },
 
   // ── Day-first view ──
-  dayFirst: { gap: spacing.sm, marginTop: spacing.sm },
+  // `gap` is the space BETWEEN the day's boxes and is untouched. `marginTop` is
+  // the space ABOVE the first one, under the date row, and it halves with the
+  // rest of that block.
+  dayFirst: { gap: spacing.sm, marginTop: spacing.xs },
   /* THE DAY SCREEN'S ONE GAP, PAID BY THE ONE BOX THAT SITS OUTSIDE THE
      CONTAINER THAT PAYS IT FOR EVERYTHING ELSE. Same `spacing.sm` as
      `dayFirst`'s `gap` above, and it is the same number on purpose. */
@@ -4727,11 +4823,13 @@ const styles = StyleSheet.create({
   // direct children of whatever mounts it, and a gapped parent then spaces the
   // invisible ones exactly as generously as the visible ones.
   stateLeafWell: { position: 'absolute', width: 0, height: 0, overflow: 'hidden' },
+  // FULL WIDTH, so its edges line up with the day cards below it, and thinner —
+  // Sam, 2026-08-27, against the template. It was a fixed 280 centred inside a
+  // full-width column, which is why it floated narrower than everything else.
   viewToggle: {
     flexDirection: 'row',
-    alignSelf: 'center',
-    width: 280,
-    marginTop: spacing.sm,
+    alignSelf: 'stretch',
+    marginTop: 0,
     padding: 4,
     gap: 4,
     borderRadius: borderRadius.full,
@@ -4739,10 +4837,10 @@ const styles = StyleSheet.create({
   },
   viewToggleOption: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
+    paddingVertical: 5,
     borderRadius: borderRadius.full,
   },
   viewToggleOptionActive: { backgroundColor: 'rgba(200,255,0,0.14)' },
@@ -4783,27 +4881,28 @@ const styles = StyleSheet.create({
   teamTrainingCard: {
     paddingVertical: spacing.md,
   },
-  teamTrainingTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
   teamTrainingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    // The same 14 the day card's own rows use, so the icon sits the same
+    // distance from its words on both cards.
+    gap: 14,
   },
   timelineRow: {
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    // 14. Matching the card's 20 exactly LOOKED too wide, because the glyph
+    // does not paint to the edges of its 32pt slot — the measured gap and the
+    // gap the eye reads are not the same number. 8 was too tight, 20 too loose.
+    gap: 14,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  timelineIconMarker: { width: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // Wider than the glyph inside it (`DAY_ROW_ICON_SIZE`), or the icon overflows
+  // its own slot and pushes the headline across.
+  timelineIconMarker: { width: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   timelineHeadline: {
     color: '#E8EAED',
     fontSize: 10.5,
@@ -4896,10 +4995,21 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200, 255, 0, 0.40)', backgroundColor: '#141814',
   },
 
+  // 2, not 14. The 14 was INERT until the header became two rows — the eyebrow
+  // used to sit inside the title block on the block's own 4pt gap. Splitting the
+  // rows for the badge handed that dead gap a job and pushed the title down.
+  // Sam: the eyebrow should almost sit on top of the title.
   selectedHeader: {
-    gap: 14,
+    gap: 2,
   },
   selectedMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  // The eyebrow line, and the day's tier badge in the box's top-right corner.
+  selectedEyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -4969,8 +5079,29 @@ const styles = StyleSheet.create({
   },
   // Selected session title — the biggest text in the list, but still a
   // row, not a hero. White + heavier weight carry the emphasis.
+  // 26, not Renee's 19 — Sam, 2026-08-27, holding the template beside the live
+  // card: *"Strength + Conditioning title needs to be bigger - to match what's
+  // in the template photo but should remain on one line"*. The ONE LINE is the
+  // other half of the ruling and it is not paid here: the title shrinks itself
+  // to fit (`adjustsFontSizeToFit`), so 26 is a ceiling, not a promise.
+  //
+  // The week card's date numeral also wears this style and is UNCHANGED — it
+  // overrides the size itself in `weekCardDateNumeral` (27/29).
   workoutTitleSelected: {
-    color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '700', letterSpacing: -0.2,
+    color: '#FFFFFF', fontSize: 22, lineHeight: 26, fontWeight: '700', letterSpacing: -0.4,
+  },
+  // THE EYEBROW SAM ASKED BACK FOR, 2026-08-27 — *"a little 'today's focus' in
+  // lime green should sit above it too like the image"*, and then *"it should be
+  // smaller"* against the first build at 11pt. Its words come from `signedCopy`.
+  // 9.5 is deliberately below the 10.5 compact-label scale: this is a LABEL FOR
+  // the title beneath it, not a line the athlete reads on its own.
+  dayFocusEyebrow: {
+    color: '#C6FF00',
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
   },
   restLabel: {
     color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',

@@ -631,6 +631,33 @@ export function registerProjectionCopy(): void {
     // the screen. The withdrawal is recorded where withdrawals are read — batch
     // 32 of `docs/COPY_SHEET_RULINGS_2026-07-30.md`, whose WITHDRAWN form
     // `test:copy-rulings-binding` asserts is ABSENT from the app.
+    //
+    // ── AND AN EYEBROW IS BACK, 2026-08-27, WITH DIFFERENT WORDS ──
+    //
+    // Sam, against his template: *"a little 'today's focus' in lime green should
+    // sit above it too like the image"*. **THIS DOES NOT UN-WITHDRAW BATCH 32.**
+    // "TODAY'S SESSION" stays gone and stays asserted absent; what he approved
+    // today is "TODAY'S FOCUS", a different string doing a different job — it
+    // labels the WORK, where the old one labelled the DAY and then repeated the
+    // date the arrows already carry.
+    //
+    // ⚠ **IT SAYS THE SAME THING ON EVERY DAY, AND THAT IS SAM'S CALL.** The
+    // first build branched on `day.isToday` and showed a neutral "SESSION FOCUS"
+    // on a day the athlete had walked to, on the reasoning that announcing
+    // "today" on Saturday is the surface lying. He was told that and ruled
+    // against it the same morning — *"session focus should be 'today's focus'"*.
+    // ONE ROW, ONE STRING, EVERY DAY. The branch and the second row are gone
+    // rather than left dark.
+    {
+      id: 'day.card.focus_eyebrow',
+      source: 'sam_ruling',
+      provenance: 'NEW — Sam, 2026-08-27, reading his template beside the live day '
+        + 'card: "a little \'today\'s focus\' in lime green should sit above it too '
+        + 'like the image", then "session focus should be \'today\'s focus\'" when '
+        + 'shown the two-form version. Above the day card title, on any day that has '
+        + 'a session.',
+      text: "TODAY'S FOCUS",
+    },
     // The drop-down row's meta line. `derived_number`: the SHAPE is authored,
     // the count is data — the same treatment the prescription templates below
     // get. PROPOSED, not signed: Sam signed the eyebrow, not this.
@@ -1050,6 +1077,31 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-25, R-195/R-200: “Tell us what’s changed '
         + 'and we’ll adjust today.”',
       text: 'Tell us what’s changed and we’ll adjust today.',
+    },
+    // The three status tiles' second lines — Sam, 2026-08-27, matching his
+    // template's square boxes. Each one says what tapping it DOES, which is why
+    // the card's own sub-line drops out of that shape: it would say it twice.
+    {
+      id: 'day.change_card.tired_detail',
+      source: 'sam_ruling',
+      provenance: 'NEW — from Sam\'s template screenshot, 2026-08-27: "the not '
+        + 'feeling 100% box … should match the template with the new square boxes". '
+        + 'The words are the template\'s own.',
+      text: 'Take it easier while you improve',
+    },
+    {
+      id: 'day.change_card.sick_detail',
+      source: 'sam_ruling',
+      provenance: 'NEW — from Sam\'s template screenshot, 2026-08-27, beside the '
+        + 'thermometer.',
+      text: 'Adjust training while you recover',
+    },
+    {
+      id: 'day.change_card.injured_detail',
+      source: 'sam_ruling',
+      provenance: 'NEW — from Sam\'s template screenshot, 2026-08-27, beside the '
+        + 'medical cross.',
+      text: 'Adapt training around an injury',
     },
     {
       id: 'day.plan_options.accessibility_label',

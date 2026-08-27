@@ -97,6 +97,18 @@ export const CHANGE_ACTION_LABEL: Record<ChangeActionId, string> = {
 export const SESSION_CHANGE_ACTION_LABEL = CHANGE_ACTION_LABEL;
 
 /**
+ * The one-line explanation under each TILE. Only the three status doors have
+ * one — `equipment` and `add` are session actions that the tile shape never
+ * draws, and inventing a sentence for them would be putting words on the screen
+ * nobody signed. A missing entry simply renders no second line.
+ */
+const TILE_DETAIL_COPY: Partial<Record<ChangeActionId, string>> = {
+  tired: 'day.change_card.tired_detail',
+  sick: 'day.change_card.sick_detail',
+  injured: 'day.change_card.injured_detail',
+};
+
+/**
  * The tints and strokes are the ones already chosen — the three status colours
  * are carried over VERBATIM from the Day screen at `1a7e7bd0` (cyan Tired,
  * amber Sick, red Injured) and the retained session-action tints from this
@@ -127,10 +139,10 @@ const ACTION_STROKE: Record<ChangeActionId, string> = {
  * them; the battery, the thermometer and the medical cross are the pictures the
  * athlete has been taught.
  */
-export function glyph(id: ChangeActionId): React.ReactNode {
+export function glyph(id: ChangeActionId, size = 18): React.ReactNode {
   const stroke = ACTION_STROKE[id];
   const common = {
-    width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+    width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
     stroke, strokeWidth: 1.9, strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
@@ -191,9 +203,22 @@ export function SessionChangeHub({
   heading,
   subline,
   style,
+  variant = 'chips',
 }: {
   actions: readonly SessionChangeAction[];
   testID?: string;
+  /**
+   * `chips` is the round-icon row this component has always drawn, and the
+   * session sheet keeps it — five actions do not fit as tiles, and `equipment`
+   * and `add` have no one-line description to put under them.
+   *
+   * `tiles` is the Day screen's template shape — Sam, 2026-08-27: *"the not
+   * feeling 100% box … should match the template with the new square boxes -
+   * but keep the buttons pointed at the same things"*. **THE ACTIONS ARE
+   * UNTOUCHED**: same ids, same handlers, same testIDs, same glyphs. Only the
+   * box around them changed.
+   */
+  variant?: 'chips' | 'tiles';
   /** Defaults to `<testID>-actions`; the Day surface keeps `home-life-fact-chips`. */
   rowTestID?: string;
   /** Defaults to Day's signed status question. Session supplies its own heading. */
@@ -215,8 +240,17 @@ export function SessionChangeHub({
   style?: StyleProp<ViewStyle>;
 }) {
   if (actions.length === 0) return null;
+  const tiles = variant === 'tiles';
   return (
-    <Card tone="default" padding="lg" radius="lg" style={style} testID={testID}>
+    <Card
+      tone="default"
+      /* 16 inside the tiles card, not 24 — the template's box is tighter, and
+         the 8 it gives back is 8 more width for the three tiles' words. */
+      padding={tiles ? 'md' : 'lg'}
+      radius="lg"
+      style={style}
+      testID={testID}
+    >
       {/* ⚠ **THE WORDS COME FROM THE SHEET, NOT FROM HERE.** They were literals
           in this file for one day and that is a word Sam could never re-word;
           `day.change_card.*` are the signed rows and moving the panel must not
@@ -224,12 +258,39 @@ export function SessionChangeHub({
       <Text style={styles.heading}>
         {heading ?? signedCopy('day.change_card.heading')}
       </Text>
-      <Text style={styles.subline}>
-        {subline ?? signedCopy('day.change_card.subline')}
-      </Text>
-      <View style={styles.row} testID={rowTestID ?? `${testID}-actions`}>
+      {/* The template puts the explanation INSIDE each tile, so the card's own
+          sub-line would say the same thing twice. It stays for the chips. */}
+      {tiles ? null : (
+        <Text style={styles.subline}>
+          {subline ?? signedCopy('day.change_card.subline')}
+        </Text>
+      )}
+      <View
+        style={[styles.row, tiles && styles.tileRow]}
+        testID={rowTestID ?? `${testID}-actions`}
+      >
         {actions.map((action) => {
           const label = CHANGE_ACTION_LABEL[action.id];
+          const detailId = TILE_DETAIL_COPY[action.id];
+          if (tiles) {
+            return (
+              <Pressable
+                key={action.id}
+                onPress={action.onPress}
+                accessibilityRole="button"
+                accessibilityLabel={action.accessibilityLabel ?? label}
+                accessibilityHint={action.accessibilityHint}
+                testID={action.testID ?? `session-change-${action.id}`}
+                style={({ pressed }) => [styles.tile, pressed && { opacity: 0.7 }]}
+              >
+                {glyph(action.id, 26)}
+                <Text style={styles.tileLabel} numberOfLines={1}>{label}</Text>
+                {detailId ? (
+                  <Text style={styles.tileDetail}>{signedCopy(detailId)}</Text>
+                ) : null}
+              </Pressable>
+            );
+          }
           return (
             <Pressable
               key={action.id}
@@ -274,6 +335,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.xs,
     marginTop: spacing.md,
+  },
+  // ── The template's three square boxes ──
+  tileRow: { gap: 8, alignItems: 'stretch', marginTop: 12 },
+  tile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    backgroundColor: '#101010',
+  },
+  tileLabel: {
+    color: '#F2F2F2', fontSize: 13, lineHeight: 17, fontWeight: '700',
+    textAlign: 'center',
+  },
+  tileDetail: {
+    color: '#8A8A8A', fontSize: 9.5, lineHeight: 13, textAlign: 'center',
   },
   chip: { flex: 1, alignItems: 'center', gap: 6 },
   chipIcon: {

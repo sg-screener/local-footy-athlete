@@ -22,7 +22,7 @@ tags:
     timeout: 10000
 - scrollUntilVisible:
     element:
-      id: "profile-program-setup-change"
+      id: "profile-edit-equipment"
     direction: DOWN
 - assertVisible: "Commercial gym"
 - assertNotVisible: "COACH ADJUSTMENTS"

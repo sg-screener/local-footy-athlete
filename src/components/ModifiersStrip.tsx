@@ -83,8 +83,10 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
         </>
       ) : headerSurface ? (
         <>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-            stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          {/* Grey, not lime — Sam, 2026-08-27, against the template. The
+              doorway is a route, and the lime here was the last of the glow. */}
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+            stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <Path d="M4 7h10" />
             <Path d="M18 7h2" />
             <Circle cx="16" cy="7" r="2" />
@@ -160,12 +162,12 @@ const styles = StyleSheet.create({
     borderColor: '#1F1F1F',
   },
   coachStrip: {
-    width: 176,
-    minHeight: 44,
+    width: 152,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
+    gap: 8,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
     /* NO LIME EDGE ON THE DOORWAY — Sam, 2026-08-27: the header pill was
@@ -180,9 +182,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexShrink: 1,
     color: '#F2F2F2',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   icon: { width: 21, alignItems: 'center' },

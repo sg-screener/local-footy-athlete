@@ -6593,3 +6593,94 @@ backed-out build is in this branch's history at the WC-144 marker in
 `weeklyScheduler.ts`).
 **Search words:** weekend, hard running friday, lower day hard runner,
 pre-season placement, separate hard runner, Q3, WC-144, blocked.
+
+**R-258** · *"i need you to rebuild what we currently have by making it more
+like the template … let's do it piece by piece"* (Sam, 2026-08-27, driving from
+his prototype screenshots, judging each piece himself on the simulator) ·
+**THE DAY SCREEN IS BEING WALKED TOWARD THE TEMPLATE, ONE PIECE PER
+INSTRUCTION. SIX PIECES RULED AND BUILT; ALL SIX SEEN BY SAM ON GLASS.**
+(a) The MY STATUS header pill loses its glow — the lime border over a
+green-tinted fill becomes the same neutral card treatment as the notice strip
+below it (`ModifiersStrip.coachStrip`). (b) The onboarding build screen's ready
+state drops the three education cards and centres the tick + "Your program is
+ready" in the band between the screen top and the CTA — measured, because the
+scroll view starts below the top inset and runs under an absolute footer
+(`CompleteScreen`). (c) The Day/Week toggle, the date row and the day card
+tighten to the template's proportions: 28pt above the date, 21pt below it, paid
+by `topBar` 6/0, `dayFirst.marginTop` 4 and a 32pt nav row whose 48pt tap target
+is held by `hitSlop={8}`. **Halving the two margins alone moved 16pt and Sam
+could not see it — most of the air was INSIDE the row.** (d) The day card's row
+glyphs go 13 → 26 (`DAY_ROW_ICON_SIZE`), the completion tick with them.
+**COLOUR IS UNCHANGED: the template draws them lime and R-116's grey stands.**
+(e) A mobility-only day showed the battery — a composed optional session now
+wears its own glyph from ONE shared table (`COMPOSED_OPTIONAL_ICON_KIND`),
+replacing the two hand-kept `{ primer }` copies that R-116 exists to prevent;
+prehab was the same defect and is fixed with it. (f) The day card title goes to
+26pt and **stays on one line** (`adjustsFontSizeToFit`), with a small lime
+**"TODAY'S FOCUS"** eyebrow above it (9.5pt after *"it should be smaller"*).
+⚠ **(f) DOES NOT UN-WITHDRAW BATCH 32.** "TODAY'S SESSION" stays withdrawn and
+asserted absent; the new eyebrow is a different string. **AND IT READS THE SAME
+ON EVERY DAY.** It was first built to say "SESSION FOCUS" on a day the athlete
+had walked to, because announcing "today" on a Saturday is the surface lying —
+Sam was told exactly that and ruled against it the same morning: *"session focus
+should be 'today's focus'"*. One string, one row, every day with a session. Guards:
+`test:day-first-timeline` cells for the eyebrow, the one-line 26pt title, the
+nav proportions + hitSlop and the topBar spacing were REWRITTEN in the same task
+(they pinned the superseded 2026-08-22 state); `test:copy-rulings-binding` holds
+the withdrawal.
+**Search words:** template, prototype, rebuild, my status glow, header pill,
+today's focus, eyebrow, day card title one line, bigger icons, row glyph size,
+mobility battery icon, composed optional glyph, day week toggle padding, date
+row spacing, program is ready centred.
+
+**R-259** · *"we're going to work in the profile tab for a bit now … instead of
+the 'edit player details' and having to go through each step again"*, then
+*"why is the 'something changed? tell the coach' button even there?"*, then
+*"it should be like everything else in the app = just a fucking pop up"*, then
+*"it would be cleaner if we just had the grey side arrow thing like in the FAQ"*
+(Sam, 2026-08-27, four passes in one morning) · **THE PROFILE PAGE EDITS ITSELF,
+ONE ANSWER AT A TIME, IN A POPUP. BUILT; SEEN BY SAM ON GLASS.**
+(a) **The "Something changed? Tell the coach" CTA, the full-screen setup review
+page and its whole step machine are DELETED** — not unlinked. Sam hit the reason
+himself: Equipment still opened that page underneath its own sheet, so dismissing
+the sheet dropped him onto a screen he had never asked for. (b) Every setup row
+on the Profile page carries the FAQ row's grey chevron and opens ONE question in
+`ProfileFieldSheet`, which is built from the vocabulary of the sheets that were
+already right (`SeasonPhaseShiftSheet`, `RebuildSheet`, `SessionFeedbackPanel`) —
+bordered 54pt choice rows, radio for one / tick for many, `size="lg"` Save over a
+`secondary` Cancel, and the seven-day questions on the app's OWN chip grid.
+**There is no mode to enter first: the pen that briefly existed is gone.**
+(c) Saving one answer commits and rebuilds immediately; it does NOT walk on to
+the next question — Sam edited his name and was carried to "what is your 2km
+time". (d) **Season phase opens the ACTUAL `SeasonPhaseShiftSheet` from My
+Status**, same component, same `useSeasonPhaseControl`: a phase change asks
+follow-ups and rebuilds a season, so it is not a field edit. (e) Main goal/s is
+editable, and the row lists ALL of them — it read `goals[0]` and preferred
+`biggestLimitation`, a different answer wearing the goals' label. (f) **The 2km
+time trial stays an ONBOARDING step and gets no door in the app** — its old door
+died with the setup page and Sam ruled against replacing it.
+**Search words:** profile, program setup, something changed, tell the coach,
+review your setup, pen icon, chevron, edit one line, field popup, season phase
+from profile, main goals, 2km no app door.
+
+**R-260** · *"EQUIPMENT LIST IS FUCKED - IT SHOULD BE THE SAME AS WHAT WAS SAID
+IN THE ONBOARDING"*, then *"i also unticked cable machines in my fucking
+onboarding and it's showing up as if i had it"*, then *"these don't all need to
+say have it"* (Sam, 2026-08-27) · **THE EQUIPMENT EDITOR OPENS ON WHAT ONBOARDING
+SAID, AND AN UNTICK IS AN ANSWER. BUILT; SEEN BY SAM ON GLASS.**
+(a) It seeded only from the answer THAT EDITOR writes, so an athlete who had
+never opened it saw everything blank — including a commercial-gym athlete whose
+program assumes the lot. With no saved checklist it now seeds from the LOCATION
+PRESET the athlete picked (`trainingLocation` → `EQUIPMENT_LOCATION_PRESETS`).
+(b) ⚠ **THE PRESET DOES NOT MERGE PER-ITEM.** The first fix did merge, and put
+back every item Sam had UNTICKED at onboarding — onboarding writes an entry only
+for what was ticked, so an untick leaves no entry and looked identical to
+silence. **A saved answer is the whole answer: ticked is have, absent is does
+not have.** (c) The rows are the onboarding TILE — plain when unticked, lime
+with a tick when ticked, and **no "Have it" caption on either surface**; NEVER
+keeps its label, being a third state onboarding has no twin for. (d) The popup
+carries a close control top-right and its Save is pinned outside the scroll view.
+(e) The sheet is always mounted, so it re-seeds on open — seeding in `useState`
+ran once at app start.
+**Search words:** equipment editor, commercial gym all ticked, untick, have it,
+onboarding tile, equipment preset, save equipment pinned, close top right.

@@ -98,9 +98,15 @@ export function RowIcon({ kind, size = 15, color }: { kind: RowIconKind; size?: 
 
   if (kind === 'team') {
     return (
+      /* ⚠ **THIS BRANCH USED TO IGNORE `size` AND DRAW 16, ALWAYS.** Every
+         other kind honours the prop, so a caller asking for a bigger row got a
+         bigger everything EXCEPT team training — silently, with no error to
+         read. Found while sizing the day card's glyphs up on 2026-08-27. The
+         other two callers ask for 17 and 18, so this is a 1–2pt change there
+         and they now say what they draw. */
       <MaterialCommunityIcons
         name="account-multiple-outline"
-        size={16}
+        size={size}
         color={iconColor}
         style={[styles.rowIcon, styles.teamTrainingIcon]}
       />

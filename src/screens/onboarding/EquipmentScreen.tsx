@@ -206,6 +206,11 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
     ticked: boolean,
     onPress: () => void,
   ) => (
+    /* ⚠ **NO "HAVE IT" TEXT** — Sam, 2026-08-27: *"these don't all need to say
+       have it - they should be ticked like in the onboarding or unticked"*. The
+       tile already says it twice over: it lifts to the selected surface AND
+       carries the tick. A third statement of the same fact is noise on every
+       row of a fifteen-row list. */
     <SelectableTile key={key} isSelected={ticked} onPress={onPress} style={styles.tile}>
       <View style={styles.tileRow}>
         <Text
@@ -213,9 +218,6 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
           color={ticked ? colors.text.primary : colors.text.secondary}
         >
           {label}
-        </Text>
-        <Text variant="caption" color={ticked ? colors.text.secondary : colors.text.tertiary}>
-          {ticked ? 'Have it' : ''}
         </Text>
       </View>
     </SelectableTile>

@@ -6,7 +6,11 @@ import {
   sessionOrderIsAuthored,
   type SessionComponent,
 } from './sessionComponents';
-import { SESSION_SECTION_ICON_KIND, type RowIconKind } from '../rules/sectionIconKinds';
+import {
+  COMPOSED_OPTIONAL_ICON_KIND,
+  SESSION_SECTION_ICON_KIND,
+  type RowIconKind,
+} from '../rules/sectionIconKinds';
 import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
 
 /**
@@ -309,10 +313,10 @@ export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   other: 'Session',
 };
 
-/** A composed optional session's own section glyph. Mirrors `rules/dayTimeline`. */
-const SECTION_ICON_BY_COMPOSED_OPTIONAL: Readonly<Record<string, RowIconKind>> = {
-  primer: 'bolt',
-};
+/* A composed optional session's own section glyph now comes from the ONE table
+   in `rules/sectionIconKinds`. This file used to keep a hand-written mirror of
+   `rules/dayTimeline`'s copy — two tables answering one question, which is the
+   defect R-116 was written about. */
 
 const SECTION_ORDER: SessionExecutionSectionId[] = [
   'mobility', 'strength', 'accessories', 'conditioning',
@@ -502,7 +506,8 @@ export function buildSessionExecutionPlan(args: {
    * for. `rules/dayTimeline` makes the identical decision for the card.
    */
   const mainSectionIcon = sessionOrderIsAuthored(args.workout)
-    ? (SECTION_ICON_BY_COMPOSED_OPTIONAL[String(args.workout.composedOptionalKind)]
+    ? (COMPOSED_OPTIONAL_ICON_KIND[
+      String(args.workout.composedOptionalKind) as keyof typeof COMPOSED_OPTIONAL_ICON_KIND]
       ?? SESSION_SECTION_ICON_KIND.strength)
     : SESSION_SECTION_ICON_KIND.strength;
   const sections = SECTION_ORDER.map((id) => ({
