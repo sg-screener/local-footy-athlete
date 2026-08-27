@@ -204,10 +204,13 @@ console.log('\n[2] BOTH EVALUATORS RETURN THE SAME VERDICT');
       const path = require('path') as typeof import('path');
       const read = (rel: string) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
       const generator = read('services/api/generateProgram.ts');
+      const rowCompiler = read('rules/canonicalWeeklyRowCompiler.ts');
       const evaluator = read('rules/section18EffectiveWeekEvaluator.ts');
       // The condition may appear ONLY in the owner. A caller restating it is
       // the drift this whole unit exists to end.
       return !generator.includes("=== 'derived_healthy_unrestricted'")
+        && rowCompiler.includes('effectiveAnchorParticipation(anchor)')
+        && !rowCompiler.includes("=== 'derived_healthy_unrestricted'")
         && !evaluator.includes("=== 'derived_healthy_unrestricted'");
     })(),
     'a caller has restated the promotion condition instead of delegating',

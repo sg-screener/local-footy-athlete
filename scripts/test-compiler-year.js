@@ -21,7 +21,7 @@ function control() {
     prerequisites: [{ id: 'canonical_only', ok: true }], mutations: [{ id: 'real_compiler_mutation', ok: true }],
     athletes: ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
       checks: [{ id: 'onboarding', ok: true }],
-      actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game']
+      actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise']
         .map((kind) => ({ kind, date: 'fixture-only', ok: true })),
       weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: WEEK_CHECKS.map((id) => ({ id, ok: true })) })),
     })) };
@@ -44,6 +44,7 @@ const mutations = {
   refused_action: (r) => { r.athletes[0].actions[0].ok = false; },
   missing_phase_transition: (r) => r.athletes[0].actions.splice(3, 1),
   missing_multi_game: (r) => { const a = r.athletes.find((a) => a.id === 'male-5-two-fixtures'); a.actions = a.actions.filter((x) => x.kind !== 'add_game'); },
+  missing_exercise_before_fixture: (r) => { const a = r.athletes.find((a) => a.id === 'male-5-two-fixtures'); a.actions = a.actions.filter((x) => x.kind !== 'swap_exercise'); },
   missing_ownership_proof: (r) => { r.prerequisites = []; },
   rival_author: (r) => { r.prerequisites[0].ok = false; },
   missing_mutation_proof: (r) => { r.mutations = []; },
@@ -83,12 +84,26 @@ test('display resolver has no progression author implementation', () => assert(r
 test('reintroduced resolver progression author is caught as executable code', () => {
   assert(!retiredWritersAbsent(resolver + '\nexport function materialiseWeekStrengthProgression(w) { w.workouts = []; }'));
 });
-test('generator delegates progression and has no rival boundary mutation calls', () => {
-  const ast = ts.createSourceFile('generator.ts', generator, ts.ScriptTarget.Latest, true);
+function delegatesFullComposition(source) {
+  const ast = ts.createSourceFile('generator.ts', source, ts.ScriptTarget.Latest, true);
+  const generation = ast.statements.find((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'generateProgramLocally');
+  assert(generation?.body && generation.body.statements.length > 5, 'live generation body must be found');
   const calls = []; const visit = (n) => { if (ts.isCallExpression(n)) calls.push(n.expression.getText(ast)); ts.forEachChild(n, visit); }; visit(ast);
-  assert(calls.includes('compileCanonicalProgramProgression'));
-  assert(!calls.some((name) => /^applyBlockBoundary|^bakeMicrocycleStrengthProgression$/.test(name)));
+  return calls.includes('compileCanonicalProgram') && !calls.some((name) => ['composeWeek', 'materialiseComposedWeek', 'assembleAuthoredWeek',
+    'applyOptionalTopUps', 'applyExclusionsToAuthoredWeek', 'compileCanonicalProgramProgression'].includes(name)) &&
+    !calls.some((name) => /^applyBlockBoundary|^bakeMicrocycleStrengthProgression$/.test(name));
+}
+test('generator delegates full composition and has no rival row or progression calls', () => {
+  assert(delegatesFullComposition(generator));
   assert(definitions(progression).includes('compileCanonicalProgramProgression'));
+});
+test('an assembly call reintroduced inside live generation fails the ownership guard', () => {
+  const ast = ts.createSourceFile('generator.ts', generator, ts.ScriptTarget.Latest, true);
+  const generation = ast.statements.find((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'generateProgramLocally');
+  assert(generation?.body);
+  const position = generation.body.getStart(ast) + 1;
+  const mutant = generator.slice(0, position) + '\nassembleAuthoredWeek({ composerWorkouts: [], adapterWorkouts: [] });\n' + generator.slice(position);
+  assert(!delegatesFullComposition(mutant));
 });
 console.log(`Compiler-year detector: ${passed} passed, ${failed} failed (infrastructure controls, not athlete-week results).`);
 process.exitCode = failed ? 1 : 0;

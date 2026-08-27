@@ -846,7 +846,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // `PRESEASON_OVERLAY.conditioningTarget` said 4 and `early_optional` said 0,
   // and neither was read by anything. A healthy no-club pre-season athlete was
   // authored two app exposures against the approved source's four.
-  const overlay = overlayForPhase(inputs.phase, inputs.offseasonBlock);
+  // Section 18: a Pre-season practice-match week uses the game-week workload,
+  // while its stored season/phase clock remains Pre-season.
+  const overlay = overlayForPhase(
+    inputs.phase === 'Pre-season' && hasScheduledGame(inputs) ? 'In-season' : inputs.phase,
+    inputs.offseasonBlock,
+  );
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -915,7 +920,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   //      exactly his *"runnign intervals or off leg conditioning"* pair.
   // A reduced week keeps every reduction rule: the arm sits behind
   // `weekIsReduced` like every other hard authorisation.
-  const noClubGameWeek = inputs.phase === 'In-season'
+  const noClubGameWeek = inputs.phase !== 'Off-season'
     && hasScheduledGame(inputs)
     && inputs.clubNights.length === 0;
   const weekAllowsHard =

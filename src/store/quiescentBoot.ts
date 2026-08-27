@@ -226,7 +226,7 @@ function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): 
       applyProgramOverrideWrite({
         date,
         workout,
-        context: undefined,
+        context: compiled.overrideContextsByDate[date],
         writer: 'program_control',
       });
     }

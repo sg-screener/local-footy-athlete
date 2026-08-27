@@ -86,7 +86,7 @@ export function inspectWeek(args: {
       detail: `expected=${phase}/${phaseWeek} actual=${args.effectiveContract.identity.seasonPhase}/${args.effectiveContract.identity.phaseWeek}` },
     { id: 'placement', ok: placement, detail: `visible dates=${days.map((d) => d.date).join(',')}` },
     { id: 'fixtures', ok: fixtures, detail: `expected=${expectedGames.join(',')} actual=${actualGames.map((d) => d.date).join(',')}` },
-    { id: 'conservation', ok: unique, detail: 'Distinct visible session/row IDs; exact persisted reconstruction is checked separately. Plan-to-final-row ownership remains a prerequisite.' },
+    { id: 'conservation', ok: unique, detail: 'Distinct visible session/row IDs; specialist-to-final row conservation is checked at the compiler boundary and exact persisted reconstruction separately.' },
     { id: 'optional', ok: optionalErrors.length === 0, detail: optionalErrors.join(',') },
     { id: 'deload', ok: deload, detail: `phaseWeek=${phaseWeek} expectedScheduled=${scheduled} kind=${week.weekKind} door=${week.deloadDoor}` },
     { id: 'programming', ok: evaluation !== null && blocking.length === 0,

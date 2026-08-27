@@ -10,18 +10,21 @@ import { commitProfileProgramTransaction } from '../../store/profileProgramTrans
 import { undoLastDecision } from '../../store/undoLastDecision';
 import { applyPhaseShift } from '../../utils/profileMutations';
 import { applyPlanChange } from '../../utils/planChangeProducer';
+import { executeProgramControlActionDurably } from '../../utils/programControlActions';
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { semanticFingerprint } from '../../utils/programSemanticSnapshot';
 import { rebaseAcceptedEffectiveWeek } from '../../rules/acceptedEffectiveWeek';
 import { coldStartThroughOnboarding, quiet, quietAsync, followTheWeek, recordDay,
-  relaunchApp, rolloverIfDue, setJourneyClock, takeCensus } from '../support/athleteJourney';
+  relaunchApp, rolloverIfDue, setJourneyClock, takeCensus, swapOptionsFor } from '../support/athleteJourney';
 import { ARCHETYPES, YEAR_START, athleteAnswers, plusDays, yearTimeline, type Archetype } from './catalog';
 import { blockSelectionHistory } from '../../store/blockSelectionHistoryStore';
 import { compilerChecks, digest, inspectWeek, signatureDifferences, visibleSignature } from './invariants';
 import type { AthleteResult, Check } from './results';
+import { observeFinalRows, finalRowChecks, finalProgramSignature } from './finalRows';
 
 const compilerModule = require('../../rules/canonicalWeeklyCompiler') as typeof import('../../rules/canonicalWeeklyCompiler');
 const progressionModule = require('../../rules/canonicalWeeklyProgressionCompiler') as typeof import('../../rules/canonicalWeeklyProgressionCompiler');
+const programCompilerModule = require('../../rules/canonicalProgramCompiler') as typeof import('../../rules/canonicalProgramCompiler');
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const visible = (start: string, today = start) => quiet(() => deriveVisibleWeekLive(start, today));
 const ledger = () => semanticFingerprint(decisionLedgerEntries());
@@ -45,6 +48,21 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
   const observations: Check[] = [];
   const original = compilerModule.compileCanonicalWeek;
   const originalProgression = progressionModule.compileCanonicalProgramProgression;
+  const originalProgram = programCompilerModule.compileCanonicalProgram;
+  const repeatedPhases = new Set<string>();
+  programCompilerModule.compileCanonicalProgram = (input) => {
+    const observed = observeFinalRows(input, originalProgram);
+    observations.push(...observed.checks);
+    observations.push({ id: 'final_compilation_reached', ok: true });
+    const phase = String(input.weeks.profile.seasonPhase);
+    if (!repeatedPhases.has(phase)) {
+      repeatedPhases.add(phase);
+      const repeated = originalProgram(input);
+      observations.push({ id: 'final_program_deterministic',
+        ok: finalProgramSignature(observed.output) === finalProgramSignature(repeated) });
+    }
+    return observed.output;
+  };
   progressionModule.compileCanonicalProgramProgression = (input) => {
     const before = semanticFingerprint(input);
     const output = originalProgression(input);
@@ -136,6 +154,26 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
           const source = days.find((d) => d.source === 'game');
           const target = days.find((d) => d.workout?.exercises.length && d.source !== 'game');
           if (!source || !target) throw new Error('Move-game occupied-day coordinate was not reached');
+          if (archetype.id === 'male-5-two-fixtures') {
+            const editedDay = days.find((d) => d.date !== target.date &&
+              d.workout?.exercises.some((r) => r.section18Evidence?.role === 'main_strength'));
+            const row = editedDay?.workout?.exercises.find((r) => r.section18Evidence?.role === 'main_strength');
+            if (!editedDay?.workout || !row) throw new Error('Exercise-edit plus fixture coordinate not reached');
+            const replacement = swapOptionsFor({ dateISO: editedDay.date, originalExercise: row.exercise.name,
+              existingExerciseNames: editedDay.workout.exercises.map((r) => r.exercise.name) })[0];
+            if (!replacement) throw new Error('No legal exercise swap reached');
+            const swap = await quietAsync(() => executeProgramControlActionDurably({
+              type: 'swap_exercise', source: { screen: 'session_detail', surface: 'compiler_year', initiatedBy: 'tap' },
+              scope: 'today_only', payload: { date: editedDay.date, fromExercise: row.exercise.name,
+                toExercise: { name: replacement.name, sets: 3, repsMin: 6, repsMax: 8 } },
+              requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+            }, { todayISO: week.weekStart }));
+            action('swap_exercise', week.weekStart, swap.ok && swap.changedProgram, JSON.stringify(swap));
+            const swappedDay = visible(week.weekStart).find((d) => d.date === editedDay.date);
+            if (!swappedDay?.workout?.exercises.some((r) => r.exercise.name === replacement.name)) {
+              throw new Error('Exercise swap reported success without applying the replacement');
+            }
+          }
           await fixture('game', 'move', week.weekStart, source.date, target.date);
         }
         if (week.phase === 'In-season' && week.phaseWeek === 5 && archetype.extraGame) {
@@ -177,8 +215,11 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
           else if (outcome.result !== 'no_session' || outcome.detail !== null) loggingErrors.push(`${date}:${JSON.stringify(outcome)}`);
         }
         checks.push({ id: 'logging', ok: loggingErrors.length === 0, detail: loggingErrors.join(' | ') });
-        checks.push({ id: 'compiler_boundary', ok: observations.length > 0 && observations.every((c) => c.ok),
-          detail: observations.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail ?? ''}`).join(' | ') });
+        const finalCompilationReached = observations.some((c) => c.id === 'final_compilation_reached');
+        checks.push({ id: 'compiler_boundary', ok: finalCompilationReached && observations.every((c) => c.ok),
+          detail: finalCompilationReached
+            ? observations.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail ?? ''}`).join(' | ')
+            : 'Complete final-row compiler was not reached' });
         observations.length = 0;
         result.weeks.push({ ...week, status: 'measured', checks, ledgerDepth: decisionLedgerEntries().length,
           sessions: before.filter((d) => d.workout).length, rows: before.reduce((sum, d) => sum + (d.workout?.exercises.length ?? 0), 0),
@@ -199,6 +240,7 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
   } finally {
     compilerModule.compileCanonicalWeek = original;
     progressionModule.compileCanonicalProgramProgression = originalProgression;
+    programCompilerModule.compileCanonicalProgram = originalProgram;
   }
   console.log(`YEAR ${archetype.id}: ${result.weeks.filter((w) => w.status === 'measured').length}/52 weeks reached${stopped ? `; ${stopped}` : ''}`);
   return result;
@@ -243,6 +285,27 @@ export async function realCompilerMutation(): Promise<Check> {
     }, installDayISO: YEAR_START }));
   } catch { /* The downstream exposure-credit conflict remains a year refusal, not a waived lifecycle. */ }
   finally { compilerModule.compileCanonicalWeek = original; }
-  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught,
-    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}. This does not certify downstream exposure acceptance.` };
+  const originalProgram = programCompilerModule.compileCanonicalProgram;
+  let finalClean = false;
+  let finalMutationReached = false;
+  let finalRowLossCaught = false;
+  programCompilerModule.compileCanonicalProgram = (input) => {
+    const observed = observeFinalRows(input, originalProgram);
+    finalClean = observed.checks.every((c) => c.ok);
+    const source = observed.sources.find((s) => s.workouts.some((w) => w.exercises.length));
+    const row = source?.workouts.flatMap((w) => w.exercises)[0];
+    if (row) {
+      const mutant = { ...observed.output, program: { ...observed.output.program,
+        microcycles: observed.output.program.microcycles.map((w) => ({ ...w,
+          workouts: w.workouts.map((s) => ({ ...s, exercises: s.exercises.filter((r) => r.id !== row.id) })) })) } };
+      finalMutationReached = observed.output.program.microcycles.some((w) => w.workouts.some((s) => s.exercises.some((r) => r.id === row.id)));
+      finalRowLossCaught = finalRowChecks(input, mutant, observed.sources).some((c) => c.id === 'final_rows_conserved' && !c.ok);
+    }
+    return observed.output;
+  };
+  try {
+    await quietAsync(() => coldStartThroughOnboarding({ profile: athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-3-experienced-gym')!), installDayISO: YEAR_START }));
+  } finally { programCompilerModule.compileCanonicalProgram = originalProgram; }
+  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught && finalClean && finalMutationReached && finalRowLossCaught,
+    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}; final rows clean=${finalClean}, row removal reached=${finalMutationReached}, caught=${finalRowLossCaught}.` };
 }

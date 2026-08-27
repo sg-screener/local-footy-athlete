@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "owners": {
     "src/services/api/generateProgram.ts#buildGeneratedMicrocycles": {
-      "classification": "rival_author",
-      "reason": "Weekly scheduler/plan compilation returns before this function composes and assembles final workout rows, pins history, and applies weekly power/top-up policy. Final content ownership still lives in generation; migrating only progression wrappers cannot establish one full-week compiler.",
-      "fingerprint": "1d29fe98f3d24d2c1cb47acdd9027c3dc19e262d5c1f7574c09a9ff8a5b0934d"
+      "classification": "canonical_compiler",
+      "reason": "Compatibility delegate only: captures an audit stamp, calls compileCanonicalProgramWeeks, forwards returned plans/selections/diagnostics and returns its microcycles unchanged. No row, placement or dose policy remains in this wrapper.",
+      "fingerprint": "757c5cafc59723815f440e7d0d2301306548ff1d56b816ab8e451b0764ca537a"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
       "classification": "canonical_compiler",
@@ -28,8 +28,8 @@
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalWeeklyExerciseEdits": {
       "classification": "canonical_compiler",
-      "reason": "Ordered typed exercise-effect fold uses compileCanonicalExerciseEditOnWorkout and returns materialised dates without store access.",
-      "fingerprint": "5caef6fb7951e25ef07ba61489fa5e482c2d4f20f6197c5e232971efd7b7b84b"
+      "reason": "Ordered typed exercise-effect fold returns materialised dates and their athlete-ownership context. Live Add/Swap and boot share canonicalExerciseEditOverrideContext, preventing fixture cleanup from classifying a reconstructed athlete edit as system residue.",
+      "fingerprint": "638e09ca55509c032c5d8721a294c7b8b85527aca6feba0c342a644b740b08a3"
     },
     "src/rules/canonicalWeeklySessionEditCompiler.ts#compileCanonicalSessionConstraintEffects": {
       "classification": "canonical_compiler",
@@ -127,9 +127,9 @@
       "fingerprint": "1891570e6442b8bb29abaabe7eead8b896d53b30d22b10c2c9dedfb527360610"
     },
     "src/services/api/generateProgram.ts#generateProgramLocally": {
-      "classification": "rival_author",
-      "reason": "Progression now delegates to the canonical progression compiler, but this service still combines independent final-row generation and exclusion application. Full program composition has not been lifted to one canonical compiler input/output boundary.",
-      "fingerprint": "79cd82dfdc3d9a73e0d132740286a570746e68a37b36f6b32f605791124b64ab"
+      "classification": "canonical_input_writer",
+      "reason": "Captures profile, accepted facts, history, equipment and metadata; calls compileCanonicalProgram once and records returned block selections at the existing acceptance boundary. Returns the compiler program without row/exclusion/progression post-passes; the year detector mutation guards that handoff.",
+      "fingerprint": "4f4f5603645b0a3935cc326dd268ea8ef6ac62143c22e4729992183633ecfef5"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
       "classification": "canonical_compiler",
@@ -180,6 +180,26 @@
       "classification": "canonical_compiler",
       "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
       "fingerprint": "6fd1583959018a0153c0c452cdf2826df6f2d318cda8e71d81fc192a55242274"
+    },
+    "src/rules/canonicalProgramCompiler.ts#compileCanonicalProgram": {
+      "classification": "canonical_compiler",
+      "reason": "Full generation input/output boundary: weekly final rows, recorded exclusions then canonical progression; returns the complete program. Year observations compare actual specialist rows with this return and prove semantic repeatability and immutable inputs. Legacy helper audit timestamps are not certified clock-pure.",
+      "fingerprint": "4512356ab1d701e15082aa2962db0d2b595374006e0f247ec5a647f7ac280ca4"
+    },
+    "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
+      "classification": "canonical_compiler",
+      "reason": "Existing row pipeline moved in full from generation: typed schedule/plan compilation, composition, materialisation/assembly, pinned history, validation and optional top-ups. Returns weeks, selections and diagnostics; no store publication.",
+      "fingerprint": "ac2deef0aa9d4f4afccca05065a6817470b3406c0e033a59a2e4c22caab678c4"
+    },
+    "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
+      "classification": "canonical_compiler",
+      "reason": "Private row-compiler helper combines composer-owned lifts with the retained non-strength adapter, stamps provenance and pins explicit historical days. No independent caller or store write.",
+      "fingerprint": "ed6fe87c95217fad103d524b87d8f769eac43861603e7e62dd9aae4d2f4e701e"
+    },
+    "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.pinHistoryDays": {
+      "classification": "canonical_compiler",
+      "reason": "Private compiler helper preserves explicit pinned historical workouts before the governed boundary while compiling the future remainder; no independent author or persistence.",
+      "fingerprint": "20b8d1220c4c7142b717198b09c16d75c51cef3fb33602de3da8639bdb3fa42b"
     }
   }
 }

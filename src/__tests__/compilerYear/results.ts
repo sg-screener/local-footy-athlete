@@ -44,6 +44,9 @@ export function yearVerdict(result: YearResult) {
     for (const kind of [...(archetype.gameDay ? ['move_game', 'remove_game'] : []), ...(archetype.extraGame ? ['add_game'] : [])]) {
       if (!athlete.actions.some((a) => a.kind === kind && a.ok)) fail(`${archetype.id}/action/${kind}`);
     }
+    if (archetype.id === 'male-5-two-fixtures' && !athlete.actions.some((a) => a.kind === 'swap_exercise' && a.ok)) {
+      fail(`${archetype.id}/action/swap_exercise`);
+    }
     for (const action of athlete.actions) if (!action.ok) fail(`${archetype.id}/${action.kind}/${action.date}`, action.detail);
     const expected = yearTimeline(archetype);
     for (const item of expected) {

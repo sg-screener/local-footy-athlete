@@ -467,7 +467,7 @@ const DELEGATING_READERS: ReadonlyArray<{ file: string; because: string }> = [
   { file: 'hooks/useSeasonPhaseControl.ts', because: 'the phase sheet inlined copy 4' },
   { file: 'utils/recoveryAddonBuilder.ts', because: "gameDayForWeek tested !== 'Varies'" },
   { file: 'utils/postGenerationConstraintValidation.ts', because: "tested !== 'Varies'" },
-  { file: 'services/api/generateProgram.ts', because: "gameDayOfWeekFor tested !== 'Varies'" },
+  { file: 'rules/canonicalWeeklyRowCompiler.ts', because: 'the final-row compiler now owns gameDayOfWeekFor' },
   { file: 'utils/weekRebuild.ts', because: 'it inlined a seven-name includes' },
   { file: 'utils/fixtureMinimalReplan.ts', because: 'the replan resolved its own anchor' },
   { file: 'utils/onboardingCompletion.ts', because: 'fixture seeding resolved its own anchor' },

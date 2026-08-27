@@ -1933,3 +1933,139 @@ Implementation checkpoint: `900b6c59`. Owner remains `testtruth`.
   one game, restart, remove it, restart and Undo; switch phase after accumulated
   training and confirm the week remains the same after relaunch. Local gates
   and the simulator do not substitute for that physical-device acceptance.
+
+## 21. Final-row composition — 2026-08-27
+
+Owner: `testtruth`. User requested this chunk after the 401/416 annual result.
+LOOP CHECK: a scheduled plan passing while its final rows fail is the existing
+split-ownership failure. This slice moves the actual final-row author, not just
+another wrapper around the scheduler. Global ownership is still NOT complete.
+
+### Options and implemented boundary
+
+- Incremental option: fix the practice-match budget and fixture fallback in
+  place. That addresses the 15 measured weeks but leaves generation composing,
+  excluding and progressing rows outside the compiler boundary.
+- Selected option: move that complete pipeline into `compileCanonicalProgram`
+  and `compileCanonicalProgramWeeks`, retaining the established scheduler,
+  selection, dose, adapter, exclusion and optional-session specialists. The
+  service captures accepted inputs and metadata, records returned selection
+  decisions at the existing boundary, and returns the compiler's program.
+  Its former row-building implementation is removed; the old exported
+  `buildGeneratedMicrocycles` is a compatibility delegate only. Warnings return
+  as diagnostics for the service to log. Old debug-only alignment/capacity
+  logging was not carried into the domain owner.
+- No new programming targets, replacement exercise catalogue, AI call or
+  persisted output format. The canonical path still compiles accepted facts
+  and uses the same selection-history and progression rules.
+
+### Measured causes and fixes
+
+1. A Pre-season practice-match week was scheduled against the Pre-season
+   conditioning overlay while its Section 18 game-week contract imposed the
+   game-week maximum. The scheduler now uses the existing In-season workload
+   overlay for that fixture week, including the existing no-club game-week
+   conditioning choice. The athlete's Pre-season phase/clock remains unchanged.
+2. After minimal fixture repair exhausted its candidates, the branch labelled
+   `full_regeneration` submitted the failed source split again, not the complete
+   target the compiler had already built. It now submits that target. The old
+   pattern roles are NOT relabelled to fake coverage, and targets are not lowered.
+3. An added combination witness found a separate real restart defect: Swap an
+   exercise, then Move a game. Boot rebuilt the swapped workout but omitted its
+   athlete-ownership context. Fixture cleanup then treated it as system residue.
+   Live Add/Swap and boot now share `canonicalExerciseEditOverrideContext`; the
+   exercise compiler returns that context with each materialised date.
+
+VISIBLE: fixture-adjusted training now receives the complete rebuilt split and
+the game-week conditioning allowance; an exercise swap survives subsequent
+fixture reconstruction. These claims are held by the named tests below, not a
+physical-phone claim. No screen layout changed in this chunk.
+
+### Verification and what catches the next defect
+
+- `test:canonical-weekly-compiler`: **375/375 named assertions**, up from 355.
+  Added actual-action Remove-session / Swap-session / Swap-exercise → game Move
+  → restart → Undo witnesses, plus a non-vacuity assertion that the complete
+  regeneration fallback ran with an athlete edit present. The eight-week
+  logged two-fixture journey now asserts programming and the full compiler
+  boundary as well as restart/selection history. A six-week novice/home
+  Pre-season journey reaches an occupied-day practice match and validates its
+  patterns and conditioning budget without changing phase identity.
+- `test:release` completed the strengthened annual gate: **416 green / 416
+  measured / 416 required athlete-weeks**, eight distinct archetypes × 52.
+  Before: **401/416** and 15 distinct programming-failing weeks. Now: **0/416
+  failed programming checks**. Each of phase clock, placement, fixtures,
+  conservation, optional behaviour, deload, restart, ordered ledger, selection
+  history, logging and compiler-boundary checks also has **0 failures / 416**.
+  The eight next-week-edit and eight exact-Undo checks pass. **55 distinct
+  recorded actions** are accepted, including the new exercise-swap-before-game
+  coordinate; **416 actual store-rehydration/production-boot restarts** ran.
+- Year observations now intercept the real materialiser and conditioning
+  adapter, clone their row receipts, then compare identity/day/semantic role
+  with the complete compiler return after exclusions and progression. Explicit
+  pinned history and exclusions are respected. Compiler input immutability,
+  semantic repeatability for each encountered phase, and actual reachability
+  of the complete compiler are checked. This catches dropped final rows rather
+  than merely proving a seven-day schedule exists. No derivative HTML oracle:
+  `outputs/compiler-year-acceptance/index.html` presents the same JSON verdict.
+- Mutations injected into real executable modules, without editing product
+  files: restore the old fixture fallback (**2 failed assertions**); restore
+  the Pre-season budget (**1**); omit boot ownership context (**2**, including
+  the accumulated journey). Each mutation reported its injection as reached;
+  the restored control passes 375/375. Logs:
+  `/tmp/testtruth-finalrows-mutation-{fallback,budget,context}.log`.
+- The year mutation also removes a real specialist row from the full compiler
+  return: clean output passes, row removal is reached and rejected. The prior
+  duplicate-day and missing-speed mutations still reject. Detector controls:
+  **28/28**, including an assembly call injected into live generation and a
+  missing exercise-before-fixture action. Writer detector: **19/19**.
+- Scheduler verification: **102/102** scheduler, **11/11** generated-fixture,
+  **10/10** travel-zero-equipment, **9/9** off-season-continuity and **20/20**
+  spare-day assertions. Generated-week validator: **36/36**.
+- First-run coverage findings were not hidden: relocation initially broke ten
+  source-location assertions, which were rebound to the actual row compiler.
+  The first session-edit witness did not reach full regeneration; it failed its
+  reachability assertion. The exercise-swap combination reached it and exposed
+  the missing ownership context. Source-reading anchor/participation/block-state
+  guards were also redirected to the moved implementation rather than left
+  passing against an empty old location.
+
+### Release status and ownership accounting
+
+- **2 confirmed distinct rival author functions / 1,257 candidate capability
+  owners**, down from 4/1,253. The two retired service authors are now delegates;
+  the new compiler/private helpers are explicitly classified. **1 confirmed
+  derived-output publisher**, **40 reviewed**, **1,217 unresolved**. The remaining
+  confirmed rival functions are `applyLighterDayTrim` and
+  `applyLighterDayForToday`. These are candidate-owner counts from the executable
+  source census, NOT proof that the unresolved set contains no further authors.
+- Annual verdict still exits **1**, solely on the global canonical-only
+  prerequisite. Release remains **1/6 units green**: bootstrap passes, year
+  ownership prerequisite fails, four later units are not reached. No global
+  zero, green release, or Fable re-audit readiness is claimed.
+- All-scope typecheck still reports **464 diagnostic occurrences**: 21 product,
+  45 devtools, 398 tests. No baseline was changed. The touched production files
+  add no diagnostic occurrences.
+- Existing census-classified rewrite suites were inspected, not used as product
+  orders: assembly stops on its old missing-selection-history fixture;
+  anchor-participation is 19/20 (old hard-day expectation); game-anchor is 11/15
+  (stale readers/UI and assertions); block-state is 30/31 (old rollover view).
+  Repo-law guards remain 52/63 on unrelated report/inbox/flow/store/anchor debt.
+  Their source-location bindings were preserved where this move affected them;
+  no training policy was changed to satisfy an obsolete expectation.
+
+### NOT COVERED / next boundary
+
+- Physical iPhone, simulator UI, remote persistence and actual OS process death.
+  Headless journeys empty/rehydrate stores and execute production boot; this
+  does not replace Sam's physical-device acceptance. No device build or wipe.
+- Global one-owner proof, the lighter-day family, the derived-output publisher,
+  remaining unresolved source-census entries and existing release/typecheck debt.
+  Next owner: `testtruth`, when Sam starts the lighter-day ownership chunk.
+- Transitive clock-purity of legacy helpers: audit `createdAt`/`updatedAt` fields
+  are excluded from semantic repeatability. The new boundary receives its
+  authoring stamp explicitly, but not every retained helper's audit timestamp
+  has been converted. No stronger purity claim is made.
+- Every injury/illness/travel/equipment/action cross-product, cross-week fixture
+  moves and screen-driven full-year interaction. The eight archetypes and named
+  accumulated-action witnesses are the measured denominator, not the whole app.

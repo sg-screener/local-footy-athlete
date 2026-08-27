@@ -37,10 +37,11 @@ async function main() {
   const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
   const result = { version: 1, revision: revision + (dirty ? ' + working-tree changes' : ''),
     startedAt: new Date().toISOString(), prerequisites: [{ id: 'canonical_only', ok: ownership.ok,
-      detail: `${ownership.counts.rival_author} confirmed rival functions, ${ownership.counts.derived_output_writer} derived publishers, ${ownership.unresolvedOwners}/${ownership.inspectedCapabilityOwners} unresolved candidate owners; final row composition is not yet compiler-exclusive.` }],
+      detail: `${ownership.counts.rival_author} confirmed rival functions, ${ownership.counts.derived_output_writer} derived publishers, ${ownership.unresolvedOwners}/${ownership.inspectedCapabilityOwners} unresolved candidate owners; global single ownership is not yet proven.` }],
     mutations: [await realCompilerMutation()], athletes: [], notCovered: [
       'Physical device, UI, remote persistence and true OS process death; the restart harness empties and rehydrates all stores then runs production boot.',
-      'Plan-to-final-row conservation is not proven while final row composition remains outside the compiler; the ownership prerequisite blocks acceptance.',
+      'Final-row checks cover specialist-row identity, placement and roles through full generation. Global single ownership across every mutation path remains blocked by the ownership prerequisite.',
+      'Compiler repeatability compares training semantics; legacy helper audit timestamps are excluded, so transitive clock-purity is not certified.',
       'Scheduled deload cadence, typed policy and restart are checked here; exact dose arithmetic is covered by the existing canonical compiler witness.',
       'Injury, illness, travel, all equipment subsets and every action permutation are not a full cross-product in these eight archetypes.',
     ] };

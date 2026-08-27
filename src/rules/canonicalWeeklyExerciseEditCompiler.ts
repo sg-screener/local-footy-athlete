@@ -1,5 +1,5 @@
 /** Pure ordered fold of accepted exercise edits over one authored week. */
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { Workout, WorkoutExercise, OverrideContext } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import type {
   CanonicalWeeklyExerciseEdit,
@@ -17,6 +17,11 @@ function safeNumber(value: unknown, fallback: number): number {
 
 function rowName(row: WorkoutExercise): string {
   return String(row.exercise?.name ?? '');
+}
+
+/** Ownership is part of an accepted edit, on live application and reconstruction. */
+export function canonicalExerciseEditOverrideContext(kind: 'swap' | 'add'): OverrideContext {
+  return { intent: 'dismissed', label: kind === 'swap' ? 'Exercise swap' : 'Exercise added' };
 }
 
 export type CanonicalExerciseEditTargetResolution =
@@ -177,9 +182,10 @@ export function compileCanonicalExerciseEditOnWorkout(
 export function compileCanonicalWeeklyExerciseEdits(args: {
   readonly workouts: readonly Workout[];
   readonly state: CanonicalWeeklyExerciseEditState;
-}): { workouts: Workout[]; materialDates: string[] } {
+}): { workouts: Workout[]; materialDates: string[]; overrideContextsByDate: Record<string, OverrideContext> } {
   const byDay = new Map(args.workouts.map((workout) => [workout.dayOfWeek, clone(workout)]));
   const materialDates = new Set<string>();
+  const overrideContextsByDate: Record<string, OverrideContext> = {};
   for (const edit of args.state.edits) {
     if (edit.kind === 'remove' || ('derivedSource' in edit && edit.derivedSource)) continue;
     const dayOfWeek = new Date(`${edit.dateISO}T12:00:00`).getDay();
@@ -189,9 +195,11 @@ export function compileCanonicalWeeklyExerciseEdits(args: {
     if (JSON.stringify(next) === JSON.stringify(current)) continue;
     byDay.set(dayOfWeek, next);
     materialDates.add(edit.dateISO);
+    overrideContextsByDate[edit.dateISO] = canonicalExerciseEditOverrideContext(edit.kind);
   }
   return {
     workouts: [...byDay.values()].sort((left, right) => left.dayOfWeek - right.dayOfWeek),
     materialDates: [...materialDates].sort(),
+    overrideContextsByDate,
   };
 }

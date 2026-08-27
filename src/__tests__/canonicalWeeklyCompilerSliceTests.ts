@@ -60,6 +60,7 @@ import {
   followTheWeek,
   recordDay,
   setJourneyClock,
+  swapOptionsFor,
 } from './support/athleteJourney';
 import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '../rules/canonicalWeeklyProgressionCompiler';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -242,14 +243,16 @@ async function main(): Promise<void> {
   ok('[MUTATION] removing the compiler scheduler call makes ownership red',
     productionCallers('scheduleWeek', { [COMPILER_PATH]: scheduleMutation }).length === 0);
 
-  const generatorSource = readFileSync(join(ROOT, 'services/api/generateProgram.ts'), 'utf8');
-  const generationStart = generatorSource.indexOf('export function generateProgramLocally(');
-  const generationEnd = generatorSource.indexOf(
+  const serviceSource = readFileSync(join(ROOT, 'services/api/generateProgram.ts'), 'utf8');
+  // The handovers moved with their executable owner, not to an exempted path.
+  const generatorSource = readFileSync(join(ROOT, 'rules/canonicalWeeklyRowCompiler.ts'), 'utf8');
+  const generationStart = serviceSource.indexOf('export function generateProgramLocally(');
+  const generationEnd = serviceSource.indexOf(
     '\nexport function buildProgramGenerationEdgePayload', generationStart,
   );
   ok('the product generation region was found before checking rival authors',
     generationStart >= 0 && generationEnd > generationStart);
-  const generationRegion = generatorSource.slice(generationStart, generationEnd);
+  const generationRegion = serviceSource.slice(generationStart, generationEnd);
   ok('product generation does not prebuild an initial rival plan',
     !generationRegion.includes('buildInitialGeneratedCoachingPlan('));
   ok('product generation declares the compiler already resolved conditioning feasibility',
@@ -2734,6 +2737,74 @@ async function main(): Promise<void> {
     selectionWeeks.every((w) => w.checks.some((c) => c.id === 'selection_history' && c.ok)));
   ok('fixture repairs preserve exact visible contents throughout the accumulated journey',
     selectionWeeks.every((w) => w.checks.some((c) => c.id === 'restart' && c.ok)));
+  ok('occupied-day game moves preserve required patterns and conditioning targets',
+    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'programming' && c.ok)),
+    JSON.stringify(selectionWeeks.flatMap((w) => w.checks.filter((c) => !c.ok))));
+  ok('the complete compiler conserves specialist rows in the accumulated journey',
+    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'compiler_boundary' && c.ok)));
+
+  console.log('\n[final-row rebuild] existing athlete edits survive a fixture regeneration');
+  const repairModule = require('../utils/fixtureMinimalReplan') as typeof import('../utils/fixtureMinimalReplan');
+  const originalRepair = repairModule.buildFixtureMinimalReplan;
+  let regeneratedWithEdit = false;
+  for (const kind of ['remove_session', 'swap_category', 'swap_exercise'] as const) {
+    await quietAsync(() => coldStartThroughOnboarding({ profile: athleteAnswers(gameProfile), installDayISO: INSTALL_DAY }));
+    const editDate = kind === 'swap_exercise' ? '2026-07-14' : '2026-07-15';
+    const edit = kind === 'swap_exercise' ? await (async () => {
+      const workout = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))
+        .find((d) => d.date === editDate)?.workout;
+      const row = workout?.exercises.find((r) => r.section18Evidence?.role === 'main_strength');
+      if (!workout || !row) return { ok: false };
+      const choice = swapOptionsFor({ dateISO: editDate, originalExercise: row.exercise.name,
+        existingExerciseNames: workout.exercises.map((r) => r.exercise.name) })[0];
+      if (!choice) return { ok: false };
+      return quietAsync(() => executeProgramControlActionDurably({
+        type: 'swap_exercise', source: { screen: 'session_detail', surface: 'compiler_witness', initiatedBy: 'tap' },
+        scope: 'today_only', payload: { date: editDate, fromExercise: row.exercise.name,
+          toExercise: { name: choice.name, sets: 3, repsMin: 6, repsMax: 8 } },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+      }, { todayISO: INSTALL_DAY }));
+    })() : quiet(() => applyPlanChange({
+        change: kind === 'remove_session'
+          ? { kind, date: editDate, scope: 'whole_day' }
+          : { kind, date: editDate, category: 'recovery' },
+        visibleWeek: quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY)),
+        todayISO: INSTALL_DAY, applyOverride: () => undefined,
+      }));
+    const beforeGame = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY));
+    const editedDay = exactWeekSignature(beforeGame.filter((d) => d.date === editDate));
+    ok(`${kind}: a real athlete edit changes the future day`, edit.ok, JSON.stringify(edit));
+    repairModule.buildFixtureMinimalReplan = (input) => {
+      const output = originalRepair(input);
+      if (output.usedFullRegeneration && (input.surfaces.userRemovalConstraints.some((c) => c.status === 'active') ||
+        Object.keys(input.surfaces.dateOverrides).length > 0)) regeneratedWithEdit = true;
+      return output;
+    };
+    try {
+      const moved = await actFixture('move', INSTALL_DAY, '2026-07-18', INSTALL_DAY);
+      ok(`${kind}: the fixture move is accepted`, moved.outcome === 'accepted', JSON.stringify(moved));
+    } catch (error) { repairModule.buildFixtureMinimalReplan = originalRepair; throw error; }
+    const afterGame = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY));
+    ok(`${kind}: the replacement base does not erase the athlete's other edit`,
+      exactWeekSignature(afterGame.filter((d) => d.date === editDate)) === editedDay);
+    const boot = await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: INSTALL_DAY }));
+    repairModule.buildFixtureMinimalReplan = originalRepair;
+    ok(`${kind}: edit plus fixture reconstructs exactly`, boot.ok &&
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === exactWeekSignature(afterGame));
+    const undo = await quietAsync(() => undoLastDecision());
+    ok(`${kind}: Undo reverses the fixture only and retains the edit`, undo.outcome === 'undone' &&
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === exactWeekSignature(beforeGame));
+  }
+  ok('the edit-preservation witness reaches the complete-regeneration fallback', regeneratedWithEdit);
+
+  const practiceJourney = await runAthlete(ARCHETYPES.find((a) => a.id === 'female-3-novice-home')!, localStorageData, 6);
+  const practiceWeek = practiceJourney.weeks[5];
+  ok('practice-match witness reaches an occupied-day match without changing season identity',
+    practiceWeek.status === 'measured' && practiceWeek.phase === 'Pre-season' &&
+    practiceJourney.actions.some((a) => a.kind === 'practice_match' && a.ok));
+  ok('practice-match final rows cover main patterns within the game-week conditioning budget',
+    practiceWeek.checks.some((c) => c.id === 'programming' && c.ok),
+    JSON.stringify(practiceWeek.checks.filter((c) => !c.ok)));
 
   console.log('\n[accumulated phase restart] 16 logged pre-season weeks into in-season without club training');
   const repeatedSprintTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'repeat_sprint');

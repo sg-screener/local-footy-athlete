@@ -1565,7 +1565,11 @@ export function buildFixtureMinimalReplan(
   // catching an exception and inventing their own answer.
   const fallbackGateway = runSection18AcceptedWeekGateway({
     contract,
-    workouts: source,
+    // Minimal preservation candidates were exhausted. Recompile from the
+    // compiler's complete target, not the same failed source split again.
+    // Accepted edits still belong to the transaction's override/constraint
+    // fold; a regenerated base is never permission to erase an edit.
+    workouts: args.targetMicrocycle.workouts,
     weekStart: args.weekStart,
     profile: args.profile,
     activeFixtureDates: args.activeFixtureDates,

@@ -338,7 +338,10 @@ console.log('\n-- End-of-block rollover state --');
 }
 
 {
-  const generationSource = readFileSync('src/services/api/generateProgram.ts', 'utf8');
+  const rowCompiler = readFileSync('src/rules/canonicalWeeklyRowCompiler.ts', 'utf8');
+  ok('block-state guard reaches the final-row compiler', rowCompiler.includes('buildBlockWeekStates({') &&
+    rowCompiler.includes('weekNumber: blockState.weekNumber'));
+  const generationSource = readFileSync('src/services/api/generateProgram.ts', 'utf8') + rowCompiler;
   ok('generation source no longer hardcodes miniCycleNumber 1',
     !/miniCycleNumber:\s*1\b/.test(generationSource));
   ok('generation source no longer hardcodes weekInBlock 1',

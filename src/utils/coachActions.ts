@@ -53,6 +53,7 @@ import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './pro
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 import {
   compileCanonicalExerciseEditOnWorkout,
+  canonicalExerciseEditOverrideContext,
   resolveCanonicalExerciseEditTarget,
 } from '../rules/canonicalWeeklyExerciseEditCompiler';
 
@@ -712,7 +713,7 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     ? null
     : blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  if (!writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' }).ok) {
+  if (!writeCoachOverride(date, canonicalWorkout, canonicalExerciseEditOverrideContext('swap')).ok) {
     return OVERRIDE_WRITE_REFUSED;
   }
   return { success: true };
@@ -777,7 +778,7 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   assertLiveWorkoutWrite(date, newWorkout);
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  if (!writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' }).ok) {
+  if (!writeCoachOverride(date, canonicalWorkout, canonicalExerciseEditOverrideContext('add')).ok) {
     return OVERRIDE_WRITE_REFUSED;
   }
   return { success: true };
