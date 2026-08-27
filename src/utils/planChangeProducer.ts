@@ -135,6 +135,8 @@ import {
   type AthleteActionTraceContext,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
+import { canonicalAcceptedSessionEditEffectFromDiff } from '../rules/canonicalWeeklySessionEditCompiler';
+import { canonicalSessionMutationIntentForPlanChange } from '../rules/canonicalWeeklySessionEditState';
 
 // ── Edit horizon ──
 // Sam 2026-07-03: athletes change this week and at most the next two —
@@ -2546,6 +2548,11 @@ function targetDate(change: PlanChange): string | undefined {
 }
 
 export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResult {
+  const stateBefore = useProgramStore.getState();
+  const constraintsBefore = [...stateBefore.userRemovalConstraints];
+  const markedDaysBefore = {
+    ...(stateBefore.acceptedMaterialContext.markedDays ?? {}),
+  };
   const source = sourceDate(args.change);
   const target = targetDate(args.change);
   const sourceWorkout = source
@@ -2597,8 +2604,22 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
       // ledger, verbatim and typed, in the same act. Refusals never reach it.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { appendDecisionEntry } = require('../store/decisionLedgerStore');
+      const intent = canonicalSessionMutationIntentForPlanChange(args.change);
+      if (!intent) {
+        throw new Error(`Accepted plan change has no canonical session intent: ${args.change.kind}`);
+      }
+      const stateAfter = useProgramStore.getState();
+      const acceptedEffect = canonicalAcceptedSessionEditEffectFromDiff({
+        beforeConstraints: constraintsBefore,
+        afterConstraints: stateAfter.userRemovalConstraints,
+        beforeMarkedDays: markedDaysBefore,
+        afterMarkedDays: stateAfter.acceptedMaterialContext.markedDays ?? {},
+        mutationIntent: intent,
+        affectedDates: result.appliedDates,
+        acceptedAt: new Date().toISOString(),
+      });
       appendDecisionEntry({
-        decision: { kind: 'plan_change', change: args.change },
+        decision: { kind: 'plan_change', change: args.change, acceptedEffect },
         provenance: 'athlete_tap',
         writer: 'program_control',
       });

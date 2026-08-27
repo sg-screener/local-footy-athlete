@@ -7,9 +7,9 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: non-exercise decision families still replay procedurally;
- * exercise exclusions remain their own persisted input; scheduled deloads,
- * later compiler families, full-year archetypes, pixels, simulator and physical
+ * NOT COVERED: fixture decisions still replay procedurally; exercise
+ * exclusions remain their own persisted input; scheduled deloads, later
+ * compiler families, full-year archetypes, pixels, simulator and physical
  * iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
@@ -61,6 +61,8 @@ import { blockSelectionHistory } from '../store/blockSelectionHistoryStore';
 import { applyPlanChange } from '../utils/planChangeProducer';
 import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { DECISION_LEDGER_PERSISTENCE_KEY } from '../store/decisionLedgerStore';
+import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 import { undoLastDecision } from '../store/undoLastDecision';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
@@ -623,7 +625,20 @@ async function main(): Promise<void> {
   const exerciseEditCompilerSource = readFileSync(
     join(ROOT, 'rules/canonicalWeeklyExerciseEditCompiler.ts'), 'utf8',
   );
+  const sessionEditStatePath = join(ROOT, 'rules/canonicalWeeklySessionEditState.ts');
+  const sessionEditCompilerPath = join(ROOT, 'rules/canonicalWeeklySessionEditCompiler.ts');
+  const sessionEditStateSource = existsSync(sessionEditStatePath)
+    ? readFileSync(sessionEditStatePath, 'utf8') : '';
+  const sessionEditCompilerSource = existsSync(sessionEditCompilerPath)
+    ? readFileSync(sessionEditCompilerPath, 'utf8') : '';
+  const decisionLedgerTypeSource = readFileSync(join(ROOT, 'types/decisionLedger.ts'), 'utf8');
   const quiescentBootSource = readFileSync(join(ROOT, 'store/quiescentBoot.ts'), 'utf8');
+  const legacySessionMigrationSource = readFileSync(
+    join(ROOT, 'store/legacyPlanChangeEffectMigration.ts'), 'utf8',
+  );
+  const ledgerReplaySource = readFileSync(
+    join(ROOT, 'rules/decisionLedgerReplay.ts'), 'utf8',
+  );
   const coachActionsSource = readFileSync(join(ROOT, 'utils/coachActions.ts'), 'utf8');
   const derivedExerciseDecisionSource = readFileSync(
     join(ROOT, 'utils/derivedExerciseDecisions.ts'), 'utf8',
@@ -742,6 +757,33 @@ async function main(): Promise<void> {
         'for (const edit of args.state.edits)',
         'for (const edit of [])',
       ).includes('for (const edit of args.state.edits)'));
+  ok('accepted session actions carry their exact semantic constraint effect',
+    decisionLedgerTypeSource.includes('acceptedEffect: CanonicalAcceptedSessionEditEffect') &&
+      sessionEditStateSource.includes('export interface CanonicalAcceptedSessionEditEffect'));
+  ok('accepted session effects translate once into ordered compiler state',
+    sessionEditStateSource.includes('export interface CanonicalWeeklySessionEditState') &&
+      sessionEditStateSource.includes('canonicalWeeklySessionEditStateFrom'));
+  ok('one pure session-edit fold owns constraint state for live actions and boot',
+    sessionEditCompilerSource.includes('export function compileCanonicalSessionConstraintEffects') &&
+      sessionEditCompilerSource.includes('for (const effect of args.effects)') &&
+      acceptedTransactionSource.includes('compileCanonicalSessionConstraintEffects({'));
+  ok('boot compiles accepted session effects instead of re-entering applyPlanChange',
+    quiescentBootSource.includes('commitCanonicalAcceptedSessionEditEffect(effect)') &&
+      quiescentBootSource.includes('Session edits never enter this interpreter') &&
+      !quiescentBootSource.includes("require('../utils/planChangeProducer')"));
+  ok('old plan-change rows have one append-only semantic upgrade boundary',
+    decisionLedgerTypeSource.includes("kind: 'legacy_plan_change_effect_upgrade'") &&
+      legacySessionMigrationSource.includes('replayLegacyPlanChangeEntryToEffect') &&
+      quiescentBootSource.includes('appendLegacyPlanChangeEffectUpgrade(upgrade)') &&
+      ledgerReplaySource.includes(
+        "entry.decision.kind !== 'legacy_plan_change_effect_upgrade'",
+      ));
+  ok('[MUTATION] removing the ordered session-effect fold is detected',
+    sessionEditCompilerSource.includes('for (const effect of args.effects)') &&
+      !sessionEditCompilerSource.replace(
+        'for (const effect of args.effects)',
+        'for (const effect of [])',
+      ).includes('for (const effect of args.effects)'));
 
   const editWorkout = (id: string, dayOfWeek: number, name: string): Workout => ({
     id, microcycleId: 'edit-week', dayOfWeek, name,
@@ -1412,6 +1454,217 @@ async function main(): Promise<void> {
     swapRestart.applied && swapRestart.changed, swapRestart.detail);
   ok('session Swap survives process death byte-for-byte',
     swapRestart.restarted && swapRestart.exact, swapRestart.detail);
+
+  console.log('\n[athlete-edit durability] accepted session Remove and Move survive restart and Undo');
+  const restartPlacementWitness = async (
+    kind: 'remove_session' | 'move_session',
+  ): Promise<{
+    applied: boolean;
+    changed: boolean;
+    restarted: boolean;
+    exact: boolean;
+    undoAvailable: boolean;
+    restored: boolean;
+    detail: string;
+  }> => {
+    localStorageData.clear();
+    const editInstall = await coldStartThroughOnboarding({
+      profile: athlete(), installDayISO: INSTALL_DAY,
+    });
+    const before = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    const source = before.find((day) => day.rows.length > 0);
+    const target = before.find((day) => day.rows.length === 0);
+    if (!source || (kind === 'move_session' && !target)) {
+      return {
+        applied: false, changed: false, restarted: false, exact: false,
+        undoAvailable: false, restored: false,
+        detail: `${kind}: no reachable source or destination`,
+      };
+    }
+    const rawWeek = quiet(() => deriveVisibleWeekLive(editInstall.blockOneStart, INSTALL_DAY));
+    const result = quiet(() => applyPlanChange({
+      change: kind === 'remove_session'
+        ? { kind, date: source.dateISO, scope: 'whole_day' }
+        : { kind, fromDate: source.dateISO, toDate: target!.dateISO },
+      visibleWeek: rawWeek,
+      todayISO: INSTALL_DAY,
+      applyOverride: () => undefined,
+    }));
+    const after = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    const beforeSignature = visibleSignature(before);
+    const afterSignature = visibleSignature(after);
+    const restart = await quietAsync(() => relaunchApp({
+      storage: localStorageData,
+      todayISO: INSTALL_DAY,
+    }));
+    const restarted = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    const activeAdjustmentCount = useProgramStore.getState()
+      .reversibleAdjustmentLedger.adjustments
+      .filter((adjustment) => adjustment.status === 'active').length;
+    const undo = await quietAsync(() => undoLastDecision());
+    const restoredDays = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    return {
+      applied: result.ok,
+      changed: afterSignature !== beforeSignature,
+      restarted: restart.ok,
+      exact: visibleSignature(restarted) === afterSignature,
+      undoAvailable: activeAdjustmentCount > 0 && undo.outcome === 'undone',
+      restored: visibleSignature(restoredDays) === beforeSignature,
+      detail: JSON.stringify({
+        kind, source: source.dateISO, target: target?.dateISO ?? null,
+        result, before, after, restarted, activeAdjustmentCount, undo, restoredDays,
+      }),
+    };
+  };
+  const removeRestart = await restartPlacementWitness('remove_session');
+  ok('session Remove reaches a non-vacuous accepted state before restart',
+    removeRestart.applied && removeRestart.changed, removeRestart.detail);
+  ok('session Remove survives process death byte-for-byte',
+    removeRestart.restarted && removeRestart.exact, removeRestart.detail);
+  ok('session Remove still has one working Undo after restart',
+    removeRestart.undoAvailable && removeRestart.restored, removeRestart.detail);
+  const moveRestart = await restartPlacementWitness('move_session');
+  ok('session Move reaches a non-vacuous accepted state before restart',
+    moveRestart.applied && moveRestart.changed, moveRestart.detail);
+  ok('session Move survives process death byte-for-byte',
+    moveRestart.restarted && moveRestart.exact, moveRestart.detail);
+  ok('session Move still has one working Undo after restart',
+    moveRestart.undoAvailable && moveRestart.restored, moveRestart.detail);
+
+  console.log('\n[athlete-edit migration] a pre-effect session decision upgrades once in place');
+  localStorageData.clear();
+  const legacyInstall = await coldStartThroughOnboarding({
+    profile: athlete(), installDayISO: INSTALL_DAY,
+  });
+  const legacyBefore = quiet(() => resolvedDays(legacyInstall.blockOneStart, INSTALL_DAY));
+  const legacyTarget = legacyBefore.find((day) => day.rows.length > 0);
+  const legacyResult = legacyTarget
+    ? quiet(() => applyPlanChange({
+        change: { kind: 'remove_session', date: legacyTarget.dateISO, scope: 'whole_day' },
+        visibleWeek: quiet(() => deriveVisibleWeekLive(
+          legacyInstall.blockOneStart, INSTALL_DAY,
+        )),
+        todayISO: INSTALL_DAY,
+        applyOverride: () => undefined,
+      }))
+    : null;
+  const legacyAfterSignature = visibleSignature(quiet(() =>
+    resolvedDays(legacyInstall.blockOneStart, INSTALL_DAY)));
+  const legacyEntry = decisionLedgerEntries().find((entry) =>
+    entry.decision.kind === 'plan_change' &&
+    entry.decision.change.kind === 'remove_session' &&
+    entry.decision.change.date === legacyTarget?.dateISO);
+  await flushPendingStorageWrites();
+  const legacyEnvelopeRaw = localStorageData.get(DECISION_LEDGER_PERSISTENCE_KEY) ?? '';
+  if (legacyEnvelopeRaw && legacyEntry) {
+    const legacyEnvelope = JSON.parse(legacyEnvelopeRaw) as {
+      state?: { entries?: Array<{ id?: string; decision?: Record<string, unknown> }> };
+    };
+    const storedLegacyEntry = legacyEnvelope.state?.entries?.find((entry) =>
+      entry.id === legacyEntry.id);
+    if (storedLegacyEntry?.decision) delete storedLegacyEntry.decision.acceptedEffect;
+    localStorageData.set(DECISION_LEDGER_PERSISTENCE_KEY, JSON.stringify(legacyEnvelope));
+  }
+  const firstLegacyRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData,
+    todayISO: INSTALL_DAY,
+  }));
+  const firstLegacyRestartSignature = visibleSignature(quiet(() =>
+    resolvedDays(legacyInstall.blockOneStart, INSTALL_DAY)));
+  const firstUpgradeCount = decisionLedgerEntries().filter((entry) =>
+    entry.decision.kind === 'legacy_plan_change_effect_upgrade' &&
+    entry.decision.sourceEntryId === legacyEntry?.id).length;
+  const secondLegacyRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData,
+    todayISO: INSTALL_DAY,
+  }));
+  const secondLegacyRestartSignature = visibleSignature(quiet(() =>
+    resolvedDays(legacyInstall.blockOneStart, INSTALL_DAY)));
+  const secondUpgradeCount = decisionLedgerEntries().filter((entry) =>
+    entry.decision.kind === 'legacy_plan_change_effect_upgrade' &&
+    entry.decision.sourceEntryId === legacyEntry?.id).length;
+  ok('a pre-effect session decision survives its one compatibility boot',
+    legacyResult?.ok === true && firstLegacyRestart.ok &&
+      firstLegacyRestartSignature === legacyAfterSignature && firstUpgradeCount === 1,
+    JSON.stringify({ legacyResult, legacyEntry, firstLegacyRestart, firstUpgradeCount }));
+  ok('the semantic upgrade preserves the decision on every later canonical boot',
+    secondLegacyRestart.ok && secondLegacyRestartSignature === legacyAfterSignature &&
+      secondUpgradeCount === 1,
+    JSON.stringify({ secondLegacyRestart, secondUpgradeCount }));
+  const undoLegacy = await quietAsync(() => undoLastDecision());
+  ok('the upgrade is metadata, so Undo still targets and restores the old athlete decision',
+    undoLegacy.outcome === 'undone' &&
+      visibleSignature(quiet(() => resolvedDays(
+        legacyInstall.blockOneStart, INSTALL_DAY,
+      ))) === visibleSignature(legacyBefore),
+    JSON.stringify({ undoLegacy, entries: decisionLedgerEntries() }));
+
+  console.log('\n[athlete-edit composition] Swap, Add, Move and Remove share one ordered fold');
+  localStorageData.clear();
+  const composedInstall = await coldStartThroughOnboarding({
+    profile: athlete(), installDayISO: INSTALL_DAY,
+  });
+  const composedBaseline = quiet(() =>
+    resolvedDays(composedInstall.blockOneStart, INSTALL_DAY));
+  const composedTraining = composedBaseline.filter((day) => day.rows.length > 0);
+  const composedEmpty = composedBaseline.filter((day) => day.rows.length === 0);
+  const applyCurrentPlanChange = (change: Parameters<typeof applyPlanChange>[0]['change']) =>
+    quiet(() => applyPlanChange({
+      change,
+      visibleWeek: quiet(() => deriveVisibleWeekLive(
+        composedInstall.blockOneStart, INSTALL_DAY,
+      )),
+      todayISO: INSTALL_DAY,
+      applyOverride: () => undefined,
+    }));
+  const composedSwap = composedTraining[0]
+    ? applyCurrentPlanChange({
+        kind: 'swap_category', date: composedTraining[0].dateISO, category: 'recovery',
+      })
+    : null;
+  const composedAdd = composedEmpty[0]
+    ? applyCurrentPlanChange({
+        kind: 'add_category', date: composedEmpty[0].dateISO, category: 'primer',
+      })
+    : null;
+  const composedMove = composedTraining[2] && composedEmpty[1]
+    ? applyCurrentPlanChange({
+        kind: 'move_session',
+        fromDate: composedTraining[2].dateISO,
+        toDate: composedEmpty[1].dateISO,
+      })
+    : null;
+  const beforeComposedRemove = quiet(() =>
+    resolvedDays(composedInstall.blockOneStart, INSTALL_DAY));
+  const composedRemove = composedTraining[1]
+    ? applyCurrentPlanChange({
+        kind: 'remove_session', date: composedTraining[1].dateISO, scope: 'whole_day',
+      })
+    : null;
+  const composedAfter = quiet(() =>
+    resolvedDays(composedInstall.blockOneStart, INSTALL_DAY));
+  const composedAfterSignature = visibleSignature(composedAfter);
+  const composedRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData,
+    todayISO: INSTALL_DAY,
+  }));
+  const composedRestarted = quiet(() =>
+    resolvedDays(composedInstall.blockOneStart, INSTALL_DAY));
+  ok('all four whole-session actions land in one accumulated athlete world',
+    composedSwap?.ok === true && composedAdd?.ok === true &&
+      composedMove?.ok === true && composedRemove?.ok === true &&
+      composedAfterSignature !== visibleSignature(composedBaseline),
+    JSON.stringify({ composedSwap, composedAdd, composedMove, composedRemove }));
+  ok('the accumulated Swap, Add, Move and Remove world survives process death exactly',
+    composedRestart.ok && visibleSignature(composedRestarted) === composedAfterSignature,
+    JSON.stringify({ composedAfter, composedRestarted }));
+  const composedUndo = await quietAsync(() => undoLastDecision());
+  ok('one Undo after restart removes only the last action from the accumulated fold',
+    composedUndo.outcome === 'undone' &&
+      visibleSignature(quiet(() => resolvedDays(
+        composedInstall.blockOneStart, INSTALL_DAY,
+      ))) === visibleSignature(beforeComposedRemove),
+    JSON.stringify({ composedUndo, beforeComposedRemove }));
 
   console.log('\n[exercise-edit durability] Remove, Swap and Add compose across restart');
   localStorageData.clear();

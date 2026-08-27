@@ -95,6 +95,13 @@ import {
 import { compileCanonicalFixtureMutationWeek } from '../rules/canonicalWeeklyCompiler';
 import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
+  canonicalAcceptedSessionEditEffectForConstraint,
+  compileCanonicalSessionConstraintEffects,
+} from '../rules/canonicalWeeklySessionEditCompiler';
+import type {
+  CanonicalAcceptedSessionEditEffect,
+} from '../rules/canonicalWeeklySessionEditState';
+import {
   effectiveFixtureDatesForWeeks,
   rollingHorizonDependencyClosure,
   rollingHorizonWeekStartsForMutation,
@@ -3116,6 +3123,14 @@ function stageAthleteMutationConstraint(args: {
    * (`applyProgramOverrideWrite`), now staged in the same typed proposal.
    */
   restoreConstraintIds?: readonly string[];
+  /** Boot supplies the already-accepted semantic delta. Live doors derive it
+   * once here, then record that exact value on the decision ledger. */
+  acceptedEffect?: CanonicalAcceptedSessionEditEffect;
+  /** Stable identity for a record reconstructed from an accepted effect. */
+  adjustmentIdentity?: {
+    sourceActionOrIntentId: string;
+    createdAt: string;
+  };
 }): AthleteMutationTransactionStage {
   const state = useProgramStore.getState();
   const profile = useProfileStore.getState().onboardingData;
@@ -3123,28 +3138,20 @@ function stageAthleteMutationConstraint(args: {
     throw new Error('Athlete mutation requires an accepted program and profile');
   }
   const prior = materialContext(state);
-  const restoreIds = new Set(args.restoreConstraintIds ?? []);
-  const restoredAt = new Date().toISOString();
-  const priorConstraints = restoreIds.size === 0
-    ? state.userRemovalConstraints
-    : state.userRemovalConstraints.map((candidate) =>
-        restoreIds.has(candidate.id) && candidate.status === 'active'
-          ? {
-              ...candidate,
-              status: 'restored' as const,
-              restoredAt,
-              restorationReason: 'explicit_re_add' as const,
-            }
-          : candidate);
-  const userRemovalConstraints = [
-    ...priorConstraints.filter((candidate) =>
-      candidate.id !== args.constraint.id && !(
-        candidate.status === 'active' &&
-        candidate.targetDate === args.constraint.targetDate &&
-        (args.constraint.scope === 'whole_session' || candidate.scope === args.constraint.scope)
-      )),
-    args.constraint,
-  ];
+  const acceptedEffect = args.acceptedEffect ??
+    canonicalAcceptedSessionEditEffectForConstraint({
+      constraints: state.userRemovalConstraints,
+      constraint: args.constraint,
+      restoreConstraintIds: args.restoreConstraintIds,
+      mutationIntent: args.mutationIntent,
+      affectedDates: args.affectedDates,
+      beforeMarkedDays: prior.markedDays,
+      afterMarkedDays: args.markedDays,
+    });
+  const userRemovalConstraints = compileCanonicalSessionConstraintEffects({
+    constraints: state.userRemovalConstraints,
+    effects: [acceptedEffect],
+  });
   const dateOverrides = { ...state.dateOverrides };
   const overrideContexts = { ...state.overrideContexts };
   for (const date of args.affectedDates) {
@@ -3236,7 +3243,8 @@ function stageAthleteMutationConstraint(args: {
         : 'session_component_delete'),
     sourceActor: 'athlete',
     sourceSurface: args.source === 'coach' ? 'coach_chat' : 'program_tab',
-    sourceActionOrIntentId: `${args.reason}:${args.constraint.id}`,
+    sourceActionOrIntentId: args.adjustmentIdentity?.sourceActionOrIntentId ??
+      `${args.reason}:${args.constraint.id}`,
     proposal,
     affectedDates: args.affectedDates,
     restorationTarget: {
@@ -3249,6 +3257,9 @@ function stageAthleteMutationConstraint(args: {
     },
     linkedUserRemovalConstraintIds: [args.constraint.id],
     userRemovalConstraint: args.constraint,
+    ...(args.adjustmentIdentity?.createdAt
+      ? { createdAt: args.adjustmentIdentity.createdAt }
+      : {}),
   });
   const result = creation.result;
   assertAcceptedVisibleLedgerEquivalence({
@@ -3282,6 +3293,58 @@ function stageAthleteMutationConstraint(args: {
     affectedWeekStarts,
     outcome: repair.outcome,
     alreadyApplied: false,
+  };
+}
+
+/**
+ * Compile one exact accepted whole-session effect through the same semantic
+ * staging body as the live door. This is replay, not a fresh request: no
+ * template choice, warning, placement search or ledger append occurs here.
+ * Repair overlays and reversible ownership are derived from the accepted
+ * constraint against the newly generated base world.
+ */
+export function commitCanonicalAcceptedSessionEditEffect(
+  effect: CanonicalAcceptedSessionEditEffect,
+): AthleteMutationTransactionStage {
+  if (effect.upsertedConstraints.length !== 1) {
+    throw new Error(
+      `Accepted session effect must carry one constraint; received ${effect.upsertedConstraints.length}`,
+    );
+  }
+  const constraint = effect.upsertedConstraints[0]!;
+  const state = useProgramStore.getState();
+  const markedDays = { ...materialContext(state).markedDays };
+  for (const change of effect.markedDayChanges) {
+    if (change.value === null) delete markedDays[change.dateISO];
+    else markedDays[change.dateISO] = change.value;
+  }
+  const adjustmentKind: ReversibleAdjustmentKind = effect.mutationIntent === 'athlete_move'
+    ? 'session_move'
+    : effect.mutationIntent === 'athlete_addition'
+      ? 'session_add'
+      : constraint.scope === 'whole_session'
+        ? 'session_delete'
+        : 'session_component_delete';
+  const staged = stageAthleteMutationConstraint({
+    reason: `canonical_session_edit:${constraint.id}`,
+    source: constraint.source,
+    mutationIntent: effect.mutationIntent,
+    constraint,
+    affectedDates: effect.affectedDates,
+    markedDays,
+    stagePurpose: 'commit',
+    adjustmentKind,
+    restoreConstraintIds: effect.restoredConstraints.map((entry) => entry.id),
+    acceptedEffect: effect,
+    adjustmentIdentity: {
+      sourceActionOrIntentId: `canonical_session_edit:${constraint.id}`,
+      createdAt: effect.acceptedAt,
+    },
+  });
+  if (!staged.proposal) return staged;
+  return {
+    ...staged,
+    result: commitAcceptedStateTransaction(staged.proposal),
   };
 }
 

@@ -945,3 +945,82 @@ contract acceptance journey above is the authority.
 - Scheduled-deload remains outside the compiler.
 - Global rival-author zero and full-year archetype acceptance are not claimed.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 13: whole-session edits compile from accepted effects
+
+### Two options weighed
+
+1. Keep boot re-entering `applyPlanChange` for every accepted Add, Swap, Move
+   and Remove, asking warnings, placement and template selection to reach the
+   same answer again.
+2. Record the exact accepted semantic constraint delta with the decision, fold
+   that typed delta through one pure constraint compiler, and use the same
+   semantic staging body live and at boot to derive repair overlays and active
+   restoration ownership.
+
+Option 2 landed. Current-format boot has zero calls into the live plan-change
+producer. It compiles the accepted effect, rather than pretending the athlete
+tapped the action again.
+
+### Exact ownership result
+
+Instrument unit: distinct current-format production paths authoring the
+accepted constraint state for a whole-session edit.
+
+- Current-format boot calls into `applyPlanChange`: **0**.
+- Constraint-list folds outside
+  `compileCanonicalSessionConstraintEffects`: **0** in the live/boot session
+  transaction boundary.
+- New plan-change rows without an exact accepted effect: **0** by type and the
+  only production writer.
+- The accepted effect contains typed constraints, affected dates, restoration
+  flips and calendar-mark deltas. It contains no guessed session label or
+  exercise name.
+- Repair overlays and reversible-adjustment records remain derived outputs;
+  boot reconstructs them through the same semantic staging body rather than
+  persisting a second snapshot.
+
+Pre-effect ledger rows are real existing input and cannot honestly be decoded
+from bytes that were never stored. They cross one named compatibility ingress:
+the old request executes once, then an append-only
+`legacy_plan_change_effect_upgrade` attaches its accepted semantic effect to
+the original entry id. The original decision keeps its ledger position, the
+metadata is never replayable or undoable, and subsequent boots are canonical.
+
+### Acceptance and liveness
+
+- Tests-first run: **166/171**, with all five new ownership cells red.
+- The first restart expansion exposed the missing active adjustment record:
+  visible Remove and Move were exact after restart, but the restoration surface
+  had zero active records. The compiler now rebuilds that derived ownership.
+- `npm run test:canonical-weekly-compiler`: **184/184**.
+- The current-contract journey proves Add and Swap individually, Remove and
+  Move with active restoration plus Undo, then composes Swap → Add → Move →
+  Remove in one accumulated world, kills the process, restores it byte-exact,
+  and undoes only the last action.
+- A real old-format Remove row upgrades exactly once, survives a second
+  canonical boot, and Undo still targets the athlete decision.
+- Liveness mutation: making the upgrade metadata replayable/undoable made the
+  suite red **179/181** on both the source ownership cell and the real Undo
+  journey; restoring the exclusion returned **184/184**.
+- `npm run test:release`: **4/4 units green**.
+- `npm run test:undo-reversal`: **25/25**.
+- `npm run test:deletion-calendar-ownership`: **4/4**.
+- Repository typecheck is green for every file in this slice; its remaining
+  errors are in concurrent temporary-fact/profile work.
+
+The diagnostic fleet was observed, not used as a product to-do list:
+`test:athlete-session-deletion`, `test:athlete-session-move`,
+`test:plan-change-producer`, `test:quiescent-boot` and
+`test:decision-ledger-ownership` remain red in their previously classified
+historical/fixture or concurrent shared-work areas. The current release gate
+and the production cold-start acceptance journey above are green.
+
+### NOT COVERED
+
+- Fixture decision replay is still procedural and is the next compiler family.
+- Exercise exclusions remain a separate persisted input beside their decision
+  ledger entry; this slice preserves that ruled owner.
+- Scheduled deload remains outside the compiler.
+- Full-year archetype acceptance has not yet been promoted into this gate.
+- Pixels, simulator and physical iPhone are not covered.

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AthleteDecision, DecisionLedgerEntry, DecisionProvenance } from '../types/decisionLedger';
+import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   guardedDurableWrite,
@@ -301,6 +302,45 @@ export function appendDecisionEntry(args: {
   const outcome = applyDecisionLedgerWrite({
     next: [...useDecisionLedgerStore.getState().entries, entry],
     writer: args.writer,
+  });
+  return outcome.ok ? { ...outcome, entry } : outcome;
+}
+
+/**
+ * Attach an exact semantic effect to one old plan-change row without moving or
+ * rewriting that decision. Replay reads this metadata at the source row's
+ * original position; the upgrade is not itself an action or an Undo target.
+ */
+export function appendLegacyPlanChangeEffectUpgrade(args: {
+  sourceEntryId: string;
+  acceptedEffect: CanonicalAcceptedSessionEditEffect;
+}): AppendDecisionOutcome {
+  if (ledgerReplayActive()) return { ok: false, reason: 'ledger_rewrite_without_reset' };
+  const existing = useDecisionLedgerStore.getState().entries;
+  const alreadyUpgraded = existing.find((entry) =>
+    entry.decision.kind === 'legacy_plan_change_effect_upgrade' &&
+    entry.decision.sourceEntryId === args.sourceEntryId);
+  if (alreadyUpgraded) return { ok: true, entry: alreadyUpgraded };
+  let maxStoredSequence = 0;
+  for (const stored of existing) {
+    const match = /^dl-(\d+)$/.exec(stored.id);
+    if (match) maxStoredSequence = Math.max(maxStoredSequence, Number(match[1]));
+  }
+  const sequence = Math.max(nextEntrySequence, maxStoredSequence + 1);
+  nextEntrySequence = sequence + 1;
+  const entry: DecisionLedgerEntry = {
+    id: `dl-${sequence}`,
+    occurredAt: new Date().toISOString(),
+    provenance: 'migration',
+    decision: {
+      kind: 'legacy_plan_change_effect_upgrade',
+      sourceEntryId: args.sourceEntryId,
+      acceptedEffect: args.acceptedEffect,
+    },
+  };
+  const outcome = applyDecisionLedgerWrite({
+    next: [...existing, entry],
+    writer: 'migration',
   });
   return outcome.ok ? { ...outcome, entry } : outcome;
 }

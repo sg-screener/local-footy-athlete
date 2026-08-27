@@ -114,7 +114,9 @@ export function replayableEntries(
 ): DecisionLedgerEntry[] {
   const annulled = annulledEntryIds(entries);
   return readable(entries).filter((entry) =>
-    entry.decision.kind !== 'reversal' && !annulled.has(entry.id));
+    entry.decision.kind !== 'reversal' &&
+    entry.decision.kind !== 'legacy_plan_change_effect_upgrade' &&
+    !annulled.has(entry.id));
 }
 
 /**

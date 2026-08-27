@@ -18,6 +18,7 @@
 import type { PlanChange } from '../utils/planChangeTypes';
 import type { ProgramControlAction } from './programControlAction';
 import type { DayOfWeek, Workout } from './domain';
+import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 
 /** Who put this decision on the ledger. */
 export type DecisionProvenance =
@@ -31,7 +32,18 @@ export type DecisionProvenance =
  * never paraphrases the decision it records.
  */
 export type AthleteDecision =
-  | { kind: 'plan_change'; change: PlanChange }
+  | {
+      kind: 'plan_change';
+      change: PlanChange;
+      /** The exact accepted constraint delta; boot compiles it without acting again. */
+      acceptedEffect: CanonicalAcceptedSessionEditEffect;
+    }
+  /** Append-only read-ingress metadata for a pre-effect plan-change row. */
+  | {
+      kind: 'legacy_plan_change_effect_upgrade';
+      sourceEntryId: string;
+      acceptedEffect: CanonicalAcceptedSessionEditEffect;
+    }
   | { kind: 'fixture_add'; date: string; fixtureKind: string }
   | { kind: 'fixture_remove'; date: string; fixtureKind: string }
   | { kind: 'fixture_move'; fromDate: string; toDate: string; fixtureKind: string }

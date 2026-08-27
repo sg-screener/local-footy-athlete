@@ -47,6 +47,7 @@ import {
 } from './decisionLedgerStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
 import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
 import { storedGameAnchor } from '../rules/gameAnchor';
@@ -124,6 +125,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
         .filter((value): value is string => typeof value === 'string');
     }
     case 'reversal':
+    case 'legacy_plan_change_effect_upgrade':
       return [];
     case 'block_boundary_notice_acknowledged':
     case 'weekly_commitment_answer':
@@ -179,35 +181,9 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     });
     return;
   }
-  // Lazy requires: the interpreters live in utils and import stores — the
-  // same circular-import dodge the adapters use, with one home here.
-  if (decision.kind === 'plan_change') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { applyPlanChange } = require('../utils/planChangeProducer');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { applyProgramOverrideWrite } = require('./programStore');
-    const weeks = [...new Set(replayDates(entry).map(mondayOf))];
-    // R-229 S4: same one door as above (and the same deliberate no-arg).
-    const visibleWeek = weeks.flatMap((week: string) => deriveVisibleWeekLive(week));
-    const result = applyPlanChange({
-      change: decision.change,
-      visibleWeek,
-      todayISO: occurredOn,
-      route: 'quiescent_boot_replay',
-      applyOverride: (date: string, workout: unknown, context: unknown) => {
-        if (!workout) return;
-        applyProgramOverrideWrite({ date, workout, context, writer: 'program_control' });
-      },
-    });
-    if (!result.ok) {
-      logger.warn('[quiescentBoot] a ledger decision no longer applies on replay', {
-        entryId: entry.id, kind: decision.change.kind, outcome: result.outcome,
-      });
-    }
-    return;
-  }
+  // Session edits never enter this interpreter. Their exact accepted effects
+  // are folded by `compileSessionDecisionGroup` below.
+  if (decision.kind === 'plan_change') return;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   if (decision.kind !== 'fixture_add' && decision.kind !== 'fixture_remove' &&
     decision.kind !== 'fixture_move') return;
@@ -285,6 +261,47 @@ function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): 
       });
     }
   }
+}
+
+/** Fold accepted whole-session edit effects without asking the live door again. */
+function compileSessionDecisionGroup(
+  entries: readonly DecisionLedgerEntry[],
+  completeLedger: readonly DecisionLedgerEntry[],
+): Array<{ sourceEntryId: string; acceptedEffect: CanonicalAcceptedSessionEditEffect }> {
+  if (entries.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalWeeklySessionEditStateFrom } =
+    require('../rules/canonicalWeeklySessionEditState');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { commitCanonicalAcceptedSessionEditEffect } =
+    require('./acceptedStateTransaction');
+  const upgradeRows = completeLedger.filter((entry) =>
+    entry.decision.kind === 'legacy_plan_change_effect_upgrade');
+  const upgrades: Array<{
+    sourceEntryId: string;
+    acceptedEffect: CanonicalAcceptedSessionEditEffect;
+  }> = [];
+  for (const entry of entries) {
+    const state = canonicalWeeklySessionEditStateFrom({
+      entries: [entry, ...upgradeRows],
+      weekStartISO: null,
+    });
+    const effect = state.effects[0];
+    if (effect) {
+      commitCanonicalAcceptedSessionEditEffect(effect);
+      continue;
+    }
+    // One compatibility boundary for a row written before accepted effects
+    // existed. It runs once; the appended upgrade makes later boots canonical.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { replayLegacyPlanChangeEntryToEffect } =
+      require('./legacyPlanChangeEffectMigration');
+    upgrades.push({
+      sourceEntryId: entry.id,
+      acceptedEffect: replayLegacyPlanChangeEntryToEffect(entry),
+    });
+  }
+  return upgrades;
 }
 
 /**
@@ -582,6 +599,10 @@ function rebuildDerivedWorldNow(): void {
     };
   })();
 
+  const legacySessionEffectUpgrades: Array<{
+    sourceEntryId: string;
+    acceptedEffect: CanonicalAcceptedSessionEditEffect;
+  }> = [];
   beginLedgerReplay();
   try {
     // A CLEAN SLATE first: after a real process death the derived surfaces
@@ -680,6 +701,7 @@ function rebuildDerivedWorldNow(): void {
         });
       }
       let exerciseGroup: DecisionLedgerEntry[] = [];
+      let sessionGroup: DecisionLedgerEntry[] = [];
       const flushExerciseGroup = () => {
         if (exerciseGroup.length === 0) return;
         const group = exerciseGroup;
@@ -692,12 +714,31 @@ function rebuildDerivedWorldNow(): void {
           });
         }
       };
+      const flushSessionGroup = () => {
+        if (sessionGroup.length === 0) return;
+        const group = sessionGroup;
+        sessionGroup = [];
+        try {
+          legacySessionEffectUpgrades.push(...compileSessionDecisionGroup(group, entries));
+        } catch (error) {
+          logger.warn('[quiescentBoot] session-edit compiler fold failed', {
+            entryIds: group.map((candidate) => candidate.id), error,
+          });
+        }
+      };
       for (const entry of replayableEntries(entries)) {
         if (entry.decision.kind === 'program_control') {
+          flushSessionGroup();
           exerciseGroup.push(entry);
           continue;
         }
+        if (entry.decision.kind === 'plan_change') {
+          flushExerciseGroup();
+          sessionGroup.push(entry);
+          continue;
+        }
         flushExerciseGroup();
+        flushSessionGroup();
         try {
           replayEntry(entry);
         } catch (error) {
@@ -707,6 +748,7 @@ function rebuildDerivedWorldNow(): void {
         }
       }
       flushExerciseGroup();
+      flushSessionGroup();
       // ── AND THEN THE FACTS, IN THE ORDER THE ATHLETE LIVED THEM ───────────
       //
       // Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,
@@ -741,5 +783,12 @@ function rebuildDerivedWorldNow(): void {
     }
   } finally {
     endLedgerReplay();
+    if (legacySessionEffectUpgrades.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { appendLegacyPlanChangeEffectUpgrade } = require('./decisionLedgerStore');
+      for (const upgrade of legacySessionEffectUpgrades) {
+        appendLegacyPlanChangeEffectUpgrade(upgrade);
+      }
+    }
   }
 }
