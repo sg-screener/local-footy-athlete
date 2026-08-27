@@ -1,11 +1,9 @@
 import type { DayOfWeek } from '../types/domain';
-import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import {
   canonicalFixtureKindForResolvedPhase,
   type FixtureAvailabilityKind,
   type FixtureConditionedAvailability,
 } from './fixtureConditionedAvailability';
-import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
 import { isoDateForWeekday } from '../utils/appDate';
 import type { WeeklySchedulerInputs } from './weeklyScheduler';
 
@@ -47,13 +45,11 @@ export function canonicalFixtureStateFrom(args: {
   readonly availability?: FixtureConditionedAvailability;
   readonly targetFixtureDay?: DayOfWeek | null;
   readonly seasonPhase: string;
-  readonly activeConstraints?: readonly ActiveConstraint[];
 }): CanonicalWeeklyFixtureState | null {
   if (!args.availability && args.targetFixtureDay === undefined) return null;
 
   const weekStartISO = args.weekStartISO.slice(0, 10);
   const offSeason = args.seasonPhase === 'Off-season';
-  const spans = awaySpansFromConstraints(args.activeConstraints);
   const fixtureKind = canonicalFixtureKindForResolvedPhase(args.seasonPhase);
   const proposed = offSeason
     ? []
@@ -66,11 +62,9 @@ export function canonicalFixtureStateFrom(args: {
           isoDateForWeekday(weekStartISO, dayNumber(args.targetFixtureDay!)),
           fixtureKind,
         )];
-  const fixtures = proposed.filter((fixture) =>
-    !dateIsInsideAwaySpan(fixture.dateISO, spans));
+  const fixtures = proposed;
   const adjacentFixtureDates = (offSeason ? [] : args.availability?.adjacentFixtureDates ?? [])
-    .map((date) => date.slice(0, 10))
-    .filter((date) => !dateIsInsideAwaySpan(date, spans));
+    .map((date) => date.slice(0, 10));
   const releasedFixtureDayNumbers = (offSeason ? [] : args.availability?.releasedFixtures ?? [])
     .map((fixture) => new Date(`${fixture.date.slice(0, 10)}T12:00:00`).getDay());
   const effectiveAvailableDayNumbers = args.availability

@@ -30,6 +30,7 @@ import {
   type ConnectorInput,
 } from './scheduleToCoachingPlan';
 import {
+  resolveConditioningSubstitutionPolicy,
   resolveWeeklyConditioningFeasibility,
   type ConditioningFeasibilityContext,
 } from './conditioningFeasibility';
@@ -47,6 +48,12 @@ import {
   type CanonicalWeeklyFixtureState,
 } from './canonicalWeeklyFixtureState';
 import type { CanonicalWeeklyInjuryState } from './canonicalWeeklyInjuryState';
+import {
+  coachingInputsWithAvailabilityState,
+  schedulerInputsWithAvailabilityState,
+  type CanonicalWeeklyAvailabilityState,
+  type CanonicalWeeklyCompositionAvailability,
+} from './canonicalWeeklyAvailabilityState';
 import {
   scheduleRefused,
   scheduleWeek,
@@ -80,7 +87,8 @@ type DerivedConnectorInput = Omit<
   readonly v1Input: Omit<ConnectorInput['v1Input'],
     'capacity' | 'readinessDeloaded' | 'weekModeOverride'
     | 'selectedDayNumbers' | 'teamTrainingDayNumbers' | 'hasGame' | 'gameDay'
-    | 'injuryPolicy'>;
+    | 'injuryPolicy' | 'appConditioningFeasible'
+    | 'attemptedConditioningSubstitutions'>;
 };
 
 /**
@@ -119,6 +127,7 @@ export interface CanonicalWeeklyCompilerInput {
   readonly illness?: CanonicalWeeklyIllnessFact | null;
   readonly fixture?: CanonicalWeeklyFixtureState | null;
   readonly injury?: CanonicalWeeklyInjuryState | null;
+  readonly availability?: CanonicalWeeklyAvailabilityState | null;
   /** Optional specialist projection, still executed inside the compiler. */
   readonly conditioningFeasibility?: ConditioningFeasibilityContext;
 }
@@ -137,6 +146,8 @@ export type CanonicalWeeklyCompilerResult =
       readonly doseDoor: 'readiness' | 'illness' | null;
       /** Compiler-authored semantic keys consumed by exercise selection. */
       readonly activeInjuryKeys: readonly InjuryKey[];
+      /** Compiler-authored kit projection consumed by row composition. */
+      readonly compositionAvailability: CanonicalWeeklyCompositionAvailability | null;
     }
   | {
       readonly ok: false;
@@ -146,7 +157,18 @@ export type CanonicalWeeklyCompilerResult =
 export function compileCanonicalWeek(
   input: CanonicalWeeklyCompilerInput,
 ): CanonicalWeeklyCompilerResult {
-  const scheduler = schedulerInputsWithFixtureState(input.scheduler, input.fixture);
+  const fixtureScheduler = schedulerInputsWithFixtureState(input.scheduler, input.fixture);
+  const availabilityScheduler = schedulerInputsWithAvailabilityState(
+    fixtureScheduler,
+    input.availability,
+  );
+  const gameDays = availabilityScheduler.gameDays ??
+    (availabilityScheduler.gameDay === null ? [] : [availabilityScheduler.gameDay]);
+  const scheduler = {
+    ...availabilityScheduler,
+    gameDays,
+    gameDay: gameDays[0] ?? null,
+  };
   const schedule = scheduleWeek({
     ...scheduler,
     readiness: {
@@ -156,9 +178,9 @@ export function compileCanonicalWeek(
   });
   if (scheduleRefused(schedule)) return { ok: false, refusal: schedule };
 
-  const { level: capacity, factors: capacityFactors } =
-    calculateCapacity(input.coaching);
-  const agePolicy = resolveTrainingAgePolicy(input.coaching.experienceLevel);
+  const coaching = coachingInputsWithAvailabilityState(input.coaching, scheduler);
+  const { level: capacity, factors: capacityFactors } = calculateCapacity(coaching);
+  const agePolicy = resolveTrainingAgePolicy(coaching.experienceLevel);
   const materialisedBase = materialiseAuthoredSessions({
     schedule,
     facts: {
@@ -184,6 +206,15 @@ export function compileCanonicalWeek(
       ? { ...session, optional: true }
       : session;
   });
+  const conditioningPolicy = input.availability
+    ? resolveConditioningSubstitutionPolicy({
+        phase: coaching.seasonPhase,
+        equipment: input.availability.reachableEquipmentAcrossWeek,
+        injury: input.injury ?? undefined,
+        readinessDeloaded:
+          input.readiness?.deloaded === true || input.illness?.deloaded === true,
+      })
+    : null;
 
   const connected = scheduleToCoachingPlan({
     ...input.connector,
@@ -203,10 +234,13 @@ export function compileCanonicalWeek(
           ? 'optional_week'
           : undefined,
       injuryPolicy: input.injury ?? undefined,
+      appConditioningFeasible: conditioningPolicy?.appConditioningFeasible ?? undefined,
+      attemptedConditioningSubstitutions:
+        conditioningPolicy?.consideredSubstitutions ?? [],
     },
     schedule,
     materialised,
-    coachingInputs: input.coaching,
+    coachingInputs: coaching,
     capacity,
     capacityFactors,
   });
@@ -222,13 +256,13 @@ export function compileCanonicalWeek(
   const readinessPolicy = input.readiness?.deloaded
     ? resolveDoorDeloadPolicy({
         door: 'readiness',
-        seasonPhase: input.coaching.seasonPhase,
+        seasonPhase: coaching.seasonPhase,
       })
     : null;
   const illnessPolicy = input.illness?.deloaded
     ? resolveDoorDeloadPolicy({
         door: 'illness',
-        seasonPhase: input.coaching.seasonPhase,
+        seasonPhase: coaching.seasonPhase,
       })
     : null;
   // The wider open illness horizon outranks readiness's narrower rolling window.
@@ -237,7 +271,7 @@ export function compileCanonicalWeek(
   // remain with the retained adapter until that family moves with its own
   // acceptance witness. We resolve only enough to make the handover honest.
   const legacyScheduledPolicy = !factPolicy
-    ? resolveDeloadWeekPolicy(input.coaching.seasonPhase, scheduler.weekKind)
+    ? resolveDeloadWeekPolicy(coaching.seasonPhase, scheduler.weekKind)
     : null;
   const dosePolicyByDay: Partial<Record<number, DeloadWeekPolicy>> = {};
   if (factPolicy) {
@@ -278,6 +312,9 @@ export function compileCanonicalWeek(
             injury: input.injury ?? undefined,
             readinessDeloaded:
               input.readiness?.deloaded === true || input.illness?.deloaded === true,
+            ...(input.availability
+              ? { equipmentByDayOfWeek: input.availability.equipmentByDayOfWeek }
+              : {}),
           },
         ),
       }
@@ -294,6 +331,7 @@ export function compileCanonicalWeek(
       ? factPolicy.door
       : null,
     activeInjuryKeys: input.injury?.activeInjuryKeys ?? [],
+    compositionAvailability: input.availability?.composition ?? null,
   };
 }
 

@@ -658,3 +658,80 @@ handoff; each kills its named cell.
   families are not zero and are not claimed zero.
 - The full-year archetype compiler acceptance gate has not been built.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 9: availability is the fifth complete compiler family
+
+### Two options weighed
+
+1. Keep travel, club closure, explicit unavailability and dated-equipment
+   interpretation split across the scheduler translator, fixture translator,
+   profile translator and generator.
+2. Translate accepted availability facts once into a semantic weekly state,
+   then let the compiler project that state into scheduling, coaching,
+   conditioning and composition.
+
+Option 2 landed. One `CanonicalWeeklyAvailabilityState` now answers what the
+athlete can attend and what equipment they can reach for each date in the week.
+
+### Ownership result
+
+Instrument unit: distinct production sites that independently interpret a
+weekly travel, club-closure, explicit-unavailability or dated-equipment fact.
+
+- Rival weekly-availability authors in the guarded generation path: **0**.
+- Scheduler, materialiser and connector remain **1 distinct production caller
+  each**, the canonical compiler.
+- The scheduler translator no longer reads active constraints.
+- The fixture translator no longer removes away fixtures itself.
+- The profile translator no longer removes club or game days from travel spans.
+- Generation no longer owns a second dated-equipment window or club-closure
+  span translator.
+
+This is an availability-family result. Global rival-author zero is not claimed
+while athlete-edit and scheduled-deload families remain outside the compiler.
+
+### Tests-first and the real action journey
+
+The ownership block first printed ten red cells before the semantic state and
+handoffs existed. The first journey instrumentation also exposed a temporal
+dead-zone error in the test itself; that was corrected before reading product
+behaviour. The final witness prints **125/125 green**.
+
+The witness cold-starts a real in-season athlete, commits a Wednesday-to-Sunday
+trip through the production schedule door, and observes club and game anchors
+removed only inside that span while the athlete's own work remains. It then
+commits reduced equipment for the same dates through the production equipment
+door. Days before the fact remain exact, governed output changes, and real
+training remains available. Resolving both exact source facts and settling the
+derived world restores the complete visible week byte-for-byte.
+
+Separate semantic cells prove the important non-equivalence: a club shutdown
+removes team nights but preserves a game the athlete entered, while an explicit
+unavailable date blocks only its own weekday. Mutations remove the generator
+handoff and bypass the compiler projection; each kills its named cell.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **125/125**.
+- Scheduler group: scheduler **102/102**, generated fixture **11/11**, travel
+  zero-equipment **10/10**, Off-season continuity **9/9**, spare-day options
+  **20/20**.
+- `npm run test:dated-equipment-fact`: **3/3**.
+- `npm run test:generated-week`: **36/36**.
+- `npm run test:release`: **4/4 units green**, `RELEASE_GATE_EXIT=0`.
+- Raw typecheck output reports no error in any product file changed by this
+  slice. The repository-wide typecheck remains red from shared/inherited files.
+- The old away, Christmas-break, equipment-scope and conditioning-equipment
+  diagnostics are classified `rewrite_test` in the test-truth census. Their old
+  harness or contract failures did not direct product changes.
+- The law registry remains independently red: **21 of 198 laws** are still
+  unguarded, one unrelated guard names a missing script, and one chain rule has
+  no registry row. This slice did not hide or expand that debt.
+
+### NOT COVERED
+
+- Athlete-edit and scheduled-deload families have not moved.
+- Global rival-author and derived-output-writer counts are not zero and are not
+  claimed zero.
+- The full-year archetype compiler acceptance gate has not been built.
+- Pixels, simulator and physical iPhone are not covered.

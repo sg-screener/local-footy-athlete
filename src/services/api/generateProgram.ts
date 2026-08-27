@@ -60,6 +60,7 @@ import {
   type GenerationConstraintContext,
 } from '../../utils/generationConstraints';
 import { canonicalWeeklyInjuryStateFrom } from '../../rules/canonicalWeeklyInjuryState';
+import { canonicalWeeklyAvailabilityStateFrom } from '../../rules/canonicalWeeklyAvailabilityState';
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
 import type { ReadinessSignal } from '../../utils/readiness';
 import type { EquipmentTag } from '../../data/exercisePools';
@@ -67,13 +68,11 @@ import { logger } from '../../utils/logger';
 import {
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
-  resolveEffectiveEquipmentWindow,
   type ResolvedEquipmentCapabilities,
 } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import type { StrengthIntent } from '../../rules/strengthPatternContributions';
 import {
-  resolveConditioningSubstitutionPolicy,
   resolveWeeklyConditioningFeasibility,
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
@@ -110,7 +109,6 @@ import {
 } from '../../rules/validateGeneratedWeek';
 import { materialiseComposedWeek } from '../../rules/materialiseComposedWeek';
 import { assembleAuthoredWeek } from '../../rules/assembleAuthoredWeek';
-import { awaySpansFromConstraints } from '../../rules/awaySpans';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
 import type { AcceptedStateOperationKind } from '../../store/acceptedStateTransaction';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
@@ -717,38 +715,6 @@ function coachingInputsToSchedulerInputs(
  * `ActiveConstraint`, so those field names are compiler-checked.
  */
 
-/**
- * THE SPANS WHERE THE CLUB IS SHUT — SEAT_INBOX item 31 part 5.
- *
- * Same reading as the trip above, DIFFERENT REACH, and the difference is the
- * whole reason it is a second function rather than a second `scheduleKind` in
- * the same filter. Away drops the team night AND the fixture; the Christmas
- * break drops the team night ONLY — the athlete is home, and a game he typed in
- * himself over the break is his own fact.
- *
- * AN OPEN END IS KEPT, NOT SKIPPED. `awaySpansFromConstraints` requires an
- * `expiresAt` because an endless trip would take the club off forever. Here the
- * open end is the ANSWER: on 10 December the athlete knows when his last
- * session is and nobody knows when the club reopens — Sam: *"that way the app
- * isn't guessing"*. The January question is what closes it, and until then
- * `until: null` is exactly true.
- */
-function noTeamTrainingSpansFromConstraints(
-  constraints: readonly any[] | undefined,
-): { from: string; until: string | null }[] {
-  return (constraints ?? [])
-    .filter((constraint) => constraint?.type === 'schedule' &&
-      constraint?.scheduleKind === 'no_team_training' &&
-      constraint?.status !== 'resolved' &&
-      typeof constraint?.startDate === 'string')
-    .map((constraint) => ({
-      from: String(constraint.startDate).slice(0, 10),
-      until: typeof constraint.expiresAt === 'string'
-        ? String(constraint.expiresAt).slice(0, 10)
-        : null,
-    }));
-}
-
 function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
@@ -927,32 +893,6 @@ function composerExclusionInput(
   };
 }
 
-/**
- * THE WINDOW'S DATED HALF, ON THE AXIS THE COMPOSER WORKS IN.
- *
- * The equipment owner answers by ISO DATE, because that is what a fact carries;
- * `composeWeek` addresses days by WEEKDAY NUMBER, because that is what a
- * `ComposerPlannedDay` carries. This is the one place the two meet, and it is a
- * projection rather than a second answer — the dates come from the same week
- * start the window was asked for, so the two cannot drift.
- *
- * **Only days that actually LOST something get an entry.** A day at full kit is
- * absent, and the composer reads an absent day as the permanent answer, so every
- * world with no dated removal produces `undefined` here and is byte-identical to
- * the behaviour before this argument existed.
- */
-function temporaryKitByDayOfWeekFrom(
-  window: { permanent: readonly string[]; byDate: Readonly<Record<string, readonly string[]>> },
-): Record<number, readonly string[]> {
-  const out: Record<number, readonly string[]> = {};
-  for (const [dateISO, tags] of Object.entries(window.byDate)) {
-    if (tags.length === window.permanent.length) continue;
-    const date = new Date(`${dateISO}T12:00:00`);
-    out[date.getDay()] = tags;
-  }
-  return out;
-}
-
 export function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   /** Legacy/test-only precompiled plan. Product generation supplies coachingInputs. */
@@ -1077,37 +1017,22 @@ export function buildGeneratedMicrocycles(args: {
      * The window owner answers both questions at once and keeps them apart:
      * `permanent` is what he OWNS and decides what gets RECORDED, `byDate` is
      * what he can REACH each day and decides what ships. */
-    const equipmentWindow = resolveEffectiveEquipmentWindow({
+    const weeklyAvailability = canonicalWeeklyAvailabilityStateFrom({
       profile,
-      constraints: args.activeConstraints,
-      fromISO: blockState.weekStart,
-      days: 7,
+      weekStartISO: blockState.weekStart,
+      activeConstraints: args.activeConstraints,
+      ...(!args.activeConstraints
+        ? {
+            fallbackEquipment: {
+              tags: [...args.availableEquipmentTags],
+              conditioningModalities: [...(args.availableConditioningModalities ?? [])],
+              selectionCompleteness: 'complete' as const,
+              source: 'complete_selection' as const,
+            },
+          }
+        : {}),
     });
-    const profileEquipment = resolveEquipmentCapabilities(
-      profile,
-      args.activeConstraints,
-      blockState.weekStart,
-    );
-    const equipment = args.activeConstraints
-      ? profileEquipment
-      : {
-          ...profileEquipment,
-          tags: [...args.availableEquipmentTags],
-          conditioningModalities: [...(
-            args.availableConditioningModalities ??
-            (args.availableEquipmentTags.includes('bike_or_treadmill')
-              ? profileEquipment.conditioningModalities
-              : [])
-          )],
-        };
-    const substitutionPolicy = resolveConditioningSubstitutionPolicy({
-      phase: profile.seasonPhase,
-      offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
-      preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
-      equipment,
-      injury: weeklyInjury,
-      readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
-    });
+    const equipment = weeklyAvailability.reachableEquipmentAcrossWeek;
     // ── B1-PIVOT: THE COMPOSER IS THE ONLY STRENGTH-CONTENT BUILDER ─────────
     //
     // Sam, 2026-08-14: *"isn't this like the ai? we just realise it's going to
@@ -1137,12 +1062,12 @@ export function buildGeneratedMicrocycles(args: {
     let compiledPlanDoseResolved = false;
     let compiledDoseDoor: 'readiness' | 'illness' | null = null;
     let compiledActiveInjuryKeys = weeklyInjury.activeInjuryKeys;
+    let weeklyCompositionAvailability = weeklyAvailability.composition;
     if (cutoverInputs) {
       const schedulerInputs = weeklySchedulerInputsFrom({
         profile,
         weekStartISO: blockState.weekStart,
         offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-        activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
         miniCycleNumber: blockState.miniCycleNumber ?? null,
         weekKind: effectiveWeekKind,
@@ -1154,12 +1079,12 @@ export function buildGeneratedMicrocycles(args: {
         readiness: canonicalReadinessFactFrom(generationConstraints),
         illness: canonicalIllnessFactFrom(generationConstraints),
         injury: weeklyInjury,
+        availability: weeklyAvailability,
         fixture: canonicalFixtureStateFrom({
           weekStartISO: blockState.weekStart,
           availability: targetWeekAvailability,
           targetFixtureDay,
           seasonPhase: profile.seasonPhase,
-          activeConstraints: args.activeConstraints,
         }),
         materialisation: {
           weekStartISO: blockState.weekStart,
@@ -1190,7 +1115,7 @@ export function buildGeneratedMicrocycles(args: {
              * spent in a hotel, and exempting it would weaken an achievable
              * requirement — which R-090 forbids by name. */
             kitUnachievablePatterns: kitUnachievablePatterns(
-              equipmentWindow.reachableAcrossWindow),
+              weeklyAvailability.composition.reachableKitAcrossWeek),
           } as never,
           v1Input: {
             seasonPhase: profile.seasonPhase,
@@ -1198,8 +1123,6 @@ export function buildGeneratedMicrocycles(args: {
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
             preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
             maxStrengthSessions: agePolicy.maxCoreSessions,
-            appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
-            attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
             byeMode: cutoverInputs.byeMode,
           } as never,
         },
@@ -1217,6 +1140,9 @@ export function buildGeneratedMicrocycles(args: {
       compiledPlanDoseResolved = compiled.planDoseResolved;
       compiledDoseDoor = compiled.doseDoor;
       compiledActiveInjuryKeys = compiled.activeInjuryKeys;
+      if (compiled.compositionAvailability) {
+        weeklyCompositionAvailability = compiled.compositionAvailability;
+      }
     } else {
       if (!args.plan) throw new Error('canonical week compilation requires coaching inputs or an explicit plan');
       if (generationConstraints?.illness) {
@@ -1273,10 +1199,9 @@ export function buildGeneratedMicrocycles(args: {
           plannedDays: schedulerOwnedPlannedDays,
           /* PERMANENT, so a five-day trip cannot enter the athlete's rotation
            * history. The dated half rides the next argument. */
-          kit: equipmentWindow.permanent,
-          temporaryKitByDayOfWeek: equipmentWindow.hasTemporaryLoss
-            ? temporaryKitByDayOfWeekFrom(equipmentWindow)
-            : undefined,
+          kit: weeklyCompositionAvailability.permanentKit,
+          temporaryKitByDayOfWeek:
+            weeklyCompositionAvailability.temporaryKitByDayOfWeek,
           injuries: {
             // §18's OWN safety answer, not a second injury reading.
             prohibitedPatterns:
@@ -1555,7 +1480,7 @@ export function buildGeneratedMicrocycles(args: {
         exposureContractV2,
         // Same week-wide answer the contract was built with, so the validator
         // and the contract cannot disagree about what the kit can reach.
-        kitUnachievablePatterns(equipmentWindow.reachableAcrossWindow),
+        kitUnachievablePatterns(weeklyCompositionAvailability.reachableKitAcrossWeek),
       );
       const validation = validateGeneratedWeek({
         workouts,
@@ -1838,24 +1763,14 @@ export function generateProgramLocally(
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const phaseResolution = generationPhaseResolution(generationProfile, blockStart, options);
-  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
-    phase: generationProfile.seasonPhase,
-    equipment: resolvedEquipment,
-    injury: generationInjury,
-    readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
-  });
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
-    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
-    conditioningSubstitutionPolicy: substitutionPolicy,
     phaseWeekNumber: phaseResolution.phaseWeekNumber,
     phaseClock: phaseResolution.clock,
     phaseClockProvenance: phaseResolution.provenance,
     offseasonSubphase: phaseResolution.offseasonSubphase ?? undefined,
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
-    awaySpans: awaySpansFromConstraints(options.activeConstraints),
-    noTeamTrainingSpans: noTeamTrainingSpansFromConstraints(options.activeConstraints),
   });
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');

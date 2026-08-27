@@ -22,6 +22,8 @@ export interface ConditioningFeasibilityContext {
   offseasonSubphase?: OffseasonSubphase | null;
   preseasonSubphase?: PreseasonSubphase | null;
   equipment: ResolvedEquipmentCapabilities;
+  /** Compiler-owned dated capability; absent callers retain the weekly fallback. */
+  equipmentByDayOfWeek?: Readonly<Record<number, ResolvedEquipmentCapabilities>>;
   injury?: CanonicalWeeklyInjuryPolicy;
   readinessDeloaded?: boolean;
 }
@@ -382,7 +384,16 @@ export function resolveWeeklyConditioningFeasibility(
   weeklyPlan: readonly SessionAllocation[],
   context: ConditioningFeasibilityContext,
 ): SessionAllocation[] {
-  return weeklyPlan.map((entry) => resolveConditioningFeasibility(entry, context));
+  const dayNames = [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ];
+  return weeklyPlan.map((entry) => {
+    const day = dayNames.indexOf(String(entry.dayOfWeek ?? ''));
+    return resolveConditioningFeasibility(entry, {
+      ...context,
+      equipment: context.equipmentByDayOfWeek?.[day] ?? context.equipment,
+    });
+  });
 }
 
 /**

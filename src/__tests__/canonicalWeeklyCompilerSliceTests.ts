@@ -7,8 +7,8 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: injuries, travel, edits, scheduled deloads, later
- * compiler families, pixels, simulator and physical iPhone.
+ * NOT COVERED: athlete edits, scheduled deloads, later compiler families,
+ * full-year archetypes, pixels, simulator and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -25,12 +25,16 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import type { OnboardingData, Workout } from '../types/domain';
 import { compileCanonicalWeek } from '../rules/canonicalWeeklyCompiler';
 import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
 import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
+import {
+  canonicalWeeklyAvailabilityStateFrom,
+  schedulerInputsWithAvailabilityState,
+} from '../rules/canonicalWeeklyAvailabilityState';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore } from '../store/programStore';
 import {
@@ -43,6 +47,8 @@ import { executeProgramControlActionDurably } from '../utils/programControlActio
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import { settleDerivedWorldAfterDecision } from '../store/quiescentBoot';
 import { blockSelectionHistory } from '../store/blockSelectionHistoryStore';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
@@ -326,7 +332,7 @@ async function main(): Promise<void> {
     compilerSource.includes("'injuries'") &&
       compilerSource.includes('injuries: [...(input.injury?.powerInjuries ?? [])]'));
   ok('the compiler derives contract injury inputs instead of receiving raw injuries',
-    compilerSource.includes("| 'injuryPolicy'>") &&
+    compilerSource.includes("| 'injuryPolicy'") &&
       !compilerSource.includes('profileInjuries') &&
       !compilerSource.includes('activeInjuries') &&
       compilerSource.includes('injuryPolicy: input.injury ?? undefined'));
@@ -435,6 +441,102 @@ async function main(): Promise<void> {
       'return buildFixtureMinimalReplan(input)',
       'return buildFixtureMinimalReplan_REMOVED(input)',
     ).includes('return buildFixtureMinimalReplan(input)'));
+
+  console.log('\n[availability ownership] travel and dated kit enter one compiler state');
+  const availabilityPath = join(ROOT, 'rules/canonicalWeeklyAvailabilityState.ts');
+  const availabilitySource = existsSync(availabilityPath)
+    ? readFileSync(availabilityPath, 'utf8')
+    : '';
+  const fixtureStateSource = readFileSync(
+    join(ROOT, 'rules/canonicalWeeklyFixtureState.ts'), 'utf8',
+  );
+  const coachingEngineSource = readFileSync(join(ROOT, 'utils/coachingEngine.ts'), 'utf8');
+  ok('one semantic weekly availability state exists',
+    availabilitySource.includes('export interface CanonicalWeeklyAvailabilityState'));
+  ok('the compiler accepts and applies the semantic availability state',
+    compilerSource.includes('readonly availability?: CanonicalWeeklyAvailabilityState | null') &&
+      compilerSource.includes('schedulerInputsWithAvailabilityState('));
+  ok('product generation hands weekly availability to the compiler',
+    generatorSource.includes('availability: weeklyAvailability'));
+  ok('composition consumes the compiler-authored availability projection',
+    compilerSource.includes('compositionAvailability:') &&
+      generatorSource.includes('compiled.compositionAvailability'));
+  ok('the scheduler translator no longer interprets schedule constraints or travel',
+    !schedulerInputsSource.includes('activeConstraints') &&
+      !schedulerInputsSource.includes('clubInputsAfterTravel') &&
+      !schedulerInputsSource.includes('awaySpansFromConstraints'));
+  ok('the fixture translator no longer independently removes away fixtures',
+    !fixtureStateSource.includes('activeConstraints') &&
+      !fixtureStateSource.includes('awaySpansFromConstraints'));
+  ok('the profile translator no longer independently removes club or game days for travel',
+    !coachingEngineSource.includes('options.awaySpans') &&
+      !coachingEngineSource.includes('options.noTeamTrainingSpans'));
+  ok('generation no longer authors its own equipment window or no-club spans',
+    !generatorSource.includes('resolveEffectiveEquipmentWindow(') &&
+      !generatorSource.includes('function noTeamTrainingSpansFromConstraints('));
+  const availabilityRivalAuthors = [
+    schedulerInputsSource.includes('activeConstraints')
+      ? 'scheduler translator interprets schedule constraints' : null,
+    schedulerInputsSource.includes('clubInputsAfterTravel')
+      ? 'scheduler translator independently removes club/game anchors' : null,
+    fixtureStateSource.includes('awaySpansFromConstraints')
+      ? 'fixture translator independently removes away fixtures' : null,
+    coachingEngineSource.includes('options.awaySpans')
+      ? 'profile translator independently removes away club/game facts' : null,
+    generatorSource.includes('resolveEffectiveEquipmentWindow(')
+      ? 'generator independently authors the dated equipment window' : null,
+    generatorSource.includes('function noTeamTrainingSpansFromConstraints(')
+      ? 'generator independently authors club-closure spans' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly-availability rival-author count is literally zero',
+    availabilityRivalAuthors.length === 0, JSON.stringify(availabilityRivalAuthors));
+  ok('[MUTATION] dropping the typed availability compiler handover is detected',
+    generatorSource.includes('availability: weeklyAvailability') &&
+      !generatorSource.replace(
+        'availability: weeklyAvailability',
+        'availability_REMOVED: weeklyAvailability',
+      ).includes('availability: weeklyAvailability'));
+  ok('[MUTATION] bypassing the compiler availability projection is detected',
+    compilerSource.includes('schedulerInputsWithAvailabilityState(') &&
+      !compilerSource.replace(
+        'schedulerInputsWithAvailabilityState(',
+        'schedulerInputsWithAvailabilityState_REMOVED(',
+      ).includes('schedulerInputsWithAvailabilityState('));
+
+  const closureAndUnavailable = canonicalWeeklyAvailabilityStateFrom({
+    profile: illnessAthlete(),
+    weekStartISO: INSTALL_DAY,
+    activeConstraints: [
+      {
+        id: 'club-closed', type: 'schedule', severity: 5, status: 'active',
+        startDate: INSTALL_DAY, lastUpdatedAt: INSTALL_DAY,
+        scheduleKind: 'no_team_training', rules: [], safeFocus: [], advice: [],
+      },
+      {
+        id: 'wednesday-unavailable', type: 'schedule', severity: 5, status: 'active',
+        startDate: INSTALL_DAY, expiresAt: '2026-07-19', lastUpdatedAt: INSTALL_DAY,
+        scheduleKind: 'unavailable_dates', unavailableDates: ['2026-07-15'],
+        rules: [], safeFocus: [], advice: [],
+      },
+    ] as never,
+  });
+  const closureAndUnavailableSchedule = schedulerInputsWithAvailabilityState({
+    weekStartISO: INSTALL_DAY,
+    phase: 'In-season', offseasonBlock: null,
+    gymAccessDays: [1, 3, 5], clubNights: [2, 4],
+    gameDays: [6], gameDay: 6, fixtureRecurrence: 'recurring', age: 24,
+    readiness: { lowReadiness: false, highReadiness: false, lowFatigue: false,
+      consistentlyCompletesThree: false },
+    unavailableDays: [],
+  }, closureAndUnavailable);
+  ok('a club shutdown removes team nights but preserves the athlete-entered game',
+    closureAndUnavailableSchedule.clubNights.length === 0 &&
+      JSON.stringify(closureAndUnavailableSchedule.gameDays) === JSON.stringify([6]) &&
+      closureAndUnavailableSchedule.gameDay === 6,
+    JSON.stringify(closureAndUnavailableSchedule));
+  ok('an explicit unavailable date blocks only its own weekday',
+    JSON.stringify(closureAndUnavailableSchedule.unavailableDays) === JSON.stringify([3]),
+    JSON.stringify(closureAndUnavailableSchedule.unavailableDays));
   const offSeasonFixture = canonicalFixtureStateFrom({
     weekStartISO: INSTALL_DAY,
     seasonPhase: 'Off-season',
@@ -761,6 +863,107 @@ async function main(): Promise<void> {
       after: injuryRecovered.map((day) => [day.dateISO, day.rows.map((row) => row.name)]),
       historyBefore: injurySelectionHistoryBefore,
       historyAfter: blockSelectionHistory(),
+    }));
+
+  console.log('\n[availability slice] normal -> away with reduced kit -> home');
+  const awayInstall = await coldStartThroughOnboarding({
+    profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+  });
+  ok('the travel witness reaches a real club-and-game week through onboarding',
+    awayInstall.onboardingRefusal === null, awayInstall.onboardingRefusal);
+  const awaySignature = (days: ReturnType<typeof resolvedDays>): string => JSON.stringify(
+    days.map((day) => [day.dateISO, day.sessionName, day.components, day.rows.map((row) => [
+      row.name, row.sets ?? '', row.repsMin ?? '', row.repsMax ?? '', row.weightKg ?? '',
+    ])]),
+  );
+  const awayBaseline = quiet(() => resolvedDays(awayInstall.blockOneStart, INSTALL_DAY));
+  const awayBaselineSignature = awaySignature(awayBaseline);
+  const awayFrom = '2026-07-15';
+  const awayUntil = '2026-07-19';
+  const scheduleAway = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_schedule_modifier',
+    source: { screen: 'program_tab', surface: 'away_sheet', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: {
+      date: awayFrom, todayISO: awayFrom,
+      awaySpan: { from: awayFrom, until: awayUntil },
+    },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO: awayFrom }));
+  ok('the athlete travel action commits through the production door',
+    scheduleAway.ok === true, scheduleAway.message);
+  const scheduleAwayId = scheduleAway.createdModifierIds?.[0] ?? null;
+  ok('the travel door returns the exact schedule fact it authored',
+    Boolean(scheduleAwayId), JSON.stringify(scheduleAway.createdModifierIds));
+  const scheduleAwayVisible = quiet(() => resolvedDays(awayInstall.blockOneStart, awayFrom));
+  const governedAwayDays = scheduleAwayVisible.filter((day) =>
+    day.dateISO >= awayFrom && day.dateISO <= awayUntil);
+  ok('travel removes club and game anchors from the governed dates',
+    governedAwayDays.every((day) =>
+      day.sessionName !== 'Game Day' && !day.components.includes('club_training' as never)),
+    JSON.stringify(governedAwayDays.map((day) =>
+      [day.dateISO, day.sessionName, day.components])));
+  ok('travel keeps the athlete\'s own authored work alive',
+    governedAwayDays.some((day) => day.rows.length > 0));
+
+  const equipmentAway = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_equipment_modifier',
+    source: { screen: 'program_tab', surface: 'away_equipment_sheet', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: {
+      date: awayFrom, todayISO: awayFrom,
+      decision: {
+        kind: 'missing_for_span', from: awayFrom, until: awayUntil,
+        tags: [
+          'barbell', 'dumbbells', 'cables', 'machine', 'bands', 'bench',
+          'pullup_bar', 'kettlebell', 'foam_roller', 'plyo_box',
+          'bike_or_treadmill',
+        ],
+        conditioningModalities: ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'],
+      },
+    },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO: awayFrom }));
+  ok('the dated equipment action commits through the production door',
+    equipmentAway.ok === true, equipmentAway.message);
+  const equipmentAwayId = equipmentAway.createdModifierIds?.[0] ?? null;
+  ok('the equipment door returns the exact fact it authored',
+    Boolean(equipmentAwayId), JSON.stringify(equipmentAway.createdModifierIds));
+  const reducedKitVisible = quiet(() => resolvedDays(awayInstall.blockOneStart, awayFrom));
+  ok('dated kit changes only the governed part of the visible week',
+    visibleSignature(reducedKitVisible.filter((day) => day.dateISO < awayFrom)) ===
+      visibleSignature(scheduleAwayVisible.filter((day) => day.dateISO < awayFrom)) &&
+      visibleSignature(reducedKitVisible.filter((day) => day.dateISO >= awayFrom)) !==
+        visibleSignature(scheduleAwayVisible.filter((day) => day.dateISO >= awayFrom)),
+    JSON.stringify({
+      baseline: awayBaseline.map((day) => [day.dateISO, day.rows.map((row) => row.name)]),
+      scheduleAway: scheduleAwayVisible.map((day) =>
+        [day.dateISO, day.rows.map((row) => row.name)]),
+      reduced: reducedKitVisible.map((day) => [day.dateISO, day.rows.map((row) => row.name)]),
+    }));
+  ok('reduced kit still leaves real training available while away',
+    reducedKitVisible.filter((day) => day.dateISO >= awayFrom && day.dateISO <= awayUntil)
+      .some((day) => day.rows.length > 0));
+
+  if (equipmentAwayId) {
+    await quietAsync(() => transactTemporarySourceFact({
+      operation: 'resolve', factId: equipmentAwayId, todayISO: awayFrom,
+    }));
+  }
+  if (scheduleAwayId) {
+    await quietAsync(() => transactTemporarySourceFact({
+      operation: 'resolve', factId: scheduleAwayId, todayISO: awayFrom,
+    }));
+  }
+  await quietAsync(() => settleDerivedWorldAfterDecision());
+  ok('resolving both availability facts restores the visible week exactly',
+    awaySignature(quiet(() =>
+      resolvedDays(awayInstall.blockOneStart, awayFrom))) === awayBaselineSignature,
+    JSON.stringify({
+      baseline: awayBaseline.map((day) =>
+        [day.dateISO, day.sessionName, day.rows.map((row) => row.name)]),
+      restored: quiet(() => resolvedDays(awayInstall.blockOneStart, awayFrom)).map((day) =>
+        [day.dateISO, day.sessionName, day.rows.map((row) => row.name)]),
     }));
 
   console.log('\n[fixture slice] move onto occupied day -> move back');
