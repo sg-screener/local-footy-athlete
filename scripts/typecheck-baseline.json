@@ -85,7 +85,6 @@
         "src/__tests__/missedSessionsTests.ts": 9,
         "src/__tests__/onboardingReliabilityTests.ts": 4,
         "src/__tests__/programBlockRolloverTests.ts": 1,
-        "src/__tests__/programControlActionsTests.ts": 3,
         "src/__tests__/programHydrationOwnershipTests.ts": 1,
         "src/__tests__/scenarioQA/actions.ts": 1,
         "src/__tests__/scenarioQA/invariants.ts": 1,

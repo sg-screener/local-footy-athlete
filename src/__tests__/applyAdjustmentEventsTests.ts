@@ -27,7 +27,7 @@ import {
   applyAdjustmentEvents,
   APPLY_REJECT_KIND,
   type ApplyOptions,
-} from '../utils/applyAdjustmentEvents';
+} from './legacy/applyAdjustmentEventsSnapshot';
 import type {
   AdjustmentEvent,
   AdjustmentEventKind,

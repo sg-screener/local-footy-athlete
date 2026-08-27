@@ -8,7 +8,7 @@ import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisa
 import { addDays } from '../../../utils/sessionResolver';
 import { rebuildLocalWeek } from '../../../utils/weekRebuild';
 import { rolloverProgramBlock } from '../../../utils/programBlockRollover';
-import { applyAdjustmentEvents, applyMoveSession } from '../../../utils/applyAdjustmentEvents';
+import { applyAdjustmentEvents, applyMoveSession } from '../../legacy/applyAdjustmentEventsSnapshot';
 import { compileCanonicalExerciseEditOnWorkout } from '../../../rules/canonicalWeeklyExerciseEditCompiler';
 import { useProgramStore } from '../../../store/programStore';
 import { useProfileStore } from '../../../store/profileStore';

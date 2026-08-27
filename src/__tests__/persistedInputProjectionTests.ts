@@ -64,7 +64,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { useProgramStore, projectProgramPersistedInputs } from '../store/programStore';
+import { useProgramStore, projectProgramPersistedInputs, reduceProgramEnvelopeToInputs } from '../store/programStore';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import {
   captureDevE2EMemoryFingerprints,
@@ -195,6 +195,14 @@ async function run(): Promise<void> {
       && JSON.stringify(Object.keys(live).sort()) === JSON.stringify(Object.keys(onDisk).sort()),
     `live=${Object.keys(live).sort().join(',')} disk=${Object.keys(onDisk ?? {}).sort().join(',')}`,
   );
+  check('current saves have no second derived injury-history field',
+    !('injuryEpisodes' in live) && onDisk !== null && !('injuryEpisodes' in onDisk));
+  const reducedAgain = JSON.parse(reduceProgramEnvelopeToInputs(JSON.stringify({
+    state: { inputs: { ...live, injuryEpisodes: [] } }, version: 1,
+  })));
+  check('already-reduced outgoing envelopes also drop the retired duplicate',
+    !('injuryEpisodes' in reducedAgain.state.inputs)
+      && JSON.stringify(reducedAgain.state.inputs.temporarySourceFacts) === '[]');
 
   // ── 3. THE RESTORED CLOCK SURVIVES A WRITE MADE BEFORE BOOT ───────────
   //

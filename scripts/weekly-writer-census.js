@@ -107,6 +107,54 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     for (const diagnostic of sf.parseDiagnostics) {
       errors.push(`${relative(root, file)}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')}`);
     }
+    if (relative(root, file) === 'src/utils/applyAdjustmentEvents.ts') {
+      errors.push('retired event/move author returned to runtime: src/utils/applyAdjustmentEvents.ts');
+    }
+    // Excluding diagnostics from the denominator is valid only while runtime
+    // cannot import them. Check every runtime edge, including barrels and lazy
+    // loaders, so moving a writer to tests cannot hide an executable author.
+    if (!/(^|\/)(__tests__|__mocks__)\//.test(relative(root, file))) {
+      function isModuleLoader(expression, seen = new Set()) {
+        if (expression.kind === ts.SyntaxKind.ImportKeyword) return true;
+        if (!ts.isIdentifier(expression) || seen.has(expression)) return false;
+        if (expression.text === 'require') return true;
+        seen.add(expression);
+        const declaration = checker.getSymbolAtLocation(expression)?.valueDeclaration;
+        return !!declaration && ts.isVariableDeclaration(declaration) &&
+          !!declaration.initializer && isModuleLoader(declaration.initializer, seen);
+      }
+      function inspectImport(node) {
+        let specifier = null;
+        if (ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly) {
+          const clause = node.importClause;
+          const bindings = clause?.namedBindings;
+          if (!clause || clause.name || !bindings || ts.isNamespaceImport(bindings) ||
+              bindings.elements.length === 0 || bindings.elements.some(element => !element.isTypeOnly)) {
+            specifier = node.moduleSpecifier;
+          }
+        }
+        if (ts.isExportDeclaration(node) && !node.isTypeOnly) {
+          const clause = node.exportClause;
+          if (!clause || ts.isNamespaceExport(clause) ||
+              clause.elements.length === 0 || clause.elements.some(element => !element.isTypeOnly)) {
+            specifier = node.moduleSpecifier;
+          }
+        }
+        if (ts.isImportEqualsDeclaration(node) && !node.isTypeOnly &&
+            ts.isExternalModuleReference(node.moduleReference)) specifier = node.moduleReference.expression;
+        if (ts.isCallExpression(node) && isModuleLoader(node.expression)) specifier = node.arguments[0];
+        if (specifier && ts.isStringLiteralLike(specifier)) {
+          const resolved = ts.resolveModuleName(specifier.text, file, options, host).resolvedModule?.resolvedFileName;
+          const target = resolved ?? (specifier.text.startsWith('.')
+            ? path.resolve(path.dirname(file), specifier.text) : specifier.text);
+          if (/(^|\/)(__tests__|__mocks__)\//.test(relative(root, target))) {
+            errors.push(`runtime imports excluded diagnostic code: ${relative(root, file)} -> ${specifier.text}`);
+          }
+        }
+        ts.forEachChild(node, inspectImport);
+      }
+      inspectImport(sf);
+    }
     function add(node, name) {
       const base = `${relative(root, file)}#${name}`;
       let id = base;

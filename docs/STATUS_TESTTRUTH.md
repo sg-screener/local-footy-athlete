@@ -2398,3 +2398,160 @@ boundary. No product policy was changed to satisfy those stale assertions.
 - Exhaustive modality and legacy speed-only lighter-day shapes. The two named
   generated equipment witnesses plus existing phase/fixture/deload journeys are
   the measured scope, not an assertion about every possible athlete session.
+
+## 24. Retired event authors and injury persistence — restart remains RED
+
+Owner: `testtruth`. 2026-08-27. Continuation of Sam's “keep going”.
+
+### Changes and scope
+
+Compared keeping the legacy event engine reachable behind another compatibility
+wrapper with removing its runtime entry points and retaining only diagnostic
+evidence. Chose the latter: current injury actions already have a durable owner;
+the unused event/move author should not survive as a second programming API.
+
+- Moved `src/utils/applyAdjustmentEvents.ts` into the test-only
+  `src/__tests__/legacy/applyAdjustmentEventsSnapshot.ts`. Its two historical
+  test importers follow it. The old module is absent from runtime. After
+  normalising the header/import relocation, every original line is preserved.
+  This is isolation of historical evidence, not deletion of athlete data.
+- Removed the sync injury writer's empty-world exception. It now refuses just
+  like other injury calls outside the durable transaction. Generic modifier
+  Clear refuses every injury, including an unowned legacy constraint, instead
+  of deleting injury-tagged overrides. Native resolution remains
+  `resolveInjuryEpisode` through `executeProgramControlActionDurably`.
+- `projectProgramPersistedInputs` writes injury history only inside canonical
+  `temporarySourceFacts`. Both live saves and already-reduced outgoing envelopes
+  drop the redundant `injuryEpisodes` field. The existing ingress still reads
+  older episode encoding, preserving real episode ids/history; canonical facts
+  beat a stale duplicate. In-memory compatibility projections remain available.
+- No unowned constraint is converted into invented episode provenance. The
+  earlier demolition intentionally removed that backfill; this pass does not
+  resurrect it or rewrite the athlete's decision ledger.
+- The executable census now rejects runtime imports of excluded test/mock code,
+  including re-exports, literal CommonJS loads and dynamic imports. It also
+  rejects resurrection of the retired production module. Type-only references
+  are not counted as runtime edges. Unknown dynamic capabilities remain part of
+  the conservative unresolved census, not an exemption.
+
+### Newly exercised failure — NOT fixed
+
+`test:canonical-weekly-compiler` now reaches real onboarding, an accepted session
+removal, a knee injury, persistence, restart, resolution, restart and Undo. It
+tests current source-fact encoding and an older episode encoding made from the
+same real accepted record, not a fabricated workout.
+
+**Three failed assertions, one distinct restart failure class:** current-format
+boot fails, older-format boot fails, and the older boot's visible-week equality
+fails. Error: `main_strength_required_minimum`, expected 3, actual 2.
+
+Baseline control: the same isolated injury journey was executed against the
+pre-change HEAD versions of the three changed production modules (in-memory
+loader only). Both restart encodings fail there too. The two additional reds
+there are the duplicate-persistence cells fixed here: **18/23 baseline cells
+green**, versus the remaining three restart reds. Receipt:
+`/tmp/testtruth-injury-baseline-head.log`. This is an existing defect newly
+covered, not a restart regression introduced by dropping the duplicate field.
+
+Read-at-source cause, with the disagreement reproduced by the journey: live
+`commitDerivingSourceFactScopedRegen` authors a dated sparse overlay and preserves
+the pre-boundary week. Boot feeds the facts into base generation, with no same
+dated overlay fold. Live forward acceptance can disclose the reduced week; boot
+restoration rejects it. Switching boot to permissive acceptance would mask this
+split and is NOT the fix. No production generation/validation policy was changed
+in this checkpoint.
+
+The older encoding retains its exact episode/history during hydration, but that
+does NOT mean its whole boot succeeds. Resolution restores the edited healthy
+week; resolution survives restart; Undo reverses the earlier session edit while
+preserving the resolved injury history. These are named cells in the canonical
+suite. Injury status is a recorded fact, not an undoable program decision. An
+initial probe expecting injury-resolution Undo was corrected against that
+existing contract, not implemented as a new product behaviour.
+
+### Evidence and liveness
+
+- Canonical compiler journey: **453 passing / 456 executed assertions; 3 red**
+  as named above. Log: `/tmp/testtruth-injury-canonical-verified.log`.
+- Persisted input projection: **12/12**, including two new checks observed RED
+  before the production change (duplicate history and already-reduced output).
+- Persisted schema inventory: **8/8**, measuring **22 distinct persisted keys in
+  10 envelopes**. Declared signup date and selected band resistance; removed nine
+  stale coach-era/retired-injury declarations. **Seven carried debt entries
+  remain**: four coach keys, two transient keys, one unregistered envelope. The
+  coach-key ceiling fell 13 -> 4, not an expanded allowance or a zero claim.
+- Census detector: **26/26**. Mutations add a retired production author and
+  runtime imports/re-exports/require/dynamic imports of test-only code; each is
+  rejected. Type-only imports/exports remain a clean control.
+- Injury shortcut mutations execute the new boundary cells with in-memory
+  source mutations: control **4/4**, restoring the generic-clear bypass reds its
+  unowned-injury refusal cell, restoring the sync writer reds its no-write cell.
+  Each mutant exited 1 for its named reason. No working-tree mutation left behind.
+  Receipt: `/tmp/testtruth-injury-shortcut-mutations.log`.
+- Annual release run: **416/416 athlete-weeks**, eight distinct athletes × 52,
+  with their restart comparisons. This catalog does not exercise the active
+  injury failure above. Full release **1/6 units green**, exit 1 on the year
+  ownership prerequisite; four later units are not reached by fail-fast, not
+  four new product failures. Canonical/census/type units were run separately.
+  Receipt: `/tmp/testtruth-injury-release.log`; HTML remains the presentation
+  of the same RED result, not separate approval.
+- Historical event snapshot: **99 passing / 101 assertions, 2 existing power
+  shape failures**. It is still diagnostic, not current release truth. Its
+  content was preserved, not repaired to dictate modern programming.
+- Historical `programControlActionsTests` still stops at obsolete recovery
+  section [5], before its injury sections. The latter no longer expect success
+  from the retired sync writer; live injury coverage is in the canonical suite.
+  Do NOT report that whole historical file green.
+- Product type diagnostics **0**, devtools **0**. Test diagnostics **256
+  occurrences across 96 distinct files**, down from 259/97 at §23. Three invalid
+  test fixture values were repaired; their baseline allowance dropped 3 -> 0.
+  Total allowed test ceilings are now 132, down from 135. Existing regressions
+  remain red; no suppression, exclusion or raised allowance was added.
+
+### Ownership accounting — zero still NOT proven
+
+Instrument unit: distinct executable capability owners, keyed by file/function;
+anonymous callbacks belong to their enclosing owner. Scope: App/index, runtime
+and dev source, deployable edge functions; excluded diagnostics cannot be
+imported by that runtime. Counts are not counts of bugs or athlete decisions.
+
+**598 files; 2,801 direct operation occurrences in 761 distinct direct owners;
+1,316 candidate capability owners; 60 reviewed and 1,256 unresolved.**
+
+The two prior dormant event/move authors and injury-clear writer are retired
+from runtime. Two newly reviewed, already-existing paths remain confirmed:
+
+1. Rival author: `commitDerivingSourceFactScopedRegen`, the live dated-fact
+   overlay/contract/adjustment author that boot does not share.
+2. Derived-output writer: `removeOverridesForModifierSource`, still used by
+   non-injury generic modifier Clear. This is a direct **volatile** derived
+   output writer; it does not establish that workout overrides are persisted.
+
+Therefore **1 confirmed rival and 1 confirmed derived-output writer / 1,316
+candidate owners**, plus the unresolved reviews. The reduction from §23 is
+retirement plus new inspection, not a claim that all unnamed paths are safe.
+
+### Next concrete work — owner `testtruth`, nothing needed from Sam
+
+1. Replace the live dated-fact overlay author and boot's separate fact handling
+   with one pure compiler fold of the recorded facts, their date horizons,
+   accepted base inputs and athlete edits. Preserve pre-fact history, fixtures,
+   selection history and accepted edit order. Delete the procedural author in
+   the same slice. Do not lower strength requirements merely to accept output.
+2. Make the three current injury-restart assertions green; extend the year
+   lifecycle catalog with active injury/update/resolve plus accumulated edits.
+   Preserve the existing rule that Undo does not erase recorded injury facts.
+3. Route remaining supported non-injury generic Clear inputs through compiler
+   reconstruction, then delete `removeOverridesForModifierSource`.
+4. Continue the executable ownership reviews and current-contract test debt.
+   No “one owner complete” or Fable re-audit-ready claim while these are red.
+
+### NOT COVERED
+
+- Native/mounted UI, physical iPhone acceptance, remote persistence and OS crash
+  recovery. No phone build or athlete data wipe was performed.
+- Successful active-injury boot: explicitly measured RED in both encodings,
+  not merely untested. Other injury regions/severities, overlapping injury facts
+  and their complete fixture/phase matrix remain outside this pass.
+- Full historical test fleet and the remaining 1,256 executable ownership
+  reviews. The annual healthy-archetype result is not whole-app approval.

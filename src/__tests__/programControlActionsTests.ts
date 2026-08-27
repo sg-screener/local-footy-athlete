@@ -171,7 +171,6 @@ function gameWorkout(date = '2026-07-11'): Workout {
     durationMinutes: 90,
     intensity: 'High',
     workoutType: 'Game',
-    sessionTier: 'game',
     exercises: [],
     createdAt: '2026-07-06T00:00:00Z',
     updatedAt: '2026-07-06T00:00:00Z',
@@ -301,7 +300,7 @@ console.log('\n[3] multiple modifiers stack');
   useCoachPreferencesStore.getState().setModalityPreference('Easy Aerobic Flush', {
     from: 'row',
     to: 'bike',
-    bikeLabel: 'Assault Bike',
+    bikeLabel: 'assault',
   });
   executeProgramControlAction(baseAction(
     'set_recovery_mode',
@@ -328,7 +327,7 @@ console.log('\n[4] clear active equipment adjustment through ProgramControlActio
   useCoachPreferencesStore.getState().setModalityPreference('Easy Aerobic Flush', {
     from: 'row',
     to: 'bike',
-    bikeLabel: 'Assault Bike',
+    bikeLabel: 'assault',
   });
   const note = selectActiveCoachNotes({
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
@@ -937,211 +936,31 @@ console.log('\n[18] busy-week schedule modifier stays out of Coach');
   ok('Coach Notes includes busy-week modifier', notes.some((note) => note.title === 'Busy week active'));
 }
 
-console.log('\n[19] guided mild injury creates an active modifier without Coach');
-{
+// The old [19]-[24] success cells called the retired synchronous injury
+// writer and generic Clear. They are not the current injury contract. Actual
+// report -> older/current saved state -> clear -> restart, accumulated session
+// edits and Undo are exercised by canonicalWeeklyCompilerSliceTests instead.
+console.log('\n[19-24] synchronous injury shortcuts cannot create or resolve facts');
+for (const severity of [2, 7, 9]) {
   resetStores();
   const todayISO = todayISOLocal();
   const constraint = buildGuidedInjuryConstraint({
-    region: 'lower_body',
-    area: 'Calf / Achilles',
-    severity: 2,
-    severityBand: 'mild',
-    adjustmentLevel: 'minimal',
-    triggers: ['Running'],
-    seriousSymptoms: false,
+    region: 'lower_body', area: 'Knee', severity,
+    severityBand: 'avoid', adjustmentLevel: 'avoid_affected',
+    triggers: ['Running'], seriousSymptoms: false,
   }, { todayISO });
   const result = executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint },
+    'set_injury_modifier', { constraint },
     { scope: 'current_and_future', createsActiveModifier: true },
   ), { todayISO });
-  const notes = selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  });
-
-  eq('mild injury succeeds', result.ok, true);
-  eq('mild injury no Coach fallback', result.fallbackToCoach, false);
-  eq('mild adjustment level saved', (useCoachUpdatesStore.getState().activeConstraints[0] as any)?.adjustmentLevel, 'minimal');
-  ok('mild injury note appears', notes.some((note) => note.title === 'Calf / Achilles issue active'));
-}
-
-console.log('\n[20] guided moderate injury saves triggers without Coach');
-{
-  resetStores();
-  const todayISO = todayISOLocal();
-  const constraint = buildGuidedInjuryConstraint({
-    region: 'lower_body',
-    area: 'Hip / groin',
-    severity: 7,
-    severityBand: 'moderate',
-    adjustmentLevel: 'moderate',
-    triggers: ['Sprinting', 'Change of direction'],
-    seriousSymptoms: false,
-  }, { todayISO });
-  const result = executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-  const stored = useCoachUpdatesStore.getState().activeConstraints[0] as any;
-  const notes = selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  });
-
-  eq('moderate injury succeeds', result.ok, true);
-  eq('moderate injury no Coach fallback', result.fallbackToCoach, false);
-  eq('moderate adjustment level saved', stored.adjustmentLevel, 'moderate');
-  eq('triggers saved', stored.triggers, ['Sprinting', 'Change of direction']);
-  ok('moderate note body includes triggers', /sprinting and change of direction/.test(notes[0]?.body ?? ''), notes[0]?.body);
-}
-
-console.log('\n[21] 8-10 guided injury pauses affected work without rehab or Coach');
-{
-  resetStores();
-  const todayISO = todayISOLocal();
-  const constraint = buildGuidedInjuryConstraint({
-    region: 'upper_body',
-    area: 'Shoulder',
-    severity: 9,
-    severityBand: 'avoid',
-    adjustmentLevel: 'training_paused',
-    triggers: [],
-    seriousSymptoms: false,
-  }, { todayISO });
-  const result = executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-
-  const notes = selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  });
-
-  eq('8-10 pause succeeds', result.ok, true);
-  eq('8-10 pause no Coach fallback', result.fallbackToCoach, false);
-  eq('8-10 does not set diagnostic serious symptom flag', (useCoachUpdatesStore.getState().activeConstraints[0] as any)?.seriousSymptoms, false);
-  eq('8-10 adjustment level saved', (useCoachUpdatesStore.getState().activeConstraints[0] as any)?.adjustmentLevel, 'training_paused');
-  eq('8-10 note title', notes[0]?.title, 'Training paused for injury');
-  eq(
-    '8-10 note body',
-    notes[0]?.body,
-    "You rated this as 8-10 / 10, so affected training is paused until you're ready or cleared to train.",
-  );
-  ok('no rehab prescription is stored', !/rehab/i.test([...constraint.rules, ...constraint.safeFocus, ...constraint.advice].join(' ')));
-}
-
-console.log('\n[22] training-paused injury note clears without Coach');
-{
-  resetStores();
-  const todayISO = todayISOLocal();
-  const constraint = buildGuidedInjuryConstraint({
-    region: 'lower_body',
-    area: 'Knee',
-    severity: 10,
-    severityBand: 'avoid',
-    adjustmentLevel: 'training_paused',
-    triggers: [],
-    seriousSymptoms: false,
-  }, { todayISO });
-  executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-  const notes = selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  });
-  const result = executeProgramControlAction(baseAction('clear_active_modifier', {
-    noteId: notes[0]?.id ?? '',
-  }));
-
-  eq('training-paused note title', notes[0]?.title, 'Training paused for injury');
-  eq('training-paused note clear action', notes[0]?.actions[0]?.label, "I've been cleared");
-  eq('clear training-paused note succeeds', result.ok, true);
-  eq('clear training-paused note no Coach fallback', result.fallbackToCoach, false);
-  eq('training-paused constraint removed', useCoachUpdatesStore.getState().activeConstraints, []);
-}
-
-console.log('\n[23] update injury replaces the existing modifier instead of duplicating');
-{
-  resetStores();
-  const todayISO = todayISOLocal();
-  const first = buildGuidedInjuryConstraint({
-    region: 'lower_body',
-    area: 'Hamstring',
-    severity: 5,
-    severityBand: 'slight',
-    adjustmentLevel: 'slight',
-    triggers: ['Running'],
-    seriousSymptoms: false,
-  }, { todayISO });
-  executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint: first },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-  const updated = buildGuidedInjuryConstraint({
-    region: 'lower_body',
-    area: 'Hamstring',
-    severity: 7,
-    severityBand: 'moderate',
-    adjustmentLevel: 'moderate',
-    triggers: ['Sprinting', 'Kicking'],
-    seriousSymptoms: false,
-  }, { todayISO, existingId: first.id });
-  const result = executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint: updated },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-  const active = useCoachUpdatesStore.getState().activeConstraints as any[];
-
-  eq('update succeeds', result.ok, true);
-  eq('update no Coach fallback', result.fallbackToCoach, false);
-  eq('still one active injury', active.length, 1);
-  eq('existing id retained', active[0]?.id, first.id);
-  eq('severity updated', active[0]?.severityBand, 'moderate');
-  eq('triggers updated', active[0]?.triggers, ['Sprinting', 'Kicking']);
-}
-
-console.log('\n[24] clear guided injury removes the note without Coach');
-{
-  resetStores();
-  const todayISO = todayISOLocal();
-  const constraint = buildGuidedInjuryConstraint({
-    region: 'back_midline',
-    area: 'Lower back',
-    severity: 5,
-    severityBand: 'slight',
-    adjustmentLevel: 'slight',
-    triggers: ['Hinging / bending'],
-    seriousSymptoms: false,
-  }, { todayISO });
-  executeProgramControlAction(baseAction(
-    'set_injury_modifier',
-    { constraint },
-    { scope: 'current_and_future', createsActiveModifier: true },
-  ), { todayISO });
-  const note = selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  })[0];
-  const result = executeProgramControlAction(baseAction('clear_active_modifier', {
-    noteId: note.id,
-  }));
-
-  eq('clear injury succeeds', result.ok, true);
-  eq('clear injury no Coach fallback', result.fallbackToCoach, false);
-  eq('active constraints empty after clear', useCoachUpdatesStore.getState().activeConstraints, []);
-  eq('notes empty after clear', selectActiveCoachNotes({
-    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    todayISO,
-  }), []);
+  eq('injury ' + severity + ' requires the durable owner', result.ok, false);
+  eq('injury ' + severity + ' shortcut has no program effect', result.changedProgram, false);
+  eq('injury ' + severity + ' shortcut records no unowned constraint',
+    useCoachUpdatesStore.getState().activeConstraints, []);
+  const clear = executeProgramControlAction(baseAction('clear_injury_modifier', {
+    episodeId: 'not-a-recorded-episode',
+  }), { todayISO });
+  eq('injury ' + severity + ' resolution requires the durable owner', clear.ok, false);
 }
 
 console.log('\n[25] busy-week schedule modifier creates a Coach Note (no chat)');

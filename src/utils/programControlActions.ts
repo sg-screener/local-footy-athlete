@@ -951,21 +951,6 @@ function executeProgramControlActionWithinTrace(
         route: route.route,
       };
     case 'set_injury_modifier': {
-      const accepted = useProgramStore.getState().acceptedMaterialContext;
-      if ((accepted.injuryEpisodes?.length ?? 0) === 0 && !accepted.acceptedCompositionBase) {
-        // Legacy pre-migration compatibility only. Every production injury
-        // surface now calls executeProgramControlActionDurably; this seam lets
-        // an old envelope enter the explicit legacy_after_state_only migration.
-        useCoachUpdatesStore.getState().upsertActiveConstraint(action.payload.constraint!);
-        return {
-          ok: true,
-          changedProgram: true,
-          requiresRebuild: false,
-          createdModifierIds: [action.payload.constraint!.id],
-          fallbackToCoach: false,
-          route: route.route,
-        };
-      }
       return {
         ok: false,
         changedProgram: false,

@@ -345,7 +345,16 @@ export function projectProgramPersistedInputs(
   state: Record<string, any>,
 ): Record<string, unknown> {
   const alreadyReduced = (state.inputs ?? null) as Record<string, unknown> | null;
-  if (alreadyReduced) return alreadyReduced;
+  if (alreadyReduced) {
+    const { injuryEpisodes, ...inputs } = alreadyReduced;
+    return {
+      ...inputs,
+      temporarySourceFacts: normalizeTemporarySourceFacts({
+        value: inputs.temporarySourceFacts,
+        legacyInjuryEpisodes: injuryEpisodes,
+      }),
+    };
+  }
   const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
   return {
     generationAnchorISO: state.generationAnchorISO ?? null,
@@ -365,8 +374,10 @@ export function projectProgramPersistedInputs(
     // here it is gone by the first relaunch, and the boundary silently
     // stops progressing anything.
     acceptedBlocks: state.acceptedBlocks ?? {},
-    temporarySourceFacts: accepted.temporarySourceFacts ?? [],
-    injuryEpisodes: accepted.injuryEpisodes ?? [],
+    temporarySourceFacts: normalizeTemporarySourceFacts({
+      value: accepted.temporarySourceFacts,
+      legacyInjuryEpisodes: accepted.injuryEpisodes,
+    }),
   };
 }
 
@@ -374,14 +385,14 @@ export function projectProgramPersistedInputs(
  * R1.3: reduce ANY outgoing program envelope to the inputs shape. Writers
  * that still serialise the fat output envelope (the transaction layer's
  * out-of-band persistence, zustand's post-migration write-back) converge to
- * inputs-only at this one door; writers already sending the new shape pass
- * through untouched.
+ * inputs-only at this one door. Older inputs envelopes are lifted here too;
+ * compatibility injury history is read, but never saved beside its source fact.
  */
 export function reduceProgramEnvelopeToInputs(value: string): string {
   try {
     const parsed = JSON.parse(value) as { state?: Record<string, any>; version?: unknown };
     const state = parsed.state;
-    if (!state || 'inputs' in state) return value;
+    if (!state) return value;
     return JSON.stringify({
       state: { inputs: projectProgramPersistedInputs(state) },
       version: parsed.version,

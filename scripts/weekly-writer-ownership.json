@@ -291,20 +291,15 @@
       "reason": "Reactive store selectors gather inputs for assembleScheduleState; the duplicate state-construction and precedence implementation was removed. No screen-specific week author remains in this function. Mounted native UI acceptance remains separate.",
       "fingerprint": "29a32a1115636d2456c2690e0aece85a4669e2c3b7a0f65b349fcdf7636f0736"
     },
-    "src/utils/applyAdjustmentEvents.ts#applyAdjustmentEvents": {
+    "src/store/temporarySourceFactTransaction.ts#commitDerivingSourceFactScopedRegen": {
       "classification": "rival_author",
-      "reason": "Retained exported legacy procedural event-application entry point invokes applyAdjustmentEventsWithinTrace and the override writer. No non-test caller found by symbol/text scan; historical diagnostics still call it. This is a dormant executable capability requiring retirement/isolation, not evidence of a current athlete action invoking it.",
-      "fingerprint": "ac807d44b60af8473e7e92aa72841714076b960667c7a8b5f05411bff5a9c1ef"
+      "reason": "Live dated-fact author independently generates affected weeks, constructs sparse overlays, reconciles their contracts and creates reversible overlay snapshots after canonical generation. Boot instead passes these same facts into base generation. The canonical injury restart journey now reproduces that disagreement (required strength 3, delivered 2); sharing the pure fact-effect fold and deleting this procedural author remains required.",
+      "fingerprint": "3835e095ad5ea140be6b9b48ff7735e5da26a54365b6683982723bd5d331fbeb"
     },
-    "src/utils/applyAdjustmentEvents.ts#applyMoveSession": {
-      "classification": "rival_author",
-      "reason": "Retained exported legacy move implementation resolves a live week then authors source/destination workouts through defaultApplyOverride. No non-test caller found; historical diagnostics still call it. Must retire/isolate rather than label this canonical because current UI uses a different door.",
-      "fingerprint": "1801a7c03ef0b65e9a5760e8e394fe377be8f70369054d435d41bbc087dfa7f5"
-    },
-    "src/utils/applyAdjustmentEvents.ts#removeInjuryOverridesFromDate": {
+    "src/utils/activeProgramModifiers.ts#removeOverridesForModifierSource": {
       "classification": "derived_output_writer",
-      "reason": "Reachable from clearActiveProgramModifier legacy injury-clear branch; iterates injury-tagged overrideContexts and invokes store.removeManualOverride for each future date. It clears derived outputs procedurally rather than lifting a source decision into compiler state. Canonical injury episodes bypass this branch, but old-format compatibility is still executable.",
-      "fingerprint": "d9e022e71ed9b4a902421e0a7d8d4294bbfeee5be82ae939a3055f73cd9181f9"
+      "reason": "Generic non-injury modifier Clear still scans linked dates and override ownership tags, then calls store.removeManualOverride directly. The injury arm no longer reaches it, but the remaining legacy modifier families do. This is a direct volatile derived-output writer, not evidence that overrides themselves are persisted. Route remaining supported input clears through canonical reconstruction before retiring it.",
+      "fingerprint": "97fdd8748565b013ceab0cedd69e3b2b7c9cce7dc765520aac0e7bab43b7b80e"
     }
   }
 }

@@ -24,6 +24,38 @@ function reviewed(sources, classify = () => 'canonical_compiler') {
   }])) };
 }
 const cleanRegistry = reviewed(clean);
+test('moving a rival into tests cannot hide a runtime import, barrel or lazy loader', () => {
+  for (const edge of [
+    "import { oldWriter } from './__tests__/legacy/snapshot'; oldWriter();",
+    "import {} from './__tests__/legacy/snapshot';",
+    "import './__tests__/legacy/snapshot';",
+    "export { oldWriter } from './__tests__/legacy/snapshot';",
+    "export {} from './__tests__/legacy/snapshot';",
+    "const old = require('./__tests__/legacy/snapshot'); old.oldWriter();",
+    "const load = require; const old = load('./__tests__/legacy/snapshot'); old.oldWriter();",
+    "export async function load() { return import('./__tests__/legacy/snapshot'); }",
+    "import old = require('./__tests__/legacy/snapshot'); old.oldWriter();",
+  ]) {
+    const result = scanSources({ sources: { ...clean, 'src/snapshotConsumer.ts': edge }, registry: cleanRegistry });
+    assert.equal(result.ok, false);
+    assert(result.errors.some(error => error.includes('runtime imports excluded diagnostic code')), edge);
+  }
+});
+test('retired event author module is rejected even before it gains a known caller', () => {
+  const result = scanSources({ sources: { ...clean, 'src/utils/applyAdjustmentEvents.ts':
+    'export function applyAdjustmentEvents(w: any) { w.exercises = []; }' } });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('retired event/move author returned')));
+});
+test('type-only diagnostic references do not become runtime import edges', () => {
+  const result = scanSources({ sources: { ...clean, 'src/typeOnlyDiagnostic.ts': `
+    import type { Old } from './__tests__/legacy/snapshot';
+    import { type Other } from './__tests__/legacy/snapshot';
+    export type { Old } from './__tests__/legacy/snapshot';
+    export { type Other } from './__tests__/legacy/snapshot';
+  ` }, registry: cleanRegistry });
+  assert.equal(result.ok, true);
+});
 test('a fully reviewed pure compiler fixture satisfies zero/zero', () => {
   const r = scanSources({ sources: clean, registry: cleanRegistry });
   assert.equal(r.ok, true); assert.equal(r.counts.canonical_compiler, 1);

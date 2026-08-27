@@ -96,7 +96,7 @@ const DECLARED: Readonly<Record<string, InputClass>> = {
   // §2.2 life-facts — typed, dated
   'calendar-storage.markedDays': 'fact',
   'readiness-store.signalsByDate': 'fact',
-  'program-store.inputs.injuryEpisodes': 'fact',
+  'profile-store.signupDateISO': 'fact',
   'program-store.inputs.temporarySourceFacts': 'fact',
 
   // §2.3 the decision ledger. The generation anchor is a DECISION and boot
@@ -122,25 +122,17 @@ const DECLARED: Readonly<Record<string, InputClass>> = {
   // §2.4 training results — what was done
   'program-store.inputs.sessionFeedback': 'result',
   'program-store.inputs.weightOverrides': 'result',
+  'program-store.inputs.bandResistanceOverrides': 'result',
 };
 
 /** §7's named carry: frozen until the coach rebuild, under LR-6's STOP. */
 const COACH_ERA_KEYS: readonly string[] = [
-  'coach-store.activeConversation',
-  'coach-store.conversations',
-  'coach-store.error',
-  'coach-store.isLoading',
-  'coach-store.isStreaming',
-  'coach-store.messages',
-  'coach-memory-store.notes',
-  'coach-mutation-history-store.entries',
   'coach-preferences-store.modalityPreferences',
   'coach-updates.activeConstraints',
-  'coach-updates.activeInjury',
   'coach-updates.dismissedCoachNoteIds',
   'coach-updates.updatesByWeek',
 ];
-const COACH_ERA_CEILING = 13; // dated 2026-08-06. Shrinks only.
+const COACH_ERA_CEILING = 4; // lowered 2026-08-27: retired stores/activeInjury no longer write.
 
 /** Render state on disk. Found by this suite; NOT one of §7's carries. */
 const TRANSIENT_STATE_DEBT: readonly string[] = [

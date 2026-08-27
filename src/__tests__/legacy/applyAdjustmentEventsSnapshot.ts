@@ -1,3 +1,6 @@
+/** Historical diagnostic snapshot only. Not imported by app/runtime code.
+ * Current athlete edits belong to the canonical compiler and accepted transaction.
+ * Preserved for the old event-engine probes; their results are not release truth. */
 /**
  * applyAdjustmentEvents.ts — Stage 3 of the Universal Adjustment Engine.
  *
@@ -35,20 +38,20 @@
  *       todayISO must be supplied by the caller.
  */
 
-import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
-import { composedOptionalClearingPatch } from './composedOptionalMarker';
+import { applyProgramOverrideWrite, useProgramStore } from '../../store/programStore';
+import { composedOptionalClearingPatch } from '../../utils/composedOptionalMarker';
 import {
   resolveWeekWithConditioning,
   getMondayStr,
   type ResolvedDay,
   type ScheduleState,
-} from './sessionResolver';
-import type { Workout, OverrideContext } from '../types/domain';
+} from '../../utils/sessionResolver';
+import type { Workout, OverrideContext } from '../../types/domain';
 import type {
   AdjustmentEvent,
   RejectedAdjustment,
-} from './programAdjustmentEngine';
-import { logger } from './logger';
+} from '../../utils/programAdjustmentEngine';
+import { logger } from '../../utils/logger';
 import {
   pickEquivalentByTier,
   applyConditioningModalityToWorkout,
@@ -56,9 +59,9 @@ import {
   inferModalityFromName,
   type ParsedModalitySwap,
   type BikeLabel,
-} from './coachModalitySwap';
-import { CONDITIONING_META, type ConditioningModality } from '../data/exerciseTags';
-import { hasMeaningfulWorkoutContent } from './workoutContent';
+} from '../../utils/coachModalitySwap';
+import { CONDITIONING_META, type ConditioningModality } from '../../data/exerciseTags';
+import { hasMeaningfulWorkoutContent } from '../../utils/workoutContent';
 import {
   athleteActionDiagnosticHash,
   athleteActionTerminalReasonChain,
@@ -69,7 +72,7 @@ import {
   type AthleteActionSource,
   type AthleteActionTraceContext,
   type AthleteActionType,
-} from './athleteActionDiagnostics';
+} from '../../utils/athleteActionDiagnostics';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -252,7 +255,7 @@ function defaultBuildState(): ScheduleState {
   // require() so the import isn't pulled in until apply runs.
   // Tests inject `buildState` instead.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildScheduleStateImperative } = require('./coachWeekDiff');
+  const { buildScheduleStateImperative } = require('../../utils/coachWeekDiff');
   return buildScheduleStateImperative();
 }
 
@@ -2191,3 +2194,4 @@ function mondayOfISOLocal(iso: string): string {
   const dd = String(anchor.getDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
 }
+

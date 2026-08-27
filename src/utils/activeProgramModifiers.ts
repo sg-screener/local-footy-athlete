@@ -16,7 +16,6 @@ import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { useReadinessStore } from '../store/readinessStore';
-import { removeInjuryOverridesFromDate } from './applyAdjustmentEvents';
 import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
 import { decideOverrideSweep } from './weekRebuild';
@@ -1572,16 +1571,6 @@ function removeOverridesForModifierSource(
   return cleared;
 }
 
-function mergeClearedOverrideDates(...groups: readonly string[][]): string[] {
-  return Array.from(new Set(groups.flat())).sort();
-}
-
-function hasLiveInjurySource(): boolean {
-  const store = useCoachUpdatesStore.getState();
-  return store.activeConstraints.some((constraint) =>
-    constraint.type === 'injury' && constraint.status !== 'resolved');
-}
-
 export function clearActiveProgramModifier(
   modifierIdToClear: string,
 ): ClearActiveProgramModifierResult {
@@ -1616,10 +1605,7 @@ export function clearActiveProgramModifier(
   // Canonical injury state is resolved only by resolveInjuryEpisode(id).
   // Generic modifier Clear remains available for the other legacy families,
   // but it must never delete an episode, history, or injury-owned projection.
-  if (modifier.type === 'injury' && (
-    typeof modifier.payload?.injuryEpisodeId === 'string' ||
-    useProgramStore.getState().acceptedMaterialContext.injuryEpisodes?.length > 0
-  )) {
+  if (modifier.type === 'injury') {
     return {
       cleared: null,
       remainingActiveCount: modifiers.length,
@@ -1636,12 +1622,6 @@ export function clearActiveProgramModifier(
     if (existing) {
       clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, existing);
       store.removeActiveConstraint(modifier.sourceId);
-      if (existing.type === 'injury' && !hasLiveInjurySource()) {
-        clearedOverrideDates = mergeClearedOverrideDates(
-          clearedOverrideDates,
-          removeInjuryOverridesFromDate(todayISOLocal()),
-        );
-      }
       if (existing.type === 'equipment') rebuildRequired = true;
     }
     if (modifier.type === 'exercise_adjustment') {

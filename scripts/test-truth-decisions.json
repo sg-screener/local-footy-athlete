@@ -60,7 +60,7 @@
     },
     "test:apply-events": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "reason": "Historical event-engine diagnostic now imports a test-only snapshot. Its obsolete override expectations are not product requirements. Current edits/restart/Undo are held by test:canonical-weekly-compiler; retain these old probes as evidence, not a release gate or a reason to restore the retired runtime engine.",
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:approved-icons": {
@@ -619,7 +619,7 @@
     },
     "test:persisted-inputs-schema": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "reason": "Registry refreshed against current persistence: signup date and selected band resistance are inputs, retired coach-store keys and duplicate injury history are removed. Inventory checks pass but still explicitly carry seven debt entries (four coach keys, two transient keys, one unregistered envelope); this is not proof of zero persisted outputs or a current release witness.",
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:persistent-injury": {

@@ -60,11 +60,11 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `codex/failure-only-state-export` · **CURRENT CHECKPOINT:** step 22 below.
-- **CURRENT UNIT:** typed lighter-day opt-in/restart/Undo; retired private planner removed; product/devtools typechecks clean; owner `testtruth`.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 22; compiler 402/402, readiness 24/24, year 416/416 weekly checks. Release remains red on ownership.
-- **NEXT:** remaining projection rewrite, global ownership review and historical test debt; owner `testtruth`. Lighter-day conditioning content remains unverified.
-- **OPEN:** 4 rival functions in one projection pipeline; 1,152/1,200 candidate owners unresolved; 312 type diagnostics in 102 test files. No zero-owner or phone acceptance claim.
+- **BRANCH:** `codex/failure-only-state-export` · **CURRENT CHECKPOINT:** step 24 below.
+- **CURRENT UNIT:** legacy event/move authors isolated; injury shortcuts retired; single injury save format; product/devtools types clean; owner `testtruth`.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 24; compiler 453/456 (three injury-restart reds), year 416/416 weekly checks; release still red.
+- **NEXT:** one pure dated-fact compiler shared by live injury and restart, then remaining non-injury Clear writer; owner `testtruth`.
+- **OPEN:** 1 confirmed rival, 1 confirmed derived-output writer; 1,256/1,316 candidate owners unresolved; 256 test type diagnostics in 96 files. No zero-owner or phone acceptance claim.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

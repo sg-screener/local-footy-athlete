@@ -49,7 +49,7 @@ import {
 } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import { compileCanonicalWeeklyExerciseEdits } from '../rules/canonicalWeeklyExerciseEditCompiler';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
-import { useProgramStore } from '../store/programStore';
+import { useProgramStore, projectProgramPersistedInputs } from '../store/programStore';
 import {
   coldStartThroughOnboarding,
   quiet,
@@ -66,7 +66,10 @@ import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '.
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveProgression, type ProgressionInput } from '../utils/progressionRules';
 import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
-import { executeProgramControlActionDurably } from '../utils/programControlActions';
+import { executeProgramControlAction, executeProgramControlActionDurably } from '../utils/programControlActions';
+import { resetStoresToFreshInstall } from './support/freshInstallStores';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { clearActiveProgramModifier, getActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
@@ -239,6 +242,34 @@ function assertCompiledSurfaceAgreement(weekStart: string, todayISO: string, lab
 }
 
 async function main(): Promise<void> {
+  resetStoresToFreshInstall('canonical injury owner refusal');
+  const freshContext = useProgramStore.getState().acceptedMaterialContext;
+  const unsupportedInjury = buildGuidedInjuryConstraint({
+    region: 'lower_body', area: 'knee', severity: 7,
+    severityBand: 'avoid', adjustmentLevel: 'avoid_affected',
+    triggers: ['running'], seriousSymptoms: false,
+  }, { todayISO: INSTALL_DAY });
+  ok('the retired injury shortcut witness reaches its former empty-world precondition',
+    !freshContext.acceptedCompositionBase && freshContext.injuryEpisodes.length === 0);
+  const refusedInjury = executeProgramControlAction({
+    type: 'set_injury_modifier',
+    source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+    scope: 'current_and_future', payload: { constraint: unsupportedInjury },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO: INSTALL_DAY });
+  ok('synchronous injury creation cannot write a retired unowned constraint',
+    !refusedInjury.ok && useCoachUpdatesStore.getState().activeConstraints.length === 0);
+  // Boundary-only counterexample for the retired writer's output. This is not
+  // an athlete program fixture and does not invent an injury episode/history.
+  setJourneyClock(INSTALL_DAY);
+  useCoachUpdatesStore.getState().upsertActiveConstraint(unsupportedInjury);
+  const unsupportedModifier = getActiveProgramModifiers(INSTALL_DAY).find(
+    (modifier) => modifier.sourceId === unsupportedInjury.id && modifier.type === 'injury');
+  ok('the old unowned constraint reaches generic Clear as an injury modifier', !!unsupportedModifier);
+  const unsupportedClear = unsupportedModifier ? clearActiveProgramModifier(unsupportedModifier.id) : null;
+  ok('generic Clear refuses unowned injury state instead of erasing derived overrides',
+    unsupportedClear?.cleared === null && useCoachUpdatesStore.getState().activeConstraints.some(
+      (constraint) => constraint.id === unsupportedInjury.id));
   checkCanonicalConstraintOwnership(ok);
   console.log('\n[ownership] one orchestration owns the three authoring stages');
   for (const symbol of [
@@ -1422,6 +1453,18 @@ async function main(): Promise<void> {
   });
   ok('the injury witness reaches a real generated week through onboarding',
     injuryInstall.onboardingRefusal === null, injuryInstall.onboardingRefusal);
+  const injuryUneditedSignature = visibleSignature(quiet(() =>
+    resolvedDays(injuryInstall.blockOneStart, INSTALL_DAY)));
+  const injuryEditWeek = quiet(() => deriveVisibleWeekLive(injuryInstall.blockOneStart, INSTALL_DAY));
+  const injuryEditDay = injuryEditWeek.find((day) =>
+    day.date >= declarationDay && day.workout && day.workout.workoutType !== 'Game' &&
+      (day.workout.exercises?.length ?? 0) > 0);
+  const injuryPriorEdit = injuryEditDay ? quiet(() => applyPlanChange({
+    change: { kind: 'remove_session', date: injuryEditDay.date, scope: 'whole_day' },
+    visibleWeek: injuryEditWeek, todayISO: declarationDay, applyOverride: () => undefined,
+  })) : null;
+  ok('the injury witness accumulates a real accepted session edit first',
+    injuryPriorEdit?.ok, injuryPriorEdit?.message);
   const injuryBaseline = quiet(() =>
     resolvedDays(injuryInstall.blockOneStart, INSTALL_DAY));
   const injuryBaselineSignature = visibleSignature(injuryBaseline);
@@ -1432,9 +1475,9 @@ async function main(): Promise<void> {
     JSON.stringify(injurySelectionHistoryBefore));
   const injuryConstraint = buildGuidedInjuryConstraint({
     region: 'lower_body', area: 'knee', severity: 7,
-    severityBand: 'avoid', adjustmentLevel: 'remove_risky',
+    severityBand: 'avoid', adjustmentLevel: 'avoid_affected',
     triggers: ['running', 'change of direction'], seriousSymptoms: false,
-  } as never, { todayISO: declarationDay });
+  }, { todayISO: declarationDay });
   const injurySet = await quietAsync(() => executeProgramControlActionDurably({
     type: 'set_injury_modifier',
     source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
@@ -1447,6 +1490,14 @@ async function main(): Promise<void> {
   const injuryEpisodeId = injurySet.createdModifierIds?.[0] ?? null;
   ok('the injury door returns the exact episode it authored',
     Boolean(injuryEpisodeId), JSON.stringify(injurySet.createdModifierIds));
+  const ownedInjuryModifier = getActiveProgramModifiers(declarationDay).find(
+    (modifier) => modifier.payload?.injuryEpisodeId === injuryEpisodeId);
+  ok('the current injury appears with its exact episode-owned modifier id', !!ownedInjuryModifier);
+  const genericClear = ownedInjuryModifier ? clearActiveProgramModifier(ownedInjuryModifier.id) : null;
+  ok('generic Clear cannot bypass the injury episode transaction',
+    genericClear?.cleared === null &&
+      useProgramStore.getState().acceptedMaterialContext.injuryEpisodes.some(
+        (episode) => episode.episodeId === injuryEpisodeId && episode.status === 'active'));
   const injuryContext = buildGenerationConstraintContext({
     activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints,
     temporarySourceFacts:
@@ -1475,6 +1526,58 @@ async function main(): Promise<void> {
   ok('the affected week retains real unaffected training instead of being emptied',
     injuryVisible.some((day) => day.rows.length > 0));
   assertCompiledSurfaceAgreement(injuryInstall.blockOneStart, declarationDay, 'accepted injury');
+  await flushPendingStorageWrites();
+  const injuryEpisodesBefore = structuredClone(
+    useProgramStore.getState().acceptedMaterialContext.injuryEpisodes);
+  const injuryLedgerBefore = JSON.stringify(decisionLedgerEntries());
+  const injuryEnvelope = JSON.parse(localStorageData.get('program-store')!);
+  ok('injury is persisted once, as the canonical source fact',
+    !('injuryEpisodes' in injuryEnvelope.state.inputs) &&
+      injuryEnvelope.state.inputs.temporarySourceFacts.some(
+        (fact: { episodeId?: string }) => fact.episodeId === injuryEpisodeId));
+  const nativeInjuryDisk = new Map(localStorageData);
+  const nativeInjuryRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: declarationDay,
+  }));
+  ok('the current-format injury plus accepted session edit survives restart unchanged',
+    nativeInjuryRestart.ok && visibleSignature(quiet(() =>
+      resolvedDays(injuryInstall.blockOneStart, declarationDay))) === visibleSignature(injuryVisible),
+    nativeInjuryRestart.error);
+  // Each encoding starts from the same actual accepted disk, independently of
+  // whether the preceding boot succeeded or partly rebuilt its in-memory world.
+  await flushPendingStorageWrites();
+  localStorageData.clear();
+  for (const [key, value] of nativeInjuryDisk) localStorageData.set(key, value);
+  // Re-encode an ACTUAL accepted injury in the supported older storage shape.
+  // No bare constraint is upgraded into invented injury provenance.
+  injuryEnvelope.state.inputs.injuryEpisodes = injuryEpisodesBefore;
+  injuryEnvelope.state.inputs.temporarySourceFacts =
+    injuryEnvelope.state.inputs.temporarySourceFacts.filter(
+      (fact: { episodeId?: string }) => !fact.episodeId);
+  localStorageData.set('program-store', JSON.stringify(injuryEnvelope));
+  const injuryRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: declarationDay,
+  }));
+  ok('a saved injury episode in the older encoding boots through current ingress',
+    injuryRestart.ok, injuryRestart.error);
+  ok('legacy injury ingress preserves the exact episode identity and history',
+    injuryEpisodesBefore.length > 0 && JSON.stringify(
+      useProgramStore.getState().acceptedMaterialContext.injuryEpisodes) ===
+      JSON.stringify(injuryEpisodesBefore));
+  ok('legacy injury ingress neither adds decisions nor changes the visible week',
+    JSON.stringify(decisionLedgerEntries()) === injuryLedgerBefore &&
+      visibleSignature(quiet(() => resolvedDays(injuryInstall.blockOneStart, declarationDay))) ===
+        visibleSignature(injuryVisible));
+  const canonicalInjuryInputs = projectProgramPersistedInputs(
+    useProgramStore.getState() as unknown as Record<string, unknown>);
+  const staleLegacyInputs = projectProgramPersistedInputs({ inputs: {
+    ...canonicalInjuryInputs,
+    injuryEpisodes: injuryEpisodesBefore.map((episode) => ({ ...episode, status: 'resolved' })),
+  } });
+  ok('canonical facts win over a stale compatibility copy without persisting it',
+    !('injuryEpisodes' in staleLegacyInputs) &&
+      JSON.stringify(staleLegacyInputs.temporarySourceFacts) ===
+        JSON.stringify(canonicalInjuryInputs.temporarySourceFacts));
   const injuryCleared = injuryEpisodeId
     ? await quietAsync(() => executeProgramControlActionDurably({
         type: 'clear_injury_modifier',
@@ -1497,6 +1600,29 @@ async function main(): Promise<void> {
       historyBefore: injurySelectionHistoryBefore,
       historyAfter: blockSelectionHistory(),
     }));
+  const recoveredRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: declarationDay,
+  }));
+  ok('clearing an older saved injury stays cleared across restart',
+    recoveredRestart.ok && visibleSignature(quiet(() =>
+      resolvedDays(injuryInstall.blockOneStart, declarationDay))) === injuryBaselineSignature,
+    recoveredRestart.error);
+  const resolvedEpisodes = JSON.stringify(useProgramStore.getState().acceptedMaterialContext.injuryEpisodes);
+  const injuryUndo = await quietAsync(() => undoLastDecision());
+  ok('Undo after restart reverses only the session edit and preserves injury resolution',
+    injuryUndo.outcome === 'undone' && visibleSignature(quiet(() =>
+      resolvedDays(injuryInstall.blockOneStart, declarationDay))) === injuryUneditedSignature &&
+      JSON.stringify(useProgramStore.getState().acceptedMaterialContext.injuryEpisodes) === resolvedEpisodes,
+    JSON.stringify(injuryUndo));
+  const injuryUndoRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: declarationDay,
+  }));
+  ok('the resolved injury history and undone session edit survive another restart',
+    injuryUndoRestart.ok && JSON.stringify(
+      useProgramStore.getState().acceptedMaterialContext.injuryEpisodes) === resolvedEpisodes &&
+        visibleSignature(quiet(() => resolvedDays(injuryInstall.blockOneStart, declarationDay))) ===
+          injuryUneditedSignature,
+    injuryUndoRestart.error);
 
   console.log('\n[availability slice] normal -> away with reduced kit -> home');
   const awayInstall = await coldStartThroughOnboarding({
