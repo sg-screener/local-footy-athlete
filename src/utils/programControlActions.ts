@@ -46,6 +46,7 @@ import {
   setPreferredAlternative,
   replaceExerciseAtDate,
   addExerciseAtDate,
+  loadForReplacementRow,
   pinExerciseGlobally,
 } from './coachActions';
 import {
@@ -2517,6 +2518,28 @@ async function executeProgramControlActionDurablyWithinTrace(
     return executeProgramControlAction(action, context);
   }
   /**
+   * The accepted action carries the replacement's resolved load. Recomputing
+   * it during boot made startup a second author and left a pure compiler with
+   * no way to reproduce the accepted prescription.
+   */
+  const acceptedAction: ProgramControlAction = action.type === 'swap_exercise' &&
+    action.payload.toExercise &&
+    !Number.isFinite(Number(action.payload.toExercise.weight))
+    ? (() => {
+        const resolvedWeight = loadForReplacementRow(action.payload.toExercise!.name);
+        return {
+          ...action,
+          payload: {
+            ...action.payload,
+            toExercise: {
+              ...action.payload.toExercise!,
+              ...(resolvedWeight !== undefined ? { weight: resolvedWeight } : {}),
+            },
+          },
+        } as ProgramControlAction;
+      })()
+    : action;
+  /**
    * DERIVED ROWS HAVE ONE MATERIAL OWNER: THE DECISION LEDGER.
    *
    * A D17 warm-up or recovery add-on has no stored `workout.exercises` row to
@@ -2532,20 +2555,20 @@ async function executeProgramControlActionDurablyWithinTrace(
    * No copied workout and no special swap writer are introduced.
    */
   const derivedExerciseAction =
-    (action.type === 'swap_exercise' || action.type === 'remove_exercise')
-    && !!action.payload.derivedSource;
+    (acceptedAction.type === 'swap_exercise' || acceptedAction.type === 'remove_exercise')
+    && !!acceptedAction.payload.derivedSource;
   if (derivedExerciseAction) {
-    const core = executeProgramControlAction(action, context);
+    const core = executeProgramControlAction(acceptedAction, context);
     if (!core.ok || !core.changedProgram) return core;
     // Lazy for the same cycle reason documented on the ordinary append below.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { programControlDecisionFor } = require('../rules/programControlDecisions');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { appendDecisionEntry } = require('../store/decisionLedgerStore');
-    const decision = programControlDecisionFor(action);
+    const decision = programControlDecisionFor(acceptedAction);
     const outcome = decision ? appendDecisionEntry({
       decision,
-      provenance: action.source.initiatedBy === 'system' ? 'system_fixture' : 'athlete_tap',
+      provenance: acceptedAction.source.initiatedBy === 'system' ? 'system_fixture' : 'athlete_tap',
       writer: 'program_control',
     }) : { ok: false, reason: 'derived_action_not_recordable' };
     if (outcome.ok) return core;
@@ -2558,11 +2581,14 @@ async function executeProgramControlActionDurablyWithinTrace(
   }
   const dates = action.type === 'move_session'
     ? [action.payload.fromDate, action.payload.toDate]
-    : [action.payload.date];
+    : action.type === 'bin_session' || action.type === 'swap_exercise' ||
+        action.type === 'add_exercise' || action.type === 'remove_exercise'
+      ? [action.payload.date]
+      : [];
   const transaction = await runCoachMutationTransaction({
     todayISO: context.todayISO ?? dates[0],
     extraDates: dates,
-    mutate: () => executeProgramControlAction(action, context),
+    mutate: () => executeProgramControlAction(acceptedAction, context),
     didApply: (result) => result.ok && result.changedProgram,
   });
   if (transaction.ok) {
@@ -2609,11 +2635,11 @@ async function executeProgramControlActionDurablyWithinTrace(
     const { programControlDecisionFor } = require('../rules/programControlDecisions');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { appendDecisionEntry } = require('../store/decisionLedgerStore');
-    const decision = programControlDecisionFor(action);
+    const decision = programControlDecisionFor(acceptedAction);
     if (decision && transaction.value.ok && transaction.value.changedProgram) {
       const outcome = appendDecisionEntry({
         decision,
-        provenance: action.source.initiatedBy === 'system' ? 'system_fixture' : 'athlete_tap',
+        provenance: acceptedAction.source.initiatedBy === 'system' ? 'system_fixture' : 'athlete_tap',
         writer: 'program_control',
       });
       if (!outcome.ok) {
@@ -2622,7 +2648,7 @@ async function executeProgramControlActionDurablyWithinTrace(
         // the durability gap this line exists to close — but an unrecorded edit
         // is one that vanishes at the next boot, so it can never be silent.
         logger.error('[programControl] the door applied an edit the ledger refused to record', {
-          actionType: action.type,
+          actionType: acceptedAction.type,
           reason: (outcome as { reason?: string }).reason,
         });
       }

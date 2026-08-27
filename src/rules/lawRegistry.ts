@@ -164,6 +164,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-canonical-weekly-compiler-exercise-edit-fold',
+    law: 'Accepted exercise Swap, Add and Remove decisions translate once into typed weekly semantic state: boot folds them through the pure weekly exercise-edit compiler rather than re-entering the live action door, live and boot Swap/Add row construction share that compiler, current actions target component ids before compatibility names, resolved replacement load is stored once at acceptance, and Remove remains an exclusion projection so Restore is exact.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md step 12 (exercise-edit compiler fold); Sam, 2026-08-27: successive "GO" instructions continuing the canonical compiler migration.',
+    guard: {
+      state: 'guarded',
+      by: 'test:canonical-weekly-compiler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-27 by seat `testtruth`. TWO OPTIONS COMPARED: keep boot re-entering the live program-control action interpreter, or translate accepted exercise decisions once and compile their ordered weekly effect through one pure fold shared by live Swap/Add writers. The pure fold landed. Its first behavioral run was 160/161 and exposed a real accepted-input omission: the live Swap resolved 17.5 kg but the ledger did not store it, while procedural replay hid the loss by recalculating at startup. The durable boundary now resolves and stores that load once. Distinct final Swap/Add row constructors outside the compiler: 0; boot callbacks into the live action interpreter for accepted exercise edits: 0; derived mobility/recovery raw action classifiers outside semantic state: 0. Duplicate-name witnesses prove component id selects the intended row and a missing current id never falls back to a name; names remain compatibility ingress only. Added-row identity is derived from canonical name plus date and remains exact across process death. A current-contract cold start performs Remove, Swap and Add on one real multi-row session, proves coexistence, restarts and restores the exact visible prescription. TEST FIRST: ownership cells red because both compiler modules were absent. LIVE: compiler 166/166, Undo 25/25, injury recomposition 41/41, direct mobility/prehab 74/74, placement 22/22, day precedence 6/6, release 4/4. NOT COVERED: non-exercise procedural replay; exclusion input plus undo-ledger dual representation; scheduled deload; global rival-author zero, full-year archetypes, pixels, simulator and physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-release-gate-runs-only-validated-current-contracts',
     law: 'The release gate is npm run test:release and derives every product witness from validated current-contract census rows; the red test:bible fleet remains diagnostic evidence and has no authority to change product behaviour.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md "step 3: one small green release gate"; Sam, 2026-08-27: "Establish one small, genuinely green release gate" after ordering the current red fleet to stop acting as a product to-do list.',

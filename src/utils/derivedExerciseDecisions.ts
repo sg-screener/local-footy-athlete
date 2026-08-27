@@ -2,7 +2,7 @@ import { POOL_REGISTRY, type PoolExercise } from '../data/exercisePools';
 import type { Workout } from '../types/domain';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { ExercisePrescriptionPayload } from '../types/programControlAction';
-import { replayableEntries } from '../rules/decisionLedgerReplay';
+import { canonicalWeeklyExerciseEditStateFrom } from '../rules/canonicalWeeklyExerciseEditState';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { MobilityPrehabFlow } from './mobilityPrehabFlow';
 
@@ -22,25 +22,28 @@ function decisionsOn(
   sourceKind: DerivedKind,
 ): DerivedDecision[] {
   const decisions: DerivedDecision[] = [];
-  for (const entry of replayableEntries(entries)) {
-    if (entry.decision.kind !== 'program_control') continue;
-    const action = entry.decision.action;
-    if (action.type !== 'swap_exercise' && action.type !== 'remove_exercise') continue;
-    if (action.payload.date.slice(0, 10) !== date.slice(0, 10)) continue;
-    if (action.payload.derivedSource?.kind !== sourceKind) continue;
-    decisions.push(action.type === 'swap_exercise'
+  const targetDate = date.slice(0, 10);
+  const parsed = new Date(`${targetDate}T12:00:00`);
+  parsed.setDate(parsed.getDate() - ((parsed.getDay() + 6) % 7));
+  const weekStartISO = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`
+    + `-${String(parsed.getDate()).padStart(2, '0')}`;
+  const state = canonicalWeeklyExerciseEditStateFrom({ weekStartISO, entries });
+  for (const edit of state.edits) {
+    if (edit.kind !== 'swap' && edit.kind !== 'remove') continue;
+    if (edit.dateISO !== targetDate || edit.derivedSource?.kind !== sourceKind) continue;
+    decisions.push(edit.kind === 'swap'
       ? {
           kind: 'swap',
           sourceKind,
-          sourceId: action.payload.derivedSource.id,
-          exerciseName: action.payload.fromExercise,
-          replacement: action.payload.toExercise,
+          sourceId: edit.derivedSource.id,
+          exerciseName: edit.targetName,
+          replacement: edit.replacement,
         }
       : {
           kind: 'remove',
           sourceKind,
-          sourceId: action.payload.derivedSource.id,
-          exerciseName: action.payload.exercise,
+          sourceId: edit.derivedSource.id,
+          exerciseName: edit.targetName,
         });
   }
   return decisions;

@@ -47,12 +47,14 @@ export type AthleteDecision =
    * ("never paraphrases") applied to a door that previously had no kind at all.
    *
    * WHY ONE KIND FOR A 26-MEMBER UNION. A kind per capability would need a
-   * translation per capability, and a translation is where a field is lost by
-   * omission. There is nothing to translate: the decision IS the action.
+   * second stored representation per capability, and that is where fields are
+   * lost by omission. The decision IS the accepted action; its effect is
+   * translated once into canonical weekly semantic state at read time.
    *
    * WHICH action types actually appear here is NOT open — it is the allow-list
-   * in `rules/programControlDecisions.ts`, and `programControlDecisionTests`
-   * pins that every recorded type has a replay arm and vice versa. Recording a
+   * in `rules/programControlDecisions.ts`, and
+   * `canonicalWeeklyCompilerSliceTests` pins that every recorded type has a
+   * semantic compiler arm and vice versa. Recording a
    * type the boot cannot reproduce would be worse than recording nothing: the
    * edit would look durable and vanish anyway.
    *

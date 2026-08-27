@@ -36,7 +36,6 @@ import { applyProgramOverrideWrite, useProgramStore, type ProgramOverrideWriteOu
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
-import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 import {
   useCoachUpdatesStore,
   type ActivePreferenceConstraint,
@@ -52,6 +51,10 @@ import { formatExerciseDisplayName } from './exerciseDisplay';
 import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
+import {
+  compileCanonicalExerciseEditOnWorkout,
+  resolveCanonicalExerciseEditTarget,
+} from '../rules/canonicalWeeklyExerciseEditCompiler';
 
 // ─── Types ───
 
@@ -403,68 +406,12 @@ export type ExerciseMatchResult =
  *   "RDL"           → unique(RDLs)                   [tier 2 alias]
  */
 export function findExerciseMatch(workout: Workout, query: string): ExerciseMatchResult {
-  const trimmed = (query || '').trim();
-  if (!trimmed) return { kind: 'not_found' };
-  const queryLower = trimmed.toLowerCase();
-
-  const exerciseNames = workout.exercises.map((ex) => (ex.exercise?.name || ''));
-
-  // Tier 1: case-insensitive exact match against existing names
-  const exactMatches = workout.exercises.filter(
-    (ex) => (ex.exercise?.name || '').toLowerCase().trim() === queryLower,
-  );
-  if (exactMatches.length === 1) {
-    return { kind: 'unique', match: exactMatches[0] };
-  }
-  if (exactMatches.length > 1) {
-    return {
-      kind: 'ambiguous',
-      candidates: exactMatches.map((ex) => ex.exercise?.name || ''),
-    };
-  }
-
-  // Tier 2: alias resolution. Try the user's input through the canonical
-  // alias map; if it normalises to a different name, look that up exactly.
-  const canonical = resolveExerciseName(trimmed);
-  const canonicalLower = canonical.toLowerCase().trim();
-  if (canonicalLower !== queryLower) {
-    const aliasMatches = workout.exercises.filter(
-      (ex) => (ex.exercise?.name || '').toLowerCase().trim() === canonicalLower,
-    );
-    if (aliasMatches.length === 1) {
-      return { kind: 'unique', match: aliasMatches[0] };
-    }
-    if (aliasMatches.length > 1) {
-      return {
-        kind: 'ambiguous',
-        candidates: aliasMatches.map((ex) => ex.exercise?.name || ''),
-      };
-    }
-  }
-
-  // Tier 3: substring fuzzy. ONE direction only — candidate name contains
-  // the user's query. Never `query.includes(name)`: a 2-char query would
-  // pass "contains" against any longer candidate and quietly grab the
-  // first one. We also check the canonical form just in case the workout
-  // stores a non-canonical variant.
-  const fuzzyMatches = workout.exercises.filter((ex) => {
-    const name = (ex.exercise?.name || '').toLowerCase().trim();
-    return name.includes(queryLower) || (canonicalLower !== queryLower && name.includes(canonicalLower));
+  const resolved = resolveCanonicalExerciseEditTarget(workout, {
+    targetComponentId: null,
+    targetName: query,
   });
-  if (fuzzyMatches.length === 1) {
-    return { kind: 'unique', match: fuzzyMatches[0] };
-  }
-  if (fuzzyMatches.length > 1) {
-    return {
-      kind: 'ambiguous',
-      candidates: fuzzyMatches.map((ex) => ex.exercise?.name || ''),
-    };
-  }
-
-  // Lint suppression — reference for debugging without changing behaviour.
-  void exerciseNames;
-
-  return { kind: 'not_found' };
+  if (resolved.kind === 'found') return { kind: 'unique', match: resolved.row };
+  return resolved;
 }
 
 /** Build a deep-enough Workout copy that the resolver can render. */
@@ -647,7 +594,7 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
  * movement the athlete last loaded three blocks ago still resumes at their number.
  * The window passed here is therefore deliberately unbounded.
  */
-function loadForReplacementRow(exerciseName: string): number | undefined {
+export function loadForReplacementRow(exerciseName: string): number | undefined {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { readBlockHistory, loadForReplacementExercise } =
@@ -675,159 +622,45 @@ function loadForReplacementRow(exerciseName: string): number | undefined {
 
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
   const { date, fromExercise, fromExerciseId, toExercise, todayISO } = input;
-  /**
-   * ⚠ **A REPLAY IS NOT THE ATHLETE ACTING, SO IT IS NOT REFUSED FOR STALENESS.**
-   *
-   * This guard is a DOOR guard: it stops an athlete editing a session that has
-   * already happened. It was already asked and already answered at the moment
-   * the decision landed. A boot replay is not a new intent — it reconstructs a
-   * decision the ledger says was accepted — so running the guard again makes
-   * startup a SECOND authority over whether an accepted decision may take
-   * effect, and a refusal there silently drops the athlete's change.
-   *
-   * MEASURED 2026-08-19 by `npm run test:session-change-sequence`: the swap's
-   * replay was refused with `"2026-07-22 is in the past - I can't change it."`
-   * and the athlete's chosen exercise was gone after every restart, while the
-   * removal (a durable decision in athlete preferences) and the add (no such
-   * guard) both survived — which is why it read as "the swap specifically".
-   *
-   * The comparison is against `entry.occurredAt`, and replay passes that as
-   * `todayISO`. It is a UTC instant string-sliced to a date, so in any timezone
-   * BEHIND UTC an ordinary evening swap stamps TOMORROW's date and the guard
-   * refuses the athlete's own edit on the next launch. Fixing only the clock
-   * would leave the refusal standing for DST, travel and a manual clock change.
-   * The authority is removed from the replay path, not compensated for.
-   *
-   * The latch is the app's existing statement of exactly this — *"a replayed
-   * interpreter is not the athlete acting"* — and it carries no imports, so
-   * consulting it here cannot form a cycle.
-   */
-  if (todayISO && !ledgerReplayActive() && date.slice(0, 10) < todayISO.slice(0, 10)) {
+  // This is a live-door guard only. Accepted actions never re-enter this
+  // function at boot; the weekly compiler reconstructs them without asking a
+  // second time whether the already-accepted edit may land.
+  if (todayISO && date.slice(0, 10) < todayISO.slice(0, 10)) {
     return { success: false, reason: `${date} is in the past - I can't change it.` };
   }
   const current = resolveDateWorkout(date);
   if (!current) {
     return { success: false, reason: `No session on ${date} to swap exercise on.` };
   }
-  let found: WorkoutExercise | null = null;
-  if (fromExerciseId) {
-    const id = String(fromExerciseId);
-    found = current.exercises.find((ex: any) =>
-      [ex.id, ex.exerciseId, ex.exercise?.id]
-        .filter(Boolean)
-        .some((candidate) => String(candidate) === id),
-    ) ?? null;
-  }
-  if (!found) {
-    const matchResult = findExerciseMatch(current, fromExercise);
-    if (matchResult.kind === 'not_found') {
-      return {
-        success: false,
-        reason: `Could not find "${fromExercise}" on ${date}.`,
-      };
-    }
-    if (matchResult.kind === 'ambiguous') {
-      // Surface the candidates so the AI can ask "which one?" rather than
-      // silently swapping the first match. We deliberately do NOT pick a
-      // default — every silent pick is a chance to swap the wrong variant.
-      return {
-        success: false,
-        reason: `"${fromExercise}" matches multiple exercises on ${date}: ${matchResult.candidates.join(', ')}. Ask the athlete which one they mean.`,
-        ambiguous: { candidates: matchResult.candidates },
-      };
-    }
-    found = matchResult.match;
-  }
-  const replacementId = `ex-coach-${toExercise.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-  const prescribedSets = finitePositiveNumber(
-    toExercise.sets,
-    finitePositiveNumber(found.prescribedSets, 3),
-  );
-  const prescribedRepsMin = finitePositiveNumber(
-    toExercise.repsMin,
-    finitePositiveNumber(found.prescribedRepsMin, 8),
-  );
-  const prescribedRepsMax = Math.max(
-    prescribedRepsMin,
-    finitePositiveNumber(
-      toExercise.repsMax,
-      finitePositiveNumber(found.prescribedRepsMax, prescribedRepsMin),
-    ),
-  );
-  const replacement: WorkoutExercise = {
-    ...found,
-    exerciseId: replacementId,
-    prescribedSets,
-    prescribedRepsMin,
-    prescribedRepsMax,
-    // ⚠ **A REPLACEMENT NEVER INHERITS THE OUTGOING EXERCISE'S LOAD.**
-    //
-    // Sam, 2026-08-18: a substitution's *"replacement never inherits another
-    // exercise's load"*. The approved contract says the same for rotation —
-    // *"the old exercise's load must not be blindly transferred … the athlete
-    // selects a safe starting load for the new movement"*.
-    //
-    // This line used to fall back to `found.prescribedWeightKg` — the row being
-    // REPLACED. MEASURED on the real journey: swapping an 80 kg `RDLs` for the
-    // app's own offered substitute produced **`Glute Bridge` at 80 kg**, which is
-    // not a conservative mapping, it is a different exercise wearing another
-    // lift's number.
-    //
-    // Absent means UNSET and the athlete chooses, which is the honest answer for a
-    // movement they have never loaded. It does NOT strand them: the moment they
-    // record a load for this exact exercise, the block boundary's exact-exercise
-    // ownership rule governs it from then on — that rule is untouched here.
-    ...(Number.isFinite(Number(toExercise.weight))
-      ? { prescribedWeightKg: Number(toExercise.weight) }
-      : { prescribedWeightKg: loadForReplacementRow(toExercise.name) }),
-    prescriptionType: toExercise.prescriptionType ?? found.prescriptionType,
-    perSide: toExercise.perSide ?? found.perSide,
-    restSeconds: toExercise.restSeconds ?? found.restSeconds,
-    notes: toExercise.notes || found.notes,
-    // WHOSE PLACE THIS ROW IS TAKING — STATED, NEVER INHERITED. The `...found`
-    // spread above would otherwise carry the OUTGOING row's provenance onto a
-    // row that has nothing to do with it, so an ordinary athlete swap would
-    // claim to be standing in for whatever the last fact displaced. Absent
-    // means "nobody's place", which is the truth for a tap.
-    substitutedFrom: input.substitutedFrom,
-    /* ⚠ **AND NEITHER IS THE OUTGOING ROW'S INJURY MARKER INHERITED.**
-     *
-     * The paragraph directly above states this rule for `substitutedFrom` and
-     * `unavailableForInjury` was breaking it in exactly the same way, through
-     * the same `...found` spread. **MEASURED ON GLASS**, hamstring 8/10 without
-     * serious symptoms: the athlete was shown four SKIP markers on the safe
-     * REPLACEMENTS, each sentence naming a different exercise than the row it
-     * sat on — `Chest-Supported DB Row` warned about `Leg Press`.
-     *
-     * A REPLACEMENT IS THE LADDER'S ANSWER TO THE INJURY, NOT A CASUALTY OF IT.
-     * It was chosen BECAUSE it is safe, so it cannot also be the row the injury
-     * withheld — those are the two opposite outcomes of one ladder and no row is
-     * both. `injuryWithholdingsOn` over the final workout already agreed: it
-     * returned an EMPTY list while four rows carried marks.
-     *
-     * ⚠ **A WITHHELD ROW IS NOT AFFECTED, BECAUSE A WITHHELD ROW IS NEVER
-     * SWAPPED.** Withholding is what happens when the ladder has nothing safe to
-     * offer; this line is only reached when it did. The red-flag rows keep their
-     * own marker, explanation, dose and load — asserted, not assumed. */
-    unavailableForInjury: undefined,
-    exercise: {
-      id: replacementId,
-      name: toExercise.name,
-      description: toExercise.name,
-      exerciseType: 'Compound' as any,
-      muscleGroups: [],
-      equipmentRequired: [],
-      difficultyLevel: 'Intermediate' as any,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as any,
-  };
-
-  const newWorkout = cloneWorkout(current, {
-    exercises: current.exercises.map((ex) =>
-      ex === found ? replacement : ex,
-    ),
+  const target = resolveCanonicalExerciseEditTarget(current, {
+    targetComponentId: fromExerciseId ?? null,
+    targetName: fromExercise,
   });
+  if (target.kind === 'not_found') {
+    return { success: false, reason: `Could not find "${fromExercise}" on ${date}.` };
+  }
+  if (target.kind === 'ambiguous') {
+    return {
+      success: false,
+      reason: `"${fromExercise}" matches multiple exercises on ${date}: ${target.candidates.join(', ')}. Ask the athlete which one they mean.`,
+      ambiguous: { candidates: target.candidates },
+    };
+  }
+  const occurredAt = new Date().toISOString();
+  const resolvedWeight = Number.isFinite(Number(toExercise.weight))
+    ? Number(toExercise.weight)
+    : loadForReplacementRow(toExercise.name);
+  const canonicalWorkout = compileCanonicalExerciseEditOnWorkout(current, {
+    kind: 'swap', decisionId: `live-swap:${date}:${target.index}`, occurredAt,
+    dateISO: date.slice(0, 10), targetName: fromExercise,
+    targetComponentId: fromExerciseId ?? null,
+    replacement: {
+      ...toExercise,
+      ...(resolvedWeight !== undefined ? { weight: resolvedWeight } : {}),
+    },
+    ...(input.substitutedFrom ? { substitutedFrom: input.substitutedFrom } : {}),
+  });
+  const newWorkout = canonicalWorkout;
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `"${fromExercise}" already matches the requested swap on ${date}.` };
   }
@@ -835,13 +668,6 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   // (demolition area 1). The equivalence check below therefore compares the
   // coach's own edit, not a canonicalised rewrite of it.
   assertLiveWorkoutWrite(date, newWorkout);
-  const canonicalWorkout = newWorkout;
-  if (workoutsAreEquivalent(current, canonicalWorkout)) {
-    return {
-      success: false,
-      reason: `That swap is not valid for the programmed session, so ${fromExercise} was kept.`,
-    };
-  }
   /**
    * ⚠ **THE COLLATERAL-LOSS REFUSAL THAT USED TO LIVE HERE IS GONE, DELIBERATELY.**
    *
@@ -936,65 +762,19 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
     return { success: false, reason: `${displayName} is already in this session.` };
   }
 
-  const now = new Date().toISOString();
-  const safeId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || 'exercise';
-  const prescribedSets = finitePositiveNumber(exercise.sets, 2);
-  const prescribedRepsMin = finitePositiveNumber(exercise.repsMin, 8);
-  const prescribedRepsMax = Math.max(
-    prescribedRepsMin,
-    finitePositiveNumber(exercise.repsMax, 12),
-  );
-  const nextOrder =
-    current.exercises.reduce(
-      (max, ex) => Math.max(max, Number.isFinite(ex.exerciseOrder) ? ex.exerciseOrder : -1),
-      -1,
-    ) + 1;
-  const exerciseId = `ex-coach-add-${safeId}`;
-  const added: WorkoutExercise = {
-    id: `${exerciseId}-${Date.now()}`,
-    workoutId: current.id,
-    exerciseId,
-    exerciseOrder: nextOrder,
-    prescribedSets,
-    prescribedRepsMin,
-    prescribedRepsMax,
-    prescribedWeightKg: Number.isFinite(Number(exercise.weight)) ? Number(exercise.weight) : 0,
-    prescriptionType: exercise.prescriptionType,
-    perSide: exercise.perSide,
-    // An athlete-added row has no rest prescription unless its chosen payload
-    // actually carries one. The old 90-second fallback invented a visible
-    // "1:30 rest" line on every Add-menu exercise, regardless of its source.
-    restSeconds: finitePositiveNumber(exercise.restSeconds, 0),
-    notes: exercise.notes,
-    exercise: {
-      id: exerciseId,
-      name,
-      description: name,
-      exerciseType: 'Accessory' as any,
-      muscleGroups: [],
-      equipmentRequired: [],
-      difficultyLevel: 'Intermediate' as any,
-      createdAt: now,
-      updatedAt: now,
-    } as any,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const newWorkout = cloneWorkout(current, {
-    exercises: [...current.exercises, added],
+  const occurredAt = new Date().toISOString();
+  const canonicalWorkout = compileCanonicalExerciseEditOnWorkout(current, {
+    kind: 'add',
+    decisionId: `live-add:${date}:${occurredAt}`,
+    occurredAt,
+    dateISO: date.slice(0, 10),
+    exercise,
   });
+  const newWorkout = canonicalWorkout;
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
   assertLiveWorkoutWrite(date, newWorkout);
-  const canonicalWorkout = newWorkout;
-  if (workoutsAreEquivalent(current, canonicalWorkout)) {
-    return {
-      success: false,
-      reason: `${displayName} is not valid for this session under the current programming policy.`,
-    };
-  }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
   if (!writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' }).ok) {

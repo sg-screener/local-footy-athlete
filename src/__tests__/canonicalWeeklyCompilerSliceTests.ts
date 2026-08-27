@@ -7,9 +7,10 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: exercise-row edit replay across process death, procedural ledger
- * replay as a pure compiler fold, scheduled deloads, later compiler families,
- * full-year archetypes, pixels, simulator and physical iPhone.
+ * NOT COVERED: non-exercise decision families still replay procedurally;
+ * exercise exclusions remain their own persisted input; scheduled deloads,
+ * later compiler families, full-year archetypes, pixels, simulator and physical
+ * iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -40,6 +41,7 @@ import { canonicalWeeklyAthleteEditStateFrom } from '../rules/canonicalWeeklyAth
 import {
   compileCanonicalAthleteEditedWeek,
 } from '../rules/canonicalWeeklyAthleteEditCompiler';
+import { compileCanonicalWeeklyExerciseEdits } from '../rules/canonicalWeeklyExerciseEditCompiler';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore } from '../store/programStore';
 import {
@@ -61,6 +63,11 @@ import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { undoLastDecision } from '../store/undoLastDecision';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import {
+  getTapSwapChoices,
+  groupTapSwapChoices,
+  resolveTapSwapEnvironment,
+} from '../utils/tapSwapHierarchy';
 
 armTotalsOrRed();
 
@@ -610,6 +617,17 @@ async function main(): Promise<void> {
   const temporaryFactTransactionSource = readFileSync(
     join(ROOT, 'store/temporarySourceFactTransaction.ts'), 'utf8',
   );
+  const exerciseEditStateSource = readFileSync(
+    join(ROOT, 'rules/canonicalWeeklyExerciseEditState.ts'), 'utf8',
+  );
+  const exerciseEditCompilerSource = readFileSync(
+    join(ROOT, 'rules/canonicalWeeklyExerciseEditCompiler.ts'), 'utf8',
+  );
+  const quiescentBootSource = readFileSync(join(ROOT, 'store/quiescentBoot.ts'), 'utf8');
+  const coachActionsSource = readFileSync(join(ROOT, 'utils/coachActions.ts'), 'utf8');
+  const derivedExerciseDecisionSource = readFileSync(
+    join(ROOT, 'utils/derivedExerciseDecisions.ts'), 'utf8',
+  );
   const todayProjectionStart = acceptedTransactionSource.indexOf(
     'const todayConstraintWorkout =',
   );
@@ -699,6 +717,31 @@ async function main(): Promise<void> {
         'for (const request of edits.reductionRequests)',
         'for (const request of [])',
       ).includes('for (const request of edits.reductionRequests)'));
+  ok('accepted exercise actions translate once into a typed weekly edit state',
+    exerciseEditStateSource.includes('export interface CanonicalWeeklyExerciseEditState') &&
+      exerciseEditStateSource.includes("action.type === 'swap_exercise'") &&
+      exerciseEditStateSource.includes("action.type === 'add_exercise'") &&
+      exerciseEditStateSource.includes("action.type === 'remove_exercise'"));
+  ok('one pure exercise-edit compiler folds the ordered accepted actions',
+    exerciseEditCompilerSource.includes('export function compileCanonicalWeeklyExerciseEdits') &&
+      exerciseEditCompilerSource.includes('for (const edit of args.state.edits)'));
+  ok('boot delegates exercise edits to the compiler instead of re-entering the action door',
+    quiescentBootSource.includes('compileCanonicalWeeklyExerciseEdits({') &&
+      !quiescentBootSource.includes("if (decision.kind === 'program_control')"));
+  ok('the live Swap/Add writers delegate their row transform to the same compiler',
+    coachActionsSource.includes('compileCanonicalExerciseEditOnWorkout(current, {') &&
+      !coachActionsSource.includes('const replacement: WorkoutExercise =') &&
+      !coachActionsSource.includes('const added: WorkoutExercise ='));
+  ok('derived mobility and recovery rows consume the semantic edit state',
+    derivedExerciseDecisionSource.includes('canonicalWeeklyExerciseEditStateFrom({') &&
+      !derivedExerciseDecisionSource.includes("entry.decision.kind !== 'program_control'") &&
+      !derivedExerciseDecisionSource.includes("action.type !== 'swap_exercise'"));
+  ok('[MUTATION] removing the weekly exercise-edit fold is detected',
+    exerciseEditCompilerSource.includes('for (const edit of args.state.edits)') &&
+      !exerciseEditCompilerSource.replace(
+        'for (const edit of args.state.edits)',
+        'for (const edit of [])',
+      ).includes('for (const edit of args.state.edits)'));
 
   const editWorkout = (id: string, dayOfWeek: number, name: string): Workout => ({
     id, microcycleId: 'edit-week', dayOfWeek, name,
@@ -780,6 +823,61 @@ async function main(): Promise<void> {
         ?.athletePlacement?.constraintId === 'swap-wed' &&
       projectedEdits.find((workout) => workout.dayOfWeek === 5)
         ?.athletePlacement?.constraintId === 'add-fri');
+
+  const duplicateNameWorkout = {
+    ...editWorkout('identity-workout', 1, 'Identity workout'),
+    exercises: [
+      {
+        id: 'component-a', exerciseId: 'exercise-a', exerciseOrder: 0,
+        prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 10,
+        prescribedWeightKg: 30,
+        exercise: { id: 'exercise-a', name: 'Split Squat' },
+      },
+      {
+        id: 'component-b', exerciseId: 'exercise-b', exerciseOrder: 1,
+        prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 10,
+        prescribedWeightKg: 35,
+        exercise: { id: 'exercise-b', name: 'Split Squat' },
+      },
+    ],
+  } as Workout;
+  const identityCompiled = compileCanonicalWeeklyExerciseEdits({
+    workouts: [duplicateNameWorkout],
+    state: {
+      kind: 'weekly_exercise_edits', weekStartISO: '2026-07-13',
+      edits: [{
+        kind: 'swap', decisionId: 'identity-swap', occurredAt: INSTALL_DAY,
+        dateISO: '2026-07-13', targetName: 'Split Squat',
+        targetComponentId: 'component-b',
+        replacement: {
+          name: 'Reverse Lunge', sets: 3, repsMin: 6, repsMax: 8, weight: 17.5,
+        },
+      }],
+    },
+  });
+  const identityRows = identityCompiled.workouts[0]?.exercises ?? [];
+  ok('typed component identity selects the exact duplicate row without name guessing',
+    identityRows[0]?.exercise?.name === 'Split Squat' &&
+      identityRows[1]?.exercise?.name === 'Reverse Lunge' &&
+      identityRows[1]?.prescribedWeightKg === 17.5,
+    JSON.stringify(identityRows));
+  const missingIdentityCompiled = compileCanonicalWeeklyExerciseEdits({
+    workouts: [duplicateNameWorkout],
+    state: {
+      kind: 'weekly_exercise_edits', weekStartISO: '2026-07-13',
+      edits: [{
+        kind: 'swap', decisionId: 'missing-identity-swap', occurredAt: INSTALL_DAY,
+        dateISO: '2026-07-13', targetName: 'Split Squat',
+        targetComponentId: 'component-that-no-longer-exists',
+        replacement: {
+          name: 'Reverse Lunge', sets: 3, repsMin: 6, repsMax: 8, weight: 17.5,
+        },
+      }],
+    },
+  });
+  ok('a missing typed component id never falls back to a duplicate display name',
+    JSON.stringify(missingIdentityCompiled.workouts) === JSON.stringify([duplicateNameWorkout]),
+    JSON.stringify(missingIdentityCompiled.workouts));
 
   console.log('\n[refusal] no partial compiler output escapes');
   const refusal = compileCanonicalWeek({
@@ -1314,6 +1412,108 @@ async function main(): Promise<void> {
     swapRestart.applied && swapRestart.changed, swapRestart.detail);
   ok('session Swap survives process death byte-for-byte',
     swapRestart.restarted && swapRestart.exact, swapRestart.detail);
+
+  console.log('\n[exercise-edit durability] Remove, Swap and Add compose across restart');
+  localStorageData.clear();
+  const exerciseInstall = await coldStartThroughOnboarding({
+    profile: athlete(), installDayISO: INSTALL_DAY,
+  });
+  const exerciseBefore = quiet(() => resolvedDays(exerciseInstall.blockOneStart, INSTALL_DAY));
+  const exerciseTarget = exerciseBefore.find((day) => day.rows.length >= 3);
+  ok('the exercise-edit witness reaches a real multi-row session',
+    Boolean(exerciseTarget), JSON.stringify(exerciseBefore));
+  if (exerciseTarget) {
+    const initialNames = exerciseTarget.rows.map((row) => row.name);
+    const removedName = initialNames[0]!;
+    const removed = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'remove_exercise',
+      source: { screen: 'session_detail', surface: 'compiler_witness', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { date: exerciseTarget.dateISO, exercise: removedName },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+    }, { todayISO: INSTALL_DAY }));
+    const afterRemove = quiet(() =>
+      resolvedDays(exerciseInstall.blockOneStart, INSTALL_DAY));
+    const targetAfterRemove = afterRemove.find((day) => day.dateISO === exerciseTarget.dateISO);
+    const swapName = targetAfterRemove?.rows[0]?.name ?? '';
+    const swapEnvironment = quiet(() => resolveTapSwapEnvironment({
+      date: exerciseTarget.dateISO,
+      profile: athlete(),
+      activeConstraints: [],
+      readinessSignal: null,
+    }));
+    const swapChoices = quiet(() => groupTapSwapChoices(getTapSwapChoices({
+      originalExercise: swapName,
+      reason: 'preference',
+      environment: swapEnvironment,
+      existingExerciseNames: targetAfterRemove?.rows.map((row) => row.name) ?? [],
+    })));
+    const replacementName = swapChoices[0]?.choices[0]?.name ?? '';
+    const swapped = replacementName
+      ? await quietAsync(() => executeProgramControlActionDurably({
+          type: 'swap_exercise',
+          source: { screen: 'session_detail', surface: 'compiler_witness', initiatedBy: 'tap' },
+          scope: 'today_only',
+          payload: {
+            date: exerciseTarget.dateISO,
+            fromExercise: swapName,
+            toExercise: { name: replacementName, sets: 3, repsMin: 6, repsMax: 8 },
+          },
+          requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+        }, { todayISO: INSTALL_DAY }))
+      : null;
+    const afterSwap = quiet(() =>
+      resolvedDays(exerciseInstall.blockOneStart, INSTALL_DAY));
+    const targetAfterSwap = afterSwap.find((day) => day.dateISO === exerciseTarget.dateISO);
+    const addName = swapChoices.flatMap((group) => group.choices)
+      .map((choice) => choice.name)
+      .find((name) => name !== replacementName &&
+        !targetAfterSwap?.rows.some((row) => row.name === name)) ?? '';
+    const added = addName
+      ? await quietAsync(() => executeProgramControlActionDurably({
+          type: 'add_exercise',
+          source: { screen: 'session_detail', surface: 'compiler_witness', initiatedBy: 'tap' },
+          scope: 'today_only',
+          payload: {
+            date: exerciseTarget.dateISO,
+            exercise: { name: addName, sets: 2, repsMin: 8, repsMax: 12 },
+          },
+          requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+        }, { todayISO: INSTALL_DAY }))
+      : null;
+    const exerciseActed = quiet(() =>
+      resolvedDays(exerciseInstall.blockOneStart, INSTALL_DAY));
+    const actedTarget = exerciseActed.find((day) => day.dateISO === exerciseTarget.dateISO);
+    const actedRawTarget = quiet(() =>
+      deriveVisibleWeekLive(exerciseInstall.blockOneStart, INSTALL_DAY))
+      .find((day) => day.date === exerciseTarget.dateISO);
+    const actedAddedId = actedRawTarget?.workout?.exercises.find((row) =>
+      row.exercise?.name === addName)?.id;
+    ok('Remove, Swap and Add all land through the production door',
+      removed.ok && swapped?.ok === true && added?.ok === true &&
+        !actedTarget?.rows.some((row) => row.name === removedName) &&
+        actedTarget?.rows.some((row) => row.name === replacementName) &&
+        actedTarget?.rows.some((row) => row.name === addName),
+      JSON.stringify({ removed, swapped, added, initialNames, actedTarget }));
+    const actedExerciseSignature = visibleSignature(exerciseActed);
+    const exerciseRestart = await quietAsync(() => relaunchApp({
+      storage: localStorageData,
+      todayISO: INSTALL_DAY,
+    }));
+    const exerciseRestarted = quiet(() =>
+      resolvedDays(exerciseInstall.blockOneStart, INSTALL_DAY));
+    const restartedRawTarget = quiet(() =>
+      deriveVisibleWeekLive(exerciseInstall.blockOneStart, INSTALL_DAY))
+      .find((day) => day.date === exerciseTarget.dateISO);
+    ok('the exercise-edit sequence survives process death byte-for-byte',
+      exerciseRestart.ok && visibleSignature(exerciseRestarted) === actedExerciseSignature,
+      JSON.stringify({ acted: exerciseActed, restarted: exerciseRestarted }));
+    ok('an added exercise keeps the same component identity across process death',
+      Boolean(actedAddedId) &&
+        restartedRawTarget?.workout?.exercises.find((row) =>
+          row.exercise?.name === addName)?.id === actedAddedId,
+      JSON.stringify({ actedAddedId, restartedRawTarget }));
+  }
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

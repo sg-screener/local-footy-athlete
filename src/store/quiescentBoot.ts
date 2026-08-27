@@ -7,8 +7,8 @@
  * outputs stopped being stored. The derived world is rebuilt in memory:
  *
  *   1. generate the program from profile answers + the persisted phase clock
- *   2. replay the decision ledger through the SAME door interpreters that
- *      recorded it (under the replay latch — replay never appends)
+ *   2. fold accepted exercise edits through their pure weekly compiler and
+ *      replay the remaining decisions through their owning interpreters
  *
  * `quiescentBootTests` holds the laws: boot leaves every persisted key
  * byte-identical within a small write budget; the visible week survives a
@@ -136,7 +136,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
   }
 }
 
-/** Replay one landed decision through the door interpreter that recorded it. */
+/** Replay one landed non-exercise decision through its remaining interpreter. */
 function replayEntry(entry: DecisionLedgerEntry): void {
   const occurredOn = entry.occurredAt.slice(0, 10);
   const decision = entry.decision;
@@ -179,47 +179,6 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     });
     return;
   }
-  if (decision.kind === 'program_control') {
-    // THE DOOR REPLAYS ITS OWN DECISION. Not a re-implementation of what the
-    // door did — the door itself, called again with the action it recorded.
-    // This is the whole argument for storing the action verbatim: replay needs
-    // no interpreter, because the interpreter is the thing that ran first.
-    //
-    // The SYNCHRONOUS executor is used, deliberately. The durable twin wraps
-    // this same call in `runCoachMutationTransaction` (acceptance, rollback,
-    // semantic verification) and appends to the ledger — neither of which a
-    // replay wants: replay is not landing a new decision, it is reconstructing
-    // the effect of one that already landed, and `appendDecisionEntry` returns
-    // early under the latch anyway. Taking the transaction path would also make
-    // every boot pay for an acceptance cycle per recorded edit.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { executeProgramControlAction } = require('../utils/programControlActions');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek');
-    const weeks = [...new Set(replayDates(entry).map(mondayOf))];
-    // R-229 S4: the replay reads the SAME live-week door every production
-    // surface reads — boot equivalence by construction, not by discipline.
-    // Deliberately NO todayISO arg: the old pair assembled at the REAL today,
-    // and resolving as-of `occurredOn` would be a semantics change smuggled
-    // into a repoint. If replay-as-of-decision-day is ever wanted, it is its
-    // own measured slice.
-    const visibleWeek = weeks.flatMap((week: string) => deriveVisibleWeekLive(week));
-    const result = executeProgramControlAction(decision.action, {
-      visibleWeek,
-      todayISO: occurredOn,
-    }) as { ok?: boolean; message?: string };
-    if (!result?.ok) {
-      // A recorded edit that no longer applies is REPORTED and dropped, exactly
-      // like a `plan_change` that no longer applies. The athlete loses that one
-      // edit's effect, never the boot.
-      logger.warn('[quiescentBoot] a recorded door action no longer applies on replay', {
-        entryId: entry.id,
-        actionType: (decision.action as { type?: string }).type,
-        message: result?.message,
-      });
-    }
-    return;
-  }
   // Lazy requires: the interpreters live in utils and import stores — the
   // same circular-import dodge the adapters use, with one home here.
   if (decision.kind === 'plan_change') {
@@ -250,6 +209,8 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     return;
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
+  if (decision.kind !== 'fixture_add' && decision.kind !== 'fixture_remove' &&
+    decision.kind !== 'fixture_move') return;
   const { executeFixtureMutationInMemory } = require('./fixtureMutationTransaction');
   const revision = (useProgramStore.getState() as unknown as {
     acceptedMaterialContext: { revision: number };
@@ -280,6 +241,53 @@ function replayEntry(entry: DecisionLedgerEntry): void {
 }
 
 /**
+ * Exercise actions are accepted facts at boot, not fresh requests. Translate
+ * each contiguous ledger group once, fold it over the authored (unfiltered)
+ * week, then publish only the material Swap/Add dates. Remove remains the
+ * exclusion projection so Restore can reveal the original authored row.
+ */
+function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): void {
+  if (entries.length === 0) return;
+  // Lazy imports keep the store/rules boundary from closing the generation
+  // cycle while still making this one explicit compiler handoff.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalWeeklyExerciseEditStateFrom } =
+    require('../rules/canonicalWeeklyExerciseEditState');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { compileCanonicalWeeklyExerciseEdits } =
+    require('../rules/canonicalWeeklyExerciseEditCompiler');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { applyProgramOverrideWrite } = require('./programStore');
+
+  const weeks = [...new Set(entries.flatMap(replayDates).map(mondayOf))];
+  for (const weekStartISO of weeks) {
+    const state = canonicalWeeklyExerciseEditStateFrom({ weekStartISO, entries });
+    if (state.edits.length === 0) continue;
+    const authoredState = { ...buildScheduleStateImperative(), athleteExclusions: [] };
+    const days = resolveWeekWithConditioning(weekStartISO, authoredState);
+    const workouts = days.flatMap((day: { workout?: unknown }) =>
+      day.workout ? [day.workout] : []);
+    const compiled = compileCanonicalWeeklyExerciseEdits({ workouts, state });
+    for (const date of compiled.materialDates) {
+      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+      const workout = compiled.workouts.find((candidate: { dayOfWeek: number }) =>
+        candidate.dayOfWeek === dayOfWeek);
+      if (!workout) continue;
+      applyProgramOverrideWrite({
+        date,
+        workout,
+        context: undefined,
+        writer: 'program_control',
+      });
+    }
+  }
+}
+
+/**
  * THE BOOT'S SUBSTANCE, one owner: park the old world for R2, then rebuild
  * the derived world. The hydration gate calls this once per process; the
  * quiescent-boot suite calls it once per simulated relaunch — same body,
@@ -298,9 +306,9 @@ export async function runQuiescentBoot(): Promise<void> {
  * tap is therefore the week they see after a relaunch, because it is built
  * by the same body.
  *
- * Replay calls the door interpreters directly and is already inside a
+ * The boot fold and remaining replay interpreters are already inside a
  * derivation, so settling is skipped under the latch — not as a guard on
- * intent, but because a derivation that re-entered itself would replay the
+ * intent, but because a derivation that re-entered itself would consume the
  * ledger against its own half-finished effects.
  */
 export async function settleDerivedWorldAfterDecision(): Promise<void> {
@@ -671,7 +679,25 @@ function rebuildDerivedWorldNow(): void {
           unreadable, total: entries.length,
         });
       }
+      let exerciseGroup: DecisionLedgerEntry[] = [];
+      const flushExerciseGroup = () => {
+        if (exerciseGroup.length === 0) return;
+        const group = exerciseGroup;
+        exerciseGroup = [];
+        try {
+          compileExerciseDecisionGroup(group);
+        } catch (error) {
+          logger.warn('[quiescentBoot] exercise-edit compiler fold failed', {
+            entryIds: group.map((candidate) => candidate.id), error,
+          });
+        }
+      };
       for (const entry of replayableEntries(entries)) {
+        if (entry.decision.kind === 'program_control') {
+          exerciseGroup.push(entry);
+          continue;
+        }
+        flushExerciseGroup();
         try {
           replayEntry(entry);
         } catch (error) {
@@ -680,6 +706,7 @@ function rebuildDerivedWorldNow(): void {
           });
         }
       }
+      flushExerciseGroup();
       // ── AND THEN THE FACTS, IN THE ORDER THE ATHLETE LIVED THEM ───────────
       //
       // Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,

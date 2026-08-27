@@ -870,3 +870,78 @@ their named cells.
 - Scheduled-deload remains outside the compiler.
 - Global rival-author zero and full-year archetype acceptance are not claimed.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 12: exercise edits compile instead of acting again at boot
+
+### Two options weighed
+
+1. Keep boot re-entering `executeProgramControlAction` once for every accepted
+   Swap, Add and Remove decision, relying on the live door to make the same
+   choices again.
+2. Translate accepted exercise decisions once into typed weekly semantic state,
+   fold each ordered group through one pure compiler, and make both the live
+   Swap/Add writers and derived-row readers delegate to that owner.
+
+Option 2 landed. Startup now reconstructs accepted output; it does not pretend
+the athlete tapped every exercise action again.
+
+### Finding exposed by the pure fold
+
+The first compiler run was correctly red. The live Swap resolved **17.5 kg**
+for the replacement, but the accepted ledger action stored only name, sets and
+reps. Procedural replay hid that omission by recalculating the load at startup.
+The durable boundary now resolves the replacement load once and records it in
+the accepted action. Boot consumes that value without guessing.
+
+### Ownership result
+
+Instrument unit: distinct production sites constructing final exercise rows or
+interpreting accepted exercise-action kinds.
+
+- Final Swap/Add row constructors outside
+  `canonicalWeeklyExerciseEditCompiler.ts`: **0**.
+- Boot calls back into the live program-control action interpreter for accepted
+  exercise edits: **0**.
+- Derived mobility/recovery action classifiers outside
+  `canonicalWeeklyExerciseEditState.ts`: **0**.
+- Current tapped Swap/Remove uses the component id. A pure duplicate-name
+  witness proves that id selects exactly the intended row; names remain only as
+  compatibility ingress for old accepted actions.
+- Remove remains a projection through the canonical exclusion owner rather than
+  being baked into the compiled override, preserving exact Restore semantics.
+
+### Acceptance and verification
+
+- Tests-first ownership run: red because both new compiler files were absent.
+- First behavioral compiler run: **160/161**, with the one failure naming the
+  missing accepted 17.5 kg load.
+- `npm run test:canonical-weekly-compiler`: **166/166** after the input fix,
+  missing-id refusal witness and stable added-component identity witness.
+- The current-contract cold-start journey performs Remove → Swap → Add on one
+  real multi-row session, proves all three coexist, kills the process and
+  returns to the exact visible prescription byte-for-byte.
+- `npm run test:undo-reversal`: **25/25**.
+- `npm run test:injury-recomposition`: **41/41**.
+- Direct `mobilityPrehabFlowTests`: **74/74**.
+- `npm run test:placement-ownership`: **22/22**.
+- `npm run test:day-precedence-ownership`: **6/6**.
+- `npm run test:release`: **4/4 units green**.
+- Repository typecheck remains red only on inherited temporary-fact union
+  errors; no new compiler, boot, derived-reader or coach-action error remains.
+
+The census-classified `rewrite_test` suite `test:program-control-decisions`
+still asserts that boot must contain the procedural action-door branch this
+slice deliberately deleted. `test:session-change-sequence` still boots an old
+fixture into an empty week. Neither directed product changes; the current
+contract acceptance journey above is the authority.
+
+### NOT COVERED
+
+- Non-exercise decision families still replay through their historical
+  procedural interpreters.
+- Exercise exclusions are still a persisted input beside their undo ledger
+  record; this slice preserves that ruled owner and does not claim one global
+  ledger representation.
+- Scheduled-deload remains outside the compiler.
+- Global rival-author zero and full-year archetype acceptance are not claimed.
+- Pixels, simulator and physical iPhone are not covered.

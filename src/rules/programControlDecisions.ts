@@ -19,21 +19,21 @@
  * both speak. So the ledger records that type, unchanged, under ONE kind.
  *
  * A kind per capability would be the ninth representation wearing a hat: every
- * new door capability would need a ledger kind, a replay arm and a translation
- * between them, and the translation is exactly where §3 of the reassessment
- * measured intent being lost by omission. There is nothing to translate here.
+ * new door capability would need a ledger kind and a semantic compiler arm.
+ * The accepted action remains verbatim at the ledger boundary; translation
+ * happens once when canonical weekly exercise-edit state is built.
  *
  * ── WHY AN ALLOW-LIST, AND WHY IT IS THE OWNERSHIP BOUNDARY ───────────────
  *
- * One general kind carrying 26 action types is a trap if replay only handles
- * three of them: a future append would record a decision the boot silently
- * cannot reproduce, and the athlete would lose an edit that LOOKS durable —
- * strictly worse than today, where at least nothing claims otherwise.
+ * One general kind carrying 26 action types is a trap if the semantic compiler
+ * only handles three of them: a future append would record a decision the boot
+ * silently cannot reproduce, and the athlete would lose an edit that LOOKS
+ * durable — strictly worse than today, where at least nothing claims otherwise.
  *
  * So the set of recorded action types is DECLARED here, and
- * `programControlDecisionTests` asserts the invariant that makes it safe:
- * **every type in this list has a replay arm, and every replay arm is in this
- * list.** The list grows only in a commit that teaches replay the new type.
+ * `canonicalWeeklyCompilerSliceTests` asserts the invariant that makes it safe:
+ * **every type in this list has a semantic-state arm, and every arm is in this
+ * list.** The list grows only in a commit that teaches the compiler the new type.
  *
  * ── WHAT IS NOT HERE, AND WHY ─────────────────────────────────────────────
  *
