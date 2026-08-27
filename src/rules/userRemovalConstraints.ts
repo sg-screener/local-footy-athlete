@@ -1,5 +1,6 @@
 import type { UserRemovalConstraint, UserRemovalScope, Workout } from '../types/domain';
-import { athletePlacementFor } from './athletePlacement';
+import { compileCanonicalAthleteEditedWeek } from './canonicalWeeklyAthleteEditCompiler';
+export { activeUserRemovalConstraintsForWeek } from './canonicalWeeklyAthleteEditState';
 import { evaluateSection18EffectiveWeek } from './section18EffectiveWeekEvaluator';
 import type {
   Section18AuthorisedReduction,
@@ -11,120 +12,17 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-export function activeUserRemovalConstraintsForWeek(
-  constraints: readonly UserRemovalConstraint[] | undefined,
-  weekStart: string,
-): UserRemovalConstraint[] {
-  const start = weekStart.slice(0, 10);
-  const end = new Date(`${start}T12:00:00`);
-  end.setDate(end.getDate() + 6);
-  const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-  return (constraints ?? [])
-    .filter((constraint) => constraint.status === 'active' &&
-      ((constraint.targetDate >= start && constraint.targetDate <= endISO) ||
-        (!!constraint.moveTargetDate &&
-          constraint.moveTargetDate >= start && constraint.moveTargetDate <= endISO)))
-    .sort((left, right) => left.createdAt.localeCompare(right.createdAt) ||
-      left.id.localeCompare(right.id));
-}
-
-/** Apply persisted user ownership before any visible-week evaluation. */
+/** Compatibility adapter for diagnostic suites; production calls the compiler. */
 export function applyUserRemovalConstraintsToWeek(args: {
   workouts: readonly Workout[];
   weekStart: string;
   constraints?: readonly UserRemovalConstraint[];
 }): Workout[] {
-  let workouts = args.workouts.map((workout) => ({ ...workout }));
-  for (const constraint of activeUserRemovalConstraintsForWeek(
-    args.constraints,
-    args.weekStart,
-  )) {
-    const start = args.weekStart.slice(0, 10);
-    const end = new Date(`${start}T12:00:00`);
-    end.setDate(end.getDate() + 6);
-    const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    if (constraint.targetDate >= start && constraint.targetDate <= endISO) {
-      const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
-      workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
-      if (!constraint.remainingWorkout && constraint.wholeDayRestOwned) {
-        // THE ATHLETE EMPTIED THIS DAY, AND THAT IS A DECISION TOO.
-        //
-        // Binning used to write `markedDays[date] = 'rest'`, and the day stayed
-        // empty because a CALENDAR mark outranks every deriver. Sam ruled that
-        // out — a deletion door does not speak for the calendar — and removing
-        // the mark alone put the derived G-1 Gunshow straight back onto the day
-        // the athlete had just cleared.
-        //
-        // So the emptiness is owned exactly as placed content is: a canonical
-        // rest stub carrying the placement stamp. `resolverMayDisplace` reads
-        // it, every deriver already asks that question, and the day renders
-        // empty as before — without a standing instruction to the planner that
-        // nothing the athlete can reach could take back.
-        workouts.push({
-          ...clone(constraint.originalWorkout),
-          id: `athlete-rest:${constraint.id}`,
-          planEntryId: undefined,
-          dayOfWeek,
-          name: 'Rest',
-          description: '',
-          durationMinutes: 0,
-          intensity: 'Low',
-          workoutType: 'Rest',
-          sessionTier: 'recovery',
-          exercises: [],
-          conditioningBlock: undefined,
-          speedBlock: undefined,
-          strengthIntent: undefined,
-          strengthPatternContributions: undefined,
-          hasCombinedConditioning: false,
-          athletePlacement: athletePlacementFor({
-            constraintId: constraint.id,
-            placedDate: constraint.targetDate,
-          }),
-        } as unknown as Workout);
-      }
-      if (constraint.remainingWorkout) {
-        // Sam's ruling (2026-07-30, #4): ownership is stamped here for EVERY
-        // athlete door, not just Move. A swap's replacement, an add's new
-        // session and a component-bin's remainder all arrive as
-        // `remainingWorkout`, and all three are content the athlete decided
-        // belongs on this day. Stamping only the Move branch below is what let
-        // the derived G-1 Gunshow regenerate over a committed swap while the
-        // sheet reported "Done." — the door, not the athlete, decided who owned
-        // the day. See rules/athletePlacement.ts.
-        workouts.push({
-          ...clone(constraint.remainingWorkout),
-          dayOfWeek,
-          athletePlacement: athletePlacementFor({
-            constraintId: constraint.id,
-            placedDate: constraint.targetDate,
-          }),
-        });
-      }
-    }
-    if (
-      constraint.mutationKind === 'move' &&
-      constraint.moveTargetDate &&
-      constraint.movedWorkout &&
-      constraint.moveTargetDate >= start &&
-      constraint.moveTargetDate <= endISO
-    ) {
-      const targetDayOfWeek = new Date(`${constraint.moveTargetDate}T12:00:00`).getDay();
-      workouts = workouts.filter((workout) => workout.dayOfWeek !== targetDayOfWeek);
-      // The move's destination half. Both pushes in this function — and no site
-      // outside it — write the placement marker, so the marker cannot disagree
-      // with the constraint that is its source of truth.
-      workouts.push({
-        ...clone(constraint.movedWorkout),
-        dayOfWeek: targetDayOfWeek,
-        athletePlacement: athletePlacementFor({
-          constraintId: constraint.id,
-          placedDate: constraint.moveTargetDate,
-        }),
-      });
-    }
-  }
-  return workouts.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+  return compileCanonicalAthleteEditedWeek({
+    workouts: args.workouts,
+    weekStartISO: args.weekStart,
+    constraints: args.constraints,
+  });
 }
 
 export function userRemovalConstraintId(args: {

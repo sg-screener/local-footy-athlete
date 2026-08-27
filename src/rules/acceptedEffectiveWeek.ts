@@ -15,7 +15,7 @@ import {
   evaluateSection18EffectiveWeek,
   type Section18EffectiveWeekEvaluation,
 } from './section18EffectiveWeekEvaluator';
-import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import { compileCanonicalAthleteEditedWeek } from './canonicalWeeklyAthleteEditCompiler';
 import type { ExerciseExclusion } from './exerciseExclusions';
 import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
@@ -249,7 +249,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
   // So the exclusion is applied at READ, once, at `utils/sessionResolver`, which
   // is the door the athlete's screen actually takes. See
   // `rules/exerciseExclusions.applyExclusionsToAuthoredDay`.
-  const composedWorkouts = applyUserRemovalConstraintsToWeek({
+  const composedWorkouts = compileCanonicalAthleteEditedWeek({
     workouts: dates.flatMap((entry) => {
       if (!entry.workout) return [];
       if (entry.owner !== 'date_override' || entry.workout.athletePlacement) {
@@ -260,7 +260,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
         athletePlacement: athletePlacementForDateOverride({ placedDate: entry.date }),
       }];
     }),
-    weekStart,
+    weekStartISO: weekStart,
     constraints: args.surfaces.userRemovalConstraints,
   });
   // Leg (iii), install site 1 of 3 — the app's contract-SELECTION line.

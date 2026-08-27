@@ -93,6 +93,7 @@ import {
   type FixtureMinimalReplanResult,
 } from '../utils/fixtureMinimalReplan';
 import { compileCanonicalFixtureMutationWeek } from '../rules/canonicalWeeklyCompiler';
+import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
   effectiveFixtureDatesForWeeks,
   rollingHorizonDependencyClosure,
@@ -3200,12 +3201,13 @@ function stageAthleteMutationConstraint(args: {
     ? repair.weekStarts
     : primaryWeekStarts;
   const today = todayISOLocal();
-  const todayConstraintWorkout = args.constraint.mutationKind === 'move' &&
-    args.constraint.moveTargetDate === today
-    ? cloneWorkoutForDate(args.constraint.movedWorkout!, today)
-    : args.constraint.targetDate === today
-      ? args.constraint.remainingWorkout
-      : state.todayWorkout;
+  const todayConstraintWorkout = args.affectedDates.includes(today)
+    ? compileCanonicalAthleteEditedWeek({
+        workouts: state.todayWorkout ? [state.todayWorkout] : [],
+        weekStartISO: mondayForDate(today),
+        constraints: userRemovalConstraints,
+      }).find((workout) => workout.dayOfWeek === new Date(`${today}T12:00:00`).getDay()) ?? null
+    : state.todayWorkout;
   const proposal: AcceptedStateTransactionProposal = {
     // Every mutation staged here is an athlete DECISION — a removal, a move or
     // an addition they performed. Forward, and therefore accept-and-reduce:

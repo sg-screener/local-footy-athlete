@@ -735,3 +735,72 @@ handoff and bypass the compiler projection; each kills its named cell.
   claimed zero.
 - The full-year archetype compiler acceptance gate has not been built.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 10: athlete-edit placement is the sixth compiler family
+
+### Two options weighed
+
+1. Keep the accepted-week, live-precedence, hydration and transaction-today
+   paths applying add, swap, move and remove constraints independently.
+2. Translate accepted edit records once into a semantic per-date placement
+   state, then let one final-workout compiler project that state everywhere.
+
+Option 2 landed. The incremental option would have preserved four places where
+the same accepted decision could become a different visible workout.
+
+### Ownership result
+
+Instrument unit: distinct production sites that turn accepted athlete-edit
+fields into final workout placement.
+
+- Athlete-edit placement rival authors: **0**.
+- Athlete-placement stamp writers: **1 distinct production caller**,
+  `canonicalWeeklyAthleteEditState.ts`.
+- Accepted effective week, live day precedence, hydration, the compatibility
+  adapter and the accepted transaction's today projection all delegate to
+  `compileCanonicalAthleteEditedWeek`.
+- Add, swap, move-source, move-target and remove are represented by one typed
+  `CanonicalWeeklyAthleteEditState` before any reader sees them.
+
+This count is placement-specific. The transaction doors still own creation of
+accepted edit facts, and contract reduction still consumes them; neither is
+misreported as a rival placement author.
+
+### Acceptance journey and liveness
+
+The semantic compiler cells cover all four edit families. The real journey
+cold-starts an Off-season athlete, removes a real training day through
+`applyPlanChange`, observes the typed ledger decision plus active accepted
+constraint, and sees the compiler-owned empty placement on the visible week.
+Undo annuls that exact decision and restores the full visible prescription
+signature byte-for-byte.
+
+The new acceptance cells were added after the first production extraction had
+already begun, so this slice does **not** claim a tests-first red count. The
+guards were instead proven live with three source mutations: bypass accepted
+projection, remove the compiler placement loop, and restore the old
+transaction-local today projection. Each kills its named cell.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **144/144**.
+- `npm run test:placement-ownership`: **22/22**.
+- `npm run test:deletion-calendar-ownership`: **4/4**.
+- `npm run test:undo-reversal`: **25/25**.
+- `npm run test:door-ledger-append`: **5/5**.
+- `npm run test:day-precedence-ownership`: **6/6**.
+- The old accepted-state, hydration, deletion, move, sequence and durability
+  suites remain `rewrite_test` in the test-truth census. Their mixed fixture,
+  retired-contract and real boot-replay failures were recorded but did not
+  drive this placement slice.
+- Repository typecheck remains red only in shared/inherited files; it reports
+  no error in a file changed by this slice.
+
+### NOT COVERED
+
+- Add/swap durability across process death is still a real red finding and has
+  not been fixed here.
+- Athlete-edit contract reduction has not moved into the compiler.
+- Scheduled-deload is still outside the compiler.
+- Global rival-author zero and full-year archetype acceptance are not claimed.
+- Pixels, simulator and physical iPhone are not covered.

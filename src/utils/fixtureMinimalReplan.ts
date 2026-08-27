@@ -35,10 +35,8 @@ import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { getSessionComponentRows } from './sessionComponents';
 import { resolveSessionDisplayName } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
-import {
-  activeUserRemovalConstraintsForWeek,
-  applyAthleteRemovalTypedReduction,
-} from '../rules/userRemovalConstraints';
+import { activeUserRemovalConstraintsForWeek } from '../rules/canonicalWeeklyAthleteEditState';
+import { applyAthleteRemovalTypedReduction } from '../rules/userRemovalConstraints';
 import {
   athleteActionDiagnosticHash,
   classifyAthleteActionFailure,

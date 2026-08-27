@@ -7,8 +7,9 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: athlete edits, scheduled deloads, later compiler families,
- * full-year archetypes, pixels, simulator and physical iPhone.
+ * NOT COVERED: athlete-edit ledger replay across process death, edit contract
+ * reduction, scheduled deloads, later compiler families, full-year archetypes,
+ * pixels, simulator and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -27,7 +28,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import type { OnboardingData, Workout } from '../types/domain';
+import type { OnboardingData, UserRemovalConstraint, Workout } from '../types/domain';
 import { compileCanonicalWeek } from '../rules/canonicalWeeklyCompiler';
 import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
 import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
@@ -35,6 +36,8 @@ import {
   canonicalWeeklyAvailabilityStateFrom,
   schedulerInputsWithAvailabilityState,
 } from '../rules/canonicalWeeklyAvailabilityState';
+import { canonicalWeeklyAthleteEditStateFrom } from '../rules/canonicalWeeklyAthleteEditState';
+import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore } from '../store/programStore';
 import {
@@ -50,6 +53,10 @@ import { executeFixtureMutationTransaction } from '../store/fixtureMutationTrans
 import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import { settleDerivedWorldAfterDecision } from '../store/quiescentBoot';
 import { blockSelectionHistory } from '../store/blockSelectionHistoryStore';
+import { applyPlanChange } from '../utils/planChangeProducer';
+import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
+import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { undoLastDecision } from '../store/undoLastDecision';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -577,6 +584,170 @@ async function main(): Promise<void> {
       JSON.stringify([1, 6]),
     JSON.stringify(offSeasonAvailability));
 
+  console.log('\n[athlete-edit ownership] add, swap, move and remove project through one compiler');
+  const editStateSource = readFileSync(
+    join(ROOT, 'rules/canonicalWeeklyAthleteEditState.ts'), 'utf8',
+  );
+  const editCompilerPath = 'rules/canonicalWeeklyAthleteEditCompiler.ts';
+  const editCompilerSource = readFileSync(join(ROOT, editCompilerPath), 'utf8');
+  const removalCompatibilitySource = readFileSync(
+    join(ROOT, 'rules/userRemovalConstraints.ts'), 'utf8',
+  );
+  const acceptedEffectiveWeekSource = readFileSync(
+    join(ROOT, 'rules/acceptedEffectiveWeek.ts'), 'utf8',
+  );
+  const dayPrecedenceSource = readFileSync(join(ROOT, 'rules/dayPrecedence.ts'), 'utf8');
+  const programStoreSource = readFileSync(join(ROOT, 'store/programStore.ts'), 'utf8');
+  const acceptedTransactionSource = readFileSync(
+    join(ROOT, 'store/acceptedStateTransaction.ts'), 'utf8',
+  );
+  const todayProjectionStart = acceptedTransactionSource.indexOf(
+    'const todayConstraintWorkout =',
+  );
+  const todayProjectionEnd = acceptedTransactionSource.indexOf(
+    '\n  const proposal:', todayProjectionStart,
+  );
+  const todayProjectionRegion = acceptedTransactionSource.slice(
+    todayProjectionStart, todayProjectionEnd,
+  );
+  ok('the accepted-transaction today projection region was found',
+    todayProjectionStart >= 0 && todayProjectionEnd > todayProjectionStart);
+  ok('one semantic weekly athlete-edit state exists',
+    editStateSource.includes('export interface CanonicalWeeklyAthleteEditState'));
+  ok('the edit state translates all accepted placement fields once',
+    editStateSource.includes('constraint.remainingWorkout') &&
+      editStateSource.includes('constraint.wholeDayRestOwned') &&
+      editStateSource.includes("constraint.mutationKind === 'move'") &&
+      editStateSource.includes('constraint.movedWorkout'));
+  ok('the compatibility adapter delegates instead of projecting edits itself',
+    removalCompatibilitySource.includes('return compileCanonicalAthleteEditedWeek({') &&
+      !removalCompatibilitySource.includes('constraint.remainingWorkout') &&
+      !removalCompatibilitySource.includes('constraint.movedWorkout'));
+  ok('accepted, live-precedence and hydration readers all use the compiler projection',
+    acceptedEffectiveWeekSource.includes('compileCanonicalAthleteEditedWeek({') &&
+      dayPrecedenceSource.includes('compileCanonicalAthleteEditedWeek({') &&
+      programStoreSource.includes('compileCanonicalAthleteEditedWeek({') &&
+      todayProjectionRegion.includes('compileCanonicalAthleteEditedWeek({'));
+  const editPlacementRivalAuthors = [
+    acceptedEffectiveWeekSource.includes('applyUserRemovalConstraintsToWeek(')
+      ? 'accepted reader applies edits itself' : null,
+    dayPrecedenceSource.includes('applyUserRemovalConstraintsToWeek(')
+      ? 'live precedence applies edits itself' : null,
+    programStoreSource.includes('applyUserRemovalConstraintsToWeek(')
+      ? 'hydration applies edits itself' : null,
+    removalCompatibilitySource.includes('constraint.remainingWorkout') ||
+      removalCompatibilitySource.includes('constraint.movedWorkout')
+      ? 'compatibility adapter interprets placement fields' : null,
+    todayProjectionRegion.includes('constraint.remainingWorkout') ||
+      todayProjectionRegion.includes('constraint.movedWorkout')
+      ? 'accepted transaction authors today output itself' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('weekly athlete-edit placement rival-author count is literally zero',
+    editPlacementRivalAuthors.length === 0, JSON.stringify(editPlacementRivalAuthors));
+  ok('athlete-edit placement stamps have one production writer: the semantic compiler state',
+    JSON.stringify(productionCallers('athletePlacementFor')) ===
+      JSON.stringify(['rules/canonicalWeeklyAthleteEditState.ts']),
+    JSON.stringify(productionCallers('athletePlacementFor')));
+  ok('[MUTATION] bypassing the accepted-week compiler projection is detected',
+    acceptedEffectiveWeekSource.includes('compileCanonicalAthleteEditedWeek({') &&
+      !acceptedEffectiveWeekSource.replace(
+        'compileCanonicalAthleteEditedWeek({',
+        'compileCanonicalAthleteEditedWeek_REMOVED({',
+      ).includes('compileCanonicalAthleteEditedWeek({'));
+  ok('[MUTATION] removing the compiler placement loop is detected',
+    editCompilerSource.includes('for (const placement of edits.placements)') &&
+      !editCompilerSource.replace(
+        'for (const placement of edits.placements)',
+        'for (const placement of [])',
+      ).includes('for (const placement of edits.placements)'));
+  ok('[MUTATION] restoring the transaction-local today projection is detected',
+    todayProjectionRegion.includes('compileCanonicalAthleteEditedWeek({') &&
+      !todayProjectionRegion.replace(
+        'compileCanonicalAthleteEditedWeek({',
+        'compileCanonicalAthleteEditedWeek_REMOVED({',
+      ).includes('compileCanonicalAthleteEditedWeek({'));
+
+  const editWorkout = (id: string, dayOfWeek: number, name: string): Workout => ({
+    id, microcycleId: 'edit-week', dayOfWeek, name,
+    description: '', durationMinutes: 30, intensity: 'Moderate',
+    workoutType: name === 'Rest' ? 'Rest' : 'Strength', exercises: [],
+    createdAt: INSTALL_DAY, updatedAt: INSTALL_DAY,
+  } as unknown as Workout);
+  const editConstraint = (args: {
+    id: string; createdAt: string; targetDate: string; original: Workout;
+    remaining?: Workout | null; wholeDayRestOwned?: boolean;
+    moveTargetDate?: string; moved?: Workout;
+  }): UserRemovalConstraint => ({
+    protocolVersion: 1, id: args.id, authorship: 'user', source: 'tap',
+    mutationKind: args.moveTargetDate ? 'move' : 'deletion', status: 'active',
+    targetDate: args.targetDate, scope: 'whole_session',
+    targetPlanEntryId: args.original.planEntryId ?? null,
+    targetWorkoutId: args.original.id, originalWorkout: args.original,
+    remainingWorkout: args.remaining ?? null,
+    equivalentExposureMayRelocate: true,
+    wholeDayRestOwned: args.wholeDayRestOwned ?? false,
+    moveTargetDate: args.moveTargetDate,
+    moveTargetPlanEntryId: args.moved?.planEntryId ?? null,
+    moveTargetWorkoutId: args.moved?.id,
+    movedWorkout: args.moved,
+    createdAt: args.createdAt, restoredAt: null, restorationReason: null,
+  } as UserRemovalConstraint);
+  const mondayBase = editWorkout('base-mon', 1, 'Monday Base');
+  const tuesdayBase = editWorkout('base-tue', 2, 'Tuesday Base');
+  const wednesdayBase = editWorkout('base-wed', 3, 'Wednesday Base');
+  const fridayBase = editWorkout('base-fri', 5, 'Friday Base');
+  const sundayBase = editWorkout('base-sun', 0, 'Sunday Base');
+  const editConstraints = [
+    editConstraint({
+      id: 'remove-mon', createdAt: '2026-07-13T01:00:00Z',
+      targetDate: '2026-07-13', original: mondayBase, wholeDayRestOwned: true,
+    }),
+    editConstraint({
+      id: 'move-tue-sun', createdAt: '2026-07-13T02:00:00Z',
+      targetDate: '2026-07-14', original: tuesdayBase, wholeDayRestOwned: true,
+      moveTargetDate: '2026-07-19', moved: editWorkout('base-tue', 0, 'Moved Session'),
+    }),
+    editConstraint({
+      id: 'swap-wed', createdAt: '2026-07-13T03:00:00Z',
+      targetDate: '2026-07-15', original: wednesdayBase,
+      remaining: editWorkout('swap-wed-workout', 3, 'Swapped Session'),
+    }),
+    editConstraint({
+      id: 'add-fri', createdAt: '2026-07-13T04:00:00Z',
+      targetDate: '2026-07-17', original: editWorkout('rest-fri', 5, 'Rest'),
+      remaining: editWorkout('added-fri-workout', 5, 'Added Session'),
+    }),
+  ];
+  const semanticEditState = canonicalWeeklyAthleteEditStateFrom({
+    weekStartISO: INSTALL_DAY,
+    constraints: editConstraints,
+  });
+  const projectedEdits = compileCanonicalAthleteEditedWeek({
+    workouts: [mondayBase, tuesdayBase, wednesdayBase, fridayBase, sundayBase],
+    weekStartISO: INSTALL_DAY,
+    edits: semanticEditState,
+  });
+  const editedName = (day: number): string | null =>
+    projectedEdits.find((workout) => workout.dayOfWeek === day)?.name ?? null;
+  ok('one semantic edit state covers add, swap, move-source, move-target and remove',
+    semanticEditState.activeConstraintIds.length === 4 &&
+      semanticEditState.placements.length === 5,
+    JSON.stringify(semanticEditState));
+  ok('the compiler projects removal as athlete-owned emptiness without a calendar fact',
+    editedName(1) === 'Rest' &&
+      projectedEdits.find((workout) => workout.dayOfWeek === 1)
+        ?.athletePlacement?.constraintId === 'remove-mon');
+  ok('the compiler projects both halves of a move without losing the moved identity',
+    editedName(2) === 'Rest' && editedName(0) === 'Moved Session' &&
+      projectedEdits.find((workout) => workout.dayOfWeek === 0)
+        ?.athletePlacement?.constraintId === 'move-tue-sun');
+  ok('the compiler projects swap and add as the athlete-owned chosen sessions',
+    editedName(3) === 'Swapped Session' && editedName(5) === 'Added Session' &&
+      projectedEdits.find((workout) => workout.dayOfWeek === 3)
+        ?.athletePlacement?.constraintId === 'swap-wed' &&
+      projectedEdits.find((workout) => workout.dayOfWeek === 5)
+        ?.athletePlacement?.constraintId === 'add-fri');
+
   console.log('\n[refusal] no partial compiler output escapes');
   const refusal = compileCanonicalWeek({
     scheduler: {
@@ -625,13 +796,45 @@ async function main(): Promise<void> {
   ok('the journey was non-vacuous and authored real training rows',
     (microcycle?.workouts ?? []).some((workout) => (workout.exercises?.length ?? 0) > 0));
 
-  console.log('\n[readiness slice] normal -> cooked rolling window -> recovered');
   const visibleSignature = (days: ReturnType<typeof resolvedDays>): string => JSON.stringify(
     days.map((day) => [day.dateISO, day.rows.map((row) => [
       row.name, row.sets ?? '', row.repsMin ?? '', row.repsMax ?? '', row.weightKg ?? '',
     ])]),
   );
   const baselineSignature = visibleSignature(visible);
+
+  console.log('\n[athlete-edit slice] accepted remove -> visible projection -> undo');
+  const rawEditWeek = quiet(() => deriveVisibleWeekLive(install.blockOneStart, INSTALL_DAY));
+  const removableDay = visible.find((day) => day.rows.length > 0);
+  const removal = removableDay
+    ? quiet(() => applyPlanChange({
+        change: { kind: 'remove_session', date: removableDay.dateISO, scope: 'whole_day' },
+        visibleWeek: rawEditWeek,
+        todayISO: INSTALL_DAY,
+        applyOverride: () => undefined,
+      }))
+    : null;
+  ok('the athlete remove action commits through the production edit door',
+    removal?.ok === true, removal?.message);
+  ok('the accepted action writes one typed edit decision and one active placement constraint',
+    decisionLedgerEntries().some((entry) =>
+      entry.decision.kind === 'plan_change' &&
+      entry.decision.change.kind === 'remove_session' &&
+      entry.decision.change.date === removableDay?.dateISO) &&
+      useProgramStore.getState().userRemovalConstraints.some((constraint) =>
+        constraint.status === 'active' && constraint.targetDate === removableDay?.dateISO));
+  const removedVisible = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+  ok('the visible week consumes the compiler-owned empty placement',
+    removedVisible.find((day) => day.dateISO === removableDay?.dateISO)?.rows.length === 0,
+    JSON.stringify(removedVisible.find((day) => day.dateISO === removableDay?.dateISO)));
+  const undoRemoval = await quietAsync(() => undoLastDecision());
+  ok('undo annuls the exact accepted edit decision', undoRemoval.outcome === 'undone',
+    JSON.stringify(undoRemoval));
+  ok('undoing the edit restores the visible accepted week exactly',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY))) ===
+      baselineSignature);
+
+  console.log('\n[readiness slice] normal -> cooked rolling window -> recovered');
   const baselineSetsByDate = new Map(visible.map((day) => [
     day.dateISO,
     day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),

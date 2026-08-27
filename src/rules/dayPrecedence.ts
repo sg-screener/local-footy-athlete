@@ -66,7 +66,7 @@
  *
  * ─── DEPENDENCY RULE ────────────────────────────────────────────────────────
  *
- * This module imports TYPES and `userRemovalConstraints` only. It must never
+ * This module imports TYPES and the canonical athlete-edit compiler only. It must never
  * import `sessionResolver`, `acceptedEffectiveWeek` or the §18 gateway: they
  * import it, and the cycle risk is real (the gateway already imports
  * `sessionResolver`). L14-clean — callable from a plain test with explicit
@@ -77,7 +77,7 @@
  * any of the four consumer files goes back to composing surfaces by hand.
  */
 import type { UserRemovalConstraint, Workout } from '../types/domain';
-import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import { compileCanonicalAthleteEditedWeek } from './canonicalWeeklyAthleteEditCompiler';
 
 /** Which surface a day's content came from. Ownership travels with content. */
 export type DaySurfaceOwner =
@@ -119,7 +119,7 @@ export function dayOfWeekForDate(dateISO: string): number {
  * That asymmetry is not an accident to tidy away. The product has no way to
  * express "the athlete cleared this day" as a null override — emptiness is
  * expressed through `userRemovalConstraints` and the canonical rest stub
- * (`userRemovalConstraints.ts`, the `wholeDayRestOwned` branch), added
+ * (`canonicalWeeklyAthleteEditState.ts`, the `wholeDayRestOwned` branch), added
  * precisely because a calendar mark outranked every deriver and Sam ruled that
  * a deletion door does not speak for the calendar. A null override is
  * therefore a state no product writer produces, and every product reader
@@ -170,10 +170,10 @@ export function composeDaySurfaces(args: {
  * Tier 1 of the ordering, constraint half: what an active removal constraint
  * leaves on this day, given what tier 2 composed onto it.
  *
- * Delegates to `applyUserRemovalConstraintsToWeek` rather than restating its
- * rules — that function is the owner of what a bin MEANS (whole-session vs
- * component, the `remainingWorkout` remainder, the `wholeDayRestOwned` rest
- * stub and its placement stamp). This module owns only WHERE it sits in the
+ * Delegates to `compileCanonicalAthleteEditedWeek` rather than restating its
+ * rules — the compiler-owned semantic edit state owns what a bin MEANS (the
+ * `remainingWorkout` remainder, the `wholeDayRestOwned` rest stub and its
+ * placement stamp). This module owns only WHERE it sits in the
  * order. Constraints are pre-filtered to the ones that speak about this date
  * so a constraint targeting another day cannot deposit its remainder here.
  *
@@ -192,7 +192,7 @@ export function removalConstraintForComposedDay(args: {
        *
        * A move constraint's placement half replays `movedWorkout` — a stored
        * clone of the session AS IT WAS WHEN MOVED — onto the landing day, and
-       * `applyUserRemovalConstraintsToWeek` clears the day first. MEASURED
+       * the canonical athlete-edit compiler clears the day first. MEASURED
        * 2026-08-26 (S2 probe, acted world): the athlete swapped an exercise
        * on the landed session, the swap's override was WRITTEN and then
        * invisible — this replay stamped the old copy back over it on every
@@ -209,9 +209,9 @@ export function removalConstraintForComposedDay(args: {
         args.composed.owner !== 'date_override')));
   if (speaking.length === 0) return null;
 
-  const resolved = applyUserRemovalConstraintsToWeek({
+  const resolved = compileCanonicalAthleteEditedWeek({
     workouts: args.composed.workout ? [args.composed.workout] : [],
-    weekStart: mondayForDate(date),
+    weekStartISO: mondayForDate(date),
     constraints: speaking,
   });
   return { workout: resolved.find((workout) => workout.dayOfWeek === dayOfWeek) ?? null };

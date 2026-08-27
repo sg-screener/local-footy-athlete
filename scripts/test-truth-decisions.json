@@ -127,6 +127,8 @@
       "reason": "The first canonical weekly compiler slice has one production author for scheduling, specialist materialisation and plan connection, and its real onboarding-to-visible witness is green.",
       "productionPaths": [
         "src/rules/canonicalWeeklyCompiler.ts",
+        "src/rules/canonicalWeeklyAthleteEditState.ts",
+        "src/rules/canonicalWeeklyAthleteEditCompiler.ts",
         "src/services/api/generateProgram.ts"
       ],
       "contractRefs": [

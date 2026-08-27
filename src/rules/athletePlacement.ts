@@ -16,8 +16,8 @@ import type { Workout } from '../types/domain';
  * SURFACES — of which there are exactly two, both persisted:
  *
  *   `removal_constraint` — a `UserRemovalConstraint`. Stamped inside
- *      `applyUserRemovalConstraintsToWeek`, the site that lands constraint-
- *      decided content on a day.
+ *      `canonicalWeeklyAthleteEditStateFrom`, the one semantic translator that
+ *      tells the compiler what constraint-decided content belongs on a day.
  *   `date_override` — an entry in `dateOverrides`, the persisted record of a
  *      human edit to one date. Stamped inside `rebaseAcceptedEffectiveWeek`,
  *      the site that composes the accepted week and the only place that knows

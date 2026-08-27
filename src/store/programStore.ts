@@ -70,7 +70,7 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
-import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
+import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
   athleteActionDiagnosticHash,
   beginAthleteActionTrace,
@@ -1046,9 +1046,9 @@ function canonicaliseAcceptedBoundaryState(
      * artifacts and are not this deletion's subject. */
   }
   const hydratedTodayWorkout = persistedState.todayWorkout
-    ? applyUserRemovalConstraintsToWeek({
+    ? compileCanonicalAthleteEditedWeek({
         workouts: [persistedState.todayWorkout],
-        weekStart: mondayForDate(effectiveTodayISO),
+        weekStartISO: mondayForDate(effectiveTodayISO),
         constraints: persistedState.userRemovalConstraints,
       }).find((workout) =>
         workout.dayOfWeek === new Date(`${effectiveTodayISO}T12:00:00`).getDay()) ?? null
