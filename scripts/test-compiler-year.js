@@ -20,16 +20,27 @@ function control() {
   return { version: 1, revision: 'verdict-control', startedAt: 'synthetic', notCovered: ['Not an athlete journey'],
     prerequisites: [{ id: 'canonical_only', ok: true }], mutations: [
       { id: 'real_compiler_mutation', ok: true }, { id: 'source_fact_history_mutation', ok: true },
-      { id: 'acceptance_writer_mutation', ok: true }, { id: 'injury_render_writer_mutation', ok: true }],
+      { id: 'acceptance_writer_mutation', ok: true }, { id: 'injury_render_writer_mutation', ok: true },
+      { id: 'progression_arithmetic_mutation', ok: true }, { id: 'deload_arithmetic_mutation', ok: true }],
     athletes: ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
       checks: [{ id: 'onboarding', ok: true }],
       actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise', 'lighter_day']
         .map((kind) => ({ kind, date: 'fixture-only', ok: true })),
-      weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: requiredWeekChecks(w).map((id) => ({ id, ok: true })) })),
+      weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: requiredWeekChecks(w).map((id) => ({ id, ok: true })),
+        doseReceipts: [
+          { kind: 'progressed_load', date: w.weekStart, rowId: 'synthetic-load', exercise: 'Verdict control', before: 100, expected: 102.5, actual: 102.5 },
+          { kind: 'deload_sets', date: w.weekStart, rowId: 'synthetic-dose', exercise: 'Verdict control', before: 4, expected: 2, actual: 2 },
+        ] })),
     })) };
 }
 test('complete synthetic result is accepted by the verdict engine', () => assert.equal(yearVerdict(control()).ok, true));
 const mutations = {
+  missing_numeric_receipts: r => { delete r.athletes[0].weeks[0].doseReceipts; },
+  false_progression_arithmetic: r => { r.athletes[0].weeks[0].doseReceipts[0].actual = 100; },
+  false_deload_arithmetic: r => { r.athletes[0].weeks[0].doseReceipts[1].actual = 4; },
+  missing_arithmetic_check: r => { r.athletes[0].weeks[0].checks = r.athletes[0].weeks[0].checks.filter(c => c.id !== 'dose_arithmetic'); },
+  missing_progression_mutation: r => { r.mutations = r.mutations.filter(c => c.id !== 'progression_arithmetic_mutation'); },
+  missing_deload_mutation: r => { r.mutations = r.mutations.filter(c => c.id !== 'deload_arithmetic_mutation'); },
   missing_archetype: (r) => r.athletes.pop(),
   duplicate_archetype: (r) => { r.athletes[1] = r.athletes[0]; },
   missing_week: (r) => r.athletes[0].weeks.pop(),

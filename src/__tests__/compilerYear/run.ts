@@ -25,6 +25,7 @@ import type { AthleteResult, Check } from './results';
 import { observeFinalRows, finalRowChecks, finalProgramSignature } from './finalRows';
 import { sourceFactLifecycle, compilerOwnsVisibleInjuryRows } from './sourceFacts';
 import { clearFactLifecycle } from './clearFacts';
+import { observeProgramDose, distinctDoseReceipts, type DoseReceipt } from './dose';
 import { buildGuidedInjuryConstraint } from '../../utils/guidedInjuryControl';
 
 const compilerModule = require('../../rules/canonicalWeeklyCompiler') as typeof import('../../rules/canonicalWeeklyCompiler');
@@ -51,12 +52,19 @@ async function shiftPhase(archetype: Archetype, phase: SeasonPhase, date: string
 export async function runAthlete(archetype: Archetype, storage: Map<string, string>, limit = 52): Promise<AthleteResult> {
   const result: AthleteResult = { id: archetype.id, weeks: [], checks: [], actions: [], compilerCalls: 0, loggedSessions: 0, restarts: 0 };
   const observations: Check[] = [];
+  const doseReceipts: DoseReceipt[] = [];
   const original = compilerModule.compileCanonicalWeek;
   const originalProgression = progressionModule.compileCanonicalProgramProgression;
   const originalProgram = programCompilerModule.compileCanonicalProgram;
   const repeatedPhases = new Set<string>();
   programCompilerModule.compileCanonicalProgram = (input) => {
-    const observed = observeFinalRows(input, originalProgram);
+    const numeric = observeProgramDose(input, candidate => {
+      const observed = observeFinalRows(candidate, originalProgram);
+      observations.push(...observed.checks);
+      return observed.output;
+    });
+    const observed = numeric;
+    doseReceipts.push(...numeric.receipts);
     observations.push(...observed.checks);
     observations.push({ id: 'final_compilation_reached', ok: true });
     const phase = String(input.weeks.profile.seasonPhase);
@@ -278,14 +286,19 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         }
         checks.push({ id: 'logging', ok: loggingErrors.length === 0, detail: loggingErrors.join(' | ') });
         const finalCompilationReached = observations.some((c) => c.id === 'final_compilation_reached');
+        const arithmetic = observations.filter(c => c.id === 'dose_arithmetic');
+        checks.push({ id: 'dose_arithmetic', ok: arithmetic.length > 0 && arithmetic.every(c => c.ok),
+          detail: arithmetic.filter(c => !c.ok).map(c => c.detail).join(' | ') });
         checks.push({ id: 'compiler_boundary', ok: finalCompilationReached && observations.every((c) => c.ok),
           detail: finalCompilationReached
             ? observations.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail ?? ''}`).join(' | ')
             : 'Complete final-row compiler was not reached' });
         observations.length = 0;
         result.weeks.push({ ...week, status: 'measured', checks, ledgerDepth: decisionLedgerEntries().length,
+          doseReceipts: distinctDoseReceipts(doseReceipts),
           sessions: before.filter((d) => d.workout).length, rows: before.reduce((sum, d) => sum + (d.workout?.exercises.length ?? 0), 0),
           fixtures: before.filter((d) => d.source === 'game').length, liveFingerprint: digest(signature), rebuiltFingerprint: digest(rebuilt) });
+        doseReceipts.length = 0;
         if (loggingErrors.length) stopped = `Logging failed in week ${week.index + 1}: ${loggingErrors[0]}`;
         if ((week.index + 1) % 4 === 0) console.log(`YEAR ${archetype.id}: reached week ${week.index + 1}, ${result.loggedSessions} logged sessions`);
       } catch (error) {

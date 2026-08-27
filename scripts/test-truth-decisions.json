@@ -2,6 +2,54 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:undo-reversal": {
+      "kind": "current_contract",
+      "reason": "Rebound the stale un-awaited removal probe to real onboarding, both durable removal facts, all three scopes, accumulated decisions and completed/restarted Undo. No synchronous timing assumption or stored-output fixture can stand in for the athlete action.",
+      "productionPaths": ["src/store/undoLastDecision.ts", "src/utils/exerciseExclusionOwner.ts"],
+      "contractRefs": ["docs/UNDO_SHAPE_RULING_2026-08-09.md", "R-107"],
+      "witnessScript": "test:undo-reversal",
+      "evidenceKind": "green_now"
+    },
+    "test:injury-recomposition": {
+      "kind": "current_contract",
+      "reason": "The injury door must distinguish recorded restrictions from a changed visible prescription. Same-day before/after checks cover unchanged unsafe sessions, honest refusals and dose-only changes; no block-wide transaction flag may claim this session changed.",
+      "productionPaths": ["src/utils/programControlActions.ts", "src/utils/injurySessionRecomposition.ts"],
+      "contractRefs": ["R-103"],
+      "witnessScript": "test:injury-recomposition",
+      "evidenceKind": "green_now"
+    },
+    "test:deload-law": {
+      "kind": "current_contract",
+      "reason": "Re-audit proved that setting the main-lift multiplier to one escaped release. This reviewed, already-green contract asserts the authored numeric reductions for strength, accessories, conditioning and power across scheduled/readiness/illness doors, independent of the implementation constant.",
+      "productionPaths": ["src/rules/deloadWeekRules.ts", "src/rules/materialiseComposedWeek.ts"],
+      "contractRefs": ["docs/LFA_PROGRAMMING_BIBLE.md"],
+      "witnessScript": "test:deload-law",
+      "evidenceKind": "green_now"
+    },
+    "test:block-two-progression": {
+      "kind": "current_contract",
+      "reason": "Re-audit proved that zeroing an earned increment escaped release. These reviewed generation-level numeric cells require recorded exact-exercise history, the smallest authored increment, honest holds/unset loads and no outgoing-lift load transfer. Expectations do not copy the increment constant.",
+      "productionPaths": ["src/rules/blockBoundaryProgression.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts"],
+      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "witnessScript": "test:block-two-progression",
+      "evidenceKind": "green_now"
+    },
+    "test:strength-progression-inputs": {
+      "kind": "current_contract",
+      "reason": "Reviewed input-boundary protection: completed/skipped feedback, actual recorded loads and workout history must reach the real progression owner. Silence and skipped sessions cannot manufacture earned increases.",
+      "productionPaths": ["src/utils/strengthProgressionIntegration.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts"],
+      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "witnessScript": "test:strength-progression-inputs",
+      "evidenceKind": "green_now"
+    },
+    "test:training-logging": {
+      "kind": "current_contract",
+      "reason": "Reviewed logging-to-progression contract: completed versus skipped sessions and exercise loads must remain distinguishable. Numeric annual compiler checks complement, not replace, this production-input witness.",
+      "productionPaths": ["src/store/programStore.ts", "src/utils/strengthProgressionIntegration.ts"],
+      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "witnessScript": "test:training-logging",
+      "evidenceKind": "green_now"
+    },
     "test:compiler-year": {
       "kind": "current_contract",
       "reason": "Sam requires the full-year archetype lifecycle to block release, including incomplete coverage and unresolved canonical ownership. HTML is rendered from this same executable result, never a separate oracle.",

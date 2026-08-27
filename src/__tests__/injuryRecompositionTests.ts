@@ -34,6 +34,8 @@
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 const durable = new Map<string, string>();
 (globalThis as unknown as { window: unknown }).window = {
   localStorage: {
@@ -57,10 +59,14 @@ import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { ARCHETYPES, athleteAnswers, YEAR_START } from './compilerYear/catalog';
+import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { applyExerciseExclusionDecision, restoreExcludedExercise } from '../utils/exerciseExclusionOwner';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { executeProgramControlAction } from '../utils/programControlActions';
+import { snapshotSemanticWorkout } from '../utils/programSemanticSnapshot';
+import { visibleInjuryPrescriptionChanged } from '../utils/injurySessionRecomposition';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
@@ -238,7 +244,7 @@ const WORLDS: InjuryWorld[] = [
 ];
 
 async function main(): Promise<void> {
-  const { executeProgramControlActionDurably } = require('../utils/programControlActions');
+  const { executeProgramControlActionDurably } = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
   const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
   const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
   const { unsafeRowsForInjury, planInjuryRecomposition } =
@@ -256,8 +262,7 @@ async function main(): Promise<void> {
       region: world.region, area: world.area, severity: world.severity,
       severityBand: 'caution', adjustmentLevel: 'reduce_load',
       triggers: ['during'], seriousSymptoms: false,
-    } as never, { todayISO: TARGET }) as
-      { bucket?: string; severity: number; adjustmentLevel?: string };
+    } as never, { todayISO: TARGET }) as import('../store/coachUpdatesStore').ActiveInjuryConstraint;
 
     const environmentBefore = quiet(() => resolveTapSwapEnvironment({
       date: TARGET, profile: useProfileStore.getState().onboardingData,
@@ -272,6 +277,7 @@ async function main(): Promise<void> {
     const unsafeBefore = unsafeRowsForInjury({
       workout: workoutBefore, environment: environmentBefore,
     }) as string[];
+    const instructionsBefore = snapshotSemanticWorkout(TARGET, workoutBefore);
     /* ⚠ THE CONTROL. A suite that declares an injury on a session the injury
      * does not touch proves nothing at all — every "no unsafe rows left" cell
      * would pass on a session that never had any. */
@@ -307,6 +313,19 @@ async function main(): Promise<void> {
     ok(`${world.label} — changedProgram matches what the athlete can see`,
       result.changedProgram === visiblyChanged,
       `changedProgram=${result.changedProgram} visiblyChanged=${visiblyChanged}`);
+    const unchanged = snapshotSemanticWorkout(TARGET, workoutBefore);
+    ok(`${world.label} — identical prescriptions never count as changed`,
+      !visibleInjuryPrescriptionChanged(instructionsBefore, unchanged));
+    for (const field of ['prescribedSets', 'prescribedWeightKg'] as const) {
+      const changed = JSON.parse(JSON.stringify(workoutBefore)) as Workout;
+      changed.exercises[0][field] = (changed.exercises[0][field] ?? 0) + 1;
+      ok(`${world.label} — ${field}-only changes count without a renamed exercise`,
+        visibleInjuryPrescriptionChanged(instructionsBefore, snapshotSemanticWorkout(TARGET, changed)));
+    }
+    const annotated = JSON.parse(JSON.stringify(workoutBefore)) as Workout;
+    annotated.coachNotes = ['Injury restrictions are active.'];
+    ok(`${world.label} — annotation-only changes cannot claim program changed`,
+      !visibleInjuryPrescriptionChanged(instructionsBefore, snapshotSemanticWorkout(TARGET, annotated)));
     ok(`${world.label} — a session left with unsafe work is NOT called safe`,
       unsafeAfter.length === 0 || /could not be made safe/i.test(message),
       `unsafeAfter=${JSON.stringify(unsafeAfter)} message="${message}"`);
@@ -411,11 +430,47 @@ async function main(): Promise<void> {
       !plan.untouched.some((name) => name.toLowerCase() === s.to.name.toLowerCase())),
     JSON.stringify(plan.substitutions.map((s) => s.to.name)));
 
+  console.log('\n[5] REAL ONBOARDING → INJURY → REPEAT → RESTART');
+  for (const coordinate of ['session_detail', 'my_status', 'changed_session'] as const) {
+    const screen = coordinate === 'changed_session' ? 'session_detail' : coordinate;
+    const installed = await quietAsync(() => coldStartThroughOnboarding({
+      profile: athleteAnswers(ARCHETYPES.find(a => a.id === 'male-3-experienced-gym')!), installDayISO: YEAR_START,
+    }));
+    ok(`${screen} — actual onboarding accepted`, !installed.onboardingRefusal);
+    const days = () => quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START));
+    const day = days().find(d => (coordinate === 'changed_session' ? d.date === YEAR_START : d.date > YEAR_START)
+      && d.workout?.exercises.some(row => row.section18Evidence?.role === 'main_strength'));
+    if (!day) throw new Error('Real injury reporting coordinate did not reach a later strength day');
+    const date = day.date;
+    setJourneyClock(date);
+    const instructions = () => JSON.stringify(snapshotSemanticWorkout(date,
+      days().find(d => d.date === date)?.workout ?? null), (key, value) =>
+      ['presentation', 'unavailableForInjury', 'createdAt', 'updatedAt'].includes(key) ? undefined : value);
+    const constraint = buildGuidedInjuryConstraint({ region: 'lower_body', area: 'knee', severity: 7,
+      severityBand: 'moderate', adjustmentLevel: 'moderate', triggers: ['running'], seriousSymptoms: false },
+      { todayISO: YEAR_START });
+    const reportInjury = () => executeProgramControlActionDurably({ type: 'set_injury_modifier',
+      source: { screen, surface: 'guided_injury_flow', initiatedBy: 'tap' }, scope: 'current_and_future',
+      payload: { constraint }, requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false }, { todayISO: date });
+    const baseline = instructions();
+    const report = await quietAsync(reportInjury);
+    const active = instructions();
+    if (coordinate === 'changed_session') ok('actual changed prescription coordinate reached', baseline !== active && report.changedProgram);
+    ok(`${screen} — reports the selected day, not the earlier onset day`, report.ok && report.changedProgram === (baseline !== active), JSON.stringify(report));
+    const repeated = await quietAsync(reportInjury);
+    ok(`${screen} — repeat with unchanged prescriptions cannot claim a change`, repeated.ok && !repeated.changedProgram && instructions() === active, JSON.stringify(repeated));
+    const episode = report.createdModifierIds?.[0];
+    const reboot = await quietAsync(() => relaunchApp({ storage: durable, todayISO: date }));
+    ok(`${screen} — restriction and visible result survive reopening`, reboot.ok && instructions() === active &&
+      !!episode && useProgramStore.getState().acceptedMaterialContext.injuryEpisodes.some(e => e.episodeId === episode));
+  }
+
   report();
 }
 
 function report(): void {
   console.log(`\n${'─'.repeat(72)}`);
+  totalsPrinted(failures.length);
   if (failures.length === 0) { console.log(`ALL GREEN — ${passed} passed`); return; }
   console.log(`FAILURES — ${passed} passed, ${failures.length} failed`);
   for (const failure of failures) console.log(`  ✗ ${failure}`);

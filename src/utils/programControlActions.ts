@@ -2,6 +2,7 @@ import { athleteActionSourceForDoor, planChangeSourceForDoor } from '../rules/at
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 import { todayISOLocal } from './appDate';
+import { snapshotSemanticWorkout } from './programSemanticSnapshot';
 import {
   useCoachUpdatesStore,
   type ActiveInjuryConstraint,
@@ -39,6 +40,7 @@ import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import {
   sessionRowNames,
   describeVisibleInjuryChange,
+  visibleInjuryPrescriptionChanged,
   planInjuryRecomposition,
   unsafeRowsForInjury,
 } from './injurySessionRecomposition';
@@ -1457,9 +1459,9 @@ async function executeProgramControlActionDurablyWithinTrace(
   if (action.type === 'set_injury_modifier') {
     // The fact transaction compiles the program atomically. This door reports
     // the actual visible difference; it does not run a second injury writer.
-    const injuryRowsBefore = visibleExerciseNamesOn(
-      (action.payload.constraint?.startDate ?? context.todayISO ?? '').slice(0, 10),
-    );
+    const injuryDate = (context.todayISO ?? action.payload.constraint!.startDate ?? todayISOLocal()).slice(0, 10);
+    const injuryRowsBefore = visibleExerciseNamesOn(injuryDate);
+    const before = snapshotSemanticWorkout(injuryDate, visibleWorkoutOnDate(injuryDate));
     const result = await createOrUpdateInjuryEpisode({
       constraint: action.payload.constraint!,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
@@ -1477,12 +1479,13 @@ async function executeProgramControlActionDurablyWithinTrace(
         route: routeProgramControlAction(action).route,
       };
     }
-    const injuryDate = (context.todayISO ?? action.payload.constraint!.startDate ?? '').slice(0, 10);
     const injuryRowsAfter = visibleExerciseNamesOn(injuryDate);
-    const visible = describeVisibleInjuryChange({
-      before: injuryRowsBefore,
-      after: injuryRowsAfter,
-      remainingUnsafe: unsafeRowsForInjury({
+    // A recorded restriction or a change elsewhere in the block does not mean
+    // this session changed. Use the existing semantic comparator so dose-only
+    // changes count too, while notes/metadata alone cannot claim recomposition.
+    const changedProgram = visibleInjuryPrescriptionChanged(before,
+      snapshotSemanticWorkout(injuryDate, visibleWorkoutOnDate(injuryDate)));
+    const remainingUnsafe = unsafeRowsForInjury({
         workout: applyExclusionsToAuthoredDay({
           /* The claim is about the athlete's screen, so it reads the screen. */
           workout: visibleWorkoutOnDate(injuryDate),
@@ -1502,7 +1505,11 @@ async function executeProgramControlActionDurablyWithinTrace(
             }
             : null,
         }),
-      }) as string[],
+      }) as string[];
+    const visible = describeVisibleInjuryChange({
+      before: injuryRowsBefore,
+      after: injuryRowsAfter,
+      remainingUnsafe,
       trainingPaused: action.payload.constraint!.adjustmentLevel === 'training_paused',
       substitutedRowNames: (visibleWorkoutOnDate(injuryDate)?.exercises ?? [])
         .filter(row => row.substitutedFrom?.cause === 'injury')
@@ -1510,10 +1517,12 @@ async function executeProgramControlActionDurablyWithinTrace(
     });
     return {
       ok,
-      changedProgram: visible.changed || result.changedProgram,
+      changedProgram,
       requiresRebuild: false,
       createdModifierIds: result.episodeId ? [result.episodeId] : undefined,
-      message: visible.message,
+      message: changedProgram && !visible.changed && remainingUnsafe.length === 0
+        ? 'Injury restrictions are active. This session’s workload has been adjusted.'
+        : visible.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

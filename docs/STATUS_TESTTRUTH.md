@@ -3643,3 +3643,134 @@ change; its findings remain in that seat's report.
 
 NOT COVERED additionally: resolving those separate re-audit findings. Passing
 the current release contract does not override that report.
+## 41. Re-audit follow-up — Undo, injury reporting and dose arithmetic (2026-08-28)
+
+Sam requested all three findings on 2026-08-28. Baseline 6c1ef72c; no unrelated
+untracked files are in scope. Reproduced `test:undo-reversal` 24/25 cells and
+`test:injury-recomposition` 37/41 cells; existing arithmetic diagnostics pass.
+Undo cell 19 is a timing-dependent synchronous probe of an async queued door:
+it does not await completion. Product failure is NOT YET ESTABLISHED by it.
+
+Options compared before implementation: (1) correct the existing transaction's
+reporting and bind its actual completed/restarted outcome; (2) redesign Undo or
+add a second injury/program writer. Choose (1): current canonical compiler and
+atomic transaction already own these changes. A parallel author would duplicate
+decisions without addressing the measurement gaps. Reuse existing arithmetic
+contracts, adding independent numeric compiler observations and live mutations,
+instead of inventing progression/deload policy or another report-only audit.
+
+### What the completed action actually showed
+
+- **Undo finding corrected, not a new product rewrite.** The previous cell read
+  exclusions immediately after `void undoLastDecision()`. Its premise that all
+  writes happen before the first await became obsolete when Undo entered the
+  queued durable transaction. The replacement awaits the real owner after real
+  onboarding and two real removals. All three scopes × live/restarted Undo
+  preserve the earlier removal, clear only the latest exclusion/action, restore
+  the current/future visible week and survive another restart. The production
+  Undo owner already does that; it was not changed to satisfy an obsolete timing
+  assertion. The test runner now awaits async cells rather than silently losing
+  their assertions. `test:undo-reversal`: **26/26 cells**, including the six
+  journey coordinates, three injected durable-store failures and a missing-
+  exclusion-reversal mutant.
+- **Injury reporting fixed at its existing acknowledgement owner.** Previously
+  the selected-day result was ORed with a block-wide transaction change. Before
+  and after could also refer to different dates (onset versus selected day).
+  Both now measure the same visible prescription. The existing semantic diff
+  counts exercise/component changes and sets/load-only changes, but not a new
+  warning, skip annotation or regenerated audit timestamp. The restriction is
+  still recorded even when that session needs no prescription change. Unsafe
+  work still receives the existing honest skip/refusal text. The new dose-only
+  acknowledgement is used only when actual work changed and no unsafe work is
+  left. `test:injury-recomposition`: **70/70 cells**; four original scenarios,
+  three real-onboarding/report/repeat/restart coordinates (including an actually
+  changed session), and independent sets/load/presentation controls. The suite
+  is now totals-or-red so a drained async run cannot silently pass.
+- **Arithmetic now has release authority.** Added six explicitly adjudicated
+  `current_contract` rows: Undo, injury reporting, deload law, block-two load
+  authority, progression inputs and training logging. These already-existing
+  scripts are in the historical chain too; no duplicate program author or new
+  progression policy was introduced. The four arithmetic/input diagnostics
+  remain 68/68, 41/41, 18/18 and 14/14 assertions respectively. Release is now
+  **17 declared current contracts / 14 distinct executable units** (shared
+  witnesses counted once); unrelated diagnostic failures still have no release
+  authority.
+- **The annual compiler instrument now measures numbers.** It observes raw
+  composed main-lift sets, governed deload output, exact-exercise recorded
+  history, earned/held load decisions, their application and the complete
+  compiler return. Receipts retain before/expected/actual numbers. Every reached
+  week requires an arithmetic observation, the verdict independently checks
+  numeric receipts, and a full result must actually reach both a reduced-set
+  and an increased-load coordinate. The two new arithmetic mutations run
+  against a real block-two input captured after onboarding and four weeks of
+  logged training, and are mandatory prerequisites. The HTML remains a
+  presentation of this same result.
+
+### Failing controls, corrections and what catches the next defect
+
+Actual production-source mutations were compiled in isolated child processes,
+without modifying checkout files. Each ran the witness selected by the actual
+release registry through `runUnits`; all four returned a failing release result:
+
+1. Delete `restoreExcludedExercise(exercise)` from Undo: awaited journey fails
+   on the remaining exclusion (not merely a source-string assertion).
+2. Restore `visible.changed || result.changedProgram`: nine injury-reporting
+   assertions fail, including real unchanged-day/repeated-report cases.
+3. Replace `previousLoadKg + increment` with `previousLoadKg`: four load-
+   progression assertions fail, including the club-night lift.
+4. Change `mainLiftSetMultiplier` from 0.5 to 1: four numeric deload assertions
+   fail. The permanent annual mutations separately reject both arithmetic
+   failures on complete compiler returns, then prove the restored controls green.
+
+The first new home-kit probe exposed an **instrument identity error**, not a
+load regression: adapter row IDs repeat across different weeks. It matched a
+High Box Squat receipt to a Trap Bar Deadlift in another week. Final checks now
+match exact exercise identity as well as row ID, honour the date of a deload,
+and inspect every matching placement. The home-kit five-week probe moved from
+4/5 to 5/5 green reached weeks with **no product arithmetic change**. Limited
+probes correctly exit red for missing annual coverage and are not release passes.
+An initial failed-save probe also compared unrelated diagnostic storage; it now
+checks the eight accepted-state persistence keys plus exact visible state,
+exclusions and ledger, matching the existing transaction boundary. All three
+injected failures leave those inputs/outputs unchanged.
+
+Ownership review changed exactly one explicit fingerprint: the existing durable
+program-control dispatcher. Its only change is acknowledgement reads; no new
+program writer. Measured **0 rivals / 0 derived-output writers / 0 unresolved
+across 1,136 executable capability owners**, from 602 runtime files, 2,365 direct
+operation occurrences and 631 distinct direct owners. Review basis: 644 explicit,
+3 AST-proven reference readers, 489 inherited call-graph owners. Four dormant
+builders remain protected, not activated.
+
+### Checkpoint verification (full release running)
+
+All three TypeScript scopes are zero. Signed-copy extraction passes. The older
+session-change sequence remains 22/22 with both prior and updated runtime code;
+session-injury-review completes at 76/76. Additional historical probes are
+**not green evidence**: session-change durability still cannot construct its
+incomplete-profile fixture; injury-fallback completes at 119/156 cells (37 red).
+The same 37 named failures reproduce with this task's two runtime modules loaded
+from 6c1ef72c. An initial baseline import did not invoke these suites' main guards
+and produced no output; it was rejected as no measurement and rerun as main.
+These old failures are not counted as fixed or newly regressed, and their
+rewrite/measurement debt is not permission to change current product semantics.
+
+Concurrent UI work in HomeScreenV2, GuidedInjuryFlowSheet, DayWorkoutScreenV2,
+useDayWorkout, SessionCompleteMoment and its source tests belongs to another
+seat and is excluded from this checkpoint's pathspec. It changed while the full
+run was underway and introduced eight unresolved ownership reviews unrelated
+to this task. The saved task checkpoint will be verified in a separate temporary
+worktree; no other seat's code will be reverted or absorbed to get a green gate.
+No generated reports or athlete data were deleted.
+
+Evidence logs: `/private/tmp/testtruth-audit-{undo-protected2,injury-real3,
+typecheck-final,dose-mutants,year-home-probe2,ownership-reviewed}.log` and
+`testtruth-audit-mutation-{undo,injury,progression,deload}.log`. Full release:
+`/private/tmp/testtruth-audit-release-final.log` (pending completion).
+
+NOT COVERED: physical iPhone installation/acceptance, a fresh simulator tape in
+this turn, the rest of the historical diagnostic fleet, and activation of the
+protected dormant builders. The annual numeric receipts cover main-lift deload
+sets and held/earned strength loads; promoted deload-law cells cover accessory,
+conditioning and power arithmetic without claiming an exhaustive annual numeric
+cross-product. No product decision is currently blocked on Sam.

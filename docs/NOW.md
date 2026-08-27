@@ -61,10 +61,10 @@ and this file gets one line pointing at it.**
 ## STATE
 
 - **BRANCH:** `codex/failure-only-state-export` · **PHONE BUILD:** `3a8a3bd6`, five-part compiler completion, status sections 38–39.
-- **CURRENT UNIT:** R-262 modifier visibility, owner `testtruth`: shared Day/Week/My Status list, exact-fact Clear, session/fixture rows and typed deload. Gates green; not installed on either phone.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 40: release 8/8 executable units, annual 416/416 athlete-weeks, modifier 248 + 24 view/copy checks. Seeded restart and non-seeded onboarding/phase-change simulator tapes green; all three typecheck scopes zero.
-- **NEXT:** physical acceptance of this modifier change. Sam confirmed week-edit/reopen persistence on the previous phone build (section 39), not this new code.
-- **OPEN:** physical modifier acceptance, historical law-registry debt, separate compiler re-audit findings (`docs/STATUS_AUDIT.md`), and preserved runtime-quarantined features. Ownership: 0 rivals / 0 direct derived writers / 1135 reviewed capability owners; this is not an all-app pass.
+- **CURRENT UNIT:** Re-audit follow-up, owner `testtruth`: injury acknowledgement fixed; actual completed Undo verified; numeric progression/deload checks now block release. Not installed on either phone.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 41: Undo 26/26, injury reporting 70/70; four actual release-witness mutants rejected. All three typecheck scopes zero. Full 14-unit release is running; unrelated UI edits are excluded from this checkpoint.
+- **NEXT:** verify the saved checkpoint in isolation from concurrent UI edits, then physical acceptance. Sam confirmed week-edit/reopen persistence on the previous phone build (section 39), not this new code.
+- **OPEN:** full release completion, phone acceptance, historical diagnostic/law debt and protected dormant builders. Before concurrent UI edits: 0 rivals / 0 derived writers / 1136 reviewed owners. R-262 modifier receipts remain in section 40; not an all-app pass.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

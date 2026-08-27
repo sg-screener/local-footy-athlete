@@ -58,6 +58,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { diffSemanticDays, type SemanticDaySnapshot } from './programSemanticSnapshot';
 import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import {
   injuryRequiresChange,
@@ -72,6 +73,16 @@ export interface InjurySubstitution {
   from: string;
   /** The ladder's best legal answer for it. */
   to: TapSwapChoice;
+}
+
+/** A restriction/skip annotation is not a rewritten prescription. Compare the
+ * same visible day on both sides; real load, sets, order and component changes
+ * count, while the injury warning itself and presentation-only copy do not.
+ */
+export function visibleInjuryPrescriptionChanged(before: SemanticDaySnapshot, after: SemanticDaySnapshot): boolean {
+  return diffSemanticDays(before, after).changes.some(change =>
+    change.category !== 'presentation' &&
+    !/(^|\.)(unavailableForInjury|createdAt|updatedAt)(\.|$)/.test(change.path));
 }
 
 /**

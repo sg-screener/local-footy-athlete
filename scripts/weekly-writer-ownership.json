@@ -147,9 +147,9 @@
       "reason": "Shared final-row semantic/material normalizer is invoked only by canonical generation and canonical accepted-template materialization. No independent store publisher; typed intent and row evidence take precedence over legacy ingress."
     },
     "src/utils/programControlActions.ts#executeProgramControlActionDurablyWithinTrace": {
-      "fingerprint": "eecc9a6f6ba2ee33af7f9d24fad72a34d2fd2d8c041d31fa7f0f96435ad73cea",
+      "fingerprint": "33cb8ba92e2e981429873848b90689e205a92f745f5b692d6cffeba398f19e00",
       "classification": "canonical_input_writer",
-      "reason": "Durable program-control dispatcher routes facts and edits to their accepted owners. Clear rebuilds from surviving inputs, injury acknowledgement only reads canonical visible rows, and direct sites are state reads/helper arguments."
+      "reason": "Reviewed 2026-08-28: durable dispatcher still routes facts/edits to their accepted owners. Injury acknowledgement now compares the same visible day's prescription before/after, excluding restriction/audit annotations; no new mutation or publisher. Clear still recompiles surviving inputs; direct sites remain reads/helper arguments."
     },
     "src/screens/home/HomeScreenV2.tsx#DayRow": {
       "fingerprint": "a5ed8ef0d52c91e989afb9b8f73e0abd504e7f9cab128a78558abfce4cb624dd",

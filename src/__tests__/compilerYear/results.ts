@@ -1,4 +1,5 @@
 import { ARCHETYPES, YEAR_WEEKS, yearTimeline } from './catalog';
+import type { DoseReceipt } from './dose';
 
 export interface Check { id: string; ok: boolean; detail?: string }
 export interface WeekResult {
@@ -6,6 +7,7 @@ export interface WeekResult {
   status: 'measured' | 'not_reached'; checks: Check[]; reason?: string;
   sessions?: number; rows?: number; fixtures?: number; ledgerDepth?: number;
   liveFingerprint?: string; rebuiltFingerprint?: string;
+  doseReceipts?: DoseReceipt[];
 }
 export interface AthleteResult {
   id: string; weeks: WeekResult[]; checks: Check[];
@@ -17,7 +19,7 @@ export interface YearResult {
   prerequisites: Check[]; mutations: Check[]; athletes: AthleteResult[];
   notCovered: string[];
 }
-export const WEEK_CHECKS = ['compiler_boundary', 'compiler_owns_visible_rows', 'phase_clock', 'placement', 'fixtures', 'conservation', 'energy_session_content', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging'] as const;
+export const WEEK_CHECKS = ['compiler_boundary', 'dose_arithmetic', 'compiler_owns_visible_rows', 'phase_clock', 'placement', 'fixtures', 'conservation', 'energy_session_content', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging'] as const;
 export function requiredWeekChecks(week: Pick<WeekResult, 'phaseWeek' | 'phase' | 'index'>): readonly string[] {
   if (week.phaseWeek === 10) return [...WEEK_CHECKS, 'carried_injury_report'];
   if (week.phaseWeek === 11 || week.phaseWeek === 12) return [...WEEK_CHECKS, 'carried_injury_retained'];
@@ -48,6 +50,9 @@ export function yearVerdict(result: YearResult) {
   if (!result.mutations.some((c) => c.id === 'source_fact_history_mutation' && c.ok)) fail('source_fact_history_mutation');
   if (!result.mutations.some((c) => c.id === 'acceptance_writer_mutation' && c.ok)) fail('acceptance_writer_mutation');
   if (!result.mutations.some((c) => c.id === 'injury_render_writer_mutation' && c.ok)) fail('injury_render_writer_mutation');
+  for (const id of ['progression_arithmetic_mutation', 'deload_arithmetic_mutation']) {
+    if (!result.mutations.some(c => c.id === id && c.ok)) fail(id);
+  }
   for (const check of result.mutations) if (!check.ok) fail(check.id, check.detail);
   const ids = result.athletes.map((a) => a.id);
   if (new Set(ids).size !== ids.length || ids.length !== ARCHETYPES.length) fail('archetype_coverage');
@@ -83,9 +88,23 @@ export function yearVerdict(result: YearResult) {
       if (week.status !== 'measured') { fail(`${key}/not_reached`, week.reason); continue; }
       for (const id of requiredWeekChecks(week)) if (!week.checks.some((c) => c.id === id && c.ok)) fail(`${key}/${id}`);
       for (const check of week.checks) if (!check.ok) fail(`${key}/${check.id}`, check.detail);
+      if (!Array.isArray(week.doseReceipts)) fail(`${key}/missing_numeric_receipts`);
+      for (const receipt of week.doseReceipts ?? []) {
+        if (!Number.isFinite(receipt.before) || !Number.isFinite(receipt.expected) ||
+            typeof receipt.actual !== 'number' || !Number.isFinite(receipt.actual) ||
+            Math.abs(receipt.actual - receipt.expected) > 0.000001 ||
+            (receipt.kind === 'deload_sets' && receipt.expected !== Math.max(1, Math.round(receipt.before / 2))) ||
+            (receipt.kind === 'progressed_load' && receipt.actual <= receipt.before) ||
+            (receipt.kind === 'held_load' && receipt.actual !== receipt.before)) {
+          fail(`${key}/numeric/${receipt.kind}/${receipt.rowId}`, JSON.stringify(receipt));
+        }
+      }
     }
   }
   const measured = result.athletes.flatMap((a) => a.weeks).filter((w) => w.status === 'measured');
+  const receipts = measured.flatMap(w => w.doseReceipts ?? []);
+  if (!receipts.some(r => r.kind === 'progressed_load' && r.actual! > r.before)) fail('earned_load_increase_not_reached');
+  if (!receipts.some(r => r.kind === 'deload_sets' && r.actual! < r.before)) fail('deload_reduction_not_reached');
   return { ok: failures.size === 0, failures: [...failures.values()],
     expectedWeeks: ARCHETYPES.length * YEAR_WEEKS, measuredWeeks: measured.length,
     greenWeeks: measured.filter((w) => requiredWeekChecks(w).every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok)).length };
