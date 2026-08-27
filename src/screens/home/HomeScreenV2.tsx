@@ -4125,10 +4125,14 @@ function WeekReadinessSheet({
             icon={flatTodayIcon('#FFC247')}
             onPress={() => onApply('flat_today')}
           />
+          {/* ⚠ **NO TINTED PLATE — Sam, 2026-08-27**: *"the pretty cooked has a
+              shaded background on the icon = remove that shade … so its like
+              the sick one"*. `accent` painted a LIME wash behind a RED glyph,
+              which is the one row in this sheet wearing two colours at once.
+              The severity is already said by the glyph's own red. */}
           <SheetOption
             label="Totally cooked"
             testID={explorerTestId.readinessOption('cooked_week')}
-            accent
             icon={cookedIcon('#FF7F7F')}
             onPress={() => onApply('cooked_week')}
           />

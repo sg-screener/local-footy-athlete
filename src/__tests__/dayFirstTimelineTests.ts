@@ -907,14 +907,28 @@ run('the day timeline uses each session icon as its only marker and matches her 
     'the compact status-label scale has drifted');
   assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20[^}]*textTransform:\s*'none'[^}]*letterSpacing:\s*0/.test(home),
     'programmed section headings must keep the 15pt scale and normal casing while compact status labels remain uppercase');
-  assert((home.match(/styles\.programmedPartHeadline/g) ?? []).length === 2,
-    'both programmed part headings must use the larger scale, without enlarging Team Training session status');
+  /* THREE, not two, since 2026-08-27: Team Training's own title moved INTO its
+     row beside the icon (Sam: *"get the icon for team training to sit where it
+     does in the template and move 'team training' text and 'not logged yet' to
+     match"*), so it now wears the same programmed heading as the two session
+     parts. The status line under it still uses the compact scale — which is
+     what this cell was protecting. */
+  assert((home.match(/styles\.programmedPartHeadline/g) ?? []).length === 3,
+    'the programmed headings changed count — check Team Training still wears the '
+    + 'session scale and its STATUS line still wears the compact one');
   assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),
     'the exercise counts no longer match Renee\'s component meta size');
   assert(/timelineRow:\s*\{[^}]*minHeight:\s*52[^}]*paddingVertical:\s*10[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
     'the simplified icon-led rows lost their accepted height or quiet dividers');
+  /* ⚠ **`selectedHeader.gap` IS 2, NOT 14 — Sam, 2026-08-27**: *"why did you
+     increase the gap above mobility and todays focus - it should be close so it
+     almost looks like it's sitting on top of it"*.
+     That 14 was INERT when this cell pinned it: the header had ONE child, so the
+     gap did nothing. Splitting it into two rows for the tier badge handed the
+     dead number a job and pushed the title down. The card's PADDING — the half
+     of this cell that was about the under-filled phone — is unchanged. */
   assert(/dayRowInnerSelected:\s*\{[^}]*paddingHorizontal:\s*20[^}]*paddingVertical:\s*20/.test(home)
-    && /selectedHeader:\s*\{[^}]*gap:\s*14/.test(home)
+    && /selectedHeader:\s*\{[^}]*gap:\s*2\b/.test(home)
     && /expanded:\s*\{[^}]*marginTop:\s*20[^}]*gap:\s*12/.test(home),
     'the Today card has fallen back to the under-filled spacing shown on Sam\'s phone');
   assert(/label="Start Session"[\s\S]{0,100}size="md"/.test(home),
@@ -1002,12 +1016,21 @@ run('the status circles sit in a card with words above them', () => {
     'the change card is no longer the shared hub carrying the status row — see '
     + '`test:session-change-hub` [8] for why there is exactly one implementation');
 
-  // THE PICTURE IS THE SHARED COMPONENT'S. Same numbers as before, read where
-  // they now live: `padding="lg"`, a 48pt circle and a 12/16 label.
-  assert(/padding="lg"/.test(hub)
+  /* ⚠ **THE DAY'S THREE STATUS DOORS ARE THE TEMPLATE'S SQUARE TILES NOW** —
+     Sam, 2026-08-27: *"the not feeling 100% box … should match the template with
+     the new square boxes - but keep the buttons pointed at the same things"*.
+     The round chips are NOT gone: the SESSION sheet still draws them, because
+     five actions do not fit as tiles and two of them have no description. So the
+     component keeps both, and this cell pins both — the tile the Day screen
+     asks for, and the chip geometry the session screen still relies on. */
+  assert(/variant = 'chips'/.test(hub)
     && /chipIcon:\s*\{[^}]*width:\s*48[^}]*height:\s*48[^}]*borderRadius:\s*24/.test(hub)
     && /chipLabel:\s*\{[^}]*fontSize:\s*12[^}]*lineHeight:\s*16/.test(hub),
-    'the status card has fallen back to its undersized padding or chip geometry');
+    'the session screen lost the round chip it still needs');
+  assert(/variant="tiles"/.test(home)
+    && /tile:\s*\{[^}]*borderRadius:\s*12[^}]*borderWidth:\s*1/.test(hub)
+    && /tileDetail:\s*\{/.test(hub),
+    'the Day screen status card has fallen back off the template tiles');
   assert(/signedCopy\('day\.change_card\.heading'\)/.test(hub)
     && /signedCopy\('day\.change_card\.subline'\)/.test(hub),
     'the heading and sub-line above the circles are not read from the sheet.');
@@ -1360,10 +1383,18 @@ run('the Program shape control is the large Day / Week toggle Sam chose', () => 
   assert(/accessibilityLabel=\{option === 'today' \? 'Day' : 'Week'\}/.test(toggle)
     && /\{option === 'today' \? 'Day' : 'Week'\}/.test(toggle),
   'the shape control does not say Day / Week in visible and accessibility copy');
-  assert(/viewToggle:\s*\{[^}]*width:\s*280\b/.test(home)
-    && /viewToggleOption:\s*\{[^}]*minHeight:\s*44\b/.test(home)
+  /* ⚠ **FULL WIDTH AND THINNER — Sam, 2026-08-27**: *"the day / week toggle
+     needs to span across further across the page - so it lines up with the boxes
+     below it - it also needs to be thinner height wise to match the template"*.
+     The 280pt centred pill is what this cell pinned; it floated narrower than
+     every card under it. The LABEL SCALE IS UNCHANGED at 15 — that is the half
+     of "undersized" that was about reading it, and shrinking it would be the
+     regression this cell was written for. */
+  assert(/viewToggle:\s*\{[^}]*alignSelf:\s*'stretch'/.test(home)
+    && !/viewToggle:\s*\{[^}]*width:\s*280\b/.test(home)
+    && /viewToggleOption:\s*\{[^}]*minHeight:\s*34\b/.test(home)
     && /viewToggleLabel:\s*\{[^}]*fontSize:\s*15\b/.test(home),
-  'the shape control has fallen back to the old undersized pill');
+  'the shape control has fallen back off the template width, or lost its label scale');
 });
 
 run('week navigation is absent from Today and compact below the toggle in Week', () => {
@@ -1720,7 +1751,10 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
   assert(/rowCount = \(visibleDay\?\.parts \?\? \[\]\)\.reduce/.test(home),
     'the count is no longer summed from the projection\'s own parts — a number '
     + 'taken beside the list it counts is `a count taken for a record`, again');
-  assert(/rowCount > 0 \? \(/.test(home),
+  /* `&& !preProgram` joined the condition on 2026-08-27: a day before the
+     athlete signed up shows the DAY and no session at all (R-258/R-227 revised),
+     so it withholds the count for a second reason. */
+  assert(/rowCount > 0 && !preProgram \?/.test(home),
     'a day with nothing in it now renders a count. A rest day already says Rest, '
     + 'and "0 exercises" is a sentence about nothing.');
   // AND IT IS THE SHEET'S TEMPLATE, the same one the drop-downs use, so the week

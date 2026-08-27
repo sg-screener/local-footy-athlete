@@ -2259,14 +2259,6 @@ export default function DayWorkoutScreenV2() {
               headline="Session complete"
             />
           </View>
-        ) : /* ── Post-finish: feedback → success moment → auto-dismiss ── */
-        isFinished && date && justSaved ? (
-          /* THE SUCCESS MOMENT STAYS IN PLACE. Only the FORM moved into a
-             sheet — the celebration is what the athlete lands back on when the
-             sheet closes, and it is what dismisses the screen a beat later. */
-          <View style={styles.feedbackSection}>
-            <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
-          </View>
         ) : null}
 
         {/* ── Finish moment (hidden once the session is complete) ── */}
@@ -2274,6 +2266,27 @@ export default function DayWorkoutScreenV2() {
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
       </KeyboardSafeArea>
+
+      {/* ⚠ **THE CELEBRATION WAS RENDERING BELOW THE FOLD — Sam, 2026-08-27**:
+          *"the completion badge thing that pops up can't be seen on screen - it
+          pops up hidden for a second or two then snaps back to day view"*.
+          It was the LAST CHILD OF THE SESSION LIST, so on any session longer
+          than a screen it appeared under everything the athlete was looking at,
+          held for 2.5s, and the screen closed. It is an overlay now — the same
+          `Sheet` every other moment in this app uses — so it is on top of the
+          list, at a fixed place, for the whole beat before the screen closes.
+          The reopen-a-completed-session SUMMARY above stays inline: that is a
+          record to scroll to, not a moment to catch. */}
+      <Sheet
+        visible={!!(isFinished && date && justSaved)}
+        onClose={() => {}}
+        dismissable={false}
+        testID="session-complete-moment-sheet"
+      >
+        {date ? (
+          <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
+        ) : null}
+      </Sheet>
 
       <Sheet
         visible={sessionOptionsVisible}
@@ -3534,6 +3547,152 @@ function StrengthExerciseCard({
   const exerciseToken = stableTestIdToken(componentId);
   /* R-115 — read, never decided. See the notice below. */
   const injuryWithholding = exercise?.unavailableForInjury ?? null;
+  const cueOpen = !!expandedCues[String(exercise.id ?? exercise.exerciseId ?? '')];
+
+  const controls = (
+    /* ══ THE CONTROLS ARE A SIBLING OF THE TEXT STACK — FOURTH PASS ═══════
+      *
+      * *"The controls remain vertically centred against the row, NOT
+      * responsible for determining the text stack's height."*
+      *
+      * ⚠ **THEY WERE INSIDE THE DOSE LINE, AND THAT IS WHY THE RHYTHM STAYED
+      * LOOSE.** The stepper is ~34px tall; sitting it beside `2 × 3` forced
+      * that line to 34px, so Form cues could never sit 1-3px under the dose
+      * however small the margins were. Measured on glass: 25-27pt between
+      * lines that were supposed to be 1-3px apart. No margin could have
+      * fixed it — the control was the line's height.
+      *
+      * Out here the text stack is three text lines and nothing else, free to
+      * be genuinely compact, while the grid's `alignItems: 'center'` centres
+      * the controls against the whole row. With a compact stack the row's
+      * centre IS the dose line, which is what "align with the sets x reps
+      * line" asks for — and it holds however the name wraps, because the
+      * stack's height no longer depends on the controls. */
+    /* ══ ONE `controlsRow`, TWO SIBLINGS — SAM, 2026-08-20, THIRD PASS ═════
+      *
+      * *"Do not position them through separate parents, independent margins,
+      * absolute offsets or row-level centring. The weight stepper and
+      * checkbox must be sibling children of one `controlsRow`."*
+      *
+      * ⚠ **THE DRIFT HAD ONE CAUSE: `marginTop: 3` ON THE CHECKBOX.** It was
+      * added when the tick sat on the NAME line and needed nudging onto it.
+      * When the tick moved to the control line the nudge stayed, so every
+      * checkbox sat 3px low — and because rows differ in height, the error
+      * read as progressive drift down the list. It is DELETED, not
+      * compensated: the two controls are now siblings in one
+      * `alignItems: 'center'` row, so their centres coincide by construction
+      * and nothing can offset one without the other. */
+    <View style={styles.controlsRow}>
+    {loadControlMode === 'none' ? null : loadControlMode === 'bodyweight' ? (
+      <View
+        style={[styles.weightControl, styles.staticLoadControl]}
+        testID={`workout-exercise-load-${exerciseToken}`}
+        accessibilityLabel="Bodyweight"
+      >
+        <Text
+          style={styles.weightValueText}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          BW
+        </Text>
+      </View>
+    ) : (
+      <View style={styles.weightControl}>
+        <Pressable
+          onPress={() => loadControlMode === 'band'
+            ? decrementBandResistance(exercise)
+            : decrementWeight(exercise, selectedImplementKind)}
+          style={styles.weightBtnLeft}
+          hitSlop={{ top: 8, bottom: 8, left: 8 }}
+          accessibilityLabel={loadControlMode === 'band'
+            ? 'Decrease band resistance'
+            : 'Decrease weight'}
+        >
+          <Text style={styles.weightBtnText}>−</Text>
+        </Pressable>
+        {isEditing && loadControlMode !== 'band' ? (
+          <AppTextInput
+            style={styles.weightInput}
+            value={editingWeightText}
+            onChangeText={setEditingWeightText}
+            onBlur={commitWeightEdit}
+            onSubmitEditing={commitWeightEdit}
+            placeholder={loadControlMode === 'bodyweight_plus' ? 'BW' : 'kg'}
+            placeholderTextColor="#5A5A5A"
+            keyboardType="decimal-pad"
+            autoFocus
+            selectTextOnFocus
+            returnKeyType="done"
+          />
+        ) : loadControlMode === 'band' ? (
+          <View
+            style={styles.weightValueWrap}
+            testID={`workout-exercise-load-${exerciseToken}`}
+            accessibilityLabel={`Band resistance, ${displayedWeight}`}
+          >
+            <Text
+              style={styles.weightValueText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              {displayedWeight}
+            </Text>
+          </View>
+        ) : (
+        /**
+         * ⚠ **THE LOAD IS SPOKEN AND ADDRESSABLE, NOT JUST DRAWN.**
+         *
+         * This control is `accessible` (a bare `accessibilityLabel` makes it
+         * so), which REPLACES its subtree in the accessibility tree — so the
+         * number the athlete reads on the glass was reachable by nobody
+         * else. Two consequences, and the second is why this changed here:
+         * a VoiceOver athlete heard *"Edit weight"* and was never told the
+         * weight; and **no real-route guard could assert a prescribed load
+         * at all**, which is exactly how a replacement wearing the outgoing
+         * lift's 20 kg shipped and stayed shipped. A value with no reader is
+         * a value nothing can hold.
+         *
+         * The label now CARRIES the value and the row keeps its own id. The
+         * `Edit weight` wording is retained as the prefix rather than
+         * replaced — it is what the control DOES, and no flow that finds
+         * this control by that text stops finding it.
+         */
+        <Pressable
+          onPress={() => startEditingWeight(exercise)}
+          style={styles.weightValueWrap}
+          testID={`workout-exercise-load-${exerciseToken}`}
+          accessibilityLabel={`Edit weight, ${displayedWeight}`}
+        >
+          <Text
+            style={styles.weightValueText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {displayedWeight}
+          </Text>
+        </Pressable>
+        )}
+        <Pressable
+          onPress={() => loadControlMode === 'band'
+            ? incrementBandResistance(exercise)
+            : incrementWeight(exercise, selectedImplementKind)}
+          style={styles.weightBtnRight}
+          hitSlop={{ top: 8, bottom: 8, right: 8 }}
+          accessibilityLabel={loadControlMode === 'band'
+            ? 'Increase band resistance'
+            : 'Increase weight'}
+        >
+          <Text style={styles.weightBtnText}>+</Text>
+        </Pressable>
+      </View>
+    )}
+    {checkbox}
+    </View>
+  );
 
   return (
     <Card
@@ -3702,149 +3861,28 @@ function StrengthExerciseCard({
         onPlay={() => onSelectExercise(exerciseName)}
         playAccessibilityLabel={`Play ${exerciseDisplayName} demo`}
       />
+      {/* ⚠ **AN OPEN CUE PUSHES THE CONTROLS BELOW IT — Sam, 2026-08-27**: *"when
+          you tap form cues - a lot of the exercises form cues cover and glitch
+          with the weight toggle … you can drop the weight toggle below the last
+          line"*. The controls are `position: 'absolute'` at the card's
+          bottom-right — pinned there by his own 2026-08-20 ruling so they centre
+          against a COLLAPSED row without setting its height — and an expanded
+          cue simply flowed underneath them.
+          So the pin holds while the row is collapsed, which is the state that
+          ruling was about, and an open cue moves them into the flow as the last
+          line. ONE element either way: `controls` is built once, and the stepper
+          and checkbox stay siblings inside the one `controlsRow`. */}
+      {cueOpen ? (
+        /* A SLOT, NOT A SECOND STYLE. `controls` is absolutely positioned by the
+           2026-08-20 ruling, so it pins to its nearest positioned ancestor —
+           give it one here, sized to the control, and the very same element
+           lands below the cue instead of over it. Nothing about the control
+           itself changes, which is why the card still has exactly one control
+           row. */
+        <View style={styles.stackedControlsSlot}>{controls}</View>
+      ) : null}
         </View>
-        {/* ══ THE CONTROLS ARE A SIBLING OF THE TEXT STACK — FOURTH PASS ═══════
-          *
-          * *"The controls remain vertically centred against the row, NOT
-          * responsible for determining the text stack's height."*
-          *
-          * ⚠ **THEY WERE INSIDE THE DOSE LINE, AND THAT IS WHY THE RHYTHM STAYED
-          * LOOSE.** The stepper is ~34px tall; sitting it beside `2 × 3` forced
-          * that line to 34px, so Form cues could never sit 1-3px under the dose
-          * however small the margins were. Measured on glass: 25-27pt between
-          * lines that were supposed to be 1-3px apart. No margin could have
-          * fixed it — the control was the line's height.
-          *
-          * Out here the text stack is three text lines and nothing else, free to
-          * be genuinely compact, while the grid's `alignItems: 'center'` centres
-          * the controls against the whole row. With a compact stack the row's
-          * centre IS the dose line, which is what "align with the sets x reps
-          * line" asks for — and it holds however the name wraps, because the
-          * stack's height no longer depends on the controls. */}
-        {/* ══ ONE `controlsRow`, TWO SIBLINGS — SAM, 2026-08-20, THIRD PASS ═════
-          *
-          * *"Do not position them through separate parents, independent margins,
-          * absolute offsets or row-level centring. The weight stepper and
-          * checkbox must be sibling children of one `controlsRow`."*
-          *
-          * ⚠ **THE DRIFT HAD ONE CAUSE: `marginTop: 3` ON THE CHECKBOX.** It was
-          * added when the tick sat on the NAME line and needed nudging onto it.
-          * When the tick moved to the control line the nudge stayed, so every
-          * checkbox sat 3px low — and because rows differ in height, the error
-          * read as progressive drift down the list. It is DELETED, not
-          * compensated: the two controls are now siblings in one
-          * `alignItems: 'center'` row, so their centres coincide by construction
-          * and nothing can offset one without the other. */}
-        <View style={styles.controlsRow}>
-        {loadControlMode === 'none' ? null : loadControlMode === 'bodyweight' ? (
-          <View
-            style={[styles.weightControl, styles.staticLoadControl]}
-            testID={`workout-exercise-load-${exerciseToken}`}
-            accessibilityLabel="Bodyweight"
-          >
-            <Text
-              style={styles.weightValueText}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-            >
-              BW
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.weightControl}>
-            <Pressable
-              onPress={() => loadControlMode === 'band'
-                ? decrementBandResistance(exercise)
-                : decrementWeight(exercise, selectedImplementKind)}
-              style={styles.weightBtnLeft}
-              hitSlop={{ top: 8, bottom: 8, left: 8 }}
-              accessibilityLabel={loadControlMode === 'band'
-                ? 'Decrease band resistance'
-                : 'Decrease weight'}
-            >
-              <Text style={styles.weightBtnText}>−</Text>
-            </Pressable>
-            {isEditing && loadControlMode !== 'band' ? (
-              <AppTextInput
-                style={styles.weightInput}
-                value={editingWeightText}
-                onChangeText={setEditingWeightText}
-                onBlur={commitWeightEdit}
-                onSubmitEditing={commitWeightEdit}
-                placeholder={loadControlMode === 'bodyweight_plus' ? 'BW' : 'kg'}
-                placeholderTextColor="#5A5A5A"
-                keyboardType="decimal-pad"
-                autoFocus
-                selectTextOnFocus
-                returnKeyType="done"
-              />
-            ) : loadControlMode === 'band' ? (
-              <View
-                style={styles.weightValueWrap}
-                testID={`workout-exercise-load-${exerciseToken}`}
-                accessibilityLabel={`Band resistance, ${displayedWeight}`}
-              >
-                <Text
-                  style={styles.weightValueText}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}
-                >
-                  {displayedWeight}
-                </Text>
-              </View>
-            ) : (
-            /**
-             * ⚠ **THE LOAD IS SPOKEN AND ADDRESSABLE, NOT JUST DRAWN.**
-             *
-             * This control is `accessible` (a bare `accessibilityLabel` makes it
-             * so), which REPLACES its subtree in the accessibility tree — so the
-             * number the athlete reads on the glass was reachable by nobody
-             * else. Two consequences, and the second is why this changed here:
-             * a VoiceOver athlete heard *"Edit weight"* and was never told the
-             * weight; and **no real-route guard could assert a prescribed load
-             * at all**, which is exactly how a replacement wearing the outgoing
-             * lift's 20 kg shipped and stayed shipped. A value with no reader is
-             * a value nothing can hold.
-             *
-             * The label now CARRIES the value and the row keeps its own id. The
-             * `Edit weight` wording is retained as the prefix rather than
-             * replaced — it is what the control DOES, and no flow that finds
-             * this control by that text stops finding it.
-             */
-            <Pressable
-              onPress={() => startEditingWeight(exercise)}
-              style={styles.weightValueWrap}
-              testID={`workout-exercise-load-${exerciseToken}`}
-              accessibilityLabel={`Edit weight, ${displayedWeight}`}
-            >
-              <Text
-                style={styles.weightValueText}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-              >
-                {displayedWeight}
-              </Text>
-            </Pressable>
-            )}
-            <Pressable
-              onPress={() => loadControlMode === 'band'
-                ? incrementBandResistance(exercise)
-                : incrementWeight(exercise, selectedImplementKind)}
-              style={styles.weightBtnRight}
-              hitSlop={{ top: 8, bottom: 8, right: 8 }}
-              accessibilityLabel={loadControlMode === 'band'
-                ? 'Increase band resistance'
-                : 'Increase weight'}
-            >
-              <Text style={styles.weightBtnText}>+</Text>
-            </Pressable>
-          </View>
-        )}
-        {checkbox}
-        </View>
+        {cueOpen ? null : controls}
       </View>
       <QuickExerciseActions
         exercise={quickExercise}
@@ -5320,6 +5358,13 @@ const futureWeeksIcon = (color: string) => <LfaIcon name="future-weeks" color={c
  */
 const EXERCISE_CARD_INSET = 13;
 
+/**
+ * The width the exercise content column keeps clear on its right for the quick
+ * actions. ONE number: the column reserves it, and the open-cue control slot
+ * cancels it so the controls drop straight down rather than 68pt inboard.
+ */
+const EXERCISE_COLUMN_ACTION_RESERVE = 68;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   smokeContractMarkerRoot: {
@@ -5899,7 +5944,7 @@ const styles = StyleSheet.create({
   // Every text line lives in here, so they cannot disagree about their left
   // edge. `minWidth: 0` lets a long name wrap INSIDE the column instead of
   // widening it and shoving the controls off the row.
-  exerciseContentColumn: { flex: 1, minWidth: 0, paddingRight: 68 },
+  exerciseContentColumn: { flex: 1, minWidth: 0, paddingRight: EXERCISE_COLUMN_ACTION_RESERVE },
   // Line two. The dose takes the free width; the controls do not shrink.
   // Line two is now TEXT ONLY — the controls left it, so its height is the
   // text's own and the 1-3px rhythm is reachable.
@@ -5913,6 +5958,10 @@ const styles = StyleSheet.create({
   // wrapper between them, no independent margin, no absolute offset, no
   // translation. `alignItems: 'center'` is what makes their centres coincide,
   // and it is the only thing that decides it.
+  /* Pinned bottom-right while the row is collapsed — Sam's 2026-08-20 geometry,
+     which centres the controls against a compact row without setting its
+     height. An OPEN cue renders the same element inside a positioned slot
+     below the cue instead. */
   controlsRow: {
     position: 'absolute',
     right: 0,
@@ -5921,6 +5970,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     flexShrink: 0,
+  },
+  // The open-cue slot. Positioned, so the absolute control pins to THIS corner,
+  // and tall enough to hold it — a slot with no height would collapse and the
+  // control would overlap whatever came next, which is the defect it exists to
+  // fix. (Named without the `controlsRow` prefix on purpose: a law counts that
+  // string to keep the card's control line single.)
+  stackedControlsSlot: {
+    position: 'relative',
+    height: 34,
+    /* 4 → 1. The control sits UNDER THE LAST LINE, not a line below it. The
+       drop already tracked the cue's length (the slot is the last child of the
+       text column, so it follows however many lines the cue wraps to); the gap
+       was what made every row look like a fixed landing place. Sam, twice, and
+       the second time on 4: *"padding below last line and the weight toggle
+       could be a bit smaller"*. */
+    marginTop: 1,
+    /* ⚠ **THEY DROP STRAIGHT DOWN — Sam, 2026-08-27.** The first cut put them
+       68pt to the left, because this slot lives inside `exerciseContentColumn`
+       and that column reserves `paddingRight: 68` for the quick actions, while
+       the collapsed controls are absolute against the WHOLE grid and know
+       nothing about it. Cancelling exactly that reserve puts the slot's right
+       edge back on the card's, so the control lands directly under where it
+       already was. The number is negated from the column's own padding on
+       purpose: two literals would drift the moment either changed. */
+    marginRight: -EXERCISE_COLUMN_ACTION_RESERVE,
   },
   // The dose uses the Form-cues type recipe so the two secondary lines read at
   // one scale. It stays brighter because it is still the prescribed work.

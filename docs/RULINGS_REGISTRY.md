@@ -6718,3 +6718,39 @@ Session and fixture changes expose the existing exact latest-action Undo only
 when eligible; showing an older active change does not manufacture a new Undo.
 Guard: `LAW-all-program-effects-visible`, `test:modifier-lifecycle`, in
 `test:release`. Receipts and NOT COVERED: `docs/STATUS_TESTTRUTH.md`.
+
+**R-263** · *"there's no checkbox for the conditioning section like there is for
+all the exercises above it"*, *"when you tap form cues - a lot of the exercises
+form cues cover and glitch with the weight toggle … you can drop the weight
+toggle below the last line"*, *"the completion badge thing that pops up can't be
+seen on screen"*, *"the pretty cooked has a shaded background on the icon"*, *"the
+injury one … they're all lime green = they should match the blue orange red"*
+(Sam, 2026-08-27, afternoon) · **FIVE SESSION-AND-SHEET FIXES. BUILT; ALL SEEN BY
+SAM ON GLASS.**
+(a) **The conditioning checkbox was never missing from the MODEL.** Every
+execution item is wrapped in `ExecutionChecklistItem`, which builds a checkbox
+and hands it to `renderItem`; the two conditioning branches dropped the argument,
+so the section's `0/1`, Select all and the saved receipt were all counting a row
+the athlete could not tick. One tick per execution item — a choice row gets ONE
+on its header, never one per option, or two ticks would claim both were done.
+⚠ `styles.controlsRow` is COUNTED by a law to keep the strength card's control
+line single; the conditioning tick uses `addonCheckboxSlot`.
+(b) **An open form cue drops the weight toggle below the last line.** The
+controls are absolute at the card's bottom-right by R (2026-08-20) — pinned so
+they centre against a COLLAPSED row without setting its height — and an expanded
+cue flowed underneath them. The pin holds while collapsed; an open cue renders
+the SAME element inside a positioned slot after the cue. The slot cancels
+`EXERCISE_COLUMN_ACTION_RESERVE`, the column's 68pt quick-action reserve, or the
+controls land 68pt inboard instead of straight down. Gap under the last line: 1.
+(c) **The completion moment rendered as the LAST CHILD OF THE SESSION LIST**, so
+on any session longer than a screen it appeared below the fold, held 2.5s and the
+screen closed. It is an overlay `Sheet` now, and the beat is 4s. **"Consistency
+starts here." is REMOVED** — a first session shows no support line at all.
+(d) "Totally cooked" lost its `accent` plate: a LIME wash behind a RED glyph, the
+only row in that sheet wearing two colours.
+(e) The three injury regions were all `colors.accent.lime`; they now wear the
+same blue/amber/red the Fatigue and Sick sheets use, in list order. The guard
+that REQUIRED lime — and named these very hexes as forbidden — is inverted.
+**Search words:** conditioning checkbox, form cues overlap weight toggle, drop
+below last line, completion badge not visible, consistency starts here, totally
+cooked shade, injury region colours.

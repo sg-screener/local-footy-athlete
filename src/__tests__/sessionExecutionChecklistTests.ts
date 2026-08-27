@@ -1010,15 +1010,24 @@ for (const [label, value] of RHYTHM) {
   ok(`[10] the ${label} gap is a compact 1-3px, not padding pretending to be one`,
     value >= 1 && value <= 3, value);
 }
+/* ⚠ **THE CONTROLS ARE BUILT ONCE AND RENDERED IN ONE OF TWO SLOTS** since
+   2026-08-27 — Sam: *"when you tap form cues … [they] cover and glitch with the
+   weight toggle … you can drop the weight toggle below the last line"*. Pinned
+   bottom-right while the row is COLLAPSED (his 2026-08-20 geometry), and moved
+   into the flow below the cue when it is OPEN, because an absolute control and
+   an expanding text stack share the same corner.
+   The law this cell holds is unchanged and is NOT about where they sit: the
+   controls must never live inside the DOSE line, where the 34pt stepper would
+   set that line's height. So it asserts the two slots exist, that both draw the
+   same one `controls`, and that neither is inside `statsRow`. */
 ok('[10] the CONTROLS do not determine the text stack\'s height',
   (() => {
-    const grid = cardSource.indexOf('styles.exerciseRowGrid');
-    const col = cardSource.indexOf('styles.exerciseContentColumn', grid);
-    const controls = cardSource.indexOf('styles.controlsRow', grid);
-    const stats = cardSource.indexOf('styles.statsRow', grid);
-    // the controls must come AFTER the content column closes, not inside statsRow
-    return controls > stats && controls > col
-      && !/statsRow\}>[\s\S]{0,3000}?styles\.controlsRow[\s\S]{0,200}?<\/View>\s*<\/View>\s*\{\/\* ⚠ \*\*POWER/.test(cardSource);
+    const built = /const controls = \(/.test(cardSource);
+    const collapsedSlot = /\{cueOpen \? null : controls\}/.test(cardSource);
+    const openSlot = /\{cueOpen \? \([\s\S]{0,600}?stackedControlsSlot\}>\{controls\}<\/View>/.test(cardSource);
+    const statsBlock = /<View style=\{styles\.statsRow\}>([\s\S]*?)<\/View>/.exec(cardSource);
+    const notInDoseLine = !!statsBlock && !/controls|styles\.controlsRow/.test(statsBlock[1]);
+    return built && collapsedSlot && openSlot && notInDoseLine;
   })(),
   'the stepper is ~34px tall; inside the dose line it forced that line to 34px');
 ok('[10] and the grid centres them against the whole row',

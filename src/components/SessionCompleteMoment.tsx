@@ -77,9 +77,17 @@ function useWeekSessionCount(date: string): number {
   }, [sessionFeedback, date]);
 }
 
-/** Pick a calm consistency message based on the weekly count. */
+/**
+ * Pick a calm consistency message based on the weekly count.
+ *
+ * ⚠ **THE FIRST-SESSION LINE IS GONE — Sam, 2026-08-27**: *"it says 'consistency
+ * starts here?' … remove that wording"*. A first session now says nothing extra
+ * rather than saying something else: the headline already tells the athlete the
+ * session is logged, and the counts below only start being worth reading once
+ * there is a count to read.
+ */
 function pickSupportCopy(weekCount: number): string {
-  if (weekCount <= 1) return 'Consistency starts here.';
+  if (weekCount <= 1) return '';
   if (weekCount === 2) return 'Two this week - momentum building.';
   if (weekCount === 3) return 'Three this week - solid rhythm.';
   if (weekCount === 4) return 'Four this week - big effort.';
@@ -230,7 +238,9 @@ export const SessionCompleteMoment: React.FC<Props> = ({
         >
           <Text style={styles.eyebrow}>COMPLETE</Text>
           <Text style={styles.headline}>{headline}</Text>
-          <Text style={styles.supportCopy}>{supportCopy}</Text>
+          {supportCopy ? (
+            <Text style={styles.supportCopy}>{supportCopy}</Text>
+          ) : null}
         </Animated.View>
       </View>
     </Card>

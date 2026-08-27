@@ -33,7 +33,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * How long the SessionCompleteMoment stays on screen after a successful
  * feedback save before `navigation.goBack()` fires.
  */
-const SESSION_COMPLETE_DISMISS_MS = 2500;
+/**
+ * ⚠ **2500 WAS MEASURED AGAINST A MOMENT NOBODY COULD SEE.** The celebration
+ * rendered below the fold (Sam, 2026-08-27), so the delay was only ever the gap
+ * before the screen closed. Now that it is an overlay the athlete actually
+ * reads it, and 2.5s is short for a badge, a headline and a line of copy that
+ * animate in. 4s.
+ */
+const SESSION_COMPLETE_DISMISS_MS = 4000;
 
 /**
  * useDayWorkout — the day-workout screen's INPUT layer.

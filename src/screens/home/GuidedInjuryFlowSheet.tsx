@@ -24,11 +24,24 @@ import { LfaIcon } from '../../components/icons/LfaIcon';
 // Inline stroked SVG, the house pattern (`HomeScreenV2`'s `svg` helper /
 // `PlanChangeSheet`'s `glyph` helper). One recognisable shape per top-level
 // region. The next body-area step is deliberately a plain text list.
-const REGION_ICON_COLOR = colors.accent.lime;
+/**
+ * ⚠ **THE THREE REGIONS WEAR THE APP'S THREE STATUS COLOURS — Sam, 2026-08-27**:
+ * *"the injury one - needs updating - they're all lime green = they should match
+ * the blue orange red"*.
+ *
+ * All three were `colors.accent.lime`, so this was the only status sheet whose
+ * rows carried no colour of their own — the Fatigue sheet reads blue → amber →
+ * red down its list, the Sick sheet the same, and Injury read lime, lime, lime.
+ * These are the SAME three hexes those sheets use, not a fourth palette.
+ *
+ * The colour is an ORDER, not a severity: a back problem is not worse than a
+ * shoulder one. It runs down the list the way the other two sheets do, so the
+ * athlete reads three sheets with one visual grammar.
+ */
 const REGION_COLOR: Record<GuidedInjuryRegion, string> = {
-  upper_body: REGION_ICON_COLOR,
-  lower_body: REGION_ICON_COLOR,
-  back_midline: REGION_ICON_COLOR,
+  upper_body: '#67D7FF',
+  lower_body: '#FFC247',
+  back_midline: '#FF7F7F',
 };
 /** Upper body — the simple bicep mark used elsewhere in the app. */
 const upperBodyIcon = (color: string) => <LfaIcon name="flexed-arm" color={color} />;

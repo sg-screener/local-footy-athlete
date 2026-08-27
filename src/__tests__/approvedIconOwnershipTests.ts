@@ -299,17 +299,23 @@ ok('injury category rows keep icons while follow-up body-area rows are text-only
   && !areaStepSource.includes('icon=')
   && injury.includes('icon={REGION_ICON[option.id](REGION_COLOR[option.id])}'));
 /* FOUR BECAME THREE when Sam removed the `Other` injury region (2026-08-21),
-   so the count is now READ OFF THE MENU rather than typed here — a literal is
-   what made this cell red on a change that never touched a colour. The subject
-   is unchanged: every region icon draws in the one lime accent. */
-const regionIconCount = (injury.match(/^\s+(\w+): REGION_ICON_COLOR,$/gm) ?? []).length;
-ok('every injury category icon uses the one lime accent',
-  injury.includes('const REGION_ICON_COLOR = colors.accent.lime;')
+   so the count is READ OFF THE MENU rather than typed here.
+
+   ⚠ **AND LIME BECAME THE THREE STATUS COLOURS — Sam, 2026-08-27**: *"the
+   injury one - needs updating - they're all lime green = they should match the
+   blue orange red"*. This cell required the opposite and named the very hexes
+   it now requires, so it is inverted, not deleted: every region still draws
+   from ONE table, still one colour each, and the three are the SAME hexes the
+   Fatigue and Sick sheets use — a fourth palette here would red it. */
+const regionColorTable = /const REGION_COLOR:[^=]*=\s*\{([\s\S]*?)\};/.exec(injury)?.[1] ?? '';
+const regionIconCount = (regionColorTable.match(/^\s+(\w+): '#[0-9A-Fa-f]{6}',$/gm) ?? []).length;
+ok('every injury category icon wears one of the app\'s three status colours',
+  !injury.includes('const REGION_ICON_COLOR = colors.accent.lime;')
   && regionIconCount === (injury.match(/^\s+(\w+): \w+Icon,$/gm) ?? []).length
   && regionIconCount > 0
-  && !injury.includes("upper_body: '#1EA7FF'")
-  && !injury.includes("lower_body: '#FFC247'")
-  && !injury.includes("back_midline: '#7CC4FF'"));
+  && injury.includes("upper_body: '#67D7FF'")
+  && injury.includes("lower_body: '#FFC247'")
+  && injury.includes("back_midline: '#FF7F7F'"));
 ok('exercise editing uses the approved body, prehab, mobility and reason icons',
   day.includes("<LfaIcon name=\"torso-abs\"")
   && day.includes("<LfaIcon name=\"upper-body\"")
