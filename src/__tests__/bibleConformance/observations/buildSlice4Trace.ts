@@ -9,6 +9,7 @@ import { addDays } from '../../../utils/sessionResolver';
 import { rebuildLocalWeek } from '../../../utils/weekRebuild';
 import { rolloverProgramBlock } from '../../../utils/programBlockRollover';
 import { applyAdjustmentEvents, applyMoveSession } from '../../../utils/applyAdjustmentEvents';
+import { compileCanonicalExerciseEditOnWorkout } from '../../../rules/canonicalWeeklyExerciseEditCompiler';
 import { useProgramStore } from '../../../store/programStore';
 import { useProfileStore } from '../../../store/profileStore';
 import { useCoachUpdatesStore } from '../../../store/coachUpdatesStore';
@@ -301,12 +302,15 @@ function contrastRemovalObservation(): Slice4PathObservation[] {
 }
 
 function directPallofObservation(): Slice4PathObservation[] {
-  resetStore();
   const source = upperPush('direct-pallof', 1);
-  seedProgram([source]);
   const started = performance.now();
-  useProgramStore.getState().addExerciseToWorkout(source.id, pathExercise(source.id, 2, 'Pallof Press', { reps: 10 }));
-  const output = useProgramStore.getState().currentMicrocycle?.workouts ?? [];
+  // This diagnostic observes the row transform, not the live action/boot loop.
+  // The canonical compiler suite covers that loop through the accepted door.
+  const output = [compileCanonicalExerciseEditOnWorkout(source, {
+    kind: 'add', decisionId: 'slice4-add-pallof',
+    occurredAt: '2026-03-23T12:00:00.000Z', dateISO: '2026-03-23',
+    exercise: { name: 'Pallof Press', sets: 3, repsMin: 10, repsMax: 10 },
+  })];
   return [
     observation('direct_exercise_edit', 'path_input', canonicalWeekLedger([source]), 0),
     observation('direct_exercise_edit', 'path_output', canonicalWeekLedger(output), performance.now() - started, ['support_added']),

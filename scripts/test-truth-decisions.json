@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:weekly-writer-zero": {
+      "kind": "current_contract",
+      "reason": "Sam explicitly requires a release-blocking zero-owner proof. This new executable-capability census is red while rival authors, derived-output writers or unreviewed owners remain; it does not promote historical diagnostic failures into product work.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyCompiler.ts",
+        "src/services/api/generateProgram.ts",
+        "src/store/programStore.ts",
+        "src/utils/lighterDayTransaction.ts"
+      ],
+      "contractRefs": ["LAW-weekly-writer-zero-proof"],
+      "witnessScript": "test:weekly-writer-zero",
+      "evidenceKind": "current_architecture_incomplete"
+    },
     "test:accepted-state-transactions": {
       "kind": "rewrite_test",
       "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",

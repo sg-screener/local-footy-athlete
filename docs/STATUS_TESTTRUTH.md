@@ -1306,3 +1306,166 @@ Other diagnostic observations, not a product to-do list:
 - Existing optional top-up content and unrelated progression/repair families
   were not redesigned. No global zero-writer claim is made.
 - Full-year archetype acceptance, simulator, UI pixels and physical iPhone.
+
+## 2026-08-27 — step 17: executable writer census, zero NOT established
+
+Owner: `testtruth`. User step 4 is **PARTIAL**, not complete. The user explicitly
+allowed unresolved chunks to be recorded and the queue to continue. No current
+author is being exempted merely to get the release gate green.
+
+### Options compared and what landed
+
+1. Keep a filename/regex allowlist of the obvious writers. This misses new files,
+   renamed imports and delegated mutations, and would repeat the narrow-zero
+   claim that prompted this work.
+2. Discover executable capabilities with the TypeScript syntax tree/type checker,
+   follow symbol references and import/require aliases, and require exact-body
+   classification reviews. New or changed candidates fail closed.
+
+Option 2 is implemented in `scripts/weekly-writer-census.js`. It discovers
+domain object construction/assignment/returns, collection updates, reflected
+writes, publication and persistence sinks, opaque mutations and possible callers.
+Comments and type-only declarations are not writer occurrences. Anonymous
+callbacks belong to their enclosing named executable owner. CommonJS bindings
+matter here: production boot uses them, so ES imports alone were insufficient.
+
+`scripts/weekly-writer-ownership.json` contains explicit reviews, rationales and
+body-plus-callee fingerprints. It is not a filename whitelist. A changed body,
+missing reviewed owner, invalid registry, parse error, new candidate, reviewed
+rival or reviewed derived-output writer makes the gate red.
+
+`test:weekly-writer-zero` runs the detector's mutation checks and the actual
+census. It is now a current contract in `test:release`, and is also linked from
+the historical Bible chain. No old diagnostic assertion was promoted. The new
+requirement is `LAW-weekly-writer-zero-proof`.
+
+### Measured scope and units — not an app-wide zero claim
+
+Instrument: `npm run audit:weekly-writers`; full reproducible detail:
+`node scripts/weekly-writer-census.js --json --report`.
+
+- Scope: **592 JS/TS source files** in App/index, src (including dev), and
+  deployable edge functions. Tests, mocks, declarations and dependencies excluded.
+- **2,263 direct operation occurrences in 649 distinct direct-owner functions**.
+- Including possible callers: **1,252 distinct executable capability owners**.
+  Dedup key: source path plus named function; anonymous callbacks are grouped
+  with the owner. This is a conservative STATIC capability set, not 1,252
+  runtime-executed authors, independent policies, athlete actions or defects.
+- **34/1,252 owners reviewed; 1,218 unresolved**. Reviewed classifications:
+  9 canonical compiler, 3 canonical input writer, 5 persistence boundary,
+  3 projection/display, 2 legacy ingress, **11 rival author**, and **1
+  derived-output writer**. Zero is not proven. Confirmed counts are LOWER BOUNDS.
+- The derived-output writer identified here is **in-memory overlay publication**,
+  not evidence that overlays are written to disk. Program persistence already
+  projects its ordinary envelope to inputs. A global durable-writer zero is
+  still unproven; transport primitives and atomic rollback are not automatically
+  classified as illicit output writers.
+
+### Confirmed unfinished ownership, not a new programming policy
+
+The 11 reviewed rival functions are:
+
+- `generateProgram.buildGeneratedMicrocycles`: final row composition, assembly,
+  history pinning and power/top-up orchestration still live after plan compilation.
+- `generateProgram.generateProgramLocally`: post-compiler block orchestration.
+- `sessionResolver.materialiseWeekStrengthProgression` and
+  `bakeMicrocycleStrengthProgression`: normal build-day dose and its week writer.
+- `blockBoundaryProgression.applyBlockBoundaryProgression`,
+  `applyBlockBoundaryVolume`, `applyBlockBoundarySetAdditions`,
+  `applyBlockBoundaryConditioning`, `applyBlockBoundaryConditioningAdvance`:
+  generator-invoked post-passes for load, sets and conditioning.
+- `lighterDayTrim.applyLighterDayTrim` and
+  `lighterDayTransaction.applyLighterDayForToday`: separate live day-dose author
+  and orchestration, called from HomeScreenV2.
+
+`programStore.setWeekScopedOverlay` is the reviewed derived-output publisher:
+it accepts externally computed overlay content and hands it to the transaction,
+instead of requiring a typed accepted input and deriving that content.
+
+These are distinct executable FUNCTIONS, including wrappers, not 11 distinct
+training policies. Classification is read from executable source and call
+references, not a claim that every branch ran on a device. Each reviewed row
+names its reason; other candidates remain unresolved rather than guessed safe.
+
+### Safe retirement completed
+
+Removed **2 distinct unused raw store authors**, `addExerciseToWorkout` and
+`replaceExerciseInWorkout`, including their public method declarations. A full
+source search found zero product callers; only one old diagnostic called Add.
+That diagnostic now invokes the existing pure canonical exercise edit transform
+and does not fabricate a direct store write. A stale usage comment was updated.
+No athlete data, ledger, report or file was deleted; the removed source is
+recoverable from git. No active training policy was changed to force zero.
+
+### Verification and liveness
+
+- New detector: **19/19 cells green**. The retirement cell first failed with
+  the two raw implementations present, then passed after their deletion.
+- Mutations add a fake writer in a new source file (green fixture becomes red),
+  explicitly classify a rival and a derived writer (each independently red),
+  change an approved function body, rename imports, alias CommonJS calls,
+  mutate through an array alias/computed key, use Object.assign/Reflect,
+  capture a store setter, and inject invalid source/registry. Each is asserted
+  against the discovered owner/site, not just a nonzero whole-repo exit.
+- First detector runs also caught two flaws in the instrument: local array
+  aliases lost their initializer and dynamic element-access calls looked like
+  literal method names. Both mutation cells are green after fixing discovery.
+- `test:canonical-weekly-compiler`: **241/241**. Real onboarding/accepted edit,
+  fixture, deload, restart and Undo witnesses still pass after the removals.
+- `test:test-truth`: **14/14**, release contract **11/11**, unrunnable-suite
+  ratchet **5/5**. The current-contract census now has four contracts, with
+  the newly requested writer proof deliberately red.
+- `test:deriving-device-commit`: **9/9**; `test:fact-horizon`: **14/14**.
+- `test:release`: **RED**. It reaches the bootstrap and the new writer gate,
+  then stops (1/5 release units green, three not run by that invocation).
+  Those other three witnesses were run separately above; do not call this
+  a green release. The reported unresolved set is not a product-fix todo list.
+- `test:compile`: globally red, 464 diagnostic occurrences across product,
+  devtools and tests (21 / 45 / 398). No reported regression names a changed
+  TypeScript file in this checkpoint. Baselines were not changed.
+- The retained `direct-add-pallof` diagnostic cannot start: its existing
+  `buildStrengthTrace` import of `../support/coachingPlanForTests` is missing.
+  This is recorded as harness debt, not repaired by restoring the retired
+  store writer. Its pure transform is covered by the current compiler suite.
+
+The next same-class mistake is caught by automatically rediscovering candidates
+and expiring reviews, plus the standing alias/mutation tests. Static discovery
+does NOT replace the real accumulated-state acceptance journeys.
+
+### Remaining work / questions before zero can be accepted
+
+Owner for this follow-up: `testtruth`.
+
+1. Move final row composition and progression/block-boundary decisions into the
+   compiler's explicit input/output contract, deleting the generator post-passes
+   in the same slice. Preserve retained versus rotated lift rules, earned sets,
+   conditioning ladders and recorded history. A new wrapper name is not enough.
+2. Record the accepted today-only lighter-day effect and compile it. Establish
+   its existing signed precedence against an already-active readiness/illness/
+   scheduled dose before changing any arithmetic. Question: when both apply,
+   which existing signed rule governs main-lift protection versus global dose?
+   Do not silently halve twice or erase the athlete's opt-in. Prove live,
+   accumulated edits, restart and Undo before retiring the overlay door.
+3. Finish reviewing the remaining capability set, distinguishing policy authors,
+   innocent reads, input writers, transports and compatibility. Review mutable
+   argument/return types and indirect paths; do not bulk-label entire modules.
+4. Re-run the census after each deletion and mutation-test any new detection
+   shape. The step-16 sprint-versus-conditioning credit disagreement remains
+   open and still blocks the late-Off-season lifecycle/full-year acceptance.
+
+No new product choice was silently made; the policy question above must first
+be resolved against the existing signed contracts. If they conflict, ask Sam.
+
+### NOT COVERED
+
+- Full classification, removal of all active rivals, or either global zero.
+- A sound whole-language call graph: the scan follows statically resolvable
+  symbols and flags several opaque writes, but does not establish dynamic
+  dispatch/eval/native/dependency implementation coverage or runtime reachability.
+  The 592-file scope is explicit; do not describe it as every platform path.
+- Full proof of every durable envelope, rollback shape, remote writer or
+  derived adjustment reconstruction path. No global persistence-zero claim.
+- New behavior acceptance for the remaining progression/lighter-day migrations;
+  those implementations were inspected, not changed or accepted by this pass.
+- Late-Off-season blocked lifecycle, full-year archetypes, full action matrix,
+  simulator, UI pixels and physical iPhone. No phone build or release approval.

@@ -15,7 +15,7 @@
  *
  * USAGE (CoachScreen.handleSend):
  *   1. Snapshot before any mutation:   const before = snapshotResolvedWeek(buildScheduleStateImperative());
- *   2. Apply the program update normally (setCurrentMicrocycle, replaceExerciseInWorkout, etc.)
+ *   2. Apply the accepted change through its canonical action door.
  *   3. Snapshot after:                  const after = snapshotResolvedWeek(buildScheduleStateImperative());
  *   4. Diff:                            const diff = diffWeekSnapshots(before, after);
  *   5. Gate the "Program updated" message on `diff.hasChanges`. Use

@@ -1402,19 +1402,6 @@ export interface ProgramState {
   setGenerating: (generating: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  addExerciseToWorkout: (workoutId: string, exercise: WorkoutExercise) => void;
-
-  /**
-   * Replace an exercise in the microcycle template by dayOfWeek + name match.
-   * This is a TEMPLATE edit — it changes the program itself, not a date override.
-   * Used by the AI coach for single-exercise substitutions.
-   */
-  replaceExerciseInWorkout: (
-    dayOfWeek: number,
-    oldExerciseName: string,
-    newExercise: WorkoutExercise,
-  ) => boolean;
-
   // SETTING an override is NOT a store action (LR-1, 2026-08-03). The raw
   // `setManualOverride` primitive is retired: a single-date write goes through
   // `applyProgramOverrideWrite`, which requires the writer to name itself.
@@ -1800,95 +1787,6 @@ export const useProgramStore = create<ProgramState>()(
           program: { weekScopedOverlays: {} },
           validateWeekStarts: affectedWeeks,
         });
-      },
-
-      addExerciseToWorkout: (workoutId, exercise) =>
-        set((state) => {
-          if (!state.currentMicrocycle) return state;
-
-          const updatedWorkouts = state.currentMicrocycle.workouts.map((w) => {
-            if (w.id !== workoutId) return w;
-            return {
-              ...w,
-              exercises: [...w.exercises, exercise],
-            };
-          });
-
-          const updatedMicrocycle = {
-            ...state.currentMicrocycle,
-            workouts: updatedWorkouts,
-          };
-          assertMicrocycleWriteAccepted(updatedMicrocycle);
-
-          // Also update todayWorkout if it's the same workout
-          const updatedToday =
-            state.todayWorkout?.id === workoutId
-              ? { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] }
-              : state.todayWorkout;
-          assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
-
-          return {
-            currentMicrocycle: updatedMicrocycle,
-            todayWorkout: updatedToday,
-          };
-        }),
-
-      replaceExerciseInWorkout: (dayOfWeek, oldExerciseName, newExercise) => {
-        const state = useProgramStore.getState();
-        if (!state.currentMicrocycle) {
-          logger.warn('[programStore] replaceExerciseInWorkout: no currentMicrocycle');
-          return false;
-        }
-
-        const oldNameLower = oldExerciseName.toLowerCase();
-        let swapped = false;
-
-        const updatedWorkouts = state.currentMicrocycle.workouts.map((w) => {
-          if (w.dayOfWeek !== dayOfWeek) return w;
-
-          const updatedExercises = w.exercises.map((ex) => {
-            const exName = (ex.exercise?.name || ex.exerciseId || '').toLowerCase();
-            if (exName.includes(oldNameLower) || oldNameLower.includes(exName)) {
-              swapped = true;
-              logger.debug(`[programStore] Swapped "${ex.exercise?.name}" → "${newExercise.exercise?.name}" on day ${dayOfWeek}`);
-              return {
-                ...newExercise,
-                id: ex.id, // preserve slot ID
-                workoutId: ex.workoutId,
-                exerciseOrder: ex.exerciseOrder,
-              };
-            }
-            return ex;
-          });
-
-          return { ...w, exercises: updatedExercises, updatedAt: new Date().toISOString() };
-        });
-
-        if (!swapped) {
-          logger.warn(`[programStore] replaceExerciseInWorkout: "${oldExerciseName}" not found on day ${dayOfWeek}`);
-          return false;
-        }
-
-        const updatedMicrocycle = {
-          ...state.currentMicrocycle,
-          workouts: updatedWorkouts,
-          updatedAt: new Date().toISOString(),
-        };
-        assertMicrocycleWriteAccepted(updatedMicrocycle);
-
-        // Also update todayWorkout if it falls on the same dayOfWeek
-        const todayDay = dayOfWeekForISODate(todayISOLocal());
-        const updatedToday = todayDay === dayOfWeek
-          ? updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout
-          : state.todayWorkout;
-        assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
-
-        useProgramStore.setState({
-          currentMicrocycle: updatedMicrocycle,
-          todayWorkout: updatedToday,
-        });
-
-        return true;
       },
 
       // THE TOTAL ERASURE. This is the one write that may empty the store, and

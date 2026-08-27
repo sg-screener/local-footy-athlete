@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "owners": {
+    "src/services/api/generateProgram.ts#buildGeneratedMicrocycles": {
+      "classification": "rival_author",
+      "reason": "Weekly scheduler/plan compilation returns before this function composes and assembles final workout rows, pins history, and applies weekly power/top-up policy. Final content ownership still lives in generation; migrating only progression wrappers cannot establish one full-week compiler.",
+      "fingerprint": "1d29fe98f3d24d2c1cb47acdd9027c3dc19e262d5c1f7574c09a9ff8a5b0934d"
+    },
+    "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Owns scheduler, specialist materialisation, connected plan and typed weekly dose/fixture/availability handoffs. This classification covers this function, not the generator's later row rewrites.",
+      "fingerprint": "de968a3b8434300cf4db000e0781ee3a11f2995d42c98a81f3341723abbeae1a"
+    },
+    "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeeklyDosePolicies": {
+      "classification": "canonical_compiler",
+      "reason": "Pure exact-week and per-date dose precedence fold called by compileCanonicalWeek; receives typed schedule/readiness/illness inputs.",
+      "fingerprint": "6b5633938fa298db8cd51e2d71400cdc125f60b29b55812d1c72c41b0b946c7c"
+    },
+    "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalFixtureMutationWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Canonical boundary delegates the existing final-workout fixture specialist; sole caller is acceptedStateTransaction.buildFixtureProjection. Other fixture paths are not exempted by this row.",
+      "fingerprint": "8553c675f27633e9b92a2f56e67805fdab2ed3e20ca52a8200eb0852aa0b9682"
+    },
+    "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalExerciseEditOnWorkout": {
+      "classification": "canonical_compiler",
+      "reason": "Pure typed accepted Add/Swap row transformation shared by live coach actions and reconstruction; exercise Remove remains exclusion projection.",
+      "fingerprint": "57ef1cdf798af5d25be111542cc5fc45af2c03ba246b05212f443b080271d785"
+    },
+    "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalWeeklyExerciseEdits": {
+      "classification": "canonical_compiler",
+      "reason": "Ordered typed exercise-effect fold uses compileCanonicalExerciseEditOnWorkout and returns materialised dates without store access.",
+      "fingerprint": "5caef6fb7951e25ef07ba61489fa5e482c2d4f20f6197c5e232971efd7b7b84b"
+    },
+    "src/rules/canonicalWeeklySessionEditCompiler.ts#compileCanonicalSessionConstraintEffects": {
+      "classification": "canonical_compiler",
+      "reason": "Pure ordered remove/restore/upsert fold of accepted session constraint effects; no live resolver or persistence access.",
+      "fingerprint": "b142fce2614c066e09bd35247d3560093e5716ebf81f2b3322a0bf57a316ba67"
+    },
+    "src/rules/canonicalWeeklyFixtureEditCompiler.ts#compileCanonicalFixtureMarkedDays": {
+      "classification": "canonical_compiler",
+      "reason": "Pure ordered fold of recorded fixture calendar effects; null only clears fixture/noGame marks and preserves other calendar facts.",
+      "fingerprint": "5f84cc93f486d3518c4ff31872cf58a68c6d8172549ac9ae09149112b7c5da5f"
+    },
+    "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Pure typed accepted placement fold over generated workouts; clone, replace by weekday, sort. Existing compatibility translator is a delegate, not a second placement loop.",
+      "fingerprint": "44668f30c23923454df8c2f73ab679f01d27b709e79c0a402d261cac2f7e8e8d"
+    },
+    "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedContract": {
+      "classification": "canonical_compiler",
+      "reason": "Canonical contract-reduction fold over typed accepted athlete reduction requests; returns cloned contract and invokes its local reducer.",
+      "fingerprint": "6929657e2172909784ab488c010913d5e03c5cfe1a603cef082b8e3dab31f3aa"
+    },
+    "src/rules/canonicalWeeklySessionEditCompiler.ts#canonicalAcceptedSessionEditEffectFromDiff": {
+      "classification": "canonical_input_writer",
+      "reason": "Captures exact accepted constraint and calendar deltas as the current typed effect, without independently selecting session content or placement.",
+      "fingerprint": "69f5d4d39e95d4d72d11bd3f622a0ccd03b136ea9334799f73afed7ded1b30f2"
+    },
+    "src/store/decisionLedgerStore.ts#appendDecisionEntry": {
+      "classification": "canonical_input_writer",
+      "reason": "Appends a current typed athlete decision with collision-safe ledger id; delegates guarded append-only write and does not build weekly output.",
+      "fingerprint": "d77f4b612f9fafc608230ec9bb4994018551cdb8c91122d224d821978fef9563"
+    },
+    "src/store/decisionLedgerStore.ts#applyDecisionLedgerWrite": {
+      "classification": "canonical_input_writer",
+      "reason": "Guarded append/reset boundary for canonical ledger entries. Refuses rewriting prior decisions outside an explicit reset.",
+      "fingerprint": "a020cf7502ef81424ee4d21a8ba0fade648c01dcae7badfdfa0f6a318588b354"
+    },
+    "src/rules/legacyMigratedDayPlacementIngress.ts#liftLegacyMigratedDayPlacementEntry": {
+      "classification": "legacy_ingress",
+      "reason": "Only retired migrated_day_placement reader; lifts original id/time/date/workout into the current accepted_day_placement effect. Does not write the retired format.",
+      "fingerprint": "5b9228c0da0f014ef432b7bab09fce5b0ac23d11da04c288a68465083c74ec82"
+    },
+    "src/store/decisionLedgerStore.ts#appendLegacyDayPlacementEffectUpgrade": {
+      "classification": "legacy_ingress",
+      "reason": "One-time metadata append keyed to original decision id; preserves prior rows and their order. It does not author a new athlete action or a visible week.",
+      "fingerprint": "b105c1739f9f8c70285a47807a4a5baad2311b3d90618d90f8275863cbd96642"
+    },
+    "src/store/programStore.ts#programStorageSetItem": {
+      "classification": "persistence_boundary",
+      "reason": "Low-level asyncStorageCompat write primitive; no programming policy. This classification does not approve its callers or claim all payloads are inputs-only.",
+      "fingerprint": "927611a5b49371e1221592af8745bc5dc63bb5130a5c77acdc5bec43864d2d77"
+    },
+    "src/store/programStore.ts#programStorageRemoveItem": {
+      "classification": "persistence_boundary",
+      "reason": "Low-level storage removal primitive for reset/rollback; no weekly authoring. Callers remain independently reviewed.",
+      "fingerprint": "4d689cf64913b1d455510d8aab385d5e35a79abca330aa780b0ecff5211a347e"
+    },
+    "src/store/programStore.ts#writeProgramStoreEnvelopeRaw": {
+      "classification": "persistence_boundary",
+      "reason": "Writes the supplied program envelope and converts write failures; upstream projection and rollback are separate reviewed subjects.",
+      "fingerprint": "9410b8ccdaa8114fe6ccb332550821c4fd94f490b94110ab81ad4dad9a36ea72"
+    },
+    "src/store/programStore.ts#persistProgramStoreEnvelopeDurably": {
+      "classification": "persistence_boundary",
+      "reason": "Requires active persistence-stage token, serialises via the current input projection, then calls the raw envelope writer.",
+      "fingerprint": "bc724c0f460f774161261bb9e4b279ac3cf67148a5946b69ea800209dbff176d"
+    },
+    "src/store/programStore.ts#restoreProgramStoreEnvelopeDurably": {
+      "classification": "persistence_boundary",
+      "reason": "Token-guarded exact envelope restoration/removal for atomic rollback, not a new program decision or steady-state output author.",
+      "fingerprint": "5183346f055eafddf3a050b866a00d8d6c218e2d14760bc6a4a07c748baf437b"
+    },
+    "src/utils/deriveVisibleWeek.ts#deriveVisibleWeek": {
+      "classification": "projection_display",
+      "reason": "Read-side assembly and resolver delegate, with explicit inputs. Does not itself mutate stores or choose prescription; downstream resolver owners are not exempted.",
+      "fingerprint": "893db7c85cd7f63842e3743b9d002085dd05a30d0cfd77fba167d6cb54dfd2c7"
+    },
+    "src/utils/deriveVisibleWeek.ts#deriveVisibleWeekLive": {
+      "classification": "projection_display",
+      "reason": "Reads live inputs and delegates deriveVisibleWeek; no independent row transformation or persistence.",
+      "fingerprint": "dd592cb91cb45bd13c82409dc33930bdbfa7540c7f413b1c2ccb7ebebc804afe"
+    },
+    "src/utils/coachWeekDiff.ts#snapshotResolvedWeek": {
+      "classification": "projection_display",
+      "reason": "Builds a resolved-week fingerprint for before/after reporting. It is not authority to write back the snapshot; resolver callees need their own review.",
+      "fingerprint": "960039c04db50dda8fac18fa238516bd0b3286e83806109d60d13da747af6244"
+    },
+    "src/utils/lighterDayTrim.ts#applyLighterDayTrim": {
+      "classification": "rival_author",
+      "reason": "Active independent accessory-set/finisher/conditioning transform outside canonical dose compilation. HomeScreenV2 reaches it through lighterDayTransaction; pure does not mean canonical.",
+      "fingerprint": "b4637ba1a5473a8551d19e2e6944ee9f2eb77b03a2319616135f95a275c73485"
+    },
+    "src/utils/lighterDayTransaction.ts#applyLighterDayForToday": {
+      "classification": "rival_author",
+      "reason": "Live HomeScreenV2 handler resolves today's output, trims it separately, assembles a sparse derived overlay and commits it, then records reversible metadata. Requires typed accepted today-only effect migration with restart/Undo coverage.",
+      "fingerprint": "1891570e6442b8bb29abaabe7eead8b896d53b30d22b10c2c9dedfb527360610"
+    },
+    "src/utils/sessionResolver.ts#materialiseWeekStrengthProgression": {
+      "classification": "rival_author",
+      "reason": "Builds progression context from history and replaces baseDays workouts outside compileCanonicalWeek. Compiler-dose days stand down, but ordinary build days still have this independent author.",
+      "fingerprint": "6c1126bcaedb65a68bae1a95ec4e3ec82b27560d00b13bc6bc69751aabcdf104"
+    },
+    "src/utils/sessionResolver.ts#bakeMicrocycleStrengthProgression": {
+      "classification": "rival_author",
+      "reason": "Generator calls this after weekly compilation; it invokes authorWeekStrengthProgression and mutates each microcycle.workouts. This is one distinct wrapper author function, not an extra independent policy.",
+      "fingerprint": "1c248e417f13fd6c2e983fdfa161aba05863d6f4a9661a01c35e8832d7442187"
+    },
+    "src/services/api/generateProgram.ts#generateProgramLocally": {
+      "classification": "rival_author",
+      "reason": "Orchestrates additional row/progression/block-boundary writes after buildGeneratedMicrocycles. Returning the same final data through a compiler-named wrapper would not retire these decision sites.",
+      "fingerprint": "88d35d4918012ae5fdb7cb6d0766c05d659552e3770c3ae0b26e4affe3cedaa8"
+    },
+    "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
+      "classification": "rival_author",
+      "reason": "Called directly by generateProgramLocally after compiler output; rewrites/clears row loads using block-boundary decisions. Preserve existing retained/rotated-lift policy when migrating.",
+      "fingerprint": "5c1ba2cf51e6317ae2b13c06029e86eafad91f409c51088c4c80f47860182a40"
+    },
+    "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryVolume": {
+      "classification": "rival_author",
+      "reason": "Called directly after compilation to rewrite prescribedSets from block feedback decisions. Must be folded into the canonical progression/dose precedence, not deleted as unwanted training policy.",
+      "fingerprint": "1cce9d1924dd5d9c63a7649c94d632466b6aa9a2708fcabd0b32669bd3685ffb"
+    },
+    "src/rules/blockBoundaryProgression.ts#applyBlockBoundarySetAdditions": {
+      "classification": "rival_author",
+      "reason": "Direct generator post-pass changes prescribedSets for earned volume increases; distinct executable writer in the block-progression family.",
+      "fingerprint": "f8f84e738c57ef6c39cf07724bf825ed516c88e62362da774313a9fd0068b54b"
+    },
+    "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioning": {
+      "classification": "rival_author",
+      "reason": "Direct generator post-pass selects easier conditioning and recomposes rows outside canonical week compilation.",
+      "fingerprint": "d3566c5b768ce265f5c87bd1bb257802fcf32e18d84bf6474e7fc07f083fb54a"
+    },
+    "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioningAdvance": {
+      "classification": "rival_author",
+      "reason": "Direct generator post-pass advances conditioning headline dose outside canonical week compilation.",
+      "fingerprint": "21d265f7f9babc7cdba713fafc3a1063eb5214e833799af3749ac712900c46cf"
+    },
+    "src/store/programStore.ts#setWeekScopedOverlay": {
+      "classification": "derived_output_writer",
+      "reason": "Accepts and publishes externally computed weekly overlay through a transaction rather than requiring a typed input and compiler result. This is in-memory derived publication, NOT a claim that overlays are durably persisted; program partialize already stores inputs.",
+      "fingerprint": "feb92d9398c56eab1455e98b7d29081f59512f1eb4fa0361cd3336e7df5225fc"
+    }
+  }
+}

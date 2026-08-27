@@ -140,6 +140,17 @@ export interface LawRow {
  * `test:bible` chain string, and grepping the suites named in each receipt.
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
+  {
+    id: 'LAW-weekly-writer-zero-proof',
+    law: 'Do not accept one weekly program owner until the executable-capability census has zero reviewed rival authors, zero reviewed derived-output writers and no unresolved ownership; a new writer or changed approved function must block release.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md step 17; Sam, 2026-08-27: "Rival-author and derived-writer census" and "zero is measured from executable paths".',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-writer-zero',
+      chainStatus: 'in_chain',
+      receipt: 'The TypeScript executable scan follows symbol references, imported and CommonJS aliases, domain writes, collection mutations, publication and persistence sinks. Exact-body reviews expire on change; unknown owners and parse errors are red. Detector mutations introduce new rival and derived writers, change approved bodies and hide writes behind aliases. The gate is intentionally RED: active progression/overlay authors and unresolved candidates remain. See step 17 for measured units, reviewed classifications, exclusions and incomplete proof. This guard is in test:release as an explicit current contract, not a grandfathered historical red.',
+    },
+  },
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
     id: 'LAW-canonical-weekly-scheduled-dose-input',
