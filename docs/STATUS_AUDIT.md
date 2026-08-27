@@ -3510,3 +3510,124 @@ repair passes, ~5000 lines) has NO production callers — the live chain is
 weeklyScheduler → materialiseAuthoredSessions → scheduleToCoachingPlan.
 The preseason-subphase / preseason-exposure / strength-sequencing suites
 partly test that dead layer. Deletion census owed (its own unit).
+
+---
+
+## 2026-08-28 — COMPILER RE-AUDIT (Sam's order) — measured at aa5804dc
+
+Audit-only; no product change. Five parallel instruments: release-gate
+coverage read, mutation study (isolated worktree at aa5804dc, all mutations
+reverted), independent writer sweep, headless door probes (scratchpad,
+`sucrase-node`, real onboarding + relaunch), year-gate anatomy. Baseline:
+this file's 2026-08-26 FULL-YEAR AUDIT + the 08-26/27 fix run.
+
+### Sam's five claims — verdicts
+
+1. **Injury change → clear → reopen produces the same program: WORKING,
+   measured.** Probe: knee sev-7 via `createOrUpdateInjuryEpisode` (correct
+   episodeId payload), visible week changed (control non-vacuous), relaunch
+   mid-episode byte-identical, `resolveInjuryEpisode` → week equals a
+   never-injured control world byte-for-byte, live AND after another boot.
+2. **One program-writing owner: WORKING.** `weekly-writer-census` re-run
+   live: 0 rival / 0 derived-output / 0 unresolved / 1137 reviewed, exit 0;
+   census verified FAIL-CLOSED (new write site anywhere in scope → red;
+   fingerprints = body+callee+operations; tombstones for named retired
+   rivals). Independent sweep of every `setItem/multiSet/persist/setState`
+   in src + supabase functions + native found NO rival. Caveats recorded:
+   "one owner" = one reviewed compiler SUBSYSTEM (170 fns, human-classified,
+   fingerprint-pinned); `applyExerciseExclusionDecision` writes a durable
+   INPUT via `setExclusion` but is labeled `projection_display` (census
+   can't see non-DOMAIN/non-SINK input writes — other gates own it; label
+   wrong-in-spirit).
+3. **Games + accumulated edits + injury + Undo across restart: WORKING at
+   the doors, with ONE regression (below).** Probe: in-season world —
+   fixture add (2-game week) accepted, move_session ok, exclusion ok,
+   injury ok, undo reversed the move visibly; two restarts byte-identical;
+   undone stayed undone; ledger stable. Correct refusals seen: pre-season
+   game add refused `fixture_kind_phase_mismatch`; move without
+   visibleWeek context refused. Design fact: injuries and exclusions are
+   NOT on the undo ledger (undo reverses last LEDGER decision only).
+4. **Release tests enforce current requirements / fail when broken:
+   PARTLY.** Gate mechanics sound and self-guarding (derives witnesses
+   from `test-truth-decisions.json`, refuses invalid registry, ~75
+   mutation/control cells, `armTotalsOrRed` on the big suites). Mutation
+   study, 8 single-line production mutations, one at a time: **6 caught**
+   (injury resolve inert → 11 cells; fixture-add unrecorded → 15; ledger
+   replay drops fixture_add → 13; undo skips rebuild → 42; compiler
+   nondeterminism → 5; second derived-output writer → census exit 1) and
+   **2 ESCAPED the ENTIRE gate: block-boundary load progression zeroed
+   (blockBoundaryProgression.ts:983) and deload main-lift halving removed
+   (deloadWeekRules.ts:38)** — both green through every witness, caught
+   only by excluded diagnostics (`test:block-two-progression`,
+   `test:deload-law`). `run-compiler-year.js:47`'s claim that dose
+   arithmetic is covered by the canonical witness is MEASURED FALSE.
+   Also: 157 of 178 registry decisions are `rewrite_test` with two
+   boilerplate reasons — declared quarantine, individually unreviewed.
+5. **Year gate assesses the athlete-visible program / catches meaningful
+   problems: HALF.** It reads `deriveVisibleWeekLive` (the screen's twin),
+   runs real onboarding + 52 restarts + real doors per athlete, §18
+   blocking-zero every week, 4 genuine runtime mutation witnesses — strong
+   on structure/provenance/durability. But NO check reads a weight, set
+   count or dose value; green receipts record 14 booleans + fingerprints,
+   no content. Would catch **1 of 8** of this file's 08-26 defect classes
+   (the bye class). "416/416" = structurally legal + durable, NOT "the
+   training is right".
+
+### Regressions at HEAD (green at pre-rework 560913f8, verified in a
+### throwaway worktree; red at aa5804dc — the shipped phone build)
+
+- **CONFIRMED BUG — undo of a removal leaves the exclusion.**
+  `test:undo-reversal` 24/1 (was 25/0): cell 19 "the exclusion survived
+  the undo — the reversal reached the ledger and not the fact that
+  actually keeps the exercise out" (undoReversalTests.ts:505). Athlete:
+  remove exercise → Undo → it stays out of every future week. Violates
+  the 2026-08-20 both-facts law and the R-restore family.
+- **CONFIRMED BUG (honesty) — `changedProgram=true` with no visible
+  change.** `test:injury-recomposition` 37/4 (was 41/0): knee-moderate,
+  hamstring-paused, hamstring-mild, shoulder-limiting all report
+  changedProgram=true while the visible day is unchanged
+  (injuryRecompositionTests.ts:307). The recomposition honestly says
+  "could not be made safe"; the flag lies. Sam's claim-vs-visible rule,
+  asserted in that very suite.
+- Known red, NOT new: `readiness-ownership` 22/2, R9/R13 self-labeled
+  "expected pre-fix" — minor illness/fatigue facts refuse to commit when
+  §18 would reject the week (inert facts should commit off the gate).
+
+Otherwise the 08-27 scoreboard HELD or improved at HEAD: deload-law 68/68,
+block-two-progression 41/0, fixture-identity 7/7, training-logging 14/0,
+missed-sessions 21/0, injury-latest-severity 48/0,
+strength-progression-inputs 18/0, workout-log-progression-wiring 37/0,
+forward-decision-acceptance 2/0, session-injury-review 76/0 (was 71/2 —
+the close/reopen and naming reds are gone).
+
+### Dormant features — verified, not features
+
+`buildTimeTrialSession`/`timeTrialWorkout` (timeTrialSession.ts) and
+`mobilityRowFor`/`pairMobilityWithAccessories` (mobilityPairing.ts): zero
+production callers (only their own test files), quarantine guard fires on
+all 9 import shapes (plain/barrel/require/dynamic/concat), detector 41/41.
+Preserved and disconnected, exactly as stated. BUILT, not WORKING.
+
+### Recommended fixes (priced by class, not built — audit-only)
+
+1. Reverse BOTH facts on undo-of-removal; derive `changedProgram` from the
+   visible diff, not from "the compiler ran". Two small owners.
+2. Give the gate numbers, the cheap way: promote the ALREADY-GREEN
+   arithmetic suites (deload-law, block-two-progression,
+   strength-progression-inputs, training-logging) to `current_contract`
+   rows — registry entries only, no new code — and add one
+   load-monotonicity + one deload-halving magnitude cell per measured week
+   to the year harness. This closes the exact class both escaped mutations
+   exploited.
+3. Work the 157 `rewrite_test` rows down with a per-suite verdict
+   (stale-expectation vs live-defect), athlete-programming suites first.
+
+### NOT COVERED / environment notes
+
+On-glass UI this session; coach chat (Codex rebuild, review-only law);
+full 8×52 year re-run under mutation (16-week restricted runs + full check
+inventory read instead); G-1/G+1 placement law only indirectly gated (its
+dedicated suites are parked). `src/__tests__/modifierLifecycleTests.ts`
+appeared untracked at 06:57 during this audit — another seat's in-progress
+work, not touched, not part of this audit's evidence. Probes rerunnable:
+scratchpad `probes/` via `TZ=Australia/Melbourne sucrase-node <probe>`.
