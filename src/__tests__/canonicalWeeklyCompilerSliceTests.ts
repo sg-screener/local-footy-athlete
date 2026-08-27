@@ -7,8 +7,8 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: late-Off-season completion awaits the sprint/conditioning-credit
- * ruling (run with --late-offseason). The year release gate remains red.
+ * Includes proper sprint conditioning credit and late-Off-season restart.
+ * NOT COVERED: the year release gate remains red.
  * Full-year archetypes, global writer census, pixels and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
@@ -79,6 +79,11 @@ import { DECISION_LEDGER_PERSISTENCE_KEY } from '../store/decisionLedgerStore';
 import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 import { undoLastDecision } from '../store/undoLastDecision';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { speedBlockForTemplate } from '../rules/speedTemplates';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import {
   getTapSwapChoices,
   groupTapSwapChoices,
@@ -2508,15 +2513,117 @@ async function main(): Promise<void> {
     JSON.stringify({ fatigueFeedback, before: prescriptions(deloadBeforeProgression),
       after: prescriptions(progressedDeload) }));
 
-  // Diagnostic pending the sprint-credit ruling; the year gate cannot pass it.
-  if (process.argv.includes('--late-offseason')) {
+  // R-261: real generated lives, not stored-program fixtures. The small
+  // negative controls below mutate these outputs, never seed the stores.
+  const teamQuestion = ONBOARDING_STEPS.find((step) => step.name === 'TeamTrainingDays')!;
+  ok('an explicit zero team-training answer is complete but silence is not',
+    teamQuestion.satisfied({ ...athlete(), teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }) &&
+    !teamQuestion.satisfied({ ...athlete(), teamTrainingDaysPerWeek: undefined, teamTrainingDays: [] }) &&
+    !teamQuestion.satisfied({ ...athlete(), teamTrainingDaysPerWeek: 2, teamTrainingDays: [] }));
+  for (const [phase, availableDays] of [
+    ['Off-season', 3], ['Pre-season', 3], ['Pre-season', 4], ['Pre-season', 5], ['Pre-season', 6],
+    ['In-season', 3], ['In-season', 6],
+  ] as const) {
+    const label = `${phase} / ${availableDays} gym days`;
     localStorageData.clear();
     const lateOffseasonInstall = await coldStartThroughOnboarding({
-      profile: { ...athlete(), seasonFinishedOn: '2026-06-14' },
+      profile: { ...athlete(), seasonPhase: phase, seasonFinishedOn: '2026-06-14',
+        ...(phase === 'In-season' ? { usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const } : {}),
+        gender: availableDays === 4 || availableDays === 5 ? 'female' : 'male',
+        trainingDaysPerWeek: availableDays,
+        preferredTrainingDays: availableDays === 3 ? ['Monday', 'Wednesday', 'Friday'] :
+          ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].slice(0, availableDays) as OnboardingData['preferredTrainingDays'],
+      },
       installDayISO: INSTALL_DAY,
+    }).catch((error) => {
+      const result = error.cause?.result;
+      ok(`${label} generation accepts its own weekly counts`, false, JSON.stringify({
+        message: error.message,
+        credits: result?.evaluation?.ledger?.conditioning,
+        workouts: result?.visibleWorkouts?.map((workout: Workout) => ({
+          day: workout.dayOfWeek, name: workout.name, category: workout.conditioningCategory,
+          speed: workout.speedBlock?.templateName,
+        })),
+      }));
+      return null;
     });
+    if (!lateOffseasonInstall) continue;
+    ok(`${label} no-team-training athlete can complete onboarding`,
+      lateOffseasonInstall.onboardingRefusal === null,
+      lateOffseasonInstall.onboardingRefusal);
+    if (lateOffseasonInstall.onboardingRefusal) continue;
     const lateOffseasonWeeks = useProgramStore.getState().currentProgram?.microcycles ?? [];
-    const lateOffseasonDeload = lateOffseasonWeeks.find((week) =>
+    const speedWorkout = lateOffseasonWeeks.flatMap((week) => week.workouts ?? [])
+      .find((workout) => workout.speedBlock?.templateName);
+    ok(`${label} actually reaches an authored sprint session`, !!speedWorkout);
+    if (speedWorkout) {
+      // Strip only the second conditioning component for a one-component unit
+      // control. The athlete-facing witnesses above/below use untouched output.
+      const speedOnly = { ...speedWorkout, conditioningBlock: undefined,
+        conditioningCategory: undefined, hasCombinedConditioning: false,
+        attachedConditioningKind: undefined };
+      const classification = classifyVisibleSession(speedOnly);
+      ok(`${label} proper speed counts once as conditioning and retains sprint identity`,
+        classification.contributions.conditioning === 1 &&
+        classification.contributions.sprintCod === 1,
+        classification.contributions);
+      const duplicatedLabel = { ...speedOnly, hasCombinedConditioning: true,
+        attachedConditioningKind: 'component' as const, conditioningCategory: 'sprint' as const };
+      ok(`${label} extra labels cannot give one sprint two conditioning credits`,
+        classifyVisibleSession(duplicatedLabel).contributions.conditioning === 1);
+      const rider = CONDITIONING_TEMPLATES.find((template) => template.properties.includes('warmup_rider_only'))!;
+      ok(`${label} warm-up rider is not a full conditioning exposure`,
+        classifyVisibleSession({ ...speedOnly, speedBlock: speedBlockForTemplate(rider, 'pre_lift') })
+          .contributions.conditioning === 0);
+      ok(`${label} optional primer is not a full conditioning exposure`,
+        classifyVisibleSession({ ...speedOnly, composedOptionalKind: 'primer' })
+          .contributions.conditioning === 0);
+      const legacyFence = { ...speedOnly, speedBlock: { ...speedOnly.speedBlock!,
+        counting: { ...speedOnly.speedBlock!.counting, conditioningCredit: 'none' as const } } };
+      ok(`${label} old stored none fence reads the same authored sprint identity`,
+        classifyVisibleSession(legacyFence).contributions.conditioning === 1);
+      const alias = { ...speedOnly, attachedConditioningKind: 'component' as const,
+        conditioningBlock: { intent: 'high-intensity' as const, options: [{
+          title: 'A second label', description: '', exerciseIds: speedOnly.speedBlock!.exerciseIds ?? [],
+        }] } };
+      ok(`${label} the same row referenced in two blocks earns one credit`,
+        classifyVisibleSession(alias).contributions.conditioning === 1);
+
+      const builtWeek = lateOffseasonWeeks.find((week) => week.workouts.includes(speedWorkout))!;
+      const contract = builtWeek.exposureContractV2!;
+      const evaluate = (workouts: Workout[]) => evaluateSection18EffectiveWeek({
+        contract, workouts, weekStart: builtWeek.startDate.slice(0, 10),
+      });
+      const verdict = evaluate(builtWeek.workouts)!;
+      ok(`${label} accepted ledger retains speed quality and passes its contract`,
+        verdict.ledger.sprintHighSpeed.achievedCount >= 1 && verdict.blockingViolations.length === 0,
+        verdict.blockingViolations);
+      if (phase === 'Pre-season') {
+        ok(`${label} combined sprint and intervals earn one conditioning credit, with speed retained`,
+          classifyVisibleSession(speedWorkout).contributions.conditioning === 1 &&
+          classifyVisibleSession(speedWorkout).contributions.sprintCod === 1);
+        const repeatSprintVariant = classifyVisibleSession({ ...speedWorkout, conditioningCategory: 'sprint' });
+        ok(`${label} two sprint qualities in one session still earn one credit of each kind`,
+          repeatSprintVariant.contributions.conditioning === 1 && repeatSprintVariant.contributions.sprintCod === 1);
+        const ordinaryIds = new Set(speedWorkout.conditioningBlock?.options.flatMap((option) => option.exerciseIds));
+        const removedOrdinary = { ...speedOnly,
+          exercises: speedOnly.exercises.filter((row) => !ordinaryIds.has(row.id)) };
+        // Unit control: explicitly ask for a hard-conditioning quality. This
+        // is not a newly authored target for the athlete's Pre-season week.
+        const qualityContract = { ...contract, conditioning: { ...contract.conditioning,
+          intensityPolicy: { ...contract.conditioning.intensityPolicy, requiredAppHardMinimum: 1 } } };
+        const qualityCheck = (workouts: Workout[]) => evaluateSection18EffectiveWeek({
+          contract: qualityContract, workouts, weekStart: builtWeek.startDate.slice(0, 10),
+        })!;
+        const broken = qualityCheck(builtWeek.workouts.map((workout) =>
+          workout === speedWorkout ? removedOrdinary : workout));
+        ok(`[MUTATION] ${label} speed cannot substitute for the required hard-conditioning component`,
+          !qualityCheck(builtWeek.workouts).blockingViolations.some((v) => v.code === 'conditioning_intensity_mismatch') &&
+          broken.blockingViolations.some((violation) => violation.code === 'conditioning_intensity_mismatch'),
+          JSON.stringify(broken.blockingViolations));
+      }
+    }
+    const lateOffseasonDeload = phase === 'In-season' ? lateOffseasonWeeks[0] : lateOffseasonWeeks.find((week) =>
       week.weekKind === 'deload' && week.deloadDoor === 'scheduled');
     const lateOffseasonStart = lateOffseasonDeload?.startDate.slice(0, 10) ?? '';
     const lateOffseasonSignature = visibleSignature(quiet(() =>
@@ -2524,16 +2631,14 @@ async function main(): Promise<void> {
     const lateOffseasonRestart = await quietAsync(() => relaunchApp({
       storage: localStorageData, todayISO: lateOffseasonStart,
     }));
-    ok('late Off-season uses the same scheduled compiler input and reconstructs exactly',
-      lateOffseasonInstall.onboardingRefusal === null && lateOffseasonStart === '2026-08-03' &&
+    ok(`${label} preserves its compiled week and dose exactly across restart`,
+      lateOffseasonInstall.onboardingRefusal === null && lateOffseasonStart === (phase === 'In-season' ? INSTALL_DAY : '2026-08-03') &&
         lateOffseasonRestart.ok &&
-        scheduledNotes(quiet(() =>
-          deriveVisibleWeekLive(lateOffseasonStart, lateOffseasonStart))).length > 0 &&
+        (phase === 'In-season' || scheduledNotes(quiet(() =>
+          deriveVisibleWeekLive(lateOffseasonStart, lateOffseasonStart))).length > 0) &&
         visibleSignature(quiet(() => resolvedDays(lateOffseasonStart, lateOffseasonStart))) ===
           lateOffseasonSignature,
       JSON.stringify({ lateOffseasonStart, lateOffseasonRestart }));
-  } else {
-    console.log('  NOT COVERED: late-Off-season lifecycle; --late-offseason reproduces its sprint-credit blocker.');
   }
 
   totalsPrinted(failed);

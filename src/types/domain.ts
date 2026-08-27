@@ -519,7 +519,8 @@ export type SpeedBlockPlacement =
 export interface SpeedBlockCountingFence {
   hardExposure: true;
   mainStrength: false;
-  conditioningCredit: 'none';
+  /** Derived from the authored template; legacy stored `none` is read-only. */
+  conditioningCredit: 'none' | 'full';
   createsHardDay: true;
   sprintCodExposure: true;
 }

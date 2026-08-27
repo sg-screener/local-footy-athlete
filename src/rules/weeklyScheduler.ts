@@ -932,13 +932,11 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     0,
     overlay.conditioningTarget.min
       - anchorConditioningDays
-      // ⚠ ONLY A STANDALONE SPRINT COSTS AN EXTRA DAY. When the sprint rides an
-      // upper strength day (WC-138) it occupies one of the component slots this
-      // budget is already counting, so subtracting for it too spent the same
-      // exposure twice and the week came back one short. The WC-143 ride is
-      // the same shape: the sprint opens the hard session's day, so it takes
-      // no day of its own and must not be charged one.
+      // A combined speed + interval session occupies ONE conditioning slot.
+      // Only a standalone sprint needs a reserved slot outside the existing
+      // conditioning receivers. A primary sprint replaces one of those slots.
       - (sprintUpperDay !== null || plannedSprintDay === null
+        || (preseasonSprintRidesHardDay && hardQuality !== null)
         || (noClubGameWeek && hardQuality !== null && overlay.sprintExposureRequired)
         ? 0 : 1),
   );
@@ -1009,7 +1007,6 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // and the week refuses — 8 worlds. The honest answer is not to weaken the
   // club-night rule or to inflate the count: it is the one the approved source
   // already gives, a standalone equipment-free exposure on a free day.
-  const residualConditioning = Math.max(0, appConditioningBudget - conditioningDays.length);
 
   // ── WC-136: WHERE THE ONE HARD EXPOSURE MAY LAND ─────────────────────────
   //
@@ -1085,6 +1082,27 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     && sprintDayIsLegal(hardDay, inputs)
     ? hardDay
     : null;
+
+  // The running floor spends the SAME conditioning budget. Reserve its
+  // off-gym slot before materialising gym components; otherwise a three-day
+  // lower/upper/full layout gets its four exposures plus an automatic fifth
+  // run. Keep the quality session and primary sprint in place, exchanging only
+  // a moderate off-leg slot for the required equipment-free running slot.
+  const plannedRunningDays = new Set([
+    ...inputs.clubNights, ...scheduledGameDays(inputs),
+    ...conditioningDays.filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
+    ...((sprintComponentDay ?? plannedSprintDay) !== null ? [sprintComponentDay ?? plannedSprintDay!] : []),
+  ]);
+  let runningSlotsToReserve = inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional'
+    ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size);
+  for (const day of [...conditioningDays].reverse()) {
+    if (runningSlotsToReserve === 0) break;
+    if (day === hardDay || day === plannedSprintDay || !PURPOSE_IS_LOWER[purposeByDay.get(day)!]) continue;
+    conditioningDays.splice(conditioningDays.indexOf(day), 1);
+    conditioningDaySet.delete(day);
+    runningSlotsToReserve -= 1;
+  }
+  const residualConditioning = Math.max(0, appConditioningBudget - conditioningDays.length);
 
   const days: SessionIntention[] = [];
   for (const day of WEEK_ORDER) {
@@ -1205,6 +1223,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...inputs.clubNights,
     ...scheduledGameDays(inputs),
     ...days.filter((d) => d.conditioning === 'running').map((d) => d.dayOfWeek),
+    ...((sprintComponentDay ?? plannedSprintDay) !== null ? [sprintComponentDay ?? plannedSprintDay!] : []),
   ]);
   const runningTopUps: SessionIntention[] = [];
   // The RUNNING minimum and the CONDITIONING shortfall are two different
@@ -1379,12 +1398,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...inputs.clubNights,
     ...scheduledGameDays(inputs),
   ]).size;
-  // ⚠ A WC-139 SPRINT COMPONENT IS ITS OWN EXPOSURE. It shares a DAY with the
-  // hard session but it is a second piece of conditioning, and Sam counts it:
-  // *"Monday aerobic + Tuesday sprint + Tuesday hard conditioning + Saturday
-  // game"* is four. Counting days rather than components lost it.
-  const appConditioningDays = withComposedOptional.filter((day) => day.conditioning !== null).length
-    + withComposedOptional.filter((day) => day.sprintComponent).length;
+  // R-261: the combined session keeps both qualities but earns one credit.
+  const appConditioningDays = withComposedOptional.filter((day) =>
+    day.conditioning !== null || day.sprintComponent).length;
   const runningDayCount = withComposedOptional.filter((day) => day.conditioning === 'running').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //

@@ -23,6 +23,7 @@ import {
   templatePrescriptionLine,
 } from './conditioningSelection';
 import type { OffseasonSubphase } from './offseasonSubphase';
+import { speedTemplateConditioningCredit } from './conditioningCredit';
 
 export interface SpeedTemplateSelectionContext {
   seasonPhase?: SeasonPhase | null;
@@ -104,7 +105,7 @@ export function speedBlockForTemplate(
     counting: {
       hardExposure: true,
       mainStrength: false,
-      conditioningCredit: 'none',
+      conditioningCredit: speedTemplateConditioningCredit(template),
       createsHardDay: true,
       sprintCodExposure: true,
     },

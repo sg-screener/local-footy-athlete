@@ -9,6 +9,7 @@
 import type { Workout } from '../types/domain';
 import { isExplicitRestStub } from '../utils/workoutContent';
 import { classifyVisibleSession } from './sessionClassificationAdapter';
+import { hasIndependentConditioningBlock, speedOwnsConditioningCredit } from './conditioningCredit';
 import {
   emptyMainStrengthLedger,
   normalizeStrengthIntent,
@@ -100,6 +101,8 @@ export interface Section18ConditioningCredit {
   stress: Section18ConditioningStress;
   source: 'app' | 'team_training' | 'game' | 'practice_match';
   participation?: AnchorParticipationState;
+  /** Speed contributes to frequency, not an aerobic/repeat-effort prescription. */
+  component?: 'speed' | 'conditioning';
 }
 
 export interface Section18AnchorLedgerRow {
@@ -320,6 +323,31 @@ function conditioningPresence(
     : 'present';
 }
 
+interface ConditioningComponent {
+  presence: 'present' | 'offer' | 'legacy_unknown';
+  stress: Section18ConditioningStress;
+  component: 'speed' | 'conditioning';
+}
+interface CreditedConditioningComponent {
+  role: Section18ConditioningRole;
+  stress: Section18ConditioningStress;
+  component: 'speed' | 'conditioning';
+}
+
+function conditioningComponents(workout: Workout): [] | [ConditioningComponent] {
+  if (workout.composedOptionalKind === 'primer') return [];
+  // A true-speed block keeps its own energy-system identity. Reduced volume
+  // in a deload does not erase it, and an old derived fence cannot veto it.
+  if (speedOwnsConditioningCredit(workout)) {
+    return [{ presence: 'present', stress: 'hard', component: 'speed' }];
+  }
+  const presence = conditioningPresence(workout);
+  if (presence && (!workout.speedBlock || hasIndependentConditioningBlock(workout))) {
+    return [{ presence, stress: workout.section18Evidence?.conditioningStress ?? 'unknown', component: 'conditioning' }];
+  }
+  return [];
+}
+
 /**
  * ONE OWNER DERIVES THE §18 CONDITIONING ROLE (Sam's ruling 1, 2026-08-06 —
  * `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md`).
@@ -372,7 +400,7 @@ function deriveConditioningRoles(args: {
   workoutsByDay: ReadonlyMap<number, Workout[]>;
   /** Core credit the anchors already took. The app's count continues it. */
   anchorCoreCredits: number;
-}): Map<Workout, Section18ConditioningRole> {
+}): Map<Workout, CreditedConditioningComponent[]> {
   const { contract, workoutsByDay, anchorCoreCredits } = args;
   const requiredMinimum = contract.conditioning.core.requiredMinimum;
   const plannerTarget = contract.conditioning.core.plannerSelectedTarget ?? requiredMinimum;
@@ -384,80 +412,54 @@ function deriveConditioningRoles(args: {
     ? contract.conditioning.optionalFlush.preferredRange.max
     : 0;
 
-  const derived = new Map<Workout, Section18ConditioningRole>();
+  const derived = new Map<Workout, CreditedConditioningComponent[]>();
   let appCoreUsed = 0;
   let flushUsed = 0;
   for (const day of TRAINING_ORDER) {
     for (const workout of workoutsByDay.get(day) ?? []) {
-      const presence = conditioningPresence(workout);
-      if (presence === null) continue;
-      if (presence === 'legacy_unknown') {
-        derived.set(workout, 'legacy_unknown');
-        continue;
+      for (const component of conditioningComponents(workout)) {
+        const { presence, stress } = component;
+        const record = (role: Section18ConditioningRole): void => {
+          derived.set(workout, [...(derived.get(workout) ?? []), { role, stress, component: component.component }]);
+        };
+        if (presence === 'legacy_unknown') {
+          record('legacy_unknown');
+          continue;
+        }
+        // Recovery identity and the placer's explicit offer are not positional.
+        if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') {
+          record('optional_recovery_aerobic');
+          continue;
+        }
+        const offer = presence === 'offer'
+          ? workout.section18Evidence?.conditioningRole ?? null
+          : null;
+        if (offer === 'optional_recovery_aerobic') {
+          record(offer);
+          continue;
+        }
+        if (offer === 'optional_flush' && flushUsed < flushAllowance) {
+          record(offer);
+          flushUsed += 1;
+          continue;
+        }
+        if (appCoreUsed < appCoreCapacity) {
+          record(anchorCoreCredits + appCoreUsed < requiredMinimum
+            ? 'required_core'
+            : 'planner_selected_core');
+          appCoreUsed += 1;
+          continue;
+        }
+        if (flushUsed < flushAllowance) {
+          record('optional_flush');
+          flushUsed += 1;
+          continue;
+        }
+        record('optional_noncore');
       }
-      // An explicit recovery session is never core, at any count. It is typed
-      // as recovery by the session it IS, not by what is left over.
-      if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') {
-        derived.set(workout, 'optional_recovery_aerobic');
-        continue;
-      }
-      // THE PLACER'S MARK, capped by the allowance the contract authored.
-      // Recovery aerobic is uncapped here for the same reason the explicit
-      // recovery branch above is: it is what the session IS. A flush beyond the
-      // authored allowance buys nothing and takes its positional turn below.
-      const offer = presence === 'offer'
-        ? workout.section18Evidence?.conditioningRole ?? null
-        : null;
-      if (offer === 'optional_recovery_aerobic') {
-        derived.set(workout, offer);
-        continue;
-      }
-      if (offer === 'optional_flush' && flushUsed < flushAllowance) {
-        derived.set(workout, offer);
-        flushUsed += 1;
-        continue;
-      }
-      if (appCoreUsed < appCoreCapacity) {
-        derived.set(workout, anchorCoreCredits + appCoreUsed < requiredMinimum
-          ? 'required_core'
-          : 'planner_selected_core');
-        appCoreUsed += 1;
-        continue;
-      }
-      if (flushUsed < flushAllowance) {
-        derived.set(workout, 'optional_flush');
-        flushUsed += 1;
-        continue;
-      }
-      derived.set(workout, 'optional_noncore');
     }
   }
   return derived;
-}
-
-/**
- * THE ROLE IS DERIVED; THE STRESS IS NOT, AND MUST NOT BE.
- *
- * Stress stays exactly where it was — the typed evidence, which reads the
- * session's own content (its conditioning category and tier). Deriving it from
- * the derived ROLE was tried and is wrong in Sam's own words: "intensity and
- * prescribed volume must never feed identity" (2026-07-27) runs both ways, and
- * a genuinely hard session that lands past the week's core capacity would have
- * had its stress rewritten to `light` because the ledger decided it was
- * surplus. Measured: `section18ContractV2Tests` 12 — six hard conditioning days
- * stopped breaching the mode's hard-day maximum, because two of them had been
- * relabelled as offers and offers are light by definition.
- */
-function workoutConditioning(
-  workout: Workout,
-  derived: ReadonlyMap<Workout, Section18ConditioningRole>,
-): {
-  role: Section18ConditioningRole;
-  stress: Section18ConditioningStress;
-} | null {
-  const role = derived.get(workout);
-  if (role === undefined) return null;
-  return { role, stress: workout.section18Evidence?.conditioningStress ?? 'unknown' };
 }
 
 function normalParticipation(anchor: Section18AnchorContract): boolean {
@@ -642,32 +644,33 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         dayAccessory = true;
       }
 
-      const conditioning = workoutConditioning(workout, derivedConditioningRoles);
-      if (conditioning) {
-        conditioningByStress[conditioning.stress] += 1;
+      const conditioning = derivedConditioningRoles.get(workout) ?? [];
+      for (const component of conditioning) {
+        conditioningByStress[component.stress] += 1;
         conditioningCredits.push({
           dayOfWeek: day,
-          role: conditioning.role,
-          stress: conditioning.stress,
+          role: component.role,
+          stress: component.stress,
           source: 'app',
+          component: component.component,
         });
-        if (isCoreRole(conditioning.role)) {
+        if (isCoreRole(component.role)) {
           coreConditioning += 1;
           appCore += 1;
           dayCoreConditioning = true;
-        } else if (conditioning.role === 'optional_flush') {
+        } else if (component.role === 'optional_flush') {
           optionalFlush += 1;
           dayRecovery = true;
-        } else if (conditioning.role === 'optional_recovery_aerobic') {
+        } else if (component.role === 'optional_recovery_aerobic') {
           optionalRecoveryAerobic += 1;
           dayRecovery = true;
-        } else if (conditioning.role === 'optional_noncore') {
+        } else if (component.role === 'optional_noncore') {
           optionalNonCore += 1;
-        } else if (conditioning.role === 'legacy_unknown') {
+        } else if (component.role === 'legacy_unknown') {
           legacyUnknown += 1;
         }
-        if (conditioning.stress === 'hard') dayHard = true;
-        else if (isCoreRole(conditioning.role) && conditioning.stress === 'moderate') {
+        if (component.stress === 'hard') dayHard = true;
+        else if (isCoreRole(component.role) && component.stress === 'moderate') {
           dayModerate = true;
         }
       }
@@ -696,7 +699,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       // exposure credit. Their visible stress still owns the day ledger.
       // This fallback classifies the day only; it never promotes untyped work
       // into strength, conditioning, sprint, or power credit.
-      if (!dayMain && !conditioning && !daySprint && !dayPower) {
+      if (!dayMain && conditioning.length === 0 && !daySprint && !dayPower) {
         if (
           dayAccessory ||
           visibleClassification.contributions.gunshow > 0 ||
@@ -1352,12 +1355,12 @@ export function evaluateSection18EffectiveWeek(
   }
 
   const appMediumHard = ledger.conditioning.credits.filter((credit) =>
-    credit.source === 'app' && isCoreRole(credit.role) &&
+    credit.source === 'app' && credit.component !== 'speed' && isCoreRole(credit.role) &&
     (credit.stress === 'moderate' || credit.stress === 'hard')).length;
   const appHard = ledger.conditioning.credits.filter((credit) =>
-    credit.source === 'app' && isCoreRole(credit.role) && credit.stress === 'hard').length;
+    credit.source === 'app' && credit.component !== 'speed' && isCoreRole(credit.role) && credit.stress === 'hard').length;
   const allAppHard = ledger.conditioning.credits.filter((credit) =>
-    credit.source === 'app' && credit.role !== 'legacy_unknown' && credit.stress === 'hard').length;
+    credit.source === 'app' && credit.component !== 'speed' && credit.role !== 'legacy_unknown' && credit.stress === 'hard').length;
   const intensity = contract.conditioning.intensityPolicy;
   if (appMediumHard < intensity.requiredAppMediumHardMinimum || appHard < intensity.requiredAppHardMinimum) {
     addFinding(findings, {

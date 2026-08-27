@@ -141,6 +141,15 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-proper-sprint-conditioning-credit',
+    law: 'A proper authored sprint counts once toward overall conditioning while retaining speed identity. Warm-up riders, primers, display labels and duplicate block references cannot manufacture credit; combined speed plus intervals earn one session credit while both qualities remain distinguishable. Deload and restart retain the same typed identity. Explicit zero team-training answers are not missing answers.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-261; Sam, 2026-08-27, approved the shared conditioning-count rule and requested chunk 1.',
+    guard: {
+      state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'Real onboarding, generated prescriptions and scheduled-deload restart witnesses; negative controls remove required hard conditioning, duplicate block references, substitute warm-up riders and change the stored legacy fence. The shared authored-template predicate is read by the speed builder, visible classifier and effective-week evaluator. See STATUS_TESTTRUTH step 19 for exact verification and remaining release blockers.',
+    },
+  },
+  {
     id: 'LAW-compiler-full-year-acceptance',
     law: 'Release requires all 52 weeks for every declared archetype, compiler ownership, real accepted actions, logging and persisted-ledger reconstruction. Missing or unreached coverage is failure. The HTML report renders the same verdict; it never owns a separate score.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md step 18; Sam, 2026-08-27: "Full-year archetype compiler acceptance gate".',

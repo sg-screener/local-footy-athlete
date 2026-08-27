@@ -1591,7 +1591,17 @@ Use as much useful conditioning as the athlete can recover from, but do not pad 
 Sprint / speed philosophy
 Sprint work should help the athlete stay exposed to high-speed running, acceleration, deceleration and footy-specific movement without creating unnecessary injury risk or fatigue.
 Sprint work is not the same as hard conditioning.
-True speed work should be high quality, low fatigue and done with enough rest. If the athlete is gassed, slowing down badly, or just trying to survive the session, it has probably turned into conditioning.
+True speed work should be high quality, low fatigue and done with enough rest. If the athlete is gassed, slowing down badly, or just trying to survive the session, it has probably turned into fatigue-based conditioning rather than quality speed work.
+
+**Counting clarification — R-261, Sam 2026-08-27.** A proper authored sprint
+session contributes once to the overall conditioning total and also meets the
+speed requirement. It keeps its speed classification: this credit never stands
+in for separately required aerobic or repeat-effort work. Warm-up riders and
+small primers do not automatically qualify. Combined speed and intervals earn
+one conditioning credit for the session, with both training qualities retained.
+A second label or reference to the same work earns no second credit. Scheduled
+deload reduces dose without deleting that identity.
+Guard: `test:canonical-weekly-compiler` (also in `test:release`).
 In-season, most sprint exposure should usually come from team training and games. Extra sprint work should only be added if the athlete needs it, has room in the week, and is not close to game day. Might be worth adding a note to team training sessions to make sure the athlete tries to get in at least 3-4 30-40m close to max speed sprints in at some stage if the rest of the group is not doing it. 
 Pre-season and off-season allow more room to build sprint exposure properly.
 Acceleration

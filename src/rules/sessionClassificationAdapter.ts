@@ -11,6 +11,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { hasIndependentConditioningBlock, hasQualifyingSpeedConditioning, speedOwnsConditioningCredit } from './conditioningCredit';
 import {
   classifyDaySessions,
   CONDITIONING_CATEGORIES,
@@ -113,6 +114,9 @@ function conditioningRole(
 ): ConditioningRole {
   if (unit.category === 'game' || unit.category === 'team_training') return 'anchor';
   if (conditioningContribution === 0) return 'none';
+  if (unit.category === 'sprint' && hasQualifyingSpeedConditioning(workout)) {
+    return workout.speedBlock?.placement === 'pre_lift' ? 'component' : 'standalone';
+  }
   if (workout.attachedConditioningKind === 'component') return 'component';
   if (
     workout.attachedConditioningKind === 'finisher' ||
@@ -142,13 +146,15 @@ function emptyUnitContributions(): Omit<SessionClassificationContributions, 'har
 function contributionsForUnit(
   unit: SessionUnit,
   stress: StressLevel,
+  workout: Workout,
 ): Omit<SessionClassificationContributions, 'hardDay'> {
   const contributions = emptyUnitContributions();
   const onFeet = unit.modality === 'running' || unit.modality === 'mixed';
   const isAnchor = unit.category === 'game' || unit.category === 'team_training';
   const isAppConditioning =
     CONDITIONING_CATEGORIES.has(unit.category) ||
-    (unit.category === 'sprint' && !onFeet);
+    (unit.category === 'sprint' && (!onFeet ||
+      (unit.component === 'conditioning' ? hasIndependentConditioningBlock(workout) : speedOwnsConditioningCredit(workout))));
 
   if (stress === 'high') contributions.hardExposures = 1;
   if (MAIN_STRENGTH_CATEGORIES.has(unit.category)) contributions.mainStrength = 1;
@@ -163,7 +169,8 @@ function contributionsForUnit(
   else if (CONDITIONING_CATEGORIES.has(unit.category) && onFeet) contributions.running = 1;
 
   if (isAnchor) contributions.sprintCod = 1;
-  else if (unit.category === 'sprint' && onFeet) contributions.sprintCod = 1;
+  else if (unit.category === 'sprint' && onFeet &&
+    !(unit.component === 'conditioning' && workout.speedBlock?.kind === 'true_speed')) contributions.sprintCod = 1;
 
   if (isAppConditioning) {
     contributions.conditioning = 1;
@@ -213,7 +220,7 @@ export function classifyVisibleSession(
 
   const units = classifyDaySessions(workout).map((unit): ClassifiedVisibleSessionUnit => {
     const stress = classifySessionStress(unit, workout, context);
-    const contributions = contributionsForUnit(unit, stress);
+    const contributions = contributionsForUnit(unit, stress, workout);
     const role = conditioningRole(unit, workout, contributions.conditioning);
     return {
       ...unit,

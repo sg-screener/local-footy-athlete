@@ -23,6 +23,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { hasIndependentConditioningBlock } from './conditioningCredit';
 import {
   inferMovementPatterns,
   canonicalStrengthLabel,
@@ -78,6 +79,8 @@ export type SessionModality = 'running' | 'off_feet' | 'mixed' | 'none';
 export interface SessionUnit {
   category: SessionCategory;
   modality: SessionModality;
+  /** Typed ownership when two qualities share a session. Never parse reason. */
+  component?: 'speed' | 'conditioning';
   /** Human-readable classification trail for debug output. */
   reason: string;
 }
@@ -360,7 +363,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
 
   const hasTrueSpeedBlock = workout.speedBlock?.kind === 'true_speed';
   if (hasTrueSpeedBlock) {
-    units.push({ category: 'sprint', modality: 'running', reason: 'speedBlock.kind=true_speed' });
+    units.push({ category: 'sprint', modality: 'running', component: 'speed', reason: 'speedBlock.kind=true_speed' });
   }
 
   // ── Recovery (only when the WHOLE session is recovery-tier) ──
@@ -479,7 +482,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
 
   // ── Conditioning unit(s) ──
   let condCat: SessionCategory | null = null;
-  if (hasTrueSpeedBlock && workout.attachedConditioningKind !== 'component') {
+  if (hasTrueSpeedBlock && !hasIndependentConditioningBlock(workout)) {
     condCat = null;
   } else if (WORKOUT_TYPE_CONDITIONING[wt]) {
     condCat = WORKOUT_TYPE_CONDITIONING[wt];
@@ -496,6 +499,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   if (condCat) {
     units.push({
       category: condCat,
+      component: 'conditioning',
       modality: detectModality(workout, condCat),
       reason: `conditioning via ${WORKOUT_TYPE_CONDITIONING[wt] ? `workoutType ${wt}` : (workout.conditioningCategory ?? workout.conditioningBlock?.intent ?? workout.conditioningFlavour ?? 'intensity fallback')}`,
     });

@@ -1653,3 +1653,83 @@ blocked.
 - A full injury/illness/travel/equipment/action Cartesian product or exact
   every-week plan-to-final-row conservation. The existing targeted compiler
   witness still owns the exact dose arithmetic and overlap matrix.
+
+## 2026-08-27 — step 19: agreed sprint/conditioning credit (chunk 1)
+
+Owner: testtruth. R-261 is Sam's approval after step 18, not another open
+programming question. Scope is chunk 1 of the seven-part re-audit preparation.
+Fixture replay, final-row compiler ownership and lighter-day migration stay
+in their existing subsequent chunks.
+
+Two options compared: add a local exception to Section 18, or put authored
+speed qualification at one pure boundary consumed by the speed builder,
+visible classifier and evaluator. The shared boundary landed. No dose or
+template was invented or changed. The existing canonical compiler still owns
+placement; there is no new post-generation repair pass.
+
+- A proper speed session contributes one conditioning exposure and retains
+  its speed quality. A combined speed/interval session earns ONE conditioning
+  credit, not two; the interval quality and speed requirement remain separate.
+- The catalog key and existing typed template properties distinguish full
+  work from warm-up riders. Primers and unnamed/unregistered legacy speed
+  blocks do not acquire full conditioning credit by inference. Old authored
+  blocks carrying the retired derived `none` fence read their typed source;
+  no ledger rewrite or athlete-data deletion occurs.
+- Conditioning blocks referencing the same sprint rows are not independent
+  work. Equivalent options still count once. Typed component ownership lets
+  repeat-sprint intervals plus speed retain one credit of each kind.
+- The scheduler no longer adds a conditioning credit for a sprint component
+  inside an already counted session. Required running shares the same budget:
+  an off-gym run reserves its slot before gym components are materialised,
+  instead of becoming an automatic fifth exposure.
+- An explicit zero club-session answer (`0` plus `[]`) is accepted at the
+  onboarding completion boundary. Missing answers still fail. This is not a
+  claim that the screen currently offers a zero-day choice (see below).
+
+First-run findings were exposed before acceptance: late-Off-season generation
+rejected its own conditioning count; after that was fixed, the no-team
+Pre-season journey was refused for missing team days despite an explicit
+zero; the wider three-day witness exposed a fifth exposure from the separate
+running top-up. A two-component-credit intermediate was rejected in favour of
+Sam's one-combined-session credit rule. It is not a shipped alternative.
+
+Verification in progress at this checkpoint:
+
+- `test:canonical-weekly-compiler`: **324/324 assertion cells**, including
+  seven real onboarding profiles: late-Off-season/3 gym days; Pre-season/3,
+  4, 5 and 6; In-season/3 and 6 with a Saturday game; all no-team-training.
+  Both genders occur in the Pre-season set. Scheduled deload is reached on
+  3 August for the five non-In-season profiles and restart preserves exact
+  visible prescriptions. In-season restarts its ordinary game week.
+- A quality-requirement negative control removes the interval component from
+  a generated mixed session. This uses an explicitly constructed one-hard-
+  conditioning contract to test quality separation; it does NOT change the
+  athlete's actual Pre-season target. The real generated control passes and
+  speed alone fails that typed quality requirement.
+- `test:compile`: **464 diagnostic occurrences**, unchanged from step 18:
+  product 21 / devtools 45 / tests 398. No baseline was weakened.
+- The historical classification diagnostics remain red: session classifier
+  38/40 (light-team-stress expectations); generation classifier 25/27
+  (generated stress expectations). They are not the release contract and
+  were not used to change product semantics.
+- Full-year release and deliberate runtime-source mutations are pending the
+  final receipt below. The global writer proof is still open, not zero.
+
+What catches the next defect: the release-linked real-life compiler witness
+checks shared frequency counting, retained quality, duplicate references,
+legacy reads, missing-versus-zero answers and deload restart across the named
+availability profiles. The year gate continues testing the accumulated lives;
+it is not replaced by the focused witness.
+
+### NOT COVERED
+
+- Physical iPhone, simulator/UI, OS process death and remote persistence.
+  The restart witness flushes, resets and rehydrates the real store adapters.
+- The existing TeamTrainingDays screen still disables Continue with zero
+  selected days. The backend zero-answer defect is fixed; that separate UI
+  affordance needs completion before claiming a no-team athlete can walk the
+  onboarding screens. This is a concrete pre-device gap, not waived acceptance.
+- Accumulated fixture repair/replay, second-game Add, final-row compiler
+  ownership, lighter-day ownership and the global writer-zero proof.
+- The full injury/travel/illness/equipment Cartesian product, every possible
+  availability-day combination, and the remaining legacy test fleet.

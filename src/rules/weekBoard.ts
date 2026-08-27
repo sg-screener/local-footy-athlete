@@ -36,10 +36,9 @@ import type { VisibleDay, VisiblePart, VisiblePartKind } from './visibleProjecti
  * competing for a slot. The fold below is therefore a DISPLAY correction, not a
  * new programming rule.
  *
- * ⚠ **AND IT DOES NOT TOUCH LOAD.** `SpeedBlockCountingFence` says
- * `conditioningCredit: 'none'`, and the registry holds that. Occupying the
- * conditioning SLOT on a day and earning conditioning CREDIT for the week are
- * two different questions; this file answers only the first.
+ * This is display grouping, not an exposure counter. R-261 now gives a proper
+ * authored sprint conditioning credit through the shared classifier; this
+ * board still only answers which box presents it, never how much it counts.
  *
  * ## Why the board is derived here and not in the screen
  *

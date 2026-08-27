@@ -151,7 +151,8 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     answerLabel: 'your team training days',
     collects: ['teamTrainingDaysPerWeek', 'teamTrainingDays'],
     visible: preOrInSeason,
-    satisfied: (data) => filled(data.teamTrainingDays),
+    satisfied: (data) => filled(data.teamTrainingDays) ||
+      (data.teamTrainingDaysPerWeek === 0 && Array.isArray(data.teamTrainingDays) && data.teamTrainingDays.length === 0),
   },
   {
     name: 'TrainingCommitment',

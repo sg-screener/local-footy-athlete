@@ -60,7 +60,11 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `8f206cfd` (the ±7 deleted; `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §11-§12) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `codex/failure-only-state-export` · **BASE:** `aaaf58a7`.
+- **CURRENT UNIT:** agreed sprint/conditioning counting, chunk 1; owner `testtruth`.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 19; focused compiler gate 324/324.
+- **NEXT:** finish verification, then accumulated fixture handling (chunk 2).
+- **OPEN:** global year/writer release gates remain red; no phone acceptance claimed.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

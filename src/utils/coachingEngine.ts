@@ -93,7 +93,7 @@ import {
   type PowerPrimerSpec,
   type PowerInjuryInput,
 } from '../rules/powerPrimerPolicy';
-import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
+import { createLateOffseasonSpeedBlock, speedBlockForTemplate } from '../rules/speedTemplates';
 import {
   SPEED_FALLBACK_TEMPLATE,
   speedTemplateByName,
@@ -776,24 +776,7 @@ function gOffset(dayNum: number, gameDayNum: number | null): number {
  */
 function createFallbackSpeedBlock(placement: SpeedBlockPlacement): SpeedBlock {
   const template = speedTemplateByName(SPEED_FALLBACK_TEMPLATE);
-  return {
-    id: `authored-speed-fallback-${placement}`,
-    title: template.name,
-    label: template.name,
-    kind: 'true_speed',
-    placement,
-    durationMinutes: templateDurationMinutes(template),
-    prescription: templatePrescriptionLine(template),
-    notes: [template.effortCue],
-    templateName: template.name,
-    counting: {
-      hardExposure: true,
-      mainStrength: false,
-      conditioningCredit: 'none',
-      createsHardDay: true,
-      sprintCodExposure: true,
-    },
-  };
+  return { ...speedBlockForTemplate(template, placement), id: `authored-speed-fallback-${placement}` };
 }
 
 function createSpeedTopUpBlock(

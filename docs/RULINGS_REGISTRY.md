@@ -6684,3 +6684,22 @@ carries a close control top-right and its Save is pinned outside the scroll view
 ran once at app start.
 **Search words:** equipment editor, commercial gym all ticked, untick, have it,
 onboarding tile, equipment preset, save equipment pinned, close top right.
+
+---
+
+**R-261** · Sam, 2026-08-27: *"conditioning is about training energy systems ...
+so it should be counted"*, followed by approval of the shared rule and
+*"okay go ahead with 1"*. A proper authored sprint session counts once toward
+overall conditioning and also satisfies speed. It retains speed identity and
+cannot replace separately required aerobic/repeat-effort work. Warm-up riders
+and small primers are not full conditioning sessions by default. Combined
+sessions do not double credit: the same component/rows count once, equivalent
+choices count once, and combined speed plus intervals earn one session credit
+while both training qualities remain distinguishable.
+This supersedes the old blanket `SpeedBlockCountingFence.conditioningCredit:
+'none'` interpretation, not the board's display grouping or quality-speed rest
+rules. The authored template key supplies identity on old saves too; no ledger
+rewrite is required. Deload changes dose, not the exposure's identity.
+Guard: `LAW-proper-sprint-conditioning-credit`,
+`test:canonical-weekly-compiler`, included in `test:release`.
+Implementation and measured scope: `docs/STATUS_TESTTRUTH.md` step 19.
