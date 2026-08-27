@@ -1,4 +1,5 @@
 import type { TrainingProgram } from '../types/domain';
+import type { DevE2ECheckpointRecord } from '../dev/e2e/devE2EPersistence';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -129,7 +130,7 @@ async function main() {
     clockFingerprint: clockReceipt.semanticFingerprint,
     unfinishedAthleteActionTraces: traceCheckpoint,
   };
-  let writtenCheckpoint: typeof checkpoint | null = null;
+  let writtenCheckpoint: DevE2ECheckpointRecord | null = null;
   let resumedTraceIds: string[] = [];
   const deps: DevE2ECoordinatorDeps = {
     requireScenarioBootstrap: async () => {},
@@ -166,9 +167,9 @@ async function main() {
     },
     writeProfile: () => events.push('profile'),
     installProgram: () => events.push('program'),
-    applyAuxiliaryState: () => events.push('auxiliary'),
+    applyAuxiliaryState: () => { events.push('auxiliary'); },
     completeOnboarding: () => events.push('complete'),
-    recordAcceptedBlock: () => events.push('accepted-block'),
+    recordAcceptedBlock: () => { events.push('accepted-block'); },
     readWitnessState: () => ({
       program: program(),
       profile: DEV_E2E_STANDARD_PROFILE,
@@ -192,13 +193,13 @@ async function main() {
     },
     captureMemoryFingerprints: () => ({ state: 'ready' }),
     fingerprintMapsMatch: (left, right) => JSON.stringify(left) === JSON.stringify(right),
-    writeCheckpoint: async (record) => { writtenCheckpoint = record as typeof checkpoint; },
+    writeCheckpoint: async (record) => { writtenCheckpoint = record; },
     readCheckpoint: async () => checkpoint,
     readPersistedFingerprints: async () => checkpoint.fingerprints,
-    clearCheckpoint: async () => events.push('checkpoint-clear'),
+    clearCheckpoint: async () => { events.push('checkpoint-clear'); },
     writeScenarioSession: async () => {},
     readScenarioSession: async () => null,
-    clearScenarioSession: async () => events.push('scenario-session-clear'),
+    clearScenarioSession: async () => { events.push('scenario-session-clear'); },
     resolveScenarioManifest: () => null,
     evaluateScenarioEligibility: ({ nextStep }) => ({
       status: 'eligible',

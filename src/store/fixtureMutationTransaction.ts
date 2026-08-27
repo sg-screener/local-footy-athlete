@@ -788,12 +788,11 @@ export async function executeFixtureMutationTransaction(
         resolved.sourceDate,
         resolved.targetDate,
       ].filter((date): date is string => !!date),
-      mutate: () => executeCandidate({
-        input,
-        resolved,
-        profile: prepared.profile,
-        trace,
-      }),
+      mutate: () => {
+        const candidate = executeCandidate({ input, resolved, profile: prepared.profile, trace });
+        if (candidate.kind === 'applied') appendLandedFixtureDecision(candidate.acceptedEffect);
+        return candidate;
+      },
       didApply: (candidate) =>
         candidate.kind === 'applied' && !!candidate.result.reversibleAdjustmentId,
       verifyCandidate: ({ value }) => ({
@@ -850,7 +849,6 @@ export async function executeFixtureMutationTransaction(
     });
     // R1.4a (shell rebuild): the landed fixture decision, appended verbatim —
     // through the one site both doors share (R5.3, 2026-08-06).
-    appendLandedFixtureDecision(candidate.acceptedEffect);
     return {
       outcome: candidate.outcome,
       result: candidate.result,

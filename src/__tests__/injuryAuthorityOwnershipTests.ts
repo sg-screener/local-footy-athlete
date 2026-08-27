@@ -123,7 +123,7 @@ function recordedState() {
   const accepted = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext);
   return {
-    activeInjury: accepted.activeInjury,
+    activeInjury: accepted.injuryEpisodes.some(episode => episode.status === 'active' || episode.status === 'improving'),
     episodes: accepted.injuryEpisodes.length,
     facts: accepted.temporarySourceFacts.length,
   };

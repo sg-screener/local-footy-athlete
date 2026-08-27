@@ -71,9 +71,6 @@ const {
   composeTemporarySourceFactCompatibility,
 } = require('../rules/temporarySourceFact') as typeof import('../rules/temporarySourceFact');
 const {
-  validateWorkoutAgainstActiveConstraints,
-} = require('../utils/postGenerationConstraintValidation') as typeof import('../utils/postGenerationConstraintValidation');
-const {
   generateProgramLocally,
 } = require('../services/api/generateProgram') as typeof import('../services/api/generateProgram');
 const {
@@ -361,87 +358,8 @@ async function main(): Promise<void> {
     modifierAffects: ['current_week'],
     rules: [], safeFocus: [], advice: [],
   };
-  const validateOn = (date: string, workout: any) =>
-    validateWorkoutAgainstActiveConstraints({
-      workout,
-      date,
-      todayISO: TODAY,
-      activeConstraints: [travelConstraint] as any,
-    } as any);
-
-  const combinedDay = () => ({
-    id: 'w-combined',
-    name: 'Strength + Team Training',
-    workoutType: 'Strength',
-    exercises: [
-      { exercise: { name: 'Back Squat' }, sets: 3, reps: '5' },
-      { exercise: { name: 'Team Training' } },
-    ],
-  });
-  const combined = validateOn(LEAVE, combinedDay());
-  const survivingNames = (combined.workout?.exercises ?? [])
-    .map((row: any) => row?.exercise?.name ?? row?.name);
-  run('[8] away takes the TEAM part off a combined day',
-    combined.workout !== null
-      && !survivingNames.some((n: string) => /team training/i.test(String(n))),
-    survivingNames);
-  run('[8b] and leaves the athlete\'s OWN session exactly where it was',
-    survivingNames.includes('Back Squat'), survivingNames);
-
-  // ── [9] A DAY THAT WAS ONLY THE CLUB BECOMES REST ────────────────────────
-  const teamOnly = validateOn(LEAVE, {
-    id: 'w-team',
-    name: 'Team Training',
-    workoutType: 'Team Training',
-    exercises: [{ exercise: { name: 'Team Training' } }],
-  });
-  run('[9] a team-training-only day becomes rest while away',
-    teamOnly.workout === null && teamOnly.collapsedToRest === true);
-
-  // ── [10] AND SO DOES A GAME ──────────────────────────────────────────────
-  const game = validateOn(LEAVE, {
-    id: 'w-game', name: 'Game Day', workoutType: 'Game', exercises: [],
-  });
-  run('[10] a game is off while away', game.workout === null);
-
-  // ── [11] NOTHING ELSE IS TOUCHED, and this is the half that matters most ─
-  const solo = validateOn(LEAVE, {
-    id: 'w-solo',
-    name: 'Lower Body Strength',
-    workoutType: 'Strength',
-    exercises: [
-      { exercise: { name: 'Back Squat' }, sets: 3, reps: '5' },
-      { exercise: { name: 'Romanian Deadlift' }, sets: 3, reps: '8' },
-    ],
-  });
-  const soloNames = (solo.workout?.exercises ?? [])
-    .map((row: any) => row?.exercise?.name);
-  run('[11] a solo session is untouched by being away',
-    solo.workout !== null && solo.collapsedToRest === false
-      && soloNames.includes('Back Squat') && soloNames.includes('Romanian Deadlift'),
-    soloNames);
-
-  // ── [12] AND ALL OF IT STOPS ON THE RETURN DATE ──────────────────────────
-  // The constraint is horizon-bounded, so the same team night on the day he is
-  // home must survive. Without this cell the rule could be "team training is
-  // gone forever" and every cell above would still be green.
-  const homeAgain = validateOn(RETURN, combinedDay());
-  const homeNames = (homeAgain.workout?.exercises ?? [])
-    .map((row: any) => row?.exercise?.name ?? row?.name);
-  run('[12] the team night is BACK on the day the athlete returns',
-    homeAgain.workout !== null
-      && homeNames.some((n: string) => /team training/i.test(String(n))),
-    homeNames);
-
-  // ── [13] THE PLAN ITSELF — where being away has to bite, and the only place
-  //
-  // Sam ruled both halves: *"yes clear team training and games while away"* and,
-  // on the fixture, ***"yes it should disappear OBVIOUSLY YOU'RE NOT GOING TO BE
-  // THERE"***. The seam cells above hold the RULE; these hold the ATHLETE'S
-  // WEEK, and the difference between the two cost a day. A day is a team day
-  // because the PLAN says `isTeamDay`, and a week is shaped around a fixture
-  // because the PLAN says `gameDay` — both re-derived after post-generation
-  // validation runs, so the club has to come off at the plan or not at all.
+  // Retired post-generation rewrite probes [8]-[12]. The generated-week
+  // probes below, and compilerYear/clearFacts, exercise travel at its input owner.
   const genProfile = {
     trainingLocation: 'Commercial gym' as const,
     equipment: ['Full Gym'],

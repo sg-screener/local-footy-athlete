@@ -56,7 +56,9 @@ import { appendDecisionEntry, decisionLedgerEntries } from './decisionLedgerStor
 import { restoreExcludedExercise } from '../utils/exerciseExclusionOwner';
 import { replayableEntries } from '../rules/decisionLedgerReplay';
 import { lastUndoableEntry, undoableEntries } from '../rules/decisionLedgerReplay';
-import { settleDerivedWorldAfterDecision } from './quiescentBoot';
+import { rebuildDerivedWorldNow } from './quiescentBoot';
+import { runCoachMutationTransaction } from './coachMutationTransaction';
+import { todayISOLocal } from '../utils/appDate';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 
 export type UndoOutcome =
@@ -142,53 +144,30 @@ export function annulOutstandingRemovalFor(exercise: string): boolean {
 export async function undoLastDecision(): Promise<UndoOutcome> {
   const target = pendingUndoTarget();
   if (!target) return { outcome: 'nothing_to_undo' };
-
-  const appended = appendDecisionEntry({
-    decision: { kind: 'reversal', reversedEntryId: target.id },
-    provenance: 'athlete_tap',
-    writer: 'undo_door',
+  const transaction = await runCoachMutationTransaction({
+    todayISO: todayISOLocal(),
+    allowAcceptedStateOnlyChange: true,
+    mutate: () => {
+      // The queued door must still own the decision the athlete asked to undo.
+      if (pendingUndoTarget()?.id !== target.id) throw new Error('undo_target_changed');
+      const appended = appendDecisionEntry({
+        decision: { kind: 'reversal', reversedEntryId: target.id },
+        provenance: 'athlete_tap', writer: 'undo_door',
+      });
+      if (!appended.ok) return appended;
+      const reversed = target.decision;
+      if (reversed.kind === 'program_control' && reversed.action.type === 'remove_exercise') {
+        const exercise = reversed.action.payload?.exercise;
+        if (typeof exercise === 'string' && exercise.trim()) restoreExcludedExercise(exercise);
+      }
+      // Same synchronous compiler used by accepted fact changes and reopening.
+      // The ledger, exclusion input and generated candidate commit together.
+      rebuildDerivedWorldNow();
+      return appended;
+    },
+    didApply: value => value.ok,
   });
-  // THE APPEND IS THE COMMIT. If the ledger owner refused, nothing has changed
-  // and nothing needs unwinding — which is the property that makes this door
-  // safe without a transaction of its own. There is no half-applied undo.
-  if (!appended.ok) {
-    return { outcome: 'refused', reason: appended.reason ?? 'ledger_refused_append' };
-  }
-  // ── THE OTHER HALF OF A REMOVAL, THROUGH THE SAME OWNER THAT WROTE IT ────
-  //
-  // A removal writes TWO facts through TWO owners: the program-control action
-  // (which lands on this ledger and is what the reversal above annuls) and the
-  // canonical exclusion in athlete preferences (which does not). Replay rebuilds
-  // the world from the ledger, so annulling the action alone leaves the
-  // exclusion standing — and the exclusion is what keeps the exercise out.
-  //
-  // MEASURED ON DEVICE 2026-08-19: after Undo, the ledger correctly held
-  // `dl-1 remove_exercise` annulled by `dl-2 reversal`, and the athlete's
-  // preferences still held
-  //   { exercise: "Back Squat", scope: "today_only", ... }
-  // so the toast said the change was undone and Back Squat did not come back.
-  // A half-reversal that reports success is exactly the honest-outcome failure
-  // this app's laws exist to prevent.
-  //
-  // `restoreExcludedExercise` is the EXISTING owner — the same one Restore
-  // uses — so this is not a second undo authority; it is the one reversal
-  // finally reaching both of the writes it is reversing.
-  const reversed = target.decision;
-  if (reversed.kind === 'program_control' && reversed.action.type === 'remove_exercise') {
-    const exercise = (reversed.action.payload as { exercise?: unknown } | undefined)?.exercise;
-    if (typeof exercise === 'string' && exercise.trim()) {
-      restoreExcludedExercise(exercise);
-    }
-  }
-
-  // A REPLAY MUST NOT RE-ENTER ITSELF. The settle door already refuses while a
-  // ledger replay is in flight, which is also why undo is not reachable from
-  // inside a replay: a reversal appended during one would be a decision made by
-  // a boot, and the plan's §2 says a boot decides nothing.
-  await settleDerivedWorldAfterDecision();
-  return {
-    outcome: 'undone',
-    reversedEntryId: target.id,
-    reversalEntryId: appended.entry?.id ?? '',
-  };
+  if (transaction.ok === false) return { outcome: 'refused', reason: transaction.reason };
+  return { outcome: 'undone', reversedEntryId: target.id,
+    reversalEntryId: transaction.value.entry?.id ?? '' };
 }

@@ -41,10 +41,16 @@ import { normalizeVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity
  * travels.
  */
 export function stripConditioningComponent(workout: Workout): Workout | null {
+  const stripped = withoutConditioningComponent(workout);
+  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
+}
+
+/** Remove only this component, retaining the day even when no work remains. */
+export function withoutConditioningComponent(workout: Workout): Workout {
   const linkedRows = new Set(
     (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
   );
-  const stripped = normalizeVisibleWorkoutIdentity({
+  return normalizeVisibleWorkoutIdentity({
     ...workout,
     exercises: (workout.exercises ?? []).filter((row) =>
       !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
@@ -52,6 +58,7 @@ export function stripConditioningComponent(workout: Workout): Workout | null {
     conditioningCategory: undefined,
     conditioningFlavour: undefined,
     conditioningFeasibility: undefined,
+    conditioningOffFeet: undefined,
     hasCombinedConditioning: false,
     attachedConditioningKind: undefined,
     coachAddedConditioningLabel: undefined,
@@ -65,5 +72,4 @@ export function stripConditioningComponent(workout: Workout): Workout | null {
     derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
       record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
   });
-  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
 }

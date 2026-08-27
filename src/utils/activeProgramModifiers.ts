@@ -18,7 +18,6 @@ import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStar
 import { useReadinessStore } from '../store/readinessStore';
 import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
-import { decideOverrideSweep } from './weekRebuild';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { todayISOLocal } from './appDate';
 import { formatExerciseDisplayName } from './exerciseDisplay';
@@ -832,45 +831,6 @@ function activeConstraintLifecycleKey(
   return `${source}:${c.id}`;
 }
 
-export interface RebuildOverrideSweepResult {
-  cleared: string[];
-  preserved: string[];
-  /** User edits removed because they conflicted with new game protection. */
-  conflictsRemoved: Array<{ date: string; name: string }>;
-}
-
-/**
- * Rebuild-safe manual-override sweep — thin store-mutating wrapper around
- * the ONE canonical, pure sweep policy in `weekRebuild.decideOverrideSweep`
- * (preserve modifier-owned + user manual edits; clear system junk; resolve
- * game-window conflicts out loud). Kept for existing callers; new rebuild
- * code should go through `weekRebuild.rebuildLocalWeek` instead.
- */
-export function clearManualOverridesPreservingActiveModifiers(
-  todayISO: string = todayISOLocal(),
-  opts: { gameDates?: string[] } = {},
-): RebuildOverrideSweepResult {
-  const program = useProgramStore.getState();
-  const decision = decideOverrideSweep({
-    gameDates: opts.gameDates ?? [],
-    overrides: program.dateOverrides ?? {},
-    overrideContexts: program.overrideContexts ?? {},
-    activeConstraintIds: new Set(
-      (useCoachUpdatesStore.getState().activeConstraints ?? [])
-        .filter((c) => !isExpiredActiveConstraint(c, todayISO))
-        .map((c) => c.id),
-    ),
-  });
-  for (const date of decision.clear) {
-    program.removeManualOverride(date);
-  }
-  logger.debug('[active-program-modifiers] rebuild override sweep', decision);
-  return {
-    cleared: decision.clear,
-    preserved: decision.preserve,
-    conflictsRemoved: decision.conflictsRemoved,
-  };
-}
 
 function isActiveAvailabilityConstraint(
   constraint: ProgramAvailabilityConstraint,
@@ -1554,23 +1514,6 @@ export function getActiveProgramModifiers(todayISO: string = todayISOLocal()): A
   });
 }
 
-function removeOverridesForModifierSource(
-  sourceId: string,
-  existing: ActiveConstraint | null | undefined,
-): string[] {
-  const programStore = useProgramStore.getState();
-  const dates = new Set(linkedOverrideDates(existing));
-  for (const [date, context] of Object.entries(programStore.overrideContexts ?? {})) {
-    if ((context as any)?.activeModifierId === sourceId) dates.add(date);
-  }
-  const cleared: string[] = [];
-  for (const date of Array.from(dates).sort()) {
-    programStore.removeManualOverride(date);
-    cleared.push(date);
-  }
-  return cleared;
-}
-
 export function clearActiveProgramModifier(
   modifierIdToClear: string,
 ): ClearActiveProgramModifierResult {
@@ -1614,15 +1557,21 @@ export function clearActiveProgramModifier(
   }
 
   let rebuildRequired = false;
-  let clearedOverrideDates: string[] = [];
 
   if (modifier.source === 'active_constraint') {
     const store = useCoachUpdatesStore.getState();
     const existing = store.activeConstraints.find((c) => c.id === modifier.sourceId);
     if (existing) {
-      clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, existing);
+      // Facts belong to the durable source-fact transaction. This synchronous
+      // compatibility helper may clear preferences, never a fact projection.
+      if ((existing.temporarySourceFactIds?.length ?? 0) > 0) {
+        return { cleared: null, remainingActiveCount: modifiers.length, rebuildRequired: false };
+      }
       store.removeActiveConstraint(modifier.sourceId);
-      if (existing.type === 'equipment') rebuildRequired = true;
+      if (useCoachUpdatesStore.getState().activeConstraints.some(c => c.id === modifier!.sourceId)) {
+        return { cleared: null, remainingActiveCount: modifiers.length, rebuildRequired: false };
+      }
+      rebuildRequired = true;
     }
     if (modifier.type === 'exercise_adjustment') {
       const prefStore = useAthletePreferencesStore.getState();
@@ -1679,7 +1628,6 @@ export function clearActiveProgramModifier(
     source: modifier.source,
     sourceId: modifier.sourceId,
     rebuildRequired,
-    clearedOverrideDates,
     remainingActiveCount: remaining.length,
   });
 

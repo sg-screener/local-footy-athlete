@@ -22,6 +22,7 @@ import { ACTION_TINT, glyph as sessionChangeGlyph } from '../../components/Sessi
 import { UndoToast } from '../../components/UndoToast';
 import { useNavigation } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
+import { SECTION_LABELS } from '../../utils/sessionExecutionChecklist';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
@@ -4588,6 +4589,30 @@ function ExerciseEditBody({
                   {`${displayExerciseName(change.from)} \u2192 ${displayExerciseName(change.to!)}`}
                 </Text>
                 <Text style={styles.exerciseEditSuggestionMeta}>{change.explanation}</Text>
+              </View>
+            ))}
+            {review.conditioningChanges.length > 0 ? (
+              <View style={styles.exerciseEditGroup} testID="injury-review-conditioning">
+                <Text style={styles.exerciseEditGroupLabel}>{SECTION_LABELS.conditioning}</Text>
+                {review.conditioningChanges.map(change => (
+                  <View key={`conditioning:${change.from}:${change.to}`} style={styles.exerciseEditSuggestionCard}>
+                    <Text style={styles.exerciseEditSuggestionName}>
+                      {!change.from && change.to ? `+ ${displayExerciseName(change.to)}` : change.to
+                        ? `${displayExerciseName(change.from)} → ${displayExerciseName(change.to)}`
+                        : `− ${displayExerciseName(change.from!)}`}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {review.restored.map(name => (
+              <View key={`restored:${name}`} style={styles.exerciseEditSuggestionCard} testID="injury-review-restored">
+                <Text style={styles.exerciseEditSuggestionName}>{`+ ${displayExerciseName(name)}`}</Text>
+              </View>
+            ))}
+            {review.withdrawn.map(name => (
+              <View key={`withdrawn:${name}`} style={styles.exerciseEditSuggestionCard} testID="injury-review-withdrawn">
+                <Text style={styles.exerciseEditSuggestionName}>{`− ${displayExerciseName(name)}`}</Text>
               </View>
             ))}
             {/* ── 2. PAUSED — A LIST, WITH NOTHING ON THE OTHER SIDE OF IT ──

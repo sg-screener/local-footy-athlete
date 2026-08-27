@@ -14,7 +14,6 @@ import {
 } from '../rules/section18EffectiveWeekEvaluator';
 import {
   buildSection18WeeklyExposureContractV2,
-  migrateLegacyWeeklyExposureContractV2,
   section18PhaseTableSignature,
   type AnchorParticipationState,
   type Section18AuthorisedReduction,
@@ -27,7 +26,7 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
-import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
+import { evaluateMicrocycleForTests } from './support/evaluateMicrocycle';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
@@ -219,18 +218,18 @@ function contract(
   const identity = identityFor(mode);
   return buildSection18WeeklyExposureContractV2({
     seasonPhase: identity.phase!,
+    capacity: 'medium',
     declaredSubphase: identity.subphase,
     mode,
     blockNumber: mode === 'late_offseason' ? 2 : 1,
     weekInBlock: mode === 'mid_offseason' ? 3 : 1,
     globalWeek: mode === 'late_offseason' ? 5 : mode === 'mid_offseason' ? 3 : 1,
     phaseWeek: mode === 'late_offseason' ? 5 : mode === 'mid_offseason' ? 3 : 1,
-    phaseWeekProvenance: 'explicit_phase_clock',
+    phaseWeekProvenance: 'explicit_user_phase_change',
     weekKind: 'build',
     anchorState: identity.anchorState,
     teamTrainingDays: [],
     fixtureDays: [],
-    readiness: 'medium',
     plannerSelected: {
       mainStrength: 4,
       coreConditioning: 4,
@@ -295,14 +294,14 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
   ok('edge-authored Week 1 and deterministic Weeks 2-4 all emit Contract v2',
     generated.microcycles.length === 4 &&
     generated.microcycles.every((candidate) => candidate.exposureContractV2?.protocolVersion === 2));
-  ok('shared microcycle observer consumes generated v2 contract', !!observeMicrocycleSection18(week));
+  ok('shared microcycle observer consumes generated v2 contract', !!evaluateMicrocycleForTests(week));
   ok('healthy generated TT resolves to normal unrestricted participation',
     week.exposureContractV2?.anchors.every((anchor) =>
       anchor.participation === 'normal_unrestricted' &&
       anchor.participationProvenance === 'derived_healthy_unrestricted') === true);
   ok('generated Contract v2 independently satisfies every planner-selected core target',
     generated.microcycles.every((candidate) => {
-      const observation = observeMicrocycleSection18(candidate);
+      const observation = evaluateMicrocycleForTests(candidate);
       return observation !== null && [
         observation.contract.mainStrength.exposure,
         observation.contract.conditioning.core,
@@ -389,19 +388,8 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
       strengthReasons(contractFor([1, 2, 3], [2])).join(',') || '(none)');
   }
 
-  const legacy = buildWeeklyExposureContract({
-    seasonPhase: 'Pre-season', capacity: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],
-    teamTrainingDayNumbers: [2, 4], hasGame: false, gameDay: null,
-    weekKind: 'build', preseasonSubphase: 'early_preseason', appConditioningFeasible: true,
-  });
-  const migratedA = migrateLegacyWeeklyExposureContractV2(legacy, { blockNumber: 1, weekInBlock: 1, globalWeek: 1 });
-  const migratedB = migrateLegacyWeeklyExposureContractV2(legacy, { blockNumber: 1, weekInBlock: 1, globalWeek: 1 });
-  ok('legacy migration is deterministic', JSON.stringify(migratedA) === JSON.stringify(migratedB));
-  ok('legacy migration does not invent participation certainty',
-    migratedA.anchors.every((anchor) => anchor.participation === 'unknown'));
-  ok('legacy missing prohibited-pattern state remains traceable',
-    migratedA.strengthPatterns.prohibitedPatternProvenance === 'legacy_missing' &&
-    migratedA.strengthPatterns.prohibitedPatterns.length === 0);
+  ok('retired contract migration cannot author current output',
+    !('migrateLegacyWeeklyExposureContractV2' in require('../rules/weeklyExposureContractV2')));
 
   const sourceWorkout = week.workouts[0];
   const editedWorkout = finaliseWorkoutAfterMutation({
@@ -414,7 +402,7 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
     planIntentValid: false,
     referenceWorkout: sourceWorkout,
   }).workout;
-  const editedObservation = observeMicrocycleSection18(week, [
+  const editedObservation = evaluateMicrocycleForTests(week, [
     editedWorkout,
     ...week.workouts.slice(1),
   ]);
@@ -441,7 +429,7 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
   console.log = originalLog;
   ok('active-constraint generation still emits observable Contract v2 ledgers',
     constrained.microcycles.every((candidate) =>
-      candidate.exposureContractV2?.protocolVersion === 2 && !!observeMicrocycleSection18(candidate)));
+      candidate.exposureContractV2?.protocolVersion === 2 && !!evaluateMicrocycleForTests(candidate)));
 }
 
 console.log('\n-- Twelve permanent Section 18 violation witnesses --');

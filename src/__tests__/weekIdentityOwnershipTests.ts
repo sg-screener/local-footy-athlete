@@ -363,7 +363,6 @@ function section18StrengthWorkout(id: string, dayOfWeek: number, names: readonly
   } as never, {
     offseasonSubphase: 'not_off_season',
     phase: 'In-season',
-    restoreMissingPlanPatterns: false,
   }).workout;
 }
 

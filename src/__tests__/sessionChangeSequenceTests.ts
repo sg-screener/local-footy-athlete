@@ -54,7 +54,8 @@ import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { applyExerciseExclusionDecision, restoreExcludedExercise } from '../utils/exerciseExclusionOwner';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { executeProgramControlAction } from '../utils/programControlActions';
@@ -81,6 +82,7 @@ function mondayFor(d: string): string {
 function theAthlete(): OnboardingData {
   return {
     firstName: 'Sim', heightCm: 184, weightKg: 90, gender: 'male', seasonPhase: 'Off-season',
+    seasonFinishedOn: '2026-07-12',
     position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
@@ -99,39 +101,16 @@ function theAthlete(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
-function install(): string {
+async function install(): Promise<void> {
   durable.clear();
-  resetStoresToFreshInstall('exercise-removal-owner:install');
-  const profile = theAthlete();
-  useProfileStore.getState().updateOnboardingData(profile);
-  quiet(() => useProfileStore.getState().completeOnboarding());
-  setJourneyClock(INSTALL_DAY);
-  const program = quiet(() => generateProgramLocally(profile, {
-    todayISO: INSTALL_DAY, previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'Off-season' as never,
-      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  })) as TrainingProgram;
-  const settled = program.microcycles[1] ?? program.microcycles[0]!;
-  const weekStart = String(settled.startDate).slice(0, 10);
-  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
-    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
-    reason: 'exercise-removal-owner:generate',
-  }));
-  useProgramStore.setState({ currentMicrocycle: settled } as never);
+  const installed = await coldStartThroughOnboarding({ profile: theAthlete(), installDayISO: INSTALL_DAY });
+  if (installed.onboardingRefusal) throw new Error(installed.onboardingRefusal);
   setJourneyClock(TARGET);
-  return weekStart;
 }
 
 /** What the athlete sees on a day, exactly as the screen reads it. */
 function rowsOn(dateISO: string): string[] {
-  const week = quiet(() => resolveWeekWithConditioning(
-    mondayFor(dateISO),
-    buildScheduleStateImperative(),
-  ));
+  const week = quiet(() => deriveVisibleWeekLive(mondayFor(dateISO), TARGET));
   const day = week.find((d) => d.date === dateISO);
   const workout = (day as { workout?: Workout } | undefined)?.workout;
   return (workout?.exercises ?? []).map((row) => {
@@ -191,7 +170,7 @@ async function main(): Promise<void> {
 
   console.log('\n[1] THE WALK — remove, then swap, then add, on ONE session');
 
-  install();
+  await install();
   setJourneyClock(TARGET);
   const start = rowsOn(TARGET);
   ok('CONTROL — the athlete has a real session to change',

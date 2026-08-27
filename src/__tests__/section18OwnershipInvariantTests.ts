@@ -138,6 +138,7 @@ function seed(
       selectedPhase: athlete.seasonPhase!,
       phaseEntryWeekStartISO: WEEK,
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
   useCalendarStore.setState({ markedDays: marks, selectedDate: null });

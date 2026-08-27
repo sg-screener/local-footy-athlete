@@ -177,12 +177,11 @@ export function applyGenerationSafetyToSection18Contract(args: {
   ]).filter((pattern): pattern is MainStrengthPattern => PATTERNS.includes(pattern));
   const availableSafePatterns = PATTERNS.filter((pattern) => !prohibited.includes(pattern));
   const selectedStrengthTarget = selectedMainStrengthTarget(contract);
-  const requiredSafe = prohibited.length > 0 && selectedStrengthTarget > 0
-    ? availableSafePatterns
-    : contract.strengthPatterns.balanceExpectation === 'equal_or_near_equal'
-      ? availableSafePatterns
-      : contract.strengthPatterns.requiredSafePatterns.filter((pattern) =>
-          !prohibited.includes(pattern));
+  // Safety may narrow the authored pattern set, never expand it. In particular,
+  // a knee report must not re-require a pull that the equipment policy already
+  // proved unreachable for a bodyweight-only athlete.
+  const requiredSafe = contract.strengthPatterns.requiredSafePatterns.filter(pattern =>
+    !prohibited.includes(pattern));
   contract.strengthPatterns.prohibitedPatterns = prohibited;
   contract.strengthPatterns.requiredSafePatterns = requiredSafe;
   if (derivedProhibited.size > 0) {

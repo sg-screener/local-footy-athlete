@@ -1,272 +1,58 @@
 /**
- * Conditioning ownership through in-season push/pull balance repair.
- *
- * Run: sucrase-node src/__tests__/conditioningBalanceRepairTests.ts
+ * Strength/conditioning balance is authored by the canonical compiler, not a
+ * post-generation repair. Real onboarding witnesses replace the retired
+ * enforceInSeasonPushPullBalance hand-built-plan tests.
+ * NOT COVERED: native controls; accumulated injury/edit cases live in the year gate.
  */
-
-import {
-  enforceInSeasonPushPullBalance,
-  onboardingToCoachingInputs,
-  type CoachingInputs,
-  type SessionAllocation,
-} from '../utils/coachingEngine';
-import type { OnboardingData } from '../types/domain';
-// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
-// totals. Added when this suite was wired into test:bible — an unarmed suite
-// in the chain exits 0 on a drained loop and the chain calls that green.
+Object.assign(globalThis, { __DEV__: true });
+const storage = new Map<string, string>();
+Object.assign(globalThis, { window: { localStorage: {
+  getItem: (key: string) => storage.get(key) ?? null,
+  setItem: (key: string, value: string) => { storage.set(key, value); },
+  removeItem: (key: string) => { storage.delete(key); },
+  clear: () => { storage.clear(); },
+} } });
+import { coldStartThroughOnboarding, quietAsync } from './support/athleteJourney';
+import { ARCHETYPES, athleteAnswers, YEAR_START } from './compilerYear/catalog';
+import { evaluateMicrocycleForTests } from './support/evaluateMicrocycle';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
-
-let pass = 0;
-let fail = 0;
+let passed = 0;
 const failures: string[] = [];
-
-function ok(name: string, condition: boolean, detail?: string): void {
-  if (condition) {
-    pass++;
-    console.log(`  ok ${name}`);
-  } else {
-    fail++;
-    failures.push(name + (detail ? `: ${detail}` : ''));
-    console.error(`  FAIL ${name}${detail ? `: ${detail}` : ''}`);
+function check(label: string, ok: boolean, detail = '') {
+  if (ok) { passed++; console.log('PASS ' + label); }
+  else { failures.push(label + ': ' + detail); console.error('FAIL ' + label + ': ' + detail); }
+}
+async function main() {
+  let mutationCaught = false;
+  for (const archetype of ARCHETYPES) {
+    const profile = athleteAnswers({ ...archetype, initialPhase: 'In-season',
+      gameDay: archetype.gameDay ?? 'Saturday' });
+    const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: YEAR_START }));
+    check(archetype.id + ' completes real onboarding', !installed.onboardingRefusal, installed.onboardingRefusal ?? '');
+    for (const week of installed.program.microcycles) {
+      const evaluation = evaluateMicrocycleForTests(week);
+      check(archetype.id + ':' + week.startDate + ' balanced canonical week',
+        !!evaluation && evaluation.blockingViolations.length === 0,
+        JSON.stringify(evaluation?.blockingViolations));
+      const mutant = week.workouts.map(workout => ({ ...workout,
+        speedBlock: undefined, conditioningBlock: undefined, conditioningCategory: undefined,
+        conditioningFlavour: undefined, hasCombinedConditioning: false,
+        attachedConditioningKind: undefined,
+        exercises: workout.exercises.filter(row => row.section18Evidence?.role !== 'conditioning'),
+        section18Evidence: workout.section18Evidence && { ...workout.section18Evidence,
+          conditioningRole: 'none' as const, conditioningStress: 'unknown' as const },
+      }));
+      mutationCaught ||= !!evaluateMicrocycleForTests(week, mutant)?.blockingViolations.some(violation =>
+        violation.domain === 'conditioning');
+    }
   }
+  check('removing real compiled conditioning fails the evaluator', mutationCaught);
+  check('retired imperative balance author cannot be called',
+    !('enforceInSeasonPushPullBalance' in require('../utils/coachingEngine')));
 }
-
-function inputs(overrides: Partial<OnboardingData> = {}): CoachingInputs {
-  return onboardingToCoachingInputs({
-    seasonPhase: 'In-season',
-    experienceLevel: '2-5 years',
-    trainingDaysPerWeek: 5,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    teamTrainingDaysPerWeek: 0,
-    teamTrainingDays: [],
-    conditioningLevel: 'Good',
-    recentTrainingLoad: 'Very consistent',
-    sprintExposure: 'Occasionally',
-    injuries: [],
-    ...overrides,
-  });
-}
-
-function hasPushPull(plan: SessionAllocation[]): boolean {
-  const coversPush = plan.some((session) =>
-    session.strengthPattern === 'push' ||
-    session.strengthPattern === 'upper_combined' ||
-    session.strengthPattern === 'full_body');
-  const coversPull = plan.some((session) =>
-    session.strengthPattern === 'pull' ||
-    session.strengthPattern === 'upper_combined' ||
-    session.strengthPattern === 'full_body');
-  return coversPush && coversPull;
-}
-
-function conditioningCount(plan: SessionAllocation[]): number {
-  return plan.filter((session) =>
-    !!session.conditioningCategory || !!session.hasCombinedConditioning).length;
-}
-
-console.log('\n[1] planned component survives balance repair');
-{
-  const component: SessionAllocation = {
-    tier: 'optional',
-    focus: 'Optional support + controlled tempo conditioning component (20-24min)',
-    dayOfWeek: 'Monday',
-    isHardExposure: false,
-    hasCombinedConditioning: true,
-    attachedConditioningKind: 'component',
-    conditioningFlavour: 'tempo',
-    conditioningCategory: 'tempo',
-    conditioningVariant: 'reduced',
-    conditioningFeel: 'controlled',
-  };
-  const teamDay: SessionAllocation = {
-    tier: 'core',
-    focus: 'Team training - field session',
-    dayOfWeek: 'Tuesday',
-    isHardExposure: true,
-    isTeamDay: true,
-  };
-  const lower: SessionAllocation = {
-    tier: 'core',
-    focus: 'Lower body strength',
-    dayOfWeek: 'Wednesday',
-    isHardExposure: true,
-    strengthPattern: 'lower',
-  };
-  const plan = [component, teamDay, lower];
-  enforceInSeasonPushPullBalance(plan, inputs({
-    teamTrainingDaysPerWeek: 1,
-    teamTrainingDays: ['Tuesday'],
-  }));
-
-  ok('component metadata remains intact',
-    component.hasCombinedConditioning === true &&
-      component.attachedConditioningKind === 'component' &&
-      component.conditioningCategory === 'tempo',
-    JSON.stringify(component));
-  ok('component copy remains intact', /conditioning component/i.test(component.focus), component.focus);
-  ok('repair still restores push and pull through another safe path',
-    hasPushPull(plan),
-    plan.map((session) => `${session.dayOfWeek}:${session.strengthPattern ?? '-'}`).join(', '));
-  ok('lower strength remains present',
-    plan.some((session) => session.strengthPattern === 'lower'));
-
-  const upperComponent: SessionAllocation = {
-    tier: 'core',
-    focus: 'Upper body - push emphasis + controlled tempo conditioning component (20-24min)',
-    dayOfWeek: 'Monday',
-    isHardExposure: false,
-    strengthPattern: 'push',
-    hasCombinedConditioning: true,
-    attachedConditioningKind: 'component',
-    conditioningFlavour: 'tempo',
-    conditioningCategory: 'tempo',
-  };
-  const inPlacePlan = [upperComponent, { ...lower }];
-  enforceInSeasonPushPullBalance(inPlacePlan, inputs());
-  ok('in-place upper promotion preserves component ownership',
-    upperComponent.strengthPattern === 'upper_combined' &&
-      upperComponent.hasCombinedConditioning === true &&
-      upperComponent.attachedConditioningKind === 'component' &&
-      upperComponent.conditioningCategory === 'tempo',
-    JSON.stringify(upperComponent));
-  ok('in-place upper promotion preserves visible component wording',
-    /conditioning component/i.test(upperComponent.focus),
-    upperComponent.focus);
-}
-
-console.log('\n[2] finisher remains removable garnish');
-{
-  const finisher: SessionAllocation = {
-    tier: 'optional',
-    focus: 'Optional support + easy aerobic finisher (10min)',
-    dayOfWeek: 'Monday',
-    isHardExposure: false,
-    hasCombinedConditioning: true,
-    attachedConditioningKind: 'finisher',
-    conditioningFlavour: 'aerobic',
-    conditioningCategory: 'aerobic_base',
-  };
-  const lower: SessionAllocation = {
-    tier: 'core',
-    focus: 'Lower body strength',
-    dayOfWeek: 'Tuesday',
-    isHardExposure: true,
-    strengthPattern: 'lower',
-  };
-  const plan = [finisher, lower];
-  enforceInSeasonPushPullBalance(plan, inputs({
-    trainingDaysPerWeek: 2,
-    preferredTrainingDays: ['Monday', 'Tuesday'],
-  }));
-
-  ok('finisher can be removed to host required upper balance',
-    !finisher.hasCombinedConditioning &&
-      finisher.attachedConditioningKind === undefined &&
-      finisher.conditioningCategory === undefined,
-    JSON.stringify(finisher));
-  ok('finisher removal still restores push and pull', hasPushPull(plan));
-}
-
-console.log('\n[3] valid conditioning removal re-checks game-week floor');
-{
-  const standalone: SessionAllocation = {
-    tier: 'optional',
-    focus: 'Aerobic base - 25min easy bike',
-    dayOfWeek: 'Monday',
-    isHardExposure: false,
-    conditioningFlavour: 'aerobic',
-    conditioningCategory: 'aerobic_base',
-  };
-  const tuesdayLower: SessionAllocation = {
-    tier: 'core',
-    focus: 'Lower body strength',
-    dayOfWeek: 'Tuesday',
-    isHardExposure: true,
-    strengthPattern: 'lower',
-  };
-  const wednesdayLower: SessionAllocation = {
-    tier: 'core',
-    focus: 'Lower body strength support',
-    dayOfWeek: 'Wednesday',
-    isHardExposure: true,
-    strengthPattern: 'lower_combined',
-  };
-  const thursday: SessionAllocation = {
-    tier: 'recovery',
-    focus: 'Mobility, foam rolling, light movement',
-    dayOfWeek: 'Thursday',
-    isHardExposure: false,
-  };
-  const friday: SessionAllocation = {
-    tier: 'recovery',
-    focus: 'Mobility, foam rolling, light movement',
-    dayOfWeek: 'Friday',
-    isHardExposure: false,
-  };
-  const plan = [standalone, tuesdayLower, wednesdayLower, thursday, friday];
-  const gameInputs = inputs({
-    usualGameDay: 'Saturday',
-    gameDay: 'Saturday',
-    conditioningLevel: 'Elite',
-  });
-  const before = conditioningCount(plan);
-  enforceInSeasonPushPullBalance(plan, gameInputs);
-
-  ok('test starts with one real conditioning exposure', before === 1, `before=${before}`);
-  ok('balance repair restores push and pull', hasPushPull(plan));
-  // ⚠ RE-POINTED 2026-08-13 — THIS CELL ASSERTED A PIPELINE PROPERTY AGAINST A
-  // SINGLE FUNCTION, AND THE FUNCTION NEVER OWNED IT.
-  //
-  // It read `conditioningCount(plan) >= 1` — a weekly FLOOR — immediately after
-  // calling `enforceInSeasonPushPullBalance` directly. That function's own
-  // contract is the opposite: `coachingEngine.ts:6395` says the repair "MAY
-  // CONSUME a finisher or standalone conditioning slot", and its
-  // `conditioningRemovalCost` ranks a standalone as removable (2) while a
-  // COMPONENT is protected (3) and `clearRemovableConditioning` refuses it.
-  // So consuming the fixture's single standalone is the documented behaviour,
-  // not a breach.
-  //
-  // ⚠ AND I NEARLY REPORTED THIS AS A LIVE ATHLETE-FACING DEFECT. Measured
-  // instead, through the REAL generator — in-season, Saturday game, Elite
-  // conditioning, team Tue/Thu — every one of four weeks carries its
-  // conditioning session. THE FLOOR HOLDS; it is restored downstream by §18,
-  // which runs after this repair. One function was measured and a pipeline was
-  // described.
-  //
-  // WHAT IS ASSERTED NOW IS WHAT THE FUNCTION ACTUALLY GUARANTEES: it consumed a
-  // REMOVABLE slot, and it left no protected component behind it. The weekly
-  // floor belongs to the pipeline and is covered where the pipeline is.
-  //
-  // ⚠ ONE REAL DEFECT SURVIVES THIS AND IS DELIBERATELY NOT PAPERED OVER:
-  // `recheckConditioningFloor` is a NO-OP (`void removedConditioning;`) while
-  // the caller's comment claims "any valid conditioning removal re-checks the
-  // floor". The protection is real but lives in §18, one layer away — so a
-  // refactor that moved §18 would delete the floor while that comment went on
-  // asserting cover. Named, not fixed; it is not this cell's to hold.
-  // ⚠ AND MY FIRST RE-POINT WAS VACUOUS — A SURVIVING MUTANT CAUGHT IT.
-  // I asserted "never removes a protected component" on THIS fixture, which has
-  // no component in it, so the claim was trivially true: deleting the
-  // `ownership === 'component'` guard from `clearRemovableConditioning` changed
-  // nothing and the cell stayed green. The component protection IS real and IS
-  // held — by the cells above that build a component fixture. It is not this
-  // one's to claim.
-  //
-  // SO THIS CELL ASSERTS WHAT THIS FIXTURE ACTUALLY PROVES: the repair spent the
-  // one removable slot it was licensed to spend. `before === 1` is asserted
-  // above, so the pair reads as a before/after and the licence is exercised
-  // rather than assumed.
-  ok('the repair CONSUMED the removable standalone it is licensed to spend',
-    before === 1 && conditioningCount(plan) === 0,
-    plan.map((session) =>
-      `${session.dayOfWeek}:${session.conditioningCategory ?? '-'}:${session.attachedConditioningKind ?? '-'}`).join(', '));
-}
-
-console.log(`\nconditioningBalanceRepairTests: ${pass} passed, ${fail} failed`);
-totalsPrinted(fail);
-if (failures.length) console.error(failures.map((failure) => `  - ${failure}`).join('\n'));
-// ⚠ NO `process.exit(fail > 0 ? 1 : 0)` — the law names this form "especially
-// seductive" and it is right: it LOOKS like careful reporting and it writes the
-// exit code DIRECTLY, hard-overriding the arm. A crash before this line would
-// still have exited 0. `totalsPrinted(fail)` above already set the code from
-// the report, which is the one act that means "I have something true to say".
+main().catch(error => { failures.push(String(error)); }).finally(() => {
+  console.log('Conditioning balance: ' + passed + ' passed; ' + failures.length + ' failures');
+  for (const failure of failures) console.error(failure);
+  totalsPrinted(failures.length);
+});

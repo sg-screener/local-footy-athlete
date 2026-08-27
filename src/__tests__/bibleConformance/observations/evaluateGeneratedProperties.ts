@@ -2,7 +2,7 @@
 
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
-import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
+import { compileConstraintWeekForTests } from '../../support/compileConstraintWeek';
 import { pathExercise, pathPowerRow, pathWorkout, canonicalWorkoutLedger } from './buildCanonicalPathLedger';
 import { buildSlice4ScenarioTrace } from './buildSlice4Trace';
 import { SLICE4_GOLDEN_SCENARIOS } from '../scenarios/slice4Goldens';
@@ -192,19 +192,17 @@ function constraintChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] 
       modifierAffects: ['current_week'], rules: [], safeFocus: [], advice: [],
     });
   }
-  const validated = validateWorkoutAgainstActiveConstraints({
-    workout: source, date: '2026-03-23', todayISO: '2026-03-23', activeConstraints: active,
-    profile: { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] },
-    canonicalContext: { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
-  });
-  const names = (validated.workout?.exercises ?? []).map((row) => row.exercise?.name ?? '');
-  const ledger = validated.workout ? canonicalWorkoutLedger(validated.workout) : null;
-  const noBarbell = entry.data.equipment !== 'bodyweight' || !names.some((name) => /barbell/i.test(name));
-  const hamstringSafe = restriction !== 'hamstring' || (
-    !ledger?.effectivePatterns.includes('hinge') &&
-    !ledger?.conditioning.some((block) => block.modality === 'running')
-  );
-  const unaffectedPush = restriction !== 'hamstring' || severity >= 8 || names.some((name) => /push-up/i.test(name));
+  const compiled = compileConstraintWeekForTests(active, '2026-03-23');
+  const names = compiled.workouts.flatMap(workout => workout.exercises.map(row => row.exercise?.name ?? ''));
+  const ledgers = compiled.workouts.map(canonicalWorkoutLedger);
+  const noBarbell = entry.data.equipment !== 'bodyweight' ||
+    compiled.workouts.every(workout => workout.exercises.every(row =>
+      !(row.exercise?.equipmentRequired ?? []).some(requirement => /barbell|dumbbell|machine/i.test(requirement))));
+  const hamstringSafe = restriction !== 'hamstring' || ledgers.every(ledger =>
+    !ledger.effectivePatterns.includes('hinge') &&
+    !ledger.conditioning.some(block => block.modality === 'running'));
+  const unaffectedPush = restriction !== 'hamstring' || severity >= 8 ||
+    ledgers.some(ledger => ledger.effectivePatterns.includes('push'));
   return [
     result(entry, 'PROPERTY_EQUIPMENT_COMPATIBLE', noBarbell, 'no unavailable barbell work', names, ['ALL-EQUIPMENT-COMPATIBLE-01']),
     result(entry, 'PROPERTY_PROHIBITED_MONOTONIC', hamstringSafe, 'restricted hinge/running removed', names, ['ALL-CONSTRAINT-AFFECTED-ONLY-01']),

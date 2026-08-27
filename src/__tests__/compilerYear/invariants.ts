@@ -72,6 +72,8 @@ export function inspectWeek(args: {
   const ids = workouts.map((w) => w.id);
   const unique = new Set(ids).size === ids.length && workouts.every((w) =>
     new Set(w.exercises.map((r) => r.id)).size === w.exercises.length);
+  const emptyEnergySessions = days.filter(day => day.workout?.workoutType === 'Conditioning' &&
+    !day.workout.conditioningBlock?.options.length && !day.workout.speedBlock);
   const optionalErrors = days.filter((d) => d.workout && (
     (phase === 'Off-season' && phaseWeek <= 2 && d.source !== 'game' && d.indicator !== 'optional' && d.indicator !== 'recovery') ||
     (profile.gender === 'female' && d.workout.composedOptionalKind === 'gunshow')
@@ -87,6 +89,8 @@ export function inspectWeek(args: {
     { id: 'placement', ok: placement, detail: `visible dates=${days.map((d) => d.date).join(',')}` },
     { id: 'fixtures', ok: fixtures, detail: `expected=${expectedGames.join(',')} actual=${actualGames.map((d) => d.date).join(',')}` },
     { id: 'conservation', ok: unique, detail: 'Distinct visible session/row IDs; specialist-to-final row conservation is checked at the compiler boundary and exact persisted reconstruction separately.' },
+    { id: 'energy_session_content', ok: emptyEnergySessions.length === 0,
+      detail: emptyEnergySessions.map(day => `${day.date}:${day.workout?.name}`).join(',') },
     { id: 'optional', ok: optionalErrors.length === 0, detail: optionalErrors.join(',') },
     { id: 'deload', ok: deload, detail: `phaseWeek=${phaseWeek} expectedScheduled=${scheduled} kind=${week.weekKind} door=${week.deloadDoor}` },
     { id: 'programming', ok: evaluation !== null && blocking.length === 0,

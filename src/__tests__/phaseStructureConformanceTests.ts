@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * A DERIVED WEEK CONFORMS TO ITS PHASE'S AUTHORED STRUCTURE — door-pass findings
  * 1a and 1b, ruled by Sam 2026-08-06 from existing law.
@@ -97,7 +98,8 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
-import { commitRebuiltProgram, rebuildLocalWeek } from '../utils/weekRebuild';
+import { commitRebuiltProgram } from '../utils/weekRebuild';
+import { rebuildLocalWeek } from './support/rebuildWeekForTest';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
@@ -206,7 +208,7 @@ function reachWorldByActing(): void {
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
   }
   const program = quiet(() => generateProgramLocally(profile, {
     weekAcceptance: 'forward_decision',

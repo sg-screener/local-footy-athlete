@@ -81,7 +81,7 @@ ok(
 const stackedSeed = buildDevE2ESeed('stacked-team-training-upper-pull');
 const corruptedStacked = buildDevE2EWitnessState(stackedSeed);
 const stackedWorkout = corruptedStacked.program?.microcycles[0]?.workouts.find((workout) =>
-  workout.id === 'dev-e2e-stacked-team-upper-pull');
+  workout.dayOfWeek === 2);
 if (!stackedWorkout) throw new Error('stacked workout missing');
 stackedWorkout.strengthIntent = undefined;
 stackedWorkout.strengthPatternContributions = [];

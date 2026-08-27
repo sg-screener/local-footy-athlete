@@ -885,14 +885,14 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
 
   ok('the approved rep vocabulary is exactly Sam\'s eight values',
     JSON.stringify(APPROVED_REP_TARGETS) === JSON.stringify([3, 4, 5, 6, 8, 10, 15, 20]),
-    APPROVED_REP_TARGETS);
+    JSON.stringify(APPROVED_REP_TARGETS));
 
   ok('arbitrary midpoints snap to approved targets, with equal distances going lower',
     ex(6, 8) === '3 × 6'
     && ex(8, 10) === '3 × 8'
     && ex(10, 12) === '3 × 10'
     && ex(15, 20) === '3 × 15',
-    [ex(6, 8), ex(8, 10), ex(10, 12), ex(15, 20)]);
+    JSON.stringify([ex(6, 8), ex(8, 10), ex(10, 12), ex(15, 20)]));
 
   ok('a fixed prescription is unchanged — nothing to collapse',
     ex(6, 6, 4) === '4 × 6', ex(6, 6, 4));

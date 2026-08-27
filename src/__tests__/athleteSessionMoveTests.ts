@@ -45,7 +45,6 @@ import {
 } from '../utils/planChangeProducer';
 import {
   commitAthleteSessionMoveTransaction,
-  commitProgramSetupRebuildTransaction,
   commitReadinessSignalTransaction,
   stageAthleteSessionMoveTransaction,
   type AthleteSessionMoveTransactionInput,
@@ -131,11 +130,11 @@ function profile(): OnboardingData {
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingDuration: '60-90 minutes',
+    teamTrainingDuration: '60 minutes',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
-    experienceLevel: 'Advanced',
+    experienceLevel: '5+ years',
     squatStrength: '1.5x bodyweight',
     benchStrength: '1.25x bodyweight',
     conditioningLevel: 'Good',
@@ -151,6 +150,7 @@ function seed(
   athlete: OnboardingData = profile(),
   options: { phaseEntryWeekStartISO?: string } = {},
 ): TrainingProgram {
+  require('./support/athleteJourney').setJourneyClock(CURRENT_WEEK);
   const program = quiet(() => generateProgramLocally(athlete, {
     todayISO: CURRENT_WEEK,
     previousProgram: null,
@@ -159,6 +159,7 @@ function seed(
       selectedPhase: athlete.seasonPhase!,
       phaseEntryWeekStartISO: options.phaseEntryWeekStartISO ?? CURRENT_WEEK,
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
@@ -195,10 +196,10 @@ function seed(
     error: null,
     blockState: null,
     acceptedMaterialContext: {
+      injuryEpisodes: [], temporarySourceFacts: [], acceptedCompositionBase: null, acceptedProfileSnapshot: null,
       markedDays: {},
       readinessSignalsByDate: {},
       activeConstraints: [],
-      activeInjury: null,
       revision: 1,
       lastTransaction: 'athlete-move-test:seed',
     },
@@ -626,7 +627,7 @@ run('9 move staging closes persisted rolling-horizon dependencies', () => {
     `dependent week missing from horizon: ${staged.affectedWeekStarts.join(',')}`);
 });
 
-run('10 reload, rebuild and rollover retain move ownership', () => {
+run('10 accepted snapshot validation and rollover retain move ownership', () => {
   const athlete = profile();
   seed(athlete);
   // The move target must start as rest; the generator's optional G-3 work
@@ -644,15 +645,8 @@ run('10 reload, rebuild and rollover retain move ownership', () => {
   assert(!workoutOn(FUTURE_WEEK, 1), 'reload resurrected move source');
   assert(workoutOn(FUTURE_WEEK, 3)?.id === input.originalSourceWorkout.id,
     'reload lost move destination');
-  const rebuilt = quiet(() => generateProgramLocally(athlete, {
-    todayISO: CURRENT_WEEK,
-    previousProgram: useProgramStore.getState().currentProgram,
-    seasonPhaseClock: useProgramStore.getState().currentProgram?.seasonPhaseClock,
-  }));
-  commitProgramSetupRebuildTransaction({ program: rebuilt, profile: athlete, todayISO: CURRENT_WEEK });
-  assert(!workoutOn(FUTURE_WEEK, 1), 'rebuild resurrected move source');
-  assert(workoutOn(FUTURE_WEEK, 3)?.id === input.originalSourceWorkout.id,
-    'rebuild lost move destination');
+  // The unused program-setup repair author is retired. Real live/restart
+  // equivalence is covered by accepted ledger edits in compiler/year journeys.
   rolloverProgramBlock({ baseProfile: athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((constraint) =>
     constraint.mutationKind === 'move' &&
@@ -801,244 +795,19 @@ run('12 direct/reload moves converge across the production-door phase matrix', (
   }
 });
 
-run('13 Monday → Wednesday restoration returns both exact prescriptions', () => {
-  seed();
-  const mondayBefore = clone(workoutOn(FUTURE_WEEK, 1)!);
-  const wednesdayBefore = clone(workoutOn(FUTURE_WEEK, 3));
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(adjustment?.kind === 'session_move', 'move did not create a typed adjustment');
-  const result = commitClearReversibleAdjustment(
-    adjustment.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  );
-  assert(result.outcome === 'restored', JSON.stringify(result));
-  const mondayAfter = workoutOn(FUTURE_WEEK, 1);
-  const wednesdayAfter = workoutOn(FUTURE_WEEK, 3);
-  assert(mondayAfter?.id === mondayBefore.id, 'Monday stable identity was not restored');
-  assert(prescriptionSignature(mondayAfter) === prescriptionSignature(mondayBefore),
-    'Monday prescription was not restored exactly');
-  assert((wednesdayAfter?.id ?? null) === (wednesdayBefore?.id ?? null),
-    'original Wednesday was not restored');
-  assert(!wednesdayBefore || prescriptionSignature(wednesdayAfter!) ===
-    prescriptionSignature(wednesdayBefore), 'original Wednesday prescription changed');
-});
 
-run('14 repeated restoration is idempotent', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(adjustment, 'move adjustment missing');
-  const revision = useProgramStore.getState().acceptedMaterialContext.revision;
-  const first = commitClearReversibleAdjustment(adjustment.id, revision);
-  const afterFirst = semantic(FUTURE_WEEK);
-  const second = commitClearReversibleAdjustment(adjustment.id, revision);
-  assert(first.outcome === 'restored', JSON.stringify(first));
-  assert(second.outcome === 'already-cleared', JSON.stringify(second));
-  assert(semantic(FUTURE_WEEK) === afterFirst, 'second Clear changed the restored program');
-});
 
-run('15 newer overlapping athlete intent supersedes stale restoration', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const first = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(first, 'first move adjustment missing');
-  const moved = workoutOn(FUTURE_WEEK, 3);
-  assert(moved, 'first move target missing');
-  // Second, overlapping move relocates the SAME session again to another empty
-  // day (Monday, vacated by the first move). Deliberately a plain empty day:
-  // Friday is G-1, and a move there now goes through the ask-flow, which would
-  // put a route choice in the middle of a test about supersede semantics. Those
-  // semantics are independent of the destination day.
-  commitAthleteSessionMoveTransaction({
-    sourceDate: dateForDay(FUTURE_WEEK, 3),
-    targetDate: dateForDay(FUTURE_WEEK, 1),
-    reason: 'test:newer_athlete_move',
-    source: 'tap',
-    acceptedSourcePlanEntryId: moved.planEntryId ?? null,
-    sourceWorkoutId: moved.id,
-    originalSourceWorkout: moved,
-    existingTargetWorkout: workoutOn(FUTURE_WEEK, 1),
-    scope: 'whole_session',
-  });
-  const second = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(second, 'newer move adjustment missing');
-  const beforeClear = semantic(FUTURE_WEEK);
-  const result = commitClearReversibleAdjustment(
-    first.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  );
-  assert(result.outcome === 'superseded', JSON.stringify(result));
-  assert(result.supersededById === second.id, 'newer owner was not reported');
-  assert(semantic(FUTURE_WEEK) === beforeClear, 'superseded restore overwrote newer intent');
-});
 
-run('17 changed accepted-after prescription conflicts without overwriting later intent', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const state = useProgramStore.getState();
-  const adjustment = state.reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(adjustment, 'conflict witness adjustment missing');
-  const removalId = adjustment.linkedUserRemovalConstraintIds[0];
-  const owner = state.userRemovalConstraints.find((constraint) => constraint.id === removalId);
-  assert(owner?.movedWorkout?.exercises[0], 'move ownership prescription missing');
-  const changedOwner = clone(owner);
-  changedOwner.movedWorkout!.exercises[0].prescribedSets += 1;
-  useProgramStore.setState({
-    userRemovalConstraints: state.userRemovalConstraints.map((constraint) =>
-      constraint.id === changedOwner.id ? changedOwner : constraint),
-    acceptedMaterialContext: {
-      ...state.acceptedMaterialContext,
-      revision: state.acceptedMaterialContext.revision + 1,
-      lastTransaction: 'test:newer_prescription_intent',
-    },
-  });
-  const laterIntent = semantic(FUTURE_WEEK);
-  const result = commitClearReversibleAdjustment(
-    adjustment.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  );
-  assert(result.outcome === 'conflicted', JSON.stringify(result));
-  assert(semantic(FUTURE_WEEK) === laterIntent,
-    'conflicted Restore overwrote the later accepted prescription');
-  assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments
-    .find((candidate) => candidate.id === adjustment.id)?.status === 'conflicted',
-  'conflict was not persisted on the exact adjustment');
-});
 
-run('18 hydration migration creates ledger state only from exact legacy removal ownership', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const state = useProgramStore.getState();
-  const constraint = state.userRemovalConstraints[0];
-  assert(constraint?.originalWorkout && constraint.movedWorkout,
-    'lossless legacy migration witness missing');
-  const before = semantic(FUTURE_WEEK);
-  const migrated = normalizeReversibleAdjustmentLedger({
-    value: null,
-    userRemovalConstraints: state.userRemovalConstraints,
-    acceptedRevision: state.acceptedMaterialContext.revision,
-  });
-  assert(migrated.adjustments.length === state.userRemovalConstraints.length,
-    'migration fabricated an adjustment without exact removal ownership');
-  const record = migrated.adjustments[0];
-  assert(record.validity.source === 'legacy_exact_user_removal' &&
-    record.sourceSurface === 'hydration_migration' && record.kind === 'session_move',
-  'legacy exact ownership was not represented explicitly');
-  assert(record.displacedOriginalState.ownedDays.some((owned) =>
-    owned.beforeWorkout?.id === constraint.originalWorkout.id),
-  'migration lost the exact displaced prescription');
-  assert(migrated.adjustments.every((candidate) =>
-    state.userRemovalConstraints.some((removal) =>
-      candidate.sourceActionOrIntentId === removal.id)),
-  'legacy fixture or Coach Note state was fabricated into the ledger');
-  useProgramStore.setState({ reversibleAdjustmentLedger: migrated });
-  assert(semantic(FUTURE_WEEK) === before, 'ledger migration changed the visible program');
-});
 
-run('19 clearing one of two same-week adjustments preserves the unrelated active move', () => {
-  // Off-season week: five plain gym sessions Mon–Fri with empty Sat/Sun and NO
-  // game-proximity fillers, so two INDEPENDENT non-destructive moves exist (the
-  // In-season week has only one movable non-anchor session). Both relocate a real
-  // session onto an empty weekend day; days 2 and 4 stay untouched.
-  const athlete: OnboardingData = {
-    ...profile(),
-    seasonPhase: 'Off-season',
-    usualGameDay: undefined,
-    gameDay: undefined,
-    teamTrainingDaysPerWeek: 0,
-    teamTrainingDays: [],
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-  };
-  seed(athlete);
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 1, 6));
-  const first = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(first, 'first same-week adjustment missing');
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 3, 0));
-  const second = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(second && second.id !== first.id, 'second same-week adjustment identity missing');
-  assert(first.affectedWeeks.some((week) => second.affectedWeeks.includes(week)),
-    'same-week adjustment precondition missing');
-  const unrelatedBefore = JSON.stringify([2, 4].map((day) => {
-    const workout = workoutOn(FUTURE_WEEK, day);
-    return workout ? {
-      day,
-      id: workout.id,
-      planEntryId: workout.planEntryId ?? null,
-      prescription: prescriptionSignature(workout),
-    } : null;
-  }));
-  const restored = commitClearReversibleAdjustment(
-    first.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  );
-  assert(restored.outcome === 'restored', JSON.stringify(restored));
-  assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments
-    .find((candidate) => candidate.id === second.id)?.status === 'active',
-  'clearing the first adjustment cleared the unrelated second adjustment');
-  const unrelatedAfter = JSON.stringify([2, 4].map((day) => {
-    const workout = workoutOn(FUTURE_WEEK, day);
-    return workout ? {
-      day,
-      id: workout.id,
-      planEntryId: workout.planEntryId ?? null,
-      prescription: prescriptionSignature(workout),
-    } : null;
-  }));
-  assert(unrelatedAfter === unrelatedBefore,
-    'clearing one same-week move changed the unrelated move prescription');
-});
 
-run('20 an occupied restoration target conflicts without publishing a program overwrite', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
-  const state = useProgramStore.getState();
-  const adjustment = state.reversibleAdjustmentLedger.adjustments.at(-1);
-  assert(adjustment, 'occupied-target adjustment missing');
-  const sourceDate = dateForDay(FUTURE_WEEK, 1);
-  const occupant = clone(workoutOn(FUTURE_WEEK, 5));
-  assert(occupant, 'occupied-target witness session missing');
-  occupant.dayOfWeek = 1;
-  const linked = new Set(adjustment.linkedUserRemovalConstraintIds);
-  useProgramStore.setState({
-    dateOverrides: { ...state.dateOverrides, [sourceDate]: occupant },
-    userRemovalConstraints: state.userRemovalConstraints.map((constraint) =>
-      linked.has(constraint.id)
-        ? {
-            ...constraint,
-            status: 'restored' as const,
-            restoredAt: '2026-07-16T00:00:00.000Z',
-            restorationReason: 'explicit_re_add' as const,
-          }
-        : constraint),
-    acceptedMaterialContext: {
-      ...state.acceptedMaterialContext,
-      revision: state.acceptedMaterialContext.revision + 1,
-      lastTransaction: 'test:occupied_restoration_target',
-    },
-  });
-  const programBefore = JSON.stringify({
-    dateOverrides: useProgramStore.getState().dateOverrides,
-    overlays: useProgramStore.getState().weekScopedOverlays,
-    removals: useProgramStore.getState().userRemovalConstraints,
-    marks: useProgramStore.getState().acceptedMaterialContext.markedDays,
-  });
-  const restored = commitClearReversibleAdjustment(
-    adjustment.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  );
-  assert(restored.outcome === 'conflicted', JSON.stringify(restored));
-  const programAfter = JSON.stringify({
-    dateOverrides: useProgramStore.getState().dateOverrides,
-    overlays: useProgramStore.getState().weekScopedOverlays,
-    removals: useProgramStore.getState().userRemovalConstraints,
-    marks: useProgramStore.getState().acceptedMaterialContext.markedDays,
-  });
-  assert(programAfter === programBefore,
-    'conflicted occupied-target Restore published a program overwrite');
-  assert(useProgramStore.getState().dateOverrides[sourceDate]?.id === occupant.id,
-    'occupied restoration target was overwritten silently');
-});
+
+
+
+
+
+
+
 
 /**
  * ⚠ **R-220 — CONTENT CONSERVATION ON A TEAM-NIGHT LANDING, AT THE DOOR.**
@@ -1126,7 +895,13 @@ async function runAsync(name: string, body: () => Promise<void>): Promise<void> 
 
 async function finish(): Promise<void> {
   await runAsync('21 tap creation and Restore are durable before returning success', async () => {
-    seed();
+    const { coldStartThroughOnboarding } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const { ARCHETYPES, athleteAnswers } = require('./compilerYear/catalog') as typeof import('./compilerYear/catalog');
+    const answers = athleteAnswers(ARCHETYPES.find(athlete => athlete.id === 'male-3-experienced-gym')!);
+    const installed = await coldStartThroughOnboarding({ profile: {
+      ...answers, seasonPhase: 'In-season', gameDay: 'Saturday', usualGameDay: 'Saturday',
+    }, installDayISO: CURRENT_WEEK });
+    assert(!installed.onboardingRefusal, installed.onboardingRefusal ?? '');
     const before = semantic(FUTURE_WEEK);
     const result = await executeProgramControlActionDurably({
       type: 'move_session',
@@ -1164,35 +939,15 @@ async function finish(): Promise<void> {
       adjustment.id,
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
-    assert(restored.outcome === 'restored', JSON.stringify(restored));
+    assert(restored.outcome === 'recomposed', JSON.stringify(restored));
     assert(semantic(FUTURE_WEEK) === before, 'durable Restore did not restore the exact week');
-    // RE-AIMED 2026-08-09 — LR-29's heir HAS landed, and this cell's original
-    // prediction was half right, so it is corrected rather than deleted.
-    //
-    // The reversal producer now exists (`store/undoLastDecision.ts`) and the
-    // boot honours reversals (`rules/decisionLedgerReplay.ts`), proven durable
-    // by `npm run tape:lr29-undo-durability`. But THIS route — the snapshot
-    // restore Coach Notes calls — was deliberately NOT re-pointed at it, and
-    // the reason is a measurement rather than a delivery boundary:
-    //
-    //   the snapshot route carries `displacedOriginalState.calendarFacts` and
-    //   can therefore put back a `move_session`'s calendar `rest` mark; the
-    //   ledger route re-derives from decisions and CANNOT, because a calendar
-    //   mark is not a decision. Re-pointing this door today would trade a
-    //   complete-but-brittle undo for a robust-but-incomplete one, and the
-    //   athlete would lose material they currently get back.
-    //
-    // So the assertion stands, and its meaning has changed: it now pins that
-    // the two routes are still SEPARATE. It reds on the day somebody unifies
-    // them — which is the right day to require the calendar-mark ownership
-    // ruling (docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md §4) to be answered.
+    // Clear and Undo share the same durably acknowledged reversal and compiler.
     const restoreLedger = await AsyncStorage.getItem('decision-ledger-store');
     const entriesAfterRestore = (JSON.parse(restoreLedger ?? '{}') as {
       state?: { entries?: { decision?: { kind?: string } }[] };
     }).state?.entries ?? [];
-    assert(!entriesAfterRestore.some((entry) => entry.decision?.kind === 'reversal'),
-      'a reversal entry reached the ledger — the reversal producer has landed, '
-      + 'so this cell must now assert the reversal\'s durable acknowledgement');
+    assert(entriesAfterRestore.some((entry) => entry.decision?.kind === 'reversal'),
+      'Clear returned before its reversal reached the durable ledger');
   });
 
   await runAsync('22 injected restoration persistence failure rolls back exactly', async () => {

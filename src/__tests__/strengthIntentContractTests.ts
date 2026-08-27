@@ -21,9 +21,8 @@ import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
 import { buildWeekLog } from '../utils/weekLogBuilder';
 import { findMatchingFeedback } from '../utils/feedbackAdapter';
-import { recomputeWeekOverrides } from '../utils/blockAdjuster';
 import { inseason_3exposurePriority } from './scenarioQA/invariants';
-import { buildIntent } from '../utils/exerciseScorer';
+import { buildIntent } from './support/legacyExerciseScorer';
 
 let passed = 0;
 let failed = 0;
@@ -111,8 +110,7 @@ function healthyInSeason(weekNumber: number, lowReadiness = false): CoachingInpu
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: lowReadiness ? 'Moderate' : 'Hard',
-    sprintExposure: lowReadiness ? 'No sprint training' : 'Regular sprint training',
+    sprintExposure: lowReadiness ? 'No sprint training' : '2+ times per week',
     conditioningLevel: lowReadiness ? 'Poor' : 'Good',
     recentTrainingLoad: lowReadiness ? 'Hardly at all' : 'Pretty consistent',
     experienceLevel: '2-5 years',
@@ -224,7 +222,7 @@ const missingSquatPlan = {
           strengthIntent: createStrengthIntent({
             archetype: 'lower', primaryPattern: 'hinge', plannedPatterns: ['hinge'],
           }),
-          strengthPatternContributions: ['hinge'] as const,
+          strengthPatternContributions: ['hinge' as const],
         }
       : session),
 };
@@ -270,7 +268,6 @@ const safetyRemoved = finaliseWorkoutAfterMutation({
 }, {
   offseasonSubphase: 'not_off_season',
   planIntentValid: true,
-  restoreMissingPlanPatterns: false,
 });
 eq('safety removal preserves planned intent',
   safetyRemoved.workout.strengthIntent?.plannedPatterns, ['squat', 'hinge']);
@@ -333,8 +330,8 @@ const upperPush = workout('same scalar type', ['push'], ['Bench Press']);
 const lowerSquat = workout('same scalar type', ['squat'], ['Back Squat']);
 const lowerHinge = workout('same scalar type', ['hinge'], ['Romanian Deadlift']);
 const feedback = {
-  '2026-04-09': { dateStr: '2026-04-09', completion: 'completed' as const, difficulty: 9 },
-  '2026-04-08': { dateStr: '2026-04-08', completion: 'completed' as const, difficulty: 5 },
+  '2026-04-09': { dateStr: '2026-04-09', completion: 'full' as const, difficulty: 9 },
+  '2026-04-08': { dateStr: '2026-04-08', completion: 'full' as const, difficulty: 5 },
 };
 eq('feedback does not match broad Strength scalar across different patterns',
   findMatchingFeedback(lowerSquat, feedback, {
@@ -389,15 +386,7 @@ const program: TrainingProgram = {
   createdAt: '',
   updatedAt: '',
 };
-const g2Overrides = recomputeWeekOverrides(
-  program,
-  microcycle,
-  '2026-04-11',
-  ['2026-04-11'],
-);
-eq('G-2 moderation detects lower contribution regardless of workout name',
-  g2Overrides.dateOverrides['2026-04-09']?.intensity,
-  'Moderate');
+// Retired blockAdjuster G-2 rewrite. Canonical fixture/lighter-day gates cover current dose authoring.
 
 console.log(`\nstrengthIntentContractTests: ${passed} passed, ${failed} failed`);
 if (failed > 0) {

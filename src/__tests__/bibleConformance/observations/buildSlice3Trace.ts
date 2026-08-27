@@ -2,7 +2,7 @@ import { performance } from 'node:perf_hooks';
 import type { OnboardingData, Workout, WorkoutExercise } from '../../../types/domain';
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
-import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
+import { compileConstraintWeekForTests } from '../../support/compileConstraintWeek';
 import { alignPowerToFinalWorkoutContent } from '../../../rules/powerRowAlignment';
 import { decidePowerPrimer, type PowerPrimerContext } from '../../../rules/powerPrimerPolicy';
 import { classifyVisibleSession } from '../../../rules/sessionClassificationAdapter';
@@ -333,7 +333,7 @@ function exposureLedger(workouts: Array<{ date: string; workout: Workout | null 
       if (classification.strengthRegion === 'lower' || classification.strengthRegion === 'full_body') lowerStrengthFatigue++;
     }
     hardConditioning += classification.units.filter((unit) =>
-      unit.conditioningRole === 'hard' && unit.contributions.conditioning > 0).length;
+      unit.stress === 'high' && unit.contributions.conditioning > 0).length;
     if (powerRows(workout).length > 0) power++;
   }
   return {
@@ -448,6 +448,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
     });
     const profile = { ...baseProfile('In-season'), usualGameDay: 'Saturday', gameDay: 'Saturday' } as OnboardingData;
     const state: ScheduleState = {
+      capacity: 'high',
       currentProgram: {
         id: 'g2-program', userId: 'bible', name: 'G2', description: '', programPhase: 'In-Season',
         startDate: '2026-03-23', endDate: '2026-03-29', microcycles: [], primaryFocus: '', isActive: true,
@@ -498,41 +499,23 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
     };
   }
 
-  if (scenario.id === 'hamstring-restriction-mixed') {
-    const raw = hamstringMixedWorkout();
-    const generated = canonical(raw, { phase: 'In-season' });
-    const constraint = injuryConstraint('hamstring', 6);
-    const result = validateWorkoutAgainstActiveConstraints({
-      workout: generated.workout, date, todayISO: date, activeConstraints: [constraint], profile: baseProfile('In-season'),
-    });
-    const effective = result.workout!;
-    const evidence: HarnessTransformEvidence[] = result.changed ? [{
-      domain: 'constraint', action: 'remove', code: 'active_injury_filter',
-      constraintIds: result.activeConstraintIds, items: result.removedExerciseNames,
-      patterns: differencePatterns(generated.workout, effective), components: result.removedComponents,
-    }] : [];
-    return { raw, generated: generated.workout, effective, week: [{ date, workout: effective }], profile: baseProfile('In-season'), date, evidence: [...generated.evidence, ...evidence], generatedEvidence: generated.evidence };
-  }
-
-  if (scenario.id === 'equipment-no-barbell-lower') {
-    const id = 'equipment-lower';
-    const raw = baseWorkout({
-      id, name: 'Lower Squat', patterns: ['squat'], primary: 'squat', exercises: [
-        row(id, 0, 'Back Squat', { equipment: ['Barbell', 'Rack'], reps: 6 }),
-        row(id, 1, 'Bulgarian Split Squat', { equipment: ['Dumbbells'], reps: 8 }),
-      ],
-    });
-    const generated = canonical(raw, { phase: 'In-season' });
-    const constraint = equipmentConstraint();
-    const result = validateWorkoutAgainstActiveConstraints({
-      workout: generated.workout, date, todayISO: date, activeConstraints: [constraint], profile: baseProfile('In-season'),
-    });
-    const effective = result.workout!;
-    const evidence: HarnessTransformEvidence[] = result.changed ? [{
-      domain: 'constraint', action: 'remove', code: 'equipment_unavailable', constraintIds: result.activeConstraintIds,
-      items: result.removedExerciseNames, patterns: differencePatterns(generated.workout, effective),
-    }] : [];
-    return { raw, generated: generated.workout, effective, week: [{ date, workout: effective }], profile: baseProfile('In-season'), date, evidence: [...generated.evidence, ...evidence], generatedEvidence: generated.evidence };
+  if (scenario.id === 'hamstring-restriction-mixed' || scenario.id === 'equipment-no-barbell-lower') {
+    const constraint = scenario.id === 'hamstring-restriction-mixed'
+      ? injuryConstraint('hamstring', 6) : equipmentConstraint();
+    const healthy = compileConstraintWeekForTests([], date);
+    const constrained = compileConstraintWeekForTests([constraint], date);
+    const raw = healthy.workouts.find(workout => workout.dayOfWeek === 1);
+    const effective = constrained.workouts.find(workout => workout.dayOfWeek === 1);
+    if (!raw || !effective) throw new Error('Current compiler did not reach the requested Monday witness');
+    const removed = raw.exercises.filter(row => !effective.exercises.some(after => after.exerciseId === row.exerciseId))
+      .map(row => row.exercise?.name ?? row.exerciseId);
+    const evidence: HarnessTransformEvidence[] = [{
+      domain: 'constraint', action: 'remove', code: 'canonical_input_compilation',
+      constraintIds: constrained.activeConstraintIds, items: removed,
+      patterns: differencePatterns(raw, effective),
+    }];
+    return { raw, generated: effective, effective, week: [{ date, workout: effective }],
+      profile: baseProfile('In-season'), date, evidence, generatedEvidence: evidence };
   }
 
   if (scenario.id === 'low-readiness-downgrade') {

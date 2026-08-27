@@ -12,9 +12,7 @@ import {
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import { coachingPlanForTests } from './support/coachingPlanForTests';
-import { DEFAULT_PROGRAM } from '../data/defaultProgram';
 import { inferMovementPatterns, type MovementPattern } from '../utils/sessionNaming';
-import type { Workout } from '../types/domain';
 
 let pass = 0;
 let fail = 0;
@@ -111,12 +109,6 @@ function strengthKind(session: SessionAllocation): StrengthKind {
   );
 }
 
-function workoutKind(workout: Workout): StrengthKind {
-  const text = `${workout.name} ${workout.description || ''} ${
-    workout.exercises.map(ex => ex.exercise?.name || '').join(' ')
-  }`;
-  return kindFromPatterns(inferMovementPatterns(text));
-}
 
 function strengthRegion(kind: StrengthKind): StrengthRegion {
   switch (kind) {
@@ -257,12 +249,12 @@ function assertConditioningPairing(
 function baseInputs(phase: CoachingInputs['seasonPhase']): CoachingInputs {
   return {
     seasonPhase: phase,
+    experienceLevel: '2-5 years',
     availableDays: 5,
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: undefined,
-    sprintExposure: 'Moderate',
+    sprintExposure: 'Occasionally',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Pretty consistent',
     injuries: [],
@@ -420,26 +412,8 @@ section('[6] Score-level posterior-chain priorities');
     scoreStrengthSequence(upperUpper) > scoreStrengthSequence(upperLower));
 }
 
-section('[7] DEFAULT_PROGRAM fallback does not encode hinge/pull adjacency');
-{
-  const workouts = DEFAULT_PROGRAM.microcycles[0].workouts
-    .filter(w => w.workoutType === 'Strength')
-    .sort((a, b) => a.dayOfWeek - b.dayOfWeek);
-  const kinds = workouts.map(workoutKind);
-  const labelled = workouts.map((w, idx) => `${DAY_NAME[w.dayOfWeek]}:${w.name}:${kinds[idx]}`).join(' | ');
-  const badPairs = workouts
-    .map((w, idx) => ({ workout: w, kind: kinds[idx] }))
-    .filter(({ workout }, idx, arr) => {
-      if (idx === 0) return false;
-      const prev = arr[idx - 1];
-      if (workout.dayOfWeek - prev.workout.dayOfWeek !== 1) return false;
-      return (isPullLike(prev.kind) && isHingeLike(kinds[idx]))
-        || (isHingeLike(prev.kind) && isPullLike(kinds[idx]));
-    });
-
-  ok('default fallback has no consecutive-day hinge/pull adjacency', badPairs.length === 0, labelled);
-  ok('default fallback does not place upper pull after lower hinge', !/Friday:Lower Hinge:hinge \| Saturday:Upper Pull:pull/.test(labelled), labelled);
-}
+// The retired hard-coded DEFAULT_PROGRAM is not a programming oracle.
+// Current generated sequencing is exercised above; retirement is held by the writer gate.
 
 console.log(`\n-- Summary --`);
 console.log(`  Pass: ${pass}`);

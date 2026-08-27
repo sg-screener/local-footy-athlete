@@ -93,12 +93,12 @@ function display(input: Parameters<typeof resolveSessionDisplayName>[0]): string
 function offSeasonFourDayInputs(): CoachingInputs {
   return {
     seasonPhase: 'Off-season',
+    experienceLevel: '2-5 years',
     availableDays: 4,
     selectedDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: undefined,
-    sprintExposure: 'Moderate',
+    sprintExposure: 'Occasionally',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Pretty consistent',
     injuries: [],

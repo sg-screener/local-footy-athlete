@@ -20,6 +20,9 @@ import {
 import { applyModalityPreferenceToWorkout } from '../utils/coachModalitySwap';
 import { shouldCollapseWorkoutToRest } from '../utils/workoutContent';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
+import { awaySpansFromFacts, dateIsInsideAwaySpan } from './awaySpans';
+import { getTeamTrainingWorkoutState } from '../utils/teamTraining';
+import { resolveSessionDisplayName } from '../utils/sessionNaming';
 
 export interface CanonicalDayConstraintInput {
   day: ResolvedDay;
@@ -328,7 +331,7 @@ export function compileActiveExposureConstraints(activeConstraints: any[]): any[
       const trainingPaused = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
       const region = trainingPaused
         ? 'global'
-        : c.region ?? (c.bucket ? bucketToRegion(c.bucket) : null);
+        : c.bucket ? bucketToRegion(c.bucket) : c.region ?? null;
       if (!region) continue;
       out.push(buildInjuryConstraint({
         ...identity,
@@ -372,15 +375,16 @@ export function compileCanonicalResolvedWeek(input: {
   days: readonly ResolvedDay[]; weekStartISO: string; todayISO: string; state: ScheduleState;
 }): ResolvedDay[] {
   const { state } = input;
+  const days = compileCanonicalTravelDates(input);
   // Bare accepted-base composition is not a request to bake temporary display
   // constraints into storage. Only explicit constraint inputs enter this stage.
-  if (!state.activeConstraints) return [...input.days];
+  if (!state.activeConstraints) return days;
   const accepted = hasStoredWeekDeclaration({
     overlay: state.weekScopedOverlays?.[input.weekStartISO],
     coveringMicrocycle: selectMicrocycleForDate(state.currentProgram, state.currentMicrocycle, input.weekStartISO),
     weekStart: input.weekStartISO, reader: 'canonicalWeeklyConstraintCompiler.acceptedContract',
   });
-  return input.days.map((day) => {
+  return days.map((day) => {
     const constraints = filterConstraintsForDate(state.activeConstraints ?? [], day.date);
     if (accepted && !constraints.some(isTemporaryFactConstraint)) return day;
     return compileCanonicalDayConstraints({
@@ -388,5 +392,34 @@ export function compileCanonicalResolvedWeek(input: {
       modalityPreferences: state.modalityPreferences ?? {},
       extraConstraints: compileActiveExposureConstraints(accepted ? constraints.filter(isTemporaryFactConstraint) : constraints),
     }).day;
+  });
+}
+
+/** Travel changes the compiled date, never a screen's copy of that date. */
+function compileCanonicalTravelDates(input: {
+  days: readonly ResolvedDay[]; todayISO: string; state: ScheduleState;
+}): ResolvedDay[] {
+  const spans = awaySpansFromFacts(input.state.temporarySourceFacts);
+  return input.days.map(day => {
+    if (!dateIsInsideAwaySpan(day.date, spans)) return day;
+    const rest = (): ResolvedDay => ({ ...day, isToday: day.date === input.todayISO,
+      workout: null, source: 'rest', indicator: 'rest' });
+    if (day.source === 'game' || day.indicator === 'game' || day.workout?.workoutType === 'Game') return rest();
+    if (!day.workout) return day;
+    const team = getTeamTrainingWorkoutState(day.workout);
+    if (!team.hasTeamTraining) return day;
+    if (team.isTeamTrainingOnly) return rest();
+    const parts = day.workout.name.split(/\s+\+\s+/).map(part => part.trim());
+    const kept = parts.filter(part => part.toLowerCase() !== 'team training');
+    return { ...day, workout: { ...day.workout,
+      name: kept.length ? kept.join(' + ') : resolveSessionDisplayName({
+        strengthIntent: day.workout.strengthIntent, exercises: team.renderableExercises,
+        isTeamDay: false, tier: day.workout.sessionTier ?? 'core',
+      }),
+      isTeamDay: false,
+      ...(day.workout.authoredDay ? { authoredDay: { ...day.workout.authoredDay, anchor: null } } : {}),
+      workoutType: day.workout.workoutType === 'Team Training' ? 'Strength' : day.workout.workoutType,
+      exercises: team.renderableExercises,
+    } };
   });
 }

@@ -533,5 +533,5 @@ export function evaluateSlice3Trace(trace: Slice3ScenarioTrace): InvariantCheckR
 
 export function firstSlice3Failure(results: readonly InvariantCheckResult[]): InvariantFailure | null {
   return results.flatMap((entry) => entry.failures)
-    .sort((left, right) => STAGE_ORDER.indexOf(left.stage) - STAGE_ORDER.indexOf(right.stage))[0] ?? null;
+    .sort((left, right) => STAGE_ORDER.findIndex(stage => stage === left.stage) - STAGE_ORDER.findIndex(stage => stage === right.stage))[0] ?? null;
 }

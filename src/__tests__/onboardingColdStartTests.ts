@@ -25,7 +25,6 @@ import {
   generateProgramFromProfile,
   generateProgramLocally,
 } from '../services/api/generateProgram';
-import { DEFAULT_PROGRAM } from '../data/defaultProgram';
 import {
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
@@ -158,7 +157,7 @@ function acceptedShape(state: ReturnType<typeof useProgramStore.getState>): stri
     markedDays: typeof state.acceptedMaterialContext.markedDays,
     readinessSignals: typeof state.acceptedMaterialContext.readinessSignalsByDate,
     activeConstraints: Array.isArray(state.acceptedMaterialContext.activeConstraints),
-    activeInjury: state.acceptedMaterialContext.activeInjury === null ? 'null' : 'object',
+    injuryEpisodes: state.acceptedMaterialContext.injuryEpisodes.length,
   });
 }
 
@@ -444,7 +443,7 @@ async function main(): Promise<void> {
     const state = install(source);
     assert(state.acceptedMaterialContext.activeConstraints.length === 0,
       'cold start manufactured constraints');
-    assert(state.acceptedMaterialContext.activeInjury === null,
+    assert(state.acceptedMaterialContext.injuryEpisodes.length === 0,
       'cold start manufactured injury state');
     const offSeason = withoutGenerationLogs(() => generateProgramLocally({
       ...DEV_TEST_ONBOARDING_DATA,
@@ -588,7 +587,7 @@ async function main(): Promise<void> {
 
   await run('14 dev skip never calls the injected generator or uses DEFAULT_PROGRAM', () => {
     assert(devGeneratorCalls === 0, 'dev skip waited for the injected network generator');
-    assert(devProgramId !== DEFAULT_PROGRAM.id, 'dev skip installed DEFAULT_PROGRAM');
+    assert(devProgramId.length > 0 && devProgramId !== 'prog-1', 'dev skip installed the retired fallback identity');
   });
 
   await run('15 Home cards and Coach today-session reads remain projection-owned', () => {

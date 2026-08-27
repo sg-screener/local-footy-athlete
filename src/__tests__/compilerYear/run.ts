@@ -23,6 +23,9 @@ import { blockSelectionHistory } from '../../store/blockSelectionHistoryStore';
 import { compilerChecks, digest, inspectWeek, signatureDifferences, visibleSignature } from './invariants';
 import type { AthleteResult, Check } from './results';
 import { observeFinalRows, finalRowChecks, finalProgramSignature } from './finalRows';
+import { sourceFactLifecycle, compilerOwnsVisibleInjuryRows } from './sourceFacts';
+import { clearFactLifecycle } from './clearFacts';
+import { buildGuidedInjuryConstraint } from '../../utils/guidedInjuryControl';
 
 const compilerModule = require('../../rules/canonicalWeeklyCompiler') as typeof import('../../rules/canonicalWeeklyCompiler');
 const progressionModule = require('../../rules/canonicalWeeklyProgressionCompiler') as typeof import('../../rules/canonicalWeeklyProgressionCompiler');
@@ -82,6 +85,7 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
     return output;
   };
   let stopped: string | null = null;
+  let carriedInjury: { id: string; reportIndex: number; blockStart: string } | null = null;
   let edited: { weekStart: string; before: string; after: string; target: string } | null = null;
   const action = (kind: string, date: string, ok: boolean, detail?: string) => {
     result.actions.push({ kind, date, ok, detail });
@@ -122,6 +126,49 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         const rollover = quiet(() => rolloverIfDue(week.weekStart));
         if (rollover.refusal) throw new Error(`Rollover: ${rollover.refusal}`);
         quiet(() => followTheWeek(week.weekStart));
+        if (week.phaseWeek === 10) {
+          const constraint = buildGuidedInjuryConstraint({ region: 'lower_body', area: 'knee', severity: 7,
+            severityBand: 'moderate', adjustmentLevel: 'moderate', triggers: ['running'], seriousSymptoms: false },
+            { todayISO: week.weekStart });
+          const report = await quietAsync(() => executeProgramControlActionDurably({ type: 'set_injury_modifier',
+            source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+            scope: 'current_and_future', payload: { constraint }, requiresRebuild: false,
+            createsActiveModifier: true, oneOffOnly: false }, { todayISO: week.weekStart }));
+          const id = report.createdModifierIds?.[0];
+          checks.push({ id: 'carried_injury_report', ok: report.ok && !!id, detail: report.message });
+          if (!report.ok || !id) throw new Error('Persistent injury report refused');
+          carriedInjury = { id, reportIndex: week.index,
+            blockStart: useProgramStore.getState().currentProgram?.startDate ?? '' };
+        }
+        if (carriedInjury && week.index > carriedInjury.reportIndex) {
+          const active = useProgramStore.getState().acceptedMaterialContext.injuryEpisodes.some(episode =>
+            episode.episodeId === carriedInjury?.id && (episode.status === 'active' || episode.status === 'improving'));
+          checks.push({ id: 'carried_injury_retained', ok: active });
+          if (!active) throw new Error('Active injury disappeared across weekly advancement');
+        }
+        if (carriedInjury && week.index === carriedInjury.reportIndex + 3) {
+          checks.push({ id: 'carried_injury_after_rollover', ok: !!carriedInjury.blockStart &&
+            useProgramStore.getState().currentProgram?.startDate !== carriedInjury.blockStart });
+          const resolved = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
+            source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+            scope: 'current_and_future', payload: { episodeId: carriedInjury!.id }, requiresRebuild: false,
+            createsActiveModifier: false, oneOffOnly: false }, { todayISO: week.weekStart }));
+          checks.push({ id: 'carried_injury_resolved', ok: resolved.ok &&
+            useProgramStore.getState().acceptedMaterialContext.injuryEpisodes.find(episode =>
+              episode.episodeId === carriedInjury?.id)?.status === 'resolved', detail: resolved.message });
+          if (!resolved.ok) throw new Error('Post-rollover injury resolution refused');
+          carriedInjury = null;
+        }
+        if (week.phaseWeek === 8) {
+          const lifecycle = await sourceFactLifecycle({ weekStart: week.weekStart, storage,
+            upperFirst: archetype.id.startsWith('female') });
+          checks.push(...lifecycle);
+          if (lifecycle.some(check => !check.ok)) throw new Error('Accumulated injury/edit/restart lifecycle failed');
+          const clearing = await clearFactLifecycle(week.weekStart, storage);
+          checks.push(...clearing);
+          if (clearing.some(check => !check.ok)) throw new Error('Accumulated status-clear/restart lifecycle failed');
+          setJourneyClock(week.weekStart);
+        }
         if (week.index === 0 && archetype.id === 'male-5-two-fixtures') {
           if (!lighterDayAvailableForDate(week.weekStart)) throw new Error('Lighter-day annual coordinate was not reached');
           const report = await quietAsync(() => executeProgramControlActionDurably(
@@ -214,6 +261,9 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         if (!boot.ok) throw new Error(`Restart: ${boot.error}`);
         const rebuilt = visibleSignature(visible(week.weekStart));
         checks.push({ id: 'restart', ok: signature === rebuilt, detail: signatureDifferences(signature, rebuilt).join(' | ') });
+        const rowOwnershipDifferences = quiet(() => compilerOwnsVisibleInjuryRows(week.weekStart, week.weekStart));
+        checks.push({ id: 'compiler_owns_visible_rows', ok: rowOwnershipDifferences.length === 0,
+          detail: rowOwnershipDifferences.join(' | ') });
         checks.push({ id: 'ledger', ok: acceptedLedger === ledger(), detail: 'Whole ordered ledger unchanged by boot' });
         checks.push({ id: 'selection_history', ok: acceptedSelections === semanticFingerprint(blockSelectionHistory()),
           detail: 'Restart cannot replace accepted block movement seats with a fixture-repair projection' });
@@ -301,9 +351,19 @@ export async function realCompilerMutation(): Promise<Check> {
   let finalClean = false;
   let finalMutationReached = false;
   let finalRowLossCaught = false;
+  let missingSpecialistCaught = false;
+  let strengthIntentLossCaught = false;
   programCompilerModule.compileCanonicalProgram = (input) => {
     const observed = observeFinalRows(input, originalProgram);
     finalClean = observed.checks.every((c) => c.ok);
+    missingSpecialistCaught = finalRowChecks(input, observed.output,
+      observed.sources.filter(source => source.producer !== 'strength'))
+      .some(check => check.id === 'final_rows_observed' && !check.ok);
+    const lostIntent = { ...observed.output, program: { ...observed.output.program,
+      microcycles: observed.output.program.microcycles.map(week => ({ ...week,
+        workouts: week.workouts.map(workout => ({ ...workout, strengthIntent: undefined })) })) } };
+    strengthIntentLossCaught = finalRowChecks(input, lostIntent, observed.sources)
+      .some(check => check.id === 'final_strength_intent_conserved' && !check.ok);
     const source = observed.sources.find((s) => s.workouts.some((w) => w.exercises.length));
     const row = source?.workouts.flatMap((w) => w.exercises)[0];
     if (row) {
@@ -318,6 +378,6 @@ export async function realCompilerMutation(): Promise<Check> {
   try {
     await quietAsync(() => coldStartThroughOnboarding({ profile: athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-3-experienced-gym')!), installDayISO: YEAR_START }));
   } finally { programCompilerModule.compileCanonicalProgram = originalProgram; }
-  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught && finalClean && finalMutationReached && finalRowLossCaught,
-    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}; final rows clean=${finalClean}, row removal reached=${finalMutationReached}, caught=${finalRowLossCaught}.` };
+  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught && finalClean && finalMutationReached && finalRowLossCaught && missingSpecialistCaught && strengthIntentLossCaught,
+    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}; final rows clean=${finalClean}, row removal reached=${finalMutationReached}, caught=${finalRowLossCaught}; missing specialist observation caught=${missingSpecialistCaught}; strength intent loss caught=${strengthIntentLossCaught}.` };
 }

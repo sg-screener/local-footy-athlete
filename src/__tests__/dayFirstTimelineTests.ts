@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * THE DAY-FIRST TIMELINE — SHOWN, NEVER WRITTEN.
  *
@@ -173,7 +174,7 @@ function world(): void {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
-  quiet(() => useCalendarStore.getState().setGameDay('2026-08-01', TODAY));
+  quiet(() => calendarActionsForTest().setGameDay('2026-08-01', TODAY));
 }
 
 function projected(week: string): ResolvedDay[] {

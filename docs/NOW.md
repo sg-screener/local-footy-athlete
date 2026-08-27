@@ -60,11 +60,11 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `codex/failure-only-state-export` · **CURRENT CHECKPOINT:** step 24 below.
-- **CURRENT UNIT:** legacy event/move authors isolated; injury shortcuts retired; single injury save format; product/devtools types clean; owner `testtruth`.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 24; compiler 453/456 (three injury-restart reds), year 416/416 weekly checks; release still red.
-- **NEXT:** one pure dated-fact compiler shared by live injury and restart, then remaining non-injury Clear writer; owner `testtruth`.
-- **OPEN:** 1 confirmed rival, 1 confirmed derived-output writer; 1,256/1,316 candidate owners unresolved; 256 test type diagnostics in 96 files. No zero-owner or phone acceptance claim.
+- **BRANCH:** `codex/failure-only-state-export` · **CURRENT CHECKPOINT:** five-part compiler completion, status sections 38–39.
+- **CURRENT UNIT:** Sam authorized committing the verified checkpoint and a clean LFA-only reinstall on his iPhone; owner `testtruth`.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 38; release 7/7 executable units, year 416/416 athlete-weeks; source fingerprint reverified unchanged 2026-08-28.
+- **NEXT:** signed Release build, install and launch on Sam's paired iPhone; then Sam's device acceptance and compiler re-audit.
+- **OPEN:** device acceptance; three old Maestro tapes; two preserved runtime-quarantined features. Ownership: 0 rivals / 0 direct derived writers / 1137 reviewed capability owners. All three typecheck scopes zero.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

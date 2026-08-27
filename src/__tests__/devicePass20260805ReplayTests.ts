@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * SAM'S 2026-08-05 DEVICE PASS, REPLAYED THROUGH REAL DOORS — L11 reassessment.
  *
@@ -256,7 +257,7 @@ function reachHisWorldByActing(): void {
 
   // His one mark, before generation — the game predates his pass.
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
   }
 
   // Generate on his generation day, THROUGH THE ACCEPT BOUNDARY — the walker's

@@ -134,10 +134,10 @@ function scenario(args: {
 }
 
 const wholeSessionId = 'dev-e2e-lower-body-deletion-2026-07-13-dow-1';
-const stackedSessionId = 'dev-e2e-stacked-team-upper-pull';
+const stackedSessionId = 'dev-e2e-stacked-team-training-upper-pull-2026-07-13-dow-2';
 const upperPullComponentId =
-  'dev-e2e-stacked-team-upper-pull:component:strength:pull';
-const oneSetSessionId = 'dev-e2e-one-set-strength-2026-07-13-dow-1';
+  `${stackedSessionId}:component:strength:pull`;
+const oneSetSessionId = 'w-composed-mc-ai-1-1';
 const followingMondaySessionId =
   'dev-e2e-multi-reload-fixture-chain-2026-07-20-dow-1';
 

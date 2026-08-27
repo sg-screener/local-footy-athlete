@@ -14,11 +14,7 @@ import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
 } from '../utils/workoutCanonicalisation';
-import {
-  validateMicrocycleAgainstActiveConstraints,
-  validateProgramAgainstActiveConstraints,
-  validateWorkoutAgainstActiveConstraints,
-} from '../utils/postGenerationConstraintValidation';
+import * as validationBoundary from '../utils/postGenerationConstraintValidation';
 import { getSessionComponentRows, getSessionComponents } from '../utils/sessionComponents';
 import { combinedConditioningCategoryLabel } from '../utils/weeklyPlanDisplay';
 import { powerRows } from '../rules/sessionRowCounting';
@@ -350,68 +346,15 @@ section('[7] stable plan identity moves with the workout, never the weekday');
     action.reason === 'plan_entry_absent_or_stale'));
 }
 
-section('[8] generation, workout write, microcycle write and program write converge');
+section('[8] validation cannot become a second canonicalisation author');
 {
-  const malformed = workout('Tempo Running', [
-    row('Bench Press', 0),
-    row('Bike Zone 2 - 15 min', 1),
-    row('Broad Jump', 2),
-    row('Pallof Press', 3),
-  ], {
-    planEntryId: 'w1:monday:push:strength',
-    strengthPatternContributions: ['push'],
-  });
-  const context = { ...EARLY, planIntentValid: true };
-  const direct = finaliseWorkoutAfterMutation(malformed, context).workout;
-  const single = validateWorkoutAgainstActiveConstraints({
-    workout: malformed,
-    date: '2099-01-05',
-    todayISO: '2099-01-01',
-    activeConstraints: [],
-    canonicalContext: context,
-  }).workout!;
-  const microcycle: Microcycle = {
-    id: 'mc', programId: 'program', weekNumber: 1,
-    startDate: '2099-01-05T12:00:00.000Z', endDate: '2099-01-11T12:00:00.000Z',
-    miniCycleNumber: 1, weekKind: 'build', intensityMultiplier: 1,
-    workouts: [malformed], createdAt: '', updatedAt: '',
-  };
-  const fromMicrocycle = validateMicrocycleAgainstActiveConstraints({
-    microcycle,
-    todayISO: '2099-01-01',
-    activeConstraints: [],
-    profile: { seasonPhase: 'Off-season' } as any,
-    canonicalContext: context,
-  }).workouts[0];
-  const program: TrainingProgram = {
-    id: 'program', userId: 'user', name: 'Program', description: '',
-    programPhase: 'Off-Season-Base', startDate: microcycle.startDate,
-    endDate: microcycle.endDate, primaryFocus: '', isActive: true,
-    microcycles: [microcycle], createdAt: '', updatedAt: '',
-  };
-  const fromProgram = validateProgramAgainstActiveConstraints({
-    program,
-    todayISO: '2099-01-01',
-    activeConstraints: [],
-    profile: { seasonPhase: 'Off-season' } as any,
-  }).microcycles[0].workouts[0];
-  const shape = (value: Workout) => ({
-    name: value.name,
-    type: value.workoutType,
-    planEntryId: value.planEntryId,
-    patterns: value.strengthPatternContributions,
-    rows: value.exercises.map((item) => ({
-      name: item.exercise?.name,
-      weight: item.prescribedWeightKg,
-      component: value.conditioningBlock?.options.some((option) => option.exerciseIds.includes(item.id))
-        ? 'conditioning'
-        : 'training',
-    })),
-    power: powerRows(value)[0]?.power?.kind ?? null,
-  });
-  eq('direct generation and single edit finalisation agree', shape(single), shape(direct));
-  eq('microcycle/rebuild write finalisation agrees', shape(fromMicrocycle), shape(direct));
-  eq('program/regeneration write finalisation agrees', shape(fromProgram), shape(direct));
+  // The old cell required three retired store-write repair functions to rewrite
+  // malformed output. Current live/restart equivalence is exercised through
+  // the canonical compiler by canonicalWeeklyCompilerSliceTests.
+  for (const name of ['validateMicrocycleAgainstActiveConstraints',
+    'validateProgramAgainstActiveConstraints', 'validateWorkoutAgainstActiveConstraints']) {
+    ok(`retired procedural writer ${name} is absent`, !(name in validationBoundary));
+  }
 }
 
 section('[9] explicit Rest keeps plan identity without restoring removed training');

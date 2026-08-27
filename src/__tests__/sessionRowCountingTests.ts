@@ -47,7 +47,7 @@ import {
   exerciseBudgetRows,
   participatesInCounting,
 } from '../rules/sessionRowCounting';
-import { selectExercises, type SessionIntent } from '../utils/exerciseScorer';
+import { selectExercises, type SessionIntent } from './support/legacyExerciseScorer';
 import type { FilterContext } from '../utils/exerciseFilter';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
 import { SESSION_ROLE_ORDER, type SessionRole } from '../utils/sessionRoles';

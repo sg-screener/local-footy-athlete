@@ -43,11 +43,11 @@ function day(date: string, workout: Partial<ResolvedDay['workout']> | null): Res
 }
 
 const TODAY = '2026-07-08';
-const strength = (name: string) => ({ id: `w-${name}`, name, workoutType: 'Strength', sessionTier: 'core', exercises: [{}, {}] });
-const game = { id: 'g', name: 'Game', workoutType: 'Game', sessionTier: 'core', exercises: [] };
+const strength = (name: string): Partial<NonNullable<ResolvedDay['workout']>> => ({ id: `w-${name}`, name, workoutType: 'Strength', sessionTier: 'core', exercises: [] });
+const game: Partial<NonNullable<ResolvedDay['workout']>> = { id: 'g', name: 'Game', workoutType: 'Game', sessionTier: 'core', exercises: [] };
 const rest = null;
-const recovery = { id: 'r', name: 'Recovery', workoutType: 'Recovery', sessionTier: 'recovery', exercises: [] };
-const team = { id: 't', name: 'Team Training', workoutType: 'Strength', sessionTier: 'core', exercises: [] };
+const recovery: Partial<NonNullable<ResolvedDay['workout']>> = { id: 'r', name: 'Recovery', workoutType: 'Recovery', sessionTier: 'recovery', exercises: [] };
+const team: Partial<NonNullable<ResolvedDay['workout']>> = { id: 't', name: 'Team Training', workoutType: 'Strength', sessionTier: 'core', exercises: [] };
 
 console.log('[1] detects a past unlogged strength session');
 {

@@ -1,3 +1,4 @@
+import type { Workout } from '../types/domain';
 /**
  * Session component detection tests.
  *
@@ -49,7 +50,7 @@ function kinds(workout: any): string[] {
 
 section('1. Standalone strength');
 {
-  const workout = {
+  const workout: Partial<Workout> = {
     name: 'Upper Pull',
     workoutType: 'Strength',
     exercises: [ex('we-row', 'Chest Supported Row')],
@@ -65,7 +66,7 @@ section('1. Standalone strength');
 
 section('2. Team Training + Upper Push');
 {
-  const workout = {
+  const workout: Partial<Workout> = {
     name: 'Team Training + Upper Push',
     workoutType: 'Strength',
     exercises: [ex('we-bench', 'Bench Press')],
@@ -96,13 +97,14 @@ section('2. Team Training + Upper Push');
 
 section('3. Strength + conditioning');
 {
-  const workout = {
+  const workout: Partial<Workout> = {
     name: 'Lower Body Strength + Hard Conditioning',
     workoutType: 'Strength',
     hasCombinedConditioning: true,
     exercises: [ex('we-squat', 'Back Squat'), ex('we-bike', 'Assault Bike Intervals')],
     conditioningBlock: {
-      options: [{ title: 'Hard Conditioning', exerciseIds: ['we-bike'] }],
+      intent: 'high-intensity',
+      options: [{ title: 'Hard Conditioning', description: '', exerciseIds: ['we-bike'] }],
     },
   };
   const components = getSessionComponents(workout);
@@ -119,14 +121,15 @@ section('3. Strength + conditioning');
 
 section('4. Optional finisher is its own component');
 {
-  const workout = {
+  const workout: Partial<Workout> = {
     name: 'Upper Pull + Aerobic Finisher',
     workoutType: 'Strength',
     hasCombinedConditioning: true,
     attachedConditioningKind: 'finisher',
     exercises: [ex('we-row', 'Chest Supported Row'), ex('we-bike', 'Easy Bike Finisher')],
     conditioningBlock: {
-      options: [{ title: 'Aerobic Finisher', exerciseIds: ['we-bike'] }],
+      intent: 'high-intensity',
+      options: [{ title: 'Aerobic Finisher', description: '', exerciseIds: ['we-bike'] }],
     },
   };
   const components = getSessionComponents(workout as any);
@@ -250,7 +253,8 @@ section('6. Removed components disappear');
     hasCombinedConditioning: true,
     exercises: [ex('we-squat', 'Back Squat')],
     conditioningBlock: {
-      options: [{ title: 'Hard Conditioning', exerciseIds: ['we-bike-removed'] }],
+      intent: 'high-intensity',
+      options: [{ title: 'Hard Conditioning', description: '', exerciseIds: ['we-bike-removed'] }],
     },
   };
   assert(
@@ -332,12 +336,11 @@ section('8. Midline rows stay inside their Conditioning session');
     ex('we-bike', 'Bike Tempo'),
     ex('we-rowerg', 'RowErg Intervals'),
   ];
-  const workout = {
+  const workout: Partial<Workout> = {
     id: 'tempo-with-support',
     microcycleId: 'mc-1',
     name: 'Bike Tempo',
-    dayOfWeek: 'Monday',
-    orderIndex: 0,
+    dayOfWeek: 1,
     workoutType: 'Conditioning',
     exercises: [
       ...aerobicRows,

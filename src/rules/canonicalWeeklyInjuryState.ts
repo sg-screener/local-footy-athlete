@@ -15,6 +15,7 @@ import {
 import {
   injurySeverityReducesAffectedWork,
   injurySeverityRemovesRiskyWork,
+  injurySeverityPausesAffectedTraining,
   onboardingInjurySeverityScore,
 } from './injurySeverityBands';
 import type { PowerInjuryInput } from './powerPrimerPolicy';
@@ -72,9 +73,13 @@ export function canonicalWeeklyInjuryStateFrom(args: {
   }
 
   for (const injury of args.profile.injuries ?? []) {
-    if (!injurySeverityRemovesRiskyWork(onboardingInjurySeverityScore(injury))) continue;
+    const severity = onboardingInjurySeverityScore(injury);
+    if (!injurySeverityRemovesRiskyWork(severity)) continue;
     const text = `${injury.bodyArea} ${injury.description ?? ''}`;
-    if (UPPER_BODY.test(text)) prohibited.push('push');
+    if (UPPER_BODY.test(text)) {
+      prohibited.push('push');
+      if (injurySeverityPausesAffectedTraining(severity)) prohibited.push('pull');
+    }
     if (LOWER_BODY.test(text)) prohibited.push('squat', 'hinge');
   }
 

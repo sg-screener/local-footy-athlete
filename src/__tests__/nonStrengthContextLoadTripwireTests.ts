@@ -50,7 +50,6 @@ import fs from 'fs';
 import path from 'path';
 
 import { POOL_REGISTRY } from '../data/exercisePools';
-import { recoveryAddonExerciseVocabulary } from '../utils/recoveryAddonBuilder';
 import { resolveLoadAuthority } from '../utils/loadEstimation';
 
 const src = path.resolve(__dirname, '..');
@@ -129,44 +128,10 @@ console.log('\n[2] THE TRIPWIRE — no prescribed load on a WEIGHT-BEARING non-s
     + 'the exercise; the gate is what needs the fix');
 }
 
-console.log('\n[3] The recovery-addon carve-out, and the reason it holds');
-{
-  // FOUND BY THIS SUITE ON ITS FIRST RUN. `recoveryAddonExerciseVocabulary()`
-  // — enumerated by running the real selection logic — offers two exercises
-  // that DO carry a prescribed load ratio: Face Pull and Suitcase Carry.
-  //
-  // By the letter of the trigger condition that is the gap going live. It is
-  // not, because the recovery-addon surface has no weight channel at all:
-  // `RecoveryAddonExercise` is { id, name, prescription, source } with no
-  // weight field, the builder never sets `prescribedWeightKg`, and
-  // `RecoveryAddonSection` renders the `prescription` STRING. Nothing on that
-  // path ever asks the estimator anything, so the two paths cannot disagree.
-  //
-  // The carve-out is therefore about the SURFACE, not about those two names —
-  // which is why the assertions below pin the surface. The moment recovery
-  // addons gain a weight, the carve-out is void and these two are live.
-  const namesWithLoad = recoveryAddonExerciseVocabulary().filter(prescribed);
-
-  ok('the carve-out is still about the two known names',
-    namesWithLoad.length === 2
-      && namesWithLoad.includes('Face Pull')
-      && namesWithLoad.includes('Suitcase Carry'),
-    `recovery-addon vocabulary now offers ${namesWithLoad.length} prescribed-load `
-    + `exercises: ${namesWithLoad.join(', ')}. A NEW one means re-checking whether `
-    + 'the surface is still weightless before extending this carve-out');
-
-  const builder = fs.readFileSync(path.join(src, 'utils/recoveryAddonBuilder.ts'), 'utf8');
-  ok('the recovery-addon builder still assigns no weight',
-    !/prescribedWeightKg/.test(builder),
-    'the addon surface has gained a weight channel — the carve-out is VOID and '
-    + 'the strength-context unit is now due');
-
-  const domain = fs.readFileSync(path.join(src, 'types/domain.ts'), 'utf8');
-  const shape = domain.slice(domain.indexOf('interface RecoveryAddonExercise'));
-  ok('RecoveryAddonExercise still carries no weight field',
-    !/weight/i.test(shape.slice(0, shape.indexOf('}'))),
-    'a weight field on the addon row voids the carve-out');
-}
+// Retired standalone add-on author: there is no second weightless selection path.
+ok('standalone recovery-addon writer stays retired',
+  !fs.existsSync(path.join(src, 'utils/recoveryAddonBuilder.ts')),
+  'do not revive a second program author to satisfy historical carve-out tests');
 
 const total = passed + failures.length;
 console.log(`\nNon-strength context load tripwire: passed=${passed}/${total} failures=${failures.length}`);

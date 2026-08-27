@@ -64,6 +64,9 @@ export interface WeeklySchedulerInputs {
   /** Monday of the week being scheduled, ISO. */
   readonly weekStartISO: string;
   readonly phase: ContractPhase;
+  /** Compiler-owned injury safety; field participation is a separate athlete fact. */
+  readonly appSprintPermitted?: boolean;
+  readonly appRunningPermitted?: boolean;
   /** Off-season only; decides the §8 overlay. */
   readonly offseasonBlock: OffseasonBlock | null;
   /**
@@ -848,10 +851,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // authored two app exposures against the approved source's four.
   // Section 18: a Pre-season practice-match week uses the game-week workload,
   // while its stored season/phase clock remains Pre-season.
-  const overlay = overlayForPhase(
+  const phaseOverlay = overlayForPhase(
     inputs.phase === 'Pre-season' && hasScheduledGame(inputs) ? 'In-season' : inputs.phase,
     inputs.offseasonBlock,
   );
+  const overlay = inputs.appSprintPermitted === false
+    ? { ...phaseOverlay, sprintExposureRequired: false }
+    : phaseOverlay;
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -1098,8 +1104,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...conditioningDays.filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
     ...((sprintComponentDay ?? plannedSprintDay) !== null ? [sprintComponentDay ?? plannedSprintDay!] : []),
   ]);
-  let runningSlotsToReserve = inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional'
-    ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size);
+  // Unplaced conditioning is already scheduled by the standalone top-up pass
+  // below. Count those running slots before exchanging an off-leg gym slot;
+  // otherwise a two-day deload with sprint restricted trades both gym slots
+  // away and attempts five runs to satisfy a five-exposure conditioning target.
+  const standaloneConditioningBudget = Math.max(0, appConditioningBudget - conditioningDays.length);
+  let runningSlotsToReserve = inputs.appRunningPermitted === false ||
+    (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional')
+    ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size - standaloneConditioningBudget);
   for (const day of [...conditioningDays].reverse()) {
     if (runningSlotsToReserve === 0) break;
     if (day === hardDay || day === plannedSprintDay || !PURPOSE_IS_LOWER[purposeByDay.get(day)!]) continue;
@@ -1273,7 +1285,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   if (inputs.phase !== 'Off-season' || inputs.offseasonBlock !== 'early_optional') {
     for (const day of topUpOrder) {
-      if (runningDays.size >= GLOBAL_RULES.running.min && outstandingConditioning <= 0) break;
+      if ((inputs.appRunningPermitted === false || runningDays.size >= GLOBAL_RULES.running.min) && outstandingConditioning <= 0) break;
       if (runningDays.has(day)) continue;
       if (inputs.unavailableDays.includes(day)) continue;      // WC-061
       if (isScheduledGameDay(day, inputs)) continue;
@@ -1342,7 +1354,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   const withRunning = withSprint.map((entry) => {
     const topUp = runningTopUps.find((r) => r.dayOfWeek === entry.dayOfWeek);
-    return topUp && entry.owner === 'rest_or_recovery' ? topUp : entry;
+    const intention = topUp && entry.owner === 'rest_or_recovery' ? topUp : entry;
+    // Safety changes the modality, not the session count or its energy-system
+    // target. The conditioning specialist resolves reachable off-feet content.
+    return inputs.appRunningPermitted === false && intention.conditioning === 'running'
+      ? { ...intention, conditioning: 'off_leg' as const }
+      : intention;
   });
 
   // ── R-130 + R-236 + R-237: THE GENDERED OPTIONAL OFFER ─────────────────

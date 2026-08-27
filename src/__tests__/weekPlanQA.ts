@@ -994,9 +994,7 @@ for (const scenario of scenarios) {
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
-    miniCycleNumber: inputs.miniCycleNumber,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
 
   // Build schedule state and resolve week with conditioning

@@ -67,7 +67,7 @@ export function generateSweepScenarios(): Scenario[] {
 
             const profile: OnboardingData = {
               firstName: 'Sweep',
-              ageRange: '25-34',
+              ageRange: '26-30',
               position: 'inside_mid',
               motivation: 'Get stronger',
               experienceLevel: 'Intermediate' as any,

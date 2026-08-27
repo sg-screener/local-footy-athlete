@@ -3,7 +3,7 @@ import {
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from '../../../utils/coachingEngine';
-import { coachingPlanForTests } from '../support/coachingPlanForTests';
+import { coachingPlanForTests } from '../../support/coachingPlanForTests';
 import {
   buildPreseasonWeeklyExposureContract,
   evaluatePreseasonExposureContract,

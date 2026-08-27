@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * THE WORN WORLD BOOTS — the coordinate every boot suite skipped.
  *
@@ -176,7 +177,7 @@ function reachWornWorldByActing(): void {
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, GENERATION_DAY);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, GENERATION_DAY);
   }
   const program = quiet(() => generateProgramLocally(profile, {
     todayISO: GENERATION_DAY,

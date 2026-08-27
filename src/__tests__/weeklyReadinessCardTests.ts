@@ -97,7 +97,7 @@ function jsxOpeningTags(source: string, element: string): string[] {
 }
 
 function resetWorld() {
-  useProgramStore.getState().clearManualOverrides();
+  useProgramStore.getState().clear();
   useReadinessStore.getState().clear();
   useCoachUpdatesStore.setState((s: unknown) => ({
     ...(s as object),

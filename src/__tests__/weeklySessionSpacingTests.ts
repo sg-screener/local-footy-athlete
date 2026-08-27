@@ -60,12 +60,12 @@ function baseInputs(
 ): CoachingInputs {
   return {
     seasonPhase: 'Off-season',
+    experienceLevel: '2-5 years',
     availableDays: selectedDays.length,
     selectedDays,
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: undefined,
-    sprintExposure: 'Moderate',
+    sprintExposure: 'Occasionally',
     conditioningLevel: readiness === 'low' ? 'Average' : 'Good',
     recentTrainingLoad: readiness === 'low' ? 'A bit' : 'Pretty consistent',
     injuries: [],

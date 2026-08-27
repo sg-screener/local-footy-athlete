@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import type { OnboardingData, Workout } from '../../../types/domain';
 import { buildGeneratedMicrocycles } from '../../../services/api/generateProgram';
 import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
-import { coachingPlanForTests } from '../support/coachingPlanForTests';
+import { coachingPlanForTests } from '../../support/coachingPlanForTests';
 import { buildBlockWeekStates, computeBlockBounds } from '../../../utils/programBlockState';
 import { resolveEquipmentCapabilities } from '../../../utils/equipmentAvailability';
 import { buildDeterministicCoachNoteDescriptors } from '../../../utils/deterministicCoachNoteFactory';
@@ -167,7 +167,8 @@ export function buildConditioningEquipmentTrace(scenario: Slice3GoldenScenario):
   const microcycles = buildGeneratedMicrocycles({
     coachWorkouts: edgeWeek(plan), plan, coachingInputs: inputs, profile,
     programId: `bible-${scenario.id}`, microcyclePrefix: `bible-${scenario.id}`,
-    blockStartISO: blockStart, blockNumber: 1, athletePrefs: {},
+    seasonPhaseClock: require('../../../rules/seasonPhaseClock').establishSeasonPhaseClock({ selectedPhase: profile.seasonPhase ?? 'In-season', targetWeekStartISO: blockStart, seasonFinishedOn: profile.seasonFinishedOn }).clock,
+    blockStartISO: blockStart, blockNumber: 1, athletePrefs: { excluded: [], pinned: [] },
     availableEquipmentTags: equipment.tags,
     availableConditioningModalities: equipment.conditioningModalities,
   });

@@ -185,7 +185,7 @@ for (const test of [
     hardDay: 0,
   },
 ] as const) {
-  const input = workout(test.name, { exercises: test.exercises });
+  const input = workout(test.name, { exercises: [...test.exercises] });
   const result = classifyVisibleSession(input);
   ok(`${test.name} uses canonical category`, category(result, test.category), result.categories);
   eq(`${test.name} uses canonical region/stress`,

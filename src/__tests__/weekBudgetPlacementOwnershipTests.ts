@@ -93,7 +93,15 @@ armTotalsOrRed();
 import type { OnboardingData } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
-import { declaredOfferCount } from '../rules/section18OfferPlacement';
+// Historical diagnostic only: the old post-acceptance offer placer is retired.
+// Current optional-session behaviour is held by the canonical annual gate.
+function declaredOfferCount(conditioning: {
+  optionalFlush: { permitted: boolean; preferredRange: { max: number }; plannerSelectedCount: number | null };
+}): number {
+  if (!conditioning.optionalFlush.permitted) return 0;
+  return Math.max(0, Math.min(conditioning.optionalFlush.plannerSelectedCount ?? 0,
+    conditioning.optionalFlush.preferredRange.max));
+}
 
 const TODAY_ISO = '2026-07-13';
 

@@ -154,11 +154,12 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
 }
 
 /** Replay one landed non-exercise decision through its remaining interpreter. */
-function replayEntry(entry: DecisionLedgerEntry): void {
+function replayEntry(entry: DecisionLedgerEntry,
+  facts: import('../rules/temporarySourceFact').TemporarySourceFact[]): void {
   const decision = entry.decision;
   if (decision.kind === 'lighter_day') {
     const { commitCanonicalAcceptedLighterDayEffect } = require('../utils/lighterDayTransaction');
-    commitCanonicalAcceptedLighterDayEffect(decision.acceptedEffect);
+    commitCanonicalAcceptedLighterDayEffect(decision.acceptedEffect, facts);
     return;
   }
   if (decision.kind === 'reversal') {
@@ -492,7 +493,7 @@ export async function rebuildDerivedWorld(): Promise<void> {
  * transaction a Promise and let verification run before a future asynchronous
  * body; this function makes the mutation boundary structural.
  */
-function rebuildDerivedWorldNow(): void {
+export function rebuildDerivedWorldNow(): void {
   const profileState = useProfileStore.getState();
   if (!profileState.isOnboardingComplete) return;
   const profile = profileState.onboardingData;
@@ -634,6 +635,11 @@ function rebuildDerivedWorldNow(): void {
       ...statedProgressionInputs(useProgramStore.getState()),
     };
   })();
+  const sourceFacts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts;
+  const { sourceFactRequiresCompilation } = require('../rules/canonicalWeeklySourceFactCompiler');
+  const { composeTemporarySourceFactCompatibility } = require('../rules/temporarySourceFact');
+  const baseFacts = sourceFacts.filter(fact => !sourceFactRequiresCompilation(fact));
+  const baseFactCompatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: baseFacts });
 
   const legacySessionEffectUpgrades: Array<{
     sourceEntryId: string;
@@ -677,6 +683,8 @@ function rebuildDerivedWorldNow(): void {
         lastTransaction: null,
         acceptedCompositionBase: null,
         acceptedProfileSnapshot: null,
+        temporarySourceFacts: [],
+        injuryEpisodes: [],
       },
     } as never);
     const program = generateProgramLocally(profile, {
@@ -688,6 +696,9 @@ function rebuildDerivedWorldNow(): void {
       recordSelections: 'replay',
       // A boot replays; it decides nothing (plan §2, "boot appends nothing").
       weekAcceptance: 'restoration',
+      temporarySourceFacts: baseFacts,
+      activeConstraints: baseFactCompatibility.activeConstraints,
+      readinessSignal: null,
       todayISO: generationISO,
       previousProgram: null,
       ...(clock ? { seasonPhaseClock: clock } : {}),
@@ -712,6 +723,14 @@ function rebuildDerivedWorldNow(): void {
       selectedDate: todayISOLocal(),
       reason: 'quiescent_boot',
     });
+    // Fixture/session replay must see the healthy base, not an injury whose
+    // dated effect has not been compiled yet. Lighter-day decisions receive
+    // their fact lookup explicitly rather than publishing future constraints.
+    useProgramStore.setState({ acceptedMaterialContext: {
+      ...useProgramStore.getState().acceptedMaterialContext,
+      ...baseFactCompatibility,
+      temporarySourceFacts: baseFacts,
+    } });
     // THE UNDO IS HONOURED HERE, AND ONLY HERE. An annulled decision is not
     // replayed, so the world the boot builds is the world the remaining
     // decisions imply — which is the same body that answered the athlete the
@@ -822,7 +841,7 @@ function rebuildDerivedWorldNow(): void {
         flushSessionGroup();
         flushFixtureGroup();
         try {
-          replayEntry(entry);
+          replayEntry(entry, sourceFacts);
         } catch (error) {
           logger.warn('[quiescentBoot] replay threw for a ledger entry', {
             entryId: entry.id, error,
@@ -832,38 +851,16 @@ function rebuildDerivedWorldNow(): void {
       flushExerciseGroup();
       flushSessionGroup();
       flushFixtureGroup();
-      // ── AND THEN THE FACTS, IN THE ORDER THE ATHLETE LIVED THEM ───────────
-      //
-      // Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,
-      // but it must not make a new choice or silently discard anything."*
-      //
-      // The decisions above put the athlete's own edits back. An injury they
-      // declared AFTERWARDS displaced some of those edits, and that
-      // recomposition lives in `dateOverrides` — which this boot blanked. So it
-      // is re-applied here, through the same owner the live door used, AFTER
-      // the decisions, which is the order it happened in.
-      //
-      // ⚠ **BEFORE, AND THE SESSION IS SAFE BUT WRONG.** Running this ahead of
-      // the replay judges the injury against a day the athlete has not edited
-      // yet; their swap then lands on top of the safe row and puts the unsafe
-      // one back. The order is the correctness.
-      //
-      // It appends nothing to the ledger and takes no transaction — a fact
-      // being re-applied is not a new decision.
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { reapplyActiveInjuryRecompositions } = require('../utils/programControlActions');
-        reapplyActiveInjuryRecompositions();
-      } catch (error) {
-        logger.warn('[quiescentBoot] active injury re-application failed; decisions stand', {
-          error,
-        });
-      }
     } catch (error) {
       logger.error('[quiescentBoot] the replay phase failed; the base world stands', {
         error,
       });
     }
+    // Fact compilation is outside the legacy replay's best-effort boundary.
+    // A fact cannot silently disappear on error: live transactions roll back;
+    // boot reports failure and retains the persisted inputs for retry.
+    const { compileAcceptedSourceFacts } = require('./sourceFactCompilation');
+    compileAcceptedSourceFacts(sourceFacts);
   } finally {
     endLedgerReplay();
     if (legacySessionEffectUpgrades.length > 0) {

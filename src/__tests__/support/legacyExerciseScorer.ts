@@ -1,3 +1,4 @@
+/* Historical diagnostic-only selector. Not a runtime author or current product contract. */
 /**
  * Exercise Scorer — Scoring, composition, selection, and substitution.
  *
@@ -36,14 +37,14 @@ import {
   type Region,
   type LoadLevel,
   type FatigueLevel,
-} from '../data/exerciseTags';
-import type { FilterContext } from './exerciseFilter';
+} from '../../data/exerciseTags';
+import type { FilterContext } from '../../utils/exerciseFilter';
 import {
   normalizeStrengthIntent,
   type MainStrengthPattern,
   type StrengthIntent,
-} from '../rules/strengthPatternContributions';
-import { SESSION_SIZE_FLOOR } from '../rules/sessionRowCounting';
+} from '../../rules/strengthPatternContributions';
+import { SESSION_SIZE_FLOOR } from '../../rules/sessionRowCounting';
 
 // ─── Session Intent ───
 
@@ -388,7 +389,7 @@ export function selectExercises(
  */
 function mainSlotSpentBy(exerciseName: string): string | null {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { isMainLift, mainLiftSlot } = require('../rules/mainLiftPatternLaw') as {
+  const { isMainLift, mainLiftSlot } = require('../../rules/mainLiftPatternLaw') as {
     isMainLift: (row: { role?: string; exercise?: { name?: string } }) => boolean;
     mainLiftSlot: (name: string) => string | null;
   };

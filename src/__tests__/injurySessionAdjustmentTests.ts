@@ -47,7 +47,11 @@ import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { compilerOwnsVisibleInjuryRows } from './compilerYear/sourceFacts';
+import { compileActiveExposureConstraints } from '../rules/canonicalWeeklyConstraintCompiler';
+import { bucketToRegion } from '../utils/injuryConstraintRegion';
+import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { DEV_E2E_STANDARD_PROFILE } from '../dev/e2e/devE2EStandardProfile';
 import {
   buildGuidedInjuryConstraint,
@@ -77,31 +81,12 @@ function mondayFor(d: string): string {
   return addDaysISO(d, -((p.getUTCDay() + 6) % 7));
 }
 
-function install(): string {
-  durable.clear();
-  resetStoresToFreshInstall('injury-session-adjustment:install');
-  const profile = DEV_E2E_STANDARD_PROFILE;
-  useProfileStore.getState().updateOnboardingData(profile);
-  quiet(() => useProfileStore.getState().completeOnboarding());
-  setJourneyClock(INSTALL_DAY);
-  const program = quiet(() => generateProgramLocally(profile, {
-    todayISO: INSTALL_DAY, previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'In-season' as never,
-      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  })) as TrainingProgram;
-  const settled = program.microcycles[0]!;
-  const weekStart = String(settled.startDate).slice(0, 10);
-  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
-    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
-    reason: 'injury-session-adjustment:generate',
+async function install(): Promise<string> {
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: DEV_E2E_STANDARD_PROFILE, installDayISO: INSTALL_DAY,
   }));
-  useProgramStore.setState({ currentMicrocycle: settled } as never);
   setJourneyClock(TARGET);
-  return weekStart;
+  return INSTALL_DAY;
 }
 
 function dayOn(dateISO: string): Workout | null {
@@ -134,17 +119,44 @@ function constraintFor(area: string, band: string, dateISO: string) {
   } as never, { todayISO: dateISO });
 }
 
-async function declare(constraint: unknown): Promise<{ ok: boolean }> {
+async function declare(constraint: unknown, todayISO = TARGET): Promise<{ ok: boolean }> {
   return await quietAsync(() => executeProgramControlActionDurably({
     type: 'set_injury_modifier',
     source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
     scope: 'current_and_future', payload: { constraint },
     requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
-  } as never, { todayISO: TARGET })) as { ok: boolean };
+  } as never, { todayISO })) as { ok: boolean };
 }
 
 async function main(): Promise<void> {
-  install();
+  for (const area of ['Knee', 'Hamstring', 'Shoulder']) {
+    const guided = constraintFor(area, 'moderate', TARGET);
+    const compiled = compileActiveExposureConstraints([guided]);
+    ok(`guided ${area} maps to the specific exposure-policy region`,
+      compiled.length === 1 && compiled[0].region === bucketToRegion(guided.bucket!) &&
+      compiled[0].blockedExposures.length > 0);
+  }
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: athleteAnswers(ARCHETYPES.find(athlete => athlete.id === 'female-3-novice-home')!),
+    installDayISO: INSTALL_DAY,
+  }));
+  const conditioningDate = addDaysISO(INSTALL_DAY, 2);
+  setJourneyClock(conditioningDate);
+  const conditioningConstraint = constraintFor('Knee', 'moderate', conditioningDate);
+  const conditioningReview = quiet(() => buildSessionInjuryReview({
+    date: conditioningDate, constraint: conditioningConstraint,
+  }));
+  ok('home athlete reaches a conditioning replacement in the injury review',
+    conditioningReview.conditioningChanges.some(change => !!change.to), conditioningReview.conditioningChanges);
+  ok('a conditioning-only change is not described as nothing changing',
+    !conditioningReview.nothingChanges && conditioningReview.headline.includes('conditioning'));
+  const conditioningAccepted = await declare(conditioningConstraint, conditioningDate);
+  const adjustedConditioning = dayOn(conditioningDate);
+  ok('the same safe conditioning replacement lands through the accepted door',
+    conditioningAccepted.ok && conditioningReview.conditioningChanges.every(change =>
+      !adjustedConditioning?.exercises.some(row => row.exercise?.name === change.from) &&
+      (!change.to || adjustedConditioning?.exercises.some(row => row.exercise?.name === change.to))));
+  await install();
   const before = fingerprintOn(TARGET);
   const beforeRows = JSON.parse(before).map((entry: string[]) => entry[0]) as string[];
 
@@ -335,7 +347,7 @@ async function main(): Promise<void> {
 
   console.log('\n[9] AND THE ADJUSTMENT ITSELF SURVIVES A RESTART WHILE THE INJURY IS LIVE');
   {
-    install();
+    await install();
     ok('CONTROL — declared again on a clean world', (await declare(
       constraintFor('Knee', 'moderate', TARGET))).ok === true);
     const adjusted = fingerprintOn(TARGET);
@@ -362,7 +374,7 @@ async function main(): Promise<void> {
      * declared on top of the first, and the block must not compound — the added
      * rows of pass one must not become "rows the session already has" that pass
      * two then builds on top of. */
-    install();
+    await install();
     ok('CONTROL — the first injury adjusted the session',
       (await declare(constraintFor('Knee', 'moderate', TARGET))).ok === true);
     const afterOne = dayOn(TARGET);
@@ -385,11 +397,8 @@ async function main(): Promise<void> {
       { after: rowsTwo.length, before: beforeRows.length });
     /* The boundary itself, named where it lives, so a future reader finds the
      * rule and not only its symptom. */
-    ok('the planner\'s read declares the suppression',
-      /suppressInjuryAdjustment: true/.test(fs.readFileSync(
-        path.resolve(__dirname, '..', 'utils', 'programControlActions.ts'), 'utf8'))
-      && /state\.suppressInjuryAdjustment \? workout/.test(fs.readFileSync(
-        path.resolve(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8')));
+    ok('the renderer does not add or re-prescribe the accumulated injury session',
+      quiet(() => compilerOwnsVisibleInjuryRows(mondayFor(TARGET), TARGET)).length === 0);
   }
 
   console.log('\n[8] THE BLOCK ROTATES BY DAY — the week is not the same replacement five times');

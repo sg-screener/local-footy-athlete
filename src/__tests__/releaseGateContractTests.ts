@@ -77,6 +77,22 @@ ok('the gate starts with test truth and carries no diagnostic-fleet command',
   gate.units[0]?.label === BOOTSTRAP_SCRIPT
     && gate.units.every((unit: any) => !/^test:bible(?::|$)/.test(unit.label)),
   gate.units);
+ok('the real all-scope typecheck runs after bootstrap, before product witnesses',
+  gate.units[1]?.label === 'test:compile'
+    && gate.units.filter((unit: any) => unit.label === 'test:compile').length === 1,
+  gate.units);
+const missingTypecheck = JSON.parse(JSON.stringify(pkg));
+delete missingTypecheck.scripts['test:compile'];
+ok('liveness: missing or redirected real typecheck refuses release',
+  refused(() => deriveReleaseGate(missingTypecheck, registry, ROOT), /real typecheck/)
+    && refused(() => deriveReleaseGate({ ...pkg, scripts: { ...pkg.scripts,
+      'test:compile': 'node scripts/test-typecheck-gate.js' } }, registry, ROOT), /real typecheck/));
+const typecheckRed = runUnits(gate.units, (unit: any) => ({
+  exit: unit.label === 'test:compile' ? 1 : 0, ms: 1,
+}));
+ok('liveness: an actual typecheck failure blocks all product witnesses',
+  typecheckRed.exit === 1 && typecheckRed.results.length === 2
+    && typecheckRed.results[1].label === 'test:compile');
 ok('every validated current contract contributes its witness automatically',
   currentContracts.length > 0
     && expectedWitnesses.size === actualWitnesses.size

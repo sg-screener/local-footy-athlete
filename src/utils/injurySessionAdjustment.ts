@@ -1,50 +1,30 @@
 /**
- * THE SESSION-LEVEL ANSWER, WHEN NO EXERCISE HAS ONE OF ITS OWN.
+ * R-124 session-level injury policy: retain safe work, pause affected patterns,
+ * and add coherent unaffected-area work within the established volume limits.
+ * Pure policy helpers consumed by canonicalWeeklyInjuryCompiler and the review
+ * preview. The resolver does not run a second session builder.
  *
- * Sam, 2026-08-21 (R-124): *"If those stages find nothing safe, do not describe
- * unrelated upper-body work as replacing that specific lower-body exercise.
- * Handle the unresolved rows at session level — preserve all safe work already
- * in the session; do not create duplicate or excessive upper-body volume; add
- * unaffected-area work only as a coherent session adjustment, not fake
- * one-for-one substitutions; clearly state which lower-body patterns are
- * paused."*
- *
- * ## NOTHING HERE IS STORED, AND THAT IS WHAT MAKES CLEARING WORK
- *
- * Sam's eighth requirement: *"Clearing the injury must restore the exact
- * original session, including after restart."*
- *
- * This is a **read-time projection from the injury FACT**, installed at the same
- * VIEW door as `rules/injuryWithheldRows` and for the same reason. The accepted
- * program keeps all six original rows and their loads; the athlete is shown a
- * different day; and clearing the injury restores the original **by doing
- * nothing at all** — there is no undo path to get wrong, and no ledger entry to
- * replay after a restart. Writing the three added rows as `add_exercise`
- * decisions would have been the obvious build and it fails requirement 8
- * outright: the ledger would replay them forever after the knee was better.
- *
- * ⚠ **SO IT MUST NEVER RUN ON A CANONICALISING READ.** It is driven by
- * `state.temporarySourceFacts`, which only the VIEW doors supply — the same
- * protection `markInjuryWithheldRows` relies on, stated in `sessionResolver`
- * beside the exclusion boundary. A projection that reaches the accepted week
- * gets written down, and then the knee would be in the program forever.
- *
- * WRITER: none — pure. READER: `utils/sessionResolver` (the view door) and
- * `utils/sessionInjuryReview` (the review that promises it).
- * TEST: `test:injury-session-adjustment`.
+ * Clear/restart rebuild the original accepted inputs through the compiler;
+ * these derived additions are never recorded as athlete add-exercise decisions.
+ * Guard: compilerYear/sourceFacts compiler_owns_visible_rows, including the
+ * overlapping-injury/one-remaining regression and render-writer mutation.
  */
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { legalAddCandidates, type AddCandidate, type AddLeafId } from './addExerciseCandidates';
-import { resolveTapSwapEnvironment, type TapSwapEnvironment } from './tapSwapHierarchy';
-import { activeInjuryFactsOn, isRedFlagInjury } from '../rules/injuryWithheldRows';
-import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import type { TapSwapEnvironment } from './tapSwapHierarchy';
 import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import { SET_CEILING } from '../rules/weeklyLegality';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { finerPatternIdentityOf } from '../rules/injuryFallbackLadder';
+import { mainPatternForExerciseMovement, type MainStrengthPattern } from '../rules/strengthPatternContributions';
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
+
+export interface InjurySessionAddition extends AddCandidate {
+  /** Declared by the compound slot; midline additions never claim this role. */
+  mainStrengthPattern?: MainStrengthPattern | null;
+}
 
 export interface InjurySessionAdjustment {
   /** The one line the active session shows instead of five greyed-out cards. */
@@ -65,7 +45,7 @@ export interface InjurySessionAdjustment {
    */
   pausedOnTheDay: readonly string[];
   /** The block that replaces them — attached to the SESSION, named against nothing. */
-  added: readonly AddCandidate[];
+  added: readonly InjurySessionAddition[];
 }
 
 /**
@@ -186,6 +166,7 @@ export function chooseInjurySessionAdditions(args: {
   pausedRowNames: readonly string[];
   /** Every exercise name anywhere in the athlete's week, this session included. */
   weekExerciseNames: readonly string[];
+  otherMainStrengthPatterns?: readonly MainStrengthPattern[];
   /**
    * ⚠ **THE ATHLETE'S OWN "LEAVE THIS OUT" DECISIONS — NEVER OFFERED BACK.**
    *
@@ -222,7 +203,7 @@ export function chooseInjurySessionAdditions(args: {
    * across the week. Absent, the pool order stands as before.
    */
   dateISO?: string;
-}): AddCandidate[] {
+}): InjurySessionAddition[] {
   /**
    * ⚠ **THREE CAPS, AND THE SMALLEST WINS.** Sam: *"Cap newly added work at
    * three exercises and never exceed the original session size or the existing
@@ -244,10 +225,10 @@ export function chooseInjurySessionAdditions(args: {
     ...args.pausedRowNames,
     ...args.excludedByAthlete,
   ].map(normalise));
-  const chosen: AddCandidate[] = [];
+  const chosen: InjurySessionAddition[] = [];
   let sets = args.keptSets;
 
-  const take = (candidate: AddCandidate | undefined): boolean => {
+  const take = (candidate: InjurySessionAddition | undefined): boolean => {
     if (!candidate) return false;
     if (chosen.length >= roomForRows) return false;
     if (sets + setsOf(candidate) > SET_CEILING) return false;
@@ -316,8 +297,12 @@ export function chooseInjurySessionAdditions(args: {
   const safeHalf: 'upper' | 'lower' = args.injuredHalf === 'upper' ? 'lower' : 'upper';
   const leaves = [...COMPOUND_LEAVES[safeHalf]];
   if (safeHalf === 'upper') {
-    const pulling = identityCount(['horizontal_pull', 'vertical_pull']);
-    const pressing = identityCount(['horizontal_push', 'vertical_push']);
+    const pulling = args.otherMainStrengthPatterns
+      ? args.otherMainStrengthPatterns.filter(pattern => pattern === 'pull').length
+      : identityCount(['horizontal_pull', 'vertical_pull']);
+    const pressing = args.otherMainStrengthPatterns
+      ? args.otherMainStrengthPatterns.filter(pattern => pattern === 'push').length
+      : identityCount(['horizontal_push', 'vertical_push']);
     // Ties go to pulling: with equal amounts of both, an extra press is the more
     // fatiguing addition for a footballer's shoulders.
     if (pressing < pulling) leaves.reverse();
@@ -326,7 +311,10 @@ export function chooseInjurySessionAdditions(args: {
    * whose every leaf is empty simply contributes nothing, and the midline slots
    * below still fill — which is what stops an upper injury emptying the day. */
   for (const leaf of leaves) {
-    if (take(legal(leaf)[0])) break;
+    const candidate = legal(leaf)[0];
+    if (candidate && take({ ...candidate,
+      mainStrengthPattern: mainPatternForExerciseMovement(getExerciseTags(candidate.name)?.movement),
+    })) break;
   }
 
   // ── 2. MIDLINE, ONE PER PRESCRIPTION SHAPE ───────────────────────────────
@@ -387,10 +375,12 @@ export function injuryAdjustmentSummary(args: {
  */
 export function injuryAdjustmentRows(args: {
   workout: Workout;
-  added: readonly AddCandidate[];
+  added: readonly InjurySessionAddition[];
   startOrder: number;
 }): WorkoutExercise[] {
+  const replacesMainStrength = args.workout.exercises.some(row => row.section18Evidence?.role === 'main_strength');
   return args.added.map((candidate, index) => {
+    const mainStrengthPattern = replacesMainStrength ? candidate.mainStrengthPattern ?? null : null;
     const slug = candidate.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return {
       id: `injury-adjustment-${args.workout.id}-${slug}`,
@@ -400,6 +390,13 @@ export function injuryAdjustmentRows(args: {
       prescribedSets: candidate.sets,
       prescribedRepsMin: candidate.repsMin,
       prescribedRepsMax: candidate.repsMax,
+      section18Evidence: {
+        protocolVersion: 1,
+        role: mainStrengthPattern ? 'main_strength' : 'strength_accessory',
+        strengthPattern: mainStrengthPattern,
+        mainStrengthPattern,
+        provenance: 'composer_declaration',
+      },
       ...(candidate.weightKg !== null ? { prescribedWeightKg: candidate.weightKg } : {}),
       restSeconds: 60,
       exercise: {
@@ -416,26 +413,7 @@ export function injuryAdjustmentRows(args: {
 
 export { setsOf as injuryAdjustmentSetsOf };
 
-/* ══════════════════════════════════════════════════════════════════════════
- * THE ONE OWNER BOTH SIDES ASK
- * ══════════════════════════════════════════════════════════════════════════
- *
- * The review PROMISES this block and the view door DELIVERS it, and the only
- * way those two can be made to agree is for them to be the same function with
- * the same inputs. So the environment is built HERE, from the athlete's profile
- * and their injury facts, rather than handed in by each caller from whatever it
- * happened to have — which is how a review and a door come to disagree.
- *
- * ⚠ **NOT COVERED, AND NAMED: A TEMPORARY EQUIPMENT FACT DOES NOT NARROW THE
- * BLOCK.** The environment below carries the athlete's PERMANENT kit (from the
- * profile) and their injuries. If they have also said "no barbell today", the
- * added block can still offer a barbell row. The per-row ladder does not have
- * this gap, because its caller hands it the full live environment. Closing it
- * means projecting equipment facts into a constraint list here, which is a
- * different unit (`composeTemporarySourceFactCompatibility`'s territory) and is
- * not smuggled into this one.
- */
-
+/** Explicit stage inputs, shared by compiler output and its review. */
 export interface InjurySessionAdjustmentInputs {
   workout: Workout | null | undefined;
   /**
@@ -465,6 +443,7 @@ export interface InjurySessionAdjustmentInputs {
   redFlag: boolean;
   /** Every exercise name in the athlete's authored week, this day included. */
   weekExerciseNames: readonly string[];
+  otherMainStrengthPatterns?: readonly MainStrengthPattern[];
   /** Exercises the athlete has removed. Never offered back — see the field of
    *  the same name on `chooseInjurySessionAdditions`. */
   excludedByAthlete: readonly string[];
@@ -478,44 +457,6 @@ export interface InjurySessionAdjustmentInputs {
    *  callers (the review and the view door) pass the same date, so the review
    *  stays an exact promise. */
   dateISO?: string;
-}
-
-export function injuryAdjustmentEnvironment(args: {
-  dateISO: string;
-  profile: OnboardingData | null | undefined;
-  facts: readonly TemporarySourceFact[] | null | undefined;
-}): TapSwapEnvironment {
-  const episodes = activeInjuryFactsOn(args.facts, args.dateISO);
-  let primary: { bucket: InjuryKey; severity: number; seriousSymptoms: boolean } | null = null;
-  for (const episode of episodes) {
-    if (!episode.bucket) continue;
-    if (!primary || episode.severity > primary.severity) {
-      primary = {
-        bucket: episode.bucket as InjuryKey,
-        severity: episode.severity,
-        seriousSymptoms: false,
-      };
-    }
-  }
-  return resolveTapSwapEnvironment({
-    date: args.dateISO,
-    profile: args.profile ?? null,
-    /* EVERY active injury, so the block is safe against all of them and not
-     * only against the worst one — the same requirement the ladder's stages
-     * carry (R-121). */
-    activeConstraints: episodes
-      .filter((episode) => !!episode.bucket)
-      .map((episode) => ({
-        id: `injury-fact-${episode.episodeId}`,
-        type: 'injury' as const,
-        status: 'active' as const,
-        bucket: episode.bucket,
-        severity: episode.severity,
-        bodyPart: episode.bodyPart,
-        startDate: args.dateISO,
-      })) as never,
-    primaryInjury: primary as never,
-  });
 }
 
 /**
@@ -554,6 +495,7 @@ export function deriveInjurySessionAdjustment(
     profile: args.profile,
     keptRowNames,
     weekExerciseNames: args.weekExerciseNames,
+    otherMainStrengthPatterns: args.otherMainStrengthPatterns,
     excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: args.pausedRowNames,
     pausedCount: args.pausedRowNames.length,
@@ -577,13 +519,13 @@ export function deriveInjurySessionAdjustment(
 }
 
 /**
- * ── THE VIEW DOOR'S HALF: PAUSED ROWS COME OFF, THE BLOCK GOES ON ──────────
+ * ── COMPILER MATERIALISATION: PAUSED ROWS COME OFF, THE BLOCK GOES ON ──────────
  *
  * Sam, 2026-08-21: *"The five paused exercises appear in the review, but
  * disappear from the active workout after Apply. Do not show five greyed-out
  * SKIP cards … show one concise summary."*
  *
- * ⚠ **THEY COME OFF THE VIEW AND STAY IN THE DATA.** `injuryAdjustment.paused`
+ * ⚠ **ORIGINAL INPUTS STAY IN THE LEDGER; THE COMPILED SESSION CARRIES THE ADJUSTMENT.** `injuryAdjustment.paused`
  * carries them at the session level, because a red-flag injury blocks the day's
  * completion *while it is withholding something*
  * (`rules/injuryWithheldRows.injurySessionOutcomeRefusal`) — and a rule that
@@ -646,126 +588,4 @@ export function applyInjurySessionAdjustment<T extends Workout | null | undefine
       added: adjustment.added.map((candidate) => candidate.name),
     },
   } as T;
-}
-
-/**
- * ── THE VIEW DOOR'S ONE CALL ──────────────────────────────────────────────
- *
- * Everything from the facts: which rows this injury pauses (the ladder decides,
- * not this file), what goes in their place, and the sentence. The resolver has
- * no stores and no environment of its own, so both are built here from the same
- * two things it does have — the athlete's profile and their source facts.
- *
- * ⚠ **THE PAUSED SET IS THE LADDER'S ANSWER, ASKED THROUGH
- * `planInjuryRecomposition`.** It is not re-derived from the tags here. If it
- * were, this file would be a second opinion about what an injury does to a
- * session, which is the single thing the injury unit has spent three rulings
- * removing.
- */
-export function injurySessionAdjustmentForDay(args: {
-  workout: Workout | null | undefined;
-  dateISO: string;
-  facts: readonly TemporarySourceFact[] | null | undefined;
-  profile: OnboardingData | null | undefined;
-  weekExerciseNames: readonly string[];
-  excludedByAthlete: readonly string[];
-}): InjurySessionAdjustment | null {
-  if (!args.workout || (args.workout.exercises ?? []).length === 0) return null;
-  const episodes = activeInjuryFactsOn(args.facts, args.dateISO);
-  if (episodes.length === 0) return null;
-  const worst = episodes.reduce((a, b) => (b.severity > a.severity ? b : a));
-  if (episodes.some((episode) => isRedFlagInjury(episode))) return null;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { planInjuryRecomposition } = require('./injurySessionRecomposition') as
-    typeof import('./injurySessionRecomposition');
-
-  /**
-   * ── STAGED, IN DECLARATION ORDER, IN MEMORY ───────────────────────────────
-   *
-   * Sam, 2026-08-21: *"the second injury reviews and changes the exercises
-   * currently visible to the athlete, not the older originals underneath."*
-   *
-   * ⚠ **THE DAY THIS IS HANDED IS NOT THE DAY THE ATHLETE WAS LOOKING AT, AND
-   * THAT IS MEASURED, NOT ASSUMED.** With two injuries, the settle resets the
-   * day to the authored week and replays each injury in turn — and stage 1's
-   * `swap_exercise` is then REFUSED by the ordinary door, because the row it
-   * wants to write (`Glute Bridge`) is unsafe under the injury declared
-   * afterwards. Correct, and it leaves `Leg Press` and `Bulgarian Split Squats`
-   * back on the day. So a single pass here paused the AUTHORED names while the
-   * review, built while the swaps were still standing, had promised
-   * `Kettlebell Swings` and `Glute Bridge` — the athlete told one thing and
-   * shown another. (`test:session-injury-review` [9].)
-   *
-   * So the athlete's history is reproduced HERE, in memory, exactly as
-   * `recomposeSessionForInjury` reproduces it on disk: stage k plans against the
-   * day as stages 0..k-1 left it, with an environment carrying only the
-   * injuries that existed by stage k. **Nothing is written and nothing is
-   * re-decided** — the earlier stages' substitutions are replayed only so that
-   * the newest stage can name the row the athlete can actually see.
-   */
-  /* Declaration order is `createdAt` — the order the athlete actually reported
-   * them, which is what "the session they could see before this injury" means. */
-  const staged = [...episodes].sort((a, b) => String(a.createdAt ?? '')
-    .localeCompare(String(b.createdAt ?? '')));
-  const originalDayRows: string[] = (args.workout.exercises ?? []).map((row) => String(
-    (row as { exercise?: { name?: string } }).exercise?.name
-    ?? (row as { name?: string }).name ?? '',
-  ).trim()).filter(Boolean);
-  let dayRows: string[] = [...originalDayRows];
-  /** visible name -> the name the DAY carries for that same slot. */
-  const dayNameOf = new Map<string, string>(originalDayRows.map((name) => [name, name]));
-  let pausedRows: string[] = [];
-  for (let index = 0; index < staged.length; index += 1) {
-    const stage = staged[index]!;
-    const stageEnvironment = injuryAdjustmentEnvironment({
-      dateISO: args.dateISO,
-      profile: args.profile,
-      /* Only the injuries that existed by this stage — the same scoping the
-       * on-disk stage loop uses, and the reason an earlier answer is not
-       * re-decided by a later injury. */
-      facts: staged.slice(0, index + 1),
-    });
-    const stagePlan = planInjuryRecomposition({
-      workout: { ...args.workout, exercises: dayRows.map((name) => ({
-        exercise: { name },
-      })) } as unknown as Workout,
-      environment: stageEnvironment,
-      primaryInjury: stage.bucket
-        ? { bucket: stage.bucket as never, severity: stage.severity, seriousSymptoms: false }
-        : null,
-    });
-    const replaced = new Map(stagePlan.substitutions
-      .filter((substitution) => substitution.to.name)
-      .map((substitution) => [substitution.from, substitution.to.name!]));
-    dayRows = dayRows.map((name) => {
-      const next = replaced.get(name);
-      if (!next) return name;
-      /* The slot keeps its identity on the day even as its visible name moves,
-       * so the filter can still find the row this pause is about. */
-      dayNameOf.set(next, dayNameOf.get(name) ?? name);
-      return next;
-    });
-    /* A row paused by an earlier stage stays paused; the later stages simply
-     * never see it again. */
-    pausedRows = [...pausedRows, ...stagePlan.pausedRows.filter((n) => !pausedRows.includes(n))];
-    dayRows = dayRows.filter((name) => !pausedRows.includes(name));
-  }
-  const plan = { pausedRows };
-  const pausedOnTheDay = pausedRows
-    .map((name) => dayNameOf.get(name) ?? name)
-    .filter((name) => originalDayRows.includes(name));
-  return deriveInjurySessionAdjustment({
-    workout: args.workout,
-    environment: injuryAdjustmentEnvironment({
-      dateISO: args.dateISO, profile: args.profile, facts: args.facts,
-    }),
-    profile: args.profile,
-    bodyPart: worst.bodyPart,
-    redFlag: false,
-    weekExerciseNames: args.weekExerciseNames,
-    excludedByAthlete: args.excludedByAthlete,
-    pausedRowNames: plan.pausedRows,
-    pausedOnTheDay,
-    dateISO: args.dateISO,
-  });
 }

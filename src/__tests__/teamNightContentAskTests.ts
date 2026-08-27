@@ -110,6 +110,12 @@ run('the safe version swaps the named three, keeps their dose, and trims the RDL
   const bench = (workout.exercises ?? [])[4];
   assert(bench === (SESSION.exercises ?? [])[4], 'an unflagged row is byte-identical');
   assert(changes.length === 4, `four changes disclosed: ${JSON.stringify(changes)}`);
+  for (const index of [0, 1, 2]) {
+    const swapped = workout.exercises[index];
+    assert(!!swapped.exerciseId && swapped.exerciseId === swapped.exercise?.id &&
+      swapped.exerciseId !== SESSION.exercises[index].exerciseId,
+    'a safe swap must replace exercise identity, not just its displayed name');
+  }
 });
 
 run('a safe session flags nothing — the swap and the flag cannot loop', () => {

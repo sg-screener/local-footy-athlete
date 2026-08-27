@@ -35,6 +35,7 @@
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { compileCanonicalExerciseEditOnWorkout } from './canonicalWeeklyExerciseEditCompiler';
 
 export const TEAM_NIGHT_CONTENT_ROUTE_IDS = ['swap_safe', 'keep_regular'] as const;
 export type TeamNightContentRouteId = (typeof TEAM_NIGHT_CONTENT_ROUTE_IDS)[number];
@@ -102,10 +103,19 @@ export function applyTeamNightSafeSwaps(
     const replacement = EXERCISE_SWAPS[identity];
     if (replacement) {
       changes.push(`${name} → ${replacement}`);
-      const carried = (row as { exercise?: { name?: string } }).exercise;
+      const swapped = compileCanonicalExerciseEditOnWorkout(workout, {
+        kind: 'swap', decisionId: `team-night-safe:${workout.id}:${row.id ?? identity}`,
+        occurredAt: workout.updatedAt ?? '', dateISO: '', targetName: name,
+        targetComponentId: row.id ?? null,
+        replacement: { name: replacement, sets: row.prescribedSets,
+          repsMin: row.prescribedRepsMin, repsMax: row.prescribedRepsMax,
+          weight: row.prescribedWeightKg, restSeconds: row.restSeconds,
+          prescriptionType: row.prescriptionType, perSide: row.perSide,
+        },
+      }).exercises.find(candidate => candidate.id === row.id && candidate.exercise?.name === replacement);
+      if (!swapped) throw new Error(`Team-night replacement could not resolve ${name}`);
       return {
-        ...row,
-        ...(carried ? { exercise: { ...carried, name: replacement } } : {}),
+        ...swapped,
         ...('name' in row ? { name: replacement } : {}),
       } as WorkoutExercise;
     }

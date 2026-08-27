@@ -39,13 +39,13 @@ function activeLighterDay(date: string): boolean {
  */
 export function commitCanonicalAcceptedLighterDayEffect(
   effect: CanonicalAcceptedLighterDayEffect,
+  facts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts,
 ): LighterDayTrimResult | null {
-  const facts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts;
   if (!lighterDayEffectActive(effect, facts)) return null;
   const state = useProgramStore.getState();
   const weekStart = getMondayForDate(effect.dateISO);
   const days = resolveWeekWithConditioning(weekStart, { ...buildScheduleStateImperative(),
-    activeConstraints: undefined, temporarySourceFacts: [], athleteExclusions: [], suppressInjuryAdjustment: true });
+    activeConstraints: undefined, temporarySourceFacts: [], athleteExclusions: [] });
   const workout = days.find((day) => day.date === effect.dateISO)?.workout;
   if (!workout) return null;
   const compiled = compileCanonicalLighterDayWorkout(workout);

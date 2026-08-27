@@ -859,7 +859,6 @@ console.log('\n[cross-week] A MOVED GAME PROTECTS THE ADJACENT WEEK (launch audi
     weekStartISO: '2026-08-31',
     availability,
     seasonPhase: profile.seasonPhase,
-    activeConstraints: [],
   }));
   ok('the REAL adjacent Sunday game reaches fixture proximity', [],
     (built.fixtureProximityDates ?? []).includes('2026-08-30'),

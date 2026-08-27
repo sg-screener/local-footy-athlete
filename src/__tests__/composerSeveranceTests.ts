@@ -359,7 +359,7 @@ console.log('\n[e] Classifier re-inference never overrides a composed declaratio
       },
     }],
   } as unknown as Workout;
-  const stamped = withSection18WorkoutEvidence(declaredAccessory, 'infer');
+  const stamped = withSection18WorkoutEvidence(declaredAccessory, 'planner_and_canonical_content');
   const row = (stamped.exercises ?? [])[0];
   ok('a `Back Squat` DECLARED an accessory stays an accessory',
     row.section18Evidence?.role === 'strength_accessory'
@@ -367,16 +367,15 @@ console.log('\n[e] Classifier re-inference never overrides a composed declaratio
     JSON.stringify(row.section18Evidence));
   ok('the declaration keeps its provenance through the evidence pass',
     row.section18Evidence?.provenance === 'composer_declaration');
-  // THE CONTROL, so the cell cannot pass by the pass doing nothing at all:
-  // an UNDECLARED Back Squat must still be inferred a main lift.
+  // An undeclared display name must not manufacture a main-lift declaration.
   const undeclared = {
     ...declaredAccessory,
     exercises: [{ ...(declaredAccessory.exercises ?? [])[0], section18Evidence: undefined }],
   } as unknown as Workout;
-  const inferred = (withSection18WorkoutEvidence(undeclared, 'infer').exercises ?? [])[0];
-  ok('[control] an UNDECLARED Back Squat is still inferred a main lift',
-    inferred.section18Evidence?.role === 'main_strength'
-    && inferred.section18Evidence?.mainStrengthPattern === 'squat',
+  const inferred = (withSection18WorkoutEvidence(undeclared, 'legacy_unknown').exercises ?? [])[0];
+  ok('[control] an UNDECLARED name cannot create a main-lift declaration',
+    inferred.section18Evidence?.role !== 'main_strength'
+    && !inferred.section18Evidence?.mainStrengthPattern,
     JSON.stringify(inferred.section18Evidence));
 }
 

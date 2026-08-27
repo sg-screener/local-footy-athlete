@@ -8,7 +8,7 @@ import type { Check } from './results';
 const rowsModule = require('../../rules/materialiseComposedWeek') as typeof import('../../rules/materialiseComposedWeek');
 const adapterModule = require('../../data/defaultProgram') as typeof import('../../data/defaultProgram');
 type Output = ReturnType<typeof compileCanonicalProgram>;
-interface AuthoredRows { weekStart: string; workouts: Workout[]; }
+interface AuthoredRows { weekStart: string; producer: 'strength' | 'conditioning'; workouts: Workout[]; }
 
 // Timestamps are audit metadata, not training instructions. This deliberately
 // measures semantic determinism, not transitive clock-purity of legacy helpers.
@@ -22,6 +22,7 @@ export const finalProgramSignature = (value: unknown): string => semanticFingerp
  */
 export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Output, sources: AuthoredRows[]): Check[] {
   const missing: string[] = [];
+  const changedIntent: string[] = [];
   let expectedRows = 0;
   for (const source of sources) {
     const retained = applyExclusionsToAuthoredWeek({ workouts: source.workouts,
@@ -30,6 +31,12 @@ export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Out
     for (const workout of retained) {
       const date = isoDateForWeekday(source.weekStart, workout.dayOfWeek);
       if (input.weeks.remainderBoundary && date < input.weeks.remainderBoundary.governedFromISO) continue;
+      if (source.producer === 'strength' && workout.exercises.length > 0) {
+        const finalWorkout = week?.workouts.find(candidate => candidate.dayOfWeek === workout.dayOfWeek);
+        if (semanticFingerprint(finalWorkout?.strengthIntent) !== semanticFingerprint(workout.strengthIntent)) {
+          changedIntent.push(date);
+        }
+      }
       for (const row of workout.exercises) {
         expectedRows++;
         const matches = week?.workouts.flatMap((w) => w.exercises
@@ -43,9 +50,23 @@ export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Out
     }
   }
   return [
-    { id: 'final_rows_observed', ok: sources.length > 0 && expectedRows > 0,
-      detail: `${expectedRows} specialist-authored rows across ${sources.length} observed specialist calls` },
+    // This invocation can legitimately prescribe zero remaining rows: for
+    // example a midweek injury with no safe movements on the athlete's kit.
+    // Liveness here is observing the actual specialists, not demanding unsafe
+    // work. The mandatory real_compiler_mutation separately requires a healthy
+    // nonempty row to be removed and detected; an empty author cannot pass it.
+    { id: 'final_rows_observed', ok: output.program.microcycles.length > 0 &&
+      output.program.microcycles.every(week => ['strength', 'conditioning'].every(producer =>
+        sources.some(source => source.weekStart === week.startDate.slice(0, 10) && source.producer === producer))),
+      detail: `${expectedRows} specialist-authored rows across ${sources.length} observed specialist calls`
+        + (expectedRows ? '' : JSON.stringify(output.program.microcycles.map(week => ({
+          start: week.startDate, paused: week.exposureContractV2?.safety.trainingPaused,
+          strength: week.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget,
+          conditioning: week.exposureContractV2?.conditioning.core.plannerSelectedTarget,
+          patterns: week.exposureContractV2?.strengthPatterns.prohibitedPatterns,
+        })))) },
     { id: 'final_rows_conserved', ok: missing.length === 0, detail: missing.join(',') },
+    { id: 'final_strength_intent_conserved', ok: changedIntent.length === 0, detail: changedIntent.join(',') },
     { id: 'final_week_identity', ok: output.program.microcycles.length === output.plans.length &&
       new Set(output.program.microcycles.map((w) => w.startDate)).size === output.plans.length },
   ];
@@ -58,12 +79,12 @@ export function observeFinalRows(input: CanonicalProgramCompilerInput, compile: 
   const originalAdapter = adapterModule.buildWorkoutsFromCoach;
   rowsModule.materialiseComposedWeek = (week, context) => {
     const workouts = originalRows(week, context);
-    sources.push({ weekStart: context.weekStartISO, workouts: JSON.parse(JSON.stringify(workouts)) });
+    sources.push({ weekStart: context.weekStartISO, producer: 'strength', workouts: JSON.parse(JSON.stringify(workouts)) });
     return workouts;
   };
   adapterModule.buildWorkoutsFromCoach = (...args) => {
     const workouts = originalAdapter(...args);
-    if (args[4]?.weekStartISO) sources.push({ weekStart: args[4].weekStartISO,
+    if (args[4]?.weekStartISO) sources.push({ weekStart: args[4].weekStartISO, producer: 'conditioning',
       workouts: JSON.parse(JSON.stringify(workouts.map((w) => ({ ...w, exercises: w.exercises.filter((r) =>
         r.section18Evidence?.role === 'conditioning') })))) });
     return workouts;

@@ -37,27 +37,6 @@ export type { CalendarDayType } from '../types/calendar';
  * Date keys are ISO strings: 'YYYY-MM-DD'
  */
 
-/**
- * Compatibility projection for onboarding, legacy Coach/undo and hydration.
- * Live fixture add/move/remove UI is owned by FixtureMutationTransaction.
- */
-function commitMark(
-  date: string,
-  mark: CalendarDayType | null,
-  expectedCurrentMark?: CalendarDayType,
-  todayISO?: string,
-): void {
-  // Dynamic loading keeps the accepted transaction owner above the legacy
-  // compatibility mirror without creating a store-initialisation cycle.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('./acceptedStateTransaction').commitCalendarMarkTransaction({
-    date,
-    mark,
-    expectedCurrentMark,
-    todayISO,
-  });
-}
-
 interface CalendarState {
   // Map of date string → day type
   markedDays: Record<string, CalendarDayType>;
@@ -65,33 +44,9 @@ interface CalendarState {
   // Currently selected date (for modal interaction)
   selectedDate: string | null;
 
-  // Actions
-  /**
-   * COMPATIBILITY-ONLY FIXTURE WRITE.
-   * Live Home fixture UI must use FixtureMutationTransaction.
-   */
-  setGameDay: (date: string, todayISO?: string) => void;
-  /**
-   * COMPATIBILITY-ONLY FIXTURE WRITE.
-   * Live Home fixture UI must use FixtureMutationTransaction.
-   */
-  removeGameDay: (date: string) => void;
-  setRestDay: (date: string) => void;
-  removeRestDay: (date: string) => void;
-  /** COMPATIBILITY-ONLY fixture suppression write; not a live Home UI door. */
-  setNoGame: (date: string) => void;
-  /** COMPATIBILITY-ONLY fixture suppression write; not a live Home UI door. */
-  removeNoGame: (date: string) => void;
   setSelectedDate: (date: string | null) => void;
   getGameDaysInRange: (startDate: string, endDate: string) => string[];
   getNextGameDay: (fromDate?: string) => string | null;
-  /**
-   * Wipe all 'game' and 'noGame' overrides (leaves 'rest' marks intact).
-   * Used when leaving In-season so no stale game state survives.
-   * COMPATIBILITY-ONLY phase-transition cleanup; not a live fixture-control
-   * add/move/remove door.
-   */
-  clearAllGames: () => void;
   clear: () => void;
 }
 
@@ -174,18 +129,6 @@ export const useCalendarStore = create<CalendarState>()(
       markedDays: {},
       selectedDate: null,
 
-      setGameDay: (date, todayISO) => commitMark(date, 'game', undefined, todayISO),
-
-      removeGameDay: (date) => commitMark(date, null, 'game'),
-
-      setRestDay: (date) => commitMark(date, 'rest'),
-
-      removeRestDay: (date) => commitMark(date, null, 'rest'),
-
-      setNoGame: (date) => commitMark(date, 'noGame'),
-
-      removeNoGame: (date) => commitMark(date, null, 'noGame'),
-
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       getGameDaysInRange: (startDate, endDate) => {
@@ -206,45 +149,17 @@ export const useCalendarStore = create<CalendarState>()(
         return gameDays[0] || null;
       },
 
-      clearAllGames: () => {
-        const current = get().markedDays;
-        const updated: Record<string, CalendarDayType> = {};
-        const affectedDates: string[] = [];
-        for (const [date, type] of Object.entries(current)) {
-          if (type === 'game' || type === 'noGame') {
-            affectedDates.push(date);
-            continue;
-          }
-          updated[date] = type;
-        }
-        if (affectedDates.length === 0) return;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitCalendarStateTransaction({
-          reason: 'calendar:clear_all_games',
-          markedDays: updated,
-          affectedDates,
-          fixtureChangedDates: affectedDates,
-        });
-      },
-
       clear: () => {
-        const affectedDates = Object.keys(get().markedDays);
-        if (affectedDates.length > 0) {
-          // A reset is the one write that may erase marks, and it says so.
-          // The act stays open across the transaction so the door's write —
-          // which happens inside the commit — is admitted and named.
-          const resetActionId = beginCalendarResetAction('calendar_store_clear');
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            require('./acceptedStateTransaction').commitCalendarStateTransaction({
-              reason: 'calendar:clear',
-              markedDays: {},
-              affectedDates,
-              fixtureChangedDates: affectedDates,
-            });
-          } finally {
-            endCalendarResetAction(resetActionId);
-          }
+        const resetActionId = beginCalendarResetAction('calendar_store_clear');
+        try {
+          // Full reset clears inputs. It must not generate a replacement week
+          // while the other stores are part-way through being reset.
+          const outcome = applyCalendarMarkedDaysWrite({
+            next: {}, writer: 'reset', resetActionId,
+          });
+          if (!outcome.ok) throw new Error(`Calendar reset refused: ${outcome.reason}`);
+        } finally {
+          endCalendarResetAction(resetActionId);
         }
         set({ selectedDate: null });
       },
@@ -261,19 +176,8 @@ export const useCalendarStore = create<CalendarState>()(
           markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(incoming.markedDays),
         };
       },
-      onRehydrateStorage: () => (state, error) => {
-        if (error || !state) return;
-        const affectedDates = Object.keys(state.markedDays);
-        if (affectedDates.length === 0) return;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitCalendarStateTransaction({
-          reason: 'calendar:hydration_acceptance',
-          markedDays: state.markedDays,
-          affectedDates,
-          fixtureChangedDates: affectedDates.filter((date) =>
-            state.markedDays[date] === 'game' || state.markedDays[date] === 'noGame'),
-        });
-      },
+      // Hydration loads inputs only. Quiescent boot waits for every store and
+      // compiles once; a calendar callback must not repair a partial world.
     }
   )
 );

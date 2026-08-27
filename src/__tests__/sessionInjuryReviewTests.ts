@@ -59,7 +59,7 @@ import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
 import { buildSessionInjuryReview, type SessionInjuryReview } from '../utils/sessionInjuryReview';
 import {
   GUIDED_INJURY_AREA_OPTIONS,
@@ -68,7 +68,8 @@ import {
   type GuidedInjuryFlowResult,
   type GuidedInjuryRegion,
 } from '../utils/guidedInjuryControl';
-import { resolveInjuryRecompositionInputs } from '../utils/programControlActions';
+import { compileSessionInjuryPreview, resolveInjuryRecompositionInputs } from '../utils/programControlActions';
+import { completeAcceptedStateFingerprint } from '../store/coachMutationTransaction';
 import { unsafeRowsForInjury } from '../utils/injurySessionRecomposition';
 import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
 import { resolveExerciseName } from '../utils/loadEstimation';
@@ -101,30 +102,11 @@ function theAthlete(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
-function install(): string {
-  localStorageData.clear();
-  resetStoresToFreshInstall('session-injury-review:install');
-  const profile = theAthlete();
-  useProfileStore.getState().updateOnboardingData(profile);
-  quiet(() => useProfileStore.getState().completeOnboarding());
-  setJourneyClock(INSTALL_DAY);
-  const program = quiet(() => generateProgramLocally(profile, {
-    todayISO: INSTALL_DAY, previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'Off-season' as never,
-      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  })) as TrainingProgram;
-  const settled = program.microcycles[1] ?? program.microcycles[0]!;
-  const weekStart = String(settled.startDate).slice(0, 10);
-  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
-    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
-    reason: 'session-injury-review:generate',
+async function install(): Promise<string> {
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: { ...theAthlete(), seasonFinishedOn: '2026-06-28' }, installDayISO: INSTALL_DAY,
   }));
-  useProgramStore.setState({ currentMicrocycle: settled } as never);
-  return weekStart;
+  return INSTALL_DAY;
 }
 
 /** R-124 — the session-level adjustment the VIEW door derived for a day. */
@@ -219,7 +201,7 @@ function unsafeCountFor(area: string, severity: number, date: string): number {
 
 async function main(): Promise<void> {
   /* ══ THE WORLD ═════════════════════════════════════════════════════════ */
-  const weekStart = install();
+  const weekStart = await install();
   const days = trainingDays(weekStart);
   const SEVERITY = 6;
 
@@ -255,7 +237,14 @@ async function main(): Promise<void> {
   setJourneyClock(target);
   const beforeRows = rowsOf(target, weekStart);
   const constraint = constraintFor(area, SEVERITY, target);
+  const beforePreview = completeAcceptedStateFingerprint();
+  const compilerPreview = quiet(() => compileSessionInjuryPreview({ date: target, constraint }));
   const review = quiet(() => buildSessionInjuryReview({ date: target, constraint })) as SessionInjuryReview;
+  ok('[1] preview publishes no state changes', completeAcceptedStateFingerprint() === beforePreview);
+  const dose = (workout: Workout | null | undefined) => JSON.stringify(workout?.exercises.map(row => [
+    row.exercise?.name, row.prescribedSets, row.prescribedRepsMin, row.prescribedRepsMax,
+    row.prescribedWeightKg, row.restSeconds,
+  ]));
 
   /* ══ [2] ASKED ONCE, EVERY AFFECTED ROW FOUND ══════════════════════════ */
   console.log('\n[2] one question, every affected row');
@@ -346,6 +335,16 @@ async function main(): Promise<void> {
     ok('[1] CONTROL — the approve door actually ran', applied.ok === true, applied);
 
     const afterRows = rowsOf(target, weekStart);
+    const actual = quiet(() => resolveWeekWithConditioning(weekStart, buildScheduleStateImperative()))
+      .find(day => day.date === target)?.workout;
+    ok('[1] the compiler preview keeps every promised row and dose',
+      !!compilerPreview && dose(compilerPreview.workout) === dose(actual),
+      { promised: dose(compilerPreview?.workout), actual: dose(actual) });
+    const corruptPreview = compilerPreview && { ...compilerPreview.workout,
+      exercises: compilerPreview.workout.exercises.map((row, index) => index === 0
+        ? { ...row, prescribedSets: row.prescribedSets + 1 } : row) };
+    ok('[1] CONTROL — the comparison rejects an incorrect preview dose',
+      !!corruptPreview?.exercises.length && dose(corruptPreview) !== dose(actual));
     const subs = review.changes.filter((change) => change.kind === 'substitution');
     ok('[6] every substitution the review PROMISED is on the session afterwards',
       subs.every((change) => afterRows.includes(change.to!)),
@@ -407,7 +406,7 @@ async function main(): Promise<void> {
   /* ══ [5] NOTHING CHANGED IS SAID PLAINLY ══════════════════════════════ */
   console.log('\n[5] never claim a change that did not happen');
   {
-    const weekStart2 = install();
+    const weekStart2 = await install();
     const days2 = trainingDays(weekStart2);
     let quietDay = '';
     let quietArea = '';
@@ -460,7 +459,7 @@ async function main(): Promise<void> {
    */
   console.log('\n[8] the red-flag world — every row withheld, nothing removed');
   {
-    const weekStart3 = install();
+    const weekStart3 = await install();
     const days3 = trainingDays(weekStart3);
     let flagDay = '';
     let flagArea = '';
@@ -559,7 +558,7 @@ async function main(): Promise<void> {
    */
   console.log('\n[9] the pairing is exact, and both sides name the visible row');
   {
-    const weekStart4 = install();
+    const weekStart4 = await install();
     const days4 = trainingDays(weekStart4);
     const pairDay = days4.find((d) => rowsOf(d, weekStart4).length >= 4)!;
     setJourneyClock(pairDay);
@@ -841,7 +840,7 @@ async function main(): Promise<void> {
   {
     const { exerciseSessionFamily, everyPlacedExerciseFamily } =
       require('../rules/exerciseSessionFamily');
-    const weekStart5 = install();
+    const weekStart5 = await install();
     const days5 = trainingDays(weekStart5);
     let strengthRowsSeen = 0;
     let substitutionsSeen = 0;

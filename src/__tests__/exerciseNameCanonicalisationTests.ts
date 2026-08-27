@@ -54,7 +54,6 @@ import {
   enforceCuratedAddonCueContract,
   enforceCuratedCueContract,
 } from '../rules/curatedCueContract';
-import { recoveryAddonExerciseVocabulary } from '../utils/recoveryAddonBuilder';
 
 const src = path.resolve(__dirname, '..');
 
@@ -438,19 +437,10 @@ console.log('\n[11] The builder-inline text class — add-on and flow rows sourc
     fs.readFileSync(path.join(src, relative), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/[^\n]*/g, '');
-  const builder = codeOf('utils/recoveryAddonBuilder.ts');
   const domain = codeOf('types/domain.ts');
 
-  ok(
-    'the found instance is gone',
-    !/Quiet tempo, no bouncing/.test(builder),
-    'recoveryAddonBuilder:544',
-  );
-  ok(
-    'the builder\'s exercise() helper can no longer carry a note argument',
-    /function exercise\(name: string, prescription: string\): RecoveryAddonExercise/.test(builder),
-    'the third parameter IS the channel — removing it retires every call site at once',
-  );
+  ok('standalone recovery-addon writer stays retired',
+    !fs.existsSync(path.join(src, 'utils/recoveryAddonBuilder.ts')));
   ok(
     'RecoveryAddonExercise has no notes field left to populate',
     /export interface RecoveryAddonExercise \{[^}]*\}/.test(domain) &&
@@ -478,22 +468,7 @@ console.log('\n[11] The builder-inline text class — add-on and flow rows sourc
     `no curated cue: ${cuelessFlow.join(', ')}`,
   );
 
-  // The vocabulary is enumerated BY RUNNING the builder over its whole decision
-  // space, not by copying its names into this file. A second list is the thing
-  // that drifts — that lesson is already paid for (see the coach-chat second
-  // vocabulary list, retired in `3639841`).
-  const addonVocabulary = recoveryAddonExerciseVocabulary();
-  ok(
-    'the enumerator actually reaches the builder\'s content',
-    addonVocabulary.length >= 10,
-    `only found ${addonVocabulary.length} names`,
-  );
-  const cuelessAddon = addonVocabulary.filter((name) => buildCueText(name) === null);
-  ok(
-    'every add-on exercise the builder can emit resolves a curated cue',
-    cuelessAddon.length === 0,
-    `no curated cue: ${cuelessAddon.join(', ')}`,
-  );
+
 }
 
 console.log('\n[12] The invariant extends to add-on rows — the class cannot return');

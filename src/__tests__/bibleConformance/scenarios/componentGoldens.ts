@@ -55,16 +55,7 @@ export const COMPONENT_GOLDEN_SCENARIOS: readonly ComponentGoldenScenario[] = [
     target: { weekInBlock: 1, day: 'Monday' },
     sourceKind: 'deterministic',
   },
-  {
-    id: 'strength-plus-recovery-addon',
-    description: 'Healthy off-season strength session with a real deterministic recovery add-on attachment.',
-    referenceDate: '2026-03-23',
-    timezone: 'Australia/Melbourne',
-    profile: HEALTHY_OFF_SEASON_FIVE_DAY,
-    ruleIds: ['ALL-RECOVERY-ADDON-01', 'ALL-COMP-PROJECTION-01'],
-    target: { weekInBlock: 1, day: 'Monday' },
-    sourceKind: 'deterministic_with_recovery_addons',
-  },
+  // Standalone recovery-addon author retired; it cannot be a generated golden.
   {
     id: 'accessory-gunshow-only',
     description: 'Direct canonical Gunshow fixture isolated from G−1 removal so accessory visibility and zero main credit can be audited.',

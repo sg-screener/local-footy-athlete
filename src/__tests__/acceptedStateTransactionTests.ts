@@ -1,3 +1,5 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
+import { rebuildLocalWeek } from './support/rebuildWeekForTest';
 /**
  * Accepted-state transaction ownership — Section 18 systemic regressions.
  *
@@ -72,7 +74,6 @@ import {
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
   buildWeekScopedWorkoutOverlay,
-  rebuildLocalWeek,
 } from '../utils/weekRebuild';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
@@ -170,16 +171,17 @@ function generate(value: OnboardingData, start = WEEK_START): TrainingProgram {
       selectedPhase: value.seasonPhase!,
       phaseEntryWeekStartISO: start,
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
 }
 
 function emptyAcceptedContext() {
   return {
+    injuryEpisodes: [], temporarySourceFacts: [], acceptedCompositionBase: null, acceptedProfileSnapshot: null,
     markedDays: {},
     readinessSignalsByDate: {},
     activeConstraints: [],
-    activeInjury: null,
     revision: 0,
     lastTransaction: null,
   };
@@ -450,7 +452,7 @@ function placeholderOverlay(weekStart: string): WeekScopedWorkoutOverlay {
 run('regression', '1 adding a game mark regenerates and gates the target game week', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
   seed(value);
-  useCalendarStore.getState().setGameDay(WEDNESDAY);
+  calendarActionsForTest().setGameDay(WEDNESDAY);
   const week = acceptedWeek(WEEK_START);
   assert(getAcceptedMaterialContext().markedDays[WEDNESDAY] === 'game', 'accepted mark missing');
   assert(week.contract.identity.mode === 'in_season_game_week', 'game table was not selected');
@@ -462,8 +464,8 @@ run('regression', '1 adding a game mark regenerates and gates the target game we
 run('regression', '2 removing a game mark removes credit and resolves bye policy', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
   seed(value);
-  useCalendarStore.getState().setGameDay(WEDNESDAY);
-  useCalendarStore.getState().removeGameDay(WEDNESDAY);
+  calendarActionsForTest().setGameDay(WEDNESDAY);
+  calendarActionsForTest().removeGameDay(WEDNESDAY);
   const week = acceptedWeek(WEEK_START);
   assert(getAcceptedMaterialContext().markedDays[SATURDAY] === 'noGame', 'recurring game was not suppressed');
   assert(week.contract.identity.mode.startsWith('in_season_bye'), 'bye table was not selected');
@@ -483,7 +485,7 @@ run('regression', '3 adding a rest mark cannot silently remove required core wor
   const prior = materialSignature();
   let rejected = false;
   try {
-    useCalendarStore.getState().setRestDay(date);
+    calendarActionsForTest().setRestDay(date);
   } catch {
     rejected = true;
   }
@@ -523,8 +525,8 @@ run('regression', '3 adding a rest mark cannot silently remove required core wor
 run('regression', '4 removing a rest mark cannot create a hard-day or rest breach', () => {
   seed(profile('Off-season'));
   const date = '2026-07-16';
-  useCalendarStore.getState().setRestDay(date);
-  useCalendarStore.getState().removeRestDay(date);
+  calendarActionsForTest().setRestDay(date);
+  calendarActionsForTest().removeRestDay(date);
   const week = acceptedWeek(WEEK_START);
   assert(getAcceptedMaterialContext().markedDays[date] === undefined, 'rest mark survived removal');
   assert(week.evaluation.blockingViolations.length === 0, 'rest removal created a blocker');
@@ -533,12 +535,12 @@ run('regression', '4 removing a rest mark cannot create a hard-day or rest breac
 
 run('regression', '5 practice-match calendar changes use the approved PM table', () => {
   seed(profile('Pre-season'));
-  useCalendarStore.getState().setGameDay(SATURDAY);
+  calendarActionsForTest().setGameDay(SATURDAY);
   const withPracticeMatch = acceptedWeek(WEEK_START);
   assert(withPracticeMatch.contract.identity.mode === 'practice_match_week', 'practice-match table not selected');
   assert(withPracticeMatch.contract.identity.anchorState === 'practice_match', 'practice-match identity missing');
   assert(withPracticeMatch.contract.anchors.some((anchor) => anchor.kind === 'practice_match'), 'PM anchor missing');
-  useCalendarStore.getState().removeGameDay(SATURDAY);
+  calendarActionsForTest().removeGameDay(SATURDAY);
   const withoutPracticeMatch = acceptedWeek(WEEK_START);
   assert(withoutPracticeMatch.contract.identity.mode !== 'practice_match_week',
     'removed practice match retained the PM table');
@@ -550,7 +552,7 @@ run('regression', '6 a future calendar mark is gated when it becomes material', 
   const value = profile('Pre-season');
   seed(value);
   const futureGame = '2026-08-15';
-  useCalendarStore.getState().setGameDay(futureGame);
+  calendarActionsForTest().setGameDay(futureGame);
   assert(!useProgramStore.getState().weekScopedOverlays[mondayFor(futureGame)],
     'unmaterialised future mark published an overlay early');
   rolloverProgramBlock({ baseProfile: value, targetDateISO: '2026-08-10' });
@@ -781,7 +783,7 @@ run('regression', '23 calendar/program transaction has no observable intermediat
     if (state.markedDays[WEDNESDAY] === 'game' &&
         getAcceptedMaterialContext().markedDays[WEDNESDAY] !== 'game') badObservation = true;
   });
-  useCalendarStore.getState().setGameDay(WEDNESDAY);
+  calendarActionsForTest().setGameDay(WEDNESDAY);
   stopProgram();
   stopCalendar();
   assert(programPublishes === 1, `calendar transaction published ProgramStore ${programPublishes} times`);
@@ -827,7 +829,7 @@ run('regression', '24 readiness source-fact/program transaction has no observabl
 run('regression', '25 re-evaluated visible week matches the gateway ledger exactly', () => {
   const value = profile('Pre-season');
   seed(value);
-  useCalendarStore.getState().setGameDay(SATURDAY);
+  calendarActionsForTest().setGameDay(SATURDAY);
   const week = acceptedWeek(WEEK_START);
   assert(ledgerSignature(week.contract) === ledgerSignature(week.evaluation.contract),
     're-evaluated visible ledger is not exact');
@@ -844,11 +846,11 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
   seed(value);
   const actions = [
-    () => useCalendarStore.getState().setGameDay(WEDNESDAY),
-    () => useCalendarStore.getState().removeGameDay(WEDNESDAY),
-    () => useCalendarStore.getState().removeNoGame(SATURDAY),
-    () => useCalendarStore.getState().setRestDay('2026-07-16'),
-    () => useCalendarStore.getState().removeRestDay('2026-07-16'),
+    () => calendarActionsForTest().setGameDay(WEDNESDAY),
+    () => calendarActionsForTest().removeGameDay(WEDNESDAY),
+    () => calendarActionsForTest().removeNoGame(SATURDAY),
+    () => calendarActionsForTest().setRestDay('2026-07-16'),
+    () => calendarActionsForTest().removeRestDay('2026-07-16'),
   ];
   for (const action of actions) {
     const before = materialSignature();
@@ -902,7 +904,7 @@ run('property', 'multi-store operations publish complete old or complete new sta
     mark: state.acceptedMaterialContext.markedDays[WEDNESDAY],
     mode: state.weekScopedOverlays[WEEK_START]?.exposureContractV2?.identity.mode,
   })));
-  useCalendarStore.getState().setGameDay(WEDNESDAY);
+  calendarActionsForTest().setGameDay(WEDNESDAY);
   stop();
   assert(observed.length === 1, 'multi-store operation published an intermediate ProgramStore state');
   assert(observed[0] === JSON.stringify({ mark: 'game', mode: 'in_season_game_week' }),

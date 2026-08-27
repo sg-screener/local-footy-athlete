@@ -196,7 +196,7 @@ console.log('\n[5] The coach\'s session builder obeys the law');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { applyHardFilters, buildFilterContext } = require('../utils/exerciseFilter');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildIntent, selectExercises } = require('../utils/exerciseScorer');
+  const { buildIntent, selectExercises } = require('./support/legacyExerciseScorer');
 
   const PATTERN_SETS = [
     ['squat'], ['hinge'], ['push'], ['pull'],

@@ -12,7 +12,19 @@ const ROOT = path.resolve(__dirname, '..');
 const CATEGORIES = new Set([
   'canonical_input_writer', 'canonical_compiler', 'persistence_boundary',
   'projection_display', 'legacy_ingress', 'rival_author', 'derived_output_writer',
+  'dormant_quarantined',
 ]);
+// Preserve Sam's built-but-unwired work without allowing it to become an
+// alternate runtime author. These exact capabilities stay fingerprinted and
+// counted. ANY runtime import of either module blocks release until deliberate
+// compiler integration replaces this boundary and supplies acceptance tests.
+const DORMANT_OWNERS = new Set([
+  'src/data/timeTrialSession.ts#buildTimeTrialSession',
+  'src/data/timeTrialSession.ts#timeTrialWorkout',
+  'src/rules/mobilityPairing.ts#mobilityRowFor',
+  'src/rules/mobilityPairing.ts#pairMobilityWithAccessories',
+]);
+const DORMANT_FILES = new Set([...DORMANT_OWNERS].map(id => id.split('#')[0]));
 const FIELDS = new Set([
   'currentProgram', 'currentMicrocycle', 'todayWorkout', 'microcycles', 'workouts',
   'exercises', 'weeklyPlan', 'manualOverrides', 'overrideContexts',
@@ -110,6 +122,45 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     if (relative(root, file) === 'src/utils/applyAdjustmentEvents.ts') {
       errors.push('retired event/move author returned to runtime: src/utils/applyAdjustmentEvents.ts');
     }
+    if (relative(root, file) === 'src/rules/section18OfferPlacement.ts') {
+      errors.push('retired post-acceptance offer author returned to runtime: src/rules/section18OfferPlacement.ts');
+    }
+    if (relative(root, file) === 'src/utils/planChangeProducer.ts' && sf.statements.some(statement =>
+      ts.isFunctionDeclaration(statement) && statement.body && statement.name?.text === 'buildPlanChangeProposal')) {
+      errors.push(`${relative(root, file)}: retired parallel session proposal author must not return`);
+    }
+    if (relative(root, file) === 'src/dev/e2e/devE2ESeedRegistry.ts' && sf.statements.some(statement =>
+      ts.isFunctionDeclaration(statement) && statement.body && ['stabilizeProgram', 'stabilizeMicrocycle'].includes(statement.name?.text))) {
+      errors.push(`${relative(root, file)}: retired diagnostic program rewriter must not return`);
+    }
+    if (relative(root, file) === 'src/utils/exerciseScorer.ts' ||
+      relative(root, file) === 'src/utils/sessionBuilder.ts' && sf.statements.some(statement =>
+        ts.isFunctionDeclaration(statement) && statement.body && statement.name?.text === 'buildTagAwareSession')) {
+      errors.push('retired independent strength selector returned to runtime');
+    }
+    if (relative(root, file) === 'src/utils/sessionBuilder.ts' && sf.statements.some(statement =>
+      ts.isFunctionDeclaration(statement) && statement.body && statement.name?.text === 'buildConditioningSession')) {
+      errors.push('retired read-side conditioning author returned to runtime');
+    }
+    if (relative(root, file) === 'src/utils/sessionResolver.ts' && sf.statements.some(statement =>
+      ts.isFunctionDeclaration(statement) && statement.body && statement.name?.text === 'applyAwayPass')) {
+      errors.push('retired read-side travel author returned to runtime: applyAwayPass');
+    }
+    if (relative(root, file) === 'src/data/defaultProgram.ts') {
+      const retired = new Set(['DEFAULT_PROGRAM', 'createDefaultMicrocycle',
+        'createWorkout', 'createWorkoutExercises']);
+      for (const statement of sf.statements) {
+        const names = ts.isFunctionDeclaration(statement) && statement.body
+          ? [statement.name?.text]
+          : ts.isVariableStatement(statement)
+          ? statement.declarationList.declarations.filter(declaration => declaration.initializer)
+            .map(declaration => propertyName(declaration.name))
+          : [];
+        for (const name of names) {
+          if (retired.has(name)) errors.push(`retired default-program author returned to runtime: ${name}`);
+        }
+      }
+    }
     // Excluding diagnostics from the denominator is valid only while runtime
     // cannot import them. Check every runtime edge, including barrels and lazy
     // loaders, so moving a writer to tests cannot hide an executable author.
@@ -143,12 +194,40 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
         if (ts.isImportEqualsDeclaration(node) && !node.isTypeOnly &&
             ts.isExternalModuleReference(node.moduleReference)) specifier = node.moduleReference.expression;
         if (ts.isCallExpression(node) && isModuleLoader(node.expression)) specifier = node.arguments[0];
-        if (specifier && ts.isStringLiteralLike(specifier)) {
-          const resolved = ts.resolveModuleName(specifier.text, file, options, host).resolvedModule?.resolvedFileName;
-          const target = resolved ?? (specifier.text.startsWith('.')
-            ? path.resolve(path.dirname(file), specifier.text) : specifier.text);
+        function literalModuleName(expression, seen = new Set()) {
+          if (ts.isStringLiteralLike(expression)) return expression.text;
+          if (ts.isParenthesizedExpression(expression)) return literalModuleName(expression.expression, seen);
+          if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+            const left = literalModuleName(expression.left, new Set(seen));
+            const right = literalModuleName(expression.right, new Set(seen));
+            return left !== null && right !== null ? left + right : null;
+          }
+          if (ts.isIdentifier(expression) && !seen.has(expression.text)) {
+            seen.add(expression.text);
+            const declaration = checker.getSymbolAtLocation(expression)?.valueDeclaration;
+            if (declaration && ts.isVariableDeclaration(declaration) && declaration.initializer &&
+                ts.isVariableDeclarationList(declaration.parent) && (declaration.parent.flags & ts.NodeFlags.Const)) {
+              return literalModuleName(declaration.initializer, seen);
+            }
+          }
+          return null;
+        }
+        if (specifier) {
+          const moduleName = literalModuleName(specifier);
+          if (moduleName === null) {
+            errors.push(`unresolved runtime module loader: ${relative(root, file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`);
+            ts.forEachChild(node, inspectImport);
+            return;
+          }
+          const resolved = ts.resolveModuleName(moduleName, file, options, host).resolvedModule?.resolvedFileName;
+          const target = resolved ?? (moduleName.startsWith('.')
+            ? path.resolve(path.dirname(file), moduleName) : moduleName);
           if (/(^|\/)(__tests__|__mocks__)\//.test(relative(root, target))) {
-            errors.push(`runtime imports excluded diagnostic code: ${relative(root, file)} -> ${specifier.text}`);
+            errors.push(`runtime imports excluded diagnostic code: ${relative(root, file)} -> ${moduleName}`);
+          }
+          if (DORMANT_FILES.has(relative(root, target)) ||
+              DORMANT_FILES.has(relative(root, target) + '.ts')) {
+            errors.push(`runtime imports quarantined programming: ${relative(root, file)} -> ${moduleName}`);
           }
         }
         ts.forEachChild(node, inspectImport);
@@ -228,6 +307,57 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     }
     return null;
   }
+  function readOnlyBuiltinCollectionMember(symbol) {
+    // Array<Workout>.map/find is not an opaque store method. Resolve its actual
+    // TypeScript library declaration, never exempt a user method by its name.
+    // Callback bodies/references still enter the executable graph independently.
+    return !!symbol?.declarations?.length && symbol.declarations.every(declaration =>
+      /[/\\]typescript[/\\]lib[/\\]lib\..*\.d\.ts$/.test(declaration.getSourceFile().fileName) &&
+      ts.isInterfaceDeclaration(declaration.parent) &&
+      ['Array', 'ReadonlyArray'].includes(declaration.parent.name.text) &&
+      !MUTATORS.has(propertyName(declaration.name)));
+  }
+  function librarySnapshotRead(symbol) {
+    // Resolve the dependency's declaration, never trust a method named getState
+    // on an arbitrary object. Only these reads return an existing reference.
+    return !!symbol?.declarations?.length && symbol.declarations.every(declaration => {
+      const file = declaration.getSourceFile().fileName.replace(/\\/g, '/');
+      const name = propertyName(declaration.name);
+      return (/\/node_modules\/zustand\/vanilla\.d\.ts$/.test(file) && name === 'getState') ||
+        (/\/typescript\/lib\/lib\..*\.d\.ts$/.test(file) && name === 'get' &&
+          ts.isInterfaceDeclaration(declaration.parent) &&
+          ['Map', 'ReadonlyMap', 'WeakMap'].includes(declaration.parent.name.text));
+    });
+  }
+  function isPassiveReferenceReader(unit) {
+    // This proof is deliberately smaller than "pure function". A filter or an
+    // immutable spread can author different sessions while looking pure. Only
+    // returning an already-existing reference is admitted; all constructions,
+    // transforms, unknown calls and assignments require source review.
+    if (!ts.isFunctionLike(unit.node) || !unit.node.body || !unit.sites.length ||
+        unit.sites.some(site => site.kind !== 'return_domain')) return false;
+    let safe = true;
+    function inspect(node) {
+      if (!safe || ts.isTypeNode(node)) return;
+      if ((node !== unit.node && ts.isFunctionLike(node)) ||
+          ts.isObjectLiteralExpression(node) || ts.isArrayLiteralExpression(node) ||
+          ts.isNewExpression(node) || ts.isDeleteExpression(node) ||
+          ts.isAwaitExpression(node) || ts.isYieldExpression(node) ||
+          ts.isTaggedTemplateExpression(node) ||
+          (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+            node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) ||
+          ((ts.isPostfixUnaryExpression(node) || ts.isPrefixUnaryExpression(node)) &&
+            [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator))) {
+        safe = false; return;
+      }
+      if (ts.isCallExpression(node) && !librarySnapshotRead(resolveSymbol(node.expression))) {
+        safe = false; return;
+      }
+      ts.forEachChild(node, inspect);
+    }
+    inspect(unit.node.body);
+    return safe;
+  }
   function domainType(type, seen = new Set()) {
     if (!type || seen.has(type)) return false;
     seen.add(type);
@@ -292,6 +422,7 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
         const receiver = node.expression;
         const symbol = resolveSymbol(ts.isPropertyAccessExpression(node) ? node.name : node);
         if (domainType(checker.getTypeAtLocation(receiver)) && !symbolUnit(symbol) &&
+            !readOnlyBuiltinCollectionMember(symbol) &&
             checker.getTypeAtLocation(node).getCallSignatures().length > 0) {
           site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
         }
@@ -299,6 +430,7 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
       if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {
         const initializer = node.parent.parent.initializer;
         if (initializer && domainType(checker.getTypeAtLocation(initializer)) &&
+            !readOnlyBuiltinCollectionMember(resolveSymbol(node.name)) &&
             !symbolUnit(resolveSymbol(node.name)) && checker.getTypeAtLocation(node.name).getCallSignatures().length > 0) {
           site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
         }
@@ -317,6 +449,12 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
       }
       if ((ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) && FIELDS.has(propertyName(node.name))) {
         site(node, 'construct', propertyName(node.name));
+      }
+      if ((ts.isSpreadAssignment(node) || ts.isSpreadElement(node)) && semantic(node.expression)) {
+        // Inferred object types lose the Workout alias. A spread-only clone
+        // (including one with an altered name/identity) is still a capable
+        // return path even when no explicit `exercises:` property is written.
+        site(node, 'copy_domain', node.expression.getText(sf));
       }
       if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
           node.operatorToken.kind <= ts.SyntaxKind.LastAssignment && (semantic(node.left) || semantic(node.right))) {
@@ -390,15 +528,57 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     if (review && (!CATEGORIES.has(review.classification) || !review.reason?.trim())) {
       errors.push(`invalid review: ${id}`); reviewStatus = 'invalid';
     }
-    return { id, file: unit.file, line: unit.line, fingerprint, reviewStatus,
+    if (review?.classification === 'dormant_quarantined' && !DORMANT_OWNERS.has(id)) {
+      errors.push(`unapproved dormant capability: ${id}`); reviewStatus = 'invalid';
+    }
+    return { id, file: unit.file, line: unit.line, fingerprint, reviewStatus, reviewOrigin: review ? 'explicit' : null,
       classification: review?.classification ?? null, reason: review?.reason ?? null,
       sites: unit.sites.map(({ key, ...rest }) => rest), calls, callers };
   });
+  // A function with no direct capability may only delegate. Prove its entire
+  // reachable capability graph, rather than requiring another prose approval
+  // for the same writer at every UI/callback layer. Never inherit through an
+  // opaque site, an unknown/changed owner, or an explicitly rejected review.
+  // Cycles remain unresolved unless an explicit review breaks the cycle.
+  const byId = new Map(rows.map(row => [row.id, row]));
+  let inherited = true;
+  while (inherited) {
+    inherited = false;
+    for (const row of rows) {
+      if (row.reviewStatus === 'unreviewed' && isPassiveReferenceReader(units.get(row.id)) &&
+          row.calls.every(id => byId.get(id)?.reviewStatus === 'reviewed' &&
+            byId.get(id)?.classification === 'projection_display')) {
+        row.classification = 'projection_display';
+        row.reviewStatus = 'reviewed';
+        row.reviewOrigin = 'structural_reference_read';
+        row.reason = 'AST proves an existing-reference reader: no construction, transform, mutation, unknown call or non-reader callee. Dependency snapshot reads resolve to library declarations.';
+        inherited = true;
+        continue;
+      }
+      if (row.reviewStatus !== 'unreviewed' || row.sites.length || !row.calls.length) continue;
+      const callees = row.calls.map(id => byId.get(id));
+      if (!callees.every(callee => callee?.reviewStatus === 'reviewed')) continue;
+      const categories = new Set(callees.map(callee => callee.classification));
+      // No caller inherits quarantine. Its import is already a release error;
+      // it must also remain unresolved instead of acquiring runtime permission.
+      if (categories.has('dormant_quarantined')) continue;
+      // Carry a rejected capability upward instead of laundering it through
+      // a zero-site wrapper. The direct owner is still counted independently.
+      row.classification = ['rival_author', 'derived_output_writer', 'canonical_input_writer',
+        'persistence_boundary', 'canonical_compiler', 'legacy_ingress', 'projection_display']
+        .find(category => categories.has(category));
+      row.reviewStatus = 'reviewed';
+      row.reviewOrigin = 'inherited_call_graph';
+      row.reason = `No direct operations; all ${callees.length} callable capability owners are verified. See calls for exact dependencies.`;
+      inherited = true;
+    }
+  }
   const stale = Object.keys(registry.owners ?? {}).filter((id) => !capable.has(id));
   for (const id of stale) errors.push(`review names an absent capability: ${id}`);
   const reviewed = rows.filter((row) => row.reviewStatus === 'reviewed');
   const counts = Object.fromEntries([...CATEGORIES].map((category) =>
-    [category, reviewed.filter((row) => row.classification === category).length]));
+    [category, reviewed.filter((row) => row.classification === category &&
+      (!['rival_author', 'derived_output_writer'].includes(category) || row.reviewOrigin === 'explicit')).length]));
   const result = { schemaVersion: 1,
     unit: 'distinct executable capability owners (file + named function, anonymous callbacks grouped with owner)',
     scope: 'App/index, all src JS/TS including dev, and deployable edge functions; excludes tests, mocks, declarations and dependencies',
@@ -406,6 +586,9 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     directWriteSiteOccurrences: rows.reduce((sum, row) => sum + row.sites.length, 0),
     distinctDirectOwners: rows.filter((row) => row.sites.length).length,
     inspectedCapabilityOwners: rows.length, reviewedOwners: reviewed.length,
+    explicitlyReviewedOwners: reviewed.filter(row => row.reviewOrigin === 'explicit').length,
+    structurallyProvenReaders: reviewed.filter(row => row.reviewOrigin === 'structural_reference_read').length,
+    inheritedCallGraphOwners: reviewed.filter(row => row.reviewOrigin === 'inherited_call_graph').length,
     unresolvedOwners: rows.length - reviewed.length, counts, errors, owners: rows };
   result.ok = rows.length > 0 && result.unresolvedOwners === 0 && errors.length === 0 &&
     counts.rival_author === 0 && counts.derived_output_writer === 0;
@@ -417,8 +600,10 @@ function printSummary(result) {
   console.log(`SCOPE: ${result.scope}`);
   console.log(`SCANNED: ${result.sourceFiles} files; ${result.directWriteSiteOccurrences} direct operation occurrences in ${result.distinctDirectOwners} distinct direct owners.`);
   console.log(`DENOMINATOR: ${result.inspectedCapabilityOwners} capability owners, including callers; ${result.reviewedOwners} reviewed; ${result.unresolvedOwners} unresolved.`);
+  console.log(`REVIEW BASIS: ${result.explicitlyReviewedOwners} explicit reviews; ${result.structurallyProvenReaders} AST-proven existing-reference readers; ${result.inheritedCallGraphOwners} zero-operation callers verified through their complete callee graph. Confirmed authors/writers exclude inherited callers.`);
   console.log(`RIVAL AUTHORS: ${result.counts.rival_author} confirmed / ${result.inspectedCapabilityOwners} candidates. ${result.unresolvedOwners ? 'ZERO NOT PROVEN.' : ''}`);
   console.log(`DERIVED-OUTPUT WRITERS: ${result.counts.derived_output_writer} confirmed / ${result.inspectedCapabilityOwners} candidates. ${result.unresolvedOwners ? 'ZERO NOT PROVEN.' : ''}`);
+  console.log(`DORMANT QUARANTINE: ${result.counts.dormant_quarantined} inventoried capabilities in protected unwired modules; runtime imports are forbidden. These are not integrated features.`);
   for (const error of result.errors) console.log(`ERROR: ${error}`);
   console.log(`WEEKLY_WRITER_GATE_EXIT=${result.ok ? 0 : 1}`);
 }

@@ -24,6 +24,79 @@ function reviewed(sources, classify = () => 'canonical_compiler') {
   }])) };
 }
 const cleanRegistry = reviewed(clean);
+test('protected unwired builders remain inventoried without runtime authority', () => {
+  const sources = { 'src/data/timeTrialSession.ts':
+    'export function timeTrialWorkout() { return { exercises: [] }; }' };
+  const result = scanSources({ sources, registry: reviewed(sources, () => 'dormant_quarantined') });
+  assert.equal(result.ok, true);
+  assert.equal(result.counts.dormant_quarantined, 1);
+  assert.equal(result.inspectedCapabilityOwners, 1, 'dormant code must not disappear from the denominator');
+});
+test('quarantine cannot be assigned to an arbitrary alternative author', () => {
+  const result = scanSources({ sources: clean, registry: reviewed(clean, () => 'dormant_quarantined') });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('unapproved dormant capability')));
+});
+test('runtime cannot activate protected builders through imports, barrels or loaders', () => {
+  for (const edge of [
+    "import { timeTrialWorkout } from './data/timeTrialSession'; timeTrialWorkout();",
+    "export * from './data/timeTrialSession';",
+    "export { timeTrialWorkout } from './data/timeTrialSession';",
+    "const old = require('./data/timeTrialSession'); old.timeTrialWorkout();",
+    "const load = require; const old = load('./data/timeTrialSession'); old.timeTrialWorkout();",
+    "export async function load() { return import('./data/timeTrialSession'); }",
+    "import old = require('./data/timeTrialSession'); old.timeTrialWorkout();",
+    "const target = './data/' + 'timeTrialSession'; require(target);",
+    "const target = unknownModuleName(); require(target);",
+  ]) {
+    const sources = { [file]: edge, 'src/data/timeTrialSession.ts':
+      'export function timeTrialWorkout() { return { exercises: [] }; }' };
+    const registry = reviewed(sources, row => row.file === 'src/data/timeTrialSession.ts'
+      ? 'dormant_quarantined' : 'canonical_compiler');
+    const result = scanSources({ sources, registry });
+    assert.equal(result.ok, false, edge);
+    assert(result.errors.some(error => /runtime imports quarantined programming|unresolved runtime module loader/.test(error)), edge);
+  }
+});
+test('parallel session proposal author cannot return as an approved helper', () => {
+  const sources = { 'src/utils/planChangeProducer.ts':
+    `export function buildPlanChangeProposal() { return { workout: { exercises: [] } }; }` };
+  const result = scanSources({ sources, registry: reviewed(sources) });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('retired parallel session proposal author')));
+});
+test('diagnostic program identity rewriters cannot return as approved helpers', () => {
+  for (const name of ['stabilizeProgram', 'stabilizeMicrocycle']) {
+    const sources = { 'src/dev/e2e/devE2ESeedRegistry.ts':
+      `function ${name}(program: any) { return { ...program, id: 'fake', workouts: [] }; }` };
+    const result = scanSources({ sources, registry: reviewed(sources) });
+    assert.equal(result.ok, false);
+    assert(result.errors.some(error => error.includes('retired diagnostic program rewriter')));
+  }
+});
+test('retired read-side conditioning author cannot return', () => {
+  const sources = { 'src/utils/sessionBuilder.ts': 'export function buildConditioningSession() { return { exercises: [], durationMinutes: 30 }; }' };
+  const result = scanSources({ sources, registry: reviewed(sources) });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('retired read-side conditioning author')));
+});
+test('retired independent strength selectors cannot return as a file or builder', () => {
+  for (const [name, body] of [
+    ['src/utils/exerciseScorer.ts', 'export function selectExercises(rows: any[]) { return rows.slice(0, 5); }'],
+    ['src/utils/sessionBuilder.ts', 'export function buildTagAwareSession(workout: any) { return { ...workout, exercises: [] }; }'],
+  ]) {
+    const sources = { [name]: body };
+    const result = scanSources({ sources, registry: reviewed(sources) });
+    assert.equal(result.ok, false);
+    assert(result.errors.some(error => error.includes('retired independent strength selector')));
+  }
+});
+test('read-side travel author cannot return outside the compiler', () => {
+  const result = scanSources({ sources: { 'src/utils/sessionResolver.ts':
+    'function applyAwayPass(days: any[]) { return days.map(day => ({ ...day, workout: null })); }' } });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('retired read-side travel author')));
+});
 test('moving a rival into tests cannot hide a runtime import, barrel or lazy loader', () => {
   for (const edge of [
     "import { oldWriter } from './__tests__/legacy/snapshot'; oldWriter();",
@@ -56,15 +129,59 @@ test('type-only diagnostic references do not become runtime import edges', () =>
   ` }, registry: cleanRegistry });
   assert.equal(result.ok, true);
 });
+test('retired post-acceptance conditioning/offer module cannot return', () => {
+  const filename = 'src/rules/section18OfferPlacement.ts';
+  assert(!fs.existsSync(path.resolve(__dirname, '..', filename)));
+  const result = scanSources({ sources: { [filename]:
+    'export function presentDeclaredOffer(workouts: any[]) { return [...workouts, { exercises: [] }]; }' } });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.includes('retired post-acceptance offer author returned')));
+});
 test('a fully reviewed pure compiler fixture satisfies zero/zero', () => {
   const r = scanSources({ sources: clean, registry: cleanRegistry });
   assert.equal(r.ok, true); assert.equal(r.counts.canonical_compiler, 1);
+});
+test('read-only native collection methods are not opaque authors, but callbacks and lookalikes remain visible', () => {
+  const source = `interface Workout { exercises: unknown[] }
+    export function read(rows: Workout[]) { return rows.some(row => row.exercises.length > 0); }
+    export function callbackWriter(rows: Workout[]) { rows.forEach(row => { row.exercises = []; }); }
+    interface ProgramState { find(): void }
+    export function fake(store: ProgramState) { store.find(); }
+    export function mutation(rows: Workout[]) { rows.pop(); }`;
+  const r = scanSources({ sources: { [file]: source } });
+  assert(!r.owners.some(row => row.id === file + '#read'));
+  assert(r.owners.find(row => row.id === file + '#callbackWriter').sites.some(site => site.kind === 'assign'));
+  assert(r.owners.find(row => row.id === file + '#fake').sites.some(site => site.kind === 'opaque_domain_callable_requires_review'));
+  assert(r.owners.find(row => row.id === file + '#mutation').sites.some(site => site.kind === 'mutate_collection'));
 });
 test('fake rival writer outside the known files fails closed', () => {
   const sources = { ...clean, 'src/newRival.ts': `export function surprise(w: any) { w.exercises = []; }` };
   const r = scanSources({ sources, registry: cleanRegistry });
   assert.equal(r.ok, false);
   assert(r.owners.some((row) => row.id === 'src/newRival.ts#surprise' && row.reviewStatus === 'unreviewed'));
+});
+test('zero-operation wrappers inherit only a completely verified call graph', () => {
+  const wrappers = { ...clean, 'src/delegates.ts': `
+    import { compile } from './censusMutationFixture';
+    export function delegate(value: any): any { return compile(value); }
+    export function outer(value: any): any { return delegate(value); }
+  ` };
+  const result = scanSources({ sources: wrappers, registry: cleanRegistry });
+  assert.equal(result.ok, true);
+  assert.equal(result.inheritedCallGraphOwners, 2);
+  const rejected = scanSources({ sources: wrappers, registry: reviewed(clean, () => 'rival_author') });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.counts.rival_author, 1); // one author, not its two callers
+  assert.equal(rejected.inheritedCallGraphOwners, 2);
+  const changed = scanSources({ sources: { ...wrappers,
+    [file]: clean[file].replace('input.exercises.slice()', '[]') }, registry: cleanRegistry });
+  assert.equal(changed.ok, false);
+  assert.equal(changed.inheritedCallGraphOwners, 0);
+  assert(changed.owners.filter(row => row.file === 'src/delegates.ts').every(row => row.reviewStatus === 'unreviewed'));
+  const directWriter = scanSources({ sources: { ...wrappers,
+    'src/delegates.ts': wrappers['src/delegates.ts'].replace('return compile(value)', 'value.exercises = []; return compile(value)') }, registry: cleanRegistry });
+  assert.equal(directWriter.ok, false);
+  assert(directWriter.owners.some(row => row.id === 'src/delegates.ts#delegate' && row.sites.length > 0 && row.reviewStatus === 'unreviewed'));
 });
 test('a reviewed rival remains red even with no unreviewed rows', () => {
   const r = scanSources({ sources: clean, registry: reviewed(clean, () => 'rival_author') });
@@ -235,6 +352,59 @@ test('retired private weekly planner cannot return beside the compiler', () => {
   };
   assert.deepEqual(authors(contents), []);
   assert.deepEqual(authors(contents + '\nfunction buildWeeklyPlan() { return { weeklyPlan: [] }; }'), ['buildWeeklyPlan']);
+});
+
+test('a passive existing-reference reader is proven, not mistaken for a program author', () => {
+  const sources = { [file]: 'interface Workout { exercises: unknown[] } export function read(input: Workout | null) { return input; }' };
+  const result = scanSources({ sources });
+  assert.equal(result.ok, true);
+  assert.equal(result.structurallyProvenReaders, 1);
+  assert.equal(result.counts.projection_display, 1);
+});
+test('reader proof rejects immutable edits, in-place edits, transforms and unknown calls', () => {
+  for (const body of [
+    'return { ...input, exercises: [] };',
+    'input.exercises.length = 0; return input;',
+    'input.exercises.pop(); return input;',
+    'const copy = { ...input }; return copy;',
+    'declareSideEffect(input); return input;',
+    'const fake = { getState() { input.exercises = []; return input; } }; return fake.getState();',
+    'Object.assign(input, { exercises: [] }); return input;',
+    'return [input].filter(() => false);',
+  ]) {
+    const result = scanSources({ sources: { [file]: 'interface Workout { exercises: unknown[] } export function read(input: Workout) { ' + body + ' }' } });
+    assert.equal(result.ok, false, body);
+    const owner = result.owners.find(row => row.id === file + '#read');
+    assert(owner, `mutation subject not reached: ${body}`);
+    assert.equal(owner.reviewOrigin, null, body);
+  }
+});
+test('reader proof cannot replace an explicit rejected or stale source review', () => {
+  const sources = { [file]: 'interface Workout { exercises: unknown[] } export function read(input: Workout) { return input; }' };
+  const rejected = reviewed(sources, () => 'rival_author');
+  assert.equal(scanSources({ sources, registry: rejected }).ok, false);
+  const changed = { [file]: sources[file].replace('return input;', 'if (!input) return input; return input;') };
+  const result = scanSources({ sources: changed, registry: rejected });
+  assert.equal(result.ok, false);
+  assert.equal(result.structurallyProvenReaders, 0);
+});
+
+test('hard-coded default-program fallback cannot return as an alternative author', () => {
+  const filename = 'src/data/defaultProgram.ts';
+  const source = ts.createSourceFile(filename,
+    fs.readFileSync(path.resolve(__dirname, '..', filename), 'utf8'), ts.ScriptTarget.Latest, true);
+  const names = source.statements.flatMap(statement => ts.isFunctionDeclaration(statement)
+    ? [statement.name?.text]
+    : ts.isVariableStatement(statement) ? statement.declarationList.declarations.map(declaration => declaration.name.getText(source)) : []);
+  for (const name of ['DEFAULT_PROGRAM', 'createDefaultMicrocycle', 'createWorkout', 'createWorkoutExercises']) {
+    assert(!names.includes(name), `retired implementation still exists: ${name}`);
+    const mutation = name === 'DEFAULT_PROGRAM'
+      ? `export const ${name} = { microcycles: [] };`
+      : `function ${name}() { return { workouts: [] }; }`;
+    const result = scanSources({ sources: { [filename]: mutation } });
+    assert(result.errors.includes(`retired default-program author returned to runtime: ${name}`));
+    assert.equal(result.ok, false);
+  }
 });
 
 console.log(`Writer census detector: ${passed} passed, ${failed} failed`);

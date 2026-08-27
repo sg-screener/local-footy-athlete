@@ -51,13 +51,8 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
-import { useCalendarStore } from '../store/calendarStore';
-import { useReadinessStore } from '../store/readinessStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
-import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import {
-  commitAcceptedStateTransaction,
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import {
@@ -67,9 +62,9 @@ import {
 } from '../store/sessionOutcomeTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { readinessActionForKind, type WeekReadinessApplyKind } from '../utils/weekReadinessActions';
-import { buildDevE2ESeed, devE2EWeekStartForSeed } from '../dev/e2e/devE2ESeedRegistry';
-import { seedOnboardingProgram } from '../utils/onboardingCompletion';
-import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
+import { profileForDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import { coldStartThroughOnboarding, setJourneyClock, relaunchApp } from './support/athleteJourney';
+import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
 import { addDaysISO } from '../utils/programBlockState';
@@ -108,90 +103,18 @@ async function run(name: string, body: () => Promise<void>): Promise<void> {
   catch (error) { failures.push(name); console.error(`  FAIL [invariant] ${name}: ${(error as Error).message}`); }
 }
 
-/** Device-exact `spent-week-friday` install — the fixture mark is published
- *  through the accepted-state boundary exactly as `defaultDevE2ESeedCoordinator`
- *  does, never the live calendar-mutation path (which would rebuild the
- *  accepted week into one_off_game overlays before anything runs). */
-function seedSpentWeekFriday(): void {
-  useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
-  useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useProgramStore.setState({
-    weekScopedOverlays: {},
-    dateOverrides: {},
-    overrideContexts: {},
-    userRemovalConstraints: [],
-    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
-    exposureContractsByWeek: {},
-    sessionFeedback: {},
-    weightOverrides: {},
-    acceptedMaterialContext: normalizeAcceptedMaterialContext({ revision: 0 }),
-  } as never);
-  const seed = buildDevE2ESeed('spent-week-friday');
-  const weekStarts = seed.program.microcycles.map((m) => m.startDate.slice(0, 10));
-  quiet(() => seedOnboardingProgram({
-    onboardingData: seed.profile,
-    program: seed.program,
-    todayISO: seed.anchorDate,
-    programStore: {
-      setCurrentProgram: (program) => {
-        commitAcceptedStateTransaction({
-          // Harness seed: installs a world, never restores one.
-          operation: 'forward_decision',
-          reason: 'fact-horizon-test:install',
-          program: {
-            currentProgram: program,
-            currentMicrocycle: null,
-            todayWorkout: null,
-            blockState: deriveStoredBlockStateFromProgram(program),
-          },
-          profile: seed.profile,
-          preserveExactAcceptedWorkouts: true,
-          validateWeekStarts: weekStarts,
-        } as never);
-      },
-      setCurrentMicrocycle: (microcycle) => commitAcceptedStateTransaction({
-        // Harness seed: installs a world, never restores one.
-        operation: 'forward_decision',
-        reason: 'fact-horizon-test:mc',
-        program: { currentMicrocycle: microcycle },
-        profile: seed.profile,
-        preserveExactAcceptedWorkouts: true,
-        validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
-      } as never),
-      setTodayWorkout: (workout) => commitAcceptedStateTransaction({
-        // Harness seed: installs a world, never restores one.
-        operation: 'forward_decision',
-        reason: 'fact-horizon-test:today',
-        program: { todayWorkout: workout },
-        profile: seed.profile,
-        preserveExactAcceptedWorkouts: true,
-        validateWeekStarts: [devE2EWeekStartForSeed('spent-week-friday')],
-      } as never),
-    },
-    fixtureMarkInstaller: {
-      setGameDay: (date: string) => {
-        const accepted = getAcceptedMaterialContext();
-        const program = useProgramStore.getState().currentProgram!;
-        commitAcceptedStateTransaction({
-          // Harness seed: installs a world, never restores one.
-          operation: 'forward_decision',
-          reason: `fact-horizon-test:calendar_game:${date}`,
-          markedDays: { ...accepted.markedDays, [date]: 'game' },
-          profile: seed.profile,
-          preserveExactAcceptedWorkouts: true,
-          validateWeekStarts: program.microcycles.map((m) => m.startDate.slice(0, 10)),
-        } as never);
-      },
-    },
-  } as never));
-  useProfileStore.setState({ onboardingData: seed.profile, isOnboardingComplete: true });
+/** Start on Monday through real onboarding; advance to Friday after logging. */
+async function seedSpentWeekFriday(): Promise<void> {
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: profileForDevE2ESeed('spent-week-friday'), installDayISO: WEEK_1,
+  }));
 }
 
 /** MON/TUE/THU recorded Done through the REAL session-outcome transaction —
  *  not a store poke. T4 is meaningless unless the Done-ness is genuine. */
 async function markSpentDaysDone(): Promise<void> {
   for (const date of SPENT_DATES) {
+    setJourneyClock(date);
     const target = resolveSessionOutcomeTarget(date, date);
     const intent = createRecordSessionOutcomeIntentFromFeedback({
       date,
@@ -214,6 +137,7 @@ async function markSpentDaysDone(): Promise<void> {
     const result = await quietAsync(() => commitSessionOutcomeTransaction(intent));
     assert(result.ok, `could not record ${date} Done: ${JSON.stringify(result)}`);
   }
+  setJourneyClock(TODAY);
 }
 
 async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
@@ -240,7 +164,9 @@ function acceptedWeek(weekStart: string): {
   for (const workout of rebased.visibleWorkouts) {
     const offset = workout.dayOfWeek === 0 ? 6 : workout.dayOfWeek - 1;
     days[addDaysISO(weekStart, offset)] =
-      `${workout.workoutType}/${workout.sessionTier ?? '-'}/${workout.intensity ?? '-'}/${workout.exercises.length}ex`;
+      `${workout.workoutType}/${workout.sessionTier ?? '-'}/${workout.intensity ?? '-'}/` +
+      JSON.stringify(workout.exercises.map(row => [row.exercise?.name, row.prescribedSets,
+        row.prescribedRepsMin, row.prescribedRepsMax, row.prescribedWeightKg, row.restSeconds]));
   }
   return {
     mode: rebased.contract.identity.mode,
@@ -278,7 +204,7 @@ function registerScenarios(): void {
   // `effectiveUntil` to the report week's Sunday, so the overlap test in
   // `deriveIllnessRecoveryWeekMode` returns false for every later week.
   scenario('t1', 'T1 a severe illness reported Friday reaches next week and the week after', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
@@ -303,7 +229,7 @@ function registerScenarios(): void {
   // property A1's fix installs. Stated as its own scenario so the change is
   // visible in the report rather than implied by an absence.
   scenario('t2-cooked_week-window', 'T2b cooked_week STOPS after 7 days — it is not an open hold', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await commitReadiness('cooked_week');
     assert((result as { ok?: boolean }).ok === true,
@@ -360,8 +286,9 @@ function registerScenarios(): void {
   // the assertion weakening.
   for (const kind of ['poor_sleep_week'] as const) {
     scenario(`t2-${kind}`, `T2 ${kind} reaches next week too (the horizon is a fact property, not an illness one)`, async () => {
-      seedSpentWeekFriday();
+      await seedSpentWeekFriday();
       await markSpentDaysDone();
+      const healthy = acceptedWeek(WEEK_2).signature;
       const result = await commitReadiness(kind);
       assert((result as { ok?: boolean }).ok === true,
         `${kind} was rejected: ${(result as { message?: string }).message}`);
@@ -377,8 +304,12 @@ function registerScenarios(): void {
         `${kind}'s effect window stops inside the report week (from=${fact.effectiveFrom} until=${fact.effectiveUntil})`);
 
       // And it must have been materialised there, per bake-at-authoring.
-      assert(activeAdjustments().some((adjustment) => adjustment.affectedWeeks.includes(WEEK_2)),
-        `${kind} authored no effect for next week — the cascade did not extend past the report week`);
+      const compiled = acceptedWeek(WEEK_2).signature;
+      assert(compiled !== healthy && !!useProgramStore.getState().weekScopedOverlays[WEEK_2],
+        `${kind} did not change the compiled next-week prescription`);
+      const restarted = await quietAsync(() => relaunchApp({ storage: memory, todayISO: TODAY }));
+      assert(restarted.ok && acceptedWeek(WEEK_2).signature === compiled,
+        `${kind} next-week prescription changed on restart`);
     });
   }
 
@@ -388,7 +319,7 @@ function registerScenarios(): void {
   // bug than the one being fixed. Undo is stored prior state, never
   // re-derivation (R12).
   scenario('t3', 'T3 clearing a severe illness restores every week it reached, byte-exact', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
 
@@ -428,7 +359,7 @@ function registerScenarios(): void {
   // erodes their record at worst (L6: honest actions).
   for (const kind of ['illness_severe', 'cooked_week', 'poor_sleep_week'] as const) {
     scenario(`t4-${kind}`, `T4 ${kind} reported Friday leaves the already-Done MON/TUE/THU untouched`, async () => {
-      seedSpentWeekFriday();
+      await seedSpentWeekFriday();
       await markSpentDaysDone();
       const before = acceptedWeek(WEEK_1).days;
 
@@ -459,7 +390,7 @@ function registerScenarios(): void {
   // buildScheduleStateImperative, the same pipeline HomeScreen renders) and
   // asserts the athlete SEES next week's sessions as optional.
   scenario('a3a-visible', 'A3a a severe illness reported Friday makes NEXT week visibly optional on the program screen', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
@@ -495,17 +426,14 @@ function registerScenarios(): void {
   // survive byte-identical, and everything else goes optional. This drives
   // the same seed's real game Saturday through the sick commit.
   scenario('a1-game-week', 'A1 a severe illness on a game week keeps the game anchor; everything else goes optional', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const accepted = getAcceptedMaterialContext();
-    const gameDates = Object.entries(accepted.markedDays ?? {})
-      .filter(([, kind]) => kind === 'game')
-      .map(([date]) => date)
-      .sort();
-    assert(gameDates.length > 0, 'seed carries no marked game day — A1 needs a live game anchor');
-    const landingGames = gameDates.filter((date) => date >= WEEK_1 && date < WEEK_2);
-    assert(landingGames.length > 0, 'no game inside the landing week on this seed');
     const before = acceptedWeek(WEEK_1).days;
+    // A standing fixture need not have a duplicate dated calendar mark.
+    const landingGames = Object.entries(before).filter(([, day]) => day.startsWith('Game/'))
+      .map(([date]) => date);
+    assert(landingGames.length > 0, 'no game inside the landing week on this seed');
 
     const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
@@ -516,10 +444,12 @@ function registerScenarios(): void {
       assert(before[date] === after[date],
         `the live game day ${date} was rewritten by the sick commit: "${before[date]}" → "${after[date]}"`);
     }
-    // The game marking itself survives in accepted state.
+    // Reconstruction projects standing fixtures into game marks. An explicit
+    // input must survive; a profile-only anchor may acquire its derived mark.
     const markedAfter = getAcceptedMaterialContext().markedDays ?? {};
     for (const date of landingGames) {
-      assert(markedAfter[date] === 'game', `game marking for ${date} was lost by the sick commit`);
+      assert(markedAfter[date] === (accepted.markedDays[date] ?? 'game'),
+        `game marking for ${date} changed during the sick commit: ${accepted.markedDays[date]} -> ${markedAfter[date]}`);
     }
     // And the week still landed as an illness_recovery week.
     assert(acceptedWeek(WEEK_1).mode === 'optional_week',
@@ -533,7 +463,7 @@ function registerScenarios(): void {
   // block's weeks are born reduced rather than patched afterwards. Clearing
   // the fact returns generation to normal — no residue in later blocks.
   scenario('r2-boundaries', 'R2 an open illness shapes the next block and a phase change, and only clearing ends it', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
@@ -604,7 +534,7 @@ function registerScenarios(): void {
   // The copy must say what changed, this week vs the weeks ahead — derived
   // from the committed diff, never from the action kind alone.
   scenario('r3-severe', 'R3 the severe-illness disclosure owns its multi-week reach', async () => {
-    seedSpentWeekFriday();
+    await seedSpentWeekFriday();
     await markSpentDaysDone();
     const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
     const result = await commitReadiness('illness_severe');
@@ -621,7 +551,7 @@ function registerScenarios(): void {
 
   for (const kind of ['cooked_week', 'poor_sleep_week'] as const) {
     scenario(`r3-${kind}`, `R3 ${kind}'s disclosure matches what actually changed`, async () => {
-      seedSpentWeekFriday();
+      await seedSpentWeekFriday();
       await markSpentDaysDone();
       const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
       const result = await commitReadiness(kind);
@@ -761,27 +691,5 @@ async function main(): Promise<void> {
   runAllForked();
 }
 
-/**
- * Test-local reader for "is this fact in effect during that week?".
- *
- * It deliberately delegates to the Stage 1 owner when the owner exists, and
- * falls back to the raw bounds otherwise, so this file states the invariant
- * without itself becoming a sixth representation of it.
- */
-function factHorizonCoversWeek(fact: TemporarySourceFact, weekStartISO: string): boolean {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const owner = require('../rules/durableFactHorizon');
-    if (typeof owner.factHorizonCoversWeek === 'function') {
-      return owner.factHorizonCoversWeek(fact, weekStartISO) as boolean;
-    }
-  } catch {
-    // Owner not built yet — fall through to the raw bounds, which is exactly
-    // what makes T2 red today.
-  }
-  if (isInjurySourceFact(fact)) return fact.affectedWeeks.includes(weekStartISO);
-  const weekEnd = addDaysISO(weekStartISO, 6);
-  return fact.effectiveFrom <= weekEnd && fact.effectiveUntil >= weekStartISO;
-}
 
 main().catch((error) => { console.error(error); process.exit(1); });

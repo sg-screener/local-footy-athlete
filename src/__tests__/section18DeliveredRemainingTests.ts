@@ -95,7 +95,6 @@ function strengthWorkout(id: string, dayOfWeek: number, names: readonly string[]
   return finaliseWorkoutAfterMutation(rawStrengthWorkout(id, dayOfWeek, names), {
     offseasonSubphase: 'not_off_season',
     phase: 'In-season',
-    restoreMissingPlanPatterns: false,
   }).workout;
 }
 

@@ -88,7 +88,7 @@ function rowRole(row: unknown): string | null {
 export const COMPOSER_OWNED_FIELDS: readonly string[] = [
   'id', 'microcycleId', 'dayOfWeek',
   'name', 'description', 'sessionTier', 'intensity', 'planEntryId',
-  'exercises', 'composedGaps',
+  'exercises', 'composedGaps', 'strengthIntent',
 ];
 
 /**
@@ -122,7 +122,6 @@ export interface AdapterContribution {
   /** Typed lifecycle ownership for derived sessions. */
   readonly derivedSessionProvenance?: unknown;
   /** The PLANNER's declared strength intent; the composer emits none. */
-  readonly strengthIntent?: unknown;
   /** The conditioning envelope — carried only when conditioning was contributed. */
   readonly section18Evidence?: unknown;
   /** Adapter-authored duration; the composer does not compute one. */
@@ -142,7 +141,7 @@ const ADAPTER_CONTRIBUTED_FIELDS: readonly string[] = [
   // the whole point of pairing it.
   'conditioningOffFeet',
   'attachedConditioningKind', 'conditioningFeasibility', 'hasCombinedConditioning',
-  'speedBlock', 'isTeamDay', 'derivedSessionProvenance', 'strengthIntent',
+  'speedBlock', 'isTeamDay', 'derivedSessionProvenance',
   'section18Evidence', 'durationMinutes', 'authoredDay',
 ];
 

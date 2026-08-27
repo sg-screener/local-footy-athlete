@@ -257,12 +257,12 @@ section('[7] Calf 8/10 — sprint/plyo/calf raise removed');
 // ═════════════════════════════════════════════════════════════════════
 // 8. FATIGUE 8/10 — hard exposures cut across the week
 // ═════════════════════════════════════════════════════════════════════
-section('[8] Fatigue 8/10 — hard exposures cut, recovery preserved');
+section('[8] Fatigue limits dose, never removes an exposure (existing readiness law)');
 {
   const c = buildFatigueConstraint({ severity: 8 });
   for (const name of ['10m Sprint', 'Box Jump', 'Bike Intervals', 'Explosive Push-Ups']) {
     const d = scoreExerciseAgainstConstraints(name, [c]);
-    ok(`${name} → remove (fatigue blocks hard work)`, d.decision === 'remove', d.reason);
+    ok(`${name} → never removed for fatigue`, d.decision !== 'remove', d.reason);
   }
   for (const name of ['Easy Bike Zone 2', 'Foam Roll', 'Lateral Raise', 'Bicep Curl']) {
     const d = scoreExerciseAgainstConstraints(name, [c]);
@@ -309,7 +309,7 @@ section('[10] Multi-constraint — most conservative wins');
   // Box Jump: shoulder doesn't care about plyo; fatigue blocks plyo.
   {
     const d = scoreExerciseAgainstConstraints('Box Jump', [sho, fat]);
-    ok('shoulder+fatigue + Box Jump → remove (fatigue wins)', d.decision === 'remove');
+    ok('shoulder+fatigue + Box Jump → limited, not removed for fatigue', d.decision === 'limit');
   }
   // Easy bike kept by both.
   {
@@ -321,9 +321,9 @@ section('[10] Multi-constraint — most conservative wins');
     const readinessFirst = buildFatigueConstraint({ id: 'readiness-priority', severity: 8 });
     const injurySecond = buildInjuryConstraint({ id: 'injury-priority', region: 'hamstring', severity: 8 });
     const d = scoreExerciseAgainstConstraints('10m Sprint', [readinessFirst, injurySecond]);
-    eq('injury attribution outranks readiness attribution',
+    eq('removal is attributed to the blocking injury, not a non-blocking fatigue limit',
       d.triggeringConstraintIds,
-      ['injury-priority', 'readiness-priority']);
+      ['injury-priority']);
   }
 }
 
@@ -434,36 +434,20 @@ section('[14] validateVisibleProgramAgainstConstraints — catches survivors');
 // ═════════════════════════════════════════════════════════════════════
 // 15. INTEGRATION — projectVisibleDay end-to-end with shoulder 8/10
 // ═════════════════════════════════════════════════════════════════════
-section('[15] Integration — projectVisibleDay shoulder 8/10');
+section('[15] Projection does not author a second injury prescription');
 {
-  const w = wk('Upper Push', [
-    ex('Incline DB Press'),
-    ex('Lateral Raise'),
-    ex('Single Arm Half Kneeling DB OHP'),
-    ex('Explosive Push-Ups'),
-    ex('Goblet Squat'),
-  ]);
-  const out = projectVisibleDay({
-    day: day(NEXT_MON, w),
-    activeInjury: {
-      bodyPart: 'shoulder', bucket: 'shoulder',
-      severity: 8, status: 'active', rules: [],
-    },
-    todayISO: TODAY_ISO,
-  });
-  ok('projection applied', out.injuryFilterApplied);
-  const names = (out.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name);
-  ok('Incline DB Press gone', !names.includes('Incline DB Press'));
-  ok('Lateral Raise gone', !names.includes('Lateral Raise'));
-  ok('Single Arm Half Kneeling DB OHP gone', !names.includes('Single Arm Half Kneeling DB OHP'));
-  ok('Explosive Push-Ups gone', !names.includes('Explosive Push-Ups'));
-  ok('Goblet Squat preserved', names.includes('Goblet Squat'));
+  const workout = wk('Accepted upper session', [ex('Incline DB Press'), ex('Goblet Squat')]);
+  const before = JSON.stringify(workout);
+  const out = projectVisibleDay({ day: day(NEXT_MON, workout), todayISO: TODAY_ISO });
+  eq('projection preserves accepted exercise rows',
+    out.day.workout?.exercises, workout.exercises);
+  eq('projection leaves its input untouched', JSON.stringify(workout), before);
 }
 
 // ═════════════════════════════════════════════════════════════════════
 // 16. INTEGRATION — projectVisibleDay with extraConstraints (fatigue)
 // ═════════════════════════════════════════════════════════════════════
-section('[16] Integration — extraConstraints (fatigue 8/10) cuts hard work');
+section('[16] Integration — fatigue retains the session instead of deleting its hard rows');
 {
   const w = wk('Hard Day', [
     ex('Box Jump'),
@@ -474,15 +458,14 @@ section('[16] Integration — extraConstraints (fatigue 8/10) cuts hard work');
   ]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, w),
-    activeInjury: null,
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
   ok('projection applied (fatigue alone)', out.injuryFilterApplied);
   const names = (out.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name);
-  ok('Box Jump gone', !names.includes('Box Jump'));
-  ok('10m Sprint gone', !names.includes('10m Sprint'));
-  ok('Bike Intervals gone', !names.includes('Bike Intervals'));
+  ok('Box Jump retained', names.includes('Box Jump'));
+  ok('10m Sprint retained', names.includes('10m Sprint'));
+  ok('Bike Intervals retained', names.includes('Bike Intervals'));
   ok('Easy Bike preserved', names.includes('Easy Bike Zone 2'));
   ok('Bicep Curl preserved', names.includes('Bicep Curl'));
 }
@@ -502,8 +485,8 @@ section('[17] UI parity — home and detail produce same projected workout');
     bodyPart: 'hamstring', bucket: 'hamstring' as const,
     severity: 7, status: 'active' as const, rules: [],
   };
-  const home = projectVisibleDay({ day: day(NEXT_MON, w), activeInjury: inj, todayISO: TODAY_ISO });
-  const detail = projectVisibleDay({ day: day(NEXT_MON, w), activeInjury: inj, todayISO: TODAY_ISO });
+  const home = projectVisibleDay({ day: day(NEXT_MON, w), todayISO: TODAY_ISO });
+  const detail = projectVisibleDay({ day: day(NEXT_MON, w), todayISO: TODAY_ISO });
   const homeNames = (home.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name).sort();
   const detailNames = (detail.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name).sort();
   eq('home === detail', homeNames, detailNames);

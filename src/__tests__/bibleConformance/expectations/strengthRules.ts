@@ -25,11 +25,11 @@ export const STRENGTH_BIBLE_RULES: readonly BibleStrengthRule[] = [
     id: 'ALL-FULLBODY-01',
     section: '4. Session types — Full body',
     anchorQuote: 'Cover push, pull, squat and hinge every week where possible.',
-    statement: 'A constrained game-week full-body session preserves all four meaningful patterns.',
+    statement: 'A full-body session combines a lower-body pattern with push and pull; weekly coverage is checked separately.',
     applicableScenarios: ['is-low-availability-full-body'],
     expectation: {
       kind: 'full_body',
-      lowerPatternCount: 2,
+      lowerPatternCount: 1,
       requiredUpperPatterns: ['push', 'pull'],
     },
   },

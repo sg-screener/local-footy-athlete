@@ -11,7 +11,7 @@ import {
   type CoachingPlan,
   type SessionAllocation,
 } from '../../../utils/coachingEngine';
-import { coachingPlanForTests } from '../support/coachingPlanForTests';
+import { coachingPlanForTests } from '../../support/coachingPlanForTests';
 import {
   buildBlockWeekStates,
   computeBlockBounds,
@@ -252,7 +252,6 @@ function scheduleState(args: {
     availableDayNumbers: Array.from(selectedDays)
       .map((day) => DAY_NUMBERS[String(day)])
       .filter((day): day is number => day !== undefined),
-    activeInjury: null,
     activeConstraints: [],
   };
 }
@@ -306,7 +305,7 @@ export function buildStrengthScenarioTrace(
         weekKind: state.weekKind,
         intensityMultiplier: state.intensityMultiplier,
       },
-      { availableEquipment: equipment },
+      { availableEquipment: equipment, excluded: [], pinned: [] },
     );
     if (options.transformGeneratedWeek) {
       workouts = options.transformGeneratedWeek({ workouts, profile, plan, state });
@@ -461,7 +460,7 @@ export function buildSingleWorkoutFixtureTrace(args: {
     userId: 'bible-harness',
     name: scenario.description,
     description: scenario.description,
-    programPhase: profile.seasonPhase ?? 'In-Season',
+    programPhase: profile.seasonPhase === 'In-season' ? 'In-Season' : profile.seasonPhase === 'Off-season' ? 'Base-Building' : 'Pre-Season-Skills',
     startDate: `${blockStart}T12:00:00`,
     endDate: `${blockEnd}T12:00:00`,
     microcycles: [microcycle],

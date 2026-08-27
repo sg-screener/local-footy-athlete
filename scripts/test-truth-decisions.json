@@ -5,8 +5,14 @@
     "test:compiler-year": {
       "kind": "current_contract",
       "reason": "Sam requires the full-year archetype lifecycle to block release, including incomplete coverage and unresolved canonical ownership. HTML is rendered from this same executable result, never a separate oracle.",
-      "productionPaths": ["src/rules/canonicalWeeklyCompiler.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts", "src/store/quiescentBoot.ts"],
-      "contractRefs": ["LAW-compiler-full-year-acceptance"],
+      "productionPaths": [
+        "src/rules/canonicalWeeklyCompiler.ts",
+        "src/rules/canonicalWeeklyProgressionCompiler.ts",
+        "src/store/quiescentBoot.ts"
+      ],
+      "contractRefs": [
+        "LAW-compiler-full-year-acceptance"
+      ],
       "witnessScript": "test:compiler-year",
       "evidenceKind": "current_architecture_incomplete"
     },
@@ -19,7 +25,9 @@
         "src/store/programStore.ts",
         "src/utils/lighterDayTransaction.ts"
       ],
-      "contractRefs": ["LAW-weekly-writer-zero-proof"],
+      "contractRefs": [
+        "LAW-weekly-writer-zero-proof"
+      ],
       "witnessScript": "test:weekly-writer-zero",
       "evidenceKind": "current_architecture_incomplete"
     },
@@ -84,9 +92,18 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:athlete-session-deletion": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "contractRefs": [
+        "LAW-canonical-weekly-compiler-first-slice"
+      ],
+      "evidenceKind": "green_now",
+      "reason": "Rebound to real onboarding across eight archetypes: exact whole-day/strength/conditioning removal, preserved co-located components and fixture anchors, accumulated ledger restart, latest-only Undo and restart. Retires automatic-relocation, snapshot Restore and legacy adjustment migration expectations.",
+      "productionPaths": [
+        "src/store/acceptedStateTransaction.ts",
+        "src/rules/canonicalWeeklySessionEditCompiler.ts",
+        "src/store/undoLastDecision.ts"
+      ],
+      "witnessScript": "test:canonical-weekly-compiler"
     },
     "test:athlete-session-move": {
       "kind": "rewrite_test",
@@ -145,12 +162,13 @@
     },
     "test:canonical-weekly-compiler": {
       "kind": "current_contract",
-      "reason": "The canonical compiler witness covers scheduling, final rows and accepted edits, including the typed lighter-day opt-in, duplicate refusal, linked-fact clear, restart and Undo. This is a measured family contract, not the still-red global single-owner proof.",
+      "reason": "The compiler witness covers scheduling, final rows, typed accepted edits, linked-fact Clear, restart and Undo, followed by a real accumulated-athlete reset/restart witness with a missing-reset mutation. This is a family contract, not the still-red global single-owner proof.",
       "productionPaths": [
         "src/rules/canonicalWeeklyCompiler.ts",
         "src/rules/canonicalWeeklyAthleteEditState.ts",
         "src/rules/canonicalWeeklyAthleteEditCompiler.ts",
         "src/rules/canonicalWeeklyLighterDayCompiler.ts",
+        "src/utils/resetCoach.ts",
         "src/utils/lighterDayTransaction.ts",
         "src/store/quiescentBoot.ts",
         "src/services/api/generateProgram.ts"
@@ -162,9 +180,18 @@
       "evidenceKind": "green_now"
     },
     "test:chained-mutation-continuity": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "contractRefs": [
+        "LAW-canonical-weekly-compiler-first-slice"
+      ],
+      "evidenceKind": "green_now",
+      "reason": "The diagnostic now runs two real 20-week journeys from the annual runner. The release witness covers all eight full years, accumulated fixtures, athlete edits, injury/resolve, phase changes and restart; replaces hand-built relocation and compatibility-setter assumptions.",
+      "productionPaths": [
+        "src/store/fixtureMutationTransaction.ts",
+        "src/store/injuryEpisodeTransaction.ts",
+        "src/store/quiescentBoot.ts"
+      ],
+      "witnessScript": "test:compiler-year"
     },
     "test:christmas-break": {
       "kind": "rewrite_test",
@@ -177,9 +204,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:coach-actions": {
-      "kind": "rewrite_test",
-      "reason": "The helpers still have live callers, but the suite centres the retired coach dispatcher. Rewrite it around executeProgramControlAction and the live helper seams.",
-      "evidenceKind": "startup_failure"
+      "kind": "retire_test",
+      "reason": "The unused phrase dispatcher and its independent lighten/move/optional/weekly output writers are deleted. The spy-store suite expected those retired writers. Current Remove/Swap/Add/Injury/Restart/Restore are held by the real-onboarding session-change-sequence (22 passing checks), canonical compiler lifecycle and annual gates, not by resurrecting the dispatcher.",
+      "retiredTestPaths": [
+        "src/__tests__/coachActionsTests.ts"
+      ],
+      "replacementScripts": [
+        "test:session-change-sequence",
+        "test:canonical-weekly-compiler",
+        "test:compiler-year"
+      ],
+      "evidenceKind": "obsolete_dispatcher_replaced_by_real_action_journeys"
     },
     "test:coach-note-display": {
       "kind": "rewrite_test",
@@ -285,9 +320,10 @@
     },
     "test:deriving-device-commit": {
       "kind": "current_contract",
-      "reason": "The stable rerun executes the current deriving source-fact commit boundary and is green now.",
+      "reason": "Rebound to real cold onboarding and canonical source-fact compilation: durable illness/readiness changes reduce the accepted week; exact fact clearing preserves later athlete edits and restart. Retires stored-adjustment-count and destructive snapshot-restore expectations.",
       "productionPaths": [
-        "src/store/temporarySourceFactTransaction.ts"
+        "src/store/temporarySourceFactTransaction.ts",
+        "src/store/sourceFactCompilation.ts"
       ],
       "contractRefs": [
         "docs/NORTH_STAR.md"
@@ -321,9 +357,9 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:dev-e2e-seeds": {
-      "kind": "rewrite_test",
-      "reason": "The stable run stopped on a stale fixture or output seam before a reliable verdict. Rebind the harness to the current compiler contract first.",
-      "evidenceKind": "runtime_failure"
+      "kind": "test_infrastructure",
+      "reason": "Rebound to unmodified canonical seeds: optional spare days, actual session identities, a valid no-team-training conditioning athlete, and timezone-invariant training observations. This guards diagnostic fixture fidelity, not an independent programming contract.",
+      "evidenceKind": "canonical_seed_fidelity"
     },
     "test:dev-e2e-testids": {
       "kind": "rewrite_test",
@@ -437,9 +473,10 @@
     },
     "test:fact-horizon": {
       "kind": "current_contract",
-      "reason": "The stable rerun executes current durable-fact horizons through real state transitions and is green now.",
+      "reason": "Rebound to real onboarding and logged outcomes: open facts shape later weeks and phase transitions, history and fixtures survive, and live/restart prescriptions agree. The fact horizon is the sole duration input; stored adjustment snapshots are not an oracle.",
       "productionPaths": [
-        "src/rules/durableFactHorizon.ts"
+        "src/rules/durableFactHorizon.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts"
       ],
       "contractRefs": [
         "docs/NORTH_STAR.md"
@@ -458,9 +495,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:fixture-mutation-transaction": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rebound to real onboarding and current accepted fixture effects: Add/Move/Remove, practice matches, failed persistence rollback, exact Clear/restart, source metadata and semantic action traces. Retired raw calendar writes and stored-output hydration expectations.",
+      "productionPaths": [
+        "src/store/fixtureMutationTransaction.ts",
+        "src/store/acceptedStateTransaction.ts"
+      ],
+      "contractRefs": [
+        "LAW-weekly-writer-zero-proof"
+      ],
+      "witnessScript": "test:canonical-weekly-compiler",
+      "evidenceKind": "current_architecture_incomplete"
     },
     "test:g1-landing-ask-flow": {
       "kind": "rewrite_test",
@@ -478,9 +523,16 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:game-local-rebuild": {
-      "kind": "rewrite_test",
-      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
-      "evidenceKind": "startup_failure"
+      "kind": "retire_test",
+      "reason": "Retired the pre-compiler profile-mutation and direct override-sweep suite. Its name/label guesses and stored-output deletion expectations describe removed authors, not current product requirements. Actual fixture Add/Move/Remove, game priority, occupied/multipart days, readiness/travel, restart and Undo are covered through real transactions by the canonical compiler and annual gates; their network-disabled harness preserves the local-only guarantee.",
+      "retiredTestPaths": [
+        "src/__tests__/gameChangeLocalRebuildTests.ts"
+      ],
+      "replacementScripts": [
+        "test:canonical-weekly-compiler",
+        "test:compiler-year"
+      ],
+      "evidenceKind": "obsolete_direct_writer_replaced_by_compiler_journeys"
     },
     "test:generated-program-normalizer": {
       "kind": "rewrite_test",
@@ -660,9 +712,9 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:plan-change-producer": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "aggregate",
+      "reason": "Historical command now delegates to canonicalWeeklyCompilerSliceTests: real accepted actions, accumulated effects and restart. The old synthetic proposal suite and its unused parallel runtime author were retired; the canonical release witness already owns this contract.",
+      "evidenceKind": "canonical_action_replacement"
     },
     "test:pools": {
       "kind": "rewrite_test",
@@ -710,9 +762,18 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:program-hydration-ownership": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "contractRefs": [
+        "LAW-canonical-weekly-compiler-first-slice"
+      ],
+      "evidenceKind": "green_now",
+      "reason": "Rebound to current input-only persistence and compiler reconstruction using real accumulated injury, edit and Clear journeys. Material preservation and destructive acceptance mutation are held; calendar hydration is input-only. Retires saved-output/scalar repair and synthetic compatibility-constraint migrations.",
+      "productionPaths": [
+        "src/store/programStore.ts",
+        "src/store/calendarStore.ts",
+        "src/store/quiescentBoot.ts"
+      ],
+      "witnessScript": "test:canonical-weekly-compiler"
     },
     "test:program-override-ownership": {
       "kind": "rewrite_test",
@@ -865,9 +926,18 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:temporary-source-facts": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rewritten as real injury/edit/restart and exact Clear journeys, including persistence-fault injection and independent-report Clear preserving an accepted lighter day. Retired fabricated program snapshots and unused explicit-load delta authors.",
+      "productionPaths": [
+        "src/store/temporarySourceFactTransaction.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
+        "src/utils/lighterDayTransaction.ts"
+      ],
+      "contractRefs": [
+        "LAW-weekly-writer-zero-proof"
+      ],
+      "witnessScript": "test:canonical-weekly-compiler",
+      "evidenceKind": "current_architecture_incomplete"
     },
     "test:testing-bias": {
       "kind": "rewrite_test",

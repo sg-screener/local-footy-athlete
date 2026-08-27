@@ -259,53 +259,7 @@ function defaultBuildState(): ScheduleState {
   return buildScheduleStateImperative();
 }
 
-/**
- * Wipe all injury-tagged manual overrides whose date falls inside the
- * given Mon-Sun week. Used by the progression flow before re-running
- * the engine at a new severity — keeps the resolver returning the
- * fresh template state until new overrides land.
- *
- * Returns the dates that were cleared (for logging / tests).
- */
-export function removeInjuryOverridesForWeek(weekStartISO: string): string[] {
-  const store = useProgramStore.getState();
-  const cleared: string[] = [];
-  // Build the seven dates Mon..Sun.
-  const weekDates = new Set<string>();
-  for (let i = 0; i < 7; i++) {
-    weekDates.add(addDaysISO(weekStartISO, i));
-  }
-  for (const [date, ctx] of Object.entries(store.overrideContexts ?? {})) {
-    if (!weekDates.has(date)) continue;
-    if ((ctx as OverrideContext)?.intent !== 'injury') continue;
-    store.removeManualOverride(date);
-    cleared.push(date);
-  }
-  logger.debug('[pipeline] removeInjuryOverridesForWeek', {
-    weekStartISO,
-    cleared,
-  });
-  return cleared;
-}
-
-/** Clear legacy injury-authored overrides from today forward across weeks. */
-export function removeInjuryOverridesFromDate(startDateISO: string): string[] {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateISO)) return [];
-  const store = useProgramStore.getState();
-  const cleared: string[] = [];
-  for (const [date, ctx] of Object.entries(store.overrideContexts ?? {})) {
-    if (date < startDateISO) continue;
-    if ((ctx as OverrideContext)?.intent !== 'injury') continue;
-    store.removeManualOverride(date);
-    cleared.push(date);
-  }
-  cleared.sort();
-  logger.debug('[pipeline] removeInjuryOverridesFromDate', {
-    startDateISO,
-    cleared,
-  });
-  return cleared;
-}
+// Retired injury-override clearing helpers had no callers. Injury facts now rebuild through the compiler.
 
 function addDaysISO(iso: string, n: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
@@ -2194,4 +2148,3 @@ function mondayOfISOLocal(iso: string): string {
   const dd = String(anchor.getDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
 }
-

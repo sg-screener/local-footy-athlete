@@ -1,4 +1,4 @@
-import { compileCanonicalProgram } from '../../rules/canonicalProgramCompiler';
+import { compileCanonicalProgram, type CanonicalProgramCompilerInput } from '../../rules/canonicalProgramCompiler';
 import { compileCanonicalProgramWeeks, canonicalReadinessFactFrom, canonicalIllnessFactFrom, type CanonicalProgramWeeksInput } from '../../rules/canonicalWeeklyRowCompiler';
 export { GeneratedWeekRefusedError } from '../../rules/canonicalWeeklyRowCompiler';
 import { OnboardingData, TrainingProgram, Microcycle, type DayOfWeek, type ConditioningEquipmentModality, type Workout } from '../../types/domain';
@@ -745,10 +745,10 @@ export function buildGeneratedMicrocycles(args: Omit<CanonicalProgramWeeksInput,
  * (or a timeout). Synchronous and throw-safe for atomic commit flows:
  * callers only apply state when this returns.
  */
-export function generateProgramLocally(
+export function canonicalProgramInputFromProfile(
   onboardingData: OnboardingData,
   options: GenerateProgramFromProfileOptions = {},
-): TrainingProgram {
+): CanonicalProgramCompilerInput {
   const effectiveTodayISO = options.todayISO ?? todayISOLocal();
   const availabilityDateISO = effectiveTodayISO;
   const { blockStart, blockEnd } = generationBlockBounds(options, effectiveTodayISO);
@@ -883,7 +883,7 @@ export function generateProgramLocally(
     updatedAt: authoredAtISO,
   };
 
-  const compilation = compileCanonicalProgram({
+  return {
     metadata, weeks: weeksInput, exclusions: athletePrefsAsRecorded?.exclusions,
     progression: {
       blockStartISO: blockStart, blockNumber: options.blockNumber ?? 1,
@@ -901,7 +901,16 @@ export function generateProgramLocally(
         workoutHistory: [], blockState: options.progressionHistory?.blockState ?? null,
       },
     },
-  });
+  };
+}
+
+export function generateProgramLocally(
+  onboardingData: OnboardingData,
+  options: GenerateProgramFromProfileOptions = {},
+): TrainingProgram {
+  const input = canonicalProgramInputFromProfile(onboardingData, options);
+  const blockStart = input.weeks.blockStartISO;
+  const compilation = compileCanonicalProgram(input);
   const { program, selections: selectionsAuthored } = compilation;
   const plan = compilation.plans[0];
   if (!plan || !program.microcycles[0]?.workouts.length) {

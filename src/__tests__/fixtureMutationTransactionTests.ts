@@ -3,7 +3,7 @@
  * Run: npm run test:fixture-mutation-transaction
  */
 
-(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+(global as unknown as { __DEV__: boolean }).__DEV__ = true;
 
 const localStorageData = new Map<string, string>();
 (globalThis as unknown as { window: unknown }).window = {
@@ -83,93 +83,36 @@ async function run(name: string, body: () => void | Promise<void>): Promise<void
 }
 
 function profile(args: {
-  phase?: 'In-season' | 'Pre-season';
-  withFixture?: boolean;
+  phase?: OnboardingData['seasonPhase']; withFixture?: boolean;
 } = {}): OnboardingData {
-  const withFixture = args.withFixture ?? true;
-  return {
-    gender: 'male',
-    seasonPhase: args.phase ?? 'In-season',
-    trainingDaysPerWeek: 5,
-    preferredTrainingDays: [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
-    ],
-    teamTrainingDaysPerWeek: 2,
-    teamTrainingDays: ['Tuesday', 'Thursday'],
-    sprintExposure: '2+ times per week',
-    conditioningLevel: 'Good',
-    recentTrainingLoad: 'Very consistent',
-    experienceLevel: 'Advanced',
-    injuries: [],
-    motivation: 'Get stronger',
-    usualGameDay: withFixture ? 'Saturday' : undefined,
-    gameDay: withFixture ? 'Saturday' : undefined,
-    // The equipment door is a required step now; a built world answered it
-    // (the walker's world-completion fix, applied here when the suite's
-    // generation started refusing equipment-less profiles).
-    equipmentAnswer: {
-      tags: {
-        barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
-        bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
-        foam_roller: 'have', plyo_box: 'have',
-      },
-      modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
-      answeredOn: WEEK_START,
-    },
-  } as unknown as OnboardingData;
+  const { athleteAnswers, ARCHETYPES } = require('./compilerYear/catalog') as typeof import('./compilerYear/catalog');
+  const phase = args.phase ?? 'In-season';
+  const base = ARCHETYPES.find(athlete => athlete.id === 'male-5-two-fixtures')!;
+  // In-season onboarding requires the standing game answer. A bye is then an
+  // accepted Remove, not an impossible no-game onboarding fixture.
+  return athleteAnswers({ ...base, initialPhase: phase, gameDay: 'Saturday' });
 }
 
-function seedAcceptedWeek(args: {
-  athlete: OnboardingData;
-  markedDays?: Record<string, CalendarDayType>;
-}): void {
-  const markedDays = args.markedDays ?? (
-    args.athlete.usualGameDay ? { [SATURDAY]: 'game' as const } : {}
-  );
-  const program = generateProgramLocally(args.athlete, {
-    todayISO: WEEK_START,
-    previousProgram: null,
-    activeConstraints: [],
-    readinessSignal: null,
-  });
-  useCalendarStore.setState({ markedDays, selectedDate: null });
-  useReadinessStore.setState({ signalsByDate: {} });
-  useProgramStore.setState({
-    currentProgram: program,
-    currentMicrocycle: program.microcycles[0] ?? null,
-    todayWorkout: null,
-    blockState: null,
-    dateOverrides: {},
-    overrideContexts: {},
-    weekScopedOverlays: {},
-    userRemovalConstraints: [],
-    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
-    exposureContractsByWeek: {},
-    sessionFeedback: {},
-    acceptedMaterialContext: normalizeAcceptedMaterialContext({
-      markedDays,
-      readinessSignalsByDate: {},
-      activeConstraints: [],
-      activeInjury: null,
-      acceptedProfileSnapshot: {
-        protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
-        capturedAt: `${WEEK_START}T00:00:00.000Z`,
-        updatedAt: `${WEEK_START}T00:00:00.000Z`,
-        sourceRevision: 1,
-        onboardingData: args.athlete,
-      },
-      revision: 1,
-      lastTransaction: 'fixture-transaction-test:seed',
-    }),
-  });
-  publishAcceptedProfileCompatibilityMirror(args.athlete);
-  useProfileStore.setState({ isOnboardingComplete: true });
-  useCoachUpdatesStore.setState({
-    updatesByWeek: {},
-    activeConstraints: [],
-    activeInjury: null,
-    dismissedCoachNoteIds: [],
-  });
+async function seedAcceptedWeek(args: {
+  athlete: OnboardingData; markedDays?: Record<string, CalendarDayType>;
+}): Promise<void> {
+  const { coldStartThroughOnboarding, quietAsync } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+  const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: args.athlete, installDayISO: WEEK_START }));
+  assert(!installed.onboardingRefusal, installed.onboardingRefusal ?? 'onboarding refused');
+  if (args.athlete.seasonPhase === 'In-season' && args.markedDays && !Object.keys(args.markedDays).length) {
+    const removed = await quietAsync(() => executeFixtureMutationTransaction(input({
+      action: 'remove', fixtureKind: 'game', sourceDate: SATURDAY,
+    })));
+    assert(removed.outcome === 'accepted', JSON.stringify(removed));
+  }
+  for (const [date, mark] of Object.entries(args.markedDays ?? {})) {
+    if (mark !== 'game') throw new Error('Fixture diagnostic requires an accepted fixture action, not synthetic marks');
+    const result = await quietAsync(() => executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: args.athlete.seasonPhase === 'Pre-season' ? 'practice_match' : 'game',
+      targetDate: date, source: source(`fixture-diagnostic-setup:${date}`),
+    })));
+    assert(result.outcome === 'accepted' || result.outcome === 'no_change', JSON.stringify(result));
+  }
 }
 
 function source(
@@ -219,7 +162,8 @@ function visibleSemantic(athlete: OnboardingData): string {
     markedDays: state.acceptedMaterialContext.markedDays,
   });
   return JSON.stringify({
-    marks: state.acceptedMaterialContext.markedDays,
+    fixtureDays: accepted.visibleWorkouts.filter(workout => workout.workoutType === 'Game')
+      .map(workout => workout.dayOfWeek),
     workouts: accepted.visibleWorkouts.map((workout) => ({
       day: workout.dayOfWeek,
       id: workout.planEntryId,
@@ -251,7 +195,7 @@ async function assertFixtureMutation(args: {
   expectedMark: { date: string; value: CalendarDayType | undefined };
 }): Promise<void> {
   const athlete = profile({ phase: args.phase, withFixture: args.withFixture });
-  seedAcceptedWeek({
+  await seedAcceptedWeek({
     athlete,
     markedDays: args.withFixture ? { [SATURDAY]: 'game' } : {},
   });
@@ -342,7 +286,7 @@ async function main(): Promise<void> {
       action: 'remove',
       sourceDate: SATURDAY,
       expectedKind: 'practice_match_fixture_remove',
-      expectedMark: { date: SATURDAY, value: 'noGame' },
+      expectedMark: { date: SATURDAY, value: undefined },
     }));
 
   await run('7 a stale render revision does not refuse the athlete\'s decision (R1.4b)', async () => {
@@ -355,7 +299,7 @@ async function main(): Promise<void> {
     // a tap carrying a stale revision still LANDS, so re-adding the check
     // reds here.
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const result = await executeFixtureMutationTransaction({
       ...input({
         action: 'move',
@@ -374,10 +318,11 @@ async function main(): Promise<void> {
 
   await run('8 persistence failure restores fixture, program, ledger, mirrors and notes', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const before = completeAcceptedStateFingerprint();
     const beforeEnvelope = await readDurableProgramStoreEnvelope();
     const beforeNotes = JSON.stringify(useCoachUpdatesStore.getState().activeConstraints);
+    const beforeMarks = JSON.stringify(useProgramStore.getState().acceptedMaterialContext.markedDays);
     const originalSetItem = AsyncStorage.setItem.bind(AsyncStorage);
     let rejectOnce = true;
     AsyncStorage.setItem = async (key: string, value: string) => {
@@ -402,8 +347,8 @@ async function main(): Promise<void> {
       'persistence failure changed accepted state');
     assert((await readDurableProgramStoreEnvelope()) === beforeEnvelope,
       'persistence failure changed durable envelope');
-    assert(useProgramStore.getState().acceptedMaterialContext.markedDays[SATURDAY] === 'game',
-      'persistence failure did not restore the fixture');
+    assert(JSON.stringify(useProgramStore.getState().acceptedMaterialContext.markedDays) === beforeMarks,
+      'persistence failure did not restore the exact fixture inputs');
     assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === 0,
       'persistence failure did not restore the ledger');
     assert(JSON.stringify(useCoachUpdatesStore.getState().activeConstraints) === beforeNotes,
@@ -412,7 +357,7 @@ async function main(): Promise<void> {
 
   await run('9 fixture restoration repairs the complete recorded horizon', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const before = visibleSemantic(athlete);
     const moved = await executeFixtureMutationTransaction(input({
       action: 'move',
@@ -426,6 +371,7 @@ async function main(): Promise<void> {
         moved.outcome !== 'impossible',
       JSON.stringify(moved),
     );
+    if (!('result' in moved)) throw new Error(JSON.stringify(moved));
     const adjustmentId = moved.result.reversibleAdjustmentId;
     assert(adjustmentId, 'move adjustment missing');
     const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
@@ -436,27 +382,23 @@ async function main(): Promise<void> {
       adjustmentId,
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
-    assert(restored.outcome === 'restored', JSON.stringify(restored));
+    assert(restored.outcome === 'recomposed', JSON.stringify(restored));
     assert(restored.affectedWeeks.length === adjustment.rollingDependencyWeeks.length,
       'restoration did not validate the complete horizon');
     assert(visibleSemantic(athlete) === before,
-      'restoration did not recover the exact visible state');
+      'restoration did not recover the exact visible fixtures and sessions');
     const envelope = await readDurableProgramStoreEnvelope();
     assert(envelope, 'restored durable envelope missing');
-    const persisted = JSON.parse(envelope).state as ReturnType<typeof useProgramStore.getState>;
-    const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
-      profile: athlete,
-      markedDays: persisted.acceptedMaterialContext.markedDays,
-      validateWeekStarts: adjustment.rollingDependencyWeeks,
-    });
-    useProgramStore.setState({ ...persisted, ...hydrated });
+    const { relaunchApp } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const restart = await relaunchApp({ storage: localStorageData, todayISO: WEEK_START });
+    assert(restart.ok, JSON.stringify(restart));
     assert(visibleSemantic(athlete) === before,
       'hydration changed the restored fixture state');
   });
 
   await run('10 Game Change Coach Note uses acknowledged source metadata', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const metadata = source('coach-fixture:coach-turn-1', {
       requestedBy: 'athlete',
       producer: 'coach',
@@ -467,7 +409,7 @@ async function main(): Promise<void> {
       action: 'move',
       fixtureKind: 'game',
       sourceDate: SATURDAY,
-      targetDate: SUNDAY,
+      targetDate: '2026-03-25',
       source: metadata,
     }));
     assert(
@@ -490,7 +432,7 @@ async function main(): Promise<void> {
     const note = useCoachUpdatesStore.getState().activeConstraints.find((constraint) =>
       constraint.id === result.noteId);
     assert(note?.type === 'schedule' && note.fixtureMutationSource?.commandId === metadata.commandId,
-      'Coach Note source metadata missing');
+      `Coach Note source metadata missing: ${JSON.stringify({noteId: result.noteId, notes: useCoachUpdatesStore.getState().activeConstraints})}`);
     assert(note?.fixtureMutationTraceId === result.traceId,
       'Coach Note trace acknowledgement missing');
     assert(note?.noteProof?.kind === 'game_change' && note.noteProof.after.length > 0,
@@ -499,7 +441,7 @@ async function main(): Promise<void> {
 
   await run('11 TraceV2 has one root for fixture action plus note projection', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     clearAthleteActionDiagnosticEvents();
     configureAthleteActionDiagnosticsForTests({
       enabled: true,
@@ -531,7 +473,10 @@ async function main(): Promise<void> {
           result.outcome !== 'impossible',
         JSON.stringify(result),
       );
-      const records = getAthleteActionTracesV2();
+      // Store-armour writes have their own system diagnostic roots. They are
+      // not extra athlete fixture actions; count the semantic action roots.
+      const records = getAthleteActionTracesV2().filter(record =>
+        record.root.actionType.status === 'captured' && record.root.actionType.value === 'game_day_change');
       assert(records.length === 1, `TraceV2 roots=${records.length}`);
       assert(records[0]?.traceId === root.traceId && result.traceId === root.traceId,
         'transaction did not reuse the supplied TraceV2 root');
@@ -552,9 +497,9 @@ async function main(): Promise<void> {
     }
   });
 
-  await run('12 Home tap adapter is semantically identical to canonical transaction', () => {
+  await run('12 Home tap adapter is semantically identical to canonical transaction', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const home = executeHomeGameMutation({
       baseProfile: athlete,
       currentPhase: 'In-season',
@@ -567,7 +512,7 @@ async function main(): Promise<void> {
     assert(home.outcome !== 'impossible', JSON.stringify(home));
     const homeSemantic = visibleSemantic(athlete);
 
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const canonical = executeFixtureMutationInMemory(input({
       action: 'move',
       fixtureKind: 'game',
@@ -587,7 +532,7 @@ async function main(): Promise<void> {
 
   await run('13 no-diff fixture actions create no misleading note', async () => {
     const athlete = profile();
-    seedAcceptedWeek({ athlete });
+    await seedAcceptedWeek({ athlete });
     const revision = useProgramStore.getState().acceptedMaterialContext.revision;
     const result = await executeFixtureMutationTransaction(input({
       action: 'add',
@@ -651,8 +596,8 @@ async function main(): Promise<void> {
     assert(/executeFixtureMutationTransaction\(/.test(home) &&
       !/\bsetGameDay\(|\bremoveGameDay\(/.test(home),
     'live Home fixture UI bypasses FixtureMutationTransaction');
-    assert(/COMPATIBILITY-ONLY FIXTURE WRITE/.test(calendar),
-      'direct CalendarStore fixture doors are not marked compatibility-only');
+    assert(!/\b(?:setGameDay|removeGameDay|setNoGame|removeNoGame)\s*:/.test(calendar),
+      'retired calendar fixture methods returned');
     // `utils/coachFixtureChange` was torn down with the frozen coach systems
     // (202de26f, the coach rebuild). While no adapter exists there IS no
     // second engine; when the rebuild lands one, it must route through the

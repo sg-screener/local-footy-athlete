@@ -47,7 +47,7 @@ import {
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
-import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
+import { evaluateMicrocycleForTests } from './support/evaluateMicrocycle';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { seedManualOverride } from './support/programOverrideHarness';
 
@@ -74,7 +74,7 @@ const IN_SEASON_PROFILE: OnboardingData = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingDuration: '60-90 minutes',
+  teamTrainingDuration: '60 minutes',
   trainingLocation: 'Commercial gym',
   equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   sprintExposure: '2+ times per week',
@@ -446,7 +446,7 @@ console.log('\n-- Block-to-block exercise variation and automatic trigger --');
     JSON.stringify(result.program?.microcycles.map((week) => week.exposureContract)));
   ok('rollover emits an observable Section 18 contract for every new week',
     result.program?.microcycles.every((week) => {
-      const observation = observeMicrocycleSection18(week);
+      const observation = evaluateMicrocycleForTests(week);
       return week.exposureContractV2?.protocolVersion === 2 && observation !== null &&
         observation.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
         observation.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&

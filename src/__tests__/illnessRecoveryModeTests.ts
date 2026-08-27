@@ -161,6 +161,7 @@ function generateWithIllness(severe: boolean, withGame = true) {
       selectedPhase: 'In-season',
       phaseEntryWeekStartISO: WEEK,
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
   return program.microcycles[0];

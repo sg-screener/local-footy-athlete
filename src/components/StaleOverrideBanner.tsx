@@ -5,19 +5,22 @@
  * but the game context has changed. Offers guided actions:
  *   - Keep: dismiss the warning, keep the override as-is
  *   - Review: open a no-chat choice sheet
- *   - Clear: remove the override entirely, let the resolver take over
+ *   - Clear: clear its exact accepted owner, when that owner is still clearable
  *
  * Used in both HomeScreen (inline on day rows) and DayWorkoutScreen (top banner).
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { Text } from './common/Text';
 import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useProgramStore } from '../store/programStore';
 import type { StaleOverrideWarning } from '../utils/staleOverrideDetector';
+import { clearableOverrideAdjustment, clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { pendingUndoTarget } from '../store/undoLastDecision';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 
 interface StaleOverrideBannerProps {
   warning: StaleOverrideWarning;
@@ -29,23 +32,43 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
   const [dismissed, setDismissed] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
-  const removeManualOverride = useProgramStore((s) => s.removeManualOverride);
-  const dismissStaleWarning = useProgramStore((s) => s.dismissStaleWarning);
+  const [clearing, setClearing] = useState(false);
+  const adjustments = useProgramStore((s) => s.reversibleAdjustmentLedger.adjustments);
+  useDecisionLedgerStore((s) => s.entries);
+  const clearable = clearableOverrideAdjustment({ date: warning.date, workout: warning.workout,
+    adjustments, latestDecision: pendingUndoTarget() });
 
   if (dismissed) return null;
 
   const handleKeep = () => {
-    dismissStaleWarning(warning.date);
     setReviewVisible(false);
     setDetailVisible(false);
     setDismissed(true);
   };
 
-  const handleClear = () => {
-    removeManualOverride(warning.date);
-    setReviewVisible(false);
-    setDetailVisible(false);
-    setDismissed(true);
+  const handleClear = async () => {
+    if (!clearable || clearing) return;
+    setClearing(true);
+    try {
+      const state = useProgramStore.getState();
+      const current = state.dateOverrides[warning.date];
+      const exact = current && clearableOverrideAdjustment({ date: warning.date, workout: current,
+        adjustments: state.reversibleAdjustmentLedger.adjustments, latestDecision: pendingUndoTarget() });
+      if (exact?.id !== clearable.id) {
+        Alert.alert('Nothing changed', 'This session has changed since you opened it. Review it again.');
+        return;
+      }
+      const result = await clearReversibleAdjustment(clearable.id, state.acceptedMaterialContext.revision);
+      if (result.outcome !== 'restored' && result.outcome !== 'recomposed' && result.outcome !== 'already-cleared') {
+        Alert.alert('Nothing changed', result.reason ?? 'Review this change in the weekly view.');
+        return;
+      }
+      setReviewVisible(false);
+      setDetailVisible(false);
+      setDismissed(true);
+    } catch {
+      Alert.alert('Nothing changed', 'The change could not be cleared. Please try again.');
+    } finally { setClearing(false); }
   };
 
   if (compact) {
@@ -55,9 +78,9 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
         <Text style={styles.compactText} numberOfLines={1}>
           Schedule changed - override may be stale
         </Text>
-        <Pressable onPress={handleClear} style={styles.compactAction}>
+        {clearable && <Pressable onPress={handleClear} disabled={clearing} style={styles.compactAction}>
           <Text style={styles.compactActionText}>Clear</Text>
-        </Pressable>
+        </Pressable>}
         <Pressable onPress={handleKeep} style={styles.compactAction}>
           <Text style={styles.compactKeepText}>Keep</Text>
         </Pressable>
@@ -99,12 +122,13 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
             <Text style={styles.reviewButtonText}>Review</Text>
           </Pressable>
 
-          <Pressable
+          {clearable && <Pressable
             onPress={handleClear}
+            disabled={clearing}
             style={({ pressed }) => [styles.actionButton, styles.clearButton, pressed && styles.pressed]}
           >
             <Text style={styles.clearButtonText}>Clear Override</Text>
-          </Pressable>
+          </Pressable>}
         </View>
       </View>
 
@@ -118,13 +142,14 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
           This change may no longer match your current program.
         </SheetDescription>
         <Button label="Keep this change" variant="secondary" glow={false} onPress={handleKeep} />
-        <Button
+        {clearable && <Button
           label="Clear this change"
           variant="danger"
           glow={false}
           onPress={handleClear}
+          disabled={clearing}
           style={styles.sheetButton}
-        />
+        />}
         <Button
           label="Update this change"
           variant="outline"
@@ -147,7 +172,9 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
             "Ask Coach". It now says what is true and closes rather than
             leaving the athlete somewhere with nothing to press. */}
         <SheetDescription>
-          {'This one needs more context than we can gather here, so nothing has changed. Keep the session or clear it from the options above.'}
+          {clearable
+            ? 'Keep this session or clear the accepted change from the options above.'
+            : 'Use the weekly view to change this session. Nothing has changed here.'}
         </SheetDescription>
         <Button
           label="Close"

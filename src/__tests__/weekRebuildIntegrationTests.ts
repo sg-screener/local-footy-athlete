@@ -26,7 +26,7 @@
   throw new Error('NETWORK DISABLED — rebuilds must be fully local');
 };
 
-import { rebuildLocalWeek } from '../utils/weekRebuild';
+import { rebuildLocalWeek } from './support/rebuildWeekForTest';
 import {
   resolveWeekWithConditioning,
   addDays,
@@ -51,7 +51,7 @@ import {
 import { seedManualOverride } from './support/programOverrideHarness';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
-import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
+import { evaluateMicrocycleForTests } from './support/evaluateMicrocycle';
 
 // Late-bound requires: these modules sit in an import cycle under the CJS
 // test runner; their exports resolve only after the graph settles.
@@ -155,7 +155,6 @@ function resetWorld() {
       markedDays: {},
       readinessSignalsByDate: {},
       activeConstraints: [],
-      activeInjury: null,
       injuryEpisodes: [],
       temporarySourceFacts: [],
       acceptedCompositionBase: null,
@@ -192,7 +191,6 @@ function seedCanonicalFatigueFact(date: string): string | null {
   useProgramStore.setState({ acceptedMaterialContext: accepted });
   publishAcceptedCoachUpdatesCompatibilityMirror({
     activeConstraints: accepted.activeConstraints,
-    activeInjury: accepted.activeInjury,
   });
   return accepted.activeConstraints.find((constraint) =>
     constraint.temporarySourceFactIds?.includes(fact.factId))?.id ?? null;
@@ -652,7 +650,7 @@ console.log('\n── Rebuild preserves corrected pre-season frequency ──');
     JSON.stringify(rebuilt.microcycles.map((week) => week.exposureContract)));
   ok('canonical rebuild emits an observable Section 18 contract for every week',
     rebuilt.microcycles.every((week) => {
-      const observation = observeMicrocycleSection18(week);
+      const observation = evaluateMicrocycleForTests(week);
       return week.exposureContractV2?.protocolVersion === 2 && observation !== null &&
         observation.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
         observation.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&

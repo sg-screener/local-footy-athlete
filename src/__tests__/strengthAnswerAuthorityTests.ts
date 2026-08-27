@@ -50,7 +50,6 @@ import type {
 import { computeTestingBias } from '../rules/testingBias';
 import { onboardingToCoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
 import { coachingPlanForTests } from './support/coachingPlanForTests';
-import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 import { estimateAnchors } from '../utils/loadEstimation';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -149,16 +148,11 @@ const ADDON_WEEK: readonly Workout[] = [
  * 'hamstring_light_prehab'], …)`), and a gate against a deleted mechanism that does not
  * watch the surface that mechanism used is watching the wrong thing.
  *
- * So the signature is skeleton + attached recovery add-ons. Anything the strength answers
- * could move, in either place, diverges it.
+ * The standalone add-on author is retired. The signature covers the current skeleton;
+ * the pure focus-preference checks below still detect strength-answer leakage.
  */
 function weekSignature(data: OnboardingData): string {
   const plan = planFor(data);
-  const withAddons = attachRecoveryAddonsToWeek({
-    workouts: [...ADDON_WEEK],
-    profile: data,
-    weekKind: 'build',
-  });
   return JSON.stringify({
     coreSessions: plan.coreSessions,
     week: plan.weeklyPlan.map((session) => ({
@@ -169,10 +163,6 @@ function weekSignature(data: OnboardingData): string {
       conditioningCategory: session.conditioningCategory,
       speedWorkKind: session.speedWorkKind,
       stressLevel: session.stressLevel,
-    })),
-    addons: withAddons.map((item) => ({
-      name: item.name,
-      focus: (item.recoveryAddons ?? []).map((addon: RecoveryAddonBlock) => addon.focusArea),
     })),
   });
 }

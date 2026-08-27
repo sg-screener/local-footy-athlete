@@ -53,8 +53,7 @@ export function acceptBlock(
   // ⚠ **AN EXPLICIT `acceptedBlockRequirements` IN `options` WINS.** A suite
   // that wants to state a world where the previous block required N says so, and
   // this door must not overwrite it with the ambient store.
-  const stated = (options as { progressionHistory?: { acceptedBlocks?: unknown } })
-    ?.progressionHistory?.acceptedBlocks;
+  const stated = options.progressionHistory?.acceptedBlocks;
   const program = generateProgramLocally(profile, {
     ...options,
     recordSelections: 'author',

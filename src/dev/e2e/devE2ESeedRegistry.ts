@@ -1,6 +1,5 @@
 import type {
   OnboardingData,
-  Microcycle,
   OverrideContext,
   TrainingProgram,
   UserRemovalConstraint,
@@ -32,6 +31,7 @@ import {
 } from './devE2ESeedIds';
 import { DEV_E2E_STANDARD_PROFILE } from './devE2EStandardProfile';
 import { semanticFingerprint } from './semanticFingerprint';
+import type { ProgramControlAction } from '../../types/programControlAction';
 
 export {
   DEV_E2E_DATE_ANCHORS,
@@ -54,7 +54,7 @@ export type DevE2EAuxiliaryState =
     }
   | { kind: 'temporary_equipment'; presetId: 'bodyweight_only'; date: string }
   | { kind: 'calendar_game'; date: string }
-  | { kind: 'removable_component_override'; date: string }
+  | { kind: 'program_control'; action: ProgramControlAction; todayISO: string }
   | {
       kind: 'session_feedback';
       date: string;
@@ -114,7 +114,7 @@ export type DevE2EWitness =
   | {
       kind: 'eligible_target_date';
       date: string;
-      eligibility: 'rest_or_empty';
+      eligibility: 'rest_or_empty' | 'optional_or_empty';
       underlyingWorkoutId?: string;
     }
   | {
@@ -219,8 +219,6 @@ export interface DevE2EWitnessState {
 }
 
 const FIXED_TIMESTAMP = '2026-07-13T12:00:00.000Z';
-const ONE_SET_EXERCISE_ID = 'dev-e2e-one-set-main';
-const STACKED_WORKOUT_ID = 'dev-e2e-stacked-team-upper-pull';
 const INJURY_CONSTRAINT_ID = 'dev-e2e-injury-right-hamstring';
 /** Monday / Tuesday / Thursday — the days already recorded Done by Friday. */
 const SPENT_WEEK_DONE_OFFSETS = [0, 1, 3] as const;
@@ -241,9 +239,6 @@ function addDaysISO(dateISO: string, dayOffset: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-function anchoredNoonISO(dateISO: string): string {
-  return `${dateISO.slice(0, 10)}T12:00:00.000Z`;
-}
 
 function mondayForDate(dateISO: string): string {
   const day = dayOfWeekForISODate(dateISO);
@@ -254,22 +249,7 @@ function dateForWorkout(weekStart: string, workout: Workout): string {
   return addDaysISO(weekStart, (workout.dayOfWeek + 6) % 7);
 }
 
-function stableIdPart(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-}
 
-function stabilizeAuditTimestamps<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map((entry) => stabilizeAuditTimestamps(entry)) as T;
-  }
-  if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
-    key,
-    (key === 'createdAt' || key === 'updatedAt') && typeof entry === 'string'
-      ? FIXED_TIMESTAMP
-      : stabilizeAuditTimestamps(entry),
-  ])) as unknown as T;
-}
 
 function fixedProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
@@ -301,6 +281,8 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
   // that has genuinely ENDED: today (2026-08-10) must fall after the last
   // microcycle's Sunday, which only a full four-week block can express.
   return seedId === 'spent-week-friday' ||
+    seedId === 'one-set-strength' ||
+    seedId === 'session-layout-showcase' ||
     seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
     seedId === 'coach-production-replay' ||
@@ -311,119 +293,14 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
     : 1;
 }
 
-function stabilizeProgram(program: TrainingProgram, seedId: DevE2ESeedId): TrainingProgram {
-  const result = stabilizeAuditTimestamps(clone(program));
-  // The PROGRAM's own start — identical to the anchor week for every ordinary
-  // seed; earlier for the two-date `block-rollover` seed (see
-  // DEV_E2E_PROGRAM_START_OVERRIDES).
-  const anchorDate = devE2EProgramStartForSeed(seedId);
-  const lastWeekIndex = Math.max(0, result.microcycles.length - 1);
-  result.id = `dev-e2e-${seedId}`;
-  result.userId = 'dev-e2e-athlete';
-  result.name = `Dev E2E: ${seedId}`;
-  result.startDate = anchoredNoonISO(anchorDate);
-  result.endDate = anchoredNoonISO(addDaysISO(anchorDate, lastWeekIndex * 7 + 6));
-  result.createdAt = FIXED_TIMESTAMP;
-  result.updatedAt = FIXED_TIMESTAMP;
-  result.microcycles = result.microcycles.map((microcycle, weekIndex) =>
-    stabilizeMicrocycle(
-      microcycle,
-      seedId,
-      result.id,
-      addDaysISO(anchorDate, weekIndex * 7),
-    ));
-  return result;
-}
 
-function stabilizeMicrocycle(
-  microcycle: Microcycle,
-  seedId: DevE2ESeedId,
-  programId: string,
-  weekStartDate: string,
-): Microcycle {
-  const stable = stabilizeAuditTimestamps(clone(microcycle));
-  const microcycleId = `dev-e2e-${seedId}-week-${weekStartDate}`;
-  return {
-    ...stable,
-    id: microcycleId,
-    programId,
-    startDate: anchoredNoonISO(weekStartDate),
-    endDate: anchoredNoonISO(addDaysISO(weekStartDate, 6)),
-    createdAt: FIXED_TIMESTAMP,
-    updatedAt: FIXED_TIMESTAMP,
-    workouts: stable.workouts.map((workout) => {
-      const workoutId = `dev-e2e-${seedId}-${weekStartDate}-dow-${workout.dayOfWeek}`;
-      // A RENAME CARRIES ITS REFERENCES OR IT IS A DELETION.
-      //
-      // Row ids are rewritten below to make a seed reproducible. Anything that
-      // POINTS AT a row by id has to travel with the rename, and until
-      // 2026-08-12 nothing did — so `conditioningBlock.options[].exerciseIds`
-      // still named the generator's ids, matched no row, and
-      // `conditioningIdsFromBlock` returned an empty set. The conditioning work
-      // was then filed as strength: **23 of 23 seeded workouts carrying a
-      // conditioning block lost their conditioning component**, every seed, and
-      // a day the generator built as "Strength + Conditioning" seeded as
-      // "Strength" with the conditioning buried inside the strength part.
-      //
-      // THE RAW GENERATED PROGRAM IS CORRECT AND WAS MEASURED — 4 of 4 blocks
-      // resolve, components read `strength, conditioning`. The loss belonged
-      // entirely to this stabiliser, which is why it was invisible to every
-      // suite that reads the generator and visible only by driving a seeded app.
-      //
-      // The map below is the whole fix: identities may change here, CONTENT may
-      // never. `test:dev-e2e-seeds` holds it.
-      const rowIdRewrites = new Map<string, string>();
-      const exercises = workout.exercises.map((exercise, exerciseIndex) => {
-        const exerciseIdentity = stableIdPart(
-          exercise.exerciseId || exercise.exercise?.id || String(exerciseIndex + 1),
-        );
-        const stableRowId = `${workoutId}-exercise-${exerciseIdentity}-${exerciseIndex + 1}`;
-        if (exercise.id) rowIdRewrites.set(String(exercise.id), stableRowId);
-        return {
-          ...exercise,
-          id: stableRowId,
-          workoutId,
-          createdAt: FIXED_TIMESTAMP,
-          updatedAt: FIXED_TIMESTAMP,
-          exercise: exercise.exercise
-            ? {
-                ...exercise.exercise,
-                createdAt: FIXED_TIMESTAMP,
-                updatedAt: FIXED_TIMESTAMP,
-              }
-            : exercise.exercise,
-        };
-      });
-      const conditioningBlock = workout.conditioningBlock
-        ? {
-            ...workout.conditioningBlock,
-            options: workout.conditioningBlock.options.map((option) => ({
-              ...option,
-              exerciseIds: (option.exerciseIds ?? []).map(
-                (rowId) => rowIdRewrites.get(String(rowId)) ?? rowId,
-              ),
-            })),
-          }
-        : workout.conditioningBlock;
-      return {
-        ...workout,
-        id: workoutId,
-        microcycleId,
-        createdAt: FIXED_TIMESTAMP,
-        updatedAt: FIXED_TIMESTAMP,
-        exercises,
-        ...(workout.conditioningBlock ? { conditioningBlock } : {}),
-      };
-    }),
-  };
-}
 
 function deterministicProgram(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
 ): TrainingProgram {
   const anchorDate = devE2EProgramStartForSeed(seedId);
-  return stabilizeProgram(generateProgramLocally(profile, {
+  const program = generateProgramLocally(profile, {
     // A dev seed installs a world; it is never restoring one.
     weekAcceptance: 'forward_decision',
     todayISO: anchorDate,
@@ -432,7 +309,10 @@ function deterministicProgram(
     activeConstraints: [],
     readinessSignal: null,
     microcycleLimit: seedMicrocycleLimit(seedId),
-  }), seedId);
+  });
+  // Install exactly what the real compiler produced. Seed-specific identity
+  // rewrites made diagnostic worlds diverge from their own boot reconstruction.
+  return program;
 }
 
 function isTeamTrainingWorkout(workout: Workout): boolean {
@@ -447,131 +327,14 @@ function strengthPatterns(workout: Workout): string[] {
   )];
 }
 
-function withStackedTeamUpperPull(program: TrainingProgram): TrainingProgram {
-  const result = clone(program);
-  const week = result.microcycles[0];
-  const stacked = week.workouts.find((workout) =>
-    workout.dayOfWeek === 2 &&
-    isTeamTrainingWorkout(workout) &&
-    strengthPatterns(workout).includes('pull'));
-  if (!stacked) {
-    throw new Error('stacked-team-training-upper-pull requires the deterministic combined session.');
-  }
-  stacked.id = STACKED_WORKOUT_ID;
-  stacked.name = 'Team Training + Upper Pull';
-  stacked.description = 'Upper-pull strength stacked with the scheduled club field session.';
-  stacked.exercises = stacked.exercises.map((row) => ({
-    ...row,
-    workoutId: STACKED_WORKOUT_ID,
-  }));
-  return result;
-}
 
-function withOneSetStrength(program: TrainingProgram): TrainingProgram {
-  const result = clone(program);
-  const targetWorkout = result.microcycles[0].workouts.find((workout) =>
-    strengthPatterns(workout).length > 0 && workout.exercises.length > 0);
-  const target = targetWorkout?.exercises.find((row) => row.prescribedSets > 0);
-  if (!targetWorkout || !target) {
-    throw new Error('one-set-strength requires a deterministic strength exercise.');
-  }
-  target.id = ONE_SET_EXERCISE_ID;
-  target.prescribedSets = 1;
-  return result;
-}
 
-/**
- * ── THE R-116 LAYOUT SHOWCASE — DEV ONLY ───────────────────────────────────
- *
- * Sam, 2026-08-20: *"create or repair a dev-only seed route containing
- * Conditioning; Team Training; a genuinely long exercise name. Do not alter
- * production programming or exercise content to manufacture screenshots."*
- *
- * ⚠ **NOTHING HERE IS INVENTED, AND THAT IS THE WHOLE POINT.** The Session
- * screen only opens for TODAY, and the deterministic week puts its conditioning
- * and its team commitment on days that are not today — so the three remaining
- * screenshots were unreachable, not missing. This seed MOVES real components
- * onto Monday; it does not author new ones:
- *
- *   - the conditioning block and its rows are lifted from the day the SAME
- *     generated week already produced them on;
- *   - the team-training row is lifted the same way;
- *   - the long name is `Half-Kneeling Single-Arm Overhead Press` — 39
- *     characters, already in the authored pool and already prescribable.
- *
- * The generator, the pools and the authored content are untouched. This is the
- * same shape `withStackedTeamUpperPull` above already uses, and it throws rather
- * than fabricating if the week does not contain what it means to move.
- */
+/** The showcase adds this real generated exercise through the accepted edit door. */
 const SHOWCASE_LONG_NAME = 'Half-Kneeling Single-Arm Overhead Press';
 
-function withSessionLayoutShowcase(program: TrainingProgram): TrainingProgram {
-  const result = clone(program);
-  const week = result.microcycles[0];
-  const today = week.workouts.find((workout) => workout.dayOfWeek === 1);
-  if (!today || (today.exercises ?? []).length === 0) {
-    throw new Error('session-layout-showcase requires a Monday session to show.');
-  }
-
-  // 1. A GENUINELY LONG NAME, on a row that already exists.
-  /* A NON-POWER row, so the primer keeps its own identity and the power-first
-   * ordering stays readable in the same screenshot. */
-  const renamed = today.exercises.find((row) =>
-    (row.exercise?.name ?? '').length > 0 && (row as { role?: string }).role !== 'power');
-  if (!renamed?.exercise) {
-    throw new Error('session-layout-showcase requires a named Monday row to lengthen.');
-  }
-  renamed.exercise = { ...renamed.exercise, name: SHOWCASE_LONG_NAME };
-
-  /* 2. CONDITIONING — the ROWS, lifted from the day this week already put them
-   *    on. Deliberately NOT `conditioningBlock`: this generator's weeks carry
-   *    conditioning as `role: 'conditioning'` rows, and a block is a different
-   *    (combined-day) shape it does not produce here. The Session screen's
-   *    Conditioning section is driven by the rows, which is what has to appear. */
-  const conditioningRows = week.workouts
-    .filter((workout) => workout.dayOfWeek !== 1)
-    .flatMap((workout) => (workout.exercises ?? [])
-      .filter((row) => (row as { role?: string }).role === 'conditioning'))
-    .slice(0, 2)
-    .map((row) => ({ ...row, id: `${row.id}-showcase`, workoutId: today.id }));
-  /* ⚠ **CONDITIONING IS OPTIONAL HERE, AND THAT IS A FINDING, NOT A SHORTCUT.**
-   *
-   * MEASURED over this seed's own generated week, both phases:
-   *   in-season   Mon Team Training + strength + power, Tue/Fri strength — no
-   *               `role: 'conditioning'` row anywhere, no `conditioningBlock`
-   *   off-season  strength on three days, and the club nights disappear too
-   *
-   * So a day carrying Conditioning AND Team Training together is not something
-   * athlete ANSWERS can reach on this generator's deterministic path. Writing a
-   * conditioning row here would be exactly what Sam forbade — *"Do not alter
-   * production programming or exercise content to manufacture screenshots."* —
-   * so the seed lifts one if the week has one and shows the day honestly if it
-   * does not. The Conditioning screenshot is reported as BLOCKED rather than
-   * staged. */
-
-  /* 3. TEAM TRAINING is ALREADY on this day and needed no lifting — the seed's
-   *    profile answers name Monday as a club night, so the generator makes it a
-   *    `Team Training` day and `getSessionComponents` gives the session its
-   *    team-training component. A team night is a day's TYPE on this generator,
-   *    not a row, which is why an earlier cut of this function looked for a row
-   *    and threw. Measured, then corrected. */
-
-  today.exercises = [...today.exercises, ...conditioningRows];
-  return result;
-}
 
 function programForSeed(seedId: DevE2ESeedId, profile: OnboardingData): TrainingProgram {
-  let program = deterministicProgram(seedId, profile);
-  if (seedId === 'stacked-team-training-upper-pull') {
-    program = withStackedTeamUpperPull(program);
-  }
-  if (seedId === 'one-set-strength') {
-    program = withOneSetStrength(program);
-  }
-  if (seedId === 'session-layout-showcase') {
-    program = withSessionLayoutShowcase(program);
-  }
-  return program;
+  return deterministicProgram(seedId, profile);
 }
 
 function underlyingWorkoutForDate(
@@ -627,10 +390,6 @@ function visibleFixtureWorkoutId(date: string): string {
 
 function visibleRecoveryWorkoutId(date: string): string {
   return `derived-recovery-${date}`;
-}
-
-function visibleArmsPumpWorkoutId(date: string): string {
-  return `derived-arms_pump-${date}`;
 }
 
 function teamTrainingWorkout(program: TrainingProgram, date: string): Workout {
@@ -788,17 +547,6 @@ function canonicalInjuryEpisodeId(): string {
   return `injury-episode:v1:${INJURY_CONSTRAINT_ID}:${suffix}`;
 }
 
-function baseWitness(seedId: DevE2ESeedId): DevE2EWitness {
-  return {
-    kind: 'program',
-    programId: `dev-e2e-${seedId}`,
-    // The PROGRAM's own first week — identical to the anchor week for every
-    // ordinary seed. For the two-date `block-rollover` seed the program
-    // deliberately does NOT cover today (that gap IS the seed), so asserting
-    // the anchor week here refused the exact world the seed installs.
-    weekStart: devE2EProgramStartForSeed(seedId),
-  };
-}
 
 function cleanSourceFactWitnesses(): DevE2EWitness[] {
   return [
@@ -826,10 +574,8 @@ function progressionWitness(identity: ProgressionIdentity): DevE2EWitness {
 
 export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
   if (seedId === 'spent-week-friday') {
-    // Sam's device profile (2026-07-24): three training days rather than the
-    // standard five, so the generated week is MON strength / TUE team /
-    // WED rest / THU team / FRI rest, with the Saturday fixture and Sunday
-    // recovery arriving from the visible-week projection.
+    // Three available gym days with completed Mon/Tue/Thu sessions. The
+    // canonical compiler may still place optional work on the spare days.
     return fixedProfile({
       trainingDaysPerWeek: 3,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday'],
@@ -864,15 +610,14 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
      * whose generated week places a conditioning row on the Monday. The
      * `session-layout-showcase` athlete's in-season week reaches none, which is
      * recorded as a programming-lane finding rather than papered over here. */
-    return fixedProfile({
+    return { ...fixedProfile({
       seasonPhase: 'Pre-season',
       trainingDaysPerWeek: 4,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-      /* ⚠ THE TEAM-TRAINING ANSWERS ARE INHERITED, NOT OVERRIDDEN. Setting them
-       * to zero/empty made the profile INCOMPLETE and the app refused the seed —
-       * it dropped the athlete back onto the Team Training Days step, which is
-       * the registry's own documented hazard: *"a profile the app would have
-       * turned away"*. The standard profile's answers are a real athlete's. */
+      // Zero team nights is now a valid onboarding answer. This athlete needs
+      // app conditioning rather than already meeting demand through club nights.
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
       conditioningLevel: 'Average',
       recentTrainingLoad: 'Pretty consistent',
       /* ⚠ THE CARDIO MODALITIES ARE THE WHOLE DIFFERENCE, AND IT WAS MEASURED.
@@ -893,7 +638,7 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
         },
         answeredOn: '2026-07-13',
       },
-    } as Partial<OnboardingData>);
+    } as Partial<OnboardingData>), gameDay: undefined, usualGameDay: undefined };
   }
   if (seedId === 'equipment-restriction-case') {
     // `'Bodyweight Only'`, NOT `'bodyweight'` — AND THAT IS THE SAME DEFECT AS
@@ -948,7 +693,7 @@ export function witnessesForDevE2ESeed(
   const sundayDate = addDaysISO(weekStart, 6);
   const followingMonday = addDaysISO(weekStart, 7);
   const witnesses: DevE2EWitness[] = [
-    baseWitness(seedId),
+    { kind: 'program', programId: program.id, weekStart: devE2EProgramStartForSeed(seedId) },
     { kind: 'profile_exact', profile },
   ];
 
@@ -1030,13 +775,12 @@ export function witnessesForDevE2ESeed(
           completion: 'full',
         });
       }
-      // Wednesday is the in-week rest day and stays an eligible move target —
-      // the destination the A6 move-refusal repro needs to distinguish from
-      // the blocked G+1 Sunday.
+      // Wednesday is a spare day carrying optional mobility, not a required
+      // gym session or fixed anchor. Do not erase it to recreate the old seed.
       witnesses.push({
         kind: 'eligible_target_date',
         date: addDaysISO(weekStart, 2),
-        eligibility: 'rest_or_empty',
+        eligibility: 'optional_or_empty',
       });
       // Nothing reported yet: the readiness/injury findings all start from a
       // clean fact store, so "next week never changed" cannot be blamed on a
@@ -1052,7 +796,7 @@ export function witnessesForDevE2ESeed(
         kind: 'workout',
         dayOfWeek: 2,
         date: stackedDate,
-        workoutId: STACKED_WORKOUT_ID,
+        workoutId: stacked.id,
         workoutType: 'Team Training',
         hasTeamTraining: true,
         strengthPattern: 'pull',
@@ -1086,12 +830,21 @@ export function witnessesForDevE2ESeed(
         strengthPattern: 'squat',
       });
       break;
-    case 'one-set-strength':
+    case 'one-set-strength': {
+      const row = program.microcycles[0].workouts.find(workout => workout.dayOfWeek === 1)
+        ?.exercises.find(row => row.section18Evidence?.role === 'main_strength');
+      if (!row) throw new Error('one-set-strength requires generated main strength');
       witnesses.push({
         kind: 'exercise_sets',
-        exerciseId: ONE_SET_EXERCISE_ID,
+        exerciseId: row.id,
         prescribedSets: 1,
       });
+      break;
+    }
+    case 'session-layout-showcase':
+      witnesses.push({ kind: 'exercise_present', date: anchorDate,
+        exerciseId: `ex-coach-add-half-kneeling-single-arm-overhead-press-${anchorDate}`,
+        name: SHOWCASE_LONG_NAME });
       break;
     case 'fixture-move': {
       const sunday = underlyingWorkoutForDate(program, sundayDate);
@@ -1247,7 +1000,7 @@ export function witnessesForDevE2ESeed(
       for (const [date, workoutId] of [
         [fixtureDate, visibleFixtureWorkoutId(fixtureDate)],
         [sundayDate, visibleRecoveryWorkoutId(sundayDate)],
-        [hamstring.date, visibleArmsPumpWorkoutId(hamstring.date)],
+        [hamstring.date, hamstring.workout.id],
         [progression.targetDate, progression.targetWorkout.id],
       ] as const) {
         witnesses.push({ kind: 'visible_card_detail_equality', date, workoutId });
@@ -1271,7 +1024,6 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
   switch (seedId) {
     case 'standard-in-season-week':
     case 'stacked-team-training-upper-pull':
-    case 'one-set-strength':
     case 'fixture-move':
     case 'multi-reload-fixture-chain':
     case 'coach-production-replay':
@@ -1283,6 +1035,26 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       break;
     case 'lower-body-deletion':
       break;
+    case 'one-set-strength':
+    case 'session-layout-showcase': {
+      const oneSet = seedId === 'one-set-strength';
+      const row = oneSet
+        ? program.microcycles[0].workouts.find(workout => workout.dayOfWeek === 1)
+          ?.exercises.find(row => row.section18Evidence?.role === 'main_strength')
+        : program.microcycles[0].workouts.flatMap(workout => workout.exercises)
+          .find(row => row.exercise?.name === SHOWCASE_LONG_NAME);
+      if (!row?.exercise) throw new Error(`${seedId}: generated source row is missing`);
+      const prescription = { name: row.exercise.name, sets: oneSet ? 1 : row.prescribedSets,
+        repsMin: row.prescribedRepsMin ?? 8, repsMax: row.prescribedRepsMax ?? 8,
+        weight: row.prescribedWeightKg, restSeconds: row.restSeconds };
+      const common = { source: { screen: 'session_detail' as const, surface: 'dev_e2e_seed', initiatedBy: 'system' as const },
+        scope: 'today_only' as const, requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true };
+      auxiliaryState.push({ kind: 'program_control', todayISO: anchorDate, action: oneSet
+        ? { ...common, type: 'swap_exercise', payload: { date: anchorDate,
+          fromExercise: row.exercise.name, fromExerciseId: row.id, toExercise: prescription } }
+        : { ...common, type: 'add_exercise', payload: { date: anchorDate, exercise: prescription } } });
+      break;
+    }
     case 'spent-week-friday': {
       const weekStart = devE2EWeekStartForSeed(seedId);
       for (const dayOffset of SPENT_WEEK_DONE_OFFSETS) {
@@ -1488,7 +1260,7 @@ export function validateDevE2EWitnesses(
         break;
       }
       case 'exercise_sets': {
-        const exercise = workouts
+        const exercise = [...Object.values(state.dateOverrides ?? {}).filter((workout): workout is Workout => !!workout), ...workouts]
           .flatMap((workout) => workout.exercises)
           .find((candidate) => candidate.id === witness.exerciseId);
         if (!exercise || exercise.prescribedSets !== witness.prescribedSets) {
@@ -1581,7 +1353,8 @@ export function validateDevE2EWitnesses(
         const underlying = underlyingWorkoutForDate(state.program, witness.date);
         const fixtureFree = state.calendarMarks[witness.date] !== 'game' &&
           state.calendarMarks[witness.date] !== 'noGame';
-        const eligible = workout === null || workout.workoutType === 'Rest';
+        const eligible = workout === null || workout.workoutType === 'Rest' ||
+          (witness.eligibility === 'optional_or_empty' && workout.sessionTier === 'optional');
         if (!fixtureFree ||
           !eligible ||
           (

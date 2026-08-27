@@ -231,7 +231,7 @@ test('competing or mismatched resume fails closed', async () => {
     scope: 'competing-request',
   };
   await expectFailure(
-    () => budget.resume(mismatch),
+    () => { budget.resume(mismatch); },
     EXPLORER_ACTIVE_TIME_BUDGET_FAILURE.TOKEN_MISMATCH,
   );
 });
@@ -291,7 +291,7 @@ test('stale pause token cannot resume a new scenario generation', async () => {
   budget.resetScenario();
   budget.start('scenario-two', 30_000);
   await expectFailure(
-    () => budget.resume(stale),
+    () => { budget.resume(stale); },
     EXPLORER_ACTIVE_TIME_BUDGET_FAILURE.STALE_TOKEN,
   );
 });

@@ -203,7 +203,6 @@ function seed(
       markedDays: {},
       readinessSignalsByDate: {},
       activeConstraints: [],
-      activeInjury: null,
       revision: 1,
       lastTransaction: 'g1-ask-flow-test:seed',
       injuryEpisodes: [],

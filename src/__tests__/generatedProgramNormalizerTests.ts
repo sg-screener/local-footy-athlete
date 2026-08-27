@@ -53,10 +53,10 @@ function section(name: string): void {
 
 const PROFILE: OnboardingData = {
   firstName: 'MixedSessionTester',
-  ageRange: '25-34',
+  ageRange: '26-30',
   position: 'inside_mid',
   motivation: 'Get stronger, run longer',
-  goals: ['Build Strength', 'Improve Fitness'],
+    goals: ['stronger_and_fitter'],
   experienceLevel: 'Intermediate' as any,
   squatStrength: '1.5x BW' as any,
   benchStrength: '1x BW' as any,
@@ -71,7 +71,7 @@ const PROFILE: OnboardingData = {
   ],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Monday', 'Wednesday'],
-  teamTrainingIntensity: 'High',
+    teamTrainingIntensity: 'Hard',
   teamTrainingDuration: '90 min' as any,
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
@@ -129,7 +129,6 @@ function visible(workout: Workout, date: string): Workout | null {
       source: 'template',
       indicator: workout.sessionTier ?? null,
     } as any,
-    activeInjury: null,
     todayISO: '2026-07-06',
     extraConstraints: [],
     modalityPreferences: {},
@@ -410,7 +409,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
       weekStartISO: '2026-07-06',
       weekKind: 'build',
     },
-    { availableEquipment: FULL_GYM_EQUIPMENT },
+    { availableEquipment: FULL_GYM_EQUIPMENT, excluded: [], pinned: [] },
   );
   const earlyWorkoutOn = (day: DayOfWeek) =>
     earlyBuilt.find((workout) => workout.dayOfWeek === DAY_NUMBER[day])!;
@@ -518,7 +517,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
       selectedPhase: 'Off-season',
       targetWeekStartISO: '2026-07-06',
     }).clock,
-    athletePrefs: {},
+    athletePrefs: { excluded: [], pinned: [] },
     availableEquipmentTags: FULL_GYM_EQUIPMENT,
   });
   ok('four microcycles are built without replaying edge week content', microcycles.length === 4);

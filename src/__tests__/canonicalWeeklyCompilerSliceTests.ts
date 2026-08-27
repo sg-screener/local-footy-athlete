@@ -70,6 +70,8 @@ import { executeProgramControlAction, executeProgramControlActionDurably } from 
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { clearActiveProgramModifier, getActiveProgramModifiers } from '../utils/activeProgramModifiers';
+import { sourceFactLifecycle } from './compilerYear/sourceFacts';
+import { clearFactLifecycle } from './compilerYear/clearFacts';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
@@ -849,10 +851,10 @@ async function main(): Promise<void> {
     removalCompatibilitySource.includes('return compileCanonicalAthleteEditedContract({') &&
       !removalCompatibilitySource.includes('function addFrequencyReduction(') &&
       !removalCompatibilitySource.includes('policy.requiredMinimum ='));
-  ok('accepted, live-precedence and hydration readers all use the compiler projection',
+  ok('accepted and live-precedence readers use the compiler; acceptance does not re-author today',
     acceptedEffectiveWeekSource.includes('compileCanonicalAthleteEditedWeek({') &&
       dayPrecedenceSource.includes('compileCanonicalAthleteEditedWeek({') &&
-      programStoreSource.includes('compileCanonicalAthleteEditedWeek({') &&
+      !programStoreSource.includes('todayWorkout: hydratedTodayWorkout') &&
       todayProjectionRegion.includes('compileCanonicalAthleteEditedWeek({'));
   const editPlacementRivalAuthors = [
     acceptedEffectiveWeekSource.includes('applyUserRemovalConstraintsToWeek(')
@@ -875,7 +877,8 @@ async function main(): Promise<void> {
     JSON.stringify(productionCallers('applyAthleteRemovalTypedReduction')));
   ok('contract readers and repair loops all call the compiler owner',
     derivedWeekContractSource.includes('compileCanonicalAthleteEditedContract({') &&
-      temporaryFactTransactionSource.includes('compileCanonicalAthleteEditedContract({') &&
+      readFileSync(join(process.cwd(), 'src/rules/canonicalWeeklySourceFactCompiler.ts'), 'utf8').includes('compileCanonicalAthleteEditedContract({') &&
+      !temporaryFactTransactionSource.includes('function commitDerivingSourceFactScopedRegen(') &&
       fixtureReplanSource.includes('compileCanonicalAthleteEditedContract({'));
   ok('athlete-edit placement stamps have one production writer: the semantic compiler state',
     JSON.stringify(productionCallers('athletePlacementFor')) ===
@@ -1426,7 +1429,8 @@ async function main(): Promise<void> {
     JSON.stringify(severeContext?.illness));
   const severeWeek = landingMicrocycle();
   const severeOverlay = landingOverlay();
-  const surviving = Object.values(severeOverlay?.workoutsByDate ?? {})
+  const surviving = Object.entries(severeOverlay?.workoutsByDate ?? {})
+    .filter(([date]) => date >= declarationDay).map(([, workout]) => workout)
     .filter((workout): workout is Workout => !!workout)
     .filter((workout) =>
     workout.workoutType !== 'Rest' && workout.workoutType !== 'Game');
@@ -1625,6 +1629,14 @@ async function main(): Promise<void> {
     injuryUndoRestart.error);
 
   console.log('\n[availability slice] normal -> away with reduced kit -> home');
+  for (const upperFirst of [false, true]) {
+    const lifecycleInstall = await coldStartThroughOnboarding({ profile: athlete(), installDayISO: INSTALL_DAY });
+    const checks = await sourceFactLifecycle({ weekStart: lifecycleInstall.blockOneStart,
+      storage: localStorageData, upperFirst });
+    for (const check of checks) ok(`${upperFirst ? 'upper-first' : 'lower-first'} ${check.id}`, check.ok, check.detail);
+    const clearing = await clearFactLifecycle(lifecycleInstall.blockOneStart, localStorageData);
+    for (const check of clearing) ok(`${upperFirst ? 'upper-first' : 'lower-first'} ${check.id}`, check.ok, check.detail);
+  }
   const awayInstall = await coldStartThroughOnboarding({
     profile: illnessAthlete(), installDayISO: INSTALL_DAY,
   });
@@ -1731,6 +1743,27 @@ async function main(): Promise<void> {
   });
   ok('the fixture witness reaches a real Saturday-game week through onboarding',
     fixtureInstall.onboardingRefusal === null, fixtureInstall.onboardingRefusal);
+  const acceptedTransactions = require('../store/acceptedStateTransaction') as typeof import('../store/acceptedStateTransaction');
+  ok('retired calendar repair authors are absent from runtime exports',
+    ['commitCalendarMarkTransaction', 'commitCalendarStateTransaction',
+      'commitDateUnavailableTransaction', 'commitProgramSetupRebuildTransaction',
+      'proposeFixtureMarkedDays'].every(name => !(name in acceptedTransactions)));
+  ok('calendar mirror exposes no alternative fixture action methods',
+    ['setGameDay', 'removeGameDay', 'setNoGame', 'removeNoGame', 'clearAllGames']
+      .every(name => !(name in useCalendarStore.getState())));
+  const beforeUnacceptedFixture = JSON.stringify(useProgramStore.getState());
+  const beforeUnacceptedMarks = JSON.stringify(useCalendarStore.getState().markedDays);
+  let unacceptedFixtureRefused = false;
+  try {
+    const { rebuildLocalWeek } = require('../utils/weekRebuild') as typeof import('../utils/weekRebuild');
+    quiet(() => rebuildLocalWeek({ baseProfile: illnessAthlete(), scope: 'weekOverlay',
+      targetDate: '2026-07-15', newGameDay: 'Wednesday', todayISO: INSTALL_DAY }));
+  } catch (error) {
+    unacceptedFixtureRefused = error instanceof Error && error.message.includes('accepted typed fixture effect');
+  }
+  ok('unaccepted fixture request cannot fall back into a procedural week author',
+    unacceptedFixtureRefused && JSON.stringify(useProgramStore.getState()) === beforeUnacceptedFixture &&
+    JSON.stringify(useCalendarStore.getState().markedDays) === beforeUnacceptedMarks);
   const fixtureSignature = (days: ReturnType<typeof resolvedDays>): string => JSON.stringify(
     days.map((day) => [day.dateISO, day.sessionName, day.components, day.rows.map((row) => [
       row.name, row.sets ?? '', row.repsMin ?? '', row.repsMax ?? '', row.weightKg ?? '',

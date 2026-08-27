@@ -1,3 +1,4 @@
+import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import * as sessionResolver from '../utils/sessionResolver';
@@ -204,18 +205,16 @@ eq('an older named Severe answer keeps its limiting behaviour without inventing 
   onboardingInjurySeverityScore({ severity: 'Severe' }), 7);
 
 const limitingShoulder = resolveRestrictedMainStrengthPatterns({
-  activeInjuries: [],
-  profileInjuries: [{
+  injuryPolicy: canonicalWeeklyInjuryStateFrom({ profile: { injuries: [{
     bodyArea: 'Shoulder', description: '', severity: 'Severe', severityScore: 7,
-  }],
+  }] } }),
 });
 ok('onboarding 6-7 shoulder severity removes risky pushing but keeps pulling',
   limitingShoulder.has('push') && !limitingShoulder.has('pull'));
 const pausedShoulder = resolveRestrictedMainStrengthPatterns({
-  activeInjuries: [],
-  profileInjuries: [{
+  injuryPolicy: canonicalWeeklyInjuryStateFrom({ profile: { injuries: [{
     bodyArea: 'Shoulder', description: '', severity: 'Severe', severityScore: 9,
-  }],
+  }] } }),
 });
 ok('onboarding 8-10 shoulder severity pauses both affected upper patterns',
   pausedShoulder.has('push') && pausedShoulder.has('pull'));

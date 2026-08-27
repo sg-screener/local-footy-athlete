@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * SAM'S DEVICE FINDINGS, REPLAYED THROUGH REAL DOORS.
  *
@@ -131,8 +132,8 @@ function reachHisWorldByActing(): void {
   } as never);
   // His calendar, through the calendar door — two rest marks and two games.
   for (const [date, mark] of Object.entries(SAM_EXPORT_8_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, TODAY);
-    else useCalendarStore.getState().setRestDay(date);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, TODAY);
+    else calendarActionsForTest().setRestDay(date);
   }
 }
 

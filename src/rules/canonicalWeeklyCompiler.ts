@@ -216,6 +216,8 @@ export function compileCanonicalWeek(
   };
   const schedule = scheduleWeek({
     ...scheduler,
+    appSprintPermitted: input.injury?.blocksAppSprint !== true,
+    appRunningPermitted: input.injury?.lowerBodyRestricted !== true,
     readiness: {
       ...input.scheduler.readiness,
       lowReadiness: input.readiness?.deloaded === true,

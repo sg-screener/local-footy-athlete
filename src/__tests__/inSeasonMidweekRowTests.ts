@@ -27,6 +27,7 @@ function section(title: string): void {
 }
 
 const tueThuSatInputs: CoachingInputs = {
+  experienceLevel: '5+ years',
   seasonPhase: 'In-season',
   availableDays: 5,
   selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

@@ -8,10 +8,6 @@
  *
  * Run: npm run test:travel-zero-equipment
  */
-declare global {
-  // eslint-disable-next-line no-var
-  var __DEV__: boolean;
-}
 (globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';

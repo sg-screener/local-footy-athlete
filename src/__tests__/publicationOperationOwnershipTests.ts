@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * EVERY PUBLICATION STATES WHAT IT IS PUBLISHING — the `?? 'restoration'` sweep.
  *
@@ -144,7 +145,7 @@ function reachDisclosedShortfallWorldByActing(options: { restMarks?: boolean } =
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
   }
   const program = quiet(() => generateProgramLocally(profile, {
     todayISO: SAM_PASS_20260805_GENERATION_DAY,
@@ -171,7 +172,7 @@ function reachDisclosedShortfallWorldByActing(options: { restMarks?: boolean } =
     if (date <= TODAY) continue;
     // A refused mark is the calendar owner's own business; what this world
     // needs is that the marks the app ACCEPTS leave the week short.
-    try { quiet(() => useCalendarStore.getState().setRestDay(date)); } catch { /* refused */ }
+    try { quiet(() => calendarActionsForTest().setRestDay(date)); } catch { /* refused */ }
   }
 }
 
@@ -318,33 +319,14 @@ const main = async () => {
 
   // ── 3. THE ATHLETE UNDOES THEIR OWN EDIT ──────────────────────────────────
   await run('3 removing your own override lands on a week you made short', () => {
-    reachDisclosedShortfallWorldByActing();
-    const date = addDaysISO(NEXT, 2);
-    const workout = firstWorkout();
-    assert(workout, 'no workout available to place');
-    quiet(() => seedManualOverride(date, { ...workout, id: 'operation-ownership-probe' } as Workout));
-    const refusal = landsOrThrows(() => useProgramStore.getState().removeManualOverride(date));
-    assert(refusal === null,
-      `removing the athlete's own override was REFUSED: ${refusal} — PLACING content already `
-      + 'declares `forward_decision` ("An athlete placing content on a day is a decision they '
-      + 'stated"); removing it is the same athlete and the same surface, and the asymmetry '
-      + 'is the silent default, not a ruling');
+    assert(!('removeManualOverride' in useProgramStore.getState()),
+      'individual Clear must change the accepted input, not delete its generated date');
   });
-
   // ── 4. THE NAMED ERASURE ──────────────────────────────────────────────────
   await run('4 the named erasure lands on a week the athlete made short', () => {
-    reachDisclosedShortfallWorldByActing();
-    const date = addDaysISO(NEXT, 2);
-    const workout = firstWorkout();
-    assert(workout, 'no workout available to place');
-    quiet(() => seedManualOverride(date, { ...workout, id: 'operation-ownership-probe' } as Workout));
-    const refusal = landsOrThrows(() => useProgramStore.getState().clearManualOverrides(TODAY));
-    assert(refusal === null,
-      `the explicit erasure (onboarding completion, program create, profile reset) was `
-      + `REFUSED: ${refusal} — it is "a named act, on the tape, writer \`reset\`", which is a `
-      + 'decision the athlete stated, not a replay of one');
+    const refusal = landsOrThrows(() => require('../utils/resetCoach').resetProgramAndOnboarding());
+    assert(refusal === null, 'explicit full reset must clear the complete athlete world');
   });
-
   // ── 5. NAVIGATING TO ANOTHER WEEK ─────────────────────────────────────────
   await run('5 selecting another week does not refuse because that week is short', () => {
     reachDisclosedShortfallWorldByActing();
@@ -361,14 +343,9 @@ const main = async () => {
 
   // ── 6. THE DERIVED OVERLAY'S OWN REPUBLICATION ────────────────────────────
   await run('6 clearing derived overlays does not refuse because a week is short', () => {
-    reachDisclosedShortfallWorldByActing();
-    const refusal = landsOrThrows(() => useProgramStore.getState().clearWeekScopedOverlays());
-    assert(refusal === null,
-      `clearing the derived week overlays THREW: ${refusal} — an overlay is DERIVED content `
-      + '(the fixture-identity law, 7d9d3ee7); republishing it is not the replay of an '
-      + 'athlete decision and cannot be judged as a corrupt snapshot');
+    assert(!('clearWeekScopedOverlays' in useProgramStore.getState()),
+      'derived overlays must be reconstructed through the compiler, not cleared by a second writer');
   });
-
   // ── 7. THE DEFAULT ITSELF ─────────────────────────────────────────────────
   await run('7 the proposal REQUIRES its operation — no call site can inherit a verdict', () => {
     const source = readFileSync(path.join(SRC, 'store/acceptedStateTransaction.ts'), 'utf8');

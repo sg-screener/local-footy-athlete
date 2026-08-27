@@ -24,7 +24,8 @@ import type {
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
-import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
+import type { WeekRebuildResult } from '../utils/weekRebuild';
+import { rebuildLocalWeek } from './support/rebuildWeekForTest';
 import {
   canonicaliseAcceptedStateCandidate,
   readDurableProgramStoreEnvelope,
@@ -113,8 +114,8 @@ function profile(args: {
     teamTrainingDays: teamDays[tt],
     sprintExposure: '2+ times per week',
     conditioningLevel: args.lowReadiness ? 'Poor' : 'Good',
-    recentTrainingLoad: args.lowReadiness ? 'Returning after 2+ months' : 'Very consistent',
-    experienceLevel: 'Advanced',
+    recentTrainingLoad: args.lowReadiness ? 'Hardly at all' : 'Very consistent',
+    experienceLevel: '5+ years',
     injuries: [],
     motivation: 'Get stronger',
     // The equipment door is a required step now (the same world-completion
@@ -150,7 +151,6 @@ function seedAcceptedWeek(args: {
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({
     activeConstraints,
-    activeInjury: null,
     dismissedCoachNoteIds: [],
   });
   useProgramStore.setState({
@@ -164,10 +164,10 @@ function seedAcceptedWeek(args: {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {},
     acceptedMaterialContext: {
+      injuryEpisodes: [], temporarySourceFacts: [], acceptedCompositionBase: null,
       markedDays,
       readinessSignalsByDate: {},
       activeConstraints,
-      activeInjury: null,
       acceptedProfileSnapshot: {
         protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
         capturedAt: `${WEEK_START}T00:00:00.000Z`,

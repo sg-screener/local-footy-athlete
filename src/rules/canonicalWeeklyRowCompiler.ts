@@ -16,7 +16,7 @@ import { canonicalWeeklyAvailabilityStateFrom } from '../rules/canonicalWeeklyAv
 import type { EquipmentTag } from '../data/exercisePools';
 import { stampSection18GovernedBoundary } from '../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../rules/gameAnchor';
-import { composeWeek, kitUnachievablePatterns } from '../rules/composeWeek';
+import { composeWeek, kitUnachievablePatterns, type ComposerInputs, type ComposerPlannedDay } from '../rules/composeWeek';
 import { resolveWeekExclusions } from '../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../rules/schedulerPlannedDays';
@@ -158,6 +158,18 @@ export class GeneratedWeekRefusedError extends Error {
   }
 }
 
+
+/** An athlete-selected extra day uses the same row composer as the generated
+ * week. Placement/acceptance remain the session-edit compiler's responsibility. */
+export function compileCanonicalStrengthTemplate(args: {
+  composition: Omit<ComposerInputs, 'plannedDays'>;
+  plannedDay: ComposerPlannedDay;
+}): Workout | null {
+  const composed = composeWeek({ ...args.composition, plannedDays: [args.plannedDay] });
+  return materialiseComposedWeek(composed, {
+    microcycleId: 'coach-template', weekStartISO: composed.weekStartISO,
+  })[0] ?? null;
+}
 
 function composerExclusionInput(
   prefs: AthletePoolPrefsArg,

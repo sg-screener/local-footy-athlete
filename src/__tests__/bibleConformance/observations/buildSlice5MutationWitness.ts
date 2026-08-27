@@ -2,9 +2,9 @@
 
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
 import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
-import { coachingPlanForTests } from '../support/coachingPlanForTests';
+import { coachingPlanForTests } from '../../support/coachingPlanForTests';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
-import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
+import { compileConstraintWeekForTests } from '../../support/compileConstraintWeek';
 import { canonicalWeekLedger, pathExercise, pathWorkout } from './buildCanonicalPathLedger';
 import type { MutationSpec } from '../types';
 
@@ -25,7 +25,7 @@ function injury(id: string, bucket: 'hamstring' | 'shoulder'): ActiveInjuryConst
   };
 }
 
-function equipment(id: string, tag: 'barbell' | 'machines'): ActiveEquipmentConstraint {
+function equipment(id: string, tag: 'barbell' | 'machine'): ActiveEquipmentConstraint {
   return {
     id, type: 'equipment', mode: 'without', tags: [tag], severity: 0, status: 'active',
     startDate: TODAY, lastUpdatedAt: `${TODAY}T00:00:00.000Z`, source: 'system',
@@ -56,15 +56,11 @@ function constraintObservation(kind: 'injury' | 'equipment') {
   });
   const constraints = kind === 'injury'
     ? [injury('injury-hamstring', 'hamstring'), injury('injury-shoulder', 'shoulder')]
-    : [equipment('equipment-barbell', 'barbell'), equipment('equipment-machines', 'machines')];
-  const output = validateWorkoutAgainstActiveConstraints({
-    workout: source, date: TODAY, todayISO: TODAY, activeConstraints: constraints,
-    profile: { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] },
-    canonicalContext: { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
-  });
+    : [equipment('equipment-barbell', 'barbell'), equipment('equipment-machines', 'machine')];
+  const output = compileConstraintWeekForTests(constraints, TODAY);
   return {
-    activeConstraintIds: output.activeConstraintIds.slice().sort(),
-    exerciseNames: (output.workout?.exercises ?? []).map((row) => row.exercise?.name ?? '').sort(),
+    activeConstraintIds: output.activeConstraintIds,
+    exerciseNames: output.workouts.flatMap(workout => workout.exercises.map(row => row.exercise?.name ?? '')).sort(),
   };
 }
 
@@ -94,7 +90,7 @@ export function buildSlice5MutationWitness(spec: MutationSpec): Slice5MutationWi
   } else if (spec.id === 'planned_credit_after_effective_removal') {
     const id = 'slice5-effective';
     const source = pathWorkout({ id, dayOfWeek: 1, name: 'Planned Combined', patterns: ['squat', 'hinge'], primary: 'squat', exercises: [pathExercise(id, 0, 'Back Squat', { weight: 80 })] });
-    const output = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source, restoreMissingPlanPatterns: false }).workout;
+    const output = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
     const value = canonicalWeekLedger([output]).workouts[0];
     observation = { planned: value.plannedPatterns, effective: value.effectivePatterns };
   } else if (spec.id === 'canonical_restores_safety_removed_work') {

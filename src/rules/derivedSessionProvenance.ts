@@ -10,6 +10,7 @@ import type {
 import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
 import { hasPowerRow, withoutPowerRows } from './sessionRowCounting';
+import { withoutConditioningComponent as stripCanonicalConditioning } from './strengthRelocationTemplate';
 
 export interface DerivedSessionExpiry {
   planEntryId: string | null;
@@ -308,24 +309,12 @@ export function rebindDerivedSessionProvenance(args: {
 }
 
 function withoutConditioningComponent(workout: Workout, recordIndex: number): Workout | null {
-  const linkedRows = new Set(
-    (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
-  );
   const provenance = (workout.derivedSessionProvenance ?? [])
     .filter((_record, index) => index !== recordIndex);
   const stripped: Workout = {
-    ...workout,
-    exercises: (workout.exercises ?? []).filter((row) =>
-      !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
-    conditioningBlock: undefined,
-    conditioningCategory: undefined,
-    conditioningFlavour: undefined,
-    conditioningFeasibility: undefined,
-    hasCombinedConditioning: false,
-    attachedConditioningKind: undefined,
-    coachAddedConditioningLabel: undefined,
-    section18ConditioningRole: undefined,
-    section18Evidence: undefined,
+    ...stripCanonicalConditioning(workout),
+    // Expiry walks the original records in reverse order. Keep its bookkeeping
+    // separate from the shared component-content operation.
     derivedSessionProvenance: provenance.length > 0 ? provenance : undefined,
   };
   return hasMeaningfulWorkoutContent(stripped) ? stripped : null;

@@ -36,6 +36,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
+import { constraintInputsForPersistence } from './compatibilityPersistence';
 import {
   normalizeAcceptedKeyedMap,
   normalizeAcceptedMaterialContext,
@@ -871,6 +872,11 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
     {
       name: COACH_UPDATES_PERSISTENCE_KEY,
       storage: createJSONStorage(() => coachUpdatesGuardedStorage),
+      partialize: state => ({
+        updatesByWeek: state.updatesByWeek,
+        activeConstraints: constraintInputsForPersistence(state.activeConstraints),
+        dismissedCoachNoteIds: state.dismissedCoachNoteIds,
+      }),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<CoachUpdatesState> | undefined) ?? {};
         const context = normalizeAcceptedMaterialContext({

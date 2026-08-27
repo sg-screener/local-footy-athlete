@@ -70,7 +70,6 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
-import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
   athleteActionDiagnosticHash,
   beginAthleteActionTrace,
@@ -106,9 +105,6 @@ import {
  * second reader to agree with about a version number.
  */
 export const PROGRAM_STORE_PERSISTENCE_VERSION = 0 as const;
-import {
-  projectHydratedStateDerivedFields,
-} from './programHydrationProjection';
 import {
   microcycleCoversWeek,
   selectStoredWeekDeclaration,
@@ -699,7 +695,7 @@ function canonicaliseAcceptedBoundaryState(
       // record and the application input are the same list.
       removalDecisions: persistedState.userRemovalConstraints ?? [],
     });
-  let currentProgram = persistedState.currentProgram ?? null;
+  const currentProgram = persistedState.currentProgram ?? null;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -728,7 +724,7 @@ function canonicaliseAcceptedBoundaryState(
   // the power". Null when there is no clock, which for a pre-clock program can
   // never canonicalise to Off-season anyway (`programPhase` has no off-season
   // spelling the phase regex matches).
-  let currentMicrocycle = persistedState.currentMicrocycle;
+  const currentMicrocycle = persistedState.currentMicrocycle;
   if (currentMicrocycle && options.activeConstraints &&
     !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -740,61 +736,11 @@ function canonicaliseAcceptedBoundaryState(
         profile: options.profile,
       });
   }
-  let weekScopedOverlays = persistedState.weekScopedOverlays
-      ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
-        weekStart,
-        (() => {
-          if (
-            !overlay.exposureContractV2 &&
-            !overlay.exposureContract &&
-            Object.keys(overlay.workoutsByDate ?? {}).length === 0
-          ) {
-            // Empty future owner placeholders carry no material programming
-            // yet. Preserve them byte-for-byte until their target week gains
-            // a base contract during rebuild/rollover materialisation.
-            return overlay;
-          }
-          // THE PERSISTED v1 -> v2 UPGRADE IS DELETED (demolition area 4).
-          // It existed for a stored world written before the v2 declaration.
-          // No production users exist and a clean reinstall is allowed, so
-          // there is no such world to serve.
-          /* ⚠ THE ACCEPTANCE BOUNDARY NO LONGER REWRITES THE OVERLAY.
-           *
-           * Two rewrites ran here and both are deleted (demolition completion
-           * sweep, 2026-08-19). `applyGenerationSafetyToSection18Contract`
-           * re-authored the week's stored CONTRACT from the live constraints —
-           * a second contract authority downstream of the one that wrote it —
-           * and `canonicaliseHydratedSafetyWorkout` re-canonicalised every
-           * stored workout on its way IN.
-           *
-           * Sam's own ruling on the sibling case, area C: *"acceptance stores a
-           * decision, it does not author one."* The same sentence decides these.
-           * An overlay is returned exactly as it was stored. */
-          return overlay;
-        })(),
-      ]))
-    : persistedState.weekScopedOverlays;
-  let dateOverrides = persistedState.dateOverrides
-    ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
-        date,
-        {
-          // Stored as decided; the acceptance boundary does not re-canonicalise.
-          ...workout,
-          // Date-keyed overrides own a concrete calendar day. Older edit
-          // writers used the 1..7 coaching convention (Sunday=7), whereas
-          // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
-          // gateway cannot mistake a valid Sunday override for a missing day.
-          dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
-        },
-      ]))
-    : persistedState.dateOverrides;
+  const weekScopedOverlays = persistedState.weekScopedOverlays;
+  const dateOverrides = persistedState.dateOverrides;
 
-  // A migrated overlay or date override can make an otherwise-valid base
-  // microcycle invalid. Rebuild the actual precedence-ordered week here and
-  // pass that effective candidate through the same accepted-week gateway.
-  // Any deterministic cross-day repair is persisted back into the surface
-  // that owns the changed date, so hydration cannot merely validate the base
-  // program while retaining an invalid visible override.
+  // Validate the effective compiler candidate across its affected weeks. Never
+  // copy gateway output back into its accepted material surfaces.
   const hydratedWeekStarts = new Set<string>([
     ...Object.keys(weekScopedOverlays ?? {}),
     ...Object.keys(dateOverrides ?? {}).map(mondayForDate),
@@ -850,9 +796,6 @@ function canonicaliseAcceptedBoundaryState(
       profile: options.profile,
       markedDays: options.markedDays ?? {},
     });
-    const effectiveByDate = new Map<string, Workout>(
-      rebased.dates.flatMap((entry) => entry.workout ? [[entry.date, entry.workout]] : []),
-    );
     /* THE FALLBACK-WEEK BUILDER IS GONE. It existed only to hand §18 a second
      * week to try when it refused the first, and §18 no longer takes one. */
     // THE COLLAPSE, AND ACCEPT-AND-REDUCE (Sam, 2026-07-29, rulings 1 and 2).
@@ -918,151 +861,13 @@ function canonicaliseAcceptedBoundaryState(
         hadOverlay: !!overlay,
       }) + '\n');
     }
-    const acceptedByDay = new Map<number, Workout>(
-      accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
-    );
-    // A DERIVED REPAIR NEVER LANDS ON THE ATHLETE'S SURFACE (Sam, 2026-07-30).
-    //
-    // The gateway's repair used to go into `dateOverrides` whenever the week had
-    // no overlay to hold it. `dateOverrides` is the athlete's DECISION surface —
-    // `rebaseAcceptedEffectiveWeek` says so in its own comment and treats
-    // `date_override` as athlete-owned — so that filed derived content under his
-    // signature, and one rest mark materialised five overrides, one of them on
-    // the rest day itself.
-    //
-    // What made it visible is that the two resolvers order the same two inputs
-    // oppositely: `_resolveDateRaw` puts a manual override at Priority 1 ABOVE
-    // the calendar mark, while `rebaseAcceptedEffectiveWeek` composes the
-    // override and applies the marks LAST. So the screen prescribed Lower Squat
-    // on the day he had marked as rest while the accepted week correctly held
-    // nothing, three actions from a fresh install. It also cost two device
-    // findings: the move door's target-identity check compares accepted against
-    // visible and was refusing, correctly, about a day that disagreed with
-    // itself.
-    //
-    // The overlay already means "derived content for this week, authored by a
-    // fact, not by the athlete", which is exactly what a gateway repair is. So a
-    // base-owned week MINTS one rather than borrowing the athlete's. This is a
-    // deletion of a second home for one kind of content, not a new branch: after
-    // it, a repair has one surface and `dateOverrides` means one thing.
-    //
-    // The first branch is untouched and is the one case where writing there is
-    // right — an override the athlete DID author is his, and the repair updates
-    // it in place. A fix that simply deleted the write would pass the ownership
-    // assertions and lose every edit in the app; `derivedRepairOwnershipTests`
-    // holds that cell open.
-    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : {};
-    let repairedBaseOwnedWeek = false;
-    for (let offset = 0; offset < 7; offset++) {
-      const date = addDaysISO(weekStart, offset);
-      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-      const before = effectiveByDate.get(date) ?? null;
-      // A RE-DERIVATION CARRIES WHAT POINTED AT IT, OR IT IS A DELETION.
-      //
-      // This loop overwrites the day with the week the gateway just re-derived,
-      // and the re-derivation does not carry `derivedSessionProvenance`. So a
-      // dependency the PROPOSAL held — "this Monday exists because of Sunday's
-      // game" — was destroyed at commit time, silently, on every path that
-      // re-gates a hydrated week.
-      //
-      // IT WAS INVISIBLE FOR ONE REASON ONLY: `section18CraftTier` fabricated
-      // neighbouring fixtures at ±7 days, so the re-derived Monday happened to
-      // be a G+1 day and minted its own record. Three attempts to delete that
-      // phantom were reverted for "losing the link"; measured in both arms, the
-      // link is derived MORE often without it (30 vs 23) and dies here.
-      // `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §7-§12.
-      //
-      // CARRIED, NOT RESURRECTED. Only records the CURRENT fixture authority
-      // still supports travel: `buildDerivedSessionExpiryCandidates` is the one
-      // owner of "is this record still valid", and it is asked here rather than
-      // re-answered. A record whose fixture is gone is left to expire exactly as
-      // it does today — this restores history that survived, it does not keep
-      // stale history alive.
-      //
-      // SAME CLASS AS `LAW-rename-carries-its-references`, second sighting in
-      // one day: there a seed stabiliser renamed rows and orphaned the block
-      // that pointed at them; here a canonicaliser rebuilds a week and drops the
-      // provenance pointing into it.
-      const after = carryProvenanceThroughRegate({
-        before,
-        after: acceptedByDay.get(dayOfWeek) ?? null,
-        contract: accepted.contract,
-        weekStart,
-        activeFixtureDates,
-      });
-      if (JSON.stringify(before) === JSON.stringify(after)) continue;
-      if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
-        /* ── R-229 S2: THE RE-GATE NEVER REWRITES A STORED DECISION ─────────
-         *
-         * This branch used to write the gateway's re-derived day OVER the
-         * athlete's stored `dateOverride` ("the repair updates it in place"),
-         * and the D-2 probe that lived here was Sam's measure-first
-         * instrument for exactly that question. MEASURED 2026-08-26 (S2
-         * probe, acted world): the athlete swaps an exercise, the swap's own
-         * commit re-gates the week, this write regressed the override to the
-         * pre-swap day INSIDE the same transaction, the semantic diff then
-         * saw "no programming change" and rolled the whole edit back —
-         * launch-audit finding #1 root B, refusing every swap on a
-         * moved-session day, relaunch or not.
-         *
-         * The override IS the decision (north star: store decisions, derive
-         * everything else). A derived repair of an override-owned day is a
-         * DERIVATION and must behave like one: applied at read time (the
-         * resolver's injury/equipment adjustment lens already does this),
-         * never written over the athlete's signature. `derivedRepairOwnership`
-         * holds the two sides: the override survives and is what the screen
-         * shows; no override the athlete did not author appears.
-         */
-        continue;
-      } else {
-        overlayWorkouts[date] = after;
-        if (!overlay) repairedBaseOwnedWeek = true;
-      }
-    }
-    if (weekScopedOverlays && (overlay || repairedBaseOwnedWeek)) {
-      const now = appDateNow().toISOString();
-      weekScopedOverlays[weekStart] = {
-        ...(overlay ?? {
-          id: `accepted-week-repair:${weekStart}`,
-          weekStart,
-          weekEnd: addDaysISO(weekStart, 6),
-          anchorDate: null,
-          reason: 'accepted_week_repair' as const,
-          createdAt: now,
-        }),
-        workoutsByDate: overlayWorkouts,
-        exposureContractV2: accepted.contract,
-        updatedAt: now,
-      };
-    }
-    /* ── R-229 S5: THE MICROCYCLE STAMP IS DELETED ──────────────────────────
-     *
-     * The else-branch here wrote `accepted.contract` — the gateway's DERIVED
-     * result — over the microcycle's generation-authored declaration ("the
-     * achieved/reduction ledger must not remain stranded in the transient
-     * gateway result"). MEASURED 2026-08-26 (S4b probe): that write is how a
-     * severe illness's optional_week permanently replaced the in-season
-     * declaration, surviving the illness itself. With S4c every judge derives
-     * from the stored declaration + the facts at read, so the stranded-ledger
-     * concern is answered by derivation, and the stamp was a stored rewrite of
-     * a derived value — the north star's named defect. The generation-authored
-     * declaration is an INPUT and now comes through boot untouched (held by
-     * the equivalence suite's S5 cell). Overlay writes are transaction
-     * artifacts and are not this deletion's subject. */
+    // Acceptance observes the compiler's candidate; it never writes a repair.
   }
-  const hydratedTodayWorkout = persistedState.todayWorkout
-    ? compileCanonicalAthleteEditedWeek({
-        workouts: [persistedState.todayWorkout],
-        weekStartISO: mondayForDate(effectiveTodayISO),
-        constraints: persistedState.userRemovalConstraints,
-      }).find((workout) =>
-        workout.dayOfWeek === new Date(`${effectiveTodayISO}T12:00:00`).getDay()) ?? null
-    : persistedState.todayWorkout;
   return {
     ...persistedState,
     currentProgram,
     currentMicrocycle,
-    todayWorkout: hydratedTodayWorkout,
+    todayWorkout: persistedState.todayWorkout,
     dateOverrides,
     weekScopedOverlays,
   };
@@ -1077,75 +882,11 @@ export interface AcceptedStateCandidateCanonicalisationOptions {
 }
 
 /** Runtime acceptance owns validation, but never legacy hydration migration. */
-/**
- * Carry a day's still-valid provenance through a re-derivation.
- *
- * The gateway rebuilds a week from the contract and hands back canonical
- * workouts with no `derivedSessionProvenance`. Writing those over the proposal
- * deletes the history the proposal was carrying — which is a deletion wearing a
- * rebuild. See the call site for the founding case.
- *
- * WHAT TRAVELS: records the CURRENT fixture authority still supports. Validity
- * is not re-answered here — `buildDerivedSessionExpiryCandidates` already owns
- * that question, so it is asked, and anything it would expire is left behind to
- * expire. A record kept alive past its fixture would be the opposite defect.
- *
- * WHAT DOES NOT TRAVEL: anything, when either side is absent. A day the
- * re-derivation removed stays removed; provenance is not a reason to resurrect a
- * session, and inventing one here would put this function in the business of
- * deciding what the week holds.
- */
-export function carryProvenanceThroughRegate(args: {
-  before: Workout | null;
-  after: Workout | null;
-  contract: WeeklyExposureContractV2 | undefined;
-  weekStart: string;
-  activeFixtureDates?: ReadonlySet<string>;
-}): Workout | null {
-  const { before, after, contract } = args;
-  if (!before || !after || !contract) return after;
-  const carried = (before.derivedSessionProvenance ?? []).filter((record) => !!record.dependency);
-  if (carried.length === 0) return after;
-  if ((after.derivedSessionProvenance ?? []).some((record) => !!record.dependency)) return after;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildDerivedSessionExpiryCandidates } = require('../rules/derivedSessionProvenance');
-  const probe = { ...after, derivedSessionProvenance: carried };
-  const expiries = buildDerivedSessionExpiryCandidates({
-    workouts: [probe],
-    contract,
-    weekStart: args.weekStart,
-    activeFixtureDates: args.activeFixtureDates,
-  });
-  // MATCH THE OWNER'S ANSWER ON ITS OWN FIELDS. A `DerivedSessionExpiry` is
-  // `{ planEntryId, workoutId, origin, scope, reason }` — there is no record id
-  // on it, and the first version of this filter keyed on one, so NOTHING ever
-  // expired and a record whose fixture was gone travelled anyway. The cell that
-  // caught it is the "opposite defect" branch in
-  // `derivedRepairOwnershipTests`.
-  //
-  // CONSERVATIVE BY CONSTRUCTION: candidates are ALTERNATIVES for the whole-week
-  // owner to choose between, so if ANY of them would expire a record, it is not
-  // carried. Choosing among candidates here would be this function re-answering
-  // a question that already has an owner.
-  const expiring = new Set<string>();
-  for (const candidate of expiries) {
-    for (const expiry of candidate.expiries ?? []) {
-      expiring.add(`${expiry.origin}|${expiry.scope}|${expiry.planEntryId ?? ''}`);
-    }
-  }
-  const surviving = carried.filter((record) =>
-    !expiring.has(`${record.origin}|${record.scope}|${record.sourcePlanEntryId ?? ''}`));
-  if (surviving.length === 0) return after;
-  return { ...after, derivedSessionProvenance: surviving };
-}
-
 export function canonicaliseAcceptedStateCandidate(
   candidate: Partial<ProgramState>,
   options: AcceptedStateCandidateCanonicalisationOptions = {},
 ): Partial<ProgramState> {
-  const accepted = canonicaliseAcceptedBoundaryState(candidate, options);
-  return projectHydratedStateDerivedFields(accepted as Record<string, unknown>) as
-    Partial<ProgramState>;
+  return canonicaliseAcceptedBoundaryState(candidate, options);
 }
 
 
@@ -1261,6 +1002,11 @@ export interface SessionFeedback {
 }
 
 export interface ProgramState {
+  /** Ephemeral continuation input, rebuilt with the program and never saved.
+   * A preview recompiles proposed facts against this pre-fact world, so lowering
+   * injury severity can reveal accepted rows without mutating live stores.
+   */
+  sourceFactCompilerInput?: import('../rules/canonicalWeeklySourceFactCompiler').CanonicalWeeklySourceFactInput | null;
   currentProgram: TrainingProgram | null;
   currentMicrocycle: Microcycle | null;
   todayWorkout: Workout | null;
@@ -1394,7 +1140,6 @@ export interface ProgramState {
   setCurrentProgram: (
     program: TrainingProgram | null,
     options?: {
-      clearOverrideDates?: readonly string[];
       todayISO?: string;
       /** New-onboarding acceptance: no fact or decision from a prior athlete survives. */
       freshAcceptedContext?: boolean;
@@ -1410,18 +1155,7 @@ export interface ProgramState {
   // SETTING an override is NOT a store action (LR-1, 2026-08-03). The raw
   // `setManualOverride` primitive is retired: a single-date write goes through
   // `applyProgramOverrideWrite`, which requires the writer to name itself.
-  /** Remove a manual override for a specific date */
-  removeManualOverride: (date: string) => void;
-  /** Clear all manual overrides (called on full program regeneration) */
-  clearManualOverrides: (todayISO?: string) => void;
-  /** Dismiss a stale-override warning (user chose "keep") */
-  dismissStaleWarning: (date: string) => void;
 
-  /** Set/replace a system-authored week overlay */
-  /** Remove a system-authored week overlay by Monday ISO key */
-  removeWeekScopedOverlay: (weekStart: string) => void;
-  /** Clear all system-authored week overlays */
-  clearWeekScopedOverlays: () => void;
 
   /** Remove feedback for a date */
   removeSessionFeedback: (date: string) => void;
@@ -1444,6 +1178,7 @@ export interface ProgramState {
 export const useProgramStore = create<ProgramState>()(
   persist(
     (set) => ({
+      sourceFactCompilerInput: null,
       currentProgram: null,
       currentMicrocycle: null,
       todayWorkout: null,
@@ -1487,18 +1222,11 @@ export const useProgramStore = create<ProgramState>()(
         if (candidateProgram) assertProgramWriteAccepted(candidateProgram, effectiveTodayISO);
         const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const freshAcceptedContext = options?.freshAcceptedContext === true;
-        const clearedDates = new Set(options?.clearOverrideDates ?? []);
         const candidateOverrides = freshAcceptedContext
           ? {}
-          : clearedDates.size > 0
-          ? Object.fromEntries(Object.entries(priorState.dateOverrides).filter(([date]) =>
-              !clearedDates.has(date)))
           : priorState.dateOverrides;
         const candidateOverrideContexts = freshAcceptedContext
           ? {}
-          : clearedDates.size > 0
-          ? Object.fromEntries(Object.entries(priorState.overrideContexts).filter(([date]) =>
-              !clearedDates.has(date)))
           : priorState.overrideContexts;
         const acceptedSurfaces = candidateProgram
           ? canonicaliseAcceptedStateCandidate({
@@ -1622,75 +1350,6 @@ export const useProgramStore = create<ProgramState>()(
 
       setError: (error) => set({ error }),
 
-      // REMOVING THE LAST OVERRIDE IS THE ATHLETE'S CHANGE, NOT THE WIPE
-      // (recipe lesson 11). A removal whose result happens to be the empty
-      // default is an attributed erasure, so it declares itself with a named
-      // act and LANDS — refusing it would strand the athlete with an edit they
-      // could not take back. The refusal stays aimed at UNATTRIBUTED defaults.
-      removeManualOverride: (date) => {
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        if (!Object.prototype.hasOwnProperty.call(state.dateOverrides, date)) return;
-        const weekStart = mondayForDate(date);
-        const updatedOverrides = { ...state.dateOverrides };
-        delete updatedOverrides[date];
-        const updatedContexts = { ...state.overrideContexts };
-        delete updatedContexts[date];
-        const exposureContractsByWeek = { ...state.exposureContractsByWeek };
-        if (!Object.keys(updatedOverrides).some((candidate) =>
-          mondayForDate(candidate) === weekStart)) delete exposureContractsByWeek[weekStart];
-        const emptiesTheSlice = Object.keys(updatedOverrides).length === 0;
-        const resetActionId = emptiesTheSlice
-          ? beginProgramOverrideResetAction(`override_remove:${date}`)
-          : undefined;
-        try {
-          applyProgramOverrideSliceWrite({
-            writer: 'store_action',
-            // The athlete taking their own content off a day is the same
-            // decision as putting it there, in the other direction.
-            operation: 'forward_decision',
-            reason: `override:remove:${date}`,
-            next: {
-              dateOverrides: updatedOverrides,
-              overrideContexts: updatedContexts,
-              exposureContractsByWeek,
-            },
-            validateWeekStarts: [weekStart],
-            ...(resetActionId ? { resetActionId } : {}),
-          });
-        } finally {
-          if (resetActionId) endProgramOverrideResetAction(resetActionId);
-        }
-      },
-
-      // The EXPLICIT fresh slate (onboarding completion, program create,
-      // profile reset). Erasure is the one write that may empty the slice, and
-      // it says so: a named act, on the tape, writer `reset`.
-      clearManualOverrides: (todayISO) => {
-        const effectiveTodayISO = todayISO ?? todayISOLocal();
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        const affectedWeeks = Array.from(new Set(Object.keys(state.dateOverrides).map(mondayForDate)));
-        const resetActionId = beginProgramOverrideResetAction('override_clear_all');
-        try {
-          applyProgramOverrideSliceWrite({
-            writer: 'reset',
-            // "A named act, on the tape, writer `reset`" — onboarding
-            // completion, program create, profile reset. Every one of them is
-            // something the athlete just did.
-            operation: 'forward_decision',
-            reason: 'override:clear_all',
-            todayISO: effectiveTodayISO,
-            next: {
-              dateOverrides: {},
-              overrideContexts: {},
-              exposureContractsByWeek: {},
-            },
-            validateWeekStarts: affectedWeeks,
-            resetActionId,
-          });
-        } finally {
-          endProgramOverrideResetAction(resetActionId);
-        }
-      },
 
       removeSessionFeedback: (date) =>
         set((state) => {
@@ -1734,43 +1393,8 @@ export const useProgramStore = create<ProgramState>()(
           },
         })),
 
-      dismissStaleWarning: (date) =>
-        set((state) => ({
-          // Write a 'dismissed' context so neither structured nor heuristic
-          // detection will flag this override again. The override itself is untouched.
-          overrideContexts: {
-            ...state.overrideContexts,
-            [date]: { intent: 'dismissed' },
-          },
-        })),
 
-      removeWeekScopedOverlay: (weekStart) => {
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
-        const updated = { ...state.weekScopedOverlays };
-        delete updated[weekStart];
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          // Derived content again — see `setWeekScopedOverlay`.
-          operation: 'forward_decision',
-          reason: `overlay:remove:${weekStart}`,
-          program: { weekScopedOverlays: updated },
-          validateWeekStarts: [weekStart],
-        });
-      },
 
-      clearWeekScopedOverlays: () => {
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        const affectedWeeks = Object.keys(state.weekScopedOverlays);
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          // Derived content again — see `setWeekScopedOverlay`.
-          operation: 'forward_decision',
-          reason: 'overlay:clear_all',
-          program: { weekScopedOverlays: {} },
-          validateWeekStarts: affectedWeeks,
-        });
-      },
 
       // THE TOTAL ERASURE. This is the one write that may empty the store, and
       // it says so: a named act is opened around it and the erasure lands on
@@ -1784,9 +1408,12 @@ export const useProgramStore = create<ProgramState>()(
         const resetActionId = beginProgramOverrideResetAction('program_store_clear');
         try {
           set({
+          sourceFactCompilerInput: null,
           currentProgram: null,
           currentMicrocycle: null,
           todayWorkout: null,
+          generationAnchorISO: null,
+          hydratedSeasonPhaseClock: null,
           isGenerating: false,
           isLoading: false,
           error: null,
@@ -2239,38 +1866,10 @@ export function applyProgramOverrideSliceWrite(args: {
   return { ok: true };
 }
 
-/**
- * ROLLBACK-ONLY: put the pin list back exactly as a snapshot found it.
- *
- * WHY IT LIVES HERE AND NOT AT THE CALLER. The coach executor's `add_session`
- * rollback has to restore three stores, and `userRemovalConstraints` is the
- * third — the pin minted by `commitAthleteSessionAdditionTransaction`. It was
- * restoring that one with a direct `useProgramStore.setState`, which made
- * `coachCommandExecutor` a SECOND LIVE WRITER of a persisted shape and reddened
- * `test:repo-law-guards` ("every persisted store has ONE live writer"). The
- * guard was right: the fix is to write through the store's own module, exactly
- * as `applyProgramOverrideWrite` below already does for overrides — not to
- * raise the debt allowance.
- *
- * DELIBERATELY NOT A GENERAL SETTER. It restores a list the caller captured
- * BEFORE its own failed write, so it cannot be used to author constraints —
- * only to un-author them. `writer` is required so the restore is attributable
- * in the same way every other sanctioned write is.
- */
-export function restoreUserRemovalConstraintsWrite(args: {
-  constraints: readonly UserRemovalConstraint[];
-  writer: ProgramOverrideWriterId;
-}): void {
-  useProgramStore.setState({
-    userRemovalConstraints: [...args.constraints],
-  } as Partial<ProgramState> as never);
-}
 
 /**
- * The single-date write — what every caller of the retired raw primitive
- * wants, with the writer named. The body is the primitive's own, unchanged:
- * the final active-constraint validation still runs here so no producer can
- * reintroduce unsafe work after its own checks.
+ * Publish the compiler's exact dated result. Constraint restoration and calendar
+ * changes belong to accepted typed effects, never to a side effect of saving a row.
  */
 export function applyProgramOverrideWrite(args: {
   date: string;
@@ -2279,52 +1878,21 @@ export function applyProgramOverrideWrite(args: {
   writer: ProgramOverrideWriterId;
 }): ProgramOverrideWriteOutcome {
   const { date, workout, context } = args;
-  // A manual override is the explicit edited result and is written AS GIVEN.
-  // The boundary may refuse it; it may not hand back a different session.
-  const validatedWorkout = {
-    ...workout,
-    dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
-  };
-  assertWorkoutWriteAccepted(date, validatedWorkout);
-  const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-  const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
-    constraint.status === 'active' && constraint.targetDate === date);
-  const restoredAt = new Date().toISOString();
-  const userRemovalConstraints = state.userRemovalConstraints.map((constraint) =>
-    constraint.status === 'active' && constraint.targetDate === date
-      ? {
-          ...constraint,
-          status: 'restored' as const,
-          restoredAt,
-          restorationReason: 'explicit_re_add' as const,
-        }
-      : constraint);
-  const acceptedContext = normalizeAcceptedMaterialContext(
-    useProgramStore.getState().acceptedMaterialContext,
-  );
-  const markedDays = { ...acceptedContext.markedDays };
-  if (activeRemovals.some((constraint) => constraint.wholeDayRestOwned) &&
-    markedDays[date] === 'rest') {
-    delete markedDays[date];
+  if (workout.dayOfWeek !== new Date(`${date.slice(0, 10)}T12:00:00`).getDay()) {
+    throw new Error('override_day_does_not_match_date');
   }
+  assertWorkoutWriteAccepted(date, workout);
+  const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
   return applyProgramOverrideSliceWrite({
     writer: args.writer,
-    // An athlete placing content on a day is a decision they stated.
     operation: 'forward_decision',
     reason: `override:set:${date}`,
     next: {
-      dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
-      overrideContexts: context
-        ? { ...state.overrideContexts, [date]: context }
-        : state.overrideContexts,
-      // THE LEGACY v1 PER-WEEK CONTRACT LEDGER IS NO LONGER WRITTEN HERE
-      // (demolition area 1). Its writer re-AUTHORED the week's exposure
-      // contract from the edited week — a second contract authority downstream
-      // of the one that authored it. The stored v2 declaration is the contract.
+      dateOverrides: { ...state.dateOverrides, [date]: workout },
+      overrideContexts: context ? { ...state.overrideContexts, [date]: context } : state.overrideContexts,
       exposureContractsByWeek: state.exposureContractsByWeek,
-      userRemovalConstraints,
+      userRemovalConstraints: state.userRemovalConstraints,
     },
-    markedDays,
     validateWeekStarts: [mondayForDate(date)],
   });
 }

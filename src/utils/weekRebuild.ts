@@ -58,7 +58,6 @@ import {
   buildFixtureProjection,
   commitAcceptedStateTransaction,
   commitReversibleAdjustmentCreationTransaction,
-  proposeFixtureMarkedDays,
   stageRollingHorizonFixtureRepair,
   type AcceptedProgramSurfaces,
   type ReversibleAdjustmentCreationInput,
@@ -174,86 +173,13 @@ function dayNameForDate(dateISO: string): DayOfWeek {
   return DAY_NAMES[new Date(`${dateISO}T12:00:00`).getDay()];
 }
 
-function cloneWorkoutForOverlay(
-  workout: Workout,
-  date: string,
-  overlayId: string,
-): Workout {
-  const suffix = `:week-overlay:${date}`;
-  const id = workout.id.endsWith(suffix) ? workout.id : `${workout.id}${suffix}`;
-  const dow = new Date(`${date}T12:00:00`).getDay();
-  return {
-    ...workout,
-    id,
-    microcycleId: overlayId,
-    dayOfWeek: dow,
-    exercises: (workout.exercises ?? []).map((exercise) => ({
-      ...exercise,
-      workoutId: id,
-    })),
-  };
-}
-
 export function buildWeekScopedWorkoutOverlay(args: {
   program: TrainingProgram;
   weekStart: string;
   anchorDate: string | null;
   reason: WeekScopedWorkoutOverlay['reason'];
 }): WeekScopedWorkoutOverlay {
-  const sourceMicrocycle = args.program.microcycles?.[0];
-  if (!sourceMicrocycle) {
-    throw new Error('Cannot build week overlay without a source microcycle');
-  }
-
-  const now = new Date().toISOString();
-  const overlayId = `week-overlay:${args.weekStart}:${args.reason}:${args.anchorDate ?? 'no-anchor'}`;
-  const byDow = new Map<number, Workout>();
-  for (const workout of sourceMicrocycle.workouts ?? []) {
-    byDow.set(workout.dayOfWeek, workout);
-  }
-
-  const workoutsByDate: Record<string, Workout | null> = {};
-  for (let offset = 0; offset < 7; offset++) {
-    const date = addDays(args.weekStart, offset);
-    const dow = new Date(`${date}T12:00:00`).getDay();
-    const workout = byDow.get(dow) ?? null;
-    workoutsByDate[date] = workout ? cloneWorkoutForOverlay(workout, date, overlayId) : null;
-  }
-
-  return {
-    id: overlayId,
-    weekStart: args.weekStart,
-    weekEnd: addDays(args.weekStart, 6),
-    anchorDate: args.anchorDate,
-    reason: args.reason,
-    // NO v1 CONTRACT ON A NEW OVERLAY (L15, Sam's D-1 ruling 2026-08-05).
-    // This copied `sourceMicrocycle.exposureContract` verbatim, and because
-    // hydrate re-materialises fixture-mark overlays through here, a superseded
-    // shape was written on launches — L15's subject exactly ("superseded
-    // formats are never written again, by anything, ever"). The V2 lift below
-    // is a READ-INGRESS lift, which is the sanctioned direction: it migrates a
-    // legacy microcycle's v1 into the current shape on the way in. Nothing
-    // reads an overlay's v1 field — every consumer falls back to the
-    // microcycle's — so the copy bought nothing but a stale second home.
-    // The microcycle-level writer is what remains, and it is filed as LR-30.
-    // LEG (v) WRITER, PRICING SCAFFOLD — publication site 1 of 2. The
-    // DECLARATION retires at its OWNER, not at one call site; both sites
-    // retire together or the world is half-stored. The readers already derive
-    // (leg (v)'s read half, landed at 8ca5ae24) and the reduction-ownership
-    // consumers already derive (08212473). Inert without the flag.
-    // The persisted v1 -> v2 upgrade is deleted (demolition area 4): a stored
-    // world predating the v2 declaration has no one to serve.
-    // R-229 S5: the LEGV writer flag is DEMOLISHED, un-landed. Its premise
-    // ("the stored declaration stops being written") belonged to a world where
-    // the declaration was one durable input; boot now regenerates the program
-    // wholesale under live facts, so the declaration is re-authored per boot
-    // and every judge derives on read (S4c) — retiring this write would only
-    // blind the cannot-derive fallback. Priced, measured, and closed.
-    exposureContractV2: sourceMicrocycle.exposureContractV2,
-    workoutsByDate,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return compileWeekOverlay({ ...args, authoredAtISO: new Date().toISOString() });
 }
 
 /**
@@ -401,18 +327,10 @@ export interface RebuildLocalWeekArgs {
   targetDate?: string;
   /** Optional old game date whose overlay should be cleared during a move. */
   clearOverlayDate?: string;
-  /** Stage the fixture mark in the same accepted snapshot as this rebuild. */
-  manageCalendarFixture?: boolean;
   /** Exact accepted fixture fact. Live and boot both compile this same value. */
   acceptedFixtureEffect?: CanonicalAcceptedFixtureEditEffect;
   /** Build only. Used by rollover so future overlays join the same commit. */
   commit?: boolean;
-  /**
-   * Compatibility notification for older callers/tests. Production fixture
-   * writes use manageCalendarFixture; this callback runs only after the
-   * accepted snapshot has committed and must not mutate material stores.
-   */
-  commitGameMark?: () => void;
   /** Development-only trace metadata; never participates in rebuild decisions. */
   trace?: AthleteActionTraceContext;
   diagnosticSource?: AthleteActionSource;
@@ -545,6 +463,9 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   if (scope === 'weekOverlay' && !targetDate) {
     throw new Error('Week-scoped rebuild requires targetDate');
   }
+  if ((scope === 'weekOverlay' || args.newGameDay !== undefined) && !args.acceptedFixtureEffect) {
+    throw new Error('Fixture rebuild requires an accepted typed fixture effect');
+  }
 
   const profile =
     args.newGameDay === undefined
@@ -558,14 +479,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
         effects: [args.acceptedFixtureEffect],
       })
-    : args.manageCalendarFixture && targetDate
-      ? proposeFixtureMarkedDays({
-          profile: args.baseProfile,
-          targetDate,
-          newGameDay: args.newGameDay ?? null,
-          previousFixtureDate: args.clearOverlayDate,
-        })
-      : undefined;
+    : undefined;
   const gameDatesOverride =
     scope === 'weekOverlay' && args.newGameDay
       ? [targetDate!]
@@ -757,7 +671,6 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           linkedConstraintIds: [`game-change:${adjustmentId}`],
         },
       });
-      args.commitGameMark?.();
       if (committedAdjustment) {
         projection.overlay = useProgramStore.getState().weekScopedOverlays[targetWeekStart!] ??
           projection.overlay;
@@ -811,7 +724,6 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   if (shouldCommit) {
     commitRebuiltProgram(program, sweep);
   }
-  if (shouldCommit) args.commitGameMark?.();
 
   logger.debug('[weekRebuild] committed', {
     scope,
@@ -1061,23 +973,6 @@ function commitWeekScopedOverlay(
   return null;
 }
 
-export function clearWeekScopedOverlayForDate(args: {
-  targetDate: string;
-  markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
-}): void {
-  const weekStart = getMondayForDate(args.targetDate);
-  const state = useProgramStore.getState();
-  if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
-  const overlays = { ...state.weekScopedOverlays };
-  delete overlays[weekStart];
-  commitAcceptedStateTransaction({
-    reason: `week_rebuild:clear_overlay:${weekStart}`,
-    operation: 'forward_decision',
-    program: { weekScopedOverlays: overlays },
-    markedDays: args.markedDays,
-    validateWeekStarts: [weekStart],
-  });
-}
 
 /**
  * Sweep decision for the AI rebuild path (no new game anchors): collect
@@ -1097,3 +992,4 @@ export function decideSweepForCurrentStores(
   });
   return decideOverrideSweep(context);
 }
+import { compileWeekOverlay } from '../rules/canonicalWeekOverlay';

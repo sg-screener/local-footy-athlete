@@ -33,10 +33,6 @@ import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/da
 import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
 import { sessionsOptionalOnDate } from '../rules/illnessRecoveryWeekMode';
 import {
-  applyInjurySessionAdjustment,
-  injurySessionAdjustmentForDay,
-} from './injurySessionAdjustment';
-import {
   applyExclusionsToAuthoredDay,
   type ExerciseExclusion,
 } from '../rules/exerciseExclusions';
@@ -104,29 +100,6 @@ export interface ScheduleState {
    * so the deriver can hand it on; nothing in this file applies it.
    */
   removalDecisions?: readonly UserRemovalConstraint[];
-  /**
-   * ── R-124: A PLANNER MUST SEE THE DAY AS IT IS, NOT AS IT IS DRAWN ────────
-   *
-   * The injury session adjustment REMOVES the paused rows and APPENDS a block,
-   * which is the one thing `markInjuryWithheldRows` has always refused to do
-   * ("MARK, NEVER FILTER") — and for exactly this reason: the injury
-   * recomposition owner reads the day back through this same resolver
-   * (`programControlActions.resolveWorkoutOnDate`), so a projection that
-   * reshapes the row list reshapes what the WRITER plans against.
-   *
-   * MEASURED by `test:session-injury-review` [9]: with two injuries, the review
-   * promised to pause `Kettlebell Swings` and `Glute Bridge` — the rows the
-   * athlete could see — while the session paused `Leg Press` and
-   * `Bulgarian Split Squats`, the authored rows underneath, because the first
-   * injury's substitutions were planned against a day the projection had
-   * already stripped. That is R-121 broken from a new direction.
-   *
-   * So the planner's read sets this and gets the day the athlete's decisions and
-   * the earlier injuries actually left behind. **The VIEW doors leave it unset**,
-   * exactly as they leave `temporarySourceFacts` set — one flag, one direction,
-   * and the asymmetry is the point.
-   */
-  suppressInjuryAdjustment?: boolean;
   /**
    * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
    *
@@ -930,46 +903,8 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
    * `state.temporarySourceFacts` is supplied by the VIEW doors, so a
    * canonicalising caller carries none and marks nothing. */
   const dayInjuryFacts = state.temporarySourceFacts ?? [];
-  /**
-   * ── R-124: THE PAUSED ROWS COME OFF AND THE BLOCK GOES ON, HERE ──────────
-   *
-   * Same door, same fact, same reason as the marking below it: this is a
-   * READ-TIME projection, `state.temporarySourceFacts` is supplied by the VIEW
-   * doors only, and a canonicalising caller therefore carries none and adjusts
-   * nothing. **That is the whole of Sam's eighth requirement** — *"Clearing the
-   * injury must restore the exact original session, including after restart"* —
-   * because the accepted week never learns about any of it.
-   *
-   * The week's names come from the AUTHORED microcycle, never from a resolved
-   * week: asking the resolver for the week from inside the resolver is circular,
-   * and names are all the "don't duplicate what the week already has" rule needs.
-   */
-  const weekExerciseNames: string[] = [];
-  for (const day of state.currentMicrocycle?.workouts ?? []) {
-    for (const row of day.exercises ?? []) {
-      const name = String(
-        (row as { exercise?: { name?: string } }).exercise?.name
-        ?? (row as { name?: string }).name ?? '',
-      ).trim();
-      if (name) weekExerciseNames.push(name);
-    }
-  }
-  const adjust = <T extends Workout | null>(workout: T): T => (
-    state.suppressInjuryAdjustment ? workout : applyInjurySessionAdjustment({
-    workout,
-    adjustment: injurySessionAdjustmentForDay({
-      workout,
-      dateISO: date,
-      facts: dayInjuryFacts,
-      profile: state.athleteContext?.onboardingData ?? null,
-      weekExerciseNames,
-      /* The athlete's own removals — the block may never offer one back. Same
-       * field the exclusion boundary above reads, and supplied by the VIEW
-       * doors for the same reason. */
-      excludedByAthlete: (state.athleteExclusions ?? []).map((entry) => entry.exercise),
-    }),
-    })
-  );
+  // Injury session composition has already run in the weekly compiler. The
+  // display only marks unavailable work and decorates optionality below.
   /* ── "EVERY SESSION BECOMES OPTIONAL" IS A DERIVED DECORATION, HERE ──────
    *
    * The law's second flag (severe illness while active; "Absolutely cooked"
@@ -990,9 +925,9 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return { ...workout, sessionTier: 'optional' } as T;
   };
   const withhold = <T extends Workout | null>(workout: T): T => optionality(
-    adjust(markInjuryWithheldRows({
+    markInjuryWithheldRows({
       workout, dateISO: date, facts: dayInjuryFacts,
-    })),
+    }),
   );
   const composedWorkout = withhold(applyExclusionsToAuthoredDay({
     workout: composed.workout,
@@ -1178,7 +1113,7 @@ function resolveWeekBeforeConstraints(
   // screen builds, so the whole conditioning tail is skipped and the athlete's
   // week is `resolveWeek`'s output. Probes: this function entered 61 times in
   // one flow, the line at the bottom of it reached ZERO.
-  if (!state.seasonPhase) return applyAwayPass(baseDays, state);
+  if (!state.seasonPhase) return baseDays;
 
   // The availability set, the block bounds and the weekly feedback summary were
   // all inputs to the deleted conditioning/recovery PLACEMENT passes. Nothing
@@ -1266,33 +1201,8 @@ function resolveWeekBeforeConstraints(
     reader: 'sessionResolver.tierFourEntry',
   });
   if (section18StoredContract) {
-    // ── AWAY IS APPLIED BEFORE THE WEEK IS CONFORMED, NOT AFTER IT ──
-    //
-    // **SEAT_INBOX item 37. Sam, 2026-08-13:** *"Away has to replace the work it
-    // removes, not just delete it — your Saturday Rest Day is the wrong case."*
-    //
-    // **THE ORDERING WAS THE WHOLE DEFECT.** `applyAwayPass` used to wrap the
-    // RETURN of this branch, so the sequence was: conform the week against its
-    // contract, and only then take the club off it. §18 therefore conformed a
-    // week that still had a Game on Saturday, decided it was full, and handed
-    // back a week the away pass then punched a hole in — with nothing left to
-    // run. **A hole cut after the last filling pass can never be filled**, which
-    // is why the vacated day read *"Training Day"*, and why calling it
-    // *"Rest Day"* instead was answering the wrong question.
-    //
-    // ONE MOVE GIVES SAM HIS RULING, because the machinery already exists and is
-    // already ruled: `derivedWeekContract` ALREADY drops a fixture inside the
-    // trip and makes the week a bye-build (R-018, and his *"almost look like a
-    // bye week build"*). The CONTRACT already knew the game was gone; only the
-    // DAYS were being told afterwards. Applying away first lets §18 tier four
-    // conform a club-less week against a club-less contract — and filling a
-    // week that is short against its own contract is precisely what
-    // `repairCoreConditioningShortfallCandidates` was for, before §18 stopped
-    // injecting conditioning (2026-08-19).
-    //
-    // STILL A FILTER, STILL NOTHING STORED. This moves WHEN the read is
-    // filtered, never what is written: his calendar mark, his accepted program
-    // and the team night all still exist and all return when the fact lifts.
+    // Travel and final constraints are folded by compileCanonicalResolvedWeek
+    // at the public boundary. This adapter only selects accepted day surfaces.
     const rested = result.map((day) =>
       !day.workout && day.source === 'none'
         ? buildDay(day.date, day.dayOfWeek, today, null, 'rest')
@@ -1323,7 +1233,7 @@ function resolveWeekBeforeConstraints(
     // a pass that should not run at read.
     //
     // §18 still runs, at the write boundaries, where it REFUSES.
-    return applyAwayPass(rested, state);
+    return rested;
   }
 
   /* ── PASS 2 IS GONE: THE READ-TIME CONDITIONING PLACEMENT ENGINE ──────────
@@ -1450,152 +1360,10 @@ function resolveWeekBeforeConstraints(
   // Final pass: apply the resolver-level injury filter to every day in
   // the week. This catches sessions added by the conditioning + recovery
   // overlays (which call buildDay directly without the wrapper). Manual
-  return applyAwayPass(result, state);
+  return result;
 }
 
-/**
- * WHILE HE IS AWAY, THE CLUB IS NOT ON HIS WEEK — SEAT_INBOX item 30.
- *
- * **Sam, 2026-08-13, after seeing a team night and a Game Day survive a trip:**
- * *"if the person is away, consider the time they are away as building a new
- * program and their old program is gone for the time being — they won't have TT
- * commitments or games … so why should game day or TT still show up? thats
- * clunky and unprofessional"*.
- *
- * THE OTHER TWO FIXES WERE BOTH ABOUT WHAT THE WEEK *IS*: the plan stops marking
- * team days (`onboardingToCoachingInputs`) and a fixture inside the trip stops
- * anchoring it (`derivedWeekContract`). **Neither touches a week that was
- * ALREADY STORED with the club on it**, and the athlete's current week is
- * exactly that — which is why he still saw both. This is the read.
- *
- * IT IS A FILTER, NOT AN EDIT. Nothing is written: his calendar mark, his
- * accepted program and the team night all still exist and all come back the day
- * the fact expires or he clears it. What changes is what the week SHOWS while
- * the trip is live.
- */
-/** A composed day name with its "Team Training" segment removed. */
-function withoutTeamTrainingSegment(name: string | undefined): string {
-  const parts = String(name ?? '').split(/\s+\+\s+/).map((part) => part.trim());
-  const kept = parts.filter((part) => part.toLowerCase() !== 'team training');
-  return kept.length > 0 ? kept.join(' + ') : String(name ?? '');
-}
 
-function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
-  const spans = (state.temporarySourceFacts ?? [])
-    .filter((fact) => 'factKind' in fact && (fact as { factKind?: string }).factKind === 'schedule' &&
-      (fact as { scheduleKind?: string }).scheduleKind === 'travel' &&
-      (fact as { status?: string }).status === 'active' &&
-      typeof (fact as { effectiveUntil?: unknown }).effectiveUntil === 'string')
-    .map((fact) => ({
-      from: String((fact as { effectiveFrom: string }).effectiveFrom).slice(0, 10),
-      until: String((fact as { effectiveUntil: string }).effectiveUntil).slice(0, 10),
-    }));
-  if (spans.length === 0) return days;
-  const isAway = (date: string): boolean =>
-    spans.some((span) => date >= span.from && date <= span.until);
-  const today = todayISOLocal();
-  return days.map((day) => {
-    if (!isAway(day.date)) return day;
-    // A FIXTURE HE IS NOT AT IS NOT A DAY ON HIS WEEK — AND THE DAY IT LEAVES
-    // BEHIND IS A REST DAY, NOT A HOLE.
-    //
-    // ── `'rest'`, NOT `'none'`, AND SAM NAMED THIS EXACT CELL ──
-    // *"why the fuck does it read training day? it should read whatever the new
-    // program is i.e. conditioning, lower body strength etc"*, looking at the
-    // Saturday his game had just been taken off.
-    //
-    // **"Training Day" WAS THIS LINE.** `'none'` means "no workout" and
-    // `dayKind` (`rules/projectVisibleWeek.ts:208`) maps every non-fixture,
-    // non-`'rest'` day to `'training'`, whose signed headline is
-    // *"Training Day"* — the app's word for a day that exists and holds
-    // nothing. So vacating a fixture to `'none'` printed a placeholder where a
-    // game used to be, on every away week, for as long as away has worked.
-    //
-    // WHY `'rest'` IS THE TRUE WORD AND NOT A NICER ONE. R-020 — *"yes clear
-    // team training and games while away"* — says the club goes and **the
-    // athlete's own sessions stay**. Nothing of his was ever on a fixture day,
-    // so once the game goes the day holds nothing and is owed nothing: he is
-    // not training that day. R-006 permits up to three full rest days in
-    // exactly this shape of week (bye-recovery), so a rest day here is inside
-    // the ruled bounds rather than an exception to them.
-    //
-    // ⚠ AND IT DOES **NOT** WIDEN `dayKind`'s REST/EMPTY DISTINCTION, which is
-    // load-bearing: *"an empty training day and a rest day must be
-    // distinguishable here"* — that conflation is what once let a deletion door
-    // write a schedule fact. This says the narrower thing, at the one seam that
-    // knows it: a day VACATED BY A LIVE TRIP is a rest day. A day that is empty
-    // for any other reason is untouched and still reads as it did.
-    //
-    // STILL A FILTER, NEVER AN EDIT — same as every other line in this pass.
-    // The mark, the fixture and the stored week are all intact and all return
-    // when the fact lifts.
-    /* ⚠ THE SUBSTITUTION IS DELETED; THE FILTER STAYS (area 3, 2026-08-19).
-     *
-     * `freedByTheTrip` BUILT a conditioning session — or a prehab session when
-     * the builder declined — onto every day a live trip vacated. That is
-     * authoring at read: content the composer never wrote, appearing on the
-     * athlete's screen and countable by nothing.
-     *
-     * Sam's ruling that it served is intact and is NOT withdrawn: *"away has to
-     * replace the work it removes, not just delete it"*. Its owner is the
-     * COMPOSER, which already gets the trip — `weeklySchedulerInputs`
-     * `clubInputsAfterTravel` takes the club night and the fixture out of the
-     * facts the plan is built from, so the substitution can be authored in the
-     * week rather than painted over it. On the rebuild list; not rebuilt here.
-     *
-     * WHAT REMAINS IS THE FILTER: the club's work is hidden while the athlete
-     * is away, the mark and the stored week are untouched, and everything
-     * returns the moment the fact lifts. */
-    if (day.source === 'game' || day.indicator === 'game' ||
-      day.workout?.workoutType === 'Game') {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
-    }
-    if (!day.workout) return day;
-    const team = getTeamTrainingWorkoutState(day.workout);
-    if (!team.hasTeamTraining) return day;
-    // A day that was ONLY the club becomes a REST day — same word, same reason
-    // as the fixture above, and it has to be the same or the week contradicts
-    // itself: a team-only Tuesday and a vacated Saturday are both "a day whose
-    // only content was the club, and the club is shut to him this week".
-    // Reading one as *"Rest Day"* and the other as *"Training Day"* is the
-    // clunkiness Sam named, one day over. A combined day is NOT this case — it
-    // keeps its own half and loses the club's, renamed through the ONE owner of
-    // that question, below.
-    if (team.isTeamTrainingOnly) {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
-    }
-    return {
-      ...day,
-      workout: {
-        ...day.workout,
-        // ── THE CLUB HALF COMES OFF A COMBINED DAY, AND IT IS THE PAIR ──
-        //
-        // MEASURED ON A REAL SEEDED WORKOUT, not a synthetic one — that was the
-        // mistake that cost two glass runs. A generated team day looks like
-        // `{ name: "Team Training + Upper Pull", workoutType: "Team Training" }`
-        // with THREE strength rows and NO `isTeamDay` flag and NO sections.
-        // `getSessionComponents` then reads the team part from BOTH the name and
-        // the type, and the strength part from the ROWS. So:
-        //   name only  -> ["team_training"]              (his gym work vanishes)
-        //   type only  -> ["strength","team_training"]   (nothing changes)
-        //   BOTH       -> ["strength"]                   ✓
-        // `getTeamTrainingWorkoutState().displayWorkoutType` cannot be used for
-        // the second half: on this shape it returns "Team Training" unchanged.
-        //
-        // LIMIT, NAMED RATHER THAN HIDDEN: the surviving type is inferred, and a
-        // club night combined with CONDITIONING rather than strength would be
-        // labelled Strength. No such day exists in any seed to measure against,
-        // so it is left as the honest simple rule instead of a guess with a
-        // branch.
-        name: withoutTeamTrainingSegment(day.workout.name),
-        workoutType: (team.displayWorkoutType && team.displayWorkoutType !== 'Team Training'
-          ? team.displayWorkoutType
-          : 'Strength') as typeof day.workout.workoutType,
-        exercises: team.renderableExercises,
-      },
-    };
-  });
-}
 
 /**
  * Resolve a single date with conditioning context.

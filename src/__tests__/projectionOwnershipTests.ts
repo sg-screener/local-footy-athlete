@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * `project()` IS THE ONE PROJECTION — and it changes nothing yet.
  *
@@ -102,7 +103,7 @@ function world(): void {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
-  quiet(() => useCalendarStore.getState().setGameDay('2026-08-01', TODAY));
+  quiet(() => calendarActionsForTest().setGameDay('2026-08-01', TODAY));
 }
 
 function projected(week: string): ResolvedDay[] {
@@ -401,7 +402,7 @@ run('recovery counts toward nothing (ruling 3)', () => {
 
 run('rest is a kind, not an absence of parts', () => {
   world();
-  quiet(() => useCalendarStore.getState().setRestDay('2026-07-30'));
+  quiet(() => calendarActionsForTest().setRestDay('2026-07-30'));
   const days = projected(WEEK);
   const mine = projectParts({ week: days, weekStart: WEEK });
   const rest = mine.days.find((d) => d.date === '2026-07-30');

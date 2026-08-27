@@ -1085,6 +1085,23 @@ function addComposerDaysISO(dateISO: string, days: number): string {
 // ─── COMPOSE ───────────────────────────────────────────────────────────────
 
 export function composeWeek(inputs: ComposerInputs): ComposedWeek {
+  // Resolve the affected ladder before selecting rows. Dropping every lower
+  // main afterwards leaves an accessory-only day and silently loses frequency.
+  // The existing safety policy requires unaffected substitution first. Upper
+  // work also respects the scheduler's lower-body fixture restrictions; this
+  // deliberately does not turn a protected upper day into heavy lower work.
+  const upperSafe = (['push', 'pull'] as const).filter(pattern =>
+    !inputs.injuries.prohibitedPatterns.includes(pattern));
+  if (upperSafe.length > 0) {
+    inputs = { ...inputs, plannedDays: inputs.plannedDays.map(day => {
+      const intended = day.strengthIntent.plannedPatterns;
+      const lowerPatterns = intended.filter(pattern => pattern !== 'push' && pattern !== 'pull');
+      if (!composedDayIsStrength(day.strengthIntent) || lowerPatterns.length === 0 ||
+        !lowerPatterns.every(pattern => inputs.injuries.prohibitedPatterns.includes(pattern))) return day;
+      return { ...day, strengthIntent: { archetype: 'upper' as const,
+        primaryPattern: upperSafe[0], plannedPatterns: [...upperSafe], effectivePatterns: [] } };
+    }) };
+  }
   const excluded = new Set(inputs.injuries.excludedIdentities.map(composedIdentityFor));
   /**
    * THE DAY'S OWN EXCLUSION SET — week-wide answers PLUS whatever this one day

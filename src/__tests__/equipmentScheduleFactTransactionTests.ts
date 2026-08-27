@@ -35,9 +35,6 @@ const {
   commitProfileProgramTransaction,
 } = require('../store/profileProgramTransaction') as typeof import('../store/profileProgramTransaction');
 const {
-  validateWorkoutAgainstActiveConstraints,
-} = require('../utils/postGenerationConstraintValidation') as typeof import('../utils/postGenerationConstraintValidation');
-const {
   useProgramStore,
 } = require('../store/programStore') as typeof import('../store/programStore');
 const {
@@ -134,7 +131,6 @@ function reset(): void {
   useCoachUpdatesStore.setState({
     updatesByWeek: {},
     activeConstraints: [],
-    activeInjury: null,
     dismissedCoachNoteIds: [],
   });
 }
@@ -202,52 +198,7 @@ async function main(): Promise<void> {
       constraint.maxSessionMinutes === 30 &&
       constraint.timeCapWeekdays?.includes('Friday')));
 
-  const workout = {
-    id: 'equipment-time-cap-workout',
-    microcycleId: 'week',
-    dayOfWeek: 5,
-    name: 'Strength',
-    description: '',
-    durationMinutes: 60,
-    intensity: 'Moderate',
-    workoutType: 'Strength',
-    sessionTier: 'core',
-    hasCombinedConditioning: false,
-    exercises: [
-      {
-        id: 'row-barbell',
-        workoutId: 'equipment-time-cap-workout',
-        exerciseId: 'barbell-row',
-        orderIndex: 0,
-        prescribedSets: 3,
-        prescribedReps: '5',
-        exercise: { id: 'barbell-row', name: 'Barbell Row', equipmentRequired: ['Barbell'] },
-      },
-      {
-        id: 'row-db',
-        workoutId: 'equipment-time-cap-workout',
-        exerciseId: 'db-row',
-        orderIndex: 1,
-        prescribedSets: 3,
-        prescribedReps: '8',
-        exercise: { id: 'db-row', name: 'Dumbbell Row', equipmentRequired: ['Dumbbells'] },
-      },
-    ],
-    createdAt: '',
-    updatedAt: '',
-  } as any;
-  const validated = validateWorkoutAgainstActiveConstraints({
-    workout,
-    date: '2026-07-24',
-    todayISO: date,
-    activeConstraints: projection.activeConstraints,
-    profile: profile(),
-  }).workout;
-  check('equipment restriction changes visible prescriptions only',
-    validated?.exercises?.length === 1 &&
-    validated.exercises[0].exercise?.name === 'Dumbbell Row');
-  check('time cap applies deterministically to targeted session',
-    validated?.durationMinutes === 30);
+  // The retired validator no longer filters a hand-built workout after generation.
   let impossibleCapRejected = false;
   try {
     createTemporaryTimeCapFact({
@@ -261,14 +212,7 @@ async function main(): Promise<void> {
     impossibleCapRejected = true;
   }
   check('impossible time cap rejects before publication', impossibleCapRejected);
-  const awayWorkout = validateWorkoutAgainstActiveConstraints({
-    workout,
-    date: '2026-07-22',
-    todayISO: date,
-    activeConstraints: projection.activeConstraints,
-    profile: profile(),
-  }).workout;
-  check('away date is unavailable without a temporary Rest override', awayWorkout === null);
+  // Current transaction checks below cover facts; no post-write repair is expected.
 
   console.log('\n[2] canonical fact transactions preserve the base and other facts');
   const beforeBase = semanticFingerprint(

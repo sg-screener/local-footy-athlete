@@ -2555,3 +2555,874 @@ retirement plus new inspection, not a claim that all unnamed paths are safe.
   and their complete fixture/phase matrix remain outside this pass.
 - Full historical test fleet and the remaining 1,256 executable ownership
   reviews. The annual healthy-archetype result is not whole-app approval.
+
+## 25. Five-step continuation PAUSED at Sam's reinstall request — 2026-08-27
+
+Owner: `testtruth`. Sam interrupted implementation to wipe/reinstall Renee's
+app. The in-progress code remains uncommitted; it was NOT built onto a phone.
+No question for Sam is blocking the implementation at this point.
+
+### Working-tree progress, not an accepted checkpoint
+
+- Extracted generation-input capture into `canonicalProgramInputFromProfile`.
+- Added pure `canonicalWeeklySourceFactCompiler` and `canonicalWeekOverlay`;
+  the latter replaces the old overlay helper's content author, retaining a
+  clock-capturing compatibility wrapper in `weekRebuild`.
+- Added `sourceFactCompilation` as input-capture/publication boundary. Live
+  fact transactions now call the same synchronous reconstruction as boot;
+  removed `commitDerivingSourceFactScopedRegen` and its snapshot-Undo author.
+- Boot builds the healthy base without deriving facts, reconstructs accepted
+  edits with fact identities available, then compiles dated fact overlays.
+  Non-deriving availability facts remain base-generation inputs.
+- Baseline canonical suite: 453/456; three injury-restart failures.
+  First modified run made those injury assertions green but exposed lost
+  lighter-day effects because boot hid their source fact during ledger folding.
+  Restoring fact identity before that fold fixed the lighter-day cases.
+  Second run: 455/456; remaining failure was the source guard still requiring
+  the now-deleted transaction-local contract author. Its assertion now points
+  at the pure compiler, but that final assertion edit has NOT been rerun.
+- Product typecheck initially found one discriminated-union narrowing error
+  in the new compiler. Corrected to explicit `ok === false`; NOT rerun yet.
+- Logs: `/tmp/testtruth-all-baseline-canonical.log`,
+  `/tmp/testtruth-all-canonical-first.log`,
+  `/tmp/testtruth-all-canonical-second.log`,
+  `/tmp/testtruth-all-types-product.log`.
+
+### Resume before claiming step 1 complete
+
+Run fresh product types and canonical suite. Clean the retired transaction's
+unused imports. Verify time-cap fixture-day acknowledgments (the old inert
+reason plumbing was removed with the old transaction body and must be retained
+through input-derived classification). Expand overlapping/date-boundary injury,
+fixture, history, update/resolve and post-injury edit coverage. Review boot's
+outer replay catch: a source-fact compilation error must not silently discard
+the fact or return an apparently valid partial world. Audit the remaining
+`reapplyActiveInjuryRecompositions` / live row recomposition writers during
+ownership convergence. Then proceed through steps 2–5 without stopping at the
+first slice: generic Clear, complete executable ownership, relevant test debt,
+expanded annual acceptance. No counts have been refreshed for the new tree.
+
+### Renee clean reinstall receipt
+
+Sam explicitly authorized uninstall and local-data removal. Installed the
+existing signed Release product from clean commit `5e7caee7`, NOT this dirty
+working tree: `/private/tmp/lfa-release-testtruth-20260827.oBnVPP/Build/Products/Release-iphoneos/LocalFootyAthlete.app`.
+
+Renee's exact paired device `C1972DB0-5B63-562E-81C2-368BBBF1A5AB`:
+uninstall exit 0; reinstall exit 0; launch exit 0. JSON receipts beside the
+build: `uninstall-renee-clean.json`, `install-renee-clean.json`,
+`launch-renee-clean.json`. Sam's phone was not modified in this reinstall.
+Sam subsequently confirmed Renee's app is working. No device data backup was
+made before the explicitly authorized uninstall.
+
+## 26. Resumed five-part completion — in progress, not a release claim
+
+Owner: `testtruth`. Sam confirmed Renee's clean installation works and asked to
+continue the entire five-item assignment. No new phone build is requested here.
+
+Implemented in the working tree:
+
+- Dated source facts compile through `canonicalWeeklySourceFactCompiler` on both
+  live acceptance and reconstruction. Input capture is separate; timestamp and
+  progression/load inputs are explicit at the pure boundary. The old
+  `commitDerivingSourceFactScopedRegen` is deleted.
+- Injury row substitutions now use `canonicalWeeklyInjuryCompiler` and the
+  established safety ladder/canonical row transform. Deleted the imperative
+  `recomposeSessionForInjury`/`reapplyActiveInjuryRecompositions` passes. Injury
+  transactions no longer run a second settle outside their rollback boundary.
+- Fixed an accumulated fixture/injury ordering defect exposed by the expanded
+  annual journey: fixture replay was reading the new injury before its dated
+  fold, changing earlier days. Replay now sees base facts; lighter-day effects
+  receive their fact lookup explicitly. The fact fold pins earlier days.
+- Deleted `removeOverridesForModifierSource` and the unused exported
+  `clearManualOverridesPreservingActiveModifiers`. Generic Clear resolves exact
+  facts through the durable owner; ambiguity refuses. Trip + its linked equipment
+  answer resolve together in one transaction, not snapshot restoration followed
+  by separate writes.
+- Added real-onboarding injury/update/overlap/resolve/restart/Undo journeys in
+  both injury orders; annual phase-week 8 requires them for every archetype.
+  Added shared-fact Clear, ambiguity, readback-failure rollback, independent
+  resolution and restart checks, also required by the annual verdict.
+- Added a real compiler-output mutation deleting a pre-injury day; the journey
+  catches it. Annual verdict requires this mutation and the lifecycle checks;
+  removing either is red in the verdict-engine controls.
+- Retired `gameChangeLocalRebuildTests.ts` / `test:game-local-rebuild`: it tested
+  the deleted profile/override-sweep paths and name inference. Replacement
+  witnesses are the canonical and annual transaction journeys. Removed its
+  package command/old-chain link, recorded the retirement in test-truth. The file
+  is recoverable from git. Kept other diagnostic suites while repairing their
+  typed fixtures; did not restore deleted runtime helpers to satisfy them.
+- Updated the stale main-lift inference control to require typed declarations;
+  deload fixtures explicitly declare their hinge rather than rely on its name.
+
+Verification receipts so far (working tree, not phone acceptance):
+
+- `/tmp/testtruth-canonical-clearing-expanded.log`: **538/538 assertions** in
+  the canonical slice, including both injury and generic-clear journeys.
+- `/tmp/testtruth-year-clearing-expanded.log`: **416/416 measured athlete-weeks
+  green across 8 distinct athletes × 52** with injury/clear checks in each phase.
+  Overall gate remains RED on the ownership prerequisite, not a year PASS.
+- `/tmp/testtruth-fact-mutation.log`: real prior-day deletion injected and caught;
+  healthy control green. `/tmp/testtruth-year-detectors.log`: **32/32** detector
+  controls (before the later clear check requirements; rerun before checkpoint).
+- `/tmp/testtruth-current-fact-tests.log`: **40/40** source-fact transaction checks.
+  `/tmp/testtruth-deload-current.log`: **68/68** deload-law assertions.
+- `/tmp/testtruth-full-types-progress.log`: product **0**, devtools **0** errors;
+  test errors still exceed the existing per-file ratchet. Latest raw tests are
+  `/tmp/testtruth-types-retirement.log` (**193 errors**, before subsequent fixes).
+  No exclusions, baseline increases or type suppressions were added.
+- Writer gate now derives zero-operation callers only when every callee is
+  verified. Unknown/changed/opaque/direct-writing functions cannot inherit a
+  pass; inherited rejected callers do not inflate the distinct author count.
+  `/tmp/testtruth-census-delegation-final.log`: **27/27** detector controls.
+  Latest reviewed census: **2,804 direct operation occurrences in 757 distinct
+  direct owners across 602 files; 1,309 capability owners incl. callers; 70 explicit
+  reviews + 16 verified caller delegations, 1,223 unresolved**. This is NOT 1,223
+  proven bugs. Zero rival/derived writers is NOT PROVEN. The two deleted known
+  writers' stale review records were removed, and the new fact boundaries were
+  reviewed individually with fingerprints.
+
+Remaining work, no question for Sam currently:
+
+1. Finish trip/equipment atomic-clear regression coverage and fresh verification
+   after the final source cleanup; checkpoint only scoped reviewed files.
+2. Continue executable ownership review, routing/deleting actual rivals. Do not
+   bulk-approve by filename or mistake unresolved candidates for writers.
+3. Finish relevant test/typecheck debt; current test-only edits are uncommitted
+   alongside the compiler work. Remaining deleted-API references need current
+   witnesses/retirement, not runtime resurrection.
+4. Run the complete release gate after ownership/type work; keep the annual
+   prerequisite red until zero is actually proven. No all-five-complete claim.
+
+NOT COVERED: physical-device acceptance of these edits; global single-owner
+proof; complete typecheck/release gate; every possible injury/equipment/action
+cross-product; active injury carried across a block rollover. The latter needs
+an accumulated acceptance coordinate, not an assumption from same-week restart.
+
+## 27. Carried injuries, Clear and remaining census — continuing 2026-08-27
+
+Owner: `testtruth`. Still uncommitted; neither phone has these changes. No new
+question for Sam. This is a continuation of all five items, not completion.
+
+New measured findings and changes:
+
+- Expanded the annual witness to carry a real knee report for three elapsed
+  weeks, across block/phase rollover, then verify actual resolution and restart.
+  Corrected the witness's phase-local week-13 clear: Off-season ends at week 12,
+  so that test had failed to issue its own clear. This was a TEST defect, not
+  evidence of a resolved injury reactivating in the app.
+- Source-fact generation now keeps the accepted block's progression anchor.
+  The old week-local cutoff re-spent logs during restart and changed loads.
+- Injured lower/full-body days use the composer's safe upper ladder before
+  row selection; the safety contract filters its existing required patterns
+  instead of overriding equipment exclusions. Sprint/running permission reaches
+  the scheduler, including its reservation of standalone running days. Off-feet
+  conditioning can remain attached to strength instead of consuming a rest day.
+- The first full carried-injury run reached all 416 athlete-weeks: 401 passed,
+  15 failed across two distinct three-day profiles. The failures exposed full-body
+  days retaining prohibited lower patterns or losing strength frequency. After
+  extending the same safe-ladder substitution to full-body days, BOTH affected
+  profiles reached 52/52 weeks each with zero failed checks in
+  `/tmp/testtruth-three-day-fullbody-fixed.log`. Full eight-profile rerun is
+  currently `/tmp/testtruth-year-final-fullbody.log`, not yet a receipt.
+- Trip Clear now resolves its exact paired equipment report in the same atomic
+  input transaction; an unrelated equipment report with the same dates survives.
+  Failure/readback rollback and restart are executable checks, not prose.
+- Deleted the remaining `reversibleAdjustmentTransaction` snapshot restoration.
+  Public Clear resolves an exact source fact or routes the exact latest accepted
+  decision through existing Undo. Orphan/older unmatched presentation records
+  are refused, never used to overwrite derived sessions. The old synchronous
+  inspection exports cannot publish anything. Canonical suite exercises the
+  actual Clear entry after injury resolution and restart: **553/553 assertions**,
+  `/tmp/testtruth-canonical-no-snapshots.log` (before later full-body extension).
+- Deleted unused Coach lighten/move/optional/weekly-rewrite functions and their
+  unused dispatcher, after checking runtime references. Existing live exercise
+  helpers remain; their publication boundary still needs ownership review.
+- Census detector now distinguishes native read-only Array methods from opaque
+  domain methods; callbacks/mutators/lookalikes remain detected. Detector controls
+  **28/28** in `/tmp/testtruth-census-builtins.log`. Denominator changed because
+  the instrument corrected false opaque calls, not because writers were approved.
+  Last scan BEFORE latest deletions: **1,192 capability owners / 602 source files;
+  667 distinct direct owners, 2,293 operation occurrences; 60 reviewed, 1,132
+  unresolved**. Unresolved candidates are NOT 1,132 demonstrated bugs. Zero is
+  still NOT PROVEN; do not bulk-refresh changed fingerprints.
+
+Next work, still owned here:
+
+1. Read final full-year result and rerun canonical verification after latest changes.
+2. Finish source-input Clear for reachable stale-override controls: `programStore`
+   `removeManualOverride` still deletes an output; used by `StaleOverrideBanner`
+   and reset helpers. Do not simply classify it as a compiler. Review live
+   exercise publication and exact reset boundaries too.
+3. Finish the executable ownership review, including unresolved candidates.
+4. Continue test/type debt. Product/dev scopes were zero before latest dead-code
+   removal; test debt remains. Current fixes repair concrete types without casts
+   or baseline increases. `workoutCanonicalisationTests` section 8 now verifies
+   retired writer APIs are absent instead of demanding those writers return.
+5. `sessionChangeSequenceTests` reached 19 passing / 3 failing checks through an
+   obsolete installer/read path. It now uses real onboarding (including the
+   required season-finished answer) and `deriveVisibleWeekLive`; rerun underway.
+   Preserve its combined removal/swap/add/injury/restart subject, do not retire it.
+6. Retire/rebind the old `coachActionsTests` dispatcher expectations and update
+   `exerciseRemovalOwnerTests` to prove the dispatcher is absent. The production
+   dispatcher has been deleted; do not reintroduce it to satisfy old tests.
+
+What catches the next defect: annual carried-fact rollover coordinates, exact
+fact/edit/ledger restart comparisons, Clear rollback/paired-report checks, plus
+the fail-closed executable census. The global census/type prerequisites still
+block release even when athlete-week checks pass.
+
+NOT COVERED: device acceptance; global zero-owner proof; complete typecheck and
+release gate; every possible injury/equipment/action combination; legacy orphan
+adjustment Clear beyond truthful refusal. Current work is NOT a phone release.
+
+## 28. Continued five-part compiler audit — 2026-08-27 (uncommitted)
+
+Owner: testtruth. Sam confirmed Renee's clean install and resumed the complete
+five-part request. No changes below are on either phone. No user decision blocks
+the independent work. Do not report global ownership or the release gate green.
+
+Measured progress since §27:
+
+- Annual full-year run reached **416/416 green athlete-weeks**, eight distinct
+  archetypes × 52 weeks, including carried injuries and phase/block rollover.
+  `/tmp/testtruth-year-intent-owner.log` and later
+  `/tmp/testtruth-year-acceptance-readonly.log`. Both overall gates remain red
+  on the global ownership prerequisite. These receipts PRECEDE the newest
+  atomic-Undo failure checks; a fresh full run is still required.
+- Composer-owned strength intent now survives final assembly. The adapter no
+  longer overrides it. Final-row acceptance includes intent conservation,
+  missing-specialist detection and non-vacuous row-loss mutations.
+- Found and fixed the onboarding severity-9 upper-body policy gap using the
+  existing severity-band owner. `test:injury-severity-bands`: 35/35.
+- Removed raw `removeManualOverride`, `clearManualOverrides`, warning dismissal
+  that overwrote override ownership, unused rollback-constraint writer, unused
+  surgical reset, and unused post-acceptance provenance repair. Stale warnings
+  may offer Clear only for a uniquely identified current accepted adjustment;
+  they no longer delete generated output. Unknown/orphan ownership is not
+  guessed. This UI path has not been exercised on a device.
+- Found a live second repair path in ProgramStore acceptance: it rewrote week
+  overlays and compatibility workout fields after compilation. Acceptance now
+  validates without those rewrites. The source assertion requiring the old
+  second compilation was obsolete and replaced; real accumulated-world checks
+  compare all candidate material before/after acceptance. An executable
+  acceptance row-erasure mutation is now mandatory in the annual verdict.
+- `test:canonical-weekly-compiler` reached **565/565**, followed by the new
+  `test:reset-coach` **16/16** (`/tmp/testtruth-canonical-reset-gate.log`). This
+  receipt predates the newest atomic-Undo change. The reset witness uses real
+  onboarding, decisions, injury, logs, persisted data and restart; it caught
+  generationAnchorISO/hydratedSeasonPhaseClock surviving reset. Both are now
+  cleared by the existing full-reset owner. The diagnostic must flush pending
+  storage writes before inspecting disk; an early read was not persistence loss.
+- Earlier relevant receipts: injury journeys 127/127 after acceptance became
+  read-only; combined exercise/session journey 22/22; §18 boundary 225/225 with
+  28 real invalid-week mutations. These are scoped results, not app acceptance.
+
+Current work / findings requiring follow-through:
+
+1. Undo previously appended its reversal outside rollback. The remaining move
+   test's persistence-failure subject is still relevant even though its old
+   snapshot-restoration expectations are not. `coachMutationTransaction` now
+   stages, snapshots, acknowledges and rolls back decision-ledger and athlete-
+   preference inputs through their existing owners. Undo uses that same
+   transaction plus synchronous `rebuildDerivedWorldNow`. Program rollback now
+   also captures generation clocks, accepted block declarations and weight/band
+   inputs. Verify all callers and regressions before calling this finished.
+2. Annual source-fact journeys now inject failed writes at program, ledger and
+   athlete-preference persistence, requiring exact memory/disk rollback and the
+   same pending Undo target. Current logs: `/tmp/testtruth-injury-undo-faults.log`,
+   `/tmp/testtruth-move-clock-fixed.log`, `/tmp/testtruth-product-atomic-undo2.log`.
+3. Old move diagnostics: 12 checks passed; nine failures were in legacy Restore,
+   migration and async Clear. Removed seven obsolete synchronous snapshot cases,
+   retained live durable Clear/failure cases and rebound them to reversal
+   acknowledgement. Their old fixture also omitted the app clock; Undo correctly
+   used real August while the test asserted July. It now sets the journey clock.
+4. Old deletion diagnostics: 16 failures, not 16 established product defects.
+   Many demand automatic relocation after Bin, or exact old Monday/stacked seed
+   layouts; others demand deleted snapshot restoration. Preserve relevant
+   component/deletion guarantees through current real journeys while retiring
+   those expectations explicitly. Do not restore the old author to green them.
+5. Test types were 79 diagnostics on the last complete test-scope run, before
+   latest cleanup. Product typecheck was zero before atomic Undo (a new union
+   narrowing error was corrected). No baseline increases or excluded tests.
+6. Global executable census is still unfinished. Latest saved scan before these
+   deletions: `/tmp/testtruth-census-latest.json`. Remove retired review entries,
+   review live writers individually and refresh fingerprints only after review.
+   In particular `applyProgramOverrideWrite` also restores removal constraints;
+   inspect whether that input effect is captured/reproduced canonically. Do not
+   bulk-classify unknown functions or claim zero from the number of known bugs.
+
+What catches the next defect: real compiler-output preservation at acceptance,
+full reset/restart with a missing-reset mutation, actual persistence-failure
+injection across the accepted input stores, accumulated annual journeys and the
+fail-closed executable ownership census. No new product policy was inferred.
+
+NOT COVERED: global zero-owner proof; final complete release gate; all diagnostic
+test/type debt; native stale-warning Clear/Keep and full reset UX; physical-device
+acceptance. No phone build should be made from this unfinished working tree.
+
+## 29. Full request resumed — current verification, ownership still open
+
+Owner: testtruth. Renee's clean reinstall was accepted by Sam; resumed the five
+requested workstreams. No changes in this worktree have been installed or committed.
+
+- All three typecheck scopes now report zero diagnostics, with no suppression,
+  exclusion or baseline increase. Ratcheted scripts/typecheck-baseline.json to
+  zero. Receipt: /tmp/testtruth-zero-type-baseline-update.log.
+- Current compiler compound gate: 565 compiler checks, 16 reset checks, 139
+  deletion checks and 69 hydration checks pass. Deletion reaches 17 distinct
+  actual actions across eight onboarded archetypes (six strength, three
+  conditioning, eight whole-day). Receipt: /tmp/testtruth-expanded-compiler-gate.log.
+- Hydration found a real extra author: calendar rehydration independently
+  published a repaired program before quiescent boot. Removed that callback;
+  the guard now witnesses zero program publications while loading calendar
+  inputs. Before: 68/69; after: 69/69.
+- Program override publication no longer implicitly clears removal constraints
+  or calendar marks. Those effects belong to accepted edit inputs, not saves.
+- Undo persistence-fault checks pass (133 injury transaction assertions), covering
+  program, decision ledger and athlete-preference write failures and exact rollback.
+- Continuity diagnostic now drives two real archetypes through 20 reached weeks
+  each, including accumulated edits and restart: 615 checks pass. The release
+  witness remains the full eight-archetype annual gate, not this shorter run.
+- Equipment/travel journey: 20 checks pass, including a real illegal-kit negative
+  control, exact scoped clear and restart. Its first oracle wrongly treated RDL's
+  old barbell metadata as exclusive; switched to authored exercise availability
+  and verified the selected implement is dumbbells. No product rule changed.
+- Explicitly retired obsolete snapshot restore, post-generation repair, retired
+  recovery-addon author and hand-seeded layout expectations. Rebound relevant
+  deletion/hydration/continuity tests to current compiler contracts; census now
+  has eight current contracts, still the same six deduplicated release units.
+  Other rewritten diagnostics are not automatically claimed current or green.
+
+Remaining: executable ownership review (last scan: 83 reviewed, 1087 unresolved
+capability owners); remove remaining calendar compatibility authors; verify
+relevant rewritten diagnostics; rerun annual and complete release gate. Last
+annual reached 416/416 required athlete-weeks with programming checks green,
+but the complete gate is red on ownership. No user decision currently blocks us.
+
+Next-defect protection: real removal/restart journeys, calendar hydration
+publication counter, acceptance row-erasure mutation, durable Undo fault injection,
+authored equipment oracle with a real negative control, and fail-closed ownership
+reviews. Unknown owners are not treated as product bugs or approved implicitly.
+
+NOT COVERED: complete ownership proof, final release gate on latest changes,
+all legacy diagnostic runtime expectations, native stale-warning UX and physical
+device acceptance of this unfinished worktree.
+
+## 30. Calendar/snapshot retirements and current-contract test rebinding
+
+Owner: testtruth. Removed five unused calendar/program-setup repair functions,
+the calendar fixture action methods, their rebuild fallback, and the arbitrary
+post-rebuild calendar callback. Weekly fixture rebuild now requires the exact
+accepted typed effect. Calendar reset clears inputs without repairing a partial
+world; its suite is 19/19 including a real fixture and publication mutation.
+
+Removed three unused explicit-load snapshot/delta helpers. Replaced their old
+hand-built test world with real fact and lighter-day decisions: 66/66 checks,
+including independent report Clear preserving the linked lighter decision across
+restart, and resolving the linked report restoring the original dose.
+
+Fixture suite is now real onboarding: 14/14. Fixed obsolete expectations that
+equated an explicit calendar mark with an effective standing fixture, required a
+no-game mark without a standing fixture, read generated output from disk, and
+counted every system diagnostic root as another athlete action. Coach-note
+metadata now reaches an actual occupied-day move; a same-layout fixture move
+legitimately need not create an explanatory training-change note.
+
+Exposure suite is 160/160 after retiring nine demands for fatigue-driven exercise
+removal, explicitly prohibited by the existing July readiness rule. Override
+boundary suite is 7/7 after selecting the actual target-day generated workout
+instead of assuming it is the first array element. No product policy changed.
+
+The two rewritten fixture/fact suites join the canonical compiler release witness.
+Test-truth: 10 current contracts, 159 rewrite-test rows, unchanged six deduplicated
+release units. All product/dev/test type scopes remain zero; baseline remains zero.
+Latest completed compiler compound run before adding these two witnesses: 568
+compiler, 19 reset, 139 removal and 69 hydration assertions green.
+
+Ownership review: 22 more individual accepted-transaction/projection/input owners
+reviewed. Last pre-detector-update census: 1153 candidate owners, 108 reviewed,
+1045 unresolved. A narrow AST proof recognizes only existing-reference readers;
+it does not infer that an immutable transform is harmless. Its mutation checks
+found a detector hole: a spread-only object loses the Workout type alias, so it
+could escape the previous return-type check. Added explicit semantic spread
+inventory; now rerunning mutation controls and reviewing changed inventories.
+Do not refresh fingerprints wholesale or claim zero while unresolved owners remain.
+
+Receipts: /tmp/testtruth-fixture-real-final.log,
+/tmp/testtruth-facts-real-lighter-clear.log, /tmp/testtruth-exposure-current3.log,
+/tmp/testtruth-override-current2.log, /tmp/testtruth-fixture-ingress-guard.log,
+/tmp/testtruth-no-snapshot-types.log, /tmp/testtruth-ten-contracts.log.
+
+NOT COVERED: complete ownership proof, latest complete release gate, all legacy
+diagnostic runtime expectations, native/device acceptance. Current changes are
+not committed or installed. No unresolved user question; continue the five steps.
+
+## 31. Compiler/view injury ownership finding (2026-08-27, continuing)
+
+The new compiler-to-visible comparison caught a real second author: after one
+of two injuries was cleared, rendering added a Bodyweight Squat absent from
+compiler output. Receipt: /tmp/testtruth-injury-view-boundary-before.log.
+Moved session-level injury adjustment into canonicalWeeklyInjuryCompiler and
+removed that author from sessionResolver. Facts now pass 73/73 assertions,
+including injected render-only row and dose mutations; two accumulated journeys
+pass 667/667 assertions across 40 reached athlete-weeks. The annual checker now
+requires the same compiler/view invariant every week. Verdict controls: 39/39.
+
+The next relevant check is preview-to-acceptance consistency. Existing injury
+review and adjustment diagnostics are red (10 and 6 assertions respectively),
+and both install generated data by bypassing real onboarding. Rebinding the
+review to real onboarding before deciding which expectations are stale. No
+claim yet that its preview promises exactly what the compiler accepts.
+
+Ownership controls now pass 31/31, including the spread-only mutation. Latest
+completed census before moving injury rendering: 239 reviewed of 1163 distinct
+capability owners; 924 unresolved. These are candidate executable functions,
+not 924 confirmed alternative authors. Source changes require fresh reviews.
+
+NOT COVERED: injury preview acceptance, final ownership zero, fresh full-year
+and complete release pass, current-source device acceptance. The annual run
+was deliberately stopped when the render-author defect was found; its partial
+log is not a passing receipt. No user choice is blocking independent work.
+
+## 32. Shared injury stage and full-year findings (2026-08-27, continuing)
+
+Preview and accepted injury folds now call the same pure injury stage. Injury
+preserves accepted safe strength rows instead of regenerating the entire session.
+Real-onboarding review checks pass 76/76, including row/dose agreement and no
+preview publication. Adjustment checks pass 54/54, including specific injury
+region mapping and conditioning-change disclosure. These are targeted receipts,
+not proof of every injury-update preview: severity decreases and future-day
+preview ordering still need measurement.
+
+Replacement compounds now declare typed main roles and balance across the week;
+blocked conditioning uses the existing capability-substitution owner. Two
+accumulated journeys pass 667/667 assertions across 40 reached athlete-weeks.
+The full-year run reached all 416 athlete-weeks, with 372 green; remaining
+programming failures are conditioning shortfalls and promotion of lighter days
+to main-strength days. The latter has a subsequent source fix not included in
+that annual process. Lost sprint-only conditioning is a hypothesis to measure,
+not yet an established cause. Restart comparisons passed throughout that run.
+
+Removed two unused authors: coachingEngine.enforceInSeasonPushPullBalance and
+programHydrationProjection. Replacement generated-program balance checks pass
+42/42; current hydration checks pass 75/75. The old slice4 hydration probe now
+explicitly refuses as retired rather than testing unreachable production code.
+Deleted tracked files remain recoverable from HEAD. No athlete data deleted.
+
+Latest completed ownership census: 319 reviewed / 1151 distinct executable
+capability owners, 832 unresolved. Zero confirmed rivals is NOT a zero-owner
+proof while those candidates remain unreviewed. All-scope types were zero at
+the last completed check; subsequent edits require a fresh check.
+
+Receipts: /tmp/testtruth-review-conditioning-disclosure.log,
+/tmp/testtruth-injury-conditioning-disclosed.log,
+/tmp/testtruth-continuity-injury-conditioning.log,
+/tmp/testtruth-year-injury-owned-components.log,
+/tmp/testtruth-retired-balance-author.log,
+/tmp/testtruth-hydration-retired-author.log,
+/tmp/testtruth-owner-round4.json.
+
+NOT COVERED: complete ownership proof, remaining annual failures, complete
+release pass, severity-decrease/future-date preview matrix, native/device QA.
+Current work is uncommitted and not installed on either phone. Renee's earlier
+clean reinstall was confirmed by Sam; that interruption is finished. No user
+decision is currently blocking independent work.
+
+## 33. Accumulated injury edits and refusal safety (2026-08-27, continuing)
+
+The real annual probe established why conditioning vanished: the injury overlay
+kept whole old sessions and discarded the canonical planner's replacement for
+lost field/sprint exposure. It now combines accepted strength with that planned
+conditioning, protecting athlete-owned dates and fixtures. The next full run
+passed 398/416 athlete-weeks; the remaining 18 were main-strength overcounts on
+two high-frequency female archetypes, not conditioning failures.
+
+Those overcounts were traced to an unchanged Primer bench press being
+reclassified from accessory to main during injury compilation. Existing typed
+row roles now survive the evidence-envelope refresh. A real ten-week female-5
+probe reports no failed checks. Full annual rerun is still running; it predates
+the following accumulated-edit transaction change and is not a final receipt.
+
+Preview now executes the same pure source-fact compiler from a captured
+pre-fact continuation, then the normal visible projection. Severity decreases
+previously failed four measured previews; restored/withdrawn rows are now
+disclosed. The continuation is ephemeral, excluded from persistence, and part
+of transaction rollback. A new injury-then-exercise-edit witness found the
+continuation was cleared without reconstruction. Exercise decisions now append
+inside the durable transaction and rebuild through the same compiler before
+success, with ledger failure rolling back instead of leaving an unrecorded edit.
+
+A real no-equipment, overlapping upper/lower restriction witness also caught
+conditioning feasibility returning the rejected original. Refusal now strips
+conditioning through the shared component remover, retaining other safe rows.
+The expanded preview matrix passes 116/116 assertions across six real profile/
+day coordinates plus four generated conditioning days, including accumulated
+edits, severity reduction, restart, role preservation and dose mutation controls.
+Receipt: /tmp/testtruth-preview-accumulated-final.log.
+
+Latest completed ownership scan before the last 27 explicit reviews: 457
+reviewed / 1156 distinct capability owners, 699 unresolved. Actual diagnostic
+writers found in devE2ESeedRegistry (one-set prescription, stacked identity,
+layout name/row copying) and the removable-component seed branch still require
+routing through accepted inputs. They are not exempt merely for being dev code.
+No zero-owner claim. Prior compound compiler witness passed; a fresh compound
+run is /tmp/testtruth-compiler-atomic-edits.log. No commits or phone installs.
+
+NOT COVERED: final full-year/release gate, complete ownership proof, final
+all-scope typecheck after these edits, native UI/device acceptance. No user
+choice is blocking the independent work.
+
+## 34. Seed authors retired; fresh annual exposed improving-injury gap (2026-08-27)
+
+The one-set and layout diagnostic seeds now use accepted program-control actions,
+not prescription/name/row copying. Their real-onboarding witness passes 12/12:
+missing-action negative controls, one ledger append, exact visible target,
+restart, and latest-action Undo. Stacked-team seed uses the real generated
+identity. Identity-preserving seeds retain deterministic timestamps/date bounds.
+The unused substituteExercise builder was deleted. No athlete data was deleted.
+
+Removed the unused hard-coded DEFAULT_PROGRAM and its three private builders
+from runtime. Three historical fallback probes now explicitly exit as retired,
+and obsolete fallback sequencing assertions were removed. Onboarding failure
+still uses the existing no-fallback outcome owner. Writer detector controls pass
+32/32, including four negative controls reintroducing the retired builders.
+Source is recoverable from HEAD. No changes committed or installed on phones.
+
+Rebound the two current fact-release suites to real cold onboarding and current
+compiler semantics. They no longer demand stored adjustment snapshots or erase
+an athlete edit when clearing an illness. Latest receipts: deriving 9/9 and
+horizon 14/14. All-scope typecheck reports zero product/devtools/test errors.
+
+The initial full-year run after the injury-row role fix reached 416/416 green
+athlete-weeks, but it predated the added severity-decrease journey. The fresh
+complete release attempt reached only 371/416: the low-availability bodyweight
+athlete stopped in week eight at knee 9 -> 3. This is one reached failing
+journey, not 45 independent programming failures. The other 45 athlete-weeks
+were NOT REACHED. Overall release was 1/6 units green (fail-fast after annual).
+
+The captured scheduler input proved a double-reservation: with sprint restricted,
+two gym days and a deload, the running-floor pass exchanged both off-leg gym
+slots for runs despite already budgeting standalone runs. It attempted five
+running days and was correctly refused by WC-046. The scheduler now counts its
+already-budgeted standalone conditioning before reserving extra running slots.
+No running ceiling or programming target was relaxed. A 12-coordinate pure-input
+matrix (2/3/4 gym days x build/deload x sprint allowed/restricted) plus the injury
+preview journeys passes 152 assertions. The exact accumulated annual athlete
+now reaches all 52 weeks; the remaining full-year run is still in progress.
+Improving-injury identity and restart are now mandatory annual gate cells.
+
+Latest completed census before the last 15 reviews: 675 reviewed / 1149 distinct
+executable capability owners, 474 unresolved. Zero confirmed rivals remains NOT
+a zero-owner proof. Further review includes the unused section18OfferPlacement
+author, fixture candidate helpers and transaction boundaries. Prior seat rulings
+explicitly protect built-but-unwired mobilityPairing/timeTrialSession work from
+deletion; these remain intact and unclassified pending the appropriate ownership
+decision, not silently deleted to lower the count.
+
+Receipts: /tmp/testtruth-seed-actions-final.log,
+/tmp/testtruth-owner-controls-default-retired.log,
+/tmp/testtruth-release-complete-round.log,
+/tmp/testtruth-severity-probe.log, /tmp/testtruth-severity-probe-fixed.log,
+/tmp/testtruth-running-reservation-after.log,
+/tmp/testtruth-types-running-budget-fixed.log,
+/tmp/testtruth-deriving-after-budget.log, /tmp/testtruth-horizon-after-budget.log,
+/tmp/testtruth-year-running-budget-fixed.log, /tmp/testtruth-owner-round10.json.
+
+NOT COVERED: completed ownership proof, final full-year and complete release
+pass, historical diagnostic-suite rewrites, native UI/device acceptance. Renee's
+earlier clean reinstall is already confirmed; do not repeat that interruption.
+The current dirty work is not on either phone. Continue the full five-part task.
+
+## 35. Injury relocation, durable derived edits and travel ownership (2026-08-27)
+
+The next annual run reached all 416 required athlete-weeks, 415 green. The one
+failing week was the two-day bodyweight athlete's pre-season deload: injury
+planning moved restricted sprint work to a previously empty Tuesday, and the
+source-fact merge discarded that new day. The merge now retains planned injury
+conditioning on unowned empty dates while preserving explicit athlete placements,
+removals and games. A real accumulated 24-week probe reached that exact case.
+That probe then exposed a stranded conditioning warm-up on the old Sunday. A
+standalone energy session now moves with its warm-up; the annual invariant
+energy_session_content rejects Conditioning containers with no energy component.
+Before/after probe receipts demonstrate both failures and their corrections.
+
+Derived warm-up/add-on edits had bypassed the durable mutation transaction.
+Injecting a failure in decision-ledger-store yielded false success and a changed
+in-memory session (9 checks passed, 2 failed). The existing shared transaction
+now contains the exact decision append and recompilation; 11/11 checks pass,
+including real onboarding, restart, latest-action Undo and failed-save rollback.
+
+The ownership review found travel filtering still authored inside sessionResolver.
+It now runs in the canonical final-constraint compiler; the resolver only selects
+accepted surfaces. Two real athletes (male three-day, female four-day) pass 12/12
+travel/restart/clear checks. Disabling the canonical span input fails four checks.
+The detector rejects reintroducing the retired read-side writer (34/34 controls).
+A combined club/gym day also now clears its club identity when travel removes
+the club component, instead of retaining a ghost team-training anchor.
+
+Team-night safer substitutions changed display names without changing exercise
+IDs. They now use the shared canonical exercise-edit transform. The added identity
+check fails before the change (9/1) and passes afterward (10/0). This is a unit
+receipt, not a claim that the full safer-move/restart journey has been measured.
+
+Latest completed census: 827 reviewed of 1143 distinct executable capability
+owners, 316 unresolved; further explicit reviews are in progress. This is not a
+zero-rival proof. All three type scopes report zero errors. The fresh annual run
+and full canonical compound are in progress. The first compound run exposed a
+stale source assertion after moving travel; its boundary/mutation guard was updated
+and passes 8/8 directly. No tests or baselines were relaxed to absorb product red.
+
+Receipts: /tmp/testtruth-year-running-budget-fixed.log,
+/tmp/testtruth-orphan-invariant-before.log,
+/tmp/testtruth-orphan-invariant-after.log,
+/tmp/testtruth-derived-durable-before.log,
+/tmp/testtruth-derived-durable-after.log,
+/tmp/testtruth-travel-owned.log, /tmp/testtruth-travel-mutant.log,
+/tmp/testtruth-writer-controls-travel.log,
+/tmp/testtruth-team-identity-before.log, /tmp/testtruth-team-identity-after.log,
+/tmp/testtruth-owner-round13.json, /tmp/testtruth-types-current.log.
+
+NOT COVERED: complete ownership proof, completed fresh annual and release gate,
+real safer-team-night move/restart, native UI and device acceptance. No user
+choice currently blocks the independent work. No commits or phone installs of
+this dirty work have been made; Renee's confirmed reinstall remains complete.
+
+## 36. Annual green weeks; picker author retired; fixture-save fault fixed (2026-08-27)
+
+The annual run in /tmp/testtruth-year-compilation-final.log completed 416 green /
+416 reached / 416 required athlete-weeks across eight distinct athletes. Its
+single failure key is the unresolved executable-owner prerequisite. This is NOT
+a green release. The run predates the subsequent picker and fixture-durability
+changes below. The later canonical compound completed with exit 0 in
+/tmp/testtruth-canonical-templates-final.log (also predates the fixture-save fix).
+
+Ownership review found manually added strength sessions using the independent
+tag selector. The picker now invokes compileCanonicalStrengthTemplate, which
+uses the same composeWeek/materialiseComposedWeek as generated rows. The input
+adapter carries the requested date, actual phase clock/block identity, dated kit,
+injury prohibitions, exclusions, pins and recorded selections. No name-derived
+intent or hard-coded generic 3x8-10 recipe remains in that path.
+
+Removed buildTagAwareSession and the runtime exerciseScorer module. The historical
+scorer is retained ONLY under tests/support/legacyExerciseScorer.ts for old
+diagnostics; no runtime imports it, and the census rejects importing excluded
+test code. The standalone old tagSystemTests entry now runs the current real-
+onboarding picker witness. Historical strength-intent/counting/main-pattern
+diagnostics explicitly import the test-only snapshot and are not product to-dos.
+These removals are recoverable from HEAD; no athlete data was deleted.
+
+The new picker witness first failed 22 checks (21 template builds + old selector
+call). It now passes 59 checks: all seven variants for three real athlete profiles
+(all phases; bodyweight/gym; male/female), canonical row identity/roles, legal kit,
+Add/restart/Undo, future-date equipment/restart/clear, injury/restart, and a runtime
+mutation proving a broken shared composer cannot be bypassed. Three intermediate
+restart failures were timestamp-only, not changed exercises or dose. The shared
+materializer now stamps the explicit session date, including embedded exercise
+metadata, instead of the device clock. The exact serialized checks now pass.
+Receipts: /tmp/testtruth-strength-template-before.log,
+/tmp/testtruth-strength-template-matrix.log,
+/tmp/testtruth-strength-template-diff.log,
+/tmp/testtruth-strength-template-final.log. All-scope typecheck was zero after
+these changes: /tmp/testtruth-types-templates-final.log.
+
+Further save-fault testing found Add/Move/Remove fixture decisions were appended
+AFTER the durable transaction. Injecting a write failure only when the new fixture
+decision appears produced six failures: each action reported success and retained
+changed memory while restart discarded it. The append is now inside the existing
+atomic mutation. /tmp/testtruth-fixture-durable-before.log is 20/6;
+/tmp/testtruth-fixture-durable-after.log is 26/0. The existing fixture family also
+passes 14/14 (/tmp/testtruth-fixture-family-after.log). The shared derived-edit
+durability suite now includes all three fixture failure coordinates.
+
+Removed the unreachable buildConditioningSession read-side author and its private
+duration/intensity defaults. It has no runtime or test callers; its old resolver
+placement loop was already retired on 2026-08-19. The actual template builder
+used by canonical generation remains intact. The independent conditioning ease
+policy remains intact too; its old wrapper was not a live feature. Runtime guard
+controls now reject restoring both retired strength paths and this conditioning
+wrapper (latest run still in progress at this checkpoint).
+
+Latest completed census before the last reviews: 889 reviewed / 1147 distinct
+executable capability owners, 258 unresolved. More explicit reviews followed;
+/tmp/testtruth-owner-round15.json is running. Review queue round11 is stable;
+read-through now reached index172. Newly read but not yet registered:159–164,
+166,168–171;165 changed for fixture durability;172 was deleted. New/changed
+helpers must use a fresh census fingerprint, not the old queue. The unresolved
+protected timeTrialSession/mobilityPairing work remains intact. Do not claim zero.
+
+NOT COVERED: completed ownership proof and final complete release gate, a fresh
+annual run after picker/fixture changes, real safer-team-night move/restart,
+remaining historical diagnostic rewrites, native UI/device acceptance. No new
+phone build or commit. Continue the whole five-part task, not just a first slice.
+
+## 37. Executable ownership green; final complete release run pending (2026-08-27)
+
+The resumed task is ALL five parts, not another isolated compiler slice. Renee's
+reinstall is already confirmed by Sam; no further install or wipe was performed.
+
+The executable census now reports 1137 reviewed / 1137 distinct capability owners,
+with 2353 direct operation occurrences across 629 direct owners in 602 source
+files. There are 0 unresolved owners, 0 confirmed rival authors and 0 direct
+derived-output writers. Receipt: /tmp/testtruth-writer-zero-final.log. Reviews
+include module initialisers, persistence adapters, UI retry cycles, source-fact
+compilation, the canonical scheduler/composer/materialiser, and their callers.
+This is a static executable-capability proof, not a claim that all UI behaviour
+has been exercised.
+
+Four capabilities in TWO protected, never-wired modules remain in that denominator:
+data/timeTrialSession and rules/mobilityPairing. They are explicitly classified
+dormant_quarantined, NOT canonical compiler helpers. Two options were compared:
+activate/delete that authored work during ownership cleanup, or preserve it with
+an enforced runtime boundary. The latter was chosen. Any runtime import, export,
+require, alias loader or lazy import of either module now fails the release gate;
+unresolvable dynamic module loaders fail closed. Arbitrary functions cannot be
+assigned the quarantine classification. Their source remains fingerprinted, and
+the inventory prints their separate count. This does not ship either feature.
+The new controls first failed three checks; all 41 detector controls now pass.
+Receipts: /tmp/testtruth-quarantine-before.log, /tmp/testtruth-quarantine-after.log.
+
+Other completed work since section 36:
+
+- Removed the unused buildPlanChangeProposal author (no app callers, only an old
+  synthetic test) and its private helper. The old test command now imports the
+  real canonical action/restart matrix; 604/604 checks pass in
+  /tmp/testtruth-plan-change-current.log. The census rejects restoring the author.
+- Removed diagnostic seed identity/timestamp rewriting. All 17 seed programs
+  retain EXACT canonical output; two real accepted seed-edit journeys additionally
+  survive restart and Undo: 29/29 checks in /tmp/testtruth-seed-identity-after.log
+  and the later weekly-writer gate. No athlete data was deleted; removed code is
+  recoverable from git.
+- Rebound the seed registry's stale empty-day, fabricated arms-session ID,
+  conditioning-profile and manifest assumptions. Zero team nights is now valid;
+  the conditioning showcase uses real pre-season/no-fixture/no-club answers.
+  The timezone diagnostic measured only metadata/local-noon differences; its
+  observation now compares ALL training data and calendar days, with a mutation
+  proving prescription/identity changes remain detectable. 87/87 checks in
+  /tmp/testtruth-seeds-current.log. No production output is normalised by that test.
+- Rebound derivedRepairOwnershipTests to actual onboarding plus accepted Add,
+  legacy rest-input compilation, and restart. It preserves the accepted ledger,
+  does not fabricate manual overrides, and rejects acceptance-boundary rewriting.
+  13/13 in /tmp/testtruth-derived-ownership-real.log. Added to the canonical gate.
+- Added real occupied-team-night move/restart/Undo across male/female and both
+  swap_safe/keep_regular choices. Initial six failures were fixture reachability
+  assumptions (the selected archetypes did not contain the presumed Back Squat),
+  not six product defects; the corrected real profiles reach the named shape.
+  32/32 pass, even with the old live swap resolver poisoned during restart.
+  /tmp/testtruth-team-move-final.log; included in test:team-night-content and the
+  canonical compiler gate.
+- All three typecheck scopes are zero: /tmp/testtruth-types-final.log. Baseline
+  remains empty. The canonical compound passed with exit 0 in
+  /tmp/testtruth-canonical-complete-final.log (the newly added team-night/repair
+  witnesses were also run separately and will run in the final full command).
+- Test-truth bootstrap passes. Historical proposal tests are an aggregate alias;
+  repaired seed fidelity is test infrastructure. Neither can dictate restoration
+  of old programming. The remaining historical rewrite labels are not app bugs.
+
+Final release is STILL PENDING at this checkpoint. The annual run that began
+before the last ownership reviews is completing in
+/tmp/testtruth-release-full-final.log; its prerequisite correctly remains red
+for the older snapshot. Run the complete release command again against the final
+state and record its actual exit. Do not turn that earlier report green by editing
+its result. Annual HTML is still generated solely from the gate result.
+
+NOT COVERED: physical UI/OS process-death/device acceptance; three older Maestro
+tapes (readiness-holds-load, conditioning-one-prescription, swap-load) still carry
+obsolete seed/content assumptions and were not run or claimed current; the wider
+historical diagnostic fleet; integration of the two quarantined features; full
+transitive clock purity (training semantics are checked, audit timestamps are not).
+The picker carries real selection history, but progressedIdentities remains empty
+in its context adapter; no new history-nudge equivalence claim is made. No commits
+or phone builds of these working-tree changes have been made.
+
+## 38. All five compiler steps verified; complete release gate green (2026-08-27)
+
+`npm run test:release` completed with process exit 0 and `RELEASE_GATE_EXIT=0`:
+**7/7 executable gate units green**, covering ten current product contracts plus
+test-truth bootstrap and real all-scope typechecking. The actual typecheck was
+missing from the earlier release runner (it ran only the typecheck-tool controls).
+That gap is now closed: missing/redirected typechecking and a real typecheck failure
+each block release. The three new controls first failed; releaseGateContractTests
+now passes 14/14. Receipts: /tmp/testtruth-release-types-before.log and
+/tmp/testtruth-release-types-after.log.
+
+Durable receipts in `outputs/compiler-year-acceptance/`:
+
+- `release-testtruth-2026-08-27.log`: the complete seven-unit command output.
+- `result.json` and `index.html`: 416 green / 416 reached / 416 required
+  athlete-weeks, eight distinct profiles x 52 weeks, zero distinct failure keys.
+  All four real-production mutation witnesses are green (each caught its injected
+  defect); HTML is a presentation of this same result, not another audit author.
+- `verified-source-testtruth-2026-08-27.json`: 1330 code, test, script, config and
+  Maestro files hashed; start and end hashes matched exactly:
+  `09b5bda50b5fc169c2c69e90ee8f83c90d2e3b5d3c9455e0df041287d7756b0a`.
+  This identifies the tested working-tree source; HEAD remains 5e7caee7.
+
+Five-part outcome:
+
+1. Injury/source-fact changes and reopening share canonical compilation. Real
+   injuries, dates, clear/resolve, accumulated athlete edits and restart are in
+   the current gate rather than a detached report.
+2. Adjustment clearing no longer independently edits generated content. The
+   canonical source-fact/clear/Undo paths and input-only compatibility persistence
+   passed the complete command, including the real rest-ingress/Add/restart case.
+3. Executable ownership gate passed: 0 rival authors, 0 direct derived-output
+   writers, 0 unresolved / 1137 reviewed capability owners. The FOUR protected
+   dormant functions remain counted and guarded against runtime imports; they
+   are not falsely described as integrated compiler helpers.
+4. Actual app, devtools and test typecheck scopes each report zero errors; baseline
+   remains empty. Test-truth census reports 351 diagnostic units, zero missing
+   commands and zero unrunnable files. Historical assertion failures are still
+   diagnostics, not permission to restore obsolete app behaviour.
+5. Annual acceptance and the COMPLETE release command passed. The old six-unit
+   command also passed; the seven-unit run above is the final authority.
+
+Next defect of these classes: changing an executable owner's body/callee graph or
+adding a writer invalidates its review; prohibited imports and retired authors
+fail even if someone attempts to classify them as approved. Full-year invariants,
+real live/restart/Undo comparisons, save-fault rollback checks and compiler mutation
+controls run through the same release command. Type failures now block it too.
+
+Questions for Sam: none blocks these five compiler steps. The preserved accessory-
+mobility pairing and 2 km assessment-session features still need deliberate compiler
+integration if they are to ship; this task did not silently activate them. Recommend
+reviewing this compiler checkpoint before adding those feature integrations.
+
+NOT COVERED: physical-phone/OS-process-death acceptance, remote persistence, the
+three older Maestro tapes named in section 37, the wider historical diagnostic
+fleet, integration of the two runtime-quarantined features, and transitive metadata
+clock purity. Those caveats have not been converted into passing claims. No new
+phone installation or commit; gates green, awaiting device acceptance. `git diff
+--check` passes, and no athlete data was removed by this resumed work.
+
+## 39. Verified checkpoint and Sam clean-install request (2026-08-28)
+
+Sam explicitly authorized saving/committing this work, rebuilding, and wiping
+LFA on HIS phone for fresh onboarding. Scope is the LFA app and its local data,
+not a device erase, cloud-data deletion, or any change to Renee's phone.
+
+Before committing, re-ran the source fingerprint over 1330 files: exactly
+09b5bda50b5fc169c2c69e90ee8f83c90d2e3b5d3c9455e0df041287d7756b0a, matching
+the start/end fingerprint of the complete 7/7 release run recorded in section 38.
+Re-read its exit-0 receipt; git diff --check is clean. No application code was
+changed for this deployment. The completed work is this seat's accumulated
+five-part compiler task; unrelated outputs and .fuse_hidden files remain intact
+and outside the commit. Other seats' latest status records were checked.
+
+Compared updating the existing install with a clean install. Sam expressly asked
+to start fresh, so build and verify the signed product BEFORE uninstalling LFA.
+Apple device discovery identifies Sam's paired iPhone 16 Pro Max as
+AFA21856-881E-587B-96D5-60817FD11018; Renee's distinct device is not targeted.
+
+Removed-author replacement map remains sections 25–38: injury/clear/travel use
+canonical source-fact/constraint compilation; seed edits use accepted actions;
+strength templates use the canonical row composer; old synthetic diagnostic
+authors are current compiler witnesses or test-only historical support. No
+authored pairing/time-trial feature is deleted or activated. Verification of
+the next defect class remains the complete release gate and its mutation arms,
+not this native packaging step.
+
+NOT COVERED: installation/launch still pending here, Sam's physical acceptance,
+the three old Maestro tapes, protected feature integration, remote persistence
+and transitive metadata clock purity. No new programming or UI changes in this
+deployment task. The build/install receipts will be appended after execution.

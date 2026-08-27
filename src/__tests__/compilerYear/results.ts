@@ -17,7 +17,25 @@ export interface YearResult {
   prerequisites: Check[]; mutations: Check[]; athletes: AthleteResult[];
   notCovered: string[];
 }
-export const WEEK_CHECKS = ['compiler_boundary', 'phase_clock', 'placement', 'fixtures', 'conservation', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging'] as const;
+export const WEEK_CHECKS = ['compiler_boundary', 'compiler_owns_visible_rows', 'phase_clock', 'placement', 'fixtures', 'conservation', 'energy_session_content', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging'] as const;
+export function requiredWeekChecks(week: Pick<WeekResult, 'phaseWeek' | 'phase' | 'index'>): readonly string[] {
+  if (week.phaseWeek === 10) return [...WEEK_CHECKS, 'carried_injury_report'];
+  if (week.phaseWeek === 11 || week.phaseWeek === 12) return [...WEEK_CHECKS, 'carried_injury_retained'];
+  if (week.phaseWeek === 13 || (week.phase === 'Pre-season' && week.phaseWeek === 1 && week.index > 0)) return [...WEEK_CHECKS, 'carried_injury_retained',
+    'carried_injury_after_rollover', 'carried_injury_resolved'];
+  return week.phaseWeek === 8 ? [...WEEK_CHECKS,
+    'facts_prior_edit', 'facts_history_unchanged', 'facts_update_identity', 'facts_improving_identity', 'facts_overlap_identity',
+    'facts_independent_resolution', 'facts_healthy_restored', 'facts_undo_edit_only',
+    'facts_undo_failure_program-store', 'facts_undo_failure_decision-ledger-store',
+    'facts_undo_failure_athlete-preferences-store',
+    'clear_shared_constraint_reached', 'clear_ambiguous_clear_refused', 'clear_failed_clear_rolled_back',
+    'clear_exact_clear', 'clear_other_report_retained', 'clear_remaining_restart',
+    'clear_generic_clear_restores', 'clear_cleared_restart',
+    'clear_trip_failed_clear_rolled_back', 'clear_trip_cleared_atomically', 'clear_trip_clear_restart', 'clear_trip_cleanup',
+    ...['active', 'updated', 'improving', 'overlap', 'one_remaining', 'resolved', 'undo'].flatMap(stage =>
+      ['restart', 'facts', 'ledger', 'acceptance_preserves_material', 'compiler_owns_visible_rows'].map(subject => `facts_${stage}_${subject}`)),
+  ] : WEEK_CHECKS;
+}
 
 /** Single verdict owner. Neither HTML nor a cached status field gets a vote. */
 export function yearVerdict(result: YearResult) {
@@ -27,6 +45,9 @@ export function yearVerdict(result: YearResult) {
   if (!result.prerequisites.some((c) => c.id === 'canonical_only' && c.ok)) fail('canonical_only');
   for (const check of result.prerequisites) if (!check.ok) fail(check.id, check.detail);
   if (!result.mutations.some((c) => c.id === 'real_compiler_mutation' && c.ok)) fail('real_compiler_mutation');
+  if (!result.mutations.some((c) => c.id === 'source_fact_history_mutation' && c.ok)) fail('source_fact_history_mutation');
+  if (!result.mutations.some((c) => c.id === 'acceptance_writer_mutation' && c.ok)) fail('acceptance_writer_mutation');
+  if (!result.mutations.some((c) => c.id === 'injury_render_writer_mutation' && c.ok)) fail('injury_render_writer_mutation');
   for (const check of result.mutations) if (!check.ok) fail(check.id, check.detail);
   const ids = result.athletes.map((a) => a.id);
   if (new Set(ids).size !== ids.length || ids.length !== ARCHETYPES.length) fail('archetype_coverage');
@@ -60,14 +81,14 @@ export function yearVerdict(result: YearResult) {
         fail(`${key}/identity`); continue;
       }
       if (week.status !== 'measured') { fail(`${key}/not_reached`, week.reason); continue; }
-      for (const id of WEEK_CHECKS) if (!week.checks.some((c) => c.id === id && c.ok)) fail(`${key}/${id}`);
+      for (const id of requiredWeekChecks(week)) if (!week.checks.some((c) => c.id === id && c.ok)) fail(`${key}/${id}`);
       for (const check of week.checks) if (!check.ok) fail(`${key}/${check.id}`, check.detail);
     }
   }
   const measured = result.athletes.flatMap((a) => a.weeks).filter((w) => w.status === 'measured');
   return { ok: failures.size === 0, failures: [...failures.values()],
     expectedWeeks: ARCHETYPES.length * YEAR_WEEKS, measuredWeeks: measured.length,
-    greenWeeks: measured.filter((w) => WEEK_CHECKS.every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok)).length };
+    greenWeeks: measured.filter((w) => requiredWeekChecks(w).every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok)).length };
 }
 
 const escape = (value: unknown) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -79,7 +100,7 @@ export function renderYearHtml(result: YearResult): string {
 <p>${verdict.greenWeeks} green weeks; ${verdict.measuredWeeks}/${verdict.expectedWeeks} weeks reached. Unreached weeks are not passes.</p>
 <p class="muted">Revision ${escape(result.revision)} · ${escape(result.startedAt)}. This page presents the gate's results; it has no separate scoring rules.</p>
 <h2>Prerequisites and detector checks</h2><ul>${[...result.prerequisites, ...result.mutations].map((c) => `<li class="${c.ok ? 'pass' : 'fail'}">${c.ok ? 'PASS' : 'FAIL'} ${escape(c.id)}: ${escape(c.detail ?? '')}</li>`).join('')}</ul>
-${result.athletes.map((a) => `<h2>${escape(a.id)}</h2><p>${a.loggedSessions} recorded sessions · ${a.restarts} restarts · ${a.compilerCalls} compiler calls</p><details><summary>52-week timeline and exact failures</summary><div class="scroll"><table><thead><tr><th>Week</th><th>Date / phase</th><th>Result</th><th>Details</th></tr></thead><tbody>${a.weeks.map((w) => `<tr><td>${w.index + 1}</td><td>${escape(w.weekStart)}<br>${escape(w.phase)} ${w.phaseWeek}</td><td>${w.status === 'not_reached' ? 'NOT REACHED' : WEEK_CHECKS.every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok) ? 'PASS' : 'FAIL'}</td><td>${escape(w.reason ?? w.checks.filter((c) => !c.ok).map((c) => `${c.id}: ${c.detail ?? ''}`).join(' | '))}</td></tr>`).join('')}</tbody></table></div></details>`).join('')}
+${result.athletes.map((a) => `<h2>${escape(a.id)}</h2><p>${a.loggedSessions} recorded sessions · ${a.restarts} restarts · ${a.compilerCalls} compiler calls</p><details><summary>52-week timeline and exact failures</summary><div class="scroll"><table><thead><tr><th>Week</th><th>Date / phase</th><th>Result</th><th>Details</th></tr></thead><tbody>${a.weeks.map((w) => `<tr><td>${w.index + 1}</td><td>${escape(w.weekStart)}<br>${escape(w.phase)} ${w.phaseWeek}</td><td>${w.status === 'not_reached' ? 'NOT REACHED' : requiredWeekChecks(w).every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok) ? 'PASS' : 'FAIL'}</td><td>${escape(w.reason ?? w.checks.filter((c) => !c.ok).map((c) => `${c.id}: ${c.detail ?? ''}`).join(' | '))}</td></tr>`).join('')}</tbody></table></div></details>`).join('')}
 <details><summary>All blocking results (${verdict.failures.length})</summary><ul>${verdict.failures.map((f) => `<li>${escape(f)}</li>`).join('')}</ul></details>
 <h2>Not covered</h2><ul>${result.notCovered.map((s) => `<li>${escape(s)}</li>`).join('')}</ul></html>`;
 }

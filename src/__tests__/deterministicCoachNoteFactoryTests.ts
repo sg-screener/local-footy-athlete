@@ -13,7 +13,6 @@ import {
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
 import { coachingPlanForTests } from './support/coachingPlanForTests';
-import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 
 let pass = 0;
 let fail = 0;
@@ -213,28 +212,7 @@ console.log('\n[3] testing notes require an actual generated-plan difference');
     notesFor(neutralWorkouts));
 }
 
-console.log('\n[4] testing robustness note follows actual safe add-on ordering');
-{
-  const baseWeek = [
-    workout({ id: 'lower', dayOfWeek: 1, name: 'Lower Strength' }),
-    workout({ id: 'upper', dayOfWeek: 2, name: 'Upper Strength', exercises: [] }),
-    workout({ id: 'recovery', dayOfWeek: 3, name: 'Recovery', workoutType: 'Recovery', sessionTier: 'recovery', exercises: [] }),
-    workout({ id: 'full', dayOfWeek: 4, name: 'Full Body Strength', exercises: [] }),
-    workout({ id: 'aerobic', dayOfWeek: 5, name: 'Easy Aerobic', workoutType: 'Conditioning', exercises: [] }),
-  ];
-  const adjusted = attachRecoveryAddonsToWeek({
-    workouts: baseWeek,
-    profile: { ...BASE_PROFILE, biggestLimitation: 'Injury history' },
-    weekKind: 'build',
-  });
-  const notes = notesFor(adjusted);
-  ok('testing/injury-history ordering creates a proven prehab note',
-    notes.some((note) => note.title === 'Testing focus active' && /Prehab support/i.test(note.body)),
-    notes);
-  const beforeCounts = countWeeklyExposures(visibleDays(baseWeek));
-  const afterCounts = countWeeklyExposures(visibleDays(adjusted));
-  eq('recovery note evidence creates no extra hard day', afterCounts.hardExposures, beforeCounts.hardExposures);
-}
+// Retired: standalone add-on ordering and its notes no longer have a runtime producer.
 
 console.log('\n[5] subphase notes require typed visible dose evidence');
 {

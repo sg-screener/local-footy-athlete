@@ -1,572 +1,82 @@
 /**
- * ProgramStore hydration ownership invariants.
- *
- * Run: npm run test:program-hydration-ownership
+ * Current-format boot owns material reconstruction; saved outputs are not inputs.
+ * Replaces obsolete scalar/snapshot hydration and compatibility-constraint migration.
+ * NOT COVERED: native storage adapter/device launch; legacy unreadable-envelope UX.
  */
-
-(global as unknown as { __DEV__: boolean }).__DEV__ = false;
-process.env.TZ = 'Australia/Melbourne';
-
+Object.assign(globalThis, { __DEV__: true });
 const storage = new Map<string, string>();
-(globalThis as unknown as { window: unknown }).window = {
-  localStorage: {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => { storage.set(key, value); },
-    removeItem: (key: string) => { storage.delete(key); },
-    clear: () => storage.clear(),
-  },
-};
-
-const NOW = '2026-07-13T00:00:00.000Z';
-const WEEK = '2026-07-13';
-
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function row(workoutId: string, suffix: string, name: string, role: string) {
-  return {
-    id: `${workoutId}:${suffix}`,
-    workoutId,
-    exerciseId: `${workoutId}:exercise:${suffix}`,
-    exerciseOrder: suffix === 'strength' ? 1 : 2,
-    prescribedSets: role === 'conditioning' ? 1 : 3,
-    prescribedRepsMin: role === 'conditioning' ? 1 : 6,
-    prescribedRepsMax: role === 'conditioning' ? 1 : 8,
-    prescribedWeightKg: 0,
-    restSeconds: 90,
-    notes: role === 'conditioning' ? '5 x 2min' : '3 x 6-8',
-    section18Evidence: {
-      protocolVersion: 1,
-      role,
-      strengthPattern: role === 'main_strength' ? 'squat' : null,
-      mainStrengthPattern: role === 'main_strength' ? 'squat' : null,
-      provenance: 'canonical_row_classifier',
-    },
-    exercise: {
-      id: `${workoutId}:exercise:${suffix}`,
-      name,
-      description: name,
-      muscleGroups: [],
-      exerciseType: role === 'conditioning' ? 'Cardio' : 'Compound',
-      equipmentRequired: [],
-      difficultyLevel: 'Intermediate',
-      createdAt: NOW,
-      updatedAt: NOW,
-    },
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-}
-
-function mixedWorkout(id = 'accepted-mixed', dayOfWeek = 1) {
-  const strength = row(id, 'strength', 'Back Squat', 'main_strength');
-  const conditioning = row(id, 'conditioning', 'Assault Bike Sprints', 'conditioning');
-  return {
-    id,
-    microcycleId: 'accepted-week',
-    dayOfWeek,
-    name: 'Lower Strength + Assault Bike Sprints',
-    description: 'Typed mixed session',
-    durationMinutes: 60,
-    intensity: 'Moderate',
-    workoutType: 'Strength',
-    sessionTier: 'core',
-    planEntryId: `${id}:plan`,
-    strengthIntent: {
-      archetype: 'lower',
-      primaryPattern: 'squat',
-      plannedPatterns: ['squat'],
-      effectivePatterns: ['squat'],
-    },
-    strengthPatternContributions: ['squat'],
-    conditioningCategory: 'sprint',
-    conditioningFlavour: 'high-intensity',
-    conditioningBlock: {
-      intent: 'high-intensity',
-      attachedKind: 'component',
-      options: [{
-        title: 'Assault Bike Sprints',
-        description: '5 x 2min',
-        exerciseIds: [conditioning.id],
-      }],
-    },
-    hasCombinedConditioning: true,
-    attachedConditioningKind: 'component',
-    section18ConditioningRole: 'planner_selected_core',
-    section18Evidence: {
-      protocolVersion: 1,
-      conditioningRole: 'core',
-      conditioningStress: 'hard',
-      provenance: 'planner_and_canonical_content',
-    },
-    exercises: [strength, conditioning],
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-}
-
-function simpleWorkout(id: string, dayOfWeek: number, workoutType: string) {
-  return {
-    id,
-    microcycleId: 'accepted-week',
-    dayOfWeek,
-    name: workoutType,
-    description: workoutType,
-    durationMinutes: workoutType === 'Recovery' ? 30 : 60,
-    intensity: workoutType === 'Recovery' ? 'Light' : 'Moderate',
-    workoutType,
-    sessionTier: workoutType === 'Recovery' ? 'recovery' : 'core',
-    section18Evidence: {
-      protocolVersion: 1,
-      conditioningRole: workoutType === 'Conditioning' ? 'core' : 'none',
-      conditioningStress: workoutType === 'Conditioning' ? 'moderate' : 'unknown',
-      provenance: 'planner_and_canonical_content',
-    },
-    ...(workoutType === 'Conditioning' ? {
-      conditioningCategory: 'tempo',
-      conditioningFlavour: 'tempo',
-      conditioningBlock: {
-        intent: 'tempo',
-        options: [{ title: 'Tempo Intervals', description: '4 x 4min', exerciseIds: [] }],
-      },
-      hasCombinedConditioning: false,
-    } : {}),
-    ...(workoutType === 'Strength' ? {
-      strengthIntent: {
-        archetype: 'upper', primaryPattern: 'push',
-        plannedPatterns: ['push'], effectivePatterns: ['push'],
-      },
-      strengthPatternContributions: ['push'],
-    } : {}),
-    exercises: [],
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-}
-
-function currentContract() {
-  return { protocolVersion: 2, authority: 'LFA_PROGRAMMING_BIBLE_SECTION_18' };
-}
-
-function acceptedFixture() {
-  const workouts = [
-    mixedWorkout(),
-    simpleWorkout('accepted-game', 2, 'Game'),
-    simpleWorkout('accepted-recovery', 3, 'Recovery'),
-    simpleWorkout('accepted-strength', 4, 'Strength'),
-    simpleWorkout('accepted-conditioning', 5, 'Conditioning'),
-  ];
-  const microcycle = {
-    id: 'accepted-week', programId: 'accepted-program', weekNumber: 1,
-    startDate: WEEK, endDate: '2026-07-19', miniCycleNumber: 1,
-    intensityMultiplier: 1, weekKind: 'build', exposureContractV2: currentContract(),
-    workouts, createdAt: NOW, updatedAt: NOW,
-  };
-  const program = {
-    id: 'accepted-program', userId: 'athlete', name: 'Accepted program', description: '',
-    programPhase: 'In-season', startDate: WEEK, endDate: '2026-08-09',
-    microcycles: [microcycle], primaryFocus: 'Football', isActive: true,
-    createdAt: NOW, updatedAt: NOW,
-  };
-  const overlayWorkout = simpleWorkout('weekly-overlay-owned', 1, 'Recovery');
-  const overlay = {
-    id: 'weekly-overlay-owned', weekStart: '2026-07-20', weekEnd: '2026-07-26',
-    anchorDate: null, reason: 'one_off_game', exposureContractV2: currentContract(),
-    workoutsByDate: { '2026-07-20': overlayWorkout }, createdAt: NOW, updatedAt: NOW,
-  };
-  const deletedWorkout = simpleWorkout('deleted-session', 0, 'Strength');
-  const removal = {
-    protocolVersion: 1, id: 'removal:deleted-session', authorship: 'user', source: 'coach',
-    mutationKind: 'deletion', status: 'active', targetDate: '2026-07-19',
-    scope: 'whole_session', targetPlanEntryId: 'deleted:plan', targetWorkoutId: 'deleted-session',
-    originalWorkout: deletedWorkout, remainingWorkout: null,
-    equivalentExposureMayRelocate: false, wholeDayRestOwned: true,
-    createdAt: NOW, restoredAt: null, restorationReason: null,
-  };
-  const ledger = {
-    protocolVersion: 1,
-    adjustments: [{
-      protocolVersion: 1,
-      id: 'reversible:weekly-overlay-owned',
-      kind: 'session_add',
-      sourceActor: 'athlete',
-      sourceSurface: 'program_tab',
-      sourceActionOrIntentId: 'weekly-overlay-action',
-      createdAt: NOW,
-      acceptedRevision: 7,
-      status: 'active',
-      ownershipToken: 'must-survive-byte-for-byte',
-    }],
-  };
-  const surfaces = {
-    currentProgram: program,
-    currentMicrocycle: microcycle,
-    todayWorkout: workouts[0],
-    blockState: { blockStartDate: WEEK, blockNumber: 1 },
-    dateOverrides: { '2026-07-16': workouts[3] },
-    overrideContexts: {
-      '2026-07-16': { intent: 'program_adjustment', label: 'Athlete-owned move destination' },
-    },
-    weekScopedOverlays: { '2026-07-20': overlay },
-    userRemovalConstraints: [removal],
-    reversibleAdjustmentLedger: ledger,
-    exposureContractsByWeek: {},
-  };
-  const equipmentFact = {
-    protocolVersion: 1,
-    factId: 'temporary-source-fact:v1:equipment:week:2026-07-13',
-    factKind: 'equipment', status: 'active', observedDate: WEEK,
-    effectiveFrom: WEEK, effectiveUntil: '2026-07-19',
-    scope: { kind: 'week', weekStart: WEEK, from: WEEK, until: '2026-07-19' },
-    athleteReportedLevel: 'unspecified', mode: 'only', equipmentTags: ['bike_or_treadmill'],
-    conditioningModalities: ['bike'], createdAt: NOW, updatedAt: NOW, resolvedAt: null,
-    sourceActor: 'athlete', sourceSurface: 'coach_chat', legacyMigrationStatus: 'native_v1',
-    transitionHistory: [{
-      at: NOW, from: null, to: 'active', actor: 'athlete', surface: 'coach_chat', reason: 'created',
-    }],
-  };
-  const profile = {
-    seasonPhase: 'In-season', trainingDaysPerWeek: 5,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    availabilityConstraints: [],
-  };
-  const acceptedMaterialContext = {
-    markedDays: { '2026-07-14': 'game' },
-    readinessSignalsByDate: {
-      '2026-07-15': {
-        date: '2026-07-15', timeAvailableMinutes: 45,
-        source: 'quick_check', updatedAt: NOW,
-      },
-    },
-    activeConstraints: [], activeInjury: null, injuryEpisodes: [],
-    temporarySourceFacts: [equipmentFact],
-    acceptedCompositionBase: {
-      protocolVersion: 1, capturedAt: NOW, updatedAt: NOW, sourceRevision: 7,
-      provenance: 'accepted_pre_injury', surfaces: clone(surfaces),
-    },
-    acceptedProfileSnapshot: {
-      protocolVersion: 1, capturedAt: NOW, updatedAt: NOW, sourceRevision: 7,
-      onboardingData: profile,
-    },
-    revision: 7, lastTransaction: 'accepted-fixture',
-  };
-  return {
-    ...surfaces,
-    acceptedMaterialContext,
-    isGenerating: false, isLoading: false, error: null,
-    sessionFeedback: {}, weightOverrides: {},
-  };
-}
-
-function componentFingerprint(workout: any): string {
-  return JSON.stringify({
-    id: workout.id,
-    strengthIntent: workout.strengthIntent,
-    conditioningBlock: workout.conditioningBlock,
-    section18Evidence: workout.section18Evidence,
-    section18ConditioningRole: workout.section18ConditioningRole,
-    exercises: workout.exercises,
-  });
-}
-
-function acceptedSemanticFingerprint(state: any): string {
-  return JSON.stringify({
-    program: state.currentProgram,
-    microcycle: state.currentMicrocycle,
-    todayWorkout: state.todayWorkout,
-    dateOverrides: state.dateOverrides,
-    overrideContexts: state.overrideContexts,
-    overlays: state.weekScopedOverlays,
-    removals: state.userRemovalConstraints,
-    ledger: state.reversibleAdjustmentLedger,
-    facts: state.acceptedMaterialContext.temporarySourceFacts,
-    base: state.acceptedMaterialContext.acceptedCompositionBase,
-    profile: state.acceptedMaterialContext.acceptedProfileSnapshot,
-    markedDays: state.acceptedMaterialContext.markedDays,
-    readiness: state.acceptedMaterialContext.readinessSignalsByDate,
-  });
-}
-
+Object.assign(globalThis, { window: { localStorage: {
+  getItem: (key: string) => storage.get(key) ?? null,
+  setItem: (key: string, value: string) => { storage.set(key, value); },
+  removeItem: (key: string) => { storage.delete(key); },
+  clear: () => { storage.clear(); },
+} } });
+const { armTotalsOrRed, totalsPrinted } = require('./support/totalsOrRed') as typeof import('./support/totalsOrRed');
+armTotalsOrRed();
+const { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } =
+  require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+const { athleteAnswers, ARCHETYPES, YEAR_START } = require('./compilerYear/catalog') as typeof import('./compilerYear/catalog');
+const { sourceFactLifecycle, acceptancePreservesCompilerOutput, acceptanceBoundaryMutation } =
+  require('./compilerYear/sourceFacts') as typeof import('./compilerYear/sourceFacts');
+const { clearFactLifecycle } = require('./compilerYear/clearFacts') as typeof import('./compilerYear/clearFacts');
+const { useProgramStore, readDurableProgramStoreEnvelope } = require('../store/programStore') as typeof import('../store/programStore');
+const { flushPendingStorageWrites } = require('../store/asyncStorageCompat') as typeof import('../store/asyncStorageCompat');
+const { decisionLedgerEntries } = require('../store/decisionLedgerStore') as typeof import('../store/decisionLedgerStore');
+const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek') as typeof import('../utils/deriveVisibleWeek');
+const { visibleSignature } = require('./compilerYear/invariants') as typeof import('./compilerYear/invariants');
 let passed = 0;
-const failures: string[] = [];
-
-async function run(name: string, body: () => void | Promise<void>): Promise<void> {
-  try {
-    await body();
-    passed += 1;
-    console.log(`  PASS ${name}`);
-  } catch (error) {
-    failures.push(name);
-    console.error(`  FAIL ${name}`, error);
+const failed: string[] = [];
+function check(name: string, ok: unknown, detail?: unknown) {
+  if (ok) { passed++; console.log('PASS', name); }
+  else { failed.push(name); console.error('FAIL', name, detail ?? ''); }
+}
+async function main() {
+  const installed = await quietAsync(() => coldStartThroughOnboarding({
+    profile: athleteAnswers(ARCHETYPES.find(athlete => athlete.id === 'male-3-experienced-gym')!),
+    installDayISO: YEAR_START,
+  }));
+  check('real onboarding produced material', !installed.onboardingRefusal && !!useProgramStore.getState().currentProgram);
+  for (const result of await sourceFactLifecycle({ weekStart: YEAR_START, storage })) {
+    check(result.id, result.ok, result.detail);
   }
-}
-
-function assert(condition: unknown, detail: string): asserts condition {
-  if (!condition) throw new Error(detail);
-}
-
-async function main(): Promise<void> {
-  const fixture = acceptedFixture();
-  const beforeMixed = fixture.currentProgram.microcycles[0].workouts[0];
-  const beforeComponent = componentFingerprint(beforeMixed);
-  storage.set('profile-store', JSON.stringify({
-    state: { onboardingData: { seasonPhase: 'Off-season', trainingDaysPerWeek: 1 } }, version: 0,
+  for (const result of await clearFactLifecycle(YEAR_START, storage)) {
+    check(result.id, result.ok, result.detail);
+  }
+  await quietAsync(() => flushPendingStorageWrites());
+  const persisted = JSON.parse((await readDurableProgramStoreEnvelope()) ?? '{}');
+  check('current envelope exists and contains inputs', persisted.state?.inputs?.generationAnchorISO);
+  const forbidden = ['currentProgram', 'currentMicrocycle', 'todayWorkout', 'dateOverrides',
+    'weekScopedOverlays', 'userRemovalConstraints', 'reversibleAdjustmentLedger'];
+  check('no derived material is persisted at top level or in inputs', forbidden.every(key =>
+    !(key in persisted.state) && !(key in persisted.state.inputs)));
+  const snapshot = () => visibleSignature(quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START)));
+  const before = snapshot();
+  const ledger = JSON.stringify(decisionLedgerEntries());
+  for (let index = 0; index < 2; index++) {
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check('current boot reconstructs identical material ' + index, boot.ok && snapshot() === before, boot.error);
+    check('boot never rewrites athlete ledger ' + index, JSON.stringify(decisionLedgerEntries()) === ledger);
+    check('acceptance never rewrites reconstructed material ' + index,
+      quiet(() => acceptancePreservesCompilerOutput(YEAR_START)));
+  }
+  const mutation = await acceptanceBoundaryMutation();
+  check(mutation.id, mutation.ok, mutation.detail);
+  // A surviving calendar input must load without running a second week author.
+  const { asyncStorageDurable } = require('../store/asyncStorageCompat') as typeof import('../store/asyncStorageCompat');
+  const { useCalendarStore } = require('../store/calendarStore') as typeof import('../store/calendarStore');
+  await flushPendingStorageWrites();
+  await asyncStorageDurable.setItem('calendar-storage', JSON.stringify({
+    state: { markedDays: { [YEAR_START]: 'rest' } }, version: 0,
   }));
-  storage.set('coach-updates', JSON.stringify({
-    state: { activeConstraints: [{ id: 'conflicting-mirror', type: 'injury', status: 'active' }] },
-    version: 0,
-  }));
-  storage.set('program-store', JSON.stringify({ state: clone(fixture), version: 0 }));
-
-  const programStore = require('../store/programStore') as typeof import('../store/programStore');
-  const projection = require('../store/programHydrationProjection') as
-    typeof import('../store/programHydrationProjection');
-  /**
-   * THE READ BOUNDARY, AS IT NOW STANDS.
-   *
-   * These cells called `programStore.canonicaliseHydratedState(state, { ingressKind:
-   * 'accepted_canonical' })`. That function was deleted on 2026-08-14 with the
-   * legacy structural-migration pipeline. ON THE `accepted_canonical` INGRESS ITS
-   * WHOLE BODY WAS THESE TWO CALLS AND AN EARLY RETURN — the migration branch was
-   * the only thing below it — so this is the same code under its own names, not a
-   * lighter substitute, and the assertions below are unchanged.
-   */
-  const canonicaliseAtReadBoundary = (state: Record<string, unknown>): any =>
-    projection.projectHydratedStateDerivedFields(state);
-  const temporaryFacts = require('../rules/temporarySourceFact') as
-    typeof import('../rules/temporarySourceFact');
-  const reversible = require('../rules/reversibleAdjustmentLedger') as
-    typeof import('../rules/reversibleAdjustmentLedger');
-
-  await run('2 accepted mixed workout repairs stale workoutType without semantic mutation', () => {
-    const projected = canonicaliseAtReadBoundary(clone(fixture) as any);
-    const mixed = projected.currentProgram.microcycles[0].workouts[0];
-    assert(mixed.workoutType === 'Mixed', `type=${mixed.workoutType}`);
-    assert(componentFingerprint(mixed) === beforeComponent, 'component/exercise fingerprint changed');
-  });
-
-  await run('3 real persistence hydration remains 5/5/5 and repairs scalar authority', async () => {
-    const storedCount = fixture.currentProgram.microcycles[0].workouts.length;
-    await programStore.useProgramStore.persist.rehydrate();
-    const first = programStore.useProgramStore.getState();
-    const firstCount = first.currentProgram?.microcycles[0].workouts.length ?? 0;
-    await programStore.useProgramStore.persist.rehydrate();
-    const second = programStore.useProgramStore.getState();
-    const secondCount = second.currentProgram?.microcycles[0].workouts.length ?? 0;
-    assert(`${storedCount}/${firstCount}/${secondCount}` === '5/5/5',
-      `counts=${storedCount}/${firstCount}/${secondCount}`);
-    assert(second.currentProgram?.microcycles[0].workouts[0].workoutType === 'Mixed',
-      'stale scalar survived real hydration');
-  });
-
-  let firstFingerprint = '';
-  await run('4 canonical envelope is semantically idempotent over first and second hydration', async () => {
-    const first = programStore.useProgramStore.getState();
-    firstFingerprint = acceptedSemanticFingerprint(first);
-    await programStore.useProgramStore.persist.rehydrate();
-    const twice = acceptedSemanticFingerprint(programStore.useProgramStore.getState());
-    assert(twice === firstFingerprint, 'second hydration changed accepted semantics');
-  });
-
-  await run('5 accepted deletion ownership remains deleted', () => {
-    const state = programStore.useProgramStore.getState();
-    const ids = state.currentProgram?.microcycles.flatMap((week) =>
-      week.workouts.map((workout) => workout.id)) ?? [];
-    assert(!ids.includes('deleted-session'), 'deleted session resurrected');
-    assert(state.userRemovalConstraints[0]?.id === 'removal:deleted-session',
-      'deletion ownership changed');
-  });
-
-  await run('6 move, fixture, override and week-overlay ownership remains unchanged', () => {
-    const state = programStore.useProgramStore.getState();
-    assert(state.acceptedMaterialContext.markedDays['2026-07-14'] === 'game',
-      'fixture changed');
-    assert(state.overrideContexts['2026-07-16']?.label === 'Athlete-owned move destination',
-      'move/override context changed');
-    const overlay = state.weekScopedOverlays['2026-07-20'];
-    assert(overlay?.reason === 'one_off_game' && overlay.id === 'weekly-overlay-owned',
-      'week-overlay ownership changed');
-  });
-
-  await run('7 current source facts, readiness, equipment and accepted profile truth remain unchanged', () => {
-    const state = programStore.useProgramStore.getState();
-    assert(JSON.stringify(state.acceptedMaterialContext.temporarySourceFacts) ===
-      JSON.stringify(fixture.acceptedMaterialContext.temporarySourceFacts),
-    'source facts changed');
-    assert(state.acceptedMaterialContext.temporarySourceFacts[0]?.factKind === 'equipment',
-      'equipment source fact disappeared');
-    assert(state.acceptedMaterialContext.readinessSignalsByDate['2026-07-15']
-      ?.timeAvailableMinutes === 45, 'readiness changed');
-    assert(JSON.stringify(state.acceptedMaterialContext.acceptedProfileSnapshot) ===
-      JSON.stringify(fixture.acceptedMaterialContext.acceptedProfileSnapshot),
-    'accepted profile truth changed');
-  });
-
-  await run('8 reversible ledger identities and ownership remain byte-for-byte unchanged', () => {
-    const state = programStore.useProgramStore.getState();
-    assert(JSON.stringify(state.reversibleAdjustmentLedger) ===
-      JSON.stringify(fixture.reversibleAdjustmentLedger), 'reversible ledger changed');
-    assert(state.reversibleAdjustmentLedger.adjustments[0]?.id ===
-      'reversible:weekly-overlay-owned', 'ledger identity changed');
-  });
-
-  await run('9 accepted composition base is preserved except derived projections', () => {
-    const base = programStore.useProgramStore.getState().acceptedMaterialContext
-      .acceptedCompositionBase;
-    assert(base?.provenance === 'accepted_pre_injury' && base.sourceRevision === 7,
-      'base provenance changed');
-    assert(base.surfaces.currentProgram?.microcycles[0].workouts[0].workoutType === 'Mixed',
-      'base derived scalar was not projected');
-    assert(componentFingerprint(base.surfaces.currentProgram?.microcycles[0].workouts[0]) ===
-      beforeComponent, 'base component semantics changed');
-  });
-
-  await run('10 persisted readback equals the accepted normalized state', () => {
-    const envelope = JSON.parse(storage.get('program-store') ?? '{}');
-    const persistedFingerprint = acceptedSemanticFingerprint(envelope.state);
-    const liveFingerprint = acceptedSemanticFingerprint(programStore.useProgramStore.getState());
-    assert(persistedFingerprint === liveFingerprint, 'accepted/persisted normalization drift');
-    assert(envelope.state.currentProgram.microcycles[0].workouts[0].workoutType === 'Mixed',
-      'normalized derived scalar was not durably acknowledged');
-  });
-
-  await run('11 cold readback has the same canonical semantic fingerprint', async () => {
-    await programStore.useProgramStore.persist.rehydrate();
-    assert(acceptedSemanticFingerprint(programStore.useProgramStore.getState()) === firstFingerprint,
-      'cold readback fingerprint changed');
-  });
-
-  await run('12 compatibility-store import/hydration order cannot override accepted truth', () => {
-    const context = programStore.useProgramStore.getState().acceptedMaterialContext;
-    assert(context.acceptedProfileSnapshot?.onboardingData.seasonPhase === 'In-season',
-      'profile mirror overrode accepted profile');
-    assert(!context.activeConstraints.some((constraint) => constraint.id === 'conflicting-mirror'),
-      'coach compatibility mirror overrode accepted context');
-  });
-
-  const legacyMixed = {
-    ...mixedWorkout('legacy-mixed'),
-    strengthIntent: undefined,
-    strengthPatternContributions: ['squat'],
-    workoutType: 'Strength',
-  };
-  /**
-   * TWO CELLS STOOD HERE AND ARE DELETED (2026-08-14), NOT WEAKENED.
-   *
-   * "13 legacy scalar and contribution-owned workout migrates to typed Mixed"
-   * and "14 legacy typed-intent compatibility representation migrates
-   * idempotently" both drove `canonicaliseHydratedState` on the
-   * `migration_required` ingress — the legacy STRUCTURAL migration, which is
-   * gone. It is gone because it was unreachable: `programStore.partialize`
-   * persists INPUTS only, `currentProgram`/`currentMicrocycle`/`dateOverrides`
-   * are never written to disk, and every boot regenerates the week through
-   * `quiescentBoot`. A cell whose subject cannot be reached passes for the wrong
-   * reason, and rewiring these to a live door would have been inventing a new
-   * claim rather than keeping an old one.
-   *
-   * AND ON 2026-08-19 THE CLASSIFIER WENT TOO (demolition area B/G). Cells 1,
-   * 13 and 18 were its implementation tests and were deleted with it. It had
-   * ZERO production callers: a stored world the current code cannot read is
-   * RESET CLEAN by `readStoredWorldOrResetClean` (Sam, 2026-08-10), which is
-   * the surviving owner of "can this envelope be read".
-   */
-  const legacyEquipmentConstraint = {
-    id: 'legacy-equipment', type: 'equipment', status: 'active', startDate: WEEK,
-    expiresAt: '2026-07-19', mode: 'only', tags: ['bike_or_treadmill'],
-    conditioningModalities: ['bike'], lastUpdatedAt: NOW,
-  } as any;
-  await run('15 legacy compatibility constraint migrates to a current source fact', async () => {
-    const facts = temporaryFacts.migrateLegacyTemporarySourceFacts({
-      activeConstraints: [legacyEquipmentConstraint],
-      activeInjury: null,
-      readinessSignalsByDate: {},
-      sourceSurface: 'program_store_hydration',
-    });
-    assert(facts.length === 1 && facts[0].protocolVersion === 1 &&
-      'factKind' in facts[0] && facts[0].factKind === 'equipment',
-    'legacy constraint did not become canonical source fact');
-    const legacyEnvelope = {
-      currentProgram: null,
-      currentMicrocycle: null,
-      todayWorkout: null,
-      blockState: null,
-      dateOverrides: { [WEEK]: clone(legacyMixed) },
-      overrideContexts: {},
-      weekScopedOverlays: {},
-      userRemovalConstraints: [clone(fixture.userRemovalConstraints[0])],
-      exposureContractsByWeek: {},
-      acceptedMaterialContext: {
-        markedDays: {}, readinessSignalsByDate: {},
-        activeConstraints: [legacyEquipmentConstraint], activeInjury: null,
-        injuryEpisodes: [], temporarySourceFacts: [],
-        acceptedCompositionBase: null, acceptedProfileSnapshot: null,
-        revision: 0, lastTransaction: null,
-      },
-      isGenerating: false, isLoading: false, error: null,
-      sessionFeedback: {}, weightOverrides: {},
-    } as any;
-    const legacySerialized = JSON.stringify({ state: legacyEnvelope, version: 0 });
-    storage.set('program-store', legacySerialized);
-    assert(await programStore.readDurableProgramStoreEnvelope() === legacySerialized,
-      'legacy fixture was not installed in durable storage');
-    await programStore.useProgramStore.persist.rehydrate();
-    const hydratedFacts = programStore.useProgramStore.getState().acceptedMaterialContext
-      .temporarySourceFacts;
-    assert(hydratedFacts.some((fact: any) => fact.factKind === 'equipment' &&
-      fact.legacyMigrationStatus === 'legacy_after_state_only'),
-      `real ProgramStore hydration did not publish the canonical source fact: ${JSON.stringify(hydratedFacts)}`);
-  });
-
-  await run('16 legacy reversible ownership migrates to normalized protocol', () => {
-    const removal = fixture.userRemovalConstraints[0] as any;
-    const ledger = reversible.normalizeReversibleAdjustmentLedger({
-      value: undefined,
-      userRemovalConstraints: [removal],
-      acceptedRevision: 1,
-    });
-    assert(ledger.protocolVersion === 1 && ledger.adjustments.length === 1,
-      'legacy reversible record was not migrated');
-    assert(ledger.adjustments[0].linkedUserRemovalConstraintIds.includes(removal.id),
-      'legacy reversible ownership identity changed');
-    const hydratedLedger = programStore.useProgramStore.getState().reversibleAdjustmentLedger;
-    assert(hydratedLedger.protocolVersion === 1 && hydratedLedger.adjustments.some((adjustment) =>
-      adjustment.linkedUserRemovalConstraintIds?.includes(removal.id)),
-    `real ProgramStore hydration did not migrate legacy reversible ownership: ${JSON.stringify(hydratedLedger)}`);
-  });
-
-  await run('17 scalar fields never override typed components or exercises', () => {
-    const mutant = mixedWorkout('scalar-mutant');
-    mutant.workoutType = 'Recovery' as any;
-    const protectedRecovery = canonicaliseAtReadBoundary({
-      dateOverrides: { [WEEK]: clone(mutant) }, userRemovalConstraints: [],
-    } as any);
-    mutant.workoutType = 'Conditioning' as any;
-    const projected = canonicaliseAtReadBoundary({
-      dateOverrides: { [WEEK]: mutant }, userRemovalConstraints: [],
-    } as any);
-    assert(protectedRecovery.dateOverrides[WEEK].workoutType === 'Mixed',
-      'recovery scalar overrode typed mixed components');
-    assert(projected.dateOverrides[WEEK].workoutType === 'Mixed',
-      'generic scalar overrode typed mixed components');
-    assert(componentFingerprint(projected.dateOverrides[WEEK]) === componentFingerprint(mutant),
-      'typed prescription changed during scalar repair');
-  });
-
-  // 14, NOT 17, SINCE 2026-08-19 — and the number is stated rather than left to
-  // drift. It was 17, NOT 18, since 2026-08-14: old cell 14 ("legacy typed-intent
-  // … migrates idempotently") went with the legacy structural migration it drove.
-  // Demolition area B/G then deleted the ingress CLASSIFIER itself, and cells 1,
-  // 13 and 18 were its implementation tests, so they went with it — 7 passes
-  // became 4, and the 10 failures below are UNCHANGED by that deletion.
-  // The cell NUMBERS are deliberately left alone: 1, 13, 14 and 18 are absent,
-  // and a silent renumber would make the history of this file unreadable
-  // against its own commits.
-  console.log(`\nProgram hydration ownership totals: passed=${passed}/14 failures=${failures.length}`);
-  if (failures.length > 0) process.exit(1);
+  let publications = 0;
+  const unsubscribe = useProgramStore.subscribe(() => { publications++; });
+  try { await quietAsync(async () => { await useCalendarStore.persist.rehydrate(); }); }
+  finally { unsubscribe(); }
+  check('calendar hydration reads the persisted input', useCalendarStore.getState().markedDays[YEAR_START] === 'rest');
+  check('calendar hydration cannot publish or repair program material', publications === 0, { publications });
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
+main().catch(error => { failed.push(String(error)); console.error(error); }).finally(() => {
+  console.log('Hydration: ' + passed + ' passed, ' + failed.length + ' failed');
+  totalsPrinted(failed.length);
+  if (failed.length) process.exitCode = 1;
 });

@@ -21,6 +21,7 @@ import {
 import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
 import { composedIdentityFor } from './composedRowLegality';
 import type { Workout, WorkoutExercise } from '../types/domain';
+import { isoDateForWeekday } from '../utils/appDate';
 
 /** The specialist's decision for one day, plus what the row builder needs. */
 export interface ComposedPowerPlacement {
@@ -88,9 +89,9 @@ function materialiseRow(
   row: ComposedDay['rows'][number],
   workoutId: string,
   index: number,
+  stamp: string,
 ): WorkoutExercise {
   const exercise = findOrCreateExercise(row.identity);
-  const stamp = new Date().toISOString();
   return {
     id: `we-${workoutId}-${index}`,
     workoutId,
@@ -106,7 +107,7 @@ function materialiseRow(
     // reps on every surface, which is the defect he reported.
     ...(row.prescriptionType ? { prescriptionType: row.prescriptionType } : {}),
     ...(row.perSide ? { perSide: true } : {}),
-    exercise,
+    exercise: { ...exercise, createdAt: stamp, updatedAt: stamp },
     // THE COMPOSER'S SUBSTITUTION RECORD, CARRIED. It has existed on
     // `ComposedRow` since 2026-08-17 and died here — the screen could see that
     // an unfamiliar lift was on the day and had no way to say WHY.
@@ -175,7 +176,8 @@ export function materialiseComposedWeek(
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
-    const composedRows = day.rows.map((row, index) => materialiseRow(row, workoutId, index));
+    const stamp = `${isoDateForWeekday(context.weekStartISO, day.dayOfWeek)}T12:00:00.000Z`;
+    const composedRows = day.rows.map((row, index) => materialiseRow(row, workoutId, index, stamp));
     // ── THE GOVERNED DOSE, APPLIED ONCE, BY THE EXISTING OWNER ──────────────
     //
     // **`applyStrengthDeloadToExercises` is the app's ONE deload arithmetic and

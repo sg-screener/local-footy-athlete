@@ -5,7 +5,7 @@ const ts = require('typescript');
 // Install the same offline runtime; importing the CLI does not run the year.
 require('./run-compiler-year');
 const { ARCHETYPES, yearTimeline } = require('../src/__tests__/compilerYear/catalog');
-const { WEEK_CHECKS, yearVerdict, renderYearHtml } = require('../src/__tests__/compilerYear/results');
+const { requiredWeekChecks, yearVerdict, renderYearHtml } = require('../src/__tests__/compilerYear/results');
 const { runUnits } = require('./release-gate');
 let passed = 0;
 let failed = 0;
@@ -18,12 +18,14 @@ function test(name, run) {
 // athlete programs or evidence that any training journey ran successfully.
 function control() {
   return { version: 1, revision: 'verdict-control', startedAt: 'synthetic', notCovered: ['Not an athlete journey'],
-    prerequisites: [{ id: 'canonical_only', ok: true }], mutations: [{ id: 'real_compiler_mutation', ok: true }],
+    prerequisites: [{ id: 'canonical_only', ok: true }], mutations: [
+      { id: 'real_compiler_mutation', ok: true }, { id: 'source_fact_history_mutation', ok: true },
+      { id: 'acceptance_writer_mutation', ok: true }, { id: 'injury_render_writer_mutation', ok: true }],
     athletes: ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
       checks: [{ id: 'onboarding', ok: true }],
       actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise', 'lighter_day']
         .map((kind) => ({ kind, date: 'fixture-only', ok: true })),
-      weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: WEEK_CHECKS.map((id) => ({ id, ok: true })) })),
+      weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: requiredWeekChecks(w).map((id) => ({ id, ok: true })) })),
     })) };
 }
 test('complete synthetic result is accepted by the verdict engine', () => assert.equal(yearVerdict(control()).ok, true));
@@ -49,6 +51,23 @@ const mutations = {
   missing_ownership_proof: (r) => { r.prerequisites = []; },
   rival_author: (r) => { r.prerequisites[0].ok = false; },
   missing_mutation_proof: (r) => { r.mutations = []; },
+  missing_fact_mutation: (r) => { r.mutations = r.mutations.filter(c => c.id !== 'source_fact_history_mutation'); },
+  missing_acceptance_mutation: (r) => { r.mutations = r.mutations.filter(c => c.id !== 'acceptance_writer_mutation'); },
+  missing_render_writer_mutation: (r) => { r.mutations = r.mutations.filter(c => c.id !== 'injury_render_writer_mutation'); },
+  missing_compiler_view_ownership: (r) => { r.athletes[0].weeks[0].checks =
+    r.athletes[0].weeks[0].checks.filter(c => c.id !== 'compiler_owns_visible_rows'); },
+  missing_injury_lifecycle: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 8);
+    week.checks = week.checks.filter(c => !c.id.startsWith('facts_')); },
+  missing_injury_restart: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 8);
+    week.checks = week.checks.filter(c => c.id !== 'facts_overlap_restart'); },
+  missing_clear_restart: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 8);
+    week.checks = week.checks.filter(c => c.id !== 'clear_cleared_restart'); },
+  missing_trip_clear: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 8);
+    week.checks = week.checks.filter(c => c.id !== 'clear_trip_cleared_atomically'); },
+  missing_carried_injury: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 10);
+    week.checks = week.checks.filter(c => c.id !== 'carried_injury_report'); },
+  missing_injury_rollover: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 13);
+    week.checks = week.checks.filter(c => c.id !== 'carried_injury_after_rollover'); },
 };
 for (const [name, mutate] of Object.entries(mutations)) test(`mutation: ${name} blocks acceptance`, () => {
   const result = control(); mutate(result); assert.equal(yearVerdict(result).ok, false);

@@ -252,15 +252,7 @@ console.log('\n-- Strength progression real inputs --');
     null,
     {
       blockState: {
-        blockNumber: 1,
-        miniCycleNumber: 1,
         weekInBlock: 4,
-        weekNumber: 4,
-        blockStart: '2026-07-06',
-        blockEnd: '2026-08-02',
-        weekStart: '2026-07-27',
-        weekEnd: '2026-08-02',
-        intensityMultiplier: 1.0,
         weeksSinceDeload: 3,
         consecutiveBuildWeeks: 3,
       },
@@ -291,6 +283,7 @@ console.log('\n-- Strength progression real inputs --');
     updatedAt: '2026-07-06T12:00:00.000Z',
   }];
   const state: ScheduleState = {
+    capacity: 'high',
     currentProgram: {
       id: 'program-1',
       userId: 'local',
@@ -305,6 +298,7 @@ console.log('\n-- Strength progression real inputs --');
     } as any,
     currentMicrocycle: {
       id: 'micro-1',
+      intensityMultiplier: 1,
       programId: 'program-1',
       miniCycleNumber: 1,
       weekNumber: 2,
@@ -318,7 +312,6 @@ console.log('\n-- Strength progression real inputs --');
     markedDays: {},
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: 'Off-season',
-    readiness: 'medium',
     workoutHistory: providedHistory,
     sessionFeedback: {
       '2026-07-06': strengthFeedback({ date: '2026-07-06', feeling: 'easy', completion: 'full' }),

@@ -116,7 +116,7 @@ const materialSnapshot = () => {
   return JSON.stringify({
     updatesByWeek: state.updatesByWeek,
     activeConstraints: state.activeConstraints,
-    activeInjury: state.activeInjury,
+    // Injury episodes are canonical inputs, not a writable coach-store mirror.
   });
 };
 
@@ -128,7 +128,6 @@ function resetCoachUpdates(): void {
       next: {
         updatesByWeek: {},
         activeConstraints: [],
-        activeInjury: null,
         dismissedCoachNoteIds: [],
       },
       writer: 'reset',
@@ -160,7 +159,7 @@ run('the door refuses the default over answered updates', () => {
   const before = materialSnapshot();
 
   const outcome = applyCoachUpdatesWrite({
-    next: { updatesByWeek: {}, activeConstraints: [], activeInjury: null },
+    next: { updatesByWeek: {}, activeConstraints: [], },
     writer: 'accepted_mirror',
   });
   assert(!outcome.ok && outcome.reason === 'default_over_answered_updates',
@@ -189,7 +188,7 @@ run('a stale reset id is refused', () => {
   const id = beginCoachUpdatesResetAction('test_stale');
   endCoachUpdatesResetAction(id);
   const outcome = applyCoachUpdatesWrite({
-    next: { updatesByWeek: {}, activeConstraints: [], activeInjury: null },
+    next: { updatesByWeek: {}, activeConstraints: [], },
     writer: 'reset',
     resetActionId: id,
   });
@@ -204,7 +203,7 @@ run('an in-flight reset erases, and says so', () => {
   resetCoachUpdates();
   const state = useCoachUpdatesStore.getState();
   assert(Object.keys(state.updatesByWeek).length === 0
-    && state.activeConstraints.length === 0 && state.activeInjury === null,
+    && state.activeConstraints.length === 0,
     'the reset did not empty the store');
   const writes = athleteActionLogEntries().slice(from)
     .filter((entry) => entry.event === 'coach_updates_write');
@@ -227,7 +226,7 @@ run('every coach-updates write is on the tape, refused or not — counts, never 
   const from = athleteActionLogEntries().length;
 
   const refused = applyCoachUpdatesWrite({
-    next: { updatesByWeek: {}, activeConstraints: [], activeInjury: null },
+    next: { updatesByWeek: {}, activeConstraints: [], },
     writer: 'coach_mutation_mirror',
   });
   assert(!refused.ok, 'precondition: the wipe shape must refuse');

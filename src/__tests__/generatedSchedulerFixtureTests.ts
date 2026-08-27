@@ -90,8 +90,7 @@ function generated(
     seasonPhaseClock: clockAtPhaseWeek(8),
     previousProgram: null,
     athletePrefs: {},
-    activeConstraints: [],
-    ...(targetFixtureDay !== undefined ? { targetFixtureDay } : {}),
+      ...(targetFixtureDay !== undefined ? { targetFixtureDay } : {}),
     ...(targetWeekAvailability ? { targetWeekAvailability } : {}),
   } as never);
 }
@@ -119,7 +118,6 @@ const byeSchedulerInputs = schedulerInputsWithFixtureState(weeklySchedulerInputs
   availability: byeAvailability,
   targetFixtureDay: null,
   seasonPhase: profile.seasonPhase,
-  activeConstraints: [],
 }));
 ok('the availability owner releases Saturday into the scheduler input',
   byeSchedulerInputs.gymAccessDays.includes(6)
@@ -200,7 +198,6 @@ const doubleFixtureWeek = generateProgramLocally(doubleProfile as never, {
   seasonPhaseClock: clockAtPhaseWeek(8),
   previousProgram: null,
   athletePrefs: {},
-  activeConstraints: [],
   targetWeekAvailability: doubleAvailability,
   targetFixtureDay: 'Wednesday',
 } as never);
@@ -229,7 +226,6 @@ const sundayBye = generateProgramLocally(sundayByeProfile as never, {
   seasonPhaseClock: clockAtPhaseWeek(8),
   previousProgram: null,
   athletePrefs: {},
-  activeConstraints: [],
   targetWeekAvailability: sundayByeAvailability,
   targetFixtureDay: null,
 } as never);

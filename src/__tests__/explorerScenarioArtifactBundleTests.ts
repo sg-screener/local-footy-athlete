@@ -154,8 +154,12 @@ function main(): void {
         JSON.stringify(EXPLORER_FIXTURE_SCENARIO_MANIFEST.steps.map((step) =>
           step.checkpointPolicy)));
 
-  const repeatManifest = cloneExplorerFixture(EXPLORER_FIXTURE_SCENARIO_MANIFEST) as
-    ExplorerScenarioContract & { steps: ExplorerScenarioStep[] };
+  const mutableManifest = () => {
+    const cloned = cloneExplorerFixture(EXPLORER_FIXTURE_SCENARIO_MANIFEST);
+    const steps: [ExplorerScenarioStep, ...ExplorerScenarioStep[]] = [cloned.steps[0], ...cloned.steps.slice(1)];
+    return { ...cloned, steps };
+  };
+  const repeatManifest = mutableManifest();
   repeatManifest.steps[0] = {
     ...repeatManifest.steps[0],
     action: {
@@ -177,8 +181,7 @@ function main(): void {
       JSON.stringify(repeatBundle.resolvedScenarioManifestReference.capabilityDeclarations) ===
         JSON.stringify(EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS));
 
-  const coachManifest = cloneExplorerFixture(EXPLORER_FIXTURE_SCENARIO_MANIFEST) as
-    ExplorerScenarioContract & { steps: ExplorerScenarioStep[] };
+  const coachManifest = mutableManifest();
   coachManifest.steps[0] = {
     ...coachManifest.steps[0],
     action: {
@@ -272,7 +275,8 @@ function main(): void {
     missingPhysicalReceipts);
 
   const wrongPhysicalTrace = cloneExplorerFixture(valid);
-  wrongPhysicalTrace.physicalEvidenceReceipts[1].traceId = 'trace-wrong-physical';
+  wrongPhysicalTrace.physicalEvidenceReceipts = wrongPhysicalTrace.physicalEvidenceReceipts.map((receipt, index) =>
+    index === 1 ? { ...receipt, traceId: 'trace-wrong-physical' } : receipt);
   expectValidationCode('physical receipt must match action trace identity',
     EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
     wrongPhysicalTrace);

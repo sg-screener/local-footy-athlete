@@ -84,7 +84,7 @@ function verifyRuleRegistry(repoRoot: string): void {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
-    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+    if (!rule.applicableScenarios.length) fail(`${rule.id} has no declared golden scenario`);
   }
   if (COMPONENT_BIBLE_RULES.length !== 7) {
     fail(`Expected exactly seven Slice 2 component rules, found ${COMPONENT_BIBLE_RULES.length}`);
@@ -95,7 +95,7 @@ function verifyRuleRegistry(repoRoot: string): void {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
-    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+    if (!rule.applicableScenarios.length) fail(`${rule.id} has no declared golden scenario`);
   }
   if (SLICE3_BIBLE_RULES.length !== 22) {
     fail(`Expected exactly twenty-two Slice 3 Bible rules, found ${SLICE3_BIBLE_RULES.length}`);
@@ -106,7 +106,7 @@ function verifyRuleRegistry(repoRoot: string): void {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
-    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+    if (!rule.applicableScenarios.length) fail(`${rule.id} has no declared golden scenario`);
   }
   if (SLICE4_BIBLE_RULES.length !== 20) {
     fail(`Expected exactly twenty Slice 4 Bible/canonical rules, found ${SLICE4_BIBLE_RULES.length}`);
@@ -117,7 +117,7 @@ function verifyRuleRegistry(repoRoot: string): void {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
-    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+    if (!rule.applicableScenarios.length) fail(`${rule.id} has no declared golden scenario`);
   }
   if (PRESEASON_EXPOSURE_RULES.length !== 6) {
     fail(`Expected exactly six pre-season exposure rules, found ${PRESEASON_EXPOSURE_RULES.length}`);
@@ -130,7 +130,7 @@ function verifyRuleRegistry(repoRoot: string): void {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
-    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+    if (!rule.applicableScenarios.length) fail(`${rule.id} has no declared golden scenario`);
   }
 }
 

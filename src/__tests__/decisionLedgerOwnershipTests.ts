@@ -103,7 +103,11 @@ function resetLedger(): void {
 /** One real decision, appended through the convenience appender. */
 function appendRemoveSession(date: string): DecisionLedgerEntry {
   const outcome = appendDecisionEntry({
-    decision: { kind: 'plan_change', change: { kind: 'remove_session', date, scope: 'whole_day' } },
+    decision: { kind: 'plan_change', change: { kind: 'remove_session', date, scope: 'whole_day' },
+      // Ledger append-only unit: no material is compiled from this sentinel effect.
+      acceptedEffect: { mutationIntent: 'athlete_removal', acceptedAt: date + 'T12:00:00.000Z',
+        affectedDates: [date], removedConstraintIds: [], restoredConstraints: [],
+        upsertedConstraints: [], markedDayChanges: [] } },
     provenance: 'athlete_tap',
     writer: 'program_control',
   });
@@ -165,7 +169,7 @@ run('the ledger is append-only: a rewrite that drops an entry refuses without a 
     && decisionLedgerEntries()[0]!.id === first.id,
     'the refused rewrite changed the ledger anyway');
   // Editing an existing entry in place is the same wipe shape.
-  const edited = { ...first, decision: { kind: 'plan_change' as const, change: { kind: 'remove_session' as const, date: '2026-08-10' } } };
+  const edited = { ...first, occurredAt: '2026-08-10T12:00:00.000Z' };
   const editOutcome = applyDecisionLedgerWrite({ next: [edited, second], writer: 'program_control' });
   assert(!editOutcome.ok && editOutcome.reason === 'ledger_rewrite_without_reset',
     `an in-place edit of a ledger entry was not refused: ${JSON.stringify(editOutcome)}`);

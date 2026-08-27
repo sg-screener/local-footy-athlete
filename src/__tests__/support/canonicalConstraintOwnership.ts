@@ -58,7 +58,13 @@ function boundaryFailures(sources: Record<string, string>): string[] {
   if (hook && calls(hook, 'assembleScheduleState').length !== 1) failures.push('reactive assembly diverged');
   // Prove the final stage actually consumes the days; a dormant call is not a boundary.
   const compiler = body(paths.compiler, 'compileCanonicalResolvedWeek');
-  if (compiler && (!compiler.getText().includes('input.days.map((day) =>') ||
+  const travel = body(paths.compiler, 'compileCanonicalTravelDates');
+  if (travel && !travel.getText().includes('return input.days.map(day =>')) {
+    failures.push('travel compilation does not consume every supplied day');
+  }
+  if (compiler && (!compiler.getText().includes('const days = compileCanonicalTravelDates(input);') ||
+      !compiler.getText().includes('return days.map((day) =>') ||
+      calls(compiler, 'compileCanonicalTravelDates').length !== 1 ||
       calls(compiler, 'compileCanonicalDayConstraints').length !== 1)) failures.push('compiler does not process every day');
   return failures;
 }
@@ -70,7 +76,9 @@ export function checkCanonicalConstraintOwnership(ok: (name: string, condition: 
   const mutations = [
     { file: paths.resolver, from: 'return compileCanonicalResolvedWeek({', to: 'return bypassFinalCompiler({' },
     { file: paths.resolver, from: 'return compileCanonicalResolvedWeek({', to: 'if (false) return compileCanonicalResolvedWeek({' },
-    { file: paths.compiler, from: 'input.days.map((day) =>', to: '[].map((day) =>' },
+    { file: paths.compiler, from: 'return days.map((day) =>', to: 'return [].map((day) =>' },
+    { file: paths.compiler, from: 'return input.days.map(day =>', to: 'return [].map(day =>' },
+    { file: paths.compiler, from: 'const days = compileCanonicalTravelDates(input);', to: 'const days = input.days;' },
     { file: paths.hook, from: 'const assembled = assembleScheduleState({', to: 'const assembled = secondAssembly({' },
     { file: paths.read, from: 'export function buildDayWorkoutProjectedDay(', to: 'export function missingDayReader(' },
   ];

@@ -1,15 +1,7 @@
 /**
  * resetCoach.ts — explicit reset/clear utilities for coach + program state.
  *
- * Three reset levels (least → most destructive):
- *
- *   clearCoachAdjustments()      — surgical: removes active program
- *                                  modifiers, Coach Update cards,
- *                                  injury-tagged manual overrides, and
- *                                  coach-authored notes. Preserves the base
- *                                  program, baseline onboarding profile,
- *                                  calendar marks, and user-authored manual
- *                                  overrides.
+ * Explicit full reset and dev-only reset:
  *
  *   resetProgramAndOnboarding()  — full reset across all coach + program
  *                                  stores; returns the user to onboarding.
@@ -37,7 +29,6 @@
 import { useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
-  type ActivePreferenceConstraint,
 } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
@@ -50,10 +41,6 @@ import { useSessionStopwatchStore } from '../store/sessionStopwatchStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
-import {
-  getActiveProgramModifiers,
-  clearActiveProgramModifier,
-} from './activeProgramModifiers';
 import { beginProfileResetAction, endProfileResetAction } from '../store/profileStore';
 import {
   beginAthleteActionTrace,
@@ -73,8 +60,6 @@ export interface ResetDeps {
   programStore: {
     getOverrideContexts: () => Record<string, OverrideContext>;
     getDateOverrides: () => Record<string, Workout>;
-    removeManualOverride: (date: string) => void;
-    clearManualOverrides: () => void;
     clear: () => void;
   };
   coachUpdatesStore: {
@@ -130,10 +115,6 @@ function defaultDeps(): ResetDeps {
         useProgramStore.getState().overrideContexts ?? {},
       getDateOverrides: () =>
         useProgramStore.getState().dateOverrides ?? {},
-      removeManualOverride: (date) =>
-        useProgramStore.getState().removeManualOverride(date),
-      clearManualOverrides: () =>
-        useProgramStore.getState().clearManualOverrides(),
       clear: () => useProgramStore.getState().clear(),
     },
     coachUpdatesStore: {
@@ -252,187 +233,6 @@ export function buildDevPostOnboardingResetProfile(
   };
 }
 
-// ─── 1. SURGICAL: clearCoachAdjustments ─────────────────────────────
-
-/**
- * Surgical reset that removes EVERY trace of coach- and injury-driven
- * program changes, while preserving the base program, profile, calendar
- * marks, and user-authored manual overrides.
- *
- * Specifically:
- *   - all CoachUpdate cards ⇒ removed
- *   - dateOverrides where overrideContext.intent === 'injury' ⇒ removed
- *   - coach-authored coachNotes on remaining (non-injury) overrides ⇒
- *     removed (notes that read like injury restrictions are stripped
- *     so the surface no longer carries the message)
- *   - athletePreferencesStore.activeInjuries ⇒ []
- *   - future-generation exercise preferences ⇒ cleared
- *   - modality preferences / readiness signals ⇒ cleared
- *   - active profile availability constraints ⇒ cleared
- *   - pendingInjuryRef (caller-supplied) ⇒ cleared
- *
- * NEVER touched:
- *   - currentProgram, currentMicrocycle (base program)
- *   - baseline profileStore.onboardingData (game days, team days, equipment)
- *   - calendarStore.markedDays (rest days, explicit games)
- *   - dateOverrides where intent is anything other than 'injury'
- */
-export function clearCoachAdjustments(opts?: {
-  deps?: Partial<ResetDeps>;
-}): ResetSummary {
-  const deps: ResetDeps = { ...defaultDeps(), ...(opts?.deps ?? {}) } as ResetDeps;
-  logger.debug('[reset] clear_coach_adjustments_started');
-
-  const summary: ResetSummary = {
-    activeInjuryCleared: false,
-    coachUpdatesCleared: 0,
-    injuryOverridesRemoved: [],
-    coachNotesRemoved: 0,
-    athletePrefInjuriesCleared: 0,
-  };
-
-  const activePreferenceConstraints = useCoachUpdatesStore
-    .getState()
-    .activeConstraints.filter(
-      (c): c is ActivePreferenceConstraint => c.type === 'preference',
-    );
-
-  // 1. Coach Update cards.
-  // ⚠ The single-slot active-injury clear that stood here is deleted with
-  // the alias (2026-08-19). Clearing an injury is an episode operation and
-  // belongs to the injury-episode transaction.
-  const updates = deps.coachUpdatesStore.getUpdatesByWeek();
-  const updateCount = Object.keys(updates).length;
-  if (updateCount > 0) {
-    deps.coachUpdatesStore.clearAllCoachUpdates();
-    summary.coachUpdatesCleared = updateCount;
-    logger.debug('[reset] coach_updates_cleared', { count: updateCount });
-  }
-
-  // 2b. Tap-created status modifiers (fatigue / recovery / busy-week / away /
-  //     soreness) don't always have a CoachUpdate card, so the card-gated
-  //     clear above can leave them behind. Sweep them through the SAME
-  //     active-modifier clear path the Program tab's per-note "Clear" uses,
-  //     so bulk clear and per-note clear stay in lockstep — including
-  //     removing the rest-day overrides an away/recovery note linked.
-  let statusModifiersCleared = 0;
-  for (const modifier of getActiveProgramModifiers()) {
-    if (
-      modifier.source === 'active_constraint' &&
-      (modifier.type === 'temporary_status' || modifier.type === 'coach_restriction')
-    ) {
-      const result = clearActiveProgramModifier(modifier.id);
-      if (result.cleared) statusModifiersCleared += 1;
-    }
-  }
-  if (statusModifiersCleared > 0) {
-    logger.debug('[reset] status_modifiers_cleared', { count: statusModifiersCleared });
-  }
-
-  // 3. Injury-tagged manual overrides (intent === 'injury').
-  const overrideContexts = deps.programStore.getOverrideContexts();
-  const overrides = deps.programStore.getDateOverrides();
-  for (const [date, ctx] of Object.entries(overrideContexts)) {
-    if ((ctx as OverrideContext)?.intent === 'injury') {
-      deps.programStore.removeManualOverride(date);
-      summary.injuryOverridesRemoved.push(date);
-    }
-  }
-  if (summary.injuryOverridesRemoved.length > 0) {
-    logger.debug('[reset] injury_overrides_removed', {
-      count: summary.injuryOverridesRemoved.length,
-      dates: summary.injuryOverridesRemoved,
-    });
-  }
-
-  // 4. Strip coach-authored notes from any REMAINING (non-injury)
-  //    override workouts. We can't surgically rebuild a workout, but
-  //    the override still has a coachNotes array we can reset to []
-  //    via the existing setManualOverride seam. To keep this
-  //    self-contained without re-resolving sessions, we only count
-  //    such notes for the summary — actual removal happens when the
-  //    user manually edits or the next override write replaces them.
-  //    Counting is sufficient for the test invariant.
-  const remainingOverrides = deps.programStore.getDateOverrides();
-  let coachNoteCount = 0;
-  for (const [date, w] of Object.entries(remainingOverrides)) {
-    const notes = (w as Workout)?.coachNotes ?? [];
-    if (notes.length > 0 && !overrideContexts[date]) {
-      coachNoteCount += notes.length;
-    }
-  }
-  summary.coachNotesRemoved = coachNoteCount;
-  if (coachNoteCount > 0) {
-    logger.debug('[reset] coach_notes_removed', { count: coachNoteCount });
-  }
-
-  // 5. Athlete-preference injury flags (drives exercise pool filter).
-  const prefStore = useAthletePreferencesStore.getState();
-  const prefInjuries = prefStore.prefs?.activeInjuries ?? [];
-  if (prefInjuries.length > 0) {
-    deps.athletePreferencesStore.setActiveInjuries([]);
-    summary.athletePrefInjuriesCleared = prefInjuries.length;
-    logger.debug('[reset] athlete_pref_injuries_cleared', {
-      count: prefInjuries.length,
-    });
-  }
-  if (activePreferenceConstraints.length > 0) {
-    for (const preference of activePreferenceConstraints) {
-      if (preference.exercise) {
-        prefStore.removeExclusion(preference.exercise);
-      }
-      if (preference.alternative) {
-        prefStore.removePinned(preference.alternative);
-      }
-    }
-    logger.debug('[reset] athlete_pref_exercise_preferences_cleared', {
-      count: activePreferenceConstraints.length,
-    });
-  }
-
-  const remainingExcluded = [...(prefStore.prefs?.excluded ?? [])];
-  const remainingPinned = [...(prefStore.prefs?.pinned ?? [])];
-  for (const exercise of remainingExcluded) prefStore.removeExclusion(exercise);
-  for (const exercise of remainingPinned) prefStore.removePinned(exercise);
-  if (remainingExcluded.length > 0 || remainingPinned.length > 0) {
-    logger.debug('[reset] athlete_pref_program_modifiers_cleared', {
-      excluded: remainingExcluded.length,
-      pinned: remainingPinned.length,
-    });
-  }
-
-  const modalityPrefs = useCoachPreferencesStore.getState().modalityPreferences ?? {};
-  if (Object.keys(modalityPrefs).length > 0) {
-    useCoachPreferencesStore.getState().clearAllModalityPreferences();
-    logger.debug('[reset] modality_preferences_cleared', {
-      count: Object.keys(modalityPrefs).length,
-    });
-  }
-
-  const readinessSignals = useReadinessStore.getState().signalsByDate ?? {};
-  if (Object.keys(readinessSignals).length > 0) {
-    useReadinessStore.getState().clear();
-    logger.debug('[reset] readiness_modifiers_cleared', {
-      count: Object.keys(readinessSignals).length,
-    });
-  }
-
-  const profileState = useProfileStore.getState();
-  const availability = profileState.onboardingData.availabilityConstraints ?? [];
-  const retainedAvailability = availability.filter((constraint) => constraint.active === false);
-  if (retainedAvailability.length !== availability.length) {
-    profileState.updateOnboardingData({
-      availabilityConstraints: retainedAvailability.length > 0 ? retainedAvailability : undefined,
-    });
-    logger.debug('[reset] availability_modifiers_cleared', {
-      count: availability.length - retainedAvailability.length,
-    });
-  }
-
-  logger.debug('[reset] complete', { mode: 'clear_coach_adjustments', summary });
-  return summary;
-}
-
 // ─── 2. FULL RESET ──────────────────────────────────────────────────
 
 /**
@@ -469,7 +269,7 @@ export function resetProgramAndOnboarding(opts?: {
     resetActionId,
   });
   try {
-    return runFullReset(deps, opts, trace, resetActionId);
+    return runFullReset(deps, trace, resetActionId);
   } finally {
     endProfileResetAction(resetActionId);
     emitAthleteActionEvent(trace, 'athlete_action_completed', {
@@ -482,14 +282,24 @@ export function resetProgramAndOnboarding(opts?: {
 
 function runFullReset(
   deps: ResetDeps,
-  opts: { deps?: Partial<ResetDeps> } | undefined,
   trace: AthleteActionTraceContext,
   resetActionId: string,
 ): ResetSummary {
 
-  // 1. First do a surgical coach clear so the per-feature logs fire
-  //    (so the audit trail shows what was cleared, not just "everything").
-  const surgical = clearCoachAdjustments({ deps: opts?.deps });
+  // This door resets the whole athlete. Individual changes use their accepted
+  // fact/decision doors; there is no intermediate surgical output rewrite.
+  const overrides = deps.programStore.getDateOverrides();
+  const contexts = deps.programStore.getOverrideContexts();
+  const summary: ResetSummary = {
+    activeInjuryCleared: false,
+    coachUpdatesCleared: Object.keys(deps.coachUpdatesStore.getUpdatesByWeek()).length,
+    injuryOverridesRemoved: Object.keys(overrides).filter(date => contexts[date]?.intent === 'injury'),
+    coachNotesRemoved: Object.values(overrides).reduce((sum, workout) => sum + (workout.coachNotes?.length ?? 0), 0),
+    athletePrefInjuriesCleared: useAthletePreferencesStore.getState().prefs.activeInjuries?.length ?? 0,
+  };
+  deps.coachUpdatesStore.clearAllCoachUpdates();
+  useReadinessStore.getState().clear();
+  useCoachPreferencesStore.getState().clearAllModalityPreferences();
 
   // 1b. The athlete's HISTORIES, before the program they explain. Launch
   //     audit 2026-08-25, finding #2: these four were not on this list, and
@@ -522,7 +332,6 @@ function runFullReset(
   deps.athletePreferencesStore.clear();
   logger.debug('[reset] athlete_preferences_cleared');
 
-  const summary: ResetSummary = { ...surgical };
   logger.debug('[reset] complete', { mode: 'full_reset', summary });
   emitAthleteActionEvent(trace, 'athlete_action_parsed', {
     internalResultCode: 'full_reset_stores_cleared',

@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * ONE PRECEDENCE ORDERING, ONE OWNER — Sam's Option C addition to Stage B.
  *
@@ -238,7 +239,7 @@ function authorAnOverride(date: string): Workout {
 }
 
 function markRestOnBothStacks(date: string): void {
-  quiet(() => useCalendarStore.getState().setRestDay(date));
+  quiet(() => calendarActionsForTest().setRestDay(date));
   const context = useProgramStore.getState().acceptedMaterialContext as never as {
     markedDays: Record<string, string>;
   };

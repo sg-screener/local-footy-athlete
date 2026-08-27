@@ -1,4 +1,9 @@
 import type { ProgramState } from './programStore';
+import { constraintInputsForPersistence, readinessInputsForPersistence } from './compatibilityPersistence';
+import { useDecisionLedgerStore, DECISION_LEDGER_PERSISTENCE_KEY,
+  applyDecisionLedgerWrite, beginDecisionLedgerResetAction, endDecisionLedgerResetAction } from './decisionLedgerStore';
+import { useAthletePreferencesStore, ATHLETE_PREFS_PERSISTENCE_KEY,
+  applyAthletePrefsWrite, beginAthletePrefsResetAction, endAthletePrefsResetAction } from './athletePreferencesStore';
 import {
   beginProgramPersistenceStage,
   endProgramPersistenceStage,
@@ -77,9 +82,15 @@ import { normalizeAcceptedMaterialContext } from './acceptedStateColdStart';
 type AcceptedProgramStateSnapshot = Pick<
   ProgramState,
   | 'currentProgram'
+  | 'sourceFactCompilerInput'
   | 'currentMicrocycle'
   | 'todayWorkout'
   | 'blockState'
+  | 'generationAnchorISO'
+  | 'hydratedSeasonPhaseClock'
+  | 'acceptedBlocks'
+  | 'weightOverrides'
+  | 'bandResistanceOverrides'
   | 'acceptedMaterialContext'
   | 'dateOverrides'
   | 'overrideContexts'
@@ -91,6 +102,8 @@ type AcceptedProgramStateSnapshot = Pick<
 >;
 
 interface AcceptedMirrorSnapshot {
+  decisionEntries: ReturnType<typeof useDecisionLedgerStore.getState>['entries'];
+  athletePreferences: ReturnType<typeof useAthletePreferencesStore.getState>['prefs'];
   markedDays: ReturnType<typeof useCalendarStore.getState>['markedDays'];
   readinessSignalsByDate: ReturnType<typeof useReadinessStore.getState>['signalsByDate'];
   coachUpdatesByWeek: ReturnType<typeof useCoachUpdatesStore.getState>['updatesByWeek'];
@@ -135,6 +148,8 @@ export class CoachMutationRollbackError extends Error {
 let coachMutationQueue: Promise<void> = Promise.resolve();
 
 const ACCEPTED_MIRROR_STORAGE_KEYS = [
+  DECISION_LEDGER_PERSISTENCE_KEY,
+  ATHLETE_PREFS_PERSISTENCE_KEY,
   'calendar-storage',
   'readiness-store',
   'coach-updates',
@@ -260,8 +275,8 @@ export async function runCoachMutationTransaction<T>(args: {
       }
 
       if (!diff.hasProgrammingChange) {
-        const acceptedStateChanged = acceptedStateFingerprint() !==
-          acceptedStateFingerprint(preProgram);
+        const acceptedStateChanged = completeAcceptedStateFingerprint() !==
+          semanticFingerprint({ program: preProgram, mirrors: preMirrors });
         const acceptedOnlyChangeAllowed =
           args.allowAcceptedStateOnlyChange && acceptedStateChanged;
         if (!acceptedOnlyChangeAllowed && !args.allowIdempotentNoop) {
@@ -495,10 +510,16 @@ export async function runCoachMutationTransaction<T>(args: {
 export function captureAcceptedProgramState(): AcceptedProgramStateSnapshot {
   const state = useProgramStore.getState();
   return clone({
+    sourceFactCompilerInput: state.sourceFactCompilerInput ?? null,
     currentProgram: state.currentProgram,
     currentMicrocycle: state.currentMicrocycle,
     todayWorkout: state.todayWorkout,
     blockState: state.blockState,
+    generationAnchorISO: state.generationAnchorISO ?? null,
+    hydratedSeasonPhaseClock: state.hydratedSeasonPhaseClock ?? null,
+    acceptedBlocks: state.acceptedBlocks,
+    weightOverrides: state.weightOverrides,
+    bandResistanceOverrides: state.bandResistanceOverrides,
     acceptedMaterialContext: state.acceptedMaterialContext,
     dateOverrides: state.dateOverrides,
     overrideContexts: state.overrideContexts,
@@ -599,6 +620,20 @@ function restoreAcceptedInMemory(
   program: AcceptedProgramStateSnapshot,
   mirrors: AcceptedMirrorSnapshot,
 ): void {
+  // Discard only this uncommitted transaction's candidate input, through each
+  // input store's bounded rollback/reset authority. Committed history survives.
+  const ledgerReset = beginDecisionLedgerResetAction('coach_mutation_rollback');
+  try {
+    const restored = applyDecisionLedgerWrite({ next: clone(mirrors.decisionEntries),
+      writer: 'reset', resetActionId: ledgerReset });
+    if (!restored.ok) throw new Error('decision_rollback_refused');
+  } finally { endDecisionLedgerResetAction(ledgerReset); }
+  const athleteReset = beginAthletePrefsResetAction('coach_mutation_rollback');
+  try {
+    const restored = applyAthletePrefsWrite({ next: clone(mirrors.athletePreferences),
+      writer: 'reset', resetActionId: athleteReset });
+    if (!restored.ok) throw new Error('athlete_preferences_rollback_refused');
+  } finally { endAthletePrefsResetAction(athleteReset); }
   // Through the calendar owner. A rollback restoring "no marks yet" is a
   // legitimate erasure — it removes the failed transaction's own marks — so
   // it runs under a reset act rather than around the door. Unlike the profile
@@ -730,6 +765,8 @@ function collectAcceptedDates(
 
 function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
   return clone({
+    decisionEntries: useDecisionLedgerStore.getState().entries,
+    athletePreferences: useAthletePreferencesStore.getState().prefs,
     markedDays: useCalendarStore.getState().markedDays,
     readinessSignalsByDate: useReadinessStore.getState().signalsByDate,
     coachUpdatesByWeek: useCoachUpdatesStore.getState().updatesByWeek,
@@ -745,6 +782,8 @@ function serializeAcceptedMirrorEnvelopes(
   mirrors: AcceptedMirrorSnapshot,
 ): Record<AcceptedMirrorStorageKey, string> {
   return {
+    [DECISION_LEDGER_PERSISTENCE_KEY]: JSON.stringify({ state: { entries: mirrors.decisionEntries }, version: 0 }),
+    [ATHLETE_PREFS_PERSISTENCE_KEY]: JSON.stringify({ state: { prefs: mirrors.athletePreferences }, version: 0 }),
     'calendar-storage': JSON.stringify({
       // Same input-only shape as CalendarStore.partialize. The transaction's
       // acknowledged write used to bypass that boundary and put the derived
@@ -753,13 +792,13 @@ function serializeAcceptedMirrorEnvelopes(
       version: 0,
     }),
     'readiness-store': JSON.stringify({
-      state: { signalsByDate: mirrors.readinessSignalsByDate },
+      state: { signalsByDate: readinessInputsForPersistence(mirrors.readinessSignalsByDate) },
       version: 0,
     }),
     'coach-updates': JSON.stringify({
       state: {
         updatesByWeek: mirrors.coachUpdatesByWeek,
-        activeConstraints: mirrors.activeConstraints,
+        activeConstraints: constraintInputsForPersistence(mirrors.activeConstraints),
         dismissedCoachNoteIds: mirrors.dismissedCoachNoteIds,
       },
       version: 0,

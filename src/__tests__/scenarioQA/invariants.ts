@@ -334,7 +334,7 @@ export const adjacency_max2SameRegion: Invariant = ({ plan }) => {
   const arr = sorted(plan);
   let maxRun = 1;
   let currentRun = 1;
-  let currentRegion: Region = 'neutral';
+  let currentRegion: ReturnType<typeof classifyRegion> = 'neutral';
   let prevDayIdx = -99;
   let worst = '';
 

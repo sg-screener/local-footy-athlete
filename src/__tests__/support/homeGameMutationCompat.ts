@@ -93,11 +93,7 @@ function canonicalInput(
 function toLegacyResult(
   result: FixtureMutationTransactionResult,
 ): HomeGameMutationResult {
-  if (
-    result.outcome === 'no_change' ||
-    result.outcome === 'conflicted' ||
-    result.outcome === 'impossible'
-  ) {
+  if (!('result' in result)) {
     return {
       outcome: 'impossible',
       reason: result.reason,

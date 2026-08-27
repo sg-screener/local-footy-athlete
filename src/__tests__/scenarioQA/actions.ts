@@ -55,9 +55,7 @@ export function runScenario(
 }
 
 function applyAction(
-  profile: typeof import('../../types/domain').OnboardingData extends never
-    ? never
-    : Parameters<typeof applyGameDayChange>[0],
+  profile: Parameters<typeof applyGameDayChange>[0],
   action: Action,
 ) {
   switch (action.type) {

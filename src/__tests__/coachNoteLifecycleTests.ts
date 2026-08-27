@@ -40,7 +40,6 @@ function eq(name: string, actual: unknown, expected: unknown) {
 function resetStores() {
   useCoachUpdatesStore.setState({
     updatesByWeek: {},
-    activeInjury: null,
     activeConstraints: [],
   } as any);
 }
@@ -337,7 +336,6 @@ console.log('\n[5] healthy normal generation has no fake notes');
   resetStores();
   eq('empty healthy snapshot stays silent', selectActiveCoachNotes({
     activeConstraints: [],
-    activeInjury: null,
     weekKind: 'build',
     visibleWeekDays: [visibleFromRows([row(WEEK_START, 'Lower body strength')])[0]],
     todayISO: WEEK_START,

@@ -526,7 +526,8 @@ function performAction(action: WalkerAction): WalkerStepResult {
       };
     }
     case 'mark_calendar': {
-      const calendar = useCalendarStore.getState();
+      const { calendarActionsForTest } = require('./support/calendarActionsForTest') as typeof import('./support/calendarActionsForTest');
+      const calendar = calendarActionsForTest();
       if (action.mark === 'game') {
         // THE FIXTURE DOOR, NOT THE STORE PRIMITIVE UNDER IT (R1.3, plan §3
         // R1 unit 4: "the fixture doors (add/remove game) rewired to append +

@@ -358,6 +358,12 @@ const mainLiftCount = (workout: Workout): number =>
   (workout.exercises ?? []).filter((entry) =>
     entry.section18Evidence?.role === 'main_strength').length;
 
+const declaredHinge = (name: string): WorkoutExercise => ({
+  ...row(name, 3),
+  section18Evidence: { protocolVersion: 1, role: 'main_strength',
+    strengthPattern: 'hinge', mainStrengthPattern: 'hinge', provenance: 'composer_declaration' },
+});
+
 const describeRows = (workout: Workout): string =>
   (workout.exercises ?? []).map((entry) =>
     `${entry.exercise?.name}|${entry.section18Evidence?.role}|${entry.prescribedSets}x`).join(' , ');
@@ -373,15 +379,15 @@ const describeRows = (workout: Workout): string =>
     row('Tricep Pushdowns', 2),
     row('Face Pulls', 2),
     row('Lateral Raises', 2),
-    row('RDLs', 3),
+    declaredHinge('RDLs'),
   ];
 
-  const full = withSection18WorkoutEvidence(hingeSession(rows), 'infer');
+  const full = withSection18WorkoutEvidence(hingeSession(rows), 'planner_and_canonical_content');
   ok('the planned hinge lift IS a main-strength exposure at full dose',
     mainLiftCount(full) === 1, describeRows(full));
 
   const deloaded = withSection18WorkoutEvidence(
-    hingeSession(applyStrengthDeloadToExercises(rows, policy)), 'infer');
+    hingeSession(applyStrengthDeloadToExercises(rows, policy)), 'planner_and_canonical_content');
 
   ok('it is STILL a main-strength exposure after the deload',
     mainLiftCount(deloaded) === 1, describeRows(deloaded));
@@ -401,7 +407,7 @@ const describeRows = (workout: Workout): string =>
     row('Tricep Pushdowns', 2),
     row('Face Pulls', 2),
     row('Lateral Raises', 2),
-    row('Romanian Deadlift', 3),
+    declaredHinge('Romanian Deadlift'),
   ];
   const deloaded = applyStrengthDeloadToExercises(rows, policy);
 
@@ -410,8 +416,8 @@ const describeRows = (workout: Workout): string =>
     deloaded.map((entry) => `${entry.exercise?.name}|${entry.prescribedSets}x`).join(' , '));
 
   ok('and the alias-named lift is still counted as a main-strength exposure',
-    mainLiftCount(withSection18WorkoutEvidence(hingeSession(deloaded), 'infer')) === 1,
-    describeRows(withSection18WorkoutEvidence(hingeSession(deloaded), 'infer')));
+    mainLiftCount(withSection18WorkoutEvidence(hingeSession(deloaded), 'planner_and_canonical_content')) === 1,
+    describeRows(withSection18WorkoutEvidence(hingeSession(deloaded), 'planner_and_canonical_content')));
 }
 
 /* ── §12: what an athlete-CHOSEN deloaded day says (Sam, signed 2026-08-05) ──

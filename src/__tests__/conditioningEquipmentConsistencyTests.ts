@@ -98,7 +98,8 @@ function generate(profileData: OnboardingData, constraints: any[] = []) {
   const microcycles = buildGeneratedMicrocycles({
     coachWorkouts: edgeWeek(plan), plan, coachingInputs: inputs, profile: profileData,
     programId: 'conditioning-equipment-consistency', microcyclePrefix: 'conditioning-equipment',
-    blockStartISO: blockStart, blockNumber: 1, athletePrefs: {},
+    seasonPhaseClock: require('../rules/seasonPhaseClock').establishSeasonPhaseClock({ selectedPhase: profileData.seasonPhase ?? 'In-season', targetWeekStartISO: blockStart, seasonFinishedOn: profileData.seasonFinishedOn }).clock,
+    blockStartISO: blockStart, blockNumber: 1, athletePrefs: { excluded: [], pinned: [] },
     availableEquipmentTags: equipment.tags,
     availableConditioningModalities: equipment.conditioningModalities,
   });

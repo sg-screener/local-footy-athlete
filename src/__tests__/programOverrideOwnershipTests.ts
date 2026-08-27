@@ -237,54 +237,21 @@ run('a stale erasure act is refused', () => {
   assert(overrideCount() === 1, 'the stale-act write erased the overrides');
 });
 
-run('the legal erasures land under a named act, and say so', () => {
-  // Two of them, and they are different shapes on purpose:
-  //   clearManualOverrides() — the EXPLICIT fresh slate (writer 'reset'),
-  //   clear()               — the store's total erasure, the one raw write.
+run('only full reset can erase generated surfaces directly', () => {
   freshInstallAndGenerate();
   authorOneOverride(WEEK);
-  const appliedResets = () => tapeWrites((entry) =>
-    entry.writer === 'reset' && entry.outcome === 'applied');
-  const before = appliedResets();
-
-  quiet(() => useProgramStore.getState().clearManualOverrides('2026-07-13'));
-  assert(overrideCount() === 0, 'clearManualOverrides() did not empty the slice');
-  assert(appliedResets() === before + 1,
-    'the fresh slate left no named erasure on the tape');
-  assert(activeProgramOverrideResetActionCount() === 0,
-    'the erasure act outlived the erasure — a later deferred write could ride it');
-
-  authorOneOverride(WEEK);
-  const beforeClear = appliedResets();
+  const before = tapeWrites(entry => entry.writer === 'reset' && entry.outcome === 'applied');
   quiet(() => useProgramStore.getState().clear());
-  assert(overrideCount() === 0, 'clear() did not empty the slice');
-  assert(appliedResets() === beforeClear + 1,
-    'the total erasure is not on the tape — the one raw write must still say so');
-  assert(activeProgramOverrideResetActionCount() === 0, 'clear() left its act in flight');
+  assert(overrideCount() === 0, 'full reset did not empty the slice');
+  assert(tapeWrites(entry => entry.writer === 'reset' && entry.outcome === 'applied') === before + 1,
+    'full reset must remain attributed on the tape');
+  assert(activeProgramOverrideResetActionCount() === 0, 'reset act outlived the reset');
 });
 
-run('a REDUCTION is the athlete editing, never the wipe', () => {
-  // Recipe lesson 3. Removing one of two overrides writes FEWER entries; the
-  // refusal must not fire, or the door refuses the athlete's own edit. And
-  // removing the LAST one (lesson 11) is an attributed erasure that LANDS.
-  freshInstallAndGenerate();
-  const second = new Date(`${WEEK}T12:00:00`);
-  second.setDate(second.getDate() + 2);
-  const secondDate = second.toISOString().slice(0, 10);
-  authorOneOverride(WEEK);
-  authorOneOverride(secondDate);
-  assert(overrideCount() === 2, 'precondition: two authored overrides');
-
-  quiet(() => useProgramStore.getState().removeManualOverride(secondDate));
-  assert(overrideCount() === 1, 'a reduction was refused — that refuses the athlete');
-
-  const from = tapeWrites((entry) => entry.outcome === 'applied');
-  quiet(() => useProgramStore.getState().removeManualOverride(WEEK));
-  assert(overrideCount() === 0,
-    'removing the LAST override was refused — the athlete is stranded with an edit '
-    + 'they cannot take back (recipe lesson 11)');
-  assert(tapeWrites((entry) => entry.outcome === 'applied') === from + 1,
-    'the last-override removal left no witness on the tape');
+run('individual Clear cannot delete a material slice without changing its accepted input', () => {
+  const state = useProgramStore.getState();
+  assert(!('removeManualOverride' in state) && !('clearManualOverrides' in state),
+    'retired output-clearing setters returned; exact fact/decision Clear is covered by compiler-year journeys');
 });
 
 run('every override write is on the tape, refused or not — counts, never answers', () => {
@@ -300,10 +267,13 @@ run('every override write is on the tape, refused or not — counts, never answe
     validateWeekStarts: [WEEK],
   }));
   assert(!refused.ok, 'precondition: the wipe shape must refuse');
+  const generated = useProgramStore.getState().currentMicrocycle!.workouts
+    .find(workout => workout.dayOfWeek === new Date(`${WEEK}T12:00:00`).getDay());
+  assert(generated, 'the real generated week must contain the target day');
   const applied = quiet(() => applyProgramOverrideWrite({
     date: WEEK,
     workout: {
-      ...useProgramStore.getState().currentMicrocycle!.workouts[0],
+      ...generated,
       name: SWAPPED_IN_NAME,
     } as Workout,
     // WAS `'lighter_day'`, retired from the closed union 2026-08-04 when the

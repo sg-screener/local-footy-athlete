@@ -33,7 +33,6 @@ function eq(name: string, actual: unknown, expected: unknown) {
 function resetStores() {
   useCoachUpdatesStore.setState({
     updatesByWeek: {},
-    activeInjury: null,
     activeConstraints: [],
   } as any);
 }
@@ -218,6 +217,7 @@ console.log('\n[5] tired/flat notes require extras or intensity trimmed');
     date: TODAY,
     energy: 'low' as const,
     flatToday: true,
+    source: 'quick_check' as const,
     updatedAt: '2026-07-06T08:00:00Z',
   };
   const notes = selectActiveCoachNotes({
@@ -255,7 +255,6 @@ console.log('\n[6] CN-1 metadata and healthy weeks');
   eq('injury note has valid CN-1 affects metadata', modifiers[0]?.affects, ['current_week', 'future_generation']);
   eq('healthy normal generation has no fake notes', selectActiveCoachNotes({
     activeConstraints: [],
-    activeInjury: null,
     visibleWeekDays: [day(TODAY, 'Lower Strength', [], ['Back Squat'])],
     todayISO: TODAY,
   }), []);

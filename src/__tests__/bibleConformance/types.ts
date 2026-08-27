@@ -486,7 +486,6 @@ export interface ComponentGoldenScenario {
   target: { weekInBlock: 1; day: string };
   sourceKind:
     | 'deterministic'
-    | 'deterministic_with_recovery_addons'
     | 'direct_accessory_fixture';
   scalarMutation?: {
     workoutType: string;
@@ -599,7 +598,7 @@ export interface MutationAcceptanceResult {
   killed: boolean;
   mutationActive: boolean;
   restored: boolean;
-  firstDivergenceStage: StrengthTraceStage | null;
+  firstDivergenceStage: InvariantFailure['stage'] | null;
   report: string;
 }
 
@@ -612,7 +611,7 @@ export type ComponentMutationId =
 
 export interface ComponentMutationAcceptanceResult extends MutationAcceptanceResult {
   mutationId: ComponentMutationId;
-  invariantId: BibleInvariantId;
+  invariantId: InvariantFailure['invariantId'];
   scenarioId: BibleScenarioId;
 }
 
@@ -640,13 +639,14 @@ export interface Slice3MutationAcceptanceResult {
   restored: boolean;
   invariantId: Slice3InvariantId;
   scenarioId: Slice3ScenarioId;
-  firstDivergenceStage: Slice3TraceStage;
+  firstDivergenceStage: InvariantFailure['stage'];
   report: string;
 }
 
 // ─── Slice 5 deterministic generation and coverage ────────────────────────
 
-export type RegisteredRuleId = BibleRuleId | ComponentRuleId | Slice3RuleId | Slice4RuleId;
+export type RegisteredRuleId = BibleRuleId | ComponentRuleId | Slice3RuleId | Slice4RuleId |
+  (typeof import('./expectations/preseasonExposureRules').PRESEASON_EXPOSURE_RULES)[number]['id'];
 
 export type GeneratedDomain =
   | 'strength'

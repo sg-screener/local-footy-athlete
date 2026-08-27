@@ -30,7 +30,6 @@ import {
 } from '../utils/coachingEngine';
 import { coachingPlanForTests } from './support/coachingPlanForTests';
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
-import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 
@@ -334,66 +333,7 @@ console.log('\n[6] robustness signal favours safe prehab without creating hard e
     ordered.at(-1)?.focusArea === 'mobility_reset',
     ordered.map((item) => item.focusArea));
 
-  const before = [
-    workout(1, 'Lower Strength'),
-    workout(2, 'Upper Strength'),
-    workout(3, 'Recovery', 'Recovery'),
-    workout(4, 'Full Body Strength'),
-    workout(5, 'Easy Aerobic', 'Conditioning'),
-  ];
-  const after = attachRecoveryAddonsToWeek({
-    workouts: before,
-    profile: profile({ biggestLimitation: 'Injury history' }),
-    weekKind: 'build',
-  });
-  ok('injury-history profile favours robustness/prehab coverage',
-    addonFocus(after).includes('hamstring_light_prehab'), addonFocus(after));
-
-  const neutralSupport = attachRecoveryAddonsToWeek({
-    workouts: before,
-    profile: profile({
-      position: undefined,
-      motivation: 'Stay consistent',
-      biggestLimitation: undefined,
-    }),
-    weekKind: 'build',
-  });
-  const sizeSupport = attachRecoveryAddonsToWeek({
-    workouts: before,
-    profile: profile({
-      position: undefined,
-      motivation: 'Build muscle and size',
-      biggestLimitation: undefined,
-    }),
-    weekKind: 'build',
-  });
-  const durabilitySupport = attachRecoveryAddonsToWeek({
-    workouts: before,
-    profile: profile({
-      position: undefined,
-      motivation: 'Stay injury-free and durable',
-      biggestLimitation: undefined,
-    }),
-    weekKind: 'build',
-  });
-  ok('strength/size goal changes safe support ordering without adding a session',
-    addonFocus(sizeSupport).join(',') !== addonFocus(neutralSupport).join(',') &&
-      sizeSupport.length === neutralSupport.length,
-    { neutral: addonFocus(neutralSupport), size: addonFocus(sizeSupport) });
-  ok('durability goal changes safe prehab ordering without adding a hard day',
-    addonFocus(durabilitySupport).join(',') !== addonFocus(neutralSupport).join(',') &&
-      addonFocus(durabilitySupport).includes('hamstring_light_prehab'),
-    { neutral: addonFocus(neutralSupport), durability: addonFocus(durabilitySupport) });
-  const beforeCounts = countWeeklyExposures(before.map((item, index) => ({
-    date: `2026-07-${String(6 + index).padStart(2, '0')}`,
-    workout: item,
-  })));
-  const afterCounts = countWeeklyExposures(after.map((item, index) => ({
-    date: `2026-07-${String(6 + index).padStart(2, '0')}`,
-    workout: item,
-  })));
-  eq('recovery add-on bias creates no hard days', afterCounts.hardExposures, beforeCounts.hardExposures);
-  eq('recovery add-on bias creates no conditioning exposure', afterCounts.conditioningExposures, beforeCounts.conditioningExposures);
+  // Retired standalone add-on materialisation: only the pure bias ordering above remains.
 }
 
 console.log('\n[7] game, injury and readiness gates win');

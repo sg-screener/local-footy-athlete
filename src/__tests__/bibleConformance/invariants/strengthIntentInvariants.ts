@@ -479,5 +479,5 @@ export function evaluateStrengthTrace(trace: StrengthScenarioTrace): InvariantCh
 
 export function firstInvariantFailure(results: readonly InvariantCheckResult[]): InvariantFailure | null {
   const failures = results.flatMap((result) => result.failures);
-  return failures.sort((left, right) => STAGES.indexOf(left.stage) - STAGES.indexOf(right.stage))[0] ?? null;
+  return failures.sort((left, right) => STAGES.findIndex(stage => stage === left.stage) - STAGES.findIndex(stage => stage === right.stage))[0] ?? null;
 }

@@ -25,12 +25,12 @@ import {
 
 const baseHealthy: Partial<OnboardingData> = {
   firstName: 'TestAthlete',
-  ageRange: '25-34',
+  ageRange: '26-30',
   position: 'inside_mid',
   motivation: 'Get stronger, run longer',
-  experienceLevel: 'Intermediate' as any,
-  squatStrength: '1.5x BW' as any,
-  benchStrength: '1x BW' as any,
+  experienceLevel: '2-5 years',
+  squatStrength: '1.5x bodyweight',
+  benchStrength: 'Around bodyweight',
   // NOTE: enum values must match src/types/domain.ts exactly. If the
   // values don't match, readiness silently falls back to 'low' and the
   // healthy-only invariants (H-IS-3, H-PRE-7/8/9) gate themselves out.
@@ -38,9 +38,9 @@ const baseHealthy: Partial<OnboardingData> = {
   sprintExposure: '2+ times per week',
   recentTrainingLoad: 'Very consistent',
   injuries: [],
-  trainingLocation: 'Gym' as any,
-  teamTrainingDuration: '90 min' as any,
-  teamTrainingIntensity: 'High',
+  trainingLocation: 'Commercial gym',
+  teamTrainingDuration: '90 minutes',
+  teamTrainingIntensity: 'Hard',
 };
 
 function inseasonHealthy5d2tSat(): OnboardingData {
@@ -120,8 +120,8 @@ function inseasonLowReadiness(): OnboardingData {
   return {
     ...baseHealthy,
     conditioningLevel: 'Poor',
-    sprintExposure: 'None',
-    recentTrainingLoad: 'Minimal',
+    sprintExposure: 'No sprint training',
+    recentTrainingLoad: 'Hardly at all',
     seasonPhase: 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -142,7 +142,7 @@ function inseasonSevereInjury(): OnboardingData {
     teamTrainingDays: ['Tuesday', 'Thursday'],
     usualGameDay: 'Saturday',
     gameDay: 'Saturday',
-    injuries: [{ area: 'Hamstring' as any, severity: 'Severe' as any }],
+    injuries: [{ bodyArea: 'Hamstring', description: 'Hamstring pain', severity: 'Severe' }],
   } as OnboardingData;
 }
 

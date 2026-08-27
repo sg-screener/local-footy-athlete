@@ -4,7 +4,6 @@ import type {
   WorkoutExercise,
 } from '../../../types/domain';
 import type { SessionAllocation } from '../../../utils/coachingEngine';
-import { attachRecoveryAddonsToWeek } from '../../../utils/recoveryAddonBuilder';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import {
   buildSingleWorkoutFixtureTrace,
@@ -35,13 +34,6 @@ function productionOptions(scenario: ComponentGoldenScenario): StrengthTraceBuil
   return {
     transformGeneratedWeek: ({ workouts, profile, state }) => {
       let next = workouts;
-      if (scenario.sourceKind === 'deterministic_with_recovery_addons') {
-        next = attachRecoveryAddonsToWeek({
-          workouts: next,
-          profile,
-          weekKind: state.weekKind,
-        });
-      }
       if (scenario.scalarMutation) {
         const targetDay = scenario.target.day;
         next = next.map((workout) => {
@@ -76,7 +68,7 @@ function fixtureRow(workoutId: string, index: number, name: string): WorkoutExer
       name,
       description: name,
       muscleGroups: [],
-      exerciseType: 'Accessory',
+      exerciseType: 'Isolation',
       equipmentRequired: [],
       difficultyLevel: 'Intermediate',
       createdAt: NOW,

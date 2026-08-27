@@ -225,6 +225,8 @@ export interface AcceptedStateTransactionProposal {
   /** Development-only correlation context; never persisted. */
   trace?: AthleteActionTraceContext;
   program?: Partial<AcceptedProgramSurfaces>;
+  /** Derived pre-fact compiler continuation; never part of persisted inputs. */
+  sourceFactCompilerInput?: ProgramState['sourceFactCompilerInput'];
   markedDays?: Record<string, CalendarDayType>;
   readinessSignalsByDate?: Record<string, ReadinessSignal>;
   activeConstraints?: ActiveConstraint[];
@@ -1027,6 +1029,8 @@ export function commitAcceptedStateTransaction(
     beforeStateHash,
   });
   useProgramStore.setState({
+    sourceFactCompilerInput: proposal.sourceFactCompilerInput ?? (proposal.program
+      ? null : useProgramStore.getState().sourceFactCompilerInput),
     ...staged.program,
     acceptedMaterialContext: staged.context,
   });
@@ -1665,207 +1669,9 @@ export function commitReversibleAdjustmentCreationTransaction(
   return { ...staged, result };
 }
 
-/**
- * Exact-delta owner for an explicit athlete/coach load reduction. Temporary
- * health facts must never call this helper: they compose reversibly from the
- * AcceptedCompositionBase and therefore do not own a program delta.
- */
-export function commitExplicitLoadEditTransaction(args: {
-  proposal: AcceptedStateTransactionProposal;
-  sourceActionOrIntentId: string;
-  affectedDates: readonly string[];
-  sourceActor?: ReversibleAdjustmentActor;
-  sourceSurface?: ReversibleAdjustmentSurface;
-}): ReversibleAdjustmentCreationStage {
-  return commitReversibleAdjustmentCreationTransaction({
-    kind: 'explicit_load_edit',
-    sourceActor: args.sourceActor ?? 'athlete',
-    sourceSurface: args.sourceSurface ?? 'coach_chat',
-    sourceActionOrIntentId: args.sourceActionOrIntentId,
-    proposal: args.proposal,
-    affectedDates: args.affectedDates,
-    restorationTarget: {
-      kind: 'session',
-      dates: [...args.affectedDates],
-    },
-  });
-}
 
-export interface AcceptedLoadEditLedgerBaseline {
-  program: AcceptedProgramSurfaces;
-  context: AcceptedMaterialContext;
-}
 
-export function captureAcceptedLoadEditLedgerBaseline(): AcceptedLoadEditLedgerBaseline {
-  const state = useProgramStore.getState();
-  return {
-    program: cloneAccepted(programSurfaces(state)),
-    context: cloneAccepted(materialContext(state)),
-  };
-}
 
-/**
- * Attach exact ownership after a deterministic program-edit executor has
- * already written its accepted candidate inside the surrounding rollback
- * transaction. The owned rows are computed from clean accepted surfaces, so
- * active temporary facts are not counted as a second load reduction.
- */
-export function commitExplicitLoadEditLedgerFromBaseline(args: {
-  baseline: AcceptedLoadEditLedgerBaseline;
-  sourceActionOrIntentId: string;
-  affectedDates: readonly string[];
-  sourceActor?: ReversibleAdjustmentActor;
-  sourceSurface?: ReversibleAdjustmentSurface;
-  /** Temporary source fact that authored this edit (for cascade-revert on clear). */
-  sourceFactId?: string;
-}): ReversibleAdjustmentRecord | null {
-  const afterState = useProgramStore.getState();
-  const afterProgram = programSurfaces(afterState);
-  const afterContext = materialContext(afterState);
-  const profile = useProfileStore.getState().onboardingData;
-  const candidateDates = Array.from(new Set(args.affectedDates.map((date) => date.slice(0, 10)))).sort();
-  const weeks = Array.from(new Set(candidateDates.map(mondayForDate))).sort();
-  const beforeWorkouts = acceptedWorkoutsForDates({
-    surfaces: args.baseline.program,
-    context: args.baseline.context,
-    profile,
-    dates: candidateDates,
-  });
-  const afterWorkouts = acceptedWorkoutsForDates({
-    surfaces: afterProgram,
-    context: afterContext,
-    profile,
-    dates: candidateDates,
-  });
-  const beforeSurfaceRows = acceptedSurfaceRowsForDates({
-    surfaces: args.baseline.program,
-    context: args.baseline.context,
-    profile,
-    dates: candidateDates,
-  });
-  const afterSurfaceRows = acceptedSurfaceRowsForDates({
-    surfaces: afterProgram,
-    context: afterContext,
-    profile,
-    dates: candidateDates,
-  });
-  const changedDates = candidateDates.filter((date) =>
-    reversibleAdjustmentWorkoutFingerprint(date, beforeWorkouts.get(date) ?? null) !==
-      reversibleAdjustmentWorkoutFingerprint(date, afterWorkouts.get(date) ?? null) ||
-    semanticFingerprint(args.baseline.program.dateOverrides[date] ?? null) !==
-      semanticFingerprint(afterProgram.dateOverrides[date] ?? null));
-  const ownedDays: ReversibleAdjustmentOwnedDayDelta[] = changedDates.map((date) => ({
-    date,
-    weekStart: mondayForDate(date),
-    beforeWorkout: cloneAccepted(beforeWorkouts.get(date) ?? null),
-    beforeSurfaceOwner: beforeSurfaceRows.get(date)?.owner ?? 'empty',
-    afterSurfaceOwner: afterSurfaceRows.get(date)?.owner ?? 'empty',
-    beforeSurfaceWorkout: cloneAccepted(beforeSurfaceRows.get(date)?.workout ?? null),
-    beforeDateOverride: cloneAccepted(args.baseline.program.dateOverrides[date] ?? null),
-    beforeOverrideContext: cloneAccepted(args.baseline.program.overrideContexts[date] ?? null),
-    beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, beforeWorkouts.get(date) ?? null),
-    afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkouts.get(date) ?? null),
-    // LR-26: identity + fingerprints, never the after-state copies.
-    afterStableIdentity: afterWorkouts.get(date)?.planEntryId
-      ?? afterWorkouts.get(date)?.id ?? null,
-    afterDateOverrideFingerprint: semanticFingerprint(afterProgram.dateOverrides[date] ?? null),
-    afterOverrideContextFingerprint: semanticFingerprint(
-      afterProgram.overrideContexts[date] ?? null),
-  }));
-  const ownedWeeks: ReversibleAdjustmentOwnedWeekDelta[] = weeks.flatMap((weekStart) => {
-    const before = contractForAcceptedWeek(args.baseline.program, weekStart) ?? null;
-    const after = contractForAcceptedWeek(afterProgram, weekStart) ?? null;
-    const beforeFingerprint = semanticFingerprint(before);
-    const afterFingerprint = semanticFingerprint(after);
-    return beforeFingerprint === afterFingerprint ? [] : [{
-      weekStart,
-      beforeExposureContract: before ? cloneAccepted(before) : null,
-      afterExposureContract: after ? cloneAccepted(after) : null,
-      beforeFingerprint,
-      afterFingerprint,
-    }];
-  });
-  if (ownedDays.length === 0 && ownedWeeks.length === 0) return null;
-  const createdAt = new Date().toISOString();
-  const id = reversibleAdjustmentId({
-    kind: 'explicit_load_edit',
-    sourceActionOrIntentId: args.sourceActionOrIntentId,
-    createdAt,
-  });
-  const beforeReductions = new Set(acceptedLinkedReductions(
-    { surfaces: args.baseline.program, context: args.baseline.context, profile }, weeks)
-    .map(linkedReductionSignature));
-  const linkedTypedReductions = acceptedLinkedReductions(
-    { surfaces: afterProgram, context: afterContext, profile }, weeks)
-    .filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
-  const record: ReversibleAdjustmentRecord = {
-    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
-    id,
-    kind: 'explicit_load_edit',
-    sourceActor: args.sourceActor ?? 'athlete',
-    sourceSurface: args.sourceSurface ?? 'coach_chat',
-    sourceActionOrIntentId: args.sourceActionOrIntentId,
-    ...(args.sourceFactId ? { sourceFactId: args.sourceFactId } : {}),
-    createdAt,
-    acceptedRevision: afterContext.revision,
-    status: 'active',
-    clearedAt: null,
-    supersededById: null,
-    supersededReason: null,
-    affectedDates: changedDates,
-    affectedWeeks: weeks,
-    rollingDependencyWeeks: weeks,
-    displacedOriginalState: {
-      ownedDays,
-      ownedWeeks,
-      calendarFacts: [],
-      userRemovalConstraint: null,
-    },
-    acceptedAfterSemanticFingerprints: ownedDays.map((entry) => ({
-      date: entry.date,
-      fingerprint: entry.afterFingerprint,
-    })),
-    restorationTarget: {
-      kind: 'session',
-      dates: changedDates,
-      stableIdentities: Array.from(new Set(ownedDays.flatMap((entry) => [
-        entry.beforeWorkout?.planEntryId ?? entry.beforeWorkout?.id,
-        entry.afterStableIdentity,
-      ].filter((value): value is string => !!value)))).sort(),
-    },
-    linkedConstraintIds: [],
-    linkedCalendarFacts: [],
-    linkedOverrideOwners: changedDates.map((date) => ({
-      date,
-      ownerId: overrideOwnerId(afterProgram.overrideContexts[date]),
-    })),
-    linkedOverlayIds: [],
-    linkedUserRemovalConstraintIds: [],
-    linkedProvenanceIds: [],
-    linkedTypedReductions,
-    validity: {
-      reversible: true,
-      source: 'runtime_exact_delta',
-      validWhile: ['accepted_after_semantic_fingerprints_match'],
-      invalidWhen: ['newer_athlete_intent_owns_same_target', 'owned_day_fingerprint_changes'],
-    },
-    laterIntentPolicy: 'newer_athlete_intent_wins',
-  };
-  commitAcceptedStateTransaction({
-    // The athlete just edited their load and this records the delta that edit
-    // produced. The decision is theirs and it is new.
-    operation: 'forward_decision',
-    reason: 'explicit_load_edit:record_exact_delta',
-    program: {
-      reversibleAdjustmentLedger: {
-        protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
-        adjustments: [...afterProgram.reversibleAdjustmentLedger.adjustments, record],
-      },
-    },
-    validateWeekStarts: weeks,
-  });
-  return record;
-}
 
 function mondayForDate(date: string): string {
   const value = new Date(`${date.slice(0, 10)}T12:00:00`);
@@ -2578,87 +2384,7 @@ export function stageRollingHorizonFixtureRepair(args: {
   };
 }
 
-export function commitCalendarMarkTransaction(args: {
-  date: string;
-  mark: CalendarDayType | null;
-  expectedCurrentMark?: CalendarDayType;
-  todayISO?: string;
-}): AcceptedStateTransactionResult {
-  const state = useProgramStore.getState();
-  const prior = materialContext(state);
-  const markedDays = { ...prior.markedDays };
-  const current = markedDays[args.date];
-  if (args.expectedCurrentMark && current !== args.expectedCurrentMark) {
-    return { program: programSurfaces(state), context: prior };
-  }
-  const weekStart = mondayForDate(args.date);
-  if (args.mark === null) delete markedDays[args.date];
-  else markedDays[args.date] = args.mark;
-  if (args.mark === 'game') {
-    for (const date of datesInWeek(weekStart)) {
-      if (
-        date !== args.date &&
-        (markedDays[date] === 'game' || markedDays[date] === 'noGame')
-      ) delete markedDays[date];
-    }
-  } else if (args.mark === 'noGame') {
-    for (const date of datesInWeek(weekStart)) {
-      if (markedDays[date] === 'game') delete markedDays[date];
-    }
-  } else if (args.mark === null && current === 'game') {
-    const profile = useProfileStore.getState().onboardingData;
-    const recurringDay = storedGameAnchor(profile);
-    if (recurringDay) {
-      const recurringDate = datesInWeek(weekStart)
-        .find((date) => dayNameForDate(date) === recurringDay);
-      if (recurringDate) markedDays[recurringDate] = 'noGame';
-    }
-  }
-  return commitCalendarStateTransaction({
-    reason: `calendar:${args.mark ?? 'clear'}:${args.date}`,
-    markedDays,
-    affectedDates: [args.date],
-    fixtureChangedDates: current === 'game' || current === 'noGame' ||
-      args.mark === 'game' || args.mark === 'noGame' ? [args.date] : [],
-    todayISO: args.todayISO,
-  });
-}
 
-/**
- * Pure fixture-mark proposal used by the rebuild owner. A week rebuild must
- * not call calendar actions during its commit; the proposed marks travel in
- * the same accepted snapshot as the rebuilt program and overlay.
- */
-export function proposeFixtureMarkedDays(args: {
-  profile: OnboardingData;
-  targetDate: string;
-  newGameDay: DayOfWeek | null;
-  previousFixtureDate?: string;
-}): Record<string, CalendarDayType> {
-  const prior = materialContext(useProgramStore.getState());
-  const markedDays = { ...prior.markedDays };
-  const targetWeekStart = mondayForDate(args.targetDate);
-
-  if (args.previousFixtureDate) delete markedDays[args.previousFixtureDate];
-  if (args.newGameDay) {
-    for (const date of datesInWeek(targetWeekStart)) {
-      if (markedDays[date] === 'game' || markedDays[date] === 'noGame') {
-        delete markedDays[date];
-      }
-    }
-    markedDays[args.targetDate] = 'game';
-    return markedDays;
-  }
-
-  if (markedDays[args.targetDate] === 'game') delete markedDays[args.targetDate];
-  const recurringDay = storedGameAnchor(args.profile);
-  if (recurringDay) {
-    const recurringDate = datesInWeek(targetWeekStart)
-      .find((date) => dayNameForDate(date) === recurringDay);
-    if (recurringDate) markedDays[recurringDate] = 'noGame';
-  }
-  return markedDays;
-}
 
 /**
  * Commit one already-accepted fixture effect through the deterministic weekly
@@ -2684,7 +2410,6 @@ export function commitCanonicalAcceptedFixtureEditEffect(
     clearOverlayDate: effect.action === 'move'
       ? effect.sourceDate ?? undefined
       : undefined,
-    manageCalendarFixture: true,
     acceptedFixtureEffect: effect,
     todayISO: effect.acceptedAt.slice(0, 10),
     diagnosticSource: effect.source.producer,
@@ -2715,89 +2440,7 @@ export function commitCanonicalAcceptedDayPlacementEffect(
   });
 }
 
-export function commitCalendarStateTransaction(args: {
-  reason: string;
-  todayISO?: string;
-  markedDays: Record<string, CalendarDayType>;
-  affectedDates: readonly string[];
-  fixtureChangedDates?: readonly string[];
-  program?: Partial<AcceptedProgramSurfaces>;
-  mutationIntent?: FixtureMutationIntent;
-}): AcceptedStateTransactionResult {
-  const state = useProgramStore.getState();
-  const baseProfile = useProfileStore.getState().onboardingData;
-  const prior = materialContext(state);
-  const affectedWeeks = new Set(args.affectedDates.map(mondayForDate));
-  const fixtureWeeks = new Set((args.fixtureChangedDates ?? []).map(mondayForDate));
-  const overlays = {
-    ...state.weekScopedOverlays,
-    ...(args.program?.weekScopedOverlays ?? {}),
-  };
-  if (state.currentProgram && baseProfile) {
-    const proposedUserRemovalConstraints = args.program?.userRemovalConstraints ??
-      state.userRemovalConstraints;
-    const repair = stageRollingHorizonFixtureRepair({
-      program: state.currentProgram,
-      profile: baseProfile,
-      beforeMarkedDays: prior.markedDays,
-      afterMarkedDays: args.markedDays,
-      sourceSurfaces: storedWorldSurfaces(state),
-      activeConstraints: prior.activeConstraints,
-      primaryWeekStarts: Array.from(
-        args.mutationIntent === 'athlete_removal' ? affectedWeeks : fixtureWeeks,
-      ),
-      primaryMutationIntent: args.mutationIntent,
-      dependentMutationIntent: 'remove_from_date',
-      evaluationSurfaces: storedWorldSurfaces({
-        ...state,
-        userRemovalConstraints: proposedUserRemovalConstraints,
-      }),
-    });
-    for (const projection of repair.projections) {
-      affectedWeeks.add(projection.weekStart);
-      overlays[projection.weekStart] = projection.overlay;
-    }
-  }
-  return commitAcceptedStateTransaction({
-    // A calendar mark IS the athlete stating a fact about their life — the
-    // founding case for accept-and-reduce. The mark is kept and the shortfall
-    // disclosed; it is never refused back at them.
-    operation: 'forward_decision',
-    reason: args.reason,
-    todayISO: args.todayISO,
-    program: { ...(args.program ?? {}), weekScopedOverlays: overlays },
-    markedDays: args.markedDays,
-    validateWeekStarts: Array.from(affectedWeeks),
-    profile: baseProfile,
-  });
-}
 
-/**
- * Atomic whole-session/date removal. The accepted target row remains in the
- * planner input, the proposed rest mark removes that date, and any compulsory
- * exposure is relocated before one program/calendar snapshot is published.
- */
-export function commitDateUnavailableTransaction(args: {
-  date: string;
-  reason: string;
-}): AcceptedStateTransactionResult {
-  const state = useProgramStore.getState();
-  const prior = materialContext(state);
-  const markedDays = { ...prior.markedDays, [args.date]: 'rest' as const };
-  const dateOverrides = { ...state.dateOverrides };
-  const overrideContexts = { ...state.overrideContexts };
-  delete dateOverrides[args.date];
-  delete overrideContexts[args.date];
-  return commitCalendarStateTransaction({
-    reason: args.reason,
-    markedDays,
-    affectedDates: [args.date],
-    fixtureChangedDates: prior.markedDays[args.date] === 'game' ||
-      prior.markedDays[args.date] === 'noGame' ? [args.date] : [],
-    program: { dateOverrides, overrideContexts },
-    mutationIntent: 'remove_from_date',
-  });
-}
 
 /**
  * Shared athlete-deletion owner for tap and Coach producers.
@@ -3996,77 +3639,6 @@ export function commitAthleteSessionAdditionTransaction(
   };
 }
 
-/**
- * Program-setup rebuild publication. Future weeks come from the newly built
- * program, while the currently accepted effective week is minimally rebased
- * through the same planner so a new availability block relocates compulsory
- * work instead of replacing the athlete's accepted strength structure.
- */
-export function commitProgramSetupRebuildTransaction(args: {
-  program: TrainingProgram;
-  profile: OnboardingData;
-  todayISO: string;
-}): AcceptedStateTransactionResult {
-  const state = useProgramStore.getState();
-  const prior = materialContext(state);
-  const weekStart = mondayForDate(args.todayISO);
-  const selected = args.program.microcycles.find((microcycle) =>
-    weekStart >= microcycle.startDate.slice(0, 10) &&
-    weekStart <= microcycle.endDate.slice(0, 10)) ?? args.program.microcycles[0] ?? null;
-  let overlays: Record<string, WeekScopedWorkoutOverlay> = {};
-  const sourceHasWeek = state.currentProgram?.microcycles.some((microcycle) =>
-    weekStart >= microcycle.startDate.slice(0, 10) &&
-    weekStart <= microcycle.endDate.slice(0, 10));
-  const targetHasWeek = args.program.microcycles.some((microcycle) =>
-    weekStart >= microcycle.startDate.slice(0, 10) &&
-    weekStart <= microcycle.endDate.slice(0, 10));
-  if (state.currentProgram && sourceHasWeek && targetHasWeek) {
-    overlays = {
-      [weekStart]: buildFixtureProjection({
-        program: args.program,
-        profile: args.profile,
-        weekStart,
-        markedDays: prior.markedDays,
-        sourceSurfaces: storedWorldSurfaces(state),
-        sourceMarkedDays: prior.markedDays,
-        activeConstraints: prior.activeConstraints,
-        mutationIntent: state.userRemovalConstraints.some((constraint) =>
-          constraint.status === 'active' && mondayForDate(constraint.targetDate) === weekStart)
-          ? 'athlete_removal'
-          : 'remove_from_date',
-      }).overlay,
-    };
-  }
-  const todayDow = new Date(`${args.todayISO}T12:00:00`).getDay();
-  const todayOverlay = overlays[weekStart]?.workoutsByDate[args.todayISO] ?? null;
-  return commitAcceptedStateTransaction({
-    // Program setup publishes a week built FOR a profile the athlete just
-    // gave. If that week cannot meet its contract that is the consequence of
-    // their answers, disclosed — not a corrupt snapshot to refuse.
-    operation: 'forward_decision',
-    reason: 'program_setup:accepted_rebuild',
-    program: {
-      currentProgram: args.program,
-      currentMicrocycle: selected,
-      todayWorkout: todayOverlay ??
-        selected?.workouts.find((workout) => workout.dayOfWeek === todayDow) ?? null,
-      weekScopedOverlays: overlays,
-      exposureContractsByWeek: {},
-    },
-    profile: args.profile,
-    acceptedProfileSnapshot: {
-      protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
-      capturedAt: prior.acceptedProfileSnapshot?.capturedAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      sourceRevision: prior.revision + 1,
-      onboardingData: args.profile,
-    },
-    validateWeekStarts: Array.from(new Set([
-      ...args.program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
-      ...Object.keys(overlays),
-    ])),
-  });
-}
 
 function readinessSignal(args: {
   date: string;

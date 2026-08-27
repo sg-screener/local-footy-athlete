@@ -112,7 +112,7 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     expectation: { attachedPreservesPrimary: true, standaloneOwnsPrimary: true },
   },
   {
-    id: 'ALL-COND-INTENT-HONEST-01', category: 'conditioning', section: 'Conditioning intensity buckets',
+    id: 'ALL-COND-INTENT-HONEST-01', category: 'identity', section: 'Conditioning intensity buckets',
     anchorQuote: 'This should sit between easy aerobic and hard conditioning.',
     statement: 'Final tempo, hard, speed, flush and recovery purpose projects the matching visible identity.',
     applicableScenarios: ['standalone-conditioning-ownership', 'generation-ai-fallback-equivalence'],

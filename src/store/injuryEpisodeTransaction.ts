@@ -344,6 +344,19 @@ function episodeFromConstraint(args: {
   };
 }
 
+/** Preview uses the exact same targeting and episode construction as acceptance. */
+export function proposeInjuryEpisodeFacts(constraint: ActiveInjuryConstraint, dateISO: string) {
+  const context = normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext);
+  const existing = activeEpisodeForConstraint(context.injuryEpisodes, constraint);
+  const horizon = acceptedWeeksAndDates(dateISO);
+  const episode = episodeFromConstraint({ constraint, existing,
+    sourceActor: 'athlete', sourceSurface: 'session_injury_review',
+    now: constraint.lastUpdatedAt ?? `${dateISO}T12:00:00.000Z`, anchorDate: dateISO,
+    affectedDates: horizon.dates, affectedWeeks: horizon.weeks });
+  return [...context.temporarySourceFacts.filter(fact => !isInjurySourceFact(fact) ||
+    fact.episodeId !== episode.episodeId), episode];
+}
+
 async function persistEpisodeSet(args: {
   nextEpisodes: InjuryEpisodeV1[];
   ownership: CanonicalOwnershipSnapshot;
@@ -610,15 +623,7 @@ export async function transactExactInjuryEpisode(
 export async function createOrUpdateInjuryEpisode(
   input: CreateOrUpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
-  const result = await createOrUpdateInjuryEpisodeTraced(input);
-  // R5.1 (the switchover): the fact has landed as an INPUT, so the week
-  // re-derives from it. The incremental replan this transaction produced on
-  // the way is discarded — an injured week must not depend on whether the
-  // athlete has relaunched since declaring it (`fact-door-inputs` cell 3).
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
-  await settleDerivedWorldAfterDecision();
-  return result;
+  return createOrUpdateInjuryEpisodeTraced(input);
 }
 
 async function createOrUpdateInjuryEpisodeTraced(
@@ -780,34 +785,7 @@ export async function resolveInjuryEpisode(
   episodeId: string,
   options: ResolveInjuryEpisodeOptions = {},
 ): Promise<InjuryEpisodeResolutionResult> {
-  const result = await resolveInjuryEpisodeTraced(episodeId, options);
-  /**
-   * ⚠ **AN INJURY ENDING IS AN INPUT CHANGING, EXACTLY LIKE AN INJURY STARTING.**
-   *
-   * `createOrUpdateInjuryEpisode` has re-derived since R5.1 — *"the fact has
-   * landed as an INPUT, so the week re-derives from it"* — and this, its twin,
-   * did not. **The asymmetry was invisible until a row the injury DISPLACED had
-   * to come back.**
-   *
-   * Sam, 2026-08-19: *"Keep the athlete's original Swap preference underneath.
-   * When the injury/equipment constraint ends, their chosen Swap returns if it
-   * is legal again."*
-   *
-   * MEASURED by `test:session-change-durability` [8]: the athlete swapped to
-   * `Glute Bridge`, a knee injury displaced it with `Bench Press`, and after
-   * clearing the injury the session still read
-   * `["Bench Press<-Glute Bridge:injury", …]` — the displacement was resolved as
-   * a FACT but stayed on the day as stored content, so the preference could
-   * never return.
-   *
-   * Nothing re-swaps anything here. The swap decision was never discarded, so
-   * re-deriving is the whole restoration: the ledger replays it and no active
-   * injury displaces it any more.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
-  await settleDerivedWorldAfterDecision();
-  return result;
+  return resolveInjuryEpisodeTraced(episodeId, options);
 }
 
 async function resolveInjuryEpisodeTraced(

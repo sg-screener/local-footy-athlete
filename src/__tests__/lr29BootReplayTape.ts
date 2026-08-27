@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * LR-29 REPLAY UNIT — ITEM 1 OF THE MEASURED DEPENDENCY LIST.
  *
@@ -134,7 +135,7 @@ function reachWorldByActing(): void {
   useProfileStore.getState().updateOnboardingData(profile);
   quiet(() => useProfileStore.getState().completeOnboarding());
   for (const [date, mark] of Object.entries(SAM_PASS_20260805_MARKED_DAYS)) {
-    if (mark === 'game') useCalendarStore.getState().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
+    if (mark === 'game') calendarActionsForTest().setGameDay(date, SAM_PASS_20260805_GENERATION_DAY);
   }
   const program = quiet(() => generateProgramLocally(profile, {
     todayISO: SAM_PASS_20260805_GENERATION_DAY,

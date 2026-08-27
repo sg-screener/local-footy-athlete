@@ -186,10 +186,8 @@ console.log('\n[3] The control — an INJURY still restricts, and still may bloc
   const healthy = canon({ ...world });
   const injured = canon({
     ...world,
-    activeInjuries: [{
-      region: 'lower_body', pauseAffectedTraining: true, severity: 8,
-      injuryKeys: ['knee'],
-    }],
+    injuryPolicy: { prohibitedPatterns: ['squat', 'hinge'], blocksAppSprint: true,
+      lowerBodyRestricted: true, upperBodyRestricted: false },
   });
   ok('[control] an active severe injury DOES move the contract',
     healthy !== injured,
@@ -197,10 +195,8 @@ console.log('\n[3] The control — an INJURY still restricts, and still may bloc
 
   const contract = buildWeeklyExposureContract({
     ...world,
-    activeInjuries: [{
-      region: 'lower_body', pauseAffectedTraining: true, severity: 8,
-      injuryKeys: ['knee'],
-    }],
+    injuryPolicy: { prohibitedPatterns: ['squat', 'hinge'], blocksAppSprint: true,
+      lowerBodyRestricted: true, upperBodyRestricted: false },
   }) as any;
   const patterns: string[] = contract?.strength?.requiredPatterns ?? [];
   ok('[control] and it removes the affected patterns — injury is untouched by R-039',

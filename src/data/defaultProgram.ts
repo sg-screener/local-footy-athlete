@@ -1,6 +1,4 @@
 import {
-  TrainingProgram,
-  Microcycle,
   Workout,
   WorkoutExercise,
   Exercise,
@@ -20,7 +18,7 @@ import {
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import { logger } from '../utils/logger';
-import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
+import { addDaysISO } from '../utils/programBlockState';
 import {
   dayOfWeekForISODate,
   todayISOLocal,
@@ -427,220 +425,8 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   },
 ];
 
-/**
- * Create workout exercises for a given workout
- */
-function createWorkoutExercises(workoutId: string, exercises: any[]): WorkoutExercise[] {
-  return exercises.map((ex, index) => ({
-    id: `we-${workoutId}-${index}`,
-    workoutId,
-    exerciseId: ex.exerciseId,
-    exerciseOrder: index + 1,
-    prescribedSets: ex.sets,
-    prescribedRepsMin: ex.repsMin,
-    prescribedRepsMax: ex.repsMax,
-    prescribedWeightKg: ex.weight,
-    restSeconds: ex.rest,
-    notes: ex.notes,
-    exercise: DEFAULT_EXERCISES.find((e) => e.id === ex.exerciseId),
-    // Explicit superset fields — only populated when template data provides them
-    ...(ex.supersetGroup ? { supersetGroup: ex.supersetGroup } : {}),
-    ...(ex.supersetOrder ? { supersetOrder: ex.supersetOrder } : {}),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }));
-}
 
-/**
- * Create a workout for a specific day
- */
-function createWorkout(
-  microcycleId: string,
-  dayOfWeek: number,
-  name: string,
-  description: string,
-  intensity: IntensityLevel,
-  type: WorkoutType,
-  exercises: any[],
-  durationMinutes: number,
-  sessionTier?: 'core' | 'optional' | 'recovery'
-): Workout {
-  const workoutId = `w-${dayOfWeek}`;
-  return {
-    id: workoutId,
-    microcycleId,
-    dayOfWeek,
-    name,
-    description,
-    intensity,
-    workoutType: type,
-    sessionTier,
-    durationMinutes,
-    exercises: createWorkoutExercises(workoutId, exercises),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-}
 
-/**
- * Create the default microcycle (1 week)
- */
-function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingData): Microcycle {
-  const today = new Date(`${todayISOLocal()}T12:00:00`);
-  const { blockStart } = computeBlockBounds(today);
-  const startDate = new Date(blockStart + 'T12:00:00');
-
-  // Microcycle = 1 week (Mon–Sun)
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + 6);
-
-  const workouts: Workout[] = [
-    // Monday: Lower Strength
-    createWorkout(
-      'mc-1',
-      1,
-      'Lower Strength',
-      'Heavy leg day with squat focus',
-      'High',
-      'Strength',
-      [
-        { exerciseId: 'ex-squat', sets: 4, repsMin: 5, repsMax: 5, weight: 100, rest: 180 },
-        { exerciseId: 'ex-bulgarian-split', sets: 3, repsMin: 8, repsMax: 12, weight: 30, rest: 90 },
-        { exerciseId: 'ex-rdl', sets: 3, repsMin: 8, repsMax: 10, weight: 80, rest: 120 },
-        { exerciseId: 'ex-goblet-squat', sets: 3, repsMin: 10, repsMax: 12, weight: 20, rest: 90 },
-        { exerciseId: 'ex-calf-raises', sets: 3, repsMin: 12, repsMax: 15, weight: 0, rest: 60 },
-      ],
-      75,
-      'core'
-    ),
-
-    // Tuesday: Team Training
-    createWorkout(
-      'mc-1',
-      2,
-      'Team Training',
-      'Footy training night',
-      'Moderate',
-      'Team Training',
-      [],
-      45,
-      'core'
-    ),
-
-    // Wednesday: Upper Strength
-    createWorkout(
-      'mc-1',
-      3,
-      'Upper Strength',
-      'Heavy pressing day',
-      'High',
-      'Strength',
-      [
-        { exerciseId: 'ex-bench-press', sets: 4, repsMin: 5, repsMax: 5, weight: 80, rest: 180 },
-        { exerciseId: 'ex-overhead-press', sets: 3, repsMin: 6, repsMax: 8, weight: 50, rest: 120 },
-        { exerciseId: 'ex-db-rows', sets: 3, repsMin: 8, repsMax: 10, weight: 35, rest: 90 },
-        { exerciseId: 'ex-face-pulls', sets: 3, repsMin: 12, repsMax: 15, weight: 0, rest: 60 },
-        { exerciseId: 'ex-tricep-dips', sets: 3, repsMin: 8, repsMax: 12, weight: 0, rest: 90 },
-      ],
-      75,
-      'core'
-    ),
-
-    // Thursday: Team Training
-    createWorkout(
-      'mc-1',
-      4,
-      'Team Training',
-      'Footy training night',
-      'Moderate',
-      'Team Training',
-      [],
-      40,
-      'core'
-    ),
-
-    // Friday: Lower Hinge
-    createWorkout(
-      'mc-1',
-      5,
-      'Lower Hinge',
-      'Hip hinge focus with high volume',
-      'Moderate',
-      'Strength',
-      [
-        { exerciseId: 'ex-trap-bar-deadlift', sets: 4, repsMin: 6, repsMax: 8, weight: 120, rest: 150 },
-        { exerciseId: 'ex-hip-thrusts', sets: 3, repsMin: 10, repsMax: 12, weight: 80, rest: 90 },
-        { exerciseId: 'ex-walking-lunges', sets: 3, repsMin: 10, repsMax: 10, weight: 30, rest: 90 },
-        { exerciseId: 'ex-nordic-lower', sets: 3, repsMin: 3, repsMax: 5, weight: 0, rest: 90 },
-        { exerciseId: 'ex-leg-extension', sets: 3, repsMin: 10, repsMax: 12, weight: 0, rest: 90 },
-        { exerciseId: 'ex-calf-raises', sets: 3, repsMin: 12, repsMax: 15, weight: 0, rest: 60 },
-      ],
-      80,
-      'optional'
-    ),
-
-    // Saturday: Upper Push
-    createWorkout(
-      'mc-1',
-      6,
-      'Upper Push',
-      'Low-fatigue push and arm accessory work',
-      'Moderate',
-      'Strength',
-      [
-        { exerciseId: 'ex-incline-db-bench', sets: 3, repsMin: 8, repsMax: 10, weight: 30, rest: 90 },
-        { exerciseId: 'ex-overhead-press', sets: 3, repsMin: 6, repsMax: 8, weight: 45, rest: 120 },
-        { exerciseId: 'ex-lateral-raises', sets: 3, repsMin: 12, repsMax: 15, weight: 10, rest: 60 },
-        { exerciseId: 'ex-tricep-dips', sets: 3, repsMin: 8, repsMax: 12, weight: 0, rest: 90 },
-        { exerciseId: 'ex-barbell-curls', sets: 3, repsMin: 10, repsMax: 12, weight: 30, rest: 60 },
-      ],
-      80,
-      'optional'
-    ),
-
-    // Sunday: Rest day (no workout)
-  ];
-
-  const phaseAwareWorkouts = onboardingData?.seasonPhase
-    ? workouts.map((workout) => ({
-        ...workout,
-        exercises: applyPhaseRepSchemesToWorkoutExercises(workout.exercises, {
-          seasonPhase: onboardingData.seasonPhase,
-          workoutName: workout.name,
-          workoutType: workout.workoutType,
-        }),
-      }))
-    : workouts;
-
-  // Apply intelligent load estimates if onboarding data is available
-  const finalWorkouts = onboardingData
-    ? phaseAwareWorkouts.map(w => ({
-        ...w,
-        exercises: applyTrainingAgePrescription(
-          applyLoadEstimates(w.exercises, onboardingData),
-          onboardingData,
-          {
-            seasonPhase: onboardingData.seasonPhase,
-            workoutName: w.name,
-            workoutType: w.workoutType,
-          },
-        ),
-      }))
-    : phaseAwareWorkouts;
-
-  return {
-    id: 'mc-1',
-    programId,
-    weekNumber: 1,
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-    miniCycleNumber: 1,
-    intensityMultiplier: 1.0,
-    workouts: finalWorkouts,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-}
 
 /**
  * Find an exercise by name (case-insensitive partial match) or create a simple one.
@@ -2789,27 +2575,6 @@ export const DEFAULT_PROFILE: UserProfile = {
   primaryGoals: ['Build Strength', 'Improve Performance'],
   subscriptionStatus: 'active',
   onboardingCompleted: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
-
-/**
- * Default training program
- */
-// Compute week-aligned block bounds once at module load
-const _defaultBounds = computeBlockBounds(new Date(`${todayISOLocal()}T12:00:00`));
-
-export const DEFAULT_PROGRAM: TrainingProgram = {
-  id: 'prog-1',
-  userId: 'user-default',
-  name: 'Foundation Strength Program',
-  description: 'Build strength and conditioning with 6 training days per week',
-  programPhase: 'Pre-Season-Skills',
-  startDate: new Date(_defaultBounds.blockStart + 'T12:00:00').toISOString(),
-  endDate: new Date(_defaultBounds.blockEnd + 'T12:00:00').toISOString(),
-  primaryFocus: 'Strength and Conditioning',
-  isActive: true,
-  microcycles: [createDefaultMicrocycle('prog-1')],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

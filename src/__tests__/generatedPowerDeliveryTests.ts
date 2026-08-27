@@ -187,8 +187,8 @@ ok('power rides real strength content and never creates a standalone day',
     rows: workout.exercises.map((row) => ({
       name: row.exercise?.name,
       role: row.role,
-      pattern: row.pattern,
-      category: row.category,
+      pattern: row.section18Evidence?.mainStrengthPattern,
+      category: row.section18Evidence?.role,
     })) })));
 ok('the selected primers remain outside Game, G-1 and G+1',
   delivered.every((workout) => ![0, 5, 6].includes(workout.dayOfWeek)),
@@ -719,5 +719,5 @@ ok('[9d] and every one of those mutations moves the DAY CARD identically too',
     swapped: dayCardStrengthOrder(swapped ?? {}) });
 
 console.log(`\nGenerated power delivery: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
-totalsPrinted();
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exitCode = 1;

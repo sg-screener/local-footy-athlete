@@ -26,10 +26,10 @@ tags:
     id: "session-execution-toggle-strength"
 - extendedWaitUntil:
     visible:
-      id: "session-execution-check-exercise-dev-e2e-one-set-main"
+      id: "session-execution-check-exercise-we-w-composed-mc-ai-1-1-0"
     timeout: 10000
 - tapOn:
-    id: "session-execution-check-exercise-dev-e2e-one-set-main"
+    id: "session-execution-check-exercise-we-w-composed-mc-ai-1-1-0"
 # The first screenshot proves the athlete can open a component and that a
 # checked row visibly recedes while the remaining work stays live.
 - takeScreenshot: artifacts/ui-walk/session-checklist-partial

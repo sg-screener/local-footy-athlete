@@ -22,7 +22,6 @@ armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  clearCoachAdjustments,
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../utils/resetCoach';
@@ -634,13 +633,11 @@ section('[8] Reset functions still callable + dispatch correctly');
     clearPendingInjury: () => {},
   };
 
-  clearCoachAdjustments({ deps: fakeDeps as any });
-  ok('clearCoachAdjustments → coachUpdates cleared', coachUpdatesCleared === 1);
-
   // Reset state for full reset run.
   programCleared = false;
   resetProgramAndOnboarding({ deps: fakeDeps as any });
   ok('resetProgramAndOnboarding → program cleared', programCleared);
+  ok('full reset clears coach updates without surgical output writes', coachUpdatesCleared === 1);
 }
 
 // ═════════════════════════════════════════════════════════════════════

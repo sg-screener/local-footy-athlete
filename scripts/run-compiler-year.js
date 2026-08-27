@@ -18,6 +18,7 @@ require('sucrase/register');
 const { ARCHETYPES, yearTimeline } = require('../src/__tests__/compilerYear/catalog');
 const { yearVerdict, renderYearHtml } = require('../src/__tests__/compilerYear/results');
 const { runAthlete, realCompilerMutation } = require('../src/__tests__/compilerYear/run');
+const { sourceFactCompilerMutation, acceptanceBoundaryMutation, injuryRenderingMutation } = require('../src/__tests__/compilerYear/sourceFacts');
 const { scanSources } = require('./weekly-writer-census');
 
 async function main() {
@@ -37,10 +38,11 @@ async function main() {
   const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
   const result = { version: 1, revision: revision + (dirty ? ' + working-tree changes' : ''),
     startedAt: new Date().toISOString(), prerequisites: [{ id: 'canonical_only', ok: ownership.ok,
-      detail: `${ownership.counts.rival_author} confirmed rival functions, ${ownership.counts.derived_output_writer} derived publishers, ${ownership.unresolvedOwners}/${ownership.inspectedCapabilityOwners} unresolved candidate owners; global single ownership is not yet proven.` }],
-    mutations: [await realCompilerMutation()], athletes: [], notCovered: [
+      detail: `${ownership.counts.rival_author} confirmed rival functions, ${ownership.counts.derived_output_writer} derived publishers, ${ownership.unresolvedOwners}/${ownership.inspectedCapabilityOwners} unresolved candidate owners; ${ownership.counts.dormant_quarantined} explicitly quarantined capabilities retained in that denominator. ${ownership.ok ? 'Executable ownership gate passed.' : 'Executable ownership is not yet proven.'}` }],
+    mutations: [await realCompilerMutation(), await sourceFactCompilerMutation(storage), await acceptanceBoundaryMutation(), await injuryRenderingMutation()], athletes: [], notCovered: [
       'Physical device, UI, remote persistence and true OS process death; the restart harness empties and rehydrates all stores then runs production boot.',
-      'Final-row checks cover specialist-row identity, placement and roles through full generation. Global single ownership across every mutation path remains blocked by the ownership prerequisite.',
+      ...(!ownership.ok ? ['Executable ownership is blocked by the failed ownership prerequisite above.'] : []),
+      'Protected accessory-mobility pairing and the 2 km assessment-session builder remain unwired and runtime-quarantined; this gate does not claim those features are integrated.',
       'Compiler repeatability compares training semantics; legacy helper audit timestamps are excluded, so transitive clock-purity is not certified.',
       'Scheduled deload cadence, typed policy and restart are checked here; exact dose arithmetic is covered by the existing canonical compiler witness.',
       'Injury, illness, travel, all equipment subsets and every action permutation are not a full cross-product in these eight archetypes.',

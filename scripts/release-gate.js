@@ -11,9 +11,12 @@ const REPO = path.resolve(__dirname, '..');
 const RELEASE_SCRIPT = 'test:release';
 const RELEASE_COMMAND = 'node scripts/release-gate.js';
 const BOOTSTRAP_SCRIPT = 'test:test-truth';
+const TYPECHECK_SCRIPT = 'test:compile';
+const TYPECHECK_COMMAND = 'node scripts/typecheck-gate.js';
 const FORBIDDEN_WITNESSES = new Set([
   RELEASE_SCRIPT,
   BOOTSTRAP_SCRIPT,
+  TYPECHECK_SCRIPT,
   'test:bible',
   'test:bible:parallel',
   'test:bible:serial-set',
@@ -26,6 +29,9 @@ function readJson(relativePath, repo = REPO) {
 function deriveReleaseGate(pkg, decisionRegistry, repo = REPO) {
   if (pkg.scripts?.[RELEASE_SCRIPT] !== RELEASE_COMMAND) {
     throw new Error(`${RELEASE_SCRIPT} must be exactly '${RELEASE_COMMAND}'`);
+  }
+  if (pkg.scripts?.[TYPECHECK_SCRIPT] !== TYPECHECK_COMMAND) {
+    throw new Error(`real typecheck ${TYPECHECK_SCRIPT} must be exactly '${TYPECHECK_COMMAND}'`);
   }
   const decisionErrors = validateDecisions(decisionRegistry, pkg, repo);
   if (decisionErrors.length > 0) {
@@ -64,6 +70,11 @@ function deriveReleaseGate(pkg, decisionRegistry, repo = REPO) {
       {
         label: BOOTSTRAP_SCRIPT,
         role: 'test_infrastructure',
+        contracts: [],
+      },
+      {
+        label: TYPECHECK_SCRIPT,
+        role: 'typecheck',
         contracts: [],
       },
       ...[...witnesses.entries()].map(([label, labels]) => ({
@@ -111,7 +122,7 @@ function main(argv = process.argv.slice(2)) {
   const decisionRegistry = readJson('scripts/test-truth-decisions.json');
   const gate = deriveReleaseGate(pkg, decisionRegistry);
 
-  console.log(`RELEASE GATE SCOPE: ${gate.contracts.length} current product contracts + 1 test-truth bootstrap.`);
+  console.log(`RELEASE GATE SCOPE: ${gate.contracts.length} current product contracts + test-truth bootstrap + real all-scope typecheck.`);
   console.log('DIAGNOSTIC FLEET: excluded from release authority; run npm run test:bible or scripts/sweep.sh when investigating it.');
   if (argv.includes('--list')) {
     for (const unit of gate.units) {

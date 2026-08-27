@@ -304,14 +304,14 @@ async function main(): Promise<void> {
           answeredOn: '2026-07-29',
         },
       } as Partial<OnboardingData>],
-      ['GymExperience', { experienceLevel: 'Intermediate' } as Partial<OnboardingData>],
-      ['SquatStrength', { squatStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
-      ['BenchStrength', { benchStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
+      ['GymExperience', { experienceLevel: '2-5 years' } as Partial<OnboardingData>],
+      ['SquatStrength', { squatStrength: 'Around bodyweight' } as Partial<OnboardingData>],
+      ['BenchStrength', { benchStrength: 'Around bodyweight' } as Partial<OnboardingData>],
       ['TwoKmTimeTrial', {
         twoKmTimeTrial: { seconds: 435, recordedOn: '2026-07-29', source: 'onboarding' },
       } as Partial<OnboardingData>],
       ['ConditioningLevel', { conditioningLevel: 'Average' } as Partial<OnboardingData>],
-      ['SprintExposure', { sprintExposure: 'Sometimes' } as Partial<OnboardingData>],
+      ['SprintExposure', { sprintExposure: 'Occasionally' } as Partial<OnboardingData>],
       ['RecentTrainingLoad', { recentTrainingLoad: 'Pretty consistent' } as Partial<OnboardingData>],
       ['Injuries', { injuries: [] }],
     ];

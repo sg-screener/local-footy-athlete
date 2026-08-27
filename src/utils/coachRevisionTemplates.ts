@@ -54,9 +54,8 @@ export interface CoachRevisionTemplateDefinition {
    *  'work_capacity' = harder off-legs conditioning (advisory game-week
    *  warning since 2026-07-04's athlete-override principle).
    *  'recovery' = restorative flow (tissue quality / mobility / breathing).
-   *  'strength' / 'accessories' = ENGINE-GENERATED via buildTagAwareSession
-   *  / buildDerivedSession — the same principles as weekly programming
-   *  (tag scoring, game proximity, injury filters). Sheet v2 phase 4. */
+   *  'strength' / 'accessories' = composed by the shared canonical strength
+   *  composer / optional-session recipe, with explicit athlete inputs. */
   category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories'
     | 'mobility' | 'primer';
   byeOnly: boolean;
@@ -64,9 +63,6 @@ export interface CoachRevisionTemplateDefinition {
   /** True when the built content varies by DATE (engine-generated) — the
    *  validation policy must compute per-date signatures for these. */
   dynamic?: boolean;
-  /** Engine name handed to buildTagAwareSession's intent builder
-   *  (strength category only). */
-  engineName?: string;
   /** Exact typed contract for engine-built strength templates. */
   strengthIntent?: StrengthIntent;
   /** Derived-session type for buildDerivedSession (composed session types). */
@@ -231,11 +227,6 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: false,
     durationMinutes: 60,
     dynamic: true,
-    // The engine's intent builder takes the athlete-facing label; it always did
-    // (`engineName: 'Upper Push'`). The one exception was `strength_full_body`,
-    // whose engineName was 'Full Body' while its label was 'Full Body Strength'
-    // — a second name for one session, and exactly what this set removes.
-    engineName: variant.label,
     strengthIntent: createStrengthIntent({
       archetype: variant.archetype,
       primaryPattern: variant.primaryPattern,
@@ -480,7 +471,7 @@ function buildMobilityTemplateWorkout(
   const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { buildDerivedSession } = require('./sessionBuilder');
-  const ctx = getCoachRevisionTemplateContext();
+  const ctx = getCoachRevisionTemplateContext(date);
   const composed: Workout | null = buildDerivedSession(
     'mobility',
     date,
@@ -555,7 +546,7 @@ function buildRecoveryTemplateWorkout(
   const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { buildDerivedSession } = require('./sessionBuilder');
-  const ctx = getCoachRevisionTemplateContext();
+  const ctx = getCoachRevisionTemplateContext(date);
   const composed: Workout | null = buildDerivedSession(
     'recovery',
     date,
@@ -588,8 +579,8 @@ function buildRecoveryTemplateWorkout(
 
 /**
  * Engine-generated templates (strength splits, accessory sessions): the
- * SAME machinery as weekly programming — buildTagAwareSession for splits
- * (tag scoring, game proximity, injury filters), buildDerivedSession for
+ * SAME machinery as weekly programming — the canonical row composer for splits,
+ * buildDerivedSession for
  * accessory/pump days (pool slots, weekly caps, load estimates). Athlete
  * context + game dates arrive via coachRevisionTemplateContext (one seam,
  * injectable in tests). Deterministic per (templateId, date, context), so
@@ -608,35 +599,22 @@ function buildEngineTemplateWorkout(
   } = require('./coachRevisionTemplateContext');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const {
-    buildTagAwareSession,
     buildDerivedSession,
   } = require('./sessionBuilder');
-  const ctx = getCoachRevisionTemplateContext();
+  const { compileCanonicalStrengthTemplate } = require('../rules/canonicalWeeklyRowCompiler');
+  const ctx = getCoachRevisionTemplateContext(date);
 
   let generated: Workout | null = null;
-  if (def.category === 'strength' && def.engineName) {
-    const synthetic: Workout = {
-      id: `template-${def.templateId}`,
-      microcycleId: 'coach-template',
+  if (def.category === 'strength' && def.strengthIntent) {
+    if (!ctx.strengthComposition) return null;
+    generated = compileCanonicalStrengthTemplate({ composition: ctx.strengthComposition, plannedDay: {
+      planEntryId: `template-${def.templateId}`, isTeamDay: false,
       dayOfWeek: isoDateToDayOfWeek(date),
-      name: def.engineName,
-      description: def.description,
-      durationMinutes: def.durationMinutes,
-      intensity: 'Moderate',
+      name: def.label,
       workoutType: 'Strength',
       sessionTier: 'core',
       strengthIntent: def.strengthIntent,
-      exercises: [],
-      createdAt: '',
-      updatedAt: '',
-    } as Workout;
-    generated = buildTagAwareSession(
-      synthetic,
-      date,
-      ctx.gameDates,
-      ctx.athlete,
-      ctx.inSeason,
-    );
+    } });
   } else if (def.derivedType) {
     generated = buildDerivedSession(
       def.derivedType,

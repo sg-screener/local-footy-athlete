@@ -1,0 +1,172 @@
+/** Dated facts -> derived weeks. No stores, wall clock, transactions or writes.
+ * Live fact acceptance and cold reconstruction supply the same accepted base,
+ * fact history and generation inputs. Derived overlays are never fact history.
+ */
+import type { OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
+import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
+import { compileCanonicalProgram } from './canonicalProgramCompiler';
+import { compileWeekOverlay } from './canonicalWeekOverlay';
+import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
+import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, isInjurySourceFact,
+  type TemporarySourceFact } from './temporarySourceFact';
+import { factHorizon, factHorizonCoversDate, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
+import { isoDateForWeekday } from '../utils/appDate';
+import { isTeamNightMoveFact, buildTeamNightMoveWeekOverlay } from './teamNightMoveDerivation';
+import { activeUserRemovalConstraintsForWeek } from './canonicalWeeklyAthleteEditState';
+import { compileCanonicalAthleteEditedContract } from './canonicalWeeklyAthleteEditCompiler';
+import { semanticFingerprint } from '../utils/programSemanticSnapshot';
+import type { CalendarDayType } from '../store/calendarStore';
+import { compileCanonicalInjuryWeek } from './canonicalWeeklyInjuryCompiler';
+import { withPlannedInjuryConditioning } from './canonicalInjuryConditioning';
+
+export function sourceFactRequiresCompilation(fact: TemporarySourceFact): boolean {
+  const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: [fact] }).activeConstraints;
+  return constraints.some((constraint) => constraint.type === 'injury' ||
+    constraint.type === 'fatigue' || constraint.type === 'equipment' ||
+    (constraint.type === 'schedule' &&
+      (constraint.scheduleKind === 'time_cap' || constraint.scheduleKind === 'team_night_move')));
+}
+
+export interface CanonicalWeeklySourceFactInput {
+  readonly surfaces: AcceptedEffectiveWeekSurfaces;
+  readonly profile: OnboardingData;
+  readonly markedDays: Readonly<Record<string, CalendarDayType>>;
+  readonly facts: readonly TemporarySourceFact[];
+  /** The boundary captures profile, block position, selections and earned loads. */
+  readonly programsByWeek: Readonly<Record<string, CanonicalProgramCompilerInput>>;
+  readonly recordedLoads: Parameters<typeof compileCanonicalInjuryWeek>[0]['recordedLoads'];
+}
+
+export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFactInput): {
+  weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
+  affectedWeekStarts: string[];
+  dateOverrides: AcceptedEffectiveWeekSurfaces['dateOverrides'];
+  injuryStagesByDate: ReturnType<typeof compileCanonicalInjuryWeek>['stagesByDate'];
+} {
+  const overlays = { ...input.surfaces.weekScopedOverlays };
+  const changed = new Set<string>();
+  const active = activeTemporarySourceFacts(input.facts);
+  const deriving = active.filter(sourceFactRequiresCompilation).sort((a, b) =>
+    factHorizon(a).startsFrom.localeCompare(factHorizon(b).startsFrom) ||
+      a.createdAt.localeCompare(b.createdAt));
+  const appliedFacts = active.filter(fact => !sourceFactRequiresCompilation(fact));
+  for (const fact of deriving) {
+    for (const weekStart of factHorizonWeeks(fact, Object.keys(input.programsByWeek))) {
+      const priorCompatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: appliedFacts });
+      const world = { ...input.surfaces, ...priorCompatibility,
+        temporarySourceFacts: appliedFacts, weekScopedOverlays: overlays };
+      const effective = rebaseAcceptedEffectiveWeek({
+        surfaces: world, weekStart, profile: input.profile, markedDays: { ...input.markedDays },
+      });
+      const governedFromISO = firstShapedDateInWeek(fact, weekStart);
+      let overlay: WeekScopedWorkoutOverlay;
+      if (isTeamNightMoveFact(fact)) {
+        const result = buildTeamNightMoveWeekOverlay({ fact, weekStart,
+          effectiveWorkoutsByDate: new Map(effective.visibleWorkouts.map(workout =>
+            [isoDateForWeekday(weekStart, workout.dayOfWeek), workout])), now: fact.updatedAt });
+        if (result.ok === false) throw new Error(`team_night_move_${result.code}`);
+        overlay = result.overlay;
+      } else {
+        const programInput = input.programsByWeek[weekStart];
+        const visibleFacts = active.filter(candidate =>
+          factHorizon(candidate).startsFrom <= factHorizon(fact).startsFrom);
+        const compatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: visibleFacts });
+        const compiled = compileCanonicalProgram({
+          ...programInput,
+          weeks: { ...programInput.weeks,
+            activeConstraints: compatibility.activeConstraints,
+            temporarySourceFacts: visibleFacts,
+            generationConstraints: undefined,
+            // This is the already accepted fact's reduced remainder, never a
+            // permissive boot of the healthy base. Its contract is disclosed
+            // by the same accepted-state boundary on live and reconstruction.
+            weekAcceptance: 'forward_decision',
+            authoredAtISO: fact.updatedAt,
+            remainderBoundary: governedFromISO > weekStart ? {
+              governedFromISO,
+              pinnedHistoryWorkouts: effective.visibleWorkouts.filter(workout =>
+                isoDateForWeekday(weekStart, workout.dayOfWeek) < governedFromISO),
+            } : null,
+          },
+        });
+        overlay = compileWeekOverlay({ program: compiled.program, weekStart,
+          anchorDate: null, reason: 'readiness_reduction', authoredAtISO: fact.updatedAt });
+        if (isInjurySourceFact(fact)) {
+          // Strength uses the approved injury ladder. Conditioning placement
+          // remains the weekly planner's responsibility: preserving the whole
+          // old workout here discarded its replacement for lost sprint/club
+          // exposure while keeping the new contract that required it.
+          overlay = { ...overlay, workoutsByDate: Object.fromEntries(effective.dates.map(day =>
+            {
+              const accepted = effective.visibleWorkouts.find(workout => workout.dayOfWeek === day.dayOfWeek);
+              const planned = overlay.workoutsByDate[day.date] ?? null;
+              // Explicit athlete placements/removals and fixtures take priority
+              // over a fresh scheduler seat; the final injury stage still makes
+              // their retained contents safe. Never resurrect a removed day.
+              const athleteOwned = !!input.surfaces.dateOverrides[day.date] ||
+                input.surfaces.userRemovalConstraints.some(removal => removal.status === 'active' &&
+                  (removal.targetDate === day.date || removal.moveTargetDate === day.date));
+              return [day.date, athleteOwned || accepted?.authoredDay?.anchor === 'game'
+                ? accepted ?? null
+                : accepted ? withPlannedInjuryConditioning(accepted, planned) : planned];
+            })) };
+        }
+        overlay = { ...overlay, workoutsByDate: {
+          ...(overlays[weekStart]?.workoutsByDate ?? {}),
+          ...Object.fromEntries(effective.dates.filter(day => day.date < governedFromISO)
+            .map(day => [day.date, effective.visibleWorkouts.find(workout =>
+              workout.dayOfWeek === day.dayOfWeek) ?? null])),
+          ...Object.fromEntries(Object.entries(overlay.workoutsByDate).filter(([date]) =>
+            factHorizonCoversDate(fact, date))),
+        } };
+      }
+      let contract = overlay.exposureContractV2;
+      if (contract) {
+        const removals = activeUserRemovalConstraintsForWeek(input.surfaces.userRemovalConstraints, weekStart);
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const rebased = rebaseAcceptedEffectiveWeek({
+            surfaces: { ...world, weekScopedOverlays: { ...overlays, [weekStart]: { ...overlay, exposureContractV2: contract } } },
+            weekStart, profile: input.profile, markedDays: { ...input.markedDays },
+          });
+          const next = compileCanonicalAthleteEditedContract({
+            contract: rebased.evaluation.contract, workouts: rebased.visibleWorkouts,
+            weekStartISO: weekStart, constraints: removals,
+          });
+          if (semanticFingerprint(next) === semanticFingerprint(contract)) break;
+          contract = next;
+        }
+        overlay = { ...overlay, exposureContractV2: contract };
+      }
+      overlays[weekStart] = overlay;
+      changed.add(weekStart);
+    }
+    appliedFacts.push(fact);
+  }
+  const dateOverrides = { ...input.surfaces.dateOverrides };
+  const injuryStagesByDate: ReturnType<typeof compileCanonicalInjuryWeek>['stagesByDate'] = {};
+  const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: input.facts }).activeConstraints;
+  for (const weekStart of changed) {
+    const effective = rebaseAcceptedEffectiveWeek({ surfaces: { ...input.surfaces,
+      weekScopedOverlays: overlays, dateOverrides }, weekStart,
+      profile: input.profile, markedDays: { ...input.markedDays } });
+    const injuryWeek = compileCanonicalInjuryWeek({
+      workoutsByDate: Object.fromEntries(effective.visibleWorkouts.map(workout =>
+        [isoDateForWeekday(weekStart, workout.dayOfWeek), workout])),
+      profile: input.profile, constraints, exclusions: input.surfaces.athleteExclusions ?? [],
+      recordedLoads: input.recordedLoads,
+    });
+    for (const workout of effective.visibleWorkouts) {
+      const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
+      const next = injuryWeek.workoutsByDate[dateISO];
+      if (next !== workout) {
+        if (input.surfaces.dateOverrides[dateISO]) dateOverrides[dateISO] = next;
+        else overlays[weekStart] = { ...overlays[weekStart], workoutsByDate: {
+          ...overlays[weekStart].workoutsByDate, [dateISO]: next,
+        } };
+      }
+    }
+    Object.assign(injuryStagesByDate, injuryWeek.stagesByDate);
+  }
+  return { weekScopedOverlays: overlays, dateOverrides, injuryStagesByDate,
+    affectedWeekStarts: [...changed].sort() };
+}

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
+import { readinessInputsForPersistence } from './compatibilityPersistence';
 import type { ReadinessSignal } from '../utils/readiness';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 import {
@@ -168,6 +169,7 @@ export const useReadinessStore = create<ReadinessState>()(
     {
       name: READINESS_PERSISTENCE_KEY,
       storage: createJSONStorage(() => readinessGuardedStorage),
+      partialize: state => ({ signalsByDate: readinessInputsForPersistence(state.signalsByDate) }),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<ReadinessState> | undefined) ?? {};
         return {

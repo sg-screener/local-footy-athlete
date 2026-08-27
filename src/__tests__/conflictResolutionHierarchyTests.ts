@@ -53,7 +53,7 @@ eq('canonical tier ids and ranks match §17.K',
 ok('red-flag hard stop outranks injury',
   compareHierarchyTiers('hard_stop_safety', 'injury_safety') < 0);
 ok('red-flag hard stop outranks readiness, equipment and goals',
-  ['readiness_safety', PROGRAMMING_DECISION_TIERS.equipmentAvailability, 'goal_bias']
+  (['readiness_safety', PROGRAMMING_DECISION_TIERS.equipmentAvailability, 'goal_bias'] as const)
     .every((tier) => compareHierarchyTiers('hard_stop_safety', tier) < 0));
 ok('game anchor outranks a normal swap/move/delete',
   compareHierarchyTiers(

@@ -66,7 +66,6 @@ const scheduler = require('../src/rules/weeklyScheduler');
 const connector = require('../src/rules/scheduleToCoachingPlan');
 const program = require('../src/data/defaultProgram');
 const assembler = require('../src/rules/assembleAuthoredWeek');
-const hydration = require('../src/store/programHydrationProjection');
 
 const realSchedule = scheduler.scheduleWeek;
 scheduler.scheduleWeek = function wrapped(...args: unknown[]) {
@@ -115,14 +114,8 @@ const built = generateProgramLocally(INPUT as never,
   { todayISO: WEEK_START, blockNumber: 1, microcycleLimit: 1 } as never);
 const finalWorkouts = built.microcycles[0].workouts as any[];
 
-// ── 5: THE STORED WEEK. The store re-derives fields on hydration, and that
-// projection is the documented retyping step — so it is a real boundary, not a
-// pass-through, and it gets measured like one.
-for (const w of finalWorkouts) {
-  const stored = hydration.projectHydratedWorkoutDerivedFields(w);
-  record('5 stored', stored.dayOfWeek, stored.workoutType,
-    stored.authoredDay?.anchor ?? '—');
-}
+// Stored-output retyping is retired. Persistence contains accepted inputs;
+// test:program-hydration-ownership exercises their actual reconstruction.
 
 // ── 6: THE PRINTED PROJECTION, by date.
 for (const w of finalWorkouts) {
@@ -130,7 +123,7 @@ for (const w of finalWorkouts) {
     w.isTeamDay ? 'club_training' : w.workoutType === 'Game' ? 'game' : '—');
 }
 
-console.log('\n════ SIX BOUNDARIES ════\n');
+console.log('\n════ COMPILER/PROJECTION BOUNDARIES — NOT A STORAGE TEST ════\n');
 console.log('boundary      dow  ISO date    weekday(ISO)  weekday(index)  match  anchor        identity');
 console.log('-'.repeat(112));
 let mismatches = 0;

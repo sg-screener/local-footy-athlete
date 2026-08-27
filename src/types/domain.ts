@@ -934,10 +934,9 @@ export interface Workout {
    * Sam, 2026-08-21: *"The five paused exercises appear in the review, but
    * disappear from the active workout after Apply … show one concise summary."*
    *
-   * Written by `utils/injurySessionAdjustment.applyInjurySessionAdjustment` at
-   * the VIEW doors only — the same door and the same discipline as
-   * `unavailableForInjury` below. The accepted program carries none of it, so
-   * clearing the injury restores the original session by doing nothing.
+   * Compiled by canonicalWeeklyInjuryCompiler using the existing session-level
+   * policy. No derived workout is persisted as an athlete decision. Clearing
+   * the injury recompiles the accepted base; rendering cannot author additions.
    *
    * `paused` is carried even though those rows are no longer in `exercises`,
    * because the red-flag completion refusal asks whether the injury is
@@ -1078,6 +1077,8 @@ export interface Workout {
   attachedConditioningKind?: AttachedConditioningKind;
   /** Conditioning flavour for combined or standalone conditioning sessions. */
   conditioningFlavour?: 'aerobic' | 'tempo' | 'high-intensity';
+  /** The canonical conditioning planner's non-running allocation. */
+  conditioningOffFeet?: boolean;
   /**
    * Conditioning category — the energy-system classification used by the
    * weekly distribution tracker. Off-season and pre-season weeks must

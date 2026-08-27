@@ -1,70 +1,18 @@
 /**
- * ONE REVIEW OF EVERY CHANGE AN INJURY PROPOSES, BEFORE ANY OF THEM LAND.
- *
- * Sam, 2026-08-20, the ruling this module is: *"Ask for the injured body area or
- * movement once. Find every affected exercise in the session. Apply the existing
- * approved safety ladder … Show one review of all proposed changes. Apply the
- * approved changes together."* And, in the same breath, the two boundaries:
- * *"Injury and ordinary Remove must remain separate. Do not create Remove
- * decisions for injury-withheld exercises. Never claim the session was safely
- * changed if nothing changed."*
- *
- * ## WHAT THIS ADDS, AND WHAT IT DELIBERATELY DOES NOT
- *
- * It adds the REVIEW and nothing else. Every question it asks was already
- * answered by an owner Sam has signed off:
- *
- *   which rows are affected   `unsafeRowsForInjury`      (one severity predicate)
- *   what to do about each     `planInjuryRecomposition`  (the approved ladder)
- *   what a withheld row says  `injuryWithholdingExplanation`
- *   whether it blocks         `isRedFlagInjurySeverity`  (R-115)
- *   the world to ask in       `resolveInjuryRecompositionInputs`
- *
- * ⚠ **IT INVENTS NO SAFETY RULE AND NO LADDER OF ITS OWN.** A review that
- * decided anything for itself would be a second authority over what is safe, and
- * the one thing worse than no review is a review that promises a change the
- * write then makes differently. This module reads the plan and renames its parts
- * for the athlete; that is the whole of it.
- *
- * ⚠ **THE PLAN IS BUILT FROM THE WRITE PATH'S OWN INPUTS.**
- * `resolveInjuryRecompositionInputs` is the same call `recomposeSessionForInjury`
- * makes, with the same pending constraint, so the review and the write see one
- * world. Measured elsewhere on 2026-08-20: a preview that re-derived its own
- * arguments disagreed with the delivered program in **40 of 90** prescriptions.
- *
- * ## NOTHING IS WRITTEN HERE, AND AN OMISSION IS STILL NOT A REMOVE
- *
- * R-115 stands untouched: a row the ladder has no answer for is **withheld**, and
- * withholding is a pure derivation `rules/injuryWithheldRows` performs at the
- * view doors from the injury FACT. This module reports such a row as
- * `kind: 'withheld'` and NEVER as a removal, so no surface downstream can read a
- * review row as an athlete Remove decision. The review's approval writes exactly
- * one thing — the injury fact, through `set_injury_modifier` — and that door
- * already refuses to touch `athletePreferencesStore.exclusions`.
- *
- * ## "NOTHING CHANGED" IS A FIRST-CLASS ANSWER
- *
- * `nothingChanges` is the state Sam's last sentence is about. When it is true
- * the review says so in those words, the approve button stops saying anything
- * about the session, and the caller must not render a success claim about rows.
- * The FINAL sentence the athlete reads after applying still comes from
- * `injuryRecompositionMessage`, which derives it from what actually landed —
- * this headline is about the PROPOSAL, and says so.
- *
- * WRITER: none, pure. READER: `screens/home/DayWorkoutScreenV2` (the Active
- * Session Injury flow). TEST: `test:session-injury-review`.
+ * Injury review is a projection of the same pure stage the weekly compiler
+ * executes. It does not select replacements or build an alternative session.
+ * Strength swaps, paused work and conditioning changes remain distinct.
+ * Guard: test:session-injury-review (preview dose, no writes, accept/restart).
  */
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import { isRedFlagInjurySeverity, injuryWithholdingExplanation } from '../rules/injuryWithheldRows';
-import { resolveInjuryRecompositionInputs } from './programControlActions';
+import { compileSessionInjuryPreview } from './programControlActions';
 import {
-  planInjuryRecomposition,
   sessionRowNames,
   untrainedPatternsInWords,
 } from './injurySessionRecomposition';
 import type { TapSwapHierarchyTier } from './tapSwapHierarchy';
 import type { AddCandidate } from './addExerciseCandidates';
-import { deriveInjurySessionAdjustment } from './injurySessionAdjustment';
 
 /**
  * A ROW IS EITHER GETTING SOMETHING ELSE OR BEING PAUSED. There is no third
@@ -111,6 +59,11 @@ export interface SessionInjuryReview {
    * from rungs 1-4 and really is a replacement for the row it names.
    */
   changes: SessionInjuryProposedChange[];
+  /** Component changes are separate from the strength fallback ladder. */
+  conditioningChanges: Array<{ from: string | null; to: string | null }>;
+  /** Exact before/after changes on an improving injury, never fake swaps. */
+  restored: string[];
+  withdrawn: string[];
   /** The rows the injury pauses. A LIST, not a column of arrows. */
   paused: SessionInjuryProposedChange[];
   /**
@@ -155,10 +108,8 @@ export function buildSessionInjuryReview(args: {
   date: string;
   constraint: ActiveInjuryConstraint;
 }): SessionInjuryReview {
-  const {
-    workout, environment, primaryInjury, trainingPaused, weekExerciseNames,
-    excludedByAthlete, profile,
-  } = resolveInjuryRecompositionInputs(args);
+  const preview = compileSessionInjuryPreview(args);
+  const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
   const redFlag = isRedFlagInjurySeverity(
     args.constraint.seriousSymptoms,
     args.constraint.severity,
@@ -170,6 +121,9 @@ export function buildSessionInjuryReview(args: {
     redFlag,
     trainingPaused,
     changes: [] as SessionInjuryProposedChange[],
+    conditioningChanges: [] as SessionInjuryReview['conditioningChanges'],
+    restored: [] as string[],
+    withdrawn: [] as string[],
     paused: [] as SessionInjuryProposedChange[],
     added: [] as AddCandidate[],
     adjustmentSummary: null as string | null,
@@ -178,7 +132,7 @@ export function buildSessionInjuryReview(args: {
     nothingChanges: true,
   };
 
-  if (!workout) {
+  if (!preview) {
     return {
       ...empty,
       headline: 'There is no session on this day to change.',
@@ -186,9 +140,17 @@ export function buildSessionInjuryReview(args: {
     };
   }
 
-  const plan = planInjuryRecomposition({ workout, environment, primaryInjury });
+  const { before: workout, plan, adjustment } = preview;
+  const before = sessionRowNames(workout);
+  const after = sessionRowNames(preview.workout);
+  const oldConditioning = workout.conditioningBlock?.options.map(option => option.title) ?? [];
+  const nextConditioning = preview.workout.conditioningBlock?.options.map(option => option.title) ?? [];
+  const conditioningChanges = Array.from({ length: Math.max(oldConditioning.length, nextConditioning.length) }, (_, index) => ({
+    from: oldConditioning[index] ?? null, to: nextConditioning[index] ?? null,
+  })).filter(change => change.from !== change.to);
   const changes: SessionInjuryProposedChange[] = [
-    ...plan.substitutions.map((substitution) => ({
+    ...plan.substitutions.filter(substitution => before.includes(substitution.from) &&
+      after.includes(substitution.to.name)).map((substitution) => ({
       from: substitution.from,
       to: substitution.to.name,
       kind: 'substitution' as const,
@@ -205,7 +167,7 @@ export function buildSessionInjuryReview(args: {
    * A paused row has no partner, so it cannot sit in the same list as the ones
    * that do without the screen having to remember which entries get an arrow.
    * Two lists, and the screen renders two sections. */
-  const paused: SessionInjuryProposedChange[] = plan.pausedRows.map((name) => ({
+  const paused: SessionInjuryProposedChange[] = plan.pausedRows.filter(name => before.includes(name)).map((name) => ({
     from: name,
     to: null,
     kind: 'paused' as const,
@@ -214,63 +176,35 @@ export function buildSessionInjuryReview(args: {
     explanation: injuryWithholdingExplanation({ exercise: name, bodyPart, redFlag }),
   }));
 
-  /* ── AND THE BLOCK THAT GOES IN THEIR PLACE, DERIVED, NOT STORED ──────────
-   * The review promises exactly what the view door will derive, because both
-   * ask `chooseInjurySessionAdditions` with the same inputs from the same
-   * owner (`resolveInjuryRecompositionInputs`). */
-  /* ⚠ **THE SAME FUNCTION THE VIEW DOOR CALLS, WITH THE SAME INPUTS.** That is
-   * the only way a review can be a promise: the door does not re-decide, it
-   * re-derives, and both derivations are this one. */
-  const adjustment = deriveInjurySessionAdjustment({
-    workout,
-    environment,
-    profile,
-    bodyPart,
-    redFlag,
-    weekExerciseNames,
-    excludedByAthlete,
-    pausedRowNames: plan.pausedRows,
-    dateISO: args.date,
-  });
-  const added = adjustment?.added ? [...adjustment.added] : [];
-
-  /* The rows the session would carry if this plan were applied — a substitution
-   * puts its answer in, a withheld row stays on the session but is marked, so it
-   * is NOT dropped from the "after" set. That is the R-115 distinction expressed
-   * arithmetically: an omission is not a deletion. */
-  /* The rows the session would carry if this plan were applied. R-124 changed
-   * the arithmetic on one side of it: a paused row is no longer in the "after"
-   * set, because the athlete will not see it — Sam, 2026-08-21: *"The five
-   * paused exercises appear in the review, but disappear from the active
-   * workout after Apply."* The added block IS in it, so the untrained-pattern
-   * sentence cannot name a pattern the block put back. */
-  const before = sessionRowNames(workout);
-  const substituted = new Map(
-    plan.substitutions.map((substitution) => [substitution.from, substitution.to.name!]),
-  );
-  const pausedNames = new Set(plan.pausedRows);
-  const after = [
-    ...before.filter((name) => !pausedNames.has(name)).map((name) => substituted.get(name) ?? name),
-    ...added.map((candidate) => candidate.name),
-  ];
-
-  const nothingChanges = changes.length === 0 && paused.length === 0;
-  const decisionCount = changes.length + paused.length;
+  // Read the compiler's session-level additions, never run another selector.
+  const added = adjustment?.added?.filter(candidate => !before.includes(candidate.name) && after.includes(candidate.name)) ?? [];
+  const conditioningNames = new Set([...oldConditioning, ...nextConditioning]);
+  const restored = after.filter(name => !before.includes(name) && !conditioningNames.has(name) &&
+    !changes.some(change => change.to === name) && !added.some(candidate => candidate.name === name));
+  const withdrawn = before.filter(name => !after.includes(name) && !conditioningNames.has(name) &&
+    !changes.some(change => change.from === name) && !paused.some(change => change.from === name));
+  const decisionCount = changes.length + paused.length + conditioningChanges.length + restored.length + withdrawn.length;
+  const nothingChanges = decisionCount === 0;
   return {
     bodyPart,
     severity: args.constraint.severity,
     redFlag,
     trainingPaused,
     changes,
+    conditioningChanges,
+    restored,
+    withdrawn,
     paused,
     added,
     adjustmentSummary: adjustment?.summary ?? null,
-    untouched: plan.untouched,
+    untouched: before.filter(name => after.includes(name) && !paused.some(change => change.from === name) &&
+      !changes.some(change => change.from === name) && !conditioningChanges.some(change => change.from === name)),
     untrainedInWords: nothingChanges
       ? []
       : untrainedPatternsInWords({ before, after }),
     nothingChanges,
-    headline: reviewHeadline({ redFlag, nothingChanges, changes, paused, added, bodyPart }),
+    headline: reviewHeadline({ redFlag, nothingChanges, changes, paused, added, bodyPart,
+      conditioningChanged: conditioningChanges.length > 0, restored, withdrawn }),
     approveLabel: nothingChanges
       ? 'Save this injury'
       : `Apply ${decisionCount === 1 ? 'this change' : `these ${decisionCount} changes`}`,
@@ -292,6 +226,9 @@ function reviewHeadline(args: {
   paused: readonly SessionInjuryProposedChange[];
   added: readonly AddCandidate[];
   bodyPart: string;
+  conditioningChanged: boolean;
+  restored: readonly string[];
+  withdrawn: readonly string[];
 }): string {
   const area = args.bodyPart.toLowerCase();
   if (args.nothingChanges) {
@@ -304,6 +241,9 @@ function reviewHeadline(args: {
   }
   const swapped = args.changes.filter((change) => change.kind === 'substitution');
   const parts: string[] = [];
+  if (args.conditioningChanged) parts.push('adjust your conditioning');
+  if (args.restored.length) parts.push(`bring back ${listInWords(args.restored)}`);
+  if (args.withdrawn.length) parts.push(`take out ${listInWords(args.withdrawn)}`);
   if (swapped.length > 0) {
     parts.push(`swap ${listInWords(swapped.map((change) => change.from))} for `
       + `${listInWords(swapped.map((change) => change.to!))}`);

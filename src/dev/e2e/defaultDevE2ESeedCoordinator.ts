@@ -1,11 +1,11 @@
 import { useProfileStore } from '../../store/profileStore';
 import {
-  applyProgramOverrideWrite,
   generationAnchorForProgram,
   recordAcceptedBlock,
   useProgramStore,
 } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
+import { applyDevE2ESeedAction } from './devE2ESeedAction';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import {
@@ -309,61 +309,8 @@ async function applyAuxiliaryState(
       installAcceptedCalendarGame(item.date);
       continue;
     }
-    if (item.kind === 'removable_component_override') {
-      const dayOfWeek = dayOfWeekForISODate(item.date);
-      const state = useProgramStore.getState();
-      const baseWorkout = state.currentMicrocycle?.workouts.find((workout) =>
-        workout.dayOfWeek === dayOfWeek) ??
-        state.currentProgram?.microcycles
-          .flatMap((microcycle) => microcycle.workouts)
-          .find((workout) => workout.dayOfWeek === dayOfWeek);
-      if (!baseWorkout) {
-        throw new Error(`removable_component_override_missing_workout:${item.date}`);
-      }
-      const componentId = 'dev-e2e-removable-band-pull-apart';
-      // DEV SEAM, DECLARED (LR-1). This is a dev-E2E seed writing product
-      // state, and it says so at the door: `writer: 'dev_seed'` puts every
-      // seeded override on the tape under a name no athlete path can wear,
-      // so a seeded world is distinguishable from a lived one in the log.
-      applyProgramOverrideWrite({
-        writer: 'dev_seed',
-        date: item.date,
-        workout: {
-          ...baseWorkout,
-          id: `${baseWorkout.id}:dev-e2e-removable-component`,
-          exercises: [
-            {
-              id: componentId,
-              workoutId: baseWorkout.id,
-              exerciseId: componentId,
-              exerciseOrder: 0,
-              prescribedSets: 2,
-              prescribedRepsMin: 12,
-              prescribedRepsMax: 15,
-              prescribedWeightKg: 0,
-              restSeconds: 45,
-              exercise: {
-                id: componentId,
-                name: 'Band Pull-Apart',
-                description: 'Optional removable E2E component',
-                exerciseType: 'Isolation',
-                muscleGroups: [],
-                equipmentRequired: ['Resistance Band'],
-                difficultyLevel: 'Beginner',
-                createdAt: '2026-07-13T12:00:00.000Z',
-                updatedAt: '2026-07-13T12:00:00.000Z',
-              },
-              createdAt: '2026-07-13T12:00:00.000Z',
-              updatedAt: '2026-07-13T12:00:00.000Z',
-            },
-            ...baseWorkout.exercises,
-          ],
-        },
-        context: {
-          intent: 'program_adjustment',
-          label: 'Dev E2E removable component',
-        },
-      });
+    if (item.kind === 'program_control') {
+      await applyDevE2ESeedAction(item);
       continue;
     }
     const target = resolveSessionOutcomeTarget(item.date, item.date);

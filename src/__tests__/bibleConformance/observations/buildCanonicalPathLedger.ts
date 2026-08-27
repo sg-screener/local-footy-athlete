@@ -170,7 +170,7 @@ function components(workout: Workout): HarnessSessionComponent[] {
 }
 
 function conditioning(workout: Workout): HarnessConditioningEntry[] {
-  return (workout.conditioningBlock?.options ?? []).map((option) => {
+  return (workout.conditioningBlock?.options ?? []).map((option): HarnessConditioningEntry => {
     const explicit = (option as typeof option & { modality?: string }).modality;
     const inferred = inferModalityFromName(`${option.title} ${option.description}`);
     const modality: HarnessConditioningEntry['modality'] = explicit === 'running' || inferred === 'run'
@@ -271,7 +271,7 @@ function exposure(workouts: Workout[]): HarnessExposureLedger {
       if (classified.strengthRegion === 'upper' || classified.strengthRegion === 'full_body') upperStrengthFatigue++;
       if (classified.strengthRegion === 'lower' || classified.strengthRegion === 'full_body') lowerStrengthFatigue++;
     }
-    hardConditioning += classified.units.filter((unit) => unit.conditioningRole === 'hard' && unit.contributions.conditioning > 0).length;
+    hardConditioning += classified.units.filter((unit) => unit.stress === 'high' && unit.contributions.conditioning > 0).length;
     if (powerRows(workout).length > 0) powerCount++;
   }
   return {

@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * L-P1 / L-P3 — EVERY SURFACE TELLS THE SAME STORY. STAGE 3 REDS.
  *
@@ -311,7 +312,7 @@ function reachHisWorldByActing(): void {
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
   // His fixture: the Saturday game that makes Sunday G+1 recovery.
-  quiet(() => useCalendarStore.getState().setGameDay('2026-08-01', TODAY));
+  quiet(() => calendarActionsForTest().setGameDay('2026-08-01', TODAY));
 }
 
 function tap(change: PlanChange) {

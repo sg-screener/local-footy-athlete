@@ -538,7 +538,8 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
   const lowReadiness = buildInSeasonExposureContract({ ...byeInput, capacity: 'low' });
   const injured = buildInSeasonExposureContract({
     ...byeInput,
-    activeInjuries: [{ region: 'lower_body', pauseAffectedTraining: true }],
+    injuryPolicy: { prohibitedPatterns: ['squat', 'hinge'], blocksAppSprint: true,
+      lowerBodyRestricted: true, upperBodyRestricted: false },
   });
   const deload = buildInSeasonExposureContract({ ...byeInput, weekKind: 'deload' });
   const declared = buildInSeasonExposureContract({ ...byeInput, byeMode: 'recovery' });

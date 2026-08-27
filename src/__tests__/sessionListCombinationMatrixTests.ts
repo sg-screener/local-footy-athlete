@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * THE SESSION-LIST COMBINATION MATRIX — day type × domains carried.
  *
@@ -219,7 +220,7 @@ function reachWorld(world: WorldSpec): void {
   weekStart = settled.startDate.slice(0, 10);
   todayISO = weekStart;
   if (world.gameOffset !== null) {
-    useCalendarStore.getState().setGameDay(addDaysISO(weekStart, world.gameOffset), todayISO);
+    calendarActionsForTest().setGameDay(addDaysISO(weekStart, world.gameOffset), todayISO);
     useProgramStore.setState({
       acceptedMaterialContext: {
         ...useProgramStore.getState().acceptedMaterialContext,

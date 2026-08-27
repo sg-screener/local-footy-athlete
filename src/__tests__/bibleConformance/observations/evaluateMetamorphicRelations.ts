@@ -1,7 +1,7 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
-import { coachingPlanForTests } from '../support/coachingPlanForTests';
+import { coachingPlanForTests } from '../../support/coachingPlanForTests';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import { canonicalWorkoutLedger, pathExercise, pathWorkout } from './buildCanonicalPathLedger';
 import { buildSlice4ScenarioTrace } from './buildSlice4Trace';
@@ -18,7 +18,7 @@ const BASE_PROFILE = {
   conditioningLevel: 'Good' as const, sprintExposure: 'Occasionally' as const,
   recentTrainingLoad: 'Very consistent' as const, injuries: [], seasonPhase: 'In-season' as const,
   trainingDaysPerWeek: 5, preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const,
-  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const, teamTrainingDuration: '90 minutes' as const,
+  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as import('../../../types/domain').DayOfWeek[], teamTrainingDuration: '90 minutes' as const,
   usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const, trainingLocation: 'Commercial gym' as const, equipment: ['Full Gym'],
 };
 
@@ -125,7 +125,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
   if (spec.id === 'remove-strength-mixed-to-conditioning') {
     const id = 'meta-remove-strength';
     const mixed = pathWorkout({ id, dayOfWeek: 1, name: 'Mixed', patterns: ['squat'], primary: 'squat', exercises: [], conditioning: [{ title: 'Bike 25min', modality: 'bike' }] });
-    const output = finaliseWorkoutAfterMutation(mixed, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: false, restoreMissingPlanPatterns: false }).workout;
+    const output = finaliseWorkoutAfterMutation(mixed, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: false }).workout;
     const ledger = canonicalWorkoutLedger(output);
     return pass(spec, ledger.components.includes('conditioning') && !ledger.components.includes('strength'), ['conditioning'], ledger.components);
   }
@@ -169,12 +169,12 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
   if (spec.id === 'game-sat-to-sun-spacing') {
     const sat = plannedFor({ game: 'Saturday', days: 5 });
     const sun = plannedFor({ game: 'Sunday', days: 5 });
-    return pass(spec, ['squat', 'hinge', 'push', 'pull'].every((pattern) => sat.patterns.includes(pattern) && sun.patterns.includes(pattern)), sat.patterns, sun.patterns);
+    return pass(spec, (['squat', 'hinge', 'push', 'pull'] as const).every((pattern) => sat.patterns.includes(pattern) && sun.patterns.includes(pattern)), sat.patterns, sun.patterns);
   }
   if (spec.id === 'bye-relaxes-not-erases') {
     const game = blockPatterns({ game: 'Saturday', days: 5 });
     const bye = blockPatterns({ days: 5 });
-    return pass(spec, ['squat', 'hinge', 'push', 'pull'].every((pattern) => game.includes(pattern) && bye.includes(pattern)), game, bye);
+    return pass(spec, (['squat', 'hinge', 'push', 'pull'] as const).every((pattern) => game.includes(pattern) && bye.includes(pattern)), game, bye);
   }
   if (spec.id === 'deload-reduces-not-invents') {
     const build = plannedFor({ days: 5, week: 1, phase: 'Off-season' });

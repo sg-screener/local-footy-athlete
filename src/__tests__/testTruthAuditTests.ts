@@ -187,13 +187,20 @@ ok('the measured failure census has a valid decision for every reviewed label',
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 5
+  censusCounts.current_contract === 10
+    && ['test:athlete-session-deletion', 'test:program-hydration-ownership',
+      'test:fixture-mutation-transaction', 'test:temporary-source-facts']
+      .every(label => decisionRegistry.decisions[label]?.witnessScript === 'test:canonical-weekly-compiler')
+    && decisionRegistry.decisions['test:chained-mutation-continuity']?.witnessScript === 'test:compiler-year'
     && decisionRegistry.decisions['test:compiler-year']?.witnessScript === 'test:compiler-year'
     && decisionRegistry.decisions['test:weekly-writer-zero']?.witnessScript === 'test:weekly-writer-zero'
-    && censusCounts.retire_test === 2
-    && censusCounts.test_infrastructure === 3
-    && censusCounts.aggregate === 2
-    && censusCounts.rewrite_test === 166,
+    && censusCounts.retire_test === 4
+    && decisionRegistry.decisions['test:game-local-rebuild']?.kind === 'retire_test'
+    && decisionRegistry.decisions['test:dev-e2e-seeds']?.kind === 'test_infrastructure'
+    && censusCounts.test_infrastructure === 4
+    && decisionRegistry.decisions['test:plan-change-producer']?.kind === 'aggregate'
+    && censusCounts.aggregate === 3
+    && censusCounts.rewrite_test === 157,
   censusCounts);
 
 const reportAudit = buildAudit({

@@ -12,6 +12,7 @@ import {
 import {
   EXPLORER_NON_COACH_SMOKE_MANIFESTS,
 } from '../dev/e2e/explorerSmokeScenarioManifests';
+import { EXPLORER_PRODUCTION_OWNER_BY_ACTION } from '../dev/e2e/explorerActionBridge';
 import type {
   ExplorerExecutableAction,
   ExplorerProductionActionReceipt,
@@ -181,18 +182,19 @@ function productionReceipt(args: {
   expectation: ExplorerRenderExpectation;
 }): ExplorerProductionActionReceipt {
   return {
+    protocolVersion: 1,
     actionType: args.action.type,
     actionSemanticHash: explorerActionSemanticHash(args.action),
     target: args.action.target,
     status: 'applied',
-    owner: 'test-owner',
+    owner: EXPLORER_PRODUCTION_OWNER_BY_ACTION[args.action.type],
     receiptId: `receipt:${args.traceId}`,
     traceV2RootId: args.traceId,
     acceptedRevisionBefore: 1,
     acceptedRevisionAfter: 2,
     reasonCode: null,
     durable: true,
-    productionReceipt: { explorerRenderExpectation: args.expectation },
+    productionReceipt: { explorerRenderExpectation: JSON.parse(JSON.stringify(args.expectation)) },
   };
 }
 

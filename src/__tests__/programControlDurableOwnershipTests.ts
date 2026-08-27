@@ -1,3 +1,4 @@
+import { calendarActionsForTest } from './support/calendarActionsForTest';
 /**
  * THE EXECUTOR THE SHEET ACTUALLY AWAITS.
  *
@@ -293,8 +294,8 @@ function reachHisWorldByActing(options?: {
   } as never);
   if (options?.withMarks === false) return;
   for (const [date, mark] of Object.entries(SAM_EXPORT_8_MARKED_DAYS)) {
-    if (mark === 'game') quiet(() => useCalendarStore.getState().setGameDay(date, TODAY));
-    else quiet(() => useCalendarStore.getState().setRestDay(date));
+    if (mark === 'game') quiet(() => calendarActionsForTest().setGameDay(date, TODAY));
+    else quiet(() => calendarActionsForTest().setRestDay(date));
   }
 }
 

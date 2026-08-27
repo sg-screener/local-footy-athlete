@@ -384,14 +384,8 @@ async function main(): Promise<void> {
   const coachActions = require('../utils/coachActions') as Record<string, unknown>;
   ok('`removeExerciseAtDate` is DELETED, not deprecated',
     coachActions.removeExerciseAtDate === undefined);
-  const coachAttempt = quiet(() => (coachActions.applyCoachAction as (a: unknown) => {
-    success: boolean; reason?: string;
-  })({ kind: 'remove_exercise', payload: { date: TARGET, exercise: victim } }));
-  ok('the coach path REFUSES rather than keeping a private removal',
-    coachAttempt.success === false, JSON.stringify(coachAttempt));
-  ok('and the refusal points at the one door that records the decision',
-    Boolean(coachAttempt.reason?.toLowerCase().includes('remove on the session')),
-    coachAttempt.reason);
+  ok('the retired coach dispatcher cannot keep a private removal authority',
+    coachActions.applyCoachAction === undefined && coachActions.applyCoachActions === undefined);
 
   report();
 }

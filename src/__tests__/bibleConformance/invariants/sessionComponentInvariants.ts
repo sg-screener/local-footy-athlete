@@ -228,6 +228,7 @@ function checkTrunkNotConditioning(trace: ComponentScenarioTrace): InvariantChec
   if (!componentRule || componentRule.expectation.kind !== 'trunk_support') {
     return result(invariantId, trace, false, []);
   }
+  const expectation = componentRule.expectation;
   const failures: InvariantFailure[] = [];
   for (const stage of ['generated_fallback', 'visible_week', 'visible_detail'] as const) {
     const observed = target(trace, stage);
@@ -241,7 +242,7 @@ function checkTrunkNotConditioning(trace: ComponentScenarioTrace): InvariantChec
     // component.
     const missingSupport = difference(componentRule.expectation.supportRows, observed?.strengthRowNames ?? []);
     const falseConditioningRows = (observed?.conditioningRowNames ?? []).filter((name) =>
-      componentRule.expectation.supportRows.includes(name));
+      expectation.supportRows.includes(name));
     const falseConditioning = observed?.components.includes('conditioning') === true &&
       (observed?.conditioningRowNames.length ?? 0) === 0;
     const strayedSupportComponent = observed?.components.includes('trunk_support') === true;
@@ -517,5 +518,5 @@ export function evaluateComponentTrace(trace: ComponentScenarioTrace): Invariant
 
 export function firstComponentFailure(results: readonly InvariantCheckResult[]): InvariantFailure | null {
   return results.flatMap((entry) => entry.failures)
-    .sort((left, right) => STAGES.indexOf(left.stage) - STAGES.indexOf(right.stage))[0] ?? null;
+    .sort((left, right) => STAGES.findIndex(stage => stage === left.stage) - STAGES.findIndex(stage => stage === right.stage))[0] ?? null;
 }

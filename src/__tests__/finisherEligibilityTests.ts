@@ -256,7 +256,7 @@ console.log('\n── 4. Game window + team adjacency apply to finishers ──'
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 5. Label / flavour / category / stress consistency ──');
 {
-  const personas = [OFF_SEASON_BASE, {
+  const personas: Partial<OnboardingData>[] = [OFF_SEASON_BASE, {
     ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],

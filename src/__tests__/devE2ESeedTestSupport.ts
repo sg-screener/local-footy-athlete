@@ -155,45 +155,6 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
     }, {});
   const dateOverrides: Record<string, Workout | null> = {};
   const overrideContexts: DevE2EWitnessState['overrideContexts'] = {};
-  const removable = seed.auxiliaryState.find((item) =>
-    item.kind === 'removable_component_override');
-  if (removable?.kind === 'removable_component_override') {
-    const base = workoutForDate(seed.program, removable.date);
-    if (!base) throw new Error(`Missing removable source on ${removable.date}`);
-    const componentId = 'dev-e2e-removable-band-pull-apart';
-    dateOverrides[removable.date] = {
-      ...base,
-      id: `${base.id}:dev-e2e-removable-component`,
-      exercises: [{
-        id: componentId,
-        workoutId: base.id,
-        exerciseId: componentId,
-        exerciseOrder: 0,
-        prescribedSets: 2,
-        prescribedRepsMin: 12,
-        prescribedRepsMax: 15,
-        prescribedWeightKg: 0,
-        restSeconds: 45,
-        exercise: {
-          id: componentId,
-          name: 'Band Pull-Apart',
-          description: 'Optional removable E2E component',
-          exerciseType: 'Isolation',
-          muscleGroups: [],
-          equipmentRequired: ['Resistance Band'],
-          difficultyLevel: 'Beginner',
-          createdAt: FIXED_TIMESTAMP,
-          updatedAt: FIXED_TIMESTAMP,
-        },
-        createdAt: FIXED_TIMESTAMP,
-        updatedAt: FIXED_TIMESTAMP,
-      }, ...base.exercises],
-    };
-    overrideContexts[removable.date] = {
-      intent: 'program_adjustment',
-      label: 'Dev E2E removable component',
-    };
-  }
 
   const injuryEpisode = canonicalInjuryEpisode(seed);
   const injuryAux = seed.auxiliaryState.find((item) =>
@@ -263,9 +224,6 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     profile: seed.profile,
     calendarMarks,
-    activeInjury: injuryAux?.kind === 'canonical_injury_episode'
-      ? { bodyPart: injuryAux.bodyPart, severity: injuryAux.severity }
-      : null,
     activeConstraints: [
       ...(injuryAux?.kind === 'canonical_injury_episode'
         ? [{
