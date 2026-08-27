@@ -1103,3 +1103,76 @@ attaches the accepted effect once and is neither replayable nor undoable.
   is not claimed beyond this fixture decision family.
 - The full-year archetype compiler acceptance gate is not built yet.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 15: retired `migrated_day_placement` is one read ingress
+
+### Two options weighed
+
+1. Leave the retired content row inside `AthleteDecision` and make boot's
+   direct `applyProgramOverrideWrite` branch quieter.
+2. Remove it from the current writer vocabulary, retain it only as a persisted
+   compatibility type, lift it at one named ingress into a typed accepted
+   placement effect, and compile that effect at the old row's ledger position.
+
+Option 2 landed. A current appender accepts `AthleteDecision`, whose union no
+longer contains `migrated_day_placement`; the old payload remains readable only
+as `LegacyMigratedDayPlacementDecision`.
+
+### Exact ownership result
+
+Instrument unit: distinct executable production sites, with type declarations
+reported separately.
+
+- Current decision writers able to construct `migrated_day_placement`: **0 of
+  1 ledger appender boundaries**.
+- Runtime interpreters of the retired payload's `date` and `workout`: **1**,
+  `legacyMigratedDayPlacementIngress`.
+- Boot branches directly writing from the retired payload: **0**.
+- Pure typed day-placement effect folds: **1**, in
+  `canonicalDayPlacementEffect`.
+- Append-only placement-upgrade writers: **1**, in `decisionLedgerStore`.
+- Persisted legacy type declarations: **1**, retained so old athletes remain
+  readable without putting the old kind back into the current action union.
+
+`legacy_day_placement_effect_upgrade` records the typed effect against the old
+entry id. It is not replayable or undoable. Boot encounters the old row through
+`bootReplayableEntries`, compiles its effect at that exact point, and appends
+upgrade metadata only after the replay latch ends. The old row remains
+byte-identical and stays before every decision that originally followed it.
+
+### Acceptance and liveness
+
+- Tests-first run: **211/219 passed**, with six ownership cells and two upgrade
+  journey cells red.
+- Final `npm run test:canonical-weekly-compiler`: **219/219**.
+- A real old placement row is inserted before a later current-format session
+  removal. On first and second restart the later removal still wins; one Undo
+  reverses only that removal and reveals the older migrated workout.
+- The old row is byte-identical after upgrade, retains its original index, and
+  receives exactly one metadata row across repeated boots.
+- Liveness mutation: replacing the real effect loop with an empty loop made
+  **5 of 219 cells red** — the fold ownership cells plus first boot, second boot
+  and Undo behavior. Restoring the loop returned **219/219**.
+- `npm run test:release`: **4/4 release units green**.
+- `npm run test:undo-reversal`: **25/25**.
+- `npm run test:journal-changes`: **13/13**.
+- Owned production and acceptance files report no TypeScript errors.
+
+Observed diagnostic reds were not used as product instructions:
+`test:decision-ledger-ownership` is **8/9** because four historical test files
+write the store in its source census; `test:quiescent-boot` is **5/6** because
+concurrent profile/coach hydration changes alter two persisted envelopes;
+`test:program-control-decisions` is **9/11** because its source assertions still
+expect the retired procedural exercise replay and deleted migration appender.
+
+### Questions
+
+- None. The persisted row contains the exact workout, date, entry id and ledger
+  position needed for a deterministic lift.
+
+### NOT COVERED
+
+- Scheduled deload remains outside the compiler.
+- The global rival-author/derived-output-writer census has not yet been run.
+- The full-year archetype compiler acceptance gate is not built yet.
+- Pixels, simulator and physical iPhone are not covered.

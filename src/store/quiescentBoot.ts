@@ -49,7 +49,15 @@ import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
-import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
+import type { CanonicalAcceptedDayPlacementEffect } from '../rules/canonicalDayPlacementEffect';
+import {
+  bootReplayableEntries,
+  unreadableEntryCount,
+} from '../rules/decisionLedgerReplay';
+import {
+  isLegacyMigratedDayPlacementEntry,
+  liftLegacyMigratedDayPlacementEntry,
+} from '../rules/legacyMigratedDayPlacementIngress';
 import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
 import { storedGameAnchor } from '../rules/gameAnchor';
 import { logger } from '../utils/logger';
@@ -105,6 +113,9 @@ function mondayOf(dateISO: string): string {
 }
 
 function replayDates(entry: DecisionLedgerEntry): string[] {
+  if (isLegacyMigratedDayPlacementEntry(entry)) {
+    return [liftLegacyMigratedDayPlacementEntry(entry).dateISO];
+  }
   const decision = entry.decision;
   switch (decision.kind) {
     case 'plan_change': {
@@ -118,8 +129,6 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
       return [decision.date];
     case 'fixture_move':
       return [decision.fromDate, decision.toDate];
-    case 'migrated_day_placement':
-      return [decision.date];
     case 'program_control': {
       const payload = (decision.action as { payload?: Record<string, unknown> }).payload ?? {};
       return [payload.date, payload.fromDate, payload.toDate]
@@ -128,6 +137,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
     case 'reversal':
     case 'legacy_plan_change_effect_upgrade':
     case 'legacy_fixture_effect_upgrade':
+    case 'legacy_day_placement_effect_upgrade':
       return [];
     case 'block_boundary_notice_acknowledged':
     case 'weekly_commitment_answer':
@@ -145,7 +155,7 @@ function replayEntry(entry: DecisionLedgerEntry): void {
   const decision = entry.decision;
   if (decision.kind === 'reversal') {
     // UNREACHABLE BY CONSTRUCTION, and kept as the exhaustiveness arm.
-    // `replayableEntries` drops reversals before this function is called — a
+    // `bootReplayableEntries` drops reversals before this function is called — a
     // reversal is not an action, it is a statement about one, and its whole
     // effect is the ENTRY IT REMOVES from the replay set. Deleting this arm
     // would make the switch non-exhaustive; making it throw would turn a
@@ -165,21 +175,6 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // here would be a SECOND application of a change that is already durable —
     // and for a `declined` answer there was never an effect at all, only a
     // record that the question was put and answered.
-    return;
-  }
-  if (decision.kind === 'migrated_day_placement') {
-    // R2: the old world's `dateOverrides`, replayed onto the surface they
-    // came from. This is the one decision that carries CONTENT rather than
-    // intent (see its note in types/decisionLedger.ts), so replay places the
-    // workout back rather than re-running a producer there is no intent for.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { applyProgramOverrideWrite } = require('./programStore');
-    applyProgramOverrideWrite({
-      date: decision.date,
-      workout: decision.workout,
-      context: undefined,
-      writer: 'program_control',
-    });
     return;
   }
   // Session edits never enter this interpreter. Their exact accepted effects
@@ -314,6 +309,25 @@ function compileFixtureDecisionGroup(
     upgrades.push({ sourceEntryId: entry.id, acceptedEffect });
   }
   return upgrades;
+}
+
+/** Lift one retired content row, then publish only its current typed effect. */
+function compileLegacyDayPlacementEntry(
+  entry: DecisionLedgerEntry,
+  completeLedger: readonly DecisionLedgerEntry[],
+): { sourceEntryId: string; acceptedEffect: CanonicalAcceptedDayPlacementEffect } | null {
+  if (!isLegacyMigratedDayPlacementEntry(entry)) return null;
+  const upgrade = completeLedger.find((candidate) =>
+    candidate.decision.kind === 'legacy_day_placement_effect_upgrade' &&
+    candidate.decision.sourceEntryId === entry.id);
+  const effect = upgrade?.decision.kind === 'legacy_day_placement_effect_upgrade'
+    ? upgrade.decision.acceptedEffect
+    : liftLegacyMigratedDayPlacementEntry(entry);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { commitCanonicalAcceptedDayPlacementEffect } =
+    require('./acceptedStateTransaction');
+  commitCanonicalAcceptedDayPlacementEffect(effect);
+  return upgrade ? null : { sourceEntryId: entry.id, acceptedEffect: effect };
 }
 
 /**
@@ -619,6 +633,10 @@ function rebuildDerivedWorldNow(): void {
     sourceEntryId: string;
     acceptedEffect: CanonicalAcceptedFixtureEditEffect;
   }> = [];
+  const legacyDayPlacementEffectUpgrades: Array<{
+    sourceEntryId: string;
+    acceptedEffect: CanonicalAcceptedDayPlacementEffect;
+  }> = [];
   beginLedgerReplay();
   try {
     // A CLEAN SLATE first: after a real process death the derived surfaces
@@ -755,7 +773,7 @@ function rebuildDerivedWorldNow(): void {
           });
         }
       };
-      for (const entry of replayableEntries(entries)) {
+      for (const entry of bootReplayableEntries(entries)) {
         if (entry.decision.kind === 'program_control') {
           flushSessionGroup();
           flushFixtureGroup();
@@ -774,6 +792,20 @@ function rebuildDerivedWorldNow(): void {
           flushExerciseGroup();
           flushSessionGroup();
           fixtureGroup.push(entry);
+          continue;
+        }
+        if (isLegacyMigratedDayPlacementEntry(entry)) {
+          flushExerciseGroup();
+          flushSessionGroup();
+          flushFixtureGroup();
+          try {
+            const upgrade = compileLegacyDayPlacementEntry(entry, entries);
+            if (upgrade) legacyDayPlacementEffectUpgrades.push(upgrade);
+          } catch (error) {
+            logger.warn('[quiescentBoot] legacy day-placement ingress failed', {
+              entryId: entry.id, error,
+            });
+          }
           continue;
         }
         flushExerciseGroup();
@@ -836,6 +868,13 @@ function rebuildDerivedWorldNow(): void {
       const { appendLegacyFixtureEffectUpgrade } = require('./decisionLedgerStore');
       for (const upgrade of legacyFixtureEffectUpgrades) {
         appendLegacyFixtureEffectUpgrade(upgrade);
+      }
+    }
+    if (legacyDayPlacementEffectUpgrades.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { appendLegacyDayPlacementEffectUpgrade } = require('./decisionLedgerStore');
+      for (const upgrade of legacyDayPlacementEffectUpgrades) {
+        appendLegacyDayPlacementEffectUpgrade(upgrade);
       }
     }
   }

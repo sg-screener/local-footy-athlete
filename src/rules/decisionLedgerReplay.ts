@@ -25,6 +25,7 @@
  */
 
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import { isLegacyMigratedDayPlacementEntry } from './legacyMigratedDayPlacementIngress';
 
 /**
  * The ids this ledger has annulled.
@@ -109,7 +110,7 @@ export function unreadableEntryCount(
  * A reversal is never replayed — it is not an action, it is a statement ABOUT
  * one, and its whole effect is the absence it creates here.
  */
-export function replayableEntries(
+export function bootReplayableEntries(
   entries: readonly DecisionLedgerEntry[],
 ): DecisionLedgerEntry[] {
   const annulled = annulledEntryIds(entries);
@@ -117,7 +118,16 @@ export function replayableEntries(
     entry.decision.kind !== 'reversal' &&
     entry.decision.kind !== 'legacy_plan_change_effect_upgrade' &&
     entry.decision.kind !== 'legacy_fixture_effect_upgrade' &&
+    entry.decision.kind !== 'legacy_day_placement_effect_upgrade' &&
     !annulled.has(entry.id));
+}
+
+/** Current accepted actions only; legacy content is admitted solely by boot ingress. */
+export function replayableEntries(
+  entries: readonly DecisionLedgerEntry[],
+): DecisionLedgerEntry[] {
+  return bootReplayableEntries(entries).filter((entry) =>
+    !isLegacyMigratedDayPlacementEntry(entry));
 }
 
 /**

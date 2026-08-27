@@ -650,7 +650,16 @@ async function main(): Promise<void> {
   const fixtureEditCompilerPath = join(ROOT, 'rules/canonicalWeeklyFixtureEditCompiler.ts');
   const fixtureEditCompilerSource = existsSync(fixtureEditCompilerPath)
     ? readFileSync(fixtureEditCompilerPath, 'utf8') : '';
+  const dayPlacementEffectPath = join(ROOT, 'rules/canonicalDayPlacementEffect.ts');
+  const dayPlacementEffectSource = existsSync(dayPlacementEffectPath)
+    ? readFileSync(dayPlacementEffectPath, 'utf8') : '';
+  const legacyDayPlacementIngressPath = join(
+    ROOT, 'rules/legacyMigratedDayPlacementIngress.ts',
+  );
+  const legacyDayPlacementIngressSource = existsSync(legacyDayPlacementIngressPath)
+    ? readFileSync(legacyDayPlacementIngressPath, 'utf8') : '';
   const decisionLedgerTypeSource = readFileSync(join(ROOT, 'types/decisionLedger.ts'), 'utf8');
+  const decisionLedgerStoreSource = readFileSync(join(ROOT, 'store/decisionLedgerStore.ts'), 'utf8');
   const quiescentBootSource = readFileSync(join(ROOT, 'store/quiescentBoot.ts'), 'utf8');
   const legacySessionMigrationSource = readFileSync(
     join(ROOT, 'store/legacyPlanChangeEffectMigration.ts'), 'utf8',
@@ -825,6 +834,43 @@ async function main(): Promise<void> {
   ok('[MUTATION] removing the ordered fixture-effect fold is detected',
     fixtureEditCompilerSource.includes('for (const effect of args.effects)') &&
       !fixtureEditCompilerSource.replace(
+        'for (const effect of args.effects)',
+        'for (const effect of [])',
+      ).includes('for (const effect of args.effects)'));
+  const currentDecisionStart = decisionLedgerTypeSource.indexOf('export type AthleteDecision =');
+  const persistedLegacyStart = decisionLedgerTypeSource.indexOf(
+    'export interface LegacyMigratedDayPlacementDecision', currentDecisionStart,
+  );
+  const currentDecisionRegion = decisionLedgerTypeSource.slice(
+    currentDecisionStart, persistedLegacyStart,
+  );
+  ok('the retired day-placement shape is absent from the current decision vocabulary',
+    currentDecisionStart >= 0 && persistedLegacyStart > currentDecisionStart &&
+      !currentDecisionRegion.includes("kind: 'migrated_day_placement'") &&
+      decisionLedgerStoreSource.includes('decision: AthleteDecision;'));
+  ok('one named legacy ingress lifts old placement content into a typed accepted effect',
+    legacyDayPlacementIngressSource.includes(
+      'export function liftLegacyMigratedDayPlacementEntry',
+    ) && dayPlacementEffectSource.includes(
+      'export interface CanonicalAcceptedDayPlacementEffect',
+    ));
+  ok('one pure compiler folds typed day-placement effects in order',
+    dayPlacementEffectSource.includes('export function compileCanonicalDayPlacementEffects') &&
+      dayPlacementEffectSource.includes('for (const effect of args.effects)'));
+  ok('current-format boot cannot directly interpret or write the retired placement shape',
+    quiescentBootSource.includes('liftLegacyMigratedDayPlacementEntry(entry)') &&
+      quiescentBootSource.includes('commitCanonicalAcceptedDayPlacementEffect(effect)') &&
+      !quiescentBootSource.includes("decision.kind === 'migrated_day_placement'") &&
+      !quiescentBootSource.includes('workout: decision.workout'));
+  ok('legacy placement upgrades are append-only metadata, never replay or Undo targets',
+    decisionLedgerTypeSource.includes("kind: 'legacy_day_placement_effect_upgrade'") &&
+      decisionLedgerStoreSource.includes('appendLegacyDayPlacementEffectUpgrade') &&
+      ledgerReplaySource.includes(
+        "entry.decision.kind !== 'legacy_day_placement_effect_upgrade'",
+      ));
+  ok('[MUTATION] removing the typed legacy-placement fold is detected',
+    dayPlacementEffectSource.includes('for (const effect of args.effects)') &&
+      !dayPlacementEffectSource.replace(
         'for (const effect of args.effects)',
         'for (const effect of [])',
       ).includes('for (const effect of args.effects)'));
@@ -1703,6 +1749,119 @@ async function main(): Promise<void> {
         legacyFixtureInstall.blockOneStart, INSTALL_DAY,
       ))) === fixtureSignature(legacyFixtureBefore),
     JSON.stringify({ legacyFixtureUndo, entries: decisionLedgerEntries() }));
+
+  console.log('\n[legacy placement ingress] old content upgrades once at its original position');
+  localStorageData.clear();
+  const legacyPlacementInstall = await coldStartThroughOnboarding({
+    profile: athlete(), installDayISO: INSTALL_DAY,
+  });
+  const legacyPlacementBefore = quiet(() =>
+    resolvedDays(legacyPlacementInstall.blockOneStart, INSTALL_DAY));
+  const legacyPlacementTarget = legacyPlacementBefore.find((day) => day.rows.length > 0);
+  const legacyPlacementMicrocycle = useProgramStore.getState().currentProgram?.microcycles
+    .find((week) => String(week.startDate).slice(0, 10) === legacyPlacementInstall.blockOneStart);
+  const legacyPlacementBase = legacyPlacementTarget
+    ? legacyPlacementMicrocycle?.workouts.find((workout) =>
+        workout.dayOfWeek === new Date(`${legacyPlacementTarget.dateISO}T12:00:00`).getDay())
+    : null;
+  const legacyPlacedWorkout = legacyPlacementBase
+    ? {
+        ...JSON.parse(JSON.stringify(legacyPlacementBase)) as Workout,
+        name: 'Legacy migrated placement',
+        exercises: legacyPlacementBase.exercises.map((row, index) => index === 0
+          ? { ...row, prescribedSets: Number(row.prescribedSets ?? 1) + 1 }
+          : row),
+      }
+    : null;
+  const laterRemoval = legacyPlacementTarget
+    ? quiet(() => applyPlanChange({
+        change: {
+          kind: 'remove_session', date: legacyPlacementTarget.dateISO, scope: 'whole_day',
+        },
+        visibleWeek: quiet(() => deriveVisibleWeekLive(
+          legacyPlacementInstall.blockOneStart, INSTALL_DAY,
+        )),
+        todayISO: INSTALL_DAY,
+        applyOverride: () => undefined,
+      }))
+    : null;
+  const laterRemovalEntry = decisionLedgerEntries().find((entry) =>
+    entry.decision.kind === 'plan_change' &&
+      entry.decision.change.kind === 'remove_session' &&
+      entry.decision.change.date === legacyPlacementTarget?.dateISO);
+  await flushPendingStorageWrites();
+  const legacyPlacementEnvelopeRaw =
+    localStorageData.get(DECISION_LEDGER_PERSISTENCE_KEY) ?? '';
+  const legacyPlacementRowId = 'legacy-day-placement-1';
+  let originalLegacyRowJSON = '';
+  if (legacyPlacementEnvelopeRaw && legacyPlacementTarget && legacyPlacedWorkout &&
+    laterRemovalEntry) {
+    const envelope = JSON.parse(legacyPlacementEnvelopeRaw) as {
+      state?: { entries?: Array<Record<string, unknown>> };
+    };
+    const entries = envelope.state?.entries ?? [];
+    const laterIndex = entries.findIndex((entry) => entry.id === laterRemovalEntry.id);
+    const legacyRow = {
+      id: legacyPlacementRowId,
+      occurredAt: '2026-07-13T10:00:00.000Z',
+      provenance: 'migration',
+      decision: {
+        kind: 'migrated_day_placement',
+        date: legacyPlacementTarget.dateISO,
+        workout: legacyPlacedWorkout,
+      },
+    };
+    originalLegacyRowJSON = JSON.stringify(legacyRow);
+    entries.splice(Math.max(0, laterIndex), 0, legacyRow);
+    localStorageData.set(DECISION_LEDGER_PERSISTENCE_KEY, JSON.stringify(envelope));
+  }
+  const firstLegacyPlacementRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const firstLegacyPlacementEntries = decisionLedgerEntries();
+  const firstLegacyPlacementUpgradeCount = firstLegacyPlacementEntries.filter((entry) =>
+    entry.decision.kind === 'legacy_day_placement_effect_upgrade' &&
+      (entry.decision as { sourceEntryId?: string }).sourceEntryId ===
+        legacyPlacementRowId).length;
+  const migratedRowAfterFirstBoot = firstLegacyPlacementEntries.find((entry) =>
+    entry.id === legacyPlacementRowId);
+  const targetAfterFirstBoot = legacyPlacementTarget
+    ? quiet(() => resolvedDays(
+        legacyPlacementInstall.blockOneStart, INSTALL_DAY,
+      )).find((day) => day.dateISO === legacyPlacementTarget.dateISO)
+    : null;
+  ok('an old placement is lifted once without rewriting or moving its ledger row',
+    firstLegacyPlacementRestart.ok && firstLegacyPlacementUpgradeCount === 1 &&
+      JSON.stringify(migratedRowAfterFirstBoot) === originalLegacyRowJSON &&
+      firstLegacyPlacementEntries.findIndex((entry) => entry.id === legacyPlacementRowId) <
+        firstLegacyPlacementEntries.findIndex((entry) => entry.id === laterRemovalEntry?.id),
+    JSON.stringify({ firstLegacyPlacementUpgradeCount, firstLegacyPlacementEntries }));
+  ok('a later current removal still wins because the legacy effect keeps its original position',
+    laterRemoval?.ok === true && targetAfterFirstBoot?.rows.length === 0,
+    JSON.stringify({ laterRemoval, targetAfterFirstBoot }));
+  const secondLegacyPlacementRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const secondLegacyPlacementUpgradeCount = decisionLedgerEntries().filter((entry) =>
+    entry.decision.kind === 'legacy_day_placement_effect_upgrade' &&
+      (entry.decision as { sourceEntryId?: string }).sourceEntryId ===
+        legacyPlacementRowId).length;
+  ok('the placement upgrade remains singular and ordering stays exact on later boots',
+    secondLegacyPlacementRestart.ok && secondLegacyPlacementUpgradeCount === 1 &&
+      (legacyPlacementTarget ? quiet(() => resolvedDays(
+        legacyPlacementInstall.blockOneStart, INSTALL_DAY,
+      )).find((day) => day.dateISO === legacyPlacementTarget.dateISO)?.rows.length === 0 : false));
+  const undoLaterRemoval = await quietAsync(() => undoLastDecision());
+  const targetAfterLegacyUndo = legacyPlacementTarget
+    ? quiet(() => resolvedDays(
+        legacyPlacementInstall.blockOneStart, INSTALL_DAY,
+      )).find((day) => day.dateISO === legacyPlacementTarget.dateISO)
+    : null;
+  ok('upgrade metadata is not undoable and undo reveals the earlier migrated placement',
+    undoLaterRemoval.outcome === 'undone' &&
+      targetAfterLegacyUndo?.sessionName === 'Legacy migrated placement' &&
+      targetAfterLegacyUndo.rows.length === (legacyPlacedWorkout?.exercises.length ?? -1),
+    JSON.stringify({ undoLaterRemoval, targetAfterLegacyUndo, legacyPlacedWorkout }));
 
   console.log('\n[athlete-edit durability] accepted session Add and Swap survive restart');
   const restartEditWitness = async (

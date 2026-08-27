@@ -194,8 +194,8 @@ run('8 the boot replays through the filter, with no second opinion', () => {
   // call text and reddened when the replay phase was wrapped in its own
   // try/catch — a correct change. What must hold is that the boot's replay loop
   // iterates the FILTER's output and nothing else.
-  assert(/for \(const entry of replayableEntries\(/.test(source),
-    'the boot no longer replays through replayableEntries');
+  assert(/for \(const entry of bootReplayableEntries\(/.test(source),
+    'the boot no longer replays through the persisted-entry filter');
   assert(!/for \(const entry of decisionLedgerEntries\(\)\)/.test(source),
     'the boot iterates the raw ledger somewhere — annulled decisions would replay');
   // A SECOND COPY OF THE RULE IS THE DEFECT THIS GATE EXISTS FOR. The boot must
@@ -389,7 +389,7 @@ run('17 the boot tolerates a failed replay PHASE, not just a failed entry', () =
   const source = fs.readFileSync(
     path.resolve(__dirname, '..', 'store', 'quiescentBoot.ts'), 'utf8');
   const replayPhase = source.slice(source.indexOf('THE REPLAY PHASE CANNOT KILL THE BOOT'));
-  assert(/try \{[\s\S]*replayableEntries\(entries\)[\s\S]*\} catch/.test(replayPhase),
+  assert(/try \{[\s\S]*bootReplayableEntries\(entries\)[\s\S]*\} catch/.test(replayPhase),
     'the replay phase is no longer wrapped — one corrupt row can kill the boot again');
   const generation = source.slice(
     source.indexOf('const program = generateProgramLocally'),

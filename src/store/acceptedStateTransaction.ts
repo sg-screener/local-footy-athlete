@@ -21,6 +21,7 @@ import {
   canonicaliseAcceptedStateCandidate,
   type AcceptedMaterialContext,
   type ProgramState,
+  applyProgramOverrideWrite,
   useProgramStore,
 } from './programStore';
 import {
@@ -101,6 +102,10 @@ import {
 import type {
   CanonicalAcceptedSessionEditEffect,
 } from '../rules/canonicalWeeklySessionEditState';
+import {
+  compileCanonicalDayPlacementEffects,
+  type CanonicalAcceptedDayPlacementEffect,
+} from '../rules/canonicalDayPlacementEffect';
 import {
   effectiveFixtureDatesForWeeks,
   rollingHorizonDependencyClosure,
@@ -2684,6 +2689,25 @@ export function commitCanonicalAcceptedFixtureEditEffect(
       : 'game_day_change',
     diagnosticRoute: 'canonical_accepted_fixture_effect',
     fixtureMutationSource: effect.source,
+  });
+}
+
+/** Publish one already-lifted accepted placement; no legacy shape crosses here. */
+export function commitCanonicalAcceptedDayPlacementEffect(
+  effect: CanonicalAcceptedDayPlacementEffect,
+) {
+  const state = useProgramStore.getState();
+  const compiled = compileCanonicalDayPlacementEffects({
+    dateOverrides: state.dateOverrides,
+    effects: [effect],
+  });
+  const workout = compiled[effect.dateISO];
+  if (!workout) throw new Error('Accepted day-placement effect compiled no workout');
+  return applyProgramOverrideWrite({
+    date: effect.dateISO,
+    workout,
+    context: undefined,
+    writer: 'program_control',
   });
 }
 

@@ -20,6 +20,7 @@ import type { ProgramControlAction } from './programControlAction';
 import type { DayOfWeek, Workout } from './domain';
 import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
+import type { CanonicalAcceptedDayPlacementEffect } from '../rules/canonicalDayPlacementEffect';
 import type { FixtureMutationKind } from './fixtureMutation';
 
 /** Who put this decision on the ledger. */
@@ -50,6 +51,11 @@ export type AthleteDecision =
       kind: 'legacy_fixture_effect_upgrade';
       sourceEntryId: string;
       acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+    }
+  | {
+      kind: 'legacy_day_placement_effect_upgrade';
+      sourceEntryId: string;
+      acceptedEffect: CanonicalAcceptedDayPlacementEffect;
     }
   | {
       kind: 'fixture_add'; date: string; fixtureKind: FixtureMutationKind;
@@ -91,23 +97,6 @@ export type AthleteDecision =
    * take two undos to undo.
    */
   | { kind: 'program_control'; action: ProgramControlAction }
-  /**
-   * R2 MIGRATION ONLY — the one kind that carries CONTENT instead of intent,
-   * and the only place in this union where that is allowed.
-   *
-   * The pre-rebuild envelope stored `dateOverrides` as a materialised workout
-   * per date: the RESULT of a past decision whose intent it never recorded.
-   * There is no honest `plan_change` to build from it — inventing one would
-   * paraphrase a decision nobody made, which this ledger's own law forbids —
-   * and `date_override` is the athlete-OWNED surface (`rebaseAcceptedEffective
-   * Week`'s precedence statement), so the content is the athlete's material
-   * and losing it would lose their edits. It migrates verbatim.
-   *
-   * NO WRITER EVER CREATES THIS but the one-time envelope extraction.
-   * `preRebuildEnvelopeMigrationTests` pins that; when the last pre-rebuild
-   * install is gone, the kind retires with the migration that made it.
-   */
-  | { kind: 'migrated_day_placement'; date: string; workout: Workout }
   /**
    * THE ATHLETE'S ANSWER TO THE MISSED-SESSION QUESTION.
    *
@@ -153,11 +142,25 @@ export type AthleteDecision =
    */
   | { kind: 'block_boundary_notice_acknowledged'; forBlockNumber: number };
 
+/**
+ * Persisted compatibility only. This is deliberately outside
+ * `AthleteDecision`, the type accepted by the ledger appender, so current code
+ * cannot write the retired material-result shape. Its fields are interpreted
+ * only by `legacyMigratedDayPlacementIngress`.
+ */
+export interface LegacyMigratedDayPlacementDecision {
+  readonly kind: 'migrated_day_placement';
+  readonly date: string;
+  readonly workout: Workout;
+}
+
+export type PersistedDecision = AthleteDecision | LegacyMigratedDayPlacementDecision;
+
 export interface DecisionLedgerEntry {
   /** Ledger-scoped unique id, assigned by the appender. */
   readonly id: string;
   /** Device-clock instant the decision was made, ISO 8601. */
   readonly occurredAt: string;
   readonly provenance: DecisionProvenance;
-  readonly decision: AthleteDecision;
+  readonly decision: PersistedDecision;
 }

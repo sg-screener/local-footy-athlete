@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AthleteDecision, DecisionLedgerEntry, DecisionProvenance } from '../types/decisionLedger';
 import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
 import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
+import type { CanonicalAcceptedDayPlacementEffect } from '../rules/canonicalDayPlacementEffect';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   guardedDurableWrite,
@@ -370,6 +371,41 @@ export function appendLegacyFixtureEffectUpgrade(args: {
     provenance: 'migration',
     decision: {
       kind: 'legacy_fixture_effect_upgrade',
+      sourceEntryId: args.sourceEntryId,
+      acceptedEffect: args.acceptedEffect,
+    },
+  };
+  const outcome = applyDecisionLedgerWrite({
+    next: [...existing, entry],
+    writer: 'migration',
+  });
+  return outcome.ok ? { ...outcome, entry } : outcome;
+}
+
+/** Append-only metadata for one retired migrated placement row. */
+export function appendLegacyDayPlacementEffectUpgrade(args: {
+  sourceEntryId: string;
+  acceptedEffect: CanonicalAcceptedDayPlacementEffect;
+}): AppendDecisionOutcome {
+  if (ledgerReplayActive()) return { ok: false, reason: 'ledger_rewrite_without_reset' };
+  const existing = useDecisionLedgerStore.getState().entries;
+  const alreadyUpgraded = existing.find((entry) =>
+    entry.decision.kind === 'legacy_day_placement_effect_upgrade' &&
+    entry.decision.sourceEntryId === args.sourceEntryId);
+  if (alreadyUpgraded) return { ok: true, entry: alreadyUpgraded };
+  let maxStoredSequence = 0;
+  for (const stored of existing) {
+    const match = /^dl-(\d+)$/.exec(stored.id);
+    if (match) maxStoredSequence = Math.max(maxStoredSequence, Number(match[1]));
+  }
+  const sequence = Math.max(nextEntrySequence, maxStoredSequence + 1);
+  nextEntrySequence = sequence + 1;
+  const entry: DecisionLedgerEntry = {
+    id: `dl-${sequence}`,
+    occurredAt: new Date().toISOString(),
+    provenance: 'migration',
+    decision: {
+      kind: 'legacy_day_placement_effect_upgrade',
       sourceEntryId: args.sourceEntryId,
       acceptedEffect: args.acceptedEffect,
     },
