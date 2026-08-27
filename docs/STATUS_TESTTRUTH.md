@@ -1937,6 +1937,8 @@ Implementation checkpoint: `900b6c59`. Owner remains `testtruth`.
 ## 21. Final-row composition — 2026-08-27
 
 Owner: `testtruth`. User requested this chunk after the 401/416 annual result.
+Implementation checkpoint: `8e7afd5a`. Annual artifacts record the pre-commit
+working tree at parent `78dddbf3`; that verified code is captured in this commit.
 LOOP CHECK: a scheduled plan passing while its final rows fail is the existing
 split-ownership failure. This slice moves the actual final-row author, not just
 another wrapper around the scheduler. Global ownership is still NOT complete.

@@ -60,11 +60,11 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `codex/failure-only-state-export` · **IMPLEMENTATION:** `900b6c59`.
-- **CURRENT UNIT:** chunk 2 locally verified; accumulated fixture/restart and no-team-training onboarding; owner `testtruth`.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 20 final verification; compiler 355/355, simulator tape exit 0, year 401/416 with all 416 restart checks green.
-- **NEXT:** final-row composition chunk, owner `testtruth`, when Sam starts it.
-- **OPEN:** 15 programming weeks and global writer ownership keep release red; no phone acceptance claimed.
+- **BRANCH:** `codex/failure-only-state-export` · **IMPLEMENTATION:** `8e7afd5a`.
+- **CURRENT UNIT:** final-row composition locally verified; fixture fallback, practice-match budget and exercise-edit ownership on restart; owner `testtruth`.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 21; compiler 375/375, year 416/416 with zero programming/restart failures, including exercise Swap then game Move.
+- **NEXT:** lighter-day ownership, then remaining global writer proof and release debt; owner `testtruth`, when Sam starts it.
+- **OPEN:** 2 confirmed rival authors, 1 derived publisher and 1,217 unresolved candidate owners keep release red; existing typecheck debt remains. No phone acceptance claimed.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
