@@ -3744,6 +3744,21 @@ builders remain protected, not activated.
 
 ### Checkpoint verification (full release running)
 
+First complete numeric run: **374/416 reached athlete-weeks green**, with 42
+weeks failing the new numeric observer on one athlete (`female-5-home`). The
+193 distinct verdict keys included repeated downstream receipt failures; these
+were not 193 distinct program defects. Inspection found a second instrument
+scope error: load decisions for an exercise used as strength/prehab were also
+expected on the same exercise in standalone Mobility/Recovery workouts, which
+the existing application owner intentionally does not touch. The observer now
+measures the owner's Strength/Mixed/Team Training workout scope. No production
+load policy changed. The affected five-week journey is **5/5 reached weeks
+green** after this correction, and the permanent real arithmetic mutations
+still pass; its overall diagnostic verdict remains red for missing annual
+coverage. The first isolated run at 490385e8 was stopped because it carried the
+same observer defect; neither run is claimed as a green release. The completed
+shared run's failure was this measurement error, not the concurrent UI edits.
+
 All three TypeScript scopes are zero. Signed-copy extraction passes. The older
 session-change sequence remains 22/22 with both prior and updated runtime code;
 session-injury-review completes at 76/76. Additional historical probes are

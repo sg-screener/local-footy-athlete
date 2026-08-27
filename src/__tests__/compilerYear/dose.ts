@@ -66,6 +66,11 @@ export function observeProgramDose(input: CanonicalProgramCompilerInput, compile
     loadApplications++;
     const workouts = originalApply(args);
     for (const workout of workouts) {
+      // A decision can share an exercise with a standalone mobility session.
+      // Only strength-bearing workout types belong to this load application;
+      // an unloaded recovery row is not a failed strength-load prescription.
+      if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed' &&
+          workout.workoutType !== 'Team Training') continue;
       for (const row of workout.exercises) {
         const decision = args.decisions.find(d => d.exerciseName === row.exercise.name);
         if (!decision || decision.previousLoadKg === null ||
