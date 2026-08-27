@@ -2088,10 +2088,10 @@ export function buildFixtureProjection(args: {
   } else {
     try {
       target = generateProgramLocally(args.profile, {
-        // ACCEPTANCE AUTHORS THE BLOCK. Sam: "add one typed
-        // BlockExerciseSelection history record at BLOCK ACCEPTANCE." This is
-        // that door, and it is the only mutation boundary in production.
-        recordSelections: 'author',
+        // A fixture repair is a projection within an already accepted block,
+        // not acceptance of a new block. Its one-week/changed-layout selection
+        // must not replace the block's recorded movement seats during replay.
+        recordSelections: false,
         // DECLARED, and the strictness is the point: the `catch` immediately
         // below CONSUMES `Section18WeekAcceptanceError` as the signal that the
         // repair owner — not target generation — must decide. Left unstated

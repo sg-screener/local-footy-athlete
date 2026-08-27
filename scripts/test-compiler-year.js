@@ -33,6 +33,8 @@ const mutations = {
   missing_week: (r) => r.athletes[0].weeks.pop(),
   duplicate_week: (r) => { r.athletes[0].weeks[1] = r.athletes[0].weeks[0]; },
   missing_required_check: (r) => r.athletes[0].weeks[0].checks.pop(),
+  missing_selection_history_check: (r) => { r.athletes[0].weeks[0].checks = r.athletes[0].weeks[0].checks.filter(c => c.id !== 'selection_history'); },
+  rewritten_selection_history: (r) => { r.athletes[0].weeks[0].checks.find(c => c.id === 'selection_history').ok = false; },
   false_compiler_invariant: (r) => { r.athletes[0].weeks[0].checks[0].ok = false; },
   unreached_week: (r) => { r.athletes[0].weeks[0].status = 'not_reached'; },
   wrong_phase: (r) => { r.athletes[0].weeks[0].phase = 'In-season'; },

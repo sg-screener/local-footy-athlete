@@ -40,6 +40,7 @@
  *     the day's actual conditioning content is.
  */
 import type { Workout, WorkoutExercise } from '../types/domain';
+import { hasQualifyingSpeedConditioning } from './conditioningCredit';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import type { GeneratedWeekClauseId, GeneratedWeekContract } from './generatedWeekContract';
 
@@ -163,6 +164,8 @@ function isTrueSpeedDay(workout: Workout): boolean {
  * they are everywhere else.
  */
 function carriesConditioning(workout: Workout): boolean {
+  if (workout.composedOptionalKind === 'primer') return false;
+  if (hasQualifyingSpeedConditioning(workout)) return true;
   const evidence = (workout as unknown as {
     section18Evidence?: { conditioningRole?: string };
   }).section18Evidence;

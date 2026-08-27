@@ -26,7 +26,8 @@ export interface CanonicalWeeklyFixtureState {
   readonly id: string;
   readonly weekStartISO: string;
   readonly fixtures: readonly CanonicalWeeklyFixtureAnchor[];
-  readonly effectiveAvailableDayNumbers?: readonly number[];
+  /** Access remains an athlete fact; fixture occupancy is a separate constraint. */
+  readonly gymAccessDayNumbers?: readonly number[];
   readonly releasedFixtureDayNumbers: readonly number[];
   readonly adjacentFixtureDates: readonly string[];
 }
@@ -67,14 +68,15 @@ export function canonicalFixtureStateFrom(args: {
     .map((date) => date.slice(0, 10));
   const releasedFixtureDayNumbers = (offSeason ? [] : args.availability?.releasedFixtures ?? [])
     .map((fixture) => new Date(`${fixture.date.slice(0, 10)}T12:00:00`).getDay());
-  const effectiveAvailableDayNumbers = args.availability
-    ? offSeason
-      ? args.availability.days
-          .filter((day) =>
-            day.provenance.includes('explicit_available')
-            && day.blockedBy.every((reason) => reason === 'fixture_occupied'))
-          .map((day) => day.dayNumber)
-      : [...args.availability.effectiveAvailableDayNumbers]
+  // Do not turn a two-day access answer into an invalid one-day answer when
+  // a fixture occupies one of those days. The scheduler owns the legal-day
+  // reduction using these access days AND the fixture dates below.
+  const gymAccessDayNumbers = args.availability
+    ? args.availability.days
+        .filter((day) =>
+          (offSeason ? day.provenance.includes('explicit_available') : day.provenance.length > 0)
+          && day.blockedBy.every((reason) => reason === 'fixture_occupied'))
+        .map((day) => day.dayNumber)
     : undefined;
 
   return {
@@ -82,8 +84,8 @@ export function canonicalFixtureStateFrom(args: {
     id: `fixture-week:${weekStartISO}`,
     weekStartISO,
     fixtures,
-    ...(effectiveAvailableDayNumbers
-      ? { effectiveAvailableDayNumbers }
+    ...(gymAccessDayNumbers
+      ? { gymAccessDayNumbers }
       : {}),
     releasedFixtureDayNumbers: Array.from(new Set(releasedFixtureDayNumbers)).sort(),
     adjacentFixtureDates: Array.from(new Set(adjacentFixtureDates)).sort(),
@@ -100,8 +102,8 @@ export function schedulerInputsWithFixtureState(
     new Date(`${entry.dateISO}T12:00:00`).getDay());
   return {
     ...scheduler,
-    ...(fixture.effectiveAvailableDayNumbers
-      ? { gymAccessDays: [...fixture.effectiveAvailableDayNumbers] }
+    ...(fixture.gymAccessDayNumbers
+      ? { gymAccessDays: [...fixture.gymAccessDayNumbers] }
       : {}),
     gameDay: gameDays[0] ?? null,
     gameDays,

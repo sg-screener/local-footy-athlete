@@ -224,6 +224,18 @@ console.log('\n[0bc] Team-session intensity is learned from session feedback, no
       && !/navigation\.navigate\('TeamTrainingDuration'\)|navigation\.navigate\('TeamTrainingIntensity'\)/.test(teamDays));
   ok('team-training days use the shared three-letter day grid',
     /<DayGrid/.test(teamDays) && !/layout=/.test(teamDays));
+  const noTeamTile = teamDays.match(/<SelectableTile\b[\s\S]*?<\/SelectableTile>/)?.[0] ?? '';
+  ok('no team training is a mounted explicit selection, not an unanswered default',
+    noTeamTile.length > 100 && /accessibilityLabel="No team training"/.test(noTeamTile) &&
+    /onPress=\{\(\) => setAnswer\(\[\]\)\}/.test(noTeamTile) &&
+    /isSelected=\{noTeamTraining\}/.test(noTeamTile) &&
+    /const isValid = answer !== null/.test(teamDays));
+  ok('selecting a weekday replaces none; unticking the final day requires an explicit answer',
+    /setAnswer\(\[\.\.\.selectedDays, day\]\)/.test(teamDays) &&
+    /setAnswer\(next\.length \? next : null\)/.test(teamDays));
+  ok('the same durable onboarding door saves zero and reopens the saved answer',
+    /saved\.teamTrainingDaysPerWeek === 0/.test(teamDays) &&
+    /commitAndAdvance\(\{\s*teamTrainingDaysPerWeek: selectedDays.length,\s*teamTrainingDays: selectedDays/.test(teamDays));
   ok('Review no longer shows or links to the retired answer',
     !/Team Sessions|formatTeamSessions|formatTeamIntensity|TeamTrainingDuration|TeamTrainingIntensity/.test(reviewRows));
 }

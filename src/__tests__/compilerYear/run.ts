@@ -16,6 +16,7 @@ import { rebaseAcceptedEffectiveWeek } from '../../rules/acceptedEffectiveWeek';
 import { coldStartThroughOnboarding, quiet, quietAsync, followTheWeek, recordDay,
   relaunchApp, rolloverIfDue, setJourneyClock, takeCensus } from '../support/athleteJourney';
 import { ARCHETYPES, YEAR_START, athleteAnswers, plusDays, yearTimeline, type Archetype } from './catalog';
+import { blockSelectionHistory } from '../../store/blockSelectionHistoryStore';
 import { compilerChecks, digest, inspectWeek, signatureDifferences, visibleSignature } from './invariants';
 import type { AthleteResult, Check } from './results';
 
@@ -157,12 +158,15 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
           profile: useProfileStore.getState().onboardingData, marks: useCalendarStore.getState().markedDays }));
         const signature = visibleSignature(before);
         const acceptedLedger = ledger();
+        const acceptedSelections = semanticFingerprint(blockSelectionHistory());
         const boot = await quietAsync(() => relaunchApp({ storage, todayISO: week.weekStart }));
         result.restarts++;
         if (!boot.ok) throw new Error(`Restart: ${boot.error}`);
         const rebuilt = visibleSignature(visible(week.weekStart));
         checks.push({ id: 'restart', ok: signature === rebuilt, detail: signatureDifferences(signature, rebuilt).join(' | ') });
         checks.push({ id: 'ledger', ok: acceptedLedger === ledger(), detail: 'Whole ordered ledger unchanged by boot' });
+        checks.push({ id: 'selection_history', ok: acceptedSelections === semanticFingerprint(blockSelectionHistory()),
+          detail: 'Restart cannot replace accepted block movement seats with a fixture-repair projection' });
         const loggingErrors: string[] = [];
         for (let day = 0; day < 7; day++) {
           const date = plusDays(week.weekStart, day);

@@ -601,6 +601,31 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       : null;
     const primaryRollingProjection = rollingRepair?.projections.find((candidate) =>
       candidate.weekStart === targetWeekStart);
+    // Historical fixture facts still exist after their block leaves memory.
+    // Fold their calendar effect, and only materialise the affected weeks the
+    // current program actually contains (including an adjacent boundary week).
+    // Never try to invent an old contract from today's phase/profile.
+    const targetIsMaterialised = currentProgram.microcycles.some((week) =>
+      week.startDate.slice(0, 10) === targetWeekStart);
+    if (args.acceptedFixtureEffect && !targetIsMaterialised) {
+      const context = collectWeekRebuildContext({
+        baseProfile: args.baseProfile, program: currentProgram, todayISO,
+      });
+      const sweep: OverrideSweepDecision = { preserve: [], clear: [], conflictsRemoved: [] };
+      if (shouldCommit) {
+        const overlays = { ...state.weekScopedOverlays };
+        for (const candidate of rollingRepair?.projections ?? []) {
+          overlays[candidate.weekStart] = candidate.overlay;
+        }
+        commitAcceptedStateTransaction({
+          operation: 'forward_decision', reason: 'canonical_fixture_fact_outside_materialised_block',
+          profile: args.baseProfile, markedDays, todayISO,
+          program: { weekScopedOverlays: overlays },
+          validateWeekStarts: rollingRepair?.weekStarts ?? [],
+        });
+      }
+      return { program: currentProgram, context, sweep };
+    }
     const projection = primaryRollingProjection
       ? {
           overlay: primaryRollingProjection.overlay,

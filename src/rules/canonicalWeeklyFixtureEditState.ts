@@ -74,18 +74,27 @@ export function canonicalAcceptedFixtureEditEffectFromIntent(args: {
   const sourceDate = args.sourceDate?.slice(0, 10) ?? null;
   const targetDate = args.targetDate.slice(0, 10);
   const after = { ...args.beforeMarkedDays };
-
+  // Materialise the implicit standing fixture before changing one date. Once
+  // any explicit game exists, calendar semantics use the explicit set instead.
+  const weekDates = datesInWeek(targetDate);
+  const hasExplicitFixtureAnswer = weekDates.some((date) =>
+    after[date] === 'game' || after[date] === 'noGame');
+  if (!hasExplicitFixtureAnswer && args.recurringGameDay) {
+    const recurringDate = weekDates.find((date) =>
+      dayNameForDate(date) === args.recurringGameDay);
+    if (recurringDate && after[recurringDate] !== 'rest') after[recurringDate] = 'game';
+  }
   if (sourceDate) delete after[sourceDate];
   if (args.action === 'remove') {
     delete after[targetDate];
-    if (args.recurringGameDay) {
+    if (args.recurringGameDay && !weekDates.some((date) => after[date] === 'game')) {
       const recurringDate = datesInWeek(targetDate)
         .find((date) => dayNameForDate(date) === args.recurringGameDay);
       if (recurringDate) after[recurringDate] = 'noGame';
     }
   } else {
-    for (const date of datesInWeek(targetDate)) {
-      if (after[date] === 'game' || after[date] === 'noGame') delete after[date];
+    for (const date of weekDates) {
+      if (after[date] === 'noGame') delete after[date];
     }
     after[targetDate] = 'game';
   }
@@ -96,7 +105,6 @@ export function canonicalAcceptedFixtureEditEffectFromIntent(args: {
   // context held no material mark for it. Seven explicit cells make the
   // effect portable across that representation boundary without storing any
   // repaired workout output.
-  const weekDates = datesInWeek(targetDate);
   return {
     action: args.action,
     fixtureKind: args.fixtureKind,

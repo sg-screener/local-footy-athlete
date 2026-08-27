@@ -17,7 +17,7 @@ export interface YearResult {
   prerequisites: Check[]; mutations: Check[]; athletes: AthleteResult[];
   notCovered: string[];
 }
-export const WEEK_CHECKS = ['compiler_boundary', 'phase_clock', 'placement', 'fixtures', 'conservation', 'optional', 'deload', 'programming', 'restart', 'ledger', 'logging'] as const;
+export const WEEK_CHECKS = ['compiler_boundary', 'phase_clock', 'placement', 'fixtures', 'conservation', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging'] as const;
 
 /** Single verdict owner. Neither HTML nor a cached status field gets a vote. */
 export function yearVerdict(result: YearResult) {

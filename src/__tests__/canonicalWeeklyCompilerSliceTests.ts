@@ -84,6 +84,11 @@ import { speedBlockForTemplate } from '../rules/speedTemplates';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
+import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
+import { runAthlete } from './compilerYear/run';
+import { visibleSignature as exactWeekSignature } from './compilerYear/invariants';
+import { useCalendarStore } from '../store/calendarStore';
+import { speedTemplateConditioningCredit } from '../rules/conditioningCredit';
 import {
   getTapSwapChoices,
   groupTapSwapChoices,
@@ -694,7 +699,7 @@ async function main(): Promise<void> {
     } as never,
   });
   ok('Off-season releases only fixture occupancy while preserving real availability blocks',
-    JSON.stringify(offSeasonAvailability?.effectiveAvailableDayNumbers) ===
+    JSON.stringify(offSeasonAvailability?.gymAccessDayNumbers) ===
       JSON.stringify([1, 6]),
     JSON.stringify(offSeasonAvailability));
 
@@ -2640,6 +2645,95 @@ async function main(): Promise<void> {
           lateOffseasonSignature,
       JSON.stringify({ lateOffseasonStart, lateOffseasonRestart }));
   }
+
+  console.log('\n[accumulated fixture durability] old blocks, two fixtures, restart and Undo');
+  const gameProfile = ARCHETYPES.find((a) => a.id === 'male-5-two-fixtures')!;
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: athleteAnswers(gameProfile), installDayISO: INSTALL_DAY,
+  }));
+  const actFixture = async (action: 'add' | 'move' | 'remove', todayISO: string,
+    sourceDate?: string, targetDate?: string) => quietAsync(() => executeFixtureMutationTransaction({
+    action, fixtureKind: 'game', todayISO, sourceDate, targetDate,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: { requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+      commandId: `accumulated:${action}:${sourceDate ?? targetDate}:${decisionLedgerEntries().length}` },
+  }));
+  const oldMove = await actFixture('move', INSTALL_DAY, '2026-07-18', '2026-07-19');
+  ok('earlier block contains a real accepted fixture move', oldMove.outcome === 'accepted');
+  const laterWeek = '2026-08-10';
+  setJourneyClock(laterWeek);
+  const advanced = quiet(() => rolloverIfDue(laterWeek));
+  quiet(() => followTheWeek(laterWeek));
+  ok('the history witness actually leaves the old fixture block', !advanced.refusal &&
+    !useProgramStore.getState().currentProgram?.microcycles.some((m) => m.startDate === INSTALL_DAY));
+  const restartFixture = async (label: string, expectedGames: string[]) => {
+    const before = quiet(() => deriveVisibleWeekLive(laterWeek, laterWeek));
+    const signature = exactWeekSignature(before);
+    const ledgerBefore = JSON.stringify(decisionLedgerEntries());
+    const marksBefore = { ...useCalendarStore.getState().markedDays };
+    const selectionsBefore = JSON.stringify(blockSelectionHistory());
+    const boot = await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: laterWeek }));
+    const after = quiet(() => deriveVisibleWeekLive(laterWeek, laterWeek));
+    ok(`${label}: fixture dates and empty game contents are exact`,
+      JSON.stringify(before.filter((d) => d.source === 'game').map((d) => d.date)) === JSON.stringify(expectedGames) &&
+      before.filter((d) => d.source === 'game').every((d) => !d.workout?.exercises.length),
+      JSON.stringify(before.map((d) => [d.date, d.source])));
+    ok(`${label}: full visible week survives restart after earlier-block history`,
+      boot.ok && exactWeekSignature(after) === signature, JSON.stringify(boot));
+    ok(`${label}: ordered ledger and historical fixture facts survive`,
+      ledgerBefore === JSON.stringify(decisionLedgerEntries()) &&
+      marksBefore['2026-07-19'] === 'game' && useCalendarStore.getState().markedDays['2026-07-19'] === 'game');
+    ok(`${label}: boot never re-authors the accepted block's exercise selections`,
+      selectionsBefore === JSON.stringify(blockSelectionHistory()));
+    return signature;
+  };
+  const occupiedBeforeAdd = quiet(() => deriveVisibleWeekLive(laterWeek, laterWeek))
+    .find((d) => d.date === '2026-08-10');
+  ok('second-game target is genuinely occupied training',
+    !!occupiedBeforeAdd?.workout?.exercises.length && occupiedBeforeAdd.source !== 'game');
+  const extra = await actFixture('add', laterWeek, undefined, '2026-08-10');
+  ok('adding a second game preserves the standing Saturday fixture', extra.outcome === 'accepted', JSON.stringify(extra));
+  await restartFixture('second game Add', ['2026-08-10', '2026-08-15']);
+  const shifted = await actFixture('move', laterWeek, '2026-08-10', '2026-08-12');
+  ok('moving one of two fixtures is accepted', shifted.outcome === 'accepted', JSON.stringify(shifted));
+  const beforeRemove = await restartFixture('one of two Move', ['2026-08-12', '2026-08-15']);
+  const removed = await actFixture('remove', laterWeek, '2026-08-12');
+  ok('removing one of two fixtures is accepted', removed.outcome === 'accepted', JSON.stringify(removed));
+  await restartFixture('one of two Remove', ['2026-08-15']);
+  const undoFixture = await quietAsync(() => undoLastDecision());
+  ok('Undo after restart reverses only the latest fixture action', undoFixture.outcome === 'undone' &&
+    exactWeekSignature(quiet(() => deriveVisibleWeekLive(laterWeek, laterWeek))) === beforeRemove, JSON.stringify(undoFixture));
+  await restartFixture('fixture Undo', ['2026-08-12', '2026-08-15']);
+
+  console.log('\n[fixture compression] a two-day athlete can report a practice match');
+  const twoDay = athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-2-novice-bodyweight')!);
+  await quietAsync(() => coldStartThroughOnboarding({
+    profile: { ...twoDay, seasonPhase: 'Pre-season' }, installDayISO: INSTALL_DAY,
+  }));
+  const compressed = await quietAsync(() => executeFixtureMutationTransaction({
+    action: 'add', fixtureKind: 'practice_match', targetDate: INSTALL_DAY, todayISO: INSTALL_DAY,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: { requestedBy: 'athlete', producer: 'tap', surface: 'program_tab', commandId: 'two-day-practice-match' },
+  }));
+  const compressedDays = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY));
+  ok('fixture occupying one gym day is not misread as an invalid one-day onboarding answer',
+    compressed.outcome === 'accepted' && compressedDays[0].source === 'game', JSON.stringify(compressed));
+  const compressedSignature = exactWeekSignature(compressedDays);
+  const compressedBoot = await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: INSTALL_DAY }));
+  ok('the fixture-compressed two-day week survives restart', compressedBoot.ok &&
+    exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === compressedSignature);
+
+  console.log('\n[accumulated phase restart] 16 logged pre-season weeks into in-season without club training');
+  const repeatedSprintTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'repeat_sprint');
+  ok('rotated repeat-sprint sessions remain conditioning, not just acceleration and top-end templates',
+    repeatedSprintTemplates.length > 0 && repeatedSprintTemplates.every((t) => speedTemplateConditioningCredit(t) === 'full'));
+  const phaseJourney = await runAthlete(ARCHETYPES.find((a) => a.id === 'male-6-no-standing-fixture')!, localStorageData, 17);
+  const shiftedWeek = phaseJourney.weeks[16];
+  ok('the phase witness reaches accumulated logged history and a genuine phase change',
+    phaseJourney.loggedSessions > 90 && phaseJourney.actions.some((a) => a.kind === 'phase_shift' && a.ok) &&
+    shiftedWeek.phase === 'In-season' && shiftedWeek.phaseWeek === 1);
+  ok('a no-team-training phase transition survives cold reconstruction',
+    shiftedWeek.status === 'measured' && shiftedWeek.checks.some((c) => c.id === 'restart' && c.ok), shiftedWeek.reason);
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

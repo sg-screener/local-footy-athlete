@@ -6,7 +6,8 @@ import type { SpeedBlock, Workout } from '../types/domain';
 const templates = new Map(CONDITIONING_TEMPLATES.map((template) => [template.name, template]));
 
 export function speedTemplateConditioningCredit(template: ConditioningTemplate): 'full' | 'none' {
-  return (template.quality === 'acceleration' || template.quality === 'top_end_speed') &&
+  return (template.quality === 'acceleration' || template.quality === 'top_end_speed' ||
+    template.quality === 'repeat_sprint') &&
     !template.properties.includes('warmup_rider_only') &&
     !template.properties.includes('finisher_role_only') ? 'full' : 'none';
 }

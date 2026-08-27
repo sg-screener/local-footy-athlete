@@ -289,15 +289,6 @@ function resolveFixtureMutation(
       ),
     };
   }
-  if (
-    input.action === 'add' &&
-    facts.some((fixture) => fixture.kind === input.fixtureKind)
-  ) {
-    throw new FixtureMutationValidationError(
-      'fixture_already_exists_in_target_week',
-      'Use a move action when the accepted week already contains a fixture.',
-    );
-  }
   return {
     action: input.action,
     fixtureKind: input.fixtureKind,

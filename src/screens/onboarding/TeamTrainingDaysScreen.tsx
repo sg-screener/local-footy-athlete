@@ -10,6 +10,8 @@ import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { DayGrid } from '../../components/onboarding/DayGrid';
+import { SelectableTile } from '../../components/common/SelectableTile';
+import { useProfileStore } from '../../store/profileStore';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type TeamTrainingDaysScreenProps = NativeStackScreenProps<
@@ -25,19 +27,26 @@ type TeamTrainingDaysScreenProps = NativeStackScreenProps<
 export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
   navigation,
 }) => {
-  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([]);
+  const saved = useProfileStore((state) => state.onboardingData);
+  // null is unanswered; [] is an explicit no-team-training answer.
+  const [answer, setAnswer] = useState<DayOfWeek[] | null>(() =>
+    saved.teamTrainingDays?.length || saved.teamTrainingDaysPerWeek === 0
+      ? [...(saved.teamTrainingDays ?? [])] : null);
+  const selectedDays = answer ?? [];
+  const noTeamTraining = answer !== null && answer.length === 0;
   const { label: stepLabel, progressPercent } = useOnboardingProgress('TeamTrainingDays');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const toggleDay = (day: DayOfWeek) => {
     if (selectedDays.includes(day)) {
-      setSelectedDays(selectedDays.filter((d) => d !== day));
+      const next = selectedDays.filter((d) => d !== day);
+      setAnswer(next.length ? next : null);
     } else {
-      setSelectedDays([...selectedDays, day]);
+      setAnswer([...selectedDays, day]);
     }
   };
 
-  const isValid = selectedDays.length > 0;
+  const isValid = answer !== null;
 
   const handleContinue = () => {
     if (isValid) {
@@ -80,6 +89,18 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
         onToggleDay={toggleDay}
       />
 
+      <SelectableTile
+        isSelected={noTeamTraining}
+        onPress={() => setAnswer([])}
+        disabled={saving}
+        accessibilityLabel="No team training"
+        style={styles.noTeamTraining}
+      >
+        <Text variant="bodyEmphasis" color={noTeamTraining ? colors.accent.lime : colors.text.primary}>
+          No team training
+        </Text>
+      </SelectableTile>
+
       {selectedDays.length > 0 && (
         <Text
           variant="bodySmall"
@@ -120,5 +141,8 @@ const styles = StyleSheet.create({
   selectedCount: {
     marginTop: spacing.lg,
     textAlign: 'center',
+  },
+  noTeamTraining: {
+    marginTop: spacing.lg,
   },
 });

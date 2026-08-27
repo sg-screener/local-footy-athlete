@@ -1779,3 +1779,82 @@ it is not replaced by the focused witness.
   ownership, lighter-day ownership and the global writer-zero proof.
 - The full injury/travel/illness/equipment Cartesian product, every possible
   availability-day combination, and the remaining legacy test fleet.
+
+## 20. Chunk 2 — accumulated fixture and phase restart (2026-08-27)
+
+Owner: `testtruth`. Sam explicitly requested fixture/restart handling and the
+missing onboarding No team training option. Existing compiler and transaction
+boundaries retained; no new replay engine, persisted program snapshot or schema.
+
+### Diagnosis and design choice
+
+Compared (1) catching/retrying individual historical fixture failures with (2)
+separating the complete dated fixture-fact fold from its currently materialised
+week horizon. Chose (2). Source truth remains accepted profile inputs, ordered
+accepted fixture effects and block exercise-selection history. Calendar marks
+and repaired workout overlays remain derived output, not independent history.
+
+Measured through the real full-year action runner before editing:
+
+- An old Pre-season practice match on 2026-08-17 was replayed against a later
+  block that no longer contained its contract. `AcceptedEffectiveWeekUnavailableError`
+  aborted the whole fixture group, including later Move/Remove decisions. The
+  existing accepted-effect route now always folds its marks, while only the
+  current program's affected weeks are materialised (including adjacent weeks).
+- Add explicitly refused any second fixture. The accepted-effect resolver also
+  cleared all other games. Add now retains existing games, Move changes only
+  its source/target, and Remove suppresses the standing fixture only after the
+  last explicit game is gone. Existing accepted effects are not rewritten.
+- Fixture availability stripped the occupied date out of the athlete's access
+  answer, making a valid two-day athlete appear to have an invalid one-day
+  answer. Typed compiler input now keeps `gymAccessDayNumbers` separate from
+  fixture occupancy; the existing scheduler still owns legal-day reduction.
+- Generated-week validation still omitted proper speed conditioning, although
+  the effective-week evaluator counted it. The six-day no-team athlete's
+  Pre-season → In-season live transition accepted, then cold boot refused.
+  Both now read the shared conditioning-credit predicate. A later full-year
+  rotation exposed authored `repeat_sprint` templates (20 m Shuttle Repeats)
+  omitted from that predicate; these also count once under R-261.
+- A fixture repair was calling generation with `recordSelections: 'author'`.
+  Its one-week/changed-layout selections overwrote the accepted block's seats;
+  week 7 of the two-fixture archetype swapped two pulldown identities on boot.
+  Scoped fixture projections no longer write block selection history. Block
+  acceptance remains its owner. Year checks now require unchanged selection
+  history on every restart; missing that check is itself a failed verdict.
+- Onboarding now renders the shared selectable tile labelled **No team
+  training**. `null` is unanswered, `[]` is an explicit answer. Picking a day
+  replaces none; unticking the last day requires an explicit answer. Continue
+  uses the existing durable commit door with numeric zero and an empty list;
+  reopening restores the saved answer.
+
+### Checkpoint measurements (before final year/UI/mutation completion)
+
+- Canonical compiler: **352/352 named assertions**. New actual-action sequence:
+  prior-block Move → rollover → second-game Add → restart → Move one → restart
+  → Remove one → restart → Undo → restart. Exact visible contents, fixture
+  precedence, ledger, old fixture facts and block-selection history are checked.
+  Separate real two-day practice-match acceptance/restart and 17-week, >90-log
+  six-day phase-transition witnesses execute. Earlier 324 assertions still pass.
+- Onboarding presentation: **109/109**; generated-week validator: **36/36**;
+  source-fact device-commit: **9/9**; fact-horizon: **14/14**.
+- Year detector infrastructure: **26/26**, including missing/rewritten
+  selection-history check mutations. These are detector controls, not athletes.
+- All-scope typecheck remains **464 diagnostic occurrences**: 21 product,
+  45 devtools, 398 tests. No baseline changed. Onboarding reliability remains
+  **23/24**, its unrelated D1 hydration-registry enumeration fails.
+- Intermediate year: **396 green / 412 measured / 416 required athlete-weeks**,
+  before the repeat-sprint and selection-history fixes. Final run is in progress;
+  no green-release claim is made from this intermediate result.
+- Writer census: **4 confirmed rival authors and 1 derived publisher across
+  1,253 candidate capability owners**, 36 reviewed and 1,217 unresolved. Same
+  distinct-owner denominator as chunk 1. Global zero is NOT claimed.
+
+### NOT COVERED at this checkpoint
+
+- Physical iPhone, remote persistence and actual OS process death. Headless
+  restart flushes, empties and rehydrates real stores before production boot.
+- Simulator tape is being completed; no UI acceptance claim yet.
+- Final-row composition and the programming-quality failures it exposes;
+  lighter-day ownership and global writer-zero proof remain later chunks.
+- Every arbitrary fixture/edit/injury/equipment combination and fixture moves
+  across week boundaries (the existing explicit scope restriction is retained).
