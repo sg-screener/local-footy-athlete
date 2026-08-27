@@ -36,6 +36,7 @@ import {
   PROGRAM_STORE_PERSISTENCE_KEY,
   generationAnchorForProgram,
   statedProgressionInputs,
+  projectProgramPersistedInputs,
 } from './programStore';
 import { useProfileStore } from './profileStore';
 import { useCalendarStore } from './calendarStore';
@@ -564,7 +565,9 @@ function rebuildDerivedWorldNow(): void {
   if (!generationISO) {
     throw new MissingGenerationAnchorError();
   }
-  const clock = storeState.hydratedSeasonPhaseClock ?? undefined;
+  // The same accepted clock projection used by persistence: a live decision
+  // has a new program clock; only cold hydration needs the restored fallback.
+  const clock = projectProgramPersistedInputs(useProgramStore.getState()).seasonPhaseClock ?? undefined;
 
   // ⚠ CAPTURED BEFORE THE CLEAN SLATE, AND THAT POSITION IS THE WHOLE FIX.
   //

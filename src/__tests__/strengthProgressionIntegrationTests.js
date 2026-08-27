@@ -40,10 +40,10 @@ const {
 
 const {
   resolveWeekWithConditioning,
-  authorWeekStrengthProgression,
   formatDate,
   addDays,
 } = require('../utils/sessionResolver');
+const { compileCanonicalStrengthWeek: authorWeekStrengthProgression } = require('../rules/canonicalWeeklyProgressionCompiler');
 
 // ─── Test Scaffolding ───
 

@@ -8,10 +8,8 @@ import {
   deriveMissedStrengthSessionsThisWeek,
 } from '../utils/strengthProgressionIntegration';
 import { deriveAdaptation } from '../utils/feedbackAdapter';
-import {
-  authorWeekStrengthProgression,
-  type ScheduleState,
-} from '../utils/sessionResolver';
+import type { ScheduleState } from '../utils/sessionResolver';
+import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '../rules/canonicalWeeklyProgressionCompiler';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 
 let pass = 0;

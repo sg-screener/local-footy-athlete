@@ -660,7 +660,6 @@ function applyDelta(
     prescribedWeightKg: newWeight,
     restSeconds: newRest,
     // notes preserved as-is — no progression tags appended
-    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -690,7 +689,6 @@ export function applyStrengthProgression(
 
   const rpe = feelingToRPE(ctx.sessionFeeling);
   const results: Record<string, ProgressionOutput> = {};
-  const now = new Date().toISOString();
 
   const newExercises = workout.exercises.map(ex => {
     // AUTHORED ROLE FIRST. Power's dose is owned by `powerPrimerPolicy` and
@@ -824,7 +822,6 @@ export function applyStrengthProgression(
   return {
     ...workout,
     exercises: newExercises,
-    updatedAt: now,
     _progressionResults: results,
   };
 }

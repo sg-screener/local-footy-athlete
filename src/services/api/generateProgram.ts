@@ -11,30 +11,10 @@ import {
   buildWorkoutsFromCoach,
   type CoachGeneratedWorkoutInput,
 } from '../../data/defaultProgram';
-import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
-import { previousBlockBoundsISO, WEEKS_PER_BLOCK } from '../../utils/programBlockState';
+import { compileCanonicalProgramProgression } from '../../rules/canonicalWeeklyProgressionCompiler';
+import { previousBlockBoundsISO } from '../../utils/programBlockState';
 import { effectiveAnchorParticipation } from '../../rules/weeklyExposureContractV2';
-import {
-  applyBlockBoundaryConditioning,
-  applyBlockBoundaryProgression,
-  applyBlockBoundarySetAdditions,
-  applyBlockBoundaryVolume,
-  buildBlockBoundaryExplanation,
-  buildBlockBoundaryReductionExplanation,
-  applyBlockBoundaryConditioningAdvance,
-  decideBlockBoundaryConditioning,
-  decideBlockBoundaryConditioningAdvance,
-  decideBlockBoundaryLoads,
-  decideBlockBoundarySetAdditions,
-  decideBlockBoundaryVolume,
-  progressedFromOwnHistory,
-  readBlockHistory,
-  snapshotAuthoredSets,
-  type BlockBoundaryConditioningAdvance,
-  type BlockBoundaryConditioningDecision,
-  type BlockBoundaryLiftDecision,
-  type BlockBoundaryVolumeDecision,
-} from '../../rules/blockBoundaryProgression';
+import { progressedFromOwnHistory, readBlockHistory } from '../../rules/blockBoundaryProgression';
 import { composedIdentityFor } from '../../rules/composedRowLegality';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -1923,7 +1903,7 @@ export function generateProgramLocally(
     'In-season': 'In-Season',
   };
 
-  const program: TrainingProgram = {
+  let program: TrainingProgram = {
     id: 'prog-ai-1',
     userId: 'user-default',
     name: buildProgramName(generationProfile, plan),
@@ -1941,203 +1921,22 @@ export function generateProgramLocally(
     updatedAt: new Date().toISOString(),
   };
 
-  // Authoring-time freeze (§18 ownership redesign, stage 1): materialise strength
-  // progression into the stored microcycles once. Resolution then merely projects
-  // these loads — it no longer recomputes progression on read.
-  //
-  // ⚠ THIS USED TO PASS FOUR EMPTY ARGUMENTS. `sessionFeedback: {}`,
-  // `weightOverrides: {}`, `workoutHistory: []`, `blockState: null`. The freeze
-  // was correct and starved: it baked a history-free load into storage, and the
-  // screen — reading the live store — could derive a different one. Feeding it
-  // is what makes stored == visible == reloaded true rather than lucky.
-  // ⚠ NO STORE READ HERE. This used to be
-  // `require('../../store/programStore').useProgramStore.getState()`, and Sam
-  // ordered it out at product close: *"Same explicit inputs must always produce
-  // the same stored block."* A hidden read makes generation a function of
-  // ambient app state, so the SAME arguments could author two different blocks
-  // depending on what happened to be in the store — which is exactly the class
-  // of thing that cannot be tested and cannot be reproduced from a bug report.
-  //
-  // **ABSENT NOW MEANS EMPTY, NOT "GO AND LOOK".** The rollover caller
-  // (`utils/weekRebuild.ts`) passes the athlete's real history, overrides and
-  // block state explicitly; fresh onboarding passes nothing and therefore
-  // authors against an explicitly empty history, which is the truthful input
-  // for an athlete who has not trained yet.
-  const progressionSessionFeedback = options.progressionHistory?.sessionFeedback ?? {};
-  const progressionWeightOverrides = options.progressionHistory?.weightOverrides ?? {};
-  const progressionBlockState = options.progressionHistory?.blockState ?? null;
-
-  // ⚠ TAKEN HERE, ONE LINE BEFORE THE FREEZE, AND THAT POSITION IS THE POINT.
-  // The block boundary's reduction is bounded by what the COMPOSER authored;
-  // after the freeze has run there is no way to read that number back, because
-  // a very-hard block's rows have already been collapsed to a single set. Taken
-  // afterwards, the reduction's own ceiling would be the value it exists to
-  // correct. It also carries the DELOAD week's already-halved dose, which is
-  // what stops the reduction raising week 4.
-  const authoredSetsByRowId = snapshotAuthoredSets(program.microcycles);
-
-  bakeMicrocycleStrengthProgression(program, {
-    manualOverrides: {},
-    markedDays: {},
-    athleteContext: {
-      injuries: baseProfile.injuries || [],
-      equipmentTags: [...resolvedEquipmentTags],
-      onboardingData: baseProfile,
+  program = compileCanonicalProgramProgression({
+    program, blockStartISO: blockStart, blockNumber: options.blockNumber ?? 1,
+    asOfISO: effectiveTodayISO,
+    previousRequiredStrengthSessions: options.progressionHistory?.acceptedBlocks?.[previousBlockBoundsISO(blockStart).startISO]?.requiredStrengthSessions ?? 0,
+    profile: baseProfile,
+    state: {
+      manualOverrides: {}, markedDays: {},
+      athleteContext: { injuries: baseProfile.injuries || [], equipmentTags: [...resolvedEquipmentTags], onboardingData: baseProfile },
+      seasonPhase: generationProfile.seasonPhase || null,
+      gameDay: baseProfile.gameDay, usualGameDay: baseProfile.usualGameDay,
+      capacity: deriveProfileReadiness(baseProfile),
+      sessionFeedback: options.progressionHistory?.sessionFeedback ?? {},
+      weightOverrides: options.progressionHistory?.weightOverrides ?? {},
+      workoutHistory: [], blockState: options.progressionHistory?.blockState ?? null,
     },
-    seasonPhase: generationProfile.seasonPhase || null,
-    gameDay: baseProfile.gameDay,
-    usualGameDay: baseProfile.usualGameDay,
-    capacity: deriveProfileReadiness(baseProfile),
-    sessionFeedback: progressionSessionFeedback,
-    weightOverrides: progressionWeightOverrides,
-    workoutHistory: [],
-    blockState: progressionBlockState,
   });
-
-  // ── THE BLOCK BOUNDARY HAS THE LAST WORD ON A STRENGTH ROW'S LOAD ──
-  //
-  // The freeze above is the general progression owner and stays that way. What
-  // it cannot decide is the question only a BOUNDARY poses: this lift ran last
-  // block and earned its 2.5 kg, that one is new and must start blank.
-  //
-  // Sam ruled the rotated half twice (2026-08-16, option B): *"leave its
-  // starting load unset and let the athlete choose... never infer one from the
-  // movement pattern, exercise name or previous weight"*, and for this slice
-  // *"rotated lift → no inherited load and no automatic estimate."* The freeze,
-  // left alone, does the opposite — `extractSlotExposureHistory` deliberately
-  // carries a rotated pool anchor's load across a sibling mapping.
-  //
-  // Applied only from block 2 onward: block 1 has no previous block to retain
-  // from, and running it there would blank every load an onboarding estimate
-  // legitimately produced.
-  const authoringBlockNumber = options.blockNumber ?? 1;
-  if (authoringBlockNumber > 1) {
-    const allDecisions: BlockBoundaryLiftDecision[] = [];
-    const allConditioningAdvances: BlockBoundaryConditioningAdvance[] = [];
-    const previousBlock = previousBlockBoundsISO(blockStart);
-    const history = readBlockHistory({
-      feedbackByDate: progressionSessionFeedback,
-      blockStartISO: previousBlock.startISO,
-      blockEndISO: previousBlock.endISO,
-      // The same recorded requirement the rotation read above uses, keyed on the
-      // same window, so one athlete cannot be rotated off one denominator and
-      // progressed off another.
-      requiredStrengthSessions:
-        options.progressionHistory?.acceptedBlocks?.[
-          previousBlock.startISO]?.requiredStrengthSessions ?? 0,
-    });
-    const allVolumeDecisions: BlockBoundaryVolumeDecision[] = [];
-    const allConditioningDecisions: BlockBoundaryConditioningDecision[] = [];
-    for (const [weekIndex, microcycle] of program.microcycles.entries()) {
-      const decisions = decideBlockBoundaryLoads({
-        history,
-        nextBlockWorkouts: microcycle.workouts,
-        // PRIORITY 2 needs the athlete's own squat/bench answers — the authored
-        // anchor estimate is a function of them, and of nothing the outgoing
-        // exercise knows.
-        onboardingData: baseProfile,
-      });
-      microcycle.workouts = applyBlockBoundaryProgression({
-        workouts: microcycle.workouts,
-        decisions,
-      });
-      for (const decision of decisions) allDecisions.push(decision);
-
-      // ── THE LADDER'S SECOND RUNG — ONE SET, ONLY WHERE LOAD DID NOT MOVE ──
-      //
-      // ORDER IS THE CONTRACT'S: *"1. Increase load... 2. Add one set when more
-      // volume is appropriate and the session remains inside its approved cap."*
-      // It runs AFTER the load pass because it is fed that pass's decisions —
-      // *"do not increase load and sets on the same exercise in the same
-      // rollover"* is only answerable once the load rung has been decided.
-      //
-      // It is a no-op on every block that is not well-completed AND
-      // well-recovered AND tolerated in the strength quality, so the ordinary
-      // and the beaten-up athlete both reach the reduction below unchanged.
-      const setAdditions = decideBlockBoundarySetAdditions({
-        history,
-        nextBlockWorkouts: microcycle.workouts,
-        weekIndex,
-        ...(microcycle.weekKind !== undefined ? { weekKind: microcycle.weekKind } : {}),
-        loadDecisions: decisions,
-        authoredSetsByRowId,
-        // In-season maintains — the set rung is closed there (Bible §5/§16).
-        seasonPhase: generationProfile.seasonPhase ?? null,
-      });
-      microcycle.workouts = applyBlockBoundarySetAdditions({
-        workouts: microcycle.workouts,
-        decisions: setAdditions,
-      });
-      // ── THE REDUCTION, ON A BLOCK THE ATHLETE SAID WAS VERY HARD ──
-      //
-      // ORDER IS THE CONTRACT'S, NOT AN IMPLEMENTATION CONVENIENCE. Its "Low
-      // readiness or high soreness" list is: hard conditioning first, then main-
-      // and secondary-lift sets, then easier aerobic work in place of what was
-      // removed. Conditioning is decided and applied before volume so that the
-      // one thing the contract cuts FIRST is the one thing that cannot be
-      // starved by a volume pass that ran ahead of it.
-      //
-      // Both are no-ops unless `history.reduces` — the decision functions
-      // return an empty list for every other verdict, so the ordinary
-      // well-recovered block reaches `return program` having changed nothing
-      // here.
-      const conditioningDecisions = decideBlockBoundaryConditioning({
-        history,
-        nextBlockWorkouts: microcycle.workouts,
-        weekIndex,
-      });
-      microcycle.workouts = applyBlockBoundaryConditioning({
-        workouts: microcycle.workouts,
-        decisions: conditioningDecisions,
-        seedISO: microcycleStartISO(microcycle, blockStart, weekIndex),
-        miniCycleNumber: weekIndex + 1,
-      });
-      for (const decision of conditioningDecisions) allConditioningDecisions.push(decision);
-
-      // ── WC-137: THE OTHER DIRECTION, AT THE SAME BOUNDARY ────────────────
-      //
-      // Conditioning easy while strength was difficult -> exactly one authored
-      // step. It runs AFTER the reduce pass on purpose: `reduces` and
-      // `conditioningEasy` can both be true of one block, and reduce outranks
-      // advance. The decider refuses that combination itself, so this ordering
-      // is belt to that braces rather than the only thing stopping it.
-      const conditioningAdvances = decideBlockBoundaryConditioningAdvance({
-        history,
-        nextBlockWorkouts: microcycle.workouts,
-        weekIndex,
-        phase: onboardingData.seasonPhase,
-      });
-      microcycle.workouts = applyBlockBoundaryConditioningAdvance({
-        workouts: microcycle.workouts,
-        advances: conditioningAdvances,
-      });
-      for (const advance of conditioningAdvances) allConditioningAdvances.push(advance);
-
-      const volumeDecisions = decideBlockBoundaryVolume({
-        history,
-        nextBlockWorkouts: microcycle.workouts,
-        authoredSetsByRowId,
-      });
-      microcycle.workouts = applyBlockBoundaryVolume({
-        workouts: microcycle.workouts,
-        decisions: volumeDecisions,
-      });
-      for (const decision of volumeDecisions) allVolumeDecisions.push(decision);
-    }
-    // Stored beside the prescriptions it explains, so the two cannot drift.
-    const reduction = buildBlockBoundaryReductionExplanation({
-      history,
-      loadDecisions: allDecisions,
-      volumeDecisions: allVolumeDecisions,
-      conditioningDecisions: allConditioningDecisions,
-    });
-    program.blockBoundaryExplanation = [
-      // THE REDUCTION ROW LEADS. It is the block-level answer to "what happened
-      // to my programme"; the per-lift load rows are its detail.
-      ...(reduction ? [reduction] : []),
-      ...buildBlockBoundaryExplanation(allDecisions),
-    ];
-  }
 
   /* ── RECORD THE DECISION ──────────────────────────────────────────────────
    * The block has been authored, so what it selected is now a FACT about the
@@ -2164,26 +1963,6 @@ export function generateProgramLocally(
   return program;
 }
 
-/**
- * The Monday a microcycle starts on, as `YYYY-MM-DD`.
- *
- * `Microcycle.startDate` is stored as a full timestamp and the conditioning
- * owner wants a plain day string, so it is narrowed here rather than at the call
- * site. Falls back to counting weeks off the block start when a microcycle
- * carries no date at all — the same grid the caller already owns, never a fresh
- * one derived from today.
- */
-function microcycleStartISO(
-  microcycle: { startDate?: string | Date },
-  blockStartISO: string,
-  weekIndex: number,
-): string {
-  const stored = microcycle.startDate;
-  if (typeof stored === 'string' && stored.length >= 10) return stored.slice(0, 10);
-  const start = new Date(`${blockStartISO}T12:00:00`);
-  start.setDate(start.getDate() + weekIndex * 7);
-  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-}
 
 /** Is a response body HTML (Cloudflare/Supabase proxy page etc.)? */
 function looksLikeHtml(body: string): boolean {

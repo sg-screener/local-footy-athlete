@@ -7,8 +7,8 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: late-Off-season scheduled-deload lifecycle is blocked by a
- * pre-existing sprint-credit refusal (run with --late-offseason to reproduce).
+ * NOT COVERED: late-Off-season completion awaits the sprint/conditioning-credit
+ * ruling (run with --late-offseason). The year release gate remains red.
  * Full-year archetypes, global writer census, pixels and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
@@ -61,7 +61,7 @@ import {
   recordDay,
   setJourneyClock,
 } from './support/athleteJourney';
-import { authorWeekStrengthProgression } from '../utils/sessionResolver';
+import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '../rules/canonicalWeeklyProgressionCompiler';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveProgression, type ProgressionInput } from '../utils/progressionRules';
 import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
@@ -2508,10 +2508,7 @@ async function main(): Promise<void> {
     JSON.stringify({ fatigueFeedback, before: prescriptions(deloadBeforeProgression),
       after: prescriptions(progressedDeload) }));
 
-  // Explicit red diagnostic, not a waived acceptance claim. This profile
-  // currently refuses in the build week before it can reach scheduled deload.
-  // Keep the real failing journey runnable while the independent sprint owner
-  // is corrected; do not label the whole deload migration complete meanwhile.
+  // Diagnostic pending the sprint-credit ruling; the year gate cannot pass it.
   if (process.argv.includes('--late-offseason')) {
     localStorageData.clear();
     const lateOffseasonInstall = await coldStartThroughOnboarding({

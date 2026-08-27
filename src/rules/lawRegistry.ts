@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-compiler-full-year-acceptance',
+    law: 'Release requires all 52 weeks for every declared archetype, compiler ownership, real accepted actions, logging and persisted-ledger reconstruction. Missing or unreached coverage is failure. The HTML report renders the same verdict; it never owns a separate score.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md step 18; Sam, 2026-08-27: "Full-year archetype compiler acceptance gate".',
+    guard: {
+      state: 'guarded',
+      by: 'test:compiler-year',
+      chainStatus: 'in_chain',
+      receipt: 'Eight explicit athlete-answer archetypes traverse 52 dated weeks through production lifecycle doors. A real compiler-return duplicate-day mutation is rejected by the same boundary check. Verdict-engine mutations remove coverage, actions, restarts and ownership; the release runner rejects a failed invariant after accepting its control. The gate stays red while ownership or reached journeys fail; see step 18 for actual coverage and remaining questions.',
+    },
+  },
+  {
     id: 'LAW-weekly-writer-zero-proof',
     law: 'Do not accept one weekly program owner until the executable-capability census has zero reviewed rival authors, zero reviewed derived-output writers and no unresolved ownership; a new writer or changed approved function must block release.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md step 17; Sam, 2026-08-27: "Rival-author and derived-writer census" and "zero is measured from executable paths".',

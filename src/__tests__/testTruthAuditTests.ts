@@ -183,11 +183,12 @@ const censusCounts = Object.values(
 );
 ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
-    && Object.keys(decisionRegistry.decisions).length === 177
+    && Object.keys(decisionRegistry.decisions).length === 178
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
-ok('only the three witnessed contracts and the explicit zero-owner requirement can direct product work',
-  censusCounts.current_contract === 4
+ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
+  censusCounts.current_contract === 5
+    && decisionRegistry.decisions['test:compiler-year']?.witnessScript === 'test:compiler-year'
     && decisionRegistry.decisions['test:weekly-writer-zero']?.witnessScript === 'test:weekly-writer-zero'
     && censusCounts.retire_test === 2
     && censusCounts.test_infrastructure === 3

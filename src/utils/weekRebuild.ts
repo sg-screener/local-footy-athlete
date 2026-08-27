@@ -910,19 +910,6 @@ export function commitRebuiltProgram(
   } = {},
 ): void {
   const proposal = buildRebuiltProgramSurfaces(program, sweep, options);
-  // R1.3 (shell rebuild): the generation anchor is an input — the day this
-  // program was GENERATED with, recorded by generation itself so the anchor
-  // can never drift from what actually ran (a caller's selectedDate can —
-  // the walker's did). It rides the same publication as the program.
-  // Through the one owner. The `?? options.selectedDate` that used to sit
-  // here was a second author for the same decision: a caller's selectedDate
-  // is where the rebuild is being applied, not the day generation ran. Sam's
-  // 2026-08-06 ruling collapses both install doors onto the program's own
-  // anchor — one home, and no door may invent one.
-  const anchor = generationAnchorForProgram(program);
-  if (anchor) {
-    (proposal as { generationAnchorISO?: string }).generationAnchorISO = anchor;
-  }
   commitAcceptedStateTransaction({
     reason: options.reason ?? 'week_rebuild:block',
     // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). A rebuild publishes a
@@ -977,6 +964,10 @@ export function buildRebuiltProgramSurfaces(
   const selectedDow = new Date(`${selectedDate}T12:00:00`).getDay();
   return {
     currentProgram: program,
+    // The anchor accompanies the program at surface composition, including
+    // profile changes which do not call commitRebuiltProgram. The year witness
+    // caught a phase change settling against the outgoing block's old anchor.
+    generationAnchorISO: generationAnchorForProgram(program),
     currentMicrocycle: selected,
     todayWorkout: selected?.workouts.find((workout) => workout.dayOfWeek === selectedDow) ?? null,
     blockState: deriveStoredBlockStateFromProgram(program, selectedDate),

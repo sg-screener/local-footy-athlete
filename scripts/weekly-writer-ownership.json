@@ -126,50 +126,60 @@
       "reason": "Live HomeScreenV2 handler resolves today's output, trims it separately, assembles a sparse derived overlay and commits it, then records reversible metadata. Requires typed accepted today-only effect migration with restart/Undo coverage.",
       "fingerprint": "1891570e6442b8bb29abaabe7eead8b896d53b30d22b10c2c9dedfb527360610"
     },
-    "src/utils/sessionResolver.ts#materialiseWeekStrengthProgression": {
-      "classification": "rival_author",
-      "reason": "Builds progression context from history and replaces baseDays workouts outside compileCanonicalWeek. Compiler-dose days stand down, but ordinary build days still have this independent author.",
-      "fingerprint": "6c1126bcaedb65a68bae1a95ec4e3ec82b27560d00b13bc6bc69751aabcdf104"
-    },
-    "src/utils/sessionResolver.ts#bakeMicrocycleStrengthProgression": {
-      "classification": "rival_author",
-      "reason": "Generator calls this after weekly compilation; it invokes authorWeekStrengthProgression and mutates each microcycle.workouts. This is one distinct wrapper author function, not an extra independent policy.",
-      "fingerprint": "1c248e417f13fd6c2e983fdfa161aba05863d6f4a9661a01c35e8832d7442187"
-    },
     "src/services/api/generateProgram.ts#generateProgramLocally": {
       "classification": "rival_author",
-      "reason": "Orchestrates additional row/progression/block-boundary writes after buildGeneratedMicrocycles. Returning the same final data through a compiler-named wrapper would not retire these decision sites.",
-      "fingerprint": "88d35d4918012ae5fdb7cb6d0766c05d659552e3770c3ae0b26e4affe3cedaa8"
+      "reason": "Progression now delegates to the canonical progression compiler, but this service still combines independent final-row generation and exclusion application. Full program composition has not been lifted to one canonical compiler input/output boundary.",
+      "fingerprint": "79cd82dfdc3d9a73e0d132740286a570746e68a37b36f6b32f605791124b64ab"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
-      "classification": "rival_author",
-      "reason": "Called directly by generateProgramLocally after compiler output; rewrites/clears row loads using block-boundary decisions. Preserve existing retained/rotated-lift policy when migrating.",
+      "classification": "canonical_compiler",
+      "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "5c1ba2cf51e6317ae2b13c06029e86eafad91f409c51088c4c80f47860182a40"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryVolume": {
-      "classification": "rival_author",
-      "reason": "Called directly after compilation to rewrite prescribedSets from block feedback decisions. Must be folded into the canonical progression/dose precedence, not deleted as unwanted training policy.",
+      "classification": "canonical_compiler",
+      "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "1cce9d1924dd5d9c63a7649c94d632466b6aa9a2708fcabd0b32669bd3685ffb"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundarySetAdditions": {
-      "classification": "rival_author",
-      "reason": "Direct generator post-pass changes prescribedSets for earned volume increases; distinct executable writer in the block-progression family.",
+      "classification": "canonical_compiler",
+      "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "f8f84e738c57ef6c39cf07724bf825ed516c88e62362da774313a9fd0068b54b"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioning": {
-      "classification": "rival_author",
-      "reason": "Direct generator post-pass selects easier conditioning and recomposes rows outside canonical week compilation.",
+      "classification": "canonical_compiler",
+      "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "d3566c5b768ce265f5c87bd1bb257802fcf32e18d84bf6474e7fc07f083fb54a"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioningAdvance": {
-      "classification": "rival_author",
-      "reason": "Direct generator post-pass advances conditioning headline dose outside canonical week compilation.",
+      "classification": "canonical_compiler",
+      "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "21d265f7f9babc7cdba713fafc3a1063eb5214e833799af3749ac712900c46cf"
     },
     "src/store/programStore.ts#setWeekScopedOverlay": {
       "classification": "derived_output_writer",
       "reason": "Accepts and publishes externally computed weekly overlay through a transaction rather than requiring a typed input and compiler result. This is in-memory derived publication, NOT a claim that overlays are durably persisted; program partialize already stores inputs.",
       "fingerprint": "feb92d9398c56eab1455e98b7d29081f59512f1eb4fa0361cd3336e7df5225fc"
+    },
+    "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalProgramProgression": {
+      "classification": "canonical_compiler",
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
+      "fingerprint": "c3bba6b55835a28d265ca2325e2dcb442abaceb36d66b55d3b7f240445997762"
+    },
+    "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalResolvedStrengthWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
+      "fingerprint": "a3f96013071b17641c807d043ad6005a40d3f583989d91ddd5821db6445d7200"
+    },
+    "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalStrengthWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
+      "fingerprint": "8b4e71cc1cdb3b998fe018a743a8227e0cb03561f66b2fd2ff190936691aee5d"
+    },
+    "src/rules/canonicalWeeklyProgressionCompiler.ts#materialiseBlockStrength": {
+      "classification": "canonical_compiler",
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
+      "fingerprint": "6fd1583959018a0153c0c452cdf2826df6f2d318cda8e71d81fc192a55242274"
     }
   }
 }

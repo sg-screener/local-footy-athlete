@@ -1469,3 +1469,187 @@ be resolved against the existing signed contracts. If they conflict, ask Sam.
   those implementations were inspected, not changed or accepted by this pass.
 - Late-Off-season blocked lifecycle, full-year archetypes, full action matrix,
   simulator, UI pixels and physical iPhone. No phone build or release approval.
+
+## 2026-08-27 — step 18: year gate wired; steps 3–5 remain partial
+
+Owner: `testtruth`. Sam added the outstanding step-3/4 issues to this round.
+This checkpoint includes fixes, not only measurement, but **neither global
+one-owner acceptance nor full-year acceptance is complete**. Unfinished work
+is named below; it has not been silently excluded from the release gate.
+
+### Options compared
+
+1. Patch restart symptoms separately and keep the annual HTML as a standalone
+   audit, with another list of expected results.
+2. Move progression ownership into an explicit-input compiler family, use one
+   executable year verdict for release and HTML, and expose unresolved ownership
+   and lifecycle failures as release blockers.
+
+Option 2 implemented. Existing load/set/conditioning policies were moved, not
+replaced with new training prescriptions. No athlete ledger or data was deleted.
+
+### Step 3: fixes and the unresolved policy question
+
+- Primary sprint sessions now carry the same typed `true_speed` block as
+  attached sprint components. They no longer acquire a second ordinary
+  conditioning identity. The actual compiler-output mutation arm strips that
+  block and observes `compiler_sprint_identity` fail.
+- The phase-change journey exposed backdating: selecting In-season on
+  2 November settled into a phase clock starting 5 October. The generation
+  anchor was only propagated by `commitRebuiltProgram`, while Profile called
+  its surface builder directly. The builder now carries the generated anchor
+  for both callers; the commit's duplicate assignment was removed.
+- Live settling now reads the same clock projection as persistence: current
+  accepted program first, hydrated clock only when no live program exists.
+  The same 17-week journey's `phase_clock` checks changed from red to green.
+- Scheduled-dose precedence and progression stand-down remain as in step 16.
+  The scheduled-deload family is not being declared complete while its
+  late-Off-season entry still fails the conditioning contract.
+
+**Question sent to Sam, unanswered at this checkpoint:** should a proper sprint
+session count toward the weekly conditioning total, or sit on top of it?
+The scheduler counts it toward the total, while `SpeedBlockCountingFence`,
+`speedBlockForTemplate` and the classification tests explicitly grant no
+conditioning credit. A temporary evaluator experiment counted it and made the
+late-Off-season probe pass, but that change was **reverted** because it chose
+between conflicting meanings. No evaluator allowance was left behind.
+
+### Step 4: progression migrated; global ownership remains unproven
+
+`canonicalWeeklyProgressionCompiler` now owns strength materialisation and the
+ordered boundary load → earned sets → conditioning reduction/advance → volume
+pipeline. It works on a private program copy with stated history, profile,
+block coordinates and generation date. The resolver's three progression
+implementations and the generator's procedural boundary loop were removed;
+callers delegate to the compiler family. The five boundary transforms now
+have that family as their sole production caller.
+
+The year repeatability check first found hidden `new Date()` writes in strength
+progression metadata. They were removed: a derived prescription retains its
+input metadata. More importantly, restart used logs recorded **after** the
+accepted build to progress the same block again. The compiler now bounds
+history by its recorded generation date. Later results still enter the next
+acceptance; merely reopening the app does not accept another progression.
+The real 17-week experienced-athlete probe changed to zero restart differences
+across all 17 reached weeks. This does not claim every full-year fixture replay
+is fixed. Recurring and explicit fixture display also now share one stub
+identity; the duplicate virtual-stub implementation was removed.
+
+Latest census: **593 source files**, **2,263 operation occurrences** in
+**649 distinct direct-owner functions**; including candidate callers,
+**1,252 distinct executable capability owners** (path + function), of which
+**36 reviewed / 1,216 unresolved**. **4 confirmed rival functions and 1
+confirmed derived-output publisher remain**. The prior checkpoint had 11
+confirmed rival functions. These are lower-bound static function counts,
+including wrappers, not counts of independent policies or executed branches.
+
+The four confirmed rivals are final row composition in
+`buildGeneratedMicrocycles`, orchestration in `generateProgramLocally`,
+`applyLighterDayTrim`, and `applyLighterDayForToday`. The derived publisher is
+`programStore.setWeekScopedOverlay` (in-memory publication, not proof of a disk
+write). Full row composition, lighter-day accepted input, remaining candidate
+classification and durable-boundary proof are still work, not questions Sam
+needs to answer. No classification was relaxed to make zero appear.
+
+### Step 5: one executable year verdict and its presentation
+
+`test:compiler-year` is a current release contract, not an optional HTML audit.
+It uses eight athlete-answer archetypes, availability 2–6 days, all three
+phases, both genders, novice/experienced and commercial/home/bodyweight kit.
+Each required timeline contains 52 weeks; the total denominator is **416
+athlete-weeks from 8 distinct athletes**. Different starting phases prevent
+one onboarding refusal from concealing every other phase.
+
+The harness uses real onboarding, generation, session removal, Undo, fixture
+changes, phase changes, logging, rollover, and storage flush → empty stores →
+rehydration → production boot. Compiler inputs/outputs are observed, not
+substituted with handmade programs. Every reached week checks dated placement,
+phase clock, fixture priority, identity duplication, optional behavior,
+scheduled dose, existing typed programming constraints, ledger preservation
+and exact visible reconstruction. Only audit creation/update timestamps are
+excluded from visible equivalence; load, sets, rest, content and identity stay.
+
+Missing athletes, weeks, checks, actions or restart depth remain red. A refused
+action marks subsequent weeks NOT REACHED, never passed. The separate
+`canonical_only` prerequisite remains red while the ownership census is
+unresolved: the current canonical compiler still returns before final row
+composition. This gate therefore does **not** pretend it has achieved exclusive
+canonical compilation yet. Plan-to-final-row conservation is also still an
+explicit blocking ownership gap, not proven by duplicate-ID checks alone.
+
+`outputs/compiler-year-acceptance/result.json` holds the results and
+`index.html` renders the same `yearVerdict`; there is no HTML scoring engine.
+Incomplete runs write incomplete red evidence. The first broad run's oracle
+was corrected where it counted a moved game's old recurring date as a second
+game and judged athlete removals against the unadjusted base contract. Those
+were instrument mistakes, not product fixes. Remaining Section-18 violations
+must be reconciled with authorized forward-decision shortfalls before anyone
+uses the red list as instructions to change training policy.
+
+### Verification receipts
+
+- `test:canonical-weekly-compiler`: **241/241 cells green** after migration,
+  clock/anchor changes and the shared fixture stub. The new year suite does
+  not replace those real edit, fixture, deload and Undo witnesses.
+- `test:strength-progression-inputs`: **18/18**; `test:deload-law`: **68/68**;
+  `test:deload-coach-notes`: **18/18**.
+- Additional diagnostic subjects checked without promoting the old fleet:
+  `test:block-two-ladder`: **59/59**, including four real rollovers with load
+  and set increases; `test:block-two-boot-preservation`: **20/20**.
+- `test:deriving-device-commit`: **9/9**; `test:fact-horizon`: **14/14**.
+- `test:test-truth`: **14/14**, release contract **11/11**, unrunnable
+  ratchet **5/5**. Five current product contracts plus the bootstrap now make
+  six release units; the historical red fleet remains excluded.
+- Year-detector controls: **24/24**. They explicitly distinguish synthetic
+  verdict inputs from athlete journeys. Actual compiler output is separately
+  mutated: injecting a duplicate day is rejected, and removing the actual
+  primary sprint's typed block is rejected. The release runner accepts a
+  synthetic complete control and fails when its weekly invariant is broken.
+  This is not a claim that the still-red full production year was first green.
+- Writer-detector controls: **19/19**, including a fake new executable writer
+  and changed approved bodies. The real census remains red as stated above.
+- `test:compile`: globally red at **464 diagnostic occurrences** across its
+  three scopes (21 product / 45 devtools / 398 tests), matching the prior
+  checkpoint. No new TypeScript errors remain in this round's changed files;
+  no baseline was edited. `git diff --check` is clean.
+
+What catches the next defect: every week is compared across actual persistence
+and boot, accepted phase dates are checked independently against the scripted
+athlete action, progression inputs are checked for immutability and repeatable
+output, and the writer census invalidates changed or new executable owners.
+The prior-generation-history cutoff is additionally exercised across worn
+blocks; passing restart alone is not taken as proof that progression advances.
+
+Final `npm run test:release`: **RED**, exit 1; bootstrap green, year gate red,
+four later units not executed by that invocation (**1/6 units green**, not six
+failed units). Those later witnesses were run separately as recorded above.
+The year reached **281/416 athlete-weeks**, **212/281** passing all weekly
+checks; **5/8 distinct athletes** completed all 52 weeks. The other 135 weeks
+are NOT REACHED. **229 distinct failing keys** include missing coverage/action
+requirements and prerequisite failures; they are not 229 product defects.
+There are **63 failed programming-check occurrences across 7 distinct
+athletes** and **10 restart-check failures across 5 distinct athletes**.
+Phase-clock, progression repeatability, input immutability and recorded-anchor
+checks hold across the reached weeks. The restart failures left are fixture
+history/reconstruction, not permission to declare those paths accepted.
+
+The earlier broad run had 28 green of 281 reached weeks. The change to 212
+includes BOTH product repairs and corrected audit expectations, so it is not
+a count of 184 fixed athlete bugs. Report and JSON are generated by the same
+final gate. No phone build was made; release and Sam-device acceptance remain
+blocked.
+
+### NOT COVERED
+
+- Physical iPhone, simulator/UI, remote persistence and true OS process death.
+- Full ownership classification, final-row compiler migration, lighter-day
+  migration, all durable writers or either global zero.
+- Resolution of the sprint/conditioning credit conflict; late-Off-season
+  onboarding still refuses under the current typed contract.
+- All accumulated fixture replay combinations. The year run exposes lost
+  moves/removals after earlier fixture history, a second-game Add refusal, and
+  the two-day athlete's practice match leaving only one permitted gym day.
+  These are not waived and block acceptance; no new replay workaround landed.
+- A full injury/illness/travel/equipment/action Cartesian product or exact
+  every-week plan-to-final-row conservation. The existing targeted compiler
+  witness still owns the exact dose arithmetic and overlap matrix.

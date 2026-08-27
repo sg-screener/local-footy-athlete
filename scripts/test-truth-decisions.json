@@ -2,6 +2,14 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:compiler-year": {
+      "kind": "current_contract",
+      "reason": "Sam requires the full-year archetype lifecycle to block release, including incomplete coverage and unresolved canonical ownership. HTML is rendered from this same executable result, never a separate oracle.",
+      "productionPaths": ["src/rules/canonicalWeeklyCompiler.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts", "src/store/quiescentBoot.ts"],
+      "contractRefs": ["LAW-compiler-full-year-acceptance"],
+      "witnessScript": "test:compiler-year",
+      "evidenceKind": "current_architecture_incomplete"
+    },
     "test:weekly-writer-zero": {
       "kind": "current_contract",
       "reason": "Sam explicitly requires a release-blocking zero-owner proof. This new executable-capability census is red while rival authors, derived-output writers or unreviewed owners remain; it does not promote historical diagnostic failures into product work.",

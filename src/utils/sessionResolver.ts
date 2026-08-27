@@ -24,18 +24,7 @@
  */
 
 import { getTeamTrainingWorkoutState } from './teamTraining';
-import type {
-  Workout,
-  Exercise,
-  Microcycle,
-  TrainingProgram,
-  SeasonPhase,
-  CapacityBand,
-  DayOfWeek,
-  WeekScopedWorkoutOverlay,
-  LoggedWorkout,
-  UserRemovalConstraint,
-} from '../types/domain';
+import type { Workout, Microcycle, TrainingProgram, SeasonPhase, CapacityBand, DayOfWeek, WeekScopedWorkoutOverlay, LoggedWorkout, UserRemovalConstraint } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
@@ -54,47 +43,13 @@ import {
 import {
   type AthleteContext,
 } from './sessionBuilder';
-import type { WeekLog } from './conditioningRules';
-import {
-  applyStrengthProgression,
-  buildStrengthWorkoutHistoryFromFeedback,
-  buildProgressionContext,
-  deriveMissedStrengthSessionsThisWeek,
-  workoutHasProgressableStrengthRows,
-} from './strengthProgressionIntegration';
-import {
-  analyzeFeedbackPatterns,
-  conditioningReportsRecentFatigue,
-  shouldPreferRest,
-} from './feedbackPatterns';
-import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
 import type { SessionFeedback } from '../store/programStore';
-import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import {
   canonicalFixtureKindForResolvedPhase,
   type FixtureAvailabilityKind,
 } from '../rules/fixtureConditionedAvailability';
 import { logger } from './logger';
-import {
-  getProgramBlockStateForDate,
-  getStoredBlockStateForDate,
-  selectMicrocycleForDate,
-  type StoredProgramBlockState,
-} from './programBlockState';
-import {
-  BIBLE_WEEKLY_CAPS,
-  countWeeklyExposures,
-  programmedRunningDayAllowance,
-} from '../rules/weeklyExposureCounts';
-import {
-  attachPrescriptionEffectEvidence,
-  buildPrescriptionEffectEvidence,
-} from './deterministicCoachNoteFactory';
-import {
-  createDerivedSessionProvenance,
-  isResolverOwnedDerivedSession,
-} from '../rules/derivedSessionProvenance';
-import { resolverMayDisplace } from '../rules/athletePlacement';
+import { selectMicrocycleForDate, type StoredProgramBlockState } from './programBlockState';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
@@ -290,29 +245,6 @@ function isoDayDiff(a: string, b: string): number {
   );
 }
 
-/**
- * Build a map of exerciseId → last performed weight from weight overrides.
- * Only considers dates strictly before `beforeDate`.
- * Returns an empty record if no overrides exist.
- */
-function buildLastPerformedWeights(
-  allOverrides: Record<string, Record<string, number | null>>,
-  beforeDate: string,
-): Record<string, number | null> {
-  const result: Record<string, number | null> = {};
-  // Walk dates in reverse chronological order
-  const dates = Object.keys(allOverrides).filter(d => d < beforeDate).sort().reverse();
-  for (const d of dates) {
-    const exerciseWeights = allOverrides[d];
-    for (const [exId, weight] of Object.entries(exerciseWeights)) {
-      // Only take the most recent for each exercise
-      if (!(exId in result)) {
-        result[exId] = weight;
-      }
-    }
-  }
-  return result;
-}
 
 function dateToDayOfWeek(dateStr: string): number {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -488,28 +420,6 @@ function createGameStub(
   };
 }
 
-/**
- * Virtual game stub. Distinct id prefix so we can tell virtual from explicit
- * calendar-sourced games (useful in logs + analytics).
- */
-function createVirtualGameStub(dateStr: string, dow: number): Workout {
-  const now = new Date().toISOString();
-  return {
-    id: `virtual-game-${dateStr}`,
-    microcycleId: 'virtual',
-    dayOfWeek: dow,
-    name: 'Game Day',
-    description: 'Match day',
-    durationMinutes: 120,
-    intensity: 'High',
-    workoutType: 'Game',
-    sessionTier: 'core',
-    exercises: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 // ─── Game Day (virtual games) ───
 
 /** Day-name → JS getDay() number for mapping profile fields to dow. */
@@ -592,7 +502,7 @@ function weekHasExplicitGameMark(
  * mark in that Mon–Sun week). Walks a ±windowDays window around centerDate
  * so proximity checks for any day in the window can see neighbouring games.
  */
-function getEffectiveGameDates(
+export function getEffectiveGameDates(
   state: ScheduleState,
   centerDate: string,
   windowDays: number = 10,
@@ -906,7 +816,11 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     dow === DOW_TO_NUM[effectiveGameDay!] &&
     !weekHasExplicitGameMark(date, markedDays || {})
   ) {
-    return buildDay(date, dow, today, createVirtualGameStub(date, dow), 'game');
+    // A recurring and explicitly materialised fixture are the same session.
+    // Hydration must not change its identity merely by projecting a mark.
+    return buildDay(date, dow, today, createGameStub(
+      date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase!),
+    ), 'game');
   }
 
   const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
@@ -1228,248 +1142,8 @@ export function getMondayForDate(dateStr: string): string {
   return formatDate(date);
 }
 
-/**
- * Resolve a full week with conditioning and recovery placement.
- *
- * Three-pass approach:
- *   Pass 1: Resolve all 7 days normally (strength templates, game proximity, overrides).
- *   Pass 2: Walk Mon→Sun. For each empty day within the active block,
- *           try conditioning placement via the rule engine. Earlier days'
- *           placements feed into later days' WeekLog (progressive accumulation).
- *   Pass 3: Walk Mon→Sun again. For each STILL-empty day within the block,
- *           try recovery placement. Recovery never coexists with strength
- *           or conditioning on the same day. Uses readiness-based category
- *           selection (passive / active / extended) with frequency guards.
- *
- * Resolution order: Strength → Conditioning → Recovery fills gaps.
- * Each pass is additive — never displaces prior passes.
- *
- * If no seasonPhase is available (pre-onboarding), passes 2 and 3 are skipped.
- */
-/**
- * Materialise strength progression for a resolved week (AUTHORING step).
- *
- * Applies the progression engine to template/manual strength days, mutating
- * `baseDays` in place. This is the *authoring / acceptance-time* computation:
- * it used to run on every read inside resolveWeekWithConditioning, which made
- * loads drift on each resolution and let mutations snapshot a re-progressed
- * value. Under the §18 ownership redesign (stage 1) it is invoked once when a
- * week is authored / accepted, and resolution merely projects the frozen
- * result. Exported so authoring paths and progression tests drive it directly.
- */
-export function materialiseWeekStrengthProgression(
-  baseDays: ResolvedDay[],
-  state: ScheduleState,
-  gameDates: string[],
-): ResolvedDay[] {
-  const injuries = (state.athleteContext?.injuries || []).map(i => ({
-    bodyArea: i.bodyArea,
-    severity: i.severity,
-  }));
 
-  const feedbackMap = state.sessionFeedback || {};
-  const allFeedbackSorted: SessionFeedback[] = Object.values(feedbackMap)
-    .sort((a: SessionFeedback, b: SessionFeedback) => b.dateStr.localeCompare(a.dateStr));
 
-  // Build a workout-type-by-date map for session type matching.
-  // Uses resolved base days + template workouts to map dates → workoutType.
-  const workoutByDate: Record<string, Workout> = {};
-  for (const day of baseDays) {
-    if (day.workout) {
-      workoutByDate[day.date] = day.workout;
-    }
-  }
-  // Also include historical dates from feedback that have no resolved day
-  // (previous weeks). Use the workout name/type from the template by dayOfWeek.
-  if (state.currentMicrocycle) {
-    for (const fb of allFeedbackSorted) {
-      const fbMicrocycle = selectMicrocycleForDate(
-        state.currentProgram,
-        state.currentMicrocycle,
-        fb.dateStr,
-      );
-      if (!workoutByDate[fb.dateStr] && fbMicrocycle?.workouts) {
-        const [fy, fm, fd] = fb.dateStr.split('-').map(Number);
-        const fbDate = new Date(fy, fm - 1, fd);
-        const fbDow = fbDate.getDay();
-        const matchingWorkout = fbMicrocycle.workouts.find(
-          (w: Workout) => w.dayOfWeek === fbDow
-        );
-        if (matchingWorkout) {
-          workoutByDate[fb.dateStr] = matchingWorkout;
-        }
-      }
-    }
-  }
-
-  for (let i = 0; i < baseDays.length; i++) {
-    const day = baseDays[i];
-    const governingWeek = selectMicrocycleForDate(
-      state.currentProgram, state.currentMicrocycle, day.date,
-    );
-    // Compiler-controlled dose is already materialised. Progression cannot
-    // add work back or run its old drop-two/70%-load reduction over it.
-    if (governingWeek?.dosePolicyByDay?.[day.dayOfWeek]) continue;
-    if (
-      day.workout &&
-      workoutHasProgressableStrengthRows(day.workout) &&
-      (day.source === 'template' || day.source === 'manual')
-    ) {
-      // Recent feedback before this date — for per-day pattern analysis
-      const priorFeedback = allFeedbackSorted.filter(
-        (fb: SessionFeedback) => fb.dateStr < day.date
-      );
-      const lastFeedbackFeeling = priorFeedback.length > 0
-        ? (priorFeedback[0].feeling as any) || null
-        : null;
-
-      // Session-type-matched adaptation (from new difficulty/soreness fields)
-      const matchedFeedback = findMatchingFeedback(
-        day.workout,
-        feedbackMap,
-        workoutByDate,
-        day.date,
-      );
-      const adaptation = deriveAdaptation(matchedFeedback);
-      const blockState = state.blockState
-        ? getStoredBlockStateForDate(
-            state.blockState,
-            day.date,
-            state.seasonPhase,
-            state.currentProgram?.seasonPhaseClock,
-          )
-        : state.currentProgram
-          ? getProgramBlockStateForDate({
-            dateISO: day.date,
-            programStartISO: state.currentProgram.startDate,
-            seasonPhase: state.seasonPhase,
-            seasonPhaseClock: state.currentProgram.seasonPhaseClock,
-          })
-          : undefined;
-
-      const providedWorkoutHistory = (state.workoutHistory ?? [])
-        .filter((workout) => workout.loggedDate < day.date)
-        .sort((a, b) => b.loggedDate.localeCompare(a.loggedDate));
-      const feedbackWorkoutHistory = buildStrengthWorkoutHistoryFromFeedback(
-        feedbackMap,
-        day.date,
-      );
-      const workoutHistory = [...providedWorkoutHistory, ...feedbackWorkoutHistory]
-        .sort((a, b) => b.loggedDate.localeCompare(a.loggedDate));
-      const missedSessionsThisWeek = deriveMissedStrengthSessionsThisWeek(
-        feedbackMap,
-        day.date,
-      );
-
-      const progressionCtx = buildProgressionContext(
-        state.seasonPhase!,
-        state.capacity || 'medium',
-        gameDates,
-        day.date,
-        injuries,
-        state.markedDays || {},
-        workoutHistory,
-        lastFeedbackFeeling,
-        priorFeedback.slice(0, 4), // analysis window for pattern biases
-        adaptation.explanation ? adaptation : null,
-        { blockState, missedSessionsThisWeek },
-      );
-
-      // Build last-performed-weight map from weight overrides (dates before today)
-      const lastPerformedWeights = buildLastPerformedWeights(
-        state.weightOverrides || {},
-        day.date,
-      );
-
-      let progressedWorkout: Workout = applyStrengthProgression(
-        day.workout,
-        progressionCtx,
-        Object.keys(lastPerformedWeights).length > 0 ? lastPerformedWeights : undefined,
-      );
-
-      if (adaptation.explanation) {
-        const adaptationReason = adaptation.volumeAdjustment < 0
-          ? 'adaptation_reduced'
-          : adaptation.volumeAdjustment > 0
-            ? 'adaptation_increased'
-            : 'adaptation_held';
-        progressedWorkout = attachPrescriptionEffectEvidence(
-          progressedWorkout,
-          buildPrescriptionEffectEvidence({
-            seed: {
-              kind: 'progression_adaptation',
-              reason: adaptationReason,
-              ownerKey: `session-feedback:${matchedFeedback?.dateStr ?? day.date}:${day.workout.workoutType}`,
-            },
-            before: day.workout.exercises,
-            after: progressedWorkout.exercises,
-          }),
-        );
-      }
-
-      // Attach adaptation explanation as metadata for UI consumption
-      if (adaptation.explanation) {
-        (progressedWorkout as any)._adaptationExplanation = adaptation.explanation;
-      }
-
-      baseDays[i] = {
-        ...day,
-        workout: progressedWorkout,
-      };
-    }
-  }
-
-  return baseDays;
-}
-
-/**
- * Author a week's strength progression (AUTHORING/acceptance entry point).
- *
- * Resolves the base week, then materialises strength progression into it and
- * returns the progressed days. This is the single seam that should run once
- * when a week is authored / accepted (its result is then stored and merely
- * projected by resolveWeekWithConditioning). It reproduces exactly what the
- * old read-time progression pass computed for a given ScheduleState — so
- * progression itself is unchanged; only *when* it runs has moved.
- */
-export function authorWeekStrengthProgression(
-  mondayStr: string,
-  state: ScheduleState,
-): ResolvedDay[] {
-  const baseDays = resolveWeek(mondayStr, state);
-  const gameDates: string[] = [];
-  getEffectiveGameDates(state, mondayStr).forEach((d) => gameDates.push(d));
-  return materialiseWeekStrengthProgression(baseDays, state, gameDates);
-}
-
-/**
- * Bake strength progression into a program's stored microcycles (AUTHORING).
- *
- * Runs once at generation so the stored week already carries its progressed
- * loads; resolution then merely projects them. This replaces the retired
- * read-time progression pass as the place progression is applied to a freshly
- * authored program. Mutates each microcycle's workouts in place.
- */
-export function bakeMicrocycleStrengthProgression(
-  program: TrainingProgram,
-  state: Omit<ScheduleState, 'currentProgram' | 'currentMicrocycle'>,
-): void {
-  for (const microcycle of program.microcycles) {
-    const weekStart = microcycle.startDate.slice(0, 10);
-    const authored = authorWeekStrengthProgression(weekStart, {
-      ...state,
-      currentProgram: program,
-      currentMicrocycle: microcycle,
-    });
-    const progressedById = new Map<string, Workout>();
-    for (const day of authored) {
-      if (day.workout) progressedById.set(day.workout.id, day.workout);
-    }
-    microcycle.workouts = microcycle.workouts.map(
-      (workout) => progressedById.get(workout.id) ?? workout,
-    );
-  }
-}
 
 export function resolveWeekWithConditioning(
   mondayStr: string,
@@ -1711,7 +1385,7 @@ export function resolveWeekWithConditioning(
           day.date,
           day.dayOfWeek,
           today,
-          createVirtualGameStub(day.date, day.dayOfWeek),
+          createGameStub(day.date, day.dayOfWeek, canonicalFixtureKindForResolvedPhase(state.seasonPhase)),
           'game',
         );
       }

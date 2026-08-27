@@ -307,7 +307,9 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     // conditioning assignment below so that, if a day somehow carried only the
     // sprint, the conditioning fields below still win the slot — the sprint is
     // an addition, never a replacement.
-    if (session.sprintTemplate) {
+    const speedTemplate = session.sprintTemplate
+      ?? (intention?.conditioning === 'sprint_high_speed' ? template : null);
+    if (speedTemplate) {
       // ⚠ **THIS IS THE APP'S EXISTING PRE-LIFT SPEED VOCABULARY, NOT A NEW
       // ONE.** `defaultProgram` already composes a pre-lift sprint onto a
       // strength day when an allocation carries `speedWorkKind: 'true_speed'`
@@ -320,17 +322,17 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
       // standalone sprint draw from one authority.
       Object.assign(allocation, {
         speedWorkKind: 'true_speed',
-        speedPlacement: 'pre_lift',
+        speedPlacement: isStrength ? 'pre_lift' : 'standalone',
         // ⚠ **THE WHOLE BLOCK, FROM THE ONE FACTORY.** A partial
         // `{ templateName }` is what broke twelve worlds: `buildSpeedBlock`
         // spreads this verbatim, so the assembled workout carried
         // `kind: undefined` and §18 — which credits `speedBlock.kind`, not the
         // visible rows — scored the week at zero sprint nights and refused it.
-        speedBlock: speedBlockForTemplate(session.sprintTemplate, 'pre_lift'),
+        speedBlock: speedBlockForTemplate(speedTemplate, isStrength ? 'pre_lift' : 'standalone'),
       });
     }
 
-    if (template && intention?.conditioningCategory) {
+    if (template && intention?.conditioningCategory && intention.conditioning !== 'sprint_high_speed') {
       Object.assign(allocation, {
         conditioningCategory: intention.conditioningCategory,
         conditioningFlavour: flavourFor(intention.conditioningCategory),
