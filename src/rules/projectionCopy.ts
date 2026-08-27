@@ -114,6 +114,9 @@ export function dayNameCopyId(day: import('../types/domain').DayOfWeek): string 
 }
 /** A session component's athlete-facing name. `part.headline.<kind>`, reused. */
 export function sessionComponentCopyId(kind: string): string {
+  // Mobility already has an authored headline. Its component kind is not the
+  // optional-session namespace used by that entry; reuse it, not new copy.
+  if (kind === 'mobility') return 'part.headline.optional.mobility';
   return `part.headline.${kind}`;
 }
 export const EXTRA_SESSION_OFFER_COPY_ID = 'blockBoundary.extraSessionOffer';

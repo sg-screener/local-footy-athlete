@@ -218,7 +218,7 @@ function theAthlete(): OnboardingData {
     // four, so the extra-session offer is correctly refused there and this
     // suite's whole preview arm would be vacuous. R-002: off-season has NO team
     // training, ever.
-    gender: 'male', seasonPhase: 'Off-season',
+    gender: 'male', seasonPhase: 'Off-season', seasonFinishedOn: '2026-07-12',
     trainingDaysPerWeek: 2,
     preferredTrainingDays: ['Monday', 'Thursday'],
     teamTrainingDaysPerWeek: 0,

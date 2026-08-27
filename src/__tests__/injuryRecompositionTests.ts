@@ -67,6 +67,7 @@ import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { executeProgramControlAction } from '../utils/programControlActions';
 import { snapshotSemanticWorkout } from '../utils/programSemanticSnapshot';
 import { visibleInjuryPrescriptionChanged } from '../utils/injurySessionRecomposition';
+import { accumulatedInjuryConditioning } from './support/accumulatedInjuryConditioning';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
@@ -465,6 +466,8 @@ async function main(): Promise<void> {
       !!episode && useProgramStore.getState().acceptedMaterialContext.injuryEpisodes.some(e => e.episodeId === episode));
   }
 
+  console.log('\n[6] ACCUMULATED SHOULDER / DELOAD / MIXED COMPONENT IDENTITY');
+  await accumulatedInjuryConditioning(durable, ok);
   report();
 }
 

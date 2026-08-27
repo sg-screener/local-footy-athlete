@@ -1096,8 +1096,16 @@ export function applyConditioningModalityToWorkout<
     touched = true;
   }
 
-  // 3 + 4 + 5. exercises[].{exercise.name, exercise.description, notes}
+  // 3 + 4 + 5. Only conditioning owns modality text. A strength Row is not
+  // rowing. Prefer the declared component; untyped rows need an exact authored
+  // conditioning identity, never a modality word found inside a lift's name.
+  const conditioningRowIds = new Set<string>((workout.conditioningBlock?.options ?? [])
+    .flatMap(option => option.exerciseIds ?? []));
   const newExercises = (workout.exercises ?? []).map((ex: any) => {
+    const role = ex?.section18Evidence?.role;
+    const isConditioning = role ? role === 'conditioning'
+      : conditioningRowIds.has(ex?.id) || !!CONDITIONING_META[ex?.exercise?.name];
+    if (!isConditioning) return ex;
     const exName: string | undefined = ex?.exercise?.name;
     const exDesc: string | undefined = ex?.exercise?.description;
     const exNotes: string | undefined = typeof ex?.notes === 'string' ? ex.notes : undefined;

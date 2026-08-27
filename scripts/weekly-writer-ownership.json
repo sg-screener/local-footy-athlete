@@ -197,7 +197,7 @@
       "reason": "Home hook reads canonical program/projections, records missed-session outcomes through the outcome owner and invokes existing fact/rollover transactions; its direct program fields are read-helper or returned view-model references."
     },
     "src/screens/home/DayWorkoutScreenV2.tsx#DayWorkoutScreenV2": {
-      "fingerprint": "1f35803f9334c83e7b69d810c5b3b923f3597962781f38b098f3544fbe0b7c4e",
+      "fingerprint": "72967c4cf7f19a7215a865ef78d7ec533393b4526ad392ebdb5924b5678af95a",
       "classification": "canonical_input_writer",
       "reason": "Session UI delegates derived warmup/addon projection to shared pure helpers and edits to program-control/exclusion owners; direct mutations are a quick-swap choice ref, not programmed rows."
     },
@@ -307,7 +307,7 @@
       "reason": "Game feedback UI constructs typed outcome input and calls the durable outcome transaction; its only local writes are React form/refusal state and diagnostic receipts."
     },
     "src/utils/coachModalitySwap.ts#applyConditioningModalityToWorkout": {
-      "fingerprint": "c320fd5d7730712784eaf353944813711f0ce09875456fd558751f4d88d89302",
+      "fingerprint": "d8406e69cc7d6dca921be6e7fde3750159b50a63e96b900d48b65036de1887e8",
       "classification": "canonical_compiler",
       "reason": "Shared pure conditioning-modality transform is called by canonical injury conditioning and the canonical day-constraint preference stage only; no independent live publisher."
     },
@@ -382,7 +382,7 @@
       "reason": "Builds an explicit athlete-move intent by shared component split, G-1 route and team-anchor helpers; the exact selected landing content is recorded by the accepted session-edit transaction."
     },
     "src/components/SessionCompleteMoment.tsx#SessionCompleteMoment": {
-      "fingerprint": "adf155b5c612bd9ef16856dad8128b8db54173697ad7c4a5431f2fa8cde28dfb",
+      "fingerprint": "99165bd2b2a5146aeac7d368d95332e0b68118d656b66528ca7dae1b0222cd4f",
       "classification": "projection_display",
       "reason": "Session-completion UI reads the receipt and future progression target for display/witnesses and animates local values; no program author."
     },

@@ -12,8 +12,8 @@
     },
     "test:injury-recomposition": {
       "kind": "current_contract",
-      "reason": "The injury door must distinguish recorded restrictions from a changed visible prescription. Same-day before/after checks cover unchanged unsafe sessions, honest refusals and dose-only changes; no block-wide transaction flag may claim this session changed.",
-      "productionPaths": ["src/utils/programControlActions.ts", "src/utils/injurySessionRecomposition.ts"],
+      "reason": "The injury door must distinguish restrictions from changed visible prescriptions. Includes real onboarding and seven logged weeks for both sexes: shoulder restriction in week-eight deload, mixed conditioning/strength row preservation, actual signed visible projection, restart and clear. First run rejected the modality rewrite corrupting strength Row names; restart equality alone was insufficient.",
+      "productionPaths": ["src/utils/programControlActions.ts", "src/utils/injurySessionRecomposition.ts", "src/utils/coachModalitySwap.ts", "src/rules/canonicalInjuryConditioning.ts"],
       "contractRefs": ["R-103"],
       "witnessScript": "test:injury-recomposition",
       "evidenceKind": "green_now"
