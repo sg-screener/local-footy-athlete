@@ -11,7 +11,6 @@ import {
   type GenerationSessionClassificationInput,
   type SessionAllocation,
 } from '../utils/coachingEngine';
-import { coachingPlanForTests } from './support/coachingPlanForTests';
 import type {
   OnboardingData,
   RecoveryAddonBlock,
@@ -123,9 +122,9 @@ eq('complete beginner upper follows kernel context shift',
   classify({ focus: 'Upper', strengthPattern: 'push' }, { experienceLevel: 'Complete beginner' }).stressLevel,
   'high');
 eq('generation adjacency reporting shares typed main-strength regions', [
-  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'lower' }),
-  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'push' }),
-  classifyGenerationAdjacencyRegion({
+  classifyGenerationAdjacencyRegion({ isHardExposure: false, focus: 'misleading text', tier: 'core', strengthPattern: 'lower' }),
+  classifyGenerationAdjacencyRegion({ isHardExposure: false, focus: 'misleading text', tier: 'core', strengthPattern: 'push' }),
+  classifyGenerationAdjacencyRegion({ isHardExposure: false,
     focus: 'misleading text',
     tier: 'core',
     strengthPattern: 'full_body',
@@ -135,8 +134,8 @@ eq('generation adjacency reporting shares typed main-strength regions', [
   }),
 ], ['lower', 'upper', 'full_body']);
 eq('accessory fatigue remains a separate adjacency policy', [
-  classifyGenerationAdjacencyRegion({ focus: 'Gunshow arm pump', tier: 'optional' }),
-  classifyGenerationAdjacencyRegion({ focus: 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab', tier: 'optional' }),
+  classifyGenerationAdjacencyRegion({ isHardExposure: false, focus: 'Gunshow arm pump', tier: 'optional' }),
+  classifyGenerationAdjacencyRegion({ isHardExposure: false, focus: 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab', tier: 'optional' }),
 ], ['upper', 'neutral']);
 
 console.log('\n[2] team and fixture anchors use shared stress/exposure rules');
@@ -257,50 +256,10 @@ eq('optional-tier hard conditioning remains a high-stress exposure',
   }, { role: 'finisher', credit: 'partial' });
 }
 
-console.log('\n[4] generated candidate stress metadata stays adapter-aligned');
-const profiles: Array<[string, Partial<OnboardingData>]> = [
-  ['off-season', {
-    seasonPhase: 'Off-season',
-    trainingDaysPerWeek: 5,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday'],
-    teamTrainingDaysPerWeek: 0,
-    teamTrainingDays: [],
-    conditioningLevel: 'Good',
-    recentTrainingLoad: 'Very consistent',
-    experienceLevel: '2-5 years',
-    injuries: [],
-  }],
-  ['pre-season light team', {
-    seasonPhase: 'Pre-season',
-    trainingDaysPerWeek: 5,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    teamTrainingDaysPerWeek: 2,
-    teamTrainingDays: ['Tuesday', 'Thursday'],
-    conditioningLevel: 'Good',
-    recentTrainingLoad: 'Very consistent',
-    experienceLevel: '2-5 years',
-    injuries: [],
-  }],
-];
-
-for (const [label, profile] of profiles) {
-  const inputs = onboardingToCoachingInputs(profile as OnboardingData);
-  const plan = coachingPlanForTests(inputs).weeklyPlan;
-  const context = {
-    experienceLevel: inputs.experienceLevel,
-    conditioningLevel: inputs.conditioningLevel,
-  };
-  const mismatches = plan.filter((session: SessionAllocation) =>
-    session.stressLevel !== classifyGenerationSession(session, context).stressLevel);
-  ok(`${label} generated stressLevel matches adapter for every session`,
-    mismatches.length === 0,
-    mismatches.map((session) => ({
-      day: session.dayOfWeek,
-      focus: session.focus,
-      actual: session.stressLevel,
-      expected: classifyGenerationSession(session, context).stressLevel,
-    })));
-}
+// The retired planner stamped stressLevel onto allocations. Current generation
+// does not store that derived field; final-row classification is exercised by
+// canonicalWeeklyCompilerSliceTests and the full-year compiler gate. Do not
+// restore a redundant stored stress label to satisfy the former two comparisons.
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) {

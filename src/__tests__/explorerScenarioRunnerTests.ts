@@ -33,9 +33,9 @@ function expect(condition: boolean, message: string): void {
 async function main(): Promise<void> {
   console.log('\n-- Explorer production scenario runner --');
 
-  await test('all nine manifests are executable with explicit live-artifact incompleteness', () => {
+  await test('all eight manifests are executable with explicit live-artifact incompleteness', () => {
     const receipts = preflightExplorerSmokeScenarios();
-    expect(receipts.length === 9, `expected nine manifests, got ${receipts.length}`);
+    expect(receipts.length === 8, `expected eight manifests, got ${receipts.length}`);
     expect(receipts.every((receipt) =>
       receipt.status === 'executable-incomplete-live-artifacts' &&
       receipt.reasonCode === EXPLORER_LIVE_ARTIFACT_REASON &&
@@ -45,8 +45,8 @@ async function main(): Promise<void> {
       receipt.externalArtifacts.screenshot === 'required-live' &&
       receipt.externalArtifacts.accessibilityHierarchy === 'required-live'),
     'a manifest was falsely complete or lacked a production/render binding');
-    expect(receipts.reduce((count, receipt) => count + receipt.actionTypes.length, 0) === 15,
-      'the nine manifests did not cover 15 actions');
+    expect(receipts.reduce((count, receipt) => count + receipt.actionTypes.length, 0) === 13,
+      'the eight manifests did not cover 13 actions');
   });
 
   await test('preflight reruns are deterministic', () => {

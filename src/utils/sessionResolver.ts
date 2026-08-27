@@ -53,12 +53,20 @@ import { selectMicrocycleForDate, type StoredProgramBlockState } from './program
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
+import { compileCanonicalResolvedWeek } from '../rules/canonicalWeeklyConstraintCompiler';
+import type { ModalityPreference } from '../rules/modalityPreferenceLookup';
+import type { OverrideContext } from '../types/domain';
 
 export { computeBlockBounds } from './programBlockState';
 
 // ─── Input/Output Types ───
 
 export interface ScheduleState {
+  /** Explicit final-compilation inputs. Absent constraints means accepted-base composition. */
+  todayISO?: string;
+  activeConstraints?: import('../store/coachUpdatesStore').ActiveConstraint[];
+  overrideContexts?: Record<string, OverrideContext>;
+  modalityPreferences?: Record<string, ModalityPreference>;
   currentProgram: TrainingProgram | null;
   currentMicrocycle: Microcycle | null;
   manualOverrides: Record<string, Workout>;
@@ -1146,6 +1154,17 @@ export function getMondayForDate(dateStr: string): string {
 
 
 export function resolveWeekWithConditioning(
+  mondayStr: string,
+  state: ScheduleState,
+): ResolvedDay[] {
+  return compileCanonicalResolvedWeek({
+    days: resolveWeekBeforeConstraints(mondayStr, state),
+    weekStartISO: mondayStr, todayISO: state.todayISO ?? todayISOLocal(), state,
+  });
+}
+
+/** Internal base composition. All public week/date reads leave through the compiler. */
+function resolveWeekBeforeConstraints(
   mondayStr: string,
   state: ScheduleState,
 ): ResolvedDay[] {

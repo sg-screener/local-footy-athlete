@@ -19,6 +19,7 @@ import {
   EXPLORER_RUNTIME_REASON,
   runExplorerScenario,
   type ExplorerRuntimeDependencies,
+  type ExplorerSyntheticRuntimeDependencies,
 } from '../dev/e2e/explorerRuntime';
 import { EXPLORER_NON_COACH_SMOKE_MANIFESTS } from
   '../dev/e2e/explorerSmokeScenarioManifests';
@@ -37,7 +38,6 @@ import type { ExplorerOracleEvaluationContext } from
   '../dev/e2e/explorerOracleEvaluator';
 import type {
   ExplorerScenarioActionEvidenceV1,
-  ExplorerScenarioArtifactBundleV1,
   ExplorerScenarioCheckpointEvidenceV1,
   ExplorerScenarioReloadReceiptV1,
   ExplorerScenarioSeedEvidenceV1,
@@ -48,6 +48,7 @@ import {
   type ExplorerPhysicalEvidenceReceiptV1,
 } from '../dev/e2e/explorerPhysicalEvidence';
 import { semanticFingerprintV2, sha256Hex } from '../utils/semanticFingerprintV2';
+import { createValidExplorerScenarioArtifactBundle } from './explorerScenarioArtifactFixture';
 import { ExplorerActionIngressGate } from '../dev/e2e/explorerActionIngress';
 import {
   __resetDevE2EStateForTest,
@@ -225,7 +226,7 @@ function runtimeManifest(stepCount = 1): ExplorerScenarioContract {
     const base = oneStep();
     const stepId = `set-readiness-${index + 1}`;
     const action: ExplorerAction = {
-      ...base.action,
+      type: 'readiness.set',
       target: { kind: 'readiness', readinessId: `readiness-${index + 1}` },
       args: {
         date: `2026-07-${String(13 + index).padStart(2, '0')}`,
@@ -258,7 +259,7 @@ function runtimeManifest(stepCount = 1): ExplorerScenarioContract {
         }]),
       ],
     };
-  }) as [ExplorerScenarioStep, ...ExplorerScenarioStep[]];
+  });
   return validateExplorerScenarioContract({
     schemaVersion: EXPLORER_SCENARIO_SCHEMA_VERSION,
     scenarioId: `runtime-${stepCount}-steps`,
@@ -347,7 +348,7 @@ function runtimeDeps(
     missingRender?: boolean;
     missingPhysicalPhase?: 'seed-reset' | 'after-action' | 'after-reload';
   } = {},
-): ExplorerRuntimeDependencies & { counts: Record<string, number> } {
+): { -readonly [K in keyof ExplorerSyntheticRuntimeDependencies]: ExplorerSyntheticRuntimeDependencies[K] } & { counts: Record<string, number> } {
   const counts: Record<string, number> = {
     reset: 0, marker: 0, claim: 0, action: 0, checkpoint: 0, reload: 0, artifact: 0,
     capture: 0, oracle: 0,
@@ -360,7 +361,7 @@ function runtimeDeps(
     }),
   });
   const underlyingBridge = createExplorerActionBridge(adapters);
-  const deps: ExplorerRuntimeDependencies & { counts: Record<string, number> } = {
+  const deps: ExplorerSyntheticRuntimeDependencies & { counts: Record<string, number> } = {
     counts,
     actionExecutionMode: 'synthetic-direct-adapter',
     loadManifest: (scenarioId) => scenarioId === manifest.scenarioId ? manifest : null,
@@ -431,10 +432,9 @@ function runtimeDeps(
       counts.artifact += 1;
       return { stepId: step.stepId } as ExplorerScenarioActionEvidenceV1;
     },
-    assembleScenarioArtifact: async () => ({
-      schemaVersion: 1,
-      semanticHash: 'sha256:test',
-    } as ExplorerScenarioArtifactBundleV1),
+    // This runtime plumbing suite mocks artifact assembly; artifact validity is
+    // exercised by the artifact suite. Keep even this mock schema-complete.
+    assembleScenarioArtifact: async () => createValidExplorerScenarioArtifactBundle(),
     physicalEvidence: {
       campaignId: 'explorer-nine-9f28da0d51a6',
       integratedRepositorySha: '9f28da0d51a62106bc85d12a14868c216de8b96d',
@@ -482,10 +482,10 @@ function runtimeDeps(
 
 console.log('\n-- Typed Explorer runtime, action bridge and smoke manifests --');
 
-void test('compiles exactly nine non-Coach smoke manifests and fifteen actions', () => {
+void test('compiles eight non-Coach smoke manifests and thirteen actions (Repeat Week retired)', () => {
   const actions = EXPLORER_NON_COACH_SMOKE_MANIFESTS.flatMap((manifest) => manifest.steps);
-  expect(EXPLORER_NON_COACH_SMOKE_MANIFESTS.length === 9, 'smoke manifest count changed');
-  expect(actions.length === 15, `expected 15 actions, received ${actions.length}`);
+  expect(EXPLORER_NON_COACH_SMOKE_MANIFESTS.length === 8, 'smoke manifest count changed');
+  expect(actions.length === 13, `expected 13 actions, received ${actions.length}`);
   expect(actions.every((step) => step.action.type !== 'coach.message'), 'Coach replay was compiled');
   expect(
     EXPLORER_NON_COACH_SMOKE_MANIFESTS.find((manifest) =>

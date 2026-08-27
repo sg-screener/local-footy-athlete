@@ -26,7 +26,7 @@
  */
 
 import type { DevE2ESeedId } from '../dev/e2e/devE2ESeedIds';
-import { buildDevE2ESeed, witnessesForDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import { buildDevE2ESeed, witnessesForDevE2ESeed, type DevE2EWitness } from '../dev/e2e/devE2ESeedRegistry';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
@@ -141,8 +141,8 @@ export function installDeviceExactSeed(opts?: {
   // installAcceptedCalendarGame equivalent). This is the fidelity dimension the deriving
   // suite dropped.
   const calendarWitnesses = witnessesForDevE2ESeed(seedId, d.program, d.profile)
-    .filter((w): w is { kind: 'calendar_mark'; date: string; mark: string } =>
-      (w as { kind?: string }).kind === 'calendar_mark');
+    .filter((w): w is Extract<DevE2EWitness, { kind: 'calendar_mark' }> =>
+      w.kind === 'calendar_mark');
   let gameDate: string | null = null;
   if (withFixtures && calendarWitnesses.length > 0) {
     const md: Record<string, string> = { ...useProgramStore.getState().acceptedMaterialContext.markedDays };

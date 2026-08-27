@@ -91,7 +91,11 @@ import { visibleSignature as exactWeekSignature } from './compilerYear/invariant
 import { useCalendarStore } from '../store/calendarStore';
 import { speedTemplateConditioningCredit } from '../rules/conditioningCredit';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../utils/lighterDayTransaction';
+import { compileCanonicalLighterDayWorkout, compileCanonicalLighterDayContract } from '../rules/canonicalWeeklyLighterDayCompiler';
+import { resolveTemplateByName, renderableModalities } from '../rules/conditioningSelection';
 import { resolveDateWithConditioning } from '../utils/sessionResolver';
+import { buildProgramTabProjectedWeek, buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
+import { checkCanonicalConstraintOwnership } from './support/canonicalConstraintOwnership';
 import {
   getTapSwapChoices,
   groupTapSwapChoices,
@@ -224,7 +228,18 @@ function rowSignature(workout: Workout): string[] {
   ].join(':'));
 }
 
+function assertCompiledSurfaceAgreement(weekStart: string, todayISO: string, label: string): void {
+  const state = buildScheduleStateImperative();
+  const direct = quiet(() => deriveVisibleWeekLive(weekStart, todayISO));
+  const weekly = quiet(() => buildProgramTabProjectedWeek({ mondayISO: weekStart, todayISO, state }));
+  const daily = quiet(() => direct.map((day) => buildDayWorkoutProjectedDay({ date: day.date, todayISO, state })));
+  ok(`${label}: compiler, weekly view and all seven daily views share the same final rows`,
+    direct.length === 7 && exactWeekSignature(direct) === exactWeekSignature(weekly) &&
+    exactWeekSignature(direct) === exactWeekSignature(daily));
+}
+
 async function main(): Promise<void> {
+  checkCanonicalConstraintOwnership(ok);
   console.log('\n[ownership] one orchestration owns the three authoring stages');
   for (const symbol of [
     'scheduleWeek', 'materialiseAuthoredSessions', 'scheduleToCoachingPlan',
@@ -1459,6 +1474,7 @@ async function main(): Promise<void> {
     resolvedDays(injuryInstall.blockOneStart, declarationDay));
   ok('the affected week retains real unaffected training instead of being emptied',
     injuryVisible.some((day) => day.rows.length > 0));
+  assertCompiledSurfaceAgreement(injuryInstall.blockOneStart, declarationDay, 'accepted injury');
   const injuryCleared = injuryEpisodeId
     ? await quietAsync(() => executeProgramControlActionDurably({
         type: 'clear_injury_modifier',
@@ -1470,6 +1486,7 @@ async function main(): Promise<void> {
     : null;
   ok('the athlete can clear the exact injury episode',
     injuryCleared?.ok === true, injuryCleared?.message);
+  assertCompiledSurfaceAgreement(injuryInstall.blockOneStart, declarationDay, 'cleared injury');
   const injuryRecovered = quiet(() =>
     resolvedDays(injuryInstall.blockOneStart, declarationDay));
   ok('clearing injury restores the visible accepted week exactly',
@@ -2849,6 +2866,88 @@ async function main(): Promise<void> {
       exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === exactWeekSignature(beforeGame));
   }
   ok('the edit-preservation witness reaches the complete-regeneration fallback', regeneratedWithEdit);
+
+  console.log('\n[lighter-day content] actual rows, not just an aerobic label');
+  for (const id of ['male-3-experienced-gym', 'female-3-novice-home']) {
+    await quietAsync(() => coldStartThroughOnboarding({
+      profile: athleteAnswers(ARCHETYPES.find((a) => a.id === id)!), installDayISO: INSTALL_DAY,
+    }));
+    const hardDay = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))
+      .find((day) => day.workout?.conditioningBlock?.intent === 'high-intensity');
+    ok(`${id}: reaches generated hard conditioning with strength`, !!hardDay &&
+      hardDay.workout!.exercises.some((r) => r.section18Evidence?.role === 'main_strength'));
+    if (!hardDay?.workout) continue;
+    const original = hardDay.workout;
+    const originalJSON = JSON.stringify(original);
+    const owned = new Set(original.conditioningBlock!.options.flatMap((o) => o.exerciseIds));
+    const compiled = compileCanonicalLighterDayWorkout(original).workout;
+    const option = compiled.conditioningBlock?.options[0];
+    const easy = option && resolveTemplateByName(option.title);
+    ok(`${id}: replaces hard work with an authored flush prescription`, easy?.quality === 'flush' &&
+      option!.exerciseIds.every((rowId) => compiled.exercises.some((r) => r.id === rowId &&
+        r.exercise?.name === easy.name && r.notes?.includes('Intensity:'))));
+    ok(`${id}: old hard rows and dose are absent`, !compiled.exercises.some((r) => owned.has(r.id)) &&
+      compiled.conditioningCategory === 'aerobic_base' && compiled.conditioningFlavour === 'aerobic');
+    ok(`${id}: preserves the selected equipment modality`, !!easy && !!option?.modality &&
+      renderableModalities(easy).includes(option.modality === 'running' ? 'run' : option.modality as 'bike') &&
+      (!original.conditioningBlock!.options[0].modality ||
+        option.modality === original.conditioningBlock!.options[0].modality));
+    ok(`${id}: strength main rows are byte-identical`, original.exercises
+      .filter((r) => r.section18Evidence?.role === 'main_strength')
+      .every((r) => JSON.stringify(compiled.exercises.find((next) => next.id === r.id)) === JSON.stringify(r)));
+    ok(`${id}: compilation is deterministic and leaves its input intact`,
+      JSON.stringify(compileCanonicalLighterDayWorkout(original).workout) === JSON.stringify(compiled) &&
+      JSON.stringify(original) === originalJSON);
+    const contract = useProgramStore.getState().currentProgram!.microcycles[0].exposureContractV2!;
+    const contractBefore = JSON.stringify(contract);
+    const workouts = quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY)).flatMap((d) => d.workout ? [d.workout] : []);
+    const afterWorkouts = workouts.map((w) => w.id === original.id ? compiled : w);
+    const doseBefore = evaluateSection18EffectiveWeek({ contract, workouts, weekStart: INSTALL_DAY }).ledger.conditioning;
+    const doseAfter = evaluateSection18EffectiveWeek({ contract, workouts: afterWorkouts, weekStart: INSTALL_DAY }).ledger.conditioning;
+    const lostCore = doseBefore.coreCount - doseAfter.coreCount;
+    const effect = { kind: 'lighter_day', policy: 'slight_v1', dateISO: hardDay.date, sourceFactId: 'contract-witness' } as const;
+    const easedContract = compileCanonicalLighterDayContract({ contract, before: workouts, after: afterWorkouts,
+      weekStartISO: INSTALL_DAY, effect });
+    ok(`${id}: contract witness reaches a real core-dose reduction`, lostCore > 0,
+      JSON.stringify({ before: doseBefore.coreCount, after: doseAfter.coreCount }));
+    ok(`${id}: targets fall only by the conditioning actually removed`,
+      easedContract.conditioning.core.requiredMinimum === Math.max(0, contract.conditioning.core.requiredMinimum - lostCore) &&
+      easedContract.conditioning.core.plannerSelectedTarget === Math.max(0, contract.conditioning.core.plannerSelectedTarget! - lostCore) &&
+      easedContract.conditioning.intensityPolicy.requiredAppHardMinimum === Math.max(0,
+        contract.conditioning.intensityPolicy.requiredAppHardMinimum - doseBefore.byStress.hard + doseAfter.byStress.hard));
+    ok(`${id}: contract reduction is dated, source-linked and leaves unrelated policy intact`,
+      easedContract.authorisedReductions.some((r) => r.affectedWeek === INSTALL_DAY && r.detail?.includes(hardDay.date) &&
+        r.detail.includes(effect.sourceFactId)) && JSON.stringify(contract) === contractBefore &&
+      JSON.stringify(easedContract.mainStrength) === JSON.stringify(contract.mainStrength) &&
+      JSON.stringify(easedContract.strengthPatterns) === JSON.stringify(contract.strengthPatterns));
+    // Compatibility shape: real generated rows with the legacy finisher tag.
+    // This is a pure input test, never an invented athlete-store fixture.
+    const finisher = compileCanonicalLighterDayWorkout({ ...original,
+      attachedConditioningKind: 'finisher',
+      conditioningBlock: { ...original.conditioningBlock!, attachedKind: 'finisher' },
+    }).workout;
+    ok(`${id}: dropping a finisher drops its owned rows and all conditioning identity`,
+      !finisher.exercises.some((r) => owned.has(r.id)) && !finisher.conditioningBlock &&
+      !finisher.conditioningCategory && !finisher.conditioningFlavour && !finisher.attachedConditioningKind &&
+      !finisher.hasCombinedConditioning && finisher.section18ConditioningRole === 'none');
+    setJourneyClock(hardDay.date);
+    const report = await quietAsync(() => executeProgramControlActionDurably(readinessActionForKind('poor_sleep_today',
+      { anchorDateISO: INSTALL_DAY, todayISO: hardDay.date }), { todayISO: hardDay.date }));
+    const before = exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, hardDay.date)));
+    assertCompiledSurfaceAgreement(INSTALL_DAY, hardDay.date, `${id} readiness`);
+    const accepted = await quietAsync(() => applyLighterDayForToday({ date: hardDay.date, todayISO: hardDay.date,
+      sourceFactId: report.createdModifierIds?.[0] }));
+    const after = exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, hardDay.date)));
+    ok(`${id}: the actual lighter-day door accepts the changed conditioning`, accepted.ok && before !== after,
+      JSON.stringify({ accepted, changed: before !== after, report }));
+    await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: hardDay.date }));
+    assertCompiledSurfaceAgreement(INSTALL_DAY, hardDay.date, `${id} lighter-day restart`);
+    ok(`${id}: the easier prescription survives restart exactly`,
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, hardDay.date))) === after);
+    await quietAsync(() => undoLastDecision());
+    ok(`${id}: Undo restores the original hard prescription`,
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, hardDay.date))) === before);
+  }
 
   console.log('\n[lighter-day combinations] phase, deload, fixture and exact restart');
   for (const coordinate of [

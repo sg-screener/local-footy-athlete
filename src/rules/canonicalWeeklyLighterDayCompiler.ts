@@ -16,13 +16,16 @@
  *
  * This module neither persists workouts nor decides progression. Its caller
  * publishes an ephemeral compiler result; only the accepted policy is saved.
- * The existing conditioning metadata behaviour is preserved in this migration;
- * this is not evidence of a newly authored easy-conditioning prescription.
+ * Conditioning changes replace the owned prescription rows and metadata together;
+ * an intensity label alone is never a change of training dose.
  */
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { TemporarySourceFact } from './temporarySourceFact';
 import { selectReadinessFactForDate, temporarySourceFactId } from './temporarySourceFact';
+import { composeConditioningRows, selectConditioningTemplate, templateDurationMinutes } from './conditioningSelection';
+import { evaluateSection18EffectiveWeek } from './section18EffectiveWeekEvaluator';
+import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
 
 /** Accepted opt-in policy, never a saved copy of the resulting session. */
 export interface CanonicalAcceptedLighterDayEffect {
@@ -68,6 +71,15 @@ function halveSets(sets: number): number {
 export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayTrimResult {
   const changes: string[] = [];
   const rows = (workout.exercises ?? []) as WorkoutExercise[];
+  // Some accepted legacy workouts have no audit timestamp. Preserve that
+  // absence instead of reading the device clock during reconstruction.
+  const authoredAtISO = workout.createdAt ?? rows[0]?.createdAt ?? '';
+  const block = workout.conditioningBlock;
+  const conditioningIds = new Set(block?.options.flatMap((option) => option.exerciseIds) ?? []);
+  const ownsConditioningRow = (row: WorkoutExercise): boolean =>
+    conditioningIds.has(row.id) || conditioningIds.has(row.exerciseId);
+  const dropFinisher = (block?.attachedKind ?? workout.attachedConditioningKind) === 'finisher';
+  const easeConditioning = !dropFinisher && block?.intent === 'high-intensity';
 
   // If no §18 role evidence anywhere, protect the first strength row positionally
   // (Slice 4.2: "never remove the session's first/main lift").
@@ -77,6 +89,8 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
     (row.prescribedWeightKg ?? 0) >= 0 && (row.prescribedSets ?? 0) > 0);
 
   const trimmedExercises = rows.map((row, index) => {
+    // Conditioning and true power work have authored doses, not accessory sets.
+    if (ownsConditioningRow(row) || row.role === 'conditioning' || row.role === 'power') return row;
     const isMain = anyRoleEvidence ? isMainStrengthRow(row) : index === firstStrengthIndex;
     if (isMain) return row; // main lift kept byte-identical (sets AND weight)
     const sets = Number(row.prescribedSets ?? 0);
@@ -87,18 +101,63 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
     return { ...row, prescribedSets: nextSets };
   });
 
-  let conditioningBlock = workout.conditioningBlock;
-  let hasCombinedConditioning = workout.hasCombinedConditioning;
-
-  // Remove the hard finisher.
-  if (conditioningBlock?.attachedKind === 'finisher') {
+  let compiled: Workout = { ...workout, exercises: trimmedExercises };
+  if (dropFinisher && block) {
     changes.push('Dropped the finisher');
-    conditioningBlock = undefined;
-    hasCombinedConditioning = false;
-  } else if (conditioningBlock && conditioningBlock.intent === 'high-intensity') {
-    // Ease hard conditioning → easy aerobic.
+    compiled = {
+      ...compiled,
+      exercises: trimmedExercises.filter((row) => !ownsConditioningRow(row)),
+      conditioningBlock: undefined,
+      hasCombinedConditioning: false,
+      attachedConditioningKind: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningFeasibility: undefined,
+      coachAddedConditioningLabel: undefined,
+      section18ConditioningRole: 'none',
+      section18Evidence: { protocolVersion: 1, conditioningRole: 'none',
+        conditioningStress: 'unknown', provenance: 'explicit_mutation' },
+    };
+  } else if (easeConditioning && block) {
+    // Use a signed flush template, retaining the already accepted modality.
+    // The short-role pool prefers a short authored dose; it never invents one.
+    const options = block.options.map((option, index) => {
+      const modality = option.modality ?? 'running';
+      const machine = modality === 'running' || modality === 'mixed' ? null : modality;
+      const template = selectConditioningTemplate({
+        category: 'recovery_flush', dateStr: `${workout.id}:${index}`, role: 'finisher',
+        offFeet: !!machine, runOnly: modality === 'running',
+        availableMachines: machine ? [machine] : [],
+      });
+      const easyRows = composeConditioningRows(template, authoredAtISO.slice(0, 10), {
+        idPrefix: `${workout.id}-lighter-${index}`, omitWarmup: true,
+        authoredMinimumDose: true, authoredAtISO,
+      }).map((row): WorkoutExercise => ({ ...row, workoutId: workout.id,
+        section18Evidence: { protocolVersion: 1, role: 'conditioning',
+          strengthPattern: null, mainStrengthPattern: null, provenance: 'canonical_row_classifier' },
+      }));
+      return { rows: easyRows, option: { title: template.name, description: easyRows[0].notes ?? '',
+        exerciseIds: easyRows.map((row) => row.id), modality,
+        intensity: 'Light' as const, durationMinutes: templateDurationMinutes(template) } };
+    });
+    const remaining = trimmedExercises.filter((row) => !ownsConditioningRow(row));
+    const hasStrength = remaining.some((row) => row.section18Evidence?.role === 'main_strength' ||
+      (row.role !== 'conditioning' && (row.exercise?.exerciseType === 'Compound' || row.exercise?.exerciseType === 'Isolation')));
     changes.push('Eased the hard conditioning');
-    conditioningBlock = { ...conditioningBlock, intent: 'aerobic' };
+    compiled = {
+      ...compiled,
+      exercises: [...remaining, ...options.flatMap((entry) => entry.rows)]
+        .map((row, index) => row.exerciseOrder === index + 1 ? row : { ...row, exerciseOrder: index + 1 }),
+      conditioningBlock: { ...block, intent: 'aerobic', options: options.map((entry) => entry.option) },
+      conditioningFlavour: 'aerobic', conditioningCategory: 'aerobic_base',
+      conditioningFeasibility: undefined,
+      section18ConditioningRole: 'optional_flush',
+      section18Evidence: { protocolVersion: 1, conditioningRole: 'optional_flush',
+        conditioningStress: 'light', provenance: 'explicit_mutation' },
+      ...(!hasStrength ? { name: options[0].option.title, description: options[0].option.description,
+        intensity: 'Light' as const, durationMinutes: options[0].option.durationMinutes,
+        workoutType: 'Conditioning' as const } : {}),
+    };
   }
 
   const accessoryHalved = changes.some((line) => /→/.test(line));
@@ -107,12 +166,7 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
     : changes;
 
   return {
-    workout: {
-      ...workout,
-      exercises: trimmedExercises,
-      conditioningBlock,
-      hasCombinedConditioning,
-    },
+    workout: compiled,
     changes: summaryChanges,
   };
 }
@@ -128,4 +182,44 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
 export function lighterDayTrimAvailable(workout: Workout | null | undefined): boolean {
   if (!workout || (workout.exercises ?? []).length === 0) return false;
   return compileCanonicalLighterDayWorkout(workout).changes.length > 0;
+}
+
+/** Compile only the conditioning-target delta authorised by this date's opt-in.
+ * Existing deficits elsewhere in the week cannot become new allowances. Strength,
+ * fixtures, placement ceilings and all other safety policies are unchanged. */
+export function compileCanonicalLighterDayContract(args: {
+  contract: WeeklyExposureContractV2;
+  before: readonly Workout[];
+  after: readonly Workout[];
+  weekStartISO: string;
+  effect: CanonicalAcceptedLighterDayEffect;
+}): WeeklyExposureContractV2 {
+  const before = evaluateSection18EffectiveWeek({ contract: args.contract,
+    workouts: args.before, weekStart: args.weekStartISO }).ledger.conditioning;
+  const after = evaluateSection18EffectiveWeek({ contract: args.contract,
+    workouts: args.after, weekStart: args.weekStartISO }).ledger.conditioning;
+  const removedCore = Math.max(0, before.coreCount - after.coreCount);
+  const removedHard = Math.max(0, before.byStress.hard - after.byStress.hard);
+  const removedMediumHard = Math.max(0,
+    before.byStress.hard + before.byStress.moderate - after.byStress.hard - after.byStress.moderate);
+  const contract: WeeklyExposureContractV2 = JSON.parse(JSON.stringify(args.contract));
+  const core = contract.conditioning.core;
+  const originalTarget = Math.max(core.requiredMinimum, core.plannerSelectedTarget ?? 0);
+  core.requiredMinimum = Math.max(0, core.requiredMinimum - removedCore);
+  if (core.plannerSelectedTarget !== null) core.plannerSelectedTarget = Math.max(0, core.plannerSelectedTarget - removedCore);
+  const intensity = contract.conditioning.intensityPolicy;
+  intensity.requiredAppHardMinimum = Math.max(0, intensity.requiredAppHardMinimum - removedHard);
+  intensity.requiredAppMediumHardMinimum = Math.max(0, intensity.requiredAppMediumHardMinimum - removedMediumHard);
+  if (removedCore > 0) {
+    const reduction = {
+      metric: 'conditioning_core_frequency' as const, originalApprovedTarget: originalTarget,
+      reducedTarget: Math.max(core.requiredMinimum, core.plannerSelectedTarget ?? 0),
+      reason: 'explicit_user_override' as const, scope: 'week' as const, change: 'frequency' as const,
+      detail: `Accepted lighter day on ${args.effect.dateISO}; source ${args.effect.sourceFactId}.`,
+      provenance: 'live_typed_reduction' as const, affectedWeek: args.weekStartISO,
+    };
+    contract.authorisedReductions.push(reduction);
+    contract.conditioning.reductions.push(reduction);
+  }
+  return contract;
 }

@@ -714,8 +714,9 @@ function conditioningRow(
   sets: number,
   rest: number,
   notes?: string,
+  authoredAtISO?: string,
 ): WorkoutExercise {
-  const now = nowISO();
+  const now = authoredAtISO ?? nowISO();
   return {
     id,
     // THE EMITTER'S OWN MARKER (Stage B, rulings 4 + the switchover).
@@ -813,6 +814,8 @@ export const CONDITIONING_WARMUP_COPY =
   + 'movements you\'re about to train.';
 
 export interface ComposeOptions {
+  /** Reconstruction supplies the original timestamp; no fresh clock in replay. */
+  readonly authoredAtISO?: string;
   readonly idPrefix?: string;
   readonly orderBase?: number;
   /** Skip the structural warm-up row (combined days warm up on the lift). */
@@ -857,6 +860,7 @@ export function composeConditioningRows(
     rows.push(conditioningRow(
       `${prefix}-warmup`, CONDITIONING_WARMUP_ROW_NAME, base, 1, 0,
       CONDITIONING_WARMUP_COPY,
+      opts.authoredAtISO,
     ));
   }
   const resolvedSetsRounds = opts.authoredMinimumDose
@@ -881,6 +885,7 @@ export function composeConditioningRows(
         masKmh: opts.masKmh ?? null,
         resolvedSetsRounds,
       }),
+      opts.authoredAtISO,
     ),
   );
   return rows;

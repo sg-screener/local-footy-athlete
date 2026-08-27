@@ -4,242 +4,307 @@
     "src/services/api/generateProgram.ts#buildGeneratedMicrocycles": {
       "classification": "canonical_compiler",
       "reason": "Compatibility delegate only: captures an audit stamp, calls compileCanonicalProgramWeeks, forwards returned plans/selections/diagnostics and returns its microcycles unchanged. No row, placement or dose policy remains in this wrapper.",
-      "fingerprint": "757c5cafc59723815f440e7d0d2301306548ff1d56b816ab8e451b0764ca537a"
+      "fingerprint": "d31ea01428345204d90b2849a2ab83384d5aadc95c23377fa56c103da83915c7"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
       "classification": "canonical_compiler",
       "reason": "Owns scheduler, specialist materialisation, connected plan and typed weekly dose/fixture/availability handoffs. This classification covers this function, not the generator's later row rewrites.",
-      "fingerprint": "de968a3b8434300cf4db000e0781ee3a11f2995d42c98a81f3341723abbeae1a"
+      "fingerprint": "2505c7cd1a72e2a2f283f9f6d5e5d3ca71a3bac0490416f8742728f0127fe157"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeeklyDosePolicies": {
       "classification": "canonical_compiler",
       "reason": "Pure exact-week and per-date dose precedence fold called by compileCanonicalWeek; receives typed schedule/readiness/illness inputs.",
-      "fingerprint": "6b5633938fa298db8cd51e2d71400cdc125f60b29b55812d1c72c41b0b946c7c"
+      "fingerprint": "9296ffa9389b93e4b90d727a06588730ba393df4c5eb5021d294af5856759efd"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalFixtureMutationWeek": {
       "classification": "canonical_compiler",
       "reason": "Canonical boundary delegates the existing final-workout fixture specialist; sole caller is acceptedStateTransaction.buildFixtureProjection. Other fixture paths are not exempted by this row.",
-      "fingerprint": "8553c675f27633e9b92a2f56e67805fdab2ed3e20ca52a8200eb0852aa0b9682"
+      "fingerprint": "cbc0db7dd448325f638c943a849303a475822c05dbd584b7d807167b0d6e9752"
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalExerciseEditOnWorkout": {
       "classification": "canonical_compiler",
-      "reason": "Pure typed accepted Add/Swap row transformation shared by live coach actions and reconstruction; exercise Remove remains exclusion projection.",
-      "fingerprint": "57ef1cdf798af5d25be111542cc5fc45af2c03ba246b05212f443b080271d785"
+      "reason": "Pure typed accepted Add/Swap row transformation shared by live coach actions and reconstruction; exercise Remove remains exclusion projection. Detector-only review refresh: interface-typed callable discovery expanded the conservative call graph; this function implementation is unchanged in this checkpoint.",
+      "fingerprint": "9da48c8f1d107bf09eaab85732b794138293f4c7f7aaefea5110ff5c420044f3"
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalWeeklyExerciseEdits": {
       "classification": "canonical_compiler",
       "reason": "Ordered typed exercise-effect fold returns materialised dates and their athlete-ownership context. Live Add/Swap and boot share canonicalExerciseEditOverrideContext, preventing fixture cleanup from classifying a reconstructed athlete edit as system residue.",
-      "fingerprint": "638e09ca55509c032c5d8721a294c7b8b85527aca6feba0c342a644b740b08a3"
+      "fingerprint": "ecc8ecd4f1cd04766975027d9216094a2499279f08f3f730e3f76d0e5a1fa4c9"
     },
     "src/rules/canonicalWeeklySessionEditCompiler.ts#compileCanonicalSessionConstraintEffects": {
       "classification": "canonical_compiler",
       "reason": "Pure ordered remove/restore/upsert fold of accepted session constraint effects; no live resolver or persistence access.",
-      "fingerprint": "b142fce2614c066e09bd35247d3560093e5716ebf81f2b3322a0bf57a316ba67"
+      "fingerprint": "6eb0a80be4d7538c3233755fd2b513212886426a96381f66a881a4fed9dd3333"
     },
     "src/rules/canonicalWeeklyFixtureEditCompiler.ts#compileCanonicalFixtureMarkedDays": {
       "classification": "canonical_compiler",
       "reason": "Pure ordered fold of recorded fixture calendar effects; null only clears fixture/noGame marks and preserves other calendar facts.",
-      "fingerprint": "5f84cc93f486d3518c4ff31872cf58a68c6d8172549ac9ae09149112b7c5da5f"
+      "fingerprint": "8c04cddbd4077392ce0d409774eee1873ce1e4aee352d4055db324e18382cb03"
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedWeek": {
       "classification": "canonical_compiler",
       "reason": "Pure typed accepted placement fold over generated workouts; clone, replace by weekday, sort. Existing compatibility translator is a delegate, not a second placement loop.",
-      "fingerprint": "44668f30c23923454df8c2f73ab679f01d27b709e79c0a402d261cac2f7e8e8d"
+      "fingerprint": "1487fd529bafb8405338ffedc63ce602f821eea4bb67b29270eaeb90d4c03af6"
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedContract": {
       "classification": "canonical_compiler",
       "reason": "Canonical contract-reduction fold over typed accepted athlete reduction requests; returns cloned contract and invokes its local reducer.",
-      "fingerprint": "6929657e2172909784ab488c010913d5e03c5cfe1a603cef082b8e3dab31f3aa"
+      "fingerprint": "e49a1a30009f26893fb3f3b84615cb73ed2fbdcf937ec9efc375858f9f678c14"
     },
     "src/rules/canonicalWeeklySessionEditCompiler.ts#canonicalAcceptedSessionEditEffectFromDiff": {
       "classification": "canonical_input_writer",
       "reason": "Captures exact accepted constraint and calendar deltas as the current typed effect, without independently selecting session content or placement.",
-      "fingerprint": "69f5d4d39e95d4d72d11bd3f622a0ccd03b136ea9334799f73afed7ded1b30f2"
+      "fingerprint": "4482d12b2f5967f318c102fe9df894e1e874b233a742b614d61a478719e559ab"
     },
     "src/store/decisionLedgerStore.ts#appendDecisionEntry": {
       "classification": "canonical_input_writer",
       "reason": "Appends a current typed athlete decision with collision-safe ledger id; delegates guarded append-only write and does not build weekly output.",
-      "fingerprint": "d77f4b612f9fafc608230ec9bb4994018551cdb8c91122d224d821978fef9563"
+      "fingerprint": "2fccb2c0c3d4db64f9324e0beb511d169b0903a0050b7a06c18e2d302ed5ec9e"
     },
     "src/store/decisionLedgerStore.ts#applyDecisionLedgerWrite": {
       "classification": "canonical_input_writer",
       "reason": "Guarded append/reset boundary for canonical ledger entries. Refuses rewriting prior decisions outside an explicit reset.",
-      "fingerprint": "a020cf7502ef81424ee4d21a8ba0fade648c01dcae7badfdfa0f6a318588b354"
+      "fingerprint": "82c67f924ef94979ad0697bc3a1803e86051bdbd1a5120445e153b3d75f6799c"
     },
     "src/rules/legacyMigratedDayPlacementIngress.ts#liftLegacyMigratedDayPlacementEntry": {
       "classification": "legacy_ingress",
       "reason": "Only retired migrated_day_placement reader; lifts original id/time/date/workout into the current accepted_day_placement effect. Does not write the retired format.",
-      "fingerprint": "5b9228c0da0f014ef432b7bab09fce5b0ac23d11da04c288a68465083c74ec82"
+      "fingerprint": "ae85c742b11776e0b2d4d7ef13d4c544ed0306a3c3e7e613b8183596fe3552e0"
     },
     "src/store/decisionLedgerStore.ts#appendLegacyDayPlacementEffectUpgrade": {
       "classification": "legacy_ingress",
       "reason": "One-time metadata append keyed to original decision id; preserves prior rows and their order. It does not author a new athlete action or a visible week.",
-      "fingerprint": "b105c1739f9f8c70285a47807a4a5baad2311b3d90618d90f8275863cbd96642"
+      "fingerprint": "cf71143a5cc67d508c93b88ad8e8ebfa34194c72c68499e718ba797c6b463a3b"
     },
     "src/store/programStore.ts#programStorageSetItem": {
       "classification": "persistence_boundary",
       "reason": "Low-level asyncStorageCompat write primitive; no programming policy. This classification does not approve its callers or claim all payloads are inputs-only.",
-      "fingerprint": "927611a5b49371e1221592af8745bc5dc63bb5130a5c77acdc5bec43864d2d77"
+      "fingerprint": "7426f726757965a08875ea39f452a96ca1068bcd754b037d32860f03a5a40a85"
     },
     "src/store/programStore.ts#programStorageRemoveItem": {
       "classification": "persistence_boundary",
       "reason": "Low-level storage removal primitive for reset/rollback; no weekly authoring. Callers remain independently reviewed.",
-      "fingerprint": "4d689cf64913b1d455510d8aab385d5e35a79abca330aa780b0ecff5211a347e"
+      "fingerprint": "44feea1aa149a9415a82b82d943d8e28e1bcdc6854406f393a1a870529dc91eb"
     },
     "src/store/programStore.ts#writeProgramStoreEnvelopeRaw": {
       "classification": "persistence_boundary",
       "reason": "Writes the supplied program envelope and converts write failures; upstream projection and rollback are separate reviewed subjects.",
-      "fingerprint": "9410b8ccdaa8114fe6ccb332550821c4fd94f490b94110ab81ad4dad9a36ea72"
+      "fingerprint": "4a26fc2308fce87ae2091fee9bb88bed9b7a7f4ed39fbb305034d119010d25c9"
     },
     "src/store/programStore.ts#persistProgramStoreEnvelopeDurably": {
       "classification": "persistence_boundary",
       "reason": "Requires active persistence-stage token, serialises via the current input projection, then calls the raw envelope writer.",
-      "fingerprint": "bc724c0f460f774161261bb9e4b279ac3cf67148a5946b69ea800209dbff176d"
+      "fingerprint": "d4706b90e6f21f2234c829a14664d5ab8224a7df2c15cf648e23ce6dc51436af"
     },
     "src/store/programStore.ts#restoreProgramStoreEnvelopeDurably": {
       "classification": "persistence_boundary",
       "reason": "Token-guarded exact envelope restoration/removal for atomic rollback, not a new program decision or steady-state output author.",
-      "fingerprint": "5183346f055eafddf3a050b866a00d8d6c218e2d14760bc6a4a07c748baf437b"
+      "fingerprint": "b9170e4902736f7387cfd9b04e1217b0e31463d089e184b63ae8e56e00a712ed"
     },
     "src/utils/deriveVisibleWeek.ts#deriveVisibleWeek": {
       "classification": "projection_display",
       "reason": "Read-side assembly and resolver delegate, with explicit inputs. Does not itself mutate stores or choose prescription; downstream resolver owners are not exempted.",
-      "fingerprint": "893db7c85cd7f63842e3743b9d002085dd05a30d0cfd77fba167d6cb54dfd2c7"
+      "fingerprint": "aa1b1074811747a4afea3a5a152199c308163ee8dc900dc9caa32a2a01e746a3"
     },
     "src/utils/deriveVisibleWeek.ts#deriveVisibleWeekLive": {
       "classification": "projection_display",
       "reason": "Reads live inputs and delegates deriveVisibleWeek; no independent row transformation or persistence.",
-      "fingerprint": "dd592cb91cb45bd13c82409dc33930bdbfa7540c7f413b1c2ccb7ebebc804afe"
+      "fingerprint": "675325bcf1d9d4e91450f7958844d460479d83eef88531e7729e223de251de29"
     },
     "src/utils/coachWeekDiff.ts#snapshotResolvedWeek": {
       "classification": "projection_display",
       "reason": "Builds a resolved-week fingerprint for before/after reporting. It is not authority to write back the snapshot; resolver callees need their own review.",
-      "fingerprint": "960039c04db50dda8fac18fa238516bd0b3286e83806109d60d13da747af6244"
+      "fingerprint": "ad091fcf2355bef82f9a520e503b00326d401f017566019316274a72e8c84ea1"
     },
     "src/utils/lighterDayTransaction.ts#applyLighterDayForToday": {
       "classification": "canonical_input_writer",
-      "reason": "Records a typed date/source-fact/policy effect through the decision ledger. Live transaction and boot use the same compiler publication adapter; no workout snapshot or reversible overlay is persisted. The accumulated compiler witness executes acceptance, restart, duplicate refusal, Undo and linked-fact clear.",
-      "fingerprint": "2a3c6d7a796d6d071869b81b02dd76b42f058944c785e41d4345e5436253d88a"
+      "reason": "Readiness eligibility and duplicate guard, existing transaction/rollback, append typed source-linked lighter_day decision, settle from accepted inputs. No row-transform implementation; current error distinguishes a rejected change from an already-light session.",
+      "fingerprint": "da87deac54cf8095063653a39b32bc842a62c4d74749c4fceefc10d56110bbb8"
     },
     "src/services/api/generateProgram.ts#generateProgramLocally": {
       "classification": "canonical_input_writer",
       "reason": "Captures profile, accepted facts, history, equipment and metadata; calls compileCanonicalProgram once and records returned block selections at the existing acceptance boundary. Returns the compiler program without row/exclusion/progression post-passes; the year detector mutation guards that handoff.",
-      "fingerprint": "4f4f5603645b0a3935cc326dd268ea8ef6ac62143c22e4729992183633ecfef5"
+      "fingerprint": "d8e0f848ce4caeee4953b918f7a9462b8753a7ba77fbc3413f916e32effcdf75"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
-      "fingerprint": "5c1ba2cf51e6317ae2b13c06029e86eafad91f409c51088c4c80f47860182a40"
+      "fingerprint": "6b622c8f535f03a6e6f9cf9c31a763c4b777a4cfd04f72d9f7ea7ee9adace2b3"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryVolume": {
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
-      "fingerprint": "1cce9d1924dd5d9c63a7649c94d632466b6aa9a2708fcabd0b32669bd3685ffb"
+      "fingerprint": "05848510f39caaf6cd1b90e59275e46026e4f6cffb8aa0c262b3bc4f1fccf1ae"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundarySetAdditions": {
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
-      "fingerprint": "f8f84e738c57ef6c39cf07724bf825ed516c88e62362da774313a9fd0068b54b"
+      "fingerprint": "bf062caa9ce3a86c85d0ab7c8260f209b06d021be1c3d19a6af0feba05206c2e"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioning": {
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
-      "fingerprint": "d3566c5b768ce265f5c87bd1bb257802fcf32e18d84bf6474e7fc07f083fb54a"
+      "fingerprint": "97418d2d9b78c5aa15c39dcc1589f6c2d421eab8a1372570be9fb2564f67ffcd"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioningAdvance": {
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
-      "fingerprint": "21d265f7f9babc7cdba713fafc3a1063eb5214e833799af3749ac712900c46cf"
+      "fingerprint": "b1abc7ad6451c60fe287078d598633529d718d13cb812f7f0cced966b204612f"
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalProgramProgression": {
       "classification": "canonical_compiler",
-      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
-      "fingerprint": "c3bba6b55835a28d265ca2325e2dcb442abaceb36d66b55d3b7f240445997762"
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete. Detector-only review refresh: interface-typed callable discovery expanded the conservative call graph; this function implementation is unchanged in this checkpoint.",
+      "fingerprint": "b4afbd954f86885074117a2ac296fbcaab630c49487372c3a87778c612360964"
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalResolvedStrengthWeek": {
       "classification": "canonical_compiler",
-      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
-      "fingerprint": "a3f96013071b17641c807d043ad6005a40d3f583989d91ddd5821db6445d7200"
+      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete. Detector-only review refresh: interface-typed callable discovery expanded the conservative call graph; this function implementation is unchanged in this checkpoint.",
+      "fingerprint": "b5956157e2febafbf812202c136c7162c8372512bb53e65520ac9e00ddddf1dc"
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalStrengthWeek": {
       "classification": "canonical_compiler",
       "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
-      "fingerprint": "8b4e71cc1cdb3b998fe018a743a8227e0cb03561f66b2fd2ff190936691aee5d"
+      "fingerprint": "877e2ec59948453985997949375087bd2b11d9bdda2fd79822b27da273060971"
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#materialiseBlockStrength": {
       "classification": "canonical_compiler",
       "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
-      "fingerprint": "6fd1583959018a0153c0c452cdf2826df6f2d318cda8e71d81fc192a55242274"
+      "fingerprint": "cb6af54ab0d588ecf2714d4a1df51ffce850a729358e84abac5d9097fba5e434"
     },
     "src/rules/canonicalProgramCompiler.ts#compileCanonicalProgram": {
       "classification": "canonical_compiler",
       "reason": "Full generation input/output boundary: weekly final rows, recorded exclusions then canonical progression; returns the complete program. Year observations compare actual specialist rows with this return and prove semantic repeatability and immutable inputs. Legacy helper audit timestamps are not certified clock-pure.",
-      "fingerprint": "4512356ab1d701e15082aa2962db0d2b595374006e0f247ec5a647f7ac280ca4"
+      "fingerprint": "d202cdef1c5e176943f6e8f7e9abf241480306e436c9fd5e2010cad5054204c5"
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
       "classification": "canonical_compiler",
-      "reason": "Existing row pipeline moved in full from generation: typed schedule/plan compilation, composition, materialisation/assembly, pinned history, validation and optional top-ups. Returns weeks, selections and diagnostics; no store publication.",
-      "fingerprint": "ac2deef0aa9d4f4afccca05065a6817470b3406c0e033a59a2e4c22caab678c4"
+      "reason": "Existing row pipeline moved in full from generation: typed schedule/plan compilation, composition, materialisation/assembly, pinned history, validation and optional top-ups. Returns weeks, selections and diagnostics; no store publication. Detector-only review refresh: interface-typed callable discovery expanded the conservative call graph; this function implementation is unchanged in this checkpoint.",
+      "fingerprint": "a963f0ac6999b754657ffe088b441f0d65725c15ac42743151babcbf1aa5c1ef"
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "classification": "canonical_compiler",
       "reason": "Private row-compiler helper combines composer-owned lifts with the retained non-strength adapter, stamps provenance and pins explicit historical days. No independent caller or store write.",
-      "fingerprint": "ed6fe87c95217fad103d524b87d8f769eac43861603e7e62dd9aae4d2f4e701e"
+      "fingerprint": "8416e0ea53de7d857c4a4998a6e09bc2b6897e45878b6868a50c343ef29e9fa1"
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.pinHistoryDays": {
       "classification": "canonical_compiler",
       "reason": "Private compiler helper preserves explicit pinned historical workouts before the governed boundary while compiling the future remainder; no independent author or persistence.",
-      "fingerprint": "20b8d1220c4c7142b717198b09c16d75c51cef3fb33602de3da8639bdb3fa42b"
+      "fingerprint": "77727103d5e1c9b16729598323bc51173f78e87fb654570af8a5e0b157dbce93"
     },
     "src/rules/canonicalWeeklyLighterDayCompiler.ts#compileCanonicalLighterDayWorkout": {
       "classification": "canonical_compiler",
-      "reason": "Sole pure implementation of the existing slight_v1 opt-in trim policy, shared by live acceptance and reconstruction. The old utility is only a re-export. Named compiler-slice cells hold main-lift protection, actual accessory changes, restart and Undo; conditioning prescription semantics are retained, not newly certified.",
-      "fingerprint": "60dff19afbcbe9b15a7ec830378a78a9fbcaa67b5179cfa8755e9738121d90a9"
+      "reason": "Pure slight_v1 row compiler. Authored flush replaces hard owned rows; finisher removal removes owned rows and identity together; main lifts remain byte-identical. Real onboarding/live/restart/Undo witnesses plus hard-row and finisher-row mutations hold this scoped policy.",
+      "fingerprint": "1745c05903324e516aac18f48ccd900c2e738748d908fd2c2315ed3dd0bc8703"
     },
     "src/rules/canonicalWeeklyLighterDayCompiler.ts#lighterDayTrimAvailable": {
       "classification": "projection_display",
       "reason": "Offer predicate delegates the exact pure transform and checks for a nonempty change list; no state publication or independent prescription rule.",
-      "fingerprint": "e80a2ff563ec8effa9fe749cc6f837ca328e97627966d9679c193812d4e2ae5c"
+      "fingerprint": "81db39be62554124451e9c56606c5757b1222e21b54bca53667ebe40d5534da4"
     },
     "src/utils/lighterDayTransaction.ts#activeLighterDay": {
       "classification": "projection_display",
       "reason": "Read-only active policy query: replayable decision ledger, matching date and linked active readiness fact. It prevents repeated acceptance; no session content is authored.",
-      "fingerprint": "5c53ef7f3fba6050c1c69cba1865df90fc66fe6272016594da4e68699dc311ce"
+      "fingerprint": "8790c530de31b0f15ae7af60a3a54eac9a03dbc263b226ade22f334f12f79902"
     },
     "src/utils/lighterDayTransaction.ts#lighterDayAvailableForDate": {
       "classification": "projection_display",
       "reason": "Read-only resolver plus active-policy guard and compiler availability predicate. No accepted inputs or outputs are written here.",
-      "fingerprint": "b88e3b48fbde47354b09c851eb11356e197c14cebf9c8c6ade7ec5ec5d5947c7"
+      "fingerprint": "4257f44906c8b22db20fac77974270ea3b25d5a0c16d245d43c33f7e0fadaeee"
     },
     "src/utils/lighterDayTransaction.ts#applyLighterDayForToday.mutate": {
       "classification": "persistence_boundary",
       "reason": "Private transaction callback delegates directly to commitCanonicalAcceptedLighterDayEffect. No alternate dose transform.",
-      "fingerprint": "cfd2f57a784758c6f143a6f5ed99d8b3c080b1a94584df7ea7e897a80d0f1590"
+      "fingerprint": "70703a64d447efcd6d73e43c5286ae1dfe104037b5e8b4350343bfa5b9bebd6c"
     },
     "src/utils/lighterDayTransaction.ts#commitCanonicalAcceptedLighterDayEffect": {
       "classification": "persistence_boundary",
-      "reason": "Guarded in-memory publication adapter: verifies linked fact, resolves current ledger-position input, invokes pure lighter-day compiler, publishes its result through the existing accepted override boundary. Both live transaction and replay call this function. It does not durably save derived workouts.",
-      "fingerprint": "beb3bf2850d40a3449a085d54054b76798d9c752d5a91199e0c8ee40e272a03d"
+      "reason": "Shared live/boot publication adapter: gathers unfiltered accepted base, invokes the lighter-day row and contract compilers, publishes their paired ephemeral result through commitAcceptedStateTransaction. No row or dose-selection policy remains in this adapter; only typed opt-in policy is ledger input.",
+      "fingerprint": "e722e07d09e06b347c4682dd475c25be607cf67b5659dcea0f10f0a4354daf2f"
     },
     "src/utils/exposureEngine.ts#applyConstraintsToSession": {
-      "classification": "rival_author",
-      "reason": "Read at executable source: projectVisibleDay invokes this after resolution on non-adjudicated constrained days. It filters rows and can call recoverySubstitution, so final content can still be authored outside the canonical compiler. This finding is a function in one projection-rewrite pipeline, not a newly reproduced athlete incident.",
-      "fingerprint": "203a1e479d894485bf58f184d68d62227cee4aecf2bada8ccf701ad2c5c17c51"
+      "classification": "canonical_compiler",
+      "reason": "Retained exposure specialist; its only non-test caller is now compileCanonicalDayConstraints, not a screen-side rewrite. Policy itself was preserved. The global census remains required for new callers; this does not certify unrelated legacy event writers.",
+      "fingerprint": "7466d5398f5ade63df66dd33c2ffa52ce225a7a146515e18c1817008d229cfef"
     },
     "src/utils/exposureEngine.ts#applyConstraintsToTypedComponents": {
-      "classification": "rival_author",
-      "reason": "Read at executable source: the projection fallback removes speed/conditioning/recovery components after resolution. It is part of the same remaining projection-rewrite pipeline, not proof of an independent athlete action.",
-      "fingerprint": "268b62511ae89892d8ed5880995715ab377def92e7cac780829ac9410c9354d1"
+      "classification": "canonical_compiler",
+      "reason": "Retained typed-component exposure specialist; its only non-test caller is now compileCanonicalDayConstraints. Speed/power/conditioning/addon rules were moved under the shared final stage without inventing a second policy.",
+      "fingerprint": "7e45baa452cf8636b96c98397cced6e4e0767782676d59ca1f93345124abb588"
     },
     "src/utils/exposureEngine.ts#recoverySubstitution": {
-      "classification": "rival_author",
-      "reason": "Private content-authoring helper of the projection fallback: changes type and duration and clears exercises/components. Kept red until the projection pipeline is removed or routed through canonical input composition.",
-      "fingerprint": "0be8585b63d90abefc77e6c88d24981f927cabed64cedf2f9023697d0373fce7"
+      "classification": "canonical_compiler",
+      "reason": "Private recovery materializer used only inside the exposure specialist now owned by the canonical final constraint stage. No independent publication or screen caller.",
+      "fingerprint": "9abb3e3440b61b007f7acf408d3565d984a6952ad6ea3780755f2081a2550849"
     },
     "src/utils/visibleProgramProjection.ts#projectVisibleDay": {
+      "classification": "projection_display",
+      "reason": "Compatibility boundary gathers optional live preferences then delegates unchanged to compileCanonicalDayConstraints. No exposure, row-filter or recovery-authoring implementation remains here; current day/week views use the public compiled resolver directly.",
+      "fingerprint": "6da0e907f76c52e750e1317a052e9c9939e770edb95420ac078de8753cbac66d"
+    },
+    "src/rules/canonicalWeeklyLighterDayCompiler.ts#compileCanonicalLighterDayContract": {
+      "classification": "canonical_compiler",
+      "reason": "Pure companion target transform, reducing only measured conditioning credits removed by the accepted date-scoped opt-in. Real generated witnesses assert exact target deltas, unchanged strength policy and input immutability; removing the delta fails the mutation control.",
+      "fingerprint": "8a97559bf8a667b9a2a6a544b753acdaff3661b249c8c1ca66a0ec361d61075b"
+    },
+    "src/rules/canonicalWeeklyConstraintCompiler.ts#collapseEmptyVisibleWorkoutShell": {
+      "classification": "canonical_compiler",
+      "reason": "Private final-constraint helper collapses an empty compiled shell using the existing meaningful-content predicate; no independent caller or store write.",
+      "fingerprint": "7067f8e0d2ca98fbba013f124290a57ef6fd48e6ef65828783e7a8703e4b6be9"
+    },
+    "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalDayConstraints": {
+      "classification": "canonical_compiler",
+      "reason": "Single existing final exposure/modality/normalization policy, moved from the display projector. Explicit clock/context/preference inputs; preserves prior typed injury adjudication. Real accepted injury, clear and lighter-day witnesses compare all day/week readers with direct derivation.",
+      "fingerprint": "e8e0f4ccd50b6aac2cf12264cfc3e7f124bb7f108604cb2c106cf38df165df73"
+    },
+    "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalResolvedWeek": {
+      "classification": "canonical_compiler",
+      "reason": "Public resolved-week final stage consumes explicit days and constraints, preserving accepted-vs-legacy precedence and calling the one day transform. Dead-loop and bypass mutations fail its source-edge guard; real journeys check result parity.",
+      "fingerprint": "c10a4c2ba4d8930607cc9e3fab812532888e60e65ea9700c574cc1fef45416a8"
+    },
+    "src/utils/sessionResolver.ts#resolveWeekWithConditioning": {
+      "classification": "canonical_compiler",
+      "reason": "Public compatibility facade returns compileCanonicalResolvedWeek over the private base resolver. Single direct return, exact days input and no downstream rewrite are guarded; base resolver internals remain separately reviewable.",
+      "fingerprint": "1a74a2b47dfab9039b22c2c6ee83b687ed9d785778df92437f6b19a318980a3a"
+    },
+    "src/utils/visibleProgramReadModel.ts#buildProgramTabProjectedWeek": {
+      "classification": "projection_display",
+      "reason": "Single-return weekly read adapter forwards explicit context to the public compiled resolver; no per-day filter or programming loop remains. Source guard and real accepted-world reader parity cover this boundary.",
+      "fingerprint": "9777afdc54f1982393c2bcff8e9b298af99aa01813cc44be7cd19b604a073c28"
+    },
+    "src/utils/visibleProgramReadModel.ts#buildDayWorkoutProjectedDay": {
+      "classification": "projection_display",
+      "reason": "Single-return daily read adapter forwards explicit context to the public compiled resolver; no second constraint application. Source guard and real accepted-world reader parity cover this boundary.",
+      "fingerprint": "644d07586a38e7448d9a8aaf0ba86da514f72a811e90a2190421ef3bea3bfb9a"
+    },
+    "src/utils/deriveVisibleWeek.ts#gatherDeriveInputs": {
+      "classification": "projection_display",
+      "reason": "Collects source state, decisions, explicit clock, preferences and exclusions without changing program rows or publishing anything. Passes captured inputs into the shared assembler.",
+      "fingerprint": "1f4479f4376201db4397097c9d9036dfc499e850d6a88e94ccfa265f46b2da0e"
+    },
+    "src/utils/deriveVisibleWeek.ts#assembleScheduleState": {
+      "classification": "projection_display",
+      "reason": "One schedule-state assembly, with explicit source precedence and phase-owner lookup. Exclusions now arrive in inputs, not an ambient store read. Both reactive and imperative adapters delegate here; this classification is assembly only, not the underlying resolver.",
+      "fingerprint": "86a79f9277098f99adccf9f3e41fc785a39bccf9c145112289ba38da5f02b45a"
+    },
+    "src/hooks/useSchedule.ts#useScheduleState": {
+      "classification": "projection_display",
+      "reason": "Reactive store selectors gather inputs for assembleScheduleState; the duplicate state-construction and precedence implementation was removed. No screen-specific week author remains in this function. Mounted native UI acceptance remains separate.",
+      "fingerprint": "29a32a1115636d2456c2690e0aece85a4669e2c3b7a0f65b349fcdf7636f0736"
+    },
+    "src/utils/applyAdjustmentEvents.ts#applyAdjustmentEvents": {
       "classification": "rival_author",
-      "reason": "Read at executable source: after adjudication bypasses, this display entry invokes exposure rewrites, then filters validator violations and normalizes/collapses the result. Remaining post-compiler content policy; a presentation name does not make it read-only.",
-      "fingerprint": "276eaba2def9be03ae0b04fa8e9dc5b3e500b867036c16d6153a1187ce1b7b39"
+      "reason": "Retained exported legacy procedural event-application entry point invokes applyAdjustmentEventsWithinTrace and the override writer. No non-test caller found by symbol/text scan; historical diagnostics still call it. This is a dormant executable capability requiring retirement/isolation, not evidence of a current athlete action invoking it.",
+      "fingerprint": "ac807d44b60af8473e7e92aa72841714076b960667c7a8b5f05411bff5a9c1ef"
+    },
+    "src/utils/applyAdjustmentEvents.ts#applyMoveSession": {
+      "classification": "rival_author",
+      "reason": "Retained exported legacy move implementation resolves a live week then authors source/destination workouts through defaultApplyOverride. No non-test caller found; historical diagnostics still call it. Must retire/isolate rather than label this canonical because current UI uses a different door.",
+      "fingerprint": "1801a7c03ef0b65e9a5760e8e394fe377be8f70369054d435d41bbc087dfa7f5"
+    },
+    "src/utils/applyAdjustmentEvents.ts#removeInjuryOverridesFromDate": {
+      "classification": "derived_output_writer",
+      "reason": "Reachable from clearActiveProgramModifier legacy injury-clear branch; iterates injury-tagged overrideContexts and invokes store.removeManualOverride for each future date. It clears derived outputs procedurally rather than lifting a source decision into compiler state. Canonical injury episodes bypass this branch, but old-format compatibility is still executable.",
+      "fingerprint": "d9e022e71ed9b4a902421e0a7d8d4294bbfeee5be82ae939a3055f73cd9181f9"
     }
   }
 }

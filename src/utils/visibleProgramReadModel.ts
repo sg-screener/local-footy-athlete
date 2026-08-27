@@ -8,38 +8,14 @@ import {
   type ResolvedDay,
   type ScheduleState,
 } from './sessionResolver';
-import { projectVisibleDay } from './visibleProgramProjection';
 import { buildScheduleStateImperative } from './coachWeekDiff';
-import { bucketToRegion } from './injuryConstraintRegion';
 import { logger } from './logger';
-import { filterConstraintsForDate } from './readinessConstraints';
 import {
   inferModalityFromName,
 } from './coachModalitySwap';
 import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
-import { selectMicrocycleForDate } from './programBlockState';
-import { hasStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
-
-function hasAcceptedWeekContract(
-  state: ScheduleState,
-  date: string,
-): boolean {
-  const weekStart = getMondayForDate(date);
-  // THE FLIP, MOVE (ii) — one read door. An EXISTENCE question on the week's
-  // declaration, asked of the same owner that answers the selection.
-  return hasStoredWeekDeclaration({
-    overlay: state.weekScopedOverlays?.[weekStart],
-    coveringMicrocycle: selectMicrocycleForDate(
-      state.currentProgram,
-      state.currentMicrocycle,
-      date,
-    ),
-    weekStart,
-    reader: 'visibleProgramReadModel.weekHasAcceptedContract',
-  });
-}
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -73,78 +49,7 @@ export interface ResolvedVisibleProgramForDate {
   strengthItems: VisibleProgramItem[];
 }
 
-export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[]): any[] {
-  if (!Array.isArray(activeConstraints) || activeConstraints.length === 0) return [];
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {
-    buildInjuryConstraint,
-    buildFatigueConstraint,
-    buildSorenessConstraint,
-    buildScheduleConstraint,
-    buildMissedSessionConstraint,
-  } = require('../utils/exposureEngine');
-  const out: any[] = [];
-  const strongestFatigue = activeConstraints
-    .filter((constraint) => constraint?.type === 'fatigue' && constraint.status !== 'resolved')
-    .sort((left, right) => (right.severity ?? 0) - (left.severity ?? 0) ||
-      String(right.lastUpdatedAt ?? '').localeCompare(String(left.lastUpdatedAt ?? '')))[0];
-  const strongestSorenessByBucket = new Map<string, any>();
-  for (const constraint of activeConstraints) {
-    if (constraint?.type !== 'soreness' || !constraint.bucket || constraint.status === 'resolved') continue;
-    const prior = strongestSorenessByBucket.get(constraint.bucket);
-    if (!prior || (constraint.severity ?? 0) > (prior.severity ?? 0) ||
-      ((constraint.severity ?? 0) === (prior.severity ?? 0) &&
-        String(constraint.lastUpdatedAt ?? '') > String(prior.lastUpdatedAt ?? ''))) {
-      strongestSorenessByBucket.set(constraint.bucket, constraint);
-    }
-  }
-  for (const c of activeConstraints) {
-    if (!c || c.status === 'resolved') continue;
-    if (c.type === 'injury') {
-      const trainingPaused = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
-      const region = trainingPaused
-        ? 'global'
-        : c.region ?? (c.bucket ? bucketToRegion(c.bucket) : null);
-      if (!region) continue;
-      out.push(buildInjuryConstraint({
-        id: c.id,
-        region,
-        severity: c.severity,
-        status: c.status,
-        startDate: c.startDate,
-        trainingPaused,
-        safeFocus: c.safeFocus,
-        advice: c.advice,
-      }));
-    } else if (c.type === 'fatigue') {
-      if (c !== strongestFatigue) continue;
-      out.push(buildFatigueConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
-    } else if (c.type === 'soreness' && c.bucket) {
-      if (strongestSorenessByBucket.get(c.bucket) !== c) continue;
-      out.push(buildSorenessConstraint({
-        id: c.id,
-        region: bucketToRegion(c.bucket),
-        severity: c.severity,
-        startDate: c.startDate,
-      }));
-    } else if (c.type === 'schedule') {
-      out.push(buildScheduleConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
-    } else if (c.type === 'missed_session') {
-      out.push(buildMissedSessionConstraint({
-        id: c.id,
-        missedDate: c.missedDate,
-        sessionName: c.sessionName,
-        startDate: c.startDate,
-      }));
-    }
-  }
-  return out;
-}
-
-function isTemporaryFactProjectionConstraint(constraint: any): boolean {
-  return (constraint?.temporarySourceFactIds?.length ?? 0) > 0 ||
-    (constraint?.type === 'injury' && !!constraint?.injuryEpisodeId);
-}
+export { compileActiveExposureConstraints as buildExtraConstraintsForVisibleProgram } from '../rules/canonicalWeeklyConstraintCompiler';
 
 export function buildProgramTabProjectedWeek(args: {
   mondayISO?: string;
@@ -153,31 +58,10 @@ export function buildProgramTabProjectedWeek(args: {
   overrideContexts?: Record<string, any>;
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay[] {
-  const monday = args.mondayISO ?? getMondayStr(0);
-  const rawWeek = resolveWeekWithConditioning(monday, args.state);
-  const prefs =
-    args.modalityPreferences ??
-    useCoachPreferencesStore.getState().modalityPreferences;
-  return rawWeek.map((day) => {
-    const dayActiveConstraints = filterConstraintsForDate(
-      args.state.activeConstraints ?? [],
-      day.date,
-    );
-    const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
-    if (hasAcceptedWeekContract(args.state, day.date) && !hasTemporaryFactProjection) {
-      return day;
-    }
-    const projectionConstraints = hasAcceptedWeekContract(args.state, day.date)
-      ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
-      : dayActiveConstraints;
-    const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
-    return projectVisibleDay({
-      day,
-      extraConstraints,
-      overrideContext: args.overrideContexts?.[day.date],
-      todayISO: args.todayISO,
-      modalityPreferences: prefs,
-    }).day;
+  return resolveWeekWithConditioning(args.mondayISO ?? getMondayStr(0), {
+    ...args.state, activeConstraints: args.state.activeConstraints ?? [], todayISO: args.todayISO,
+    overrideContexts: args.overrideContexts ?? args.state.overrideContexts,
+    modalityPreferences: args.modalityPreferences ?? args.state.modalityPreferences ?? useCoachPreferencesStore.getState().modalityPreferences,
   });
 }
 
@@ -188,29 +72,11 @@ export function buildDayWorkoutProjectedDay(args: {
   overrideContext?: any;
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay {
-  const raw = resolveDateWithConditioning(args.date, args.state);
-  const dayActiveConstraints = filterConstraintsForDate(
-    args.state.activeConstraints ?? [],
-    args.date,
-  );
-  const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
-  if (hasAcceptedWeekContract(args.state, args.date) && !hasTemporaryFactProjection) {
-    return raw;
-  }
-  const projectionConstraints = hasAcceptedWeekContract(args.state, args.date)
-    ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
-    : dayActiveConstraints;
-  const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
-  const prefs =
-    args.modalityPreferences ??
-    useCoachPreferencesStore.getState().modalityPreferences;
-  return projectVisibleDay({
-    day: raw,
-    extraConstraints,
-    overrideContext: args.overrideContext,
-    todayISO: args.todayISO,
-    modalityPreferences: prefs,
-  }).day;
+  return resolveDateWithConditioning(args.date, {
+    ...args.state, activeConstraints: args.state.activeConstraints ?? [], todayISO: args.todayISO,
+    overrideContexts: { ...args.state.overrideContexts, ...(args.overrideContext ? { [args.date]: args.overrideContext } : {}) },
+    modalityPreferences: args.modalityPreferences ?? args.state.modalityPreferences ?? useCoachPreferencesStore.getState().modalityPreferences,
+  });
 }
 
 export function getResolvedVisibleProgramForDate(args: {

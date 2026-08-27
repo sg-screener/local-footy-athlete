@@ -7,10 +7,8 @@
  * KEEP-IN-SYNC twin of `useScheduleState`) becomes a delegation to the owner,
  * so the assembly can no longer drift between adapters.
  *
- * The reactive hook twin (`hooks/useSchedule.ts` `useScheduleState`) remains
- * a DECLARED rival until R5 deletes it at switchover (LR-13): a mounted-render
- * test is not reachable in this repo, so its equality is held by delegation +
- * the sweep cell here, not by execution.
+ * The reactive hook also delegates to the shared assembler. This suite checks
+ * source ownership; mounted React/native rendering is a separate surface.
  *
  * Run: npm run test:derived-week-ownership
  */
@@ -198,15 +196,10 @@ run('the imperative adapter is a delegation, not a second assembly', () => {
     'the accepted-precedence switch is back in the adapter — the assembly has two homes again');
 });
 
-run('the precedence switch has one owner and one declared rival', () => {
-  // The rule "accepted context owns material state when revision > 0" may
-  // exist in exactly two places until R5: the derive owner, and the reactive
-  // hook twin useScheduleState (declared rival, deleted at switchover/LR-13).
-  // A THIRD copy is the drift this cell exists to fail.
+run('the precedence switch has one assembly owner', () => {
   const srcRoot = path.resolve(__dirname, '..');
   const declared = new Set([
     path.join('utils', 'deriveVisibleWeek.ts'),
-    path.join('hooks', 'useSchedule.ts'),
   ]);
   const holders: string[] = [];
   const walk = (dir: string): void => {

@@ -78,6 +78,35 @@ test('namespace import property calls retain their executable edge', () => {
   const r = scanSources({ sources });
   assert(r.owners.find((row) => row.id === 'src/censusAliasFixture.ts#entry')?.calls.includes(`${file}#mutate`));
 });
+test('interface-typed store methods cannot hide a caller behind the public signature', () => {
+  const sources = { [file]: `
+    interface ProgramState { removeManualOverride(date: string): void }
+    declare const useStore: { getState(): ProgramState };
+    export function clear() { const store = useStore.getState(); store.removeManualOverride('2026-07-13'); }
+    export function callback() { return useStore.getState().removeManualOverride; }
+    export function alias() { const { removeManualOverride: erase } = useStore.getState(); erase('2026-07-13'); }
+    export function computed() { useStore.getState()['removeManualOverride']('2026-07-13'); }
+  ` };
+  const r = scanSources({ sources });
+  for (const name of ['clear', 'callback', 'alias', 'computed']) {
+    const row = r.owners.find((o) => o.id === `${file}#${name}`);
+    assert(row?.sites.some((s) => s.kind === 'opaque_domain_callable_requires_review'), name);
+  }
+  assert.equal(r.ok, false);
+});
+test('a newly discovered operation invalidates a review even when the function text is unchanged', () => {
+  const initial = { [file]: `
+    interface OtherState { erase(): void }
+    interface ProgramState { erase(): void }
+    declare const store: OtherState;
+    export function entry() { store.erase(); return { exercises: [] }; }
+  ` };
+  const registry = reviewed(initial);
+  const changed = { [file]: initial[file].replace('store: OtherState', 'store: ProgramState') };
+  const r = scanSources({ sources: changed, registry });
+  assert.equal(r.ok, false);
+  assert.equal(r.owners.find((o) => o.id === `${file}#entry`)?.reviewStatus, 'changed');
+});
 test('CommonJS destructured and namespace aliases retain the production callback edge', () => {
   const sources = { [file]: `export function mutate(w: any) { w.exercises = []; }`,
     'src/censusAliasFixture.ts': `const { mutate: forward } = require('./censusMutationFixture');

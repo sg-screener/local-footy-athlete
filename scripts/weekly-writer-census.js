@@ -236,6 +236,25 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
       // Runtime references (including callbacks) are still followed below.
       if (ts.isTypeNode(node) || ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
       const unit = owner(node);
+      // Store interfaces often expose method signatures, not the arrow-function
+      // implementation inside a Zustand initializer. Symbol resolution alone
+      // loses this edge. Keep such domain callables RED for explicit review,
+      // including callback references, computed access and destructured aliases.
+      if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+        const receiver = node.expression;
+        const symbol = resolveSymbol(ts.isPropertyAccessExpression(node) ? node.name : node);
+        if (domainType(checker.getTypeAtLocation(receiver)) && !symbolUnit(symbol) &&
+            checker.getTypeAtLocation(node).getCallSignatures().length > 0) {
+          site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
+        }
+      }
+      if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {
+        const initializer = node.parent.parent.initializer;
+        if (initializer && domainType(checker.getTypeAtLocation(initializer)) &&
+            !symbolUnit(resolveSymbol(node.name)) && checker.getTypeAtLocation(node.name).getCallSignatures().length > 0) {
+          site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
+        }
+      }
       // Symbol-resolved references also include callback/JSX handoffs. These
       // are conservative possible-call edges, not claims that a tap occurred.
       if (ts.isIdentifier(node) && unit) {
@@ -311,7 +330,13 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     const unit = units.get(id);
     const calls = [...unit.calls].filter((target) => capable.has(target)).sort();
     const callers = [...unit.callers].filter((target) => capable.has(target)).sort();
-    const fingerprint = hash(printer.printNode(ts.EmitHint.Unspecified, unit.node, unit.sf) + '\n' + calls.join('\n'));
+    // The reviewed subject includes the detector's operation inventory, not
+    // only source text. A new type/sink insight must invalidate an old review
+    // even when the function body has not changed.
+    const operations = unit.sites.map(({ kind, field }) => ({ kind,
+      field: String(field ?? '').replace(/\s+/g, ' ').trim() }));
+    const fingerprint = hash(printer.printNode(ts.EmitHint.Unspecified, unit.node, unit.sf) +
+      '\n' + calls.join('\n') + '\n' + JSON.stringify(operations));
     const review = registry.owners?.[id];
     let reviewStatus = !review ? 'unreviewed' : review.fingerprint !== fingerprint ? 'changed' : 'reviewed';
     if (review && (!CATEGORIES.has(review.classification) || !review.reason?.trim())) {

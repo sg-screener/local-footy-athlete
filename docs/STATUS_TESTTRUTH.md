@@ -2240,3 +2240,161 @@ Still owned by `testtruth`, not blocked on a new Sam ruling:
 - Newly correct hard-conditioning replacement prescriptions or all combined
   finisher rows; this checkpoint migrates the existing policy and tests the
   listed strength/ledger contracts, not unmeasured conditioning semantics.
+
+## 23. Remaining lighter-day content and shared final constraints — 2026-08-27
+
+Owner: `testtruth`. Sam: "do stilll unfinished". **Partial checkpoint, not global
+one-owner completion.** No device build, wipe, athlete-ledger deletion or remote
+write. Existing diagnostic outputs and unrelated untracked files were preserved.
+
+### Options and findings
+
+- Compared another screen-side patch with moving the existing final constraint
+  transformation behind the shared public resolver. Chose the shared boundary:
+  day/week readers no longer independently author exposure-filtered sessions.
+  This preserves existing injury adjudication, recovery and modality behaviour;
+  it does not replace the remaining name-based legacy exposure classifier.
+- Confirmed the Step 22 content gap: lighter-day hard conditioning only changed
+  metadata, and dropping a finisher did not remove its owned prescription rows.
+  New real onboarding witnesses cover a commercial-gym man and home-equipment
+  woman, both reaching generated hard conditioning alongside strength.
+- The first real replacement then hit a real validation refusal:
+  `planner_selected_target_miss:conditioning:3`. The compiler now changes the
+  exact conditioning target delta alongside the accepted lighter prescription,
+  not a blanket validation bypass. Strength policy and unrelated targets remain
+  unchanged; the reduction is linked to the accepted date/source fact.
+- The global census missed a legacy clear function calling a store action
+  through an interface signature. A new detector test was **21 green / 1 red**
+  before the detector fix. Domain callable references with unresolved concrete
+  implementations now require review, including ordinary calls, callbacks,
+  destructured aliases and computed property access. The larger candidate count
+  below is an instrument correction, not newly introduced application writers.
+- A second detector control exposed stale review inheritance when type information
+  reveals a new operation without changing the function text (**22 green / 1 red**
+  before the fix). Fingerprints now include the detected operation inventory as
+  well as code and call edges. Existing reviews were migrated only after verifying
+  their exact operations and calls matched the reviewed snapshot; new/unknown
+  capabilities were not approved by the fingerprint migration.
+
+### Implemented boundaries
+
+- `canonicalWeeklyLighterDayCompiler`: actual hard rows become an existing
+  authored recovery-flush prescription; selected equipment modality is retained.
+  Finisher removal drops its owned rows and conditioning identity together.
+  Main strength rows remain byte-identical. Replay supplies stable audit stamps.
+- `commitCanonicalAcceptedLighterDayEffect`: shared live/boot publication of
+  compiler-produced rows and contract through the existing accepted transaction.
+  Only the source-linked opt-in policy is ledger input; outputs remain ephemeral.
+  It reads the unfiltered accepted base so temporary injury/exclusion display
+  filters do not become the new accepted prescription.
+- `canonicalWeeklyConstraintCompiler`: former projector's complete final policy
+  now runs inside `resolveWeekWithConditioning`; public date reads share it.
+  The compatibility projector delegates to that same policy. The day/week
+  read-model functions are single-return adapters, with no second content loop.
+- `useScheduleState` now collects reactive inputs for `assembleScheduleState`,
+  instead of retaining a second assembly implementation. Preferences, exclusions
+  and contexts are explicit inputs. Pure preference lookup was separated from
+  its persistence adapter; its matching policy was preserved.
+- Ownership guards check found executable bodies, direct returns, actual input
+  days and shared assembly. Controls kill a bypass, a dead conditional, an empty
+  day loop, a second assembler and a missing daily reader. These are scoped
+  source-edge checks, complemented by real accepted-world reader comparisons;
+  they do not certify the entire repo's ownership.
+
+### Verification receipts and next-defect protection
+
+- `test:canonical-weekly-compiler`: **440/440 named assertions**. Added actual
+  authored flush content, removed finisher rows, unchanged main lifts, input
+  immutability, exact contract deltas, live acceptance, restart and Undo for both
+  equipment witnesses. Existing accumulated fixture/edit/phase/deload journeys
+  remain. Day/week/direct-result agreement now also runs with active and cleared
+  injury, readiness, and lighter-day restart.
+- Executable in-memory mutations, each with a mandatory injection marker:
+  retain finisher rows -> **2 failures / 431 assertions**; leave hard rows
+  unchanged -> **9 failures / 438 assertions**; omit the matching contract delta
+  -> **4 failures / 438 assertions**. The first contract mutation survived the
+  weaker checks; new non-vacuous generated-contract assertions caught it. No
+  mutated source was written. Current clean suite includes two subsequent
+  injury reader-agreement assertions, hence 440 rather than 438.
+- Census detector: **23/23 controls**, including the new interface-call blind
+  spot and the existing fake rival writer insertion. Unknown owners, changed
+  reviews and explicit derived writers still fail closed.
+- Focused suites: readiness/source facts **24/24**; compatibility projection
+  **83/83**; derived assembly **6/6**; preference ownership **7/7**; classification
+  **25/25**; Explorer runtime **17/17**; scenario runner **6/6**; logger **11/11**.
+- Remaining focused release witnesses: deriving-fact commit **9/9** and fact
+  horizon **14/14**. The current type ratchet remains RED on **58 file/scope
+  pairs**, all test harness; product/devtools allow and report zero errors.
+- Final release/year rerun: **416/416 green athlete-week observations across
+  8 athletes x 52 weeks**, with all 52 persisted-store restarts per athlete.
+  Year exit **1**, solely the `canonical_only` ownership prerequisite. Release
+  exit **1**: bootstrap green, year prerequisite red, four later units not
+  reached by the fail-fast runner (not four additional product failures).
+  Later units were exercised separately as listed above. Final detector and
+  bootstrap reruns also include the operation-fingerprint guard added during
+  the annual run; domain code did not change during that run.
+  HTML and JSON present the same RED gate result in
+  `outputs/compiler-year-acceptance/`, not a separate verdict.
+
+### Ownership accounting — still RED
+
+Unit: distinct executable capability owners, keyed by file plus named function;
+anonymous callbacks belong to their enclosing owner. Denominator includes
+transitive callers. Scope: App/index, all production/dev JS/TS and deployable
+edge functions; excludes tests, mocks, declarations and dependencies.
+
+- **599 source files; 2,904 direct operation occurrences in 789 distinct direct
+  owners; 1,345 candidate capability owners.**
+- **61 reviewed; 1,284 unresolved; zero stale/invalid reviews.**
+- **2 confirmed rival entry points**, both exported legacy capabilities in
+  `applyAdjustmentEvents.ts`: `applyAdjustmentEvents` and `applyMoveSession`.
+  No non-test callers were found for those two exports; historical diagnostics
+  still invoke them. They are retained executable capabilities, not reproduced
+  current-UI incidents. Retire/isolate them instead of calling them canonical.
+- **1 confirmed derived-output writer**: `removeInjuryOverridesFromDate`, called
+  by the legacy injury branch of `clearActiveProgramModifier`. It directly
+  clears future injury-tagged overrides through a store action. Current injury
+  episodes bypass that branch; old-format compatibility still needs migration
+  proof, not deletion by assumption.
+- The four previously confirmed projection functions now belong to the shared
+  final compiler path. This does **not** turn the unresolved entries into zero.
+
+### Test/type debt
+
+Raw compiler diagnostic occurrences: product **0**, devtools **0**, test harness
+**259 in 97 distinct files**, down from **312 in 102 test files** at Step 22.
+No suppressions or config exclusions were added. Allowed test-error ceilings
+were lowered from 162 to 135; existing regressions were not absorbed.
+
+Repairs: explicit exposure constraints instead of the retired single-injury
+argument; discriminated exact-seed witness narrowing; current logger options;
+typed adjacency fixtures; correct synthetic-runtime dependency type and complete
+artifact mock; current smoke registry counts (Repeat Week was retired). Removed
+two obsolete assertions against stored `session.stressLevel`, which the current
+compiler does not author: final-row stress is covered at the compiler/year
+boundary. No product policy was changed to satisfy those stale assertions.
+
+### Remaining work — owner `testtruth`
+
+1. Retire or diagnostic-isolate the two unused exported event/move authors,
+   preserving the still-live legacy injury-clear compatibility until its source
+   input migration is proven. Do not delete old-athlete compatibility blindly.
+2. Replace that legacy output-clear path with a typed input/ingress and shared
+   compiler reconstruction, proving legacy load, clear, restart and Undo.
+3. Continue executable ownership reviews, especially accepted-state publication,
+   raw resolver/fixture repair, store actions and legacy modifier paths. The
+   1,284 unresolved capabilities are **not** 1,284 proven bugs or harmless reads.
+4. Repair or retire remaining diagnostic suites against current contracts;
+   there are still 259 test type diagnostics. Keep the ratchet and release red
+   until their actual prerequisites pass.
+
+### NOT COVERED
+
+- Mounted React/native UI, physical iPhone acceptance, remote persistence and
+  OS process death. Restart here means emptied/rehydrated stores plus production
+  boot, not a device build. Do not send this as a release-ready phone checkpoint.
+- Global one-owner/zero-writer proof, full legacy-ledger/old-injury compatibility,
+  every historical test and every injury/illness/travel/equipment combination.
+- Exhaustive modality and legacy speed-only lighter-day shapes. The two named
+  generated equipment witnesses plus existing phase/fixture/deload journeys are
+  the measured scope, not an assertion about every possible athlete session.

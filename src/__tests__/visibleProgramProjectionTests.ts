@@ -1,12 +1,7 @@
 /**
- * visibleProgramProjectionTests — proves the EXACT visible-app bug
- * is fixed: hammy 6/10 + next Monday Lower Body Strength must NOT
- * show Deadlift / Nordic Lower / RDL on either Program tab or
- * DayWorkoutScreen.
- *
- * The previous suites all tested helpers in isolation. This one
- * drives the SAME projection path the React hooks use:
- *   resolver output → projectVisibleDay(day, state) → UI consumer.
+ * Compatibility constraint/compiler tests and read-model tests. These use
+ * isolated fixtures, not mounted React or a physical device. Current accepted
+ * injury journeys and day/week agreement are in canonicalWeeklyCompilerSliceTests.
  *
  * Run: npm run test:visible-program-projection
  */
@@ -30,7 +25,7 @@ import {
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import type { InjuryState } from '../utils/injuryProgression';
-import { buildFatigueConstraint } from '../utils/exposureEngine';
+import { buildInjuryConstraint, buildFatigueConstraint } from '../utils/exposureEngine';
 import { hasPowerRow, powerRows } from '../rules/sessionRowCounting';
 
 // ─── Harness ───
@@ -123,7 +118,6 @@ function stateWithManual(date: string, workout: Workout): any {
     readiness: 'medium',
     sessionFeedback: {},
     weightOverrides: {},
-    activeInjury: null,
     activeConstraints: [],
   };
 }
@@ -161,7 +155,7 @@ section('[1] Hammy 6/10 + next Monday Lower Body Strength → Deadlift + Nordic 
   ]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   ok('projection applied', out.injuryFilterApplied);
@@ -194,7 +188,7 @@ section('[2] AI-named "Slider Hamstring Curl" caught by name-match safety net');
   ]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   const names = (out.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name);
@@ -211,7 +205,7 @@ section('[3] Resolved injury → Deadlift + Nordic return');
   const workout = wk('Lower', 1, [ex('Deadlift'), ex('Nordic Lower')]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(0, 'resolved'),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 0, status: 'resolved', startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   eq('not applied (resolved)', out.injuryFilterApplied, false);
@@ -228,7 +222,7 @@ section('[4] Past-date workout → no filter');
   const workout = wk('Lower', 1, [ex('Deadlift')]);
   const out = projectVisibleDay({
     day: day('2026-04-20', workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   eq('not applied (past)', out.injuryFilterApplied, false);
@@ -242,7 +236,7 @@ section('[5] Recovery session → untouched');
   const recovery = wk('Recovery Session', 3, [], { workoutType: 'Recovery', sessionTier: 'recovery' });
   const out = projectVisibleDay({
     day: day(NEXT_MON, recovery),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   eq('not applied (recovery)', out.injuryFilterApplied, false);
@@ -256,7 +250,7 @@ section('[6] Game stub → untouched');
   const game = wk('Game', 6, [], { workoutType: 'Game' });
   const out = projectVisibleDay({
     day: day(NEXT_MON, game),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   eq('not applied (game)', out.injuryFilterApplied, false);
@@ -272,7 +266,7 @@ section('[7] Injury-authored override with notes → no double-mutation');
   });
   const out = projectVisibleDay({
     day: day(NEXT_MON, overrideWorkout, 'manual'),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     overrideContext: { intent: 'injury', label: 'prior write' } as any,
     todayISO: TODAY_ISO,
   });
@@ -289,7 +283,7 @@ section('[8] Non-injury manual override → STILL filtered');
   const userEdited = wk('Lower', 1, [ex('Deadlift'), ex('Nordic Lower')]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, userEdited, 'manual'),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     overrideContext: { intent: 'manual_edit', label: 'user added DL' } as any,
     todayISO: TODAY_ISO,
   });
@@ -307,7 +301,7 @@ section('[9] Manual override without context → STILL filtered');
   const ambiguous = wk('Lower', 1, [ex('Deadlift')]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, ambiguous, 'manual'),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
     // overrideContext intentionally omitted
   });
@@ -324,7 +318,7 @@ section('[10] activeInjury with bucket=null → no filter');
   const workout = wk('Lower', 1, [ex('Deadlift')]);
   const out = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: { ...hammy(6), bucket: null } as any,
+    extraConstraints: [],
     todayISO: TODAY_ISO,
   });
   eq('not applied (bucket=null)', out.injuryFilterApplied, false);
@@ -343,7 +337,7 @@ section('[11] Current-week Team Training injury note preserved');
   });
   const out = projectVisibleDay({
     day: day(NEXT_MON, teamDay, 'manual'),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     overrideContext: { intent: 'injury' } as any,
     todayISO: TODAY_ISO,
   });
@@ -371,7 +365,7 @@ section('[12] projectAndLog runtime logs');
   const workout = wk('Lower', 1, [ex('Deadlift'), ex('Goblet Squat')]);
   projectAndLog({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
     surface: 'home',
   });
@@ -381,8 +375,8 @@ section('[12] projectAndLog runtime logs');
   ok('logs project_input', captured.some((l) => l.includes('[visible-program] project_input')));
   ok('logs project_output', captured.some((l) => l.includes('[visible-program] project_output')));
   ok(
-    'logs include activeInjuryBucket=hamstring',
-    captured.some((l) => l.includes('"activeInjuryBucket"') && l.includes('hamstring')),
+    'logs include the explicit constraint identity',
+    captured.some((l) => l.includes('"extraConstraintIds"') && l.includes('injury-hamstring')),
   );
   ok(
     'logs include injuryFilterApplied=true',
@@ -400,12 +394,12 @@ section('[13] Same input → home and detail surfaces produce same projected wor
   ]);
   const homeOut = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   const detailOut = projectVisibleDay({
     day: day(NEXT_MON, workout),
-    activeInjury: hammy(6),
+    extraConstraints: [buildInjuryConstraint({ id: 'injury-hamstring', region: 'hamstring', severity: 6, startDate: TODAY_ISO })],
     todayISO: TODAY_ISO,
   });
   const homeNames = (homeOut.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name).sort();
@@ -493,7 +487,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   });
   const strengthProjected = projectVisibleDay({
     day: day(wed, emptyStrength, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   eq('empty strength shell collapses despite stale coach note', strengthProjected.day.workout, null);
@@ -505,7 +498,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   });
   const projected = projectVisibleDay({
     day: day(wed, emptyFlush, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   eq('direct projection collapses empty conditioning shell', projected.day.workout, null);
@@ -533,7 +525,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   });
   const recoveryProjected = projectVisibleDay({
     day: day(wed, recovery, 'template'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   eq('recovery session with real mobility content is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
@@ -545,7 +536,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   ]) {
     const anchored = projectVisibleDay({
       day: day(wed, anchor, 'template'),
-      activeInjury: null,
       todayISO: TODAY_ISO,
     });
     eq(`${anchor.name} anchor is not collapsed`, anchored.day.workout?.name, anchor.name);
@@ -573,7 +563,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   for (const contentWorkout of [conditioningOnly, speedOnly, addonOnly]) {
     const contentProjected = projectVisibleDay({
       day: day(wed, contentWorkout, 'manual'),
-      activeInjury: null,
       todayISO: TODAY_ISO,
     });
     ok(`${contentWorkout.name} typed content is not collapsed`,
@@ -583,7 +572,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
 
   const invalidPowerProjected = projectVisibleDay({
     day: day(wed, powerOnly, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   eq('power-only shell without final strength collapses to Rest',
@@ -597,7 +585,6 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   const validPower = wk('Lower Strength', 3, [powerRow('Vertical Jump'), squat], {});
   const validPowerProjected = projectVisibleDay({
     day: day(wed, validPower, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   eq('valid strength-linked power row survives visible projection as a primer',
@@ -633,7 +620,6 @@ section('[16b] Cooked readiness LIMITS the session — it never removes it');
     'Powered Lower Strength', 3, [powerRow('Vertical Jump'), ex('Back Squat')], {});
   const poweredProjected = projectVisibleDay({
     day: day('2026-05-06', poweredStrength, 'template'),
-    activeInjury: null,
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
@@ -658,7 +644,6 @@ section('[16b] Cooked readiness LIMITS the session — it never removes it');
   });
   const projected = projectVisibleDay({
     day: day('2026-05-06', hardOnly, 'template'),
-    activeInjury: null,
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
@@ -698,7 +683,6 @@ section('[17] Strength removed from mixed session re-derives conditioning displa
 
   const direct = projectVisibleDay({
     day: day(mon, staleMixedShell, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   const directItems = extractVisibleProgramItemsFromWorkout(direct.day.workout);
@@ -762,7 +746,6 @@ section('[18] Conditioning removed from mixed session clears stale conditioning 
   });
   const direct = projectVisibleDay({
     day: day(mon, staleStrengthShell, 'manual'),
-    activeInjury: null,
     todayISO: TODAY_ISO,
   });
   const directItems = extractVisibleProgramItemsFromWorkout(direct.day.workout);
@@ -804,7 +787,6 @@ section('[19] Tempo purpose stays stable while detail rows retain modality');
     });
     return projectVisibleDay({
       day: day('2026-07-07', workout, 'manual'),
-      activeInjury: null,
       todayISO: TODAY_ISO,
     }).day.workout?.name;
   }

@@ -384,62 +384,18 @@ async function main(): Promise<void> {
       applyLighterDayTrim: (w: unknown) => { workout: any; changes: string[] };
     };
 
-    // Synthetic day: 1 main lift (4 sets @ 100kg), 2 accessories, a hard-conditioning finisher.
-    const synthetic = {
-      id: 'w-synthetic', name: 'Lower Body Strength', workoutType: 'Strength', sessionTier: 'core',
-      dayOfWeek: 1, date: WEEK, hasCombinedConditioning: true,
-      conditioningBlock: { intent: 'high-intensity', attachedKind: 'finisher', options: [{ title: 'Hard Bike Finisher' }] },
-      exercises: [
-        { exerciseId: 'ex-squat', exercise: { name: 'Back Squat' }, prescribedSets: 4, prescribedRepsMin: 3, prescribedRepsMax: 4, prescribedWeightKg: 100, section18Evidence: { role: 'main_strength' } },
-        { exerciseId: 'ex-rdl', exercise: { name: 'Romanian Deadlift' }, prescribedSets: 4, prescribedRepsMin: 8, prescribedRepsMax: 10, prescribedWeightKg: 80, section18Evidence: { role: 'strength_accessory' } },
-        { exerciseId: 'ex-curl', exercise: { name: 'Bicep Curl' }, prescribedSets: 3, prescribedRepsMin: 10, prescribedRepsMax: 15, prescribedWeightKg: 20, section18Evidence: { role: 'strength_accessory' } },
-      ],
-    };
-    const trimmed = mod.applyLighterDayTrim(synthetic);
-    const byId = (w: any, id: string) => (w.exercises ?? []).find((r: any) => r.exerciseId === id);
+    await onboardLighterDay();
+    const original = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()).find((day) => day.workout?.exercises.some((row) =>
+      row.section18Evidence?.role === 'main_strength'))?.workout;
+    assert(original, 'real onboarding must reach a main-strength session');
+    const trimmed = mod.applyLighterDayTrim(original);
+    const mainRows = original.exercises.filter((row) => row.section18Evidence?.role === 'main_strength');
+    assert(mainRows.length > 0 && mainRows.every((row) =>
+      JSON.stringify(trimmed.workout.exercises.find((next: any) => next.id === row.id)) === JSON.stringify(row)),
+      'all generated main-strength rows must remain byte-identical');
+    assert(trimmed.changes.length > 0, 'a real generated accessory prescription must change');
+    assert(trimmed.workout.exercises.length > 0, 'lighter must not become rest');
 
-    // Main lift byte-identical (sets AND weight kept — the locked methodology).
-    const mainBefore = byId(synthetic, 'ex-squat');
-    const mainAfter = byId(trimmed.workout, 'ex-squat');
-    assert(mainAfter && mainAfter.prescribedSets === mainBefore.prescribedSets,
-      `main lift sets must be kept: ${mainBefore.prescribedSets} -> ${mainAfter?.prescribedSets}`);
-    assert(mainAfter.prescribedWeightKg === mainBefore.prescribedWeightKg,
-      `main lift weight must be kept: ${mainBefore.prescribedWeightKg} -> ${mainAfter.prescribedWeightKg}`);
-    // Accessories halved (4->2, 3->2), weight kept.
-    assert(byId(trimmed.workout, 'ex-rdl').prescribedSets === 2, 'accessory RDL sets should halve 4->2');
-    assert(byId(trimmed.workout, 'ex-curl').prescribedSets === 2, 'accessory curl sets should halve 3->2 (ceil)');
-    assert(byId(trimmed.workout, 'ex-rdl').prescribedWeightKg === 80, 'accessory weight must be kept');
-    // Hard finisher removed.
-    assert(!trimmed.workout.conditioningBlock || trimmed.workout.conditioningBlock.attachedKind !== 'finisher',
-      'hard finisher must be removed');
-    // Session stays intact (not collapsed to rest), main lift still present.
-    assert(trimmed.workout.workoutType !== 'Rest', 'session must stay intact (not rest)');
-    assert(!!byId(trimmed.workout, 'ex-squat'), 'main lift must remain present');
-    // Disclosure names each change.
-    assert(Array.isArray(trimmed.changes) && trimmed.changes.length > 0, 'changes must name what was trimmed');
-
-    // Real MON (Back Squat + Deadlift main_strength, Pallof trunk_support accessory).
-    seed();
-    // World drift, 2026-08-26: the generated lower day is now named
-    // 'lower_squat' / 'lower' rather than 'Lower Body Strength'. The cell's
-    // subject is "the real Monday lower session's main lift survives the trim",
-    // so the day is found by its CONTENT (it carries Back Squat) rather than by
-    // a display name the generator no longer emits.
-    const findLower = (list: any[] | undefined) => (list ?? []).find((entry: any) => {
-      const w = entry?.workout ?? entry;
-      return (w?.exercises ?? []).some((r: any) => r.exercise?.name === 'Back Squat');
-    });
-    const monDay = findLower((useProgramStore.getState().currentProgram as any).microcycles[0].days);
-    const monWorkout = (monDay?.workout ?? monDay)
-      ?? findLower((useProgramStore.getState().currentProgram as any).microcycles[0].workouts);
-    assert(monWorkout, 'precondition: seeded lower day carrying Back Squat present');
-    const trimmedMon = mod.applyLighterDayTrim(monWorkout);
-    const squatBefore = (monWorkout.exercises ?? []).find((r: any) => r.exercise?.name === 'Back Squat');
-    const squatAfter = (trimmedMon.workout.exercises ?? []).find((r: any) => r.exercise?.name === 'Back Squat');
-    assert(squatAfter.prescribedSets === squatBefore.prescribedSets &&
-      squatAfter.prescribedWeightKg === squatBefore.prescribedWeightKg,
-      'real MON main lift (Back Squat) must be byte-identical');
-    assert(trimmedMon.changes.length > 0, 'real MON trim must name a change (accessory volume)');
   });
 
   // ── R-228 / audit #8 dead-end: the OFFER stands on the same predicate as

@@ -13,8 +13,7 @@
  * History this closes: `buildScheduleStateImperative` (coachWeekDiff) and
  * `useScheduleState` (useSchedule) were KEEP-IN-SYNC twins of the same
  * assembly, and the debug panel carried a third copy. The imperative adapter
- * now delegates here; the reactive hook remains a DECLARED rival until R5
- * deletes it at switchover (LR-13).
+ * and reactive hook now both gather inputs for this same assembler.
  *
  * The `decisions` input is carried from R1.1 and consumed from R1.4 on, when
  * the day doors append ledger entries and the in-memory surfaces this
@@ -39,8 +38,11 @@ import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { liveAthleteExclusions } from './liveEvaluationSurfaces';
+import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
+import type { ModalityPreference } from '../rules/modalityPreferenceLookup';
+import type { ExerciseExclusion } from '../rules/exerciseExclusions';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
-import type { OnboardingData } from '../types/domain';
+import type { OnboardingData, OverrideContext } from '../types/domain';
 
 const DAY_NAME_TO_NUMBER: Record<string, number> = {
   Sunday: 0,
@@ -60,6 +62,9 @@ const DAY_NAME_TO_NUMBER: Record<string, number> = {
  */
 export interface DeriveWeekInputs {
   readonly todayISO: string;
+  readonly modalityPreferences?: Record<string, ModalityPreference>;
+  readonly overrideContexts?: Record<string, OverrideContext>;
+  readonly athleteExclusions?: readonly ExerciseExclusion[];
   /** Profile answers. */
   readonly onboardingData: OnboardingData;
   /** Life-facts. */
@@ -93,6 +98,9 @@ export function gatherDeriveInputs(todayISO?: string): DeriveWeekInputs {
   const coachUpdatesState = useCoachUpdatesStore.getState();
   return {
     todayISO: todayISO ?? getTodayISOLocal(),
+    modalityPreferences: { ...useCoachPreferencesStore.getState().modalityPreferences },
+    overrideContexts: { ...programState.overrideContexts },
+    athleteExclusions: liveAthleteExclusions(),
     onboardingData: profileState.onboardingData,
     markedDays: { ...(calendarState.markedDays ?? {}) },
     readinessSignalsByDate: { ...(useReadinessStore.getState().signalsByDate ?? {}) },
@@ -160,6 +168,9 @@ export function assembleScheduleState(
     : buildReadinessActiveConstraints(todayReadinessSignal as never);
 
   return {
+    todayISO,
+    modalityPreferences: inputs.modalityPreferences ?? {},
+    overrideContexts: inputs.overrideContexts ?? {},
     currentProgram: inputs.currentProgram,
     currentMicrocycle: inputs.currentMicrocycle,
     manualOverrides: (inputs.dateOverrides as never) || {},
@@ -173,10 +184,9 @@ export function assembleScheduleState(
     // must not carry exclusions or a reversible decision gets written into the
     // program. See `utils/sessionResolver.resolveDate`.
     //
-    // Read live rather than threaded through `DeriveWeekInputs`: the exclusions
-    // live in a different store from every other input here, and a standing
-    // athlete decision is the same in every world this assembler is asked about.
-    athleteExclusions: liveAthleteExclusions(),
+    // Gathered with the other accepted inputs, never read ambiently while
+    // compiling a candidate or reconstructing a captured world.
+    athleteExclusions: inputs.athleteExclusions ?? [],
     // The RECORD, same source, same breath — see the declared rival
     // (`hooks/useSchedule.ts`) and
     // `docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`.

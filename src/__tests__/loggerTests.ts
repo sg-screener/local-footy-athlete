@@ -39,17 +39,17 @@ function makeSink() {
 
 section('[1] production gate');
 {
-  ok('debug suppressed in production', !shouldEmitLog('debug', { isDev: false }));
-  ok('info suppressed in production', !shouldEmitLog('info', { isDev: false }));
-  ok('warn emitted in production', shouldEmitLog('warn', { isDev: false }));
-  ok('error emitted in production', shouldEmitLog('error', { isDev: false }));
+  ok('debug suppressed in production', !shouldEmitLog('debug', { enableDebugLogs: false }));
+  ok('info suppressed in production', !shouldEmitLog('info', { enableDebugLogs: false }));
+  ok('warn emitted in production', shouldEmitLog('warn', { enableDebugLogs: false }));
+  ok('error emitted in production', shouldEmitLog('error', { enableDebugLogs: false }));
 }
 
 section('[2] explicit debug override');
 {
   ok(
     'debug emitted when public flag enabled',
-    shouldEmitLog('debug', { isDev: false, enableDebugLogs: true }),
+    shouldEmitLog('debug', { enableDebugLogs: true }),
   );
 }
 

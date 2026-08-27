@@ -36,14 +36,12 @@ import {
 } from '../utils/sessionBuilder';
 import { resolveEquipmentAvailability } from '../utils/equipmentAvailability';
 import {
-  buildExtraConstraintsForVisibleProgram,
   buildProgramTabProjectedWeek,
   getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
 import { todayISOLocal } from '../utils/appDate';
-import { profileCapacityBandOrNull } from '../utils/readiness';
-import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
-import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
+import { assembleScheduleState } from '../utils/deriveVisibleWeek';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { project } from '../rules/projectVisibleWeek';
 import type { VisibleDay, VisibleWeek } from '../rules/visibleProjection';
 
@@ -88,155 +86,36 @@ export function useAthleteContext(): AthleteContext {
  * The store property is named `dateOverrides` for AsyncStorage backward compatibility,
  * but semantically represents manual overrides only. The resolver field is `manualOverrides`.
  */
-/** Map day name → JS getDay() number. */
-const DAY_NAME_TO_NUMBER: Record<string, number> = {
-  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-  Thursday: 4, Friday: 5, Saturday: 6,
-};
-
-function useScheduleState(): ScheduleState & {
-  activeConstraints: any[];
-  modalityPreferences: Record<string, any>;
-} {
+/** Reactive input collection only; the shared assembler owns precedence. */
+function useScheduleState(): ScheduleState & { activeConstraints: any[]; modalityPreferences: Record<string, any> } {
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
-  const manualOverrides = useProgramStore((s) => s.dateOverrides);
+  const dateOverrides = useProgramStore((s) => s.dateOverrides);
+  const overrideContexts = useProgramStore((s) => s.overrideContexts);
   const weekScopedOverlays = useProgramStore((s) => s.weekScopedOverlays);
-  // The athlete's bins. Subscribed from 2026-08-04 (precedence unification) —
-  // this adapter omitted the surface entirely, so the screen could not honour a
-  // removal the accepted week honours.
   const userRemovalConstraints = useProgramStore((s) => s.userRemovalConstraints);
-  // The athlete's "leave this exercise out" decisions. SUBSCRIBED, not read
-  // once: the day screen applies one and returns to a week that must already
-  // have lost the row. This adapter is a VIEW door, which is the whole reason
-  // it may carry them at all — see `deriveVisibleWeek.assembleScheduleState`.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
-  const athleteExclusions = useAthletePreferencesStore(
-    (s: { prefs?: { exclusions?: unknown[] } }) => s.prefs?.exclusions,
-  ) ?? [];
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
-  const acceptedContext = useProgramStore((s) => s.acceptedMaterialContext);
-  const mirroredMarkedDays = useCalendarStore((s) => s.markedDays);
-  const markedDays = acceptedContext.revision > 0
-    ? acceptedContext.markedDays
-    : mirroredMarkedDays;
-  const athleteContext = useAthleteContext();
+  const acceptedMaterialContext = useProgramStore((s) => s.acceptedMaterialContext);
+  const markedDays = useCalendarStore((s) => s.markedDays);
   const onboardingData = useProfileStore((s) => s.onboardingData);
-  // Reactive subscription on the recurring modality preference store.
-  // Without this, the visible-program projection reads via .getState()
-  // (one-shot, not reactive) and HomeScreen / DayWorkoutScreen never
-  // re-render when the coach writes a new preference — the live-app
-  // bug that caused future Wednesday's Easy Aerobic Flush to keep
-  // showing "20min Rower" even after the coach said "Done".
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
+  const decisions = useDecisionLedgerStore((s) => s.entries);
+  const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
+  const athleteExclusions = useAthletePreferencesStore((s: { prefs?: { exclusions?: unknown[] } }) => s.prefs?.exclusions) ?? [];
   const { useCoachPreferencesStore } = require('../store/coachPreferencesStore');
-  const modalityPreferences = useCoachPreferencesStore(
-    (s: any) => s.modalityPreferences,
-  );
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const modalityPreferences = useCoachPreferencesStore((s: { modalityPreferences: Record<string, any> }) => s.modalityPreferences);
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  // Subscribe to the FULL activeConstraints[] too. Non-injury entries
-  // (fatigue / soreness / schedule / missed_session) flow through the
-  // visible-program projection's `extraConstraints` seam — see
-  // useResolvedDay / useResolvedWeek below.
-  const mirroredCoachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
-  const coachActiveConstraints = acceptedContext.revision > 0
-    ? acceptedContext.activeConstraints
-    : mirroredCoachActiveConstraints;
-
-  // Season phase from THE owner (rules/seasonPhaseOwner). This used to read
-  // `onboardingData.seasonPhase` directly while the home chrome read the
-  // program's clock — two answers, and a failed phase-shift rebuild left the
-  // visible week built from one and labelled by the other. The clock owns it;
-  // the profile selection is the input the clock was minted from.
-  const seasonPhase = ownSeasonPhase({
-    program: currentProgram,
-    profile: onboardingData,
-  }).phase;
-
-  // Game day fields — feed the resolver's virtual-game logic.
-  // `usualGameDay` is set by the phase-shift and profile sheets; `gameDay` is
-  // set by onboarding's GameDayScreen. Both hold any of the seven days, and
-  // `rules/gameAnchor.ts` is the one owner that decides which one wins.
-  const usualGameDay = useProfileStore((s) => s.onboardingData?.usualGameDay);
-  const gameDay = useProfileStore((s) => s.onboardingData?.gameDay);
-
-  // Preferred training days → day-of-week numbers for the availability hard-filter.
-  // This is a HARD CONSTRAINT — the resolver must never schedule sessions on
-  // days the user did not select as available.
-  const preferredDays = useProfileStore((s) => s.onboardingData?.preferredTrainingDays);
-  const availableDayNumbers = preferredDays && preferredDays.length > 0
-    ? preferredDays.map((name: string) => DAY_NAME_TO_NUMBER[name]).filter((n: number | undefined) => n !== undefined)
-    : undefined;
-
-  // Readiness: profile-derived baseline, replacing the old hard-coded
-  // `medium`. Today's quick signal is applied as a date-scoped constraint
-  // below so it doesn't reshape the whole week.
-  const todayISO = todayISOLocal();
-  const mirroredTodayReadinessSignal = useReadinessStore(
-    (s) => s.signalsByDate[todayISO],
-  );
-  const todayReadinessSignal = acceptedContext.revision > 0
-    ? acceptedContext.readinessSignalsByDate[todayISO]
-    : mirroredTodayReadinessSignal;
-  // Structural readiness changes are already materialised through the
-  // accepted-state transaction. Keep constraints here only for legacy state
-  // that predates the accepted material context.
-  const readinessActiveConstraints = acceptedContext.revision > 0
-    ? []
-    : buildReadinessActiveConstraints(todayReadinessSignal);
-  // RENDER MUST NOT THROW (Sam, 2026-07-30). This is a read, not a prescription,
-  // so it asks for the band OR NULL. `deriveProfileReadiness` still throws and
-  // is still what generation calls — an unscoreable profile is refused a
-  // program, it is not refused a screen. `null` travels as null; see
-  // rules note in utils/readiness.ts.
-  const capacity = profileCapacityBandOrNull(onboardingData);
-
-  return {
-    currentProgram,
-    currentMicrocycle,
-    manualOverrides: manualOverrides || {},
-    weekScopedOverlays: weekScopedOverlays || {},
-    userRemovalConstraints: userRemovalConstraints || [],
-    athleteExclusions,
-    // The RECORD, from the same source in the same breath
-    // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). On the live path
-    // nothing has consumed the list, so the two are the same — they diverge
-    // only inside the §18 derivation, which blanks the input above and carries
-    // this one through.
-    removalDecisions: userRemovalConstraints || [],
-    // THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3,
-    // from the same accepted context this adapter already subscribes to. The
-    // declared rival carries it because a rival that answers the week's
-    // identity from storage while the owner derives it is the divergence the
-    // rival exists to be measured against.
-    temporarySourceFacts: acceptedContext.temporarySourceFacts,
-    markedDays: markedDays || {},
-    athleteContext,
-    seasonPhase,
-    usualGameDay,
-    gameDay,
-    capacity,
-    blockState,
-    sessionFeedback: sessionFeedback || {},
-    weightOverrides: weightOverrides || {},
-    availableDayNumbers,
-    activeConstraints: [...coachActiveConstraints, ...readinessActiveConstraints],
-    modalityPreferences: modalityPreferences ?? {},
-  };
+  const coachActiveConstraints = useCoachUpdatesStore((s: { activeConstraints: unknown[] }) => s.activeConstraints) ?? [];
+  const assembled = assembleScheduleState({
+    todayISO: todayISOLocal(), onboardingData, markedDays, readinessSignalsByDate,
+    coachActiveConstraints, decisions, currentProgram, currentMicrocycle, dateOverrides,
+    overrideContexts, weekScopedOverlays, userRemovalConstraints, blockState,
+    acceptedMaterialContext, sessionFeedback, weightOverrides, athleteExclusions, modalityPreferences,
+  });
+  return { ...assembled, modalityPreferences: assembled.modalityPreferences ?? {} };
 }
-
-/**
- * Convert non-injury active constraints (fatigue / soreness / schedule
- * / missed_session) into engine `Constraint[]` so the visible-program
- * projection can layer them on top of the injury constraint. Injury
- * entries are skipped here — the projection already builds the injury
- * Constraint from the active constraint set.
- */
-const buildExtraConstraints = buildExtraConstraintsForVisibleProgram;
 
 // ─── Exported Hooks ───
 
