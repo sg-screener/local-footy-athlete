@@ -1858,3 +1858,78 @@ Measured through the real full-year action runner before editing:
   lighter-day ownership and global writer-zero proof remain later chunks.
 - Every arbitrary fixture/edit/injury/equipment combination and fixture moves
   across week boundaries (the existing explicit scope restriction is retained).
+
+### Final chunk-2 verification
+
+Implementation checkpoint: `900b6c59`. Owner remains `testtruth`.
+
+- Final annual run: **401 green / 416 measured / 416 required athlete-weeks**,
+  eight distinct archetypes each completing 52 weeks. Before this chunk it was
+  **280 / 297 / 416**. Every measured week has a passing restart, fixture,
+  placement, ordered-ledger and selection-history check: **0 failures / 416
+  checks for each of those five check kinds**, not a claim about every possible
+  athlete. All 54 recorded actions accepted: 16 phase shifts, 8 practice matches,
+  6 game moves, 6 game removals, 2 game adds, 8 session removals and 8 session
+  Undos. The focused fixture witness separately checks Undo after restart.
+- **15 distinct athlete-weeks across all 8 archetypes still fail programming**.
+  Missing main-lift pattern coverage occurs in all 15. Other failures overlap:
+  excessive conditioning in 6, insufficient conditioning in 4, insufficient
+  strength in 1, missed selected strength targets in 5, missed selected
+  conditioning targets in 2, intensity mismatch in 4, pattern imbalance in 2.
+  These are failed weekly constraints, not 15 newly isolated root causes. They
+  remain visible in the unchanged acceptance gate; this pass does not redefine
+  their targets. Final-row composition is the next implementation boundary.
+- `test:release` exits 1: **1/6 units green**, year red, four later units not
+  reached by that invocation. The year verdict has 16 distinct failure keys:
+  those 15 programming-week failures plus the canonical-only prerequisite.
+  Ownership is still 4 confirmed rival authors / 1 derived publisher, with
+  1,217 unresolved out of 1,253 candidate owners. Neither global zero nor a
+  release-ready app is claimed. Current verdict code re-read the final JSON and
+  returned the same 401/416 result; HTML is its presentation, not another audit.
+- Restored `test:canonical-weekly-compiler`: **355/355 assertions**. The three
+  extra assertions exercise eight real logged weeks of the two-fixture athlete,
+  including accepted game Add/Move/Remove, exact visible restart contents and
+  selection-history preservation. `scripts/test-compiler-year.js`: **26/26**.
+- Four in-process product mutations were injected and confirmed reached:
+  disable the historical-fact horizon branch (**9 failed assertions**);
+  clear the other game on Add/Move (**4**); omit the shared speed credit from
+  generated-week validation (**1**); re-enable fixture-repair selection-history
+  writing (**1**, exact visible contents in the eight-week journey). The first
+  three ran against the 352-assertion checkpoint, the last against 355. No
+  product source or running simulator bundle was changed for these mutations.
+  Logs: `/tmp/testtruth-chunk2-mutation-{historical,multi,credit}.log` and
+  `/tmp/testtruth-chunk2-mutation-selections-confirmed.log`.
+- Test liveness finding: the original short fixture sequence survived the
+  selection-history mutation because it did not reach the logged block state
+  that changes exercise order. The added eight-week journey fails on the real
+  mutation. Its first reachability assertion incorrectly asked this In-season
+  athlete for a practice match; corrected to its actual Add/Move/Remove events,
+  then reran both mutation and clean control. No product change was made to
+  satisfy the mistaken assertion. This longer witness and the annual exact
+  restart comparison catch the next instance of this class, not just a source
+  call-site spelling.
+- `.maestro/visible/onboarding-no-team-training.yaml`: **exit 0**, fresh
+  non-seeded simulator onboarding through Team training days, none/day/none
+  selection, Continue, app Back, retained none answer and Continue again.
+  Screenshot `/tmp/testtruth-no-team-selected.png` inspected. Earlier runner
+  failures were selector mistakes (including Maestro's integer-only percentage
+  points), not accepted UI evidence; the final tape uses the actual app Back.
+  Only the simulator test app was cleared. No physical phone or production
+  athlete data was wiped, and no phone build was delivered.
+
+### NOT COVERED / next boundary
+
+- Physical iPhone acceptance, remote persistence, true OS process death and a
+  full screen-driven onboarding-to-season-change journey. UI verification here
+  reaches the no-team answer and its back-navigation persistence; headless
+  production transactions cover generation, accumulated actions and phases.
+- Final-row composition, lighter-day ownership, the remaining 15 programming
+  weeks, and the global executable-owner census. This is not ready for Fable's
+  final re-audit. Next owner: `testtruth`, subject to Sam starting that chunk.
+- Every arbitrary fixture/edit/injury/travel/illness/equipment combination and
+  cross-week fixture moves. The existing same-week move restriction remains.
+- When a release checkpoint is ready for Sam's phone, verify No team training
+  → Continue → Back retains the answer; add a second game onto training, move
+  one game, restart, remove it, restart and Undo; switch phase after accumulated
+  training and confirm the week remains the same after relaunch. Local gates
+  and the simulator do not substitute for that physical-device acceptance.

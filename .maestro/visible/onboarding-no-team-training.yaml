@@ -49,7 +49,8 @@ name: Fresh onboarding explicitly accepts no team training
 - takeScreenshot: /tmp/testtruth-no-team-selected
 - tapOn: "Continue"
 - assertVisible: "How many days each week can you get to a gym?"
-- back
+- tapOn:
+    point: "6%,11%"
 - assertVisible: "Team training days"
 - assertVisible:
     text: "No team training"

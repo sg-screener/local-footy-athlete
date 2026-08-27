@@ -2723,6 +2723,18 @@ async function main(): Promise<void> {
   ok('the fixture-compressed two-day week survives restart', compressedBoot.ok &&
     exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === compressedSignature);
 
+  console.log('\n[fixture selection ownership] logged multi-fixture history across two blocks');
+  const selectionJourney = await runAthlete(gameProfile, localStorageData, 8);
+  const selectionWeeks = selectionJourney.weeks.slice(0, 8);
+  ok('the selection witness reaches eight logged weeks and accepted game Add, Move and Remove',
+    selectionWeeks.every((w) => w.status === 'measured') && selectionJourney.loggedSessions > 20 &&
+    ['add_game', 'move_game', 'remove_game'].every((kind) =>
+      selectionJourney.actions.some((a) => a.kind === kind && a.ok)));
+  ok('fixture repairs preserve accepted block selections throughout the accumulated journey',
+    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'selection_history' && c.ok)));
+  ok('fixture repairs preserve exact visible contents throughout the accumulated journey',
+    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'restart' && c.ok)));
+
   console.log('\n[accumulated phase restart] 16 logged pre-season weeks into in-season without club training');
   const repeatedSprintTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'repeat_sprint');
   ok('rotated repeat-sprint sessions remain conditioning, not just acceleration and top-end templates',
