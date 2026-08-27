@@ -15,6 +15,14 @@ import {
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import { replayableEntries, lastUndoableEntry } from '../rules/decisionLedgerReplay';
+import { adjustmentMatchesDecision } from '../store/reversibleAdjustmentTransaction';
+import type { ReversibleAdjustmentRecord } from '../rules/reversibleAdjustmentLedger';
+import { lighterDayEffectActive } from '../rules/canonicalWeeklyLighterDayCompiler';
+import { composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint,
+  type TemporarySourceFact } from '../rules/temporarySourceFact';
 import { useReadinessStore } from '../store/readinessStore';
 import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
@@ -39,6 +47,8 @@ import type {
   OnboardingData,
   ProgramAvailabilityConstraint,
   WeekKind,
+  Microcycle,
+  UserRemovalConstraint,
   Workout,
 } from '../types/domain';
 import type { ReadinessSignal } from './readiness';
@@ -130,10 +140,7 @@ export interface ActiveProgramModifierAction {
  * a phrase for every member the day a member is added. TEST:
  * `test:modifier-effect-phrases`.
  *
- * `'not_shown'` IS A DECISION, NOT AN ABSENCE. Sam withdrew time caps on
- * 2026-08-13 — *"i've taken out time caps for now"* — so a time-cap modifier
- * renders no row. Spelling that as a named member rather than `undefined`
- * keeps it a ruling anyone can find, and keeps the `Record` total.
+ * Time limits carry their own sentence and are visible on all surfaces (R-262).
  *
  * `'unsigned'` IS THE HONEST GAP, AND IT DID NOT CLOSE.
  *
@@ -165,7 +172,7 @@ export type ActiveProgramModifierEffect =
   | 'exercise_removed'
   | 'exercise_prioritised'
   | 'conditioning_swapped'
-  | 'not_shown'
+  | 'session_time_limited'
   | 'unsigned';
 
 export interface ActiveProgramModifier {
@@ -185,12 +192,17 @@ export interface ActiveProgramModifier {
 
 export interface ActiveProgramModifierSnapshot {
   activeConstraints?: readonly ActiveConstraint[] | null;
+  temporarySourceFacts?: readonly TemporarySourceFact[];
+  decisionEntries?: readonly DecisionLedgerEntry[];
+  reversibleAdjustments?: readonly ReversibleAdjustmentRecord[];
+  sessionConstraints?: readonly UserRemovalConstraint[];
   athletePrefs?: AthletePoolPrefs | null;
   modalityPreferences?: Record<string, ModalityPreference> | null;
   onboardingData?: OnboardingData | null;
   readinessSignalsByDate?: Record<string, ReadinessSignal> | null;
   todayISO?: string;
   weekKind?: WeekKind | null;
+  compiledWeek?: Pick<Microcycle, 'startDate' | 'deloadDoor' | 'dosePolicyByDay'> | null;
   visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[] | null;
   dismissedCoachNoteIds?: readonly string[] | null;
 }
@@ -343,169 +355,6 @@ function modifierAffects(
   return parsed;
 }
 
-interface VisibleEffectSummary {
-  changedNotes: string[];
-  changedText: string;
-  visibleText: string;
-  hasRemoved: boolean;
-  hasReplacement: boolean;
-  hasCaution: boolean;
-  hasSprint: boolean;
-  hasCod: boolean;
-  hasHinge: boolean;
-  hasNordic: boolean;
-  hasPressing: boolean;
-  hasKneeDominant: boolean;
-  hasJump: boolean;
-  hasGroinAdductor: boolean;
-  hasHardConditioning: boolean;
-  hasAccessoryOrFinisher: boolean;
-  hasRecoveryChange: boolean;
-  hasSafeLowerBikeCore: boolean;
-  hasSafeUpperBike: boolean;
-}
-
-function visibleEffects(days: readonly ActiveProgramModifierVisibleDay[]): VisibleEffectSummary {
-  const notes = days.flatMap((day) => day.workout?.coachNotes ?? []);
-  const changedNotes = notes.filter((note) =>
-    /\b(Removed:|Replaced|Caution:|Lightened|Switched to recovery|Rebuilt for|limited|reduced)/i.test(note),
-  );
-  const changedText = changedNotes.join(' ').toLowerCase();
-  const visibleText = days.map((day) => {
-    const workout = day.workout;
-    const exerciseNames = (workout?.exercises ?? [])
-      .map((row: any) => row?.exercise?.name)
-      .filter(Boolean)
-      .join(' ');
-    return [
-      workout?.name,
-      workout?.workoutType,
-      workout?.sessionTier,
-      exerciseNames,
-      ...(workout?.coachNotes ?? []),
-    ].filter(Boolean).join(' ');
-  }).join(' ').toLowerCase();
-  return {
-    changedNotes,
-    changedText,
-    visibleText,
-    hasRemoved: /\bremoved:/.test(changedText),
-    hasReplacement: /\breplaced\b/.test(changedText),
-    hasCaution: /\bcaution:|limited|reduced/.test(changedText),
-    hasSprint: /\b(sprints?|speed|high[-\s]?speed|flying\s*\d|running)\b/.test(changedText),
-    hasCod: /\b(change of direction|cod|cutting|agility)\b/.test(changedText),
-    hasHinge: /\b(hinge|deadlift|rdl|trap bar|posterior chain)\b/.test(changedText),
-    hasNordic: /\b(nordic|hamstring curl|hamstring)\b/.test(changedText),
-    hasPressing: /\b(press|bench|overhead|dip|push[-\s]?up|push)\b/.test(changedText),
-    hasKneeDominant: /\b(squat|lunge|split squat|step[-\s]?down|knee)\b/.test(changedText),
-    hasJump: /\b(jump|plyo|bound|hop)\b/.test(changedText),
-    hasGroinAdductor: /\b(groin|adductor|copenhagen|lateral|cutting|change of direction|cod)\b/.test(changedText),
-    hasHardConditioning: /\b(hard conditioning|conditioning|interval|metcon|sprint|speed|hard erg|assault bike)\b/.test(changedText),
-    hasAccessoryOrFinisher: /\b(accessor|finisher|extra|optional|volume|sets|lightened|caution:)\b/.test(changedText),
-    hasRecoveryChange: /\b(recovery|switched to recovery|rest|easy aerobic|easy conditioning|mobility)\b/.test(changedText),
-    hasSafeLowerBikeCore: /\b(lower|squat|hinge|bike|core|trunk)\b/.test(visibleText),
-    hasSafeUpperBike: /\b(upper|bench|row|pull|press|bike|off[-\s]?feet|core|trunk)\b/.test(visibleText),
-  };
-}
-
-function hasLinkedProgramEffect(c: ActiveConstraint): boolean {
-  return linkedOverrideDates(c).length > 0;
-}
-
-function hasAnyVisibleEffect(summary: VisibleEffectSummary): boolean {
-  return summary.changedNotes.length > 0;
-}
-
-function effectSentence(parts: string[]): string {
-  return parts.map((part) => `${part}.`).join(' ');
-}
-
-function deterministicInjuryBody(
-  c: ActiveInjuryConstraint,
-  summary: VisibleEffectSummary,
-): string | null {
-  if (!hasAnyVisibleEffect(summary)) return null;
-  const bucket = String(c.bucket || c.bodyPart || '').toLowerCase();
-  const bodyPart = capitaliseWords(displayBodyPart(c));
-  const effects: string[] = [];
-  const paused = c.adjustmentLevel === 'training_paused' || c.seriousSymptoms === true || severityPausesTraining(c.severity);
-
-  if (paused && (summary.hasRemoved || summary.hasRecoveryChange)) {
-    effects.push('affected training was paused or reduced');
-  }
-  if (bucket.includes('hamstring')) {
-    if (summary.hasSprint) effects.push('sprinting was reduced');
-    if (summary.hasHinge || summary.hasNordic) effects.push('heavy hinging or Nordics were reduced');
-  } else if (bucket.includes('adductor') || bucket.includes('groin')) {
-    if (summary.hasCod || summary.hasGroinAdductor) effects.push('COD, adductor or lateral work was reduced');
-  } else if (bucket.includes('shoulder')) {
-    if (summary.hasPressing) effects.push('pressing or overhead work was reduced or swapped');
-  } else if (bucket.includes('knee')) {
-    if (summary.hasKneeDominant || summary.hasCod || summary.hasJump) {
-      effects.push('knee-dominant, jumping or COD work was reduced');
-    }
-  }
-
-  if (summary.hasReplacement && effects.length === 0) {
-    effects.push('affected exercises were swapped');
-  }
-  if ((summary.hasRemoved || summary.hasCaution) && effects.length === 0) {
-    effects.push('affected work was reduced');
-  }
-  if (effects.length === 0) return null;
-
-  const safeLine =
-    bucket.includes('shoulder') && summary.hasSafeLowerBikeCore
-      ? 'Lower-body, bike or midline work stayed in where safe.'
-      : (bucket.includes('hamstring') || bucket.includes('knee') || bucket.includes('adductor') || bucket.includes('groin')) && summary.hasSafeUpperBike
-        ? 'Upper-body, bike or midline work stayed in where safe.'
-        : '';
-
-  return sentence([
-    `${bodyPart} issue active.`,
-    effectSentence(effects),
-    safeLine,
-  ]);
-}
-
-function deterministicReadinessBody(
-  c: Exclude<ActiveConstraint, ActiveInjuryConstraint | ActivePreferenceConstraint>,
-  summary: VisibleEffectSummary,
-): string | null {
-  const linkedEffect = hasLinkedProgramEffect(c as ActiveConstraint);
-  if (!hasAnyVisibleEffect(summary) && !linkedEffect) return null;
-  if (c.type === 'missed_session') return null;
-  if (linkedEffect && !hasAnyVisibleEffect(summary)) {
-    return modifierString(c as ActiveConstraint, 'modifierBody') ?? 'Your program was changed for recovery or load management.';
-  }
-
-  const parts: string[] = [];
-  if (summary.hasRecoveryChange) {
-    parts.push('training was changed to recovery or easy work');
-  }
-  if (summary.hasHardConditioning || summary.hasSprint) {
-    parts.push('hard conditioning or sprint work was reduced');
-  }
-  if (summary.hasAccessoryOrFinisher || summary.hasCaution) {
-    parts.push('extras, accessories or intensity were trimmed');
-  }
-  if (summary.hasRemoved && parts.length === 0) {
-    parts.push('hard work was reduced');
-  }
-  if (parts.length === 0) return null;
-
-  if (c.type === 'soreness') {
-    return sentence([
-      `${capitaliseWords(displayBodyPart(c))} soreness active.`,
-      effectSentence(parts),
-      'Pain-free work stayed in where possible.',
-    ]);
-  }
-
-  const title = modifierString(c as ActiveConstraint, 'modifierTitle') ?? c.reasonLabel ?? '';
-  return sentence([readinessBodyLead(c, title), effectSentence(parts)]);
-}
-
 /**
  * The lead sentence of a readiness coach note, attributed to the fact KIND — never
  * a fatigue attribution ("you said you're cooked") on an illness or poor-sleep
@@ -538,168 +387,19 @@ export function readinessBodyLead(
   return 'Readiness adjustment active.';
 }
 
-function proofGateInjuryModifier(
-  modifier: ActiveProgramModifier,
-  c: ActiveInjuryConstraint,
-  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
-): ActiveProgramModifier | null {
-  if (!visibleWeekDays) return modifier;
-  const body = deterministicInjuryBody(c, visibleEffects(visibleWeekDays));
-  if (!body) return null;
-  return { ...modifier, body };
-}
-
-function proofGateReadinessModifier(
-  modifier: ActiveProgramModifier | null,
-  c: Exclude<ActiveConstraint, ActiveInjuryConstraint | ActivePreferenceConstraint>,
-  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
-): ActiveProgramModifier | null {
-  if (!modifier) return null;
-  if (!visibleWeekDays || (c.type !== 'fatigue' && c.type !== 'soreness')) return modifier;
-  const body = deterministicReadinessBody(c, visibleEffects(visibleWeekDays));
-  if (!body) return null;
-  return { ...modifier, body };
-}
-
-interface DeloadVisibleEvidence {
-  weekStart: string;
-  proofText: string;
-  hasReductionProof: boolean;
-  hasMainStrengthPreserved: boolean;
-  hasSetsReduced: boolean;
-  hasLoadOrIntensityReduced: boolean;
-  hasAccessoriesTrimmed: boolean;
-  hasHardConditioningRemoved: boolean;
-  hasSprintIntensityRemoved: boolean;
-  hasEasyRecoveryPreserved: boolean;
-}
-
-function workoutText(day: ActiveProgramModifierVisibleDay): string {
-  const workout = day.workout;
-  if (!workout) return '';
-  const exerciseText = (workout.exercises ?? []).map((row: any) => [
-    row?.exercise?.name,
-    row?.exerciseId,
-    row?.notes,
-    row?.prescriptionType,
-    typeof row?.prescribedSets === 'number' ? `${row.prescribedSets} sets` : null,
-    typeof row?.prescribedWeightKg === 'number' ? `${row.prescribedWeightKg} kg` : null,
-  ].filter(Boolean).join(' '));
-  const conditioningText = [
-    workout.conditioningCategory,
-    workout.conditioningFlavour,
-    workout.hasCombinedConditioning ? 'combined conditioning' : null,
-    workout.speedBlock?.title,
-    workout.speedBlock?.label,
-    workout.speedBlock?.prescription,
-    ...(workout.speedBlock?.notes ?? []),
-    ...(workout.conditioningBlock?.options ?? []).flatMap((option) => [
-      option.title,
-      option.description,
-    ]),
-    ...(workout.recoveryAddons ?? []).flatMap((addon) => [
-      addon.title,
-      addon.label,
-      addon.focusArea,
-      addon.placementNote,
-    ]),
-  ];
-  return [
-    workout.name,
-    workout.description,
-    workout.workoutType,
-    workout.sessionTier,
-    ...(workout.coachNotes ?? []),
-    ...exerciseText,
-    ...conditioningText,
-  ].filter(Boolean).join(' ');
-}
-
-function visibleDeloadEvidence(
-  days: readonly ActiveProgramModifierVisibleDay[],
-): DeloadVisibleEvidence {
-  const proofText = days.map(workoutText).join(' ').toLowerCase();
-  const weekStart = days[0]?.date ?? todayISOLocal();
-  const hasDeloadMarker = /\bdeload\b|lighter week|lower fatigue/.test(proofText);
-  const hasMainStrengthPreserved =
-    /\b(squat|deadlift|trap bar|rdl|hinge|bench|press|row|pull[-\s]?up|split squat|lunge|hip thrust)\b/.test(proofText) &&
-    !/\b(training paused|full pause|bedridden)\b/.test(proofText);
-  const hasSetsReduced =
-    /\b(sets?|volume)\b[^.]*\b(reduced|trimmed|lowered|pulled back|dropped)\b/.test(proofText) ||
-    /\b(reduced|trimmed|lowered|pulled back|dropped)\b[^.]*\b(sets?|volume)\b/.test(proofText);
-  const hasLoadOrIntensityReduced =
-    /\b(load|intensity|rpe|effort)\b[^.]*\b(reduced|lowered|capped|controlled|pulled back|6-\d|leave reps in reserve)\b/.test(proofText) ||
-    /\b(reduced|lowered|capped|controlled|pulled back)\b[^.]*\b(load|intensity|rpe|effort)\b/.test(proofText) ||
-    /\bdeload week:\s*keep rpe\b/.test(proofText);
-  const hasAccessoriesTrimmed =
-    /\b(accessor(?:y|ies)|finisher|extras?|optional)\b[^.]*\b(removed|trimmed|reduced|dropped|pulled back)\b/.test(proofText) ||
-    /\b(removed|trimmed|reduced|dropped|pulled back)\b[^.]*\b(accessor(?:y|ies)|finisher|extras?|optional)\b/.test(proofText);
-  const hasHardConditioningRemoved =
-    /\b(hard conditioning|conditioning|intervals?|metcon|assault bike)\b[^.]*\b(removed|trimmed|reduced|dropped|out)\b/.test(proofText) ||
-    /\b(removed|trimmed|reduced|dropped|no)\b[^.]*\b(hard conditioning|conditioning|intervals?|metcon|assault bike)\b/.test(proofText);
-  const hasSprintIntensityRemoved =
-    /\b(sprint|speed|cod|change of direction|vo2|glycolytic|repeated sprint)\b[^.]*\b(removed|trimmed|reduced|dropped|out)\b/.test(proofText) ||
-    /\b(removed|trimmed|reduced|dropped|no)\b[^.]*\b(sprint|speed|cod|change of direction|vo2|glycolytic|repeated sprint)\b/.test(proofText);
-  const hasEasyRecoveryPreserved =
-    /\b(easy|recovery|mobility|flush|zone 2|aerobic|tempo)\b/.test(proofText);
-
-  return {
-    weekStart,
-    proofText,
-    hasReductionProof: hasDeloadMarker && (
-      hasSetsReduced ||
-      hasLoadOrIntensityReduced ||
-      hasAccessoriesTrimmed ||
-      hasHardConditioningRemoved ||
-      hasSprintIntensityRemoved
-    ),
-    hasMainStrengthPreserved,
-    hasSetsReduced,
-    hasLoadOrIntensityReduced,
-    hasAccessoriesTrimmed,
-    hasHardConditioningRemoved,
-    hasSprintIntensityRemoved,
-    hasEasyRecoveryPreserved,
-  };
-}
-
-function deloadBody(evidence: DeloadVisibleEvidence): string | null {
-  if (!evidence.hasReductionProof) return null;
-  const lines: string[] = ['This is a deload week.'];
-  if (evidence.hasMainStrengthPreserved) {
-    lines.push('Main strength patterns stay in.');
-  }
-  if (evidence.hasSetsReduced) {
-    lines.push('Sets or volume are reduced.');
-  }
-  if (evidence.hasLoadOrIntensityReduced) {
-    lines.push('Load or intensity is pulled back.');
-  }
-  if (evidence.hasAccessoriesTrimmed) {
-    lines.push('Accessories or finishers are trimmed.');
-  }
-  if (evidence.hasSprintIntensityRemoved) {
-    lines.push('Sprint, VO2 or glycolytic work is out this week.');
-  } else if (evidence.hasHardConditioningRemoved) {
-    lines.push('Hard conditioning is out this week.');
-  }
-  if (evidence.hasEasyRecoveryPreserved) {
-    lines.push('Easy recovery work stays in.');
-  }
-  return lines.join(' ');
-}
-
 function deloadWeekModifier(
   snapshot: ActiveProgramModifierSnapshot,
 ): ActiveProgramModifier | null {
-  if (snapshot.weekKind !== 'deload' || !snapshot.visibleWeekDays?.length) return null;
-  const evidence = visibleDeloadEvidence(snapshot.visibleWeekDays);
-  const body = deloadBody(evidence);
-  if (!body) return null;
+  const week = snapshot.compiledWeek;
+  const scheduled = week?.deloadDoor === 'scheduled'
+    || Object.values(week?.dosePolicyByDay ?? {}).some(policy => policy?.door === 'scheduled');
+  if (!scheduled) return null;
+  const weekStart = weekStartFromVisibleDays(snapshot.visibleWeekDays) ?? week!.startDate.slice(0, 10);
+  const body = 'This is a deload week. Main strength patterns stay in. Sets or volume are reduced.';
   return {
-    id: modifierId('week_kind', `deload:${evidence.weekStart}`),
+    id: modifierId('week_kind', `deload:${weekStart}`),
     source: 'week_kind',
-    sourceId: `deload:${evidence.weekStart}`,
+    sourceId: `deload:${weekStart}`,
     type: 'temporary_status',
     title: 'Deload week active',
     body,
@@ -709,8 +409,8 @@ function deloadWeekModifier(
     actions: [],
     payload: {
       weekKind: 'deload',
-      weekStart: evidence.weekStart,
-      lifecycleKey: `week_kind:deload:${evidence.weekStart}`,
+      weekStart: weekStart,
+      lifecycleKey: `week_kind:deload:${weekStart}`,
     },
   };
 }
@@ -759,62 +459,6 @@ function weekStartFromVisibleDays(
 ): string | null {
   const firstDate = days?.find((day) => typeof day.date === 'string' && day.date.trim())?.date;
   return firstDate ? getMondayForDate(firstDate) : null;
-}
-
-function normalizedWorkoutLifecycle(
-  workoutName: unknown,
-  workoutType: unknown,
-): string {
-  const name = typeof workoutName === 'string' ? workoutName.trim() : '';
-  const type = typeof workoutType === 'string' ? workoutType.trim() : '';
-  if (type === 'Game') return 'game';
-  if (
-    !name && !type ||
-    type === 'Rest' ||
-    /^(?:rest|off)$/i.test(name)
-  ) {
-    return 'rest';
-  }
-  return `training:${type}:${name}`;
-}
-
-function visibleWorkoutLifecycle(
-  day: ActiveProgramModifierVisibleDay | undefined,
-): string {
-  return normalizedWorkoutLifecycle(
-    day?.workout?.name,
-    day?.workout?.workoutType,
-  );
-}
-
-function gameChangeProofStillVisible(
-  c: ActiveConstraint,
-  days: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
-): boolean {
-  const proof = (c as any)?.noteProof;
-  if (!days || proof?.kind !== 'game_change' || !Array.isArray(proof.after)) return true;
-  const visibleByDate = new Map(days.map((day) => [day.date, day]));
-  return proof.after.every((row: any) => {
-    if (typeof row?.date !== 'string') return false;
-    const visible = visibleByDate.get(row.date);
-    if (!visible) return false;
-    return visibleWorkoutLifecycle(visible) === normalizedWorkoutLifecycle(
-      row.workoutName,
-      row.workoutType,
-    );
-  });
-}
-
-function activeConstraintVisibleInSnapshot(
-  c: ActiveConstraint,
-  snapshot: ActiveProgramModifierSnapshot,
-): boolean {
-  const weekStartISO = (c as any)?.weekStartISO;
-  const visibleWeekStart = weekStartFromVisibleDays(snapshot.visibleWeekDays);
-  if (typeof weekStartISO === 'string' && weekStartISO.trim() && visibleWeekStart && weekStartISO !== visibleWeekStart) {
-    return false;
-  }
-  return gameChangeProofStillVisible(c, snapshot.visibleWeekDays);
 }
 
 function activeConstraintLifecycleKey(
@@ -948,11 +592,7 @@ function statusModifier(
      severe illness read as "Recovery mode active" (every health fact shares
      the `fatigue` constraint type).
 
-     TIME CAPS ARRIVE HERE TOO, and this is their SECOND door: a time cap can
-     be a `schedule` constraint with `scheduleKind: 'time_cap'` as well as a
-     `time_limit` availability constraint. Sam withdrew time caps on
-     2026-08-13, so both doors render no row — finding one and missing the
-     other would have hidden the row on one path and shown it on the other.
+     Time caps share the same visible effect on both ingress paths (R-262).
 
      SORENESS IS DELIBERATELY UNSIGNED. Sam's row reads "Cooked / tired", and
      soreness is neither; its own sentence names the body part, which is more
@@ -961,7 +601,7 @@ function statusModifier(
     readinessFactKind === 'illness' ? 'training_eased'
       : readinessFactKind === 'fatigue' || readinessFactKind === 'poor_sleep' ? 'volume_adjusted'
         : readinessFactKind === 'soreness' ? 'unsigned'
-          : c.type === 'schedule' && c.scheduleKind === 'time_cap' ? 'not_shown'
+          : c.type === 'schedule' && c.scheduleKind === 'time_cap' ? 'session_time_limited'
             : c.type === 'schedule' && c.noteProof?.kind === 'game_change' ? 'week_rebuilt'
               // ── ITEM 28: TRAVEL IS ITS OWN EFFECT NOW ──
               // "Sessions moved" was honest while away marked its dates
@@ -1022,24 +662,6 @@ function statusModifier(
       presentationOnlyDismiss: c.presentationOnlyDismiss === true || isLegacyFixtureProjection,
     },
   };
-}
-
-function equipmentHasVisibleProof(
-  c: ActiveEquipmentConstraint,
-  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
-): boolean {
-  if (!visibleWeekDays?.length) return false;
-  const equipmentText = uniqueStrings([
-    ...c.tags.map(equipmentLabel),
-    c.mode === 'without' ? 'without' : 'only',
-  ]).join('|');
-  const tagPattern = equipmentText ? new RegExp(`\\b(${equipmentText})\\b`, 'i') : null;
-  return visibleWeekDays.some((day) => {
-    const text = workoutText(day);
-    if (!text) return false;
-    const hasAdjustment = /\b(replaced|swapped|removed|limited|available equipment|bodyweight|dumbbell|barbell|machine|cable|band)\b/i.test(text);
-    return hasAdjustment && (!tagPattern || tagPattern.test(text));
-  });
 }
 
 function equipmentModifierBody(
@@ -1108,7 +730,7 @@ function equipmentModifier(
     effect: 'exercises_substituted',
     title: modifierString(c, 'modifierTitle') ?? title,
     body: modifierString(c, 'modifierBody') ??
-      equipmentModifierBody(c, affects, equipmentHasVisibleProof(c, visibleWeekDays)),
+      equipmentModifierBody(c, affects, false),
     severity: c.severity,
     affects,
     actions: [
@@ -1348,11 +970,7 @@ function availabilityModifier(
       source: 'profile_availability',
       sourceId: constraint.id,
       type: 'coach_restriction',
-      // TIME CAPS RENDER NO ROW (SEAT_INBOX 22b). Sam, 2026-08-13: "i've taken
-      // out time caps for now". A DISPLAY ruling, not a deletion — the kind
-      // still exists and this builder still runs, because other facts write it
-      // and My Status still needs to show and clear one.
-      effect: 'not_shown',
+      effect: 'session_time_limited',
       title: `${constraint.dayOfWeek} time cap active`,
       body: `${constraint.dayOfWeek} sessions are capped at ${constraint.maxSessionMinutes} minutes.`,
       affects: ['future_generation'],
@@ -1402,7 +1020,25 @@ export function selectActiveProgramModifiers(
   const todayISO = snapshot.todayISO ?? todayISOLocal();
   const out: ActiveProgramModifier[] = [];
   const seen = new Set<string>();
-  const activeConstraints = [...(snapshot.activeConstraints ?? [])]
+  const fixtureEntries = new Map<string, DecisionLedgerEntry>();
+  for (const entry of replayableEntries(snapshot.decisionEntries ?? [])) {
+    if (entry.decision.kind !== 'fixture_add' && entry.decision.kind !== 'fixture_move' && entry.decision.kind !== 'fixture_remove') continue;
+    const effect = entry.decision.acceptedEffect;
+    if (!effect) continue;
+    const week = getMondayForDate(effect.targetDate);
+    if (week >= getMondayForDate(todayISO)) fixtureEntries.set(week, entry);
+  }
+  // Display each accepted report, not the strongest member of a compiler group.
+  // This is a read projection: generation continues to combine facts as before.
+  const constraints = snapshot.temporarySourceFacts
+    ? [
+        ...(snapshot.activeConstraints ?? []).filter(c => !isTemporarySourceFactConstraint(c)),
+        ...snapshot.temporarySourceFacts.flatMap(fact =>
+          composeTemporarySourceFactCompatibility({ temporarySourceFacts: [fact] }).activeConstraints
+            .map(c => c.type === 'injury' ? c : { ...c, id: `source-fact:${c.temporarySourceFactIds![0]}` })),
+      ]
+    : snapshot.activeConstraints ?? [];
+  const activeConstraints = [...constraints]
     .filter((constraint) => !isExpiredActiveConstraint(constraint, todayISO));
 
   const activePreferenceExercises = new Set<string>();
@@ -1410,16 +1046,13 @@ export function selectActiveProgramModifiers(
 
   for (const constraint of activeConstraints) {
     if (!constraint || constraint.status === 'resolved') continue;
-    if (!activeConstraintVisibleInSnapshot(constraint, snapshot)) continue;
+    if (constraint.type === 'schedule' && constraint.noteProof?.kind === 'game_change' &&
+      fixtureEntries.has(constraint.weekStartISO ?? '')) continue;
     if (constraint.type === 'injury') {
       addUnique(
         out,
         seen,
-        proofGateInjuryModifier(
-          injuryModifier(constraint, 'active_constraint'),
-          constraint,
-          snapshot.visibleWeekDays,
-        ),
+        injuryModifier(constraint, 'active_constraint'),
       );
     } else if (constraint.type === 'preference') {
       if (constraint.exercise) activePreferenceExercises.add(constraint.exercise);
@@ -1431,11 +1064,7 @@ export function selectActiveProgramModifiers(
       addUnique(
         out,
         seen,
-        proofGateReadinessModifier(
-          statusModifier(constraint, 'active_constraint') as ActiveProgramModifier,
-          constraint,
-          snapshot.visibleWeekDays,
-        ),
+        statusModifier(constraint, 'active_constraint'),
       );
     }
   }
@@ -1445,15 +1074,72 @@ export function selectActiveProgramModifiers(
     addUnique(
       out,
       seen,
-      proofGateReadinessModifier(
-        statusModifier(constraint as any, 'readiness_signal') as ActiveProgramModifier,
-        constraint as any,
-        snapshot.visibleWeekDays,
-      ),
+      statusModifier(constraint as any, 'readiness_signal'),
     );
   }
 
   addUnique(out, seen, deloadWeekModifier(snapshot));
+  const latestUndo = lastUndoableEntry(snapshot.decisionEntries ?? []);
+  for (const constraint of snapshot.sessionConstraints ?? []) {
+    if (constraint.status !== 'active' ||
+      (constraint.targetDate < todayISO && (!constraint.moveTargetDate || constraint.moveTargetDate < todayISO))) continue;
+    const entry = [...replayableEntries(snapshot.decisionEntries ?? [])].reverse().find(candidate =>
+      candidate.decision.kind === 'plan_change' && candidate.decision.acceptedEffect?.upsertedConstraints
+        .some(accepted => accepted.id === constraint.id));
+    const kind = entry?.decision.kind === 'plan_change' ? entry.decision.change.kind : undefined;
+    const title = kind === 'remove_session' ? 'Session removed'
+      : kind === 'add_category' || kind === 'add_template' ? 'Session added'
+        : kind === 'swap_category' || kind === 'swap_template' ? 'Session swapped'
+          : constraint.mutationKind === 'move' ? 'Session moved' : 'Session changed';
+    const adjustment = entry && snapshot.reversibleAdjustments?.find(record =>
+      record.status === 'active' && adjustmentMatchesDecision(record, entry));
+    const canUndo = !!entry && latestUndo?.id === entry.id && !!adjustment;
+    addUnique(out, seen, {
+      id: modifierId('program_effect', `session:${constraint.id}`),
+      source: 'program_effect', sourceId: `session:${constraint.id}`,
+      type: 'exercise_adjustment', title,
+      body: constraint.mutationKind === 'move'
+        ? `Your session moved from ${constraint.targetDate} to ${constraint.moveTargetDate}.`
+        : `${title} on ${constraint.targetDate}.`,
+      effect: constraint.mutationKind === 'move' ? 'sessions_moved' : 'unsigned',
+      affects: ['current_week'],
+      actions: canUndo ? [{ kind: 'restore_adjustment', label: 'Undo session change' }] : [],
+      payload: { reversibleAdjustmentId: canUndo ? adjustment!.id : undefined },
+    });
+  }
+  for (const entry of fixtureEntries.values()) {
+    if (entry.decision.kind !== 'fixture_add' && entry.decision.kind !== 'fixture_move' && entry.decision.kind !== 'fixture_remove') continue;
+    const effect = entry.decision.acceptedEffect!;
+    const fixture = effect.fixtureKind === 'practice_match' ? 'Practice match' : 'Game';
+    const verb = { add: 'added', move: 'moved', remove: 'removed' }[effect.action];
+    const adjustment = snapshot.reversibleAdjustments?.find(record => record.status === 'active' && adjustmentMatchesDecision(record, entry));
+    const canUndo = latestUndo?.id === entry.id && !!adjustment;
+    addUnique(out, seen, {
+      id: modifierId('active_constraint', `fixture:${entry.id}`),
+      source: 'active_constraint', sourceId: `fixture:${entry.id}`,
+      type: 'coach_restriction', effect: 'week_rebuilt', title: `${fixture} ${verb}`,
+      body: effect.action === 'move'
+        ? `${fixture} moved from ${effect.sourceDate} to ${effect.targetDate}.`
+        : `${fixture} ${verb} on ${effect.targetDate}.`,
+      affects: ['current_week'],
+      actions: canUndo ? [{ kind: 'restore_adjustment', label: 'Restore fixture' }] : [],
+      payload: { reversibleAdjustmentId: canUndo ? adjustment!.id : undefined },
+    });
+  }
+  for (const entry of replayableEntries(snapshot.decisionEntries ?? [])) {
+    if (entry.decision.kind !== 'lighter_day') continue;
+    const effect = entry.decision.acceptedEffect;
+    if (effect.dateISO < todayISO || !lighterDayEffectActive(effect, snapshot.temporarySourceFacts ?? [])) continue;
+    if (out.some(modifier => (modifier.payload?.temporarySourceFactIds as string[] | undefined)?.includes(effect.sourceFactId))) continue;
+    addUnique(out, seen, {
+      id: modifierId('active_constraint', `lighter:${effect.sourceFactId}`),
+      source: 'active_constraint', sourceId: effect.sourceFactId,
+      type: 'temporary_status', effect: 'volume_adjusted', title: 'Lighter day',
+      body: `${effect.dateISO}: your session is lighter after your readiness report.`,
+      affects: ['current_day'], actions: [{ kind: 'clear_status', label: "I'm good now" }],
+      payload: { temporarySourceFactIds: [effect.sourceFactId], date: effect.dateISO },
+    });
+  }
   for (const modifier of deterministicProgramEffectModifiers(snapshot)) {
     addUnique(out, seen, modifier);
   }
@@ -1506,6 +1192,10 @@ export function getActiveProgramModifiers(todayISO: string = todayISOLocal()): A
     // compatibility mirror and must never decide whether My Status can see a
     // saved injury.
     activeConstraints: accepted.activeConstraints,
+    temporarySourceFacts: accepted.temporarySourceFacts,
+    decisionEntries: decisionLedgerEntries(),
+    reversibleAdjustments: useProgramStore.getState().reversibleAdjustmentLedger.adjustments,
+    sessionConstraints: useProgramStore.getState().userRemovalConstraints,
     athletePrefs: useAthletePreferencesStore.getState().prefs,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
     onboardingData: useProfileStore.getState().onboardingData,

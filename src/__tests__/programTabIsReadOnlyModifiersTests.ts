@@ -271,7 +271,7 @@ run('every Program status doorway opens My Status directly', () => {
       `the ${surface} doorway does not open My Status directly`);
   }
   const hook = read('src/screens/home/useHomeScreen.ts');
-  assert(/navigation\.navigate\('MyStatus'\)/.test(hook),
+  assert(/navigation\.navigate\('MyStatus', \{ weekStartISO: visibleWeekStart \}\)/.test(hook),
     'Program still changes tabs or opens an intermediate surface instead of '
     + 'navigating straight to its My Status page');
 });

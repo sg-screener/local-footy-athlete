@@ -1,6 +1,16 @@
 {
   "schemaVersion": 1,
   "owners": {
+    "src/hooks/useActiveModifiers.ts#useActiveModifiers": {
+      "fingerprint": "5c022cef8db8ef358c56b62af23acbed3f302febbaaca8f6a1410a04c9541712",
+      "classification": "projection_display",
+      "reason": "Reads accepted inputs and the existing visible-week projection to return status rows/count. Store callbacks return existing entries/program references, never write them."
+    },
+    "src/utils/activeProgramModifiers.ts#selectActiveProgramModifiers": {
+      "fingerprint": "d9990dead8f9c87c2196c4e03dda7a6e0bfbac43d1192824f007bb575010005e",
+      "classification": "projection_display",
+      "reason": "Pure status projection. Its fixture Map and reversed COPY of accepted decisions only join existing fixture/session identities for presentation and existing Undo eligibility; no ledger or generated-session mutation."
+    },
     "src/data/timeTrialSession.ts#buildTimeTrialSession": {
       "fingerprint": "f4272a8386fd1b56f268fce9563997ae5797ed7f3332f05e558abd50dde2079b",
       "classification": "dormant_quarantined",
@@ -182,7 +192,7 @@
       "reason": "Training feedback panel submits existing workout plus typed feedback to commitSessionOutcomeTransaction; form state is not training output."
     },
     "src/screens/home/useHomeScreen.ts#useHomeScreen": {
-      "fingerprint": "3376f9aac96265e1e3062cef44e1ed794b31c74ea3ad88f50ebc0818e2ac8b39",
+      "fingerprint": "d65aa30f3899a77ef72cc4da8244e27b31a7f1d6567601ef85ba86a484729fd2",
       "classification": "canonical_input_writer",
       "reason": "Home hook reads canonical program/projections, records missed-session outcomes through the outcome owner and invokes existing fact/rollover transactions; its direct program fields are read-helper or returned view-model references."
     },
@@ -332,7 +342,7 @@
       "reason": "Provenance stamps canonical planner rows against the same explicit exposure contract; sole runtime caller is canonicalWeeklyRowCompiler, no new session choices."
     },
     "src/screens/coach/useCoachNoteActions.ts#createCoachNoteActions.clearCoachNote": {
-      "fingerprint": "bec99291106b28c22e4f86953441253a9cc1249b55e4c951349884b8fb393c35",
+      "fingerprint": "593d375b333bcb47a4cf14184860e34f0eb722eee0e049f72c05c012ae405851",
       "classification": "canonical_input_writer",
       "reason": "Coach-note clear UI delegates to exclusion/injury/fact or reversible-adjustment transaction owners and reports their outcome; fallback clearCoachNoteAction writes input state, not generated sessions."
     },
@@ -1822,7 +1832,7 @@
       "reason": "Retains a React sheet step during closing animation and renders it; no program publication."
     },
     "src/utils/activeProgramModifiers.ts#getActiveProgramModifiers": {
-      "fingerprint": "601dfd5000a29285f62f39d6f683f08eff15785371d458eb393a6c69e483f3b5",
+      "fingerprint": "b3ce14d6ec71a1b04fa6af8a035167c59b37743d70e391a26c95efbc63dc7326",
       "classification": "projection_display",
       "reason": "Selects status modifiers from accepted facts and preference inputs for display."
     },

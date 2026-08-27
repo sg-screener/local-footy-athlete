@@ -28,7 +28,6 @@ import {
 } from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
-import { isShownOnProgram } from '../../rules/programModifierVisibility';
 import {
   getActiveProgramModifiers,
   type ActiveProgramModifier,
@@ -60,9 +59,7 @@ import {
 } from '../../store/sessionOutcomeTransaction';
 import { todayISOLocal } from '../../utils/appDate';
 import {
-  getProgramBlockStateForDate,
   getProgramBlockRolloverStatus,
-  getStoredBlockStateForDate,
 } from '../../utils/programBlockState';
 import { rolloverProgramBlock } from '../../utils/programBlockRollover';
 import {
@@ -454,76 +451,10 @@ export function useHomeScreen() {
       dismissedIds: dismissedCoachNoteIds,
     });
   }, [temporarySourceFacts, onboardingData, dismissedCoachNoteIds]);
-  const visibleWeekKind = useMemo(() => {
-    if (!visibleWeekStart) return undefined;
-    const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
-      const start = microcycle.startDate.split('T')[0];
-      const end = microcycle.endDate.split('T')[0];
-      return visibleWeekStart >= start && visibleWeekStart <= end;
-    });
-    if (exactMicrocycle?.weekKind) return exactMicrocycle.weekKind;
-    if (blockState) {
-      return getStoredBlockStateForDate(
-        blockState,
-        visibleWeekStart,
-        currentPhase,
-        currentProgram?.seasonPhaseClock,
-      ).weekKind;
-    }
-    if (currentProgram?.startDate) {
-      return getProgramBlockStateForDate({
-        dateISO: visibleWeekStart,
-        programStartISO: currentProgram.startDate,
-        seasonPhase: currentPhase,
-        seasonPhaseClock: currentProgram.seasonPhaseClock,
-      }).weekKind;
-    }
-    return undefined;
-  }, [blockState, currentPhase, currentProgram, visibleWeekStart]);
-  /**
-   * THE SAME DERIVATION MY STATUS USES, NOT A SECOND ONE.
-   *
-   * Until 2026-08-13 this was an inline `selectActiveCoachNotes` memo whose
-   * seven store reads and two week inputs were byte-for-byte the ones inside
-   * `useActiveModifiers`. That was survivable while Program only needed the
-   * LIST — but SEAT_INBOX item 16 puts a COUNT on the day and week screens,
-   * and its rule (d) is that the count comes from this hook and never from a
-   * separate tally. Two copies of one selector is `a count taken for a record`
-   * (sighting 14 in this repo): the copies agree until the day one of them is
-   * given a filter the other never hears about.
-   *
-   * So the duplicate is COLLAPSED rather than joined by a third: the strip's
-   * count is `modifiers.length` of the very list `coachNoteActions` acts on and
-   * My Status renders, which is why the number on the day screen cannot
-   * disagree with the list behind it.
-   */
-  const { modifiers: coachNotes } = useActiveModifiers({
+  const { modifiers: coachNotes, count: modifierCount } = useActiveModifiers({
     visibleWeekDays: weekDays,
-    weekKind: visibleWeekKind,
+    weekStartISO: visibleWeekStart,
   });
-
-  /**
-   * WHAT PROGRAM SHOWS, AND THEREFORE WHAT PROGRAM COUNTS — SEAT_INBOX 22(b).
-   *
-   * **Sam, 2026-08-13:** *"hide time caps from the Program count ... keep them
-   * on My Status."* The popup named in that older wording was retired by R-249;
-   * this filter now owns the Program notice count only.
-   *
-   * ONE FILTER, APPLIED ONCE, feeding the notice count. My Status deliberately
-   * reads the whole unfiltered list through its own shared selector.
-   *
-   * `coachNotes` STAYS WHOLE for `coachNoteActions` below: the action router is
-   * about what CAN be acted on, not what Program draws, and narrowing it here
-   * would quietly remove a door rather than a row.
-   *
-   * MY STATUS IS UNFILTERED, by the same ruling — it holds the only control
-   * that clears a time cap, so filtering there would strand an active
-   * constraint with no door at all.
-   */
-  const modifierCount = useMemo(
-    () => coachNotes.filter(isShownOnProgram).length,
-    [coachNotes],
-  );
 
   useEffect(() => {
     if (!pendingFixtureObservation) return;
@@ -1151,8 +1082,8 @@ export function useHomeScreen() {
 
   /** Day and Week open their own Program-stack My Status destination directly. */
   const handleOpenMyStatus = useCallback(() => {
-    navigation.navigate('MyStatus');
-  }, [navigation]);
+    navigation.navigate('MyStatus', { weekStartISO: visibleWeekStart });
+  }, [navigation, visibleWeekStart]);
 
   const registerSourceFactRenderObservation = useCallback((args: {
     result: ProgramControlActionResult;

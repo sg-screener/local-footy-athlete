@@ -1,0 +1,81 @@
+appId: com.localfootyathlete.app
+name: Non-seeded onboarding, modifier lifecycle and season change
+tags:
+  - golden
+  - my-status
+---
+- runFlow: ../visible/onboarding-no-team-training.yaml
+- tapOn: Continue
+- tapOn: Monday
+- tapOn: Tuesday
+- tapOn: Thursday
+- tapOn: Friday
+- tapOn: Continue
+- tapOn: Commercial gym
+- tapOn: Continue
+- tapOn: "Advanced.*"
+- tapOn: "1.5× bodyweight"
+- tapOn: "1.25× bodyweight"
+- tapOn: "I haven't tested it"
+- tapOn: "Solid.*"
+- tapOn: "Regular.*"
+- tapOn: "Consistent.*"
+- tapOn: "No.*No current issues"
+- tapOn: Generate My Program
+- extendedWaitUntil:
+    visible: "Start your program.*"
+    timeout: 45000
+- tapOn: "Start your program.*"
+- assertVisible:
+    id: program-screen
+- tapOn:
+    id: program-view-week
+- tapOn:
+    id: program-week-next
+- assertVisible:
+    id: modifiers-strip-week-header
+- tapOn:
+    id: program-week-previous
+- tapOn:
+    id: program-view-today
+- scrollUntilVisible:
+    element:
+      id: home-tired-entry
+    direction: DOWN
+- tapOn:
+    id: home-tired-entry
+- tapOn:
+    id: readiness-option-cooked-week
+- tapOn:
+    id: home-week-readiness-confirmed-done
+- scrollUntilVisible:
+    element:
+      id: modifiers-strip-day-header
+    direction: UP
+- tapOn:
+    id: modifiers-strip-day-header
+- assertVisible: "1 ACTIVE"
+- tapOn:
+    id: "coach-status-modifier-.*"
+- tapOn: "I'm good now"
+- tapOn: "Clear and update program"
+- assertVisible:
+    id: coach-status-empty
+- tapOn:
+    id: coach-status-season-phase
+- tapOn:
+    id: season-phase-option-off-season
+- tapOn: Confirm phase
+- assertVisible: Select the date of your last game
+- tapOn: "I'm not sure"
+- assertVisible: What days can you train?
+- assertNotVisible: Team training days
+- tapOn: Shift to Off-season
+- extendedWaitUntil:
+    visible:
+      id: phase-shift-complete
+    timeout: 30000
+- tapOn: Done
+- assertVisible:
+    id: coach-status-screen
+- takeScreenshot: artifacts/ui-walk/modifiers-cold-onboarding-phase

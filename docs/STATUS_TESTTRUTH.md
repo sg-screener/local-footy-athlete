@@ -3464,3 +3464,182 @@ NOT COVERED: Sam's physical UX acceptance and new non-seeded on-phone journey,
 three older Maestro tapes, dormant accessory-mobility/2 km feature integration,
 remote persistence and transitive metadata clock purity. Release gates remain
 green for this exact source; awaiting Sam's device acceptance.
+
+### Sam's week-edit/reopen acceptance (2026-08-28)
+
+Sam reported: "yep i changed the week exited the app and it was still the same".
+Accepted on his physical iPhone: the week changes he made remained after exiting
+and reopening the installed app. This is a user-observed check, not a newly run
+automated tape. The exact edits and OS termination method were not specified;
+do not turn this into a claim that every action or true process-death route was
+tested. No code, app state or phone installation changed in recording this.
+
+NOT COVERED by this confirmation: fixture/injury/Undo combinations individually,
+the full fresh-onboarding/phase-change journey, broader UX and compiler re-audit,
+or the previously listed unintegrated features and older Maestro flows.
+
+## 40. All active modifier sources share the Program/My Status projection (2026-08-28)
+
+Owner: testtruth. Sam: "anything that effects the program should be listed - as
+a modifier that pops up and shows up in my status". R-262 and
+LAW-all-program-effects-visible bind this to `test:modifier-lifecycle`, a new
+current contract in the small release gate. R-249's direct navigation remains:
+the Program notice opens My Status, with no restored intermediate popup.
+
+Compared separately patching each screen's filters with one read-only snapshot
+of canonical facts, accepted edits and typed week metadata. Chose the shared
+snapshot: Home passes the displayed week; My Status receives that week in its
+route and uses the existing visible-week resolver. The count is the length of
+the same list. Neither screen writes generated sessions or a persisted list of
+modifiers. Existing compiler, fact transactions, preference owners and Undo
+remain the only mutation mechanisms.
+
+### Measured gaps and replacement map
+
+- Time caps were explicitly filtered from Program. They now have the visible
+  `session_time_limited` effect; creation UI/programming policy is unchanged.
+- Injury/readiness/equipment visibility depended on matching workout prose.
+  Removed those inference helpers; canonical active facts now supply identity
+  and visibility even when descriptions are absent or change.
+- Mild readiness reports were correctly record-only, but choosing the existing
+  lighter-day opt-in changed training without a clearable Status row. The row
+  now comes from the accepted lighter-day effect and its exact source fact.
+- Composed same-kind constraints hid individual accepted reports. Display now
+  projects each accepted fact separately; the compiler still combines their
+  effects exactly as before. Clear addresses the selected fact ID, not an
+  ambiguous shared constraint or displayed note ID.
+- Old dismissed-note IDs could conceal effects still changing the program.
+  They no longer filter active notes; active rows have no Dismiss action. Old
+  saved IDs and ledger records are preserved, not rewritten or deleted.
+- An accepted practice-match change survived restart but its transient
+  adjustment note vanished. Status derives the fixture row from the stable
+  decision ID and matches the reconstructed adjustment through the existing
+  identity helper. Latest fixture-layer decision per affected week is shown;
+  it is not an event-history list of superseded fixture resolutions.
+- Manual session constraints lacked modifier rows. Current active session
+  constraints are now joined to accepted edit identities for Add/Move/Swap/
+  Remove copy. Only the exact latest undoable change exposes existing Undo;
+  older active edits remain visible without inventing an out-of-order Undo.
+- Scheduled deload comes from typed `deloadDoor`/`dosePolicyByDay`, read-only,
+  rather than guessing from a week label or a phrase in workout notes.
+
+Test-first receipts include `/private/tmp/testtruth-modifiers-session-before.log`
+(215 assertions passed, 2 failed: accepted removal row absent live and after
+restart). The fixture restart and time-cap/prose/opt-in defects were likewise
+observed in the preceding lifecycle runs before their projection changes.
+
+The simulator restart checkpoint also failed for a different, test-only reason:
+it expected fact-derived readiness/constraint mirrors to exist on disk. Fixed
+the TWO existing descriptor selectors in `devE2EPersistence.ts` to call the
+same `readinessInputsForPersistence` and `constraintInputsForPersistence` owners
+used by app persistence. No duplicate saved output, new harness, seed author or
+store descriptor was introduced. A new executable control confirms the
+checkpoint agrees with canonical disk inputs AND rejects a removed program
+store. The observed failing checkpoint is in
+`/private/tmp/testtruth-modifiers-ui.log`.
+
+### Verification and next-defect protection
+
+`test:modifier-lifecycle` drives real onboarding and production apply/Status-
+clear/restart doors. Targeted run: 223 assertions passed, 0 failed in the main
+lifecycle suite, plus 10 My Status, 10 Program-route and 4 effect-phrase cells
+passed (`/private/tmp/testtruth-modifiers-final-targeted.log`). Scope:
+
+- 16 distinct restriction journeys: six automatic readiness choices, equipment,
+  time cap, all seven temporary schedule kinds and a limiting knee injury.
+- Three distinct record-only readiness choices followed by real lighter-day
+  opt-in; independent overlapping reports including two same-kind source facts.
+- Actual changed training, list/count agreement, stable IDs, persistence,
+  exact-fact clear and restart-after-clear for every restriction journey.
+- Typed scheduled deload, accumulated prior session removal, exclusion restore,
+  latest session Undo after restart, conditioning preference persistence/clear,
+  fixture Undo after restart, upcoming restrictions and expiry.
+- Mutation controls hide a real time-cap row and remove real persisted program
+  inputs: the same visibility/checkpoint assertions reject both mutations, then
+  pass again after restoration. No fake stored program is substituted.
+
+The initial new test coordinates also found test mistakes, not product defects:
+a normal game in pre-season (the supported variant is practice match), treating
+moderate `sore_today` as a record-only choice, expecting two identical stable-ID
+readiness taps to make two separate facts, and using `running` instead of the
+modality input enum `run`. Corrected those expectations/inputs; no training law
+was changed to satisfy them.
+
+Simulator iPhone 17 Pro, iOS 26.3, B8B2C7B0-0558-448A-896D-EAB9C2C6C326:
+fresh Debug build installed for these checks, neither physical phone touched.
+`.maestro/golden/modifier-cold-onboarding.yaml` passed real non-seeded onboarding,
+generation, week navigation, cooked apply/Status clear, and off-season change
+including last-game calendar and no team-training prompt. Receipt:
+`/private/tmp/testtruth-modifiers-cold-ui3.log`; screenshot:
+`artifacts/ui-walk/modifiers-cold-onboarding-phase.png`. Two earlier runs stopped
+on exact-text selectors for grouped title/subtitle labels; updated the test to
+match the real accessibility labels, without changing the controls.
+
+Expanded session-edit coverage also passes all six variants: Add/Swap by category
+or template, Move, and Remove. Each accepted edit has a row, stable restart
+identity, exact rebuilt training and eligible Status Undo. Receipt:
+`/private/tmp/testtruth-modifiers-all-edits2.log`: final main-suite total
+248 passed, 0 failed, plus the same 24 view/copy cells. The first Move probe selected
+a team-training day as "empty" because it had no exercise rows; corrected the
+test to select an actual empty/Rest day, without altering placement policy.
+
+Final seeded tape `.maestro/golden/program-modifier-notice.yaml` passed on final
+runtime source: apply cooked, Day/Week notice and My Status count 1, real
+stop/relaunch, exact Status clear, notice absent in both views, second real
+stop/relaunch and Status still empty. Receipt:
+`/private/tmp/testtruth-modifiers-ui-final.log`; screenshots:
+`artifacts/ui-walk/modifier-active-status.png` and
+`artifacts/ui-walk/modifier-cleared-after-restart.png`.
+
+Final `npm run test:release` completed exit 0, **8/8 executable units green**,
+covering 11 current contract rows plus bootstrap/typecheck. Receipt:
+`/private/tmp/testtruth-modifiers-release-final.log`. Annual acceptance reached
+and passed all 416 required athlete-weeks (8 distinct archetypes × 52); canonical
+compiler slice 604 assertions passed; modifier lifecycle 248 passed plus 24
+view/copy assertions. The release command's other existing witnesses also
+completed successfully. Runtime code stayed unchanged throughout this final
+run; the test-only Add/Swap/Move cases added during the year run were executed
+by its final modifier unit and separately typechecked after addition. Rule
+wording/receipt refinements did not change runtime behavior.
+
+Final standalone ownership census (`testtruth-modifiers-ownership-final.log`):
+602 runtime source files, 2365 direct-operation occurrences in 631 distinct
+direct owners; all 1135 executable capability owners reviewed (644 explicit,
+3 structurally proven readers, 488 inherited callers), 0 unresolved, 0 distinct
+rival authors, 0 distinct direct derived-output writers. Four dormant builder
+capabilities remain inventoried and runtime-quarantined. Final typecheck
+(`testtruth-modifiers-typecheck-complete.log`) reports 0 product, 0 devtools,
+0 test-scope errors. Test-truth bootstrap also passes on the finished registry
+(`testtruth-modifiers-test-truth-final.log`), 0 unrunnable of 392 inventoried
+suites; this is an inventory claim, not 392 passing suites.
+The first release run reached 416/416 green athlete-weeks, then correctly stopped
+at the ownership gate when the just-added session-display readers needed fresh
+review. Only the five changed direct capabilities were reviewed, not a blanket
+fingerprint refresh: shared hook, selector, imperative selector, Home reader and
+existing exact-fact Clear caller. Fixture-map mutation and reversed ledger
+COPY are local presentation work, not program/ledger writes.
+
+The separate historical `test:law-registry` remains red: 11 cells pass, 3 fail;
+21 of 205 law rows UNENFORCED, missing `test:game-feedback` reference and
+unregistered LR-18 citation. R-262 itself is registered, gated and in-chain.
+This is not a claim that the entire old Bible fleet is green, and its old red
+expectations are not being used as a product-change backlog.
+
+NOT COVERED: physical iPhone installation/acceptance of this modifier change;
+every modifier/action combination individually on glass (the wider matrix here
+is headless); standing preference/profile editing flows beyond the tested
+exclusion and modality controls; device expiry at midnight; remote persistence;
+the two preserved runtime-quarantined features and remaining legacy test debt.
+No blocking question for Sam. New simulator tests are not physical acceptance.
+
+Concurrent audit seat committed only `docs/STATUS_AUDIT.md` as `0837ce6a` while
+this work ran; reviewed its latest findings and preserved its work. Its reported
+exercise-removal Undo/exclusion regression, changedProgram reporting mismatch
+and arithmetic mutation blind spots are separate from this modifier-visibility
+checkpoint and are NOT claimed fixed here. The Status exclusion-restore path
+tested above is not the same operation as generic latest-decision Undo of an
+exercise removal. No code from the other seat was modified or swept into this
+change; its findings remain in that seat's report.
+
+NOT COVERED additionally: resolving those separate re-audit findings. Passing
+the current release contract does not override that report.

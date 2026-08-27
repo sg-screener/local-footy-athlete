@@ -1013,6 +1013,21 @@
       "kind": "rewrite_test",
       "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
       "evidenceKind": "assertion_or_late_runtime_failure"
+    },
+    "test:modifier-lifecycle": {
+      "kind": "current_contract",
+      "reason": "R-262 requires every active program-affecting change to be visible; source facts are independently clearable through My Status, while session/fixture Undo retains its exact latest-action eligibility. Day and Week count the same list, including opted-in lighter days.",
+      "productionPaths": [
+        "src/hooks/useActiveModifiers.ts",
+        "src/utils/activeProgramModifiers.ts",
+        "src/utils/activeCoachNotes.ts",
+        "src/screens/coach/useCoachNoteActions.ts"
+      ],
+      "contractRefs": [
+        "LAW-all-program-effects-visible"
+      ],
+      "witnessScript": "test:modifier-lifecycle",
+      "evidenceKind": "current_architecture_incomplete"
     }
   }
 }

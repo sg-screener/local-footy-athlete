@@ -1,46 +1,5 @@
-/**
- * "YOUR SESSION HAS BEEN MODIFIED" — THE STEP BETWEEN THE NOTICE AND MY STATUS.
- *
- * SAM'S OWN PROTOTYPE, RULED 2026-08-13. He sent the screen, asked whether
- * tapping the day/week notice opened *"something like this? which you can then
- * tap and be taken to the status area inside the coach tab"*, and on being told
- * it went straight through in one hop, answered *"add the popup"*.
- *
- * WHAT IT IS FOR, IN HIS DESIGN'S OWN TERMS. The notice says HOW MANY things
- * are changing the program. This says WHICH ones — without making the athlete
- * leave the Program screen to find out, and with a way to say "not now" and get
- * on with the session. My Status is one tap further on, for when they want to
- * change something.
- *
- * IT LISTS. IT DOES NOT ACT — AND THAT IS THE LINE THIS FILE MUST NOT CROSS.
- * SEAT_INBOX item 16 rule (c) says the notice "carries no controls of its own",
- * and that rule is why the strip originally went straight to My Status. Sam's
- * prototype overrules the ROUTE, not the reason: the modifier LIST's eight
- * ACTIONS — clear, update, restore, resolve — still live on My Status alone.
- * So `note.actions` is deliberately NOT read here. The two controls this sheet
- * has are a navigation and a dismiss, and neither changes a modifier.
- *
- * THE RIGHT-HAND COLUMN IS SAM'S, SIGNED 2026-08-13 (SEAT_INBOX 22a). Eight
- * short phrases, one per modifier kind, keyed off the modifier's own `effect`
- * — a field its BUILDER sets, because only the builder can tell a tired week
- * from a sick one or an injury worked around from an injury that stopped
- * training. `EFFECT_COPY_ID` is a `Record` over the closed union, so adding a
- * member without giving it a phrase does not compile.
- *
- * TWELVE PHRASES NOW, AFTER SEAT_INBOX 23 SIGNED THE LAST FOUR. Only TWO kinds
- * still fall back to their own authored sentence, and both by ruling rather
- * than omission: SORENESS, whose sentence names the body part, and the
- * generated PROGRAMME-EFFECT notes, which carry their own. They are still
- * SHOWN and still COUNTED — a missing phrase is a gap in the words, never a
- * reason to stop telling the athlete their program changed.
- *
- * TIME CAPS RENDER NO ROW AT ALL (22b). Sam: *"i've taken out time caps for
- * now"*. **And they are absent from the COUNT as well, by his 2026-08-13
- * ruling** — the notice above this sheet counts what this sheet lists, so
- * hiding only the row would have put "2 active modifiers" over a list of one.
- * `PROGRAM_HIDDEN_EFFECTS` is the one filter, exported so the count and the
- * list cannot apply different ones. My Status is unfiltered on purpose: it
- * holds the only control that clears a cap.
+/** Preserved legacy presentation; R-249 removed its runtime mount.
+ * R-262 keeps its read-only list consistent with Program and My Status.
  */
 
 import React from 'react';
@@ -75,7 +34,7 @@ const EFFECT_COPY_ID: Record<ActiveProgramModifierEffect, string | null> = {
   exercise_removed: 'modifiers.effect.exercise_removed',
   exercise_prioritised: 'modifiers.effect.exercise_prioritised',
   conditioning_swapped: 'modifiers.effect.conditioning_swapped',
-  not_shown: null,
+  session_time_limited: null,
   unsigned: null,
 };
 

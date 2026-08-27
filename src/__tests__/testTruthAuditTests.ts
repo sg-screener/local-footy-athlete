@@ -183,11 +183,11 @@ const censusCounts = Object.values(
 );
 ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
-    && Object.keys(decisionRegistry.decisions).length === 178
+    && Object.keys(decisionRegistry.decisions).length === 179
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 10
+  censusCounts.current_contract === 11
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',
       'test:fixture-mutation-transaction', 'test:temporary-source-facts']
       .every(label => decisionRegistry.decisions[label]?.witnessScript === 'test:canonical-weekly-compiler')

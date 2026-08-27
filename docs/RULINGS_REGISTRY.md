@@ -6703,3 +6703,18 @@ rewrite is required. Deload changes dose, not the exposure's identity.
 Guard: `LAW-proper-sprint-conditioning-credit`,
 `test:canonical-weekly-compiler`, included in `test:release`.
 Implementation and measured scope: `docs/STATUS_TESTTRUTH.md` step 19.
+
+**R-262** · Sam, 2026-08-28: *"anything that effects the program should be listed - as a modifier that pops up and shows up in my status"*.
+
+Owner: testtruth. Every active program-affecting restriction, accepted session/fixture
+edit and lighter-day choice is visible in the Program indicator and My Status. This supersedes the
+old time-cap hiding rule. Preserve R-249's direct My Status navigation: no extra
+intermediate popup. Both surfaces use the same list and viewed-week context.
+Recorded restrictions do not disappear because session prose changes or an old
+note was dismissed. Separate accepted reports remain independently clearable;
+Clear uses the existing canonical transaction and preserves unrelated edits.
+Generated planned deload is shown from typed compiler metadata, read-only.
+Session and fixture changes expose the existing exact latest-action Undo only
+when eligible; showing an older active change does not manufacture a new Undo.
+Guard: `LAW-all-program-effects-visible`, `test:modifier-lifecycle`, in
+`test:release`. Receipts and NOT COVERED: `docs/STATUS_TESTTRUTH.md`.

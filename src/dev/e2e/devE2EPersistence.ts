@@ -6,6 +6,7 @@ import {
   useCalendarStore,
 } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
+import { constraintInputsForPersistence, readinessInputsForPersistence } from '../../store/compatibilityPersistence';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
@@ -122,7 +123,7 @@ const semanticStores: SemanticStoreDescriptor[] = [
   {
     key: 'readiness-store',
     store: useReadinessStore as unknown as PersistedStore,
-    select: (state) => ({ signalsByDate: state.signalsByDate ?? {} }),
+    select: (state) => ({ signalsByDate: readinessInputsForPersistence(state.signalsByDate ?? {}) }),
   },
   {
     key: 'coach-preferences-store',
@@ -134,7 +135,7 @@ const semanticStores: SemanticStoreDescriptor[] = [
     store: useCoachUpdatesStore as unknown as PersistedStore,
     select: (state) => ({
       updatesByWeek: state.updatesByWeek ?? {},
-      activeConstraints: state.activeConstraints ?? [],
+      activeConstraints: constraintInputsForPersistence(state.activeConstraints ?? []),
     }),
   },
   {

@@ -275,7 +275,7 @@ run('My Status is unfiltered even when the visible program week is absent', () =
   const call = screen.slice(anchor, screen.indexOf(';', anchor) + 1);
   assert(call.length > 1,
     'the My Status modifier call could not be bounded — this assertion reads nothing');
-  assert(/^useActiveModifiers\(\);$/.test(call.trim()),
+  assert(/^useActiveModifiers\(\{ weekStartISO: route\.params\?\.weekStartISO \}\);$/.test(call.trim()),
     `My Status calls \`${call.trim()}\`; passing visibleWeekDays lets a missing or `
     + 'different program output hide a saved athlete fact');
 });

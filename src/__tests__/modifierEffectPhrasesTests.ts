@@ -64,12 +64,12 @@ run('all twelve of Sam\'s phrases ship exactly as he wrote them', () => {
   }
 });
 
-run('a time cap is hidden from Program, and nothing else is', () => {
-  assert(PROGRAM_HIDDEN_EFFECTS.length === 1 && PROGRAM_HIDDEN_EFFECTS[0] === 'not_shown',
+run('all effects including time limits are visible (R-262)', () => {
+  assert(PROGRAM_HIDDEN_EFFECTS.length === 0,
     `Program hides ${JSON.stringify(PROGRAM_HIDDEN_EFFECTS)}. Sam withdrew TIME CAPS `
     + 'and nothing else; every other modifier must still be visible and counted.');
-  assert(!isShownOnProgram({ effect: 'not_shown' }),
-    'a time-cap modifier is being shown on Program again — Sam took time caps out');
+  assert(isShownOnProgram({ effect: 'session_time_limited' }),
+    'an active time-cap modifier is hidden from Program despite R-262');
   for (const [effect] of SAM_PHRASES) {
     assert(isShownOnProgram({ effect }),
       `"${effect}" is hidden from Program. Sam signed a phrase for it, which is `
@@ -84,14 +84,14 @@ run('a time cap is hidden from Program, and nothing else is', () => {
 // THE COUNT AND THE LIST ARE THE SAME ARRAY, AND THIS IS WHY IT MATTERS.
 // Hiding a row while still counting it is the defect this ruling created the
 // risk of: the notice would read "2 active modifiers" over a list of one.
-run('hiding a row also removes it from the count', () => {
+run('the count includes every listed effect', () => {
   const notes = [
     { effect: 'volume_adjusted' as const },
-    { effect: 'not_shown' as const },
+    { effect: 'session_time_limited' as const },
     { effect: 'unsigned' as const },
   ];
   const shown = notes.filter(isShownOnProgram);
-  assert(shown.length === 2,
+  assert(shown.length === 3,
     `Program would count ${shown.length} of these three. The notice counts what `
     + 'the sheet lists, so any difference is a number the athlete can see is wrong.');
 });

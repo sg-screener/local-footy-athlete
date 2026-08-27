@@ -1,28 +1,13 @@
-/**
- * THE ATHLETE'S ACTIVE PROGRAM MODIFIERS — ONE DERIVATION, EVERY SURFACE.
- *
- * Ruling 4 of the UI merge moves the modifiers off the day screen and onto the
- * coach page, and the seat's note on ruling 7 adds a third surface: *"the '2
- * active modifiers' row appears at the top of the WEEK view too — same component
- * as the day screen's, not a second one."*
- *
- * **THREE SURFACES IS THREE CHANCES TO DISAGREE, AND THIS FILE IS WHY THEY
- * CANNOT.** `selectActiveCoachNotes` was already the one selector; what was
- * missing was a way to REACH it from anywhere but `useHomeScreen`, which is a
- * 2000-line hook belonging to one screen. A second screen that assembled the
- * same snapshot by hand would be a second reading of the athlete's state — the
- * exact defect every law in this repo exists to kill — and it would drift the
- * first time an input was added, silently, because nothing compares two lists
- * nobody knows are two.
- *
- * IT ADDS NO STORED STATE AND NO NEW SOURCE. Every input is read from the store
- * that already owns it; the week comes from `useResolvedWeek`, the same
- * derivation the coach tab and the program tab already share. This is the north
- * star's own sentence — store only decisions, derive everything else — applied
- * to a list that was already derived and merely unreachable.
+/** Shared, read-only modifier projection for Program and My Status (R-262).
+ * Accepted facts own restrictions; the ledger owns opted-in lighter days;
+ * canonical week metadata owns generated changes. No display output is saved.
  */
 
 import { useMemo } from 'react';
+import { useResolvedWeekForDate } from './useSchedule';
+import { todayISOLocal } from '../utils/appDate';
+import { getMondayForDate } from '../utils/sessionResolver';
+import type { ActiveProgramModifierVisibleDay } from '../utils/activeProgramModifiers';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -32,20 +17,14 @@ import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { isTemporaryEquipmentFact } from '../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 
 export interface ActiveModifiersSnapshotInput {
-  /**
-   * The days the athlete is looking at, and the week's kind if it is known.
-   *
-   * PASSED IN, NEVER RE-DERIVED HERE, for the reason `CoachTabScreen`'s own
-   * comment gives about `executePlanChangeAction`: a surface that re-derived its
-   * own week would be free to describe a week nobody is reading. Callers hand it
-   * the week they are showing.
-   */
-  readonly visibleWeekDays?: readonly unknown[];
-  readonly weekKind?: string;
+  /** Reuse Program's displayed days, or resolve the requested week on My Status. */
+  readonly visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[];
+  readonly weekStartISO?: string;
 }
 
 /**
@@ -88,36 +67,58 @@ export function useActiveModifiers(
   // Normalisation also re-composes the constraint from the stored typed fact,
   // so a stale/empty compatibility array cannot turn a saved injury invisible.
   const acceptedMaterialContext = useProgramStore((s) => s.acceptedMaterialContext);
-  const activeConstraints = useMemo(
-    () => normalizeAcceptedMaterialContext(acceptedMaterialContext).activeConstraints,
+  const acceptedContext = useMemo(
+    () => normalizeAcceptedMaterialContext(acceptedMaterialContext),
     [acceptedMaterialContext],
   );
+  const { activeConstraints, temporarySourceFacts } = acceptedContext;
+  const decisionEntries = useDecisionLedgerStore(s => s.entries);
+  const reversibleAdjustments = useProgramStore(s => s.reversibleAdjustmentLedger.adjustments);
+  const sessionConstraints = useProgramStore(s => s.userRemovalConstraints);
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
   const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
   const onboardingData = useProfileStore((s) => s.onboardingData);
-  const { visibleWeekDays, weekKind } = input;
+  const currentProgram = useProgramStore(s => s.currentProgram);
+  const todayISO = todayISOLocal();
+  const targetWeek = getMondayForDate(input.weekStartISO ?? input.visibleWeekDays?.[0]?.date ?? todayISO);
+  const resolvedDays = useResolvedWeekForDate(input.visibleWeekDays ? undefined : targetWeek);
+  const visibleWeekDays = input.visibleWeekDays ?? resolvedDays;
+  const compiledWeek = currentProgram?.microcycles.find(week => week.startDate.slice(0, 10) === targetWeek);
+  const weekKind = compiledWeek?.weekKind;
 
   const modifiers = useMemo(
     () => selectActiveCoachNotes({
       activeConstraints,
+      temporarySourceFacts,
+      decisionEntries,
+      reversibleAdjustments,
+      sessionConstraints,
       dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
       weekKind,
+      compiledWeek,
+      todayISO,
       visibleWeekDays,
-    } as Parameters<typeof selectActiveCoachNotes>[0]),
+    }),
     [
       activeConstraints,
+      temporarySourceFacts,
+      decisionEntries,
+      reversibleAdjustments,
+      sessionConstraints,
       dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
       weekKind,
+      compiledWeek,
+      todayISO,
       visibleWeekDays,
     ],
   );
@@ -126,8 +127,6 @@ export function useActiveModifiers(
   // The horizon filter is not optional: comparing `scope.until` directly drops
   // every OPEN fact, which blanks exactly the durable reports (severe illness,
   // cooked, no gym for a month) that most need showing.
-  const temporarySourceFacts = useProgramStore((s) =>
-    s.acceptedMaterialContext.temporarySourceFacts);
   const visibleWeekStart = (visibleWeekDays?.[0] as { date?: string } | undefined)?.date;
   const equipmentFactIds = useMemo(() => new Set(temporarySourceFacts
     .filter(isTemporaryEquipmentFact)

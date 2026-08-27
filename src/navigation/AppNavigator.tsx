@@ -21,7 +21,7 @@ export type ProgramStackParamList = {
   DayWorkout: {
     workoutId: string; date?: string; startFinished?: boolean;
   };
-  MyStatus: undefined;
+  MyStatus: { weekStartISO?: string } | undefined;
 };
 
 type ProfileStackParamList = {

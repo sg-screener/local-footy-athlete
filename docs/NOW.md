@@ -61,10 +61,10 @@ and this file gets one line pointing at it.**
 ## STATE
 
 - **BRANCH:** `codex/failure-only-state-export` · **PHONE BUILD:** `3a8a3bd6`, five-part compiler completion, status sections 38–39.
-- **CURRENT UNIT:** clean signed Release installed and launched on Sam's iPhone over Wi-Fi 2026-08-28; owner `testtruth`. Only LFA local data was removed; Renee untouched.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 38; release 7/7 executable units, year 416/416 athlete-weeks; source fingerprint reverified unchanged 2026-08-28.
-- **NEXT:** Sam's fresh-onboarding/device acceptance and compiler re-audit; no further phone actions pending.
-- **OPEN:** device acceptance; three old Maestro tapes; two preserved runtime-quarantined features. Ownership: 0 rivals / 0 direct derived writers / 1137 reviewed capability owners. All three typecheck scopes zero.
+- **CURRENT UNIT:** R-262 modifier visibility, owner `testtruth`: shared Day/Week/My Status list, exact-fact Clear, session/fixture rows and typed deload. Gates green; not installed on either phone.
+- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 40: release 8/8 executable units, annual 416/416 athlete-weeks, modifier 248 + 24 view/copy checks. Seeded restart and non-seeded onboarding/phase-change simulator tapes green; all three typecheck scopes zero.
+- **NEXT:** physical acceptance of this modifier change. Sam confirmed week-edit/reopen persistence on the previous phone build (section 39), not this new code.
+- **OPEN:** physical modifier acceptance, historical law-registry debt, separate compiler re-audit findings (`docs/STATUS_AUDIT.md`), and preserved runtime-quarantined features. Ownership: 0 rivals / 0 direct derived writers / 1135 reviewed capability owners; this is not an all-app pass.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

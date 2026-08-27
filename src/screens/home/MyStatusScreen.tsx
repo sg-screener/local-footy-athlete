@@ -24,8 +24,8 @@ import { useCoachNoteActions } from '../coach/useCoachNoteActions';
 
 type Props = NativeStackScreenProps<ProgramStackParamList, 'MyStatus'>;
 
-export default function MyStatusScreen({ navigation }: Props) {
-  const { modifiers, equipmentFactIds } = useActiveModifiers();
+export default function MyStatusScreen({ navigation, route }: Props) {
+  const { modifiers, equipmentFactIds } = useActiveModifiers({ weekStartISO: route.params?.weekStartISO });
   const rebuild = useProgramRebuild();
   const rebuildNotice = useRebuildNotice();
   const phaseControl = useSeasonPhaseControl();

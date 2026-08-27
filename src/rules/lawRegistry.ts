@@ -141,6 +141,15 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-all-program-effects-visible',
+    law: 'Every active program-affecting restriction, session/fixture edit or accepted lighter-day choice has a visible modifier. Day and Week count the same list My Status opens for that week. Time caps are included; prose changes and old dismissals cannot hide active effects. Clear targets the exact fact through its existing transaction, preserving other facts and edits. Session/fixture Undo uses existing exact latest-action eligibility. Scheduled deload is read-only and identified by canonical dose metadata.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-262',
+    guard: {
+      state: 'guarded', by: 'test:modifier-lifecycle', chainStatus: 'in_chain',
+      receipt: 'Test-first 2026-08-28, testtruth. Real onboarding/apply/Status-clear/restart journeys exposed time-cap filtering, prose-dependent visibility, absent lighter-day opt-ins and ambiguous grouped-report Clear. Current contract in test:release; detailed execution, mutation and UI receipts in docs/STATUS_TESTTRUTH.md. Physical-phone acceptance remains separate.',
+    },
+  },
+  {
     id: 'LAW-proper-sprint-conditioning-credit',
     law: 'A proper authored sprint counts once toward overall conditioning while retaining speed identity. Warm-up riders, primers, display labels and duplicate block references cannot manufacture credit; combined speed plus intervals earn one session credit while both qualities remain distinguishable. Deload and restart retain the same typed identity. Explicit zero team-training answers are not missing answers.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-261; Sam, 2026-08-27, approved the shared conditioning-count rule and requested chunk 1.',

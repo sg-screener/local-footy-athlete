@@ -81,7 +81,6 @@ export function buildCoachNotesFromModifiers(
   modifiers: readonly ActiveProgramModifier[],
   dismissedCoachNoteIds: readonly string[] = [],
 ): ActiveCoachNote[] {
-  const dismissed = new Set(dismissedCoachNoteIds);
   return dedupeModifiersByLifecycle(modifiers).map((modifier) => ({
     id: `coach-note:${modifier.id}`,
     modifierId: modifier.id,
@@ -91,7 +90,7 @@ export function buildCoachNotesFromModifiers(
     title: modifier.title,
     body: modifier.body,
     severity: modifier.severity,
-    actions: modifier.actions,
+    actions: modifier.actions.filter(action => action.kind !== 'dismiss_note'),
     reversibleAdjustmentId: typeof modifier.payload?.reversibleAdjustmentId === 'string'
       ? modifier.payload.reversibleAdjustmentId
       : undefined,
@@ -106,15 +105,13 @@ export function buildCoachNotesFromModifiers(
       && typeof modifier.payload?.exercise === 'string'
       ? modifier.payload.exercise
       : undefined,
-  })).filter((note) => !dismissed.has(note.id));
+  }));
 }
 
 export function dismissActiveCoachNote(noteId: string): boolean {
-  const note = buildCoachNotesFromModifiers(getActiveProgramModifiers(), [])
-    .find((candidate) => candidate.id === noteId);
-  if (!note || (!note.presentationOnlyDismiss && !note.reversibleAdjustmentId)) return false;
-  useCoachUpdatesStore.getState().dismissCoachNote(note.id);
-  return true;
+  // R-262: an active effect cannot be hidden independently of ending its cause.
+  // Retain the old command boundary so persisted/older callers fail safely.
+  return false;
 }
 
 export function selectActiveCoachNotes(

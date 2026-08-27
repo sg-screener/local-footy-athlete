@@ -336,21 +336,17 @@ export function createCoachNoteActions(input: CoachNoteActionsInput): CoachNoteA
       return;
     }
     const acceptedContext = useProgramStore.getState().acceptedMaterialContext;
-    const constraint = note
-      ? acceptedContext.activeConstraints
-          .find((candidate) => candidate.id === note.constraintId)
-      : null;
     const sourceFactId = note?.temporarySourceFactIds?.[0];
     const sourceFactDomain = sourceFactId && acceptedContext.temporarySourceFacts.some((fact) =>
       isTemporaryEquipmentFact(fact) && fact.factId === sourceFactId)
       ? 'equipment' as const
       : 'readiness' as const;
-    const result = (constraint?.temporarySourceFactIds?.length ?? 0) > 0
+    const result = sourceFactId
       ? await executeProgramControlActionDurably({
           type: 'clear_fatigue_status',
           source: { screen, surface: 'coach_notes_resolved', initiatedBy: 'tap' },
           scope: 'current_and_future',
-          payload: { noteId, modifierId: note?.modifierId, date: todayISOLocal() },
+          payload: { modifierId: sourceFactId, date: todayISOLocal() },
           requiresRebuild: false,
           createsActiveModifier: false,
           oneOffOnly: false,
