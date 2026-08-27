@@ -68,7 +68,7 @@ export interface ExplorerScenarioActiveTimeBudgetSnapshot {
 interface ExplorerActiveTimeBudgetStorage
   extends Pick<DevE2EKeyValueStorage, 'getItem' | 'setItem' | 'removeItem'> {}
 
-type TimerHandle = ReturnType<typeof setTimeout>;
+type TimerHandle = ReturnType<typeof setTimeout> | number;
 
 export interface ExplorerExternalStageDeadlineOptions {
   readonly timeoutMs?: number;

@@ -21,7 +21,7 @@ function control() {
     prerequisites: [{ id: 'canonical_only', ok: true }], mutations: [{ id: 'real_compiler_mutation', ok: true }],
     athletes: ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
       checks: [{ id: 'onboarding', ok: true }],
-      actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise']
+      actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise', 'lighter_day']
         .map((kind) => ({ kind, date: 'fixture-only', ok: true })),
       weeks: yearTimeline(a).map((w) => ({ ...w, status: 'measured', checks: WEEK_CHECKS.map((id) => ({ id, ok: true })) })),
     })) };
@@ -45,6 +45,7 @@ const mutations = {
   missing_phase_transition: (r) => r.athletes[0].actions.splice(3, 1),
   missing_multi_game: (r) => { const a = r.athletes.find((a) => a.id === 'male-5-two-fixtures'); a.actions = a.actions.filter((x) => x.kind !== 'add_game'); },
   missing_exercise_before_fixture: (r) => { const a = r.athletes.find((a) => a.id === 'male-5-two-fixtures'); a.actions = a.actions.filter((x) => x.kind !== 'swap_exercise'); },
+  missing_lighter_day: (r) => { const a = r.athletes.find((a) => a.id === 'male-5-two-fixtures'); a.actions = a.actions.filter((x) => x.kind !== 'lighter_day'); },
   missing_ownership_proof: (r) => { r.prerequisites = []; },
   rival_author: (r) => { r.prerequisites[0].ok = false; },
   missing_mutation_proof: (r) => { r.mutations = []; },

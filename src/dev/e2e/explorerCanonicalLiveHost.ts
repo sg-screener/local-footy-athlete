@@ -615,7 +615,7 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
         throw new Error(`explorer_live_trace_semantic_snapshot_missing:${step.stepId}`);
       }
       const render = readExplorerCorrelatedRenderReceipt(receipt);
-      const renderWitnessReceipts = step.oracleAssertions.flatMap((oracle) => {
+      const renderWitnessReceipts = step.oracleAssertions.flatMap<import('./explorerOracleEvaluator').ExplorerRenderWitnessReceipt>((oracle) => {
         if (oracle.type !== 'rendered-witness') return [];
         if (!render || !render.complete || !render.observedTestIds.includes(oracle.testId)) {
           throw new Error(`explorer_live_render_receipt_missing:${oracle.oracleId}`);

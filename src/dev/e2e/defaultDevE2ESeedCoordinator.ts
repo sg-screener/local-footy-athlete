@@ -393,7 +393,7 @@ async function applyAuxiliaryState(
       todayISO: item.date,
     });
     const result = await commitSessionOutcomeTransaction(intent);
-    if (!result.ok) {
+    if (result.ok === false) {
       throw new Error(`session_feedback_seed_failed:${result.code}`);
     }
   }

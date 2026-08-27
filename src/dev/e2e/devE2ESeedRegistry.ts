@@ -191,7 +191,7 @@ export interface DevE2EWitnessState {
   userRemovalConstraints?: UserRemovalConstraint[];
   reversibleAdjustmentLedger?: ReversibleAdjustmentLedger;
   profile: OnboardingData;
-  calendarMarks: Record<string, 'game' | 'rest' | 'noGame'>;
+  calendarMarks: Record<string, 'game' | 'practice_match' | 'rest' | 'noGame'>;
   activeConstraints: Array<{
     id: string;
     type: string;
@@ -199,6 +199,9 @@ export interface DevE2EWitnessState {
     injuryEpisodeId?: string;
     targetDate?: string;
     moveTargetDate?: string;
+    mode?: string;
+    tags?: string[];
+    temporarySourceFactIds?: string[];
   }>;
   injuryEpisodes?: InjuryEpisodeV1[];
   temporarySourceFacts?: TemporarySourceFact[];

@@ -144,7 +144,7 @@ function seedDeviceExact(): string {
 /** The ACCEPTED effective week as the athlete would see it — mode + a stable
  *  day/tier/intensity signature. This is the pure-projection read; it is what a
  *  correct (b)-style scoped-regen commit must have re-authored. */
-function acceptedWeek(anchor: string): { mode: string; signature: string } {
+function acceptedWeek(anchor: string): { mode: string; signature: string; blockingViolations: string[]; optionalCount: number } {
   const state = useProgramStore.getState();
   const rebased = rebaseAcceptedEffectiveWeek({
     surfaces: state as never, weekStart: anchor,

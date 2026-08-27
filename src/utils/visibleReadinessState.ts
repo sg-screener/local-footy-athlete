@@ -10,7 +10,7 @@
  * `set_recovery_mode` is a synchronous tap modifier that creates no source fact.
  */
 
-import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import type { TemporarySourceFact, NonInjuryTemporarySourceFact } from '../rules/temporarySourceFact';
 import { isInjurySourceFact, selectReadinessFactForDate } from '../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 import {
@@ -100,7 +100,7 @@ export function resolveVisibleReadinessState(
   //    recomputed here: this filter used to compare `scope.until` directly and
   //    so silently dropped every OPEN fact, blanking the card for exactly the
   //    reports that matter most (R19).
-  const activeFacts = readinessFacts.filter((fact) =>
+  const activeFacts = readinessFacts.filter((fact): fact is NonInjuryTemporarySourceFact =>
     !isInjurySourceFact(fact) &&
     fact.status === 'active' &&
     'factKind' in fact &&
@@ -113,7 +113,7 @@ export function resolveVisibleReadinessState(
     // target a different fact than the trim was linked to — the athlete cleared
     // what they reported and the day stayed trimmed. Both now ask the same
     // function, so they cannot disagree.
-    const scopeOf = (fact: TemporarySourceFact): 'today' | 'week' =>
+    const scopeOf = (fact: NonInjuryTemporarySourceFact): 'today' | 'week' =>
       (fact.scope.kind === 'date' && fact.scope.from === todayISO && isThisWeek) ? 'today' : 'week';
     const chosen = selectReadinessFactForDate({
       facts: activeFacts,

@@ -249,7 +249,7 @@ function swapIdentity(trace: Slice4ScenarioTrace): InvariantCheckResult {
   });
   return check(id, trace, applied, valid, () => failure({
     trace, invariantId: id, ruleId: 'ALL-SWAP-IDENTITY-01', observed: outputObs,
-    expected: input.map(workoutSemantic), actual: output.map(workoutSemantic),
+    expected: input.map((workout) => workoutSemantic(workout)), actual: output.map((workout) => workoutSemantic(workout)),
     missing: ['both_workout_owned_identities_at_opposite_days'],
   }));
 }
@@ -359,7 +359,7 @@ function standaloneConditioningOwnsNoStrength(trace: Slice4ScenarioTrace): Invar
   return check(id, trace, applied, valid, () => failure({
     trace, invariantId: id, ruleId: 'ALL-COND-STANDALONE-OWNERSHIP-01', observed,
     expected: { components: ['conditioning'], effectivePatterns: [], strengthRows: [], workoutType: 'Conditioning' },
-    actual: candidates.map(workoutSemantic),
+    actual: candidates.map((workout) => workoutSemantic(workout)),
     missing: candidates.length === 0 ? ['standalone_conditioning'] : [],
     extra: candidates.flatMap((workout) => [
       ...(workout.components.includes('strength') ? ['strength'] : []),

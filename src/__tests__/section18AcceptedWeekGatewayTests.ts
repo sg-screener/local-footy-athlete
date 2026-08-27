@@ -410,18 +410,19 @@ function installOverrideDependency(value: ReturnType<typeof program>): { extraDa
     { intent: 'program_adjustment' },
   );
   const sourceDate = dateForWeekDay(base.startDate.slice(0, 10), source.dayOfWeek);
-  useProgramStore.getState().setWeekScopedOverlay({
+  const overlay = {
     id: 'overlay-removes-core',
     weekStart: base.startDate.slice(0, 10),
     weekEnd: base.endDate.slice(0, 10),
     anchorDate: null,
-    reason: 'one_off_game',
+    reason: 'one_off_game' as const,
     exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
     exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
     workoutsByDate: { [sourceDate]: removeConditioningFromWorkout(source, 'overlay-without-core') },
     createdAt: NOW,
     updatedAt: NOW,
-  });
+  };
+  useProgramStore.setState((state) => ({ weekScopedOverlays: { ...state.weekScopedOverlays, [overlay.weekStart]: overlay } }));
   return { extraDate };
 }
 
@@ -469,18 +470,19 @@ function installOverlayDependency(value: ReturnType<typeof program>): { weekStar
   const source = coreConditioningWorkout(value);
   const weekStart = base.startDate.slice(0, 10);
   const extraDate = dateForWeekDay(weekStart, 3);
-  useProgramStore.getState().setWeekScopedOverlay({
+  const overlay = {
     id: 'overlay-fourth-core',
     weekStart,
     weekEnd: base.endDate.slice(0, 10),
     anchorDate: null,
-    reason: 'one_off_game',
+    reason: 'one_off_game' as const,
     exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
     exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
     workoutsByDate: { [extraDate]: additionalCoreConditioning(source, 3, OVERLAY_DEPENDENCY_WORKOUT_ID) },
     createdAt: NOW,
     updatedAt: NOW,
-  });
+  };
+  useProgramStore.setState((state) => ({ weekScopedOverlays: { ...state.weekScopedOverlays, [overlay.weekStart]: overlay } }));
   const sourceDate = dateForWeekDay(weekStart, source.dayOfWeek);
   seedManualOverride(
     sourceDate,

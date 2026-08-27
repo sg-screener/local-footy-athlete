@@ -1991,7 +1991,7 @@ async function executeProgramControlActionDurablyWithinTrace(
     if (decision.kind === 'available_again') {
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       const facts = accepted.temporarySourceFacts
-        .filter((fact) => isTemporaryEquipmentFact(fact) && fact.status === 'active');
+        .filter(isTemporaryEquipmentFact).filter((fact) => fact.status === 'active');
       if (facts.length === 0) {
         return {
           ok: true,
@@ -2005,7 +2005,7 @@ async function executeProgramControlActionDurablyWithinTrace(
       }
       const now = new Date().toISOString();
       const ids = new Set(facts.map((fact) => fact.factId));
-      const actor = action.source.initiatedBy === 'system' ? 'system' : 'athlete';
+      const actor = action.source.initiatedBy === 'system' ? 'system' as const : 'athlete' as const;
       const nextFacts = accepted.temporarySourceFacts.map((fact) =>
         isTemporaryEquipmentFact(fact) && ids.has(fact.factId)
           ? {
@@ -2446,6 +2446,15 @@ async function executeProgramControlActionDurablyWithinTrace(
       sourceSurface: action.source.surface ?? action.source.screen,
     });
     const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
+    // Linked lighter-day decisions become inert when this fact clears.
+    const { decisionLedgerEntries } = require('../store/decisionLedgerStore') as typeof import('../store/decisionLedgerStore');
+    const hasLighterDay = decisionLedgerEntries().some((entry) =>
+      entry.decision.kind === 'lighter_day' && entry.decision.acceptedEffect.sourceFactId === factId);
+    if (ok && hasLighterDay) {
+      const { settleDerivedWorldAfterDecision } = require('../store/quiescentBoot');
+      await settleDerivedWorldAfterDecision();
+      revertedAdjustment = true;
+    }
     /* ── R-229, THE CLEAR HALF — Sam's phone, 2026-08-26 (checklist #10) ────
      *
      * "removing the going away modifier from my status seemed to not update
@@ -2476,8 +2485,8 @@ async function executeProgramControlActionDurablyWithinTrace(
       const spanScope = clearedSpanFact.scope as { kind: string; from?: string; until?: string };
       const linkedEquipment = useProgramStore.getState().acceptedMaterialContext
         .temporarySourceFacts
-        .filter((fact) => isTemporaryEquipmentFact(fact)
-          && fact.status === 'active'
+        .filter(isTemporaryEquipmentFact)
+        .filter((fact) => fact.status === 'active'
           && fact.sourceSurface === 'away_this_week'
           && fact.scope.kind === 'window'
           && spanScope.kind === 'window'

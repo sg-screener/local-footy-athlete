@@ -111,7 +111,7 @@ ExplorerProductionActionReceipt {
 
 async function expectFailure(
   expected: string,
-  run: () => void | Promise<void>,
+  run: () => unknown | Promise<unknown>,
 ): Promise<void> {
   try {
     await run();

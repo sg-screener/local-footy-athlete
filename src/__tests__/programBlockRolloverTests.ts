@@ -275,8 +275,10 @@ console.log('\n-- Deterministic next-block state and persistence --');
 
   const oldOverlay = makeOverlay('2026-07-27', '2026-08-02');
   const futureOverlay = makeOverlay('2026-08-10', '2026-08-16');
-  useProgramStore.getState().setWeekScopedOverlay(oldOverlay);
-  useProgramStore.getState().setWeekScopedOverlay(futureOverlay);
+  // Boundary fixture, not a production output-authoring API.
+  useProgramStore.setState({ weekScopedOverlays: {
+    [oldOverlay.weekStart]: oldOverlay, [futureOverlay.weekStart]: futureOverlay,
+  } });
 
   useProgramStore.setState((state) => ({
     sessionFeedback: {

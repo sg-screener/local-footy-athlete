@@ -35,6 +35,7 @@ const SCOPES = [
 /** Run tsc for one scope and return a { [file]: errorCount } map. */
 function collect(config) {
   let output = '';
+  let failed = false;
   try {
     output = execFileSync(
       'npx',
@@ -43,6 +44,7 @@ function collect(config) {
     );
   } catch (error) {
     // tsc exits non-zero whenever there are errors; that is the normal path here.
+    failed = true;
     output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
   }
   const counts = {};
@@ -50,6 +52,12 @@ function collect(config) {
     const match = line.match(/^(.+?)\((\d+),(\d+)\): error TS/);
     if (!match) continue;
     counts[match[1]] = (counts[match[1]] ?? 0) + 1;
+  }
+  // A missing compiler, malformed project or global diagnostic is not a clean
+  // source tree. Never turn an unparseable failure into an empty green count.
+  if ((failed && Object.keys(counts).length === 0) ||
+      output.split('\n').some((line) => /error TS\d+/.test(line) && !/^.+?\(\d+,\d+\): error TS/.test(line))) {
+    throw new Error(`Typecheck did not produce a complete file-level result for ${config}:\n${output}`);
   }
   return counts;
 }
@@ -98,12 +106,14 @@ for (const scope of SCOPES) {
 
 console.log(`${'TOTAL'.padEnd(9)} ${String(total).padStart(4)} error(s) against baseline\n`);
 
-if (updating) {
+if (updating && regressions.length === 0) {
   next.generatedAt = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(baselinePath, `${JSON.stringify(next, null, 2)}\n`);
   console.log(`Baseline written to ${path.relative(repoRoot, baselinePath)}`);
   process.exit(0);
 }
+
+if (updating) console.error('Baseline update refused: existing regressions must not become new allowances. No baseline was written.');
 
 if (improvements.length > 0) {
   console.log(`${improvements.length} file(s) improved since the baseline:`);

@@ -370,11 +370,11 @@ function resolveAthleteTarget(
     visibleWeek,
     source: 'tap',
   });
-  if (!athleteMutation.ok) {
+  if (athleteMutation.ok === false) {
     throw new Error(`explorer_athlete_target_resolution_failed:${athleteMutation.error}`);
   }
   const sessionId = action.target.sessionId;
-  const original = athleteMutation.input.originalWorkout ??
+  const original = ('originalWorkout' in athleteMutation.input ? athleteMutation.input.originalWorkout : null) ??
     ('originalSourceWorkout' in athleteMutation.input
       ? athleteMutation.input.originalSourceWorkout
       : null);
@@ -737,6 +737,7 @@ async function defaultInvokeCanonicalOwner(
       const fact = createTemporaryEquipmentFact({
         observedDate: action.args.fromDate,
         scope: {
+          kind: action.args.toDate && action.args.toDate !== action.args.fromDate ? 'window' : 'date',
           from: action.args.fromDate,
           until: action.args.toDate ?? action.args.fromDate,
         },
@@ -819,7 +820,7 @@ async function defaultInvokeCanonicalOwner(
         todayISO: action.args.date,
       });
       const result = await commitSessionOutcomeTransaction(intent);
-      if (!result.ok) {
+      if (result.ok === false) {
         return {
           status: 'rejected',
           reasonCode: result.code,

@@ -585,7 +585,7 @@ export async function commitProfileProgramTransaction(
       return { ok: true };
     },
   });
-  if (!transaction.ok) {
+  if (transaction.ok === false) {
     return {
       ok: false,
       changedProgram: false,

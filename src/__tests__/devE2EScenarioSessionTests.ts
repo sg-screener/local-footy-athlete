@@ -48,6 +48,7 @@ import {
 } from '../dev/e2e/devE2EState';
 import type { DevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { DEV_E2E_SEED_IDS } from '../dev/e2e/devE2ESeedIds';
+import { EXPLORER_NON_COACH_SMOKE_MANIFESTS } from '../dev/e2e/explorerSmokeScenarioManifests';
 import { DEV_E2E_SCENARIO_MANIFESTS } from '../dev/e2e/devE2EScenarioManifestRegistry';
 import { AthleteActionTraceCoordinator } from '../dev/e2e/AthleteActionTraceCoordinator';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
@@ -303,8 +304,11 @@ function createHarness(): Harness {
 async function main(): Promise<void> {
   __resetDevE2EScenarioRuntimeForTest();
   __resetDevE2EStateForTest();
-  ok('default and nine Explorer manifests add no seed families',
-    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length + 9 &&
+  ok('default and registered Explorer manifests add no seed families',
+    EXPLORER_NON_COACH_SMOKE_MANIFESTS.length > 0 &&
+    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length + EXPLORER_NON_COACH_SMOKE_MANIFESTS.length &&
+    EXPLORER_NON_COACH_SMOKE_MANIFESTS.every((expected) =>
+      DEV_E2E_SCENARIO_MANIFESTS.some((actual) => actual.scenarioId === expected.scenarioId && actual.seedId === expected.seedId)) &&
       DEV_E2E_SCENARIO_MANIFESTS.every((manifest) =>
         DEV_E2E_SEED_IDS.includes(manifest.seedId)));
 

@@ -1,4 +1,4 @@
-import { DEV_E2E_SEED_IDS } from './devE2ESeedIds';
+import { DEV_E2E_SEED_IDS, isDevE2ESeedId } from './devE2ESeedIds';
 import {
   DEV_E2E_SCENARIO_PROTOCOL_VERSION,
   validateDevE2EScenarioManifest,
@@ -27,8 +27,9 @@ const DIAGNOSTIC_ACTION_TYPE: Readonly<Record<string, string>> = {
 
 /** Exact Explorer smoke manifests projected into the scenario-session V2 protocol. */
 export const EXPLORER_DEV_E2E_SCENARIO_MANIFESTS: readonly DevE2EScenarioManifest[] =
-  EXPLORER_NON_COACH_SMOKE_MANIFESTS.map((manifest) =>
-    validateDevE2EScenarioManifest({
+  EXPLORER_NON_COACH_SMOKE_MANIFESTS.map((manifest) => {
+    if (!isDevE2ESeedId(manifest.seedId)) throw new Error(`Unknown scenario seed: ${manifest.seedId}`);
+    return validateDevE2EScenarioManifest({
       protocolVersion: DEV_E2E_SCENARIO_PROTOCOL_VERSION,
       scenarioId: manifest.scenarioId,
       seedId: manifest.seedId,
@@ -42,7 +43,8 @@ export const EXPLORER_DEV_E2E_SCENARIO_MANIFESTS: readonly DevE2EScenarioManifes
         eligibilityWitnessIds: step.preconditions.map((predicate) =>
           `eligibility:${predicate.type}:${predicate.predicateId}`),
       })),
-    }));
+    });
+  });
 
 /**
  * Protocol-only manifests preserve every existing seed as a valid one-step

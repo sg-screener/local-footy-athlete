@@ -7,6 +7,7 @@ import {
   explorerLiveActionIngressGate,
 } from './explorerActionIngress';
 import { createExplorerProductionBindings } from './explorerProductionBindings';
+import { assertExplorerActionExecutable } from './explorerActionBridge';
 import { resolveExplorerSmokeScenarioManifest } from
   './explorerSmokeScenarioManifests';
 import { explorerActionSemanticHash } from
@@ -68,6 +69,7 @@ export function ExplorerActionIngressControl(): React.ReactElement | null {
       }, (claim) => {
         // This production capability exists only inside the tapped UI handler.
         const bindings = createExplorerProductionBindings();
+        assertExplorerActionExecutable(step.action);
         void bindings.actionBridge.execute(step.action, {
           claim: {
             campaignId: claim.campaignId,

@@ -116,15 +116,10 @@
       "reason": "Builds a resolved-week fingerprint for before/after reporting. It is not authority to write back the snapshot; resolver callees need their own review.",
       "fingerprint": "960039c04db50dda8fac18fa238516bd0b3286e83806109d60d13da747af6244"
     },
-    "src/utils/lighterDayTrim.ts#applyLighterDayTrim": {
-      "classification": "rival_author",
-      "reason": "Active independent accessory-set/finisher/conditioning transform outside canonical dose compilation. HomeScreenV2 reaches it through lighterDayTransaction; pure does not mean canonical.",
-      "fingerprint": "b4637ba1a5473a8551d19e2e6944ee9f2eb77b03a2319616135f95a275c73485"
-    },
     "src/utils/lighterDayTransaction.ts#applyLighterDayForToday": {
-      "classification": "rival_author",
-      "reason": "Live HomeScreenV2 handler resolves today's output, trims it separately, assembles a sparse derived overlay and commits it, then records reversible metadata. Requires typed accepted today-only effect migration with restart/Undo coverage.",
-      "fingerprint": "1891570e6442b8bb29abaabe7eead8b896d53b30d22b10c2c9dedfb527360610"
+      "classification": "canonical_input_writer",
+      "reason": "Records a typed date/source-fact/policy effect through the decision ledger. Live transaction and boot use the same compiler publication adapter; no workout snapshot or reversible overlay is persisted. The accumulated compiler witness executes acceptance, restart, duplicate refusal, Undo and linked-fact clear.",
+      "fingerprint": "2a3c6d7a796d6d071869b81b02dd76b42f058944c785e41d4345e5436253d88a"
     },
     "src/services/api/generateProgram.ts#generateProgramLocally": {
       "classification": "canonical_input_writer",
@@ -155,11 +150,6 @@
       "classification": "canonical_compiler",
       "reason": "Existing dose specialist, now invoked only inside compileCanonicalProgramProgression over its private input copy. The service post-pass was deleted; the year gate checks explicit-input repeatability and immutability, and the detector forbids reintroducing service mutation calls.",
       "fingerprint": "21d265f7f9babc7cdba713fafc3a1063eb5214e833799af3749ac712900c46cf"
-    },
-    "src/store/programStore.ts#setWeekScopedOverlay": {
-      "classification": "derived_output_writer",
-      "reason": "Accepts and publishes externally computed weekly overlay through a transaction rather than requiring a typed input and compiler result. This is in-memory derived publication, NOT a claim that overlays are durably persisted; program partialize already stores inputs.",
-      "fingerprint": "feb92d9398c56eab1455e98b7d29081f59512f1eb4fa0361cd3336e7df5225fc"
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalProgramProgression": {
       "classification": "canonical_compiler",
@@ -200,6 +190,56 @@
       "classification": "canonical_compiler",
       "reason": "Private compiler helper preserves explicit pinned historical workouts before the governed boundary while compiling the future remainder; no independent author or persistence.",
       "fingerprint": "20b8d1220c4c7142b717198b09c16d75c51cef3fb33602de3da8639bdb3fa42b"
+    },
+    "src/rules/canonicalWeeklyLighterDayCompiler.ts#compileCanonicalLighterDayWorkout": {
+      "classification": "canonical_compiler",
+      "reason": "Sole pure implementation of the existing slight_v1 opt-in trim policy, shared by live acceptance and reconstruction. The old utility is only a re-export. Named compiler-slice cells hold main-lift protection, actual accessory changes, restart and Undo; conditioning prescription semantics are retained, not newly certified.",
+      "fingerprint": "60dff19afbcbe9b15a7ec830378a78a9fbcaa67b5179cfa8755e9738121d90a9"
+    },
+    "src/rules/canonicalWeeklyLighterDayCompiler.ts#lighterDayTrimAvailable": {
+      "classification": "projection_display",
+      "reason": "Offer predicate delegates the exact pure transform and checks for a nonempty change list; no state publication or independent prescription rule.",
+      "fingerprint": "e80a2ff563ec8effa9fe749cc6f837ca328e97627966d9679c193812d4e2ae5c"
+    },
+    "src/utils/lighterDayTransaction.ts#activeLighterDay": {
+      "classification": "projection_display",
+      "reason": "Read-only active policy query: replayable decision ledger, matching date and linked active readiness fact. It prevents repeated acceptance; no session content is authored.",
+      "fingerprint": "5c53ef7f3fba6050c1c69cba1865df90fc66fe6272016594da4e68699dc311ce"
+    },
+    "src/utils/lighterDayTransaction.ts#lighterDayAvailableForDate": {
+      "classification": "projection_display",
+      "reason": "Read-only resolver plus active-policy guard and compiler availability predicate. No accepted inputs or outputs are written here.",
+      "fingerprint": "b88e3b48fbde47354b09c851eb11356e197c14cebf9c8c6ade7ec5ec5d5947c7"
+    },
+    "src/utils/lighterDayTransaction.ts#applyLighterDayForToday.mutate": {
+      "classification": "persistence_boundary",
+      "reason": "Private transaction callback delegates directly to commitCanonicalAcceptedLighterDayEffect. No alternate dose transform.",
+      "fingerprint": "cfd2f57a784758c6f143a6f5ed99d8b3c080b1a94584df7ea7e897a80d0f1590"
+    },
+    "src/utils/lighterDayTransaction.ts#commitCanonicalAcceptedLighterDayEffect": {
+      "classification": "persistence_boundary",
+      "reason": "Guarded in-memory publication adapter: verifies linked fact, resolves current ledger-position input, invokes pure lighter-day compiler, publishes its result through the existing accepted override boundary. Both live transaction and replay call this function. It does not durably save derived workouts.",
+      "fingerprint": "beb3bf2850d40a3449a085d54054b76798d9c752d5a91199e0c8ee40e272a03d"
+    },
+    "src/utils/exposureEngine.ts#applyConstraintsToSession": {
+      "classification": "rival_author",
+      "reason": "Read at executable source: projectVisibleDay invokes this after resolution on non-adjudicated constrained days. It filters rows and can call recoverySubstitution, so final content can still be authored outside the canonical compiler. This finding is a function in one projection-rewrite pipeline, not a newly reproduced athlete incident.",
+      "fingerprint": "203a1e479d894485bf58f184d68d62227cee4aecf2bada8ccf701ad2c5c17c51"
+    },
+    "src/utils/exposureEngine.ts#applyConstraintsToTypedComponents": {
+      "classification": "rival_author",
+      "reason": "Read at executable source: the projection fallback removes speed/conditioning/recovery components after resolution. It is part of the same remaining projection-rewrite pipeline, not proof of an independent athlete action.",
+      "fingerprint": "268b62511ae89892d8ed5880995715ab377def92e7cac780829ac9410c9354d1"
+    },
+    "src/utils/exposureEngine.ts#recoverySubstitution": {
+      "classification": "rival_author",
+      "reason": "Private content-authoring helper of the projection fallback: changes type and duration and clears exercises/components. Kept red until the projection pipeline is removed or routed through canonical input composition.",
+      "fingerprint": "0be8585b63d90abefc77e6c88d24981f927cabed64cedf2f9023697d0373fce7"
+    },
+    "src/utils/visibleProgramProjection.ts#projectVisibleDay": {
+      "classification": "rival_author",
+      "reason": "Read at executable source: after adjudication bypasses, this display entry invokes exposure rewrites, then filters validator violations and normalizes/collapses the result. Remaining post-compiler content policy; a presentation name does not make it read-only.",
+      "fingerprint": "276eaba2def9be03ae0b04fa8e9dc5b3e500b867036c16d6153a1187ce1b7b39"
     }
   }
 }

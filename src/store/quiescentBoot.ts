@@ -119,6 +119,8 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
   }
   const decision = entry.decision;
   switch (decision.kind) {
+    case 'lighter_day':
+      return [decision.acceptedEffect.dateISO];
     case 'plan_change': {
       const change = decision.change as Record<string, unknown>;
       return [change.date, change.fromDate, change.toDate,
@@ -154,6 +156,11 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
 /** Replay one landed non-exercise decision through its remaining interpreter. */
 function replayEntry(entry: DecisionLedgerEntry): void {
   const decision = entry.decision;
+  if (decision.kind === 'lighter_day') {
+    const { commitCanonicalAcceptedLighterDayEffect } = require('../utils/lighterDayTransaction');
+    commitCanonicalAcceptedLighterDayEffect(decision.acceptedEffect);
+    return;
+  }
   if (decision.kind === 'reversal') {
     // UNREACHABLE BY CONSTRUCTION, and kept as the exhaustiveness arm.
     // `bootReplayableEntries` drops reversals before this function is called — a

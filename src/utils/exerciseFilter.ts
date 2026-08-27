@@ -246,7 +246,9 @@ export function buildFilterContext(
   // Build active injuries map
   const activeInjuries: Record<string, 'caution' | 'avoid'> = {};
   for (const inj of injuries) {
-    const sev = injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(inj))
+    const severity = inj.severity === 'Mild' || inj.severity === 'Moderate' || inj.severity === 'Severe'
+      ? inj.severity : undefined;
+    const sev = injurySeverityReducesAffectedWork(onboardingInjurySeverityScore({ ...inj, severity }))
       ? 'avoid' : 'caution';
     activeInjuries[inj.bodyArea] = sev;
   }

@@ -403,7 +403,7 @@ export function useHomeScreen() {
     .filter((fact) => !visibleWeekStart ||
       factHorizonCoversWeek(fact, visibleWeekStart)),
   [temporarySourceFacts, visibleWeekStart]);
-  const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact) =>
+  const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact): fact is import('../../rules/temporarySourceFact').NonInjuryTemporarySourceFact =>
     'factKind' in fact && (
       fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
       fact.factKind === 'poor_sleep' || fact.factKind === 'illness'

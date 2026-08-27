@@ -34,7 +34,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { OnboardingData } from '../types/domain';
-import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import type { NonInjuryTemporarySourceFact } from '../rules/temporarySourceFact';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -57,6 +57,12 @@ import { seedOnboardingProgram } from '../utils/onboardingCompletion';
 import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
 import { applyLighterDayForToday } from '../utils/lighterDayTransaction';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
+import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { undoLastDecision } from '../store/undoLastDecision';
+import { replayableEntries } from '../rules/decisionLedgerReplay';
+import { lighterDayEffectActive } from '../rules/canonicalWeeklyLighterDayCompiler';
+import { coldStartThroughOnboarding, relaunchApp } from './support/athleteJourney';
+import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 
 const WEEK = '2026-07-13';
 const SATURDAY = '2026-07-18';
@@ -155,6 +161,7 @@ function seed(athlete: OnboardingData = profile()): void {
       selectedPhase: athlete.seasonPhase!,
       phaseEntryWeekStartISO: WEEK,
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
   const marks = { [SATURDAY]: 'game' as const };
@@ -173,7 +180,7 @@ function seed(athlete: OnboardingData = profile()): void {
       markedDays: marks,
       readinessSignalsByDate: {},
       activeConstraints: [],
-      activeInjury: null,
+      injuryEpisodes: [],
       revision: 1,
       lastTransaction: 'readiness-ownership-test:seed',
     }),
@@ -215,19 +222,19 @@ async function reportTiredToday(scope: 'today_only' | 'current_week' = 'today_on
   } as never, { todayISO: WEEK });
 }
 
-function activeReadinessFacts(): TemporarySourceFact[] {
+function activeReadinessFacts(): NonInjuryTemporarySourceFact[] {
   const facts = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
-  return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
+  return facts.filter((fact): fact is NonInjuryTemporarySourceFact => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact &&
     (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
       fact.factKind === 'poor_sleep' || fact.factKind === 'illness'));
 }
 
-function activeIllnessFacts(): TemporarySourceFact[] {
+function activeIllnessFacts(): NonInjuryTemporarySourceFact[] {
   const facts = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
-  return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
+  return facts.filter((fact): fact is NonInjuryTemporarySourceFact => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact && fact.factKind === 'illness');
 }
 
@@ -272,6 +279,26 @@ function seedDeviceExact(): string {
   useProfileStore.setState({ onboardingData: dseed.profile, isOnboardingComplete: true });
   return dseed.anchorDate;
 }
+
+
+/** New lighter-day witnesses use completed onboarding, not an invented overlay. */
+async function onboardLighterDay(): Promise<void> {
+  const archetype = ARCHETYPES.find((a) => a.id === 'male-5-two-fixtures');
+  assert(archetype, 'the actual five-day athlete must exist');
+  const installed = await coldStartThroughOnboarding({
+    profile: athleteAnswers(archetype), installDayISO: WEEK,
+  });
+  assert(!installed.onboardingRefusal, String(installed.onboardingRefusal));
+  assert((await reportTiredToday()).ok, 'the readiness report must commit');
+}
+
+const dayPrescription = (date: string): string => {
+  const workout = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()).find((day) => day.date === date)?.workout;
+  // Removing another session can rehouse this unchanged session in a derived
+  // week overlay. Compare content/row identity, not that container's id.
+  return JSON.stringify(workout && { ...workout, id: undefined, microcycleId: undefined },
+    (key, value) => ['createdAt', 'updatedAt', 'workoutId'].includes(key) ? undefined : value);
+};
 
 async function main(): Promise<void> {
   // ── Invariant R1 (characterization baseline, part-c scope): the contextual
@@ -442,138 +469,47 @@ async function main(): Promise<void> {
       'the offer and the apply must answer identically for the same workout');
   });
 
-  // ── Invariant R5 (part c — progression-baseline guard): a trimmed day must NOT
-  // drag the athlete's future progression baseline down. The baseline builder
-  // reads ONLY `weightOverrides`, so next week's strength prescription must be
-  // byte-identical and weightOverrides must stay untouched. This is the
-  // "lighter loads are planned, not a performance signal" guarantee, tested
-  // structurally.
-  //
-  // CONVERTED 2026-08-04 (Option C item 4, the lighter-day derivation unit).
-  // This cell used to SIMULATE the channel — it seeded a manual override by
-  // hand and its comment named `dateOverride` as "the channel the real action
-  // uses". It now drives the REAL door and asserts the channel instead of
-  // assuming it: the trim is a derived effect of a readiness fact, so it lands
-  // on `weekScopedOverlays` (`reason: 'readiness_reduction'`, the surface
-  // programStore.ts:1179-1190 already declares to be "derived content authored
-  // by a fact, not by the athlete") and `dateOverrides` stays EMPTY. A cell
-  // that simulates a channel cannot notice when the channel changes.
-  await run('R5 progression-guard: a trimmed today leaves next week\'s strength prescription byte-identical', async () => {
-    const nextMonday = addDays(WEEK, 7);
-    const nextWeekStrengthWeights = (): Record<string, number> => {
-      const week = resolveWeekWithConditioning(nextMonday, buildScheduleStateImperative());
-      const out: Record<string, number> = {};
-      for (const day of week) {
-        for (const row of (day.workout?.exercises ?? []) as any[]) {
-          if (typeof row.prescribedWeightKg === 'number') {
-            out[`${day.date}:${row.exerciseId}`] = row.prescribedWeightKg;
-          }
-        }
-      }
-      return out;
-    };
-
-    seed();
-    const control = nextWeekStrengthWeights();
-
-    // Through the REAL door, not a simulated channel.
-    const monVisible = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
-      .find((day) => day.date === WEEK)?.workout;
-    assert(monVisible, 'precondition: MON visible workout present');
-    const trimPreview = applyLighterDayTrim(monVisible as never);
-    assert(trimPreview.changes.length > 0, 'precondition: the trim actually changed today');
-
-    const applied = await (require('../utils/lighterDayTransaction') as {
-      applyLighterDayForToday: (args: { date: string; todayISO: string }) => Promise<{
-        ok: boolean; message: string; changes: string[];
-      }>;
-    }).applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
-    assert(applied.ok, `the lighter-day door refused: ${applied.message}`);
-
-    // THE CHANNEL, asserted rather than assumed.
-    const overlay = (useProgramStore.getState().weekScopedOverlays ?? {})[WEEK];
-    assert(overlay && Object.prototype.hasOwnProperty.call(overlay.workoutsByDate, WEEK),
-      'the trim did not land on the week overlay — a fact-derived reduction '
-      + 'belongs on the surface that means "derived content authored by a fact"');
-    const overrides = useProgramStore.getState().dateOverrides ?? {};
-    assert(Object.keys(overrides).length === 0,
-      'the lighter-day trim wrote the ATHLETE\'S decision surface: '
-      + `${JSON.stringify(Object.keys(overrides))}. dateOverrides records decisions; `
-      + 'a trim derived from a readiness fact is not one.');
-
-    // Guard against a vacuous pass: the override must actually be in effect this
-    // week (fewer total strength sets on MON than before).
-    const monBeforeSets = ((monVisible as { exercises?: any[] }).exercises ?? [])
-      .reduce((sum, r) => sum + Number(r.prescribedSets ?? 0), 0);
-    const monAfter = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
-      .find((day) => day.date === WEEK)?.workout;
-    const monAfterSets = ((monAfter?.exercises ?? []) as any[])
-      .reduce((sum, r) => sum + Number(r.prescribedSets ?? 0), 0);
-    assert(monAfterSets < monBeforeSets,
-      `override not in effect this week: MON sets ${monBeforeSets} -> ${monAfterSets}`);
-
-    // The trim must never write the progression baseline channel.
-    const weightOverrides = useProgramStore.getState().weightOverrides ?? {};
-    assert(Object.keys(weightOverrides).length === 0,
-      `trim wrote weightOverrides (would drag the baseline): ${JSON.stringify(Object.keys(weightOverrides))}`);
-
-    // Next week's prescription is byte-identical — the reduced day is planned,
-    // not a performance signal.
-    const after = nextWeekStrengthWeights();
-    const drifted = Object.keys(control).filter((key) => control[key] !== after[key]);
-    assert(drifted.length === 0,
-      `trimmed day dragged next week's baseline: ${JSON.stringify(drifted.map((k) => ({ k, from: control[k], to: after[k] })))}`);
+  // R5/R6 retain the behaviour contract; obsolete overlay/snapshot expectations
+  // are replaced by typed accepted decisions and the production Undo owner.
+  await run('R5 progression-guard: a trimmed today leaves next week unchanged across restart', async () => {
+    await onboardLighterDay();
+    assert(resolveWeekWithConditioning(addDays(WEEK, 7), buildScheduleStateImperative())
+      .some((day) => (day.workout?.exercises.length ?? 0) > 0), 'reach real next-week training');
+    const future = () => JSON.stringify(resolveWeekWithConditioning(addDays(WEEK, 7), buildScheduleStateImperative())
+      .map((day) => ({ date: day.date, rows: day.workout?.exercises.map((r) => ({
+        id: r.exerciseId, sets: r.prescribedSets, kg: r.prescribedWeightKg,
+      })) })));
+    const beforeFuture = future();
+    const before = dayPrescription(WEEK);
+    const weights = JSON.stringify(useProgramStore.getState().weightOverrides);
+    const applied = await applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
+    assert(applied.ok, applied.message);
+    assert(dayPrescription(WEEK) !== before, 'the real current session must change');
+    const entry = decisionLedgerEntries().find((e) => e.id === applied.adjustmentId);
+    assert(entry?.decision.kind === 'lighter_day' && !JSON.stringify(entry.decision).includes('exercises'),
+      'persist policy, not the resulting workout');
+    assert(JSON.stringify(useProgramStore.getState().weightOverrides) === weights, 'never write progression logs');
+    assert(future() === beforeFuture, 'next-week prescriptions must not change');
+    const lighter = dayPrescription(WEEK);
+    await relaunchApp({ storage: memory, todayISO: WEEK });
+    assert(dayPrescription(WEEK) === lighter, 'the actual trim must survive restart');
+    assert(future() === beforeFuture, 'next week must remain unchanged after restart');
   });
 
-  // ── Invariant R6 (part c — single-owner, reversible, disclosed): accepting the
-  // lighter-day offer applies TODAY's trim through the accepted-state transaction,
-  // records ONE reversible-ledger entry, discloses exactly what changed, and undo
-  // restores today. A prior tired-today fact + acknowledgment survive the undo
-  // (declining/undoing the lighter day never clears the readiness signal).
-  await run('R6 single-owner: lighter-day offer is transaction-owned, disclosed, and reversible (undo restores today)', async () => {
-    const mod = require('../utils/lighterDayTransaction') as {
-      applyLighterDayForToday: (a: { date: string; todayISO: string }) => Promise<{
-        ok: boolean; message: string; changes: string[]; adjustmentId?: string;
-      }>;
-    };
-
-    seed();
-    // Report tired first — the offer follows an acknowledged readiness signal.
-    const tired = await reportTiredToday('today_only');
-    assert((tired as { ok?: boolean }).ok === true, 'precondition: tired-today fact commits');
-
-    const todaySetsBefore = (): number =>
-      (resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
-        .find((day) => day.date === WEEK)?.workout?.exercises ?? [] as any[])
-        .reduce((sum: number, r: any) => sum + Number(r.prescribedSets ?? 0), 0);
-    const before = todaySetsBefore();
-
-    const applied = await mod.applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
-    assert(applied.ok === true, `lighter-day apply failed: ${applied.message}`);
-    assert(applied.changes.length > 0 && /\S/.test(applied.message),
-      'lighter-day result must disclose exactly what changed');
-    assert(!!applied.adjustmentId, 'lighter-day must record a reversible adjustment id');
-
-    // Transaction-owned: exactly one reversible-ledger entry for today.
-    const ledger = useProgramStore.getState().reversibleAdjustmentLedger.adjustments;
-    const owned = ledger.filter((entry) => entry.affectedDates.includes(WEEK));
-    assert(owned.length >= 1, 'no reversible adjustment recorded for today (not transaction-owned)');
-    // Today is actually lighter now.
-    const afterApply = todaySetsBefore();
-    assert(afterApply < before, `today not trimmed: sets ${before} -> ${afterApply}`);
-
-    // Undo restores today.
-    const revision = useProgramStore.getState().acceptedMaterialContext.revision;
-    const undo = await (require('../store/reversibleAdjustmentTransaction') as {
-      clearReversibleAdjustment: (id: string, rev: number) => Promise<{ outcome: string }>;
-    }).clearReversibleAdjustment(applied.adjustmentId!, revision);
-    assert(['restored', 'recomposed'].includes(undo.outcome), `undo did not restore: ${undo.outcome}`);
-    const afterUndo = todaySetsBefore();
-    assert(afterUndo === before, `undo did not restore today's volume: ${before} -> ${afterUndo}`);
-
-    // The readiness fact survives the lighter-day undo.
-    assert(activeReadinessFacts().length === 1,
-      'undoing the lighter day must not clear the tired-today readiness fact');
+  await run('R6 single-owner: typed lighter-day decision is disclosed and Undo restores only that decision', async () => {
+    await onboardLighterDay();
+    const before = dayPrescription(WEEK);
+    const factId = activeReadinessFacts()[0]?.factId;
+    assert(factId, 'the report must have a canonical identity');
+    const applied = await applyLighterDayForToday({ date: WEEK, todayISO: WEEK, sourceFactId: factId });
+    assert(applied.ok && applied.changes.length > 0, applied.message);
+    const entries = replayableEntries(decisionLedgerEntries()).filter((e) => e.decision.kind === 'lighter_day');
+    assert(entries.length === 1 && entries[0].id === applied.adjustmentId, 'exactly one accepted policy');
+    assert(dayPrescription(WEEK) !== before, 'today must actually be lighter');
+    const undo = await undoLastDecision();
+    assert(undo.outcome === 'undone' && undo.reversedEntryId === applied.adjustmentId, 'Undo must target the exact decision');
+    assert(dayPrescription(WEEK) === before, 'Undo must restore the original session');
+    assert(activeReadinessFacts().some((f) => f.factId === factId), 'Undo must retain the readiness report');
   });
 
   // ── Invariant R7 (Defect 3 fix, the seam): a minor-tier (severity < 4) fatigue
@@ -722,77 +658,51 @@ async function main(): Promise<void> {
       'the fatigue fact did not persist on a device-exact base');
   });
 
-  // ── Invariant R12 (cascade undo): the disclosure promises "undo anytime".
-  // Clearing the readiness fact must generically revert ANY reversible adjustment
-  // linked to that fact (by RECORDED source-fact id, not heuristic), restoring the
-  // accepted week byte-identical to pre-offer state — no lighter-day special case.
-  // Also: a clear with no accepted trim is a no-op cascade; and clearing must never
-  // touch an unlinked adjustment.
-  await run('R12 cascade-undo: clearing the readiness fact reverts the linked trim (by recorded id), byte-identical', async () => {
-    const monWeightSig = (): string => JSON.stringify(
-      (resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
-        .find((day) => day.date === WEEK)?.workout?.exercises ?? [] as any[])
-        .map((r: any) => ({ id: r.exerciseId, sets: r.prescribedSets, kg: r.prescribedWeightKg })));
-    const clearFatigue = (factId: string) => executeProgramControlActionDurably({
-      type: 'clear_fatigue_status',
-      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-      scope: 'current_week', payload: { modifierId: factId, date: WEEK },
+  // Clearing the source fact makes its accepted policy inert. A subsequent
+  // unrelated session edit remains active; no before/after snapshot is restored.
+  await run('R12 cascade-undo: clearing the linked fact restores only its trim and preserves a later edit', async () => {
+    const clear = (factId: string) => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status', source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'today_only', payload: { modifierId: factId, date: WEEK },
       requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
-    } as never, { todayISO: WEEK });
-    const ledger = () => useProgramStore.getState().reversibleAdjustmentLedger.adjustments;
+    }, { todayISO: WEEK });
+    await onboardLighterDay();
+    const before = dayPrescription(WEEK);
+    const factId = activeReadinessFacts()[0]?.factId;
+    assert(factId, 'the real report must exist');
+    const applied = await applyLighterDayForToday({ date: WEEK, todayISO: WEEK, sourceFactId: factId });
+    assert(applied.ok && dayPrescription(WEEK) !== before, 'the real trim must apply');
+    const entry = decisionLedgerEntries().find((e) => e.id === applied.adjustmentId);
+    assert(entry?.decision.kind === 'lighter_day' && entry.decision.acceptedEffect.sourceFactId === factId,
+      'the decision must record the exact source-fact link');
 
-    // ── (1) main cascade ──────────────────────────────────────────────
-    seed();
-    const preOffer = monWeightSig();
-    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition: fact commits');
-    const factId = activeReadinessFacts()[0].factId;
-    const applied = await applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
-    assert(applied.ok && !!applied.adjustmentId, 'precondition: lighter-day trim applied');
-    assert(monWeightSig() !== preOffer, 'precondition: the trim changed the week');
-    const adj = ledger().find((a) => a.id === applied.adjustmentId);
-    assert((adj as { sourceFactId?: string } | undefined)?.sourceFactId === factId,
-      `link must resolve by RECORDED source-fact id, got ${(adj as { sourceFactId?: string } | undefined)?.sourceFactId}`);
-
-    const cleared = await clearFatigue(factId);
-    assert((cleared as { ok?: boolean }).ok === true, `clear failed: ${(cleared as { message?: string }).message}`);
-    assert(activeReadinessFacts().length === 0, '(a) clear must remove the tired fact');
-    const adjAfter = ledger().find((a) => a.id === applied.adjustmentId);
-    assert(adjAfter && adjAfter.status !== 'active', '(b) linked adjustment must be reverted');
-    assert(monWeightSig() === preOffer,
-      '(b) accepted week must restore byte-identical to pre-offer state');
-
-    // ── (2) no-op cascade: clear with no accepted trim just clears the fact ──
-    seed();
-    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition');
-    const factId2 = activeReadinessFacts()[0].factId;
-    const activeAdjBefore = ledger().filter((a) => a.status === 'active').length;
-    const cleared2 = await clearFatigue(factId2);
-    assert((cleared2 as { ok?: boolean }).ok === true, 'no-op clear must still succeed');
-    assert(activeReadinessFacts().length === 0, 'no-op cascade must still clear the fact');
-    assert(ledger().filter((a) => a.status === 'active').length === activeAdjBefore,
-      'no-op cascade must not create/clear any adjustment');
-
-    // ── (3) unlinked adjustments untouched ───────────────────────────
-    seed();
-    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition');
-    const factId3 = activeReadinessFacts()[0].factId;
-    await applyLighterDayForToday({ date: WEEK, todayISO: WEEK }); // linked to factId3
-    // An UNRELATED reversible adjustment (empty-day add on WED — no source fact).
-    const WEDNESDAY = addDays(WEEK, 2);
-    const change = { kind: 'add_category' as const, date: WEDNESDAY, category: 'conditioning_light' as const };
     const week = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative());
+    const other = week.find((d) => d.date === addDays(WEEK, 2) && (d.workout?.exercises.length ?? 0) > 0);
+    assert(other, 'reach Wednesday training, not a protected Tuesday club session');
+    const change = { kind: 'remove_session' as const, date: other.date };
     const preview = previewPlanChangeRisk({ change, visibleWeek: week, todayISO: WEEK,
       profile: useProfileStore.getState().onboardingData ?? undefined });
-    applyPlanChange({ change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-      applyOverride: (d, w, c) => seedManualOverride(d, w, c) });
-    const unlinked = ledger().find((a) => a.affectedDates.includes(WEDNESDAY) && a.status === 'active');
-    assert(!!unlinked, 'precondition: an unrelated WED adjustment exists');
-    assert(!(unlinked as { sourceFactId?: string }).sourceFactId, 'the WED adjustment is not fact-linked');
+    const removed = applyPlanChange({ change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+      applyOverride: () => { throw new Error('Remove must use its canonical transaction, not an override callback'); } });
+    assert(removed.ok, removed.message);
+    const afterEdit = dayPrescription(other.date);
+    const removeEntry = decisionLedgerEntries().find((e) => e.decision.kind === 'plan_change' &&
+      e.decision.change.kind === 'remove_session' && e.decision.change.date === other.date);
+    assert(removeEntry, 'the unrelated removal must be accepted in the ledger');
+    assert((await clear(factId)).ok, 'clearing the report must commit');
+    assert(entry.decision.kind === 'lighter_day' && !lighterDayEffectActive(entry.decision.acceptedEffect,
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts), 'the linked policy must become inactive');
+    assert(dayPrescription(WEEK) === before, 'restore only the trim; content and row identities must match');
+    assert(dayPrescription(other.date) === afterEdit, 'do not undo the later session edit');
+    await relaunchApp({ storage: memory, todayISO: WEEK });
+    assert(dayPrescription(WEEK) === before && dayPrescription(other.date) === afterEdit, 'clear + unrelated edit survive restart');
+    assert(replayableEntries(decisionLedgerEntries()).some((e) => e.id === removeEntry.id), 'the unrelated decision stays active');
 
-    await clearFatigue(factId3);
-    const unlinkedAfter = ledger().find((a) => a.id === (unlinked as { id: string }).id);
-    assert(unlinkedAfter && unlinkedAfter.status === 'active',
-      'clearing the fact must NOT touch an unlinked adjustment');
+    await onboardLighterDay();
+    const untrimmed = dayPrescription(WEEK);
+    const noTrimFact = activeReadinessFacts()[0]?.factId;
+    assert(noTrimFact && (await clear(noTrimFact)).ok, 'clear without an accepted trim still succeeds');
+    assert(dayPrescription(WEEK) === untrimmed, 'a no-trim clear must not change the session');
   });
 
   // ── Invariant R13 (illness severity doctrine — minor is INERT): a minor illness

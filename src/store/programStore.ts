@@ -575,12 +575,6 @@ function assertNullableWorkoutWriteAccepted(date: string, workout: Workout | nul
     .assertLiveNullableWorkoutWrite(date, workout);
 }
 
-function assertWeekOverlayWriteAccepted(overlay: WeekScopedWorkoutOverlay): void {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('../utils/postGenerationConstraintValidation')
-    .assertLiveWeekOverlayWrite(overlay);
-}
-
 
 function mondayForDate(date: string): string {
   const value = new Date(`${date.slice(0, 10)}T12:00:00`);
@@ -1413,7 +1407,6 @@ export interface ProgramState {
   dismissStaleWarning: (date: string) => void;
 
   /** Set/replace a system-authored week overlay */
-  setWeekScopedOverlay: (overlay: WeekScopedWorkoutOverlay) => void;
   /** Remove a system-authored week overlay by Monday ISO key */
   removeWeekScopedOverlay: (weekStart: string) => void;
   /** Clear all system-authored week overlays */
@@ -1739,27 +1732,6 @@ export const useProgramStore = create<ProgramState>()(
             [date]: { intent: 'dismissed' },
           },
         })),
-
-      setWeekScopedOverlay: (overlay) => {
-        assertWeekOverlayWriteAccepted(overlay);
-        const validatedOverlay = overlay;
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          // An overlay is DERIVED content (the fixture-identity law, 7d9d3ee7):
-          // republishing it replays no athlete decision, so it cannot be judged
-          // as a corrupt snapshot.
-          operation: 'forward_decision',
-          reason: `overlay:set:${validatedOverlay.weekStart}`,
-          program: {
-            weekScopedOverlays: {
-              ...state.weekScopedOverlays,
-              [validatedOverlay.weekStart]: validatedOverlay,
-            },
-          },
-          validateWeekStarts: [validatedOverlay.weekStart],
-        });
-      },
 
       removeWeekScopedOverlay: (weekStart) => {
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());

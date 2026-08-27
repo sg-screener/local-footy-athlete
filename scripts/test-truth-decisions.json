@@ -145,11 +145,14 @@
     },
     "test:canonical-weekly-compiler": {
       "kind": "current_contract",
-      "reason": "The first canonical weekly compiler slice has one production author for scheduling, specialist materialisation and plan connection, and its real onboarding-to-visible witness is green.",
+      "reason": "The canonical compiler witness covers scheduling, final rows and accepted edits, including the typed lighter-day opt-in, duplicate refusal, linked-fact clear, restart and Undo. This is a measured family contract, not the still-red global single-owner proof.",
       "productionPaths": [
         "src/rules/canonicalWeeklyCompiler.ts",
         "src/rules/canonicalWeeklyAthleteEditState.ts",
         "src/rules/canonicalWeeklyAthleteEditCompiler.ts",
+        "src/rules/canonicalWeeklyLighterDayCompiler.ts",
+        "src/utils/lighterDayTransaction.ts",
+        "src/store/quiescentBoot.ts",
         "src/services/api/generateProgram.ts"
       ],
       "contractRefs": [

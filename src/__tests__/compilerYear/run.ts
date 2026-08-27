@@ -11,6 +11,8 @@ import { undoLastDecision } from '../../store/undoLastDecision';
 import { applyPhaseShift } from '../../utils/profileMutations';
 import { applyPlanChange } from '../../utils/planChangeProducer';
 import { executeProgramControlActionDurably } from '../../utils/programControlActions';
+import { applyLighterDayForToday, lighterDayAvailableForDate } from '../../utils/lighterDayTransaction';
+import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { semanticFingerprint } from '../../utils/programSemanticSnapshot';
 import { rebaseAcceptedEffectiveWeek } from '../../rules/acceptedEffectiveWeek';
@@ -120,6 +122,16 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         const rollover = quiet(() => rolloverIfDue(week.weekStart));
         if (rollover.refusal) throw new Error(`Rollover: ${rollover.refusal}`);
         quiet(() => followTheWeek(week.weekStart));
+        if (week.index === 0 && archetype.id === 'male-5-two-fixtures') {
+          if (!lighterDayAvailableForDate(week.weekStart)) throw new Error('Lighter-day annual coordinate was not reached');
+          const report = await quietAsync(() => executeProgramControlActionDurably(
+            readinessActionForKind('poor_sleep_today', { anchorDateISO: week.weekStart, todayISO: week.weekStart }),
+            { todayISO: week.weekStart }));
+          if (!report.ok) throw new Error('Annual readiness report refused');
+          const lighter = await quietAsync(() => applyLighterDayForToday({ date: week.weekStart,
+            todayISO: week.weekStart, sourceFactId: report.createdModifierIds?.[0] }));
+          action('lighter_day', week.weekStart, lighter.ok, JSON.stringify(lighter));
+        }
         if (week.index === 1) {
           const days = visible(week.weekStart);
           const clubDays = useProfileStore.getState().onboardingData.teamTrainingDays ?? [];

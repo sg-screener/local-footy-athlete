@@ -2071,3 +2071,172 @@ physical-phone claim. No screen layout changed in this chunk.
 - Every injury/illness/travel/equipment/action cross-product, cross-week fixture
   moves and screen-driven full-year interaction. The eight archetypes and named
   accumulated-action witnesses are the measured denominator, not the whole app.
+
+## 22. Lighter-day input, ownership cleanup and type debt — 2026-08-27
+
+Owner: `testtruth`. Sam requested all three. **This checkpoint does NOT complete
+the global ownership proof or all historical test debt.** No device build/wipe.
+
+### Choice and implementation
+
+- Compared retaining the live lighter-day overlay writer with recording the
+  opt-in as a typed input. Keeping the overlay would preserve the separate live
+  author and would not explain how restart should reproduce the decision.
+- Chose `lighter_day` / `slight_v1`, linked to one date and source-fact id, in
+  the existing decision ledger. The pure
+  `canonicalWeeklyLighterDayCompiler` owns the retained trim policy. The old
+  utility is only a re-export. Live acceptance and ordered boot reconstruction
+  share the same publication adapter; no workout snapshot is saved with the
+  decision. Undo annuls the decision; clearing its source fact makes it inert.
+- Removed `programStore.setWeekScopedOverlay`, whose last production caller was
+  the old lighter-day transaction. Existing test-only setup uses store fixtures;
+  no replacement public derived-output setter was added.
+- The old private `buildWeeklyPlan` and its nine private rewriting helpers had
+  no production caller. Removed those ten definitions and unused imports from
+  `coachingEngine`; all six previously exported functions remain. This removes
+  6,319 net source lines, not 6,319 independently executing authors.
+
+### Behaviour and failure evidence
+
+- `test:canonical-weekly-compiler`: **402/402 named assertions**, including real
+  onboarding, accepted lighter-day policy, protected main lifts, actual accessory
+  changes, duplicate refusal, persisted-store rehydration/production boot,
+  exact Undo, clear, Off-season/In-season, occupied-day fixture Move, and an
+  actual scheduled Pre-season deload week. The deload witness initially selected
+  an ordinary week and failed its non-vacuity check; corrected the witness to
+  reach the actual scheduled deload, not the policy.
+- New lighter-day assertions were red before the migration: policy recording,
+  repeat availability/repeated halving, restart, exact Undo. Four executable
+  in-memory mutations were then injected into real modules, with a mandatory
+  injection marker (no source edits left behind): omit boot application ->
+  401/402; permit duplicate acceptance -> 398/402; ignore cleared-fact
+  eligibility -> 399/402; trim protected main rows -> 401/402. Clean rerun is
+  402/402. Logs `/tmp/testtruth-lighter-mut-{boot,duplicate,cleared,main}.log`;
+  runner `/tmp/testtruth-lighter-mutations.cjs`.
+- `test:readiness-ownership`: **24/24 cases**. Its old R5/R6/R12 explicitly
+  demanded the retired overlay/reversible-snapshot format. Replaced those three
+  with actual onboarding and current decision-ledger actions, retaining their
+  real contracts: next week's prescription unchanged; Undo only the accepted
+  trim; linked-fact clear retains a later unrelated session Remove across
+  restart. A first removal tried a protected Tuesday club day and was refused;
+  the witness now explicitly reaches Wednesday training. Content comparison
+  excludes rehomed workout-container ids and audit times, but preserves row
+  identities and every prescription. The original other 21 cases remain.
+- `test:compiler-year`: **416/416 green athlete-week observations across eight
+  distinct athletes x 52 weeks**, each with 52 persisted-store restarts. The
+  five-day/two-fixture archetype now also accepts a lighter day. Missing that
+  action is a verdict-engine mutation. Existing real compiler mutations still
+  catch duplicate placement, lost speed identity and lost final rows.
+- **Year command exit 1; release exit 1 (1/6 release units green).** The single
+  failing year prerequisite is global ownership. The remaining release units
+  are not all reached by the fail-fast runner; focused witnesses were run
+  separately. Generated HTML still derives this same RED verdict.
+
+### Ownership accounting — not a zero claim
+
+`test:weekly-writer-zero` exits 1. Detector controls are **21/21**, including
+actual fake-writer insertion, changed fingerprint, missing owner, alias/callback
+edges, opaque writes and the newly retired planner. A new control proves a
+type-only `Parameters<typeof fn>` reference is not an executable call edge;
+runtime call/callback edges remain observed.
+
+Current scan unit: **distinct executable capability owners (file + named
+function; anonymous callbacks grouped with their enclosing owner)**. Scope:
+App/index, all production/dev JS/TS and deployable edge functions; not tests,
+mocks, dependencies or declarations.
+
+- 597 source files; 1,996 direct operation occurrences in 624 distinct direct
+  owners; 1,200 candidate owners including transitive callers.
+- 48 reviewed; **1,152 unresolved**. No stale/invalid registry rows.
+- **4 confirmed rival functions**, all in one remaining projection-rewrite
+  pipeline: `projectVisibleDay`, `applyConstraintsToSession`,
+  `applyConstraintsToTypedComponents`, `recoverySubstitution`.
+- **0 confirmed derived publishers**, with global zero **NOT PROVEN** while
+  those candidates remain unresolved. The old public setter was removed, not
+  reclassified to hide it.
+
+The projection finding is **read at executable source, not a newly reproduced
+phone incident**: after its adjudication bypasses, the display path can filter
+rows/components, replace a workout with recovery, then filter validator
+violations again. It cannot be signed off as display-only. These four functions
+were already present; this is discovery, not four newly introduced regressions.
+
+Compared with step 21: candidate owners 1,257 -> 1,200; direct owners 652 -> 624;
+direct sites 2,262 -> 1,996. The old two lighter-day rivals are migrated; the four
+projection functions are newly reviewed findings. Do not read those numbers as
+counts of distinct athlete actions or affected athletes.
+
+### Test/type debt
+
+Raw TypeScript diagnostic occurrences by scope (not unique product defects):
+
+| Scope | Before | Now |
+| --- | ---: | ---: |
+| Product | 21 | 0 |
+| Devtools | 45 | 0 |
+| Test harness | 398 | 312 |
+| Total scope occurrences | 464 | 312 |
+
+The remaining **312 occurrences are in 102 distinct test files**. The existing
+per-file ratchet is still red on 59 file/scope pairs. Baseline ceilings were
+only lowered, never raised: product/devtools now allow zero; old test regressions
+were not absorbed, and no tsconfig exclusions or suppressions were added.
+
+Fixes include exact readiness-fact narrowing, result-union narrowing, E2E seed
+id validation, real session-id witness shape, equipment date/window scope,
+callback action narrowing and timer portability. Removed the unused Classic
+Home standalone-game banner referencing a hook flag that no longer exists;
+the active V2 UI was not redesigned.
+
+Focused harness runs: coach revision 141/141; Explorer ingress 13/13; Explorer
+production bindings 19/19; Explorer scenario session 36/36; Explorer live wiring
+15/15; active-time budget 20/20; deriving-fact commit 9/9; fact horizon 14/14.
+Replaced stale Repeat Week manifest/action counts with the actual current
+registry (Sam removed Repeat Week in `eefc9c98`). Coach template tests now supply
+real onboarding answers including bodyweight, not a store-less default athlete.
+The test-truth bootstrap is green. These results do not promote the whole old
+diagnostic fleet into product authority.
+
+The typecheck gate itself also had a laundering hole: `--update` could absorb
+regressions, and an unparseable compiler failure could appear as zero errors.
+It now refuses both. Six mock-compiler controls, including an actual conditional
+mutation that re-enables the bad update, run inside the release bootstrap.
+They test the instrument, not product code. `test:repo-law-guards` remains
+52/63 on existing report/inbox/flow/store/source-anchor debt (same totals as the
+preceding checkpoint); no baseline allowance was raised to hide that result.
+
+### What catches the next defect / remaining work
+
+The canonical witness and full-year gate now exercise the accepted lighter-day
+input through the same reconstruction as session/game edits. The negative
+mutations demonstrate those checks can reject lost replay, duplicate trimming,
+cleared-fact leakage and main-lift reduction. The fingerprinted source census
+continues to fail closed on unreviewed or changed executable owners; it is not
+whitelisted by filename or a `compile` prefix.
+
+Still owned by `testtruth`, not blocked on a new Sam ruling:
+
+1. Reproduce/classify the remaining projection fallback against current and
+   legacy accepted sessions, then remove/reroute its content policy through the
+   compiler without weakening injury withholding or resurrecting deleted rows.
+2. Complete the remaining executable-path reviews and migrations. **The global
+   zero proof is unfinished**; 1,152 unresolved entries are not harmless by
+   assumption. Uncalled exported legacy interpreters also need retirement review.
+3. Repair/rewrite the remaining 312 test type diagnostics against current
+   contracts, not by restoring retired product APIs or raising baseline ceilings.
+4. Existing lighter-day hard-conditioning logic only retags block intent; the
+   migration deliberately retained it. Whether the actual authored rows become
+   easy is **NOT VERIFIED**. Finisher row ownership also needs a real combined
+   session witness. This is a blocking content gap before claiming the entire
+   lighter-day experience complete, not permission to invent a new dose.
+
+### NOT COVERED
+
+- Physical iPhone/simulator UI, remote persistence and actual OS process death.
+  No athlete-facing completion/device acceptance claim; headless rehydration is
+  the measured restart mechanism.
+- Full injury/illness/travel/equipment/action cross-product and every historical
+  test suite. Global ownership and the remaining test debt above are unfinished.
+- Newly correct hard-conditioning replacement prescriptions or all combined
+  finisher rows; this checkpoint migrates the existing policy and tests the
+  listed strength/ledger contracts, not unmeasured conditioning semantics.

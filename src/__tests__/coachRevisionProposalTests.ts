@@ -19,12 +19,23 @@ import {
   parseCoachRevisionProposal,
   validateCoachRevisionDiff,
   type CoachRevisionIntent,
+  type CoachRevisionValidationIssue,
   type CoachRevisionProposal,
   type CoachVisibleDaySnapshot,
   type CoachVisibleSectionSnapshot,
   type CoachVisibleWeekSnapshot,
 } from '../utils/coachRevisionProposal';
 import { coachRevisionValidationPolicyForWeek } from '../utils/coachRevisionPolicy';
+import { setCoachRevisionTemplateContextProvider } from '../utils/coachRevisionTemplateContext';
+import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
+import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
+
+// Template builders require actual athlete answers (including bodyweight).
+// The old store-less fallback is not a completed onboarding profile.
+setCoachRevisionTemplateContextProvider(() => ({
+  athlete: { ...DEFAULT_ATHLETE_CONTEXT, onboardingData: athleteAnswers(ARCHETYPES[2]) },
+  gameDates: [], inSeason: false,
+}));
 
 const MON = '2026-07-06';
 const TUE = '2026-07-07';
@@ -310,7 +321,7 @@ section('[4] protected conditioning violation');
   const result = validateCoachRevisionDiff({ before, proposal: p });
 
   eq('validator fails', result.status, 'invalid');
-  ok('protected ref changed', result.issues.some((entry) => entry.code === 'protected_ref_changed'));
+  ok('protected ref changed', result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'protected_ref_changed'));
 }
 
 section('[5] unrelated day changed');
@@ -330,7 +341,7 @@ section('[5] unrelated day changed');
   const result = validateCoachRevisionDiff({ before, proposal: p });
 
   eq('validator fails', result.status, 'invalid');
-  ok('unrelated day flagged', result.issues.some((entry) => entry.code === 'unrelated_day_changed' && entry.date === WED));
+  ok('unrelated day flagged', result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'unrelated_day_changed' && entry.date === WED));
 }
 
 section('[6] invented hidden ID');
@@ -360,7 +371,7 @@ section('[6] invented hidden ID');
   const result = validateCoachRevisionDiff({ before, proposal: p });
 
   eq('validator fails', result.status, 'invalid');
-  ok('unknown section rejected', result.issues.some((entry) => entry.code === 'unknown_section_id'));
+  ok('unknown section rejected', result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'unknown_section_id'));
 }
 
 section('[7] generic replacement of team training is rejected by anchor policy');
@@ -409,7 +420,7 @@ section('[7] generic replacement of team training is rejected by anchor policy')
 
   eq('generic team replacement rejected', result.status, 'invalid');
   ok('protected anchor issue reported',
-    result.issues.some((entry) => entry.code === 'protected_anchor_changed'),
+    result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'protected_anchor_changed'),
     result.issues);
   ok('classified as replace/remove+add', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'removed' && entry.sectionKind === 'session'));
   ok('conditioning addition visible', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'added' && entry.sectionKind === 'conditioning'));
@@ -421,7 +432,7 @@ section('[7] generic replacement of team training is rejected by anchor policy')
     const selfAuthorized = validateCoachRevisionDiff({ before, proposal: p });
     eq('self-authorized add rejected', selfAuthorized.status, 'invalid');
     ok('unknown_section_id issue reported',
-      selfAuthorized.issues.some((entry) => entry.code === 'unknown_section_id'),
+      selfAuthorized.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'unknown_section_id'),
       selfAuthorized.issues);
   }
 
@@ -471,7 +482,7 @@ section('[7] generic replacement of team training is rejected by anchor policy')
     });
     eq('forged item rejected', result.status, 'invalid');
     ok('unknown_item_id names the forged item',
-      result.issues.some((entry) => entry.code === 'unknown_item_id' && entry.ref === 'item:forged:extra-squat'),
+      result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'unknown_item_id' && entry.ref === 'item:forged:extra-squat'),
       result.issues);
   }
 
@@ -493,7 +504,7 @@ section('[7] generic replacement of team training is rejected by anchor policy')
     });
     eq('game removal rejected', gameResult.status, 'invalid');
     ok('game protected anchor issue reported',
-      gameResult.issues.some((entry) => entry.code === 'protected_anchor_changed'),
+      gameResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'protected_anchor_changed'),
       gameResult.issues);
   }
 }
@@ -527,7 +538,7 @@ section('[8] make tomorrow lighter via conservative reduction');
     const titleOnlyResult = validateCoachRevisionDiff({ before, proposal: titleOnly });
     eq('title-only lighter is rejected', titleOnlyResult.status, 'invalid');
     ok('no material dose reduction issue is explicit',
-      titleOnlyResult.issues.some((entry) => entry.code === 'no_material_dose_reduction'),
+      titleOnlyResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'no_material_dose_reduction'),
       titleOnlyResult.issues);
   }
 
@@ -544,7 +555,7 @@ section('[8] make tomorrow lighter via conservative reduction');
     const result2 = validateCoachRevisionDiff({ before, proposal: p2 });
     eq('nullified field rejected', result2.status, 'invalid');
     ok('non_conservative_reduction issue',
-      result2.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      result2.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'non_conservative_reduction'),
       result2.issues);
   }
 
@@ -595,7 +606,7 @@ section('[8] make tomorrow lighter via conservative reduction');
     const resultSneaky = validateCoachRevisionDiff({ before: mixedBefore, proposal: pSneaky });
     eq('off-domain increase under reduce rejected', resultSneaky.status, 'invalid');
     ok('non_conservative issue raised',
-      resultSneaky.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      resultSneaky.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'non_conservative_reduction'),
       resultSneaky.issues);
   }
 
@@ -612,7 +623,7 @@ section('[8] make tomorrow lighter via conservative reduction');
     const result3 = validateCoachRevisionDiff({ before, proposal: p3 });
     eq('dropped prescription rejected', result3.status, 'invalid');
     ok('non_conservative_reduction issue for dropped prescription',
-      result3.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      result3.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'non_conservative_reduction'),
       result3.issues);
   }
 }
@@ -648,7 +659,7 @@ section('[10] empty shell rejected');
   const result = validateCoachRevisionDiff({ before, proposal: p });
 
   eq('validator fails', result.status, 'invalid');
-  ok('empty shell flagged', result.issues.some((entry) => entry.code === 'empty_workout_shell'));
+  ok('empty shell flagged', result.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'empty_workout_shell'));
 }
 
 section('[10b] parse normalizes empty shells to canonical rest/null');
@@ -757,7 +768,7 @@ section('[13] move conservation: relocated content must arrive exactly');
   const lostResult = validateCoachRevisionDiff({ before, proposal: moveProposal(lost) });
   eq('losing an item in transit rejected', lostResult.status, 'invalid');
   ok('move_lost_content named',
-    lostResult.issues.some((entry) => entry.code === 'move_lost_content'),
+    lostResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'move_lost_content'),
     lostResult.issues);
 
   const mutated = movedDay((day) => {
@@ -767,7 +778,7 @@ section('[13] move conservation: relocated content must arrive exactly');
   const mutatedResult = validateCoachRevisionDiff({ before, proposal: moveProposal(mutated) });
   eq('mutating content in transit rejected', mutatedResult.status, 'invalid');
   ok('move_changed_content named',
-    mutatedResult.issues.some((entry) => entry.code === 'move_changed_content'),
+    mutatedResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'move_changed_content'),
     mutatedResult.issues);
 
   const invented = movedDay((day) => {
@@ -785,7 +796,7 @@ section('[13] move conservation: relocated content must arrive exactly');
   const inventedResult = validateCoachRevisionDiff({ before, proposal: moveProposal(invented) });
   eq('inventing content in transit rejected', inventedResult.status, 'invalid');
   ok('move_invented_content named',
-    inventedResult.issues.some((entry) => entry.code === 'move_invented_content'),
+    inventedResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'move_invented_content'),
     inventedResult.issues);
 
   // PARTIAL MERGE stays forbidden (sheet v2): destination keeps its own
@@ -812,7 +823,7 @@ section('[13] move conservation: relocated content must arrive exactly');
   });
   eq('partial merge onto occupied day rejected', occupiedResult.status, 'invalid');
   ok('move_merge_not_supported named',
-    occupiedResult.issues.some((entry) => entry.code === 'move_merge_not_supported'),
+    occupiedResult.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'move_merge_not_supported'),
     occupiedResult.issues);
 
   // FULL SWAP is legal (sheet v2): the two days exchange their complete
@@ -829,7 +840,7 @@ section('[13] move conservation: relocated content must arrive exactly');
       revisedDays: [swapMon, swapTue],
     }),
   });
-  eq('full two-day swap validates', swapResult.status, 'valid', swapResult.issues);
+  eq('full two-day swap validates', swapResult.status, 'valid');
 }
 
 section('[14] replace is label-agnostic: any domain label validates structurally');
@@ -977,7 +988,7 @@ section('[16] work-capacity templates are bye-week gated');
   });
   eq('EMOM on a game week is invalid', gameWeek.status, 'invalid');
   ok('bye-only issue named',
-    gameWeek.issues.some((entry) => entry.code === 'template_bye_week_only'),
+    gameWeek.issues.some((entry: CoachRevisionValidationIssue) => entry.code === 'template_bye_week_only'),
     gameWeek.issues);
 
   // Bye week: same proposal allowed (needs confirmation as usual).

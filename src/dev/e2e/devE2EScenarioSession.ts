@@ -76,11 +76,12 @@ function exactKeys(
 function parseFingerprintMap(value: unknown): DevE2EFingerprintMap | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const entries = Object.entries(value as Record<string, unknown>);
-  if (entries.some(([key, fingerprint]) =>
-    key.length === 0 || typeof fingerprint !== 'string' || fingerprint.length === 0)) {
-    return null;
+  const parsed: DevE2EFingerprintMap = {};
+  for (const [key, fingerprint] of entries) {
+    if (!key.length || typeof fingerprint !== 'string' || !fingerprint.length) return null;
+    parsed[key] = fingerprint;
   }
-  return Object.fromEntries(entries);
+  return parsed;
 }
 
 function parseNullableId(value: unknown): string | null | undefined {

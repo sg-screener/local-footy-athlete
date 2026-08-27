@@ -232,6 +232,9 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
     const sf = program.getSourceFile(file);
     if (!sf) continue;
     function walk(node) {
+      // Type signatures and import/export declarations do not execute writers.
+      // Runtime references (including callbacks) are still followed below.
+      if (ts.isTypeNode(node) || ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
       const unit = owner(node);
       // Symbol-resolved references also include callback/JSX handoffs. These
       // are conservative possible-call edges, not claims that a tap occurred.

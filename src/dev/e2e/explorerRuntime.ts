@@ -642,6 +642,7 @@ export async function runExplorerScenario(
     let ingressRequest: ExplorerActionIngressRequest | null = null;
     try {
       if (deps.actionExecutionMode === 'live-external-action-ingress') {
+        assertExplorerActionExecutable(step.action);
         ingressRequest = createExplorerActionIngressRequest({
           campaignId: deps.physicalEvidence.campaignId,
           scenarioId: manifest.scenarioId,

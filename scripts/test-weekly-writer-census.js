@@ -52,6 +52,15 @@ test('comments and type-only fields do not manufacture executable writers', () =
   assert.equal(r.directWriteSiteOccurrences, 0); assert.equal(r.inspectedCapabilityOwners, 0);
   assert.equal(r.ok, false); // an empty scan cannot prove the real application
 });
+test('typeof signatures and type-only imports are not executable call edges', () => {
+  const sources = {
+    [file]: clean[file],
+    'src/typeConsumer.ts': `import type { compile } from './censusMutationFixture';
+      export type Input = Parameters<typeof compile>[0];`,
+  };
+  const r = scanSources({ sources });
+  assert.deepEqual(r.owners.map((row) => row.id), [file + '#compile']);
+});
 test('renamed imports, local aliases and wrappers remain linked to the actual writer', () => {
   const sources = {
     [file]: `export function mutate(w: any) { w.exercises = []; }`,
@@ -143,6 +152,28 @@ test('retired raw exercise-store authors have no executable implementation', () 
   }
   visit(source);
   assert.equal(found, 0, 'raw template writes must use typed canonical exercise effects instead');
+});
+
+test('retired private weekly planner cannot return beside the compiler', () => {
+  const filename = path.resolve(__dirname, '../src/utils/coachingEngine.ts');
+  const contents = fs.readFileSync(filename, 'utf8');
+  const retired = new Set(['buildWeeklyPlan', 'applySection18ConditioningAllocation',
+    'optimiseStrengthLoadSequence', 'enforcePreSeasonCoreStreak', 'enforceWeekendPeak',
+    'enforceFieldLoadStreak', 'enforceAdjacentRegionLimit', 'teamDayPlaceholderAllocation',
+    'createFallbackSpeedBlock', 'createSpeedTopUpBlock']);
+  const authors = (text) => {
+    const source = ts.createSourceFile(filename, text, ts.ScriptTarget.Latest, true);
+    assert.equal(source.parseDiagnostics.length, 0);
+    const found = [];
+    function visit(node) {
+      if (ts.isFunctionDeclaration(node) && node.body && retired.has(node.name?.text)) found.push(node.name.text);
+      ts.forEachChild(node, visit);
+    }
+    visit(source);
+    return found;
+  };
+  assert.deepEqual(authors(contents), []);
+  assert.deepEqual(authors(contents + '\nfunction buildWeeklyPlan() { return { weeklyPlan: [] }; }'), ['buildWeeklyPlan']);
 });
 
 console.log(`Writer census detector: ${passed} passed, ${failed} failed`);

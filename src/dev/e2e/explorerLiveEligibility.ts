@@ -181,7 +181,8 @@ function buildLiveExplorerEligibilityWitnessState(args: {
     sourceFacts,
     reversibleAdjustments: adjustmentWitnesses,
     cardDetailEqualities: sessions.map((session) => ({
-      ...session,
+      sessionId: session.id,
+      date: session.date,
       equal: semanticFingerprintV2(visibleEqualityProjection(
         witness.visibleCardDays?.[session.date],
       )) === semanticFingerprintV2(visibleEqualityProjection(

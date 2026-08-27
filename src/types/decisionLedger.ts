@@ -22,6 +22,7 @@ import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeekl
 import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
 import type { CanonicalAcceptedDayPlacementEffect } from '../rules/canonicalDayPlacementEffect';
 import type { FixtureMutationKind } from './fixtureMutation';
+import type { CanonicalAcceptedLighterDayEffect } from '../rules/canonicalWeeklyLighterDayCompiler';
 
 /** Who put this decision on the ledger. */
 export type DecisionProvenance =
@@ -35,6 +36,7 @@ export type DecisionProvenance =
  * never paraphrases the decision it records.
  */
 export type AthleteDecision =
+  | { kind: 'lighter_day'; acceptedEffect: CanonicalAcceptedLighterDayEffect }
   | {
       kind: 'plan_change';
       change: PlanChange;

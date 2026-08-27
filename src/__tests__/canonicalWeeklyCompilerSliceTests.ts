@@ -90,6 +90,8 @@ import { runAthlete } from './compilerYear/run';
 import { visibleSignature as exactWeekSignature } from './compilerYear/invariants';
 import { useCalendarStore } from '../store/calendarStore';
 import { speedTemplateConditioningCredit } from '../rules/conditioningCredit';
+import { applyLighterDayForToday, lighterDayAvailableForDate } from '../utils/lighterDayTransaction';
+import { resolveDateWithConditioning } from '../utils/sessionResolver';
 import {
   getTapSwapChoices,
   groupTapSwapChoices,
@@ -1193,6 +1195,57 @@ async function main(): Promise<void> {
   ok('undoing the edit restores the visible accepted week exactly',
     visibleSignature(quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY))) ===
       baselineSignature);
+
+  console.log('\n[lighter-day slice] opt-in -> restart -> Undo -> clear linked fact');
+  const lighterDate = removableDay!.dateISO;
+  setJourneyClock(lighterDate);
+  const sleep = await quietAsync(() => executeProgramControlActionDurably(
+    readinessActionForKind('poor_sleep_today', { anchorDateISO: install.blockOneStart, todayISO: lighterDate }),
+    { todayISO: lighterDate },
+  ));
+  const sleepId = sleep.createdModifierIds?.[0];
+  ok('lighter-day witness records an actual today-scoped readiness fact', sleep.ok && !!sleepId);
+  const lighterBaseline = visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate)));
+  const untrimmed = quiet(() => resolveDateWithConditioning(lighterDate, buildScheduleStateImperative()))!.workout!;
+  const protectedRows = untrimmed.exercises.filter((row) => row.section18Evidence?.role === 'main_strength');
+  ok('lighter-day witness reaches main lifts and trimmable accessories', protectedRows.length > 0 &&
+    lighterDayAvailableForDate(lighterDate));
+  const lighter = await quietAsync(() => applyLighterDayForToday({ date: lighterDate, todayISO: lighterDate, sourceFactId: sleepId }));
+  ok('lighter-day accepts the real offer', lighter.ok, lighter.message);
+  const lighterEntry = decisionLedgerEntries().find((entry) => (entry.decision.kind as string) === 'lighter_day');
+  ok('lighter-day records a typed decision, not a stored workout', !!lighterEntry &&
+    !JSON.stringify(lighterEntry.decision).includes('exercises'));
+  const trimmed = quiet(() => resolveDateWithConditioning(lighterDate, buildScheduleStateImperative()))!.workout!;
+  const prescriptionOnly = (row: typeof protectedRows[number] | undefined) => JSON.stringify(row,
+    (key, value) => key === 'createdAt' || key === 'updatedAt' ? undefined : value);
+  ok('lighter-day keeps all main-lift prescriptions exactly', protectedRows.every((row) =>
+    prescriptionOnly(trimmed.exercises.find((next) => next.id === row.id)) === prescriptionOnly(row)));
+  const lighterSignature = visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate)));
+  ok('lighter-day changes the visible prescription', lighterSignature !== lighterBaseline);
+  ok('an accepted lighter day is not offered for another halving', !lighterDayAvailableForDate(lighterDate));
+  const duplicate = await quietAsync(() => applyLighterDayForToday({ date: lighterDate, todayISO: lighterDate, sourceFactId: sleepId }));
+  ok('repeated acceptance does not halve the session twice', !duplicate.ok &&
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === lighterSignature);
+  await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: lighterDate }));
+  ok('lighter-day survives persisted-ledger restart exactly',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === lighterSignature);
+  const lighterUndo = await quietAsync(() => undoLastDecision());
+  ok('Undo reverses only the lighter-day decision', lighterUndo.outcome === 'undone' &&
+    lighterUndo.reversedEntryId === lighterEntry?.id);
+  ok('Undo restores the untrimmed week with the readiness fact still present',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === lighterBaseline);
+  await quietAsync(() => applyLighterDayForToday({ date: lighterDate, todayISO: lighterDate, sourceFactId: sleepId }));
+  const clearSleep = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'clear_fatigue_status', source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'today_only', payload: { modifierId: sleepId, date: lighterDate },
+    requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+  }, { todayISO: lighterDate }));
+  ok('clearing the linked fact restores the lighter-day prescription immediately', clearSleep.ok &&
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === baselineSignature);
+  await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: lighterDate }));
+  ok('cleared lighter-day decision stays inactive after restart',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === baselineSignature);
+  setJourneyClock(INSTALL_DAY);
 
   console.log('\n[readiness slice] normal -> cooked rolling window -> recovered');
   const baselineSetsByDate = new Map(visible.map((day) => [
@@ -2796,6 +2849,47 @@ async function main(): Promise<void> {
       exactWeekSignature(quiet(() => deriveVisibleWeekLive(INSTALL_DAY, INSTALL_DAY))) === exactWeekSignature(beforeGame));
   }
   ok('the edit-preservation witness reaches the complete-regeneration fallback', regeneratedWithEdit);
+
+  console.log('\n[lighter-day combinations] phase, deload, fixture and exact restart');
+  for (const coordinate of [
+    { profile: athlete(), weekIndex: 0, fixture: false, label: 'Off-season' },
+    { profile: athleteAnswers(gameProfile), weekIndex: 0, fixture: true, label: 'In-season plus fixture' },
+    { profile: preseasonAthlete(), weekIndex: 3, fixture: false, label: 'scheduled deload' },
+  ]) {
+    await quietAsync(() => coldStartThroughOnboarding({ profile: coordinate.profile, installDayISO: INSTALL_DAY }));
+    const cycles = useProgramStore.getState().currentProgram!.microcycles;
+    const cycle = coordinate.weekIndex === 3
+      ? cycles.find((week) => week.weekKind === 'deload' && week.deloadDoor === 'scheduled')!
+      : cycles[coordinate.weekIndex];
+    const weekStart = cycle.startDate.slice(0, 10);
+    const days = quiet(() => deriveVisibleWeekLive(weekStart, weekStart));
+    const day = days.find((day) => day.workout?.exercises.some((r) => r.section18Evidence?.role === 'main_strength') &&
+      lighterDayAvailableForDate(day.date));
+    ok(`${coordinate.label}: reaches a trimmable generated strength day`, !!day);
+    if (!day) continue;
+    if (coordinate.weekIndex === 3) ok('deload witness reaches the compiler dose policy',
+      Object.keys(cycle.dosePolicyByDay ?? {}).length > 0);
+    setJourneyClock(day.date);
+    const report = await quietAsync(() => executeProgramControlActionDurably(readinessActionForKind('poor_sleep_today',
+      { anchorDateISO: weekStart, todayISO: day.date }), { todayISO: day.date }));
+    const before = exactWeekSignature(quiet(() => deriveVisibleWeekLive(weekStart, day.date)));
+    const lightened = await quietAsync(() => applyLighterDayForToday({ date: day.date, todayISO: day.date,
+      sourceFactId: report.createdModifierIds?.[0] }));
+    ok(`${coordinate.label}: accepts the opt-in without deleting the session`, lightened.ok &&
+      !!quiet(() => deriveVisibleWeekLive(weekStart, day.date)).find((d) => d.date === day.date)?.workout);
+    const lighterWeek = exactWeekSignature(quiet(() => deriveVisibleWeekLive(weekStart, day.date)));
+    if (coordinate.fixture) {
+      const moved = await actFixture('move', day.date, '2026-07-18', '2026-07-15');
+      ok('lighter day then occupied-day fixture Move is accepted', moved.outcome === 'accepted');
+    }
+    const acceptedWeek = exactWeekSignature(quiet(() => deriveVisibleWeekLive(weekStart, day.date)));
+    await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: day.date }));
+    ok(`${coordinate.label}: full week survives restart without dose stacking`,
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(weekStart, day.date))) === acceptedWeek);
+    await quietAsync(() => undoLastDecision());
+    ok(`${coordinate.label}: Undo removes only the latest action`,
+      exactWeekSignature(quiet(() => deriveVisibleWeekLive(weekStart, day.date))) === (coordinate.fixture ? lighterWeek : before));
+  }
 
   const practiceJourney = await runAthlete(ARCHETYPES.find((a) => a.id === 'female-3-novice-home')!, localStorageData, 6);
   const practiceWeek = practiceJourney.weeks[5];

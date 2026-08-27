@@ -119,10 +119,16 @@ async function main() {
     }
   });
 
-  await test('all fifteen live actions remain on canonical production bindings', () => {
+  await test('all surviving live action kinds remain on canonical production bindings', () => {
     const actions = EXPLORER_NON_COACH_SMOKE_MANIFESTS.flatMap((manifest) =>
       manifest.steps.map((step) => step.action.type));
-    expect(actions.length === 15, `expected 15 live actions, received ${actions.length}`);
+    // eefc9c98 removed Repeat Week by Sam's ruling, including its two-step
+    // smoke scenario. Do not demand that retired capability back to make 15.
+    const expected = ['session.delete', 'component.delete', 'fixture.move', 'adjustment.restore',
+      'injury.set', 'injury.resolve', 'readiness.set', 'readiness.clear',
+      'equipment.clear', 'equipment.set', 'session-feedback.record'].sort();
+    expect(actions.length === 13 && JSON.stringify([...new Set(actions)].sort()) === JSON.stringify(expected),
+      `expected 13 action occurrences covering 11 distinct kinds, received ${JSON.stringify(actions)}`);
     expect(actions.every((actionType) =>
       Object.prototype.hasOwnProperty.call(EXPLORER_PRODUCTION_OWNER_BY_ACTION, actionType)),
     'a live action bypasses explorerProductionBindings');

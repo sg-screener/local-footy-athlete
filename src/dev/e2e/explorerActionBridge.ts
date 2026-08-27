@@ -30,7 +30,7 @@ export type ExplorerExecutableAction = Exclude<
 export type ExplorerExecutableActionType = ExplorerExecutableAction['type'];
 
 export type ExplorerActionFor<TActionType extends ExplorerActionType> =
-  Extract<ExplorerAction, { readonly type: TActionType }>;
+  ExplorerAction & { readonly type: TActionType };
 
 /**
  * One adapter name per canonical production owner. Several action types may
@@ -157,8 +157,8 @@ function sameStableValue(left: unknown, right: unknown): boolean {
   return stableSemanticJsonV2(left) === stableSemanticJsonV2(right);
 }
 
-function assertReceiptShape(
-  result: ExplorerProductionOwnerResult,
+function assertReceiptShape<T extends ExplorerExecutableActionType>(
+  result: ExplorerProductionOwnerResult<T>,
 ): void {
   if (!EXPLORER_PRODUCTION_RECEIPT_STATUSES.includes(result.status) ||
     !nonEmpty(result.receiptId) ||

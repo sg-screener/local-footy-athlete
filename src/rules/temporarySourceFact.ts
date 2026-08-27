@@ -659,7 +659,7 @@ export function selectReadinessFactForDate(args: {
   readonly dateISO: string;
   /** When given, a fact scoped to exactly this date is preferred. */
   readonly todayISO?: string;
-}): TemporarySourceFact | null {
+}): NonInjuryTemporarySourceFact | null {
   const candidates = args.facts.filter((fact): fact is NonInjuryTemporarySourceFact =>
     !isInjurySourceFact(fact)
     && fact.status === 'active'
@@ -925,7 +925,7 @@ function readinessProjection(
       signal.poorSleepPattern = fact.pattern;
     } else {
       signal.soreness = levelScore(fact.athleteReportedLevel) >= 7 ? 'high' : 'moderate';
-      if (fact.distribution === 'localized' && fact.reportedBodyPartLanguage) {
+      if (fact.factKind === 'soreness' && fact.distribution === 'localized' && fact.reportedBodyPartLanguage) {
         signal.bodyPart = fact.reportedBodyPartLanguage;
       }
     }

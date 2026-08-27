@@ -16,7 +16,7 @@
     "test:scenarios:golden": "sucrase-node src/__tests__/scenarioHarness.js --golden",
     "test:scenarios:verbose": "sucrase-node src/__tests__/scenarioHarness.js --verbose",
     "test:qa": "sucrase-node src/__tests__/weekPlanQA.ts",
-    "test:test-truth": "TZ=Australia/Melbourne sucrase-node src/__tests__/testTruthAuditTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/releaseGateContractTests.ts && npm run test:unrunnable-suites",
+    "test:test-truth": "TZ=Australia/Melbourne sucrase-node src/__tests__/testTruthAuditTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/releaseGateContractTests.ts && npm run test:unrunnable-suites && node scripts/test-typecheck-gate.js",
     "audit:test-truth": "node scripts/test-truth-audit.js",
     "test:release": "node scripts/release-gate.js",
     "test:canonical-weekly-compiler": "TZ=Australia/Melbourne sucrase-node src/__tests__/canonicalWeeklyCompilerSliceTests.ts",
