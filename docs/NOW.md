@@ -60,10 +60,10 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `codex/failure-only-state-export` · **BASE:** `aaaf58a7`.
+- **BRANCH:** `codex/failure-only-state-export` · **IMPLEMENTATION:** `0c4cad0b`.
 - **CURRENT UNIT:** agreed sprint/conditioning counting, chunk 1; owner `testtruth`.
 - **RECEIPT:** `docs/STATUS_TESTTRUTH.md` step 19; focused compiler gate 324/324.
-- **NEXT:** finish verification, then accumulated fixture handling (chunk 2).
+- **NEXT:** accumulated fixture/restart handling (chunk 2); see the explicit UI gap in step 19.
 - **OPEN:** global year/writer release gates remain red; no phone acceptance claimed.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the

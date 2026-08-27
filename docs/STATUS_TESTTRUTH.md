@@ -1693,7 +1693,7 @@ zero; the wider three-day witness exposed a fifth exposure from the separate
 running top-up. A two-component-credit intermediate was rejected in favour of
 Sam's one-combined-session credit rule. It is not a shipped alternative.
 
-Verification in progress at this checkpoint:
+Verification (implementation checkpoint `0c4cad0b`, final receipt below):
 
 - `test:canonical-weekly-compiler`: **324/324 assertion cells**, including
   seven real onboarding profiles: late-Off-season/3 gym days; Pre-season/3,
@@ -1712,14 +1712,60 @@ Verification in progress at this checkpoint:
   38/40 (light-team-stress expectations); generation classifier 25/27
   (generated stress expectations). They are not the release contract and
   were not used to change product semantics.
-- Full-year release and deliberate runtime-source mutations are pending the
-  final receipt below. The global writer proof is still open, not zero.
+- Full-year release and deliberate runtime-source mutations are recorded below.
+  The global writer proof is still open, not zero.
 
 What catches the next defect: the release-linked real-life compiler witness
 checks shared frequency counting, retained quality, duplicate references,
 legacy reads, missing-versus-zero answers and deload restart across the named
 availability profiles. The year gate continues testing the accumulated lives;
 it is not replaced by the focused witness.
+
+### Final verification receipt
+
+- Runtime-source mutations were made only after the implementation checkpoint
+  and restored by exact patches, never checkout/reset. Removing proper-speed
+  credit failed **13/267 reached assertions** (the refused onboarding journeys
+  correctly could not reach their later cells). Allowing warm-up riders failed
+  **7/324 assertions**. Letting the speed unit claim a second credit in a mixed
+  session failed **14/306 reached assertions**, including the combined-count
+  and quality-control cells. Restoring the source returned **324/324 green**.
+- `test:deriving-device-commit`: **9/9**; `test:fact-horizon`: **14/14**;
+  `test:deload-law`: **68/68**; `test:deload-coach-notes`: **18/18**;
+  year-detector infrastructure controls: **24/24**.
+- The historical `test:block-two-ladder` diagnostic is **58/59**, versus 59/59
+  in step 18. Its failed cell requires an example landing EXACTLY at the
+  16-set ceiling; the newly generated sessions top out at 15 in that sample.
+  No sample exceeds the ceiling and progression assertions still pass. This
+  is a lost boundary witness, not a requirement to increase athlete volume.
+  It remains diagnostic test debt; no expectation or product target was
+  altered merely to green it.
+- Full-year gate: **280 green / 297 measured / 416 required athlete-weeks**,
+  compared with **212 / 281 / 416** before chunk 1. **17 measured weeks fail
+  one or more checks; 119 are not completed/reached**. Five of eight distinct
+  archetypes complete all 52 weeks. The seven-profile focused witness above
+  and this eight-archetype annual corpus are different denominators.
+- The year has **11 failed programming-check occurrences across 7 distinct
+  archetypes**, and **10 restart-check failures across 5 distinct archetypes**.
+  The no-team six-day athlete now completes 16 weeks, including four scheduled
+  deloads, rather than refusing at onboarding. Its first In-season week passes
+  live checks, then boot refuses `core_conditioning_required_minimum:2`.
+  Exact cause remains OPEN-UNKNOWN; this is a concrete accumulated phase/
+  reconstruction gap for the remaining work, not a successful full-year life.
+- Fixture-compressed two-day refusal and second-game Add refusal remain.
+  They are chunk 2's existing scope. The new annual result has **156 distinct
+  failure keys**, including missing coverage and prerequisites, NOT 156 bugs.
+- Writer census: **594 scanned files**, **2257 direct operation occurrences**
+  in **650 distinct direct owners**. Of **1253 capability owners**, 36 are
+  reviewed and 1217 unresolved. **4 confirmed rival authors and 1 confirmed
+  derived-output publisher** remain. Neither global zero is claimed.
+- `test:release` remains **RED**, exit 1, **1/6 release units green** in that
+  invocation: bootstrap passed, year failed, the four subsequent units were
+  not reached. The relevant later witnesses were run separately above.
+  JSON and HTML at `outputs/compiler-year-acceptance/` come from that same
+  verdict; the recorded revision is the pre-commit tree plus working changes.
+  `git diff --check` is clean. No phone build, data wipe or athlete-data
+  deletion occurred. This is not whole-app or device acceptance.
 
 ### NOT COVERED
 
