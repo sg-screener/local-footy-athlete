@@ -1304,6 +1304,12 @@ export function materialiseWeekStrengthProgression(
 
   for (let i = 0; i < baseDays.length; i++) {
     const day = baseDays[i];
+    const governingWeek = selectMicrocycleForDate(
+      state.currentProgram, state.currentMicrocycle, day.date,
+    );
+    // Compiler-controlled dose is already materialised. Progression cannot
+    // add work back or run its old drop-two/70%-load reduction over it.
+    if (governingWeek?.dosePolicyByDay?.[day.dayOfWeek]) continue;
     if (
       day.workout &&
       workoutHasProgressableStrengthRows(day.workout) &&

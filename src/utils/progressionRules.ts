@@ -31,7 +31,6 @@ import {
   type ExerciseRole,
   feelingToRPE,
 } from './progressionHelpers';
-import { resolveDeloadWeekPolicy } from '../rules/deloadWeekRules';
 
 // ─── Types ───
 
@@ -139,31 +138,8 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
     return buildDeload(`Soft deload: ${signals.join(' + ')}`);
   }
 
-  // ── Step 4: Scheduled deload cycle (candidate, not forced) ──
-  // Only fires when there is at least 1 supporting fatigue signal.
-  //
-  // This branch used to carry its own in-season threshold (`? 4 : 6`) — a
-  // SECOND scheduled-deload decider that D16's gate never saw. D16 says there
-  // are no scheduled in-season deloads at all; in-season backs off through the
-  // readiness and illness doors, which are steps 2 and 3 above and are
-  // deliberately left ungated. Asking the scheduled door itself is what binds
-  // this branch to the same law as every other scheduled deload.
-  const scheduledDoorOpen = resolveDeloadWeekPolicy(input.seasonPhase, 'deload') !== null;
-  const deloadThreshold = 6;
-  if (scheduledDoorOpen && input.weeksSinceDeload >= deloadThreshold) {
-    // Check for at least one fatigue signal
-    const hasSignal =
-      input.capacity === 'low' ||
-      rpe >= 8 ||
-      input.missedSessionsThisWeek >= 1 ||
-      input.sessionFeeling === 'Cooked' ||
-      input.sessionFeeling === 'Sore' ||
-      input.recentFatiguePattern;
-    if (hasSignal) {
-      return buildDeload(`Scheduled deload cycle (${input.weeksSinceDeload} weeks) with fatigue signal`);
-    }
-    // No fatigue signal — skip deload, continue to normal resolution
-  }
+  // Scheduled dose belongs to the phase clock -> weekly compiler. There is
+  // no second six-week timer here; this engine only evaluates progression.
 
   // ── Step 5: Game proximity hold ──
   if (input.daysToGame !== null && input.daysToGame <= 2) {

@@ -1176,3 +1176,133 @@ expect the retired procedural exercise replay and deleted migration appender.
 - The global rival-author/derived-output-writer census has not yet been run.
 - The full-year archetype compiler acceptance gate is not built yet.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 16: scheduled dose is compiler input; acceptance still partial
+
+Owner: `testtruth`. This is user chunk 3, after fixture effects and legacy
+placement ingress. **Not declared complete:** the late-Off-season lifecycle
+still refuses before entering its deload. No phone build is authorised by this
+checkpoint's evidence.
+
+### Two options weighed
+
+1. Keep the generator/adapter scheduled branch and add exceptions around
+   fixture repair, restart and readiness overlap.
+2. Lift the existing phase-clock answer into one exact-week typed fact, compile
+   the per-date dose once, and make materialisation/progression consume it.
+
+Option 2 implemented. The existing `DELOAD_LAW` arithmetic and the phase clock's
+cadence are unchanged. This is ownership migration, not a new training policy.
+
+### Authoritative fact and precedence
+
+- `seasonPhaseClock.resolveSeasonPhaseWeekKind` remains WHEN: Pre-season every
+  fourth phase week; Off-season only after the first four phase weeks, then
+  every fourth late-phase week; no scheduled In-season deload.
+- `CanonicalWeeklyScheduledDeloadState` names the exact target Monday and the
+  existing semantic policy. It is derived from the persisted phase clock, not
+  another mutable store or ledger action.
+- `compileCanonicalWeeklyDosePolicies` chooses exactly one policy per day:
+  illness, then readiness, then scheduled. Outside an applicable live window,
+  the scheduled fact remains effective. No stacking of multipliers.
+- Generated training consumes that output. Fixtures still own their occupied
+  days; accepted edits still fold over generated training. Undo removes an
+  athlete action, not the phase clock.
+- Compiler-authored `dosePolicyByDay` travels with each microcycle. Fixture
+  replacement materialisation consumes it, including the rejected-candidate
+  repair envelope's existing base-week metadata.
+
+### Retired authors and the defect found by extending the check
+
+Removed the generator and retained adapter's `resolveDeloadWeekPolicy` calls,
+the adapter's alternate readiness resolver, and the old scheduled fallback
+handoff. Materialisers still execute the existing dose arithmetic; they no
+longer decide whether a week is scheduled for deload.
+
+The production-wide resolver scan then found **one additional distinct caller**,
+`progressionRules`. Its private six-week-with-fatigue timer was removed; the
+phase clock now owns scheduled cadence. A real recorded very-hard session
+showed the later progression pass also changed already-deloaded rows: Leg
+Press went from 2 sets at 4–6 reps/127.5 kg to 1 set at 3–4 reps/90 kg. The
+progression pass now stands down on dates carrying compiler-authored dose.
+Other progression decisions on ordinary build days are unchanged.
+
+Instrument: `test:canonical-weekly-compiler`. Distinct executable production
+callers of `resolveDeloadWeekPolicy`: **1**, the typed scheduled-state ingress.
+Independent scheduled resolvers in the generator and retained adapter: **0
+across those 2 modules**. This is NOT a global rival-author/derived-writer count.
+
+### Acceptance, depth and liveness
+
+- Initial scheduled ownership additions: **219/227 cells passed**, eight red.
+- The expanded progression check: **238/241 passed**, three red, including
+  a real recorded feedback witness (not a synthetic store seed).
+- Final `npm run test:canonical-weekly-compiler`: **241/241 cells green**.
+  The new Pre-season journey spans build week 3, deload week 4 and next-block
+  week 1. It exercises Remove → restart → Undo, then practice-match Add onto
+  an occupied day → restart → Undo. These are two distinct accepted edit
+  decisions plus their reversals, not a full-year accumulated-state claim.
+- The per-date overlap cell reaches all seven dates: scheduled Mon/Tue,
+  readiness Wed/Thu, illness Fri/Sat/Sun.
+- Mutation: removing the exact-week check from the scheduled-state reader
+  produces **240/241**, with the leakage cell red. Restoring it returns green.
+- `npm run test:release`: **4/4 release units green**.
+- `test:deload-law`: **68/68**; `test:deload-coach-notes`: **18/18**;
+  `test:strength-progression-inputs`: **18/18**.
+- Production and test TypeScript checks remain globally red; neither reports
+  an error in this checkpoint's changed files.
+
+The next defect of this class is caught by the per-date precedence and boundary
+cells, the real restart/Undo journeys, the progression double-dose witness and
+the production-wide scheduled-resolver scan. They protect different subjects;
+a single green source count is not being substituted for behavior.
+
+### Open blocker and questions recorded, not silently waived
+
+`npm run test:canonical-weekly-compiler -- --late-offseason` is intentionally a
+still-red diagnostic. Real onboarding with the ordinary 3-gym-day athlete,
+install 13 July and last game 14 June, fails in its first build week with
+`required_minimum_shortfall:sprint_high_speed:0`, before reaching 3 August's
+deload. Normal release execution prints this lifecycle as NOT COVERED.
+
+Read-at-source cause: a sprint in the scheduler's primary conditioning slot
+does not receive the `speedBlock` identity that a separate sprint component
+receives. An experimental identity repair exposed a second disagreement:
+the scheduler counts sprint toward its conditioning target but the typed speed
+block carries no conditioning credit (`planner_selected_target_miss:conditioning:4`).
+**That experiment was reverted.** No speed or conditioning programming change
+is included in this checkpoint. The existing Bible sprint-quality distinction
+and scheduler's WC-139 exposure comment need reconciling at their shared owner,
+not another local identity patch. Owner for follow-up: `testtruth`.
+
+No new deload policy answer is required from Sam (registry checked: R-034,
+R-035, R-036). The question to resolve before calling this family complete is
+whether the sprint and conditioning targets describe the same exposure unit;
+the current two owners disagree. Re-run the red lifecycle after that correction
+and move it into the always-on compiler acceptance gate.
+
+Other diagnostic observations, not a product to-do list:
+
+- `test:phase-clock` reaches the same sprint-credit refusal after its
+  season-finish-date sub-suite; not a newly inferred deload cadence problem.
+- `test:fixture-conditioned-replan`: **21/34**. Failures include restored
+  semantic-fingerprint mismatches and profile inputs reaching capacity
+  validation errors. They have not been triaged as regressions in this slice;
+  the current real fixture journey above is this change's narrower evidence.
+- Earlier `test:deload-week`: **50 passed, 9 failed**. Its January season-finish
+  profile is tested as though July starts phase week 1, and it has a stale
+  declared-gap expectation. It has not been rewritten to force a product fix.
+- `test:law-registry`: **11/14 cells**, with 21 existing UNENFORCED rows out
+  of 201 registry rows, missing historical commands and unregistered historical
+  citations. The new scheduled-dose row has its in-chain guard; this does not
+  turn the historical registry or diagnostic fleet green.
+
+### NOT COVERED
+
+- Late-Off-season full onboarding → deload → restart lifecycle: blocked above.
+- Cross-week session relocation and every fixture-repair rejection combination
+  have not been newly exercised; the covered transition is calendar navigation
+  plus actual block rollover, and the fixture journey is an accepted Add.
+- Existing optional top-up content and unrelated progression/repair families
+  were not redesigned. No global zero-writer claim is made.
+- Full-year archetype acceptance, simulator, UI pixels and physical iPhone.

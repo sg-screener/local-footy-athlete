@@ -483,6 +483,7 @@ function buildConditioning(args: {
       weekStartISO: args.weekStart,
       weekKind: args.microcycle.weekKind,
       intensityMultiplier: args.microcycle.intensityMultiplier,
+      canonicalDosePolicyByDay: args.microcycle.dosePolicyByDay,
     },
   );
   if (!workout) throw new Error(`Unable to build fixture replacement conditioning on ${dayName}`);

@@ -84,8 +84,6 @@ import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
   applyDeloadPolicyToSessionAllocation,
   applyStrengthDeloadToExercises,
-  resolveDeloadWeekPolicy,
-  resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
 } from '../rules/deloadWeekRules';
 import {
@@ -1566,23 +1564,11 @@ export function buildWorkoutsFromCoach(
     seasonPhase: onboardingData?.seasonPhase,
     explicitSubphase: rotationContext?.offseasonSubphase,
   });
-  // Scheduled and readiness doors share ONE transformation. Scheduled is
-  // phase-gated (D16); readiness is not. Illness is compiler-authored before
-  // this retained adapter is called.
-  const deloadPolicy = rotationContext?.deloadDoor === 'readiness'
-    ? resolveDoorDeloadPolicy({
-        door: 'readiness',
-        seasonPhase: onboardingData?.seasonPhase,
-      })
-    : resolveDeloadWeekPolicy(
-        onboardingData?.seasonPhase,
-        rotationContext?.weekKind,
-      );
   function deloadPolicyForDayOfWeek(dayOfWeek: number | undefined): DeloadWeekPolicy | null {
     if (dayOfWeek !== undefined && rotationContext?.canonicalDosePolicyByDay) {
       return rotationContext.canonicalDosePolicyByDay[dayOfWeek] ?? null;
     }
-    return deloadPolicy;
+    return null;
   }
 
   const profileEquipment = resolveEquipmentCapabilities(onboardingData);
@@ -1615,7 +1601,7 @@ export function buildWorkoutsFromCoach(
       ));
   const effectiveWeeklyPlan = deloadedWeeklyPlan
     ? rotationContext?.conditioningFeasibilityResolved &&
-        (rotationContext.canonicalPlanDoseResolved || !deloadPolicy)
+        rotationContext.canonicalPlanDoseResolved
       // The compiler already authored this derived output. Re-running the
       // specialist here would make the retained adapter a second writer of the
       // same plan, even when its answer happened to be idempotent.

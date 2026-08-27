@@ -2182,6 +2182,10 @@ export function buildFixtureProjection(args: {
         miniCycleNumber: base?.miniCycleNumber ?? 1,
         intensityMultiplier: base?.intensityMultiplier ?? 1,
         weekKind: error.result.contract.identity.weekKind,
+        // Fixture repair keeps this target week's compiler-authored dose;
+        // a rejected candidate is not permission to rebuild it at full dose.
+        deloadDoor: base?.deloadDoor,
+        dosePolicyByDay: base?.dosePolicyByDay,
         exposureContractV2: error.result.contract,
         workouts: error.result.canonicalWorkouts,
         createdAt: base?.createdAt ?? now,

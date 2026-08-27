@@ -7,10 +7,9 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: fixture decisions still replay procedurally; exercise
- * exclusions remain their own persisted input; scheduled deloads, later
- * compiler families, full-year archetypes, pixels, simulator and physical
- * iPhone.
+ * NOT COVERED: late-Off-season scheduled-deload lifecycle is blocked by a
+ * pre-existing sprint-credit refusal (run with --late-offseason to reproduce).
+ * Full-year archetypes, global writer census, pixels and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -30,8 +29,15 @@ process.env.TZ = 'Australia/Melbourne';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import type { OnboardingData, UserRemovalConstraint, Workout } from '../types/domain';
-import { compileCanonicalWeek } from '../rules/canonicalWeeklyCompiler';
+import {
+  compileCanonicalWeek,
+  compileCanonicalWeeklyDosePolicies,
+} from '../rules/canonicalWeeklyCompiler';
 import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
+import {
+  canonicalWeeklyScheduledDeloadStateFrom,
+  scheduledDeloadPolicyForWeek,
+} from '../rules/canonicalWeeklyScheduledDeloadState';
 import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
 import {
   canonicalWeeklyAvailabilityStateFrom,
@@ -50,7 +56,15 @@ import {
   quietAsync,
   relaunchApp,
   resolvedDays,
+  rolloverIfDue,
+  followTheWeek,
+  recordDay,
+  setJourneyClock,
 } from './support/athleteJourney';
+import { authorWeekStrengthProgression } from '../utils/sessionResolver';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { resolveProgression, type ProgressionInput } from '../utils/progressionRules';
+import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
@@ -233,7 +247,7 @@ async function main(): Promise<void> {
   const adapterSource = readFileSync(join(ROOT, 'data/defaultProgram.ts'), 'utf8');
   ok('the retained adapter stands down instead of rewriting a healthy compiler plan',
     adapterSource.includes('rotationContext?.conditioningFeasibilityResolved &&') &&
-      adapterSource.includes('(rotationContext.canonicalPlanDoseResolved || !deloadPolicy)'));
+      adapterSource.includes('rotationContext.canonicalPlanDoseResolved'));
   ok('[MUTATION] dropping the compiler-to-adapter ownership marker is detected',
     !generatorSource.replace('conditioningFeasibilityResolved: true', '')
       .includes('conditioningFeasibilityResolved: true'));
@@ -285,6 +299,76 @@ async function main(): Promise<void> {
       'canonicalDosePolicyByDay: compiledDosePolicyByDay',
       'canonicalDosePolicyByDay_REMOVED: compiledDosePolicyByDay',
     ).includes('canonicalDosePolicyByDay: compiledDosePolicyByDay'));
+
+  console.log('\n[scheduled-deload ownership] the phase clock fact enters the compiler once');
+  const scheduledDeloadStatePath = join(
+    ROOT, 'rules/canonicalWeeklyScheduledDeloadState.ts',
+  );
+  const scheduledDeloadStateSource = existsSync(scheduledDeloadStatePath)
+    ? readFileSync(scheduledDeloadStatePath, 'utf8')
+    : '';
+  ok('one typed scheduled-deload state names its target week and semantic policy',
+    scheduledDeloadStateSource.includes(
+      'export interface CanonicalWeeklyScheduledDeloadState',
+    ) && scheduledDeloadStateSource.includes('readonly targetWeekStartISO: string') &&
+      scheduledDeloadStateSource.includes('readonly policy: DeloadWeekPolicy'));
+  ok('the compiler accepts scheduled deload as a typed input family',
+    compilerSource.includes(
+      'readonly scheduledDeload?: CanonicalWeeklyScheduledDeloadState | null',
+    ));
+  ok('product generation translates the phase-clock week into that compiler state',
+    generatorSource.includes('scheduledDeload: canonicalWeeklyScheduledDeloadStateFrom({'));
+  ok('scheduled, readiness and illness dose precedence is explicit in the compiler',
+    compilerSource.includes('illnessPolicy ?? readinessPolicy ?? scheduledPolicy'));
+  ok('product generation never re-resolves a scheduled deload after compilation',
+    !generatorSource.includes('resolveDeloadWeekPolicy('));
+  ok('the retained workout adapter only consumes compiler-authored dose policy',
+    !adapterSource.includes('resolveDeloadWeekPolicy(') &&
+      !adapterSource.includes('resolveDoorDeloadPolicy(') &&
+      adapterSource.includes('rotationContext?.canonicalDosePolicyByDay'));
+  const scheduledDeloadRivalAuthors = [
+    generatorSource.includes('resolveDeloadWeekPolicy(')
+      ? 'generator re-resolves the scheduled policy' : null,
+    adapterSource.includes('resolveDeloadWeekPolicy(')
+      ? 'retained adapter re-resolves the scheduled policy' : null,
+    adapterSource.includes('resolveDoorDeloadPolicy(')
+      ? 'retained adapter re-resolves another dose door' : null,
+    compilerSource.includes('resolveDeloadWeekPolicy(coaching.seasonPhase, scheduler.weekKind)')
+      ? 'compiler infers the scheduled fact from a scheduler label' : null,
+  ].filter((finding): finding is string => finding !== null);
+  ok('generator and retained adapter contain zero independent scheduled-dose resolvers',
+    scheduledDeloadRivalAuthors.length === 0,
+    JSON.stringify(scheduledDeloadRivalAuthors));
+  ok('only scheduled-state ingress may resolve the scheduled policy in production',
+    JSON.stringify(productionCallers('resolveDeloadWeekPolicy')) ===
+      JSON.stringify(['rules/canonicalWeeklyScheduledDeloadState.ts']),
+    JSON.stringify(productionCallers('resolveDeloadWeekPolicy')));
+  const progressionInput: ProgressionInput = {
+    exerciseRole: 'primary_strength', seasonPhase: 'Pre-season', capacity: 'high',
+    completionQuality: 'full', weeksSinceDeload: 0, consecutiveBuildWeeks: 0,
+    recentRPE: 6, daysToGame: null, daysSinceGame: null, doubleGameWeek: false,
+    weeksOffTraining: 0, injuryAvoidFlag: false, recentDeloadTrigger: null,
+    missedSessionsThisWeek: 0, sessionFeeling: 'Sore', recentFatiguePattern: false,
+    trend: 'flat', isLowerBody: false, consecutiveFullCompletions: 1,
+  };
+  ok('the progression engine cannot invent another scheduled week from a six-week counter',
+    JSON.stringify(resolveProgression(progressionInput)) === JSON.stringify(
+      resolveProgression({ ...progressionInput, weeksSinceDeload: 7 }),
+    ));
+  ok('phase-clock ingress preserves the early Off-season exception and later scheduled cadence',
+    [1, 2, 3, 4, 5, 6, 7, 8, 9].every((phaseWeek) => {
+      const state = canonicalWeeklyScheduledDeloadStateFrom({
+        weekStartISO: '2026-08-03', seasonPhase: 'Off-season',
+        weekKind: resolveSeasonPhaseWeekKind('Off-season', phaseWeek),
+      });
+      return phaseWeek === 8 ? state?.policy.door === 'scheduled' : state === null;
+    }));
+  ok('[MUTATION] dropping the typed scheduled-deload handover is detected',
+    generatorSource.includes('scheduledDeload: canonicalWeeklyScheduledDeloadStateFrom({') &&
+      !generatorSource.replaceAll(
+        'scheduledDeload: canonicalWeeklyScheduledDeloadStateFrom({',
+        'scheduledDeload_REMOVED: canonicalWeeklyScheduledDeloadStateFrom({',
+      ).includes('scheduledDeload: canonicalWeeklyScheduledDeloadStateFrom({'));
 
   console.log('\n[illness ownership] one typed directive enters the compiler; no read-side rival rewrites it');
   ok('generation context carries illness as its own typed directive',
@@ -2227,6 +2311,232 @@ async function main(): Promise<void> {
         restartedRawTarget?.workout?.exercises.find((row) =>
           row.exercise?.name === addName)?.id === actedAddedId,
       JSON.stringify({ actedAddedId, restartedRawTarget }));
+  }
+
+  console.log('\n[scheduled-deload slice] enter, edit, fixture, restart, undo and leave');
+  localStorageData.clear();
+  const deloadInstall = await coldStartThroughOnboarding({
+    profile: preseasonAthlete(), installDayISO: INSTALL_DAY,
+  });
+  const deloadProgram = useProgramStore.getState().currentProgram;
+  const deloadMicrocycle = deloadProgram?.microcycles.find((week) =>
+    week.weekKind === 'deload' && week.deloadDoor === 'scheduled');
+  const deloadWeekStart = deloadMicrocycle?.startDate.slice(0, 10) ?? '';
+  const deloadIndex = deloadProgram?.microcycles.findIndex((week) =>
+    week.startDate.slice(0, 10) === deloadWeekStart) ?? -1;
+  const buildMicrocycle = deloadIndex > 0
+    ? deloadProgram?.microcycles[deloadIndex - 1]
+    : undefined;
+  const buildWeekStart = buildMicrocycle?.startDate.slice(0, 10) ?? '';
+  const scheduledState = deloadWeekStart
+    ? canonicalWeeklyScheduledDeloadStateFrom({
+        weekStartISO: deloadWeekStart,
+        seasonPhase: 'Pre-season',
+        weekKind: 'deload',
+      })
+    : null;
+  ok('entering the phase-clock deload week produces one targeted scheduled fact',
+    deloadInstall.onboardingRefusal === null && Boolean(deloadMicrocycle) &&
+      scheduledDeloadPolicyForWeek(scheduledState, deloadWeekStart)?.door === 'scheduled',
+    JSON.stringify({ deloadWeekStart, kind: deloadMicrocycle?.weekKind, scheduledState }));
+  ok('moving before or after the targeted week cannot leak its dose policy',
+    Boolean(buildWeekStart) &&
+      scheduledDeloadPolicyForWeek(scheduledState, buildWeekStart) === null &&
+      scheduledDeloadPolicyForWeek(scheduledState, '2026-08-10') === null,
+    JSON.stringify({ buildWeekStart, deloadWeekStart }));
+  const overlapDose = compileCanonicalWeeklyDosePolicies({
+    weekStartISO: deloadWeekStart,
+    seasonPhase: 'Pre-season',
+    scheduledDeload: scheduledState,
+    readiness: {
+      kind: 'readiness', id: 'overlap-readiness', deloaded: true,
+      sessionsOptional: false,
+      windowStartISO: '2026-08-05', windowEndISO: '2026-08-07',
+    },
+    illness: {
+      kind: 'illness', id: 'overlap-illness', deloaded: true,
+      sessionsOptional: false, activeFromISO: '2026-08-07',
+    },
+  });
+  ok('overlapping causes select one dose per day and preserve scheduled days outside live windows',
+    Object.keys(overlapDose.dosePolicyByDay).length === 7 &&
+      overlapDose.dosePolicyByDay[1]?.door === 'scheduled' &&
+      overlapDose.dosePolicyByDay[2]?.door === 'scheduled' &&
+      overlapDose.dosePolicyByDay[3]?.door === 'readiness' &&
+      overlapDose.dosePolicyByDay[4]?.door === 'readiness' &&
+      overlapDose.dosePolicyByDay[5]?.door === 'illness' &&
+      overlapDose.dosePolicyByDay[6]?.door === 'illness' &&
+      overlapDose.dosePolicyByDay[0]?.door === 'illness',
+    JSON.stringify(overlapDose));
+  const rawDeloadWeek = quiet(() => deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart));
+  const rawBuildWeek = quiet(() => deriveVisibleWeekLive(buildWeekStart, buildWeekStart));
+  const scheduledNotes = (week: typeof rawDeloadWeek): string[] => week.flatMap((day) =>
+    (day.workout?.exercises ?? []).map((row) => row.notes ?? '')
+      .filter((note) => note.includes('Deload:')));
+  ok('the compiler dose is visible on the deload week and absent from the build week',
+    scheduledNotes(rawDeloadWeek).length > 0 && scheduledNotes(rawBuildWeek).length === 0,
+    JSON.stringify({
+      buildNotes: scheduledNotes(rawBuildWeek),
+      deloadNotes: scheduledNotes(rawDeloadWeek),
+    }));
+  const deloadBaseline = quiet(() => resolvedDays(deloadWeekStart, deloadWeekStart));
+  const deloadBaselineSignature = visibleSignature(deloadBaseline);
+  const deloadTrainingDay = deloadBaseline.find((day) => day.rows.length > 0);
+  const deloadRemove = deloadTrainingDay
+    ? quiet(() => applyPlanChange({
+        change: {
+          kind: 'remove_session', date: deloadTrainingDay.dateISO, scope: 'whole_day',
+        },
+        visibleWeek: quiet(() => deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart)),
+        todayISO: deloadWeekStart,
+        applyOverride: () => undefined,
+      }))
+    : null;
+  const deloadAfterEdit = quiet(() => resolvedDays(deloadWeekStart, deloadWeekStart));
+  const deloadAfterEditSignature = visibleSignature(deloadAfterEdit);
+  const deloadEditRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: deloadWeekStart,
+  }));
+  ok('an athlete edit layers over the deload and survives restart exactly',
+    deloadRemove?.ok === true && deloadAfterEditSignature !== deloadBaselineSignature &&
+      deloadEditRestart.ok && visibleSignature(quiet(() =>
+        resolvedDays(deloadWeekStart, deloadWeekStart))) === deloadAfterEditSignature,
+    JSON.stringify({ deloadRemove, deloadTrainingDay }));
+  const deloadEditUndo = await quietAsync(() => undoLastDecision());
+  ok('undoing the athlete edit restores the compiler-authored deload, not a full-dose week',
+    deloadEditUndo.outcome === 'undone' &&
+      visibleSignature(quiet(() => resolvedDays(deloadWeekStart, deloadWeekStart))) ===
+        deloadBaselineSignature &&
+      scheduledNotes(quiet(() =>
+        deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart))).length > 0,
+    JSON.stringify(deloadEditUndo));
+
+  const occupiedDeloadDay = deloadBaseline.find((day) => day.rows.length > 0);
+  const deloadFixture = occupiedDeloadDay
+    ? await quietAsync(() => executeFixtureMutationTransaction({
+        action: 'add',
+        fixtureKind: 'practice_match',
+        targetDate: occupiedDeloadDay.dateISO,
+        expectedAcceptedRevision:
+          useProgramStore.getState().acceptedMaterialContext.revision,
+        source: {
+          requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+          commandId: 'compiler-scheduled-deload:add-practice-match',
+        },
+        todayISO: deloadWeekStart,
+      }))
+    : null;
+  const deloadWithFixture = quiet(() => resolvedDays(deloadWeekStart, deloadWeekStart));
+  const fixtureDay = deloadWithFixture.find((day) =>
+    day.dateISO === occupiedDeloadDay?.dateISO);
+  const deloadPracticeEffect = decisionLedgerEntries().find((entry) =>
+    entry.decision.kind === 'fixture_add')?.decision;
+  const rawDeloadWithFixture = quiet(() =>
+    deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart));
+  const survivingDeloadNotes = scheduledNotes(rawDeloadWithFixture);
+  const acceptedDeloadAfterFixture = useProgramStore.getState().currentProgram
+    ?.microcycles.find((week) => week.startDate.slice(0, 10) === deloadWeekStart);
+  ok('a fixture takes precedence on its occupied day without erasing the deload elsewhere',
+    deloadFixture?.outcome === 'accepted' &&
+      deloadPracticeEffect?.kind === 'fixture_add' &&
+      deloadPracticeEffect.acceptedEffect.fixtureKind === 'practice_match' &&
+      fixtureDay?.rows.length === 0 &&
+      acceptedDeloadAfterFixture?.weekKind === 'deload' &&
+      acceptedDeloadAfterFixture.deloadDoor === 'scheduled' &&
+      survivingDeloadNotes.length > 0,
+    JSON.stringify({
+      fixtureOutcome: deloadFixture?.outcome,
+      fixtureEffectKind: deloadPracticeEffect?.kind === 'fixture_add'
+        ? deloadPracticeEffect.acceptedEffect.fixtureKind : null,
+      fixtureDay,
+      acceptedKind: acceptedDeloadAfterFixture?.weekKind,
+      acceptedDoor: acceptedDeloadAfterFixture?.deloadDoor,
+      survivingDeloadNotes,
+    }));
+  const deloadFixtureSignature = visibleSignature(deloadWithFixture);
+  const deloadFixtureRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: deloadWeekStart,
+  }));
+  ok('fixture plus scheduled deload reconstructs identically after restart',
+    deloadFixtureRestart.ok && visibleSignature(quiet(() =>
+      resolvedDays(deloadWeekStart, deloadWeekStart))) === deloadFixtureSignature);
+  const deloadFixtureUndo = await quietAsync(() => undoLastDecision());
+  ok('undo removes only the fixture and reveals the same scheduled deload baseline',
+    deloadFixtureUndo.outcome === 'undone' &&
+      visibleSignature(quiet(() => resolvedDays(deloadWeekStart, deloadWeekStart))) ===
+        deloadBaselineSignature,
+    JSON.stringify(deloadFixtureUndo));
+
+  followTheWeek(buildWeekStart);
+  const selectedBuildKind = useProgramStore.getState().currentMicrocycle?.weekKind;
+  followTheWeek(deloadWeekStart);
+  const selectedDeloadKind = useProgramStore.getState().currentMicrocycle?.weekKind;
+  const nextBlock = quiet(() => rolloverIfDue('2026-08-10'));
+  const nextWeekStart = followTheWeek('2026-08-10');
+  const nextWeek = useProgramStore.getState().currentMicrocycle;
+  ok('live week navigation and rollover enter and leave the scheduled deload without carrying its dose',
+    selectedBuildKind === 'build' && selectedDeloadKind === 'deload' &&
+      nextBlock.fired && nextWeek?.weekKind === 'build' &&
+      nextWeek.deloadDoor === undefined &&
+      scheduledNotes(quiet(() =>
+        deriveVisibleWeekLive(nextWeekStart, nextWeekStart))).length === 0,
+    JSON.stringify({ selectedBuildKind, selectedDeloadKind, nextBlock,
+      nextKind: nextWeek?.weekKind, nextDoor: nextWeek?.deloadDoor }));
+
+  localStorageData.clear();
+  await coldStartThroughOnboarding({ profile: preseasonAthlete(), installDayISO: INSTALL_DAY });
+  followTheWeek(buildWeekStart);
+  const feedbackDay = quiet(() => resolvedDays(buildWeekStart, buildWeekStart))
+    .find((day) => day.rows.length > 0);
+  if (feedbackDay) setJourneyClock(feedbackDay.dateISO);
+  const fatigueFeedback = feedbackDay ? await quietAsync(() => recordDay(feedbackDay.dateISO, {
+    record: true, completion: 'full', feeling: 'very_hard', soreness: 'high',
+    difficulty: 9, logWeights: true,
+  })) : null;
+  setJourneyClock(deloadWeekStart);
+  followTheWeek(deloadWeekStart);
+  const deloadBeforeProgression = quiet(() => deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart));
+  const progressedDeload = quiet(() => authorWeekStrengthProgression(
+    deloadWeekStart, buildScheduleStateImperative(),
+  ));
+  const prescriptions = (days: Array<{ workout?: Workout | null }>): string => JSON.stringify(
+    days.flatMap((day) => day.workout ? rowSignature(day.workout) : []),
+  );
+  ok('recorded hard feedback cannot dose compiler-controlled deload rows a second time',
+    fatigueFeedback?.result === 'recorded' &&
+      prescriptions(deloadBeforeProgression) === prescriptions(progressedDeload),
+    JSON.stringify({ fatigueFeedback, before: prescriptions(deloadBeforeProgression),
+      after: prescriptions(progressedDeload) }));
+
+  // Explicit red diagnostic, not a waived acceptance claim. This profile
+  // currently refuses in the build week before it can reach scheduled deload.
+  // Keep the real failing journey runnable while the independent sprint owner
+  // is corrected; do not label the whole deload migration complete meanwhile.
+  if (process.argv.includes('--late-offseason')) {
+    localStorageData.clear();
+    const lateOffseasonInstall = await coldStartThroughOnboarding({
+      profile: { ...athlete(), seasonFinishedOn: '2026-06-14' },
+      installDayISO: INSTALL_DAY,
+    });
+    const lateOffseasonWeeks = useProgramStore.getState().currentProgram?.microcycles ?? [];
+    const lateOffseasonDeload = lateOffseasonWeeks.find((week) =>
+      week.weekKind === 'deload' && week.deloadDoor === 'scheduled');
+    const lateOffseasonStart = lateOffseasonDeload?.startDate.slice(0, 10) ?? '';
+    const lateOffseasonSignature = visibleSignature(quiet(() =>
+      resolvedDays(lateOffseasonStart, lateOffseasonStart)));
+    const lateOffseasonRestart = await quietAsync(() => relaunchApp({
+      storage: localStorageData, todayISO: lateOffseasonStart,
+    }));
+    ok('late Off-season uses the same scheduled compiler input and reconstructs exactly',
+      lateOffseasonInstall.onboardingRefusal === null && lateOffseasonStart === '2026-08-03' &&
+        lateOffseasonRestart.ok &&
+        scheduledNotes(quiet(() =>
+          deriveVisibleWeekLive(lateOffseasonStart, lateOffseasonStart))).length > 0 &&
+        visibleSignature(quiet(() => resolvedDays(lateOffseasonStart, lateOffseasonStart))) ===
+          lateOffseasonSignature,
+      JSON.stringify({ lateOffseasonStart, lateOffseasonRestart }));
+  } else {
+    console.log('  NOT COVERED: late-Off-season lifecycle; --late-offseason reproduces its sprint-credit blocker.');
   }
 
   totalsPrinted(failed);

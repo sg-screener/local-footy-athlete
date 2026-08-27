@@ -142,6 +142,17 @@ export interface LawRow {
 export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
+    id: 'LAW-canonical-weekly-scheduled-dose-input',
+    law: 'Scheduled dose enters the weekly compiler as an exact-week phase-clock fact; readiness and illness take precedence only on their applicable dates; the retained adapter consumes the compiled policy, and the progression engine neither invents another scheduled cycle nor re-doses compiler-controlled days.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md step 16; Sam, 2026-08-27: "Scheduled deload ... compiler input instead of a separate week rewriter".',
+    guard: {
+      state: 'guarded',
+      by: 'test:canonical-weekly-compiler',
+      chainStatus: 'in_chain',
+      receipt: 'Typed scheduled state and per-date precedence are tested alongside a real Pre-season onboarding journey through deload, accepted Remove, practice-match Add on an occupied day, restart, Undo and next-block rollover. Recorded very-hard feedback proves the progression pass leaves the compiler dose unchanged. The phase-clock Off-season first-four-week exception and later cadence are pinned separately. Ownership scans require only the scheduled-state ingress to call resolveDeloadWeekPolicy. Initial ownership tests were red; a further real-feedback witness caught a second reduction (2 sets to 1, altered reps/load) before the progression handoff was fixed. Removing the exact-week boundary made the targeted leakage cell fail. NOT COVERED: the late-Off-season end-to-end lifecycle remains BLOCKED by required_minimum_shortfall:sprint_high_speed:0; run the same suite with --late-offseason for the still-red witness. This row does not claim the whole migration, full-year gate or global writer census is complete.',
+    },
+  },
+  {
     id: 'LAW-canonical-weekly-compiler-first-slice',
     law: 'An ordinary healthy Off-season week plus readiness, illness, injury, target-week fixture, availability and accepted athlete-edit placement adjustments are authored through one canonical weekly compiler boundary: the scheduler, specialist materialiser and connector each have that compiler as their only production caller; generation does not prebuild a rival initial plan or schedule the same week twice; migrated fact families enter as typed semantic directives and no scheduler translator, generator, retained adapter, transaction or read-side resolver independently re-resolves their dose, optionality, fixture identity, injury restrictions, availability or athlete-owned placement; injury policy is classified once and drives strength patterns, sprint, conditioning, power and exercise-pool keys; a game moved onto an occupied day takes precedence and moving it back restores the exact accepted week; clearing a temporary injury restores the exact healthy week; an accepted athlete remove is visible and Undo restores the exact week; standing game answers remain dormant in Off-season; refusal returns no partial plan; and visible prescriptions equal the accepted compiler-authored week.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md steps 4-10 (first compiler slice and migrated fact/action families); Sam, 2026-08-27: "Build the first complete canonical weekly compiler slice" and successive "go for it" instructions.',

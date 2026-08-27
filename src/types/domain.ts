@@ -776,7 +776,7 @@ export interface Microcycle {
   intensityMultiplier: number; // 0.7-1.3 typical range
   weekKind?: WeekKind;
   /**
-   * Which door deloaded this week, when it was not the scheduled one.
+   * Which compiler input deloaded this week, including the scheduled door.
    *
    * Deliberately SEPARATE from `weekKind`: that is the block plan's structural
    * statement about the week, and Sam's law holds structure constant while the
@@ -784,7 +784,9 @@ export interface Microcycle {
    * of week the plan says this is. Recorded rather than inferred so the applied
    * deload stays observable — a dose transform with no trace is untestable.
    */
-  deloadDoor?: 'readiness' | 'illness';
+  deloadDoor?: 'scheduled' | 'readiness' | 'illness';
+  /** Compiler output consumed by materialisers and repair builders, never re-resolved. */
+  dosePolicyByDay?: Readonly<Partial<Record<number, import('../rules/deloadWeekRules').DeloadWeekPolicy>>>;
 
   /** Phase-owned weekly exposure intent accepted against final effective content. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;

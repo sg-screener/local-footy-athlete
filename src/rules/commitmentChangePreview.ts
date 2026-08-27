@@ -108,8 +108,8 @@ export interface CommitmentPreviewWeekLoad {
   readonly weekStartISO: string;
   /** The block plan's structural statement about the week, if it made one. */
   readonly weekKind: string | null;
-  /** Which door deloaded the week, when it was not the scheduled one. */
-  readonly deloadDoor: 'readiness' | 'illness' | null;
+  /** The compiler-authored dose cause, copied without re-inference. */
+  readonly deloadDoor: NonNullable<Microcycle['deloadDoor']> | null;
   readonly intensityMultiplier: number | null;
   /** Training days before and after. R-106: a combined day counts ONCE. */
   readonly trainingDaysBefore: number;

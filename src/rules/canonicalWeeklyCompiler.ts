@@ -36,10 +36,13 @@ import {
 } from './conditioningFeasibility';
 import {
   applyDeloadPolicyToSessionAllocation,
-  resolveDeloadWeekPolicy,
   resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
 } from './deloadWeekRules';
+import {
+  scheduledDeloadPolicyForWeek,
+  type CanonicalWeeklyScheduledDeloadState,
+} from './canonicalWeeklyScheduledDeloadState';
 import { isDateInReadinessDeloadWindow } from './readinessIllnessLaw';
 import { resolveTrainingAgePolicy } from './trainingAgePolicy';
 import { isoDateForWeekday } from '../utils/appDate';
@@ -113,6 +116,49 @@ export interface CanonicalWeeklyIllnessFact {
   readonly sessionsOptional: boolean;
 }
 
+/** One dose decision per date. Overlapping causes never halve the same row twice. */
+export function compileCanonicalWeeklyDosePolicies(input: {
+  readonly weekStartISO: string;
+  readonly seasonPhase: CoachingInputs['seasonPhase'];
+  readonly readiness?: CanonicalWeeklyReadinessFact | null;
+  readonly illness?: CanonicalWeeklyIllnessFact | null;
+  readonly scheduledDeload?: CanonicalWeeklyScheduledDeloadState | null;
+}): {
+  readonly dosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>>;
+  readonly doseDoor: 'scheduled' | 'readiness' | 'illness' | null;
+} {
+  const readinessDose = input.readiness?.deloaded
+    ? resolveDoorDeloadPolicy({ door: 'readiness', seasonPhase: input.seasonPhase })
+    : null;
+  const illnessDose = input.illness?.deloaded
+    ? resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: input.seasonPhase })
+    : null;
+  const scheduledPolicy = scheduledDeloadPolicyForWeek(
+    input.scheduledDeload,
+    input.weekStartISO,
+  );
+  const dosePolicyByDay: Partial<Record<number, DeloadWeekPolicy>> = {};
+  for (let day = 0; day < 7; day += 1) {
+    const dateISO = isoDateForWeekday(input.weekStartISO, day);
+    const illnessPolicy = illnessDose && input.illness &&
+      dateISO >= input.illness.activeFromISO ? illnessDose : null;
+    const readinessPolicy = readinessDose &&
+      (!input.readiness?.windowStartISO || !input.readiness.windowEndISO ||
+        isDateInReadinessDeloadWindow(dateISO, {
+          startISO: input.readiness.windowStartISO,
+          endISO: input.readiness.windowEndISO,
+        })) ? readinessDose : null;
+    // More specific live facts outrank the schedule only on their own dates.
+    // Outside a readiness/illness window the scheduled week still applies.
+    const policy = illnessPolicy ?? readinessPolicy ?? scheduledPolicy;
+    if (policy) dosePolicyByDay[day] = policy;
+  }
+  const appliedDoors = Object.values(dosePolicyByDay).map((policy) => policy.door);
+  const doseDoor = (['illness', 'readiness', 'scheduled'] as const)
+    .find((door) => appliedDoors.includes(door)) ?? null;
+  return { dosePolicyByDay, doseDoor };
+}
+
 export interface CanonicalWeeklyCompilerInput {
   /** WRITER: the generation boundary. READER: the weekly scheduler. */
   readonly scheduler: WeeklySchedulerInputs;
@@ -125,6 +171,7 @@ export interface CanonicalWeeklyCompilerInput {
   /** Typed fact families already migrated into this compiler. */
   readonly readiness?: CanonicalWeeklyReadinessFact | null;
   readonly illness?: CanonicalWeeklyIllnessFact | null;
+  readonly scheduledDeload?: CanonicalWeeklyScheduledDeloadState | null;
   readonly fixture?: CanonicalWeeklyFixtureState | null;
   readonly injury?: CanonicalWeeklyInjuryState | null;
   readonly availability?: CanonicalWeeklyAvailabilityState | null;
@@ -140,10 +187,8 @@ export type CanonicalWeeklyCompilerResult =
       readonly plan: CoachingPlan;
       /** Compiler-authored instruction; materialisers consume without re-deciding. */
       readonly dosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>>;
-      /** False only while the scheduled-deload family still uses its adapter. */
-      readonly planDoseResolved: boolean;
       /** The accepted fact door, carried so metadata never re-infers it. */
-      readonly doseDoor: 'readiness' | 'illness' | null;
+      readonly doseDoor: 'scheduled' | 'readiness' | 'illness' | null;
       /** Compiler-authored semantic keys consumed by exercise selection. */
       readonly activeInjuryKeys: readonly InjuryKey[];
       /** Compiler-authored kit projection consumed by row composition. */
@@ -253,41 +298,14 @@ export function compileCanonicalWeek(
         }),
       }
     : connected;
-  const readinessPolicy = input.readiness?.deloaded
-    ? resolveDoorDeloadPolicy({
-        door: 'readiness',
-        seasonPhase: coaching.seasonPhase,
-      })
-    : null;
-  const illnessPolicy = input.illness?.deloaded
-    ? resolveDoorDeloadPolicy({
-        door: 'illness',
-        seasonPhase: coaching.seasonPhase,
-      })
-    : null;
-  // The wider open illness horizon outranks readiness's narrower rolling window.
-  const factPolicy = illnessPolicy ?? readinessPolicy;
-  // Scheduled deloads are not silently absorbed by this fact-family slice. They
-  // remain with the retained adapter until that family moves with its own
-  // acceptance witness. We resolve only enough to make the handover honest.
-  const legacyScheduledPolicy = !factPolicy
-    ? resolveDeloadWeekPolicy(coaching.seasonPhase, scheduler.weekKind)
-    : null;
-  const dosePolicyByDay: Partial<Record<number, DeloadWeekPolicy>> = {};
-  if (factPolicy) {
-    for (let day = 0; day < 7; day += 1) {
-      const dateISO = isoDateForWeekday(scheduler.weekStartISO, day);
-      if (illnessPolicy && input.illness && dateISO < input.illness.activeFromISO) continue;
-      if (!illnessPolicy && input.readiness?.windowStartISO && input.readiness.windowEndISO &&
-        !isDateInReadinessDeloadWindow(
-          dateISO,
-          { startISO: input.readiness.windowStartISO, endISO: input.readiness.windowEndISO },
-        )) continue;
-      dosePolicyByDay[day] = factPolicy;
-    }
-  }
-  const planDoseResolved = !legacyScheduledPolicy;
-  const doseResolvedPlan = factPolicy
+  const { dosePolicyByDay, doseDoor } = compileCanonicalWeeklyDosePolicies({
+    weekStartISO: scheduler.weekStartISO,
+    seasonPhase: coaching.seasonPhase,
+    readiness: input.readiness,
+    illness: input.illness,
+    scheduledDeload: input.scheduledDeload,
+  });
+  const doseResolvedPlan = doseDoor
     ? {
         ...injuryResolvedPlan,
         weeklyPlan: injuryResolvedPlan.weeklyPlan.map((entry) =>
@@ -326,10 +344,7 @@ export function compileCanonicalWeek(
     materialised,
     plan,
     dosePolicyByDay,
-    planDoseResolved,
-    doseDoor: factPolicy?.door === 'readiness' || factPolicy?.door === 'illness'
-      ? factPolicy.door
-      : null,
+    doseDoor,
     activeInjuryKeys: input.injury?.activeInjuryKeys ?? [],
     compositionAvailability: input.availability?.composition ?? null,
   };

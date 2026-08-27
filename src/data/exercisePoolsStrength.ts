@@ -157,9 +157,8 @@ export interface RotationContext {
    * READER: buildWorkoutsFromCoach.
    *
    * True means the plan's conditioning feasibility has already been resolved
-   * inside the compiler. A healthy week must not write that derived output a
-   * second time in the retained adapter. Deloads still re-resolve after their
-   * category transformation until that family moves into the compiler.
+   * inside the compiler. The retained adapter must not write that derived
+   * output a second time.
    */
   conditioningFeasibilityResolved?: true;
   /**
@@ -191,13 +190,6 @@ export interface RotationContext {
   weekKind?: WeekKind;
   /** Week-level generation intensity multiplier. Optional for rotation-only callers. */
   intensityMultiplier?: number;
-  /**
-   * Which door opened this deload, when it was not the scheduled one. The
-   * scheduled door is phase-gated by D16; readiness is not. Illness is already
-   * compiled before this retained adapter is called. Absent means the scheduled
-   * door (or no deload at all).
-   */
-  deloadDoor?: 'readiness';
   /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
   offseasonSubphase?: OffseasonSubphase;
 }
