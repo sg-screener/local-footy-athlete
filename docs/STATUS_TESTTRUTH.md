@@ -3426,3 +3426,41 @@ NOT COVERED: installation/launch still pending here, Sam's physical acceptance,
 the three old Maestro tapes, protected feature integration, remote persistence
 and transitive metadata clock purity. No new programming or UI changes in this
 deployment task. The build/install receipts will be appended after execution.
+
+### Installed checkpoint and receipts
+
+Committed the reviewed paths as `3a8a3bd654c0cc0b5b40bdeddaf21be1df398aee`.
+The tracked working tree was clean before and after the native build; only the
+unrelated outputs and two .fuse_hidden files remained untracked. The 1330-file
+source fingerprint still matched the verified release source after native build.
+
+Built from scratch into `/private/tmp/lfa-release-testtruth-20260828.4Y6cTa`:
+Xcode Release build exit 0, `** BUILD SUCCEEDED **`, signed bundle
+`Build/Products/Release-iphoneos/LocalFootyAthlete.app`, bundle identifier
+`com.localfootyathlete.app`. Embedded main.jsbundle is present, SHA-256
+`0df72a31061b969a1bbc8bca2ba5f555107d280fd4e636d74ed82f92d4d87bd4`.
+Strict/deep codesign verification passed with macOS trust services accessible;
+the initial sandboxed trust check could not access them and was rerun outside
+the sandbox. No signature or trust policy was bypassed or changed.
+
+Sam's identified device reported transport `localNetwork`. At 06:41 Melbourne:
+LFA uninstall exit 0, clean install exit 0, foreground launch exit 0. Receipt
+JSONs in the build directory: uninstall-sam.json, install-sam.json,
+launch-sam.json. The app's process 44480 remained running at 06:42:16, confirmed
+by process-sam-verified.json. An earlier diagnostic filter attempted CONTAINS
+on Apple's URL-valued executable property and failed; filtering by the exact
+launched PID succeeded. This was a diagnostic command error, not an app crash.
+
+Only LFA's local app container was removed under Sam's express authorization;
+no backup of that old container was taken and this task cannot recover it.
+No device erase, remote data deletion or changes to Renee's installation.
+No UI automation filled onboarding or altered the fresh athlete setup.
+
+Sam's suggested acceptance: onboard normally, inspect the week, add/move a
+session or game, declare/clear an injury, fully close/reopen, and check those
+choices remain. Native launch success is not visual acceptance of those flows.
+
+NOT COVERED: Sam's physical UX acceptance and new non-seeded on-phone journey,
+three older Maestro tapes, dormant accessory-mobility/2 km feature integration,
+remote persistence and transitive metadata clock purity. Release gates remain
+green for this exact source; awaiting Sam's device acceptance.
