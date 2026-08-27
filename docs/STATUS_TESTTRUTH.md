@@ -3742,7 +3742,7 @@ operation occurrences and 631 distinct direct owners. Review basis: 644 explicit
 3 AST-proven reference readers, 489 inherited call-graph owners. Four dormant
 builders remain protected, not activated.
 
-### Checkpoint verification (full release running)
+### Checkpoint verification — saved source 86efeadb
 
 First complete numeric run: **374/416 reached athlete-weeks green**, with 42
 weeks failing the new numeric observer on one athlete (`female-5-home`). The
@@ -3759,6 +3759,26 @@ coverage. The first isolated run at 490385e8 was stopped because it carried the
 same observer defect; neither run is claimed as a green release. The completed
 shared run's failure was this measurement error, not the concurrent UI edits.
 
+**Final complete release: 14/14 executable release units green, exit 0.** Ran
+`npm run test:release` from a clean detached worktree at `86efeadb` (the injury,
+Undo and arithmetic checkpoint plus the observer-scope correction), isolated
+from the uncommitted UI changes. The result names that exact revision with no
+working-tree suffix. **416/416 required athlete-weeks green: eight distinct
+archetypes × 52 weeks; zero distinct failure keys.** All six permanent annual
+mutation checks passed, including the two actual arithmetic mutations. The
+previously failing home-kit athlete reached all 52 weeks with zero failed checks
+and receipts for held loads, increased loads and deloaded sets. The compiler
+slice is **604/604 assertions**, all three TypeScript scopes have zero errors,
+and the completed ownership gate again measured **0 rivals / 0 derived-output
+writers / 0 unresolved among 1,136 capability owners**. Undo 26/26 and injury
+reporting 70/70 were rerun as part of this complete release, not substituted by
+the earlier targeted receipts. Existing modifier lifecycle gates also pass.
+
+Final isolated worktree: `/private/tmp/testtruth-release-verified.QHlHEP`.
+Its tracked source remained unchanged throughout verification; its only new
+untracked directory is the generated output. Preserved the annual JSON/HTML and
+full release log together in `outputs/compiler-year-acceptance-86efeadb/`.
+
 All three TypeScript scopes are zero. Signed-copy extraction passes. The older
 session-change sequence remains 22/22 with both prior and updated runtime code;
 session-injury-review completes at 76/76. Additional historical probes are
@@ -3774,14 +3794,16 @@ Concurrent UI work in HomeScreenV2, GuidedInjuryFlowSheet, DayWorkoutScreenV2,
 useDayWorkout, SessionCompleteMoment and its source tests belongs to another
 seat and is excluded from this checkpoint's pathspec. It changed while the full
 run was underway and introduced eight unresolved ownership reviews unrelated
-to this task. The saved task checkpoint will be verified in a separate temporary
-worktree; no other seat's code will be reverted or absorbed to get a green gate.
+to this task. The saved task checkpoint was verified in a separate temporary
+worktree; no other seat's code was reverted or absorbed to get a green gate.
 No generated reports or athlete data were deleted.
 
 Evidence logs: `/private/tmp/testtruth-audit-{undo-protected2,injury-real3,
 typecheck-final,dose-mutants,year-home-probe2,ownership-reviewed}.log` and
-`testtruth-audit-mutation-{undo,injury,progression,deload}.log`. Full release:
-`/private/tmp/testtruth-audit-release-final.log` (pending completion).
+`testtruth-audit-mutation-{undo,injury,progression,deload}.log`. Final full release:
+`/private/tmp/testtruth-release-verified.log` (14/14 units, exit 0).
+`/private/tmp/testtruth-audit-release-final.log` is the earlier failed numeric
+observer run, not the final release receipt.
 
 NOT COVERED: physical iPhone installation/acceptance, a fresh simulator tape in
 this turn, the rest of the historical diagnostic fleet, and activation of the
