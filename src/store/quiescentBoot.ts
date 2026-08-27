@@ -48,6 +48,7 @@ import {
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
+import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
 import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
 import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
 import { storedGameAnchor } from '../rules/gameAnchor';
@@ -126,6 +127,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
     }
     case 'reversal':
     case 'legacy_plan_change_effect_upgrade':
+    case 'legacy_fixture_effect_upgrade':
       return [];
     case 'block_boundary_notice_acknowledged':
     case 'weekly_commitment_answer':
@@ -140,7 +142,6 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
 
 /** Replay one landed non-exercise decision through its remaining interpreter. */
 function replayEntry(entry: DecisionLedgerEntry): void {
-  const occurredOn = entry.occurredAt.slice(0, 10);
   const decision = entry.decision;
   if (decision.kind === 'reversal') {
     // UNREACHABLE BY CONSTRUCTION, and kept as the exhaustiveness arm.
@@ -184,36 +185,9 @@ function replayEntry(entry: DecisionLedgerEntry): void {
   // Session edits never enter this interpreter. Their exact accepted effects
   // are folded by `compileSessionDecisionGroup` below.
   if (decision.kind === 'plan_change') return;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  if (decision.kind !== 'fixture_add' && decision.kind !== 'fixture_remove' &&
-    decision.kind !== 'fixture_move') return;
-  const { executeFixtureMutationInMemory } = require('./fixtureMutationTransaction');
-  const revision = (useProgramStore.getState() as unknown as {
-    acceptedMaterialContext: { revision: number };
-  }).acceptedMaterialContext.revision;
-  const action = decision.kind === 'fixture_add' ? 'add'
-    : decision.kind === 'fixture_remove' ? 'remove' : 'move';
-  const result = executeFixtureMutationInMemory({
-    action,
-    fixtureKind: decision.fixtureKind,
-    ...(decision.kind === 'fixture_add' ? { targetDate: decision.date } : {}),
-    ...(decision.kind === 'fixture_remove' ? { sourceDate: decision.date } : {}),
-    ...(decision.kind === 'fixture_move'
-      ? { sourceDate: decision.fromDate, targetDate: decision.toDate } : {}),
-    expectedAcceptedRevision: revision,
-    source: {
-      requestedBy: 'athlete',
-      producer: 'tap',
-      surface: 'program_tab',
-      commandId: `quiescent-boot-replay:${entry.id}`,
-    },
-    todayISO: occurredOn,
-  });
-  if (result.outcome === 'conflicted' || result.outcome === 'impossible') {
-    logger.warn('[quiescentBoot] a fixture decision no longer applies on replay', {
-      entryId: entry.id, kind: decision.kind, outcome: result.outcome,
-    });
-  }
+  // Fixture edits are accepted effects too; their compiler group owns them.
+  if (decision.kind === 'fixture_add' || decision.kind === 'fixture_remove' ||
+    decision.kind === 'fixture_move') return;
 }
 
 /**
@@ -300,6 +274,44 @@ function compileSessionDecisionGroup(
       sourceEntryId: entry.id,
       acceptedEffect: replayLegacyPlanChangeEntryToEffect(entry),
     });
+  }
+  return upgrades;
+}
+
+/** Fold accepted fixture effects without re-entering request validation. */
+function compileFixtureDecisionGroup(
+  entries: readonly DecisionLedgerEntry[],
+  completeLedger: readonly DecisionLedgerEntry[],
+): Array<{ sourceEntryId: string; acceptedEffect: CanonicalAcceptedFixtureEditEffect }> {
+  if (entries.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalWeeklyFixtureEditStateFrom } =
+    require('../rules/canonicalWeeklyFixtureEditState');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { commitCanonicalAcceptedFixtureEditEffect } =
+    require('./acceptedStateTransaction');
+  const upgradeRows = completeLedger.filter((entry) =>
+    entry.decision.kind === 'legacy_fixture_effect_upgrade');
+  const upgrades: Array<{
+    sourceEntryId: string;
+    acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+  }> = [];
+  for (const entry of entries) {
+    const state = canonicalWeeklyFixtureEditStateFrom({
+      entries: [entry, ...upgradeRows],
+      weekStartISO: null,
+    });
+    const effect = state.effects[0];
+    if (effect) {
+      commitCanonicalAcceptedFixtureEditEffect(effect);
+      continue;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { replayLegacyFixtureEntryToEffect } =
+      require('./legacyFixtureEffectMigration');
+    const acceptedEffect = replayLegacyFixtureEntryToEffect(entry);
+    commitCanonicalAcceptedFixtureEditEffect(acceptedEffect);
+    upgrades.push({ sourceEntryId: entry.id, acceptedEffect });
   }
   return upgrades;
 }
@@ -603,6 +615,10 @@ function rebuildDerivedWorldNow(): void {
     sourceEntryId: string;
     acceptedEffect: CanonicalAcceptedSessionEditEffect;
   }> = [];
+  const legacyFixtureEffectUpgrades: Array<{
+    sourceEntryId: string;
+    acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+  }> = [];
   beginLedgerReplay();
   try {
     // A CLEAN SLATE first: after a real process death the derived surfaces
@@ -702,6 +718,7 @@ function rebuildDerivedWorldNow(): void {
       }
       let exerciseGroup: DecisionLedgerEntry[] = [];
       let sessionGroup: DecisionLedgerEntry[] = [];
+      let fixtureGroup: DecisionLedgerEntry[] = [];
       const flushExerciseGroup = () => {
         if (exerciseGroup.length === 0) return;
         const group = exerciseGroup;
@@ -726,19 +743,42 @@ function rebuildDerivedWorldNow(): void {
           });
         }
       };
+      const flushFixtureGroup = () => {
+        if (fixtureGroup.length === 0) return;
+        const group = fixtureGroup;
+        fixtureGroup = [];
+        try {
+          legacyFixtureEffectUpgrades.push(...compileFixtureDecisionGroup(group, entries));
+        } catch (error) {
+          logger.warn('[quiescentBoot] fixture-edit compiler fold failed', {
+            entryIds: group.map((candidate) => candidate.id), error,
+          });
+        }
+      };
       for (const entry of replayableEntries(entries)) {
         if (entry.decision.kind === 'program_control') {
           flushSessionGroup();
+          flushFixtureGroup();
           exerciseGroup.push(entry);
           continue;
         }
         if (entry.decision.kind === 'plan_change') {
           flushExerciseGroup();
+          flushFixtureGroup();
           sessionGroup.push(entry);
+          continue;
+        }
+        if (entry.decision.kind === 'fixture_add' ||
+          entry.decision.kind === 'fixture_move' ||
+          entry.decision.kind === 'fixture_remove') {
+          flushExerciseGroup();
+          flushSessionGroup();
+          fixtureGroup.push(entry);
           continue;
         }
         flushExerciseGroup();
         flushSessionGroup();
+        flushFixtureGroup();
         try {
           replayEntry(entry);
         } catch (error) {
@@ -749,6 +789,7 @@ function rebuildDerivedWorldNow(): void {
       }
       flushExerciseGroup();
       flushSessionGroup();
+      flushFixtureGroup();
       // ── AND THEN THE FACTS, IN THE ORDER THE ATHLETE LIVED THEM ───────────
       //
       // Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,
@@ -788,6 +829,13 @@ function rebuildDerivedWorldNow(): void {
       const { appendLegacyPlanChangeEffectUpgrade } = require('./decisionLedgerStore');
       for (const upgrade of legacySessionEffectUpgrades) {
         appendLegacyPlanChangeEffectUpgrade(upgrade);
+      }
+    }
+    if (legacyFixtureEffectUpgrades.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { appendLegacyFixtureEffectUpgrade } = require('./decisionLedgerStore');
+      for (const upgrade of legacyFixtureEffectUpgrades) {
+        appendLegacyFixtureEffectUpgrade(upgrade);
       }
     }
   }

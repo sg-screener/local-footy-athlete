@@ -116,6 +116,7 @@ export function replayableEntries(
   return readable(entries).filter((entry) =>
     entry.decision.kind !== 'reversal' &&
     entry.decision.kind !== 'legacy_plan_change_effect_upgrade' &&
+    entry.decision.kind !== 'legacy_fixture_effect_upgrade' &&
     !annulled.has(entry.id));
 }
 

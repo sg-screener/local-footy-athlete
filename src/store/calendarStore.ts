@@ -15,6 +15,8 @@ import {
   emitAthleteActionEvent,
 } from '../utils/athleteActionDiagnostics';
 import { logger } from '../utils/logger';
+import type { CalendarDayType } from '../types/calendar';
+export type { CalendarDayType } from '../types/calendar';
 
 /**
  * Calendar Store — Game Day Management
@@ -34,8 +36,6 @@ import { logger } from '../utils/logger';
  *
  * Date keys are ISO strings: 'YYYY-MM-DD'
  */
-
-export type CalendarDayType = 'game' | 'rest' | 'noGame';
 
 /**
  * Compatibility projection for onboarding, legacy Coach/undo and hydration.

@@ -1024,3 +1024,82 @@ and the production cold-start acceptance journey above are green.
 - Scheduled deload remains outside the compiler.
 - Full-year archetype acceptance has not yet been promoted into this gate.
 - Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 14: fixture Add, Move and Remove compile from accepted effects
+
+### Two options weighed
+
+1. Keep boot replaying `fixture_add`, `fixture_move` and `fixture_remove` by
+   entering `executeFixtureMutationInMemory`, relying on the current resolver
+   and current recurring-game materialisation to rediscover the old result.
+2. Resolve an exact typed fixture-week effect once when the decision lands,
+   fold that effect through one pure calendar compiler, and make both live
+   publication and boot call the same accepted-effect commit boundary.
+
+Option 2 landed. Current-format boot does not enter the live fixture request
+transaction and therefore cannot ask today's resolver to reinterpret an old
+accepted decision.
+
+### Exact ownership result
+
+Instrument unit: distinct current-format executable boot branches and decision
+writers for fixture Add, Move and Remove.
+
+- Boot branches calling `executeFixtureMutationInMemory`: **0 of 1 boot replay
+  modules**.
+- Current fixture decision writers omitting `acceptedEffect`: **0 of 1 fixture
+  decision writer sites**, held by the required type and source ownership cell.
+- Pure ordered fixture-effect folds: **1**, in
+  `canonicalWeeklyFixtureEditCompiler`.
+- Live and boot accepted-effect commit boundaries: **1**, in
+  `commitCanonicalAcceptedFixtureEditEffect`.
+- The effect stores the complete seven-day fixture layer for its week. It does
+  not store repaired sessions or an overlay.
+- Repair overlays and reversible-adjustment rows remain derived and are rebuilt
+  through the existing deterministic weekly-rebuild body.
+
+The complete seven-day layer was required by the first accumulated restart
+witness. Live accepted state carried only Wednesday's explicit game after a
+Saturday-to-Wednesday move, while fresh boot had first re-derived the profile's
+usual Saturday game. A delta containing only Wednesday therefore produced two
+games after restart. Recording the accepted fixture layer clears any re-derived
+fixture marks first, while preserving non-fixture calendar facts such as rest.
+
+Pre-effect fixture rows cross one append-only compatibility ingress. The old
+row keeps its original ledger position; `legacy_fixture_effect_upgrade`
+attaches the accepted effect once and is neither replayable nor undoable.
+
+### Acceptance and liveness
+
+- Tests-first ownership run: **184/189**, with the five new ownership cells red.
+- First expanded restart run: **200/201**. The one red was the portable
+  Saturday-to-Wednesday move described above; the fix returned the suite green.
+- Final `npm run test:canonical-weekly-compiler`: **208/208**.
+- Add, Move and Remove each make a non-vacuous visible change, survive process
+  death byte-exact and retain one exact Undo after restart.
+- The accumulated Remove-base → Add → Move → Remove world survives restart in
+  ledger order; one Undo removes only the last Remove.
+- The occupied destination is a real multi-part day, and the fixture replaces
+  it while active and restores it on Undo.
+- `practice_match` Add uses the same typed effect and restart path.
+- A real pre-effect fixture row upgrades exactly once across two boots; Undo
+  still targets the athlete decision.
+- Liveness mutation: replacing the real fixture-effect loop with an empty loop
+  made **20 of 208 cells red**, including live verification, all three action
+  families, accumulated ordering, practice match and legacy ingress. Restoring
+  the loop returned **208/208**.
+- `npm run test:release`: **4/4 release units green**.
+- `npm run test:undo-reversal`: **25/25**.
+- `npm run test:fixture-identity`: **7/7**.
+- `npm run test:day-precedence-ownership`: **6/6**.
+- `npm run test:placement-ownership`: **22/22**.
+
+### NOT COVERED
+
+- `migrated_day_placement` remains its separate legacy content ingress; this
+  fixture slice did not change it.
+- Scheduled deload remains outside the compiler.
+- The global rival-author/derived-output-writer census is not yet run and zero
+  is not claimed beyond this fixture decision family.
+- The full-year archetype compiler acceptance gate is not built yet.
+- Pixels, simulator and physical iPhone are not covered.

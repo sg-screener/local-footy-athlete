@@ -87,7 +87,9 @@ const reversal = (id: string, target: string): DecisionLedgerEntry =>
 run('1 a reversal removes its target from the replay set, and itself', () => {
   const ledger = [
     entry('dl-1', move('2026-08-08', '2026-08-09')),
-    entry('dl-2', { kind: 'fixture_add', date: '2026-08-10', fixtureKind: 'game' }),
+    entry('dl-2', {
+      kind: 'fixture_add', date: '2026-08-10', fixtureKind: 'game',
+    } as never),
     reversal('dl-3', 'dl-1'),
   ];
   const replayed = replayableEntries(ledger).map((row) => row.id);
@@ -158,7 +160,9 @@ run('6 what can be undone IS what still counts — one set, never two', () => {
   // world had already stopped replaying: a button that appears to do nothing.
   const ledger = [
     entry('dl-1', move('2026-08-08', '2026-08-09')),
-    entry('dl-2', { kind: 'fixture_add', date: '2026-08-10', fixtureKind: 'game' }),
+    entry('dl-2', {
+      kind: 'fixture_add', date: '2026-08-10', fixtureKind: 'game',
+    } as never),
     reversal('dl-3', 'dl-2'),
   ];
   assert(JSON.stringify(undoableEntries(ledger).map((row) => row.id))

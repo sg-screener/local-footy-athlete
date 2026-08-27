@@ -18,7 +18,13 @@ import {
 } from '../utils/gameChangeCoachNotes';
 import { todayISOLocal } from '../utils/appDate';
 import { getMondayForDate } from '../utils/sessionResolver';
-import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
+import type { WeekRebuildResult } from '../utils/weekRebuild';
+import {
+  canonicalAcceptedFixtureEditEffectFromIntent,
+  type CanonicalAcceptedFixtureEditEffect,
+} from '../rules/canonicalWeeklyFixtureEditState';
+import { storedGameAnchor } from '../rules/gameAnchor';
+import { commitCanonicalAcceptedFixtureEditEffect } from './acceptedStateTransaction';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -96,6 +102,7 @@ type CandidateResult =
       kind: 'applied';
       outcome: AppliedFixtureMutationOutcome;
       result: WeekRebuildResult;
+      acceptedEffect: CanonicalAcceptedFixtureEditEffect;
     }
   | {
       kind: 'conflicted' | 'no_change' | 'impossible';
@@ -378,24 +385,18 @@ function executeCandidate(args: {
   // went with it — see resolveFixtureMutation. The candidate acts on current
   // accepted state by construction.
   try {
-    const result = rebuildLocalWeek({
-      baseProfile: args.profile,
-      newGameDay: args.resolved.newGameDay,
-      scope: 'weekOverlay',
+    const state = useProgramStore.getState();
+    const acceptedEffect = canonicalAcceptedFixtureEditEffectFromIntent({
+      action: args.resolved.action,
+      fixtureKind: args.resolved.fixtureKind,
+      sourceDate: args.resolved.sourceDate,
       targetDate: args.resolved.targetDate,
-      clearOverlayDate: args.resolved.action === 'move'
-        ? args.resolved.sourceDate
-        : undefined,
-      manageCalendarFixture: true,
-      todayISO: args.resolved.todayISO,
-      diagnosticSource: args.resolved.source.producer,
-      diagnosticActionType: args.resolved.fixtureKind === 'practice_match'
-        ? 'practice_match_change'
-        : 'game_day_change',
-      diagnosticRoute: 'fixture_mutation_rebuild',
-      fixtureMutationSource: args.resolved.source,
-      trace: args.trace,
+      acceptedAt: `${args.resolved.todayISO}T12:00:00.000Z`,
+      source: args.resolved.source,
+      beforeMarkedDays: state.acceptedMaterialContext.markedDays,
+      recurringGameDay: storedGameAnchor(args.profile),
     });
+    const result = commitCanonicalAcceptedFixtureEditEffect(acceptedEffect);
     if (!result.reversibleAdjustmentId) {
       return {
         kind: 'no_change',
@@ -406,12 +407,12 @@ function executeCandidate(args: {
         ),
       };
     }
-    const status = result.fixtureReplan?.gateway.status;
     return {
       kind: 'applied',
       // §18 returns accepted or impossible; an applied mutation is accepted.
       outcome: 'accepted',
       result,
+      acceptedEffect,
     };
   } catch (error) {
     return {
@@ -646,20 +647,30 @@ function resolveForExecution(
  * (`decisionLedgerStore.ts:269`). That is the honest guard — replay never
  * appends because it is replay, not because it picked the quiet door.
  */
-function appendLandedFixtureDecision(input: FixtureMutationTransactionInput): void {
+function appendLandedFixtureDecision(effect: CanonicalAcceptedFixtureEditEffect): void {
   appendDecisionEntry({
-    decision: input.action === 'move'
+    decision: effect.action === 'move'
       ? {
           kind: 'fixture_move',
-          fromDate: input.sourceDate ?? '',
-          toDate: input.targetDate ?? '',
-          fixtureKind: input.fixtureKind,
+          fromDate: effect.sourceDate ?? '',
+          toDate: effect.targetDate,
+          fixtureKind: effect.fixtureKind,
+          acceptedEffect: effect,
         }
-      : input.action === 'add'
-        ? { kind: 'fixture_add', date: input.targetDate ?? '', fixtureKind: input.fixtureKind }
-        : { kind: 'fixture_remove', date: input.sourceDate ?? '', fixtureKind: input.fixtureKind },
-    provenance: input.source.requestedBy === 'athlete' ? 'athlete_tap' : 'coach',
+      : effect.action === 'add'
+        ? {
+            kind: 'fixture_add', date: effect.targetDate,
+            fixtureKind: effect.fixtureKind, acceptedEffect: effect,
+          }
+        : {
+            kind: 'fixture_remove', date: effect.sourceDate ?? effect.targetDate,
+            fixtureKind: effect.fixtureKind, acceptedEffect: effect,
+          },
+    provenance: effect.source.requestedBy === 'athlete'
+      ? 'athlete_tap'
+      : effect.source.requestedBy === 'coach' ? 'coach' : 'system_fixture',
     writer: 'fixture_door',
+    occurredAt: effect.acceptedAt,
   });
 }
 
@@ -730,7 +741,7 @@ export function executeFixtureMutationInMemory(
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
     });
-    appendLandedFixtureDecision(input);
+    appendLandedFixtureDecision(candidate.acceptedEffect);
     return {
       outcome: candidate.outcome,
       result: candidate.result,
@@ -806,7 +817,7 @@ export async function executeFixtureMutationTransaction(
         reason: 'fixture_acknowledged_state_or_source_mismatch',
       }),
     });
-    if (!transaction.ok) {
+    if (transaction.ok === false) {
       const candidate = transaction.value;
       if (candidate && candidate.kind !== 'applied') {
         return failureResult({ candidate, trace });
@@ -848,7 +859,7 @@ export async function executeFixtureMutationTransaction(
     });
     // R1.4a (shell rebuild): the landed fixture decision, appended verbatim —
     // through the one site both doors share (R5.3, 2026-08-06).
-    appendLandedFixtureDecision(input);
+    appendLandedFixtureDecision(candidate.acceptedEffect);
     return {
       outcome: candidate.outcome,
       result: candidate.result,

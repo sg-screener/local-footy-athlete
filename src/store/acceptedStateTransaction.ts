@@ -2651,6 +2651,42 @@ export function proposeFixtureMarkedDays(args: {
   return markedDays;
 }
 
+/**
+ * Commit one already-accepted fixture effect through the deterministic weekly
+ * rebuild. Request validation and target selection happen before this
+ * boundary; startup enters here directly and therefore makes no new choice.
+ */
+export function commitCanonicalAcceptedFixtureEditEffect(
+  effect: import('../rules/canonicalWeeklyFixtureEditState').CanonicalAcceptedFixtureEditEffect,
+): import('../utils/weekRebuild').WeekRebuildResult {
+  const profile = useProfileStore.getState().onboardingData;
+  if (!profile) throw new Error('Cannot compile a fixture effect without an accepted profile');
+  // Lazy to keep the established accepted-state/week-rebuild cycle explicit.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { rebuildLocalWeek } = require('../utils/weekRebuild');
+  const newGameDay = effect.action === 'remove'
+    ? null
+    : dayNameForDate(effect.targetDate);
+  return rebuildLocalWeek({
+    baseProfile: profile,
+    newGameDay,
+    scope: 'weekOverlay',
+    targetDate: effect.targetDate,
+    clearOverlayDate: effect.action === 'move'
+      ? effect.sourceDate ?? undefined
+      : undefined,
+    manageCalendarFixture: true,
+    acceptedFixtureEffect: effect,
+    todayISO: effect.acceptedAt.slice(0, 10),
+    diagnosticSource: effect.source.producer,
+    diagnosticActionType: effect.fixtureKind === 'practice_match'
+      ? 'practice_match_change'
+      : 'game_day_change',
+    diagnosticRoute: 'canonical_accepted_fixture_effect',
+    fixtureMutationSource: effect.source,
+  });
+}
+
 export function commitCalendarStateTransaction(args: {
   reason: string;
   todayISO?: string;

@@ -84,6 +84,8 @@ import {
   ownSeasonPhaseForGeneration,
 } from '../rules/seasonPhaseOwner';
 import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
+import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
+import { compileCanonicalFixtureMarkedDays } from '../rules/canonicalWeeklyFixtureEditCompiler';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -401,6 +403,8 @@ export interface RebuildLocalWeekArgs {
   clearOverlayDate?: string;
   /** Stage the fixture mark in the same accepted snapshot as this rebuild. */
   manageCalendarFixture?: boolean;
+  /** Exact accepted fixture fact. Live and boot both compile this same value. */
+  acceptedFixtureEffect?: CanonicalAcceptedFixtureEditEffect;
   /** Build only. Used by rollover so future overlays join the same commit. */
   commit?: boolean;
   /**
@@ -549,14 +553,19 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
 
   const targetWeekStart = targetDate ? getMondayForDate(targetDate) : null;
   const shouldCommit = args.commit !== false;
-  const proposedMarkedDays = args.manageCalendarFixture && targetDate
-    ? proposeFixtureMarkedDays({
-        profile: args.baseProfile,
-        targetDate,
-        newGameDay: args.newGameDay ?? null,
-        previousFixtureDate: args.clearOverlayDate,
+  const proposedMarkedDays = args.acceptedFixtureEffect
+    ? compileCanonicalFixtureMarkedDays({
+        markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+        effects: [args.acceptedFixtureEffect],
       })
-    : undefined;
+    : args.manageCalendarFixture && targetDate
+      ? proposeFixtureMarkedDays({
+          profile: args.baseProfile,
+          targetDate,
+          newGameDay: args.newGameDay ?? null,
+          previousFixtureDate: args.clearOverlayDate,
+        })
+      : undefined;
   const gameDatesOverride =
     scope === 'weekOverlay' && args.newGameDay
       ? [targetDate!]

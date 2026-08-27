@@ -174,6 +174,19 @@ function illnessAthlete(): OnboardingData {
   };
 }
 
+function preseasonAthlete(): OnboardingData {
+  return {
+    ...illnessAthlete(),
+    firstName: 'Practice-match compiler',
+    seasonPhase: 'Pre-season',
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    usualGameDay: undefined,
+    gameDay: undefined,
+    recentTrainingLoad: 'Very consistent',
+  };
+}
+
 function rowSignature(workout: Workout): string[] {
   return (workout.exercises ?? []).map((row) => [
     row.exercise?.name ?? '',
@@ -631,6 +644,12 @@ async function main(): Promise<void> {
     ? readFileSync(sessionEditStatePath, 'utf8') : '';
   const sessionEditCompilerSource = existsSync(sessionEditCompilerPath)
     ? readFileSync(sessionEditCompilerPath, 'utf8') : '';
+  const fixtureEditStatePath = join(ROOT, 'rules/canonicalWeeklyFixtureEditState.ts');
+  const fixtureEditStateSource = existsSync(fixtureEditStatePath)
+    ? readFileSync(fixtureEditStatePath, 'utf8') : '';
+  const fixtureEditCompilerPath = join(ROOT, 'rules/canonicalWeeklyFixtureEditCompiler.ts');
+  const fixtureEditCompilerSource = existsSync(fixtureEditCompilerPath)
+    ? readFileSync(fixtureEditCompilerPath, 'utf8') : '';
   const decisionLedgerTypeSource = readFileSync(join(ROOT, 'types/decisionLedger.ts'), 'utf8');
   const quiescentBootSource = readFileSync(join(ROOT, 'store/quiescentBoot.ts'), 'utf8');
   const legacySessionMigrationSource = readFileSync(
@@ -781,6 +800,31 @@ async function main(): Promise<void> {
   ok('[MUTATION] removing the ordered session-effect fold is detected',
     sessionEditCompilerSource.includes('for (const effect of args.effects)') &&
       !sessionEditCompilerSource.replace(
+        'for (const effect of args.effects)',
+        'for (const effect of [])',
+      ).includes('for (const effect of args.effects)'));
+  ok('accepted fixture actions carry their exact semantic calendar effect',
+    decisionLedgerTypeSource.includes('acceptedEffect: CanonicalAcceptedFixtureEditEffect') &&
+      fixtureEditStateSource.includes('export interface CanonicalAcceptedFixtureEditEffect'));
+  ok('accepted fixture effects translate once into ordered compiler state',
+    fixtureEditStateSource.includes('export interface CanonicalWeeklyFixtureEditState') &&
+      fixtureEditStateSource.includes('canonicalWeeklyFixtureEditStateFrom'));
+  ok('one pure fixture-effect fold owns accepted calendar state',
+    fixtureEditCompilerSource.includes('export function compileCanonicalFixtureMarkedDays') &&
+      fixtureEditCompilerSource.includes('for (const effect of args.effects)'));
+  ok('live fixture actions and boot commit the same accepted effect',
+    acceptedTransactionSource.includes('commitCanonicalAcceptedFixtureEditEffect') &&
+      quiescentBootSource.includes('commitCanonicalAcceptedFixtureEditEffect(effect)'));
+  ok('boot compiles fixture effects instead of re-entering the live transaction',
+    !quiescentBootSource.includes("require('./fixtureMutationTransaction')") &&
+      !quiescentBootSource.includes('executeFixtureMutationInMemory({'));
+  ok('old fixture rows have one append-only semantic upgrade boundary',
+    decisionLedgerTypeSource.includes("kind: 'legacy_fixture_effect_upgrade'") &&
+      quiescentBootSource.includes('appendLegacyFixtureEffectUpgrade(upgrade)') &&
+      ledgerReplaySource.includes("entry.decision.kind !== 'legacy_fixture_effect_upgrade'"));
+  ok('[MUTATION] removing the ordered fixture-effect fold is detected',
+    fixtureEditCompilerSource.includes('for (const effect of args.effects)') &&
+      !fixtureEditCompilerSource.replace(
         'for (const effect of args.effects)',
         'for (const effect of [])',
       ).includes('for (const effect of args.effects)'));
@@ -1357,6 +1401,9 @@ async function main(): Promise<void> {
   const fixtureBaselineSignature = fixtureSignature(fixtureBaseline);
   const saturday = '2026-07-18';
   const wednesday = '2026-07-15';
+  ok('the occupied fixture target is a real multi-part training day',
+    (fixtureBaseline.find((day) => day.dateISO === wednesday)?.components.length ?? 0) > 1,
+    JSON.stringify(fixtureBaseline.find((day) => day.dateISO === wednesday)));
   const mutateFixture = async (sourceDate: string, targetDate: string, commandId: string) =>
     quietAsync(() => executeFixtureMutationTransaction({
       action: 'move',
@@ -1401,6 +1448,261 @@ async function main(): Promise<void> {
   ok('moving the fixture back restores the visible week exactly',
     fixtureSignature(quiet(() =>
       resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature);
+
+  console.log('\n[fixture durability] Add, Move and Remove compile across restart and Undo');
+  const runFixtureRestartWitness = async (
+    action: 'add' | 'move' | 'remove',
+  ): Promise<{
+    landed: boolean; changed: boolean; restarted: boolean; exact: boolean;
+    undoOnlyLast: boolean; detail: string;
+  }> => {
+    localStorageData.clear();
+    const install = await coldStartThroughOnboarding({
+      profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+    });
+    const act = async (args: {
+      action: 'add' | 'move' | 'remove'; sourceDate?: string; targetDate?: string;
+      commandId: string;
+    }) => quietAsync(() => executeFixtureMutationTransaction({
+      action: args.action,
+      fixtureKind: 'game',
+      sourceDate: args.sourceDate,
+      targetDate: args.targetDate,
+      expectedAcceptedRevision:
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      source: {
+        requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+        commandId: args.commandId,
+      },
+      todayISO: INSTALL_DAY,
+    }));
+    const saturdayDate = '2026-07-18';
+    const occupiedDate = '2026-07-15';
+    let beforeLast = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+    let result: Awaited<ReturnType<typeof act>>;
+    if (action === 'add') {
+      const prerequisite = await act({
+        action: 'remove', sourceDate: saturdayDate,
+        commandId: 'compiler-fixture:add-prerequisite-remove',
+      });
+      if (prerequisite.outcome !== 'accepted') {
+        return {
+          landed: false, changed: false, restarted: false, exact: false,
+          undoOnlyLast: false, detail: JSON.stringify(prerequisite),
+        };
+      }
+      beforeLast = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+      result = await act({
+        action: 'add', targetDate: occupiedDate,
+        commandId: 'compiler-fixture:add-occupied',
+      });
+    } else if (action === 'move') {
+      result = await act({
+        action: 'move', sourceDate: saturdayDate, targetDate: occupiedDate,
+        commandId: 'compiler-fixture:move-occupied',
+      });
+    } else {
+      result = await act({
+        action: 'remove', sourceDate: saturdayDate,
+        commandId: 'compiler-fixture:remove',
+      });
+    }
+    const after = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+    const afterSignature = fixtureSignature(after);
+    const restarted = await quietAsync(() => relaunchApp({
+      storage: localStorageData, todayISO: INSTALL_DAY,
+    }));
+    const afterRestart = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+    const activeAdjustments = useProgramStore.getState()
+      .reversibleAdjustmentLedger.adjustments
+      .filter((adjustment) => adjustment.status === 'active').length;
+    const undo = await quietAsync(() => undoLastDecision());
+    const afterUndo = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+    return {
+      landed: result.outcome === 'accepted',
+      changed: afterSignature !== fixtureSignature(beforeLast),
+      restarted: restarted.ok,
+      exact: fixtureSignature(afterRestart) === afterSignature,
+      undoOnlyLast: activeAdjustments > 0 && undo.outcome === 'undone' &&
+        fixtureSignature(afterUndo) === fixtureSignature(beforeLast),
+      detail: JSON.stringify({
+        action,
+        resultOutcome: result.outcome,
+        acceptedEffect: decisionLedgerEntries().find((entry) =>
+          entry.decision.kind === `fixture_${action}`)?.decision,
+        markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+        after: after.map((day) => [day.dateISO, day.sessionName]),
+        afterRestart: afterRestart.map((day) => [day.dateISO, day.sessionName]),
+        undo,
+        afterUndo: afterUndo.map((day) => [day.dateISO, day.sessionName]),
+      }),
+    };
+  };
+  for (const action of ['add', 'move', 'remove'] as const) {
+    const witness = await runFixtureRestartWitness(action);
+    ok(`fixture ${action} reaches a non-vacuous accepted state`,
+      witness.landed && witness.changed, witness.detail);
+    ok(`fixture ${action} survives process death byte-for-byte`,
+      witness.restarted && witness.exact, witness.detail);
+    ok(`fixture ${action} keeps one exact Undo after restart`,
+      witness.undoOnlyLast, witness.detail);
+  }
+
+  console.log('\n[fixture composition] accumulated Add, Move and Remove keep ledger order');
+  localStorageData.clear();
+  const fixtureCompositionInstall = await coldStartThroughOnboarding({
+    profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+  });
+  const composeFixture = async (args: {
+    action: 'add' | 'move' | 'remove'; sourceDate?: string; targetDate?: string;
+    commandId: string;
+  }) => quietAsync(() => executeFixtureMutationTransaction({
+    action: args.action, fixtureKind: 'game',
+    sourceDate: args.sourceDate, targetDate: args.targetDate,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: {
+      requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+      commandId: args.commandId,
+    },
+    todayISO: INSTALL_DAY,
+  }));
+  const compositionRemoveBase = await composeFixture({
+    action: 'remove', sourceDate: saturday,
+    commandId: 'compiler-fixture:composition-remove-base',
+  });
+  const compositionAdd = await composeFixture({
+    action: 'add', targetDate: wednesday,
+    commandId: 'compiler-fixture:composition-add',
+  });
+  const compositionMove = await composeFixture({
+    action: 'move', sourceDate: wednesday, targetDate: '2026-07-17',
+    commandId: 'compiler-fixture:composition-move',
+  });
+  const beforeCompositionRemove = quiet(() =>
+    resolvedDays(fixtureCompositionInstall.blockOneStart, INSTALL_DAY));
+  const compositionRemove = await composeFixture({
+    action: 'remove', sourceDate: '2026-07-17',
+    commandId: 'compiler-fixture:composition-remove',
+  });
+  const compositionAfter = quiet(() =>
+    resolvedDays(fixtureCompositionInstall.blockOneStart, INSTALL_DAY));
+  const compositionSignature = fixtureSignature(compositionAfter);
+  const compositionRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  ok('accumulated fixture actions all land through one accepted-effect family',
+    compositionRemoveBase.outcome === 'accepted' && compositionAdd.outcome === 'accepted' &&
+      compositionMove.outcome === 'accepted' && compositionRemove.outcome === 'accepted',
+    JSON.stringify({ compositionRemoveBase, compositionAdd, compositionMove, compositionRemove }));
+  ok('accumulated fixture effects survive process death in ledger order',
+    compositionRestart.ok && fixtureSignature(quiet(() =>
+      resolvedDays(fixtureCompositionInstall.blockOneStart, INSTALL_DAY))) ===
+      compositionSignature);
+  const compositionUndo = await quietAsync(() => undoLastDecision());
+  ok('one Undo removes only the latest accumulated fixture effect',
+    compositionUndo.outcome === 'undone' && fixtureSignature(quiet(() =>
+      resolvedDays(fixtureCompositionInstall.blockOneStart, INSTALL_DAY))) ===
+      fixtureSignature(beforeCompositionRemove),
+    JSON.stringify(compositionUndo));
+
+  console.log('\n[fixture variant] practice match uses the same accepted-effect compiler');
+  localStorageData.clear();
+  const practiceInstall = await coldStartThroughOnboarding({
+    profile: preseasonAthlete(), installDayISO: INSTALL_DAY,
+  });
+  const practiceBefore = quiet(() =>
+    resolvedDays(practiceInstall.blockOneStart, INSTALL_DAY));
+  const practiceMove = await quietAsync(() => executeFixtureMutationTransaction({
+    action: 'add', fixtureKind: 'practice_match', targetDate: wednesday,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: {
+      requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+      commandId: 'compiler-practice-match:add',
+    },
+    todayISO: INSTALL_DAY,
+  }));
+  const practiceAfter = quiet(() =>
+    resolvedDays(practiceInstall.blockOneStart, INSTALL_DAY));
+  const practiceAfterSignature = fixtureSignature(practiceAfter);
+  const practiceRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const practiceEffect = decisionLedgerEntries().find((entry) =>
+    entry.decision.kind === 'fixture_add')?.decision;
+  ok('practice-match Add records the typed variant and takes occupied-day precedence',
+    practiceMove.outcome === 'accepted' &&
+      practiceEffect?.kind === 'fixture_add' &&
+      practiceEffect.acceptedEffect.fixtureKind === 'practice_match' &&
+      fixtureSignature(practiceAfter) !== fixtureSignature(practiceBefore) &&
+      practiceAfter.find((day) => day.dateISO === wednesday)?.rows.length === 0,
+    JSON.stringify({ practiceMove, practiceEffect, practiceAfter }));
+  ok('practice-match Add survives process death through the same compiler',
+    practiceRestart.ok && fixtureSignature(quiet(() =>
+      resolvedDays(practiceInstall.blockOneStart, INSTALL_DAY))) === practiceAfterSignature);
+
+  console.log('\n[fixture migration] a pre-effect fixture decision upgrades once in place');
+  localStorageData.clear();
+  const legacyFixtureInstall = await coldStartThroughOnboarding({
+    profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+  });
+  const legacyFixtureBefore = quiet(() =>
+    resolvedDays(legacyFixtureInstall.blockOneStart, INSTALL_DAY));
+  const legacyFixtureMove = await quietAsync(() => executeFixtureMutationTransaction({
+    action: 'move', fixtureKind: 'game', sourceDate: saturday, targetDate: wednesday,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: {
+      requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+      commandId: 'compiler-fixture:legacy-move',
+    },
+    todayISO: INSTALL_DAY,
+  }));
+  const legacyFixtureAfterSignature = fixtureSignature(quiet(() =>
+    resolvedDays(legacyFixtureInstall.blockOneStart, INSTALL_DAY)));
+  const legacyFixtureEntry = decisionLedgerEntries().find((entry) =>
+    entry.decision.kind === 'fixture_move' && entry.decision.toDate === wednesday);
+  await flushPendingStorageWrites();
+  const legacyFixtureEnvelopeRaw =
+    localStorageData.get(DECISION_LEDGER_PERSISTENCE_KEY) ?? '';
+  if (legacyFixtureEnvelopeRaw && legacyFixtureEntry) {
+    const envelope = JSON.parse(legacyFixtureEnvelopeRaw) as {
+      state?: { entries?: Array<{ id?: string; decision?: Record<string, unknown> }> };
+    };
+    const stored = envelope.state?.entries?.find((entry) =>
+      entry.id === legacyFixtureEntry.id);
+    if (stored?.decision) delete stored.decision.acceptedEffect;
+    localStorageData.set(DECISION_LEDGER_PERSISTENCE_KEY, JSON.stringify(envelope));
+  }
+  const firstLegacyFixtureRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const firstLegacyFixtureUpgradeCount = decisionLedgerEntries().filter((entry) =>
+    entry.decision.kind === 'legacy_fixture_effect_upgrade' &&
+    entry.decision.sourceEntryId === legacyFixtureEntry?.id).length;
+  const firstLegacyFixtureSignature = fixtureSignature(quiet(() =>
+    resolvedDays(legacyFixtureInstall.blockOneStart, INSTALL_DAY)));
+  const secondLegacyFixtureRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const secondLegacyFixtureUpgradeCount = decisionLedgerEntries().filter((entry) =>
+    entry.decision.kind === 'legacy_fixture_effect_upgrade' &&
+    entry.decision.sourceEntryId === legacyFixtureEntry?.id).length;
+  ok('a pre-effect fixture row survives its one compatibility boot',
+    legacyFixtureMove.outcome === 'accepted' && firstLegacyFixtureRestart.ok &&
+      firstLegacyFixtureSignature === legacyFixtureAfterSignature &&
+      firstLegacyFixtureUpgradeCount === 1,
+    JSON.stringify({ legacyFixtureMove, firstLegacyFixtureUpgradeCount }));
+  ok('the fixture upgrade stays singular on every later boot',
+    secondLegacyFixtureRestart.ok && secondLegacyFixtureUpgradeCount === 1 &&
+      fixtureSignature(quiet(() => resolvedDays(
+        legacyFixtureInstall.blockOneStart, INSTALL_DAY,
+      ))) === legacyFixtureAfterSignature);
+  const legacyFixtureUndo = await quietAsync(() => undoLastDecision());
+  ok('fixture upgrade metadata never becomes the Undo target',
+    legacyFixtureUndo.outcome === 'undone' &&
+      fixtureSignature(quiet(() => resolvedDays(
+        legacyFixtureInstall.blockOneStart, INSTALL_DAY,
+      ))) === fixtureSignature(legacyFixtureBefore),
+    JSON.stringify({ legacyFixtureUndo, entries: decisionLedgerEntries() }));
 
   console.log('\n[athlete-edit durability] accepted session Add and Swap survive restart');
   const restartEditWitness = async (

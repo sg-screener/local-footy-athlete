@@ -19,6 +19,8 @@ import type { PlanChange } from '../utils/planChangeTypes';
 import type { ProgramControlAction } from './programControlAction';
 import type { DayOfWeek, Workout } from './domain';
 import type { CanonicalAcceptedSessionEditEffect } from '../rules/canonicalWeeklySessionEditState';
+import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
+import type { FixtureMutationKind } from './fixtureMutation';
 
 /** Who put this decision on the ledger. */
 export type DecisionProvenance =
@@ -44,9 +46,23 @@ export type AthleteDecision =
       sourceEntryId: string;
       acceptedEffect: CanonicalAcceptedSessionEditEffect;
     }
-  | { kind: 'fixture_add'; date: string; fixtureKind: string }
-  | { kind: 'fixture_remove'; date: string; fixtureKind: string }
-  | { kind: 'fixture_move'; fromDate: string; toDate: string; fixtureKind: string }
+  | {
+      kind: 'legacy_fixture_effect_upgrade';
+      sourceEntryId: string;
+      acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+    }
+  | {
+      kind: 'fixture_add'; date: string; fixtureKind: FixtureMutationKind;
+      acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+    }
+  | {
+      kind: 'fixture_remove'; date: string; fixtureKind: FixtureMutationKind;
+      acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+    }
+  | {
+      kind: 'fixture_move'; fromDate: string; toDate: string; fixtureKind: FixtureMutationKind;
+      acceptedEffect: CanonicalAcceptedFixtureEditEffect;
+    }
   /** Undo is a decision too: a reversal APPENDS, it never rewrites (LR-29). */
   | { kind: 'reversal'; reversedEntryId: string }
   /**
