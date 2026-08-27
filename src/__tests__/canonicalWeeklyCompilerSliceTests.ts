@@ -7,9 +7,9 @@
  * source census beside the journey holds the ownership boundary: scheduler,
  * materialiser and connector each have one production caller — the compiler.
  *
- * NOT COVERED: athlete-edit ledger replay across process death, edit contract
- * reduction, scheduled deloads, later compiler families, full-year archetypes,
- * pixels, simulator and physical iPhone.
+ * NOT COVERED: exercise-row edit replay across process death, procedural ledger
+ * replay as a pure compiler fold, scheduled deloads, later compiler families,
+ * full-year archetypes, pixels, simulator and physical iPhone.
  */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 const localStorageData = new Map<string, string>();
@@ -37,13 +37,16 @@ import {
   schedulerInputsWithAvailabilityState,
 } from '../rules/canonicalWeeklyAvailabilityState';
 import { canonicalWeeklyAthleteEditStateFrom } from '../rules/canonicalWeeklyAthleteEditState';
-import { compileCanonicalAthleteEditedWeek } from '../rules/canonicalWeeklyAthleteEditCompiler';
+import {
+  compileCanonicalAthleteEditedWeek,
+} from '../rules/canonicalWeeklyAthleteEditCompiler';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore } from '../store/programStore';
 import {
   coldStartThroughOnboarding,
   quiet,
   quietAsync,
+  relaunchApp,
   resolvedDays,
 } from './support/athleteJourney';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
@@ -601,6 +604,12 @@ async function main(): Promise<void> {
   const acceptedTransactionSource = readFileSync(
     join(ROOT, 'store/acceptedStateTransaction.ts'), 'utf8',
   );
+  const derivedWeekContractSource = readFileSync(
+    join(ROOT, 'rules/derivedWeekContract.ts'), 'utf8',
+  );
+  const temporaryFactTransactionSource = readFileSync(
+    join(ROOT, 'store/temporarySourceFactTransaction.ts'), 'utf8',
+  );
   const todayProjectionStart = acceptedTransactionSource.indexOf(
     'const todayConstraintWorkout =',
   );
@@ -619,10 +628,21 @@ async function main(): Promise<void> {
       editStateSource.includes('constraint.wholeDayRestOwned') &&
       editStateSource.includes("constraint.mutationKind === 'move'") &&
       editStateSource.includes('constraint.movedWorkout'));
+  ok('the semantic edit state owns contract-reduction requests too',
+    editStateSource.includes('reductionRequests:') &&
+      editStateSource.includes('constraintId: constraint.id') &&
+      editStateSource.includes('scope: constraint.scope'));
+  ok('the athlete-edit compiler owns the contract reduction',
+    editCompilerSource.includes('export function compileCanonicalAthleteEditedContract') &&
+      editCompilerSource.includes('for (const request of edits.reductionRequests)'));
   ok('the compatibility adapter delegates instead of projecting edits itself',
     removalCompatibilitySource.includes('return compileCanonicalAthleteEditedWeek({') &&
       !removalCompatibilitySource.includes('constraint.remainingWorkout') &&
       !removalCompatibilitySource.includes('constraint.movedWorkout'));
+  ok('the retired contract reducer is now only a compatibility delegation',
+    removalCompatibilitySource.includes('return compileCanonicalAthleteEditedContract({') &&
+      !removalCompatibilitySource.includes('function addFrequencyReduction(') &&
+      !removalCompatibilitySource.includes('policy.requiredMinimum ='));
   ok('accepted, live-precedence and hydration readers all use the compiler projection',
     acceptedEffectiveWeekSource.includes('compileCanonicalAthleteEditedWeek({') &&
       dayPrecedenceSource.includes('compileCanonicalAthleteEditedWeek({') &&
@@ -644,6 +664,13 @@ async function main(): Promise<void> {
   ].filter((finding): finding is string => finding !== null);
   ok('weekly athlete-edit placement rival-author count is literally zero',
     editPlacementRivalAuthors.length === 0, JSON.stringify(editPlacementRivalAuthors));
+  ok('athlete-edit contract-reduction rival-author count is literally zero',
+    productionCallers('applyAthleteRemovalTypedReduction').length === 0,
+    JSON.stringify(productionCallers('applyAthleteRemovalTypedReduction')));
+  ok('contract readers and repair loops all call the compiler owner',
+    derivedWeekContractSource.includes('compileCanonicalAthleteEditedContract({') &&
+      temporaryFactTransactionSource.includes('compileCanonicalAthleteEditedContract({') &&
+      fixtureReplanSource.includes('compileCanonicalAthleteEditedContract({'));
   ok('athlete-edit placement stamps have one production writer: the semantic compiler state',
     JSON.stringify(productionCallers('athletePlacementFor')) ===
       JSON.stringify(['rules/canonicalWeeklyAthleteEditState.ts']),
@@ -666,6 +693,12 @@ async function main(): Promise<void> {
         'compileCanonicalAthleteEditedWeek({',
         'compileCanonicalAthleteEditedWeek_REMOVED({',
       ).includes('compileCanonicalAthleteEditedWeek({'));
+  ok('[MUTATION] removing the compiler contract-reduction loop is detected',
+    editCompilerSource.includes('for (const request of edits.reductionRequests)') &&
+      !editCompilerSource.replace(
+        'for (const request of edits.reductionRequests)',
+        'for (const request of [])',
+      ).includes('for (const request of edits.reductionRequests)'));
 
   const editWorkout = (id: string, dayOfWeek: number, name: string): Workout => ({
     id, microcycleId: 'edit-week', dayOfWeek, name,
@@ -1228,6 +1261,59 @@ async function main(): Promise<void> {
   ok('moving the fixture back restores the visible week exactly',
     fixtureSignature(quiet(() =>
       resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature);
+
+  console.log('\n[athlete-edit durability] accepted session Add and Swap survive restart');
+  const restartEditWitness = async (
+    kind: 'add_category' | 'swap_category',
+  ): Promise<{ applied: boolean; changed: boolean; restarted: boolean; exact: boolean; detail: string }> => {
+    localStorageData.clear();
+    const editInstall = await coldStartThroughOnboarding({
+      profile: athlete(), installDayISO: INSTALL_DAY,
+    });
+    const before = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    const target = kind === 'add_category'
+      ? before.find((day) => day.rows.length === 0)
+      : before.find((day) => day.rows.length > 0);
+    if (!target) {
+      return {
+        applied: false, changed: false, restarted: false, exact: false,
+        detail: `${kind}: no reachable target day`,
+      };
+    }
+    const rawWeek = quiet(() => deriveVisibleWeekLive(editInstall.blockOneStart, INSTALL_DAY));
+    const result = quiet(() => applyPlanChange({
+      change: { kind, date: target.dateISO, category: 'recovery' },
+      visibleWeek: rawWeek,
+      todayISO: INSTALL_DAY,
+      applyOverride: () => undefined,
+    }));
+    const after = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    const afterSignature = visibleSignature(after);
+    const restart = await quietAsync(() => relaunchApp({
+      storage: localStorageData,
+      todayISO: INSTALL_DAY,
+    }));
+    const restarted = quiet(() => resolvedDays(editInstall.blockOneStart, INSTALL_DAY));
+    return {
+      applied: result.ok,
+      changed: afterSignature !== visibleSignature(before),
+      restarted: restart.ok,
+      exact: visibleSignature(restarted) === afterSignature,
+      detail: JSON.stringify({
+        kind, target: target.dateISO, result, before, after, restarted,
+      }),
+    };
+  };
+  const addRestart = await restartEditWitness('add_category');
+  ok('session Add reaches a non-vacuous accepted state before restart',
+    addRestart.applied && addRestart.changed, addRestart.detail);
+  ok('session Add survives process death byte-for-byte',
+    addRestart.restarted && addRestart.exact, addRestart.detail);
+  const swapRestart = await restartEditWitness('swap_category');
+  ok('session Swap reaches a non-vacuous accepted state before restart',
+    swapRestart.applied && swapRestart.changed, swapRestart.detail);
+  ok('session Swap survives process death byte-for-byte',
+    swapRestart.restarted && swapRestart.exact, swapRestart.detail);
 
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);

@@ -29,10 +29,8 @@ import {
   firstShapedDateInWeek,
 } from '../rules/durableFactHorizon';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
-import {
-  activeUserRemovalConstraintsForWeek,
-  applyAthleteRemovalTypedReduction,
-} from '../rules/userRemovalConstraints';
+import { activeUserRemovalConstraintsForWeek } from '../rules/canonicalWeeklyAthleteEditState';
+import { compileCanonicalAthleteEditedContract } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
   REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
   reversibleAdjustmentId,
@@ -414,12 +412,12 @@ function reconcileOverlayContract(args: {
     const finalised = rebased.evaluation.contract;
     const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
     if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
-    let next = finalised;
-    for (const constraint of activeRemovals) {
-      next = applyAthleteRemovalTypedReduction({
-        contract: next, workouts: rebased.visibleWorkouts, weekStart: args.weekStart, constraint,
-      });
-    }
+    const next = compileCanonicalAthleteEditedContract({
+      contract: finalised,
+      workouts: rebased.visibleWorkouts,
+      weekStartISO: args.weekStart,
+      constraints: activeRemovals,
+    });
     if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
     contract = next;
   }

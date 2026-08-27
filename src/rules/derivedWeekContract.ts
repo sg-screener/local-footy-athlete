@@ -10,7 +10,7 @@
  */
 import type { UserRemovalConstraint, Workout } from '../types/domain';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
-import { applyAthleteRemovalTypedReduction } from './userRemovalConstraints';
+import { compileCanonicalAthleteEditedContract } from './canonicalWeeklyAthleteEditCompiler';
 
 /** Diagnostic compatibility surface; no product reader consumes it. */
 export const lastTierFourDerivation: {
@@ -36,31 +36,16 @@ export interface RemovalAdjustedWeekContractInput {
 export function applyRemovalLedgerToWeekContract(
   args: RemovalAdjustedWeekContractInput,
 ): WeeklyExposureContractV2 {
-  const weekStart = args.weekStart.slice(0, 10);
-  const weekEnd = (() => {
-    const date = new Date(`${weekStart}T12:00:00`);
-    date.setDate(date.getDate() + 6);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      + `-${String(date.getDate()).padStart(2, '0')}`;
-  })();
-  const speaking = (args.userRemovalConstraints ?? []).filter((constraint) =>
-    constraint.status === 'active' &&
-    constraint.targetDate >= weekStart && constraint.targetDate <= weekEnd);
-  if (speaking.length === 0 || !args.workouts) return args.contract;
-
-  let result = args.contract;
-  for (const constraint of speaking) {
-    const alreadyTyped = (result.authorisedReductions ?? []).some((reduction) =>
-      reduction.deletionIdentity === constraint.id);
-    if (alreadyTyped) continue;
-    result = applyAthleteRemovalTypedReduction({
-      contract: result,
-      workouts: args.workouts,
-      weekStart,
-      constraint,
-    });
-  }
-  return result;
+  if (!args.workouts) return args.contract;
+  // Contract arithmetic belongs to the same semantic athlete-edit compiler as
+  // visible placement. This adapter remains only because derived-week callers
+  // still consume the historical contract-shaped API.
+  return compileCanonicalAthleteEditedContract({
+    contract: args.contract,
+    workouts: args.workouts,
+    weekStartISO: args.weekStart,
+    constraints: args.userRemovalConstraints,
+  });
 }
 
 /** Compatibility name for existing non-fixture callers and old diagnostics. */

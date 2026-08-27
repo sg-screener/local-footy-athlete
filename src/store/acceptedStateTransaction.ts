@@ -1292,7 +1292,7 @@ function derivedContractForAcceptedWeek(args: {
  * constraint ids this adjustment carries`, read off the contract the week
  * actually derives to — not the set difference of two stored contracts.
  *
- * Why the diff cannot survive: `applyAthleteRemovalTypedReduction` returns a
+ * Why the diff cannot survive: `compileCanonicalAthleteEditedContract` returns a
  * whole contract with the reduction folded into its targets, and leg (i) stops
  * persisting that arithmetic. An after-minus-before over the stored surface is
  * therefore empty by construction, and an empty link means the undo cannot

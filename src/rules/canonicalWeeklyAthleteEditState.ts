@@ -3,10 +3,11 @@
  *
  * Add, swap, move and remove doors persist typed user-removal constraints.
  * This module translates those records once for one Monday-start week. The
- * compiler consumes the resulting day placements; read surfaces never
- * interpret mutation kind, remainingWorkout or wholeDayRestOwned themselves.
+ * compiler consumes the resulting day placements and contract-reduction
+ * requests; read surfaces never interpret mutation kind, remainingWorkout,
+ * wholeDayRestOwned or reduction scope themselves.
  */
-import type { UserRemovalConstraint, Workout } from '../types/domain';
+import type { UserRemovalConstraint, UserRemovalScope, Workout } from '../types/domain';
 import { athletePlacementFor } from './athletePlacement';
 
 function clone<T>(value: T): T {
@@ -46,12 +47,19 @@ export interface CanonicalWeeklyAthleteEditPlacement {
   readonly workout: Workout | null;
 }
 
+export interface CanonicalWeeklyAthleteEditReductionRequest {
+  readonly constraintId: string;
+  readonly targetDate: string;
+  readonly scope: UserRemovalScope;
+}
+
 export interface CanonicalWeeklyAthleteEditState {
   readonly kind: 'weekly_athlete_edits';
   readonly id: string;
   readonly weekStartISO: string;
   readonly activeConstraintIds: readonly string[];
   readonly placements: readonly CanonicalWeeklyAthleteEditPlacement[];
+  readonly reductionRequests: readonly CanonicalWeeklyAthleteEditReductionRequest[];
 }
 
 function ownedWorkout(args: {
@@ -147,5 +155,14 @@ export function canonicalWeeklyAthleteEditStateFrom(args: {
     activeConstraintIds: active.map((constraint) => constraint.id),
     placements: [...byDate.values()].sort((left, right) =>
       left.dateISO.localeCompare(right.dateISO)),
+    reductionRequests: active
+      .filter((constraint) => dateIsInWeek(
+        constraint.targetDate, weekStartISO, weekEndISO,
+      ))
+      .map((constraint) => ({
+        constraintId: constraint.id,
+        targetDate: constraint.targetDate.slice(0, 10),
+        scope: constraint.scope,
+      })),
   };
 }

@@ -798,9 +798,75 @@ transaction-local today projection. Each kills its named cell.
 
 ### NOT COVERED
 
-- Add/swap durability across process death is still a real red finding and has
-  not been fixed here.
+- Add/swap **session** durability had not yet been measured on the current
+  contract. The old red durability suite exercises exercise-row edits and has
+  a stale onboarding fixture; it is not evidence that session edits disappear.
 - Athlete-edit contract reduction has not moved into the compiler.
 - Scheduled-deload is still outside the compiler.
+- Global rival-author zero and full-year archetype acceptance are not claimed.
+- Pixels, simulator and physical iPhone are not covered.
+
+## 2026-08-27 — step 11: athlete-edit contract reduction joins the compiler
+
+### Two options weighed
+
+1. Keep `userRemovalConstraints` as the arithmetic owner and let derived-week,
+   temporary-fact and fixture-repair loops call it independently.
+2. Translate active accepted constraints into semantic reduction requests beside
+   their placements, then let the athlete-edit compiler own the one contract
+   transform while the old API becomes a compatibility delegation.
+
+Option 2 landed. It removes the class where the same removal can be visible in
+the week but interpreted differently by one of three contract consumers.
+
+### Ownership and acceptance result
+
+Instrument unit: distinct production call sites invoking the retired contract
+reducer, plus distinct semantic compiler consumers.
+
+- Production callers of `applyAthleteRemovalTypedReduction`: **3 before, 0
+  after**.
+- Contract-reduction rival authors: **0**. Derived-week contract projection,
+  temporary-source-fact reconciliation and fixture repair all call
+  `compileCanonicalAthleteEditedContract`.
+- `CanonicalWeeklyAthleteEditState` now carries typed, week-scoped reduction
+  requests using the accepted constraint id, target date and scope.
+- Reduction identity now uses the exact accepted constraint id instead of
+  matching prose containing a date. This keeps two removals on one date
+  independently reversible; the historical deletion diagnostic gained one
+  passing regression cell after the move.
+- Current-contract cold-start witnesses prove session Add and session Swap each
+  change a real generated week and survive process death byte-for-byte. The
+  earlier session-durability concern is closed as a misclassification: the old
+  red suite covers exercise-row changes, not session changes.
+
+Tests-first ownership cells began **6 red** before the extraction. After the
+move, `test:canonical-weekly-compiler` is **154/154**. Source mutations remove
+the semantic request mapping, contract loop and consumer delegation and kill
+their named cells.
+
+### Verification
+
+- `npm run test:canonical-weekly-compiler`: **154/154**.
+- `npm run test:placement-ownership`: **22/22**.
+- `npm run test:deletion-calendar-ownership`: **4/4**.
+- `npm run test:day-precedence-ownership`: **6/6**.
+- `npm run test:section18-delivered-remaining`: **8/8**.
+- `npm run test:athlete-session-deletion`: historical diagnostic remains red,
+  but improves from **7/24 to 8/24 regression cells**; properties remain 4/5
+  and mutations 3/3.
+- Repository typecheck remains red only in shared/inherited files and reports no
+  error in a file changed by this slice.
+- `test:derived-week-lawfulness` is blocked before the slice by a stale fixture
+  missing required gender. `test:temporary-source-facts` reaches its existing
+  call to the removed `migrateLegacyTemporarySourceFacts` export and stops.
+
+### NOT COVERED
+
+- Exercise-row add/swap/remove and their durable replay are a separate edit
+  family and have not entered this compiler.
+- Accepted decision-ledger replay is still procedural rather than one pure
+  compiler fold.
+- Scheduled-deload remains outside the compiler.
 - Global rival-author zero and full-year archetype acceptance are not claimed.
 - Pixels, simulator and physical iPhone are not covered.

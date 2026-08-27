@@ -153,6 +153,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-canonical-weekly-compiler-athlete-edit-contract',
+    law: 'Accepted athlete session edits have one semantic weekly state and one contract-reduction compiler: active removal constraints become typed, week-scoped reduction requests, every production contract consumer delegates to that compiler, and no production caller invokes the retired reduction author; session Add and Swap must each survive process death byte-for-byte.',
+    ruledAt: 'docs/STATUS_TESTTRUTH.md step 11 (athlete-edit contract reduction); Sam, 2026-08-27: successive "go" instructions continuing the canonical compiler migration.',
+    guard: {
+      state: 'guarded',
+      by: 'test:canonical-weekly-compiler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-27 by seat `testtruth`. TWO OPTIONS COMPARED: retain the reducer in `userRemovalConstraints` with three production callers, or translate accepted constraints into semantic reduction requests and let `compileCanonicalAthleteEditedContract` own the transform. The semantic compiler landed. Distinct production callers of the retired reducer: 3 before, 0 after; contract-reduction rival authors: 0. Derived-week projection, temporary-fact reconciliation and fixture repair delegate. Exact constraint ids replace date-in-prose identity, so same-date removals remain independently reversible. Current-contract cold starts prove session Add and Swap each change a real week and survive restart byte-for-byte. TEST FIRST: six ownership cells were red; LIVE: compiler 154/154, placement 22/22, deletion-calendar 4/4, day-precedence 6/6, Section 18 delivered/remaining 8/8. The historical deletion diagnostic improved from 7/24 to 8/24 regression cells without losing its 4/5 property or 3/3 mutation counts. NOT COVERED: exercise-row edit durability, procedural decision-ledger replay as a pure compiler fold, scheduled deload, global rival-author zero, full-year archetypes, pixels, simulator and physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-release-gate-runs-only-validated-current-contracts',
     law: 'The release gate is npm run test:release and derives every product witness from validated current-contract census rows; the red test:bible fleet remains diagnostic evidence and has no authority to change product behaviour.',
     ruledAt: 'docs/STATUS_TESTTRUTH.md "step 3: one small green release gate"; Sam, 2026-08-27: "Establish one small, genuinely green release gate" after ordering the current red fleet to stop acting as a product to-do list.',

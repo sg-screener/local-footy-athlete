@@ -36,7 +36,7 @@ import { getSessionComponentRows } from './sessionComponents';
 import { resolveSessionDisplayName } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import { activeUserRemovalConstraintsForWeek } from '../rules/canonicalWeeklyAthleteEditState';
-import { applyAthleteRemovalTypedReduction } from '../rules/userRemovalConstraints';
+import { compileCanonicalAthleteEditedContract } from '../rules/canonicalWeeklyAthleteEditCompiler';
 import {
   athleteActionDiagnosticHash,
   classifyAthleteActionFailure,
@@ -1440,11 +1440,11 @@ export function buildFixtureMinimalReplan(
       (left.gateway.failureSignature ?? '').localeCompare(right.gateway.failureSignature ?? ''))[0];
     const reductionSource = bestRejected?.workouts ?? source;
     const visible = bestRejected?.gateway.visibleWorkouts ?? visibleResolver(args)(source);
-    let reducedContract = applyAthleteRemovalTypedReduction({
+    let reducedContract = compileCanonicalAthleteEditedContract({
       contract,
       workouts: visible,
-      weekStart: args.weekStart,
-      constraint,
+      weekStartISO: args.weekStart,
+      constraints: [constraint],
     });
     let reducedGateway: Section18AcceptedWeekGatewayResult;
     for (let attempt = 0; ; attempt += 1) {
@@ -1461,11 +1461,11 @@ export function buildFixtureMinimalReplan(
       // Safety finalisation can expose a second-order shortfall (for example,
       // a now-unrepresentable strength pattern). Reduce from that accepted-
       // state candidate as well; the loop is monotonic and strictly bounded.
-      const nextContract = applyAthleteRemovalTypedReduction({
+      const nextContract = compileCanonicalAthleteEditedContract({
         contract: reducedContract,
         workouts: reducedGateway.visibleWorkouts,
-        weekStart: args.weekStart,
-        constraint,
+        weekStartISO: args.weekStart,
+        constraints: [constraint],
       });
       if (JSON.stringify(nextContract) === JSON.stringify(reducedContract)) break;
       reducedContract = nextContract;
