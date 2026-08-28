@@ -27,6 +27,7 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
 }) {
   const { stage } = args;
   const primaryInjury = stage.bucket ? { bucket: stage.bucket, severity: stage.severity,
+    triggers: stage.triggers,
     seriousSymptoms: stage.seriousSymptoms === true } : null;
   const environment = resolveTapSwapEnvironment({ date: args.dateISO, profile: args.profile,
     activeConstraints: [...args.constraints], primaryInjury });
@@ -43,14 +44,18 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
   let workout = args.workout;
   for (const substitution of plan.substitutions) {
     if (!substitution.to.name) continue;
-    const previous = workout.exercises.find(row => row.exercise?.name === substitution.from)?.substitutedFrom;
+    const originalRow = workout.exercises.find(row => row.exercise?.name === substitution.from);
+    const previous = originalRow?.substitutedFrom;
     const origin = previous?.cause === 'injury'
       ? previous.originExerciseName ?? previous.baseExerciseName : substitution.from;
     workout = compileCanonicalExerciseEditOnWorkout(workout, {
       kind: 'swap', decisionId: stage.id, occurredAt: stage.lastUpdatedAt ?? stage.startDate,
       dateISO: args.dateISO, targetName: substitution.from, targetComponentId: null,
       replacement: { name: substitution.to.name,
-        sets: substitution.to.prescription?.sets ?? 3,
+        // An injury swap keeps the already-reduced dose ceiling, including
+        // scheduled deload/readiness. Missing replacement dose is not 3 new sets.
+        sets: Math.min(originalRow?.prescribedSets ?? 3,
+          substitution.to.prescription?.sets ?? originalRow?.prescribedSets ?? 3),
         repsMin: substitution.to.prescription?.repsMin ?? 8,
         repsMax: substitution.to.prescription?.repsMax ?? 12,
         weight: loadForReplacementExercise({ exerciseName: substitution.to.name,

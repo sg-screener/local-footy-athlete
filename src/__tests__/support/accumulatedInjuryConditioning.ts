@@ -9,6 +9,7 @@ import { buildGuidedInjuryConstraint } from '../../utils/guidedInjuryControl';
 import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
 import { project } from '../../rules/projectVisibleWeek';
+import { getExerciseTags } from '../../data/exerciseTags';
 
 // The reported world: actual onboarding, seven logged weeks, week-eight
 // shoulder restriction during a scheduled deload, including mixed sessions.
@@ -59,9 +60,17 @@ export async function accumulatedInjuryConditioning(
     if (rolled.refusal) throw new Error(JSON.stringify(rolled.refusal));
     quiet(() => followTheWeek(weekStart));
     setJourneyClock(date);
+    const tired = await quietAsync(() => executeProgramControlActionDurably(
+      readinessActionForKind('tired_today', { anchorDateISO: date, todayISO: date }), { todayISO: date }));
+    ok(`${gender}: active readiness precedes shoulder during deload`, tired.ok);
     const view = () => quiet(() => deriveVisibleWeekLive(weekStart, date));
     const before = view();
     const baseline = visibleSignature(before);
+    const presses = (days: ReturnType<typeof view>) => days.filter(d => d.date >= date).flatMap(d =>
+      d.workout?.exercises.filter(r => ['horizontal_push', 'vertical_push'].includes(
+        getExerciseTags(r.exercise.name)?.movement ?? '')).map(r => `${d.date}:${r.exercise.name}`) ?? []);
+    ok(`${gender}: accumulated world contains affected pressing before restriction`, presses(before).length > 0);
+    const sets = (day: ReturnType<typeof view>[number]) => day.workout?.exercises.reduce((sum, row) => sum + (row.prescribedSets ?? 0), 0) ?? 0;
     const week = useProgramStore.getState().currentProgram?.microcycles.find(w => w.startDate.slice(0, 10) === weekStart);
     ok(`${gender}: reached week 8 deload after seven logged weeks`, logged > 20 && week?.weekKind === 'deload',
       JSON.stringify({ loggedDays: logged, weekStart, weekKind: week?.weekKind }));
@@ -97,9 +106,14 @@ export async function accumulatedInjuryConditioning(
         !['Barbell Bike', 'Chest-Supported DB Bike'].includes(r.exercise.name)) ?? true));
     };
     assertProjection('live');
+    ok(`${gender}: live accumulated week removes the painful movement family`, presses(view()).length === 0, JSON.stringify(presses(view())));
+    const doseGrowth = view().filter(day => day.date >= date && sets(day) > sets(before.find(d => d.date === day.date)!));
+    ok(`${gender}: shoulder replacement does not increase reduced session sets`, doseGrowth.length === 0,
+      JSON.stringify(doseGrowth.map(day => ({ date: day.date, before: sets(before.find(d => d.date === day.date)!), after: sets(day) }))));
     const reboot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
     ok(`${gender}: injury and prescriptions survive restart`, reboot.ok && visibleSignature(view()) === active);
     assertProjection('restarted');
+    ok(`${gender}: restarted accumulated week cannot restore painful pressing`, presses(view()).length === 0, JSON.stringify(presses(view())));
     const cleared = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
       scope: 'current_and_future', payload: { episodeId: action.createdModifierIds?.[0] }, source,
       requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false }, { todayISO: date }));

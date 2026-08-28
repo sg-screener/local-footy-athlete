@@ -1367,6 +1367,7 @@ export function resolveInjuryRecompositionInputs(args: {
       bucket: args.constraint.bucket as TapSwapPrimaryInjury['bucket'],
       severity: args.constraint.severity,
       seriousSymptoms: args.constraint.seriousSymptoms === true,
+      triggers: args.constraint.triggers,
     }
     : null;
   const environment = resolveTapSwapEnvironment({
@@ -1502,6 +1503,7 @@ async function executeProgramControlActionDurablyWithinTrace(
               bucket: action.payload.constraint!.bucket as never,
               severity: action.payload.constraint!.severity,
               seriousSymptoms: false,
+              triggers: action.payload.constraint!.triggers,
             }
             : null,
         }),

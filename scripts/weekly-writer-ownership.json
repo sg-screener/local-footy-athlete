@@ -147,7 +147,7 @@
       "reason": "Shared final-row semantic/material normalizer is invoked only by canonical generation and canonical accepted-template materialization. No independent store publisher; typed intent and row evidence take precedence over legacy ingress."
     },
     "src/utils/programControlActions.ts#executeProgramControlActionDurablyWithinTrace": {
-      "fingerprint": "33cb8ba92e2e981429873848b90689e205a92f745f5b692d6cffeba398f19e00",
+      "fingerprint": "91dd63fd7317b8209695876388b2ec071029b431af07ebce8860f4ba26b405f5",
       "classification": "canonical_input_writer",
       "reason": "Reviewed 2026-08-28: durable dispatcher still routes facts/edits to their accepted owners. Injury acknowledgement now compares the same visible day's prescription before/after, excluding restriction/audit annotations; no new mutation or publisher. Clear still recompiles surviving inputs; direct sites remain reads/helper arguments."
     },
@@ -462,7 +462,7 @@
       "reason": "Builds coach snapshot and strength/load histories by reading visible weeks and recorded outcomes; produces reporting DTOs, not program rows."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryStage": {
-      "fingerprint": "45d860ea51fced6d917511dd4860c35e571b302ebfb4857e66b7bf863277bb8d",
+      "fingerprint": "5c6c094fcdeb913506d2595ec9d602dbdfc92f2bc6d9f8313b8e20e95c58060f",
       "classification": "canonical_compiler",
       "reason": "Shared explicit injury-stage compiler applies canonical exercise swaps, injury adjustment and conditioning feasibility, then carries typed row roles through evidence normalization."
     },
@@ -962,7 +962,7 @@
       "reason": "Formats accepted-state presence/type counts only; no mutation."
     },
     "src/utils/programControlActions.ts#resolveInjuryRecompositionInputs": {
-      "fingerprint": "8609418294521a2377fc0c9f88a41d5f1958f682d5945a68c7046f5cccce7e97",
+      "fingerprint": "564e8855f11a54e9332f699f249eba78dbc3ff829d90ab6c90a54307135087fb",
       "classification": "projection_display",
       "reason": "Builds injury preview inputs from current workout, facts, profile and exclusions; no replacement is authored here."
     },

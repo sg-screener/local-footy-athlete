@@ -181,7 +181,7 @@ export function injuryWithholdingsOn(args: {
     const canonical = resolveExerciseName(name);
     for (const episode of episodes) {
       if (!episode.bucket) continue;
-      if (!injuryWithholdsExistingRow(canonical, episode.bucket as InjuryKey, episode.severity)) {
+      if (!injuryWithholdsExistingRow(canonical, episode.bucket as InjuryKey, episode.severity, episode.triggers)) {
         continue;
       }
       out.push({

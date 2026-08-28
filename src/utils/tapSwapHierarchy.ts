@@ -49,6 +49,7 @@ export interface TapSwapPrimaryInjury {
   bucket: InjuryBucket;
   severity: number;
   seriousSymptoms?: boolean;
+  triggers?: readonly string[];
 }
 
 export interface TapSwapEnvironment {
@@ -73,6 +74,8 @@ export interface TapSwapEnvironment {
    * speak the coarse vocabulary, at the point of use.
    */
   injurySeverities: Partial<Record<InjuryKey, number>>;
+  /** Projected from the dated injury decisions, never persisted separately. */
+  injuryTriggers?: Partial<Record<InjuryKey, readonly string[]>>;
   primaryInjury: TapSwapPrimaryInjury | null;
   availableEquipment: EquipmentClass[];
   availableEquipmentTags: EquipmentTag[];
@@ -201,12 +204,16 @@ export function resolveTapSwapEnvironment(args: {
     args.date,
   );
   const injurySeverities: Partial<Record<InjuryKey, number>> = {};
+  const injuryTriggers: Partial<Record<InjuryKey, readonly string[]>> = {};
   let primaryInjury = args.primaryInjury ?? null;
 
   for (const constraint of constraints) {
     if (constraint.type !== 'injury' && constraint.type !== 'soreness') continue;
     const bucket = constraint.bucket as InjuryBucket | null;
     if (!bucket) continue;
+    if (constraint.type === 'injury') injuryTriggers[bucket] = [...new Set([
+      ...(injuryTriggers[bucket] ?? []), ...(constraint.triggers ?? []),
+    ])];
     // THE WORST THE ATHLETE REPORTED FOR THIS REGION, so neither question is
     // answered from a milder constraint that happens to be listed later.
     if ((injurySeverities[bucket] ?? 0) < constraint.severity) {
@@ -218,6 +225,7 @@ export function resolveTapSwapEnvironment(args: {
         severity: constraint.severity,
         seriousSymptoms:
           constraint.type === 'injury' && constraint.seriousSymptoms === true,
+        triggers: injuryTriggers[bucket],
       };
     }
   }
@@ -226,6 +234,9 @@ export function resolveTapSwapEnvironment(args: {
     && (injurySeverities[args.primaryInjury.bucket] ?? 0) < args.primaryInjury.severity) {
     injurySeverities[args.primaryInjury.bucket] = args.primaryInjury.severity;
   }
+  if (args.primaryInjury?.triggers) injuryTriggers[args.primaryInjury.bucket] = [...new Set([
+    ...(injuryTriggers[args.primaryInjury.bucket] ?? []), ...args.primaryInjury.triggers,
+  ])];
 
   const availableEquipmentTags = resolveEquipmentAvailability(
     args.profile,
@@ -242,6 +253,7 @@ export function resolveTapSwapEnvironment(args: {
 
   return {
     injurySeverities,
+    injuryTriggers,
     primaryInjury,
     availableEquipment: equipmentTagsToSubstituteEquipmentClasses(
       availableEquipmentTags,
@@ -480,7 +492,7 @@ export function assessTapSwapCandidateSafety(
     return { safe: false, reason: 'The replacement cannot be verified against the active injury.' };
   }
   for (const [bucket, severity] of activeInjuryEntries) {
-    if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), bucket, severity)) {
+    if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), bucket, severity, environment.injuryTriggers?.[bucket])) {
       return { safe: false, reason: `The replacement still loads the active ${bucket} issue.` };
     }
   }
@@ -539,7 +551,7 @@ export function injuryRequiresChange(
      * exercise the injury sheet does not rate — right for a replacement, wrong
      * here, where it struck every untagged row off the athlete's session for
      * every injury. See `injuryWithholdsExistingRow`. */
-    if (injuryWithholdsExistingRow(resolveExerciseName(name), region, severity)) {
+    if (injuryWithholdsExistingRow(resolveExerciseName(name), region, severity, environment.injuryTriggers?.[region])) {
       return true;
     }
   }
@@ -726,6 +738,10 @@ export function getTapSwapChoices(args: {
   // A caller may hand this function a primary injury the environment was not
   // resolved with — the day screen does exactly that — so it folds in here.
   const injurySeverities = { ...args.environment.injurySeverities };
+  const injuryTriggers = { ...args.environment.injuryTriggers };
+  if (primaryInjury?.triggers) injuryTriggers[primaryInjury.bucket] = [...new Set([
+    ...(injuryTriggers[primaryInjury.bucket] ?? []), ...primaryInjury.triggers,
+  ])];
   if (primaryInjury && (injurySeverities[primaryInjury.bucket] ?? 0) < primaryInjury.severity) {
     injurySeverities[primaryInjury.bucket] = primaryInjury.severity;
   }
@@ -735,6 +751,7 @@ export function getTapSwapChoices(args: {
     {
       ...args.environment,
       injurySeverities,
+      injuryTriggers,
       primaryInjury: primaryInjury ?? null,
       medicalStop:
         args.environment.medicalStop || primaryInjury?.seriousSymptoms === true,

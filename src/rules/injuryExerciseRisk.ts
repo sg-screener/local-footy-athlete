@@ -6,7 +6,8 @@
  * risky work even when their base tag is `caution` rather than `avoid`.
  */
 
-import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
+import { getExerciseTags, type InjuryKey, type MovementPattern } from '../data/exerciseTags';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { injurySeverityRemovesRiskyWork } from './injurySeverityBands';
 
 /**
@@ -80,6 +81,35 @@ function loadedThroughTheInjuredLimb(args: {
 }
 
 export type InjuryExerciseRisk = 'avoid' | 'caution' | 'good' | 'unknown';
+
+/** Bible §8: an explicit painful movement remains excluded at every active
+ * band. These are movement identities, not a second exercise replacement list.
+ * A named exercise excludes that identity only; an unknown/free-text complaint
+ * is not silently expanded to an entire region. */
+const TRIGGER_MOVEMENTS: Readonly<Record<string, readonly MovementPattern[]>> = {
+  pressing: ['horizontal_push', 'vertical_push'],
+  pushing: ['horizontal_push', 'vertical_push'],
+  pulling: ['horizontal_pull', 'vertical_pull'],
+  'overhead pressing': ['vertical_push'],
+  'overhead pulling': ['vertical_pull'],
+  squatting: ['squat'],
+  lunging: ['lunge'],
+  hinging: ['hinge'],
+  jumping: ['plyo'],
+  carrying: ['carry'],
+};
+
+export function injuryTriggerMatchesExercise(exerciseName: string, triggers: readonly string[]): boolean {
+  const canonical = canonicalExerciseName(exerciseName).trim().toLowerCase();
+  const movement = getExerciseTags(exerciseName)?.movement;
+  return triggers.some(trigger => {
+    const key = trigger.trim().toLowerCase();
+    const patterns = TRIGGER_MOVEMENTS[key];
+    if (patterns) return !!movement && patterns.includes(movement);
+    // An explicit catalogue identity is narrower than its movement family.
+    return !!getExerciseTags(trigger) && canonicalExerciseName(trigger).trim().toLowerCase() === canonical;
+  });
+}
 
 export function classifyExerciseRiskForBucket(
   exerciseName: string,
@@ -201,7 +231,9 @@ export function injuryPermitsExerciseAtSeverity(
   exerciseName: string,
   bucket: InjuryKey,
   severity: number,
+  triggers: readonly string[] = [],
 ): boolean {
+  if (severity > 0 && injuryTriggerMatchesExercise(exerciseName, triggers)) return false;
   const risk = classifyExerciseRiskForBucket(exerciseName, bucket, severity);
   if (risk === 'avoid' || risk === 'unknown') return false;
   if (risk === 'good') return true;
@@ -248,7 +280,9 @@ export function injuryWithholdsExistingRow(
   exerciseName: string,
   bucket: InjuryKey,
   severity: number,
+  triggers: readonly string[] = [],
 ): boolean {
+  if (severity > 0 && injuryTriggerMatchesExercise(exerciseName, triggers)) return true;
   const risk = classifyExerciseRiskForBucket(exerciseName, bucket, severity);
   if (risk === 'unknown') return false;
   if (risk === 'avoid') return true;
