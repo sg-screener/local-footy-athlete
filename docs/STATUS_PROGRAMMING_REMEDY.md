@@ -378,13 +378,58 @@ five-decision list, not the verified candidate receipts above. Work is in
 progress; no new candidate verification or physical acceptance is claimed.
 No phone install, launch, reset or wipe. Other seat's `docs/NOW.md` untouched.
 
+## Follow-up delivery — saved product candidate 38457383
+
+Product commit: `38457383935fe9bbe5b522c78647f97b94a52c68`. The five decisions
+above are answered and implemented through the existing owners. Baseline
+`8dbcbc00` and its evidence remain untouched. This final status/report save is
+documentation-only; neither phone has been installed, launched, reset or wiped.
+
+- Exact release gate: 20/20 units green, exit 0; 23 current product contracts,
+  bootstrap and all-scope typecheck (zero errors in all three scopes).
+  Existing annual verdict: 416/416 green athlete-weeks and 416 restarts, eight
+  distinct profiles, zero distinct failure keys. Canonical slice 1,891/1,891;
+  modifier lifecycle 248/248. Writer census 1,138/1,138 reviewed, zero unresolved,
+  rival authors or derived-output writers. No allowance increased.
+- All 38 named in-memory mutations landed and failed the intended witnesses;
+  the runner recorded candidate `38457383` before and after. Original 24 retained.
+- Four final illustrated years use identical inputs to baseline within each
+  partial/commercial kit world: 52 weeks, 364 dates and 52 successful restarts
+  per athlete/world. All four artifact audits passed. Original evidence retained.
+- All 55 conditioning templates reviewed as output. 110 dose variants / 220
+  rendered rows have unchanged numeric dose and Work/Recovery text. Actual mode
+  output was also reviewed across four equipment worlds. Missing Bodyweight
+  Circuit movements/mode eligibility and Erg Flush Blocks' cap-reading
+  restriction are explicitly still open, not hidden by field-presence tests.
+- Separate non-repeating Mobility/Recovery: 14 real male/female journeys,
+  104 assertions, including derived strength warm-ups, separate completion,
+  session limits, Undo and restart. P16 no-rack/no-barbell: four real worlds,
+  12 assertions with restart. Full P01–P22 ledger is in the follow-up report.
+- Six full simulator flows passed. Additional non-seeded phase/Clear/restart
+  reached and was verified in place using its exact accessible label. Failed
+  injury-answer tap and scratch-label attempts remain in the logs; no claim of
+  uninterrupted seven-flow success or reliable onboarding taps is made.
+- Clean isolated Release build and deep/strict signature verification succeeded:
+  1.0.0 (1), bundle `007eeee7740accd023981e313e05fdc78d222e0e3e5641b1649347dc619ff1ad`.
+  All 2,344 tracked source files matched the saved candidate before/after build.
+  The isolated release-test checkout also matched all 2,344 before and after.
+  Not installed. Installation hold remains.
+
+Report: `PROGRAMMING_FOLLOWUP_2026-08-28.md`.
+Evidence: `outputs/programming-clarity-2026-08-28/candidate-38457383/`.
+Consolidated receipt: `final-verification.json` in that evidence directory.
+Other seat's `docs/NOW.md`, original handoffs and unrelated files remain untouched.
+
 ## NOT COVERED
 
-- Outstanding product decisions; all P01–P22 are not closed.
+- Bodyweight Circuit's four movements (Sam's answer) and incorrect eligibility;
+  Erg Flush Blocks' resolved-dose cap calculation (technical follow-up).
+  All P01–P22 are not closed.
 - Physical installation/acceptance, clinical validation and the 2 km tap fix.
 - All seven native Add choices and native guided painful-trigger entry;
   painful-trigger legality is held by actual accumulated compiler journeys.
 - Simulator launch/reload reliability, remote persistence, true OS-death fault
   injection, full Cartesian coverage and globally optimal spacing.
+- Onboarding 2 km skip-tap consistency and repeat injury-answer tap reliability.
 - Rendered HTML layout QA: local-file Browser access was rejected; no bypass or
   unperformed visual verification is claimed.
