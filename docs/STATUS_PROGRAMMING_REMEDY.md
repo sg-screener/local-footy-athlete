@@ -319,9 +319,63 @@ The scratch flow now waits for the transient toast to leave before tapping the
 Save control underneath it; it does not mistake an accessibility node for an
 uncovered button. A final exact-version release gate/build follows this UI fix.
 
+## Final candidate verification — 8dbcbc00
+
+Product candidate: `8dbcbc00c2bcccc5ad221eed6312de3ac78563aa`. This final status
+and `PROGRAMMING_REMEDIATION_REPORT_2026-08-28.md` are a documentation-only save.
+All earlier pending statements above are historical, superseded by these receipts.
+
+- Exact `npm run test:release`: 20/20 units green, exit 0. Scope: 23 current
+  product contracts plus test-truth bootstrap and all-scope typecheck. Product,
+  devtools and tests each report zero type errors.
+- Existing compiler-year verdict: 416/416 green athlete-weeks, eight distinct
+  athlete profiles × 52 weeks, 416 successful weekly restarts, zero distinct
+  failure keys. Progression, deload, logging, phases, fixtures and accumulated
+  facts remain in the acceptance surface.
+- Writer census: 1,136/1,136 distinct executable capability owners reviewed,
+  zero unresolved, zero rival authors, zero derived-output writers. No authority
+  allowance was increased.
+- All 24 named in-memory domain mutations landed and failed their intended
+  witnesses. Undo layer mutation is additionally held by its 28/28 suite.
+- Four illustrated years regenerated at this candidate: male/female × original
+  partial/corrected commercial kit, 52 weeks and 364 dates each, 52 successful
+  restarts each. Artifact audit: no projection error, trainable painful press in
+  the measured shoulder window, corrupt name, empty lifting dose or missing
+  conditioning mode. Before/after frequency and spacing accompany the HTML.
+- Native Mobility+Gunshow Add → drag → Undo → drag → Save → restart passed.
+  Real non-seeded onboarding/phase-change and its process restart passed.
+  Readiness/load/Clear/restart, conditioning/logging and swap/load/restart passed.
+  These are six distinct passing flow receipts, not an uninterrupted six-flow
+  process. Cold entry and readiness reload each had a stopped-app attempt;
+  unchanged individual retries passed. No new app crash report accompanied the
+  readiness interruption. Those failures remain in the logs, not erased.
+- Clean isolated Release build succeeded; signature verification exit 0.
+  Version 1.0.0 (1), bundle SHA-256
+  `3b138b218c12523c493c3fe089158e2187d212c1ef39cfeca5111ac484e7212b`.
+  Both isolated checkouts matched all 2,337 tracked candidate files before and
+  after verification. Main checkout's only tracked mismatch during simulator
+  verification was the unrelated, preserved `docs/NOW.md` edit.
+
+Consolidated receipts:
+`outputs/programming-remedy-2026-08-28/candidate-8dbcbc00/final-verification.json`.
+The final report contains every P01–P22 disposition, concrete remaining
+decisions, corrected report links, failed diagnostics and physical checklist.
+P07's authored active-recovery exceptions and P19's existing strength role are
+retained; they do not require a new decision merely to retain them. Sam still
+owns the no-rack slot/automatic lift preference, club-speed credit, new power
+routes, optional-flush need and second-Mobility/Recovery-part decisions.
+
+Installation remains held. No physical install, launch, reset or wipe was
+performed. Gates green is not physical acceptance. The unchanged onboarding
+flow passed the 2 km skip tap once; its inconsistency is still OPEN-UNKNOWN.
+
 ## NOT COVERED
 
-- Product questions above remain open; all P01–P22 are not closed.
-- Revised exact-version release, consolidated mutations, regenerated years and
-  final simulator flows are pending. Earlier candidate receipts are diagnostics.
-- No physical installation/acceptance, clinical validation or 2 km tap fix.
+- Outstanding product decisions; all P01–P22 are not closed.
+- Physical installation/acceptance, clinical validation and the 2 km tap fix.
+- All seven native Add choices and native guided painful-trigger entry;
+  painful-trigger legality is held by actual accumulated compiler journeys.
+- Simulator launch/reload reliability, remote persistence, true OS-death fault
+  injection, full Cartesian coverage and globally optimal spacing.
+- Rendered HTML layout QA: local-file Browser access was rejected; no bypass or
+  unperformed visual verification is claimed.
