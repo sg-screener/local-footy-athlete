@@ -85,5 +85,10 @@ tags:
     element:
       id: session-execution-toggle-conditioning
     direction: DOWN
-- assertVisible: "1/1"
+- assertVisible:
+    id: session-execution-toggle-conditioning
+    text: "Conditioning, 1 of 1 complete.*"
+- assertVisible:
+    id: "session-execution-check-exercise-cond-.*"
+    text: "Completed: .*"
 - takeScreenshot: artifacts/visible/conditioning-completed-reopened
