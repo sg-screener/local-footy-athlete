@@ -784,14 +784,18 @@ async function main(): Promise<void> {
       ask(9, true) !== null || ask(6, false) !== null, {
         redFlag: ask(9, true), ordinary: ask(6, false),
       });
-    ok('a red flag (8-10 AND serious symptoms) blocks the session',
+    ok('serious symptoms block affected work at the severe band',
       ask(9, true)?.code === 'red_flag_injury_session', ask(9, true));
     ok('a LIMITING injury (6-7) does not block — the athlete still trains',
       ask(6, false) === null, ask(6, false));
     ok('a PAUSE-band injury without serious symptoms does not block either',
       ask(9, false) === null, ask(9, false));
-    ok('serious symptoms BELOW the pause band do not block on their own',
-      ask(6, true) === null, ask(6, true));
+    // R-267 supersedes the old numeric-and-symptoms conjunction. Keep this
+    // predicate check independent of the UI and exercise every numeric band.
+    for (let severity = 1; severity <= 10; severity++) {
+      ok(`serious symptoms block affected work independently at severity ${severity}`,
+        ask(severity, true)?.code === 'red_flag_injury_session', ask(severity, true));
+    }
   }
 
   /* ── EVERY PATTERN THE MISSION NAMES WAS ACTUALLY WALKED ──────────────────

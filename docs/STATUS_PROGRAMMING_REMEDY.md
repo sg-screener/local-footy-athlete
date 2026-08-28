@@ -786,3 +786,10 @@ native corrected-copy/restart checks are required after this save.
 NOT COVERED: remaining native Add/Swap/severe/strength-plus-Mobility permutations,
 final revised-version release acceptance, physical iPhones and 2 km Skip QA
 acceptance. Installation remains held; no phone was installed to or reset.
+
+8ada6c67 release finished RED at 17/20 units: injury-fallback-journey had
+172 pass / 1 fail because its old predicate required serious symptoms AND a
+high numeric score. R-267 explicitly supersedes that expectation. Retired only
+that assertion, replacing it with all ten severity scores at the existing
+refusal owner. No product rule was weakened; earlier independent simple-flow
+and native low-score serious-symptom checks already held the current behaviour.
