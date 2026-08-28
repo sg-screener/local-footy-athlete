@@ -558,7 +558,7 @@ labels and the mutation runner entrypoint, with executed adapters proven equal
 to the saved helpers. Application and release-gated guard source remain 263369ba.
 Other seat's NOW, exercise intake, handoffs, outputs and fuse files are untouched.
 
-## NOT COVERED / remaining work
+## NOT COVERED / remaining work (263369ba release; follow-up below)
 
 - Physical iPhone acceptance and Release runtime on either phone. Installation
   hold remains; the entire original 22-item list is not called finished.
@@ -572,3 +572,39 @@ Other seat's NOW, exercise intake, handoffs, outputs and fuse files are untouche
 - Original onboarding wrong-answer/2 km uncertainty is now investigated and
   guarded with repeat simulator evidence, not closed solely by a retry;
   physical-device confirmation still belongs to the held acceptance step.
+
+## 28 August — simulator/spacing/diagnostic follow-up (in progress)
+
+Owner programming-remedy, continuing at 1922a995. No application changes or
+phone operations. Scope is Sam's three follow-up requests, not a rebuild.
+
+- Four old C12 failures reproduced (104/108), all obsolete categoryToFlavour
+  source expectations after 3417731e. Replaced with actual typed-category
+  selection/composition guard, also called by the release compiler witness.
+  Diagnostic now 152/152; four new category-loss mutants caught. All three
+  TypeScript scopes report zero errors. Historic law id/R-003 explicitly updated.
+- All four delivered-year inputs replayed for their first 12 weeks, identical
+  in every exported week/row/dose/modifier/restart result. Original 15 adjacent
+  conditioning pairs per year classify as five easy→hard and ten easy→easy.
+  Speed adds eight more easy→speed pairs omitted by the original measure.
+  Zero hard→hard; current five-exposure placement attains the mathematical
+  minimum adjacency with two non-core days. Six actual candidate receiver sets
+  were compared across all eight affected weeks. Illness week is separate.
+- Fresh real simulator onboarding/generation, then shoulder/slight through the
+  actual injury screens. Proven missing painful-movement entry: severity
+  submits immediately, and older UI tests intentionally forbid the trigger
+  step. Asked Sam about restoring it; no silent UI/product reversal.
+- Real shoulder modifier survives reopening and clears/stays cleared after
+  reopening. Original wrong selector/invalid diagnostic-purpose attempts are
+  retained; final valid-purpose rerun pending. Add Mobility, second Mobility,
+  visible Undo and reversal reached natively; drill comparison and other
+  Add/game-adjacent combinations continue.
+
+Receipt in progress: docs/PROGRAMMING_GAP_CLOSURE_2026-08-28.md.
+Evidence: outputs/programming-gap-closure-2026-08-28/ (new, originals untouched).
+
+### NOT COVERED — follow-up
+
+Painful-trigger screen input remains missing; remaining Add permutations,
+final exact-checkpoint release verification and physical acceptance remain.
+Installation hold stands. No claim that P01–P22 are all finished.

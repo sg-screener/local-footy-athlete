@@ -5,6 +5,10 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  category_missing_pool: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('aerobic_power');", 'return [];', 'categories', 'vo2: nonempty pool contains only its intended qualities'],
+  category_lossy_cod: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('cod_decel');", "return templatesOfQuality('anaerobic');", 'categories', 'cod_decel: nonempty pool contains only its intended qualities'],
+  category_new_vocabulary: ['src/rules/offseasonSubphasePolicy.ts', "| 'cod_decel';", "| 'cod_decel' | 'unhandled_quality';", 'categories_source', 'OffseasonConditioningCategory has a nonempty, fully accounted vocabulary'],
+  category_recovery_identity: ['src/rules/conditioningSelection.ts', "if (role === 'optional_recovery_aerobic' || role === 'optional_flush') {", "if (role === 'optional_recovery_aerobic') {", 'categories', 'optional_flush: recovery demand selects flush'],
   flush_fixed_target: ['src/screens/home/dayWorkoutHelpers.ts', '`${exercise.prescribedSets} × ${base} ${unit}`', '`${exercise.prescribedSets} × ${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax} ${unit}`', 'flush', 'fixed interval headline has one target'],
   flush_duration: ['src/data/conditioningTemplates.ts', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) {', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) { rounds *= 3;', 'flush', 'complete session is under 15 minutes'],
   flush_intensity: ['src/data/conditioningTemplates.ts', "intensity: 'Easy, 2–3/10; full conversation throughout'", "intensity: 'Hard, 8/10'", 'flush', 'easy throughout, transitions inside recovery'],
@@ -63,7 +67,7 @@ const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {
   require(path.join(repo, 'node_modules/sucrase/register'));
   const [file, from, to, witness] = mutants[child];
-  if (witness === 'onboarding') {
+  if (witness === 'onboarding' || witness === 'categories_source') {
     const read = fs.readFileSync;
     fs.readFileSync = (filename, ...args) => {
       const result = read(filename, ...args);
@@ -74,7 +78,8 @@ if (child) {
       return code.replace(from, to);
     };
     let failures = 0;
-    require(path.join(repo, 'src/__tests__/support/onboardingTapTruth')).onboardingTapTruth((label, value) => {
+    const helper = witness === 'onboarding' ? 'onboardingTapTruth' : 'conditioningCategoryTruth';
+    require(path.join(repo, 'src/__tests__/support', helper))[helper]((label, value) => {
       if (!value) failures++;
       console.log(value ? 'PASS' : 'FAIL', label);
     });
@@ -90,7 +95,15 @@ if (child) {
     console.log(`MUTATION_LANDED=${child}`);
     module._compile(require(path.join(repo, 'node_modules/sucrase')).transform(code, { transforms: ['typescript', 'imports'] }).code, filename);
   };
-  if (witness === 'injury') require(path.join(repo, 'src/__tests__/injuryRecompositionTests'));
+  if (witness === 'categories') {
+    let failures = 0;
+    require(path.join(repo, 'src/__tests__/support/conditioningCategoryTruth')).conditioningCategoryTruth((label, value) => {
+      if (!value) failures++;
+      console.log(value ? 'PASS' : 'FAIL', label);
+    });
+    process.exitCode = failures ? 1 : 0;
+  }
+  else if (witness === 'injury') require(path.join(repo, 'src/__tests__/injuryRecompositionTests'));
   else if (witness === 'compiler') require(path.join(repo, 'src/__tests__/canonicalWeeklyCompilerSliceTests'));
   else {
     global.__DEV__ = true;

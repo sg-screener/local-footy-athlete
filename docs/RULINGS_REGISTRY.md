@@ -95,6 +95,15 @@ and `categoryToFlavour` has no `cod_decel` case, so the ranking fix alone breaks
 generation (`LAW-every-category-has-a-flavour`, `dd73a53b`, is the guard). **The
 gate is no longer the wall. The ranking is.**
 
+**2026-08-28 implementation update (programming-remedy):** the paragraph above
+is historical, not current debt. `3417731e` removed the old flavour translation;
+the current typed selector has a COD pool. C12's four obsolete missing-map
+expectations have been replaced by `conditioningCategoryTruth`, exercising all
+seven categories and their actual prescriptions. Four deliberately reintroduced
+category-loss defects fail that guard. This does not invent a COD quota or change
+the no-team-training eligibility ruling. See
+`docs/PROGRAMMING_GAP_CLOSURE_2026-08-28.md` for the diagnostic classification.
+
 **R-004** · *"that way the app isn't guessing"* · The Christmas break is set by
 ASKING: ~10 Dec *"when is your last team training?"*, ~3 Jan *"when does team
 training go back?"*. The dates are defaults for WHEN TO ASK, never inferred

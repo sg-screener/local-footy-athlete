@@ -23,8 +23,10 @@ import { lowLoadAdditionJourney } from './lowLoadAdditionJourney';
 import { programmingSelectionDecisions } from './programmingSelectionDecisions';
 import { gPlusTwoFlushJourney } from './gPlusTwoFlushJourney';
 import { unilateralPriorityJourney } from './unilateralPriorityJourney';
+import { conditioningCategoryTruth } from './conditioningCategoryTruth';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
+  conditioningCategoryTruth(ok);
   onboardingTapTruth(ok);
   await flushPrescriptionTruth(storage, ok);
   await flushRestartJourney(storage, ok);
