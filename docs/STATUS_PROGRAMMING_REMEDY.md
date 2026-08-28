@@ -252,6 +252,24 @@ block-rollover suite refuses its incomplete hand-built onboarding before
 rollover (missing gender and ten other required answers); no assertion or input
 contract was weakened. Current real-onboarding witnesses remain authoritative.
 
+### Candidate fdbf7e42 is superseded, not accepted
+
+Its four years reached every day but found four November dates per athlete/world
+whose projection threw on `Continuous Aerobic Bike`: 16 athlete-day/world
+occurrences across four distinct calendar dates. The modality transform renamed
+an authored template, breaking its signed identity. It now preserves all 55
+template identities while updating typed modality; explicit nonmatching source
+modalities remain untouched. The accumulated rollover also executes the full
+signed projection, and annual inspection does so for every observed week.
+Injury suite after the repair: 184/184. Three-mode × 55-title checks pass; mutation
+receipt pending. One existing modality compiler capability reviewed; no new writer.
+
+The fdbf7e42 release attempt was deliberately stopped in annual verification
+(10/20 release units finished). Its four native flows passed: Mobility Add and
+restart plus readiness, conditioning and swap. These are not receipts for the
+next revision. Native Release setup failed on absent generated dependency files;
+this was an isolated build setup error, and no app was installed.
+
 ## NOT COVERED
 
 - Product questions above remain open; all P01–P22 are not closed.

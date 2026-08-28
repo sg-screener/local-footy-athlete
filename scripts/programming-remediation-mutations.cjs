@@ -27,6 +27,7 @@ const mutants = {
   injury_horizon: ['src/rules/durableFactHorizon.ts', "fact.status === 'active' || fact.status === 'improving'\n        ? null : addDays(last, 6)", 'addDays(last, 6)', 'injury', 'rollover withholding and safe work survive restart'],
   rollover_facts: ['src/utils/programBlockRollover.ts', 'compileSourceFacts: true,', 'compileSourceFacts: false,', 'injury', 'rollover withholding and safe work survive restart'],
   optional_names: ['src/rules/projectVisibleWeek.ts', 'return kinds.size === 1 ? [...kinds][0] : workout?.composedOptionalKind;', 'return workout?.composedOptionalKind;', 'mobility', 'mixed optional parts retain their own signed names and buckets'],
+  template_identity: ['src/utils/coachModalitySwap.ts', 'if (resolveTemplateByName(text)) return null;', 'if (false && resolveTemplateByName(text)) return null;', 'inputs', 'modality changes preserve every authored template identity and set the typed mode'],
 };
 const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {

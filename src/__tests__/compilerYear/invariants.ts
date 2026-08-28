@@ -8,6 +8,7 @@ import { semanticFingerprint, snapshotSemanticResolvedDay } from '../../utils/pr
 import { DAY_NAMES, plusDays } from './catalog';
 import type { Check } from './results';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { project } from '../../rules/projectVisibleWeek';
 
 export function compilerChecks(result: CanonicalWeeklyCompilerResult): Check[] {
   if (result.ok === false) return [{ id: 'accepted_compile', ok: false, detail: JSON.stringify(result.refusal) }];
@@ -87,6 +88,8 @@ export function inspectWeek(args: {
   const mispresented = days.flatMap(day => buildSessionTemplate(day.workout).items.filter(item =>
     item.kind === 'exercise' && ['main_strength', 'strength_accessory'].includes(item.row.section18Evidence?.role)
       && item.presentation === 'conditioning_phase').map(item => `${day.date}:${item.kind === 'exercise' ? item.row.exercise?.name : ''}`));
+  let projectionError = '';
+  try { project({ week: days, weekStart }); } catch (error) { projectionError = String(error); }
   return [
     { id: 'phase_clock', ok: args.effectiveContract.identity.seasonPhase === phase && args.effectiveContract.identity.phaseWeek === phaseWeek,
       detail: `expected=${phase}/${phaseWeek} actual=${args.effectiveContract.identity.seasonPhase}/${args.effectiveContract.identity.phaseWeek}` },
@@ -100,5 +103,6 @@ export function inspectWeek(args: {
     { id: 'programming', ok: evaluation !== null && blocking.length === 0,
       detail: evaluation ? JSON.stringify(blocking) : 'Missing current typed exposure contract' },
     { id: 'typed_strength_presentation', ok: mispresented.length === 0, detail: mispresented.join(',') },
+    { id: 'signed_final_projection', ok: !projectionError, detail: projectionError },
   ];
 }

@@ -144,6 +144,10 @@ export async function accumulatedInjuryConditioning(
       ['horizontal_push', 'vertical_push'].includes(getExerciseTags(row.exercise.name)?.movement ?? '') &&
       !row.unavailableForInjury).map(row => `${day.date}:${row.exercise.name}`) ?? []);
     ok(`${gender}: rollover retains no trainable painful press`, unsafe().length === 0, JSON.stringify(unsafe()));
+    let rolloverProjectionError = '';
+    try { project({ week: nextView(), weekStart: nextWeek }); }
+    catch (error) { rolloverProjectionError = String(error); }
+    ok(`${gender}: injury rollover projects every authored identity`, !rolloverProjectionError, rolloverProjectionError);
     const nextSignature = visibleSignature(nextView());
     const nextBoot = await quietAsync(() => relaunchApp({ storage, todayISO: nextWeek }));
     ok(`${gender}: rollover withholding and safe work survive restart`, nextBoot.ok &&

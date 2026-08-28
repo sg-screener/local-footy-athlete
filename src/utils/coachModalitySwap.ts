@@ -30,6 +30,7 @@ import {
 } from '../data/exerciseTags';
 import type { AdjustmentEvent } from './programAdjustmentEngine';
 import { logger } from './logger';
+import { resolveTemplateByName } from '../rules/conditioningSelection';
 
 // ─── Modality vocabulary ────────────────────────────────────────────
 
@@ -1028,6 +1029,10 @@ export function applyConditioningModalityToWorkout<
   // through the rewriteModalityInName bike-label branch.
   const rewriteText = (text: string | undefined): string | null => {
     if (!text || typeof text !== 'string') return null;
+    // Authored titles are stable dose identities, not editable modality copy.
+    // The selected equipment lives on the option below, so Run -> Bike must
+    // not invent an unsigned "Continuous Aerobic Bike" template.
+    if (resolveTemplateByName(text)) return null;
     if (isLabelOnlyFix) {
       const r = rewriteModalityInName(text, to, labelOpts);
       return r && r !== text ? r : null;
@@ -1140,16 +1145,22 @@ export function applyConditioningModalityToWorkout<
     let blockChanged = false;
     const newOptions = newBlock.options.map((opt: any) => {
       const newTitle = rewriteText(opt?.title);
+      const matchesSource = !from || !opt.modality || opt.modality === 'mixed' ||
+        opt.modality === (from === 'run' ? 'running' : from);
+      const modality = !matchesSource ? opt.modality : to === 'run' ? 'running'
+        : ['bike', 'row', 'ski'].includes(to) ? to : opt.modality;
+      const modeChanged = modality !== opt.modality;
       let newOptDesc: string | null = rewriteText(opt?.description);
       if (!newOptDesc && newTitle && opt?.title && opt?.description === opt?.title) {
         newOptDesc = newTitle;
       }
-      if (!newTitle && !newOptDesc) return opt;
+      if (!newTitle && !newOptDesc && !modeChanged) return opt;
       blockChanged = true;
       touched = true;
       if (newTitle && opt?.title && !firstRename) firstRename = { from: opt.title, to: newTitle };
       return {
         ...opt,
+        modality,
         title: newTitle ?? opt.title,
         description: newOptDesc ?? opt.description,
       };

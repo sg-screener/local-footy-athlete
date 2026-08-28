@@ -4,6 +4,7 @@ import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { applyConstraintsToTypedComponents, buildInjuryConstraint } from '../../utils/exposureEngine';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
 
 /** Metamorphic unit checks on a real generated component, never a stored-state
  * fixture. A title mutation cannot turn an explicitly selected erg into running;
@@ -24,11 +25,26 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
     });
     ok(`${modality}: typed off-leg identity survives every authored title mutation`,
       CONDITIONING_TEMPLATES.length === 55 && failures.length === 0, JSON.stringify(failures.map(t => t.name)));
+    const renamed = CONDITIONING_TEMPLATES.filter(template => {
+      const candidate = { ...workout, name: template.name, exercises: workout.exercises.map(row => ({ ...row,
+        exercise: { ...row.exercise, name: template.name }, section18Evidence: { ...row.section18Evidence, role: 'conditioning' as const } })),
+        conditioningBlock: { ...workout.conditioningBlock!, options: workout.conditioningBlock!.options.map(option =>
+          ({ ...option, title: template.name, modality: 'running' as const })) } };
+      const swapped = applyConditioningModalityToWorkout(candidate, { fromModality: null, toModality: modality });
+      return swapped.name !== template.name || swapped.exercises.some(row => row.exercise.name !== template.name) ||
+        swapped.conditioningBlock.options.some(option => option.title !== template.name || String(option.modality) !== modality);
+    });
+    ok(`${modality}: modality changes preserve every authored template identity and set the typed mode`,
+      CONDITIONING_TEMPLATES.length === 55 && renamed.length === 0, JSON.stringify(renamed.map(t => t.name)));
   }
   const running = { ...workout, conditioningBlock: { ...workout.conditioningBlock,
     options: workout.conditioningBlock.options.map(option => ({ ...option, modality: 'running' as const, title: 'Bike intervals' })) } };
   ok('actual running remains blocked even under an erg-looking title',
     !applyConstraintsToTypedComponents(running, [constraint]).workout.conditioningBlock);
+  ok('an explicit Row-only change does not retag an existing Running option',
+    applyConditioningModalityToWorkout({ ...running, name: 'Classic 4x4', conditioningBlock: {
+      ...running.conditioningBlock, options: running.conditioningBlock.options.map(option => ({ ...option, title: 'Classic 4x4' })) } },
+    { fromModality: 'row', toModality: 'bike' }).conditioningBlock.options.every(option => option.modality === 'running'));
   // Presentation metamorphism over actual generated rows: an injury can put
   // safe lifting into a former energy-only container. The container title/type
   // cannot turn those typed lifts into intervals or erase their lifting dose.

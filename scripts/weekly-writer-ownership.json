@@ -307,7 +307,7 @@
       "reason": "Game feedback UI constructs typed outcome input and calls the durable outcome transaction; its only local writes are React form/refusal state and diagnostic receipts."
     },
     "src/utils/coachModalitySwap.ts#applyConditioningModalityToWorkout": {
-      "fingerprint": "d8406e69cc7d6dca921be6e7fde3750159b50a63e96b900d48b65036de1887e8",
+      "fingerprint": "ceea79ed2c5d1235e519a40e982ec46db98688fab6a0cd2c4368f78082d34b76",
       "classification": "canonical_compiler",
       "reason": "Shared pure conditioning-modality transform is called by canonical injury conditioning and the canonical day-constraint preference stage only; no independent live publisher."
     },
