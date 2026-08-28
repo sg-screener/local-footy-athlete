@@ -528,6 +528,9 @@ function scoreAssignment(
   // comparable upper stresses. This is a preference among LEGAL assignments;
   // fixtures, forbidden days and coverage are still decided before scoring.
   for (const lower of [true, false]) {
+    // WC-101's specific upper/club consolidation outranks the general P10
+    // spacing preference. Do not pull an upper session off its club night.
+    if (!lower && inputs.clubNights.length > 0) continue;
     const familyDays = byOrder.filter(s => PURPOSE_IS_LOWER[s.purpose] === lower)
       .map(s => orderIndex(s.day));
     if (familyDays.length < 2) continue;

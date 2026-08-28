@@ -936,6 +936,15 @@ for (const offseasonBlock of ['transition', 'normal_build'] as const) {
   }
 }
 
+{
+  const week = built({ phase: 'In-season', gymAccessDays: [MON, TUE, THU],
+    clubNights: [TUE, THU], gameDay: SAT });
+  ok('P10/WC-101: general spacing cannot displace upper work from either club night', ['WC-101'],
+    [TUE, THU].every(day => week.days.some(session => session.dayOfWeek === day
+      && session.owner === 'strength' && session.purpose && !PURPOSE_IS_LOWER[session.purpose])),
+    JSON.stringify(week.days.map(day => [day.dayOfWeek, day.purpose])));
+}
+
 const total = passed + failures.length;
 console.log(`\nWeekly scheduler: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

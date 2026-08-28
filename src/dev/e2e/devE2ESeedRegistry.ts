@@ -755,12 +755,14 @@ export function witnessesForDevE2ESeed(
       break;
     }
     case 'stacked-team-training-upper-pull': {
-      const stackedDate = addDaysISO(anchorDate, 1);
-      const stacked = underlyingWorkoutForDate(program, stackedDate);
+      const stacked = program.microcycles[0].workouts.find(workout =>
+        strengthPatterns(workout).includes('pull')
+        && getSessionComponents(workout).some(component => component.id === 'team_training'));
       if (!stacked) throw new Error('Stacked witness source workout missing.');
+      const stackedDate = dateForWorkout(weekStart, stacked);
       witnesses.push({
         kind: 'workout',
-        dayOfWeek: 2,
+        dayOfWeek: stacked.dayOfWeek,
         date: stackedDate,
         workoutId: stacked.id,
         workoutType: 'Team Training',

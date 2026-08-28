@@ -128,6 +128,15 @@ No source file was changed to inject or restore a mutation. Reviewed thirteen
 changed existing writer functions/boundaries; only their fingerprints changed,
 with no classifications or authority budgets relaxed.
 
+Checkpoint `4361391c` release attempt stopped in bootstrap (0/20 units): the
+stacked-upper-pull seed could not find its component. Investigation corrected
+the initial "stale weekday only" diagnosis: general upper spacing outweighed
+WC-101's club-night pairing preference. Upper spacing now yields to that
+specific club rule. New explicit WC-101 check holds both nights; the seed also
+locates the actual typed combined component instead of assuming Tuesday. All
+17 four-week seeds pass 104 assertions. The interrupted candidate/year/simulator
+receipts are diagnostic, not acceptance of the corrected checkpoint.
+
 ### Product questions / outstanding scope (owner: Sam for decisions; programming-remedy for implementation)
 
 1. P06: retain Leg Press and conventional Deadlift as manual/fallback choices,
