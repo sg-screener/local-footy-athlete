@@ -2372,7 +2372,7 @@
       "fingerprint": "f8587cf37e9160e08d4907aec97240c5f074b1bc5f15bffc0501f79443a54780"
     },
     "src/rules/canonicalWeeklySourceFactCompiler.ts#compileCanonicalSourceFactWeeks": {
-      "fingerprint": "7b6e591d5a67e2b54680a6878c833173b46d2824d696d9a7b9fd1365e8d2d281",
+      "fingerprint": "8ccf0e3f79b12bb5bd7b9c994ff445b13eaa0dd413c507fa4bbf958ffe276a06",
       "classification": "canonical_compiler",
       "reason": "Canonical source-fact fold compiles explicit dated facts with accepted edits and prior-day boundaries, then runs the shared injury week compiler. Live fact transitions and reconstruction invoke this same stage."
     },

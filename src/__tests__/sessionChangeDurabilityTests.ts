@@ -67,16 +67,17 @@ import { addDaysISO } from '../utils/programBlockState';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { coldStartThroughOnboarding, followTheWeek, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
-const TARGET = '2026-07-22';
+let TARGET = '2026-07-22';
 
 let passed = 0;
 const failures: string[] = [];
@@ -93,7 +94,8 @@ function mondayFor(d: string): string {
 
 function theAthlete(): OnboardingData {
   return {
-    firstName: 'Sim', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
+    firstName: 'Sim', ageRange: '22-26', gender: 'male', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
+    seasonFinishedOn: '2026-07-12',
     position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
@@ -112,29 +114,12 @@ function theAthlete(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
-function install(): string {
-  durable.clear();
-  resetStoresToFreshInstall('exercise-removal-owner:install');
-  const profile = theAthlete();
-  useProfileStore.getState().updateOnboardingData(profile);
-  quiet(() => useProfileStore.getState().completeOnboarding());
-  setJourneyClock(INSTALL_DAY);
-  const program = quiet(() => generateProgramLocally(profile, {
-    todayISO: INSTALL_DAY, previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'Off-season' as never,
-      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  })) as TrainingProgram;
-  const settled = program.microcycles[1] ?? program.microcycles[0]!;
-  const weekStart = String(settled.startDate).slice(0, 10);
-  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
-    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
-    reason: 'exercise-removal-owner:generate',
-  }));
-  useProgramStore.setState({ currentMicrocycle: settled } as never);
+async function install(): Promise<string> {
+  TARGET = '2026-07-22';
+  const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: theAthlete(), installDayISO: INSTALL_DAY }));
+  if (installed.onboardingRefusal) throw new Error(JSON.stringify(installed.onboardingRefusal));
+  const weekStart = mondayFor(TARGET);
+  quiet(() => followTheWeek(weekStart));
   setJourneyClock(TARGET);
   return weekStart;
 }
@@ -182,6 +167,11 @@ function substitutionsOn(dateISO: string): string[] {
   });
 }
 
+function injuryAdjustmentOn(dateISO: string) {
+  return quiet(() => resolveWeekWithConditioning(mondayFor(dateISO), buildScheduleStateImperative()))
+    .find(day => day.date === dateISO)?.workout?.injuryAdjustment;
+}
+
 const door = () => require('../utils/programControlActions').executeProgramControlActionDurably;
 
 async function remove(exercise: string): Promise<{ ok: boolean }> {
@@ -200,7 +190,7 @@ function offeredReplacementFor(victim: string, existing: string[]): string {
     require('../utils/tapSwapHierarchy');
   const environment = quiet(() => resolveTapSwapEnvironment({
     date: TARGET, profile: useProfileStore.getState().onboardingData,
-    activeConstraints: [], readinessSignal: null,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints, readinessSignal: null,
   }));
   const menu = groupTapSwapChoices(quiet(() => getTapSwapChoices({
     originalExercise: victim, reason: 'preference', environment,
@@ -210,16 +200,20 @@ function offeredReplacementFor(victim: string, existing: string[]): string {
 }
 
 async function swap(victim: string, replacement: string): Promise<{ ok: boolean }> {
+  const visible = quiet(() => resolveWeekWithConditioning(mondayFor(TARGET), buildScheduleStateImperative()))
+    .find(day => day.date === TARGET)?.workout;
+  const row = visible?.exercises.find(row => row.exercise?.name === victim);
+  if (!row) throw new Error(`Visible swap target absent: ${victim}`);
   return await quietAsync(() => door()({
     type: 'swap_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
     scope: 'today_only',
     payload: {
-      date: TARGET, fromExercise: victim,
+      date: TARGET, fromExercise: victim, fromExerciseId: row.id,
       toExercise: { name: replacement, sets: 3, repsMin: 6, repsMax: 8 },
     },
     requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
-  }, { todayISO: TARGET })) as { ok: boolean };
+    }, { todayISO: TARGET })) as { ok: boolean };
 }
 
 async function add(exercise: string): Promise<{ ok: boolean }> {
@@ -296,7 +290,7 @@ async function main(): Promise<void> {
 
   /* ═══ 1 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[1] SWAP -> close -> reopen');
-  install();
+  await install();
   const s1Start = rowsOn(TARGET);
   const s1Victim = s1Start[0]!.split('@')[0]!;
   const s1New = offeredReplacementFor(s1Victim, s1Start.map((r) => r.split('@')[0]!));
@@ -342,7 +336,7 @@ async function main(): Promise<void> {
 
   /* ═══ 2 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[2] REMOVE -> close -> reopen -> RESTORE');
-  install();
+  await install();
   const s2Start = rowsOn(TARGET);
   const s2Gone = s2Start[0]!.split('@')[0]!;
   await remove(s2Gone);
@@ -361,7 +355,7 @@ async function main(): Promise<void> {
 
   /* ═══ 3 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[3] REMOVE -> SWAP another row -> close -> reopen -> RESTORE');
-  install();
+  await install();
   const s3Start = rowsOn(TARGET);
   const s3Gone = s3Start[0]!.split('@')[0]!;
   await remove(s3Gone);
@@ -394,7 +388,7 @@ async function main(): Promise<void> {
 
   /* ═══ 4 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[4] SWAP -> REMOVE another row -> close -> reopen -> UNDO');
-  install();
+  await install();
   const s4Start = rowsOn(TARGET);
   const s4Victim = s4Start[0]!.split('@')[0]!;
   const s4New = offeredReplacementFor(s4Victim, s4Start.map((r) => r.split('@')[0]!));
@@ -417,20 +411,22 @@ async function main(): Promise<void> {
 
   /* ═══ 5 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[5] EQUIPMENT change -> SWAP -> REMOVE -> restart');
-  install();
+  await install();
   const s5Equip = await equipmentGone(['barbell']);
   ok('CONTROL — the equipment door accepted the change', s5Equip.ok);
   const s5AfterEquip = rowsOn(TARGET);
   const s5Victim = s5AfterEquip[0]!.split('@')[0]!;
   const s5New = offeredReplacementFor(s5Victim, s5AfterEquip.map((r) => r.split('@')[0]!));
-  await swap(s5Victim, s5New);
+  const s5Swap = await swap(s5Victim, s5New);
+  ok('CONTROL — equipment-constrained swap is accepted', s5Swap.ok,
+    JSON.stringify({ victim: s5Victim, replacement: s5New, result: s5Swap }));
   const s5AfterSwap = rowsOn(TARGET);
   const s5Gone = s5AfterSwap[s5AfterSwap.length - 1]!.split('@')[0]!;
   await remove(s5Gone);
   const s5Before = rowsOn(TARGET);
   ok('CONTROL — all three changes are visible before the restart',
     s5Before.some((r) => r.startsWith(`${s5New}@`))
-      && !s5Before.some((r) => r.startsWith(`${s5Gone}@`)), JSON.stringify(s5Before));
+      && !s5Before.some((r) => r.startsWith(`${s5Gone}@`)), JSON.stringify({ victim: s5Victim, replacement: s5New, removed: s5Gone, afterEquipment: s5AfterEquip, afterSwap: s5AfterSwap, afterRemove: s5Before }));
   ok('the app came back up', await restart());
   const s5After = rowsOn(TARGET);
   ok('the restarted session is IDENTICAL after an equipment change, a swap and a removal',
@@ -438,7 +434,7 @@ async function main(): Promise<void> {
 
   /* ═══ 6 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[6] INJURY change -> REMOVE -> restart');
-  install();
+  await install();
   const s6Injury = await injuryDeclared();
   ok('CONTROL — the injury door accepted the change', s6Injury.ok);
   const s6AfterInjury = rowsOn(TARGET);
@@ -478,7 +474,7 @@ async function main(): Promise<void> {
 
   /* ═══ 7 ═══════════════════════════════════════════════════════════════ */
   console.log('\n[7] ADD -> SWAP -> restart');
-  install();
+  await install();
   const s7Start = rowsOn(TARGET);
   const s7Added = offeredAddFor(s7Start.map((r) => r.split('@')[0]!));
   await add(s7Added);
@@ -499,7 +495,13 @@ async function main(): Promise<void> {
 
   /* ═══ 8 ═══════════════════════════════════════════════════════════════ */
   console.log("\n[8] SAM'S RULING — a later injury DISPLACES the athlete's choice, says so, keeps it, and gives it back");
-  install();
+  await install();
+  const lowerDay = quiet(() => resolveWeekWithConditioning(mondayFor(TARGET), buildScheduleStateImperative()))
+    .find(day => day.workout?.exercises[0]?.section18Evidence?.mainStrengthPattern === 'squat'
+      || day.workout?.exercises[0]?.section18Evidence?.mainStrengthPattern === 'hinge');
+  if (!lowerDay) throw new Error('Knee displacement coordinate did not reach a lower-body lift');
+  TARGET = lowerDay.date;
+  setJourneyClock(TARGET);
   const s8Start = rowsOn(TARGET);
   const s8Victim = s8Start[0]!.split('@')[0]!;
   const s8Choice = offeredReplacementFor(s8Victim, s8Start.map((r) => r.split('@')[0]!));
@@ -519,21 +521,23 @@ async function main(): Promise<void> {
     displaced, `${s8Choice} still present: ${JSON.stringify(s8AfterInjury)}`);
   ok('the illegal choice is NOT shown',
     !s8AfterInjury.some((r) => r.startsWith(`${s8Choice}@`)), JSON.stringify(s8AfterInjury));
-  ok('a legal replacement stands in its place — the day did not just lose a row',
-    s8AfterInjury.length === s8AfterSwap.length, `${s8AfterSwap.length} -> ${s8AfterInjury.length}`);
-  /* Sam: "Tell the athlete exactly why their chosen exercise is temporarily not
-   * being used." The row names whose place it is taking, and the cause. */
-  ok("the athlete is TOLD why — the standing-in row names their exercise and the injury",
-    s8Subs.some((entry) => entry.includes(`<-${s8Choice}:injury`)), JSON.stringify(s8Subs));
+  // R-124: knee restrictions exhaust the per-exercise ladder; unrelated work
+  // must not be labelled a replacement. The session reports its pause instead.
+  const s8Adjustment = injuryAdjustmentOn(TARGET);
+  ok('R-124 names the chosen lift as paused rather than inventing a replacement',
+    !!s8Adjustment?.paused.includes(s8Choice) && s8Subs.length === 0,
+    JSON.stringify({ adjustment: s8Adjustment, substitutions: s8Subs }));
+  ok('the visible session explains the injury adjustment',
+    !!s8Adjustment?.summary && /knee/i.test(s8Adjustment.summary), JSON.stringify(s8Adjustment));
 
   const s8Before = rowsOn(TARGET);
   ok('the app came back up', await restart());
   const s8After = rowsOn(TARGET);
   ok('and the restart reproduces it EXACTLY — no new choice at startup',
     sameSession(s8After, s8Before), `${JSON.stringify(s8Before)} -> ${JSON.stringify(s8After)}`);
-  ok('the reason survives the restart too',
-    substitutionsOn(TARGET).some((entry) => entry.includes(`<-${s8Choice}:injury`)),
-    JSON.stringify(substitutionsOn(TARGET)));
+  ok('the named pause and explanation survive the restart too',
+    !!s8Adjustment && JSON.stringify(injuryAdjustmentOn(TARGET)) === JSON.stringify(s8Adjustment),
+    JSON.stringify(injuryAdjustmentOn(TARGET)));
 
   /* ── AND THE PREFERENCE IS STILL UNDERNEATH ──────────────────────────────
    * Sam: "Keep the athlete's original Swap preference underneath. When the

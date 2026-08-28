@@ -333,7 +333,7 @@ ok('mobility movements use the same controlled checklist owner',
     && /onToggle=\{onToggleItem\}/.test(screen));
 ok('the day card reads Mobility completion from that saved checklist owner',
   /reconcileRecordedSessionExecution\(executionPlan, sessionFeedback\[day\.date\]\)/.test(home)
-    && /dayTimeline\(visibleDay, sessionFeedback\[day\.date\], day\.workout, recordedExecution\)/.test(home)
+    && /dayTimeline\(visibleDay, sessionFeedback\[day\.date\], projectedWorkout, recordedExecution\)/.test(home)
     && /mobilityCompletion=\{recordedExecution\?\.sectionCompletions\.mobility \?\? null\}/.test(home)
     && /day-timeline-complete-mobility-warmup-\$\{mobilityCompletion\}/.test(home)
     && /mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home));
@@ -341,7 +341,7 @@ ok('mobility and every other session row use one square checkbox recipe',
   /sessionExecutionCheckbox/.test(screen)
     && /\.\.\.sessionExecutionCheckbox/.test(screen)
     && !/MobilityPrehabFlowSection/.test(screen));
-const mobilitySectionAt = screen.indexOf("filter((section) => section.id === 'mobility')");
+const mobilitySectionAt = screen.indexOf("section.id === 'mobility'");
 const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilitySectionAt);
 const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
 const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
@@ -350,6 +350,7 @@ const mobilityRenderer = mobilityRendererAt >= 0 && sessionListAt > mobilityRend
   : '';
 ok('mobility uses the same chevron owner as the other sections',
   mobilitySectionAt >= 0 && mobilityRowsAt > mobilitySectionAt &&
+    /section.items.every\(\(item\) => item.source === 'mobility'\)\)\.map\(\(section\)/.test(screen.slice(mobilitySectionAt, mobilityRowsAt)) &&
     screen.slice(mobilitySectionAt, mobilityRowsAt).includes('<SessionExecutionSection') &&
     !/chevron-up|chevron-down|useState\(false\)/.test(mobilityRenderer));
 ok('mobility reuses the complete Strength exercise presentation',
@@ -435,8 +436,8 @@ ok('performed Team Training asks for duration and its own 1-10 effort',
     && /club-training-feedback-minutes/.test(feedback)
     && /club-training-feedback-effort-grid/.test(feedback)
     && /<EffortSlider/.test(feedback));
-ok('the extra team-training result is required only when that section was performed',
-  /const draftIsComplete = baseDraftIsComplete[\s\S]{0,180}!teamTrainingWasPerformed \|\| teamTrainingOutcome !== undefined/.test(feedback));
+ok('separate gym feedback never waits on the later club-training answer',
+  /const draftIsComplete = baseDraftIsComplete;/.test(feedback));
 ok('the accepted transaction validates and republishes the team-training result',
   /parseTeamTrainingSessionOutcome\(intent\.teamTraining\)/.test(outcomeTransaction)
     && /intent\.teamTraining \? \{ teamTraining: intent\.teamTraining \}/.test(outcomeTransaction));
@@ -517,16 +518,18 @@ const sessionEquipmentSheet = fs.readFileSync(
   'utf8',
 );
 ok('the opened-session icon mounts the one session equipment sheet',
-  /testID="day-workout-equipment-concern-action"/.test(screen)
+  /testID="session-options-equipment"/.test(screen)
     && /<SessionEquipmentSheet/.test(screen)
     && /requirements=\{sessionEquipmentRequirements\}/.test(screen));
 // ⚠ **THIS CELL USED TO MATCH `createsActiveModifier: false` ANYWHERE IN THE
 // FILE, and after the planner's swap loop was deleted it would have gone on
 // passing on a string belonging to the live Swap door — green on a property it
 // had stopped watching.** It reads the equipment handler's own body now.
-const equipmentHandlerBody = screen.slice(
-  screen.indexOf('const applySessionEquipment'),
-  screen.indexOf('const applyExerciseGuidedInjury'));
+const equipmentStart = screen.indexOf('const applySessionEquipment');
+const equipmentEnd = screen.indexOf('const reviewSessionInjury', equipmentStart);
+ok('equipment handler anchors are found in order', equipmentStart >= 0 && equipmentEnd > equipmentStart);
+const equipmentHandlerBody = screen.slice(equipmentStart, equipmentEnd)
+  .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 ok('the session equipment answer is today-only and written as a dated fact',
   /surface: 'session_equipment_sheet'/.test(equipmentHandlerBody)
     && /scope: 'today_only'/.test(equipmentHandlerBody)

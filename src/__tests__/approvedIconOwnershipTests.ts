@@ -35,6 +35,7 @@ const ownerPath = path.join(root, 'components/icons/LfaIcon.tsx');
 const owner = fs.existsSync(ownerPath) ? fs.readFileSync(ownerPath, 'utf8') : '';
 const equipment = read('screens/home/EquipmentLimitationSheet.tsx');
 const home = read('screens/home/HomeScreenV2.tsx');
+const changeHub = read('components/SessionChangeHub.tsx');
 const plan = read('screens/home/PlanChangeSheet.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
 const day = read('screens/home/DayWorkoutScreenV2.tsx');
@@ -248,12 +249,12 @@ ok('dumbbell and kettlebell reuse the one library glyph owner',
   equipment.includes("<LfaIcon name=\"dumbbell\"")
   && equipment.includes("<LfaIcon name=\"kettlebell\""));
 ok('Program quick actions and readiness choices use the approved replacements',
-  home.includes('stroke="#B9A7FF"')
-  && home.includes('M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z')
-  && home.includes('stroke="#FFCA68"')
-  && home.includes('M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z')
-  && home.includes('stroke="#FF7F7F"')
-  && home.includes('M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z')
+  /<SessionChangeHub\b/.test(home)
+  && changeHub.includes("tired: '#67D7FF'")
+  && changeHub.includes("sick: '#FFCA68'")
+  && changeHub.includes("injured: '#FF7F7F'")
+  && changeHub.includes('M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z')
+  && changeHub.includes('M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z')
   && home.includes("<LfaIcon name=\"sick\"")
   && home.includes("<LfaIcon name=\"half-energy\"")
   && home.includes("<LfaIcon name=\"totally-cooked\"")
@@ -316,14 +317,11 @@ ok('every injury category icon wears one of the app\'s three status colours',
   && injury.includes("upper_body: '#67D7FF'")
   && injury.includes("lower_body: '#FFC247'")
   && injury.includes("back_midline: '#FF7F7F'"));
-ok('exercise editing uses the approved body, prehab, mobility and reason icons',
-  day.includes("<LfaIcon name=\"torso-abs\"")
-  && day.includes("<LfaIcon name=\"upper-body\"")
-  && day.includes("<LfaIcon name=\"lower-body\"")
-  && day.includes("<LfaIcon name=\"medical-shield\"")
-  && day.includes("<LfaIcon name=\"mobility\"")
-  && day.includes("<LfaIcon name=\"no-equipment\"")
-  && day.includes("<LfaIcon name=\"thumbs-down\""));
+ok('R-209/R-210 session options reuse the shared glyph owner; R-217 retires menu Add',
+  day.includes("from '../../components/SessionChangeHub'")
+  && ['equipment', 'injury'].every(id =>
+    day.includes(`sessionChangeGlyph('${id}')`))
+  && !day.includes("sessionChangeGlyph('add')"));
 
 console.log(`\napproved icon ownership totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);

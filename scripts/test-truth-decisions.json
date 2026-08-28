@@ -2,6 +2,32 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:readiness-load-retention": {
+      "kind": "current_contract",
+      "reason": "Four real-onboarding gender/fact coordinates prove retained lifts keep accepted kilograms while sets reduce, actual projection, restart and Clear. First run failed four load cells; bypassing accepted-load carry reproduces those failures.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklySourceFactCompiler.ts"
+      ],
+      "contractRefs": [
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
+      "witnessScript": "test:readiness-load-retention",
+      "evidenceKind": "green_now"
+    },
+    "test:session-change-durability": {
+      "kind": "current_contract",
+      "reason": "Eight real-onboarding sequences now use the UI's typed row targets and R-124's named pause, not fabricated replacements. 48 assertions cover swaps, equipment, removal/restore, Undo, injury/Clear and restart. Bypassing the canonical swap fold is rejected.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyExerciseEditCompiler.ts",
+        "src/store/quiescentBoot.ts"
+      ],
+      "contractRefs": [
+        "docs/NORTH_STAR.md",
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
+      "witnessScript": "test:session-change-durability",
+      "evidenceKind": "green_now"
+    },
     "test:undo-reversal": {
       "kind": "current_contract",
       "reason": "Rebound the stale un-awaited removal probe to real onboarding, both durable removal facts, all three scopes, accumulated decisions and completed/restarted Undo. No synchronous timing assumption or stored-output fixture can stand in for the athlete action.",
@@ -120,9 +146,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:approved-icons": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rebound inline glyph assertions to shared SessionChangeHub and R-209/R-210/R-217 ownership. 26 assertions preserve exact traces and current consumers. Mutating the shared tired tint fails the consumer check.",
+      "productionPaths": [
+        "src/components/SessionChangeHub.tsx",
+        "src/components/icons/LfaIcon.tsx"
+      ],
+      "contractRefs": [
+        "docs/COPY_SHEET_RULINGS_2026-07-30.md"
+      ],
+      "witnessScript": "test:approved-icons",
+      "evidenceKind": "green_now"
     },
     "test:athlete-door-matrix": {
       "kind": "rewrite_test",
@@ -205,8 +239,8 @@
     },
     "test:block-two-extra-session": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "reason": "Three measured failures: 16-set check counts mobility days; manufactured block history omits complete onboarding; clubless-preseason cell requires a refusal the compiler no longer makes. Real offer/preview/accept/decline/restart is held by repaired test:coach-weekly-reduction. No retired refusal or fabricated history restored.",
+      "evidenceKind": "fixture_and_obsolete_expectation"
     },
     "test:canonical-weekly-compiler": {
       "kind": "current_contract",
@@ -307,9 +341,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:coach-weekly-reduction": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "The fixture omitted the required off-season last-game answer; real hydration correctly refused it. Completing that answer and reusing authored Mobility copy yields 64 assertions over accepted block/history, offer/no-write, preview, accept or decline, and restart. No unsupported restoration control added.",
+      "productionPaths": [
+        "src/rules/weeklyCommitmentConversation.ts",
+        "src/rules/projectionCopy.ts"
+      ],
+      "contractRefs": [
+        "docs/NORTH_STAR.md"
+      ],
+      "witnessScript": "test:coach-weekly-reduction",
+      "evidenceKind": "green_now"
     },
     "test:composer-b1": {
       "kind": "rewrite_test",
@@ -338,8 +380,8 @@
     },
     "test:copy-rulings-binding": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "reason": "Measured 7/9. Whole-session Swap menu strings belong to a retired menu. StaleOverrideBanner now uses conditional clearable-owner wording instead of batch 11 and still carries an UNSIGNED comment. Copy provenance is recorded as a question for Sam, not silently approved or restored; source extraction remains gated.",
+      "evidenceKind": "unresolved_copy_provenance"
     },
     "test:craft-tier": {
       "kind": "rewrite_test",
@@ -348,8 +390,8 @@
     },
     "test:day-first-timeline": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "reason": "Timeline itself is now 56/56 with current projection, icon and anchored toggle guards; the toggle mutation is rejected. Chained week-board remains 80/81: adapter-strengthIntent fallback conflicts with LAW-generated-week-assembly's composer-owned field list. Do not restore adapter ownership to green this diagnostic.",
+      "evidenceKind": "obsolete_expectation"
     },
     "test:decision-ledger-ownership": {
       "kind": "rewrite_test",
@@ -633,9 +675,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:injury-fallback-journey": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Repaired incomplete onboarding and compatibility-adapter pin; single-leg hip is reached through actual Add. 173 assertions cover the ladder, reporting, restart, restoration and unaffected days. The valid severe-hamstring walk exposed affected/global pause conflation; restoring that translation fails the unaffected-upper-day cell.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyConstraintCompiler.ts",
+        "src/utils/injurySessionRecomposition.ts"
+      ],
+      "contractRefs": [
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
+      "witnessScript": "test:injury-fallback-journey",
+      "evidenceKind": "green_now"
     },
     "test:injury-readiness-coach-notes": {
       "kind": "rewrite_test",
@@ -904,9 +954,17 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:session-execution": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rebound projectedWorkout, mobility region, separate gym/club feedback and session-options equipment door. 201 assertions; mutating gym completion to false fails the separation cell. Product behaviour was not altered to satisfy obsolete source text.",
+      "productionPaths": [
+        "src/screens/home/DayWorkoutScreenV2.tsx",
+        "src/components/SessionFeedbackPanel.tsx"
+      ],
+      "contractRefs": [
+        "docs/NORTH_STAR.md"
+      ],
+      "witnessScript": "test:session-execution",
+      "evidenceKind": "green_now"
     },
     "test:session-execution-checklist": {
       "kind": "rewrite_test",

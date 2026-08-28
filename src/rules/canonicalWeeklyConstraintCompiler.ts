@@ -23,6 +23,7 @@ import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from './awaySpans';
 import { getTeamTrainingWorkoutState } from '../utils/teamTraining';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
+import { isRedFlagInjurySeverity } from './injuryWithheldRows';
 
 export interface CanonicalDayConstraintInput {
   day: ResolvedDay;
@@ -328,7 +329,10 @@ export function compileActiveExposureConstraints(activeConstraints: any[]): any[
     // defaults during a pure read. Current accepted facts already have both.
     const identity = { id: c.id ?? `legacy-exposure:${index}`, startDate: c.startDate ?? '' };
     if (c.type === 'injury') {
-      const trainingPaused = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
+      // The guided 8-10 band pauses AFFECTED work. Only the shared red-flag
+      // predicate pauses the whole session; treating the band as global
+      // silently deleted unaffected upper days for a severe hamstring report.
+      const trainingPaused = isRedFlagInjurySeverity(c.seriousSymptoms, c.severity);
       const region = trainingPaused
         ? 'global'
         : c.bucket ? bucketToRegion(c.bucket) : c.region ?? null;

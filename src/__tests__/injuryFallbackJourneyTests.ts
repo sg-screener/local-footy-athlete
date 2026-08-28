@@ -54,6 +54,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 /* eslint-disable import/first */
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
+import { coldStartThroughOnboarding, followTheWeek } from './support/athleteJourney';
 import { addDaysISO } from '../utils/programBlockState';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -74,7 +75,7 @@ function mondayFor(d: string): string {
 }
 function theAthlete(): OnboardingData {
   return {
-    firstName: 'Sim', heightCm: 184, weightKg: 90, gender: 'male', seasonPhase: 'Off-season',
+    firstName: 'Sim', ageRange: '22-26', seasonFinishedOn: '2026-07-12', heightCm: 184, weightKg: 90, gender: 'male', seasonPhase: 'Off-season',
     position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
@@ -92,29 +93,11 @@ function theAthlete(): OnboardingData {
     usualGameDay: 'Saturday', gameDay: 'Saturday',
   } as unknown as OnboardingData;
 }
-function install(): string {
-  localStorageData.clear();
-  resetStoresToFreshInstall('removal-transaction:install');
-  const profile = theAthlete();
-  useProfileStore.getState().updateOnboardingData(profile);
-  quiet(() => useProfileStore.getState().completeOnboarding());
-  setJourneyClock(INSTALL_DAY);
-  const program = quiet(() => generateProgramLocally(profile, {
-    todayISO: INSTALL_DAY, previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'Off-season' as never,
-      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  })) as TrainingProgram;
-  const settled = program.microcycles[1] ?? program.microcycles[0]!;
-  const weekStart = String(settled.startDate).slice(0, 10);
-  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
-    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
-    reason: 'removal-transaction:generate',
-  }));
-  useProgramStore.setState({ currentMicrocycle: settled } as never);
+async function install(): Promise<string> {
+  const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: theAthlete(), installDayISO: INSTALL_DAY }));
+  if (installed.onboardingRefusal) throw new Error(JSON.stringify(installed.onboardingRefusal));
+  const weekStart = addDaysISO(mondayFor(INSTALL_DAY), 7);
+  quiet(() => followTheWeek(weekStart));
   return weekStart;
 }
 
@@ -331,7 +314,21 @@ async function main(): Promise<void> {
 
   for (const testCase of CASES) {
     console.log(`\n[${testCase.label}]`);
-    const weekStart = install();
+    const weekStart = await install();
+    if (testCase.area === 'hamstring' && testCase.severity === 6) {
+      // Reach the missing single-leg hip coordinate through the actual Add
+      // transaction, not by inserting an exercise into a generated workout.
+      setJourneyClock(weekStart);
+      const added = await quietAsync(() => require('../utils/programControlActions')
+        .executeProgramControlActionDurably({
+          type: 'add_exercise',
+          source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+          scope: 'today_only', payload: { date: weekStart,
+            exercise: { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 } },
+          requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+        }, { todayISO: weekStart }));
+      ok('single-leg hip coverage enters through an accepted Add', added.ok, added.message);
+    }
     const days = trainingDays(weekStart);
 
     /* ── [1] LIVENESS, DERIVED ─────────────────────────────────────────────
@@ -352,7 +349,11 @@ async function main(): Promise<void> {
        * `Band Pallof Press` — so the four upper planes were never walked and the
        * coverage line read "trunk_support" for a shoulder injury. */
       if (unsafe.length > targetCount) { target = date; targetCount = unsafe.length; }
-      if (unsafe.length === 0 && untouched === null) untouched = date;
+      // The strength classifier says nothing about mobility/conditioning.
+      // Only claim an unaffected strength day after reaching that domain.
+      if (unsafe.length === 0 && untouched === null
+        && workout.exercises.every(row => ['main_strength', 'strength_accessory', 'trunk_support']
+          .includes(row.section18Evidence?.role ?? ''))) untouched = date;
     }
     ok(`${testCase.label} — CONTROL: a day in the real week carries work this injury makes unsafe`,
       target !== null, { days });
@@ -561,7 +562,7 @@ async function main(): Promise<void> {
     const { resolveSessionOutcomeTarget } = require('../store/sessionOutcomeTransaction');
     const { injuryWithholdingsOn, activeInjuryFactsOn } = require('../rules/injuryWithheldRows');
 
-    const weekStart = install();
+    const weekStart = await install();
     const target = '2026-07-20';
     setJourneyClock(target);
     const before = rowsOf(target, weekStart);
@@ -694,7 +695,7 @@ async function main(): Promise<void> {
      * training the app exists to keep going; and an injury reported on Friday
      * must not reach back and withhold Monday's finished session. */
     {
-      const laterWeekStart = install();
+      const laterWeekStart = await install();
       const earlier = '2026-07-20';
       const later = '2026-07-24';
       setJourneyClock(later);
@@ -852,7 +853,7 @@ async function main(): Promise<void> {
     const fs = require('fs');
     const path = require('path');
 
-    const weekStart = install();
+    const weekStart = await install();
     const target = '2026-07-20';
     setJourneyClock(target);
 
@@ -1046,12 +1047,12 @@ async function main(): Promise<void> {
       unavailableForInjury?: { explanation?: string };
       substitutedFrom?: { baseExerciseName?: string; cause?: string };
     };
-    let weekStart2 = install();
+    let weekStart2 = await install();
     let ordinaryTarget = '2026-07-20';
     let ordinaryRows: OrdinaryRow[] = [];
     for (const candidate of ORDINARY_CANDIDATES) {
       for (const offset of [0, 1, 2, 3, 4, 5, 6]) {
-        weekStart2 = install();
+        weekStart2 = await install();
         const day = addDaysISO(weekStart2, offset);
         setJourneyClock(day);
         await quietAsync(() => executeProgramControlActionDurably({
@@ -1116,7 +1117,8 @@ async function main(): Promise<void> {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^[ \t]*\/\/.*$/gm, '');
     ok('[11] CONTROL — stripping comments left the projection\'s real code behind',
-      /unavailableForInjury/.test(projectionCode) && projectionCode.includes('projectVisibleDay'),
+      projectionCode.includes('return compileCanonicalDayConstraints({ ...input,')
+        && projectionCode.includes('export function projectVisibleDay('),
       projectionCode.length);
     ok('[11] and neither does the projection — one field, no classifier, no import',
       !/injuryPermitsExerciseAtSeverity|injurySeverityPauses|isRedFlagInjury|injuryWithholdingsOn/

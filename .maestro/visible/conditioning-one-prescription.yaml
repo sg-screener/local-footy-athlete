@@ -5,8 +5,8 @@ tags:
   - visible
   - conditioning
 ---
-# A real pre-season/full-gym athlete whose production-generated Monday carries
-# Classic 4×4. No display row or prescription is hand-built by this seed.
+# Real pre-season/full-gym onboarding answers select an authored VO2 session.
+# Assert the reached title/dose explicitly; never depend on reminted row IDs.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
@@ -30,7 +30,12 @@ tags:
     direction: DOWN
     timeout: 10000
 - assertVisible:
-    id: "workout-exercise-prescription-dev-e2e-conditioning-showcase-2026-07-13-dow-1-exercise-cond-2026-07-13-main-7"
+    id: "workout-exercise-prescription-cond-.*"
+- scrollUntilVisible:
+    element:
+      text: ".*Choose a pace you can repeat across all 4 rounds.*"
+    direction: DOWN
+    timeout: 10000
 - assertVisible: ".*Work: 4 min hard.*"
 - assertVisible: ".*Recovery: 3 min complete rest.*"
 - assertVisible: ".*Rounds: 4.*"
@@ -42,3 +47,43 @@ tags:
 - assertNotVisible: ".*Heart rate.*"
 - assertNotVisible: ".*Run hard, but do not sprint.*"
 - takeScreenshot: artifacts/visible/conditioning-one-prescription
+- scrollUntilVisible:
+    element:
+      id: "session-execution-check-exercise-cond-.*"
+    direction: UP
+- tapOn:
+    id: "session-execution-check-exercise-cond-.*"
+- assertVisible: "Completed: .*"
+- scrollUntilVisible:
+    element:
+      id: finish-session-action
+    direction: DOWN
+- tapOn:
+    id: finish-session-action
+- tapOn:
+    id: session-feedback-rpe-grid
+- scrollUntilVisible:
+    element:
+      id: "session-feedback-save-.*"
+    direction: DOWN
+- tapOn:
+    id: "session-feedback-save-.*"
+- assertVisible:
+    id: session-complete-moment-sheet
+- takeScreenshot: artifacts/visible/conditioning-completion-overlay
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 15000
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: conditioning-showcase
+- tapOn:
+    id: view-workout-button
+- scrollUntilVisible:
+    element:
+      id: session-execution-toggle-conditioning
+    direction: DOWN
+- assertVisible: "1/1"
+- takeScreenshot: artifacts/visible/conditioning-completed-reopened

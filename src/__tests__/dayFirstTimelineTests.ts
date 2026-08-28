@@ -955,7 +955,7 @@ run('the front review includes the owned mobility warm-up before all projected p
   const home = homeScreenSource();
   assert(/selectMobilityPrehabFlow\(/.test(home),
     'the Program review does not ask the existing mobility-flow owner for the flow');
-  assert(/mobilityFlow=\{mobilityFlowByDate\.get\(day\.date\) \?\? null\}/.test(home),
+  assert(/weekDays\.flatMap\(\(day\) => \{[\s\S]*?buildSessionExecutionPlan\(\{[\s\S]*?mobilityFlow: mobilityFlowByDate\.get\(day\.date\) \?\? null/.test(home),
     'the review does not pass each day\'s owned flow into the shared timeline');
   const timelineAt = home.indexOf('function DayTimeline(');
   const chevronAt = home.indexOf('function TimelineChevron(', timelineAt);
@@ -965,7 +965,7 @@ run('the front review includes the owned mobility warm-up before all projected p
   assert(/mobilityFlow \? \(/.test(timeline)
     && /testID="day-timeline-part-mobility-warmup"/.test(timeline)
     && /mobilityFlow\.movements\.map/.test(timeline)
-    && /RowIcon kind="mobility" size=\{13\} color=\{rowIconColor\('mobility'\)\}/.test(timeline),
+    && /RowIcon kind="mobility" size=\{DAY_ROW_ICON_SIZE\} color=\{rowIconColor\('mobility'\)\}/.test(timeline),
   'the mobility warm-up is not a real review row with its owned movements');
   /* `'entries.map'` was the anchor here and it stopped existing when the loop
      learned to filter (2026-08-22) — `indexOf` returned -1 and the comparison
@@ -1336,8 +1336,14 @@ run('the week starts collapsed while Day owns its persistent weekday directly', 
   const weekContentAt = home.indexOf('{dayFirst ? (', toggleAt);
   assert(toggleAt > 0 && weekContentAt > toggleAt,
     'the Today/Week toggle region could not be found');
-  const toggle = home.slice(toggleAt, weekContentAt);
-  assert(/onPress=\{\(\) => \{[\s\S]{0,180}setPreferredProgramView\(option\)[\s\S]{0,120}handleClearWeekPresentation\(\)/.test(toggle),
+  const toggle = home.slice(toggleAt, weekContentAt).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const handlerAt = toggle.indexOf('onPress={() => {');
+  const handlerEnd = toggle.indexOf('testID={`program-view-${option}`}');
+  assert(handlerAt >= 0 && handlerEnd > handlerAt, 'the actual shape-toggle handler was not found');
+  const handler = toggle.slice(handlerAt, handlerEnd);
+  const selectAt = handler.indexOf('setPreferredProgramView(option)');
+  const resetAt = handler.indexOf('handleClearWeekPresentation()');
+  assert(selectAt >= 0 && resetAt > selectAt,
     'the shape toggle does not clear the new template\'s Week expansion coordinate');
 
   assert(/const \[expandedWeekIdx, setExpandedWeekIdx\] = useState\(-1\)/.test(home),
@@ -1346,7 +1352,7 @@ run('the week starts collapsed while Day owns its persistent weekday directly', 
   const clear = home.slice(clearAt, clearAt + 180);
   assert(clearAt > 0 && /setExpandedWeekIdx\(-1\)/.test(clear)
     && /handleClearSelection\(\)/.test(clear)
-    && /onPress=\{dayFirst \? undefined : handleClearWeekPresentation\}/.test(home),
+    && /onPress=\{dayFirst \|\| weekBoardOpen \? undefined : handleClearWeekPresentation\}/.test(home),
   'the shared shape/whitespace clear no longer collapses the local Week details');
   for (const pair of [
     ['handleCompactPrev', 'handlePrev'],

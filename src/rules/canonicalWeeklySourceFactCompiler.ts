@@ -7,7 +7,7 @@ import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
 import { compileCanonicalProgram } from './canonicalProgramCompiler';
 import { compileWeekOverlay } from './canonicalWeekOverlay';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
-import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, isInjurySourceFact,
+import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, isInjurySourceFact, READINESS_FACT_KINDS,
   type TemporarySourceFact } from './temporarySourceFact';
 import { factHorizon, factHorizonCoversDate, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
 import { isoDateForWeekday } from '../utils/appDate';
@@ -91,6 +91,27 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         });
         overlay = compileWeekOverlay({ program: compiled.program, weekStart,
           anchorDate: null, reason: 'readiness_reduction', authoredAtISO: fact.updatedAt });
+        if ('factKind' in fact && READINESS_FACT_KINDS.has(fact.factKind)) {
+          // R-034 holds load on a readiness/illness reduction. Recompiling the
+          // reduced dose skips progression, so its starting estimates are NOT
+          // the accepted loads. Carry only the same lift's own accepted load;
+          // new/replacement lifts keep the compiler's independently owned load.
+          overlay = { ...overlay, workoutsByDate: Object.fromEntries(
+            Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
+              const accepted = effective.visibleWorkouts.find(day =>
+                isoDateForWeekday(weekStart, day.dayOfWeek) === date);
+              if (!workout || !accepted) return [date, workout];
+              return [date, { ...workout, exercises: workout.exercises.map(row => {
+                const matches = accepted.exercises.filter(old =>
+                  old.exercise?.name === row.exercise?.name &&
+                  old.section18Evidence?.role === row.section18Evidence?.role);
+                const own = matches.find(old => old.id === row.id)
+                  ?? (matches.length === 1 ? matches[0] : undefined);
+                return own ? { ...row, prescribedWeightKg: own.prescribedWeightKg } : row;
+              }) }];
+            }),
+          ) };
+        }
         if (isInjurySourceFact(fact)) {
           // Strength uses the approved injury ladder. Conditioning placement
           // remains the weekly planner's responsibility: preserving the whole

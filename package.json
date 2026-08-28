@@ -68,6 +68,7 @@
     "test:session-change-sequence": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionChangeSequenceTests.ts",
     "test:session-change-hub": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionChangeHubTests.ts",
     "test:injury-recomposition": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryRecompositionTests.ts",
+    "test:readiness-load-retention": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessLoadRetentionTests.ts",
     "test:exercise-add-candidates": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseAddCandidatesTests.ts",
     "test:exercise-swap-choices": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseSwapChoicesTests.ts",
     "test:exercise-removal-owner": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseRemovalOwnerTests.ts",
