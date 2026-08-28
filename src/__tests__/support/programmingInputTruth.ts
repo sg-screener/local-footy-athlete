@@ -25,9 +25,11 @@ import { gPlusTwoFlushJourney } from './gPlusTwoFlushJourney';
 import { unilateralPriorityJourney } from './unilateralPriorityJourney';
 import { conditioningCategoryTruth } from './conditioningCategoryTruth';
 import { lowLoadRemovalJourney } from './lowLoadRemovalJourney';
+import { guidedInjuryUiTruth } from './guidedInjuryUiTruth';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   conditioningCategoryTruth(ok);
+  guidedInjuryUiTruth(ok);
   await lowLoadRemovalJourney(storage, ok);
   onboardingTapTruth(ok);
   await flushPrescriptionTruth(storage, ok);

@@ -307,7 +307,6 @@ function GuidedInjuryFlowBody({
               label={option.label}
               sub={option.sub}
               icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])}
-              selected={selectedSeverity.label === option.label}
               onPress={() => {
                 setSelectedSeverity(option);
                 if (option.adjustmentLevel === 'training_paused') {

@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  injury_severity_highlight: ['src/screens/home/GuidedInjuryFlowSheet.tsx', 'icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])}', 'icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])} selected={selectedSeverity.label === option.label}', 'injury_ui', 'severity rows have neutral chips and dividers'],
   removal_effect_identity: ['src/store/acceptedStateTransaction.ts', 'if (existing && reversibleAdjustmentWorkoutFingerprint(date, existing.remainingWorkout)\n    === reversibleAdjustmentWorkoutFingerprint(date, remainingWorkout)) {', 'if (existing) {', 'lowload_remove', 'removing added work is not mistaken for an already-applied addition'],
   category_missing_pool: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('aerobic_power');", 'return [];', 'categories', 'vo2: nonempty pool contains only its intended qualities'],
   category_lossy_cod: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('cod_decel');", "return templatesOfQuality('anaerobic');", 'categories', 'cod_decel: nonempty pool contains only its intended qualities'],
@@ -68,7 +69,7 @@ const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {
   require(path.join(repo, 'node_modules/sucrase/register'));
   const [file, from, to, witness] = mutants[child];
-  if (witness === 'onboarding' || witness === 'categories_source') {
+  if (witness === 'onboarding' || witness === 'categories_source' || witness === 'injury_ui') {
     const read = fs.readFileSync;
     fs.readFileSync = (filename, ...args) => {
       const result = read(filename, ...args);
@@ -79,7 +80,7 @@ if (child) {
       return code.replace(from, to);
     };
     let failures = 0;
-    const helper = witness === 'onboarding' ? 'onboardingTapTruth' : 'conditioningCategoryTruth';
+    const helper = witness === 'injury_ui' ? 'guidedInjuryUiTruth' : witness === 'onboarding' ? 'onboardingTapTruth' : 'conditioningCategoryTruth';
     require(path.join(repo, 'src/__tests__/support', helper))[helper]((label, value) => {
       if (!value) failures++;
       console.log(value ? 'PASS' : 'FAIL', label);

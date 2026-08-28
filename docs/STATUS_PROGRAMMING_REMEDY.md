@@ -591,9 +591,10 @@ phone operations. Scope is Sam's three follow-up requests, not a rebuild.
   minimum adjacency with two non-core days. Six actual candidate receiver sets
   were compared across all eight affected weeks. Illness week is separate.
 - Fresh real simulator onboarding/generation, then shoulder/slight through the
-  actual injury screens. Proven missing painful-movement entry: severity
-  submits immediately, and older UI tests intentionally forbid the trigger
-  step. Asked Sam about restoring it; no silent UI/product reversal.
+  actual injury screens. Severity submits immediately. Sam subsequently
+  confirmed the absence of a mandatory trigger step is intentional. Optional
+  pain reporting and the shared severity/support/safety rules are the remaining
+  verification scope, not a request to restore the old questionnaire.
 - Real shoulder modifier survives reopening and clears/stays cleared after
   reopening. Original wrong selector/invalid diagnostic-purpose attempts are
   retained; final valid-purpose rerun pending. Add Mobility, second Mobility,
@@ -605,7 +606,7 @@ Evidence: outputs/programming-gap-closure-2026-08-28/ (new, originals untouched)
 
 ### NOT COVERED — follow-up
 
-Painful-trigger screen input remains missing; remaining Add permutations,
+Optional specific-pain reporting remains to verify; remaining Add permutations,
 final exact-checkpoint release verification and physical acceptance remain.
 Installation hold stands. No claim that P01–P22 are all finished.
 
@@ -623,3 +624,23 @@ Native revised-candidate verification remains outstanding.
 Separate read-only registry diagnostic reproduces three baseline failures on
 263369ba and follow-up (21/208 UNENFORCED, missing game-feedback script, LR-18
 unregistered). Not reclassified as a new application regression or silently fixed.
+
+### Injury-flow decision and severity-row appearance
+
+Sam confirmed the simple area → severity → adjustment flow is intentional;
+there is no outstanding request for a mandatory trigger questionnaire. Optional
+pain reports, historical restrictions, indirect loading and independent serious
+symptoms are the current safety verification scope. Source inspection found
+that severity updates can replace historical triggers with an empty array and
+the red-flag predicate requires severity 8+; behavioural regressions are next.
+
+The screenshot's 4–5 tint came from the default selected severity. Removed only
+the severity row's selected styling, retaining the coloured bars and all tap
+behaviour. New release-witness guard plus a deliberate highlight-restoration
+mutation pass/catch respectively. Guided menu diagnostic: 48/48; three
+typecheck scopes: zero errors. An older all-caps onboarding title expectation
+was explicitly replaced with case-insensitive matching of the actual Title;
+the repeat-injury transition remains required. Native visual check is pending.
+
+NOT COVERED: final revised-candidate release, the remaining injury/native
+matrix, and physical acceptance. No installation or phone wipe.

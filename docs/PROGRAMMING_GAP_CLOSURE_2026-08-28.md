@@ -97,11 +97,12 @@ Fresh real onboarding and generation succeeded without a seed. The actual
 in-app injury screens accept region, area and severity, then apply immediately.
 They do not offer painful movements. The shoulder/slight flow applied 5/10;
 `painful-entry-before.yaml` then failed to find `injury-trigger-pressing`.
-This is a real missing input surface, not a successful painful-trigger test.
-Existing compiler-trigger protection remains green but does not close this UI
-gap. The removal is explicitly protected by older guided-injury UI tests; a
-question about restoring that step has been sent to Sam, without holding up
-independent work.
+Sam subsequently confirmed that this is intentional: keep body area → severity
+→ adjustment, with no mandatory painful-movement questionnaire. The failed
+probe is not an app defect or proof of optional pain reporting. The follow-up
+now verifies optional specific-pain reporting, preserved historical restrictions,
+indirect loading, shared severity rules and the separate serious-symptom path.
+No product answer remains outstanding on the main flow.
 
 The actual reported shoulder modifier survived app termination/reopening,
 displayed in My Status, cleared through **Injury resolved → Clear and update
@@ -170,7 +171,8 @@ absent screen.
 
 ## NOT COVERED
 
-- Painful-movement input through real screens: missing UI, unresolved.
+- Optional specific-pain input and the settled simple-flow safety matrix:
+  verification in progress; no mandatory trigger screen is required.
 - Remaining native Add/occupied/game-adjacent combinations: in progress.
 - Physical iPhone acceptance, installation or phone resets: none performed.
 - Clinical validation or a claim that every prescription is ideal.

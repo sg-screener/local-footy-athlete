@@ -51,6 +51,7 @@ import {
   guidedInjuryMenuTotality,
 } from '../utils/guidedInjuryControl';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
+import { guidedInjuryUiTruth } from './support/guidedInjuryUiTruth';
 
 const src = path.resolve(__dirname, '..');
 let passed = 0; const failures: string[] = [];
@@ -231,6 +232,7 @@ console.log('\n[4] THE SHEET HAS NO TYPED-AREA DOOR AT ALL');
   ok('updating in-app preserves trigger context originally saved elsewhere',
     sheet.includes('setPreservedTriggers(initial?.triggers ?? [])')
     && sheet.includes('triggers: trainingPaused ? [] : preservedTriggers'));
+  guidedInjuryUiTruth(ok);
   ok('onboarding stops after the shared severity scale, then asks whether to repeat',
     onboarding.includes("type InternalStep = 'question' | 'region' | 'area' | 'severity' | 'more'")
     && !onboarding.includes("setStep('triggers')")
@@ -276,7 +278,7 @@ console.log('\n[5] SETUP ASKS FROM THE SAME LIST — the second door is closed t
   ok('setup offers No issues after all initially and No more injuries when repeating',
     setup.includes("injuries.length > 0 ? 'No more injuries' : 'No issues after all'"));
   ok('setup asks whether there are more injuries after each severity answer',
-    setup.includes('title="ANY MORE INJURIES?"')
+    /<Title\b[^>]*title="Any more injuries\?"/i.test(setup)
     && setup.includes('setStep(\'more\')'));
   ok('Yes repeats the region and area process; No saves every collected injury',
     setup.includes('const addAnotherInjury = () =>')
