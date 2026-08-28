@@ -116,6 +116,48 @@ Add-session simulator checks and final exact-checkpoint release verification
 are still in progress. Native evidence, including unsuccessful probes, remains
 under `baseline-1922a995/`.
 
+### New native removal finding and existing-owner correction
+
+Actual sequence: real onboarding → add Mobility on Saturday rest → add another
+Mobility → Undo → re-add → reopen → Remove. Removal reported **“Your plan already
+has that, so nothing changed”** while both sessions remained. The before/after
+screenshots are `remove-two-mobility-result.png` and
+`after-remove-two-mobility.png`. This was not classified from a failed selector:
+the observed result and unchanged day established the defect.
+
+`lowLoadRemovalJourney` reproduced it in **8/8 athlete/session-kind worlds**:
+male/female × Mobility/Recovery first × Mobility/Recovery second. Baseline:
+32 passing assertions, eight removal failures. All state is reached through
+real onboarding, Add, Undo, re-add and restart, then the same durable action
+called by the native screen. No saved-state fixture was invented.
+
+Ownership review: the visible plan is derived from canonical accepted effects;
+the screen sends a typed removal through the existing program-control door to
+`stageAthleteSessionDeletionTransaction`. That owner treated an active record
+for the same target as proof that the requested effect had already happened.
+But Add/Swap uses that target with a nonempty remaining workout. Options were
+(1) compare effects at this existing idempotency owner, using its existing
+semantic workout fingerprint, or (2) redesign constraint identities and migrate
+all writers/readers. Option 1 preserves the current architecture and addresses
+the missing distinction directly. No new resolver, write format or finaliser.
+
+The owner now compares the remaining-workout effect as well as the target.
+After correction, **64/64 assertions** pass across the eight worlds, including
+removal → reopen → Undo removal → reopen and exact restoration of both sessions.
+The existing deletion matrix remains **147/147** across 18 deletion coordinates
+(eight whole-day, six strength, four conditioning). All three TypeScript scopes
+have zero errors. The new journey is in the release compiler witness; a mutant
+restoring the target-only shortcut is required to fail before final acceptance.
+Native verification of the revised application is still owed.
+
+### Broader diagnostic registry, separate from the four C12 failures
+
+`test:law-registry` reports three failures on both untouched 263369ba and the
+follow-up: nonexistent `test:game-feedback`, unregistered LR-18, and 21 of 208
+law rows marked UNENFORCED. These are baseline diagnostic debt, not introduced
+by this change, and not evidence that the whole diagnostic fleet is green.
+No law was quietly waived or marked guarded to make that result pass.
+
 ## What catches the next defect of these classes
 
 Category vocabulary is checked against real selection and rendering, rather

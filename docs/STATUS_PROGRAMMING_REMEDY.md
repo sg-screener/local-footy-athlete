@@ -608,3 +608,18 @@ Evidence: outputs/programming-gap-closure-2026-08-28/ (new, originals untouched)
 Painful-trigger screen input remains missing; remaining Add permutations,
 final exact-checkpoint release verification and physical acceptance remain.
 Installation hold stands. No claim that P01–P22 are all finished.
+
+### Native finding: low-load removal after accumulated additions
+
+Native two-Mobility day remained after Remove reported already-applied. New
+real-door matrix reproduces 8/8 worlds (32 pass, eight fail). Existing deletion
+owner confused same target with same effect: prior Add/Swap still carried
+remaining content. Compared effect-check at that owner against identity-system
+redesign; selected the existing semantic fingerprint comparison, no new owner.
+After fix: 64/64 new assertions, 147/147 existing deletion assertions, all three
+typecheck scopes zero. Release helper and deliberate target-only mutant added.
+Native revised-candidate verification remains outstanding.
+
+Separate read-only registry diagnostic reproduces three baseline failures on
+263369ba and follow-up (21/208 UNENFORCED, missing game-feedback script, LR-18
+unregistered). Not reclassified as a new application regression or silently fixed.

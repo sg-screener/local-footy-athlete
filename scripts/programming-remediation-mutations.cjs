@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  removal_effect_identity: ['src/store/acceptedStateTransaction.ts', 'if (existing && reversibleAdjustmentWorkoutFingerprint(date, existing.remainingWorkout)\n    === reversibleAdjustmentWorkoutFingerprint(date, remainingWorkout)) {', 'if (existing) {', 'lowload_remove', 'removing added work is not mistaken for an already-applied addition'],
   category_missing_pool: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('aerobic_power');", 'return [];', 'categories', 'vo2: nonempty pool contains only its intended qualities'],
   category_lossy_cod: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('cod_decel');", "return templatesOfQuality('anaerobic');", 'categories', 'cod_decel: nonempty pool contains only its intended qualities'],
   category_new_vocabulary: ['src/rules/offseasonSubphasePolicy.ts', "| 'cod_decel';", "| 'cod_decel' | 'unhandled_quality';", 'categories_source', 'OffseasonConditioningCategory has a nonempty, fully accounted vocabulary'],
@@ -111,7 +112,7 @@ if (child) {
     global.window = { localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k), clear: () => storage.clear() } };
     global.fetch = () => { throw Error('NETWORK DISABLED'); };
     let failures = 0;
-    const helper = witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
+    const helper = witness === 'lowload_remove' ? 'lowLoadRemovalJourney' : witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
       : witness === 'flush_restart' ? 'flushRestartJourney' : 'programmingInputTruth';
     require(path.join(repo, 'src/__tests__/support', helper))[helper](storage, (label, value, detail) => {
       if (!value) failures++;

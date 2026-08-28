@@ -3067,9 +3067,16 @@ export function stageAthleteSessionDeletionTransaction(
   const state = useProgramStore.getState();
   const prior = materialContext(state);
   const id = userRemovalConstraintId({ date, scope: args.scope, workout: args.originalWorkout });
+  const remainingWorkout = args.remainingWorkout && args.remainingWorkout.workoutType !== 'Rest'
+    ? JSON.parse(JSON.stringify(args.remainingWorkout)) as Workout
+    : null;
   const existing = state.userRemovalConstraints.find((constraint) =>
     constraint.id === id && constraint.status === 'active');
-  if (existing) {
+  // A prior Add/Swap can own this same target with content still remaining.
+  // Idempotency means the requested effect already holds, not merely that the
+  // target has a record. Use the existing semantic owner for the comparison.
+  if (existing && reversibleAdjustmentWorkoutFingerprint(date, existing.remainingWorkout)
+    === reversibleAdjustmentWorkoutFingerprint(date, remainingWorkout)) {
     return {
       proposal: null,
       result: { program: programSurfaces(state), context: prior },
@@ -3091,9 +3098,6 @@ export function stageAthleteSessionDeletionTransaction(
   // mirroring the move transaction (wholeDayRestOwned: !swappedWorkout). For
   // every existing Bin case (whole_session ⇒ remainingWorkout null) this is
   // byte-identical to the previous unconditional behaviour.
-  const remainingWorkout = args.remainingWorkout && args.remainingWorkout.workoutType !== 'Rest'
-    ? JSON.parse(JSON.stringify(args.remainingWorkout)) as Workout
-    : null;
   const wholeDayRest = args.scope === 'whole_session' && !remainingWorkout;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
