@@ -12,6 +12,11 @@ import { undoLastDecision } from '../../store/undoLastDecision';
 import { applyPlanChange } from '../../utils/planChangeProducer';
 import { selectActiveProgramModifiers } from '../../utils/activeProgramModifiers';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { rankedQuickSwapChoices } from '../../utils/quickExerciseActions';
+import { resolveTapSwapEnvironment } from '../../utils/tapSwapHierarchy';
+import { buildSwapSuggestionPayload } from '../../utils/swapSuggestionPayload';
+import { chooseInjurySessionAdditions } from '../../utils/injurySessionAdjustment';
+import { assessProgramEditRisk } from '../../utils/programEditRiskAssessment';
 
 export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (let severity = 1; severity <= 10; severity++) {
@@ -63,6 +68,96 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
     ['RDLs', 'Hinging / bending'], ['Box Jumps', 'Jumping / landing']] as const) {
     ok(`simple-injury/${name}: exact untagged pain and historical movement labels remain effective`,
       !injuryPermitsExerciseAtSeverity(name, 'shoulder', 1, [pain]));
+  }
+  // Native conformance shape: four-day in-season athlete, two club nights,
+  // Saturday game. Reach it through onboarding, not a copied simulator store.
+  // A severe shoulder report used to add a second Bodyweight Squat on Monday,
+  // then all later manual swaps failed the unchanged weekly balance rule.
+  for (const gender of ['male', 'female'] as const) for (const severity of [7, 9]) {
+    const now = '2026-08-28', week = '2026-08-31', target = '2026-09-01';
+    const profile = athleteAnswers({ ...ARCHETYPES[3], gender, experience: '5+ years', gameDay: 'Saturday' });
+    profile.heightCm = 182;
+    profile.weightKg = 84;
+    profile.equipmentAnswer = { ...profile.equipmentAnswer!, tags: { ...profile.equipmentAnswer!.tags,
+      rack: 'have', trap_bar: 'have', dip_bars: 'have', rings_trx: 'have', ab_wheel: 'have',
+      swiss_ball: 'have', sandbag: 'have', back_extension_bench: 'have' } };
+    const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: now }));
+    if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
+    const view = () => quiet(() => deriveVisibleWeekLive(week, now));
+    const healthyWeek = visibleSignature(view());
+    const constraint = buildGuidedInjuryConstraint({ region: 'upper_body', area: 'Shoulder', severity,
+      severityBand: severity >= 8 ? 'avoid' : 'moderate',
+      adjustmentLevel: severity >= 8 ? 'training_paused' : 'moderate', triggers: [], seriousSymptoms: false }, { todayISO: now });
+    const injury = await quietAsync(() => executeProgramControlActionDurably({ type: 'set_injury_modifier',
+      source: { screen: 'program_tab', surface: 'guided_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint }, requiresRebuild: false,
+      createsActiveModifier: true, oneOffOnly: false }, { todayISO: now }));
+    const label = `simple-injury/manual/${gender}/${severity}`;
+    ok(`${label}: real injury report accepted`, injury.ok);
+    const riskWeek = { days: view().map(day => ({ date: day.date, workouts: day.workout ? [day.workout] : [] })) };
+    for (const score of [2, 9]) {
+      const assessment = quiet(() => assessProgramEditRisk({ current: riskWeek, proposed: riskWeek,
+        activeConstraints: [{ ...constraint, severity: score, seriousSymptoms: true }], todayISO: now }));
+      ok(`${label}/${score}: serious symptoms retain the medical stop for manual edits`,
+        assessment.findings.some(finding => finding.ruleId === 'active_injury_hard_stop'));
+    }
+    const rowNames = () => view().map(day => (day.workout?.exercises ?? []).map(row => row.exercise?.name));
+    ok(`${label}: substitutions and additions never duplicate an exercise on one day`,
+      rowNames().every(names => new Set(names).size === names.length), JSON.stringify(rowNames()));
+    for (const afterBoot of [false, true]) {
+      if (afterBoot) {
+        const before = visibleSignature(view());
+        const boot = await quietAsync(() => relaunchApp({ storage, todayISO: now }));
+        ok(`${label}: injury rows and doses survive restart`, boot.ok && visibleSignature(view()) === before);
+      }
+      const workout = view().find(day => day.date === target)?.workout;
+      const row = workout?.exercises.find(row => row.section18Evidence?.role === 'main_strength');
+      if (!workout || !row) throw Error(`${label}: no actual unaffected main-strength target`);
+      const environment = quiet(() => resolveTapSwapEnvironment({ date: target, profile,
+        activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints, readinessSignal: null }));
+      if (!afterBoot) {
+        const balanced = quiet(() => chooseInjurySessionAdditions({ environment, profile,
+          keptRowNames: [], pausedRowNames: ['Bench Press'], weekExerciseNames: ['Bodyweight Squat'],
+          otherMainStrengthPatterns: ['squat', 'squat', 'squat'],
+          excludedByAthlete: [], pausedCount: 1, originalRowCount: 1,
+          injuredHalf: 'upper', keptSets: 0, dateISO: target }));
+        ok(`${label}: eligible lower replacement favours the uncovered hinge`,
+          balanced[0]?.mainStrengthPattern === 'hinge', JSON.stringify(balanced));
+      }
+      const choice = quiet(() => rankedQuickSwapChoices({ originalExercise: row.exercise.name, reason: 'preference',
+        environment, existingExerciseNames: workout.exercises.map(row => row.exercise.name), profile }))[0];
+      if (!choice?.name) throw Error(`${label}: native swap menu has no unaffected choice`);
+      const before = visibleSignature(view());
+      const swapped = await quietAsync(() => executeProgramControlActionDurably({ type: 'swap_exercise',
+        source: { screen: 'session_detail', surface: 'quick_exercise_action', initiatedBy: 'tap' },
+        scope: 'today_only', payload: { date: target, fromExercise: row.exercise.name, fromExerciseId: row.id,
+          toExercise: buildSwapSuggestionPayload(choice.name!, row, choice.prescription ?? {}) },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: target }));
+      ok(`${label}/${afterBoot ? 'reopened' : 'live'}: offered unaffected swap is accepted without relaxing weekly balance`,
+        swapped.ok, JSON.stringify(swapped));
+      if (swapped.ok) {
+        const undo = await quietAsync(() => undoLastDecision());
+        ok(`${label}/${afterBoot ? 'reopened' : 'live'}: Undo restores exact injured week`,
+          undo.outcome === 'undone' && visibleSignature(view()) === before);
+      }
+      const unsafe = await quietAsync(() => executeProgramControlActionDurably({ type: 'swap_exercise',
+        source: { screen: 'session_detail', surface: 'quick_exercise_action', initiatedBy: 'tap' },
+        scope: 'today_only', payload: { date: target, fromExercise: row.exercise.name, fromExerciseId: row.id,
+          toExercise: { name: 'Bench Press', sets: 2, repsMin: 10, repsMax: 10 } },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: target }));
+      ok(`${label}/${afterBoot ? 'reopened' : 'live'}: unsafe manual press stays refused with no state change`,
+        !unsafe.ok && visibleSignature(view()) === before);
+    }
+    const episodeId = useProgramStore.getState().acceptedMaterialContext.injuryEpisodes
+      .find(episode => episode.bucket === 'shoulder' && episode.status === 'active')?.episodeId;
+    if (!episodeId) throw Error(`${label}: no actual injury to Clear`);
+    const clear = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
+      source: { screen: 'program_tab', surface: 'guided_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { episodeId }, requiresRebuild: false,
+      createsActiveModifier: false, oneOffOnly: false }, { todayISO: now }));
+    ok(`${label}: Clear restores the exact healthy week`, clear.ok && visibleSignature(view()) === healthyWeek);
+    const clearedBoot = await quietAsync(() => relaunchApp({ storage, todayISO: now }));
+    ok(`${label}: cleared healthy work survives restart`, clearedBoot.ok && visibleSignature(view()) === healthyWeek);
   }
   const today = '2026-08-24';
   for (const gender of ['male', 'female'] as const) {

@@ -312,8 +312,21 @@ export function chooseInjurySessionAdditions(args: {
   /* The first leaf in the unaffected half that has anything legal left. A half
    * whose every leaf is empty simply contributes nothing, and the midline slots
    * below still fill — which is what stops an upper injury emptying the day. */
-  for (const leaf of leaves) {
-    const candidate = legal(leaf)[0];
+  // Lower-body replacements use the same least-covered-pattern principle.
+  // Search the existing eligible leaves together: a legal hinge may live in
+  // Accessories, so exhausting only the Hinge drawer must not force more
+  // squats while the unchanged weekly balance rule still requires a hinge.
+  const lowerCount = (candidate: AddCandidate): number => {
+    const pattern = mainPatternForExerciseMovement(getExerciseTags(candidate.name)?.movement);
+    if (!pattern) return Number.MAX_SAFE_INTEGER;
+    return args.otherMainStrengthPatterns
+      ? args.otherMainStrengthPatterns.filter(existing => existing === pattern).length
+      : restOfWeek.filter(name => mainPatternForExerciseMovement(getExerciseTags(name)?.movement) === pattern).length;
+  };
+  const compounds = safeHalf === 'lower'
+    ? leaves.flatMap(legal).sort((left, right) => lowerCount(left) - lowerCount(right))
+    : leaves.flatMap(leaf => legal(leaf).slice(0, 1));
+  for (const candidate of compounds) {
     if (candidate && take({ ...candidate,
       mainStrengthPattern: mainPatternForExerciseMovement(getExerciseTags(candidate.name)?.movement),
     })) break;

@@ -6,10 +6,11 @@
  * copy or graduate severity independently. Session-level row recomposition is a
  * separate specialist and deliberately remains outside this weekly policy.
  */
-import type { InjuryKey } from '../data/exerciseTags';
+import { EXERCISE_TAGS, type InjuryKey } from '../data/exerciseTags';
 import type { OnboardingData, OnboardingInjury } from '../types/domain';
 import {
   applyGenerationConstraintsToProfile,
+  injuryKeysFor,
   type GenerationConstraintContext,
 } from '../utils/generationConstraints';
 import {
@@ -19,8 +20,8 @@ import {
   onboardingInjurySeverityScore,
 } from './injurySeverityBands';
 import type { PowerInjuryInput } from './powerPrimerPolicy';
-import type { MainStrengthPattern } from './strengthPatternContributions';
-import { injuryTriggerMatchesConditioningModality } from './injuryExerciseRisk';
+import { mainPatternForExerciseMovement, type MainStrengthPattern } from './strengthPatternContributions';
+import { injuryPermitsExerciseAtSeverity, injuryTriggerMatchesConditioningModality } from './injuryExerciseRisk';
 
 export interface CanonicalWeeklyInjuryPolicy {
   readonly prohibitedPatterns: readonly MainStrengthPattern[];
@@ -86,6 +87,21 @@ export function canonicalWeeklyInjuryStateFrom(args: {
     if (LOWER_BODY.test(text)) prohibited.push('squat', 'hinge');
   }
 
+  // Do not require a pattern whose entire rated pool the shared injury
+  // authority excludes. In particular, limiting shoulder restrictions exclude
+  // Caution pulls too; requiring one made safe manual edits impossible. This
+  // reads candidate ratings, not the rows that happened to survive generation.
+  const restrictions = mergedProfileInjuries.flatMap(injury => injuryKeysFor(injury.bodyArea)
+    .map(bucket => ({ bucket, severity: onboardingInjurySeverityScore(injury),
+      triggers: injury.movementTriggers ?? [] })));
+  if (restrictions.length) for (const pattern of ['squat', 'hinge', 'push', 'pull'] as const) {
+    const candidates = Object.entries(EXERCISE_TAGS).filter(([, tags]) =>
+      !tags.power && mainPatternForExerciseMovement(tags.movement) === pattern);
+    if (candidates.length > 0 && !candidates.some(([name]) => restrictions.every(injury =>
+      injuryPermitsExerciseAtSeverity(name, injury.bucket, injury.severity, injury.triggers)))) {
+      prohibited.push(pattern);
+    }
+  }
   const prohibitedPatterns = uniquePatterns(prohibited);
   const lowerBodyRestricted = mergedProfileInjuries.some((injury) =>
     injurySeverityReducesAffectedWork(onboardingInjurySeverityScore(injury)) &&

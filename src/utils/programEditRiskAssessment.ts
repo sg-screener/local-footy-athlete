@@ -19,7 +19,7 @@ import {
   getProgrammingRiskRank,
   type ProgrammingHierarchyTier,
 } from '../rules/conflictResolutionHierarchy';
-import { severityPausesTraining } from '../rules/injurySeverityBands';
+import { isRedFlagInjurySeverity } from '../rules/injuryWithheldRows';
 
 export type ProgramEditRiskDecision = 'allow' | 'confirm' | 'block';
 export type ProgramEditRiskLevel = FindingSeverity;
@@ -344,10 +344,10 @@ function activeConstraintHardStops(
   for (const constraint of constraints ?? []) {
     if (expiresBeforeToday(constraint, todayISO)) continue;
     if (constraint.type !== 'injury') continue;
-    const hardStop =
-      constraint.seriousSymptoms === true ||
-      severityPausesTraining(constraint.severity) ||
-      constraint.adjustmentLevel === 'training_paused';
+    // Severe ordinary injuries pause affected work, not every edit. Individual
+    // candidates still pass the shared injury check; only serious symptoms own
+    // the separate medical stop, at every numeric severity.
+    const hardStop = isRedFlagInjurySeverity(constraint.seriousSymptoms, constraint.severity);
     if (!hardStop) continue;
     findings.push({
       ruleId: 'active_injury_hard_stop',

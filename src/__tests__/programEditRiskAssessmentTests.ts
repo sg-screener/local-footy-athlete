@@ -403,6 +403,18 @@ console.log('\n[10] protected anchors and red-flag constraints');
   ok('game-day finding declares the game-protection hierarchy tier',
     byRule(ordered, 'game_day_hard_work')[0]?.hierarchyTier === 'game_day_protection',
     ruleList(ordered));
+  for (let severity = 1; severity <= 10; severity++) {
+    const assess = (seriousSymptoms: boolean) => assessProgramEditRisk({
+      current: input(cleanWeek()), proposed: input(cleanWeek()),
+      activeConstraints: [{ ...injury, severity, seriousSymptoms,
+        adjustmentLevel: severity >= 8 ? 'training_paused' : 'minimal' }],
+      todayISO: '2026-06-01',
+    });
+    ok(`severity ${severity}: serious symptoms retain the separate medical stop`,
+      byRule(assess(true), 'active_injury_hard_stop').length === 1);
+    ok(`severity ${severity}: ordinary injury does not blanket-block unaffected edits`,
+      byRule(assess(false), 'active_injury_hard_stop').length === 0);
+  }
 }
 
 console.log(`\nprogramEditRiskAssessmentTests: ${pass} passed, ${fail} failed`);

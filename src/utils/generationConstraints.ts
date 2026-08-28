@@ -448,7 +448,7 @@ function inferRegion(bodyPart: string, bucket?: string): GenerationInjuryRegion 
   return 'other';
 }
 
-function injuryKeysFor(bodyPart: string, bucket?: string): InjuryKey[] {
+export function injuryKeysFor(bodyPart: string, bucket?: string): InjuryKey[] {
   const text = `${bodyPart} ${bucket ?? ''}`.toLowerCase();
   const keys: InjuryKey[] = [];
   if (/\bhamstring|hammy\b/.test(text)) keys.push('hamstring');

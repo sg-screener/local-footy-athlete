@@ -816,3 +816,66 @@ the limiting injury through My Status passed, retaining accumulated edits.
 NOT COVERED: final revised candidate verification; native Undo, severe and
 second-session checks in progress; physical acceptance, including recorded
 2 km Skip QA. No phone installation or reset.
+
+### dd00b81e verified; native severe-edit gaps reproduced and corrected
+
+Exact isolated dd00b81e: release 20/20 units, 23 current contracts, exit 0;
+compiler year 416/416 athlete-weeks (8 athletes × 52), zero distinct failures;
+clean generic iOS Release build succeeded, not installed. Four delivered years
+each contain 52 weeks, 364 days and 52 restart checks; 4/4 strict audits pass.
+All 55 templates / 110 emitted variants and all 23 adjacent energy date pairs
+per year match the classified baseline. Twenty-two follow-up mutants caught.
+Evidence: outputs/programming-gap-closure-2026-08-28/candidate-dd00b81e/.
+
+Native dd00 healthy Barbell Row Quick Swap → Undo restores the row. Adding a
+third session to Tuesday (strength + club) is correctly refused; this is NOT
+proof of strength-plus-Mobility. Severe shoulder Clear through My Status passes.
+The severe native swap, however, is refused by weekly pattern validation.
+Read-only simulator storage is a conformance target ONLY. Reusing its onboarding
+answers in fresh real journeys reproduces it: male/female × 7/9 × live/reopened.
+First matrix: 526 pass / 10 fail (8 refused safe swaps, 2 male duplicate days).
+
+Ownership review / options: a new edit-specific repair or injury engine would
+duplicate decisions; retain the existing canonical injury fold, shared ratings,
+weekly policy and medical predicate. The same accepted injury is represented as
+an episode, compiler policy and candidate-check context; old pattern/medical
+summaries disagreed with the shared candidate authority. Correct those reads,
+not the transaction/validator, and do not add a late repair or another writer.
+Existing R-089 and Bible strength balance already authorise injury imbalance;
+healthy numeric limits and safe-pattern requirements stay unchanged.
+
+Corrections, each held by real journeys and deliberate mutants:
+- Session additions now see the ladder's actual substitutions, preventing two
+  independent choices of the same exercise on one day.
+- Existing lower-body addition candidates prioritise the less-covered pattern,
+  including a legal hinge in an accessory drawer; no dose or new exercise added.
+- Weekly injury policy consults the shared rated pool before requiring a pattern
+  with no legal candidate (limiting shoulder had still required a Caution pull).
+- Existing typed intentional-imbalance reason carries the active injury to the
+  validator. No numeric limit, healthy-week rule or per-exercise restriction changed.
+- Manual edit medical stop uses the existing serious-symptom predicate, not a
+  severe number or affected-training-paused label alone. Unsafe Bench remains
+  refused; serious symptoms at low and high scores still stop manual edits.
+
+Expanded current matrix: 564/564, including low/high serious-edit controls and
+exact healthy-week restoration after Clear and another restart. Risk unit: 51/51,
+write guard and existing adjustment tests green (54/54 adjustment). All three
+TypeScript scopes have zero errors. Six deliberate new mutants caught. The
+first duplicate mutant changed only one of two inputs and survived; it was an
+incomplete mutation, not evidence of coverage. Reintroducing both original
+inputs fails the duplicate-day assertion. Original logs retained.
+
+Additional diagnostic: test:section18-v2 fails before assertions on both dd00
+and current source because its fixture lacks required onboarding answers. This
+is stale fixture debt, not justification to weaken real onboarding validation.
+
+Actual browser report review found a remaining NON-FLUSH clarity gap: a Bike
+Extensive Tempo row still says “30 s walk” recovery. Exact 55-template capture
+equality is not proof that every resolved machine rendering is clear. Keep this
+open for modality-aware review; no recovery mode, dose or intensity was quietly
+changed to make the text pass. P18 flush itself is unchanged.
+
+NOT COVERED: revised exact-candidate release/build/years and affected native
+checks still required after this correction; strength-day Mobility and refusal
+sheet dismissal; non-flush off-leg recovery wording; physical iPhones/2 km Skip
+acceptance. Phone installation remains held. Other-seat NOW changes untouched.

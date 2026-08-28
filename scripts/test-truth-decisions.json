@@ -260,12 +260,18 @@
         "src/utils/sessionBuilder.ts",
         "src/utils/sessionTemplate.ts",
         "src/utils/injurySessionAdjustment.ts",
+        "src/rules/canonicalWeeklyInjuryCompiler.ts",
+        "src/rules/canonicalWeeklyInjuryState.ts",
+        "src/rules/section18SafetyPolicy.ts",
+        "src/utils/programEditRiskAssessment.ts",
         "src/rules/canonicalWeeklySourceFactCompiler.ts",
         "src/store/blockSelectionHistoryStore.ts"
       ],
       "contractRefs": [
         "LAW-canonical-weekly-compiler-first-slice",
         "LAW-programming-remediation-inputs-and-selection",
+        "LAW-simple-injury-shared-safety",
+        "LAW-speed-quality-and-landmine-power",
         "R-237"
       ],
       "witnessScript": "test:canonical-weekly-compiler",

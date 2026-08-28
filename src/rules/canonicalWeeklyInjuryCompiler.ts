@@ -34,13 +34,6 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
   const visible = applyExclusionsToAuthoredDay({ workout: args.workout, dateISO: args.dateISO,
     exclusions: args.exclusions }) ?? args.workout;
   const plan = planInjuryRecomposition({ workout: visible, environment, primaryInjury });
-  const adjustment = deriveInjurySessionAdjustment({ workout: visible, environment,
-    profile: args.profile, bodyPart: stage.bodyPart,
-    redFlag: isRedFlagInjurySeverity(stage.seriousSymptoms, stage.severity),
-    weekExerciseNames: args.weekExerciseNames,
-    otherMainStrengthPatterns: args.otherMainStrengthPatterns,
-    excludedByAthlete: args.exclusions.map(entry => entry.exercise),
-    pausedRowNames: plan.pausedRows, dateISO: args.dateISO });
   let workout = args.workout;
   for (const substitution of plan.substitutions) {
     if (!substitution.to.name) continue;
@@ -65,6 +58,24 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
         ...(origin !== substitution.from ? { originExerciseName: origin } : {}) },
     });
   }
+  // The added block must see the ladder's actual substitutions. Planning both
+  // against the original rows could independently choose Bodyweight Squat,
+  // putting it on the same day twice and overstating weekly squat exposure.
+  const substitutedVisible = applyExclusionsToAuthoredDay({ workout, dateISO: args.dateISO,
+    exclusions: args.exclusions }) ?? workout;
+  const substitutedWeekNames = [...args.weekExerciseNames];
+  for (const row of visible.exercises) {
+    const index = substitutedWeekNames.indexOf(row.exercise?.name ?? '');
+    if (index >= 0) substitutedWeekNames.splice(index, 1);
+  }
+  substitutedWeekNames.push(...substitutedVisible.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
+  const adjustment = deriveInjurySessionAdjustment({ workout: substitutedVisible, environment,
+    profile: args.profile, bodyPart: stage.bodyPart,
+    redFlag: isRedFlagInjurySeverity(stage.seriousSymptoms, stage.severity),
+    weekExerciseNames: substitutedWeekNames,
+    otherMainStrengthPatterns: args.otherMainStrengthPatterns,
+    excludedByAthlete: args.exclusions.map(entry => entry.exercise),
+    pausedRowNames: plan.pausedRows, dateISO: args.dateISO });
   workout = applyInjurySessionAdjustment({ workout, adjustment });
   // Typed speed/power/conditioning components obey the same stage. Planning
   // first preserves the original names in the review and paused-work summary.

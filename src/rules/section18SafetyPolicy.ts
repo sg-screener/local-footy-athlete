@@ -274,6 +274,12 @@ export function applyGenerationSafetyToSection18Contract(args: {
   const hasFieldRestriction = trainingPaused;
 
   if (prohibited.length > 0) {
+    // Bible strength balance / §18.D: an active injury explicitly justifies
+    // temporary imbalance. Keep the healthy-week rule and its numeric limit;
+    // carry the existing typed injury authority to the validator instead of
+    // letting it refuse an otherwise safe edit on an already-adjusted week.
+    contract.strengthPatterns.intentionalImbalanceReason ??=
+      `injury_restriction:${prohibited.join(',')}`;
     addReduction(contract, {
       metric: 'strength_pattern_count',
       reducedTarget: requiredSafe.length,
