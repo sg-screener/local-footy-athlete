@@ -231,7 +231,7 @@ console.log('\n[4] THE SHEET HAS NO TYPED-AREA DOOR AT ALL');
     && !sheet.includes('injury-trigger-'));
   ok('updating in-app preserves trigger context originally saved elsewhere',
     sheet.includes('setPreservedTriggers(initial?.triggers ?? [])')
-    && sheet.includes('triggers: trainingPaused ? [] : preservedTriggers'));
+    && sheet.includes('triggers: preservedTriggers'));
   guidedInjuryUiTruth(ok);
   ok('onboarding stops after the shared severity scale, then asks whether to repeat',
     onboarding.includes("type InternalStep = 'question' | 'region' | 'area' | 'severity' | 'more'")

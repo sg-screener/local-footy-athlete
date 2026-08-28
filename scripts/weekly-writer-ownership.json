@@ -92,7 +92,7 @@
       "reason": "Pure row-composition stage shared by weekly compilation and the strength-template compiler: resolves typed planned patterns, selection history, equipment, exclusions, dose and loads; returns composed rows and coverage gaps without publishing state. All direct write regions inspected."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "75ba3287c967f671be0518d2e1a47396b377088d1803e3c44e4a737665944e75",
+      "fingerprint": "f518b5f598f7a1ffa85fcfd0d24c52d33a4e312a1ddbb7f0e6308ece755b9ca6",
       "classification": "canonical_compiler",
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },
@@ -412,7 +412,7 @@
       "reason": "Generation-request diagnostic builds a shared planner snapshot for explanation and emits profile/plan metadata only; no accepted program writer."
     },
     "src/rules/materialiseAuthoredSessions.ts#materialiseAuthoredSessions": {
-      "fingerprint": "a017753bf849f0cb765253dfa9e759047fff2fc908435f3aa9c80bf08cc70111",
+      "fingerprint": "45182b6506fdf3f76b1f9a3fc22045a7705022a42a724c6395e083b96b50b1e1",
       "classification": "canonical_compiler",
       "reason": "Canonical weekly compiler's specialist materializer consumes the sole scheduler's intentions, uses shared conditioning/sprint selection and power policy, and returns declared content metadata."
     },
@@ -692,7 +692,7 @@
       "reason": "Guarded coach-update/constraint input patch with reset-action provenance; compatibilityPersistence filters source-fact-derived constraints from durable writes."
     },
     "src/rules/canonicalInjuryConditioning.ts#compileInjuryConditioning": {
-      "fingerprint": "7e39e35ec6e498686d2cb9640e57eca8195b4d25ab7d4df515e8150cc1abddab",
+      "fingerprint": "a1b9a59097b0d0745ef02459c7c46bd5fdfdcbc8eee2a2323cb2132f8a849ad4",
       "classification": "canonical_compiler",
       "reason": "Canonical injury conditioning policy filters typed components and applies shared equipment-safe substitution to explicit inputs; no persistence or ambient-store dependency."
     },
@@ -2422,7 +2422,7 @@
       "fingerprint": "d31ea01428345204d90b2849a2ab83384d5aadc95c23377fa56c103da83915c7"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
-      "fingerprint": "3e12e8127a485620334a0dc39ad7733ace5a1c5efcf22dfc5bdbcaaef82ca7de",
+      "fingerprint": "c03f2771b528734415d05b46e43045958dbb5ad73fb46eec21896bba8259e437",
       "classification": "canonical_compiler",
       "reason": "Canonical weekly orchestrator combines typed fixture, availability, injury, readiness and scheduled-deload inputs through shared scheduler, allocation and dose stages."
     },
@@ -2642,7 +2642,7 @@
       "reason": "Explicit constraint dose/content stage invoked by canonicalWeeklyConstraintCompiler; no independent publisher or store input."
     },
     "src/utils/exposureEngine.ts#applyConstraintsToTypedComponents": {
-      "fingerprint": "608ee51fecee8c24180edffc093120fa267e7b013abc637e6b36b097ab618820",
+      "fingerprint": "cea3fa1c039ba7b87e2e2ef718ed9b452025f5452eead14c3648164c5e1c9910",
       "classification": "canonical_compiler",
       "reason": "Typed component constraint transformation used by the shared canonical constraint stage; accepts explicit constraints and has no persistence."
     },
@@ -2908,8 +2908,8 @@
     },
     "src/store/acceptedStateTransaction.ts#stageAthleteSessionDeletionTransaction": {
       "classification": "canonical_input_writer",
-      "reason": "Captures deletion scope, target identity and accepted remaining components as a typed constraint; delegates application. Re-reviewed added semantic-copy inventory; source body is hash-identical to the previous review.",
-      "fingerprint": "b7a37812fb259e1d075bcc0dd89e016dbcd29e8ee7ac602f4459cbd85f7c7bf8"
+      "reason": "Captures deletion scope, target identity and accepted remaining components as a typed constraint; delegates application. Re-reviewed full body after the 28-Aug accumulated-Add removal fix: the existing semantic fingerprint compares requested and recorded remaining content before returning already-applied. No new derived author, calendar writer, format or capability; only idempotency identity changed.",
+      "fingerprint": "13eb7c5b233159c52637690c9d9373511716f9b6af1ab35d7da83c8e3436b499"
     },
     "src/store/acceptedStateTransaction.ts#stageAthleteSessionMoveTransaction": {
       "classification": "canonical_input_writer",

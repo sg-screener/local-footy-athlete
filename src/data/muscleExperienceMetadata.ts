@@ -539,7 +539,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
   },
   {
     exercise: 'Explosive Landmine Press',
-    pool: 'Upper push vertical',
+    pool: 'Upper power',
     primary: ['Shoulders', 'Chest'],
     secondary: ['Triceps'],
     experienceGate: 'one_plus_years',

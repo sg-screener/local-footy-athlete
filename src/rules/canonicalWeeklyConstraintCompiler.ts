@@ -343,6 +343,7 @@ export function compileActiveExposureConstraints(activeConstraints: any[]): any[
         severity: c.severity,
         status: c.status,
         trainingPaused,
+        painfulMovements: c.triggers ?? [],
         safeFocus: c.safeFocus,
         advice: c.advice,
       }));

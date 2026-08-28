@@ -5,6 +5,16 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  speed_club_blanket: ['src/rules/weeklyScheduler.ts', 'if (!missing?.length || inputs.readiness.lowReadiness', 'if (inputs.clubNights.length > 0 || !missing?.length || inputs.readiness.lowReadiness', 'speed', 'a club night does not blanket-deny an unmet speed need'],
+  speed_quality_erased: ['src/rules/conditioningSelection.ts', "(template) => args.category !== 'sprint' || !args.requestedSpeedQualities", "(template) => true || args.category !== 'sprint' || !args.requestedSpeedQualities", 'speed', 'the delivered template serves only an unmet quality'],
+  speed_fact_disconnected: ['src/rules/canonicalWeeklyCompiler.ts', 'sprintExposure: input.coaching.sprintExposure,', 'sprintExposure: undefined,', 'speed', 'actual onboarding/compiler delivers the missing quality only'],
+  landmine_power_unreachable: ['src/rules/powerExercisePool.ts', "if (entry.family !== context.family) return false;", "if (entry.name === 'Explosive Landmine Press') return false;\n    if (entry.family !== context.family) return false;", 'landmine', 'real power pool includes the explosive landmine'],
+  landmine_strength_fallback: ['src/data/exercisePoolsStrength.ts', 'if (!tags || tags.power) return null;', 'if (!tags) return null;', 'landmine', 'explosive landmine is absent from every strength slot'],
+  pain_machine_disconnected: ['src/rules/injuryExerciseRisk.ts', 'return triggers.some(trigger => aliases[modality]?.includes(trigger.trim().toLowerCase()));', 'return false;', 'flush', 'only suitable available machines survive injury compilation'],
+  injury_history_preservation: ['src/store/injuryEpisodeTransaction.ts', 'triggers: [...new Set([...args.existing.triggers, ...(args.constraint.triggers ?? [])])]', 'triggers: [...(args.constraint.triggers ?? [])]', 'simple_injury', 'simple severity update preserves reported painful movements'],
+  injury_serious_score: ['src/rules/injuryWithheldRows.ts', 'return seriousSymptoms === true;', 'return seriousSymptoms === true && _severity >= 8;', 'simple_injury', 'serious symptoms do not require a high severity score'],
+  injury_indirect_support: ['src/rules/injuryExerciseRisk.ts', '  const rating = tags.injury[bucket];', "  if (tags.region === 'lower' && ['shoulder','elbow','wrist/hand'].includes(bucket)) return 'good';\n  const rating = tags.injury[bucket];", 'simple_injury', 'loaded support is not blanket Good clearance'],
+  injury_optional_pain: ['src/screens/home/GuidedInjuryFlowSheet.tsx', 'testID="injury-optional-pain"', 'testID="missing-pain-control"', 'injury_ui', 'painful movements are optional'],
   injury_severity_highlight: ['src/screens/home/GuidedInjuryFlowSheet.tsx', 'icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])}', 'icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])} selected={selectedSeverity.label === option.label}', 'injury_ui', 'severity rows have neutral chips and dividers'],
   removal_effect_identity: ['src/store/acceptedStateTransaction.ts', 'if (existing && reversibleAdjustmentWorkoutFingerprint(date, existing.remainingWorkout)\n    === reversibleAdjustmentWorkoutFingerprint(date, remainingWorkout)) {', 'if (existing) {', 'lowload_remove', 'removing added work is not mistaken for an already-applied addition'],
   category_missing_pool: ['src/rules/conditioningSelection.ts', "return templatesOfQuality('aerobic_power');", 'return [];', 'categories', 'vo2: nonempty pool contains only its intended qualities'],
@@ -113,9 +123,9 @@ if (child) {
     global.window = { localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k), clear: () => storage.clear() } };
     global.fetch = () => { throw Error('NETWORK DISABLED'); };
     let failures = 0;
-    const helper = witness === 'lowload_remove' ? 'lowLoadRemovalJourney' : witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
+    const helper = witness === 'speed' ? 'inseasonSpeedTruth' : witness === 'landmine' ? 'powerOnlyLandmineJourney' : witness === 'simple_injury' ? 'simpleInjurySafetyTruth' : witness === 'lowload_remove' ? 'lowLoadRemovalJourney' : witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
       : witness === 'flush_restart' ? 'flushRestartJourney' : 'programmingInputTruth';
-    require(path.join(repo, 'src/__tests__/support', helper))[helper](storage, (label, value, detail) => {
+    require(path.join(repo, 'src/__tests__/support', witness === 'landmine' ? 'powerOnlyLandmineTruth' : helper))[helper](storage, (label, value, detail) => {
       if (!value) failures++;
       console.log(value ? 'PASS' : 'FAIL', label, value ? '' : detail ?? '');
     }).then(() => { console.log(`MUTANT_FAILURES=${failures}`); process.exitCode = failures ? 1 : 0; })

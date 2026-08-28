@@ -2488,6 +2488,20 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'flushPrescriptionTruth checks all seven identities across machine subsets, numeric/display dose, actual injury compilation and modality changes. flushRestartJourney drives real onboarding and rollover through all seven identities on each supported single machine for both genders. Existing G+2, Clear, Undo and input-truth witnesses remain. First-run failures and exact-version verification are recorded in STATUS_PROGRAMMING_REMEDY.' },
   },
+  {
+    id: 'LAW-simple-injury-shared-safety',
+    law: 'R-267: simple body-area/severity/adjustment flow; optional explicit pain overrides ratings at every active band, historical restrictions survive updates/restart, indirect loading counts, and serious symptoms use the independent stop pathway. Existing severity rules and shared owners remain.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-267 — Sam injury-flow decision, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'simpleInjurySafetyTruth, guidedInjuryUiTruth and flushPrescriptionTruth cover severity boundaries, support examples, history/update/Clear/Add/Undo/restart, actual machine restrictions and UI binding. Red-first evidence and native gaps: STATUS_PROGRAMMING_REMEDY.' },
+  },
+  {
+    id: 'LAW-speed-quality-and-landmine-power',
+    law: 'R-268: club attendance does not blanket-deny reported unmet acceleration/top-speed needs; existing timing, injury/fatigue, availability and weekly limits remain. Explosive Landmine Press is selectable only as power, with no strength selection or strength credit and no invented dose.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-268 — Sam P15/P19 decisions, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'inseasonSpeedTruth and powerOnlyLandmineJourney exercise the real scheduler/selector and male/female onboarding/restart. Landmine reaches three real accepted blocks; deliberately restoring club exclusion, erasing quality requests, disconnecting facts or restoring strength fallback is caught. Final release status: STATUS_PROGRAMMING_REMEDY.' },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

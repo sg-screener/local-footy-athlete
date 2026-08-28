@@ -6840,3 +6840,30 @@ Guard: `LAW-short-explicit-recovery-prescriptions`,
 `gPlusTwoFlushJourney`, `conditioningClarity`). Original dated workbook remains
 unchanged; seven explicit replacement records are equality-checked. Findings and
 NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
+
+**R-267** · Sam's simple injury-flow decision, 2026-08-28.
+
+Owner: programming-remedy. Main flow stays body area → severity → adjustment;
+painful-movement reporting is optional. Existing mild/moderate rules remain;
+6–7 excludes Caution/Avoid, 8–10 retains only clearly unaffected work. Ratings
+include indirect support/loading. Explicit pain overrides generic ratings at
+every active severity, including resolved conditioning machines. Preserve
+historical reports. Serious symptoms use the separate safety pathway regardless
+of numeric severity; no diagnosis or rehabilitation prescription is introduced.
+Guard: `LAW-simple-injury-shared-safety`, `test:canonical-weekly-compiler`
+(`simpleInjurySafetyTruth`, `guidedInjuryUiTruth`, `flushPrescriptionTruth`).
+Verification status and NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
+
+**R-268** · Sam's P15/P19 decisions, 2026-08-28.
+
+Owner: programming-remedy. In-season speed is not blanket-excluded by club
+attendance. Reported missing acceleration/top-speed qualities may receive
+existing authored speed work through the scheduler, within injury, fatigue,
+availability, game-timing and weekly limits. Do not duplicate covered qualities.
+Explosive Landmine Press is selectable power only, never a strength-slot choice
+or strength credit. Existing power dose, equipment and experience gates remain.
+P18 flush is unchanged. Supersedes older no-club-only/strength-role statements
+in WC-135 and R-265, not their unrelated safety limits or doses.
+Guard: `LAW-speed-quality-and-landmine-power`, `test:canonical-weekly-compiler`
+(`inseasonSpeedTruth`, `powerOnlyLandmineJourney`). Verification status and
+NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.

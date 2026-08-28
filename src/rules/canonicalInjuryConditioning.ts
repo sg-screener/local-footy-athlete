@@ -24,12 +24,17 @@ export function compileInjuryConditioning(args: {
   // A full stop is not permission to find another workout.
   if (constraints.some(constraint => constraint.trainingPaused)) return filtered;
   const injury = canonicalWeeklyInjuryStateFrom({ profile: args.profile, generationConstraints });
+  const equipment = resolveEquipmentCapabilities(args.profile, args.constraints, args.dateISO);
+  const actualModesAvailable = filtered.conditioningBlock?.options.every(option => {
+    const modes = option.modalitySequence?.length ? option.modalitySequence : [option.modality];
+    return modes.every(mode => mode === 'running' || (mode !== undefined
+      && equipment.conditioningModalities.includes(mode === 'bike' ? 'bike_erg' : mode as never)));
+  });
   // Weekly capability policy also governs easy running. The exposure filter
   // alone only removes specific hard exposures and cannot certify an on-feet
   // session for an athlete whose lower-body work is restricted.
-  if (filtered.conditioningBlock?.options.length && !injury.lowerBodyRestricted &&
+  if (filtered.conditioningBlock?.options.length && actualModesAvailable && !injury.lowerBodyRestricted &&
       !injury.upperBodyRestricted) return filtered;
-  const equipment = resolveEquipmentCapabilities(args.profile, args.constraints, args.dateISO);
   const feasible = resolveConditioningFeasibility({
     tier: args.workout.sessionTier ?? 'core', focus: args.workout.name,
     ergModality: args.workout.conditioningFeasibility?.resolvedModality,

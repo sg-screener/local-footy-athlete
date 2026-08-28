@@ -1,4 +1,4 @@
-import type { WeekKind, Workout } from '../types/domain';
+import type { SprintExposure, WeekKind, Workout } from '../types/domain';
 import {
   BIBLE_WEEKLY_CAPS,
   countWeeklyExposures,
@@ -8,6 +8,19 @@ import type { PreseasonSubphase } from './preseasonSubphase';
 import { getPreseasonSubphasePolicy } from './preseasonSubphasePolicy';
 
 export type SprintExposureGatePhase = 'Off-season' | 'Pre-season' | 'In-season';
+
+export type RequestedSpeedQuality = 'acceleration' | 'top_end_speed';
+
+/** P15: a reported missing quality is not satisfied by a generic club-night count.
+ * Frequency-only answers make no per-quality claim. Null retains that uncertainty
+ * and the existing floor policy rather than inventing what happened at training.
+ */
+export function reportedMissingSpeedQualities(answer?: SprintExposure): readonly RequestedSpeedQuality[] | null {
+  if (answer === 'No sprint training') return ['acceleration', 'top_end_speed'];
+  if (answer === 'Acceleration only') return ['top_end_speed'];
+  if (answer === 'Top-speed only') return ['acceleration'];
+  return null;
+}
 
 export type SprintExposureGateReason =
   | 'preseason_shortfall'

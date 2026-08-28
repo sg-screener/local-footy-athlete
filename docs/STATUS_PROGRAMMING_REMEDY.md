@@ -644,3 +644,53 @@ the repeat-injury transition remains required. Native visual check is pending.
 
 NOT COVERED: final revised-candidate release, the remaining injury/native
 matrix, and physical acceptance. No installation or phone wipe.
+
+### Current P15/P19 and shared injury-safety checkpoint
+
+Owner: programming-remedy. Sam's latest decisions supersede earlier P15/P19
+questions; no answer is outstanding. No architecture rebuild or new doses.
+
+- P15 new scheduler guard first failed 27 assertions with club training present.
+  Added explicit acceleration-only/top-speed-only answers to the existing sprint
+  control (old saved frequency answers remain compatible and make no per-quality
+  claim). Existing gate derives the missing quality; scheduler requests it and
+  specialist selects existing authored templates. Game-week validation rejected
+  both spending the metabolic slot on speed and adding an extra conditioning
+  day; existing combined-session shape now preserves both within current caps.
+  98 assertions pass, including four male/female real onboarding/restart worlds,
+  eight block indices per explicit answer and injury/fatigue/availability/three-
+  night controls. Three in-memory regressions are caught.
+- P19 removed Explosive Landmine Press from the strength pool AND its tag-based
+  strength fallback. It enters the actual upper-power pool with existing kit,
+  experience and dose rules. First probe: 4 pass/7 fail. Now 34 assertions pass,
+  including male/female real onboarding, three accepted blocks and restart.
+  First-block-only probe did not reach the selected identity; extending through
+  real rollover did. Both pool-removal and strength-fallback mutants are caught.
+- Injury: preserve prior triggers through severity updates; preserve serious-
+  symptom reports independently of score and retain the actual reported score.
+  Optional movement controls use the same transaction, no mandatory question.
+  Corrected supporting-arm/bar-position ratings in the existing matrix and
+  preserved exact untagged painful drills/old combined movement labels. First
+  additional support/legacy-label probe: 412 pass/68 fail; now 480/480.
+- Actual painful conditioning modalities flow through shared exposure and
+  feasibility owners. Air Bike pushing/pulling is not a standard Bike. New
+  shoulder-pain expectation first failed 56 assertions. Four-band expansion
+  found mild-score equipment bypass and mixed-mode reselection (35 failures).
+  All seven flush identities × 16 machine subsets × three injury combinations
+  × four severity bands now pass, with total/display/credit and unchanged-dose
+  checks: 4,489 assertions. Disabling actual pain matching is caught. P18 dose,
+  G+2 placement and optional/core rules have NOT changed.
+- Severity appearance was visually verified on frozen a95ec14e simulator JS:
+  neutral grey chips/dividers, yellow bars retained. Native low-load Remove,
+  immediate Undo and reopening passed on cc3a1aaa. The first late Undo tap was
+  an automation timing failure (toast expired), not an app failure.
+- cc3a1aaa exact release attempt was NOT green: 10/20 units; the changed Remove
+  owner lacked its updated review fingerprint. Its 416 athlete-weeks and six
+  release mutations passed; clean Release build succeeded. Reviewed that owner
+  without changing classifications/budgets. Five further compiler owners were
+  reviewed for this checkpoint. Exact release rerun remains required.
+
+NOT COVERED: new optional pain/sprint answers on native glass, remaining native
+Add/Swap/game-adjacent/Undo permutations, final exact-version release and revised
+delivered years after these changes, physical-iPhone acceptance. P01–P22 are not
+all closed. Installation hold remains; neither phone was installed to or wiped.

@@ -463,7 +463,6 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'DB Shoulder Press',                        loadRatio: 0.55 },
         { name: 'Seated DB Press',                          loadRatio: 0.55 },
         { name: 'Half-Kneeling Single-Arm Overhead Press',  loadRatio: 0.35 },
-        { name: 'Explosive Landmine Press',                 loadRatio: 0.00 },
         { name: 'Z-Press',                                  loadRatio: 0.60 },
       ],
     },
@@ -719,7 +718,7 @@ export function classifyPoolSlot(
 
   // 2. Fall back to tag-based heuristic
   const tags = EXERCISE_TAGS[exerciseName];
-  if (!tags) return null;
+  if (!tags || tags.power) return null;
 
   const slot = PATTERN_TO_SLOT[tags.movement];
   if (!slot) return null;

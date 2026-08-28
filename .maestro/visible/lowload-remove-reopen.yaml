@@ -1,0 +1,73 @@
+appId: com.localfootyathlete.app
+name: Remove accumulated low-load additions, Undo and reopen
+---
+# Continues the real onboarding/game-and-gplus1 journey: Friday today, Sunday
+# Recovery + Mobility added through the UI. No seed or reset at this boundary.
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- assertNotVisible:
+    id: e2e-explorer-launch-error-.*
+- waitForAnimationToEnd
+- tapOn:
+    id: program-day-next
+- tapOn:
+    id: program-day-next
+- waitForAnimationToEnd
+- assertVisible:
+    id: day-row-sun
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertVisible:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/gap/lowload-before-removal
+- tapOn:
+    id: home-plan-options
+- waitForAnimationToEnd
+- tapOn: Remove session
+- waitForAnimationToEnd
+- tapOn: Yes, remove it
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+# The separate removal tape records the empty day. Undo expires after six
+# seconds, so do not spend its window on screenshots or repeated assertions.
+- tapOn:
+    id: undo-toast-action
+- waitForAnimationToEnd
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertVisible:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/gap/lowload-undo-restored
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn:
+    id: program-day-next
+- tapOn:
+    id: program-day-next
+- waitForAnimationToEnd
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertVisible:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/gap/lowload-undo-after-reopen

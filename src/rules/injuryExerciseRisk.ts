@@ -93,9 +93,12 @@ const TRIGGER_MOVEMENTS: Readonly<Record<string, readonly MovementPattern[]>> = 
   'overhead pressing': ['vertical_push'],
   'overhead pulling': ['vertical_pull'],
   squatting: ['squat'],
+  'squatting / lunging': ['squat', 'lunge'],
   lunging: ['lunge'],
   hinging: ['hinge'],
+  'hinging / bending': ['hinge'],
   jumping: ['plyo'],
+  'jumping / landing': ['plyo'],
   carrying: ['carry'],
 };
 
@@ -107,8 +110,25 @@ export function injuryTriggerMatchesExercise(exerciseName: string, triggers: rea
     const patterns = TRIGGER_MOVEMENTS[key];
     if (patterns) return !!movement && patterns.includes(movement);
     // An explicit catalogue identity is narrower than its movement family.
-    return !!getExerciseTags(trigger) && canonicalExerciseName(trigger).trim().toLowerCase() === canonical;
+    return key.length > 0 && canonicalExerciseName(trigger).trim().toLowerCase() === canonical;
   });
+}
+
+/** Explicit pain on the actual modality, shared by projection and feasibility.
+ * Air Bike uses push/pull handles; it is not a hands-free standard Bike.
+ * Titles and alternative machine menus are deliberately not inputs here.
+ */
+export function injuryTriggerMatchesConditioningModality(modality: string, triggers: readonly string[]): boolean {
+  const aliases: Readonly<Record<string, readonly string[]>> = {
+    bike: ['bike', 'cycling'], bike_erg: ['bike', 'cycling'],
+    air_bike: ['air bike', 'assault bike', 'bike', 'cycling', 'pressing', 'pushing', 'pulling'],
+    row: ['row', 'rowing', 'rowerg', 'pulling'],
+    ski: ['ski', 'skierg', 'ski erg', 'pulling'],
+    running: ['run', 'running', 'sprint', 'sprinting', 'speed', 'top speed', 'acceleration'],
+    treadmill: ['run', 'running', 'walking', 'treadmill'],
+    walking: ['walk', 'walking'],
+  };
+  return triggers.some(trigger => aliases[modality]?.includes(trigger.trim().toLowerCase()));
 }
 
 export function classifyExerciseRiskForBucket(

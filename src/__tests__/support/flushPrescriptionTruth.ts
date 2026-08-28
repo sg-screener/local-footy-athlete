@@ -126,13 +126,13 @@ export async function flushPrescriptionTruth(storage: Map<string, string>, ok: C
     const mode = resolvedBlockModality(t.name, 'mixed', kit);
     const block = buildConditioningBlock('aerobic', rows, 'finisher', mode, kit)!;
     const candidate = { ...actual, exercises: [...lifting, ...rows], conditioningBlock: block };
-    for (const [injury, constraints] of [['shoulder', [shoulder]], ['knee', [knee]], ['both', [shoulder, knee]]] as const) {
+    for (const severity of [1, 4, 6, 9]) for (const [injury, constraints] of [['shoulder', [shoulder]], ['knee', [knee]], ['both', [shoulder, knee]]] as const) {
       const result = quiet(() => compileInjuryConditioning({ workout: candidate, profile: narrowedProfile,
-        dateISO: date, constraints }));
+        dateISO: date, constraints: constraints.map(constraint => ({ ...constraint, severity })) }));
       const options = result.conditioningBlock?.options ?? [];
       const credit = evaluateSection18EffectiveWeek({ contract, workouts: [result], weekStart: date }).ledger.conditioning;
-      const suitable = injury === 'knee' ? kit : kit.filter(m => m === 'bike' || m === 'air_bike');
-      ok(`flush/${t.name}/${kit}/${injury}: only suitable available machines survive injury compilation`,
+      const suitable = injury === 'knee' ? kit : severity === 1 ? kit.filter(m => m !== 'air_bike') : kit.filter(m => m === 'bike');
+      ok(`flush/${t.name}/${kit}/${injury}/${severity}: only suitable available machines survive injury compilation`,
         suitable.length === 0 ? options.length === 0 : options.length > 0 && options.every(o =>
           !!o.modalitySequence?.length && o.modalitySequence.every(m => suitable.includes(m as never))), JSON.stringify(options));
       ok(`flush/${t.name}/${kit}/${injury}: recovery role never earns fitness-conditioning credit`,

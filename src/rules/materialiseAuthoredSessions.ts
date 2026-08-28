@@ -180,6 +180,7 @@ export function materialiseAuthoredSessions(args: {
       try {
         conditioningTemplate = selectConditioningTemplate({
           category: intention.conditioningCategory as AthleteConditioningCategory,
+          requestedSpeedQualities: intention.sprintQualities,
           dateStr: intention.dateISO,
           miniCycleNumber: facts.miniCycleNumber,
           seatIndex,
@@ -214,6 +215,7 @@ export function materialiseAuthoredSessions(args: {
       try {
         sprintTemplate = selectConditioningTemplate({
           category: 'sprint',
+          requestedSpeedQualities: intention.sprintQualities,
           dateStr: intention.dateISO,
           miniCycleNumber: facts.miniCycleNumber,
           seatIndex,
@@ -229,7 +231,7 @@ export function materialiseAuthoredSessions(args: {
       }
     }
 
-    if (intention.conditioning === 'sprint_high_speed' && !conditioningTemplate) {
+    if (intention.conditioning === 'sprint_high_speed' && !conditioningTemplate && !intention.sprintQualities) {
       // The scheduler asked for sprint QUALITY; the specialist names the template.
       conditioningTemplate = speedTemplateByName('Flying 30s');
       unmaterialised = null;

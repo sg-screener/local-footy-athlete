@@ -1,0 +1,38 @@
+appId: com.localfootyathlete.app
+name: Neutral severity choices without preselecting 4-5
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- assertNotVisible:
+    id: e2e-explorer-launch-error-.*
+- scrollUntilVisible:
+    element:
+      id: home-injured-entry
+    direction: DOWN
+- tapOn:
+    id: home-injured-entry
+- waitForAnimationToEnd
+- tapOn:
+    id: injury-region-upper_body
+- waitForAnimationToEnd
+- tapOn:
+    id: injury-area-shoulder
+- waitForAnimationToEnd
+- assertVisible:
+    id: injury-severity-mild
+- assertVisible:
+    id: injury-severity-slight
+- assertVisible:
+    id: injury-severity-moderate
+- assertVisible:
+    id: injury-severity-avoid
+- takeScreenshot: artifacts/gap/severity-neutral-after
+- tapOn: Cancel

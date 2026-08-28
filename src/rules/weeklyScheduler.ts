@@ -49,7 +49,9 @@ import {
   type SetBudget,
 } from './weeklyProgrammingContract';
 import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
-import type { AthleteGender, WeekKind } from '../types/domain';
+import type { AthleteGender, SprintExposure, WeekKind } from '../types/domain';
+import { reportedMissingSpeedQualities, type RequestedSpeedQuality } from './sprintExposureGate';
+import { BIBLE_WEEKLY_CAPS } from './weeklyExposureCounts';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
 
@@ -66,6 +68,7 @@ export interface WeeklySchedulerInputs {
   readonly phase: ContractPhase;
   /** Compiler-owned injury safety; field participation is a separate athlete fact. */
   readonly appSprintPermitted?: boolean;
+  readonly sprintExposure?: SprintExposure;
   readonly appRunningPermitted?: boolean;
   /** Current dated equipment, supplied by the compiler; no machine is assumed. */
   readonly offLegAvailableDays?: readonly number[];
@@ -200,6 +203,8 @@ export interface SessionIntention {
    * flag means specifically *"a second component, and it is a sprint"*.
    */
   readonly sprintComponent: boolean;
+  /** Requested qualities only; the specialist still owns the template and dose. */
+  readonly sprintQualities?: readonly RequestedSpeedQuality[];
   /** True when the athlete may skip it — the early off-season block. */
   readonly optional: boolean;
   /**
@@ -868,9 +873,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     inputs.phase === 'Pre-season' && hasScheduledGame(inputs) ? 'In-season' : inputs.phase,
     inputs.offseasonBlock,
   );
+  const missingSpeedQualities = reportedMissingSpeedQualities(inputs.sprintExposure);
   const overlay = inputs.appSprintPermitted === false
+    || (missingSpeedQualities !== null && (inputs.readiness.lowReadiness || inputs.weekKind === 'deload'))
     ? { ...phaseOverlay, sprintExposureRequired: false }
     : phaseOverlay;
+  const clubSpeedTopUp = inputs.clubNights.length > 0 && overlay.sprintExposureRequired
+    && missingSpeedQualities !== null && appSprintNeedPermitted(inputs);
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -897,7 +906,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // week's two high-output running exposures sit apart. Taking the first upper
   // day would stack them on Tuesday.
   const sprintUpperDay = upperDayForSprint(inputs, overlay, purposeByDay);
-  const plannedSprintDay = sprintUpperDay
+  const plannedSprintDay = clubSpeedTopUp ? null : sprintUpperDay
     ?? appSprintDay(inputs, overlay, new Set(purposeByDay.keys()));
 
   // ── WC-139: PRE-SEASON PUTS THE SPRINT ON THE HARD DAY, AS A SECOND
@@ -1031,6 +1040,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
       return [
+        clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
+          && sprintDayIsLegal(day, inputs)) ? 1 : 0,
+        clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
+          && !PURPOSE_IS_LOWER[purposeByDay.get(day)!] && sprintDayIsLegal(day, inputs)) ? 1 : 0,
         hardQuality !== null && !days.some(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]
           && !isGameMinusTwo(day, inputs)) ? 1 : 0,
         inputs.appRunningPermitted === false || inputs.offseasonBlock === 'early_optional' ? 0
@@ -1143,11 +1156,18 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // placed elsewhere") already says the ride and the standalone never coexist.
   const sprintRidesHardDay = preseasonSprintRidesHardDay
     || (noClubGameWeek && overlay.sprintExposureRequired);
-  const sprintComponentDay = sprintRidesHardDay
+  // P15 uses the existing speed + conditioning component shape. Keeping both
+  // on one legal upper day preserves the game-week conditioning/nights caps
+  // and does not replace the required metabolic work with speed.
+  const clubSpeedCandidates = clubSpeedTopUp ? conditioningDays.filter(day => purposeByDay.has(day)
+    && sprintDayIsLegal(day, inputs)) : [];
+  const clubSpeedDay = clubSpeedCandidates.find(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
+    ?? clubSpeedCandidates[0] ?? null;
+  const sprintComponentDay = clubSpeedDay ?? (sprintRidesHardDay
     && hardDay !== null
     && sprintDayIsLegal(hardDay, inputs)
     ? hardDay
-    : null;
+    : null);
 
   // The running floor spends the SAME conditioning budget. Reserve its
   // off-gym slot before materialising gym components; otherwise a three-day
@@ -1217,6 +1237,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // when no conditioning was owed, so the day carries no empty component.
         conditioningRole: conditioningDaySet.has(day) ? 'component' : null,
         sprintComponent: day === sprintComponentDay,
+        ...(day === sprintComponentDay && missingSpeedQualities ? { sprintQualities: missingSpeedQualities } : {}),
         // ── WC-050: WHICH DAYS MAY BE OFFERED A POWER PRIMER AT ALL ────────
         //
         // Never the game day. Never G-1 (*"no heavy lifting or conditioning"*).
@@ -1392,6 +1413,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       return { ...entry,
         conditioning: 'sprint_high_speed' as const,
         conditioningCategory: CATEGORY_FOR_CONDITIONING.sprint_high_speed,
+        ...(missingSpeedQualities ? { sprintQualities: missingSpeedQualities } : {}),
         conditioningRole: 'component' as const,
         clauseId: 'WC-138' };
     }
@@ -1401,6 +1423,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       return { ...entry, owner: 'conditioning' as const,
         conditioning: 'sprint_high_speed' as const,
         conditioningCategory: CATEGORY_FOR_CONDITIONING.sprint_high_speed,
+        ...(missingSpeedQualities ? { sprintQualities: missingSpeedQualities } : {}),
         conditioningRole: 'standalone' as const, optional: false,
         clauseId: 'WC-135' };
     }
@@ -1635,6 +1658,18 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  * The scheduler owns session days and spacing, so the citation moves here, to
  * the site that actually decides whether a hard day may sit inside G-3.
  */
+function appSprintNeedPermitted(inputs: WeeklySchedulerInputs): boolean {
+  // Sam's P15 decision supersedes the older blanket no-club quotations above.
+  // Their game proximity and weekly ceilings remain in force.
+  if (inputs.appSprintPermitted === false) return false;
+  if (inputs.clubNights.length === 0) return true;
+  const missing = reportedMissingSpeedQualities(inputs.sprintExposure);
+  if (!missing?.length || inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
+  // P15 does not relax the existing nights ceiling, even for a missing quality.
+  const anchorNights = new Set([...inputs.clubNights, ...scheduledGameDays(inputs)]).size;
+  return inputs.phase !== 'In-season' || anchorNights < BIBLE_WEEKLY_CAPS.sprintCodExposures.max;
+}
+
 function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {
   if (inputs.clubNights.includes(day)) return false;
   if (isScheduledGameDay(day, inputs)) return false;
@@ -1651,7 +1686,7 @@ function upperDayForSprint(
   purposeByDay: ReadonlyMap<number, SessionPurpose>,
 ): number | null {
   if (!overlay.sprintExposureRequired) return null;
-  if (inputs.clubNights.length > 0) return null;
+  if (!appSprintNeedPermitted(inputs)) return null;
   // ⚠ **OFF-SEASON ONLY, AND PRE-SEASON'S ABSENCE HERE IS A MEASURED REFUSAL,
   // NOT AN OVERSIGHT.**
   //
@@ -1718,7 +1753,7 @@ export function appSprintDay(
   // in-season sprint on a no-club week that still has a fixture, and the
   // placement rule below (G-3 or earlier) is what keeps that safe.
   if (!overlay.sprintExposureRequired) return null;
-  if (inputs.clubNights.length > 0) return null;
+  if (!appSprintNeedPermitted(inputs)) return null;
   // LATEST legal day first: a sprint sits as close to G-3 as the week allows, so
   // it does not crowd the start of the week away from the game.
   //

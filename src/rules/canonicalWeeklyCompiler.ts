@@ -221,6 +221,7 @@ export function compileCanonicalWeek(
         equipment.conditioningModalities.some(mode => mode !== 'treadmill')).map(([day]) => Number(day))
       : scheduler.offLegAvailableDays,
     appSprintPermitted: input.injury?.blocksAppSprint !== true,
+    sprintExposure: input.coaching.sprintExposure,
     appRunningPermitted: input.injury?.lowerBodyRestricted !== true,
     readiness: {
       ...input.scheduler.readiness,

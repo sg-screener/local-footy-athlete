@@ -1003,8 +1003,11 @@ async function main(): Promise<void> {
     const fs = require('fs');
     const sheet = fs.readFileSync('src/screens/home/GuidedInjuryFlowSheet.tsx', 'utf8');
     const door = fs.readFileSync('src/utils/programControlActions.ts', 'utf8');
-    ok('[1] the guided sheet still reports seriousSymptoms: false, so no live path sets it',
-      /seriousSymptoms:\s*false/.test(sheet), 'GuidedInjuryFlowSheet');
+    // Sam's 28-Aug decision retires the old assertion that this path is inert.
+    ok('[1] the optional serious-symptom control carries its report independently of severity',
+      sheet.includes('testID="injury-serious-symptoms"')
+      && sheet.includes('onPress={() => setSeriousSymptoms(current => initial?.seriousSymptoms === true || !current)}')
+      && /\n\s+seriousSymptoms,/.test(sheet), 'GuidedInjuryFlowSheet');
     ok('[1] and the injury door reads the flag from the constraint, not a literal',
       /seriousSymptoms:\s*args\.constraint\.seriousSymptoms === true/.test(door),
       'programControlActions');

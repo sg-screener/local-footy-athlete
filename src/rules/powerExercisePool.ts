@@ -105,6 +105,11 @@ export const POWER_POOL_REDUCED_TAKEOVER = 'Pogo Hops';
  * four are his 2026-07-23 additions.
  */
 export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
+  {
+    name: 'Explosive Landmine Press', family: 'upper', equipmentRequired: ['Barbell'],
+    minTrainingAge: 'developing', phaseGate: 'all_phases', inSeasonSafe: true,
+    reducedTakeoverOnly: false, authoredCueIntent: 'Drive the bar up explosively. Reset between reps.',
+  },
   // Sam, 2026-08-28: these are ordinary alternatives in the same power slot,
   // not lower-priority choices or additional volume. Existing policy owns dose.
   {

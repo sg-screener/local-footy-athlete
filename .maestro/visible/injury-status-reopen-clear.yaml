@@ -1,0 +1,54 @@
+appId: com.localfootyathlete.app
+name: Reported injury remains visible after reopening and clears through My Status
+tags:
+  - visible
+  - programming-gap
+---
+# Continues an injury entered through the actual guided screens, not a seed.
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- assertNotVisible:
+    id: onboarding-welcome-cta
+- tapOn:
+    id: modifiers-strip-day-header
+- assertVisible: '1 ACTIVE'
+- tapOn:
+    id: coach-status-modifier-.*
+- scrollUntilVisible:
+    element:
+      text: Injury resolved
+    direction: DOWN
+- takeScreenshot: artifacts/gap/injury-modifier-after-reopen
+- tapOn:
+    text: Injury resolved
+- tapOn: Clear and update program
+- extendedWaitUntil:
+    visible:
+      id: coach-status-empty
+    timeout: 30000
+- takeScreenshot: artifacts/gap/injury-cleared
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- tapOn:
+    id: modifiers-strip-day-header
+- assertVisible:
+    id: coach-status-empty
+- takeScreenshot: artifacts/gap/injury-clear-after-reopen
+- tapOn:
+    id: coach-status-close

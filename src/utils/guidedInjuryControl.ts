@@ -359,7 +359,7 @@ export function buildGuidedInjuryConstraint(
   const trainingPaused = injurySeverityPausesAffectedTraining(result.severity) || result.seriousSymptoms;
   const effectiveResult: GuidedInjuryFlowResult = {
     ...result,
-    severityBand: trainingPaused ? 'avoid' : bandFromSeverity,
+    severityBand: bandFromSeverity,
     adjustmentLevel: trainingPaused ? 'training_paused' : adjustmentFromSeverity,
   };
   return {
@@ -367,7 +367,7 @@ export function buildGuidedInjuryConstraint(
     type: 'injury',
     bodyPart: displayArea(result.area),
     bucket,
-    severity: trainingPaused ? Math.max(8, result.severity) : result.severity,
+    severity: result.severity,
     status: 'active',
     startDate: opts.todayISO,
     lastUpdatedAt: now,

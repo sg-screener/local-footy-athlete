@@ -84,10 +84,11 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Box Jumps', 'lower', null, ['Box']],
   ['Broad Jumps', 'lower', null, []],
   ['Jump Squats', 'lower', null, []],
+  ['Explosive Landmine Press', 'upper', 'developing', ['Barbell']],
 ];
 
 ok(
-  'the pool holds exactly Sam\'s ten approved entries',
+  'the pool holds exactly Sam\'s approved entries including power-only Landmine Press',
   POWER_EXERCISE_POOL.length === AUTHORED_ENTRIES.length,
   `found ${POWER_EXERCISE_POOL.length}: ${POWER_EXERCISE_POOL.map((e) => e.name).join(', ')}`,
 );

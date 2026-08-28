@@ -20,12 +20,14 @@ import {
 } from './injurySeverityBands';
 import type { PowerInjuryInput } from './powerPrimerPolicy';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import { injuryTriggerMatchesConditioningModality } from './injuryExerciseRisk';
 
 export interface CanonicalWeeklyInjuryPolicy {
   readonly prohibitedPatterns: readonly MainStrengthPattern[];
   readonly blocksAppSprint: boolean;
   readonly lowerBodyRestricted: boolean;
   readonly upperBodyRestricted: boolean;
+  readonly painfulMovements?: readonly string[];
 }
 
 export interface CanonicalWeeklyInjuryState extends CanonicalWeeklyInjuryPolicy {
@@ -55,6 +57,7 @@ export function canonicalWeeklyInjuryStateFrom(args: {
     args.generationConstraints,
   );
   const mergedProfileInjuries = [...(mergedProfile.injuries ?? [])];
+  const painfulMovements = Array.from(new Set(mergedProfileInjuries.flatMap(injury => injury.movementTriggers ?? [])));
   const prohibited: MainStrengthPattern[] = [];
 
   for (const injury of args.generationConstraints?.injuries ?? []) {
@@ -103,8 +106,10 @@ export function canonicalWeeklyInjuryStateFrom(args: {
       severity: onboardingInjurySeverityScore(injury),
     })),
     activeInjuryKeys: [...(args.generationConstraints?.activeInjuryKeys ?? [])],
+    painfulMovements,
     prohibitedPatterns,
     blocksAppSprint:
+      injuryTriggerMatchesConditioningModality('running', painfulMovements) ||
       activeSprintRestriction || prohibitedPatterns.includes('squat') ||
       prohibitedPatterns.includes('hinge'),
     lowerBodyRestricted,

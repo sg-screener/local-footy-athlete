@@ -55,7 +55,6 @@ import type { InjuryEpisodeV1 } from './injuryEpisode';
 import { injuryEpisodeIsActive } from './injuryEpisode';
 import { isInjurySourceFact, type TemporarySourceFact } from './temporarySourceFact';
 import { injuryWithholdsExistingRow } from './injuryExerciseRisk';
-import { injurySeverityPausesAffectedTraining } from './injurySeverityBands';
 import type { InjuryKey } from '../data/exerciseTags';
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { resolveExerciseName } from '../utils/loadEstimation';
@@ -78,8 +77,8 @@ export function activeInjuryFactsOn(
 
 /**
  * **THE ONE THING THAT MAKES A SESSION UNCOMPLETABLE**, per Sam's *"or block the
- * session if necessary"*: a red-flag injury — his 8-10 band together with
- * serious symptoms — is the case his Bible already says the app must stop
+ * session if necessary"*: a serious-symptom report, independently of the
+ * numeric severity band, is the case his Bible already says the app must stop
  * training for (*"the app should stop affected training and recommend
  * physio/medical advice"*), not one it should let the athlete tick off.
  *
@@ -100,9 +99,9 @@ export function isRedFlagInjury(episode: InjuryEpisodeV1): boolean {
  */
 export function isRedFlagInjurySeverity(
   seriousSymptoms: boolean | undefined,
-  severity: number,
+  _severity: number,
 ): boolean {
-  return seriousSymptoms === true && injurySeverityPausesAffectedTraining(severity);
+  return seriousSymptoms === true;
 }
 
 export interface InjuryWithholding {

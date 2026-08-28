@@ -107,6 +107,7 @@ const INJURY_AREA_TEST_IDS: Record<string, string> = {
 type FlowStep =
   | 'region'
   | 'area'
+  | 'pain'
   | 'stop_training'
   | 'severity';
 
@@ -121,6 +122,7 @@ type FlowStep =
 const STEP_TITLE: Record<FlowStep, string> = {
   region: 'Where is the issue?',
   area: 'Where is the issue?',
+  pain: 'What hurts?',
   stop_training: 'Stop affected training',
   severity: 'How much is it limiting you?',
 };
@@ -134,6 +136,7 @@ const STEP_SUBTITLE: Record<FlowStep, string | null> = {
      hatch was removed on 2026-08-21. It has to carry that weight alone, which
      is why it stays on the step rather than becoming a one-off refusal. */
   area: GUIDED_INJURY_AREA_HINT,
+  pain: 'Optional. Report a movement that hurts; your severity answer still follows.',
   stop_training: null,
   severity: null,
 };
@@ -158,6 +161,7 @@ function GuidedInjuryFlowBody({
   const [area, setArea] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState(GUIDED_INJURY_SEVERITY_OPTIONS[1]);
   const [preservedTriggers, setPreservedTriggers] = useState<string[]>([]);
+  const [seriousSymptoms, setSeriousSymptoms] = useState(false);
 
   /**
    * ⚠ **THIS NO LONGER WATCHES `visible`, AND IT IS NOT A RESET ANY MORE.** The
@@ -171,6 +175,7 @@ function GuidedInjuryFlowBody({
     setRegion(initial?.region ?? null);
     setArea(initial?.region ? initial.area ?? '' : '');
     setPreservedTriggers(initial?.triggers ?? []);
+    setSeriousSymptoms(initial?.seriousSymptoms === true);
     const severity = GUIDED_INJURY_SEVERITY_OPTIONS.find(
       (option) => option.severityBand === initial?.severityBand,
     ) ?? GUIDED_INJURY_SEVERITY_OPTIONS[1];
@@ -180,6 +185,7 @@ function GuidedInjuryFlowBody({
     initial?.region,
     initial?.severityBand,
     initial?.triggers,
+    initial?.seriousSymptoms,
   ]);
 
   const selectedArea = area.trim();
@@ -205,10 +211,10 @@ function GuidedInjuryFlowBody({
       severity: severityOption.severity,
       severityBand: severityOption.severityBand,
       adjustmentLevel: trainingPaused ? 'training_paused' : severityOption.adjustmentLevel,
-      // The in-app flow no longer asks this question. Keep a value originally
-      // supplied during onboarding or an earlier saved episode when updating.
-      triggers: trainingPaused ? [] : preservedTriggers,
-      seriousSymptoms: false,
+      // Optional new pain and historical reports travel together through the
+      // existing injury transaction; the main flow stays simple.
+      triggers: preservedTriggers,
+      seriousSymptoms,
     });
   };
 
@@ -222,6 +228,8 @@ function GuidedInjuryFlowBody({
     if (step === 'area') {
       setStep('region');
     } else if (step === 'stop_training') {
+      setStep('severity');
+    } else if (step === 'pain') {
       setStep('severity');
     } else if (step === 'severity') {
       setStep('area');
@@ -297,6 +305,27 @@ function GuidedInjuryFlowBody({
       );
     }
 
+    if (step === 'pain') {
+      return (
+        <>
+          {['Pressing', 'Pulling', 'Squatting', 'Lunging', 'Hinging', 'Jumping', 'Carrying', 'Running', 'Cycling', 'Rowing', 'SkiErg'].map((movement) => (
+            <FlowOption
+              key={movement}
+              testID={`injury-pain-${movement.toLowerCase()}`}
+              label={movement}
+              sub={initial?.triggers?.includes(movement) ? 'Previously reported — kept until this injury is resolved.' : undefined}
+              disabled={initial?.triggers?.includes(movement)}
+              selected={preservedTriggers.includes(movement)}
+              onPress={() => setPreservedTriggers(current => initial?.triggers?.includes(movement)
+                ? current : current.includes(movement) ? current.filter(value => value !== movement) : [...current, movement])}
+            />
+          ))}
+          <Button label="Back to severity" testID="injury-pain-done" glow={false}
+            onPress={() => setStep('severity')} />
+        </>
+      );
+    }
+
     if (step === 'severity') {
       return (
         <>
@@ -309,7 +338,7 @@ function GuidedInjuryFlowBody({
               icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])}
               onPress={() => {
                 setSelectedSeverity(option);
-                if (option.adjustmentLevel === 'training_paused') {
+                if (option.adjustmentLevel === 'training_paused' || seriousSymptoms) {
                   setStep('stop_training');
                 } else {
                   submit(false, option);
@@ -317,6 +346,15 @@ function GuidedInjuryFlowBody({
               }}
             />
           ))}
+          <FlowOption testID="injury-optional-pain" label="Add a painful movement (optional)"
+            sub={preservedTriggers.length ? preservedTriggers.join(', ') : undefined}
+            onPress={() => setStep('pain')} />
+          <FlowOption testID="injury-serious-symptoms" label="Serious symptoms or trouble moving"
+            sub={seriousSymptoms ? 'Reported. Choose your pain score above; training will be paused.'
+              : 'Pop, numbness/tingling, chest pain, dizziness, head/neck symptoms, or unable to walk normally.'}
+            selected={seriousSymptoms}
+            disabled={initial?.seriousSymptoms === true}
+            onPress={() => setSeriousSymptoms(current => initial?.seriousSymptoms === true || !current)} />
         </>
       );
     }
@@ -375,6 +413,7 @@ function FlowOption({
   selected,
   danger,
   onPress,
+  disabled,
 }: {
   testID?: string;
   label: string;
@@ -383,10 +422,13 @@ function FlowOption({
   selected?: boolean;
   danger?: boolean;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled, selected: !!selected }}
       testID={testID}
       accessibilityRole="button"
       /* R-109 (Sam, 2026-08-20): *"fix the six accessibility labels so athletes hear

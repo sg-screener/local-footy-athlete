@@ -41,6 +41,8 @@ const SPRINT_OPTIONS: { id: SprintExposure; label: string; subtitle: string }[] 
     label: 'Regular',
     subtitle: '2+ times per week',
   },
+  { id: 'Acceleration only', label: 'Acceleration only', subtitle: 'Short bursts, but no top-speed runs' },
+  { id: 'Top-speed only', label: 'Top-speed only', subtitle: 'Fast upright running, but no acceleration work' },
 ];
 
 export const SprintExposureScreen: React.FC<SprintExposureScreenProps> = ({

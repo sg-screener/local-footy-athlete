@@ -156,6 +156,8 @@ const formatSprintWork = (value?: SprintExposure): string => {
     'No sprint training': 'None',
     Occasionally: 'Occasional',
     '2+ times per week': 'Regular',
+    'Acceleration only': 'Acceleration only',
+    'Top-speed only': 'Top-speed only',
   };
   return labels[value];
 };

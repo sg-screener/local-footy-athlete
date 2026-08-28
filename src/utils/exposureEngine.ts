@@ -48,6 +48,7 @@ import {
 } from '../rules/conflictResolutionHierarchy';
 import { classifySessionImpact } from '../rules/sessionImpactBands';
 import { getExerciseTags } from '../data/exerciseTags';
+import { injuryTriggerMatchesConditioningModality } from '../rules/injuryExerciseRisk';
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -174,6 +175,7 @@ export interface Constraint {
   label?: string;
   /** Typed medical-stop policy: preserve only existing recovery/game anchors. */
   trainingPaused?: boolean;
+  painfulMovements?: readonly string[];
 }
 
 export type ExerciseDecisionKind = 'keep' | 'limit' | 'remove';
@@ -745,6 +747,7 @@ export function buildInjuryConstraint(args: {
   status?: 'active' | 'improving' | 'resolved';
   startDate?: string;
   trainingPaused?: boolean;
+  painfulMovements?: readonly string[];
   safeFocus?: string[];
   advice?: string[];
 }): Constraint {
@@ -770,6 +773,7 @@ export function buildInjuryConstraint(args: {
     advice: args.advice ?? advice,
     label: `injury:${region}@${severity}/10`,
     trainingPaused: args.trainingPaused === true,
+    painfulMovements: args.painfulMovements,
   };
 }
 
@@ -1064,7 +1068,9 @@ export function applyConstraintsToTypedComponents(
 
   if (
     workout.speedBlock &&
-    textIsRemovedByConstraints(speedBlockExposureText(workout), constraints)
+    (textIsRemovedByConstraints(speedBlockExposureText(workout), constraints)
+      || constraints.some(c => c.status !== 'resolved'
+        && injuryTriggerMatchesConditioningModality('running', c.painfulMovements ?? [])))
   ) {
     workout = { ...workout, speedBlock: undefined };
     removedComponents.push('speed');
@@ -1133,7 +1139,10 @@ export function applyConstraintsToTypedComponents(
         : workout.conditioningBlock?.intent === 'tempo'
           ? isRunning ? 'tempo running' : 'off-feet tempo conditioning'
           : isRunning ? 'easy aerobic running' : 'easy off-feet aerobic conditioning';
-      if (textIsRemovedByConstraints(`${typedExposure} ${typedModality ? modalityText : displayText}`, constraints)) {
+      const actualModes = option.modalitySequence?.length ? option.modalitySequence : [typedModality ?? ''];
+      const explicitlyPainful = constraints.some(c => c.status !== 'resolved'
+        && actualModes.some(mode => injuryTriggerMatchesConditioningModality(mode, c.painfulMovements ?? [])));
+      if (explicitlyPainful || textIsRemovedByConstraints(`${typedExposure} ${typedModality ? modalityText : displayText}`, constraints)) {
         for (const id of option.exerciseIds) removeRowIds.add(id);
         return [];
       }

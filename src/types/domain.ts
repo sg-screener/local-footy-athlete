@@ -113,7 +113,8 @@ export type BenchStrength = "I don't bench" | 'Less than bodyweight' | 'Around b
 
 export type ConditioningLevel = 'Poor' | 'Average' | 'Good' | 'Elite';
 
-export type SprintExposure = 'No sprint training' | 'Occasionally' | '2+ times per week';
+export type SprintExposure = 'No sprint training' | 'Occasionally' | '2+ times per week'
+  | 'Acceleration only' | 'Top-speed only';
 
 export type RecentTrainingLoad = 'Hardly at all' | 'A bit' | 'Pretty consistent' | 'Very consistent';
 

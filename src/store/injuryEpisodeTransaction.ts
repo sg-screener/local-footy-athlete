@@ -266,9 +266,11 @@ function episodeFromConstraint(args: {
       status,
       updatedAt: args.now,
       resolvedAt: null,
-      triggers: [...(args.constraint.triggers ?? args.existing.triggers)],
-      seriousSymptoms: args.constraint.seriousSymptoms === true,
-      seriousSymptom: args.constraint.seriousSymptom,
+      // A severity-only report is not an all-clear for previously painful work.
+      // Resolution/Clear ends this episode; its historical report stays intact.
+      triggers: [...new Set([...args.existing.triggers, ...(args.constraint.triggers ?? [])])],
+      seriousSymptoms: args.constraint.seriousSymptoms === true || args.existing.seriousSymptoms,
+      seriousSymptom: args.constraint.seriousSymptom ?? args.existing.seriousSymptom,
       transitionHistory: [
         ...args.existing.transitionHistory,
         transition({

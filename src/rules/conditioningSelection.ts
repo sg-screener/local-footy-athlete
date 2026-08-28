@@ -413,6 +413,8 @@ export function conditioningSelectionHash(seed: string): number {
 export interface ConditioningSelectionArgs {
   readonly category: AthleteConditioningCategory;
   readonly dateStr: string;
+  /** Explicit scheduler quality request; repeat sprint cannot stand in for top speed. */
+  readonly requestedSpeedQualities?: readonly ('acceleration' | 'top_end_speed')[];
   /** Block-stable rotation: stable within a mini-cycle, rotates at the boundary. */
   readonly miniCycleNumber?: number;
   /** Occurrence of this quality/category in the authored week, not call count. */
@@ -537,6 +539,8 @@ export function selectConditioningTemplate(
   const pool = poolForCategory(args.category);
 
   const filters: Array<(template: ConditioningTemplate) => boolean> = [
+    (template) => args.category !== 'sprint' || !args.requestedSpeedQualities
+      || (args.requestedSpeedQualities as readonly string[]).includes(template.quality),
     // Sam's ruling 5 (2026-08-05): a warm-up dose rides on a session the
     // athlete is already doing and is never a session in its own right. The
     // gate is the SHEET's authored property, read here — not a name filter.

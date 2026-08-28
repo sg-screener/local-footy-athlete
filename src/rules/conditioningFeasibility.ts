@@ -14,6 +14,7 @@ import type { Section18ConditioningStress, Section18EquipmentPolicyState } from 
 import { selectDefaultAerobicErgModalityFromHash } from '../utils/sessionBuilder';
 
 import { CONDITIONING_WARMUP_ROW_NAME } from './conditioningSelection';
+import { injuryTriggerMatchesConditioningModality } from './injuryExerciseRisk';
 type ErgModality = NonNullable<SessionAllocation['ergModality']>;
 type AllowedErgModality = Exclude<ErgModality, 'bike_erg'>;
 
@@ -117,7 +118,9 @@ function allowedErgs(
   equipmentModalities: readonly ConditioningEquipmentModality[],
   injury?: CanonicalWeeklyInjuryPolicy,
 ): AllowedErgModality[] {
-  const available = new Set(equipmentModalities);
+  const available = new Set(equipmentModalities.filter(mode =>
+    !injuryTriggerMatchesConditioningModality(mode, injury?.painfulMovements ?? [])
+      && !(mode === 'air_bike' && injury?.upperBodyRestricted)));
   const upperRestricted = injury?.upperBodyRestricted === true;
   // The session-side 'bike' family renders on EITHER bike machine; the
   // athlete's answer distinguishes them (ruling 2, 2026-07-31) so that
@@ -127,7 +130,8 @@ function allowedErgs(
   if (anyBike) out.push('bike');
   if (available.has('row') && !upperRestricted) out.push('row');
   if (available.has('ski') && !upperRestricted) out.push('ski');
-  if (anyBike && !upperRestricted && (available.has('row') || available.has('ski'))) {
+  if (anyBike && !upperRestricted && (available.has('row') || available.has('ski'))
+      && equipmentModalities.every(mode => !injuryTriggerMatchesConditioningModality(mode, injury?.painfulMovements ?? []))) {
     out.push('mixed');
   }
   return out;
@@ -230,15 +234,18 @@ export function substitutionDecision(args: {
 
   const modalities = new Set(context.equipment.conditioningModalities);
   attempted.push('treadmill');
-  if (modalities.has('treadmill') && !context.injury?.lowerBodyRestricted) {
+  if (modalities.has('treadmill') && !context.injury?.lowerBodyRestricted
+      && !injuryTriggerMatchesConditioningModality('treadmill', context.injury?.painfulMovements ?? [])) {
     return { family: 'treadmill', attempted };
   }
 
   const lowerRestricted = context.injury?.lowerBodyRestricted === true;
   const upperRestricted = context.injury?.upperBodyRestricted === true;
+  const runningPain = injuryTriggerMatchesConditioningModality('running', context.injury?.painfulMovements ?? []);
+  const walkingPain = injuryTriggerMatchesConditioningModality('walking', context.injury?.painfulMovements ?? []);
   const stress = stressFor(entry);
   const genuineSprint = entry.conditioningCategory === 'sprint';
-  const runningSafe = !lowerRestricted && !entry.conditioningOffFeet &&
+  const runningSafe = !runningPain && !lowerRestricted && !entry.conditioningOffFeet &&
     // A deloaded week caps quality exposures at one, and sprint is a quality
     // exposure — so "deloaded" is the whole question here now.
     !(genuineSprint && context.readinessDeloaded);
@@ -247,7 +254,7 @@ export function substitutionDecision(args: {
   if (runningSafe) return { family: 'outdoor_running', attempted };
 
   attempted.push('hill_running_or_walking');
-  if (!lowerRestricted && !entry.conditioningOffFeet) {
+  if (!runningPain && !walkingPain && !lowerRestricted && !entry.conditioningOffFeet) {
     return { family: 'hill_running_or_walking', attempted };
   }
 
@@ -255,7 +262,7 @@ export function substitutionDecision(args: {
   // `!entry.conditioningOffFeet` IS THE FIX. Walking was the only on-feet family
   // that never asked, so an athlete told to stay off their feet was refused
   // running, refused hills, and handed a walk.
-  if (!lowerRestricted && stress !== 'hard' && !genuineSprint
+  if (!walkingPain && !lowerRestricted && stress !== 'hard' && !genuineSprint
     && !(entry.conditioningOffFeet && familyIsOnFeet('brisk_walking'))) {
     return { family: 'brisk_walking', attempted };
   }
@@ -290,8 +297,10 @@ export function resolveConditioningSubstitutionPolicy(
     context.equipment.conditioningModalities,
     context.injury,
   );
-  const treadmill = context.equipment.conditioningModalities.includes('treadmill') && !lowerRestricted;
-  const running = !lowerRestricted;
+  const treadmill = context.equipment.conditioningModalities.includes('treadmill') && !lowerRestricted
+    && !injuryTriggerMatchesConditioningModality('treadmill', context.injury?.painfulMovements ?? []);
+  const running = !lowerRestricted
+    && !injuryTriggerMatchesConditioningModality('running', context.injury?.painfulMovements ?? []);
   const bodyweight = context.equipment.tags.includes('bodyweight') && !(lowerRestricted && upperRestricted);
   const feasible = !trainingPaused && (ergs.length > 0 || treadmill || running || bodyweight);
   const substitutionNeeded = feasible && ergs.length === 0;

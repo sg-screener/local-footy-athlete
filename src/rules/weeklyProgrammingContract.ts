@@ -582,10 +582,11 @@ export function hardConditioningQualityFor(
   return qualities[cycle % qualities.length];
 }
 
-/** WC-135. §8: *"Only add a sprint when club training is absent, at G-3 or earlier."* */
+/** WC-135, amended by Sam's P15 decision 2026-08-28: club attendance alone
+ * cannot exclude a reported missing speed quality. Existing timing/caps remain. */
 export const INSEASON_SPRINT_RULE = {
   clauseId: 'WC-135',
-  addOnlyWhenNoClubTraining: true,
+  addOnlyWhenNoClubTraining: false,
   earliestGameOffset: -3,
 } as const;
 
@@ -739,9 +740,10 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
       + 'low fatigue. Low readiness never adds work.' },
   { id: 'WC-142', provenance: '§6 Base layout coverage',
     statement: 'One entry point resolves phase x availability to a base layout.' },
-  { id: 'WC-135', provenance: '§3 Sprint/high-speed / §8 In-season',
-    statement: 'In-season, only add sprint work when there is no club training, and '
-      + 'place it G-3 or earlier.' },
+  { id: 'WC-135', provenance: '§3 Sprint/high-speed / §8 In-season / P15 2026-08-28',
+    statement: 'In-season, supply a reported missing speed quality even with club '
+      + 'training when existing safety, availability and weekly limits permit; '
+      + 'place it G-3 or earlier. Do not duplicate covered qualities.' },
   { id: 'WC-138', provenance: '§3 Upper + running / §7 off-season reference week',
     statement: 'In off-season the sprint rides the LAST legal upper strength day '
       + 'rather than taking a day of its own, so the week\'s two high-output '
