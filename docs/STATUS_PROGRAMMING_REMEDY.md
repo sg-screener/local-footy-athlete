@@ -911,3 +911,35 @@ hand-support cases. A new exact source checkpoint and release/native runs follow
 NOT COVERED: revised candidate release/build/year/native verification is pending;
 non-flush off-leg recovery wording, full-strength warm-up native overlap,
 refusal-sheet dismissal, physical iPhone/2 km Skip QA. No installation or wipe.
+
+### Ownership review prerequisite and final restart receipts
+
+2f63ced4 completed 416/416 annual athlete-weeks but its release is RED at 10/20:
+one changed ownership fingerprint out of 1,138 executable capability owners.
+01334a5a has the same stale review. The detector correctly invalidated
+compileCanonicalInjuryStage after the substitution-aware addition fix. Read the
+whole function, 18 reported sites, six capable callees and sole capable caller;
+the function remains a pure existing canonical compiler stage. Compared updating
+this exact reviewed fingerprint with changing the detector or production code;
+only the review record changes. The old fingerprint is a demonstrated failing
+control. No test exemption, new writer or programming change is introduced.
+
+01334a5a clean generic Release build succeeded (not installed), four delivered
+years pass strict audits with 208/208 weekly restarts, 55 templates/110 emitted
+variants match the preserved capture, and all 31 follow-up mutants are caught.
+Actual adjacent energy prescriptions match all 23 classified date pairs/year.
+
+Native 01334a5a severe shoulder now retains Single-Leg Leg Press and Bosch Hold,
+not the loaded Single-Leg Box Squat. Quick Swap and immediate Undo pass. Maestro
+then reported an app crash 256 ms after launch completion; SpringBoard shows the
+new process 93463 successfully bootstrapped and remained running-active-Visible.
+Without relaunching, the app screenshot and continuation show retained injury,
+Undo and modifiers; Clear restores healthy Barbell Row. This is an automation
+launch-transition failure, not a measured app crash. Added an animation wait to
+the separate corrected tape. Three consecutive fresh-process reopens pass:
+healthy Gunshow + Mobility remains on Friday, healthy Barbell Row on next Tuesday,
+and the cleared injury banner stays absent. Original failure evidence retained.
+
+NOT COVERED: exact release rerun after this review-only save; non-flush off-leg
+recovery wording; full-strength warm-up native overlap; refusal-sheet dismissal;
+physical iPhone and 2 km Skip acceptance. Both phones remain untouched.

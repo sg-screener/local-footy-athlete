@@ -462,9 +462,9 @@
       "reason": "Builds coach snapshot and strength/load histories by reading visible weeks and recorded outcomes; produces reporting DTOs, not program rows."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryStage": {
-      "fingerprint": "5c6c094fcdeb913506d2595ec9d602dbdfc92f2bc6d9f8313b8e20e95c58060f",
+      "fingerprint": "6a02304327a05ca57e0a79cb21fbe92a9a37c720e9bcac0d06b523770f1dedf9",
       "classification": "canonical_compiler",
-      "reason": "Shared explicit injury-stage compiler applies canonical exercise swaps, injury adjustment and conditioning feasibility, then carries typed row roles through evidence normalization."
+      "reason": "Reviewed full function and six capable callees after 2f63ced4: the existing canonical stage now derives additions from actual preceding substitutions and updates a local copy of week exercise names, preventing duplicate replacements. Its sole capable caller remains compileCanonicalInjuryWeek. All row construction stays in the existing swap, injury-adjustment, conditioning and evidence compilers; no store, UI or independent publisher was added. Existing row roles and dose ceilings remain explicit."
     },
     "src/utils/workoutCanonicalisation.ts#buildCanonicalConditioningBlock": {
       "fingerprint": "26d6e73c6e65b50e3f4e50f80a93a7003e649a1e0f9a659027afe37cff437f8a",
