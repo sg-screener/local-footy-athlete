@@ -508,6 +508,26 @@ run('20 mutation: a missing exclusion reversal is caught after awaited Undo', as
       'the session screen names UndoToast without importing it');
   });
 
+  const overlayLayer = (source: string, style: string): number => {
+    const region = source.match(new RegExp(`\\b${style}\\s*:\\s*\\{([^}]+)\\}`));
+    assert(!!region && region[1].length > 20, `${style} style region was not found`);
+    assert(/position:\s*'absolute'/.test(region![1]), `${style} is no longer an overlay`);
+    const layer = region![1].match(/\bzIndex:\s*(\d+)/);
+    return layer ? Number(layer[1]) : 0;
+  };
+  run('R-107 — Undo stays above the week-board Save control it overlaps', () => {
+    assert(/<Animated\.View\s+style=\{\[styles\.wrap,/.test(toast), 'toast wrap is not mounted');
+    assert(/testID="week-board-save"\s+style=\{styles\.weekBoardSave\}/.test(day), 'Save style is not mounted');
+    assert(overlayLayer(toast, 'wrap') > overlayLayer(day, 'weekBoardSave'),
+      'Save covers the visible/tappable Undo toast');
+  });
+  run('R-107 — putting Undo behind Save makes its layering guard red', () => {
+    const lowered = toast.replace(/(wrap:\s*\{[^}]*\bzIndex:)\s*\d+/, '$1 0');
+    assert(lowered !== toast, 'layer mutation did not land');
+    assert(overlayLayer(lowered, 'wrap') <= overlayLayer(day, 'weekBoardSave'),
+      'layering mutation was not detected');
+  });
+
   run('R-107 — at most one is visible, and the guard is in the COMPONENT', () => {
     assert(/useIsFocused/.test(toast),
       'UndoToast does not read focus, so two mounts can both draw');

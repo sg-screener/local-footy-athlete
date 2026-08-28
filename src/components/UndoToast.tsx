@@ -144,6 +144,9 @@ const styles = StyleSheet.create({
   // part in flow would push the week it sits over.
   wrap: {
     position: 'absolute',
+    // The board's Save bar is layer 20; Undo must remain visible and tappable
+    // above it on the same surface (R-107), not merely in accessibility state.
+    zIndex: 30,
     left: 0,
     right: 0,
     bottom: spacing.lg,

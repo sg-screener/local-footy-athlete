@@ -300,6 +300,25 @@ the sheet Done control instead of the board Save changes. A further full flow
 lost the app during reload; the app subsequently appeared normally. Neither
 scratch failure is a completed native drag/Undo/restart receipt.
 
+### Native drag found a covered Undo control
+
+The final 76e9a802 programming run caught all 24 named domain mutations; its
+four corrected year reports also passed their projection/restart/artifact
+checks. Readiness and swap simulator flows passed. Conditioning initially hit
+iOS accessibility error `kAXErrorInvalidUIElement` and then passed unchanged.
+
+The requested extra drag probe found a real UI defect: Save changes has layer
+20 and occupies the same bottom space as the unlayered Undo toast. Accessibility
+could find Undo, but the screenshot showed Save covering it, and the tap hit Save.
+The existing shared toast now uses layer 30. No Undo transaction, timer, route,
+copy or save behaviour changed. `test:undo-reversal` was 26/28 red before and
+28/28 green after; its new anchored style guard also rejects lowering the toast
+behind Save. Actual native Undo now restores Mobility to Wednesday beside
+Gunshow and leaves Sunday empty. The complete save/restart rerun is still owed.
+The scratch flow now waits for the transient toast to leave before tapping the
+Save control underneath it; it does not mistake an accessibility node for an
+uncovered button. A final exact-version release gate/build follows this UI fix.
+
 ## NOT COVERED
 
 - Product questions above remain open; all P01–P22 are not closed.
