@@ -244,7 +244,7 @@
     },
     "test:canonical-weekly-compiler": {
       "kind": "current_contract",
-      "reason": "The compiler witness covers scheduling, final rows, typed accepted edits, linked-fact Clear, restart and Undo, followed by a real accumulated-athlete reset/restart witness with a missing-reset mutation. This is a family contract, not the still-red global single-owner proof.",
+      "reason": "The compiler witness covers scheduling, final rows, typed accepted edits, linked-fact Clear, restart and Undo. Programming remediation adds real full/partial/no-kit onboarding, Mobility Add/Move/Remove/Undo, weekly conditioning seats, accepted quality-specific selection history and all-template display checks. Changed injury-review fixtures now locate actual generated lower/quiet days instead of imposing an old weekday or exercise name; retained-row safety and dose assertions remain. R-237's no-game optional expectation is explicitly superseded by Sam's P03, not removed to hide a failure.",
       "productionPaths": [
         "src/rules/canonicalWeeklyCompiler.ts",
         "src/rules/canonicalWeeklyAthleteEditState.ts",
@@ -253,10 +253,16 @@
         "src/utils/resetCoach.ts",
         "src/utils/lighterDayTransaction.ts",
         "src/store/quiescentBoot.ts",
-        "src/services/api/generateProgram.ts"
+        "src/services/api/generateProgram.ts",
+        "src/rules/conditioningSelection.ts",
+        "src/rules/weeklyScheduler.ts",
+        "src/utils/sessionComponents.ts",
+        "src/store/blockSelectionHistoryStore.ts"
       ],
       "contractRefs": [
-        "LAW-canonical-weekly-compiler-first-slice"
+        "LAW-canonical-weekly-compiler-first-slice",
+        "LAW-programming-remediation-inputs-and-selection",
+        "R-237"
       ],
       "witnessScript": "test:canonical-weekly-compiler",
       "evidenceKind": "green_now"

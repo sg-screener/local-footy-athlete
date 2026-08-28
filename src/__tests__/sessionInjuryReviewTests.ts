@@ -412,6 +412,12 @@ async function main(): Promise<void> {
     let quietArea = '';
     for (const day of days2) {
       setJourneyClock(day);
+      // unsafeRowsForInjury counts exercise substitutions, not modality changes.
+      // Find a genuine no-conditioning control instead of calling zero unsafe
+      // lifts proof that a combined day cannot change its Run to Bike.
+      const candidateDay = quiet(() => resolveWeekWithConditioning(weekStart2, buildScheduleStateImperative()))
+        .find(candidate => candidate.date === day);
+      if (candidateDay?.workout?.conditioningBlock?.options.length) continue;
       for (const candidate of CANDIDATE_AREAS) {
         if (unsafeCountFor(candidate, SEVERITY, day) === 0) { quietDay = day; quietArea = candidate; break; }
       }

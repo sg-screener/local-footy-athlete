@@ -17,6 +17,9 @@
 
 // ─── Types ───
 
+import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
+import type { ExperienceLevel } from '../types/domain';
+
 export type FatigueLevel = 'low' | 'moderate' | 'high';
 
 export type EquipmentTag =
@@ -170,6 +173,16 @@ export const BICEPS_POOL: PoolExercise[] = [
   ex('dumbbell-bicep-curl','Bicep Curl (Dumbbell)',     3, 10, 12, 45, 'Keep elbows still. Control both directions.',  ['dumbbells'],['elbow', 'wrist']),
   ex('lying-db-curl',     'Lying Dumbbell Curl',        2, 10, 12, 45, 'Lie flat. Let the arms stretch at the bottom.', ['dumbbells'],['shoulder', 'elbow']),
 ];
+
+/** P08: preference after legality, not a ban on bands or a new training-age ladder. */
+export function preferAutomaticCurlCandidates<T>(
+  candidates: readonly T[], experience: ExperienceLevel | null | undefined, nameOf: (entry: T) => string,
+): T[] {
+  if (ladderLevelForProfile(experience ?? null) !== 'advanced') return [...candidates];
+  const alternatives = new Set(BICEPS_POOL.filter(row => row.id !== 'band-curl').map(row => row.name));
+  if (!candidates.some(row => alternatives.has(nameOf(row)))) return [...candidates];
+  return candidates.filter(row => nameOf(row) !== 'Banded Bicep Curl');
+}
 
 export const TRICEPS_POOL: PoolExercise[] = [
   ex('tricep-pushdown',   'Tricep Pushdown',            3, 12, 15, 45, 'Full lockout at the bottom. Keep elbows pinned.', ['cables'], ['elbow', 'wrist']),

@@ -1688,6 +1688,7 @@ export function buildWorkoutsFromCoach(
       && (selectionCategory !== 'sprint' || strengthRegion === 'lower');
     const selectedTemplate = selectConditioningTemplate({
       category: selectionCategory,
+      preferredTemplateName: planEntry.conditioningVariant,
       dateStr,
       miniCycleNumber: rotationContext?.miniCycleNumber,
       offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
@@ -1848,7 +1849,7 @@ export function buildWorkoutsFromCoach(
     if (candidateIsRun && runStreak >= 3 && !isProtectedSpeed) {
       // 3rd (or later) consecutive run — convert to off-feet: an authored
       // template of the SAME quality that renders on a machine.
-      const offFeetTemplate = isCombined ? null : offFeetAlternative(candidateName, dateStr);
+      const offFeetTemplate = isCombined ? null : offFeetAlternative(candidateName, dateStr, availableMachines);
       const offFeet = isCombined
         ? buildConditioningTemplate(candidateName, dateStr, {
             combined: true,
@@ -2454,7 +2455,7 @@ export function buildWorkoutsFromCoach(
       if (powerSpec) resolvedPowerRow = buildPowerRow(powerSpec, workoutId, {
         phase: onboardingData?.seasonPhase,
         experienceLevel: onboardingData?.experienceLevel,
-        availableEquipment: onboardingData?.equipment ?? [],
+        availableEquipment,
         // Mini-cycle = the 3-4 week block. Stable all block, rotates at rollover.
         blockId: `mini-${rotationContext?.miniCycleNumber ?? 1}`,
       });

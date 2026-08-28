@@ -338,11 +338,13 @@ function materializeAcceptedVisibleSections(args: {
 
   let exercises = (args.source.exercises ?? []).filter((row: any) => {
     const ids = workoutRowIds(row);
+    // The accepted section already owns exact membership. Reclassifying every
+    // non-conditioning row as Strength here discarded a moved Mobility section.
+    if (wantedExerciseIds.size > 0) return ids.some((id) => wantedExerciseIds.has(id));
     const isConditioning = ids.some((id) => conditioningExerciseIds.has(id));
     if (isConditioning && !hasConditioning && !hasRecovery) return false;
     if (!isConditioning && !hasStrength) return false;
-    if (wantedExerciseIds.size === 0) return true;
-    return ids.some((id) => wantedExerciseIds.has(id));
+    return true;
   });
 
   const nextConditioningBlock = hasConditioning || hasRecovery
@@ -358,7 +360,11 @@ function materializeAcceptedVisibleSections(args: {
     });
   }
 
-  const onlyConditioning = !hasStrength && (hasConditioning || hasRecovery);
+  const onlyConditioning = !hasStrength && hasConditioning;
+  const firstOptionalKind = exercises[0]?.composedOptionalKind ?? args.source.composedOptionalKind;
+  const survivingOptionalKind = firstOptionalKind && exercises.length > 0 &&
+    exercises.every(row => (row.composedOptionalKind ?? args.source.composedOptionalKind) === firstOptionalKind)
+    ? firstOptionalKind : undefined;
   const onlyStrength = hasStrength && !hasConditioning && !hasRecovery && !hasSession;
   const onlySession = hasSession && !hasStrength && !hasConditioning && !hasRecovery;
   const title = onlySession
@@ -376,7 +382,8 @@ function materializeAcceptedVisibleSections(args: {
 
   return cloneWorkout(args.source, {
     name: title,
-    workoutType: workoutType as Workout['workoutType'],
+    workoutType: survivingOptionalKind === 'mobility' ? 'Mobility' : workoutType as Workout['workoutType'],
+    composedOptionalKind: survivingOptionalKind,
     // THE ANCHOR IS A FACT ABOUT THE DAY, NOT ABOUT A COMPONENT.
     //
     // `isTeamDay` is what `isTeamTrainingSession` reads, and `cloneWorkout`
@@ -738,6 +745,10 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
 
+  const mobilityRows = renderableRows.filter(row => lowLoadKind === 'mobility' || row.composedOptionalKind === 'mobility');
+  const recoveryRows = renderableRows.filter(row => lowLoadKind === 'recovery' || row.composedOptionalKind === 'recovery');
+  const lowLoadIds = new Set([...mobilityRows, ...recoveryRows].map(row => row.id));
+
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
   const legacyConditioningIds = blockConditioningIds.size > 0
     ? new Set<string>()
@@ -755,7 +766,7 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
 
   const conditioningRows = isStandaloneConditioningWorkout(workout)
-    ? renderableRows.filter((row) => !supportIds.has(row?.id))
+    ? renderableRows.filter((row) => !supportIds.has(row?.id) && !lowLoadIds.has(row?.id))
     : renderableRows.filter((row) => conditioningIds.has(row?.id) && !supportIds.has(row?.id));
   // SPEED IS ITS OWN BUCKET (Sam, 2026-08-17). Scoped to rows the conditioning
   // block has NOT already claimed, so a block that names the same id twice
@@ -769,6 +780,7 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const strengthRows = isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)
     ? []
     : renderableRows.filter((row) => !conditioningIds.has(row?.id)
+      && !lowLoadIds.has(row?.id)
       && !supportIds.has(row?.id)
       && !speedIds.has(row?.id));
 
@@ -778,8 +790,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     strengthRows,
     supportRows,
     conditioningRows,
-    mobilityRows: lowLoadKind === 'mobility' ? renderableRows : [],
-    recoveryRows: lowLoadKind === 'recovery' ? renderableRows : [],
+    mobilityRows,
+    recoveryRows,
     teamTrainingRows: teamState.teamTrainingItems ?? [],
   };
 }
@@ -909,7 +921,7 @@ export function getSessionComponents(
   }
 
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
-  if (lowLoadKind === 'mobility' && (mobilityRows.length > 0 || components.length === 0)) {
+  if (mobilityRows.length > 0 || (lowLoadKind === 'mobility' && components.length === 0)) {
     components.push({
       id: 'mobility',
       kind: 'mobility',
@@ -918,7 +930,7 @@ export function getSessionComponents(
     });
   }
 
-  if (lowLoadKind === 'recovery' && (recoveryRows.length > 0 || components.length === 0)) {
+  if (recoveryRows.length > 0 || (lowLoadKind === 'recovery' && components.length === 0)) {
     components.push({
       id: 'recovery',
       kind: 'recovery',

@@ -453,6 +453,15 @@ export interface ConditioningSelectionArgs {
   readonly dateStr: string;
   /** Block-stable rotation: stable within a mini-cycle, rotates at the boundary. */
   readonly miniCycleNumber?: number;
+  /** Occurrence of this quality/category in the authored week, not call count. */
+  readonly seatIndex?: number;
+  /** Carry the specialist's choice through adapters when it is still feasible. */
+  readonly preferredTemplateName?: string;
+  /** Accepted selection facts, never a preview/call-count cursor. */
+  readonly selectionContext?: {
+    readonly blockStartISO: string;
+    readonly history: readonly BlockConditioningSelection[];
+  };
   /** The block must render off feet (run load caps, lower-body pairing). */
   readonly offFeet?: boolean;
   /** The athlete has no ergs — the template must render on run/bodyweight. */
@@ -466,6 +475,14 @@ export interface ConditioningSelectionArgs {
   /** The week carries NO team training (lifts the availability gate). */
   readonly noTeamTrainingWeek?: boolean;
   readonly role?: ConditioningRole;
+}
+
+/** One chosen identity per conditioning seat; dose remains owned by the sheet. */
+export interface BlockConditioningSelection {
+  readonly blockStartISO: string;
+  readonly category: AthleteConditioningCategory;
+  readonly seatIndex: number;
+  readonly templateName: string;
 }
 
 /**
@@ -551,46 +568,6 @@ const ROLE_MAX_MINUTES: Readonly<Record<ConditioningRole, number | null>> = {
  * Deterministically select the authored template serving a demand category.
  * Filters are selection policy; the returned template is Sam's, untouched.
  */
-/**
- * ── WC-115: THE OFF-LEG PREFERENCE, DECLARED ONCE AND READ BY BOTH CHOOSERS ──
- *
- * §3: *"Lower + conditioning: Prefer off-leg work: bike, ski, rower or assault
- * bike."*
- *
- * ⚠ **"CAN RENDER OFF-FEET" IS NOT "IS AN OFF-LEG SESSION", AND EVERY AUTHORED
- * TEMPLATE LISTS `run`.** So a big lower day was paired with `Continuous
- * Aerobic Run` — which the sheet renders on run or BIKE ONLY — while `Steady
- * Blocks` and `Steady 5 min Blocks`, which the sheet renders on all four
- * machines, sat unpicked. Legal, and the wrong session after a squat/deadlift
- * day.
- *
- * The preference is the COUNT OF MACHINES the athlete can actually use, read
- * from the sheet's own `modalityNotes`. Richest off-leg support wins; the
- * caller's existing rotation then picks inside that tier, so block-stability is
- * untouched.
- *
- * **IT IS A PREFERENCE, NEVER A REFUSAL.** When no candidate has a machine at
- * all the list is returned exactly as given rather than emptied — the day still
- * gets its authored session.
- *
- * ⚠ **BOTH CHOOSERS READ IT, AND THAT IS THE WHOLE POINT.** The generator picks
- * through `selectConditioningTemplate`; the READ PATH picks again through
- * `offFeetAlternative` (`sessionResolver`'s run-load pass). Fixing only the
- * first left generation storing `Steady Blocks` and the athlete's screen
- * showing `Continuous Aerobic Run` — one rule, two implementations, one wrong.
- */
-function preferRichestOffLeg(
-  candidates: readonly ConditioningTemplate[],
-  machineOwned: (modality: ConditioningModality) => boolean,
-): ConditioningTemplate[] {
-  if (candidates.length <= 1) return [...candidates];
-  const machineCount = (template: ConditioningTemplate): number =>
-    renderableModalities(template).filter((m) => m !== 'run' && machineOwned(m)).length;
-  const best = Math.max(...candidates.map(machineCount));
-  if (best <= 0) return [...candidates];
-  return candidates.filter((template) => machineCount(template) === best);
-}
-
 export function selectConditioningTemplate(
   args: ConditioningSelectionArgs,
 ): ConditioningTemplate {
@@ -636,7 +613,9 @@ export function selectConditioningTemplate(
   };
 
   let candidates = pool.filter((template) => filters.every((filter) => filter(template)));
-  if (args.offFeet) candidates = preferRichestOffLeg(candidates, machineOwned);
+  // P14: owning more machines does not make a template better. The feasibility
+  // filter above establishes an actual usable off-leg route; rotation keeps
+  // every such candidate instead of narrowing to the largest machine count.
 
   // A role cap is a preference, not a wall — when it empties the pool the
   // authored session runs long rather than a dose being invented short.
@@ -644,8 +623,29 @@ export function selectConditioningTemplate(
   if (capped.length > 0) candidates = capped;
   if (candidates.length === 0) candidates = pool;
 
+  const preferred = candidates.find(template => template.name === args.preferredTemplateName);
+  if (preferred) return preferred;
+  if (args.selectionContext) {
+    const { blockStartISO, history } = args.selectionContext;
+    const seat = args.seatIndex ?? 0;
+    const relevant = history.filter(entry => entry.category === args.category
+      && entry.blockStartISO <= blockStartISO);
+    const recorded = relevant.find(entry => entry.blockStartISO === blockStartISO && entry.seatIndex === seat);
+    const restored = candidates.find(template => template.name === recorded?.templateName);
+    if (restored) return restored;
+    // Choose the least-recently served QUALITY before the template within it.
+    // Skipped block numbers and unrelated qualities never consume a turn.
+    // Earlier seats in this very week are supplied explicitly by the boundary.
+    const latest = (matches: (entry: BlockConditioningSelection) => boolean): string =>
+      relevant.filter(matches).map(entry => entry.blockStartISO).sort().at(-1) ?? '';
+    const qualityLast = (quality: ConditioningQuality): string => latest(entry =>
+      resolveTemplateByName(entry.templateName)?.quality === quality);
+    const nameLast = (name: string): string => latest(entry => entry.templateName === name);
+    return [...candidates].sort((a, b) => qualityLast(a.quality).localeCompare(qualityLast(b.quality))
+      || nameLast(a.name).localeCompare(nameLast(b.name)))[0];
+  }
   const index = args.miniCycleNumber !== undefined
-    ? (Math.max(1, args.miniCycleNumber) - 1) % candidates.length
+    ? (Math.max(1, args.miniCycleNumber) - 1 + Math.max(0, args.seatIndex ?? 0)) % candidates.length
     : conditioningSelectionHash(args.dateStr) % candidates.length;
   return candidates[index];
 }
@@ -661,18 +661,19 @@ export function selectConditioningTemplate(
 export function offFeetAlternative(
   name: string,
   dateStr: string,
+  availableMachines?: readonly ConditioningModality[],
 ): ConditioningTemplate | null {
   const template = resolveTemplateByName(name);
   if (!template) return null;
   const pool = CONDITIONING_TEMPLATES.filter(
-    (candidate) => candidate.quality === template.quality && rendersOffFeet(candidate),
+    (candidate) => candidate.quality === template.quality && renderableModalities(candidate)
+      .some(modality => modality !== 'run' && (availableMachines === undefined || availableMachines.includes(modality))),
   );
   if (pool.length === 0) return null;
-  // THE SAME PREFERENCE THE GENERATOR APPLIES. `availableMachines` is not a
-  // parameter of this read-path entry, so every machine counts as owned —
-  // exactly what the generator does when it is handed `undefined`.
-  const preferred = preferRichestOffLeg(pool, () => true);
-  return preferred[conditioningSelectionHash(dateStr) % preferred.length];
+  // A usable selected template keeps its identity; changing modality alone
+  // must not silently rotate the session to another prescription.
+  return pool.find(candidate => candidate.name === template.name)
+    ?? pool[conditioningSelectionHash(dateStr) % pool.length];
 }
 
 /* ── Name resolution for stored/legacy content ── */

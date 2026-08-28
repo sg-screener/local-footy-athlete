@@ -1404,6 +1404,11 @@ export interface WorkoutExercise {
    * rather than retire it.
    */
   role?: import('../utils/sessionRoles').SessionRole;
+  /** The authored optional component this row belongs to on a stacked day.
+   * Uses the session builder's existing identity; it is not a new session kind.
+   * Carried by the stack owner so a strength finaliser cannot re-author these slots.
+   */
+  composedOptionalKind?: Workout['composedOptionalKind'];
 
   /**
    * The two power facts a row must carry that a name and a dose cannot express.

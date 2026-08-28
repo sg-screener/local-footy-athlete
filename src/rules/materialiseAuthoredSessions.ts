@@ -41,6 +41,7 @@ import {
   speedTemplateByName,
   type AthleteConditioningCategory,
   type ConditioningRole,
+  type BlockConditioningSelection,
 } from './conditioningSelection';
 import { decidePowerPrimer, type PowerPrimerSpec } from './powerPrimerPolicy';
 import type { ConditioningModality, ConditioningTemplate } from '../data/conditioningTemplates';
@@ -97,6 +98,8 @@ export interface MaterialisationFacts {
   readonly powerGoalNudge: boolean;
   readonly injuries: Parameters<typeof decidePowerPrimer>[0]['injuries'];
   readonly availableMachines?: readonly ConditioningModality[];
+  readonly availableMachinesByDay?: Readonly<Partial<Record<number, readonly ConditioningModality[]>>>;
+  readonly conditioningSelectionContext?: { readonly blockStartISO: string; readonly history: readonly BlockConditioningSelection[] };
   /** No erg access — the template must render on run or bodyweight. */
   readonly runOnly?: boolean;
   readonly phase: Parameters<typeof decidePowerPrimer>[0]['phase'];
@@ -130,6 +133,18 @@ export function materialiseAuthoredSessions(args: {
     ? (args.gameDay === null ? [] : [args.gameDay])
     : args.gameDays;
   const hasGame = gameDays.length > 0;
+  const seats = new Map<string, number>();
+  const selectedThisWeek: BlockConditioningSelection[] = [];
+  const selectionContext = () => facts.conditioningSelectionContext ? {
+    ...facts.conditioningSelectionContext,
+    history: [...facts.conditioningSelectionContext.history, ...selectedThisWeek],
+  } : undefined;
+  const remember = (category: AthleteConditioningCategory, seatIndex: number, template: ConditioningTemplate) => {
+    if (facts.conditioningSelectionContext) selectedThisWeek.push({
+      blockStartISO: facts.conditioningSelectionContext.blockStartISO,
+      category, seatIndex, templateName: template.name,
+    });
+  };
 
   // ⚠ ONE ENTRY PER AUTHORISED DAY, IN THE SCHEDULER'S ORDER. `map`, never
   // `flatMap`, never `filter`, never a push into the result — the specialists
@@ -154,19 +169,25 @@ export function materialiseAuthoredSessions(args: {
     let conditioningTemplate: ConditioningTemplate | null = null;
     let unmaterialised: UnmaterialisedReason | null = null;
     if (intention.conditioningCategory && intention.conditioningRole) {
+      const seatIndex = seats.get(intention.conditioningCategory) ?? 0;
+      seats.set(intention.conditioningCategory, seatIndex + 1);
+      const availableMachines = facts.availableMachinesByDay?.[intention.dayOfWeek] ?? facts.availableMachines;
       try {
         conditioningTemplate = selectConditioningTemplate({
           category: intention.conditioningCategory as AthleteConditioningCategory,
           dateStr: intention.dateISO,
           miniCycleNumber: facts.miniCycleNumber,
+          seatIndex,
+          selectionContext: selectionContext(),
           // §3 "Lower + conditioning: prefer off-leg work" — the scheduler already
           // decided that by choosing the category; this passes the same fact on.
           offFeet: intention.conditioning === 'off_leg',
-          runOnly: facts.runOnly,
-          availableMachines: facts.availableMachines,
+          runOnly: availableMachines?.length === 0 || facts.runOnly,
+          availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: intention.conditioningRole as ConditioningRole,
         });
+        remember(intention.conditioningCategory as AthleteConditioningCategory, seatIndex, conditioningTemplate);
       } catch {
         // A SPECIALIST MAY REFUSE, AND THE DAY SURVIVES THE REFUSAL. It is
         // recorded with a typed reason rather than the session quietly vanishing,
@@ -183,16 +204,21 @@ export function materialiseAuthoredSessions(args: {
     // standalone sprint draws from, so the two agree by construction.
     let sprintTemplate: ConditioningTemplate | null = null;
     if (intention.sprintComponent) {
+      const seatIndex = seats.get('sprint') ?? 0;
+      seats.set('sprint', seatIndex + 1);
       try {
         sprintTemplate = selectConditioningTemplate({
           category: 'sprint',
           dateStr: intention.dateISO,
           miniCycleNumber: facts.miniCycleNumber,
+          seatIndex,
+          selectionContext: selectionContext(),
           runOnly: facts.runOnly,
           availableMachines: facts.availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: 'component',
         });
+        remember('sprint', seatIndex, sprintTemplate);
       } catch {
         unmaterialised = 'no_template_for_category_on_this_equipment';
       }

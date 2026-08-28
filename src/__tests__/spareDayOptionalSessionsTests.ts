@@ -171,8 +171,8 @@ const preSeason = generate({
   usualGameDay: null,
   gameDay: null,
 });
-check('[7] Pre-season uses spare gym capacity for the gendered optional session',
-  workoutKind(preSeason, 'gunshow').length === 1);
+check('[7] P03: no-game Pre-season does not automatically add Gunshow',
+  workoutKind(preSeason, 'gunshow').length === 0);
 check('[8] Pre-season also offers equipment-free optional Mobility',
   workoutKind(preSeason, 'mobility').length >= 1
     && workoutKind(preSeason, 'mobility').every(mobilityRowsRequireNoEquipment));
@@ -186,8 +186,8 @@ const femalePreSeason = generate({
   usualGameDay: null,
   gameDay: null,
 });
-check('[8a] a no-game female spare gym offer is Primer, never Gunshow',
-  workoutKind(femalePreSeason, 'primer').length === 1
+check('[8a] P03: no-game female Pre-season has neither automatic Primer nor Gunshow',
+  workoutKind(femalePreSeason, 'primer').length === 0
     && workoutKind(femalePreSeason, 'gunshow').length === 0);
 
 const offSeason = generate({
@@ -199,9 +199,9 @@ const offSeason = generate({
   usualGameDay: null,
   gameDay: null,
 });
-check('[9] Off-season keeps its two-mobility target and gains one spare-gym Gunshow',
+check('[9] P03: Off-season keeps its two-mobility target without automatic Gunshow',
   workoutKind(offSeason, 'mobility').length === 2
-    && workoutKind(offSeason, 'gunshow').length === 1,
+    && workoutKind(offSeason, 'gunshow').length === 0,
   offSeason.workouts.map((workout) => `${workout.dayOfWeek}:${workout.name}`).join(' | '));
 
 for (const [label, week] of [

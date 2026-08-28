@@ -643,6 +643,20 @@ export function finaliseWorkoutAfterMutation(
     return { workout: inputWorkout, changed: false, actions };
   }
 
+  // A stack does not transfer ownership of authored optional slots to this
+  // strength finaliser. Apply the existing pass only to the other component;
+  // keep the exact rows, doses and identities supplied by the optional builder.
+  const composedRows = inputWorkout.exercises.filter(row => row.composedOptionalKind);
+  if (composedRows.length > 0) {
+    const otherRows = inputWorkout.exercises.filter(row => !row.composedOptionalKind);
+    if (otherRows.length === 0) return { workout: inputWorkout, changed: false, actions };
+    const other = finaliseWorkoutAfterMutation({ ...inputWorkout, exercises: otherRows }, context);
+    const byId = new Map(other.workout.exercises.map(row => [row.id, row]));
+    const exercises = inputWorkout.exercises.flatMap(row => row.composedOptionalKind
+      ? [row] : byId.has(row.id) ? [byId.get(row.id)!] : []);
+    return { ...other, workout: { ...other.workout, name: inputWorkout.name, exercises } };
+  }
+
   const earlyOffseason = context.phase === 'Off-season' &&
     context.offseasonSubphase === 'early_offseason';
   const originalJson = JSON.stringify(inputWorkout);

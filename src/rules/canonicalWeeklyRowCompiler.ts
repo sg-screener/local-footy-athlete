@@ -214,6 +214,7 @@ export interface CanonicalProgramWeeksInput {
    * selector performs no hidden store read and boot/rollover feed it explicitly.
    */
   selectionHistory?: readonly import('../rules/blockExerciseSelection').BlockExerciseSelection[];
+  conditioningSelectionHistory?: readonly import('./conditioningSelection').BlockConditioningSelection[];
   availableEquipmentTags: readonly EquipmentTag[];
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
@@ -389,9 +390,15 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         materialisation: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
+          conditioningSelectionContext: { blockStartISO: args.blockStartISO,
+            history: args.conditioningSelectionHistory ?? [] },
           powerGoalNudge: false,
-          availableMachines: undefined,
-          runOnly: false,
+          availableMachines: equipment.conditioningModalities.filter(modality => modality !== 'treadmill')
+            .map(modality => modality === 'bike_erg' ? 'bike' : modality),
+          availableMachinesByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
+            .map(([day, capabilities]) => [day, capabilities.conditioningModalities
+              .filter(modality => modality !== 'treadmill').map(modality => modality === 'bike_erg' ? 'bike' : modality)])),
+          runOnly: equipment.conditioningModalities.every(modality => modality === 'treadmill'),
           phase: profile.seasonPhase as never,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         },
@@ -531,7 +538,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
        * The composer never reads a store. Boot and rollover reach this same
        * argument, so every path feeds the selector the same history. */
       blockStartISO: blockState.blockStart,
-      selectionHistory: args.selectionHistory ?? [],
+      // Later weeks in a newly authored block must see the same accepted seat
+      // choices that restart will read. Otherwise a changed weekly layout can
+      // re-pick core/accessory seats before their first week's record is saved.
+      selectionHistory: [...(args.selectionHistory ?? []), ...selections],
     });
     /* What this block chose, carried out so the caller can RECORD it. The
      * composer decides; persistence is the caller's job. */
@@ -669,7 +679,9 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
               : 0,
             phase: profile.seasonPhase,
             experienceLevel: profile.experienceLevel,
-            availableEquipment: profile.equipment ?? [],
+            availableEquipment: equipment.tags,
+            availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
+              .map(([day, capabilities]) => [day, capabilities.tags])),
             blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
           },
         }),

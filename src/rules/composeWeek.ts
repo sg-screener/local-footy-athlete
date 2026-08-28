@@ -47,6 +47,7 @@ import {
   type SelectionRole,
 } from './blockExerciseSelection';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
+import { preferAutomaticCurlCandidates } from '../data/exercisePools';
 import {
   ladderLevelForProfile,
   visibleGatesForLadderLevel,
@@ -500,7 +501,8 @@ function experiencePreferred(
     if (!gate) return true;
     return gates.includes(gate);
   });
-  return admitted.length > 0 ? admitted : candidates;
+  return preferAutomaticCurlCandidates(admitted.length > 0 ? admitted : candidates,
+    profile?.experienceLevel, name => name);
 }
 
 /**

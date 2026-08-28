@@ -38,6 +38,7 @@ import type {
 } from '../store/programStore';
 import {
   POOL_REGISTRY,
+  preferAutomaticCurlCandidates,
   gunshowExercisesCanPair,
   type PoolExercise,
   type ExerciseCategory,
@@ -618,11 +619,11 @@ export function filterPoolEntriesForAthlete(
   entries: readonly PoolExercise[],
   athlete: AthleteContext,
 ): PoolExercise[] {
-  return filterPool(
+  return preferAutomaticCurlCandidates(filterPool(
     [...entries],
     injuriesToTags(athlete.injuries),
     new Set(athlete.equipmentTags),
-  );
+  ), athlete.onboardingData?.experienceLevel, row => row.name);
 }
 
 export function dateHash(dateStr: string): number {

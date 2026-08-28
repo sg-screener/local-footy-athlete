@@ -213,7 +213,7 @@ export async function coldStartThroughOnboarding(args: {
   installDayISO: string;
 }): Promise<JourneyInstallResult> {
   resetStoresToFreshInstall('athlete-journey:cold-start');
-  useBlockSelectionHistoryStore.setState({ selections: [] } as never);
+  useBlockSelectionHistoryStore.getState().clear();
 
   setJourneyClock(args.installDayISO);
 

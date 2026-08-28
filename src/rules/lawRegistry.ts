@@ -2337,7 +2337,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-spare-capacity-offers-gendered-gym-and-equipment-free-mobility',
-    law: 'The gym-days answer is a ceiling for the optimal core week, not a session quota. After that core is authored, genuinely spare gym capacity may offer one gendered optional session — male Gunshow or female Primer — while every season may offer one bodyweight-only Mobility session on any spare governable day, including outside the gym-day answer; Off-season keeps two total Mobility sessions. An offer replaces an empty Rest shell, remains optional and does not alter rest or compliance counts. Multi-game weeks receive no automatic gendered offer, and Accessories remain gym-only and off G+1.',
+    law: 'The gym-days answer is a ceiling, not a quota. P03 amendment, 2026-08-28: automatic male Gunshow/female Primer is G-1 only in a one-game in-season or pre-season week, never off-season, no-game or multi-game; manual Add remains. Every season may offer one bodyweight-only Mobility session on a spare governable day, including outside gym days; Off-season keeps two total. Offers replace empty Rest shells, remain optional and do not alter rest or compliance. Accessories remain gym-only and off G+1.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-237 — Sam asked for the optimal core first, then Gunshow/Primer and optional no-equipment Mobility on spare days regardless of season.',
     guard: {
       state: 'guarded',
@@ -2466,6 +2466,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-08-26 by seat `weeksave`. RESEARCH DECISION: no repetitions formula is universally most accurate across these four lifts and athlete populations; exercise-specific equations do not cover all four, and velocity methods need hardware LFA does not record. The low-rep Brzycki estimate landed because it is exact at one rep, widely validated as a practical submaximal estimate, and LFA already owns the required load/reps facts. TWO IMPLEMENTATIONS COMPARED: convert the old weekly heaviest-weight summary only in the screen, or add one pure estimated-1RM owner and preserve the best real set pair when feedback is saved. The pure owner landed because the old summary can combine the maximum weight from one set with the minimum reps from another. Journal progression remains on its existing conservative raw top-set owner. TEST FIRST: the Progress tape began with seven named reds and then passed 24/0; the workout-log tape passes 37/0. MUTATION/LIVENESS: changing the formula numerator 36 -> 30 killed five estimate cells; deleting Back Squat killed the fixed-four cell. `npx tsc --noEmit --pretty false` is green. SIMULATOR: iPhone 17 Pro displayed Pull-Up, Bench Press, RDL and Back Squat in order, including Back Squat with no data, Pull-Up as added load, and no lime title dashes. The built-in populated seed needed its newly-required off-season finish date restored; after that it reached Progress, while its existing accepted-week console warning was dismissed for the visual inspection. NOT COVERED: physical-iPhone Release, formula calibration against this athlete\'s tested 1RM, bodyweight changes between legacy Pull-Up sessions, sets taken far from failure, more than ten reps, Dynamic Type and Android.',
     },
+  },
+  {
+    id: 'LAW-programming-remediation-inputs-and-selection',
+    law: 'P08: advanced automatic curl choices prefer available loaded biceps alternatives, preserving band-only and novice eligibility. P14: machine availability is feasibility, never largest-machine-count ranking. P10/P21: compare complete feasible weekly receiver sets and recurring comparable-strength gaps, preserving fixture priorities and budgets. P05/P20: conditioning decisions use accepted category/seat history, quality before template, with no preview writes or hidden selection cursor; feasible accepted identities restore.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-264 — Sam programming remediation, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'programmingInputTruth drives real male/female onboarding, conflicting legacy/current kit, full/partial/no-kit restart, advanced/novice/band-only curl candidates, all five usable off-leg aerobic templates and the original transition weeks 3/4. Existing scheduler contract matrix remains required. See STATUS_PROGRAMMING_REMEDY for red-first evidence and candidate verification status.' },
   },
 ];
 

@@ -42,7 +42,7 @@
       "reason": "Zustand registration and empty preference initialisation; all actions delegate to separately reviewed preference-input owners. Guarded storage persists accepted preferences, not generated sessions. Inspected direct persist site and full callee graph."
     },
     "src/store/blockSelectionHistoryStore.ts#<module>": {
-      "fingerprint": "5865411325f5cf6b0cc0e935ec2837666ba7b97c10faf613d1f384cde4791f09",
+      "fingerprint": "6fb0a152e1b812bd1d6227d063b3df1f51740adc5db8e8dfc6323cf14bd127f1",
       "classification": "persistence_boundary",
       "reason": "Registers block selection-history input storage, initially empty; reset clears selection inputs and partialize retains selections only. No generated session publication."
     },
@@ -92,12 +92,12 @@
       "reason": "Pure row-composition stage shared by weekly compilation and the strength-template compiler: resolves typed planned patterns, selection history, equipment, exclusions, dose and loads; returns composed rows and coverage gaps without publishing state. All direct write regions inspected."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "57de4c28acd75921bfa37c2cf2ba75ed4eb167987ed4359d19ddba18d60c2946",
+      "fingerprint": "a47d78578abfeb1db4b39e05373db8045920e7a9a66b7ad6eeec2412113d99d1",
       "classification": "canonical_compiler",
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
-      "fingerprint": "37c5c9e8cb84971e6da891829662461fb0da62c249f588c1167b9e4d819670e1",
+      "fingerprint": "cdcedefd1ba25076a1982d2b7f4657b350f724023bf90d40c444a3afd3c22ace",
       "classification": "canonical_compiler",
       "reason": "Shared materialisation adapter called by canonicalWeeklyRowCompiler and its fixtureMinimalReplan conditioning compiler. Builds typed components from accepted allocations using shared strength, conditioning and lighter-day materialisers, then normalises rows; no store publication. Inspected complete function including legacy generated-row ingress and both runtime callers."
     },
@@ -142,7 +142,7 @@
       "reason": "Week validator indexes existing workouts to return findings and counts. Workout fields are observer DTO references, never rewritten material."
     },
     "src/utils/workoutCanonicalisation.ts#finaliseWorkoutAfterMutation": {
-      "fingerprint": "d7b2ed11c7518ac059e7bf4c24fb2ceed05bd74fdef854059e932732858a85bf",
+      "fingerprint": "5f7fc03a363a52dc52073ccc3983f973ca8009556ebf03138a1ed4ebc5376ee6",
       "classification": "canonical_compiler",
       "reason": "Shared final-row semantic/material normalizer is invoked only by canonical generation and canonical accepted-template materialization. No independent store publisher; typed intent and row evidence take precedence over legacy ingress."
     },
@@ -332,7 +332,7 @@
       "reason": "Read-only semantic snapshot of existing visible workout components and metadata; returns a DTO, never writes a workout."
     },
     "src/utils/sessionComponents.ts#materializeAcceptedVisibleSections": {
-      "fingerprint": "09c952faab79388940364aeefa8136af9a6b4a06a96d65555375352304e55c08",
+      "fingerprint": "1afad36ee2a247c6ca952505769b1e96b0a49825578581e5af90355b3e01d1c0",
       "classification": "canonical_compiler",
       "reason": "Shared pure selection of existing typed component rows from explicit athlete-accepted section IDs; used by accepted removal and split, not a standalone scheduler."
     },
@@ -412,7 +412,7 @@
       "reason": "Generation-request diagnostic builds a shared planner snapshot for explanation and emits profile/plan metadata only; no accepted program writer."
     },
     "src/rules/materialiseAuthoredSessions.ts#materialiseAuthoredSessions": {
-      "fingerprint": "4d951b50b2469de2fee6c91cc75fe0b0ea2d9cd46d86f9a4354e05c53d196a6a",
+      "fingerprint": "f3694f89cb1784d90eaad76ec510ed1ed23807a10bc2268f3ce33d924ad1d271",
       "classification": "canonical_compiler",
       "reason": "Canonical weekly compiler's specialist materializer consumes the sole scheduler's intentions, uses shared conditioning/sprint selection and power policy, and returns declared content metadata."
     },
@@ -517,7 +517,7 @@
       "reason": "Compares compiled current/candidate programs and produces a commitment-change preview DTO; no program mutations."
     },
     "src/rules/materialiseComposedWeek.ts#materialiseComposedWeek": {
-      "fingerprint": "83bcce49173f107bacf82b53f2afa7594c76037e1f06ae165d94c0d8ae2ce68f",
+      "fingerprint": "8815485eb67a5440b9910174fcd4bf5f5e4721cc8394b51d20b011669d543124",
       "classification": "canonical_compiler",
       "reason": "Sole shared composed-week materializer maps composed rows and canonical deload/power policy into workouts; manual strength templates also use it, with explicit row timestamps."
     },
@@ -537,7 +537,7 @@
       "reason": "Claims a developer scenario step and records diagnostic ingress ownership; scenario progress is not athlete program content."
     },
     "src/utils/canonicalPlanChangeCandidateMaterializer.ts#stackTemplate": {
-      "fingerprint": "73623dbd78fade00934ecce6b3989405c7875b582a57fdce691556d2e8133ca8",
+      "fingerprint": "fd0c4174e9a92d17785147c9643fbf5875f549ad16f7c1e16ea609c51b456541",
       "classification": "canonical_compiler",
       "reason": "Private canonical plan-change candidate helper combines an explicit accepted template with existing components; returns candidate data to the shared session-edit transform."
     },
@@ -1242,7 +1242,7 @@
       "reason": "Collects live profile, fixtures and existing override references into rebuild context without publishing changes."
     },
     "src/store/blockSelectionHistoryStore.ts#recordBlockSelections": {
-      "fingerprint": "f71b70f3404656887457dc6a0c36ac1aa4e30d8a8f0c62fcbf3a40ab9e21a534",
+      "fingerprint": "1961405370131dd939154fffe1d2d34a1b252f10519730281223695a55f722cc",
       "classification": "canonical_input_writer",
       "reason": "Records accepted block exercise-selection history for future rotation; writes historical choices, not current workout output."
     },
@@ -2379,7 +2379,7 @@
     "src/services/api/generateProgram.ts#canonicalProgramInputFromProfile": {
       "classification": "canonical_input_writer",
       "reason": "Input capture boundary extracted from generateProgramLocally. Captures accepted profile, history, clocks, equipment and facts into the canonical compiler input; does not construct or rewrite returned workouts.",
-      "fingerprint": "c4b4d90e2e825353702c0c43e91560961173c5c2ee422bb6c3634b486a998d07"
+      "fingerprint": "d2f252029c33a7a326d88809a284448b01d15ec4e86e98fccc1eb029773df809"
     },
     "src/store/sourceFactCompilation.ts#compileAcceptedSourceFacts": {
       "fingerprint": "286b3bb4e98d3cb2e3ed99994750045e85318c9ee7ea52f98743d589276ecf26",
@@ -2539,7 +2539,7 @@
     "src/services/api/generateProgram.ts#generateProgramLocally": {
       "classification": "canonical_input_writer",
       "reason": "Captures canonical input through canonicalProgramInputFromProfile, calls compileCanonicalProgram once, then records its selection result and diagnostics. No row/exclusion/progression post-pass; the annual detector mutation guards this handoff.",
-      "fingerprint": "56f8773459d2f8471d8eed55e09c12eec58761636d678309337f192bfb29fee8"
+      "fingerprint": "ff1515d59ab849c92f41c939fea172db7610cdb9ffb5ffc400bc35719b63c75f"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
       "fingerprint": "a38545836e60cee8028971b1e5c92191c139e725d3d19a6786b189b6b863f923",
@@ -2592,12 +2592,12 @@
       "reason": "Top-level pure program compiler composes canonical weeks, explicit exclusions and canonical progression in one pipeline."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "0dd1fffe40540d2057c3b9b176cd75abd4b672ea9bc0f37fd6538fbd316b45ab",
+      "fingerprint": "befea1c96046f3f088e879580662ff6780a67c636d17f603e762f2dc4ec82cdc",
       "classification": "canonical_compiler",
       "reason": "Canonical program-week owner orchestrates explicit scheduler, composer, materializer, dose/injury/availability stages and optional top-ups with validation. It returns microcycles and selections; persistence lives outside."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
-      "fingerprint": "447ccab226306d682f420e64c223a7687adf0fcdb4886178fbcf67a8eb817694",
+      "fingerprint": "2d9d708aed78d3866763d810739a7bef5e7e1a783c4da2cd81cd37bf96f6c520",
       "classification": "canonical_compiler",
       "reason": "Nested final-row assembler of compileCanonicalProgramWeeks; converts the composed-day adapter into canonical dated rows with explicit dose, power and provenance."
     },

@@ -16,6 +16,7 @@ import {
 import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
+import { getSessionComponentRows } from './sessionComponents';
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -138,6 +139,8 @@ export function extractVisibleProgramItemsFromWorkout(
 
   const teamState = getTeamTrainingWorkoutState(workout);
   const exercises = teamState.renderableExercises;
+  const components = getSessionComponentRows(workout);
+  const lowLoadIds = new Set([...components.mobilityRows, ...components.recoveryRows].map(row => row.id));
   const items: VisibleProgramItem[] = [];
   const seen = new Set<string>();
   const isRecovery =
@@ -199,6 +202,7 @@ export function extractVisibleProgramItemsFromWorkout(
 
   if (isPureConditioning || isRecovery) {
     for (const [index, exercise] of exercises.entries()) {
+      if (lowLoadIds.has(exercise.id)) continue;
       const id = String(
         exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `conditioning-phase:${index}`,
       );
@@ -233,7 +237,7 @@ export function extractVisibleProgramItemsFromWorkout(
     addItem({
       id,
       title,
-      domain: 'strength',
+      domain: lowLoadIds.has(exercise.id) ? 'recovery' : 'strength',
       modality: null,
       durationMinutes: null,
       description: cleanVisibleTitle(exercise.notes || exercise.exercise?.description),

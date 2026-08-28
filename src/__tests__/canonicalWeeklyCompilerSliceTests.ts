@@ -93,6 +93,8 @@ import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { runAthlete } from './compilerYear/run';
 import { visibleSignature as exactWeekSignature } from './compilerYear/invariants';
+import { mobilityAddJourney } from './support/mobilityAddJourney';
+import { programmingInputTruth } from './support/programmingInputTruth';
 import { useCalendarStore } from '../store/calendarStore';
 import { speedTemplateConditioningCredit } from '../rules/conditioningCredit';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../utils/lighterDayTransaction';
@@ -3170,6 +3172,8 @@ async function main(): Promise<void> {
   ok('a no-team-training phase transition survives cold reconstruction',
     shiftedWeek.status === 'measured' && shiftedWeek.checks.some((c) => c.id === 'restart' && c.ok), shiftedWeek.reason);
 
+  await mobilityAddJourney(localStorageData, ok);
+  await programmingInputTruth(localStorageData, ok);
   totalsPrinted(failed);
   console.log(`\nCanonical weekly compiler slice: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

@@ -1021,6 +1021,16 @@ ok(
     unstable.join(' || '));
 }
 
+{
+  const picked = new Set(Array.from({ length: 20 }, (_, i) => selectConditioningTemplate({
+    category: 'aerobic_base', dateStr: '2026-08-26', miniCycleNumber: i + 1,
+    offFeet: true, availableMachines: ['bike', 'air_bike', 'row', 'ski'], role: 'standalone',
+  }).name));
+  ok('P14: all five legal off-leg aerobic templates remain reachable; machine count is not a rank',
+    ['Continuous Aerobic Run', 'Steady Blocks (3×8 min or 4×6 min)', 'Long Aerobic Intervals',
+      'Controlled 10–20 min Blocks', 'Steady 5 min Blocks'].every(name => picked.has(name)), JSON.stringify([...picked]));
+}
+
 // ── [C12] A CATEGORY THE FLAVOUR MAP HAS NEVER HEARD OF RETURNS `undefined` ──
 //
 // FOUNDING CASE, 2026-08-13. `cod_decel` joined `OffseasonConditioningCategory`

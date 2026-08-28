@@ -37,6 +37,7 @@ export interface ComposedPowerPlacement {
   readonly phase?: import('../types/domain').SeasonPhase;
   readonly experienceLevel?: string;
   readonly availableEquipment?: readonly string[];
+  readonly availableEquipmentByDay?: Readonly<Record<number, readonly string[]>>;
   readonly blockId?: string;
 }
 
@@ -229,7 +230,8 @@ export function materialiseComposedWeek(
         const built = buildPowerRow(dosed, workoutId, {
           phase: context.power?.phase,
           experienceLevel: context.power?.experienceLevel as never,
-          availableEquipment: (context.power?.availableEquipment ?? []) as never,
+          availableEquipment: (context.power?.availableEquipmentByDay?.[day.dayOfWeek]
+            ?? context.power?.availableEquipment ?? []) as never,
           blockId: context.power?.blockId,
         }) as WorkoutExercise;
         /* ── ONE EXERCISE, ONCE PER SESSION ──────────────────────────────────

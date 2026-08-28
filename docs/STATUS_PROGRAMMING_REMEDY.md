@@ -65,7 +65,101 @@ freeze; original years remain immutable and corrected-kit years are separate.
   passes 70/70 across five Add types, two genders, restart and latest Undo.
   Move/Remove and the second Mobility/Recovery policy are not yet settled.
 
+## Subsequent programming checkpoint (verification in progress)
+
+Owner: programming-remedy. The earlier item table is an intake snapshot, not
+the current completion claim. Current implementation and measurements:
+
+- P13 remains 172/172 green after the subsequent scheduling/selection changes.
+  No pressing-trigger loophole or reduced-set expansion was restored.
+- P22: 140 assertions across 10 real Mobility+Add journeys (five categories,
+  both pathways): original and added rows, component Remove, Move to empty day,
+  latest Undo and restart. Mixed rows retain their existing typed optional
+  identity. Second Mobility/Recovery and actual drag gesture remain below.
+- P17/P20: power now uses resolved current and dated kit, not legacy strings;
+  strength, conditioning and power preserve explicit partial answers. The input
+  witness compares full/partial/no-kit male/female worlds under conflicting
+  legacy answers, then restart. Depth Jumps is allowed only with current box.
+- P03: automatic gendered extras now need the existing single-game G-1
+  opportunity; no off-season or no-game/bye offer. Manual Add remains exercised.
+- P10/P21: whole-week conditioning receivers and cyclic upper/lower preference.
+  The new P10 test first failed twice (upper Tue/Wed in transition and build),
+  then all 110 scheduler assertions passed. Original weeks 3/4 now distribute
+  conditioning Tue/Thu/Sat for both examples; actual block-boundary fixture
+  protection remains distinct from the recurring-week preference.
+- P05/P14/P20: every eligible off-leg template stays in the pool. Weekly
+  occurrences differ and the adapter retains the specialist's feasible choice.
+  Conditioning identities use the EXISTING block-selection history carrier,
+  with category/seat identity only, no stored dose/plan or hidden cursor.
+  Sparse-opportunity tests cover all three sprint qualities and all five aerobic
+  templates; preview cannot write and accepted identities survive restart.
+- P08: advanced automatic curl pools prefer eligible loaded alternatives;
+  bands remain for novice and band-only athletes. No global band ban.
+- P01/P07/P09/P04: all 55 templates projected through the current formatter;
+  duplicate labels, ratio titles, Heart rate lines and alternative-dose menus
+  checked. Existing authored active recovery is NOT silently renamed complete
+  rest. Power rest display is already hidden at DayWorkoutScreenV2; export now
+  hides it too while retaining domainRestSeconds. Actual modality export and
+  visual acceptance still owed.
+
+### Findings from the broader chain, not hidden by rebaselining
+
+The canonical slice's first run passed its 793 assertions but its downstream
+injury-adjustment suite stopped with nine failures after placement changed. It
+assumed Monday was lower-body and a fixed Pallof row. It now locates the actual
+generated squat day and asserts EVERY safe retained row. All 54 assertions pass.
+The session-review quiet-day control also previously counted unsafe strength
+rows while ignoring a real conditioning substitution; its input now reaches an
+actually quiet day. The four stale C12 checks in the diagnostic template-equality
+suite still refer to the deleted categoryToFlavour closure; they are not removed
+or accepted as a current release pass.
+
+The new female restart test found two core rows exchanging days after reboot.
+New block week 3 did not see week 1's in-run selections, although reboot did.
+The compiler now supplies already-authored selections to subsequent weeks.
+The exact same final-row comparison is green after this source-of-truth repair.
+
+Typecheck after these changes: zero errors in all three scopes. All 55 display
+templates passed the new structured checks. Twelve in-memory mutation subjects
+are now caught; the first weekday-prefix mutant survived the too-weak
+"beyond Wednesday" assertion after P10 moved the strength days. Added the
+actual cyclic-gap assertion, reran that mutant and observed the intended red.
+No source file was changed to inject or restore a mutation. Reviewed thirteen
+changed existing writer functions/boundaries; only their fingerprints changed,
+with no classifications or authority budgets relaxed.
+
+### Product questions / outstanding scope (owner: Sam for decisions; programming-remedy for implementation)
+
+1. P06: retain Leg Press and conventional Deadlift as manual/fallback choices,
+   and what exact automatic preference should replace them? No deletion made.
+2. P16/P02: P16 requests unilateral priority without rack/barbell. R-014/Bible
+   227 requires squat + hinge + single-leg knee + single-leg hip; the original
+   lower day already has a single-leg knee row. Does unilateral work REPLACE
+   the second weekly bilateral squat seat, or LEAD while the required squat
+   remains? Do not retag lunges as squats or silently relax coverage/pair guards.
+3. P15: R-079 permits preseason top-end work with club accelerations; current
+   Bible 94 says no app sprint is needed when club supplies the weekly floor,
+   and scheduler suppresses app sprint for any club week. Need to settle the
+   quality-specific rider versus no-extra-session contract; no unreported club
+   content or extra in-season speed assumed. Existing no-club sprint route stays.
+4. P17/P19: Box/Broad/Jump Squats exist in the plyo catalogue but not the signed
+   dedicated power pool. Which phase/age/impact/dose route is approved? Explosive
+   Landmine Press remains a vertical-push strength entry; adding a power role is
+   not an alias repair. Back Extension has a corrected-kit accessory route.
+5. P07: many templates explicitly author easy spin/jog/walk-back. Retain these
+   authored exceptions, or revise specific doses/cues to passive rest together?
+   A text-only replacement would misdescribe the actual recovery.
+6. P22: should a second Mobility/Recovery Add merge with the existing component
+   or create a separately removable part within the existing cap? The clear
+   five-type Mobility compatibility repair is independent of that choice.
+
+P18 optional flush has approved example placements (Bible 79/81/1418), but no
+new automatic need/placement route has been implemented in this checkpoint.
+P10 cross-phase/day-specific strength spacing still needs broader acceptance;
+P16 alternative-slot policy, special-session equipment exception audit, power
+reachability, all-seven-type UI and actual simulator gestures remain work.
+
 ## NOT COVERED
 
-- Chunks A/C/D/E/F incomplete; no revised-candidate gate or simulator run.
+- Chunks A/C/D/E/F incomplete; no revised-candidate gate or simulator run yet.
 - No physical installation/acceptance, clinical validation or 2 km tap fix.

@@ -523,12 +523,18 @@ function scoreAssignment(
   const byOrder = [...assignment].sort((a, b) => orderIndex(a.day) - orderIndex(b.day));
   let score = 0;
 
-  // WC-043 — reward clear days between lower sessions, two or more preferred.
-  const lowerDays = byOrder.filter((s) => PURPOSE_IS_LOWER[s.purpose])
-    .map((s) => orderIndex(s.day));
-  for (let i = 1; i < lowerDays.length; i += 1) {
-    const clear = lowerDays[i] - lowerDays[i - 1] - 1;
-    score += clear >= 2 ? 30 : clear === 1 ? 10 : 0;
+  // WC-043 / P10: compare recurring weekly gaps, not only gaps inside the
+  // printed Monday–Sunday page. Upper push/pull are different planes but still
+  // comparable upper stresses. This is a preference among LEGAL assignments;
+  // fixtures, forbidden days and coverage are still decided before scoring.
+  for (const lower of [true, false]) {
+    const familyDays = byOrder.filter(s => PURPOSE_IS_LOWER[s.purpose] === lower)
+      .map(s => orderIndex(s.day));
+    if (familyDays.length < 2) continue;
+    for (let i = 0; i < familyDays.length; i += 1) {
+      const clear = (familyDays[(i + 1) % familyDays.length] - familyDays[i] + 7) % 7 - 1;
+      score += clear >= 2 ? 30 : clear === 1 ? 10 : 0;
+    }
   }
 
   // General separation — the contract says "best-separated" in nine layout rows.
@@ -550,9 +556,9 @@ function scoreAssignment(
     ...scheduledGameDays(inputs),
   ]);
   let run = 0; let longestRun = 0;
-  for (const day of WEEK_ORDER) {
+  for (const day of [...WEEK_ORDER, ...WEEK_ORDER]) {
     run = hardDays.has(day) ? run + 1 : 0;
-    longestRun = Math.max(longestRun, run);
+    longestRun = Math.min(7, Math.max(longestRun, run));
   }
   if (longestRun > GLOBAL_RULES.consecutiveHardDays.preferred) {
     score -= (longestRun - GLOBAL_RULES.consecutiveHardDays.preferred) * 15;
@@ -988,11 +994,53 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           return rank(a) - rank(b) || WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b);
         })
       : WEEK_ORDER.filter((day) => purposeByDay.has(day))),
+    ...inputs.gymAccessDays.filter(day => !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs)),
   ]));
-  const conditioningDays = conditioningCandidates.filter((day) =>
+  const legalConditioningCandidates = conditioningCandidates.filter((day) =>
     !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
-    && !isScheduledGameDay(day, inputs)).slice(0, appConditioningBudget);
+    && !isScheduledGameDay(day, inputs)
+    && !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs));
+  const conditioningDays = (() => {
+    const count = Math.min(appConditioningBudget, legalConditioningCandidates.length);
+    // WC-143's explicit early-upper/G-2 sequence and released-fixture priority
+    // remain authoritative. The ordinary case considers complete receiver sets,
+    // not a weekday prefix, before spending the same exposure budget.
+    if (noClubGameWeek || releasedReceivers.length > 0) return legalConditioningCandidates.slice(0, count);
+    const anchors = [...inputs.clubNights, ...scheduledGameDays(inputs)];
+    const training = [...purposeByDay.keys(), ...anchors];
+    const cyclicStreak = (days: readonly number[]) => {
+      const present = new Set(days);
+      let run = 0; let longest = 0;
+      for (const day of [...WEEK_ORDER, ...WEEK_ORDER]) {
+        run = present.has(day) ? run + 1 : 0;
+        longest = Math.max(longest, run);
+      }
+      return Math.min(7, longest);
+    };
+    const score = (days: readonly number[]): number[] => {
+      const running = [...anchors, ...days.filter(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
+        ...(plannedSprintDay === null ? [] : [plannedSprintDay])];
+      const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
+      const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
+      return [
+        hardQuality !== null && !days.some(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]
+          && !isGameMinusTwo(day, inputs)) ? 1 : 0,
+        inputs.appRunningPermitted === false || inputs.offseasonBlock === 'early_optional' ? 0
+          : Math.max(0, GLOBAL_RULES.running.min - new Set(running).size),
+        Math.max(0, cyclicStreak([...training, ...days]) - GLOBAL_RULES.consecutiveHardDays.preferred),
+        gaps.reduce((sum, gap) => sum + gap * gap, 0),
+        days.filter(day => !purposeByDay.has(day)).length,
+      ];
+    };
+    const candidates = combinations(legalConditioningCandidates, count);
+    const compare = (a: readonly number[], b: readonly number[]) => {
+      const left = score(a); const right = score(b);
+      for (let i = 0; i < left.length; i++) if (left[i] !== right[i]) return left[i] - right[i];
+      return 0; // stable enumeration is the final deterministic tie-break.
+    };
+    return candidates.sort(compare)[0] ?? [];
+  })();
   // WC-144 (Sam's Q3 ruling, 2026-08-26 — the pre-season hard runner leaving
   // an all-lower receiver set for a free weekend day) was BUILT HERE and
   // BACKED OUT 2026-08-27: the moved Saturday session collides with the
@@ -1369,15 +1417,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // 2026-08-26 (profiles audit F-B): *"men should be given optional gunshow
   // instead of optional primer"* — the male arm was the ledgered dead
   // branch; R-236 revives it as the GUNSHOW under the same placement rule.
-  // A one-game in-season week preserves the signed G−1 placement. A no-game
-  // week in any phase may instead use ONE genuinely spare gym-access day: the
-  // core week has already been solved, so this offer cannot inflate its target.
-  // Multi-game weeks still receive no automatic offer. The day's counted facts
-  // remain rest-class by construction.
+  // P03, 2026-08-28: automatic gendered extras are fixture-relative only.
+  // Preserve G−1, including a pre-season practice match; no off-season/no-game
+  // offer. This does not govern manual Add or the separate Mobility top-up.
   const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
-    if (inputs.phase === 'In-season' && fixtureDays.length === 1) {
+    if (inputs.phase !== 'Off-season' && fixtureDays.length === 1) {
       const gameIdx = orderIndex(fixtureDays[0]);
       if (gameIdx <= 0) return withRunning;
       const g1Day = WEEK_ORDER[gameIdx - 1];
@@ -1390,20 +1436,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           : entry
       ));
     }
-    if (fixtureDays.length !== 0) return withRunning;
-    const spareGymDay = [5, 3, ...WEEK_ORDER].find((day, index, order) =>
-      order.indexOf(day) === index
-        && inputs.gymAccessDays.includes(day)
-        && withRunning.some((entry) => entry.dayOfWeek === day
-          && entry.owner === 'rest_or_recovery'
-          && !entry.clubTraining
-          && !entry.game));
-    if (spareGymDay === undefined) return withRunning;
-    return withRunning.map((entry) => (
-      entry.dayOfWeek === spareGymDay
-        ? { ...entry, composedOptional: offer, clauseId: 'R-237' }
-        : entry
-    ));
+    return withRunning;
   })();
 
   const intended = new Set<MovementPattern>();

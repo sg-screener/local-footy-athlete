@@ -6181,9 +6181,13 @@ men, women, arms pump.
 **R-237** · *"it should fill the gym days with 1. what is optimal ... then also fill up the next two ie gunshow or primer, and one day of mobility"*; *"if an athlete ... can only train 3 times then that would be 3 gym days, + 1 optional session requiring no equipment"*; *"it doesn't matter what time of the season it is"*; *"on spare days, it could add in mobility sessions that are optional and bodyweight only too"* (Sam, 2026-08-26, audit item 2) · **THE CORE WEEK STAYS OPTIMAL; SPARE CAPACITY OFFERS GENDERED GYM WORK AND EQUIPMENT-FREE MOBILITY.**
 R-235's gym answer remains a ceiling, never a quota: the scheduler first
 authors the best legal core week. If a gym-access day is still genuinely
-spare, a no-game week offers one gendered optional session — male Gunshow,
-female Primer. The existing one-game G-1 placement remains unchanged and
-multi-game weeks still receive none automatically. Separately, every phase
+spare, the original ruling offered a no-game gendered session. **Amended by
+Sam's P03 direction on 2026-08-28:** no automatic Gunshow/female Primer in
+off-season, no-game pre-season or an in-season bye. One-game G-1 placement
+remains, including a pre-season practice match; multi-game weeks still receive
+none automatically. Manual Add is unchanged. Guard: `test:spare-day-options`
+(in `test:weekly-scheduler`) plus the real Add/restart/Undo compiler journey.
+Separately, every phase
 offers one optional Mobility session on a spare governable day; Off-season
 keeps its signed target of two total. Auto-placed Mobility is composed through
 the existing Mobility owner with bodyweight-only eligibility, may sit outside
@@ -6754,3 +6758,25 @@ that REQUIRED lime — and named these very hexes as forbidden — is inverted.
 **Search words:** conditioning checkbox, form cues overlap weight toggle, drop
 below last line, completion badge not visible, consistency starts here, totally
 cooked shade, injury region colours.
+
+**R-264** · Sam's programming-remediation direction, 2026-08-28 (P05/P08/P10/P14/P20/P21).
+
+Owner: programming-remedy. Advanced automatic curl choices prefer available
+loaded biceps alternatives; band-only fallback and younger training ages remain.
+Machine availability is a conditioning feasibility test, not a reason to narrow
+to templates supporting the largest number of machines. Ordinary conditioning
+receivers are selected as complete feasible whole-week sets, preserving exposure
+budgets, fixture-relative priorities and hard constraints. R-237's narrower P03
+amendment is recorded at that ruling. No change to P06 catalogue policy, new
+power exercise roles/doses or assumptions about unreported club speed is implied.
+Comparable upper/lower placements use recurring weekly gaps, including the
+Sunday–Monday boundary. Conditioning chooses within the required category using
+accepted per-block, per-occurrence identity history in the existing selection
+history store: quality before template, no writes from previews, no cursor
+consumed by rebuilding. Dose remains the authored template's. New blocks may
+rotate; current accepted identities restore whenever feasible. The adapter
+retains the specialist's feasible choice. This does not author extra exposures.
+Guard: `LAW-programming-remediation-inputs-and-selection`,
+`test:canonical-weekly-compiler` (`programmingInputTruth`), plus the existing
+`test:weekly-scheduler` contract matrix. Status and NOT COVERED:
+`docs/STATUS_PROGRAMMING_REMEDY.md`.

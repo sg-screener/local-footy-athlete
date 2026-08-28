@@ -62,10 +62,11 @@ import { executeProgramControlActionDurably } from '../utils/programControlActio
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { INJURY_ADJUSTMENT_MAX_ADDED } from '../utils/injurySessionAdjustment';
 import { SET_CEILING } from '../rules/weeklyLegality';
+import { getExerciseTags } from '../data/exerciseTags';
 
 const INSTALL_DAY = '2026-07-13';
-/** Monday of the seeded in-season week — the athlete's lower-body day. */
-const TARGET = '2026-07-13';
+/** The actual generated lower-body day, not an assumed weekday layout. */
+let TARGET = INSTALL_DAY;
 
 let passed = 0;
 const failures: string[] = [];
@@ -85,6 +86,11 @@ async function install(): Promise<string> {
   await quietAsync(() => coldStartThroughOnboarding({
     profile: DEV_E2E_STANDARD_PROFILE, installDayISO: INSTALL_DAY,
   }));
+  const week = quiet(() => resolveWeekWithConditioning(INSTALL_DAY, buildScheduleStateImperative()));
+  const lower = week.find(day => day.workout?.exercises.some(row =>
+    getExerciseTags(row.exercise?.name ?? '')?.movement === 'squat'));
+  if (!lower) throw new Error('R-124 witness did not reach a generated lower day');
+  TARGET = lower.date;
   setJourneyClock(TARGET);
   return INSTALL_DAY;
 }
@@ -159,11 +165,12 @@ async function main(): Promise<void> {
   await install();
   const before = fingerprintOn(TARGET);
   const beforeRows = JSON.parse(before).map((entry: string[]) => entry[0]) as string[];
+  const safeRows = beforeRows.filter(name => classifyExerciseRiskForBucket(name, 'knee', 7) === 'good');
 
   console.log('\n[1] CONTROL — the world this suite is about');
   {
     ok('the athlete has a lower-body session with something safe in it',
-      beforeRows.length >= 5 && beforeRows.includes('Band Pallof Press'), beforeRows);
+      beforeRows.length >= 5 && safeRows.length > 0, beforeRows);
   }
 
   const constraint = constraintFor('Knee', 'moderate', TARGET);
@@ -298,7 +305,7 @@ async function main(): Promise<void> {
       review.paused.every((change) => !afterRows.includes(change.from)),
       { afterRows });
     ok('the safe row the athlete already had is untouched',
-      afterRows.includes('Band Pallof Press'), afterRows);
+      safeRows.length > 0 && safeRows.every(name => afterRows.includes(name)), { safeRows, afterRows });
     ok('the added block is on the session',
       review.added.every((candidate) => afterRows.includes(candidate.name)),
       { added: review.added.map((c) => c.name), afterRows });

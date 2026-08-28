@@ -166,6 +166,7 @@ export interface GenerateProgramFromProfileOptions {
    * the domain selector ever reaching for one.
    */
   selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
+  conditioningSelectionHistory?: readonly import('../../rules/conditioningSelection').BlockConditioningSelection[];
   /**
    * Record this block's selections durably? **DEFAULT FALSE.**
    *
@@ -846,6 +847,8 @@ export function canonicalProgramInputFromProfile(
     ),
     progressedIdentities,
     selectionHistory: selectionHistoryForBuild,
+    conditioningSelectionHistory: options.conditioningSelectionHistory
+      ?? require('../../store/blockSelectionHistoryStore').blockConditioningSelectionHistory(),
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
@@ -937,7 +940,34 @@ export function generateProgramLocally(
     const historyStore = require('../../store/blockSelectionHistoryStore');
     const alreadyRecorded: boolean = historyStore.blockHasRecordedSelections(blockStart);
     if (options.recordSelections === 'author' || !alreadyRecorded) {
-      historyStore.recordBlockSelections(blockStart, selectionsAuthored);
+      const conditioningSelections: import('../../rules/conditioningSelection').BlockConditioningSelection[] = [];
+      for (const weekPlan of compilation.plans) {
+        const seats = new Map<string, number>();
+        for (const allocation of weekPlan.weeklyPlan) {
+          const entries = [
+            ...(allocation.conditioningCategory && allocation.conditioningVariant
+              ? [{ category: allocation.conditioningCategory, templateName: allocation.conditioningVariant }] : []),
+            ...(allocation.speedBlock?.templateName
+              ? [{ category: 'sprint' as const, templateName: allocation.speedBlock.templateName }] : []),
+          ];
+          for (const entry of entries) {
+            const seatIndex = seats.get(entry.category) ?? 0;
+            seats.set(entry.category, seatIndex + 1);
+            if (!conditioningSelections.some(row => row.category === entry.category && row.seatIndex === seatIndex)) {
+              conditioningSelections.push({ ...entry, category: entry.category as import('../../rules/conditioningSelection').AthleteConditioningCategory,
+                seatIndex, blockStartISO: blockStart });
+            }
+          }
+        }
+      }
+      // Existing seats are accepted facts, not something a temporary injury,
+      // equipment restriction or unrelated edit may silently re-record.
+      const priorConditioning = historyStore.blockConditioningSelectionHistory()
+        .filter((entry: import('../../rules/conditioningSelection').BlockConditioningSelection) => entry.blockStartISO === blockStart);
+      historyStore.recordBlockSelections(blockStart, selectionsAuthored, [
+        ...priorConditioning, ...conditioningSelections.filter(entry => !priorConditioning.some(
+          (prior: import('../../rules/conditioningSelection').BlockConditioningSelection) => prior.category === entry.category && prior.seatIndex === entry.seatIndex)),
+      ]);
     }
   }
   return program;

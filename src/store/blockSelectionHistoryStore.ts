@@ -6,6 +6,7 @@ import {
 } from '../rules/blockExerciseSelection';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { registerQuarantineBoundary } from './refusedPayloadQuarantine';
+import type { BlockConditioningSelection } from '../rules/conditioningSelection';
 
 /**
  * BLOCK SELECTION HISTORY — the durable carrier for WHICH EXERCISE each block
@@ -41,6 +42,7 @@ import { registerQuarantineBoundary } from './refusedPayloadQuarantine';
 interface BlockSelectionHistoryState {
   /** Every recorded selection, most recent block FIRST. */
   selections: BlockExerciseSelection[];
+  conditioningSelections: BlockConditioningSelection[];
   clear: () => void;
 }
 
@@ -53,9 +55,9 @@ registerQuarantineBoundary(BLOCK_SELECTION_HISTORY_KEY, {
   carriesMaterial: (envelope) => {
     try {
       const state = (JSON.parse(envelope) as {
-        state?: { selections?: unknown[] };
+        state?: { selections?: unknown[]; conditioningSelections?: unknown[] };
       }).state;
-      return (state?.selections ?? []).length > 0;
+      return (state?.selections ?? []).length > 0 || (state?.conditioningSelections ?? []).length > 0;
     } catch {
       return false;
     }
@@ -66,12 +68,13 @@ export const useBlockSelectionHistoryStore = create<BlockSelectionHistoryState>(
   persist(
     (set) => ({
       selections: [],
-      clear: () => set({ selections: [] }),
+      conditioningSelections: [],
+      clear: () => set({ selections: [], conditioningSelections: [] }),
     }),
     {
       name: BLOCK_SELECTION_HISTORY_KEY,
       storage: createJSONStorage(() => asyncStorageCompat),
-      partialize: (state) => ({ selections: state.selections }) as BlockSelectionHistoryState,
+      partialize: (state) => ({ selections: state.selections, conditioningSelections: state.conditioningSelections }) as BlockSelectionHistoryState,
     },
   ),
 );
@@ -82,6 +85,10 @@ export function blockSelectionHistory(): readonly BlockExerciseSelection[] {
     ...selection,
     seatIndex: selectionSeatIndex(selection),
   }));
+}
+
+export function blockConditioningSelectionHistory(): readonly BlockConditioningSelection[] {
+  return useBlockSelectionHistoryStore.getState().conditioningSelections ?? [];
 }
 
 /**
@@ -116,6 +123,7 @@ export function blockHasRecordedSelections(blockStartISO: string): boolean {
 export function recordBlockSelections(
   blockStartISO: string,
   selections: readonly BlockExerciseSelection[],
+  conditioningSelections?: readonly BlockConditioningSelection[],
 ): void {
   if (!blockStartISO) return;
   useBlockSelectionHistoryStore.setState((state) => {
@@ -138,7 +146,11 @@ export function recordBlockSelections(
       if (!blocks.includes(entry.blockStartISO)) blocks.push(entry.blockStartISO);
       return blocks.indexOf(entry.blockStartISO) < BLOCK_SELECTION_HISTORY_DEPTH;
     });
-    return { selections: kept };
+    const nextConditioning = conditioningSelections === undefined ? (state.conditioningSelections ?? [])
+      : [...conditioningSelections, ...(state.conditioningSelections ?? []).filter(entry => entry.blockStartISO !== blockStartISO)];
+    const conditioningBlocks = [...new Set(nextConditioning.map(entry => entry.blockStartISO))].sort().reverse()
+      .slice(0, BLOCK_SELECTION_HISTORY_DEPTH);
+    return { selections: kept, conditioningSelections: nextConditioning.filter(entry => conditioningBlocks.includes(entry.blockStartISO)) };
   });
 }
 

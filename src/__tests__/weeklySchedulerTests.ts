@@ -917,6 +917,25 @@ console.log('\n[registry] EVERY typed clause is represented and guarded');
     + `${guardedClauseIds.size} guarded, ${unguarded.length} unguarded`);
 }
 
+for (const offseasonBlock of ['transition', 'normal_build'] as const) {
+  const week = built({ phase: 'Off-season', offseasonBlock, gymAccessDays: [MON, TUE, WED, THU, FRI, SAT],
+    miniCycleNumber: 1, gameDay: null, clubNights: [] });
+  const receivers = week.days.filter(d => d.conditioning !== null).map(d => d.dayOfWeek);
+  ok(`P21/${offseasonBlock}: full-week receivers do not exhaust the budget Mon/Tue/Wed`, [],
+    receivers.length >= 3 && receivers.some(day => [THU, FRI, SAT, SUN].includes(day)), JSON.stringify(receivers));
+  const ordered = receivers.map(day => [MON, TUE, WED, THU, FRI, SAT, SUN].indexOf(day)).sort((a, b) => a - b);
+  const gaps = ordered.map((day, i) => (ordered[(i + 1) % ordered.length] - day + 7) % 7);
+  ok(`P21/${offseasonBlock}: unconstrained three-exposure week has no adjacent conditioning pair`, [],
+    receivers.length !== 3 || gaps.every(gap => gap >= 2), JSON.stringify({ receivers, gaps }));
+  for (const lower of [false, true]) {
+    const family = week.days.filter(day => day.owner === 'strength' && day.purpose
+      && PURPOSE_IS_LOWER[day.purpose] === lower).map(day => [MON, TUE, WED, THU, FRI, SAT, SUN].indexOf(day.dayOfWeek)).sort((a, b) => a - b);
+    const familyGaps = family.map((day, i) => (family[(i + 1) % family.length] - day + 7) % 7);
+    ok(`P10/${offseasonBlock}/${lower ? 'lower' : 'upper'}: repeated weekly family is separated including Sunday to Monday`, [],
+      family.length === 2 && familyGaps.every(gap => gap >= 2), JSON.stringify({ family, familyGaps }));
+  }
+}
+
 const total = passed + failures.length;
 console.log(`\nWeekly scheduler: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

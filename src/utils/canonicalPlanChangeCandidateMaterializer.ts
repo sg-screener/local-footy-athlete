@@ -50,9 +50,10 @@ function isoDateToDayOfWeek(date: string): number {
   return ((parsed.getUTCDay() + 6) % 7) + 1;
 }
 
-function cloneRows(rows: Workout['exercises'] | undefined): Workout['exercises'] {
+function cloneRows(rows: Workout['exercises'] | undefined, kind?: Workout['composedOptionalKind']): Workout['exercises'] {
   return (rows ?? []).map((row: any) => ({
     ...row,
+    ...(kind ? { composedOptionalKind: kind } : {}),
     exercise: row.exercise ? { ...row.exercise } : row.exercise,
   }));
 }
@@ -197,8 +198,9 @@ function stackTemplate(args: {
       Number(args.template.durationMinutes ?? 0),
     intensity: args.base.intensity ?? args.template.intensity,
     exercises: [
-      ...cloneRows(args.base.exercises),
-      ...cloneRows(args.template.exercises),
+      ...cloneRows(args.base.exercises, args.base.composedOptionalKind ??
+        (args.base.workoutType === 'Recovery' ? 'recovery' : undefined)),
+      ...cloneRows(args.template.exercises, templateComposedKind),
     ],
     hasCombinedConditioning: !!conditioningOwner && !!strengthOwner,
     conditioningBlock: conditioningOwner?.conditioningBlock,
