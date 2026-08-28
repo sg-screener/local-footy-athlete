@@ -8,6 +8,7 @@ import {
 import { DEV_E2E_SCENARIO_MANIFESTS, EXPLORER_DEV_E2E_SCENARIO_MANIFESTS } from '../dev/e2e/devE2EScenarioManifestRegistry';
 import { semanticFingerprint } from '../dev/e2e/semanticFingerprint';
 import { getSessionComponents } from '../utils/sessionComponents';
+import { WEEKS_PER_BLOCK } from '../utils/programBlockState';
 import { buildDevE2EWitnessState } from './devE2ESeedTestSupport';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
 // totals. This suite sits in test:bible; unarmed, it exits 0 on a drained loop
@@ -109,6 +110,11 @@ try {
 
   for (const seedId of DEV_E2E_SEED_IDS) {
     const seed = buildDevE2ESeed(seedId);
+    ok(
+      `${seedId} installs the full block that boot reconstructs`,
+      seed.program.microcycles.length === WEEKS_PER_BLOCK,
+      `${seed.program.microcycles.length}/${WEEKS_PER_BLOCK} weeks; shortened blocks change accepted session requirements on restart`,
+    );
     const state = buildDevE2EWitnessState(seed);
     const failuresForSeed = validateDevE2EWitnesses(
       seedId,

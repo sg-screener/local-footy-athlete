@@ -1552,9 +1552,9 @@
       "reason": "Injury preview invokes the same source-fact compiler from its pre-fact continuation and fails closed when absent. It never writes accepted state."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#deterministicProgram": {
-      "fingerprint": "5ac08d5f3ea8943c752f1fa8a226c1d3aa5bf109bb56fbd5510ae85cdec0ad5c",
+      "fingerprint": "77abcf331b468e4c128a8bf04c9a2197bf9f79e09cfdd84a0f5500ffa4fbf6b3",
       "classification": "canonical_input_writer",
-      "reason": "Diagnostic seed requests the canonical generator with explicit profile/date/block inputs and returns its exact result. All 17 seed identities/material match captured generator output; old stabilizers are removed."
+      "reason": "Diagnostic seed requests the canonical generator with explicit profile/date/block inputs and returns its exact result. All 17 seeds use the normal four-week block; no shortened denominator or seed-specific output rewrite. Reviewed caller and generator boundary remain canonical."
     },
     "src/rules/g1LandingAsk.ts#deloadedSession": {
       "fingerprint": "cb144a378635103b3df595a2321800559e547f8fca5f1ab55893eb9e009d8472",

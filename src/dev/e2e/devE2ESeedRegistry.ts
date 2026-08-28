@@ -20,6 +20,7 @@ import {
   type SessionComponentKind,
 } from '../../utils/sessionComponents';
 import { dayOfWeekForISODate } from '../../utils/appDate';
+import { WEEKS_PER_BLOCK } from '../../utils/programBlockState';
 import { composeDaySurfaces } from '../../rules/dayPrecedence';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import {
@@ -258,43 +259,6 @@ function fixedProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   };
 }
 
-function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
-  // spent-week-friday needs real ADJACENT weeks: half its reason to exist is
-  // asking what an active fact does to the week the athlete swipes to next.
-  // A single-microcycle seed answers that question with an empty week, which
-  // is a seed artifact rather than a finding.
-  // AND `christmas-break-ask` NEEDS FOUR FOR THE SAME REASON, MEASURED THE HARD
-  // WAY. Its whole product is what happens to the weeks AFTER the break starts:
-  // the athlete answers on 10 December and the club comes off from the 18th. A
-  // one-week seed cannot express that — the week-forward control has nowhere to
-  // go, and a flow paging into the break lands back on the week it started on.
-  // **The golden flow's "team training is gone" assertion then fails against
-  // the week BEFORE the break, which legitimately still has it, and reads
-  // exactly like a product defect.** It is not one; it is a seed with one week.
-  // AND `exercise-removal-restart` NEEDS FOUR BECAUSE THE BLOCK REQUIREMENT IS
-  // A DENOMINATOR. Boot regenerates the block and derives
-  // `requiredStrengthSessions` from the FOUR-week block window; a one-week seed
-  // therefore installs a world whose accepted block disagrees with the one boot
-  // writes over it, and the reload gate compares exactly that. Four microcycles
-  // is what makes the seeded world and the booted world the same world.
-  // AND `block-rollover` NEEDS ALL FOUR because its whole point is a block
-  // that has genuinely ENDED: today (2026-08-10) must fall after the last
-  // microcycle's Sunday, which only a full four-week block can express.
-  return seedId === 'spent-week-friday' ||
-    seedId === 'one-set-strength' ||
-    seedId === 'session-layout-showcase' ||
-    seedId === 'feedback-progression-case' ||
-    seedId === 'multi-reload-fixture-chain' ||
-    seedId === 'coach-production-replay' ||
-    seedId === 'exercise-removal-restart' ||
-    seedId === 'christmas-break-ask' ||
-    seedId === 'block-rollover'
-    ? 4
-    : 1;
-}
-
-
-
 function deterministicProgram(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
@@ -308,7 +272,9 @@ function deterministicProgram(
     previousProgram: null,
     activeConstraints: [],
     readinessSignal: null,
-    microcycleLimit: seedMicrocycleLimit(seedId),
+    // Match normal onboarding/boot: a shortened seed changes the accepted
+    // block's required-session denominator when it is reconstructed.
+    microcycleLimit: WEEKS_PER_BLOCK,
   });
   // Install exactly what the real compiler produced. Seed-specific identity
   // rewrites made diagnostic worlds diverge from their own boot reconstruction.

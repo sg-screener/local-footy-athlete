@@ -80,7 +80,7 @@ tags:
     env:
       SEED_ID: conditioning-showcase
 - tapOn:
-    id: view-workout-button
+    id: view-completed-session-button
 - scrollUntilVisible:
     element:
       id: session-execution-toggle-conditioning

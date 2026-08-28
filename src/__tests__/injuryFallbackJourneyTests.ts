@@ -326,7 +326,7 @@ async function main(): Promise<void> {
           scope: 'today_only', payload: { date: weekStart,
             exercise: { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 } },
           requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
-        }, { todayISO: weekStart }));
+        }, { todayISO: weekStart })) as { ok: boolean; message?: string };
       ok('single-leg hip coverage enters through an accepted Add', added.ok, added.message);
     }
     const days = trainingDays(weekStart);

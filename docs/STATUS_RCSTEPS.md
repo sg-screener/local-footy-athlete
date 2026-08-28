@@ -133,5 +133,39 @@ author or derived-output writer was introduced.
 
 ## NOT COVERED
 
-No fresh full release pass, completed simulator flow, physical install or
+No exact-final full release pass, final conditioning flow, physical install or
 physical acceptance yet. Historical receipts are not reused as current proof.
+
+### Full-block fixture correction and final source freeze
+
+The conditioning restart mismatch was isolated by reading the simulator's
+persisted inputs before/after boot. Exactly one input changed: its accepted
+block required-strength-session count, 4→16. The seed generated one week while
+boot reconstructed the normal four. Logged completion was retained. This is a
+fixture defect, not permission to silence fingerprint comparisons or change
+the production block denominator.
+
+Compared extending the seed-specific exception list with making every seed use
+the real block length. Removed the exception list; all 17 seeds request the
+canonical four-week block and return its unmodified output. New seed assertions
+first failed for 8/17 seeds (`seeds-before.log`, 96/104 assertions green), then
+passed 104/104 (`seeds-fixed.log`). Targeted in-memory shortening of conditioning
+fails exactly its new assertion, 103/104 (`mutation-seeds-targeted.log`). The
+broader initial mutation also prevented an adjacent-week seed from constructing;
+the targeted mutation establishes the new cell itself is live.
+
+The seed suite now runs as test infrastructure within the release bootstrap;
+it is not relabelled a product contract. Reviewed only the changed
+`deterministicProgram` capability fingerprint. All three TypeScript scopes are
+zero (`compile-final-source.log`). The preceding `2fb87b04` release attempt
+stopped in bootstrap on an untyped Add result in the test; that harness typing
+is now explicit. No failed or mixed-version run is claimed as a release pass.
+
+The full-block conditioning flow passes the persisted-input restart gate. Its
+last obsolete selector expected Start after logging; the actual completed day
+offers View summary. Updated that selector and rerunning the entire flow.
+Completion overlay screenshot was inspected: overlay above the session, one
+conditioning checkbox and coherent work/rest prescription visible beneath it.
+
+NOT COVERED: final exact-commit release and three-flow rerun, clean native build,
+data-preserving install, physical cold onboarding and Sam's device acceptance.

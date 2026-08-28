@@ -448,7 +448,7 @@
     },
     "test:dev-e2e-seeds": {
       "kind": "test_infrastructure",
-      "reason": "Rebound to unmodified canonical seeds: optional spare days, actual session identities, a valid no-team-training conditioning athlete, and timezone-invariant training observations. This guards diagnostic fixture fidelity, not an independent programming contract.",
+      "reason": "Rebound to unmodified canonical seeds: optional spare days, actual session identities, a valid no-team-training conditioning athlete, and timezone-invariant training observations. All 17 seeds now install the normal four-week block so accepted session requirements survive boot; shortening the block fails the guard. Runs in the release test-truth bootstrap to guard diagnostic fixture fidelity, not as an independent programming contract.",
       "evidenceKind": "canonical_seed_fidelity"
     },
     "test:dev-e2e-testids": {
