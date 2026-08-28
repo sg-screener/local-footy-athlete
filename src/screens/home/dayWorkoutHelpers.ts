@@ -375,12 +375,10 @@ export function formatConditioningRowPrescription(exercise: any): string {
   const unit =
     pType === 'duration_minutes' ? 'min' : pType === 'duration' ? 'sec' : null;
   if (!unit) return '';
-  if (exercise.prescribedSets > 1) {
-    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax} ${unit}`;
-  }
   const base =
     exercise.prescribedRepsMin !== exercise.prescribedRepsMax
       ? `${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax}`
       : `${exercise.prescribedRepsMin}`;
+  if (exercise.prescribedSets > 1) return `${exercise.prescribedSets} × ${base} ${unit}`;
   return `${base} ${unit}`;
 }

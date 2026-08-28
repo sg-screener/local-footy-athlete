@@ -16,6 +16,7 @@ import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwa
 import { extractVisibleProgramItemsFromWorkout } from '../../utils/visibleProgramReadModel';
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import { useProgramStore } from '../../store/programStore';
+import { formatConditioningRowPrescription } from '../../screens/home/dayWorkoutHelpers';
 
 type Check = (label: string, value: boolean, detail?: string) => void;
 const machines = ['bike', 'air_bike', 'row', 'ski'] as const;
@@ -30,6 +31,12 @@ export async function flushPrescriptionTruth(storage: Map<string, string>, ok: C
     const rows = composeConditioningRows(t, '2026-07-13', { authoredMinimumDose: minimum });
     const row = rows.at(-1)!;
     const dose = conditioningAthletePrescription(t, row.prescribedSets);
+    ok(`flush/${t.name}/${minimum}: fixed interval headline has one target, not a repeated range`,
+      formatConditioningRowPrescription(row) === `${row.prescribedSets} × ${row.prescribedRepsMin} sec`,
+      formatConditioningRowPrescription(row));
+    ok(`flush/${t.name}/${minimum}: genuine interval ranges remain displayed`,
+      formatConditioningRowPrescription({ ...row, prescribedRepsMax: row.prescribedRepsMin + 30 })
+        === `${row.prescribedSets} × ${row.prescribedRepsMin}-${row.prescribedRepsMin + 30} sec`);
     const displayedSeconds = (text: string) => {
       const parsed = parseConditioningDose(text);
       return parsed.ok ? doseSeconds(parsed.quantity)?.min : undefined;

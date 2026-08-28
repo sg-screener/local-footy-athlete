@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  flush_fixed_target: ['src/screens/home/dayWorkoutHelpers.ts', '`${exercise.prescribedSets} × ${base} ${unit}`', '`${exercise.prescribedSets} × ${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax} ${unit}`', 'flush', 'fixed interval headline has one target'],
   flush_duration: ['src/data/conditioningTemplates.ts', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) {', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) { rounds *= 3;', 'flush', 'complete session is under 15 minutes'],
   flush_intensity: ['src/data/conditioningTemplates.ts', "intensity: 'Easy, 2–3/10; full conversation throughout'", "intensity: 'Hard, 8/10'", 'flush', 'easy throughout, transitions inside recovery'],
   flush_transition: ['src/data/conditioningTemplates.ts', 'complete rest, including transitions; after every round, including the last', 'complete rest; take extra time to change machines', 'flush', 'easy throughout, transitions inside recovery'],

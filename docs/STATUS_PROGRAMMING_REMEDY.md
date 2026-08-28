@@ -494,6 +494,13 @@ Seven changed executable owners were reviewed in the writer census; same
 classifications, no new writer or permission budget. The diagnostic template
 suite's four C12 anchor failures are also reproduced on untouched 38457383.
 
+Final-year inspection on c12a8397 exposed a presentation defect newly reached by
+numeric flush rows: fixed intervals displayed as `60-60 sec`. Fourteen new
+assertions first failed. The existing conditioning formatter now uses its
+equal-endpoint handling for multi-round rows too; dose and recovery are unchanged.
+An additional in-memory mutant restores the duplicated range. The amended
+checkpoint, not c12a8397, must carry the final release/years/build receipts.
+
 NOT COVERED: final exact-version release gate, mutation receipts, repeated final
 native onboarding, final year reports and physical device acceptance are pending.
 The original 22-item list is not declared finished.
