@@ -875,7 +875,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   );
   const missingSpeedQualities = reportedMissingSpeedQualities(inputs.sprintExposure);
   const overlay = inputs.appSprintPermitted === false
-    || (missingSpeedQualities !== null && (inputs.readiness.lowReadiness || inputs.weekKind === 'deload'))
+    || (inputs.clubNights.length > 0 && missingSpeedQualities !== null
+      && (inputs.readiness.lowReadiness || inputs.weekKind === 'deload'))
     ? { ...phaseOverlay, sprintExposureRequired: false }
     : phaseOverlay;
   const clubSpeedTopUp = inputs.clubNights.length > 0 && overlay.sprintExposureRequired

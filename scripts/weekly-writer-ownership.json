@@ -92,7 +92,7 @@
       "reason": "Pure row-composition stage shared by weekly compilation and the strength-template compiler: resolves typed planned patterns, selection history, equipment, exclusions, dose and loads; returns composed rows and coverage gaps without publishing state. All direct write regions inspected."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "f518b5f598f7a1ffa85fcfd0d24c52d33a4e312a1ddbb7f0e6308ece755b9ca6",
+      "fingerprint": "0260ce23c757a6eb4e017b917f3a7f80de2e5f5fdda3c4667333c04469881eba",
       "classification": "canonical_compiler",
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },

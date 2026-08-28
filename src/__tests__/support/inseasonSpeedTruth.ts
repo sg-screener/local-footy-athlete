@@ -9,6 +9,23 @@ import { resolveTemplateByName } from '../../rules/conditioningSelection';
 export async function inseasonSpeedTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   inseasonSpeedSelectionTruth(ok);
   const today = '2026-08-24';
+  for (const gender of ['male', 'female'] as const) {
+    const profile = { ...athleteAnswers({ ...ARCHETYPES[0], gender, equipment: 'commercial', days: [...ARCHETYPES[6].days] }),
+      sprintExposure: 'No sprint training' as const, recentTrainingLoad: 'Hardly at all' as const, conditioningLevel: 'Poor' as const };
+    let installed: Awaited<ReturnType<typeof coldStartThroughOnboarding>>;
+    try { installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: today })); }
+    catch (error) {
+      ok(`P15/${gender}: club-top-up fatigue rule does not refuse existing novice no-club programming`, false, String(error));
+      continue;
+    }
+    ok(`P15/${gender}: club-top-up fatigue rule does not refuse existing novice no-club programming`,
+      !installed.onboardingRefusal, JSON.stringify(installed.onboardingRefusal));
+    if (installed.onboardingRefusal) continue;
+    const view = () => quiet(() => deriveVisibleWeekLive(today, today));
+    const before = visibleSignature(view());
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: today }));
+    ok(`P15/${gender}: novice no-club programming survives restart unchanged`, boot.ok && before === visibleSignature(view()));
+  }
   for (const gender of ['male', 'female'] as const) for (const answer of ['Acceleration only', 'Top-speed only'] as const) {
     const profile = { ...athleteAnswers({ ...ARCHETYPES[7], gender, days: ['Monday', 'Wednesday'],
       clubDays: ['Thursday'], gameDay: 'Saturday' }), sprintExposure: answer };

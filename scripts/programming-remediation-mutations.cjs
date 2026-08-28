@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  speed_unrelated_fatigue: ['src/rules/weeklyScheduler.ts', 'inputs.clubNights.length > 0 && missingSpeedQualities !== null\n      && (inputs.readiness.lowReadiness', 'missingSpeedQualities !== null\n      && (inputs.readiness.lowReadiness', 'speed', 'club-top-up fatigue rule does not refuse existing novice no-club programming'],
   landmine_strength_slot: ['src/rules/sessionSlotCoverage.ts', 'if (tag.power) return [];', 'if (false && tag.power) return [];', 'landmine', 'explosive landmine is absent from every strength slot'],
   primer_power_evidence: ['src/utils/sessionBuilder.ts', "role: 'power',\n    power: { family: entry.family, kind: 'primer' },", "role: 'accessory',", 'landmine', 'selected landmine is power without strength credit or changed dose'],
   primer_role_flattened: ['src/utils/sessionTemplate.ts', "oneRole && row.role !== 'power'", 'oneRole', 'landmine', 'selected landmine is power without strength credit or changed dose'],

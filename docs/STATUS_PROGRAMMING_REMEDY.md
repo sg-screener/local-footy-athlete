@@ -739,3 +739,15 @@ four C12 failures remain explicitly retired/replaced by current category checks.
 
 NOT COVERED: final revised-candidate gate/build/years, remaining native safety
 and Add combinations, physical acceptance. Installation remains held; no wipe.
+
+Correction to the diagnostic attribution above: the 263369ba power diagnostic
+has four historical assertion failures, not the same early refusal as 14be71d8.
+Isolating its eight profiles found a NEW refusal for the no-club off-season
+novice (low readiness + No sprint training). P15's new top-up fatigue condition
+had spilled into the existing no-club phase overlay while its contract still
+required the existing speed allocation. Narrowed only the NEW condition to club
+top-ups; no established injury/fatigue/deload safety or dose was relaxed.
+New male/female real-onboarding cases first fail with the exact missing-speed
+refusal. They now guard no-club generation and restart in the release witness.
+The old four power-golden/strip/order expectations remain a separate diagnostic
+classification, not permission to restore a deleted power-stripping owner.
