@@ -499,9 +499,10 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
-      'shoulder': 'good',
-      'elbow': 'good',
-      'wrist/hand': 'good',
+      // The delivered load profile is a held dumbbell, not an unloaded squat.
+      'shoulder': 'caution',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
     },
   },
 
@@ -652,8 +653,9 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'lowerBack': 'caution',
       'neck': 'good',
       'shoulder': 'caution',
-      'elbow': 'good',
-      'wrist/hand': 'good',
+      // Positioning and stabilising the prescribed bar also loads the hands.
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
     },
   },
 
@@ -694,8 +696,8 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'lowerBack': 'caution',
       'neck': 'good',
       'shoulder': 'caution',
-      'elbow': 'good',
-      'wrist/hand': 'good',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
     },
   },
 
@@ -714,9 +716,11 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'good',
       'lowerBack': 'caution',
       'neck': 'good',
-      'shoulder': 'good',
-      'elbow': 'good',
-      'wrist/hand': 'good',
+      // This catalogue identity prescribes a held dumbbell; do not silently
+      // treat the loaded version as clearly unaffected bodyweight work.
+      'shoulder': 'caution',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
     },
   },
 

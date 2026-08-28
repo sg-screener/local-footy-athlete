@@ -17,6 +17,7 @@ import { resolveTapSwapEnvironment } from '../../utils/tapSwapHierarchy';
 import { buildSwapSuggestionPayload } from '../../utils/swapSuggestionPayload';
 import { chooseInjurySessionAdditions } from '../../utils/injurySessionAdjustment';
 import { assessProgramEditRisk } from '../../utils/programEditRiskAssessment';
+import { EXERCISE_LOAD_MAP } from '../../utils/loadEstimation';
 
 export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (let severity = 1; severity <= 10; severity++) {
@@ -54,6 +55,18 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
   for (const region of ['shoulder', 'elbow', 'wrist/hand'] as const) {
     ok(`simple-injury/${region}: clearly unaffected bodyweight squat remains available`,
       injuryPermitsExerciseAtSeverity('Bodyweight Squat', region, 9));
+  }
+  // Cross-check actual load prescriptions, not only the main-muscle labels.
+  // Native Single-Leg Box Squat was rated Good while prescribing a dumbbell;
+  // a list of remembered squat/deadlift names missed that same defect class.
+  for (const [name, load] of Object.entries(EXERCISE_LOAD_MAP)) {
+    if (EXERCISE_TAGS[name]?.region !== 'lower' || load.ratio <= 0
+      || !['barbell', 'dumbbell', 'kettlebell'].includes(load.equipment)) continue;
+    for (const region of ['shoulder', 'elbow', 'wrist/hand'] as const) for (const severity of [6, 7, 8, 9, 10]) {
+      ok(`simple-injury/loaded/${name}/${region}/${severity}: prescribed free weights require upper-limb support clearance`,
+        !injuryPermitsExerciseAtSeverity(name, region, severity)
+        && injuryWithholdsExistingRow(name, region, severity));
+    }
   }
   for (const [name, regions] of [
     ['Hip Thrusts', ['shoulder']], ['Single-Leg Hip Thrust', ['shoulder']],

@@ -879,3 +879,35 @@ NOT COVERED: revised exact-candidate release/build/years and affected native
 checks still required after this correction; strength-day Mobility and refusal
 sheet dismissal; non-flush off-leg recovery wording; physical iPhones/2 km Skip
 acceptance. Phone installation remains held. Other-seat NOW changes untouched.
+
+### Native load support cross-check — 2f63ced4 is not installation-ready
+
+The clean Release build of 2f63ced4 succeeded and its four report years reached
+52 weeks / 52 restarts each. Native Gunshow + Mobility Add, Undo, re-add and
+reopen passed: 12 displayed exercise placements, 12 distinct names, two sessions.
+All six original strength exercises and six different mobility drills are in
+the reopened hierarchy. This Gunshow has no derived warm-up; do not claim that
+native tape covers full-strength warm-up overlap (the compiler matrix does).
+
+NEW REAL SAFETY FINDING: the severe Tuesday banner named Single-Leg Box Squat
+as unaffected work, but its actual native control read “Edit weight, 17.5kg”.
+The load owner prescribes a dumbbell while its injury ratings were still Good
+for shoulder, elbow and wrist. Back Extension shares that mismatch; Hip Thrusts
+and Single-Leg Hip Thrust omitted hand/arm support for their prescribed load.
+Earlier limiting native Add → Back Extension was therefore NOT complete safety
+acceptance, despite successful saving/reopening. That prior claim is narrowed.
+
+Compared changing the load owner to silently prescribe bodyweight with correcting
+the existing shared ratings. Kept the prescribed loads/doses and corrected ten
+rating cells across four catalogue entries. No new classifier or injury engine.
+New cross-metadata regression enumerates all 19 lower-body free-weight load
+profiles × three upper-limb regions × five active limiting/severe scores: 285
+checks, not 285 exercises. Together with the real journeys: 799 pass / 50 fail
+before, 849/849 after. Bodyweight Squat remains available. Existing adjustment
+54/54, Tap Swap 26/26 and all TypeScript scopes zero errors. Three mutants restore
+the old unsafe Good answers for box squat, back extension and the two hip-thrust
+hand-support cases. A new exact source checkpoint and release/native runs follow.
+
+NOT COVERED: revised candidate release/build/year/native verification is pending;
+non-flush off-leg recovery wording, full-strength warm-up native overlap,
+refusal-sheet dismissal, physical iPhone/2 km Skip QA. No installation or wipe.
