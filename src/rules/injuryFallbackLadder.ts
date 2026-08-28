@@ -96,6 +96,7 @@ import {
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
 import { resolveExerciseName } from '../utils/loadEstimation';
+import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
 import type { SafeTrainingFallbackTier } from './conflictResolutionHierarchy';
 
 /* ── THE RUNGS, AND THE TIER EACH ONE PROJECTS ONTO ───────────────────────── */
@@ -446,6 +447,14 @@ function patternIdentity(candidate: Candidate): string | null {
 function sameFinerIdentity(left: Candidate, right: Candidate): boolean {
   const a = patternIdentity(left);
   const b = patternIdentity(right);
+  // Isolation slots mix unrelated muscles. An ungrouped catalogue entry must
+  // prove the same action through its authored primary muscles, not become a
+  // wildcard (which made a Pike Lift a Hamstring Curl replacement).
+  if ((a === null || b === null)
+    && (left.tags.movement === 'isolation_lower' || left.tags.movement === 'isolation_upper')) {
+    const muscles = muscleMetadataFor(left.name)?.primary ?? [];
+    return (muscleMetadataFor(right.name)?.primary ?? []).some((muscle) => muscles.includes(muscle));
+  }
   if (a === null || b === null) return true;
   return a === b;
 }
@@ -508,7 +517,7 @@ function rungFor(
   // adjacent slot, or the same slot under a DIFFERENT main pattern (a squat for
   // a split squat). Both are disclosed as partial coverage.
   if ((ADJACENT_SLOTS[originalSlot] ?? []).includes(candidateSlot as PoolSlotKey)
-    || candidateSlot === originalSlot) {
+    || (candidateSlot === originalSlot && (!isIsolation || sameIdentity))) {
     return 'safe_adjacent_pattern';
   }
 

@@ -58,6 +58,9 @@ export type MobilityRegion = (typeof MOBILITY_REGIONS)[number];
  * Signed: `docs/OPTIONAL_PLACEMENT_RULINGS_2026-07-30.md` §3.
  */
 export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
+  'seated-good-morning-barbell': 'midline',
+  'crab-hold': 'upper',
+  'seated-good-morning': 'midline',
   // ── lower (knee, ankle, calf, hamstring) ──
   'deep-squat-hold': 'lower',
   'toe-stretch': 'lower',

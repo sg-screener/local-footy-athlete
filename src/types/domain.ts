@@ -1551,7 +1551,7 @@ export interface WorkoutExercise {
      * athlete: a dated kit loss lifts itself, an exclusion ends when they
      * restore it, an injury ends when it clears.
      */
-    readonly cause: 'excluded_today' | 'kit_today' | 'injury';
+    readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
   };
 
   // Timestamps

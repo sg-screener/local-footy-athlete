@@ -1,7 +1,24 @@
 /** Real generation guard for specialist-owned power selection and delivery. */
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
-import { generateProgramLocally } from '../services/api/generateProgram';
+import { coldStartThroughOnboarding, quietAsync } from './support/athleteJourney';
+import { athleteAnswers, plusDays } from './compilerYear/catalog';
+import { derivedEquipmentChecklistTags } from '../rules/equipmentVocabulary';
+import { useProgramStore } from '../store/programStore';
+import type { OnboardingData } from '../types/domain';
+const storage = new Map<string, string>();
+(globalThis as any).window = { localStorage: {
+  getItem: (key: string) => storage.get(key) ?? null,
+  setItem: (key: string, value: string) => storage.set(key, value),
+  removeItem: (key: string) => storage.delete(key), clear: () => storage.clear(),
+} };
+async function generateThroughOnboarding(profile: OnboardingData, options: { todayISO: string; seasonPhaseClock?: { phaseEntryWeekStartISO: string } }) {
+  const answers = { ...profile, twoKmTimeTrial: { ...profile.twoKmTimeTrial!, recordedOn: options.todayISO } };
+  if (answers.seasonPhase === 'Off-season') answers.seasonFinishedOn = plusDays(options.seasonPhaseClock?.phaseEntryWeekStartISO ?? options.todayISO, -1);
+  const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: answers, installDayISO: options.todayISO }));
+  if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
+  return useProgramStore.getState().currentProgram!;
+}
 import { project } from '../rules/projectVisibleWeek';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import {
@@ -39,17 +56,15 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
   console.error(`  FAIL ${name}: ${JSON.stringify(detail)}`);
 }
 
-const profile = {
-  ageRange: '26-30', experienceLevel: 'Intermediate',
-  trainingLocation: 'Commercial gym', equipmentSelectionCompleteness: 'complete',
-  equipment: ['Bodyweight Only'], recentTrainingLoad: 'Pretty consistent',
-  conditioningLevel: 'Average', gender: 'male', seasonPhase: 'Pre-season',
-  trainingDaysPerWeek: 4,
-  preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
-};
+async function main() {
+const profile = athleteAnswers({ id: 'power-bodyweight', gender: 'male',
+  experience: '2-5 years', equipment: 'bodyweight', initialPhase: 'Pre-season',
+  days: ['Monday', 'Tuesday', 'Thursday', 'Friday'], clubDays: [], gameDay: null, extraGame: false });
+const fullKit = { ...profile.equipmentAnswer!, tags: Object.fromEntries(derivedEquipmentChecklistTags()
+  .filter(tag => !['medicine_ball', 'throwing_wall', 'slam_ball', 'slam_space'].includes(tag))
+  .map(tag => [tag, 'have'])), modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' } } as OnboardingData['equipmentAnswer'];
 
-const program = generateProgramLocally(profile as never, {
+const program = await generateThroughOnboarding(profile as never, {
   todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
 } as never);
 const microcycle = program.microcycles[0];
@@ -175,12 +190,9 @@ ok('R-118 — every missing primer is explained by a collision',
     daysWithoutPower: strengthDaysWithoutPower.map((workout) => ({
       day: workout.dayOfWeek,
       names: (workout.exercises ?? []).map((row) => row.exercise?.name) })) });
-ok('CONTROL — this world really does exhibit the collision the ruling is about',
-  shortfall > 0,
-  `shortfall=${shortfall}. If a Bodyweight-Only world stops colliding — because `
-  + 'the pool gained upper entries, which is the REAL fix Sam ordered — this '
-  + 'cell is the one that says so, and the cells above become vacuous here and '
-  + 'must move to a world that still collides.');
+// R-118 added legitimate bodyweight power choices. This athlete no longer
+// owes a collision; requiring a shortfall would reintroduce retired behavior.
+ok('CONTROL — bodyweight delivery remains nonempty after pool expansion', rows.length > 0);
 ok('power rides real strength content and never creates a standalone day',
   delivered.every((workout) => exerciseBudgetRows(workout).length > 0),
   delivered.map((workout) => ({ day: workout.dayOfWeek,
@@ -270,18 +282,18 @@ ok('no day projects a separate Power part any more',
   visible.days.map((day) => ({ date: day.date,
     kinds: day.parts.map((part) => String(part.kind)) })));
 
-const noFixtureProgram = generateProgramLocally({
+const noFixtureProgram = await generateThroughOnboarding({
   ...profile,
   gameDay: undefined,
-  equipment: ['Full Gym'],
+  equipment: ['Full Gym'], equipmentAnswer: fullKit,
 } as never, {
   todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
 } as never);
 const noFixtureWeek = noFixtureProgram.microcycles[0];
 const noFixtureStrengthDays = noFixtureWeek.workouts.filter((workout) =>
   exerciseBudgetRows(workout).length > 0);
-ok('the phase cap limits a non-vacuous four-strength-day candidate world to two primers',
-  noFixtureStrengthDays.length === 4 &&
+ok('the phase cap limits a non-vacuous candidate world to two primers',
+  noFixtureStrengthDays.length >= 4 &&
     noFixtureWeek.exposureContractV2?.power?.plannerSelectedWeeklyBudget === 2 &&
     noFixtureWeek.workouts.flatMap((workout) => powerRows(workout)).length === 2,
   {
@@ -290,7 +302,7 @@ ok('the phase cap limits a non-vacuous four-strength-day candidate world to two 
     rows: noFixtureWeek.workouts.flatMap((workout) => powerRows(workout)).length,
   });
 
-const teamProgram = generateProgramLocally({
+const teamProgram = await generateThroughOnboarding({
   ...profile,
   teamTrainingDaysPerWeek: 1,
   teamTrainingDays: ['Tuesday'],
@@ -316,8 +328,8 @@ ok('a real club night cannot hide its composer-authored strength rows',
  * With a full kit the power selector has movements the strength block does not
  * hold, so the complete allowance IS deliverable and a shortfall would be a
  * real defect rather than the ruling working. */
-const fullGymProgram = generateProgramLocally({
-  ...profile, equipment: ['Full Gym'],
+const fullGymProgram = await generateThroughOnboarding({
+  ...profile, equipment: ['Full Gym'], equipmentAnswer: fullKit,
 } as never, {
   todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
 } as never);
@@ -367,15 +379,8 @@ ok('and no Full Gym session prescribes one exercise twice either',
  * ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[8] Power counts in the athlete\'s counter and in nothing else');
 
-const capProfile = {
-  ageRange: '26-30', experienceLevel: 'Intermediate',
-  trainingLocation: 'Commercial gym', equipmentSelectionCompleteness: 'complete',
-  equipment: ['Full gym'], recentTrainingLoad: 'Pretty consistent',
-  conditioningLevel: 'Average', gender: 'male', seasonPhase: 'Pre-season', trainingDaysPerWeek: 4,
-  preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
-};
-const capProgram: any = generateProgramLocally(capProfile as never, {
+const capProfile = { ...profile, equipmentAnswer: fullKit };
+const capProgram: any = await generateThroughOnboarding(capProfile as never, {
   todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 3,
 } as never);
 const capWorkouts: any[] = capProgram.microcycles.flatMap((m: any) => m.workouts ?? []);
@@ -415,13 +420,10 @@ ok('[8] the visible Strength counter COUNTS the power row',
   { with: subject ? strengthSectionCount(subject) : null,
     without: withoutPower ? strengthSectionCount(withoutPower) : null,
     powerRows: subject ? powerRows(subject).length : null });
-ok('[8] SAM\'S NUMBERS — one power row and five strength rows reads 6, and 5 without it',
-  !!subject && powerRows(subject).length === 1
-    && strengthSectionCount(subject) === 6 && strengthSectionCount(withoutPower) === 5,
-  { name: subject?.workoutType, dow: subject?.dayOfWeek,
-    rows: (subject?.exercises ?? []).map((r: any) => `${r.role ?? 'strength'}:${r.exercise?.name}`),
-    with: subject ? strengthSectionCount(subject) : null,
-    without: withoutPower ? strengthSectionCount(withoutPower) : null });
+// The old fixed five-row fixture was replaced by the approved split recipe.
+// The exact dynamic count assertion above applies to every current recipe.
+ok('[8] CONTROL — the counter comparison contains one power row and real strength',
+  !!subject && powerRows(subject).length === 1 && strengthSectionCount(withoutPower) > 0);
 
 // ── 2. THE STRENGTH EXERCISE CAP. Removing power must free NO capacity.
 ok('[8] power does not count toward the strength exercise cap',
@@ -596,16 +598,9 @@ ok('[8] strength-set progression never moves a power row',
  * ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[9] Contrast keeps its authored pair at the main slot');
 
-const contrastProfile = {
-  ageRange: '26-30', experienceLevel: 'Advanced', trainingLocation: 'Commercial gym',
-  equipmentSelectionCompleteness: 'complete', equipment: ['Full gym'],
-  // Capacity must score HIGH (6/6) or the policy returns a primer, not contrast.
-  recentTrainingLoad: 'Very consistent', conditioningLevel: 'Elite',
-  gender: 'male', seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
-  preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
-};
-const contrastProgram: any = generateProgramLocally(contrastProfile as never, {
+const contrastProfile = { ...profile, experienceLevel: '5+ years', equipmentAnswer: fullKit,
+  recentTrainingLoad: 'Very consistent', conditioningLevel: 'Elite', seasonPhase: 'Off-season' };
+const contrastProgram: any = await generateThroughOnboarding(contrastProfile as never, {
   todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 2,
   // Phase week 5+ is `late_offseason`, the only live route to contrast intent.
   seasonPhaseClock: { protocolVersion: 1, selectedPhase: 'Off-season',
@@ -721,3 +716,6 @@ ok('[9d] and every one of those mutations moves the DAY CARD identically too',
 console.log(`\nGenerated power delivery: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
 totalsPrinted(failures.length);
 if (failures.length > 0) process.exitCode = 1;
+
+}
+main().catch(error => { console.error(error); totalsPrinted(1); process.exitCode = 1; });

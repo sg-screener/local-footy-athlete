@@ -17,8 +17,7 @@ import { useProgramStore } from '../store/programStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
-import { replayableEntries, lastUndoableEntry } from '../rules/decisionLedgerReplay';
-import { adjustmentMatchesDecision } from '../store/reversibleAdjustmentTransaction';
+import { replayableEntries } from '../rules/decisionLedgerReplay';
 import type { ReversibleAdjustmentRecord } from '../rules/reversibleAdjustmentLedger';
 import { lighterDayEffectActive } from '../rules/canonicalWeeklyLighterDayCompiler';
 import { composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint,
@@ -1023,14 +1022,6 @@ export function selectActiveProgramModifiers(
   const todayISO = snapshot.todayISO ?? todayISOLocal();
   const out: ActiveProgramModifier[] = [];
   const seen = new Set<string>();
-  const fixtureEntries = new Map<string, DecisionLedgerEntry>();
-  for (const entry of replayableEntries(snapshot.decisionEntries ?? [])) {
-    if (entry.decision.kind !== 'fixture_add' && entry.decision.kind !== 'fixture_move' && entry.decision.kind !== 'fixture_remove') continue;
-    const effect = entry.decision.acceptedEffect;
-    if (!effect) continue;
-    const week = getMondayForDate(effect.targetDate);
-    if (week >= getMondayForDate(todayISO)) fixtureEntries.set(week, entry);
-  }
   // Display each accepted report, not the strongest member of a compiler group.
   // This is a read projection: generation continues to combine facts as before.
   const constraints = snapshot.temporarySourceFacts
@@ -1049,8 +1040,8 @@ export function selectActiveProgramModifiers(
 
   for (const constraint of activeConstraints) {
     if (!constraint || constraint.status === 'resolved') continue;
-    if (constraint.type === 'schedule' && constraint.noteProof?.kind === 'game_change' &&
-      fixtureEntries.has(constraint.weekStartISO ?? '')) continue;
+    // Calendar edits are history, not an athlete-state modifier.
+    if (constraint.type === 'schedule' && constraint.noteProof?.kind === 'game_change') continue;
     if (constraint.type === 'injury') {
       addUnique(
         out,
@@ -1082,53 +1073,6 @@ export function selectActiveProgramModifiers(
   }
 
   addUnique(out, seen, deloadWeekModifier(snapshot));
-  const latestUndo = lastUndoableEntry(snapshot.decisionEntries ?? []);
-  for (const constraint of snapshot.sessionConstraints ?? []) {
-    if (constraint.status !== 'active' ||
-      (constraint.targetDate < todayISO && (!constraint.moveTargetDate || constraint.moveTargetDate < todayISO))) continue;
-    const entry = [...replayableEntries(snapshot.decisionEntries ?? [])].reverse().find(candidate =>
-      candidate.decision.kind === 'plan_change' && candidate.decision.acceptedEffect?.upsertedConstraints
-        .some(accepted => accepted.id === constraint.id));
-    const kind = entry?.decision.kind === 'plan_change' ? entry.decision.change.kind : undefined;
-    const title = kind === 'remove_session' ? 'Session removed'
-      : kind === 'add_category' || kind === 'add_template' ? 'Session added'
-        : kind === 'swap_category' || kind === 'swap_template' ? 'Session swapped'
-          : constraint.mutationKind === 'move' ? 'Session moved' : 'Session changed';
-    const adjustment = entry && snapshot.reversibleAdjustments?.find(record =>
-      record.status === 'active' && adjustmentMatchesDecision(record, entry));
-    const canUndo = !!entry && latestUndo?.id === entry.id && !!adjustment;
-    addUnique(out, seen, {
-      id: modifierId('program_effect', `session:${constraint.id}`),
-      source: 'program_effect', sourceId: `session:${constraint.id}`,
-      type: 'exercise_adjustment', title,
-      body: constraint.mutationKind === 'move'
-        ? `Your session moved from ${constraint.targetDate} to ${constraint.moveTargetDate}.`
-        : `${title} on ${constraint.targetDate}.`,
-      effect: constraint.mutationKind === 'move' ? 'sessions_moved' : 'unsigned',
-      affects: ['current_week'],
-      actions: canUndo ? [{ kind: 'restore_adjustment', label: 'Undo session change' }] : [],
-      payload: { reversibleAdjustmentId: canUndo ? adjustment!.id : undefined },
-    });
-  }
-  for (const entry of fixtureEntries.values()) {
-    if (entry.decision.kind !== 'fixture_add' && entry.decision.kind !== 'fixture_move' && entry.decision.kind !== 'fixture_remove') continue;
-    const effect = entry.decision.acceptedEffect!;
-    const fixture = effect.fixtureKind === 'practice_match' ? 'Practice match' : 'Game';
-    const verb = { add: 'added', move: 'moved', remove: 'removed' }[effect.action];
-    const adjustment = snapshot.reversibleAdjustments?.find(record => record.status === 'active' && adjustmentMatchesDecision(record, entry));
-    const canUndo = latestUndo?.id === entry.id && !!adjustment;
-    addUnique(out, seen, {
-      id: modifierId('active_constraint', `fixture:${entry.id}`),
-      source: 'active_constraint', sourceId: `fixture:${entry.id}`,
-      type: 'coach_restriction', effect: 'week_rebuilt', title: `${fixture} ${verb}`,
-      body: effect.action === 'move'
-        ? `${fixture} moved from ${effect.sourceDate} to ${effect.targetDate}.`
-        : `${fixture} ${verb} on ${effect.targetDate}.`,
-      affects: ['current_week'],
-      actions: canUndo ? [{ kind: 'restore_adjustment', label: 'Restore fixture' }] : [],
-      payload: { reversibleAdjustmentId: canUndo ? adjustment!.id : undefined },
-    });
-  }
   for (const entry of replayableEntries(snapshot.decisionEntries ?? [])) {
     if (entry.decision.kind !== 'lighter_day') continue;
     const effect = entry.decision.acceptedEffect;

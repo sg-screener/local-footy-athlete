@@ -176,6 +176,17 @@ export function getExerciseCue(
 // ─── Part 3: Exercise Cue Library ───
 
 export const EXERCISE_CUES: Record<string, ExerciseCue> = {
+  "Seated Good Morning (Barbell)": {"primaryCue": "Sit wide, brace, and hinge forward from the hips.", "secondaryCue": "Don't round the spine."},
+  "Rotational Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes, rotate hard, and slam outside the foot.", "secondaryCue": "Reset before each explosive repetition."},
+  "Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes and slam the ball straight down.", "secondaryCue": "Finish athletically with the hips and knees softly bent."},
+  "Rotational Medicine-Ball Throw": {"primaryCue": "Load the outside hip, rotate hard, and throw through the wall.", "secondaryCue": ""},
+  "Reverse Nordic Curl": {"primaryCue": "Squeeze the glutes and lean back from the knees.", "secondaryCue": "Keep knees, hips, and shoulders in one straight line."},
+  "SL 45° Back Extension Hold": {"primaryCue": "Hold a straight line using the glute and hamstring.", "secondaryCue": "Keep the hips square and avoid hanging through the lower back."},
+  "SL 45° Back Extension": {"primaryCue": "Hinge over the pad, then drive through the working hip.", "secondaryCue": "Keep the hips square and finish without arching the lower back."},
+  "Seated Good Morning": {"primaryCue": "Sit wide, brace, and hinge forward from the hips.", "secondaryCue": "Don't round the spine."},
+  "Crab Hold": {"primaryCue": "Press through hands and feet, then lift the hips high.", "secondaryCue": "Keep the chest open and hold."},
+  "Standing Knee Extension": {"primaryCue": "Stand tall, lift one knee to 90 degrees, then straighten your leg.", "secondaryCue": ""},
+  "Seated Single-Leg Pike Lift": {"primaryCue": "Lean slightly forward, lock the knee, and lift the heel.", "secondaryCue": "Pause at the top."},
   '90/90 Breathing': {
     primaryCue: 'Knees and hips at 90, exhale fully.',
     secondaryCue: 'Pause at the bottom of each breath.',

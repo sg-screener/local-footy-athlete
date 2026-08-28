@@ -44,7 +44,7 @@
  * count can never disagree with its list.
  *
  * WRITER: none, this stores nothing. READER: `screens/home/DayWorkoutScreenV2`.
- * TEST: `src/__tests__/exerciseAddCandidatesTests.ts`.
+ * TEST: `src/__tests__/exerciseIntakeTests.ts`.
  */
 
 import {
@@ -58,6 +58,8 @@ import { SECTION_LABELS, type SessionExecutionSectionId } from './sessionExecuti
 import type { OnboardingData } from '../types/domain';
 
 export interface AddCandidate {
+  restSeconds?: number;
+  notes?: string;
   name: string;
   sets: number;
   repsMin: number;
@@ -346,8 +348,9 @@ function loadFor(name: string, profile: OnboardingData | null | undefined): numb
  * which an ad-hoc add has. Inventing those to reach it would be inventing the
  * answer. So the band comes off the movement's own tags.
  */
-function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax' | 'prescriptionType' | 'perSide'> {
+function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax' | 'prescriptionType' | 'perSide' | 'restSeconds' | 'notes'> {
   const tags = getExerciseTags(resolveExerciseName(name));
+  if (tags?.prescription) return { ...tags.prescription };
   if (!tags) return { sets: 2, repsMin: 8, repsMax: 12 };
   if (tags.movement === 'conditioning') {
     return { sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes' };

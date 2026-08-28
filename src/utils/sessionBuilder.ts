@@ -56,7 +56,9 @@ import {
   routableBodyParts,
   type InjuryRegion,
 } from '../data/injuryRegions';
-import type { FilterContext } from './exerciseFilter';
+import { exerciseProgrammingAllows, type FilterContext } from './exerciseFilter';
+import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
+import { guidedInjuryBucketForArea } from './guidedInjuryControl';
 import { applyLoadEstimates } from './loadEstimation';
 import {
   SPEED_FALLBACK_TEMPLATE,
@@ -79,6 +81,7 @@ import type { PowerFamily } from '../rules/powerPrimerPolicy';
 // ─── Athlete Context ───
 
 export interface AthleteContext {
+  daysToGame?: number | null;
   /** Injury list from onboarding. */
   injuries: OnboardingInjury[];
   /** Equipment tags the athlete has access to. */
@@ -226,6 +229,8 @@ export type SessionSlot =
       category: ExerciseCategory;
       /** How many exercises to pick from this category. */
       count: number;
+      /** Additional authored pool candidates competing for the same slot. */
+      alternatives?: readonly PoolExercise[];
       /**
        * ONE PICK PER NAMED REGION, then the remainder free.
        *
@@ -343,7 +348,8 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
     // "1 extra drill (not hip or upper back mobility)" — the complement of the
     // two named regions, stated as the regions it MAY use so an added fifth
     // region is a decision rather than a silent inclusion.
-    { category: 'mobility', count: 1, regions: ['lower', 'midline'] },
+    { category: 'mobility', count: 1, regions: ['lower', 'midline'],
+      alternatives: POOL_REGISTRY.hamstring_light.filter(row => EXERCISE_TAGS[row.name]?.programming?.primer) },
     {
       authored: [{
         names: ['Pogo Hops'],
@@ -625,7 +631,15 @@ export function filterPoolEntriesForAthlete(
     [...entries],
     injuriesToTags(athlete.injuries),
     new Set(athlete.equipmentTags),
-  ), athlete.onboardingData?.experienceLevel, row => row.name);
+  ), athlete.onboardingData?.experienceLevel, row => row.name)
+    .filter(row => exerciseProgrammingAllows(row.name, {
+      experienceLevel: athlete.onboardingData?.experienceLevel,
+      daysToGame: athlete.daysToGame, route: 'automatic',
+    }) && (!EXERCISE_TAGS[row.name]?.programming || athlete.injuries.every(injury => {
+      const region = guidedInjuryBucketForArea(injury.bodyArea);
+      return !region || injuryPermitsExerciseAtSeverity(row.name,
+        region, onboardingInjurySeverityScore(injury));
+    })));
 }
 
 export function dateHash(dateStr: string): number {
@@ -922,7 +936,14 @@ function pickPowerEntries(
     reduced: false,
     availableEquipment: athlete.equipmentTags ?? [],
     blockId: `primer-${seed}`,
-  });
+  }).filter(entry => exerciseProgrammingAllows(entry.name, {
+    experienceLevel: athlete.onboardingData?.experienceLevel,
+    daysToGame: athlete.daysToGame, route: 'primer',
+  }) && athlete.injuries.every(injury => {
+    const region = guidedInjuryBucketForArea(injury.bodyArea);
+    return !region || injuryPermitsExerciseAtSeverity(entry.name,
+      region, onboardingInjurySeverityScore(injury));
+  }));
 
   // SHRINK, NEVER PAD — the rule this repo applies everywhere else. A family
   // whose shelf is empty yields no row; it does not borrow from the other one.
@@ -941,6 +962,7 @@ function powerEntryToWorkoutExercise(
 ): WorkoutExercise {
   const now = new Date().toISOString();
   const id = authoredRowId(entry.name);
+  const authored = EXERCISE_TAGS[entry.name]?.prescription;
   return {
     // The existing authored slot owns dose/order; the power pool owns role.
     // A Primer's explosive row must not masquerade as a strength accessory.
@@ -958,10 +980,12 @@ function powerEntryToWorkoutExercise(
     exerciseId: id,
     exerciseOrder: order,
     prescribedSets: slot.sets,
-    prescribedRepsMin: slot.repsMin,
-    prescribedRepsMax: slot.repsMax,
-    restSeconds: slot.restSeconds,
-    notes: entry.authoredCueIntent,
+    prescribedRepsMin: authored?.repsMin ?? slot.repsMin,
+    prescribedRepsMax: authored?.repsMax ?? slot.repsMax,
+    restSeconds: authored?.restSeconds ?? slot.restSeconds,
+    prescriptionType: authored?.prescriptionType,
+    perSide: authored?.perSide,
+    notes: authored?.notes ?? entry.authoredCueIntent,
     exercise: {
       id,
       name: entry.name,
@@ -1110,7 +1134,10 @@ export function buildDerivedSession(
     const inRegion = slot.regions
       ? pool.filter((entry) => slot.regions.indexOf(mobilityRegionOf(entry)) !== -1)
       : pool;
-    const filtered = filterPool(inRegion, injuryTags, equipmentSet).filter(notAlreadyProgrammed);
+    const filtered = filterPoolEntriesForAthlete([...inRegion, ...(slot.alternatives ?? [])], athlete).filter(notAlreadyProgrammed)
+      .filter(row => type !== 'primer' || exerciseProgrammingAllows(row.name, {
+        experienceLevel: athlete.onboardingData?.experienceLevel, daysToGame: 1, route: 'primer',
+      }));
     const slotSeed = slotSeedForSource; // prime offset for variety
     const picks = slot.spread
       ? pickAcrossRegions(filtered, slot.count, slot.spread, slotSeed)

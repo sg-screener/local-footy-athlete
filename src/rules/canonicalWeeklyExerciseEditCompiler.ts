@@ -1,6 +1,8 @@
 /** Pure ordered fold of accepted exercise edits over one authored week. */
 import type { Workout, WorkoutExercise, OverrideContext } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { POWER_EXERCISE_POOL } from './powerExercisePool';
+import { getExerciseTags } from '../data/exerciseTags';
 import type {
   CanonicalWeeklyExerciseEdit,
   CanonicalWeeklyExerciseEditState,
@@ -17,6 +19,30 @@ function safeNumber(value: unknown, fallback: number): number {
 
 function rowName(row: WorkoutExercise): string {
   return String(row.exercise?.name ?? '');
+}
+
+/** Accepted manual edits use the existing power catalogue's typed identity.
+ * The compiler authors the role with the row, exactly as automatic builders do.
+ * A replacement may not inherit power/contrast metadata from another exercise.
+ */
+function powerFieldsFor(name: string, previous?: WorkoutExercise): Partial<WorkoutExercise> {
+  const identity = canonicalExerciseName(name);
+  const entry = POWER_EXERCISE_POOL.find((candidate) => candidate.name === identity);
+  if (entry) {
+    const contrast = previous?.power?.kind === 'contrast'
+      && previous.power.family === entry.family
+      && getExerciseTags(identity)?.programming?.contrast !== false;
+    return {
+      role: 'power', power: { family: entry.family, kind: contrast ? 'contrast' : 'primer' },
+      section18Evidence: { protocolVersion: 1, role: 'power', strengthPattern: null,
+        mainStrengthPattern: null, provenance: 'canonical_row_classifier' },
+      ...(!contrast ? { supersetGroup: undefined, supersetOrder: undefined, pairType: undefined } : {}),
+    };
+  }
+  return previous?.role === 'power'
+    ? { role: undefined, power: undefined, section18Evidence: undefined,
+      supersetGroup: undefined, supersetOrder: undefined, pairType: undefined }
+    : {};
 }
 
 /** Ownership is part of an accepted edit, on live application and reconstruction. */
@@ -96,6 +122,7 @@ export function compileCanonicalExerciseEditOnWorkout(
     );
     const replacement: WorkoutExercise = {
       ...found,
+      ...powerFieldsFor(edit.replacement.name, found),
       exerciseId: replacementId,
       prescribedSets,
       prescribedRepsMin,
@@ -140,6 +167,7 @@ export function compileCanonicalExerciseEditOnWorkout(
     -1,
   ) + 1;
   const added: WorkoutExercise = {
+    ...powerFieldsFor(name),
     // One date cannot contain the same canonical exercise twice, so date +
     // canonical name is the accepted component identity. It is identical in
     // the live write and at boot; ledger-generated ids are not available until

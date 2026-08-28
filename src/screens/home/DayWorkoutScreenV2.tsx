@@ -1,3 +1,5 @@
+import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
+import { getEffectiveGameDates } from '../../utils/sessionResolver';
 import React from 'react';
 import {
   View,
@@ -1026,7 +1028,9 @@ export default function DayWorkoutScreenV2() {
     ): SuggestedSwap => {
       const dateISO = date ?? todayISOLocal();
       const environment = resolveTapSwapEnvironment({
+        scheduleState: buildScheduleStateImperative(),
         date: dateISO,
+        gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), dateISO)],
         profile: useProfileStore.getState().onboardingData,
         activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
@@ -1051,7 +1055,9 @@ export default function DayWorkoutScreenV2() {
     let state = quickSwapState.current[slotId];
     if (!state) {
       const environment = resolveTapSwapEnvironment({
+        scheduleState: buildScheduleStateImperative(),
         date,
+        gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), date)],
         profile: useProfileStore.getState().onboardingData,
         activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[date],
@@ -1115,7 +1121,9 @@ export default function DayWorkoutScreenV2() {
       const reason: SwapReason = 'Preference';
       const dateISO = date ?? todayISOLocal();
       const environment = resolveTapSwapEnvironment({
+        scheduleState: buildScheduleStateImperative(),
         date: dateISO,
+        gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), dateISO)],
         profile: useProfileStore.getState().onboardingData,
         activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
@@ -1185,7 +1193,9 @@ export default function DayWorkoutScreenV2() {
     const dateISO = date ?? todayISOLocal();
     return {
       environment: resolveTapSwapEnvironment({
+        scheduleState: buildScheduleStateImperative(),
         date: dateISO,
+        gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), dateISO)],
         profile: useProfileStore.getState().onboardingData,
         activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
@@ -1285,6 +1295,8 @@ export default function DayWorkoutScreenV2() {
           sets: candidate.sets,
           repsMin: candidate.repsMin,
           repsMax: candidate.repsMax,
+          restSeconds: candidate.restSeconds,
+          notes: candidate.notes,
           ...(candidate.prescriptionType ? { prescriptionType: candidate.prescriptionType } : {}),
           ...(candidate.perSide ? { perSide: true } : {}),
           ...(candidate.weightKg !== null ? { weight: candidate.weightKg } : {}),
@@ -2583,6 +2595,9 @@ function ComposedGapNotice({ gaps }: { gaps: readonly ComposedGap[] }) {
   const excluded = gaps.filter((gap) => gap.cause === 'exclusion');
   const kit = gaps.filter((gap) => gap.cause === 'kit');
   const lines: string[] = [];
+  for (const gap of gaps.filter((gap) => gap.cause === 'already_on_day')) {
+    lines.push(`No extra ${slotWordFor(gap.slot)} today — the available exercises are already in this session.`);
+  }
   for (const gap of excluded) {
     // NOT a bare `.map(displayExerciseName)` — `map` passes the INDEX as its
     // second argument and that helper's second parameter is a fallback string.

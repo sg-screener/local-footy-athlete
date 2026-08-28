@@ -43,6 +43,17 @@ export interface ExerciseLookupResult {
 // Populate manually — do NOT use search URLs.
 
 export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
+  "Seated Good Morning (Barbell)": "https://youtube.com/shorts/GycVtINbX9M?si=gEfvrD9NRfadWX2k",
+  "Rotational Medicine-Ball Slam": "https://www.youtube.com/shorts/M9ryqecCLf0",
+  "Medicine-Ball Slam": "https://youtube.com/shorts/fGLHGiYFIqc?si=nRpguZLephK8ZgMD",
+  "Rotational Medicine-Ball Throw": "https://youtube.com/shorts/02c2YLgF8iE?si=0wuPpSMgXz_f0evm",
+  "Reverse Nordic Curl": "https://youtube.com/shorts/Dd3SX08tZV4?si=wYQjogjx48LIE1xt",
+  "SL 45° Back Extension Hold": "https://youtube.com/shorts/ZlAy-WUGzDA?si=5cweA9cEIvz2z5pf",
+  "SL 45° Back Extension": "https://youtube.com/shorts/RpYJ3hc54eI?si=oqOiqjxkSfjvmbDa",
+  "Seated Good Morning": "https://youtube.com/shorts/GycVtINbX9M?si=gEfvrD9NRfadWX2k",
+  "Crab Hold": "https://youtube.com/shorts/m7-7YKIt_wM?si=2z1PTWhiwyGfDSyp",
+  "Standing Knee Extension": "https://youtube.com/shorts/iJkCwL7Jivg?si=v0VQ0LOyyJYlP05p",
+  "Seated Single-Leg Pike Lift": "https://youtube.com/shorts/1v-h-JQBKEY?si=xiftPU8joMStVB3l",
   // ═══ LOWER — Squat ═══
   'Back Squat':                       'https://youtube.com/shorts/hscOjLrW60c?si=w-VfL2KXVSR8tlhX',
   'Front Squat':                      'https://youtube.com/shorts/N4WGYDGu6bI?si=ca0DyggYeEZBOAVa',

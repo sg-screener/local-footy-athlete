@@ -13,6 +13,7 @@
 
 import {
   EXERCISE_TAGS,
+  getExerciseTags,
   type ExerciseTag,
   type InjuryRating,
 } from '../data/exerciseTags';
@@ -20,6 +21,26 @@ import {
   injurySeverityReducesAffectedWork,
   onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
+import { ladderLevelForProfile, meetsTrainingAgeMinimum } from '../rules/experienceCrosswalk';
+import type { ExperienceLevel } from '../types/domain';
+
+/** Typed movement restrictions shared by composition, warm-up and manual doors. */
+export function exerciseProgrammingAllows(name: string, context: {
+  experienceLevel?: ExperienceLevel | null;
+  daysToGame?: number | null;
+  route: 'automatic' | 'manual' | 'warmup' | 'primer';
+}): boolean {
+  const policy = getExerciseTags(name)?.programming;
+  if (!policy) return true;
+  if (!meetsTrainingAgeMinimum(ladderLevelForProfile(context.experienceLevel),
+    context.route === 'manual' ? policy.manualMinimum : policy.automaticMinimum)) return false;
+  if (context.route === 'warmup' && !policy.warmup) return false;
+  if (context.route === 'primer' && !policy.primer) return false;
+  const limit = context.route === 'manual' ? policy.excludeWithinDaysOfGame
+    : Math.max(policy.excludeWithinDaysOfGame ?? -1, policy.automaticExcludeWithinDaysOfGame ?? -1);
+  return limit === undefined || limit < 0 || context.daysToGame === null
+    || (context.daysToGame !== undefined && context.daysToGame > limit);
+}
 
 // ─── Context Types ───
 

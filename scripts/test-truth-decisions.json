@@ -2,6 +2,23 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:exercise-intake": {
+      "kind": "current_contract",
+      "reason": "User-authorized ten-movement intake, exact submitted ratings, canonical equipment answers, automatic reachability, manual Add, session logging and accumulated restart; preserves annual programming contracts.",
+      "productionPaths": [
+        "src/data/exerciseTags.ts",
+        "src/data/exerciseEquipmentRequirement.ts",
+        "src/rules/composeWeek.ts",
+        "src/utils/sessionBuilder.ts",
+        "src/utils/tapSwapHierarchy.ts"
+      ],
+      "contractRefs": [
+        "R-270",
+        "docs/EXERCISE_INTAKE_2026-08-28.md"
+      ],
+      "witnessScript": "test:exercise-intake",
+      "evidenceKind": "green_now"
+    },
     "test:readiness-load-retention": {
       "kind": "current_contract",
       "reason": "Four real-onboarding gender/fact coordinates prove retained lifts keep accepted kilograms while sets reduce, actual projection, restart and Clear. First run failed four load cells; bypassing accepted-load carry reproduces those failures.",
@@ -31,48 +48,81 @@
     "test:undo-reversal": {
       "kind": "current_contract",
       "reason": "Rebound the stale un-awaited removal probe to real onboarding, both durable removal facts, all three scopes, accumulated decisions and completed/restarted Undo. No synchronous timing assumption or stored-output fixture can stand in for the athlete action.",
-      "productionPaths": ["src/store/undoLastDecision.ts", "src/utils/exerciseExclusionOwner.ts"],
-      "contractRefs": ["docs/UNDO_SHAPE_RULING_2026-08-09.md", "R-107"],
+      "productionPaths": [
+        "src/store/undoLastDecision.ts",
+        "src/utils/exerciseExclusionOwner.ts"
+      ],
+      "contractRefs": [
+        "docs/UNDO_SHAPE_RULING_2026-08-09.md",
+        "R-107"
+      ],
       "witnessScript": "test:undo-reversal",
       "evidenceKind": "green_now"
     },
     "test:injury-recomposition": {
       "kind": "current_contract",
       "reason": "The injury door must distinguish restrictions from changed visible prescriptions. Includes real onboarding and seven logged weeks for both sexes: shoulder restriction in week-eight deload, mixed conditioning/strength row preservation, actual signed visible projection, restart and clear. First run rejected the modality rewrite corrupting strength Row names; restart equality alone was insufficient.",
-      "productionPaths": ["src/utils/programControlActions.ts", "src/utils/injurySessionRecomposition.ts", "src/utils/coachModalitySwap.ts", "src/rules/canonicalInjuryConditioning.ts"],
-      "contractRefs": ["R-103"],
+      "productionPaths": [
+        "src/utils/programControlActions.ts",
+        "src/utils/injurySessionRecomposition.ts",
+        "src/utils/coachModalitySwap.ts",
+        "src/rules/canonicalInjuryConditioning.ts"
+      ],
+      "contractRefs": [
+        "R-103"
+      ],
       "witnessScript": "test:injury-recomposition",
       "evidenceKind": "green_now"
     },
     "test:deload-law": {
       "kind": "current_contract",
       "reason": "Re-audit proved that setting the main-lift multiplier to one escaped release. This reviewed, already-green contract asserts the authored numeric reductions for strength, accessories, conditioning and power across scheduled/readiness/illness doors, independent of the implementation constant.",
-      "productionPaths": ["src/rules/deloadWeekRules.ts", "src/rules/materialiseComposedWeek.ts"],
-      "contractRefs": ["docs/LFA_PROGRAMMING_BIBLE.md"],
+      "productionPaths": [
+        "src/rules/deloadWeekRules.ts",
+        "src/rules/materialiseComposedWeek.ts"
+      ],
+      "contractRefs": [
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
       "witnessScript": "test:deload-law",
       "evidenceKind": "green_now"
     },
     "test:block-two-progression": {
       "kind": "current_contract",
       "reason": "Re-audit proved that zeroing an earned increment escaped release. These reviewed generation-level numeric cells require recorded exact-exercise history, the smallest authored increment, honest holds/unset loads and no outgoing-lift load transfer. Expectations do not copy the increment constant.",
-      "productionPaths": ["src/rules/blockBoundaryProgression.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts"],
-      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "productionPaths": [
+        "src/rules/blockBoundaryProgression.ts",
+        "src/rules/canonicalWeeklyProgressionCompiler.ts"
+      ],
+      "contractRefs": [
+        "docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"
+      ],
       "witnessScript": "test:block-two-progression",
       "evidenceKind": "green_now"
     },
     "test:strength-progression-inputs": {
       "kind": "current_contract",
       "reason": "Reviewed input-boundary protection: completed/skipped feedback, actual recorded loads and workout history must reach the real progression owner. Silence and skipped sessions cannot manufacture earned increases.",
-      "productionPaths": ["src/utils/strengthProgressionIntegration.ts", "src/rules/canonicalWeeklyProgressionCompiler.ts"],
-      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "productionPaths": [
+        "src/utils/strengthProgressionIntegration.ts",
+        "src/rules/canonicalWeeklyProgressionCompiler.ts"
+      ],
+      "contractRefs": [
+        "docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"
+      ],
       "witnessScript": "test:strength-progression-inputs",
       "evidenceKind": "green_now"
     },
     "test:training-logging": {
       "kind": "current_contract",
       "reason": "Reviewed logging-to-progression contract: completed versus skipped sessions and exercise loads must remain distinguishable. Numeric annual compiler checks complement, not replace, this production-input witness.",
-      "productionPaths": ["src/store/programStore.ts", "src/utils/strengthProgressionIntegration.ts"],
-      "contractRefs": ["docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"],
+      "productionPaths": [
+        "src/store/programStore.ts",
+        "src/utils/strengthProgressionIntegration.ts"
+      ],
+      "contractRefs": [
+        "docs/BLOCK_TWO_PROGRESSION_CONTRACT_APPROVED_2026-08-16.md"
+      ],
       "witnessScript": "test:training-logging",
       "evidenceKind": "green_now"
     },
@@ -193,9 +243,9 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:authored-cues": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "aggregate",
+      "reason": "Retained: no equivalent full master-sheet and cue/video binding exists. Fixed source scan to inspect production instead of negative test fixtures, and recognizes the existing approved Acceleration session registry. Executed by the exercise-intake release witness.",
+      "evidenceKind": "maintained_in_exercise_intake_release_witness"
     },
     "test:away-flow": {
       "kind": "rewrite_test",
@@ -843,15 +893,22 @@
     "test:power-counting": {
       "kind": "current_contract",
       "reason": "Rebound 2026-08-28: current compiler owns power budgets; retired gateway stripping is not restored. Visible pre-lift ordering replaces obsolete every-row-order-zero. July migration golden retained immutable behind --historical-golden, not today's oracle. Determinism, counting fences, actual power/main-lift reach and budget assertions remain.",
-      "productionPaths": ["src/utils/sessionTemplate.ts", "src/utils/sessionRoles.ts", "src/rules/weeklyScheduler.ts"],
-      "contractRefs": ["R-268", "docs/NORTH_STAR.md"],
+      "productionPaths": [
+        "src/utils/sessionTemplate.ts",
+        "src/utils/sessionRoles.ts",
+        "src/rules/weeklyScheduler.ts"
+      ],
+      "contractRefs": [
+        "R-268",
+        "docs/NORTH_STAR.md"
+      ],
       "witnessScript": "test:power-counting",
       "evidenceKind": "green_now"
     },
     "test:power-primer-policy": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "aggregate",
+      "reason": "Retained unique power delivery, counting and contrast controls with real valid onboarding. Retired obsolete forced-collision and fixed five-row expectations; R-118 collision is held by an explicit materialisation control in exercise-intake. Executed by the exercise-intake release witness.",
+      "evidenceKind": "maintained_in_exercise_intake_release_witness"
     },
     "test:preseason-exposure": {
       "kind": "rewrite_test",
@@ -960,8 +1017,12 @@
     "test:section18-v2": {
       "kind": "current_contract",
       "reason": "Rebound 2026-08-28: complete current onboarding answers and explicit current kit repair the incomplete diagnostic input. All existing assertions and eight mutation arms remain; no production programming changes.",
-      "productionPaths": ["src/rules/section18EffectiveWeekEvaluator.ts"],
-      "contractRefs": ["docs/LFA_PROGRAMMING_BIBLE.md"],
+      "productionPaths": [
+        "src/rules/section18EffectiveWeekEvaluator.ts"
+      ],
+      "contractRefs": [
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
       "witnessScript": "test:section18-v2",
       "evidenceKind": "green_now"
     },
@@ -1011,8 +1072,14 @@
     "test:slot-coverage": {
       "kind": "current_contract",
       "reason": "Rebound 2026-08-28: deleted pool rotation replaced by existing block selection owner. Seven-slot split expectations replace retired three-row completeness. Actual typed strength intent and resolved kit make generated census nonempty. R-233 Nordic coverage explicitly classified; omission/positive fixtures distinguished. Original missing-slot ceilings unchanged.",
-      "productionPaths": ["src/rules/blockExerciseSelection.ts", "src/rules/sessionSlotCoverage.ts"],
-      "contractRefs": ["R-233", "docs/LFA_PROGRAMMING_BIBLE.md"],
+      "productionPaths": [
+        "src/rules/blockExerciseSelection.ts",
+        "src/rules/sessionSlotCoverage.ts"
+      ],
+      "contractRefs": [
+        "R-233",
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
       "witnessScript": "test:slot-coverage",
       "evidenceKind": "green_now"
     },
@@ -1159,6 +1226,32 @@
       ],
       "witnessScript": "test:modifier-lifecycle",
       "evidenceKind": "current_architecture_incomplete"
+    },
+    "test:exercise-add-candidates": {
+      "kind": "retire_test",
+      "reason": "Sam requested removal of superseded tests. Current real-onboarding exercise-intake and canonical compiler/durability journeys cover accepted Add/Swap, load, equipment/injury constraints and accumulated restart. Unique menu grouping, counts, labels, no duplicates, no regression and manual-over-cap checks were consolidated into exerciseIntakeTests before removal; no parallel stale fixture remains.",
+      "retiredTestPaths": [
+        "src/__tests__/exerciseAddCandidatesTests.ts"
+      ],
+      "replacementScripts": [
+        "test:exercise-intake",
+        "test:session-change-durability",
+        "test:canonical-weekly-compiler"
+      ],
+      "evidenceKind": "equivalent_current_journeys_plus_consolidated_menu_checks"
+    },
+    "test:exercise-swap-choices": {
+      "kind": "retire_test",
+      "reason": "Sam requested removal of superseded tests. Current real-onboarding exercise-intake and canonical compiler/durability journeys cover accepted Add/Swap, load, equipment/injury constraints and accumulated restart. Unique menu grouping, counts, labels, no duplicates, no regression and manual-over-cap checks were consolidated into exerciseIntakeTests before removal; no parallel stale fixture remains.",
+      "retiredTestPaths": [
+        "src/__tests__/exerciseSwapChoicesTests.ts"
+      ],
+      "replacementScripts": [
+        "test:exercise-intake",
+        "test:session-change-durability",
+        "test:canonical-weekly-compiler"
+      ],
+      "evidenceKind": "equivalent_current_journeys_plus_consolidated_menu_checks"
     }
   }
 }

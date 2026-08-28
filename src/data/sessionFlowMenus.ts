@@ -201,7 +201,7 @@ export const FLOW_CATEGORY_MUSCLE_MAPPING: Readonly<
   },
   hip_prehab: {
     pools: ['Groin / adductors', 'Lower prehab'],
-    muscleGroups: ['Groin', 'Hips', 'Glutes'],
+    muscleGroups: ['Groin', 'Hips', 'Glutes', 'Hip flexors'],
     authoredDescription: 'Hip prehab: groin/adductor plus hip/glute entries.',
   },
   knee_prehab: {

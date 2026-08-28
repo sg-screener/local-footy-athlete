@@ -98,6 +98,8 @@ export function rankedQuickSwapChoices(args: {
       sets: candidate.sets,
       repsMin: candidate.repsMin,
       repsMax: candidate.repsMax,
+      restSeconds: candidate.restSeconds,
+      notes: candidate.notes,
       ...(candidate.weightKg !== null ? { weight: candidate.weightKg } : {}),
       ...(candidate.prescriptionType ? { prescriptionType: candidate.prescriptionType } : {}),
       ...(candidate.perSide !== undefined ? { perSide: candidate.perSide } : {}),

@@ -20,6 +20,7 @@ import {
   type CoachingPlan,
 } from '../utils/coachingEngine';
 import type { InjuryKey } from '../data/exerciseTags';
+import { scheduledGameProximity } from './weeklyScheduler';
 import {
   materialiseAuthoredSessions,
   type MaterialisationFacts,
@@ -193,6 +194,8 @@ export type CanonicalWeeklyCompilerResult =
       readonly activeInjuryKeys: readonly InjuryKey[];
       /** Compiler-authored kit projection consumed by row composition. */
       readonly compositionAvailability: CanonicalWeeklyCompositionAvailability | null;
+      /** Same resolved fixture context used by the scheduler, read by composition. */
+      readonly daysToGameByDay: Readonly<Record<number, number | null>>;
     }
   | {
       readonly ok: false;
@@ -354,6 +357,8 @@ export function compileCanonicalWeek(
     doseDoor,
     activeInjuryKeys: input.injury?.activeInjuryKeys ?? [],
     compositionAvailability: input.availability?.composition ?? null,
+    daysToGameByDay: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(day =>
+      [day, scheduledGameProximity(day, scheduler).daysUntilNextGame])),
   };
 }
 

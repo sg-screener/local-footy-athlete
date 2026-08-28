@@ -2686,6 +2686,9 @@ function visibleExerciseSignature(workout: Workout | null | undefined): string {
       repsMin: row.prescribedRepsMin,
       repsMax: row.prescribedRepsMax,
       weight: row.prescribedWeightKg,
+      prescriptionType: row.prescriptionType ?? 'reps',
+      perSide: row.perSide ?? false,
+      restSeconds: row.restSeconds ?? 0,
     }))
     .sort());
 }
@@ -3552,25 +3555,31 @@ export function stageAthleteSessionAdditionTransaction(
       targetDate: date,
     });
   }
-  const id = userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder });
+  // Idempotency describes the accepted day, not an old addition record. A
+  // later component removal can leave that record active while its content is
+  // absent. Each actual addition gets its own accepted-revision identity; the
+  // existing ordered effect/Undo owners retain and supersede the earlier facts.
   const existing = state.userRemovalConstraints.find((constraint) =>
-    constraint.id === id && constraint.status === 'active');
-  if (existing) {
+    constraint.targetDate === date && constraint.scope === 'whole_session' &&
+    constraint.status === 'active' && !!constraint.remainingWorkout);
+  const currentWorkout = accepted.visibleWorkouts.find((workout) => workout.dayOfWeek === dayOfWeek);
+  if (existing && visibleExerciseSignature(currentWorkout) === visibleExerciseSignature(addedWorkout)) {
     return {
       proposal: null,
       result: { program: programSurfaces(state), context: prior },
       adjustment: state.reversibleAdjustmentLedger.adjustments.find((adjustment) =>
-        adjustment.linkedUserRemovalConstraintIds.includes(id)) ?? null,
+        adjustment.linkedUserRemovalConstraintIds.includes(existing.id)) ?? null,
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
       noChange: {
         reason: 'athlete_mutation_already_applied',
-        constraintId: id,
+        constraintId: existing.id,
         date: date,
       },
     };
   }
+  const id = `${userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder })}:add:${prior.revision + 1}`;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,

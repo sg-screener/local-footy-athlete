@@ -1940,6 +1940,12 @@ export function registerProjectionCopy(): void {
     // app told an athlete who had banned every row that their equipment was the
     // problem.
     {
+      id: 'day.gap.already_on_day',
+      source: 'sam_ruling',
+      provenance: 'docs/STATUS_INTAKE.md — proposed disclosure for the authorized duplicate-exercise fix, 2026-08-28.',
+      text: 'No extra {slot} today — the available exercises are already in this session.',
+    },
+    {
       id: 'day.gap.kit_with_need',
       source: 'authored_sheet',
       provenance: 'screens/home/DayWorkoutScreenV2.tsx ComposedGapNotice — the kit '

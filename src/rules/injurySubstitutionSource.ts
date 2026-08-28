@@ -53,6 +53,7 @@ const SUBSTITUTION_REASON: Readonly<Record<string, string>> = {
   kit_today: 'equipment today',
   injury: 'injury',
   excluded_today: 'you left it out',
+  already_on_day: 'already in this session',
 };
 
 export interface InjurySubstitutionSourceRef {
@@ -60,7 +61,7 @@ export interface InjurySubstitutionSourceRef {
   readonly baseExerciseName: string;
   /** The authored exercise. Internal history — never rendered. */
   readonly originExerciseName?: string;
-  readonly cause: 'excluded_today' | 'kit_today' | 'injury';
+  readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
 }
 
 /**

@@ -1080,7 +1080,7 @@ Upper-body power:
 Speed bench
 Explosive push-ups
 Explosive landmine press
-Medicine ball work has been REMOVED from LFA entirely. Chest pass, slam and overhead throw are retired; the power block is bodyweight-first and never depends on a medicine ball being available.
+R-270 (2026-08-28) restores only Rotational Medicine-Ball Throw, Medicine-Ball Slam and Rotational Medicine-Ball Slam, with the explicit equipment/safe-space answers, prescriptions and eligibility in `docs/EXERCISE_INTAKE_2026-08-28.md`. Existing bodyweight options remain. Chest passes and overhead throws remain retired, and no conditioning slam template is authorized. Guard: `test:exercise-intake` / `LAW-exercise-intake-20260828`.
 Power exercise selection and experience gating
 The app picks ONE primary power exercise per session from the power pool, and the pick is block-stable: the same exercise every week within a training block, rotating at block rollover so vertical, lateral and depth qualities all get trained across blocks. No per-week randomness. The athlete can change the pick and the change persists for the block.
 Experience gating uses ONE ladder for the whole app: new -> developing -> consistent -> advanced. Every power entry declares a minimum on that ladder.

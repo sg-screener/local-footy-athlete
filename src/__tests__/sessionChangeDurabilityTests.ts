@@ -76,6 +76,7 @@ import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { coldStartThroughOnboarding, followTheWeek, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
+import type { AddCandidate } from '../utils/addExerciseCandidates';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
@@ -191,6 +192,7 @@ function offeredReplacementFor(victim: string, existing: string[]): string {
   const { resolveTapSwapEnvironment, getTapSwapChoices, groupTapSwapChoices } =
     require('../utils/tapSwapHierarchy');
   const environment = quiet(() => resolveTapSwapEnvironment({
+    scheduleState: buildScheduleStateImperative(),
     date: TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints, readinessSignal: null,
   }));
@@ -222,13 +224,13 @@ async function swap(victim: string, replacement: string): Promise<{ ok: boolean 
   return result;
 }
 
-async function add(exercise: string): Promise<{ ok: boolean }> {
+async function add(exercise: AddCandidate): Promise<{ ok: boolean }> {
   const seen = undoToastSeenMarker(useDecisionLedgerStore.getState().entries);
   const result = await quietAsync(() => door()({
     type: 'add_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
     scope: 'today_only',
-    payload: { date: TARGET, exercise: { name: exercise, sets: 2, repsMin: 8, repsMax: 12 } },
+    payload: { date: TARGET, exercise },
     requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
   }, { todayISO: TARGET })) as { ok: boolean };
   if (result.ok) ok('actual Add exposes its newest decision through the shared Undo model',
@@ -236,13 +238,16 @@ async function add(exercise: string): Promise<{ ok: boolean }> {
   return result;
 }
 
-function offeredAddFor(existing: string[]): string {
+function offeredAddFor(existing: string[]): AddCandidate {
   const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
   const { legalAddFamilies, legalAddCandidates } = require('../utils/addExerciseCandidates');
   const environment = quiet(() => resolveTapSwapEnvironment({
+    scheduleState: buildScheduleStateImperative(),
     date: TARGET, profile: useProfileStore.getState().onboardingData,
     activeConstraints: [], readinessSignal: null,
   }));
+  ok('early off-season Add reads the accepted no-power contract',
+    environment.weeklyContract?.power.eligible === false);
   // SAM'S HIERARCHY (2026-08-20): the first thing the athlete could actually tap
   // through to — first family, first heading, first leaf under it, first choice.
   // The depth is not uniform, so this walks LEAVES rather than assuming a level.
@@ -252,8 +257,10 @@ function offeredAddFor(existing: string[]): string {
   };
   const families = legalAddFamilies(args) as
     { groups: { leaves: { id: string }[] }[] }[];
+  ok('early off-season Add does not offer rejected power work',
+    !families.some(family => family.groups.some(group => group.leaves.some(leaf => leaf.id === 'power'))));
   const leaf = families[0]!.groups[0]!.leaves[0]!.id;
-  return (legalAddCandidates({ ...args, leaf }) as { name: string }[])[0]!.name;
+  return (legalAddCandidates({ ...args, leaf }) as AddCandidate[])[0]!;
 }
 
 async function restart(): Promise<boolean> {
@@ -487,10 +494,11 @@ async function main(): Promise<void> {
   await install();
   const s7Start = rowsOn(TARGET);
   const s7Added = offeredAddFor(s7Start.map((r) => r.split('@')[0]!));
-  await add(s7Added);
+  const s7AddResult = await add(s7Added);
+  ok('CONTROL — the offered Add is accepted', s7AddResult.ok, JSON.stringify({ exercise: s7Added, result: s7AddResult }));
   const s7AfterAdd = rowsOn(TARGET);
   ok('ADD landed and took nothing away',
-    s7AfterAdd.some((r) => r.startsWith(`${s7Added}@`))
+    s7AfterAdd.some((r) => r.startsWith(`${s7Added.name}@`))
       && s7AfterAdd.length === s7Start.length + 1, JSON.stringify(s7AfterAdd));
   const s7Victim = s7AfterAdd[0]!.split('@')[0]!;
   const s7New = offeredReplacementFor(s7Victim, s7AfterAdd.map((r) => r.split('@')[0]!));
@@ -501,7 +509,7 @@ async function main(): Promise<void> {
   ok('the restarted session is IDENTICAL — the add and the swap both survive',
     sameSession(s7After, s7Before), `${JSON.stringify(s7Before)} -> ${JSON.stringify(s7After)}`);
   ok('and the ADD is still there by name',
-    s7After.some((r) => r.startsWith(`${s7Added}@`)), JSON.stringify(s7After));
+    s7After.some((r) => r.startsWith(`${s7Added.name}@`)), JSON.stringify(s7After));
 
   /* ═══ 8 ═══════════════════════════════════════════════════════════════ */
   console.log("\n[8] SAM'S RULING — a later injury DISPLACES the athlete's choice, says so, keeps it, and gives it back");

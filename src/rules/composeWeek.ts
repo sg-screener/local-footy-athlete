@@ -62,6 +62,7 @@ import {
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
 import { resolveComposedDose, resolveComposedLoad } from './composedDose';
+import { exerciseProgrammingAllows } from '../utils/exerciseFilter';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
@@ -69,6 +70,8 @@ import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
 export interface ComposerPlannedDay {
+  /** From the canonical fixture-aware scheduler; null explicitly means no game. */
+  readonly daysToGame?: number | null;
   readonly dayOfWeek: number;
   /** Is the club running a session on this day? Read by the full-body shape. */
   readonly isTeamDay: boolean;
@@ -191,6 +194,8 @@ export interface ComposerInputs {
 export type ComposedRowRole = 'main_strength' | 'strength_accessory';
 
 export interface ComposedRow {
+  readonly restSeconds?: number;
+  readonly notes?: string;
   /** Clause (b): ONE identity for selection, legality, storage and comparison. */
   readonly identity: ComposedExerciseIdentity;
   readonly slot: SessionSlot;
@@ -211,7 +216,7 @@ export interface ComposedRow {
    * can re-read a hold as reps. ('distance' left with R-133: no composed row
    * prescribes metres any more.)
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly prescriptionType?: 'reps' | 'duration' | 'duration_minutes';
   readonly perSide?: boolean;
   /**
    * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base
@@ -230,7 +235,7 @@ export interface ComposedRow {
      * the return date, an exclusion ends when the athlete restores the exercise.
      * The same distinction `ComposedGap.cause` already draws.
      */
-    readonly cause: 'excluded_today' | 'kit_today';
+    readonly cause: 'excluded_today' | 'kit_today' | 'already_on_day';
   };
 }
 
@@ -257,7 +262,7 @@ export interface ComposedRow {
 export interface ComposedGap {
   readonly dayOfWeek: number;
   readonly slot: SessionSlot;
-  readonly cause: 'kit' | 'exclusion';
+  readonly cause: 'kit' | 'exclusion' | 'already_on_day';
   readonly wouldNeed: string | null;
   /**
    * The exercises the athlete left out that emptied this slot. Set only on an
@@ -1554,7 +1559,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         hingePriorityFirst(
           slot,
           experiencePreferred(
-            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
+            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)
+              && exerciseProgrammingAllows(id, { experienceLevel: inputs.profile.experienceLevel,
+                daysToGame: planned.daysToGame, route: 'automatic' })),
             inputs.profile,
           ),
         );
@@ -1603,7 +1610,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         return filtered.length > 0 ? filtered : list;
       };
       const baseLegal = legalUnder(excluded, inputs.kit);
-      const legal = withoutRdlFamily(legalUnder(excludedToday, kitToday));
+      const legalBeforeDayIdentity = withoutRdlFamily(legalUnder(excludedToday, kitToday));
+      // One exercise once per day. Keep the block record independent of the
+      // day's shape; resolve a collision here, before any row is authored.
+      const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));
       /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */
@@ -1771,7 +1781,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * the slot is NOT pushed to `required`, because a slot nothing filled must
        * not be counted as owed-and-met by the judge. */
       if (legal.length === 0) {
-        if (!planeChoice) {
+        if (legalBeforeDayIdentity.length > 0) {
+          gaps.push({ dayOfWeek: planned.dayOfWeek, slot, cause: 'already_on_day', wouldNeed: null });
+        } else if (!planeChoice) {
           gaps.push({
             // Attributed against the DAY's kit: a slot only today's kit empties
             // is a kit gap the athlete can see the cause of, and one the
@@ -1812,7 +1824,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const substitutionReason: ComposedRow['substitutedFor'] = substitutedToday
         ? {
             baseIdentity: selection.identity,
-            cause: excludedToday.has(selection.identity) ? 'excluded_today' : 'kit_today',
+            cause: excludedToday.has(selection.identity) ? 'excluded_today'
+              : identitiesThisDay.has(selection.identity) ? 'already_on_day' : 'kit_today',
           }
         : undefined;
       usedThisWeek.add(identity);
@@ -1853,6 +1866,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         sets: dose.sets,
         repsMin: dose.repsMin,
         repsMax: dose.repsMax,
+        ...(dose.restSeconds !== undefined ? { restSeconds: dose.restSeconds } : {}),
+        ...(dose.notes ? { notes: dose.notes } : {}),
         // U-2 applies exactly once, here, before authorship. The composer emits
         // no starting load of its own, so the cut has nothing to stack onto.
         // THE FINAL LOAD, DERIVED FROM THE BASE — base working load x one

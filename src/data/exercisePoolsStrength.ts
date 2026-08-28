@@ -67,6 +67,7 @@ export type PoolRole = 'anchor' | 'accessory';
  * wording he approved, covering unloaded compounds and ballistic strength work.
  */
 export type ComposedDoseCategory =
+  | 'authored_exercise'
   | 'main_lift'
   | 'loaded_lower_secondary_compound'
   | 'isolation_accessory'
@@ -152,6 +153,7 @@ export interface PoolDefinition {
 }
 
 export interface RotationContext {
+  daysToGameByDay?: Readonly<Partial<Record<number, number | null>>>;
   /**
    * WRITER: canonical weekly compiler call site in generateProgram.
    * READER: buildWorkoutsFromCoach.
@@ -404,6 +406,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // wrong than a lost slot; more variety is a content unit, not this one.
       slot: 'hinge', role: 'accessory', entries: [
         { name: 'Single-Leg RDL', doseCategory: 'loaded_lower_secondary_compound',    loadRatio: 0.45, group: 'single_leg_hip' },
+        { name: "SL 45° Back Extension", loadRatio: 0, group: 'single_leg_hip' },
         { name: 'Hip Thrusts', doseCategory: 'loaded_lower_secondary_compound',       loadRatio: 1.10, group: 'bilateral_hinge' },
         { name: 'Kettlebell Swings', doseCategory: 'ballistic_strength', loadRatio: 0.35, group: 'bilateral_hinge' },
         // Sam ruled 2026-07-25: bodyweight-with-optional. loadRatio 0 means no

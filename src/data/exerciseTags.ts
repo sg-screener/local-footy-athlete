@@ -62,6 +62,32 @@ export interface InjuryProfile {
  */
 export type InjuryKey = keyof InjuryProfile;
 
+/** Curated movement doses override generic slot bands (28 August intake).
+ * Writer: this catalogue. Readers: composedDose, power rows and manual Add/Swap.
+ * Guard: exerciseIntakeTests. No derived prescription is persisted here.
+ */
+export interface AuthoredExercisePrescription {
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  restSeconds: number;
+  prescriptionType: 'reps' | 'duration';
+  perSide: boolean;
+  notes: string;
+}
+
+export interface ExerciseProgramming {
+  strengthRole?: 'none' | 'accessory' | 'secondary';
+  automaticMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
+  manualMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
+  excludeWithinDaysOfGame?: number;
+  automaticExcludeWithinDaysOfGame?: number;
+  warmup: boolean;
+  primer: boolean;
+  /** Rotation/throwing is not a same-pattern pressing contrast. */
+  contrast?: boolean;
+}
+
 export interface ExerciseTag {
   movement: MovementPattern;
   region: Region;
@@ -73,6 +99,8 @@ export interface ExerciseTag {
   eccentric: EccentricLevel;
   lateWeek: LateWeekRating;
   power?: boolean;
+  prescription?: AuthoredExercisePrescription;
+  programming?: ExerciseProgramming;
   injury: InjuryProfile;
 }
 
@@ -193,6 +221,240 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
 // ─── Exercise Tag Registry ───
 
 export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
+  'Seated Good Morning (Barbell)': {
+    movement: 'hinge', region: 'lower', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'moderate', lateWeek: 'caution',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'good',
+      hamstring: 'caution', knee: 'caution', calf: 'good',
+      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
+      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 60, prescriptionType: 'reps', perSide: false,
+      notes: 'Lower for 5 seconds. Start with an empty bar; log total external load. Mobility only; excluded the day before a game.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'developing', manualMinimum: 'developing',
+      warmup: false, primer: false, excludeWithinDaysOfGame: 1,
+    },
+  },
+  'Rotational Medicine-Ball Slam': {
+    movement: 'core', region: 'upper', load: 'moderate',
+    fatigue: 'low', doms: 'low', stability: 'moderate',
+    unilateral: true, eccentric: 'low', lateWeek: 'caution',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'caution',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
+      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'wrist/hand': 'avoid',
+    },
+    prescription: {
+      sets: 3, repsMin: 4, repsMax: 6,
+      restSeconds: 60, prescriptionType: 'reps', perSide: true,
+      notes: 'Start around 3–6 kg; log total ball weight. Reset each rep. Low-volume power only near games; stop if speed drops.',
+    },
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'new', warmup: false,
+      primer: true, contrast: false,
+    },
+    power: true,
+  },
+  'Medicine-Ball Slam': {
+    movement: 'vertical_pull', region: 'upper', load: 'moderate',
+    fatigue: 'moderate', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'low', lateWeek: 'caution',
+    injury: {
+      groin: 'good', hip: 'caution', quad: 'caution',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
+      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'wrist/hand': 'avoid',
+    },
+    prescription: {
+      sets: 3, repsMin: 4, repsMax: 6,
+      restSeconds: 60, prescriptionType: 'reps', perSide: false,
+      notes: 'Start around 3–6 kg; log total ball weight. Low-volume power only near games. Stop if speed drops.',
+    },
+    programming: {
+      automaticMinimum: 'new', manualMinimum: 'new', warmup: false,
+      primer: true, contrast: false,
+    },
+    power: true,
+  },
+  'Rotational Medicine-Ball Throw': {
+    movement: 'core', region: 'upper', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'moderate',
+    unilateral: true, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'caution',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
+      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 3, repsMin: 3, repsMax: 5,
+      restSeconds: 60, prescriptionType: 'reps', perSide: true,
+      notes: 'Use a wall-throw ball. Start around 2–4 kg; log total ball weight. Fast reps with complete recovery.',
+    },
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'new', warmup: false,
+      primer: true, contrast: false,
+    },
+    power: true,
+  },
+  'Reverse Nordic Curl': {
+    movement: 'isolation_lower', region: 'lower', load: 'moderate',
+    fatigue: 'moderate', doms: 'high', stability: 'low',
+    unilateral: false, eccentric: 'high', lateWeek: 'avoid',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'avoid',
+      hamstring: 'good', knee: 'avoid', calf: 'good',
+      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
+      neck: 'good', shoulder: 'good', elbow: 'good',
+      'wrist/hand': 'good',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 60, prescriptionType: 'reps', perSide: false,
+      notes: 'Lower for 5 seconds. Bodyweight; beginners use shallow range or band assistance. External loading not yet specified.',
+    },
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'new', warmup: false,
+      primer: false, excludeWithinDaysOfGame: 2,
+    },
+  },
+  'SL 45° Back Extension Hold': {
+    movement: 'isolation_lower', region: 'lower', load: 'moderate',
+    fatigue: 'low', doms: 'low', stability: 'moderate',
+    unilateral: true, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'good',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
+      neck: 'good', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 2, repsMin: 30, repsMax: 30,
+      restSeconds: 45, prescriptionType: 'duration', perSide: true,
+      notes: 'Short submaximal holds near games; never maximum duration. Start bodyweight; optional plate or dumbbell at chest, total external load.',
+    },
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'developing', warmup: true,
+      primer: true,
+    },
+  },
+  'SL 45° Back Extension': {
+    movement: 'hinge', region: 'lower', load: 'moderate',
+    fatigue: 'moderate', doms: 'moderate', stability: 'moderate',
+    unilateral: true, eccentric: 'moderate', lateWeek: 'caution',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'good',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
+      neck: 'good', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 3, repsMin: 10, repsMax: 10,
+      restSeconds: 60, prescriptionType: 'reps', perSide: true,
+      notes: 'Start with bodyweight. Optional plate or dumbbell at chest; log total external load. Caution two days before a game.',
+    },
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'developing', warmup: false,
+      primer: false, automaticExcludeWithinDaysOfGame: 1,
+    },
+  },
+  'Seated Good Morning': {
+    movement: 'hinge', region: 'lower', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'moderate', lateWeek: 'caution',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'good',
+      hamstring: 'caution', knee: 'caution', calf: 'good',
+      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
+      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 60, prescriptionType: 'reps', perSide: false,
+      notes: 'Lower for 5 seconds. Bodyweight mobility; never a main lift.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: false, primer: false,
+    },
+  },
+  'Crab Hold': {
+    movement: 'core', region: 'full', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'moderate',
+    unilateral: false, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'good', hip: 'caution', quad: 'good',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
+      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'wrist/hand': 'avoid',
+    },
+    prescription: {
+      sets: 2, repsMin: 15, repsMax: 30,
+      restSeconds: 30, prescriptionType: 'duration', perSide: false,
+      notes: 'Hold with an open chest. Bodyweight. Familiar and pain-free near games.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+  },
+  'Standing Knee Extension': {
+    movement: 'isolation_lower', region: 'lower', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'moderate',
+    unilateral: true, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'caution',
+      hamstring: 'caution', knee: 'caution', calf: 'caution',
+      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
+      neck: 'good', shoulder: 'good', elbow: 'good',
+      'wrist/hand': 'good',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 30, prescriptionType: 'reps', perSide: true,
+      notes: 'Squeeze for 5 seconds each rep. Bodyweight.',
+    },
+    programming: {
+      automaticMinimum: 'new', manualMinimum: 'new', warmup: true,
+      primer: false,
+    },
+  },
+  'Seated Single-Leg Pike Lift': {
+    movement: 'isolation_lower', region: 'lower', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: true, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'caution',
+      hamstring: 'caution', knee: 'good', calf: 'good',
+      'ankle/foot': 'good', ribs: 'good', lowerBack: 'caution',
+      neck: 'good', shoulder: 'good', elbow: 'good',
+      'wrist/hand': 'good',
+    },
+    prescription: {
+      sets: 2, repsMin: 6, repsMax: 10,
+      restSeconds: 30, prescriptionType: 'reps', perSide: true,
+      notes: 'Hold each rep for 2 seconds. Bodyweight.',
+    },
+    programming: {
+      automaticMinimum: 'new', manualMinimum: 'new', warmup: true,
+      primer: false,
+    },
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // LOWER BODY — SQUAT / LUNGE

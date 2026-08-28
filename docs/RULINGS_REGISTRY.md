@@ -6876,3 +6876,32 @@ in WC-135 and R-265, not their unrelated safety limits or doses.
 Guard: `LAW-speed-quality-and-landmine-power`, `test:canonical-weekly-compiler`
 (`inseasonSpeedTruth`, `powerOnlyLandmineJourney`). Verification status and
 NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
+
+**R-270** · Sam's saved exercise implementation authorization, 2026-08-28.
+
+Owner: intake. Implement all ten movements in `docs/EXERCISE_INTAKE_2026-08-28.md`
+through the existing catalogue and canonical compiler, including their approved
+automatic, manual, warm-up, accessory and Primer uses. The submitted ratings,
+units, per-side prescriptions, experience and fixture restrictions bind.
+Ball suitability, throwing wall and safe slam space require explicit equipment
+answers; gym location and dead-ball ownership do not answer them. The three
+specified ball power movements supersede the former blanket retirement; chest
+passes, overhead throws, Bird Dogs and a conditioning slam template do not return.
+Power rest remains hidden. Estimated 1RM is outside this work.
+Guard: `LAW-exercise-intake-20260828`, `test:exercise-intake`.
+Unresolved variant instructions and NOT COVERED: `docs/STATUS_INTAKE.md`.
+
+**R-271** · Sam's attached device findings, 2026-08-28.
+
+Owner: intake. Source: `/Users/samgeurts/Downloads/Untitled note.pdf`, three pages,
+supplied with the explicit request to fix these alongside the exercise intake.
+An addition confirmation names the work added, not the entire resulting day.
+Removal names the visible components, including Gunshow and Mobility. Removing
+Mobility must permit adding it again, retaining the other component and allowing
+Undo and restart. Session and fixture edits belong to history, not Active
+Modifiers; the latter retains athlete-state restrictions such as injury, illness,
+fatigue, equipment and travel. This narrows R-262's session/fixture inclusion;
+its restriction visibility, Clear and shared-count requirements remain.
+Guard: `LAW-session-stack-and-status-boundary`, `test:canonical-weekly-compiler`
+(`mobilityAddJourney`) and `test:modifier-lifecycle`.
+Transaction reassessment, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.

@@ -102,7 +102,8 @@ function materialiseRow(
     prescribedRepsMin: row.repsMin,
     prescribedRepsMax: row.repsMax,
     prescribedWeightKg: row.load,
-    restSeconds: 0,
+    restSeconds: row.restSeconds ?? 0,
+    notes: row.notes,
     // Slice 5 (Sam, 2026-08-23): an isometric's authored UNIT reaches the
     // stored row — without this, `2 × 20-30 seconds` rendered as `2 × 15`
     // reps on every surface, which is the defect he reported.

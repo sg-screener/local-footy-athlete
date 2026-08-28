@@ -30,6 +30,7 @@ import { applyLighterDayForToday } from '../utils/lighterDayTransaction';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { dismissActiveCoachNote } from '../utils/activeCoachNotes';
 import { executeFixtureMutationTransaction } from '../store/fixtureMutationTransaction';
+import { undoLastDecision } from '../store/undoLastDecision';
 import { applyPlanChange } from '../utils/planChangeProducer';
 import { applyExerciseExclusionDecision } from '../utils/exerciseExclusionOwner';
 import { settleDerivedWorldAfterDecision } from '../store/quiescentBoot';
@@ -220,7 +221,7 @@ async function main() {
       visibleWeek: days(), todayISO: YEAR_START, applyOverride: () => undefined }));
     check('accumulated/real prior session edit reached', edit.ok, edit.message);
     const sessionEdit = statusNotes().find(note => note.title === 'Session removed');
-    check('session edit/accepted removal appears on both surfaces', !!sessionEdit && ids(statusNotes()) === ids(programNotes()));
+    check('session edit/accepted removal is absent from modifiers on both surfaces', !sessionEdit && ids(statusNotes()) === ids(programNotes()));
     const edited = signature();
     const id = await quietAsync(readiness('cooked_week').apply);
     await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
@@ -228,7 +229,7 @@ async function main() {
     check('accumulated/clearing readiness preserves the prior session edit', signature() === edited);
     const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
     check('accumulated/edit still preserved after restart', boot.ok && signature() === edited);
-    check('session edit/row survives restart and clearing another modifier', !!sessionEdit && statusNotes().some(note => note.id === sessionEdit.id));
+    check('session edit/restart and clearing another modifier do not expose session history', !statusNotes().some(note => note.title === 'Session removed'));
     const row = days().flatMap(day => day.workout?.exercises ?? [])[0];
     const removed = quiet(() => applyExerciseExclusionDecision({ exercise: row.exercise.name,
       scope: 'until_changed', decidedOnISO: YEAR_START }));
@@ -249,14 +250,11 @@ async function main() {
     const edit = quiet(() => applyPlanChange({ change: { kind: 'remove_session', date, scope: 'whole_day' },
       visibleWeek: days(), todayISO: YEAR_START, applyOverride: () => undefined }));
     const row = statusNotes().find(note => note.title === 'Session removed');
-    check('session edit/latest change exposes its existing Undo', edit.ok && !!row?.reversibleAdjustmentId);
-    if (row) {
-      await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
-      const reopened = statusNotes().find(note => note.id === row.id)!;
-      check('session edit/restart preserves Undo', !!reopened?.reversibleAdjustmentId);
-      await clearNote(reopened);
-      check('session edit/Status Undo restores baseline and removes row', signature() === baseline && !statusNotes().some(note => note.id === row.id));
-    }
+    check('session edit/real removal is not an athlete-state modifier', edit.ok && !row);
+    await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check('session edit/restart does not expose session history', !statusNotes().some(note => note.title === 'Session removed'));
+    const undone = await quietAsync(() => undoLastDecision());
+    check('session edit/existing Undo restores baseline', undone.outcome === 'undone' && signature() === baseline);
   } catch (error) { check('session edit/complete Undo lifecycle', false, String(error)); }
   for (const kind of ['add_category', 'swap_category', 'move_session', 'add_template', 'swap_template'] as const) {
     try {
@@ -271,18 +269,14 @@ async function main() {
       const result = quiet(() => applyPlanChange({ change, visibleWeek, todayISO: YEAR_START, applyOverride: () => undefined }));
       const title = kind === 'move_session' ? 'Session moved' : kind.startsWith('add_') ? 'Session added' : 'Session swapped';
       const row = statusNotes().find(note => note.title === title);
-      check(`${kind}/real edit changes training and has a modifier`, result.ok && signature() !== baseline && !!row,
+      check(`${kind}/real edit changes training without becoming an athlete-state modifier`, result.ok && signature() !== baseline && !row,
         JSON.stringify({ result, source: source.date, target: target.date, notes: statusNotes() }));
       check(`${kind}/Program and Status agree`, ids(statusNotes()) === ids(programNotes()));
-      if (row) {
-        const changed = signature();
-        const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
-        const reopened = statusNotes().find(note => note.id === row.id);
-        check(`${kind}/reopen retains row and exact program`, boot.ok && signature() === changed && !!reopened);
-        check(`${kind}/latest change remains undoable`, !!reopened?.reversibleAdjustmentId);
-        await clearNote(reopened!);
-        check(`${kind}/Status Undo restores baseline`, signature() === baseline && !statusNotes().some(note => note.id === row.id));
-      }
+      const changed = signature();
+      const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+      check(`${kind}/reopen retains exact program without a modifier`, boot.ok && signature() === changed && !statusNotes().some(note => note.title === title));
+      const undone = await quietAsync(() => undoLastDecision());
+      check(`${kind}/existing Undo restores baseline`, undone.outcome === 'undone' && signature() === baseline);
     } catch (error) { check(`${kind}/complete modifier lifecycle`, false, String(error)); }
   }
   try {
@@ -304,17 +298,14 @@ async function main() {
       expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
       source: { requestedBy: 'athlete', producer: 'tap', surface: 'program_tab', commandId: 'modifier-fixture-add' } }));
     const fixture = statusNotes().find(note => note.effect === 'week_rebuilt');
-    check('fixture/accepted game change has a modifier and undo', result.outcome === 'accepted' && !!fixture?.reversibleAdjustmentId,
+    check('fixture/accepted game change is absent from athlete-state modifiers', result.outcome === 'accepted' && !fixture,
       JSON.stringify({ result, notes: statusNotes() }));
     check('fixture/count and rows agree', ids(statusNotes()) === ids(programNotes()));
-    if (fixture) {
-      const active = signature();
-      const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
-      check('fixture/row and program survive restart', boot.ok && signature() === active && statusNotes().some(note => note.id === fixture.id),
-        JSON.stringify({ boot, sameProgram: signature() === active, before: fixture, after: statusNotes() }));
-      await clearNote(fixture);
-      check('fixture/Status undo restores baseline', signature() === baseline && !statusNotes().some(note => note.id === fixture.id));
-    }
+    const active = signature();
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check('fixture/program survives restart without a modifier', boot.ok && signature() === active && !statusNotes().some(note => note.effect === 'week_rebuilt'));
+    const undone = await quietAsync(() => undoLastDecision());
+    check('fixture/existing undo restores baseline', undone.outcome === 'undone' && signature() === baseline);
   } catch (error) { check('fixture/complete lifecycle', false, String(error)); }
   try {
     await fresh();

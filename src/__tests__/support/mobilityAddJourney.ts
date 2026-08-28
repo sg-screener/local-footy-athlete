@@ -7,6 +7,8 @@ import { snapshotProjectedDay } from '../../utils/coachRevisionProposal';
 import { undoLastDecision } from '../../store/undoLastDecision';
 import { getSessionComponentRows } from '../../utils/sessionComponents';
 import { project } from '../../rules/projectVisibleWeek';
+import { stageAthleteSessionAdditionTransaction } from '../../store/acceptedStateTransaction';
+import { decisionLedgerEntries } from '../../store/decisionLedgerStore';
 
 export async function mobilityAddJourney(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   const date = '2026-09-28';
@@ -41,6 +43,10 @@ export async function mobilityAddJourney(storage: Map<string, string>, ok: (labe
     ok(`${label}: accepted Add keeps original Mobility and adds content`, result.ok && finalNames.length > originalNames.length &&
       originalNames.every(n => finalNames.includes(n)), JSON.stringify({ result, originalNames, finalNames }));
     const snapshot = snapshotProjectedDay(current);
+    ok(`${label}: confirmation names only the addition`, result.ok && !result.message.includes('Mobility'));
+    const binMenu = quiet(() => listPlanChangeOptionsForDay({ visibleWeek: after, date: target.date, todayISO: date }));
+    ok(`${label}: removal names Mobility rather than recovery work`,
+      binMenu.binScopes.some(scope => scope.id === 'recovery' && scope.label === 'Mobility'));
     ok(`${label}: both visible component kinds survive`, !!snapshot.workout?.sections.some(s => s.kind === 'recovery') &&
       !!snapshot.workout?.sections.some(s => s.kind === planChangeCategoryAddsSessionKind(category)), JSON.stringify(snapshot.workout?.sections.map(s => s.kind)));
     const parts = project({ week: after, weekStart: date }).days.find(day => day.date === target.date)!.parts;
@@ -63,6 +69,37 @@ export async function mobilityAddJourney(storage: Map<string, string>, ok: (labe
     const removed = visibleSignature(view());
     const removeBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
     ok(`${label}: component Remove survives restart`, removeBoot.ok && visibleSignature(view()) === removed);
+    const priorEntries = JSON.stringify(decisionLedgerEntries());
+    const priorEntryCount = decisionLedgerEntries().length;
+    const readd = quiet(() => applyPlanChange({ change: { kind: 'add_category', date: target.date, category: 'mobility' },
+      visibleWeek: view(), todayISO: date, applyOverride: () => undefined }));
+    const readded = view().find(d => d.date === target.date)!;
+    ok(`${label}: removed Mobility can be added again`, readd.ok &&
+      project({ week: view(), weekStart: date }).days.find(d => d.date === target.date)!.parts.some(p => p.headline === 'Mobility'),
+      JSON.stringify({ readd, rows: readded.workout?.exercises.map(r => r.exercise.name) }));
+    ok(`${label}: re-add confirmation names only Mobility`, readd.ok && /^Done\. Mobility added/.test(readd.message));
+    if (readd.ok) {
+      const readdSignature = visibleSignature(view());
+      ok(`${label}: re-add appends one decision without rewriting prior history`,
+        decisionLedgerEntries().length === priorEntryCount + 1 &&
+        JSON.stringify(decisionLedgerEntries().slice(0, priorEntryCount)) === priorEntries);
+      const entriesAfterAdd = JSON.stringify(decisionLedgerEntries());
+      const repeatedStage = quiet(() => stageAthleteSessionAdditionTransaction({
+        date: target.date, reason: 'Repeated accepted addition', source: 'tap', addedWorkout: readded.workout!,
+      }));
+      ok(`${label}: identical transaction retry is inert`, repeatedStage.alreadyApplied === true &&
+        repeatedStage.proposal === null && visibleSignature(view()) === readdSignature &&
+        JSON.stringify(decisionLedgerEntries()) === entriesAfterAdd);
+      const readdBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
+      ok(`${label}: re-add survives restart`, readdBoot.ok && visibleSignature(view()) === readdSignature);
+      const undoReadd = await quietAsync(() => undoLastDecision());
+      ok(`${label}: Undo re-add restores the component removal`, undoReadd.outcome === 'undone' && visibleSignature(view()) === removed);
+      const addAgain = quiet(() => applyPlanChange({ change: { kind: 'add_category', date: target.date, category: 'mobility' },
+        visibleWeek: view(), todayISO: date, applyOverride: () => undefined }));
+      ok(`${label}: another re-add after Undo is accepted`, addAgain.ok && visibleSignature(view()) === readdSignature);
+      const undoAgain = await quietAsync(() => undoLastDecision());
+      ok(`${label}: another Undo still reveals the same removal`, undoAgain.outcome === 'undone' && visibleSignature(view()) === removed);
+    }
     const undoRemove = await quietAsync(() => undoLastDecision());
     ok(`${label}: Undo component Remove restores the combined day`, undoRemove.outcome === 'undone' && visibleSignature(view()) === active);
     const destination = view().find(d => d.date !== target.date && (!d.workout || d.workout.exercises.length === 0));

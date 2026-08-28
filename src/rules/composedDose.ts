@@ -35,8 +35,11 @@ import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import { estimateStartingWeight } from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
+import { getExerciseTags } from '../data/exerciseTags';
 
 export interface ComposedDose {
+  readonly restSeconds?: number;
+  readonly notes?: string;
   readonly sets: number;
   readonly repsMin: number;
   readonly repsMax: number;
@@ -51,7 +54,7 @@ export interface ComposedDose {
    * R-133 — *"carries all timed"* — when Suitcase Carry's metres became
    * seconds; the Primer's Acceleration keeps distance outside this path.)
    */
-  readonly prescriptionType?: 'duration' | 'duration_minutes';
+  readonly prescriptionType?: 'reps' | 'duration' | 'duration_minutes';
   readonly perSide?: boolean;
 }
 
@@ -171,6 +174,8 @@ export interface ComposedDoseInput {
  * and the same movement supporting one takes U-1's loaded band.
  */
 export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
+  const authored = getExerciseTags(input.identity)?.prescription;
+  if (authored && !input.isMainLift) return { ...authored, category: 'authored_exercise' };
   if (input.isMainLift && input.poolSlot) {
     const scheme = mainLiftSchemeForSlot(input.poolSlot, input.seasonPhase, input.offseasonSubphase);
     if (scheme) {

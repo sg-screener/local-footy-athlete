@@ -183,17 +183,17 @@ const censusCounts = Object.values(
 );
 ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
-    && Object.keys(decisionRegistry.decisions).length === 187
+    && Object.keys(decisionRegistry.decisions).length === 190
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 26
+  censusCounts.current_contract === 27
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',
       'test:injury-fallback-journey', 'test:coach-weekly-reduction',
       'test:approved-icons', 'test:session-execution',
-      'test:slot-coverage', 'test:power-counting', 'test:section18-v2']
+      'test:slot-coverage', 'test:power-counting', 'test:section18-v2', 'test:exercise-intake']
       .every(label => decisionRegistry.decisions[label]?.kind === 'current_contract'
         && decisionRegistry.decisions[label]?.witnessScript === label)
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',
@@ -202,13 +202,16 @@ ok('only witnessed contracts and the explicit ownership/year acceptance requirem
     && decisionRegistry.decisions['test:chained-mutation-continuity']?.witnessScript === 'test:compiler-year'
     && decisionRegistry.decisions['test:compiler-year']?.witnessScript === 'test:compiler-year'
     && decisionRegistry.decisions['test:weekly-writer-zero']?.witnessScript === 'test:weekly-writer-zero'
-    && censusCounts.retire_test === 4
+    && censusCounts.retire_test === 6
+    && ['test:exercise-add-candidates', 'test:exercise-swap-choices'].every(label =>
+      decisionRegistry.decisions[label]?.kind === 'retire_test'
+      && decisionRegistry.decisions[label]?.replacementScripts?.includes('test:exercise-intake'))
     && decisionRegistry.decisions['test:game-local-rebuild']?.kind === 'retire_test'
     && decisionRegistry.decisions['test:dev-e2e-seeds']?.kind === 'test_infrastructure'
     && censusCounts.test_infrastructure === 4
     && decisionRegistry.decisions['test:plan-change-producer']?.kind === 'aggregate'
-    && censusCounts.aggregate === 3
-    && censusCounts.rewrite_test === 150,
+    && censusCounts.aggregate === 5
+    && censusCounts.rewrite_test === 148,
   censusCounts);
 
 const reportAudit = buildAudit({

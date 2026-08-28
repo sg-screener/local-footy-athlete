@@ -39,6 +39,7 @@
  * group; it is dropped on the way in.
  */
 export type MuscleGroup =
+  | 'Hip flexors'
   | 'Quads'
   | 'Glutes'
   | 'Hamstrings'
@@ -60,6 +61,7 @@ export type MuscleGroup =
   | 'Grip';
 
 export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
+  'Hip flexors',
   'Quads',
   'Glutes',
   'Hamstrings',
@@ -224,6 +226,17 @@ export const METADATA_WITHOUT_SELECTABLE_EXERCISE: readonly MetadataWithoutSelec
 
 /** Generated from the sheet and held to it by `npm run test:muscle-experience`. */
 export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
+  {"exercise": "Seated Good Morning (Barbell)", "pool": "Mobility", "primary": ["Low back", "Groin"], "secondary": ["Hamstrings", "Glutes", "Midline", "Upper back"], "experienceGate": "one_plus_years", "note": "Lower for 5 seconds. Start with an empty bar; log total external load. Mobility only; excluded the day before a game.", "flagged": false},
+  {"exercise": "Rotational Medicine-Ball Slam", "pool": "Power", "primary": ["Midline", "Lats", "Glutes"], "secondary": ["Shoulders", "Triceps", "Hips", "Quads", "Calves"], "experienceGate": "one_plus_years", "note": "Start around 3–6 kg; log total ball weight. Reset each rep. Low-volume power only near games; stop if speed drops.", "flagged": false},
+  {"exercise": "Medicine-Ball Slam", "pool": "Power", "primary": ["Lats", "Midline", "Shoulders"], "secondary": ["Triceps", "Glutes", "Quads", "Hamstrings", "Calves"], "experienceGate": "everyone", "note": "Start around 3–6 kg; log total ball weight. Low-volume power only near games. Stop if speed drops.", "flagged": false},
+  {"exercise": "Rotational Medicine-Ball Throw", "pool": "Power", "primary": ["Midline", "Glutes", "Hips"], "secondary": ["Chest", "Shoulders", "Triceps", "Calves"], "experienceGate": "one_plus_years", "note": "Use a wall-throw ball. Start around 2–4 kg; log total ball weight. Fast reps with complete recovery.", "flagged": false},
+  {"exercise": "Reverse Nordic Curl", "pool": "Lower prehab", "primary": ["Quads"], "secondary": [], "experienceGate": "one_plus_years", "note": "Lower for 5 seconds. Bodyweight; beginners use shallow range or band assistance. External loading not yet specified.", "flagged": false},
+  {"exercise": "SL 45° Back Extension Hold", "pool": "Hamstring (light)", "primary": ["Hamstrings", "Glutes"], "secondary": ["Low back", "Midline"], "experienceGate": "one_plus_years", "note": "Short submaximal holds near games; never maximum duration. Start bodyweight; optional plate or dumbbell at chest, total external load.", "flagged": false},
+  {"exercise": "SL 45° Back Extension", "pool": "Lower hinge", "primary": ["Glutes", "Hamstrings"], "secondary": ["Low back", "Midline"], "experienceGate": "one_plus_years", "note": "Start with bodyweight. Optional plate or dumbbell at chest; log total external load. Caution two days before a game.", "flagged": false},
+  {"exercise": "Seated Good Morning", "pool": "Mobility", "primary": ["Low back", "Groin"], "secondary": ["Hamstrings", "Glutes", "Midline", "Upper back"], "experienceGate": "everyone", "note": "Lower for 5 seconds. Bodyweight mobility; never a main lift.", "flagged": false},
+  {"exercise": "Crab Hold", "pool": "Mobility", "primary": ["Shoulders", "Glutes", "Triceps"], "secondary": ["Hamstrings", "Chest", "Upper back", "Midline"], "experienceGate": "everyone", "note": "Hold with an open chest. Bodyweight. Familiar and pain-free near games.", "flagged": false},
+  {"exercise": "Standing Knee Extension", "pool": "Lower prehab", "primary": ["Quads", "Hip flexors"], "secondary": ["Midline", "Glutes"], "experienceGate": "everyone", "note": "Squeeze for 5 seconds each rep. Bodyweight.", "flagged": false},
+  {"exercise": "Seated Single-Leg Pike Lift", "pool": "Lower prehab", "primary": ["Hip flexors"], "secondary": ["Quads", "Midline"], "experienceGate": "everyone", "note": "Hold each rep for 2 seconds. Bodyweight.", "flagged": false},
   /* ── Lower squat ── */
   {
     exercise: 'Back Squat',
@@ -539,7 +552,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
   },
   {
     exercise: 'Explosive Landmine Press',
-    pool: 'Upper power',
+    pool: 'Power',
     primary: ['Shoulders', 'Chest'],
     secondary: ['Triceps'],
     experienceGate: 'one_plus_years',

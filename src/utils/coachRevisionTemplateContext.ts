@@ -88,12 +88,13 @@ function liveStoreProvider(dateISO?: string): CoachRevisionTemplateContext {
           ),
           onboardingData,
         }
-      : DEFAULT_ATHLETE_CONTEXT;
+      : { ...DEFAULT_ATHLETE_CONTEXT };
 
-    const gameDates = Object.entries(markedDays)
-      .filter(([, mark]) => mark === 'game')
-      .map(([date]) => date)
-      .sort();
+    const { getEffectiveGameDates } = require('./sessionResolver') as typeof import('./sessionResolver');
+    const { buildScheduleStateImperative } = require('./coachWeekDiff') as typeof import('./coachWeekDiff');
+    const { buildFilterContext } = require('./exerciseFilter') as typeof import('./exerciseFilter');
+    const gameDates = [...getEffectiveGameDates(buildScheduleStateImperative(), todayISO)].sort();
+    athlete.daysToGame = buildFilterContext(todayISO, gameDates, [], false).daysToGame;
 
     const inSeason =
       (onboardingData?.seasonPhase ?? 'In-season') === 'In-season';

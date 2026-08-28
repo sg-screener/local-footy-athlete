@@ -50,7 +50,7 @@ import {
 } from '../data/sessionFlowMenus';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { resolveTrainingAgePolicy, TRAINING_AGE_LEVELS } from '../rules/trainingAgePolicy';
-import { readSheetRecords } from './support/xlsxReader';
+import { readSheetRecords, parseXlsxWorksheet } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const SHEET = path.join(repoRoot, 'docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx');
@@ -77,6 +77,12 @@ function ok(name: string, condition: unknown, detail?: string): void {
 }
 
 const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
+const namespacedSheet = '<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData><x:row r="1"><x:c r="A1" t="s"><x:v>1</x:v></x:c><x:c r="C1" t="inlineStr"><x:is><x:t>Hold &amp; </x:t><x:t>lift</x:t></x:is></x:c></x:row></x:sheetData></x:worksheet>';
+ok('XLSX reads namespace prefixes, shared strings, rich text and blank columns',
+  JSON.stringify(parseXlsxWorksheet(namespacedSheet, ['unused', 'Pike lift'])) === JSON.stringify([['Pike lift', '', 'Hold & lift']]));
+let rejectedBadString = false;
+try { parseXlsxWorksheet(namespacedSheet, []); } catch { rejectedBadString = true; }
+ok('XLSX missing shared string is red, not an empty equality pass', rejectedBadString);
 
 /* ── The sheet ── */
 
@@ -87,7 +93,7 @@ console.log('\n[1] THE SHEET — still reads as Sam signed it');
    together with its pool entry, cue, tags, load list and vocabulary entry. The
    number moves with the sheet; that is what makes this cell a ratchet rather
    than a decoration. */
-ok('the sheet holds 198 exercise rows', sheetRows.length === 198, `found ${sheetRows.length}`);
+ok('the sheet holds 209 exercise rows (ten additions and one barbell variant)', sheetRows.length === 209, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -307,9 +313,9 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // `everyone` and not a regression (136 -> 137). Total 198 -> 199.
 // Then 137 -> 136 and 199 -> 198 on 2026-08-21 with the Light Skipping deletion.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 136,
+  everyone: 141,
   everyone_regression: 11,
-  one_plus_years: 32,
+  one_plus_years: 38,
   two_plus_years: 17,
   advanced_only: 2,
 };

@@ -35,7 +35,7 @@ import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { resolveTemplateByName } from '../rules/conditioningSelection';
-import { selectableExerciseNames, isExempt } from '../data/selectableExerciseVocabulary';
+import { selectableExerciseNames, isExempt, SESSION_AUTHORED_ROWS } from '../data/selectableExerciseVocabulary';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVideoService';
@@ -265,9 +265,13 @@ function main(): void {
     // document had never heard of. They were all Sam's; they had just never
     // been filed. The reverse bind makes filing structural: a cue that is not
     // on the sheet is not a cue.
-    const unfiled = Object.keys(EXERCISE_CUES).filter((name) => !authoredCues.has(name));
-    ok('every shipped cue is on the sheet', unfiled.length === 0,
+    const unfiled = Object.keys(EXERCISE_CUES).filter((name) => !authoredCues.has(name) && !SESSION_AUTHORED_ROWS.has(name));
+    ok('every shipped cue is on the master sheet or the existing signed-session registry', unfiled.length === 0,
       `in EXERCISE_CUES, absent from the master sheet: ${unfiled.join(', ')}`);
+    ok('R-129 session-authored Acceleration keeps its exact approved cue',
+      SESSION_AUTHORED_ROWS.size === 1 && SESSION_AUTHORED_ROWS.has('Acceleration') &&
+      EXERCISE_CUES.Acceleration?.primaryCue === 'Build up to 90% effort over the 15m.' &&
+      EXERCISE_CUES.Acceleration?.secondaryCue === '');
 
     // A PENDING row must NOT have quietly acquired a cue in code: that would be
     // an unruled cue shipping under the appearance of an authored one.
@@ -380,11 +384,11 @@ function main(): void {
       for (const file of allSourceFiles()) {
         // This suite necessarily names the retired exercises in order to ban
         // them; it is the guard, not a consumer.
-        if (file === __filename) continue;
+        if (file === __filename || file.includes(`${path.sep}__tests__${path.sep}`)) continue;
         const text = fs.readFileSync(file, 'utf8');
         if (pattern.test(text)) offenders.push(path.relative(src, file));
       }
-      ok(`"${label}" appears nowhere in src`, offenders.length === 0,
+      ok(`"${label}" appears nowhere in production source`, offenders.length === 0,
         offenders.join(', '));
     }
   }

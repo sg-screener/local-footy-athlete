@@ -11,6 +11,7 @@ import {
 } from '../data/sessionFlowMenus';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
+import { exerciseProgrammingAllows } from './exerciseFilter';
 import { getSessionComponentRows } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import {
@@ -240,6 +241,10 @@ export function flowSlotCandidates(
     if (![...entry.primary, ...entry.secondary].some((group) => wanted.has(group))) continue;
     const poolEntry = POOL_ENTRY_BY_NAME.get(canonicalExerciseName(entry.exercise));
     if (!poolEntry || !eligible.has(poolEntry.id)) continue;
+    if (!exerciseProgrammingAllows(poolEntry.name, {
+      experienceLevel: athlete.onboardingData?.experienceLevel,
+      daysToGame: athlete.daysToGame, route: 'warmup',
+    })) continue;
     out.push(poolEntry);
   }
   return out;

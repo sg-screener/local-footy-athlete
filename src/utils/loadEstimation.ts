@@ -99,6 +99,13 @@ export interface ExerciseLoadProfile {
  * These should show "BW" in the UI. Everything else gets a load estimate.
  */
 export const TRUE_BODYWEIGHT_EXERCISES = new Set([
+  'Seated Single-Leg Pike Lift',
+  'Standing Knee Extension',
+  'Crab Hold',
+  'Seated Good Morning',
+  'SL 45° Back Extension',
+  'SL 45° Back Extension Hold',
+  'Reverse Nordic Curl',
   // Upper body BW
   'Pull-Ups',
   'Chin-Ups',
@@ -714,6 +721,9 @@ export function resolveExerciseName(name: string): string {
 // the card shows "—" until the athlete enters their own number, which then
 // renders verbatim as "12kg". Sam, 2026-07-28.
 export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
+  'Rotational Medicine-Ball Throw',
+  'Medicine-Ball Slam',
+  'Rotational Medicine-Ball Slam',
   'Dumbbell Pullovers',
 ]);
 
@@ -733,6 +743,7 @@ export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
  * arithmetic, and the ratio is gone rather than left dead in the map.
  */
 export const EQUIPMENT_MINIMUM_PRESCRIPTIONS: Record<string, EquipmentKind> = {
+  'Seated Good Morning (Barbell)': 'barbell',
   'Bicep Curl (Barbell)': 'barbell',
   'Bottoms-Up KB Press': 'kettlebell',
   'Explosive Landmine Press': 'barbell',
@@ -853,6 +864,8 @@ export function stepBandResistance(
  * changing the exercise's identity.
  */
 export const BODYWEIGHT_LOADABLE_EXERCISES = new Set([
+  'SL 45° Back Extension',
+  'SL 45° Back Extension Hold',
   'Dips',
   'Pull-Ups',
   'Chin-Ups',

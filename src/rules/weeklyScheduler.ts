@@ -410,7 +410,7 @@ function isScheduledGameDay(day: number, inputs: WeeklySchedulerInputs): boolean
 }
 
 /** Nearest previous and next fixture across every actual target-week anchor. */
-function scheduledGameProximity(
+export function scheduledGameProximity(
   day: number,
   inputs: WeeklySchedulerInputs,
 ): GameProximity {

@@ -34,6 +34,13 @@ import {
 import { severityHasModerateEffect, severityIsLimiting } from '../rules/injurySeverityBands';
 import { injuryPermitsExerciseAtSeverity, injuryWithholdsExistingRow } from '../rules/injuryExerciseRisk';
 import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
+import { equipmentRequiredFor, exerciseIsAvailableWith } from '../data/exerciseEquipmentRequirement';
+import { exerciseProgrammingAllows, buildFilterContext } from './exerciseFilter';
+import type { ScheduleState } from './sessionResolver';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
+import { getMondayISOForDate, selectMicrocycleForDate } from './programBlockState';
+import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -53,6 +60,10 @@ export interface TapSwapPrimaryInjury {
 }
 
 export interface TapSwapEnvironment {
+  /** Read from the accepted compiler output; never authored by a chooser. */
+  weeklyContract?: WeeklyExposureContractV2 | null;
+  experienceLevel?: OnboardingData['experienceLevel'];
+  daysToGame?: number | null;
   /**
    * THE ONE INJURY FACT ON THIS ENVIRONMENT: what the athlete actually said,
    * per region, 1-10.
@@ -103,6 +114,7 @@ export interface TapSwapChoice {
     weight?: number;
     prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
     restSeconds?: number;
+    notes?: string;
     perSide?: boolean;
   };
 }
@@ -194,6 +206,8 @@ function lowerCapacity(
  */
 export function resolveTapSwapEnvironment(args: {
   date: string;
+  scheduleState?: Pick<ScheduleState, 'currentProgram' | 'currentMicrocycle' | 'weekScopedOverlays'>;
+  gameDates?: readonly string[];
   profile?: OnboardingData | null;
   activeConstraints?: readonly ActiveConstraint[] | null;
   readinessSignal?: ReadinessSignal | null;
@@ -250,9 +264,20 @@ export function resolveTapSwapEnvironment(args: {
   const fatigueConstraint = constraints.find((constraint) =>
     constraint.type === 'fatigue' && severityIsLimiting(constraint.severity));
   if (fatigueConstraint) capacity = lowerCapacity(capacity, 'low');
+  const weekStart = getMondayISOForDate(args.date);
+  const weeklyContract = args.scheduleState ? selectStoredWeekDeclaration({
+    overlay: args.scheduleState.weekScopedOverlays?.[weekStart],
+    coveringMicrocycle: selectMicrocycleForDate(args.scheduleState.currentProgram,
+      args.scheduleState.currentMicrocycle, weekStart),
+    weekStart, reader: 'tapSwapHierarchy.acceptedPowerPolicy',
+  }) : undefined;
 
   return {
+    weeklyContract,
     injurySeverities,
+    experienceLevel: args.profile?.experienceLevel,
+    daysToGame: args.gameDates === undefined ? undefined
+      : buildFilterContext(args.date, [...args.gameDates], [], false).daysToGame,
     injuryTriggers,
     primaryInjury,
     availableEquipment: equipmentTagsToSubstituteEquipmentClasses(
@@ -437,6 +462,20 @@ export function assessTapSwapCandidateSafety(
     return { safe: false, reason: 'A medical-stop constraint is active.' };
   }
 
+  const canonical = resolveExerciseName(name);
+  const power = POWER_EXERCISE_POOL.find(entry => entry.name === canonical);
+  if (power && (environment.weeklyContract?.power.eligible === false ||
+      environment.weeklyContract?.safety.prohibitedPowerFamilies.includes(power.family))) {
+    return { safe: false, reason: 'Power work is not eligible under this week’s training or injury restrictions.' };
+  }
+  if (!exerciseIsAvailableWith(canonical, environment.availableEquipmentTags)) {
+    return { safe: false, reason: 'The required equipment or training space is not available.' };
+  }
+  if (!exerciseProgrammingAllows(canonical, { experienceLevel: environment.experienceLevel,
+    daysToGame: environment.daysToGame, route: 'manual' })) {
+    return { safe: false, reason: 'The movement does not meet experience or game-proximity requirements.' };
+  }
+
   if (name === 'Easy Bike' &&
       !environment.availableEquipmentTags.includes('bike_or_treadmill')) {
     return { safe: false, reason: 'Bike/cardio equipment is not available.' };
@@ -446,7 +485,8 @@ export function assessTapSwapCandidateSafety(
   if (equipment && !environment.availableEquipment.includes(equipment)) {
     return { safe: false, reason: `${equipment} equipment is not available.` };
   }
-  if (!equipment && environment.hasEquipmentConstraint && !isRecoveryName(name)) {
+  if (!equipment && environment.hasEquipmentConstraint && !isRecoveryName(name)
+    && equipmentRequiredFor(canonical) === null) {
     return { safe: false, reason: 'The replacement equipment cannot be verified.' };
   }
 

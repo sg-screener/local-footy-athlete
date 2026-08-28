@@ -44,6 +44,17 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
+  "Seated Good Morning (Barbell)": [["bench", "plyo_box"], "barbell"],
+  "Rotational Medicine-Ball Slam": ["slam_ball", "slam_space"],
+  "Medicine-Ball Slam": ["slam_ball", "slam_space"],
+  "Rotational Medicine-Ball Throw": ["medicine_ball", "throwing_wall"],
+  "Reverse Nordic Curl": [],
+  "SL 45° Back Extension Hold": ["back_extension_bench"],
+  "SL 45° Back Extension": ["back_extension_bench"],
+  "Seated Good Morning": [["bench", "plyo_box"]],
+  "Crab Hold": [],
+  "Standing Knee Extension": [],
+  "Seated Single-Leg Pike Lift": [],
   "Ab Wheel": ['ab_wheel'],
   "Back Extension": ['back_extension_bench'],
   "Back Squat": ['barbell', 'rack'],

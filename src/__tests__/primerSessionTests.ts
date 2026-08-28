@@ -140,11 +140,14 @@ run('S2. row 3 may be ANY of the signed upper region, including the chest stretc
     + 'the region is restricted but the pick is not rotating');
 });
 
-run('S3. row 4 is a drill from NEITHER hips NOR upper', () => {
+run('S3. row 4 is lower/midline mobility or the approved submaximal single-leg hold', () => {
   for (const date of DATES) {
     const name = rowNames(primerOn(date))[3];
     const region = regionOfName(name);
-    assert(region === 'lower' || region === 'midline',
+    const hold = name === 'SL 45° Back Extension Hold';
+    const row = primerOn(date).exercises[3];
+    assert(region === 'lower' || region === 'midline' || (hold &&
+      row.prescriptionType === 'duration' && row.perSide === true && row.prescribedRepsMax === 30),
       `${date}: row 4 was "${name}" (${region}). Sam: "1 extra drill (not hip or `
       + 'upper back mobility)"');
   }

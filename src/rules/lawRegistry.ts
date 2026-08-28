@@ -141,8 +141,22 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-exercise-intake-20260828',
+    law: 'R-270: the ten saved exercise additions use canonical typed catalogue, equipment, injury, experience, fixture and dose owners. Ball and space suitability require explicit answers. Approved automatic/manual/warm-up/Primer routes remain reachable; units and load conventions persist. No Bird Dogs, conditioning slam template, power-rest UI or Estimated 1RM change.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-270',
+    guard: { state: 'guarded', by: 'test:exercise-intake', chainStatus: 'in_chain',
+      receipt: 'exerciseIntakeTests compares all submitted injury ratings, real equipment and chooser eligibility, canonical composition, actual Add, logging and accumulated restart. Execution status and uncovered variants: docs/STATUS_INTAKE.md.' },
+  },
+  {
+    id: 'LAW-session-stack-and-status-boundary',
+    law: 'R-271: Add names only the added component, removal uses visible component labels, and removed Mobility can be re-added without losing its sibling. Session/fixture edits are not athlete-state modifiers. Existing Undo and restart retain the accepted decisions.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-271',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler + test:modifier-lifecycle', chainStatus: 'in_chain',
+      receipt: 'mobilityAddJourney and modifierLifecycleTests contain red-first sequence, visibility, Undo and restart checks. The existing addition transaction now compares accepted content and appends distinct revision identities. Original 20 re-add failures were corrected, with history/Undo/restart retained; receipt: docs/STATUS_INTAKE.md.' },
+  },
+  {
     id: 'LAW-all-program-effects-visible',
-    law: 'Every active program-affecting restriction, session/fixture edit or accepted lighter-day choice has a visible modifier. Day and Week count the same list My Status opens for that week. Time caps are included; prose changes and old dismissals cannot hide active effects. Clear targets the exact fact through its existing transaction, preserving other facts and edits. Session/fixture Undo uses existing exact latest-action eligibility. Scheduled deload is read-only and identified by canonical dose metadata.',
+    law: 'Every active athlete-state restriction or accepted lighter-day choice has a visible modifier. R-271 excludes session/fixture edit history from Active Modifiers. Day and Week count the same list My Status opens for that week. Time caps are included; prose changes and old dismissals cannot hide active effects. Clear targets the exact fact through its existing transaction, preserving other facts and edits. Session/fixture Undo remains in its existing action owner. Scheduled deload is read-only and identified by canonical dose metadata.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-262',
     guard: {
       state: 'guarded', by: 'test:modifier-lifecycle', chainStatus: 'in_chain',

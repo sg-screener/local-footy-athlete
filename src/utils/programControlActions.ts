@@ -1,3 +1,4 @@
+import { getEffectiveGameDates } from './sessionResolver';
 import { athleteActionSourceForDoor, planChangeSourceForDoor } from '../rules/athleteActionSourceLabel';
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { logger } from './logger';
@@ -627,7 +628,9 @@ function executeProgramControlActionWithinTrace(
     case 'swap_exercise': {
       const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
       const environment = resolveTapSwapEnvironment({
+        scheduleState: buildScheduleStateImperative(),
         date: action.payload.date,
+        gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), action.payload.date)],
         profile: useProfileStore.getState().onboardingData,
         activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[action.payload.date],
@@ -1371,7 +1374,9 @@ export function resolveInjuryRecompositionInputs(args: {
     }
     : null;
   const environment = resolveTapSwapEnvironment({
+    scheduleState: buildScheduleStateImperative(),
     date: args.date,
+    gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), args.date)],
     profile: useProfileStore.getState().onboardingData,
     activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints,
     readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
@@ -1494,7 +1499,9 @@ async function executeProgramControlActionDurablyWithinTrace(
           exclusions: liveAthleteExclusions(),
         }),
         environment: resolveTapSwapEnvironment({
+          scheduleState: buildScheduleStateImperative(),
           date: injuryDate,
+          gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), injuryDate)],
           profile: useProfileStore.getState().onboardingData,
           activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
           readinessSignal: useReadinessStore.getState().signalsByDate[injuryDate],

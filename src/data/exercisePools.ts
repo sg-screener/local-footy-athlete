@@ -19,6 +19,7 @@
 
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import type { ExperienceLevel } from '../types/domain';
+import { EXERCISE_TAGS } from './exerciseTags';
 
 export type FatigueLevel = 'low' | 'moderate' | 'high';
 
@@ -67,7 +68,11 @@ export type EquipmentTag =
   // It survived the both-directions vocabulary gate because that gate derives
   // from FIVE authored sources and Sam's sheet was not one of them — see
   // `rules/equipmentVocabulary.ts`, where the sheet is now read FIRST.
-  | 'sandbag';
+  | 'sandbag'
+  | 'medicine_ball'
+  | 'throwing_wall'
+  | 'slam_ball'
+  | 'slam_space';
 
 export type InjuryTag =
   | 'shoulder'
@@ -126,6 +131,13 @@ export interface PoolExercise {
 }
 
 // ─── Helper to define exercises concisely ───
+
+/** The curated catalogue owns these doses; pool membership adds no copy. */
+function authoredExercise(id: string, name: string, equipment: PoolEquipmentRequirement[]): PoolExercise {
+  const tags = EXERCISE_TAGS[name];
+  if (!tags?.prescription) throw new Error(`Missing authored prescription: ${name}`);
+  return { id, name, ...tags.prescription, equipment, contraindications: [], fatigue: tags.fatigue };
+}
 
 interface ExOptions {
   prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
@@ -288,6 +300,9 @@ export const CALVES_POOL: PoolExercise[] = [
  *   ✗ Generic prehab_accessories (use calves instead)
  */
 export const LOWER_PREHAB_POOL: PoolExercise[] = [
+  authoredExercise("reverse-nordic-curl", "Reverse Nordic Curl", []),
+  authoredExercise("standing-knee-extension", "Standing Knee Extension", []),
+  authoredExercise("seated-single-leg-pike-lift", "Seated Single-Leg Pike Lift", []),
   ex('tib-raise',         'Tib Raises',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
   ex('banded-tke',        'Banded TKE',             2, 15, 20, 30, 'Band behind the knee. Straighten and squeeze the quad.', ['bands'], ['knee'], 'low', { prescriptionType: 'reps' }),
   ex('bosch-hold',        'Bosch Hold',             2, 20, 30, 30, 'Drive the heel down, hips high. Single or double leg.', ['bodyweight'], ['hamstring', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
@@ -336,6 +351,7 @@ export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
 ];
 
 export const HAMSTRING_LIGHT_POOL: PoolExercise[] = [
+  authoredExercise("sl-45-back-extension-hold", "SL 45° Back Extension Hold", ["back_extension_bench"]),
   ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.',              ['swiss_ball'],['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
 ];
 
@@ -353,6 +369,9 @@ export const TISSUE_QUALITY_POOL: PoolExercise[] = [
 ];
 
 export const MOBILITY_POOL: PoolExercise[] = [
+  authoredExercise("seated-good-morning-barbell", "Seated Good Morning (Barbell)", [["bench", "plyo_box"], "barbell"]),
+  authoredExercise("seated-good-morning", "Seated Good Morning", [["bench", "plyo_box"]]),
+  authoredExercise("crab-hold", "Crab Hold", []),
   ex('hip-90-90',         'Hip 90/90 Stretch',           2, 30, 45, 30, 'Breathe into the stretch.',                    ['bodyweight'], ['hip', 'knee'],  'low', { prescriptionType: 'duration', perSide: true }),
   ex('cat-cow',           'Cat-Cow',                     2, 10, 12, 15, 'Slow and controlled. Match movement to breath.', ['bodyweight'], [],             'low', { prescriptionType: 'reps' }),
   ex('worlds-greatest',   "World's Greatest Stretch",    2, 5,  5,  15, 'Hold each position 3 seconds.',                ['bodyweight'], [],              'low', { prescriptionType: 'reps', perSide: true }),

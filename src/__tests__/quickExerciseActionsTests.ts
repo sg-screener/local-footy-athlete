@@ -263,18 +263,17 @@ assert(/controlsRow: \{[\s\S]*?position: 'absolute'[\s\S]*?right: 0[\s\S]*?botto
   'the bottom-right controls overlay the card without changing its height');
 assert(/<View style=\{styles\.controlsRow\}>[\s\S]*?styles\.weightControl[\s\S]*?\{checkbox\}[\s\S]*?<\/View>/.test(source),
   'the weight toggle and checkbox are siblings on one exact centreline');
-const hubStart = source.indexOf('testID="day-workout-change-hub"');
-assert(hubStart >= 0, 'the session-wide change hub anchor exists');
-const hubEnd = source.indexOf('/>', hubStart);
-assert(hubEnd >= 0, 'the session-wide change hub closing anchor exists');
-assert(hubEnd > hubStart, 'the session-wide change hub closing anchor exists');
+// R-217 moved Add to section controls; the old top-level hub was retired.
+const hubStart = source.indexOf('testID="session-options-sheet"');
+const hubEnd = source.indexOf('</Sheet>', hubStart);
+assert(hubStart >= 0 && hubEnd > hubStart, 'the current session options sheet is anchored');
 const hubSource = source.slice(hubStart, hubEnd);
-assert(/id: 'equipment'/.test(hubSource)
-  && /id: 'injury'/.test(hubSource)
-  && /id: 'add'/.test(hubSource)
-  && !/id: 'remove'/.test(hubSource)
-  && !/id: 'swap'/.test(hubSource),
-  'the session-wide change hub keeps Equipment, Injury and Add without duplicate Swap or Remove');
+assert(hubSource.includes('testID="session-options-equipment"')
+  && hubSource.includes('openSessionEquipment();')
+  && hubSource.includes('testID="session-options-injury"')
+  && hubSource.includes('openSessionInjuryFlow();')
+  && !/testID="session-options-(add|swap|remove)"/.test(hubSource),
+  'R-217 options retain live Equipment and Injury; section Add and row actions remain separate');
 for (const renderer of [
   'MobilityExerciseList', 'StrengthExerciseCard', 'ConditioningPhaseRow',
   'ConditioningRow', 'AddonRow',
@@ -323,14 +322,21 @@ assert(/type: 'swap_exercise'/.test(replacementSource)
 const controlSource = fs.readFileSync(
   path.join(process.cwd(), 'src/utils/programControlActions.ts'), 'utf8',
 );
-const derivedLedgerBranch = controlSource.indexOf('const derivedExerciseAction =');
-assert(derivedLedgerBranch >= 0, 'the derived exercise decision anchor exists');
-const ordinaryTransaction = controlSource.indexOf('const transaction = await runCoachMutationTransaction', derivedLedgerBranch);
-assert(ordinaryTransaction >= 0, 'the ordinary transaction anchor exists');
-assert(ordinaryTransaction > derivedLedgerBranch,
-  'the ordinary transaction anchor follows the derived decision branch');
-assert(/appendDecisionEntry/.test(controlSource.slice(derivedLedgerBranch, ordinaryTransaction)),
-  'derived exercise actions append through the ledger before the material-program transaction');
+// The current atomic transaction owns both material edits and their ledger
+// entry. Appending before the transaction was replaced by rollback-safe append.
+const derivedStart = controlSource.indexOf('const derivedExerciseAction =');
+assert(derivedStart >= 0, 'the derived exercise classifier is anchored');
+const transactionStart = controlSource.indexOf('const transaction = await runCoachMutationTransaction', derivedStart);
+const transactionEnd = controlSource.indexOf('if (transaction.ok) return transaction.value;', transactionStart);
+assert(transactionStart >= 0 && transactionEnd > transactionStart,
+  'the durable action transaction is anchored');
+const transactionSource = controlSource.slice(transactionStart, transactionEnd);
+const appendAt = transactionSource.indexOf('const outcome = appendDecisionEntry(');
+const rebuildAt = transactionSource.indexOf('rebuildDerivedWorldNow();');
+assert(appendAt >= 0 && rebuildAt > appendAt
+  && transactionSource.includes("if (!outcome.ok) throw new Error('exercise_decision_append_refused')")
+  && transactionSource.includes('allowAcceptedStateOnlyChange: derivedExerciseAction'),
+  'derived and material edits append within the rollback boundary before canonical rebuild');
 
 console.log(`quick exercise actions: ${passed} passed / ${failed} failed`);
 if (failed > 0) process.exit(1);

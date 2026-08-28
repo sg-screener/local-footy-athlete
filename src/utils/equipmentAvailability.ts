@@ -268,6 +268,10 @@ export function equipmentTagsForRequirement(
   if (/^(rings_trx|rings|trx|suspension_trainer)$/.test(normalized)) return ['rings_trx'];
   // Sam wrote "sand bag / dead ball" on his sheet; both spellings are one tick.
   if (/^(sandbag|sand_bag|dead_ball|deadball|sandbag_dead_ball)$/.test(normalized)) return ['sandbag'];
+  if (/^(medicine_ball|medicine_ball_wall_throws)$/.test(normalized)) return ['medicine_ball'];
+  if (/^(throwing_wall|suitable_throwing_wall)$/.test(normalized)) return ['throwing_wall'];
+  if (/^(slam_ball|ball_suitable_for_slams)$/.test(normalized)) return ['slam_ball'];
+  if (/^(slam_space|impact_safe_floor_and_clear_space)$/.test(normalized)) return ['slam_space'];
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {

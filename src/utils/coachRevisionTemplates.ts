@@ -617,6 +617,7 @@ function buildEngineTemplateWorkout(
     generated = compileCanonicalStrengthTemplate({ composition: ctx.strengthComposition, plannedDay: {
       planEntryId: `template-${def.templateId}`, isTeamDay: false,
       dayOfWeek: isoDateToDayOfWeek(date),
+      daysToGame: ctx.athlete.daysToGame,
       name: def.label,
       workoutType: 'Strength',
       sessionTier: 'core',

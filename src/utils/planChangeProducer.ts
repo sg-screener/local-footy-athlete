@@ -20,7 +20,7 @@ import {
   type CoachVisibleDaySnapshot,
 } from './coachRevisionProposal';
 import {
-  dayIsFixture, partHoldsTheDayDown, projectParts, type ProjectedDayParts,
+  dayIsFixture, partHoldsTheDayDown, project, projectParts, type ProjectedDayParts,
 } from '../rules/projectVisibleWeek';
 import {
   buildCoachRevisionTemplateWorkout,
@@ -657,7 +657,7 @@ export function listPlanChangeOptionsForDay(args: {
     templates,
     categories,
     move,
-    binScopes: canRemove ? binScopesForSnapshot(snap) : [],
+    binScopes: canRemove ? binScopesForSnapshot(snap, project({ week: [day], weekStart: day.date }).days[0].parts) : [],
     addOnTopCategories: canAddOnTop
       ? categories.filter((category) => {
           const addedKind = categoryAddsSessionKind(category.id);
@@ -896,13 +896,17 @@ const WHOLE_DAY_SCOPE: PlanChangeBinScope = {
 
 function binScopesForSnapshot(
   snap: CoachVisibleDaySnapshot,
+  labels: readonly { kind: string; headline: string }[],
 ): PlanChangeBinScope[] {
   const kinds = Array.from(
     new Set((snap.workout?.sections ?? []).map((section) => section.kind)),
   );
   const parts = kinds
     .map((kind) => BIN_SCOPE_FOR_SECTION_KIND[kind])
-    .filter((scope): scope is PlanChangeBinScope => !!scope);
+    .filter((scope): scope is PlanChangeBinScope => !!scope)
+    .map(scope => ({ ...scope, label: labels
+      .filter(part => part.kind === (scope.id === 'team' ? 'team_training' : scope.id))
+      .map(part => part.headline).join(' + ') || scope.label }));
   const anchors = protectedAnchorsForDaySnapshot(snap);
   if (anchors.some((anchor) => anchor.kind === 'team_training')) {
     return parts;
@@ -2654,14 +2658,19 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       }
       if (addUnverified) return visibleVerificationFailedResult(addUnverified);
       if (addNoChange) return noChangeResult(addNoChange);
+      const beforeDay = args.visibleWeek.find(day => day.date === resolution.input.date);
+      const afterDay = (args.readVisibleWeekAfterCommit ?? liveVisibleWeekFor)(resolution.appliedDates)
+        .find(day => day.date === resolution.input.date);
+      const beforeParts = beforeDay ? project({ week: [beforeDay], weekStart: beforeDay.date }).days[0].parts : [];
+      const addedLabel = afterDay ? project({ week: [afterDay], weekStart: afterDay.date }).days[0].parts
+        .filter(part => !beforeParts.some(before => before.kind === part.kind && before.bucket === part.bucket))
+        .map(part => part.headline).join(' + ') : '';
       return {
         ok: true,
         outcome: 'applied',
         message: athleteAdditionDoneMessage(
           resolution.input.date,
-          visibleSessionNameOn(resolution.input.date)
-            ?? acceptedSessionNameOn(resolution.input.date)
-            ?? resolution.pickedTitle,
+          addedLabel || resolution.pickedTitle,
           additionOutcome),
         appliedDates: resolution.appliedDates,
         rejected: [],

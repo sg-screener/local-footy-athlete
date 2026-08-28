@@ -60,6 +60,8 @@ import {
   type TrainingAgeLevel,
 } from './experienceCrosswalk';
 import type { PowerFamily, PowerKind } from './powerPrimerPolicy';
+import { getExerciseTags } from '../data/exerciseTags';
+import { exerciseIsAvailableWith } from '../data/exerciseEquipmentRequirement';
 
 /* ── Entries ── */
 
@@ -105,6 +107,9 @@ export const POWER_POOL_REDUCED_TAKEOVER = 'Pogo Hops';
  * four are his 2026-07-23 additions.
  */
 export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
+  {"name": "Rotational Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["slam_ball", "slam_space"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes, rotate hard, and slam outside the foot."},
+  {"name": "Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["slam_ball", "slam_space"], "minTrainingAge": null, "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes and slam the ball straight down."},
+  {"name": "Rotational Medicine-Ball Throw", "family": "upper", "equipmentRequired": ["medicine_ball", "throwing_wall"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Load the outside hip, rotate hard, and throw through the wall."},
   {
     name: 'Explosive Landmine Press', family: 'upper', equipmentRequired: ['Barbell'],
     minTrainingAge: 'developing', phaseGate: 'all_phases', inSeasonSafe: true,
@@ -258,6 +263,7 @@ export function eligiblePowerExercises(
   context: PowerSelectionContext,
 ): readonly PowerPoolEntry[] {
   return POWER_EXERCISE_POOL.filter((entry) => {
+    if (context.kind === 'contrast' && getExerciseTags(entry.name)?.programming?.contrast === false) return false;
     if (entry.family !== context.family) return false;
     if (entry.reducedTakeoverOnly) return false;
     if (context.phase === 'In-season' && !entry.inSeasonSafe) return false;
@@ -270,7 +276,8 @@ export function eligiblePowerExercises(
     ) {
       return false;
     }
-    return hasEquipment(entry, context.availableEquipment);
+    return hasEquipment(entry, context.availableEquipment)
+      && (!getExerciseTags(entry.name)?.programming || exerciseIsAvailableWith(entry.name, context.availableEquipment));
   });
 }
 

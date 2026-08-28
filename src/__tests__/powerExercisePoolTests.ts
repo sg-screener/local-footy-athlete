@@ -36,6 +36,7 @@ import { isSelectable, exemptionsFor, isExempt } from '../data/selectableExercis
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { lookupExerciseDemo } from '../services/exerciseVideoService';
 import type { SeasonPhase } from '../types/domain';
+import { buildPowerRow } from '../data/defaultProgram';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -85,6 +86,9 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Broad Jumps', 'lower', null, []],
   ['Jump Squats', 'lower', null, []],
   ['Explosive Landmine Press', 'upper', 'developing', ['Barbell']],
+  ['Rotational Medicine-Ball Throw', 'upper', 'developing', ['medicine_ball', 'throwing_wall']],
+  ['Medicine-Ball Slam', 'upper', null, ['slam_ball', 'slam_space']],
+  ['Rotational Medicine-Ball Slam', 'upper', 'developing', ['slam_ball', 'slam_space']],
 ];
 
 ok(
@@ -418,10 +422,10 @@ ok(
 
 // Dose must still come from the policy's spec, not from the pool. If a future
 // edit read a number off a pool entry, this is where it shows up.
-ok(
-  'buildPowerRow stamps the dose from the policy spec, not the pool',
-  /prescribedSets: spec\.sets,\s*prescribedRepsMin: spec\.repsMin,\s*prescribedRepsMax: spec\.repsMax,/.test(programSource),
-);
+const legacyDose = buildPowerRow({ family: 'upper', kind: 'primer', sets: 2, repsMin: 3, repsMax: 4,
+  reduced: false, reason: 'policy test' }, 'legacy-dose', { availableEquipment: [], experienceLevel: '5+ years', phase: 'Pre-season' });
+ok('power without an authored override keeps the policy dose', legacyDose.prescribedSets === 2 &&
+  legacyDose.prescribedRepsMin === 3 && legacyDose.prescribedRepsMax === 4);
 
 /* ── Result ── */
 

@@ -357,6 +357,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     const cutoverInputs = args.coachingInputs;
     let allocatedWeekPlan: CoachingPlan;
     let compiledSchedule: WeeklySchedule | null = null;
+    let compiledDaysToGame: Readonly<Record<number, number | null>> = {};
     let compiledDosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>> = {};
     let compiledDoseDoor: 'scheduled' | 'readiness' | 'illness' | null = null;
     let compiledActiveInjuryKeys = weeklyInjury.activeInjuryKeys;
@@ -455,6 +456,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       });
       if (compiled.ok === false) throw new WeeklyScheduleRefusedError(compiled.refusal);
       compiledSchedule = compiled.schedule;
+      compiledDaysToGame = compiled.daysToGameByDay;
       allocatedWeekPlan = compiled.plan;
       compiledDosePolicyByDay = compiled.dosePolicyByDay;
       compiledDoseDoor = compiled.doseDoor;
@@ -515,7 +517,8 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
           // B1-M1: the phase the DOSE is resolved against, before authorship.
           seasonPhase: profile.seasonPhase as never,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-          plannedDays: schedulerOwnedPlannedDays,
+          plannedDays: schedulerOwnedPlannedDays.map(day => ({ ...day,
+            daysToGame: compiledDaysToGame[day.dayOfWeek] })),
           /* PERMANENT, so a five-day trip cannot enter the athlete's rotation
            * history. The dated half rides the next argument. */
           kit: weeklyCompositionAvailability.permanentKit,
@@ -647,6 +650,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
             composedStrengthDays,
             canonicalDosePolicyByDay: compiledDosePolicyByDay,
+            daysToGameByDay: compiledDaysToGame,
             canonicalPlanDoseResolved: true as const,
           },
           {
@@ -899,6 +903,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       microcycleId,
       weekStartISO: blockState.weekStart,
       gameDayOfWeek: gameDayOfWeekFor(workouts, profile),
+      daysToGameByDay: compiledDaysToGame,
       // Only days the athlete said they train, and never a day already governed as
       // history: a top-up on a pinned past day would be the app editing a day that
       // has already been.

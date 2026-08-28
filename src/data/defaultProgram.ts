@@ -1,3 +1,4 @@
+import { getExerciseTags } from './exerciseTags';
 import {
   Workout,
   WorkoutExercise,
@@ -1261,9 +1262,9 @@ export function buildPowerRow(
   workoutId: string,
   selection: PowerBlockSelectionInput = {},
 ): WorkoutExercise {
-  // Identity comes from the pool + selector; DOSE still comes from the policy's
-  // spec. That split is the spec's law, which is why the entry contributes only
-  // a name and its equipment, and every number below is `spec.*`.
+  // Identity comes from the pool. The policy owns placement and legacy dose;
+  // R-270's authored per-exercise prescription supplies the new ball doses.
+  // A reduced policy remains a ceiling on their set count.
   const picked = selectPowerExercise({
     family: spec.family,
     phase: selection.phase ?? 'Pre-season',
@@ -1277,6 +1278,7 @@ export function buildPowerRow(
   // unreachable in practice; falling back to the family's bodyweight default
   // keeps a missing power row from being worse than a plain one.
   const name = picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up');
+  const authored = getExerciseTags(name)?.prescription;
 
   // PLACEMENT and CONTRAST guidance only. Per-exercise coaching text is NOT
   // here: rows render curated `EXERCISE_CUES` like every other row, so a second
@@ -1294,11 +1296,13 @@ export function buildPowerRow(
     // Power is pre-lift and must sort first. `exerciseOrder` 0 puts it ahead of
     // every generated strength row, which start at 1.
     exerciseOrder: 0,
-    prescribedSets: spec.sets,
-    prescribedRepsMin: spec.repsMin,
-    prescribedRepsMax: spec.repsMax,
-    restSeconds: 120,
-    notes,
+    prescribedSets: authored ? (spec.reduced ? Math.min(spec.sets, authored.sets) : authored.sets) : spec.sets,
+    prescribedRepsMin: authored?.repsMin ?? spec.repsMin,
+    prescribedRepsMax: authored?.repsMax ?? spec.repsMax,
+    restSeconds: authored?.restSeconds ?? 120,
+    prescriptionType: authored?.prescriptionType,
+    perSide: authored?.perSide,
+    notes: authored ? `${notes} ${authored.notes}` : notes,
     role: 'power',
     power: { family: spec.family, kind: spec.kind },
     section18Evidence: {
@@ -2136,6 +2140,7 @@ export function buildWorkoutsFromCoach(
         {
           injuries: onboardingData?.injuries ?? [],
           equipmentTags: [...availableEquipment],
+          daysToGame: rotationContext?.daysToGameByDay?.[cw.dayOfWeek],
           ...(onboardingData ? { onboardingData } : {}),
         },
       );

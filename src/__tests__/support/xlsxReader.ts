@@ -6,16 +6,14 @@
  * extract instead, Sam editing the sheet would not fail the build, and the
  * whole guarantee ("the sheet is the source of truth") would be theatre.
  *
- * Rather than add an xlsx dependency to a deliberately lean dependency list,
- * this reads the format we actually have. Both authored workbooks are written
- * by openpyxl, which emits:
- *   - no `xl/sharedStrings.xml` — every string is an inline `t="inlineStr"`
- *   - one `xl/worksheets/sheetN.xml` per tab, ordered as in `xl/workbook.xml`
+ * Reads both the original inline-string exports and the shared-string,
+ * namespaced SpreadsheetML written by the current spreadsheet authoring tool.
+ * Worksheets are ordered as in `xl/workbook.xml`.
  *
  * So the reader needs exactly two things: ZIP/deflate extraction (via node's
  * zlib) and enough XML scanning to pull cell text. It is NOT a general xlsx
  * implementation — it asserts loudly when it meets anything it does not model
- * (notably shared strings), so a future re-export cannot silently degrade a
+ * (including invalid shared-string references), so a future re-export cannot silently degrade a
  * gate into passing on empty data.
  */
 
@@ -140,7 +138,17 @@ function cellText(cellXml: string): string {
   return value ? decodeXmlText(value[1]) : '';
 }
 
-function parseSheet(xml: string): string[][] {
+/** Excel serializers may choose a prefix for the same SpreadsheetML namespace. */
+export function spreadsheetXml(xml: string): string {
+  for (const match of xml.matchAll(/xmlns:([A-Za-z_][\w.-]*)="http:\/\/schemas.openxmlformats.org\/spreadsheetml\/2006\/main"/g)) {
+    const prefix = match[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    xml = xml.replace(new RegExp(`<(\\/?)${prefix}:`, 'g'), '<$1');
+  }
+  return xml;
+}
+
+export function parseXlsxWorksheet(xml: string, sharedStrings: readonly string[] = []): string[][] {
+  xml = spreadsheetXml(xml);
   const rows: string[][] = [];
   const sheetData = /<sheetData>([\s\S]*?)<\/sheetData>/.exec(xml);
   if (!sheetData) return rows;
@@ -151,7 +159,14 @@ function parseSheet(xml: string): string[][] {
       const attributes = cellMatch[1];
       const body = cellMatch[2] ?? '';
       const reference = /r="([A-Z]+\d+)"/.exec(attributes);
-      const text = cellText(body);
+      let text = cellText(body);
+      if (/\bt="s"/.test(attributes)) {
+        const index = Number(text);
+        if (!/^\d+$/.test(text) || !Number.isSafeInteger(index) || index >= sharedStrings.length) {
+          throw new Error(`xlsx: invalid shared string index '${text}' at ${reference?.[1] ?? 'unknown cell'}`);
+        }
+        text = sharedStrings[index];
+      }
       if (reference) {
         const index = columnIndex(reference[1]);
         while (cells.length < index) cells.push('');
@@ -179,17 +194,12 @@ export function readXlsx(filePath: string): XlsxSheet[] {
   const entries = unzip(fs.readFileSync(filePath));
   const byName = new Map(entries.map((entry) => [entry.name, entry.data]));
 
-  if (byName.has('xl/sharedStrings.xml')) {
-    throw new Error(
-      'xlsx: workbook uses a shared-string table, which this reader does not model. ' +
-        'Re-export without shared strings, or extend readXlsx to resolve them — do NOT ' +
-        'weaken the equality suite to work around this.',
-    );
-  }
+  const sharedXml = spreadsheetXml(byName.get('xl/sharedStrings.xml')?.toString('utf8') ?? '');
+  const sharedStrings = [...sharedXml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map(match => cellText(match[1]));
 
   const workbook = byName.get('xl/workbook.xml');
   if (!workbook) throw new Error('xlsx: missing xl/workbook.xml');
-  const workbookXml = workbook.toString('utf8');
+  const workbookXml = spreadsheetXml(workbook.toString('utf8'));
 
   const relationships = byName.get('xl/_rels/workbook.xml.rels');
   const targetById = new Map<string, string>();
@@ -216,7 +226,7 @@ export function readXlsx(filePath: string): XlsxSheet[] {
 
     sheets.push({
       name: name ? decodeXmlText(name[1]) : `sheet${positional}`,
-      rows: parseSheet(sheetData.toString('utf8')),
+      rows: parseXlsxWorksheet(sheetData.toString('utf8'), sharedStrings),
     });
   }
   if (sheets.length === 0) throw new Error('xlsx: workbook declares no sheets');

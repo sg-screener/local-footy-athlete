@@ -990,6 +990,10 @@ function gapCopy(workout: Workout | null | undefined): readonly SignedCopy[] {
     const slotId = gapSlotCopyId(String(gap?.slot ?? ''));
     if (!slotId) continue;
     const slot = signedCopy(slotId);
+    if (gap?.cause === 'already_on_day') {
+      out.push(signedCopy('day.gap.already_on_day', { slot }));
+      continue;
+    }
     if (gap?.cause === 'kit') {
       const needId = gap?.wouldNeed ? gapNeedCopyId(String(gap.wouldNeed)) : null;
       out.push(needId

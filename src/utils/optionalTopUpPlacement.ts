@@ -64,6 +64,7 @@ const DERIVED_TYPE: Readonly<Record<OptionalTopUpType, 'prehab_accessories' | 'm
 };
 
 export interface ApplyOptionalTopUpsArgs {
+  daysToGameByDay?: Readonly<Partial<Record<number, number | null>>>;
   /** The ACCEPTED week. Never mutated. */
   readonly workouts: readonly Workout[];
   readonly seasonPhase: SeasonPhase | null | undefined;
@@ -121,7 +122,7 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
       date,
       args.microcycleId,
       TOP_UP_REASON,
-      athlete,
+      { ...athlete, daysToGame: args.daysToGameByDay?.[placement.dayOfWeek] },
     );
     // An empty composition is no session rather than an empty card: equipment and
     // injury filtering can thin a pool, and the app shrinks rather than padding.
