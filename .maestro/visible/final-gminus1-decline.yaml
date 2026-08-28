@@ -1,0 +1,47 @@
+appId: com.localfootyathlete.app
+name: G-1 hard conditioning can be declined without changing the day
+---
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Friday 4 Sep
+      DAY_ID: day-row-fri
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible: Gunshow
+- assertNotVisible:
+    id: day-timeline-part-conditioning
+- tapOn:
+    id: home-plan-options
+- assertVisible: Friday 4 Sep
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-conditioning
+- tapOn: Hard session
+- extendedWaitUntil:
+    visible:
+      id: g1-route-back
+    timeout: 15000
+- takeScreenshot: artifacts/final/gminus1-hard-warning
+- tapOn:
+    id: g1-route-back
+- assertNotVisible:
+    id: g1-route-back
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Friday 4 Sep
+      DAY_ID: day-row-fri
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible: Gunshow
+- assertNotVisible:
+    id: day-timeline-part-conditioning
+- takeScreenshot: artifacts/final/gminus1-decline-reopened

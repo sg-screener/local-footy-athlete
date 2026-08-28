@@ -1,0 +1,22 @@
+appId: com.localfootyathlete.app
+---
+- takeScreenshot: 'artifacts/final/${ICON_CASE}-week'
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible: '${DAY_TITLE}'
+- assertVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: 'artifacts/final/${ICON_CASE}-day'
+- tapOn:
+    id: view-workout-button
+- extendedWaitUntil:
+    visible:
+      id: workout-screen
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: session-execution-icon-mobility
+    direction: UP
+- takeScreenshot: 'artifacts/final/${ICON_CASE}-session'

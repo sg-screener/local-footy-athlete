@@ -1,0 +1,146 @@
+appId: com.localfootyathlete.app
+name: Four actual Mobility component shapes across native views and reopening
+---
+# Accumulated real-onboarding simulator. Date and content are asserted, not inferred.
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Monday 31 Aug
+      DAY_ID: day-row-mon
+- runFlow:
+    file: combined-mobility-icon-screens.yaml
+    env:
+      ICON_CASE: strength-mobility
+      DAY_TITLE: Strength \+ Mobility
+      DAY_OPTIONS_DATE: Monday 31 Aug
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Monday 31 Aug
+      DAY_ID: day-row-mon
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/strength-mobility-reopened
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 0
+      DAY_OPTIONS_DATE: Friday 28 Aug
+      DAY_ID: day-row-fri
+- runFlow:
+    file: combined-mobility-icon-screens.yaml
+    env:
+      ICON_CASE: gunshow-mobility
+      DAY_TITLE: Gunshow \+ Mobility
+      DAY_OPTIONS_DATE: Friday 28 Aug
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 0
+      DAY_OPTIONS_DATE: Friday 28 Aug
+      DAY_ID: day-row-fri
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/gunshow-mobility-reopened
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Wednesday 2 Sep
+      DAY_ID: day-row-wed
+- runFlow:
+    file: combined-mobility-icon-screens.yaml
+    env:
+      ICON_CASE: standalone-mobility
+      DAY_TITLE: Mobility
+      DAY_OPTIONS_DATE: Wednesday 2 Sep
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Wednesday 2 Sep
+      DAY_ID: day-row-wed
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertNotVisible:
+    id: day-timeline-part-strength
+- takeScreenshot: artifacts/final/standalone-mobility-reopened
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 0
+      DAY_OPTIONS_DATE: Sunday 30 Aug
+      DAY_ID: day-row-sun
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertNotVisible:
+    id: day-timeline-part-strength
+- runFlow:
+    when:
+      notVisible:
+        id: day-timeline-part-recovery
+    commands:
+      - tapOn:
+          id: home-plan-options
+      - tapOn:
+          id: plan-change-add
+      - tapOn:
+          id: plan-change-type-recovery
+      - extendedWaitUntil:
+          visible:
+            id: plan-change-done
+          timeout: 30000
+      - tapOn:
+          id: plan-change-done
+- assertVisible:
+    id: day-timeline-part-recovery
+- tapOn:
+    id: program-view-week
+- runFlow:
+    file: combined-mobility-icon-screens.yaml
+    env:
+      ICON_CASE: mobility-recovery
+      DAY_TITLE: Mobility \+ Recovery|Recovery \+ Mobility
+      DAY_OPTIONS_DATE: Sunday 30 Aug
+- tapOn:
+    id: session-execution-toggle-mobility
+- scrollUntilVisible:
+    element:
+      id: session-execution-icon-recovery
+    direction: DOWN
+- takeScreenshot: artifacts/final/mobility-recovery-session-battery
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 0
+      DAY_OPTIONS_DATE: Sunday 30 Aug
+      DAY_ID: day-row-sun
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertNotVisible:
+    id: day-timeline-part-strength
+- assertVisible:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/final/mobility-recovery-reopened

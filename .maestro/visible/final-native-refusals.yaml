@@ -1,0 +1,62 @@
+appId: com.localfootyathlete.app
+name: Occupied-day refusal and game protection preserve the accumulated program
+---
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Tuesday 1 Sep
+      DAY_ID: day-row-tue
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-strength
+- assertNotVisible:
+    id: day-timeline-part-mobility
+- tapOn:
+    id: home-plan-options
+- assertVisible: Tuesday 1 Sep
+- tapOn:
+    id: plan-change-add
+- assertVisible: Please remove a session first
+- takeScreenshot: artifacts/final/occupied-day-refusal
+- tapOn: '‹ Back'
+- tapOn: Back
+- assertVisible:
+    id: day-timeline-part-strength
+- assertNotVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/occupied-refusal-dismissed
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 1
+      DAY_OPTIONS_DATE: Tuesday 1 Sep
+      DAY_ID: day-row-tue
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible:
+    id: day-timeline-part-strength
+- assertNotVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/occupied-refusal-reopened
+- runFlow:
+    file: combined-mobility-icon-date.yaml
+    env:
+      WEEK_OFFSET: 0
+      DAY_OPTIONS_DATE: Saturday 29 Aug
+      DAY_ID: day-row-sat
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: program-day-current
+- assertVisible: Game Day
+- assertNotVisible:
+    id: home-add-session
+- assertNotVisible:
+    id: home-plan-options
+- takeScreenshot: artifacts/final/game-day-protected

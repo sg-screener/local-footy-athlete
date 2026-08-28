@@ -22,6 +22,8 @@ for (const world of ['original-partial', 'corrected-commercial']) {
     const corrupt = rows.filter(({ row }) => /Barbell Bike|Chest-Supported DB Bike|Continuous Aerobic Bike/.test(row.name));
     const emptyLifts = rows.filter(({ row }) => ['power', 'main_lift', 'accessory'].includes(row.role) && !row.withheld && !row.dose);
     const missingMode = rows.filter(({ row }) => row.role === 'conditioning' && !row.modalityLabel);
+    const wrongMachineRecovery = rows.filter(({ row }) => /off-leg/.test(row.modalityLabel ?? '')
+      && /\bwalk(?:ing|-back)?\b|spin\/paddle/i.test(row.notes ?? ''));
     const power = rows.filter(({ row }) => row.role === 'power');
     const flush = rows.filter(({ row }) => resolveTemplateByName(row.name)?.quality === 'flush');
     const badFlush = flush.filter(({ row }) => {
@@ -41,6 +43,7 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       distinctProjectedDates: new Set(days.filter(d => !d.projectionError).map(d => d.date)).size,
       trainablePainfulPressRows: painful.length, corruptDisplayNames: corrupt.length,
       emptyLiftingDoses: emptyLifts.length, missingConditioningModes: missingMode.length,
+      wrongMachineRecoveryRows: wrongMachineRecovery.length,
       powerRows: power.length, displayedPowerRestRows: power.filter(({ row }) => row.rest).length,
       flushRowPlacements: flush.length, distinctFlushDates: new Set(flush.map(r => r.date)).size,
       distinctFlushTemplates: [...new Set(flush.map(r => r.row.name))], invalidFlushRows: badFlush.length,
@@ -50,9 +53,9 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       retiredAutomaticRows: retired.length };
     result.ok = result.weeks === 52 && result.athleteDays === 364 && result.restartChecks === 52 &&
       result.successfulRestarts === 52 && !errors.length && !painful.length && !corrupt.length &&
-      !emptyLifts.length && !missingMode.length && power.length > 0 && !result.displayedPowerRestRows
+      !emptyLifts.length && !missingMode.length && !wrongMachineRecovery.length && power.length > 0 && !result.displayedPowerRestRows
       && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length && result.optionalFlushRows === flush.length;
-    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, badFlush, retired, invalidLandmine });
+    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine });
   }
 }
 const receipt = { revision,

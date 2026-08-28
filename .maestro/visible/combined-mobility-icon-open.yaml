@@ -1,0 +1,16 @@
+appId: com.localfootyathlete.app
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 45000
+- tapOn:
+    id: program-view-week
