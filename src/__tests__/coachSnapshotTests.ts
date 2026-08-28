@@ -334,7 +334,7 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
     );
   ok('moving Load below the main-lift heading kills the hierarchy guard',
     progressOwnsTheLoadHero(progress) && !progressOwnsTheLoadHero(movedLoad));
-  const singleColumn = progress.replace("flexWrap: 'wrap',", "flexDirection: 'column',");
+  const singleColumn = progress.replace(/(liftGrid: \{[\s\S]*?)flexWrap: 'wrap',/, "$1flexDirection: 'column',");
   ok('collapsing the main-lift grid to one column kills its layout guard',
     progressUsesTwoColumnLiftGrid(progress) && !progressUsesTwoColumnLiftGrid(singleColumn));
 }

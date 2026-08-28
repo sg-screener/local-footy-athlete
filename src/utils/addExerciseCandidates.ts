@@ -55,7 +55,8 @@ import { assessTapSwapCandidateSafety, type TapSwapEnvironment } from './tapSwap
 import { resolveExerciseName, startingWeightForAthlete } from './loadEstimation';
 import { CONDITIONING_META, getExerciseTags, type ConditioningTier } from '../data/exerciseTags';
 import { SECTION_LABELS, type SessionExecutionSectionId } from './sessionExecutionChecklist';
-import type { OnboardingData } from '../types/domain';
+import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
+import { exerciseProgrammingAllows } from './exerciseFilter';
 
 export interface AddCandidate {
   restSeconds?: number;
@@ -68,6 +69,22 @@ export interface AddCandidate {
   weightKg: number | null;
   prescriptionType?: 'reps' | 'duration' | 'duration_minutes';
   perSide?: boolean;
+}
+
+/** Preserve the tapped section separately from the exercise's physiological role. */
+export function addExerciseSectionContext(section: AddFamilyId, leaf: AddLeafId,
+  sessionKind?: Workout['composedOptionalKind']): Pick<WorkoutExercise, 'sessionSection' | 'composedOptionalKind' | 'role'> {
+  const family = Object.values(ADD_GROUPS).find(group => group.leaves.includes(leaf))?.family;
+  return {
+    sessionSection: section,
+    ...(family === 'conditioning' ? { role: 'conditioning' as const } : {}),
+    ...(section === 'recovery' ? { composedOptionalKind: 'recovery' as const }
+      : section === 'primer' ? { composedOptionalKind: 'primer' as const }
+      : section === 'accessories' ? { composedOptionalKind: 'prehab' as const }
+      : family === 'mobility' && section !== 'optional' ? { composedOptionalKind: 'mobility' as const }
+      : sessionKind === 'primer' || sessionKind === 'prehab' || sessionKind === 'gunshow'
+        ? { composedOptionalKind: sessionKind } : {}),
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -115,10 +132,7 @@ export interface AddCandidate {
  * SAM'S THREE. A subset of the session's sections, typed as one so a family can
  * never name a section the athlete's session screen does not have.
  */
-export type AddFamilyId = Extract<
-  SessionExecutionSectionId,
-  'strength' | 'conditioning' | 'mobility'
->;
+export type AddFamilyId = Exclude<SessionExecutionSectionId, 'team_training'>;
 
 /** Sam's order, which is not `SECTION_ORDER`'s. He stated Strength first. */
 export const ADD_FAMILY_ORDER: readonly AddFamilyId[] = ['strength', 'conditioning', 'mobility'];
@@ -313,6 +327,9 @@ export interface AddFamilyOffer {
 }
 
 export interface AddCandidateArgs {
+  /** The section tapped, not a second exercise taxonomy. */
+  section?: AddFamilyId;
+  sessionKind?: Workout['composedOptionalKind'];
   environment: TapSwapEnvironment;
   existingExerciseNames?: readonly string[];
   profile?: OnboardingData | null;
@@ -392,15 +409,33 @@ function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
     for (const name of group.names) {
       if (present.has(resolveExerciseName(name).toLowerCase())) continue;
       if (!assessTapSwapCandidateSafety(name, args.environment).safe) continue;
+      if ((args.section === 'primer' || args.sessionKind === 'primer') && !exerciseProgrammingAllows(name, {
+        ...args.environment, route: 'primer',
+      })) continue;
       const leaf = target === 'by_conditioning_tier'
         ? LEAF_FOR_TIER[CONDITIONING_META[name]?.tier ?? 'B-low']
         : liftUnilateralToSingleLeg(target, name);
+      if (args.section && !leafAllowedInSection(args.section, leaf, args.sessionKind)) continue;
       const bucket = filed.get(leaf);
       if (bucket) bucket.push(name);
       else filed.set(leaf, [name]);
     }
   }
   return filed;
+}
+
+function leafAllowedInSection(section: AddFamilyId, leaf: AddLeafId,
+  sessionKind?: Workout['composedOptionalKind']): boolean {
+  if (section === 'optional' || section === 'other') return true;
+  if (section === 'primer') return Object.values(ADD_GROUPS).some(group =>
+    (group.family === 'strength' || group.family === 'mobility') && group.leaves.includes(leaf));
+  // Authored Accessories uses the existing main-section ID ('strength'),
+  // with its own visible label. Its typed session identity still owns choices.
+  if (section === 'accessories' || (section === 'strength' && sessionKind === 'prehab')) return [
+    'lower_accessories', 'upper_accessories', 'upper_arms_shoulders', 'midline_carries',
+  ].includes(leaf);
+  if (section === 'recovery') return ['mobility_drills', 'tissue', 'breathing', 'easy_flush'].includes(leaf);
+  return Object.values(ADD_GROUPS).some((group) => group.family === section && group.leaves.includes(leaf));
 }
 
 function leafForExerciseName(name: string): AddLeafId | null {
@@ -491,13 +526,14 @@ export function legalAddAlternativesForExercise(
 export function legalAddFamilies(args: AddCandidateArgs): AddFamilyOffer[] {
   const filed = legalNamesByLeaf(args);
   const families: AddFamilyOffer[] = [];
-  for (const family of ADD_FAMILY_ORDER) {
+  for (const family of args.section ? [args.section] : ADD_FAMILY_ORDER) {
     const groups: AddGroupOffer[] = [];
     // Declaration order in ADD_GROUPS is menu order.
     for (const [id, spec] of Object.entries(ADD_GROUPS) as [AddGroupId, AddGroupSpec][]) {
-      if (spec.family !== family) continue;
+      if (!spec.leaves.some((leaf) => leafAllowedInSection(family, leaf))) continue;
       const leaves: AddLeafOffer[] = [];
       for (const leafId of spec.leaves) {
+        if (!leafAllowedInSection(family, leafId)) continue;
         const names = filed.get(leafId);
         if (!names || names.length === 0) continue;
         leaves.push({ id: leafId, label: ADD_LEAF_LABELS[leafId], count: names.length });

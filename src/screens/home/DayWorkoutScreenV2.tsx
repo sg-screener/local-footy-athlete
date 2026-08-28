@@ -48,6 +48,7 @@ import {
 import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
 import {
   ADD_GROUPS,
+  addExerciseSectionContext,
   ADD_LEAF_LABELS,
   legalAddCandidates,
   legalAddFamilies,
@@ -654,6 +655,8 @@ function suggestionPrescription(suggestion: SuggestedExercise): string {
  * Swapping between Classic and V2 produces identical session data, only the
  * rendering differs.
  */
+const SessionReadOnlyContext = React.createContext(false);
+
 export default function DayWorkoutScreenV2() {
   const {
     date,
@@ -889,13 +892,14 @@ export default function DayWorkoutScreenV2() {
       : new Set());
   }, [date, workout?.id, persistedFeedback]);
   const toggleExerciseComplete = React.useCallback((itemId: string) => {
+    if (isFinished || isAlreadyComplete) return;
     setCompletedExerciseIds((current) => {
       const next = new Set(current);
       if (next.has(itemId)) next.delete(itemId);
       else next.add(itemId);
       return next;
     });
-  }, []);
+  }, [isFinished, isAlreadyComplete]);
   const executionSummary = React.useMemo(
     () => executionPlan
       ? buildSessionExecutionSummary(executionPlan, completedExerciseIds)
@@ -1205,27 +1209,20 @@ export default function DayWorkoutScreenV2() {
     };
   }, [date, editableExercises]);
 
-  /* ⚠ **LEVEL 1 IS DELETED, AND THAT IS THE POINT OF R-217.**
-   *
-   * `openExerciseAdd` opened *"Strength / Conditioning / Mobility / Warm-up"* —
-   * R-120's first rung — and the retired menu row was its only caller. The
-   * section plus answers that question by WHERE it is tapped, so the rung has
-   * nothing left to ask and `openAddFamily` is now the entry point.
-   *
-   * ⚠ **ITS "Nothing safe to add today" SENTENCE WENT WITH IT, DELIBERATELY.**
-   * That fallback fired when EVERY family was empty. Legality is now read per
-   * section before a plus is drawn, so a section with nothing safe shows no
-   * control instead of a control that opens on a refusal — the honest answer
-   * moved from a sentence to an absence. `showExerciseEditFallback` keeps its
-   * other callers.
-   */
+  const addSessionKind = React.useCallback((family: AddFamilyId) =>
+    executionPlan?.sections.find(section => section.id === family)?.sessionKind, [executionPlan]);
+
   /** LEVEL 2 — the headings inside one family. */
   const openAddFamily = React.useCallback((
     family: AddFamilyId,
     fromFamily?: Extract<ExerciseEditStep, { kind: 'add_family' }>,
   ) => {
-    const offer = legalAddFamilies(addCandidateArgs()).find((entry) => entry.id === family);
-    if (!offer) return;
+    const offer = legalAddFamilies({ ...addCandidateArgs(), section: family, sessionKind: addSessionKind(family) }).find((entry) => entry.id === family);
+    if (!offer) {
+      setExerciseEditStep({ kind: 'result', ok: false, title: 'Nothing suitable to add',
+        message: 'No additional exercises fit this section with your equipment, injury restrictions and today’s safety limits. Your session is unchanged.' });
+      return;
+    }
     setExerciseEditStep({
       kind: 'add_group',
       family: offer.id,
@@ -1235,42 +1232,16 @@ export default function DayWorkoutScreenV2() {
       })),
       ...(fromFamily ? { fromFamily } : {}),
     });
-  }, [addCandidateArgs]);
+  }, [addCandidateArgs, addSessionKind]);
 
-  /**
-   * ⚠ **WHICH SECTIONS OFFER A QUICK ADD — R-217.**
-   *
-   * `AddFamilyId` is an `Extract` of `SessionExecutionSectionId`, so a section
-   * and an add family are THE SAME IDENTITY and no translation table is needed
-   * (`addExerciseCandidates`: *"the families ARE session sections"*). A section
-   * outside those three — Accessories, Recovery, Optional Work — has no family
-   * to add into and gets no plus.
-   *
-   * The legality is the SAME `legalAddFamilies` pass the retired menu row ran,
-   * so a family with nothing safe for today's kit and injuries shows no plus at
-   * all rather than a control that opens on an empty list.
-   */
-  const quickAddFamilies = React.useMemo(() => {
-    if (isTeamOnly || isFinished || isAlreadyComplete || editableExercises.length === 0) {
-      return new Set<AddFamilyId>();
-    }
-    return new Set(legalAddFamilies(addCandidateArgs()).map((family) => family.id));
-  }, [
-    addCandidateArgs, editableExercises.length, isAlreadyComplete, isFinished, isTeamOnly,
-  ]);
-
-  /** The tap for one section's plus, or `null` when that section has none. */
+  // Availability filters the list, not the control. Games/club entries and
+  // completed records do not offer an exercise edit.
   const quickAddFor = React.useCallback(
     (sectionId: SessionExecutionSectionId): (() => void) | null => {
-      const family = sectionId as AddFamilyId;
-      if (!quickAddFamilies.has(family)) return null;
-      // ⚠ ENTERS THE EXISTING HIERARCHY ONE LEVEL DOWN — R-120's level 1 IS the
-      // three section names, and the plus has already answered that question by
-      // WHERE it was tapped. Asking again would be the "path is the context"
-      // mistake R-120b names, in reverse.
-      return () => openAddFamily(family);
-    },
-    [openAddFamily, quickAddFamilies],
+      if (isTeamOnly || isFinished || isAlreadyComplete || sectionId === 'team_training'
+        || workout?.workoutType === 'Game') return null;
+      return () => openAddFamily(sectionId);
+    }, [openAddFamily, isTeamOnly, isFinished, isAlreadyComplete, workout?.workoutType],
   );
 
   /**
@@ -1282,7 +1253,7 @@ export default function DayWorkoutScreenV2() {
     leaf: AddLeafId,
     fromList?: Extract<ExerciseEditStep, { kind: 'add_leaf' } | { kind: 'add_group' }>,
   ) => {
-    const candidates = legalAddCandidates({ ...addCandidateArgs(), leaf });
+    const candidates = legalAddCandidates({ ...addCandidateArgs(), leaf, section: family, sessionKind: addSessionKind(family) });
     if (candidates.length === 0) return;
     setExerciseEditStep({
       kind: 'add_pick',
@@ -1291,6 +1262,7 @@ export default function DayWorkoutScreenV2() {
       label: ADD_LEAF_LABELS[leaf],
       options: candidates.map((candidate) => {
         const suggestion: SuggestedExercise = {
+          ...addExerciseSectionContext(family, leaf, addSessionKind(family)),
           name: candidate.name,
           sets: candidate.sets,
           repsMin: candidate.repsMin,
@@ -1308,7 +1280,7 @@ export default function DayWorkoutScreenV2() {
       }),
       ...(fromList ? { fromList } : {}),
     });
-  }, [addCandidateArgs]);
+  }, [addCandidateArgs, addSessionKind]);
 
   /**
    * A HEADING WAS TAPPED — AND WHETHER THAT ASKS ANOTHER QUESTION IS THE DATA'S
@@ -1326,7 +1298,7 @@ export default function DayWorkoutScreenV2() {
     group: AddGroupId,
     fromGroup?: Extract<ExerciseEditStep, { kind: 'add_group' }>,
   ) => {
-    const familyOffer = legalAddFamilies(addCandidateArgs()).find((entry) => entry.id === family);
+    const familyOffer = legalAddFamilies({ ...addCandidateArgs(), section: family, sessionKind: addSessionKind(family) }).find((entry) => entry.id === family);
     const offer = familyOffer?.groups.find((entry) => entry.id === group);
     if (!offer || offer.leaves.length === 0) return;
     if (offer.leaves.length === 1) {
@@ -1343,7 +1315,7 @@ export default function DayWorkoutScreenV2() {
       })),
       ...(fromGroup ? { fromGroup } : {}),
     });
-  }, [addCandidateArgs, openAddLeafList]);
+  }, [addCandidateArgs, openAddLeafList, addSessionKind]);
 
   /** THE EXTRA STEP'S ANSWER — Hinge / Squat / Single leg / Accessories. */
   const openAddLeaf = React.useCallback((
@@ -2168,16 +2140,9 @@ export default function DayWorkoutScreenV2() {
           card owner. Their load-neutral classification does not select a
           different visual template.
         */}
-        <>
-            {executionPlan?.sections.filter((section) =>
-              section.id === 'mobility'
-              && section.items.every((item) => item.source === 'mobility')).map((section) => (
-              <SessionExecutionSection
-                key={section.id}
-                section={section}
-                completedItemIds={completedExerciseIds}
-                onQuickAdd={quickAddFor(section.id)}
-              >
+        <SessionReadOnlyContext.Provider value={isFinished || isAlreadyComplete}>
+            <SessionList
+              mobilityContent={
                 <MobilityExerciseList
                   flow={mobilityFlow}
                   completedItemIds={completedExerciseIds}
@@ -2199,9 +2164,7 @@ export default function DayWorkoutScreenV2() {
                   onQuickSwap={quickSwapExercise}
                   onQuickRemove={requestExerciseRemoval}
                 />
-              </SessionExecutionSection>
-            ))}
-            <SessionList
+              }
               items={sessionTemplate.items}
               executionPlan={executionPlan!}
               quickAddFor={quickAddFor}
@@ -2237,7 +2200,7 @@ export default function DayWorkoutScreenV2() {
               * on, reading the same tick when it is on. A pill or a text link
               * here would be a different control claiming to do the same job.
               */}
-            {selectableItemIds.length > 0 ? (
+            {!isFinished && !isAlreadyComplete && selectableItemIds.length > 0 ? (
               <Pressable
                 onPress={toggleSelectAll}
                 accessibilityRole="checkbox"
@@ -2260,7 +2223,7 @@ export default function DayWorkoutScreenV2() {
                 </View>
               </Pressable>
             ) : null}
-        </>
+        </SessionReadOnlyContext.Provider>
 
         {/* ── Reopen of a completed session → read-only summary ── */}
         {isAlreadyComplete && date ? (
@@ -2728,6 +2691,7 @@ interface SessionListProps {
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
   /** R-217 — the section's quick-add tap, or `null` where nothing is legal. */
+  mobilityContent: React.ReactNode;
   quickAddFor: (sectionId: SessionExecutionSectionId) => (() => void) | null;
 }
 
@@ -2871,15 +2835,16 @@ function SessionList({
   onQuickSwap,
   onQuickRemove,
   quickAddFor,
+  mobilityContent,
 }: SessionListProps) {
-  if (items.length === 0) return null;
+  if (executionPlan.sections.length === 0) return null;
 
   // Numbers are a property of the LIST, not of a row — a superset takes one
   // slot however its members are ordered — so they are computed once, up here.
   const labels = sessionListLabels(items);
 
   const renderItem = (
-    item: SessionTemplateItem, key: string, index: number, checkbox?: React.ReactNode,
+    item: SessionTemplateItem, key: string, index: number, checkbox?: React.ReactNode, sectionLabel?: string,
   ) => {
     if (item.kind === 'team_training') {
       return <TeamTrainingRow key={key} checkbox={checkbox} />;
@@ -2936,10 +2901,10 @@ function SessionList({
         checkbox={checkbox}
         selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         availableEquipment={availableEquipment}
-        label={labels[index] ?? ''}
+        label={sectionLabel ?? labels[index] ?? ''}
         isGrouped={!!item.superset}
         prescriptionLabel={isLowLoad ? formatLowLoadSetsReps(item.row) : undefined}
-        cueTextOverride={item.presentation === 'mobility'
+        cueTextOverride={item.presentation === 'mobility' && !item.row.sessionSection
           ? cleanNotes(item.row?.notes ?? item.row?.exercise?.description)
           : undefined}
         isLastInGroup={
@@ -2966,8 +2931,7 @@ function SessionList({
     );
   };
 
-  const sections = executionPlan.sections.filter((section) =>
-    !(section.id === 'mobility' && section.items.every((item) => item.source === 'mobility')));
+  const sections = executionPlan.sections;
   return (
     <View style={styles.executionSections}>
       {sections.map((section) => (
@@ -2977,7 +2941,8 @@ function SessionList({
           completedItemIds={completedItemIds}
           onQuickAdd={quickAddFor(section.id)}
         >
-          {section.items.map((executionItem) => (
+          {section.items.some((item) => item.source === 'mobility') ? mobilityContent : null}
+          {section.items.filter((item) => item.source !== 'mobility').map((executionItem) => (
             <ExecutionChecklistItem
               key={executionItem.id}
               itemId={executionItem.id}
@@ -2998,6 +2963,8 @@ function SessionList({
                     `session-item-${executionItem.templateIndex}`,
                     executionItem.templateIndex,
                     checkbox,
+                    section.items.some(item => item.source === 'mobility')
+                      ? String(section.items.findIndex(item => item.id === executionItem.id) + 1) : undefined,
                   ))}
             </ExecutionChecklistItem>
           ))}
@@ -3030,11 +2997,9 @@ function SessionExecutionSection({ section, completedItemIds, onQuickAdd, childr
    * last box in each section ... a 'quick add' feature that allows the athlete
    * to add an exercise to that section"*.**
    *
-   * `null` when this section has nothing legal to add — the athlete's kit and
-   * injuries decide that, not this component. **It is mounted HERE, in the one
-   * section owner both the Mobility route and `SessionList` render through, so
-   * a section cannot exist without having been asked the question.** That is
-   * the same lesson as R-213: a per-surface plus is a plus one surface forgets.
+   * `null` for read-only/non-exercise entries. An empty legal list is explained
+   * after the tap (R-273), rather than hiding this control. Every exercise
+   * section renders through this same owner.
    */
   onQuickAdd?: (() => void) | null;
   children: React.ReactNode;
@@ -3162,6 +3127,7 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, 
   withheld?: { explanation?: string } | null;
   children: (checkbox: React.ReactNode) => React.ReactNode;
 }) {
+  const readOnly = React.useContext(SessionReadOnlyContext);
   /*
    * ⚠ **THE CHECKBOX OWNS THE RIGHT EDGE — SAM, 2026-08-20 (R-111).**
    *
@@ -3208,9 +3174,10 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, withheld, 
     </View>
   ) : (
     <Pressable
+      disabled={readOnly}
       onPress={() => onToggle(itemId)}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: completed }}
+      accessibilityState={{ checked: completed, disabled: readOnly }}
       accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
       testID={`session-execution-check-${stableTestIdToken(itemId)}`}
       /* ⚠ **18x18 DRAWN, 44x44 TAPPABLE.** The checkbox now follows the
@@ -3488,6 +3455,7 @@ function StrengthExerciseCard({
   commitWeightEdit,
   onSelectExercise,
 }: StrengthExerciseCardProps) {
+  const readOnly = React.useContext(SessionReadOnlyContext);
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
   const setsReps = prescriptionLabel ?? formatStrengthSetsReps(exercise);
@@ -3600,7 +3568,12 @@ function StrengthExerciseCard({
       * `alignItems: 'center'` row, so their centres coincide by construction
       * and nothing can offset one without the other. */
     <View style={styles.controlsRow}>
-    {loadControlMode === 'none' ? null : loadControlMode === 'bodyweight' ? (
+    {loadControlMode === 'none' ? null : readOnly ? (
+      <View style={[styles.weightControl, styles.staticLoadControl]}
+        testID={`workout-exercise-load-${exerciseToken}`} accessibilityLabel={`Weight, ${displayedWeight}`}>
+        <Text style={styles.weightValueText}>{displayedWeight}</Text>
+      </View>
+    ) : loadControlMode === 'bodyweight' ? (
       <View
         style={[styles.weightControl, styles.staticLoadControl]}
         testID={`workout-exercise-load-${exerciseToken}`}
@@ -4199,6 +4172,8 @@ function QuickExerciseActions({
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
 }) {
+  const readOnly = React.useContext(SessionReadOnlyContext);
+  if (readOnly) return null;
   const token = stableTestIdToken(exercise.targetId ?? exercise.key);
   return (
     <View style={styles.exerciseRowActions}>

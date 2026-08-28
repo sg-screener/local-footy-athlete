@@ -635,6 +635,10 @@ export function buildSessionFeedbackPayload(
     return {
       ...shared,
       completion,
+      ...(completion !== 'skipped' && input.strength?.length
+        ? { strength: input.strength } : {}),
+      ...(completion !== 'skipped' && input.conditioning
+        ? { conditioning: input.conditioning } : {}),
       ...(completion !== 'skipped' && isSessionEffortRating(input.difficulty)
         ? { difficulty: input.difficulty }
         : {}),

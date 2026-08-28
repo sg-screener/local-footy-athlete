@@ -81,7 +81,9 @@ import {
   getSessionComponents,
   type SessionComponent,
 } from '../utils/sessionComponents';
-import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
+import { buildStrengthPerformanceLogs, collectLoggedStrengthSets, buildLastSetFeedbackInputs } from '../utils/strengthLogging';
+import { LastSetRirQuestion } from './LastSetRirQuestion';
+import type { LastSetEstimateInput } from '../rules/estimatedOneRepMax';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
 import { useProfileStore } from '../store/profileStore';
 import { measuredMinutesFor } from '../store/sessionStopwatchStore';
@@ -697,6 +699,10 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     | undefined;
   const weightOverrides = useProgramStore((s: any) => s.weightOverrides[date]);
   const bodyWeightKg = useProfileStore((s) => s.onboardingData?.weightKg);
+  const trackedLiftChoices = useProfileStore((s) => s.trackedLiftChoices);
+  const loggedSets = useWorkoutLogStore((s) => s.loggedSets);
+  const activeLoggedWorkout = useWorkoutLogStore((s) => s.activeWorkout);
+  const [lastSetDrafts, setLastSetDrafts] = useState<Record<string, LastSetEstimateInput>>({});
   const conditioningConfig = useMemo(
     () => getConditioningLoggingConfig(workout),
     [workout],
@@ -888,6 +894,15 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const hasComponentFlow = sessionComponents.length > 0;
   const conditioningComponentCompletion = activeComponentCompletions.conditioning ?? completion;
   const strengthComponentCompletion = activeComponentCompletions.strength ?? activeCompletion;
+  const lastSetInputs = buildLastSetFeedbackInputs({
+    date, workout, choices: trackedLiftChoices,
+    loggedSets: activeLoggedWorkout?.id === workout?.id
+      ? collectLoggedStrengthSets(workout, loggedSets, activeLoggedWorkout?.id) : undefined,
+    executionItems: executionSummary?.items,
+    completion: strengthComponentCompletion,
+    bodyWeightKg, existing: existing?.strength,
+  }).map((input) => lastSetDrafts[input.workoutExerciseId]?.setId === input.setId
+    ? lastSetDrafts[input.workoutExerciseId] : input);
   const conditioningWasPerformed =
     conditioningComponentCompletion === 'full' ||
     conditioningComponentCompletion === 'partial';
@@ -1116,7 +1131,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
           weightOverrides,
           strengthCompletion,
           loggedStrengthSets,
-          { bodyWeightKg },
+          { bodyWeightKg, lastSetInputs },
         );
     const feedback = buildSessionFeedbackPayload({
       dateStr: date,
@@ -1233,6 +1248,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     workout,
     weightOverrides,
     bodyWeightKg,
+    lastSetInputs,
     notes,
     date,
     onSave,
@@ -1306,6 +1322,8 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
        was the "subtitle under 'log session'" Sam had already removed once, from
        the sheet header, while the panel kept drawing its own copy. */
     <View testID="session-feedback-panel">
+      {lastSetInputs.map((input) => <LastSetRirQuestion key={input.setId} input={input}
+        onChange={(next) => setLastSetDrafts((drafts) => ({ ...drafts, [next.workoutExerciseId]: next }))} />)}
       {executionSummary ? (
         <>
           <View style={styles.checklistSummary} testID="session-feedback-checklist-summary">

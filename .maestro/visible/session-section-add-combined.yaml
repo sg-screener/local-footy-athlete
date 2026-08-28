@@ -1,0 +1,166 @@
+appId: com.localfootyathlete.app
+name: Section Add on real Primer, conditioning, recovery and accessory sessions
+# Continue estimated-1rm-session-add.yaml. Verified with real onboarding on
+# Saturday 2026-08-29. Sunday is free; next Wednesday has optional Mobility.
+# The deterministic both-sex/date/fixture matrix is test:session-section-add.
+---
+- tapOn:
+    point: 12%, 95%
+- waitForAnimationToEnd
+- tapOn:
+    id: program-day-next
+- tapOn:
+    id: home-add-session
+- tapOn:
+    id: plan-change-type-primer
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-primer
+- tapOn:
+    id: session-quick-add-primer
+- tapOn: Power & Jumps
+- tapOn: Box Jumps
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-optional
+- tapOn:
+    id: session-quick-add-optional
+- tapOn: Upper body
+- tapOn: Pull
+- tapOn: Pull-Ups
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-conditioning
+- tapOn: Light session
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-conditioning
+# Keep the plus clear of the persistent bottom tab bar.
+- swipe:
+    start: 50%, 80%
+    end: 50%, 50%
+    duration: 500
+- tapOn:
+    id: session-quick-add-conditioning
+- tapOn: Easy & flush
+- tapOn: Easy Bike
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-recovery
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-recovery
+# Keep the plus clear of the persistent bottom tab bar.
+- swipe:
+    start: 50%, 80%
+    end: 50%, 50%
+    duration: 500
+- tapOn:
+    id: session-quick-add-recovery
+- tapOn: Breathing & wind-down
+- tapOn: Box Breathing
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn: Week
+- tapOn:
+    id: program-week-next
+- tapOn: Day
+- repeat:
+    times: 4
+    commands:
+      - tapOn:
+          id: program-day-previous
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- scrollUntilVisible:
+    element:
+      id: plan-change-type-prehab
+- tapOn:
+    id: plan-change-type-prehab
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-accessories
+# Keep the plus clear of the persistent bottom tab bar.
+- swipe:
+    start: 50%, 80%
+    end: 50%, 50%
+    duration: 500
+- tapOn:
+    id: session-quick-add-accessories
+- tapOn: Upper body
+- tapOn: Accessories
+- tapOn: Scap Push-Up
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- takeScreenshot: artifacts/rir-add/all-section-adds

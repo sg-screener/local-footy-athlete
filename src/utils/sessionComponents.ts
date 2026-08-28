@@ -751,15 +751,20 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
 
-  const mobilityRows = renderableRows.filter(row => (row.composedOptionalKind ?? lowLoadKind) === 'mobility');
-  const recoveryRows = renderableRows.filter(row => (row.composedOptionalKind ?? lowLoadKind) === 'recovery');
+  const lowLoadForRow = (row: any) => row.composedOptionalKind
+    ?? (row.sessionSection === 'mobility' || row.sessionSection === 'recovery' ? row.sessionSection
+      : row.sessionSection ? undefined : lowLoadKind);
+  const mobilityRows = renderableRows.filter(row => lowLoadForRow(row) === 'mobility');
+  const recoveryRows = renderableRows.filter(row => lowLoadForRow(row) === 'recovery');
   const lowLoadIds = new Set([...mobilityRows, ...recoveryRows].map(row => row.id));
 
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
   const legacyConditioningIds = blockConditioningIds.size > 0
     ? new Set<string>()
     : legacyConditioningTailIds(workout, renderableRows);
-  const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds]);
+  const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds,
+    ...renderableRows.filter(row => row.sessionSection &&
+      (row.sessionSection === 'conditioning' || row.role === 'conditioning')).map(row => row.id)]);
   // CARD IDENTITY, ONE NAME (Sam, 2026-08-24). Midline is an exercise role,
   // not a session type. It stays inside the session that prescribed it even
   // when edits leave midline as the only non-power row. The former
@@ -771,9 +776,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const supportRows: any[] = [];
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
 
-  const conditioningRows = isStandaloneConditioningWorkout(workout)
-    ? renderableRows.filter((row) => !supportIds.has(row?.id) && !lowLoadIds.has(row?.id))
-    : renderableRows.filter((row) => conditioningIds.has(row?.id) && !supportIds.has(row?.id));
+  const conditioningRows = renderableRows.filter(row => !lowLoadIds.has(row?.id) && !supportIds.has(row?.id)
+    && (conditioningIds.has(row?.id) || (isStandaloneConditioningWorkout(workout) && !row.sessionSection)));
   // SPEED IS ITS OWN BUCKET (Sam, 2026-08-17). Scoped to rows the conditioning
   // block has NOT already claimed, so a block that names the same id twice
   // cannot duplicate a row across two components — conditioning keeps it,
@@ -783,9 +787,9 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
       .filter((id) => !conditioningIds.has(id) && !supportIds.has(id)),
   );
   const speedRows = renderableRows.filter((row) => speedIds.has(row?.id));
-  const strengthRows = isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)
-    ? []
-    : renderableRows.filter((row) => !conditioningIds.has(row?.id)
+  const strengthRows = renderableRows.filter((row) =>
+      (row.sessionSection || !(isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)))
+      && !conditioningIds.has(row?.id)
       && !lowLoadIds.has(row?.id)
       && !supportIds.has(row?.id)
       && !speedIds.has(row?.id));

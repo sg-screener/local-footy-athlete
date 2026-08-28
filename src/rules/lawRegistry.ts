@@ -141,6 +141,20 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-estimated-1rm-last-set-rir',
+    law: 'R-272: four chart-only lift alternatives preserve separate histories. Only actual last completed working-set load/reps plus optional RIR 0–4 with effective reps <=15 produce a versioned estimate. Skip/unanswered/open-ended 5+ do not. Pull-ups use session bodyweight and display added load; Bulgarians use one non-dominant-leg total external load. No prescription fallback, program-load changes, confidence badges or PB awards.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-272',
+    guard: { state: 'guarded', by: 'test:estimated-1rm', chainStatus: 'in_chain',
+      receipt: 'estimatedOneRepMaxTests uses real onboarding, actual Add/log/feedback transactions, chart switches and process restart for both sexes. Published-curve and boundary assertions protect the calculation inputs. Final verification and native coverage: docs/STATUS_INTAKE.md.' },
+  },
+  {
+    id: 'LAW-session-section-add-context',
+    law: 'R-273: the shared + exists beneath every editable exercise section, including Primer and optional work. Equipment, injury and fixture safety filter choices and empty results explain why. Section context and physiological role persist without deleting existing work. Completed records are read-only; games and team training have no exercise Add.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-273',
+    guard: { state: 'guarded', by: 'test:session-section-add + test:session-execution', chainStatus: 'in_chain',
+      receipt: 'sessionSectionAddTests walks actual section and exercise Add transactions across both sexes, combined sessions and accumulated restart. Shared-control wiring is guarded in sessionChangeHubTests and sessionExecutionChecklistTests. Final native/gate receipt: docs/STATUS_INTAKE.md.' },
+  },
+  {
     id: 'LAW-exercise-intake-20260828',
     law: 'R-270: the ten saved exercise additions use canonical typed catalogue, equipment, injury, experience, fixture and dose owners. Ball and space suitability require explicit answers. Approved automatic/manual/warm-up/Primer routes remain reachable; units and load conventions persist. No Bird Dogs, conditioning slam template, power-rest UI or Estimated 1RM change.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-270',

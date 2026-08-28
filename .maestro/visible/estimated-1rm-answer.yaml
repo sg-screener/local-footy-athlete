@@ -1,0 +1,70 @@
+appId: com.localfootyathlete.app
+name: Enter and verify one actual last-set answer
+---
+- scrollUntilVisible:
+    element:
+      id: 'last-set-${QA_LIFT}-weight'
+    centerElement: false
+- tapOn:
+    id: 'last-set-${QA_LIFT}-weight'
+- eraseText
+- inputText: '${QA_WEIGHT}'
+- assertVisible:
+    id: 'last-set-${QA_LIFT}-weight'
+    text: '${QA_WEIGHT}'
+- scrollUntilVisible:
+    element:
+      id: 'last-set-${QA_LIFT}-reps'
+    centerElement: false
+- tapOn:
+    id: 'last-set-${QA_LIFT}-reps'
+- eraseText
+- inputText: '${QA_REPS}'
+- assertVisible:
+    id: 'last-set-${QA_LIFT}-reps'
+    text: '${QA_REPS}'
+- scrollUntilVisible:
+    element:
+      id: 'last-set-${QA_LIFT}-summary'
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: 'last-set-${QA_LIFT}-summary'
+- assertVisible:
+    id: 'last-set-${QA_LIFT}-summary'
+    text: 'Last set: .*${QA_WEIGHT} kg × ${QA_REPS} reps.*'
+- takeScreenshot: 'artifacts/rir-add/${QA_LIFT}-actual-set'
+- scrollUntilVisible:
+    element:
+      id: 'last-set-${QA_LIFT}-rir'
+    centerElement: true
+- assertVisible:
+    id: 'last-set-${QA_LIFT}-rir-readout'
+    text: Unanswered
+- assertNotVisible:
+    id: 'last-set-${QA_LIFT}-rir-thumb'
+- runFlow:
+    when:
+      true: ${QA_RIR_POINT === '100%'}
+    commands:
+      - tapOn:
+          id: 'last-set-${QA_LIFT}-rir'
+          point: '98%, 50%'
+- runFlow:
+    when:
+      true: ${QA_RIR_POINT === '40%'}
+    commands:
+      - tapOn:
+          id: 'last-set-${QA_LIFT}-rir'
+          point: '40%, 50%'
+- runFlow:
+    when:
+      true: ${QA_RIR_POINT === '20%'}
+    commands:
+      - tapOn:
+          id: 'last-set-${QA_LIFT}-rir'
+          point: '20%, 50%'
+- assertVisible:
+    id: 'last-set-${QA_LIFT}-rir-readout'
+    text: '${QA_RIR_TEXT} more clean reps'
+- takeScreenshot: 'artifacts/rir-add/${QA_LIFT}-rir'

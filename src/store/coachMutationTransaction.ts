@@ -112,6 +112,7 @@ interface AcceptedMirrorSnapshot {
   modalityPreferences: ReturnType<typeof useCoachPreferencesStore.getState>['modalityPreferences'];
   onboardingData: ReturnType<typeof useProfileStore.getState>['onboardingData'];
   isOnboardingComplete: ReturnType<typeof useProfileStore.getState>['isOnboardingComplete'];
+  trackedLiftChoices: ReturnType<typeof useProfileStore.getState>['trackedLiftChoices'];
 }
 
 export interface CoachMutationCandidateVerification {
@@ -775,6 +776,7 @@ function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
     onboardingData: useProfileStore.getState().onboardingData,
     isOnboardingComplete: useProfileStore.getState().isOnboardingComplete,
+    trackedLiftChoices: useProfileStore.getState().trackedLiftChoices,
   });
 }
 
@@ -811,6 +813,9 @@ function serializeAcceptedMirrorEnvelopes(
       state: {
         onboardingData: mirrors.onboardingData,
         isOnboardingComplete: mirrors.isOnboardingComplete,
+        // Display preferences share this store, but never the program inputs.
+        // Accepted edits must not replace their durable envelope with defaults.
+        trackedLiftChoices: mirrors.trackedLiftChoices,
         isLoading: false,
         error: null,
       },

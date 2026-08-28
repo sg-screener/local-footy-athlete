@@ -2,11 +2,12 @@ import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import { journalWeekStartOf } from './journalLoad';
 import {
   estimateExternalOneRepMaxKg,
-  isPullUpExerciseName,
   type OneRepMaxBasis,
+  TRACKED_LIFTS, selectedTrackedLifts, trackedLiftId, estimateLastSetOneRepMaxKg,
+  type TrackedLiftId, type TrackedLiftChoices,
 } from './estimatedOneRepMax';
 
-export type ProgressMainLiftId = 'pull_up' | 'bench_press' | 'rdl' | 'back_squat';
+export type ProgressMainLiftId = TrackedLiftId;
 
 export interface ProgressMainLiftPoint {
   readonly weekStart: string;
@@ -17,6 +18,7 @@ export interface ProgressMainLiftHistory {
   readonly id: ProgressMainLiftId;
   readonly exerciseName: string;
   readonly points: readonly ProgressMainLiftPoint[];
+  readonly series: readonly ProgressMainLiftSeries[];
   readonly valuePrefix: '' | '+';
 }
 
@@ -25,36 +27,17 @@ export interface ProgressStrengthSession {
   readonly strength: readonly StrengthExercisePerformanceLog[];
 }
 
-const MAIN_LIFTS: readonly Omit<ProgressMainLiftHistory, 'points'>[] = [
-  { id: 'pull_up', exerciseName: 'Pull-Up', valuePrefix: '+' },
-  { id: 'bench_press', exerciseName: 'Bench Press', valuePrefix: '' },
-  { id: 'rdl', exerciseName: 'RDL', valuePrefix: '' },
-  { id: 'back_squat', exerciseName: 'Back Squat', valuePrefix: '' },
-];
-
-function normalizedName(exerciseName: string): string {
-  return exerciseName
-    .trim()
-    .toLowerCase()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ');
-}
-
-function mainLiftId(exerciseName: string): ProgressMainLiftId | null {
-  if (isPullUpExerciseName(exerciseName)) return 'pull_up';
-  const normalized = normalizedName(exerciseName);
-  if (normalized === 'bench press') return 'bench_press';
-  if (normalized === 'rdl' || normalized === 'rdls'
-    || normalized === 'romanian deadlift' || normalized === 'romanian deadlifts') return 'rdl';
-  if (normalized === 'back squat' || normalized === 'back squats') return 'back_squat';
-  return null;
+export interface ProgressMainLiftSeries {
+  readonly key: string;
+  readonly label: string;
+  readonly method: string;
+  readonly points: readonly ProgressMainLiftPoint[];
 }
 
 function legacyBasis(
   lift: StrengthExercisePerformanceLog,
-  bodyWeightKg: number | undefined,
 ): OneRepMaxBasis | null {
-  const id = mainLiftId(lift.exerciseName);
+  const id = trackedLiftId(lift.exerciseName);
   if (id === null || lift.completion === 'skipped') return null;
   const reps = Number.isInteger(lift.actualReps) && Number(lift.actualReps) > 0
     ? Number(lift.actualReps)
@@ -62,14 +45,7 @@ function legacyBasis(
       ? Number(lift.prescribedRepsMax)
       : 0;
   if (reps < 1 || reps > 10) return null;
-  if (id === 'pull_up') {
-    if (typeof bodyWeightKg !== 'number' || bodyWeightKg <= 0) return null;
-    return {
-      externalLoadKg: typeof lift.weightKg === 'number' && lift.weightKg > 0 ? lift.weightKg : 0,
-      reps,
-      bodyWeightKg,
-    };
-  }
+  if (id === 'pull_up') return null;
   if (typeof lift.weightKg !== 'number' || lift.weightKg <= 0) return null;
   return { externalLoadKg: lift.weightKg, reps };
 }
@@ -81,37 +57,65 @@ function roundedKg(value: number): number {
 export function buildProgressMainLiftHistories(input: {
   readonly weekStart: string;
   readonly sessions: readonly ProgressStrengthSession[];
+  /** Retained for old callers; never used to fill historical session measurements. */
   readonly bodyWeightKg?: number;
+  readonly choices?: TrackedLiftChoices;
 }): readonly ProgressMainLiftHistory[] {
-  const bestByLiftAndWeek = new Map<string, number>();
+  const seriesByLift = new Map<TrackedLiftId, Map<string, {
+    label: string; method: string; weeks: Map<string, number>;
+  }>>();
   for (const session of input.sessions) {
     const weekStart = journalWeekStartOf(session.date);
     if (weekStart === null || weekStart > input.weekStart) continue;
     for (const lift of session.strength) {
-      const id = mainLiftId(lift.exerciseName);
+      const id = trackedLiftId(lift.exerciseName);
       if (id === null || lift.completion === 'skipped') continue;
-      const storedBasis = lift.oneRepMaxBasis;
-      const basis = storedBasis
-        ? id === 'pull_up' && storedBasis.bodyWeightKg === undefined
-          ? { ...storedBasis, bodyWeightKg: input.bodyWeightKg }
-          : storedBasis
-        : legacyBasis(lift, input.bodyWeightKg);
-      if (!basis) continue;
-      const estimate = estimateExternalOneRepMaxKg(basis);
+      const raw = lift.lastSetEstimate;
+      let estimate: number | null = null;
+      let method = 'legacy_brzycki';
+      let context = '';
+      if (raw) {
+        if (raw.liftId !== id || raw.exerciseId !== lift.exerciseId
+          || raw.workoutExerciseId !== lift.workoutExerciseId) continue;
+        estimate = estimateLastSetOneRepMaxKg(raw);
+        method = raw.method;
+        context = typeof raw.setup === 'string' ? raw.setup.trim() : '';
+      } else if (lift.estimateCaptureVersion === undefined) {
+        const basis = lift.oneRepMaxBasis ?? legacyBasis(lift);
+        if (basis && (id !== 'pull_up' || (basis.bodyWeightKg ?? 0) > 0)) {
+          estimate = estimateExternalOneRepMaxKg(basis);
+        }
+      }
       if (estimate === null) continue;
-      const key = `${id}:${weekStart}`;
-      const current = bestByLiftAndWeek.get(key);
-      if (current === undefined || estimate > current) bestByLiftAndWeek.set(key, estimate);
+      // Exact approved aliases identify the lift. A manual Add and an automatic
+      // row can have different storage IDs for that same exercise; those IDs
+      // establish provenance above, not different physiological variations.
+      const key = JSON.stringify([method, id, context]);
+      const byContext = seriesByLift.get(id) ?? new Map();
+      const series = byContext.get(key) ?? {
+        method,
+        label: [method === 'legacy_brzycki' ? 'Legacy estimate · no RIR' : 'Last-set estimate',
+          id === 'bulgarian_split_squat' ? 'Non-dominant leg · total external load' : '', context]
+          .filter(Boolean).join(' · '),
+        weeks: new Map<string, number>(),
+      };
+      const current = series.weeks.get(weekStart);
+      if (current === undefined || estimate > current) series.weeks.set(weekStart, estimate);
+      byContext.set(key, series);
+      seriesByLift.set(id, byContext);
     }
   }
-
-  return MAIN_LIFTS.map((lift) => ({
-    ...lift,
-    points: Array.from(bestByLiftAndWeek.entries())
-      .flatMap(([key, estimate]) => {
-        const [id, weekStart] = key.split(':');
-        return id === lift.id ? [{ weekStart, predictedOneRepMaxKg: roundedKg(estimate) }] : [];
-      })
-      .sort((left, right) => left.weekStart.localeCompare(right.weekStart)),
-  }));
+  return selectedTrackedLifts(input.choices).map((id) => {
+    const series: ProgressMainLiftSeries[] = [...(seriesByLift.get(id) ?? new Map()).entries()]
+      .map(([key, entry]) => ({
+        key, label: entry.label, method: entry.method,
+        points: [...entry.weeks.entries()].map(([weekStart, estimate]) => ({
+          weekStart, predictedOneRepMaxKg: entry.method === 'legacy_brzycki'
+            ? roundedKg(estimate) : Math.round(estimate),
+        })).sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
+      }));
+    series.sort((a, b) => (a.points.at(-1)?.weekStart ?? '').localeCompare(b.points.at(-1)?.weekStart ?? ''));
+    return { id, exerciseName: TRACKED_LIFTS[id].label, valuePrefix: id === 'pull_up' ? '+' : '',
+      series, points: series.at(-1)?.points ?? [] };
+  });
 }

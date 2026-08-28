@@ -141,6 +141,26 @@ for (const bad of [0, EFFORT_MAX + 1, -1, 2.5]) {
     /onPanResponderTerminationRequest: \(\) => false/.test(slider));
   ok('the emission dedup (lastEmitted) is still in place',
     /lastEmitted/.test(slider));
+  ok('the slider emits during movement, not only on release',
+    /onPanResponderMove: \(event\) => commitFromTouch\(event.nativeEvent.locationX\)/.test(slider));
+  ok('the selected number follows the current slider value',
+    /value === label && styles.stepLabelSelected/.test(slider));
+  ok('labelled endpoints reserve the whole thumb and align number centres',
+    /trackWithLabels:\s*\{\s*marginHorizontal: THUMB_SIZE \/ 2/.test(slider)
+      && /minWidth: THUMB_SIZE/.test(slider));
+  const rir = fs.readFileSync(path.join(__dirname, '..', 'components', 'LastSetRirQuestion.tsx'), 'utf8');
+  ok('last-set RIR reuses the shared bounded slider',
+    /<DiscreteSlider\b[^>]*min=\{0\} max=\{5\}/.test(rir));
+  ok('the RIR endpoint is stored open-ended, not numeric five',
+    /rir: value === 5 \? '5\+'/.test(rir));
+  ok('the unanswered readout does not disguise null as zero',
+    /value === null \? 'Unanswered'/.test(rir));
+  ok('Skip clears the RIR answer and has a usable target',
+    /skipped: !input.skipped, rir: null/.test(rir)
+      && /minWidth: 44, minHeight: 44/.test(rir));
+  ok('last-set summary displays the actual input pair',
+    rir.includes('input.actualWeightKg') && rir.includes('input.actualReps')
+      && rir.includes('Last completed working set'));
 }
 
 console.log(`\nEffort scale totals: ${pass} passed, ${fail} failed`);

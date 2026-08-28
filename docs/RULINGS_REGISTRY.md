@@ -6905,3 +6905,38 @@ its restriction visibility, Clear and shared-count requirements remain.
 Guard: `LAW-session-stack-and-status-boundary`, `test:canonical-weekly-compiler`
 (`mobilityAddJourney`) and `test:modifier-lifecycle`.
 Transaction reassessment, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
+
+**R-272** · Sam's Estimated 1RM implementation decisions, 2026-08-29.
+
+Owner: intake. Read the saved `FEATURE_BRIEF_ESTIMATED_1RM_RIR_2026-08-28.md`
+with Sam's final message: Bench/OHP, Pull-Up/Lat Pulldown, Back Squat/Bulgarian
+Split Squat, RDL/Trap-Bar Deadlift are four configurable charts, never program
+edits. Retain separate lift, technique/setup and calculation-method histories.
+Ask only for a selected completed lift's last completed working set: actual
+weight and reps, optional initially unanswered 0–4/5+ RIR slider with Skip.
+Skip/unanswered/open-ended 5+ create no estimate. Calculate only at RIR 0–4 and
+completed reps plus RIR no greater than 15, using the verified Nuzzo curves
+(Bench-specific curve for Bench). Preserve raw inputs and version; no automatic
+load changes, confidence badges or new PB awards. Last-set fatigue remains.
+Pull-ups use recorded session bodyweight plus added load and display estimated
+added load. Assisted pull-ups remain out of scope. Bulgarians use one total
+external load, reps and RIR for the non-dominant leg; no side selector or second
+leg entry. New observations never fall back to the legacy best-set/prescribed
+rep method. Historical legacy lines remain clearly separate.
+This explicitly authorizes the feature previously excluded from R-270's intake.
+Guard: `LAW-estimated-1rm-last-set-rir`, `test:estimated-1rm`.
+Research, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
+
+**R-273** · Sam's session section Add consistency decisions, 2026-08-29.
+
+Owner: intake. Every editable exercise section uses the existing shared + and
+Add route, including Strength, Conditioning, Mobility, Primer, Accessories,
+Recovery and Optional Work. The tapped section and exercise role are distinct
+typed inputs and survive accepted edits/restart. Safety filters choices, never
+the button; an empty safe list explains why. Completed session records remain
+read-only. No exercise Add buttons on games or team-training entries. Existing
+rows, cues, videos and loading controls remain. This supersedes R-217's older
+empty-choice button suppression, not existing equipment/injury/fixture limits.
+Guard: `LAW-session-section-add-context`, `test:session-section-add` and
+`test:session-execution`; full compiler tests retain Move/Undo and annual rules.
+Verification status, safety conflicts and NOT COVERED: `docs/STATUS_INTAKE.md`.

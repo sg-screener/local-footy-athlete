@@ -9,6 +9,7 @@
 import { useMemo } from 'react';
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { useProgramStore } from '../../store/programStore';
+import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import type { ActiveCoachNote } from '../../utils/activeCoachNotes';
 import { todayISOLocal } from '../../utils/appDate';
@@ -27,6 +28,7 @@ export interface UseLiveAthleteSnapshotInput {
 
 export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): CoachSnapshot {
   const sessionFeedback = useProgramStore((state) => state.sessionFeedback);
+  const trackedLiftChoices = useProfileStore((state) => state.trackedLiftChoices);
   const readinessSignalsByDate = useReadinessStore((state) => state.signalsByDate);
   const athlete = useAthleteContext();
   const asOfDateISO = todayISOLocal();
@@ -42,12 +44,14 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     conditioningLevel: athlete.onboardingData?.conditioningLevel,
     twoKmTimeTrial: athlete.onboardingData?.twoKmTimeTrial,
     bodyWeightKg: athlete.onboardingData?.weightKg,
+    trackedLiftChoices,
   }), [
     asOfDateISO,
     input.weekDays,
     input.visibleWeek,
     input.activeModifiers,
     sessionFeedback,
+    trackedLiftChoices,
     readinessSignalsByDate,
     athlete.onboardingData?.experienceLevel,
     athlete.onboardingData?.conditioningLevel,

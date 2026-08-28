@@ -932,6 +932,8 @@ export interface Workout {
   /** Compiler receipt, not a new athlete decision: this exact placement has
    * already passed through later source facts. Absent from the healthy base. */
   sourceFactAdjustedPlacementId?: string;
+  /** Derived by the exercise-edit compiler; protects later edits of this exact placement. */
+  exerciseEditedPlacementId?: string;
   /**
    * R-124 — THE SESSION-LEVEL INJURY ADJUSTMENT, DERIVED, NEVER STORED.
    *
@@ -1410,6 +1412,9 @@ export interface WorkoutExercise {
    * rather than retire it.
    */
   role?: import('../utils/sessionRoles').SessionRole;
+  /** Athlete's Add destination. Writer: canonical exercise edit compiler;
+   * readers: session template/checklist; guard: sessionSectionAddTests. */
+  sessionSection?: Exclude<import('../utils/sessionExecutionChecklist').SessionExecutionSectionId, 'team_training'>;
   /** The authored optional component this row belongs to on a stacked day.
    * Uses the session builder's existing identity; it is not a new session kind.
    * Carried by the stack owner so a strength finaliser cannot re-author these slots.
@@ -1624,6 +1629,12 @@ export interface LoggedSet {
   loggedWorkoutId: string;
   workoutExerciseId: string;
   setNumber: number;
+  /** Last-set feedback excludes warm-ups and unfinished sets. Old logged sets
+   * were completed working sets. Writer: workoutLogStore; reader: strengthLogging. */
+  kind?: 'working' | 'warmup';
+  completed?: boolean;
+  side?: 'non_dominant' | 'dominant';
+  bodyWeightKg?: number;
 
   // Performance
   actualReps?: number;

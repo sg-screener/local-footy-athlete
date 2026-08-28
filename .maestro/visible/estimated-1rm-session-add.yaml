@@ -1,0 +1,192 @@
+appId: com.localfootyathlete.app
+name: Estimated 1RM and section Add through real onboarding
+# Native receipt uses Saturday 2026-08-29; the selected three gym days leave
+# today free. The release-gated journey tests use an explicit deterministic clock.
+---
+- runFlow:
+    file: onboarding-critical-answers.yaml
+    env:
+      QA_GENDER: "${typeof QA_GENDER === 'undefined' ? 'Male' : QA_GENDER}"
+      QA_THREE_DAYS: 'true'
+- tapOn: Generate My Program
+- extendedWaitUntil:
+    visible: 'Start your program.*'
+    timeout: 90000
+- tapOn: 'Start your program.*'
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 90000
+- takeScreenshot: artifacts/rir-add/real-onboarding
+# Add one extra main session to a three-day week, within the existing maximum.
+- scrollUntilVisible:
+    element:
+      id: home-add-session
+    centerElement: true
+- tapOn:
+    id: home-add-session
+- tapOn:
+    id: plan-change-type-strength
+- tapOn: Full body
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn: Start Session
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: session-quick-add-mobility
+    centerElement: true
+# iOS exposes off-screen rows beneath the sticky header. Move this + below it.
+- swipe:
+    start: 50%, 35%
+    end: 50%, 70%
+    duration: 500
+- tapOn:
+    id: session-quick-add-mobility
+- tapOn: Mobility & stretching
+- tapOn: Crab Hold
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- repeat:
+    times: 3
+    commands:
+      - swipe:
+          start: 50%, 78%
+          end: 50%, 30%
+          duration: 400
+- tapOn:
+    id: session-quick-add-strength
+- tapOn: Upper body
+- tapOn: Pull
+- tapOn: Pull-Ups
+- tapOn: Add exercise
+- extendedWaitUntil:
+    visible: Exercise added
+    timeout: 30000
+- tapOn: Today only
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn:
+    point: 62%, 95%
+- swipe:
+    start: 50%, 80%
+    end: 50%, 42%
+    duration: 600
+- tapOn:
+    id: progress-choose-bulgarian_split_squat
+- assertVisible: Bulgarian Split Squat
+- tapOn:
+    point: 12%, 95%
+- waitForAnimationToEnd
+- tapOn: Start Session
+- waitForAnimationToEnd
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 78%
+          end: 50%, 30%
+          duration: 400
+- tapOn:
+    id: session-execution-select-all
+- assertVisible:
+    id: session-execution-select-all
+    text: '.*checked.*'
+- tapOn:
+    id: finish-session-action
+- extendedWaitUntil:
+    visible:
+      id: session-feedback-sheet
+    timeout: 10000
+- runFlow:
+    file: estimated-1rm-answer.yaml
+    env:
+      QA_LIFT: rdl
+      QA_WEIGHT: '90'
+      QA_REPS: '6'
+      QA_RIR_POINT: '100%'
+      QA_RIR_TEXT: '5\+'
+- runFlow:
+    file: estimated-1rm-answer.yaml
+    env:
+      QA_LIFT: bulgarian_split_squat
+      QA_WEIGHT: '40'
+      QA_REPS: '8'
+      QA_RIR_POINT: '40%'
+      QA_RIR_TEXT: '2'
+- runFlow:
+    file: estimated-1rm-answer.yaml
+    env:
+      QA_LIFT: bench_press
+      QA_WEIGHT: '100'
+      QA_REPS: '5'
+      QA_RIR_POINT: '40%'
+      QA_RIR_TEXT: '2'
+- runFlow:
+    file: estimated-1rm-answer.yaml
+    env:
+      QA_LIFT: pull_up
+      QA_WEIGHT: '10'
+      QA_REPS: '6'
+      QA_RIR_POINT: '20%'
+      QA_RIR_TEXT: '1'
+- scrollUntilVisible:
+    element:
+      id: session-feedback-rpe-grid
+    centerElement: true
+- tapOn:
+    id: session-feedback-rpe-grid
+    point: 70%, 50%
+- scrollUntilVisible:
+    element:
+      id: session-feedback-save-.*
+    centerElement: true
+- tapOn:
+    id: session-feedback-save-.*
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 20000
+- tapOn:
+    point: 62%, 95%
+- swipe:
+    start: 50%, 80%
+    end: 50%, 42%
+    duration: 600
+- assertVisible: '120 kg'
+- assertVisible: '\+26 kg'
+- assertVisible: '50 kg'
+- tapOn:
+    id: progress-choose-lat_pulldown
+- assertNotVisible: '\+26 kg'
+- tapOn:
+    id: progress-choose-pull_up
+- assertVisible: '\+26 kg'
+- takeScreenshot: artifacts/rir-add/chart-switch-restored
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: rir-reopen
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- tapOn:
+    point: 62%, 95%
+- swipe:
+    start: 50%, 80%
+    end: 50%, 42%
+    duration: 600
+- assertVisible: '120 kg'
+- assertVisible: '\+26 kg'
+- assertVisible: '50 kg'
+- takeScreenshot: artifacts/rir-add/reopened-charts

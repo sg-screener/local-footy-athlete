@@ -3,7 +3,6 @@ import type { Workout } from '../types/domain';
 import type { MobilityPrehabFlow } from './mobilityPrehabFlow';
 import {
   getSessionComponents,
-  sessionOrderIsAuthored,
   type SessionComponent,
 } from './sessionComponents';
 import {
@@ -31,6 +30,7 @@ import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
 export type SessionExecutionSectionId =
   | 'mobility'
   | 'strength'
+  | 'primer'
   | 'accessories'
   | 'conditioning'
   | 'team_training'
@@ -53,9 +53,11 @@ export interface SessionExecutionSection {
   items: SessionExecutionItem[];
   /**
    * The glyph this section draws, decided here because only here is the
-   * workout's typed identity readable. See the note beside `mainSectionIcon`.
+   * section's typed row identity readable.
    */
   iconKind: RowIconKind;
+  /** Context of this section's rows, not the combined day's container. */
+  sessionKind?: Workout['composedOptionalKind'];
 }
 
 export interface SessionExecutionPlan {
@@ -305,6 +307,7 @@ export function recordedCompletedSessionExecutionItemIds(
 export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   mobility: 'Mobility / Warm-up',
   strength: 'Strength',
+  primer: 'Primer',
   accessories: 'Accessories / Prehab',
   conditioning: 'Conditioning',
   team_training: 'Team Training',
@@ -319,7 +322,7 @@ export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
    defect R-116 was written about. */
 
 const SECTION_ORDER: SessionExecutionSectionId[] = [
-  'mobility', 'strength', 'accessories', 'conditioning',
+  'mobility', 'primer', 'strength', 'accessories', 'conditioning',
   'team_training', 'recovery', 'optional', 'other',
 ];
 
@@ -375,12 +378,18 @@ function componentForTemplateItem(
   return ids.has('session') ? 'session' : null;
 }
 
-function sectionForTemplateItem(item: SessionTemplateItem): SessionExecutionSectionId {
+function sectionForTemplateItem(item: SessionTemplateItem, workout: Workout): SessionExecutionSectionId {
   if (item.kind === 'team_training') return 'team_training';
+  if (item.kind === 'exercise' && item.row.sessionSection && item.row.sessionSection !== 'strength') return item.row.sessionSection;
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') return 'conditioning';
   if (item.kind === 'exercise' && item.optional) return 'optional';
   if (item.kind === 'exercise' && item.presentation === 'mobility') return 'mobility';
   if (item.kind === 'exercise' && item.presentation === 'recovery') return 'recovery';
+  if (item.kind === 'exercise') {
+    const kind = item.row.composedOptionalKind ?? workout.composedOptionalKind;
+    if (kind === 'primer') return 'primer';
+    if (kind === 'prehab') return 'accessories';
+  }
   // R-110 — power is Strength's first row, not its own section. The ROLE is
   // still what routes it; only the destination changed.
   if (item.role === 'power') return 'strength';
@@ -393,6 +402,7 @@ function itemFromTemplate(
   item: SessionTemplateItem,
   index: number,
   components: SessionComponent[],
+  workout: Workout,
 ): SessionExecutionItem {
   if (item.kind === 'team_training') {
     return {
@@ -415,7 +425,7 @@ function itemFromTemplate(
   }
   return {
     id: `exercise:${rowIdentity(item.row, String(index))}`,
-    sectionId: sectionForTemplateItem(item),
+    sectionId: sectionForTemplateItem(item, workout),
     componentId: componentForTemplateItem(item, components),
     label: rowLabel(item.row, `Exercise ${index + 1}`),
     templateIndex: index,
@@ -459,7 +469,7 @@ export function buildSessionExecutionPlan(args: {
     });
   }
 
-  args.template.items.forEach((item, index) => items.push(itemFromTemplate(item, index, components)));
+  args.template.items.forEach((item, index) => items.push(itemFromTemplate(item, index, components, args.workout)));
 
   // A typed component can exist without an ordinary row (speed blocks and a
   // team commitment are examples). It still gets one visible, checkable unit.
@@ -482,44 +492,27 @@ export function buildSessionExecutionPlan(args: {
     });
   }
 
-  /*
-   * A SESSION SAM AUTHORED NAMES ITS OWN MAIN SECTION.
-   *
-   * Sam, 2026-08-23, reading his Primer: *"this should be 'mobility warm up'
-   * then 'primer' then optional work which includes the accelerations and the
-   * heavy lifts"*. The middle section read STRENGTH — the generic label for
-   * whatever a session's main work is — which is right for a gym session and
-   * wrong for one that has its own name on the screen directly above it.
-   *
-   * Scoped through `sessionOrderIsAuthored`, the same predicate the template
-   * uses to keep his row order, so the two cannot disagree about which sessions
-   * are authored. Every other section keeps its label: the warm-up is still the
-   * warm-up and the optional cluster is still Optional Work, which is exactly
-   * the three-section shape he named.
-   */
-  const mainSectionLabel = sessionOrderIsAuthored(args.workout)
-    ? (args.workout.name ?? SECTION_LABELS.strength)
-    : SECTION_LABELS.strength;
-  /*
-   * THE SECTION CARRIES ITS OWN GLYPH, for the same reason it carries its own
-   * label: only here is the workout's typed identity readable. The screen used
-   * `SESSION_SECTION_ICON_KIND[section.id]` and could not tell a Primer's main
-   * section from any other strength section, so the day card drew Sam's bolt and
-   * the session screen drew a dumbbell for the same work — two surfaces
-   * disagreeing about one session, which is the split this repo keeps paying
-   * for. `rules/dayTimeline` makes the identical decision for the card.
-   */
-  const mainSectionIcon = sessionOrderIsAuthored(args.workout)
-    ? (COMPOSED_OPTIONAL_ICON_KIND[
-      String(args.workout.composedOptionalKind) as keyof typeof COMPOSED_OPTIONAL_ICON_KIND]
-      ?? SESSION_SECTION_ICON_KIND.strength)
-    : SESSION_SECTION_ICON_KIND.strength;
-  const sections = SECTION_ORDER.map((id) => ({
-    id,
-    label: id === 'strength' ? mainSectionLabel : SECTION_LABELS[id],
-    iconKind: id === 'strength' ? mainSectionIcon : SESSION_SECTION_ICON_KIND[id],
-    items: items.filter((item) => item.sectionId === id),
-  })).filter((section) => section.items.length > 0);
+  // The existing row-level composed identity survives combined days. It owns
+  // both the visible section and the Add context; the day's purity marker does
+  // not. No name parsing or new programming classification is involved.
+  const sections = SECTION_ORDER.map((id) => {
+    const ownItems = items.filter((item) => item.sectionId === id);
+    const kinds = new Set(ownItems.flatMap(item => {
+      const templateItem = item.templateIndex === null ? null : args.template.items[item.templateIndex];
+      if (templateItem?.kind !== 'exercise') return [];
+      const kind = templateItem.row.composedOptionalKind ?? args.workout.composedOptionalKind;
+      return kind ? [kind] : [];
+    }));
+    const sessionKind = kinds.size === 1 ? [...kinds][0] : undefined;
+    return {
+      id,
+      label: SECTION_LABELS[id],
+      iconKind: id === 'accessories' && sessionKind === 'prehab'
+        ? COMPOSED_OPTIONAL_ICON_KIND.prehab : SESSION_SECTION_ICON_KIND[id],
+      items: ownItems,
+      ...(sessionKind ? { sessionKind } : {}),
+    };
+  }).filter((section) => section.items.length > 0);
   return { components, sections, items };
 }
 

@@ -30,13 +30,17 @@ export function compileCanonicalAthleteEditedWeek(args: {
     args.workouts.map((workout) => [workout.dayOfWeek, clone(workout)]),
   );
   for (const placement of edits.placements) {
-    // This exact accepted placement may already have been compiled through
-    // later injury/equipment facts. Replaying its healthy snapshot again would
-    // undo those facts. A newer decision has a different constraint identity
-    // and still wins; a null removal still empties its day.
+    // The same accepted placement may already carry later exercise edits or
+    // injury/equipment facts. Replaying its original snapshot would undo them.
+    // A new placement has a different constraint identity and still wins;
+    // a null removal still empties its day. A plain placement stamp alone is
+    // insufficient: component Move/Undo also carries that stamp while the
+    // placement's content still needs to be materialised.
     const current = byDay.get(placement.dayOfWeek);
     const existing = current?.athletePlacement;
-    if (placement.workout && current?.sourceFactAdjustedPlacementId === placement.constraintId &&
+    if (placement.workout &&
+        (current?.sourceFactAdjustedPlacementId === placement.constraintId ||
+          current?.exerciseEditedPlacementId === placement.constraintId) &&
         existing?.constraintId === placement.constraintId &&
         existing.placedDate === placement.dateISO) continue;
     byDay.delete(placement.dayOfWeek);

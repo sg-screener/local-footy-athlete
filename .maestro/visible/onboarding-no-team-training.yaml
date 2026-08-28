@@ -19,7 +19,7 @@ name: Fresh onboarding explicitly accepts no team training
 - tapOn: "Type your name..."
 - inputText: "Fixture QA"
 - tapOn: "Continue"
-- tapOn: "Male"
+- tapOn: "${typeof QA_GENDER === 'undefined' ? 'Male' : QA_GENDER}"
 - tapOn:
     point: "25%,40%"
 - inputText: "182"

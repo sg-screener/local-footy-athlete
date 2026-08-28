@@ -12,6 +12,7 @@ import {
 } from '../utils/athleteActionDiagnostics';
 import { logger } from '../utils/logger';
 import { todayISOLocal } from '../utils/appDate';
+import { TRACKED_LIFT_PAIRS, type TrackedLiftChoices, type TrackedLiftSlot, type TrackedLiftId } from '../rules/estimatedOneRepMax';
 import { canScoreCapacity } from '../data/capacityRubric';
 import {
   assessOnboardingCompleteness,
@@ -38,6 +39,10 @@ export interface OnboardingCompletionOutcome {
 }
 
 interface ProfileState {
+  /** Display choice only; never part of onboarding/programming inputs.
+   * Writer: Progress; readers: Progress + feedback; guard: estimatedOneRepMaxTests. */
+  trackedLiftChoices: TrackedLiftChoices;
+  setTrackedLiftChoice: (slot: TrackedLiftSlot, lift: TrackedLiftId) => void;
   onboardingData: OnboardingData;
   isOnboardingComplete: boolean;
   /**
@@ -305,6 +310,11 @@ export function mergePersistedProfileState(
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
+      trackedLiftChoices: {},
+      setTrackedLiftChoice: (slot, lift) => {
+        if (!TRACKED_LIFT_PAIRS[slot]?.includes(lift)) return;
+        set({ trackedLiftChoices: { ...get().trackedLiftChoices, [slot]: lift } });
+      },
       onboardingData: initialOnboardingData,
       isOnboardingComplete: false,
       signupDateISO: null,
@@ -409,6 +419,7 @@ export const useProfileStore = create<ProfileState>()(
         } finally {
           endProfileResetAction(resetActionId);
         }
+        set({ trackedLiftChoices: {} });
       },
 
       setLoading: (loading) => set({ isLoading: loading }),
@@ -429,7 +440,7 @@ export const useProfileStore = create<ProfileState>()(
         } finally {
           endProfileResetAction(resetActionId);
         }
-        set({ isLoading: false, error: null });
+        set({ isLoading: false, error: null, trackedLiftChoices: {} });
       },
     }),
     {

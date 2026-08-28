@@ -2,14 +2,18 @@ import type { LoggedSet, Workout, WorkoutExercise } from '../types/domain';
 import { getExerciseTags, type MovementPattern } from '../data/exerciseTags';
 import { carriesStrengthComponent } from './sessionComponents';
 import {
-  bestOneRepMaxBasis,
-  isPullUpExerciseName,
   type OneRepMaxBasis,
+  RIR_ESTIMATE_METHOD, selectedTrackedLifts, trackedLiftId,
+  type LastSetEstimateInput, type TrackedLiftChoices,
 } from '../rules/estimatedOneRepMax';
+import type { SessionExecutionItemResult } from './sessionExecutionChecklist';
 
 export type StrengthLogCompletion = 'full' | 'partial' | 'skipped';
 
 export interface StrengthExercisePerformanceLog {
+  /** New captures never use legacy prescribed/best-set estimate fallbacks. */
+  estimateCaptureVersion?: 1;
+  lastSetEstimate?: LastSetEstimateInput;
   exerciseId: string;
   workoutExerciseId: string;
   exerciseName: string;
@@ -102,12 +106,10 @@ function resolvedWeightKg(
  */
 function summariseLoggedSets(
   loggedSets: LoggedSet[] | undefined,
-  options?: { readonly bodyWeightKg?: number; readonly bodyweightLoadable?: boolean },
 ): {
   completedSets: number;
   actualReps?: number;
   topWeightKg?: number;
-  oneRepMaxBasis?: OneRepMaxBasis;
 } | null {
   if (!loggedSets || loggedSets.length === 0) return null;
   const repsValues = loggedSets
@@ -116,27 +118,10 @@ function summariseLoggedSets(
   const weightValues = loggedSets
     .map((s) => (typeof s.actualWeightKg === 'number' ? s.actualWeightKg : undefined))
     .filter((weight): weight is number => typeof weight === 'number' && weight > 0);
-  const estimateCandidates = loggedSets.flatMap((set) => {
-    if (!Number.isInteger(set.actualReps) || Number(set.actualReps) < 1) return [];
-    const externalLoadKg = typeof set.actualWeightKg === 'number'
-      ? set.actualWeightKg
-      : options?.bodyweightLoadable
-        ? 0
-        : null;
-    if (externalLoadKg === null || externalLoadKg < 0) return [];
-    return [{
-      externalLoadKg,
-      reps: Number(set.actualReps),
-      ...(options?.bodyweightLoadable && typeof options.bodyWeightKg === 'number'
-        ? { bodyWeightKg: options.bodyWeightKg }
-        : {}),
-    }];
-  });
   return {
     completedSets: loggedSets.length,
     actualReps: repsValues.length > 0 ? Math.min(...repsValues) : undefined,
     topWeightKg: weightValues.length > 0 ? Math.max(...weightValues) : undefined,
-    oneRepMaxBasis: bestOneRepMaxBasis(estimateCandidates) ?? undefined,
   };
 }
 
@@ -183,7 +168,7 @@ export function buildStrengthPerformanceLogs(
    * captured so progression can prefer them over the prescribed snapshot.
    */
   loggedSetsByWorkoutExerciseId?: Record<string, LoggedSet[]>,
-  options?: { readonly bodyWeightKg?: number },
+  options?: { readonly bodyWeightKg?: number; readonly lastSetInputs?: readonly LastSetEstimateInput[] },
 ): StrengthExercisePerformanceLog[] {
   // ── THE GYM WORK IS CREDITED WHEREVER IT FALLS (Sam, 2026-08-20) ──────────
   //
@@ -210,25 +195,16 @@ export function buildStrengthPerformanceLogs(
     .filter((exercise, index) => isMainStrengthExercise(exercise, index))
     .map((exercise) => {
       const exerciseName = exercise.exercise?.name ?? exercise.exerciseId;
-      const bodyweightLoadable = isPullUpExerciseName(exerciseName);
-      const logged = summariseLoggedSets(loggedSetsByWorkoutExerciseId?.[exercise.id], {
-        bodyweightLoadable,
-        bodyWeightKg: options?.bodyWeightKg,
-      });
+      const logged = summariseLoggedSets(loggedSetsByWorkoutExerciseId?.[exercise.id]);
       const prescribedWeight = resolvedWeightKg(exercise, weightOverrides);
-      const completedPrescriptionBasis = completion === 'full'
-        && Number(exercise.prescribedRepsMax) >= 1
-        && Number(exercise.prescribedRepsMax) <= 10
-        && (bodyweightLoadable || (typeof prescribedWeight === 'number' && prescribedWeight > 0))
-        ? {
-            externalLoadKg: typeof prescribedWeight === 'number' ? prescribedWeight : 0,
-            reps: Number(exercise.prescribedRepsMax),
-            ...(bodyweightLoadable && typeof options?.bodyWeightKg === 'number'
-              ? { bodyWeightKg: options.bodyWeightKg }
-              : {}),
-          }
-        : undefined;
       return {
+        estimateCaptureVersion: 1 as const,
+        ...(() => {
+          const input = options?.lastSetInputs?.find((entry) =>
+            entry.workoutExerciseId === exercise.id && entry.exerciseId === exercise.exerciseId
+            && entry.liftId === trackedLiftId(exerciseName));
+          return input ? { lastSetEstimate: input } : {};
+        })(),
         exerciseId: exercise.exerciseId,
         workoutExerciseId: exercise.id,
         exerciseName,
@@ -240,9 +216,56 @@ export function buildStrengthPerformanceLogs(
         completion,
         ...(logged ? { completedSets: logged.completedSets } : {}),
         ...(logged?.actualReps !== undefined ? { actualReps: logged.actualReps } : {}),
-        ...((logged?.oneRepMaxBasis ?? completedPrescriptionBasis)
-          ? { oneRepMaxBasis: logged?.oneRepMaxBasis ?? completedPrescriptionBasis }
-          : {}),
       };
     });
+}
+
+/** Last actually completed working set, including back-offs. Missing detail
+ * remains missing; it cannot silently select an earlier, better-documented set. */
+export function lastCompletedWorkingSet(sets: readonly LoggedSet[], nonDominant = false): LoggedSet | null {
+  return sets.filter((set) => set.kind !== 'warmup' && set.completed !== false
+    && (!nonDominant || set.side === 'non_dominant'))
+    .reduce<LoggedSet | null>((last, set) => !last || set.setNumber >= last.setNumber ? set : last, null);
+}
+
+export function buildLastSetFeedbackInputs(args: {
+  date: string;
+  workout: Workout | null | undefined;
+  choices?: TrackedLiftChoices;
+  loggedSets?: Record<string, LoggedSet[]>;
+  executionItems?: readonly SessionExecutionItemResult[];
+  completion: StrengthLogCompletion | null;
+  bodyWeightKg?: number;
+  existing?: readonly StrengthExercisePerformanceLog[];
+}): LastSetEstimateInput[] {
+  if (!args.workout || args.completion === 'skipped') return [];
+  const selected = new Set(selectedTrackedLifts(args.choices));
+  return args.workout.exercises.flatMap((row) => {
+    const liftId = trackedLiftId(row.exercise?.name ?? '');
+    if (!liftId || !selected.has(liftId)) return [];
+    const sets = args.loggedSets?.[row.id] ?? [];
+    const nonDominant = liftId === 'bulgarian_split_squat';
+    const last = lastCompletedWorkingSet(sets, nonDominant);
+    const anyLast = lastCompletedWorkingSet(sets);
+    const tick = args.executionItems?.find((item) => item.itemId === `exercise:${row.id}`);
+    // A partial workout is not evidence that every prescribed lift was done.
+    const performed = anyLast !== null || tick?.completed === true
+      || (args.executionItems === undefined && args.completion === 'full');
+    if (!performed) return [];
+    const saved = args.existing?.find((entry) => entry.workoutExerciseId === row.id
+      && entry.exerciseId === row.exerciseId)?.lastSetEstimate;
+    if (saved && saved.liftId === liftId) return [{ ...saved }];
+    return [{
+      method: RIR_ESTIMATE_METHOD,
+      liftId, exerciseId: row.exerciseId, workoutExerciseId: row.id,
+      setId: last?.id ?? `${args.date}:${row.id}:last-working-set`,
+      setNumber: last?.setNumber ?? null,
+      source: last ? 'logged_set' as const : 'athlete_confirmed_last_set' as const,
+      actualWeightKg: last?.actualWeightKg ?? null,
+      actualReps: last?.actualReps ?? null,
+      rir: null, skipped: false, setup: '',
+      ...(nonDominant ? { side: 'non_dominant' as const } : {}),
+      ...(liftId === 'pull_up' ? { bodyWeightKg: last?.bodyWeightKg ?? args.bodyWeightKg ?? null } : {}),
+    }];
+  });
 }

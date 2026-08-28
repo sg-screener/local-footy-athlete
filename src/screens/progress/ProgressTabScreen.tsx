@@ -1,6 +1,8 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useProfileStore } from '../../store/profileStore';
+import { TRACKED_LIFT_PAIRS, TRACKED_LIFTS, type TrackedLiftSlot, type TrackedLiftId } from '../../rules/estimatedOneRepMax';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
@@ -129,7 +131,9 @@ function LineChart({ points: recordedPoints, higherIsBetter = true }: {
   );
 }
 
-function StrengthChart({ history }: { history: ProgressMainLiftHistory }) {
+function StrengthChart({ history, slot, onChoose }: {
+  history: ProgressMainLiftHistory; slot: TrackedLiftSlot; onChoose: (lift: TrackedLiftId) => void;
+}) {
   const latest = history.points[history.points.length - 1];
   const estimate = latest?.predictedOneRepMaxKg;
   const formatted = estimate === undefined
@@ -146,12 +150,24 @@ function StrengthChart({ history }: { history: ProgressMainLiftHistory }) {
             {PROGRESS_TAB_COPY.predictedOneRepMax}
           </Text>
         </View>
-        <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted}</Text>
+        {history.series.length <= 1 ? <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted}</Text> : null}
       </View>
-      <LineChart points={history.points.map((point) => ({
-        dateISO: point.weekStart,
-        value: point.predictedOneRepMaxKg,
-      }))} />
+      <View style={styles.liftChoices}>
+        {TRACKED_LIFT_PAIRS[slot].map((lift) => <Pressable key={lift}
+          testID={`progress-choose-${lift}`} accessibilityRole="button"
+          accessibilityState={{ selected: history.id === lift }}
+          style={styles.liftChoice} onPress={() => onChoose(lift)}>
+          <Text variant="caption" style={{ color: history.id === lift ? colors.accent.lime : colors.text.secondary }}>
+            {TRACKED_LIFTS[lift].label}
+          </Text>
+        </Pressable>)}
+      </View>
+      {history.id === 'pull_up' ? <Text variant="caption">Estimated added weight · session bodyweight used</Text> : null}
+      {history.series.length === 0 ? <LineChart points={[]} /> : history.series.map((series) => <View key={series.key}>
+        <Text variant="caption">{series.label}{history.series.length > 1
+          ? ` · ${history.valuePrefix}${series.points[series.points.length - 1].predictedOneRepMaxKg} kg` : ''}</Text>
+        <LineChart points={series.points.map((point) => ({ dateISO: point.weekStart, value: point.predictedOneRepMaxKg }))} />
+      </View>)}
     </View>
   );
 }
@@ -177,6 +193,7 @@ function TwoKmChart({ answer }: { answer: TwoKmTimeTrialAnswer | null }) {
 }
 
 export default function ProgressTabScreen() {
+  const setTrackedLiftChoice = useProfileStore((state) => state.setTrackedLiftChoice);
   const { weekDays, visibleWeek } = useResolvedWeek();
   const { modifiers } = useActiveModifiers({ visibleWeekDays: weekDays });
   const snapshot = useLiveAthleteSnapshot({
@@ -203,8 +220,10 @@ export default function ProgressTabScreen() {
 
         <ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />
         <View style={styles.liftGrid}>
-          {snapshot.mainLiftEstimates.map((history) => (
-            <StrengthChart key={history.id} history={history} />
+          {snapshot.mainLiftEstimates.map((history, index) => (
+            <StrengthChart key={history.id} history={history}
+              slot={(Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[])[index]}
+              onChoose={(lift) => setTrackedLiftChoice((Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[])[index], lift)} />
           ))}
         </View>
 
@@ -214,6 +233,8 @@ export default function ProgressTabScreen() {
 }
 
 const styles = StyleSheet.create({
+  liftChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  liftChoice: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   root: { flex: 1, backgroundColor: colors.surface.primary },
   content: {
     paddingHorizontal: spacing.md,

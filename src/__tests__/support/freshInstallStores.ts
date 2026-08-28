@@ -33,6 +33,7 @@ import type { OnboardingData } from '../../types/domain';
 
 export function resetStoresToFreshInstall(reason: string): void {
   useProfileStore.setState({
+    trackedLiftChoices: {},
     onboardingData: {} as OnboardingData,
     isOnboardingComplete: false,
   });

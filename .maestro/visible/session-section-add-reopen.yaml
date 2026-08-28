@@ -1,0 +1,58 @@
+appId: com.localfootyathlete.app
+name: Reopen the real two-week section Add journey
+# Continue session-section-add-combined.yaml; Saturday receipt, see its precondition.
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-sections-reopen
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- tapOn: Week
+- tapOn:
+    id: program-week-next
+- tapOn: Day
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: program-day-previous
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: Play Scap Push-Up demo
+- assertVisible: Play Scap Push-Up demo
+- takeScreenshot: artifacts/rir-add/accessories-persisted-final
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn: Week
+- tapOn:
+    id: program-week-previous
+- tapOn: Day
+- repeat:
+    times: 4
+    commands:
+      - tapOn:
+          id: program-day-next
+- tapOn:
+    id: view-workout-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: Play Box Jumps demo
+- assertVisible: Play Box Jumps demo
+- takeScreenshot: artifacts/rir-add/primer-persisted-final
+- scrollUntilVisible:
+    element: Easy Bike
+- assertVisible: Easy Bike
+- scrollUntilVisible:
+    element: Play Box Breathing demo
+- assertVisible: Play Box Breathing demo
+- scrollUntilVisible:
+    element: Play Pull-Ups demo
+- assertVisible: Play Pull-Ups demo
+- takeScreenshot: artifacts/rir-add/combined-persisted-final

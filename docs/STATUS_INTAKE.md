@@ -213,3 +213,356 @@ No installation or wipe is authorized by this task.
 - Dumbbell Seated Good Morning experience threshold and Reverse Nordic external
   loading method: supplied as unresolved; these variants remain withheld.
 - Band-Resisted Bird Dogs, conditioning slams and Estimated 1RM: explicitly out of scope.
+
+## Estimated 1RM — new authorization, 2026-08-29
+
+Owner: intake. This is a separate task after the exercise checkpoint above.
+Starting checkpoint: `42ea66268bbb0a52beafbd6341a6b9db646611e5`.
+Read the complete feature brief and original pasted proposal. The new user request
+authorizes implementation; the brief's historical recording-only header does not
+cancel that authorization. Its explicitly unresolved product choices still need
+Sam's ruling before those choices are implemented.
+
+### Research verification
+
+Visually checked the proposed general and Bench curve coordinates at 60–95%
+against [Nuzzo et al., Figures 2 and 3](https://link.springer.com/article/10.1007/s40279-023-01937-7):
+all supplied coordinates match. The 1-rep/100% endpoint is a definition, not a
+table result. Linear interpolation, adding RIR, and the 15-effective-rep cutoff
+are application choices. The source extracted first sets in non-fatigued tests;
+it does not validate the proposed last-set inverse calculation across eight lifts.
+
+[Refalo et al.](https://pubmed.ncbi.nlm.nih.gov/37967832/) studied 1/3-RIR
+predictions during two Bench sets at 75% tested 1RM in 24 trained participants.
+That supports RIR capture in those conditions, not universal 1RM confidence or
+elimination of fatigue effects.
+
+### Integration review and questions for Sam
+
+Read at source, not runtime-measured this turn: existing owners are
+`strengthLogging`, `SessionFeedbackPanel`, `estimatedOneRepMax`,
+`progressMainLiftStrength`, and the persisted profile/session-outcome stores.
+Compared extending those owners with a separate estimate/history owner. Prefer
+the existing owners: persist the raw observation and method provenance, derive
+the chart, and keep chart choice separate from programming inputs.
+
+R-255 already settles Pull-Up display: estimate with session bodyweight plus
+added load, then show the added-load estimate. No need to ask that again.
+
+Recommendations awaiting Sam, not implemented policy:
+
+- Use the proposed curve with exact RIR 0–4 and at most 15 effective reps;
+  show approximate estimates without confidence badges or new PB awards.
+  Skip/unanswered/5+ create no RIR estimate. Keep legacy method history separate.
+- Keep assisted Pull-Up performance loggable, but exclude it from estimated 1RM.
+- For Bulgarian Split Squats use total external load and reps for the identified
+  last completed leg; keep left/right histories separate, never joining sides.
+
+### NOT COVERED
+
+- No Estimated 1RM application changes, regression tests or release-gate run yet;
+  implementation awaits the explicitly open decisions above.
+- No native slider verification, save/reopen run, phone installation or wipe.
+- No independent validation of last-set 1RM accuracy for the eight tracked lifts.
+- Other-seat changes and the prior checkpoint remain untouched.
+
+## Estimated 1RM + section Add implementation — 2026-08-29
+
+Owner: intake. Sam's subsequent explicit decisions supersede the provisional
+recommendations above, including the proposed separate Bulgarian leg histories.
+R-272 and R-273 record the approved scope and point to maintained release guards.
+There is no assisted pull-up workflow and no second-leg selector/history.
+
+### Implementation and ownership
+
+- Extended the existing profile preference, workout-log, session feedback,
+  accepted-outcome and Progress owners. Chart choices sit outside onboarding
+  programming inputs. No extra store or programming engine.
+- Four pairs retain exercise-specific history. Last completed working-set inputs
+  are stored with set identity, actual load/reps, optional exact/open-ended RIR,
+  session bodyweight, non-dominant-leg convention and calculation version.
+- Published general/Bench curves are interpolated only for exact RIR 0–4 and
+  at most 15 effective reps. Skip, unanswered and 5+ do not fall back to legacy
+  estimates. Legacy/new methods and distinct setup contexts use separate lines.
+  This does not establish equivalent accuracy across lifts or remove fatigue.
+- The shared section + now reaches the existing Add flow for every editable
+  exercise section. The compiler preserves the destination section and the
+  exercise's physiological role. Candidate filtering retains equipment, injury,
+  experience, fixture and Primer restrictions; empty lists explain the result.
+- Completed records retain cues/video access but no exercise edits, load edits,
+  Select all or + controls. Derived mobility and manually added mobility render
+  together, with authored cues and section-local numbering for added rows.
+
+### Defects found and corrected during this implementation
+
+1. Checklist-mode feedback discarded supplied structured strength records. The
+   accepted outcome builder now retains them; the real onboarding/save/reopen
+   tests fail without this change.
+2. Reapplying an accepted placement snapshot could erase a subsequent exercise
+   Add/Swap. The existing compiler now recognizes an exercise-edit receipt for
+   that exact placement identity/date. An initial broader condition broke 33
+   canonical assertions; it was narrowed, and the canonical aggregate's main
+   suite then passed all 10,376 assertions. Move/Undo semantics are preserved.
+3. Simulator inspection found the labelled slider thumb clipped at its endpoint.
+   The shared control now reserves half a thumb width and aligns number cells.
+
+### Verification receipts so far (not the final release claim)
+
+- `test:estimated-1rm`: 163 new assertions plus the existing Progress ownership
+  and 37 logging-wiring assertions passed before the final full-gate run.
+- `test:session-section-add`: 188 assertions, over both sexes and seven section
+  contexts plus combined-session/restart cases; shared screen contract: 58.
+- Existing session-execution suite: 201 assertions; exercise-intake suite: 570
+  assertions over ten submitted exercises. The final release run repeats them.
+- Mutations execute altered production modules in isolation: selecting the
+  first instead of last set; interpreting null RIR as zero; dropping the
+  placement receipt; and assigning added mobility to Strength. Each breaks its
+  corresponding assertion. No source file is rewritten by these mutations.
+- First full release attempt reached 416/416 green athlete-weeks (8 athletes ×
+  52 weeks) but correctly failed its ownership prerequisite. Seven changed
+  direct owners and one new chart-map owner required explicit review; twelve
+  caller reviews then resolved through the existing call graph. Reviewed all
+  eight, preserving classifications and the gate; zero unresolved owners,
+  zero rival authors and zero derived-output writers after review.
+- Simulator: isolated `LFA RIR Section QA`, UUID
+  `88997171-28B4-4598-AB38-C842EDD73D5C`. Real male onboarding, actual Mobility +
+  (Crab Hold) and Strength + (Pull-Ups), chart choice, slider drag/Skip/Undo,
+  saved Bulgarian 40×8 with 2 RIR and Pull-Up +10×6 with 1 RIR at session BW84.
+  Reopened charts showed 50 kg / +26 kg respectively and completed rows were
+  read-only. The first tape did not reliably retain Bench input during dev
+  refresh, so a fresh tape asserts each actual-set summary before saving.
+
+### Maintained tests repaired/replaced
+
+- `workoutLogProgressionWiringTests`: replaced obsolete best/prescribed-set 1RM
+  write expectations with raw-last-set capture binding and no new legacy writes.
+- `progressTabOwnershipTests`: legacy method remains explicitly labelled;
+  current bodyweight can no longer fill historical pull-up measurements.
+- `sessionChangeHubTests` and `sessionExecutionChecklistTests`: replaced obsolete
+  two-renderer/three-family assumptions with the shared all-section renderer,
+  destination context, empty-list explanation and completed-record protection.
+- `coachSnapshotTests`: bounded its layout mutation to the lift grid after the
+  new choice control introduced another wrapping row. Its direct suite passes.
+- Full historical `test:coach-snapshot` also includes an already-classified
+  `rewrite_test` for populated load snapshots: two assertions expect a load
+  ratio from fixtures lacking measured duration. This is the current measured-
+  duration load rule, unrelated to chart estimation; that file is unchanged and
+  is not a maintained release contract. No application change was made to satisfy it.
+- Test-truth registry counts now include the two new contract witnesses; no
+  unrelated test was weakened or promoted merely to hide a failure.
+
+### Open product/safety contradiction
+
+The simulator's first four-day athlete could add a fifth main strength session,
+then an exercise edit on it was rejected by Section 18 with
+`maximum_breach:main_strength:5`. This is conflicting Add-session and final-week
+policy, not permission to increase the maximum or reduce another session.
+No programming rule was changed. Subsequent exercise tests use a valid three-day
+week plus one manually added strength session. This contradiction still needs
+an explicit product ruling if fifth-session behavior is to change.
+
+### NOT COVERED
+
+- Final native female/remaining-section receipts and final release result are
+  pending below; the preliminary measurements above are not final acceptance.
+- Physical iPhone acceptance, phone installation/wipe, remote/backend sync and
+  individual estimated-1RM accuracy. Neither phone was installed or wiped.
+- Assisted pull-ups, withheld exercise variants, altered programming loads,
+  conditioning slams and a second Bulgarian leg entry are intentionally absent.
+
+### Native combined-section finding and closure (2026-08-29)
+
+Recovery rows were separated correctly; the initial visual suspicion that they
+were Strength rows was wrong. The real defect was the Primer section losing its
+identity after a Conditioning/Recovery session was attached: the day purity
+marker clears, while each original row retains `composedOptionalKind=primer`.
+The old section renderer read only the former. That also lost the Primer Add
+filter. Accessories had the same whole-container dependency.
+
+Compared retaining a shared Strength bucket with a contextual label against
+using the existing typed section system for each authored population. The latter
+also handles Primer beside actual Strength without mixing their Add rules.
+The checklist now has an explicit Primer section and uses its existing
+Accessories section for prehab rows; physiological roles and prescriptions do
+not change. Each section carries its own typed source context to the shared Add
+flow. Primer ordering remains authored even beside another session. Existing
+power rows in ordinary Strength still stay in Strength and hide rest periods.
+
+The real-onboarding Add suite now reaches both sexes × Primer/Accessories ×
+Conditioning/Recovery/Strength attachments, then edits and restarts each one.
+The first expanded run passed 270 assertions; two further live mutation checks
+and a section-context call-site assertion are included in the final gate.
+The mutation reroutes typed Primer rows into Strength and must lose the expected
+Primer section. This is protection for the next combination, not only the one
+seen on glass. The existing 201 session-execution assertions remained green.
+
+A second all-green release run completed 26/26 units before this native finding.
+A third run was already underway during the fix and therefore is NOT the final
+candidate receipt, even if green. A fresh frozen-candidate run is required below.
+
+### NOT COVERED (this intermediate finding)
+
+- Final frozen-candidate release and complete native replay remain pending.
+
+### Non-default chart preference persistence (2026-08-29)
+
+The native phase-change check retained the estimates but showed Back Squat
+instead of the selected Bulgarian chart. Read-only inspection of that QA
+simulator's `profile-store` found **no `trackedLiftChoices` field**. This was
+not established as a phase-change-only defect: the accepted transaction's
+profile serializer omitted the new preference, so any accepted edit could
+overwrite its disk value before restart. No history points were deleted.
+
+Compared extending the existing accepted profile envelope with moving chart
+choices into another store. Extended the existing envelope; a separate store
+would duplicate ownership and violate the requested integration. The preference
+remains outside onboarding and programming inputs. No prescription changed.
+
+The old restart assertion selected all defaults first and could not detect a
+missing preference. Replaced it with all four **non-default** selections,
+accepted session saves, a real Profile phase transaction and cold rehydration.
+`/tmp/lfa-rir-preference-red.log` reproduced eight failures (three missing disk
+captures and one non-default restart per sex). With the two existing mirror
+functions extended, `/tmp/lfa-rir-preference-green.log` reports **175/175**
+Estimated 1RM assertions, plus the maintained Progress, logging and effort checks.
+The two modified persistence owners were inspected and re-fingerprinted; the
+writer gate again reports 1142/1142 reviewed capability owners, zero unresolved,
+zero rival authors and zero derived-output writers. All three typecheck scopes
+report zero errors.
+
+Final release started against the frozen source/test/script manifest
+`/tmp/lfa-rir-final-source-sha.json`; result will be recorded below. Native full
+replay is in `/tmp/lfa-native-final-male.log`. Earlier all-green release runs
+remain intermediate receipts, not the final-candidate claim.
+
+### NOT COVERED (preference-fix intermediate receipt)
+
+- Full final release and uninterrupted native replay are still running.
+- Physical phones, backend synchronization and exercise-specific predictive
+  accuracy remain outside this local verification.
+
+## Final verification — Estimated 1RM and section Add, 2026-08-29
+
+This receipt supersedes the intermediate counts and pending statements above.
+The candidate extends `42ea6626`; it does not replace that checkpoint. Other
+seats' `docs/NOW.md`, handoff documents, outputs and unrelated Maestro flow
+were left outside this save. Neither physical phone was installed or wiped.
+
+### Implemented
+
+- Four configurable charts and all eight approved lifts, with separate exercise,
+  method and setup histories. Chart choices do not write programming inputs.
+- Optional last-working-set feedback in the existing logging/save flow: actual
+  weight and reps, unanswered lime slider, live highlight, Skip and open-ended
+  5+. Only RIR 0–4 and effective reps up to 15 produce estimates.
+- Published general and Bench-specific curve coordinates verified against
+  [Nuzzo et al.](https://link.springer.com/article/10.1007/s40279-023-01937-7).
+  Their fresh first-set data do **not** validate a fatigue-free last-set
+  estimator for every lift. The UI calls the result approximate. No confidence
+  badge, PB award or automatic training-load change was added.
+- Session-bodyweight pull-up inputs and added-load display; one non-dominant-leg
+  Bulgarian input with total external weight. No assisted pull-up or second-leg
+  workflow. Raw set identity, measurements, RIR and method version persist.
+- One existing shared + and accepted Add flow for every editable exercise
+  section. Section identity survives combined sessions, all existing rows and
+  reopening. Safety narrows choices, with an explanation when empty. Completed
+  records stay read-only; game and team entries get no exercise +.
+
+### Final automated results
+
+`npm run test:release` — `/tmp/lfa-rir-release-verified.log`, process exit **0**:
+**26/26 execution units green**, representing 29 current product contracts plus
+the infrastructure/typecheck units (some contracts share a witness).
+
+| Maintained check | Result |
+| --- | --- |
+| Estimated 1RM regression | 175 assertions passed |
+| Existing logging wiring / effort controls | 37 / 53 assertions passed |
+| Section Add matrix / shared-control contract | 272 / 59 assertions passed |
+| Exercise intake | 570 assertions; 10 distinct submitted exercises |
+| Annual compiler acceptance | 416/416 athlete-weeks; 8 distinct athletes × 52; 0 distinct failure keys |
+| Weekly writer ownership | 1142/1142 capability owners reviewed; 0 unresolved, rival authors or derived-output writers |
+| Product, devtool and test typecheck | 0 errors in each scope |
+
+The manifest `/tmp/lfa-rir-final-source-sha.json` covers 1256 application, test,
+script and package files. Final comparison after the gate found **zero changed
+files**. Native automation selectors were corrected separately; no application
+source was changed during the final gate. `git diff --check` passed.
+
+Maintained test repairs/replacements are itemized above. In particular, the
+default-only restart assertion was replaced with a non-default accepted-edit /
+phase-change / restart journey. The omitted persistence field first produced
+eight failing assertions across both sexes; the fix made those same checks
+pass. No unrelated test was weakened to obtain this result.
+
+The next defect is caught by the section × sex × combined-context matrix,
+existing safety-owner checks, real accepted writes and cold rehydration, plus
+production-module mutations for first-set substitution, null-as-zero, lost
+placement edits and incorrect section routing. Native field-value assertions
+now stop immediately if automation failed to enter an actual measurement.
+
+### Simulator verification
+
+Only isolated simulator `88997171-28B4-4598-AB38-C842EDD73D5C` was used.
+Both male and female athletes went through real onboarding and generation.
+Across the recorded runs, all seven supported section + controls were tapped:
+Strength/Pull-Ups, Mobility/Crab Hold, Primer/Box Jumps, Optional Work/Pull-Ups,
+Conditioning/Easy Bike, Recovery/Box Breathing, Accessories/Scap Push-Up.
+Combined sections and their added rows were visibly reopened after restart.
+
+The final male journey saved these four distinct set observations (read back
+from the canonical persisted program envelope; four occurrences, four set IDs):
+
+| Lift | Actual input | Result shown |
+| --- | --- | --- |
+| RDL | 90 kg × 6, RIR `5+` | No new estimate |
+| Bulgarian Split Squat | 40 kg × 8, RIR 2, non-dominant leg | 50 kg |
+| Bench Press | 100 kg × 5, RIR 2 | 120 kg |
+| Pull-Up | +10 kg × 6, RIR 1, session bodyweight 84 kg | +26 kg |
+
+All four store `nuzzo_last_set_rir_v1`. Switching Pull-Up → Lat Pulldown →
+Pull-Up restored its history. The non-default Bulgarian selection and three
+estimates survived accepted section edits, restart, a real Pre-season →
+Off-season Profile change, and another restart.
+
+Receipts: `/tmp/lfa-native-final-male.log` (onboarding and first controls),
+`/tmp/lfa-native-male-resume2.log` (actual fields, save, charts, restart and
+Primer/Optional adds), `/tmp/lfa-native-combined-tail.log` (remaining section
+adds, all combined rows reopened, phase change; exit 0), and
+`/tmp/lfa-native-post-phase-reopen.log` (post-phase restart; exit 0).
+Earlier female cue expansion and demo-modal opening are recorded in
+`/tmp/lfa-accessories-native-proof.log`; provider playback was not established.
+
+The top-level native run was resumed after test-navigation failures: a centered
+scroll did not enter Bench values; a + obscured by the bottom tab bar caused a
+tab tap; iOS reported a visibly focused text field as unfocused. Tests now
+assert entered field values, scroll controls clear of tabs, and use the actual
+Back button. These were not bypassed by changing expected estimates or the app.
+The resumed passes prove the named surfaces, not an uninterrupted wrapper run.
+
+### Genuine unresolved issue
+
+The separately observed fifth-main-strength-session conflict remains: Add
+Session permitted the fifth session, then exercise Add refused it under the
+existing Section 18 maximum. Its starting-checkpoint status was not established.
+No limit was increased and no other session was removed. A product ruling is
+needed before changing that contradictory policy; it is not an Estimated 1RM
+calculation decision. No other unresolved defect was observed in the verified
+feature surfaces.
+
+**Gates green, awaiting Sam device acceptance.** When a phone build is authorized,
+check one completed lift's actual-set question, drag/Skip, save/reopen, switching
+charts, a section + on a combined day, and completed-record read-only behavior.
+
+### NOT COVERED
+
+- Physical iPhone acceptance or a rebuilt native Release binary; no phone
+  installation, wipe or data migration was performed.
+- Android, backend/account synchronization, and full external video playback.
+- One uninterrupted execution of the assembled top-level Maestro wrapper;
+  actual named controls, saves, reopens and the phase change passed in segments.
+- Individual predictive accuracy or equal accuracy across the eight lifts;
+  fatigue remains a limitation of this approximate metric.
+- Assisted pull-ups, withheld exercise variants, new conditioning templates,
+  PB awards or automatic training-load changes (deliberately not implemented).
+- Physical phones, remote sync and individual lift-estimation accuracy.

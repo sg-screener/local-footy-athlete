@@ -41,6 +41,9 @@
  */
 
 export type SwapSuggestionPayload = {
+  sessionSection?: import('../types/domain').WorkoutExercise['sessionSection'];
+  role?: import('../types/domain').WorkoutExercise['role'];
+  composedOptionalKind?: import('../types/domain').WorkoutExercise['composedOptionalKind'];
   name: string;
   sets: number;
   repsMin: number;

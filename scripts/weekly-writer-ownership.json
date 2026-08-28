@@ -72,9 +72,9 @@
       "reason": "Registers journal-note input persistence; initializes notes and exposes reviewed controlled note/reset writers. No program output field is persisted here."
     },
     "src/store/profileStore.ts#<module>": {
-      "fingerprint": "1f1aa6f830e448f0e821221bad52b6a239c6d903a63471379045bc0e3329ea42",
+      "fingerprint": "e42b9c4b51236f76891d80455aa39e2958388d01d5e212b2cb924c864684264d",
       "classification": "persistence_boundary",
-      "reason": "Registers onboarding input persistence with empty initial answers. Compatibility subscription delegates to guarded applyProfileOnboardingWrite; no session generation or projection author."
+      "reason": "Intake 2026-08-29: existing persisted profile owner adds validated chart-only lift preferences outside onboardingData; reset clears them. No program-generation inputs or separate store are introduced; existing onboarding actions retain their reviewed owners."
     },
     "src/store/readinessStore.ts#<module>": {
       "fingerprint": "b7d628c80df332297022dd8f2db6eca11ce0de3ab64db8fdda382faef53532ad",
@@ -187,9 +187,9 @@
       "reason": "Profile screen reads owned phase and submits profile edits/reset actions through dedicated owners; no direct session construction in this component."
     },
     "src/components/SessionFeedbackPanel.tsx#TrainingSessionFeedbackPanel": {
-      "fingerprint": "4bbada0b8b2e456c754fd14653802f0dbefc9806e5235210c0544d695c338089",
+      "fingerprint": "065b18f26b0afe7fa0a8d258e48e938d8ec9dcf07058d48ad79fbc29a555f6ff",
       "classification": "canonical_input_writer",
-      "reason": "Training feedback panel submits existing workout plus typed feedback to commitSessionOutcomeTransaction; form state is not training output."
+      "reason": "Intake 2026-08-29: reads active logged sets and chart choices, builds raw last-set feedback drafts, then submits the existing outcome transaction. Neither RIR nor chart selection writes a program or changes prescribed loads."
     },
     "src/screens/home/useHomeScreen.ts#useHomeScreen": {
       "fingerprint": "d65aa30f3899a77ef72cc4da8244e27b31a7f1d6567601ef85ba86a484729fd2",
@@ -197,9 +197,9 @@
       "reason": "Home hook reads canonical program/projections, records missed-session outcomes through the outcome owner and invokes existing fact/rollover transactions; its direct program fields are read-helper or returned view-model references."
     },
     "src/screens/home/DayWorkoutScreenV2.tsx#DayWorkoutScreenV2": {
-      "fingerprint": "81d41bc12931a06ac16a5b639a1beec4c640d8ed0d18d09b80c025178ab4beab",
+      "fingerprint": "4f9a47e0a4e1867486e7d4483c2e7c3e7d6ebe3a013cb15aeb1ed829edd06234",
       "classification": "canonical_input_writer",
-      "reason": "Intake review 2026-08-28: Add/Swap read actual fixture context and pass authored dose fields through existing accepted action doors. Intake review: passes the accepted schedule declaration to the shared Add/Swap safety reader; no new write or policy author."
+      "reason": "Intake 2026-08-29: section + constructs existing durable Add inputs with typed section/role context. Existing equipment/injury filters and accepted transaction own choices and mutations. Completed-session context disables edit callbacks. Remaining local writes are render, weight-input and quick-swap state, not generated program publication. Combined-day Add reads the typed context of its execution section, never the whole-day purity marker."
     },
     "src/screens/home/HomeScreenV2.tsx#HomeScreenV2": {
       "fingerprint": "ef5e5f29d3233adf846082f9050e4f985c71a866d32b4fc7efbfa5d7b30eee21",
@@ -457,9 +457,9 @@
       "reason": "Week-board box animates drag coordinates and delegates drop/remove/add callbacks; animation state contains no generated program edits."
     },
     "src/rules/liveAthleteSnapshot.ts#deriveCoachSnapshot": {
-      "fingerprint": "ce1c84767edce159394771be81ab38e607e8067dc263b7dc8483ce1587bc6ae7",
+      "fingerprint": "c2c2c0377e4ec2a4b91ee3608c011f10619f5000f9a75ec952f9ac9fbeeca6c5",
       "classification": "projection_display",
-      "reason": "Builds coach snapshot and strength/load histories by reading visible weeks and recorded outcomes; produces reporting DTOs, not program rows."
+      "reason": "Intake 2026-08-29: passes chart preferences with recorded outcomes to the existing progress projection; workout inputs remain existing references and no state is written."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryStage": {
       "fingerprint": "3613bc6d6e16728550068a8a14dcc7e757d4f4be8e725848016835225807263e",
@@ -602,9 +602,9 @@
       "reason": "Shared row-pair metadata normalizer used by canonical row materialization; clears invalid pair IDs only and has no schedule/store authority."
     },
     "src/utils/strengthLogging.ts#buildStrengthPerformanceLogs": {
-      "fingerprint": "37b78f4ceb05391a790c6b3d2d95050bd07069f6e5452aec52aee07d7ddd6f2e",
+      "fingerprint": "6a32fcc65dcd95efa8864b14a5172987b07516a2b1bdc9aa272e0a01d8ad6663",
       "classification": "canonical_input_writer",
-      "reason": "Creates strength-performance logging records from completed-session input; writes training history, not planned session contents."
+      "reason": "Intake 2026-08-29: creates recorded-performance input for the existing session outcome transaction, now attaching matching raw last-set observations and capture version. Prescribed fields remain historical snapshot fields, never a workout rewrite or a substitute for estimate inputs."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#futureProgressionIdentity": {
       "fingerprint": "91bf555cdb8b20fde53a6fe1846f945f39a529cc15ce6fd700aee9a14e273ab8",
@@ -1122,9 +1122,9 @@
       "reason": "Persists and verifies native diagnostic launch receipts only, not program sessions or derived scheduling state."
     },
     "src/store/coachMutationTransaction.ts#serializeAcceptedMirrorEnvelopes": {
-      "fingerprint": "26ae487397c72b03e7b844056489f3a277952c5278b9b9f0e8f629692bdb4742",
+      "fingerprint": "a12cb3e8bce2b0769e51d8d10a84b7291ba439b054cd21cf304c733fae62bcbb",
       "classification": "persistence_boundary",
-      "reason": "Serializes accepted input mirrors with shared calendar/readiness/constraint persistence filters; derived fact copies are excluded."
+      "reason": "Intake review 2026-08-29: serializes the captured chart-only preferences in the existing profile envelope. Existing calendar/readiness/constraint filters unchanged. Real accepted save, phase change and non-default restart tests reproduce the omission and guard the fix."
     },
     "src/rules/assembleAuthoredWeek.ts#assembleAuthoredWeek": {
       "fingerprint": "d0948aa561915f0dbda5efbf654dd66543118bb5068e7d9a83dfd08daed827aa",
@@ -1427,9 +1427,9 @@
       "reason": "Private pool-row materialiser copies explicit pool prescriptions and row evidence into canonical optional-session rows."
     },
     "src/store/coachMutationTransaction.ts#captureAcceptedMirrors": {
-      "fingerprint": "600b5f57cb627833532039dbac882837580f34e5066facc4fdd972fff88c5336",
+      "fingerprint": "74797632fccd504c61f4e01dda9a4a1515dea9cad24ac6f2142ea8e9e058e137",
       "classification": "persistence_boundary",
-      "reason": "Clones accepted mirrors for transaction rollback and durable comparison without changing their content."
+      "reason": "Intake review 2026-08-29: captures the existing chart-only profile preferences alongside accepted mirrors so durable transactions retain them; no programming input, prescription or generated row change."
     },
     "src/rules/dayPrecedence.ts#removalConstraintForComposedDay": {
       "fingerprint": "8b504bc86ee6f3537bb70bb9778e91f05409122f50d24e2857ed7ecb3417ee00",
@@ -2437,9 +2437,9 @@
       "fingerprint": "cbc0db7dd448325f638c943a849303a475822c05dbd584b7d807167b0d6e9752"
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalExerciseEditOnWorkout": {
-      "fingerprint": "cb862b06bf1e70d1dac17a1b5a237cf1823e5c2ccb397dc99ecdfa323b9defda",
+      "fingerprint": "19f82e3e0c1b0a145e62425a635b2c0d9e020e064a6020c89f73a10404e950fe",
       "classification": "canonical_compiler",
-      "reason": "Intake review 2026-08-28: Existing canonical accepted-edit fold owns both Add and Swap at live write and restart. It now carries power role/family from the existing typed power catalogue, clears obsolete role/pairing when replacing power, and prevents unapproved ball contrast. Six actual manual Add/Swap assertions were red before this correction; no second writer or post-compile patch."
+      "reason": "Intake 2026-08-29: existing typed Add/Swap compiler constructs the row with its supplied section, catalogue role and optional kind, and stamps its matching accepted placement. No parallel catalogue, engine or direct store publication."
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalWeeklyExerciseEdits": {
       "fingerprint": "fbfc45c0caf57093619dc2a0b0ee8cbd2372aa677e0ee98a055bcd2b91529874",
@@ -2457,9 +2457,9 @@
       "fingerprint": "d50b007e48863488a224d0354d615179d373056ddc9c84499de9ab8f8b5ce4b0"
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedWeek": {
-      "fingerprint": "6f5ed858f1f1202a4a6de8a7cce563c5d839571d426e11421aaec1d8bc7d5a21",
+      "fingerprint": "9e6de2fe22e70d5262cfd8ea90cdcc4fd54109c79e02edd5c3799dc156cab538",
       "classification": "canonical_compiler",
-      "reason": "Pure canonical athlete-edit fold applies typed placements to cloned input workouts in explicit order; no store access."
+      "reason": "Intake 2026-08-29: existing placement compiler preserves a matching same-date accepted placement only when its source-fact or exercise-edit marker identifies that placement. Move/Undo still apply their snapshots. The local day map is returned to the canonical compiler; no post-acceptance publication."
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedContract": {
       "classification": "canonical_compiler",
@@ -3230,6 +3230,11 @@
       "fingerprint": "829a743eaec1b6e1c54f629406e062ec17a57043223d38ee065cf2e46dd89bc3",
       "classification": "canonical_compiler",
       "reason": "Private helper of the existing compiler-owned fixture specialist. Reconsiders only the fresh target compiler flush contribution before acceptance, retaining existing lifting and excluding conditioning/team collisions; no alternate planner or persistence writer."
+    },
+    "src/rules/progressMainLiftStrength.ts#buildProgressMainLiftHistories": {
+      "fingerprint": "533b6a8afe279c15bbc9cbc96334e2216c7622d2add64f58234940240d0ac93c",
+      "classification": "projection_display",
+      "reason": "Intake 2026-08-29: pure chart projection builds local series/week maps from immutable session observations and selected lift IDs. The detected series.weeks.set is a local graph accumulator, not a program, workout or store writer."
     }
   }
 }

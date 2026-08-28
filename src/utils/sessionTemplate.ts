@@ -402,7 +402,15 @@ export function buildSessionTemplate(
         items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
       }
     } else {
-      const options = resolveConditioningOptions(workout, componentRows.conditioningRows);
+      // Athlete additions are extra work, never another alternative to the
+      // existing block. Its original option IDs remain authoritative.
+      const blockIds = new Set<string>(((workout as Workout).conditioningBlock?.options ?? [])
+        .flatMap(option => option.exerciseIds ?? []));
+      const additions = blockIds.size ? componentRows.conditioningRows
+        .filter(row => row.sessionSection && !blockIds.has(row.id)) : [];
+      for (const row of additions) items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
+      const addedIds = new Set(additions.map(row => row.id));
+      const options = resolveConditioningOptions(workout, componentRows.conditioningRows.filter(row => !addedIds.has(row.id)));
       if (options.length === 1) {
         /* One prescription is not a choice. The old wrapper printed the
          * category label (for example "Hard Intervals") and then nested the
@@ -450,7 +458,8 @@ export function buildSessionTemplate(
     ordering,
     items: orderItems(items, oneRole
       ? item => item.kind === 'team_training' ? 2 : isOptional(item) ? 1 : 0
-      : ordering === 'phase' ? phaseRank : d2Rank).map(item =>
+      : item => item.kind === 'exercise' && item.row.composedOptionalKind === 'primer'
+        ? 0 : ordering === 'phase' ? phaseRank(item) : d2Rank(item)).map(item =>
       item.kind === 'exercise' && item.presentation === 'conditioning_phase'
         ? { ...item, row: conditioningRowForDisplay(workout, item.row), modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
         : item),

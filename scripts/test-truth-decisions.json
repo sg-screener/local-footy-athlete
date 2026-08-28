@@ -1252,6 +1252,40 @@
         "test:canonical-weekly-compiler"
       ],
       "evidenceKind": "equivalent_current_journeys_plus_consolidated_menu_checks"
+    },
+    "test:estimated-1rm": {
+      "kind": "current_contract",
+      "reason": "Approved last completed working set/RIR method, exact inputs and optional answers, four chart-only alternatives, session-bodyweight pull-ups, non-dominant Bulgarians, separate method histories and actual save/reopen for both sexes. Replaces obsolete best-set and prescription-as-measurement assertions without changing programming loads.",
+      "productionPaths": [
+        "src/rules/estimatedOneRepMax.ts",
+        "src/rules/progressMainLiftStrength.ts",
+        "src/utils/strengthLogging.ts",
+        "src/components/SessionFeedbackPanel.tsx",
+        "src/screens/progress/ProgressTabScreen.tsx"
+      ],
+      "contractRefs": [
+        "R-272",
+        "docs/FEATURE_BRIEF_ESTIMATED_1RM_RIR_2026-08-28.md"
+      ],
+      "witnessScript": "test:estimated-1rm",
+      "evidenceKind": "green_now"
+    },
+    "test:session-section-add": {
+      "kind": "current_contract",
+      "reason": "Real-onboarding section Add matrix for both sexes, typed context and roles, actual accepted edits, unchanged existing prescriptions and restart. Combined conditioning additions must remain visible; later exercise edits of athlete-placed sessions cannot be overwritten by their original placement. Shared UI guards keep all editable section buttons and completed-record restrictions.",
+      "productionPaths": [
+        "src/screens/home/DayWorkoutScreenV2.tsx",
+        "src/utils/addExerciseCandidates.ts",
+        "src/utils/sessionComponents.ts",
+        "src/utils/sessionTemplate.ts",
+        "src/rules/canonicalWeeklyExerciseEditCompiler.ts",
+        "src/rules/canonicalWeeklyAthleteEditCompiler.ts"
+      ],
+      "contractRefs": [
+        "R-273"
+      ],
+      "witnessScript": "test:session-section-add",
+      "evidenceKind": "green_now"
     }
   }
 }

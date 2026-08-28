@@ -341,18 +341,16 @@ ok('mobility and every other session row use one square checkbox recipe',
   /sessionExecutionCheckbox/.test(screen)
     && /\.\.\.sessionExecutionCheckbox/.test(screen)
     && !/MobilityPrehabFlowSection/.test(screen));
-const mobilitySectionAt = screen.indexOf("section.id === 'mobility'");
-const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilitySectionAt);
 const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
 const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
 const mobilityRenderer = mobilityRendererAt >= 0 && sessionListAt > mobilityRendererAt
   ? screen.slice(mobilityRendererAt, sessionListAt)
   : '';
-ok('mobility uses the same chevron owner as the other sections',
-  mobilitySectionAt >= 0 && mobilityRowsAt > mobilitySectionAt &&
-    /section.items.every\(\(item\) => item.source === 'mobility'\)\)\.map\(\(section\)/.test(screen.slice(mobilitySectionAt, mobilityRowsAt)) &&
-    screen.slice(mobilitySectionAt, mobilityRowsAt).includes('<SessionExecutionSection') &&
-    !/chevron-up|chevron-down|useState\(false\)/.test(mobilityRenderer));
+ok('mobility uses the shared section mapper, including mixed derived and added rows',
+  sessionListAt >= 0 && /const sections = executionPlan.sections;/.test(screen.slice(sessionListAt))
+    && /section.items.some\(\(item\) => item.source === 'mobility'\) \? mobilityContent/.test(screen.slice(sessionListAt))
+    && /mobilityContent=\{/.test(screen)
+    && !/chevron-up|chevron-down|useState\(false\)/.test(mobilityRenderer));
 ok('mobility reuses the complete Strength exercise presentation',
   /<ExecutionChecklistItem/.test(mobilityRenderer)
     && /<StrengthExerciseCard/.test(mobilityRenderer)
@@ -763,7 +761,7 @@ ok('[7] the checkbox is handed to the card, not parked on the name line',
 // ── NOTHING ABOUT COMPLETION OR VIDEO CHANGED, AND THESE SAY SO.
 ok('[7] the checkbox keeps its toggle, its state and its identity',
   /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItemWhole)
-    && /accessibilityState=\{\{ checked: completed \}\}/.test(checklistItemWhole)
+    && /accessibilityState=\{\{ checked: completed, disabled: readOnly \}\}/.test(checklistItemWhole) && /disabled=\{readOnly\}/.test(checklistItemWhole)
     && /testID=\{`session-execution-check-\$\{stableTestIdToken\(itemId\)\}`\}/.test(checklistItemWhole));
 ok('[7] the checkbox keeps its spoken label',
   /accessibilityLabel=\{`\$\{completed \? 'Completed' : 'Mark complete'\}: \$\{label\}`\}/

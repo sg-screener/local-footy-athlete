@@ -132,6 +132,7 @@ export interface DeriveCoachSnapshotInput {
   readonly conditioningLevel?: OnboardingData['conditioningLevel'];
   readonly twoKmTimeTrial?: OnboardingData['twoKmTimeTrial'];
   readonly bodyWeightKg?: OnboardingData['weightKg'];
+  readonly trackedLiftChoices?: import('./estimatedOneRepMax').TrackedLiftChoices;
 }
 
 function countRecordedWeeks(
@@ -224,6 +225,7 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     weekStart: journalWeek.weekStart,
     sessions: strengthSessions,
     bodyWeightKg: input.bodyWeightKg,
+    choices: input.trackedLiftChoices,
   });
 
   return buildCoachSnapshot({

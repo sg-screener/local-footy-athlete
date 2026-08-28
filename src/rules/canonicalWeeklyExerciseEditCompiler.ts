@@ -3,6 +3,7 @@ import type { Workout, WorkoutExercise, OverrideContext } from '../types/domain'
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { POWER_EXERCISE_POOL } from './powerExercisePool';
 import { getExerciseTags } from '../data/exerciseTags';
+import { classifyExerciseRole } from '../utils/sessionRoles';
 import type {
   CanonicalWeeklyExerciseEdit,
   CanonicalWeeklyExerciseEditState,
@@ -149,7 +150,9 @@ export function compileCanonicalExerciseEditOnWorkout(
     };
     const exercises = [...workout.exercises];
     exercises[index] = replacement;
-    return { ...workout, exercises, updatedAt: edit.occurredAt };
+    return { ...workout, exercises, updatedAt: edit.occurredAt,
+      ...(workout.athletePlacement?.constraintId
+        ? { exerciseEditedPlacementId: workout.athletePlacement.constraintId } : {}) };
   }
 
   const name = edit.exercise.name.trim();
@@ -167,7 +170,11 @@ export function compileCanonicalExerciseEditOnWorkout(
     -1,
   ) + 1;
   const added: WorkoutExercise = {
+    role: edit.exercise.role ?? classifyExerciseRole(name),
     ...powerFieldsFor(name),
+    ...(edit.exercise.sessionSection ? { sessionSection: edit.exercise.sessionSection } : {}),
+    ...(edit.exercise.composedOptionalKind ? { composedOptionalKind: edit.exercise.composedOptionalKind } : {}),
+    ...(edit.exercise.sessionSection === 'optional' ? { optionalNoPenalty: true } : {}),
     // One date cannot contain the same canonical exercise twice, so date +
     // canonical name is the accepted component identity. It is identical in
     // the live write and at boot; ledger-generated ids are not available until
@@ -199,6 +206,8 @@ export function compileCanonicalExerciseEditOnWorkout(
   return {
     ...workout,
     exercises: [...workout.exercises, added],
+    ...(workout.athletePlacement?.constraintId
+      ? { exerciseEditedPlacementId: workout.athletePlacement.constraintId } : {}),
     updatedAt: edit.occurredAt,
   };
 }

@@ -1,0 +1,12 @@
+appId: com.localfootyathlete.app
+name: Real onboarding to last-set charts, all section Adds, reopen and phase change
+# Run only on an authorized isolated QA simulator. See the date precondition in
+# estimated-1rm-session-add.yaml; no seeded profile or program is used.
+---
+- runFlow:
+    file: estimated-1rm-session-add.yaml
+    env:
+      QA_GENDER: "${typeof QA_GENDER === 'undefined' ? 'Male' : QA_GENDER}"
+- runFlow: session-section-add-combined.yaml
+- runFlow: session-section-add-reopen.yaml
+- runFlow: estimated-1rm-phase-history.yaml

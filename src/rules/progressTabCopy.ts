@@ -3,7 +3,7 @@ export const PROGRESS_TAB_COPY = {
   title: 'Progress',
   load: 'Load',
   mainLifts: 'Main lifts',
-  predictedOneRepMax: 'Predicted 1RM',
+  predictedOneRepMax: 'Estimated 1RM',
   twoKmTimeTrial: '2km time trial',
   noLiftHistory: 'No data yet',
   notTested: "Haven't tested",

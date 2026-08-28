@@ -17,6 +17,7 @@ interface DiscreteSliderProps {
   min: number;
   max: number;
   formatReadout?: (value: number | null) => string;
+  formatStepLabel?: (value: number) => string;
   showReadout?: boolean;
   showStepLabels?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -32,6 +33,7 @@ export function DiscreteSlider({
   min,
   max,
   formatReadout,
+  formatStepLabel,
   showReadout = true,
   showStepLabels = false,
   style,
@@ -123,7 +125,7 @@ export function DiscreteSlider({
               testID={`${testID}-step-${label}`}
               style={[styles.stepLabel, value === label && styles.stepLabelSelected]}
             >
-              {label}
+              {formatStepLabel ? formatStepLabel(label) : label}
             </Text>
           ))}
         </View>
@@ -151,7 +153,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   trackWithLabels: {
-    marginHorizontal: 8,
+    marginHorizontal: THUMB_SIZE / 2,
   },
   rail: {
     position: 'absolute',
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
     textAlign: 'center',
-    minWidth: 16,
+    minWidth: THUMB_SIZE,
   },
   stepLabelSelected: {
     color: colors.accent.lime,

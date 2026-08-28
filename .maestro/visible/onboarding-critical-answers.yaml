@@ -1,12 +1,26 @@
 appId: com.localfootyathlete.app
 name: Real onboarding verifies settled taps and saved answers
 ---
-- runFlow: onboarding-no-team-training.yaml
+- runFlow:
+    file: onboarding-no-team-training.yaml
+    env:
+      QA_GENDER: "${typeof QA_GENDER === 'undefined' ? 'Male' : QA_GENDER}"
+- runFlow:
+    when:
+      true: ${typeof QA_THREE_DAYS !== 'undefined' && String(QA_THREE_DAYS) == 'true'}
+    commands:
+      - tapOn:
+          id: training-commitment-picker-value-3
+      - waitForAnimationToEnd
 - tapOn: Continue
 - tapOn: Monday
 - tapOn: Tuesday
 - tapOn: Thursday
-- tapOn: Friday
+- runFlow:
+    when:
+      true: ${typeof QA_THREE_DAYS === 'undefined' || String(QA_THREE_DAYS) != 'true'}
+    commands:
+      - tapOn: Friday
 - tapOn: Continue
 - tapOn: Commercial gym
 - tapOn: Continue

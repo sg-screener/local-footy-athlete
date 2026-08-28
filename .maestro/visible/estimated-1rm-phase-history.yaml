@@ -1,0 +1,39 @@
+appId: com.localfootyathlete.app
+name: Current Profile phase change preserves Estimated 1RM history
+---
+- tapOn:
+    point: 62%, 95%
+- swipe:
+    start: 50%, 80%
+    end: 50%, 42%
+    duration: 600
+# A non-default selection must already be present before the phase transaction.
+- assertVisible: '50 kg'
+- tapOn:
+    point: 88%, 95%
+- scrollUntilVisible:
+    element:
+      id: profile-edit-phase
+- tapOn:
+    id: profile-edit-phase
+- tapOn:
+    id: season-phase-option-off-season
+- tapOn: Confirm phase
+- tapOn: I'm not sure
+- tapOn: Shift to Off-season
+- extendedWaitUntil:
+    visible:
+      id: phase-shift-complete
+    timeout: 30000
+- takeScreenshot: artifacts/rir-add/phase-change
+- tapOn: Done
+- tapOn:
+    point: 62%, 95%
+- swipe:
+    start: 50%, 80%
+    end: 50%, 42%
+    duration: 600
+- assertVisible: '120 kg'
+- assertVisible: '\+26 kg'
+- assertVisible: '50 kg'
+- takeScreenshot: artifacts/rir-add/history-after-phase-change

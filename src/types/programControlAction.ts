@@ -153,6 +153,9 @@ interface SessionCategoryPayload {
 }
 
 export interface ExercisePrescriptionPayload {
+  sessionSection?: WorkoutExercise['sessionSection'];
+  role?: WorkoutExercise['role'];
+  composedOptionalKind?: WorkoutExercise['composedOptionalKind'];
   name: string;
   sets: number;
   repsMin: number;

@@ -152,11 +152,11 @@ console.log('\n[PREDICTED 1RM] ONE LOW-REP ESTIMATE ACROSS EVERY PRESCRIPTION');
       && histories.length === 4
       && histories[2].points.length === 0
       && histories[3].points.length === 0);
-  ok('a completed prescribed set becomes a chart point when actual set detail is absent',
-    histories[1]?.points[0]?.predictedOneRepMaxKg === 108);
-  ok('the Pull-Up graph is clearly an added-load estimate',
+  ok('legacy prescribed estimates remain identifiable in their separate legacy series',
+    histories[1]?.points[0]?.predictedOneRepMaxKg === 108 && histories[1].series[0].method === 'legacy_brzycki');
+  ok('the Pull-Up graph is added load and never backfills missing historical bodyweight',
     histories[0]?.valuePrefix === '+'
-      && histories[0]?.points[0]?.predictedOneRepMaxKg === 21.3);
+      && histories[0]?.points.length === 0);
 }
 
 console.log('\n[TIMELINE] REAL DATES OWN HORIZONTAL SPACE');

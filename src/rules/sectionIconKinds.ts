@@ -109,6 +109,7 @@ export const COMPOSED_OPTIONAL_ICON_KIND:
 export const SESSION_SECTION_ICON_KIND:
   Readonly<Record<SessionExecutionSectionId, RowIconKind>> = {
   mobility: 'mobility',
+  primer: 'bolt',
   strength: 'strength',
   accessories: 'core',
   conditioning: 'pulse',

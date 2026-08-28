@@ -54,11 +54,12 @@ tags:
     id: "day-complete-mon"
 - tapOn:
     id: "view-completed-session-button"
-- scrollUntilVisible:
-    element:
-      id: "session-execution-select-all"
-    direction: DOWN
-- assertVisible:
+- assertNotVisible:
     id: "session-execution-select-all"
-    text: "checkbox, checked"
+- assertNotVisible:
+    id: "session-quick-add-.*"
+- assertVisible:
+    id: "session-execution-check-.*"
+    text: ".*checked.*"
+    enabled: false
 - takeScreenshot: artifacts/visible/session-checklist-restored-after-reopen

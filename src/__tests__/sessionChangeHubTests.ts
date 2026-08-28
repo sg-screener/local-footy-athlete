@@ -194,9 +194,16 @@ console.log('\n[5b] Quick add: one plus per section, in the one section owner');
     /function SessionExecutionSection\(\{ section, completedItemIds, onQuickAdd, children \}/.test(live)
       && /testID=\{`session-quick-add-\$\{section\.id\}`\}/.test(live),
     'both the Mobility route and SessionList render through this one owner');
-  ok('and BOTH render routes hand it the section\'s own tap',
-    (live.match(/onQuickAdd=\{quickAddFor\(section\.id\)\}/g) ?? []).length === 2,
-    'a route that omitted it would silently lose the plus for its sections');
+  ok('the one section mapper carries the section tap and retains derived mobility content',
+    /const sections = executionPlan.sections;/.test(live)
+      && /sections.map\(\(section\) => \([\s\S]*?onQuickAdd=\{quickAddFor\(section.id\)\}/.test(live)
+      && /mobilityContent/.test(live));
+  ok('manually added mobility uses authored cues rather than its catalogue description',
+    /cueTextOverride=\{item\.presentation === 'mobility' && !item\.row\.sessionSection/.test(live)
+      && /const cueText = cueTextOverride !== undefined \? cueTextOverride : resolvedCue\.text/.test(live));
+  ok('mixed mobility rows are numbered within their visible section',
+    live.includes('label={sectionLabel ?? labels[index] ??')
+      && live.includes('String(section.items.findIndex(item => item.id === executionItem.id) + 1)'));
   ok('it sits AFTER the section\'s rows, under the last card',
     (() => {
       const at = live.indexOf('testID={`session-execution-items-${section.id}`}');
@@ -216,20 +223,19 @@ console.log('\n[5b] Quick add: one plus per section, in the one section owner');
     /executionSectionBody: \{ paddingBottom: spacing\.md, gap: spacing\.sm \}/.test(live)
       && /quickAddRow: \{[^}]*marginTop: -spacing\.sm/.test(live),
     'the plus is a CHILD of that body, so its gap applied to the plus too');
-  ok('the tap enters the EXISTING hierarchy one level down, at the section\'s family',
-    /const quickAddFor = React\.useCallback\([\s\S]{0,900}openAddFamily\(family\)/.test(live),
-    'same legality owner, same rungs — only the first question is skipped');
-  ok('legality is the same legalAddFamilies pass the retired row ran',
-    /const quickAddFamilies = React\.useMemo\([\s\S]{0,700}legalAddFamilies\(addCandidateArgs\(\)\)/.test(live));
-  ok('a finished, already-saved or team-only session offers no plus',
-    /const quickAddFamilies = React\.useMemo\(\(\) => \{[\s\S]{0,320}isTeamOnly \|\| isFinished \|\| isAlreadyComplete/.test(live));
-  ok('a section outside the three add families gets none either',
-    /quickAddFamilies\.has\(family\)/.test(live)
-      && /ADD_FAMILY_ORDER: readonly AddFamilyId\[\] = \['strength', 'conditioning', 'mobility'\]/
-        .test(readFileSync(
-          join(__dirname, '..', 'utils', 'addExerciseCandidates.ts'), 'utf8',
-        )),
-    'AddFamilyId is an Extract of SessionExecutionSectionId — one identity, no table');
+  ok('the tap enters the existing hierarchy with the exact section',
+    /const quickAddFor = React\.useCallback\([\s\S]{0,900}openAddFamily\(sectionId\)/.test(live));
+  ok('legality filters choices inside the selected section',
+    /legalAddFamilies\(\{ \.\.\.addCandidateArgs\(\), section: family/.test(live));
+  ok('combined-day Add context comes from the actual section rows',
+    /const addSessionKind = React\.useCallback\([\s\S]{0,220}executionPlan\?\.sections\.find\(section => section\.id === family\)\?\.sessionKind/.test(live)
+      && !/sessionKind: workout\?\.composedOptionalKind/.test(live));
+  ok('completed records and team-only entries offer no plus',
+    /const quickAddFor = React\.useCallback\([\s\S]{0,400}isTeamOnly \|\| isFinished \|\| isAlreadyComplete/.test(live));
+  // The old three-family visibility assertion is superseded by R-273.
+  ok('an empty safe list explains the result without hiding the control',
+    !/quickAddFamilies\.has/.test(live) && /Nothing suitable to add/.test(live)
+      && /addExerciseSectionContext\(family, leaf, addSessionKind\(family\)\)/.test(live));
   ok('the spoken label names the section, since the control is a bare glyph',
     /accessibilityLabel=\{`\$\{signedCopy\('session\.quick_add\.label'\)\}: \$\{section\.label\}`\}/.test(live)
       && /id: 'session\.quick_add\.label'[\s\S]{0,500}text: 'Quick add'/.test(copySource));
