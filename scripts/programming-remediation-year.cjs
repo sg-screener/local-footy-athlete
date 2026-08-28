@@ -22,7 +22,7 @@ if (fullKit) replace('const profile=athleteAnswers(archetype);',
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
   "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
-  'role:item.role,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||undefined,pair:item.superset?.groupId');
+  'role:item.role,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||(conditioning&&app("src/utils/sessionComponents").getSessionComponents(workout).some(c=>c.kind==="finisher"&&c.completionPolicy==="optional_no_penalty"))||undefined,pair:item.superset?.groupId');
 replace('name:o.title,description:o.description,rows:o.rows.map',
   'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
@@ -32,7 +32,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured'],
+  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);

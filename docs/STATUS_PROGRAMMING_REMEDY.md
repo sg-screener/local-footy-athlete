@@ -1,6 +1,9 @@
 # STATUS — programming-remedy
 
 Owner: programming-remedy. Opened 2026-08-28 for Sam's P01–P22 implementation.
+Current receipt: see **Final short-flush/onboarding verification** at the end
+and `docs/FLUSH_ONBOARDING_RELEASE_2026-08-28.md`. Earlier pending statements
+below are historical snapshots, superseded by that exact-candidate evidence.
 Baseline: `a8947d6f` on `codex/failure-only-state-export`; product/scripts/flows
 identical to verified `0bcc3353`. Existing NOW, handoffs, outputs and fuse files
 belong to others and are not staged by this owner.
@@ -504,3 +507,68 @@ checkpoint, not c12a8397, must carry the final release/years/build receipts.
 NOT COVERED: final exact-version release gate, mutation receipts, repeated final
 native onboarding, final year reports and physical device acceptance are pending.
 The original 22-item list is not declared finished.
+
+## Final short-flush/onboarding verification — 263369ba
+
+Owner: programming-remedy. Final application checkpoint
+`263369ba6873008cef28fab1a7f831dfc5989e4f`; original verified fixes preserved.
+No unanswered programming decisions. Original P01–P22 implementation and named
+evidence are listed individually in `FLUSH_ONBOARDING_RELEASE_2026-08-28.md`;
+none is represented as physically accepted. No installation/reset/wipe.
+
+- Exact isolated `test:release`: 20/20 units, 23 contracts, exit 0. Annual
+  acceptance: 416/416 athlete-weeks, eight distinct athletes, zero failure keys.
+  All 2,351 tracked candidate files match their Git blobs before/during/after.
+- Flush matrix: 1,794/1,794 assertions; seven template identities and all 16
+  machine subsets (including no kit), ordinary/minimum doses, combined days,
+  injury restrictions, mode changes, numeric/display agreement and no fitness
+  conditioning credit. Real rollover: 288/288 assertions, eight athlete/machine
+  worlds, all seven flushes reached per world, 56 successful restart checks.
+- 53 deliberate mutations caught. The removed-flush case originally failed
+  the newer reachability precondition before the runner's expected old cell;
+  preserved that unproven receipt, then targeted the unchanged G+2 witness and
+  observed its expected failure. No guard or app code was weakened/changed.
+- Three fresh real onboarding journeys pass: original fast text taps; Review
+  plus modifier Clear/phase change; 6:45 entry, Review revisit, keyboard-open
+  Skip and saved-answer assertions. No-clear restart retains the generated
+  plan and the phase journey's Off-season/zero-active-modifier state.
+- Three additional native flows pass: conditioning/logging/restart,
+  readiness/Clear/load retention/restart, replacement/load/restart. These use
+  the dedicated simulator's existing development client with frozen 263369ba
+  JavaScript, not an installed Release build on a phone.
+- Clean Release build and deep/strict signing verification succeed; version
+  1.0.0 (1), main bundle SHA-256
+  `aa85a1ae8e091e387a8dc3e8a64e637fbfbfa85cb3ebceb7d8c2bb3fc5303aac`.
+- Actual emitted copy reviewed for 55 templates / 110 variants; 54 automatic
+  identities, all 55 saved identities retained. Seven flush doses replaced;
+  all 48 non-flush display prescriptions preserved. Steady Blocks' numeric
+  count now matches its existing displayed four-round choice.
+- Four final delivered year reports use the same profiles/actions/phases as
+  baseline 38457383. Each reaches 52 weeks, 364 athlete-days and 52 successful
+  restarts; zero invalid flush rows, retired automatic circuit rows, missing
+  modes, corrupt names or trainable painful presses in the measured window.
+  Each has 20 optional flush placements/dates; the existing completion owner
+  supplies those report labels. The initial unlabelled reports are preserved.
+
+Evidence: `outputs/flush-remediation-2026-08-28/candidate-263369ba/`.
+Authoritative receipt: `final-verification.json`; delivered years are under
+`delivered-years/`. Original attempts and original release evidence remain.
+The follow-up commit is report/verification tooling only: optional export
+labels and the mutation runner entrypoint, with executed adapters proven equal
+to the saved helpers. Application and release-gated guard source remain 263369ba.
+Other seat's NOW, exercise intake, handoffs, outputs and fuse files are untouched.
+
+## NOT COVERED / remaining work
+
+- Physical iPhone acceptance and Release runtime on either phone. Installation
+  hold remains; the entire original 22-item list is not called finished.
+- Four pre-existing C12 diagnostic template flavour-anchor failures reproduce
+  on baseline 38457383. Diagnostic guard maintenance remains; no test weakened.
+- Every native Add permutation, native guided painful-trigger entry, other
+  screen sizes/orientations, actual OS-death injection and remote persistence.
+  The corresponding accumulated compiler/transaction behaviour is covered.
+- Clinical validation, exhaustive Cartesian combinations and rendered HTML
+  layout QA. Report content/prescriptions/restarts were directly audited.
+- Original onboarding wrong-answer/2 km uncertainty is now investigated and
+  guarded with repeat simulator evidence, not closed solely by a retry;
+  physical-device confirmation still belongs to the held acceptance step.

@@ -41,7 +41,7 @@ const mutants = {
   derived_warmup_duplicates: ['src/utils/canonicalPlanChangeCandidateMaterializer.ts', 'coachRevisionExistingExerciseNames(source, change.date)', 'source?.exercises.map(row => row.exercise.name)', 'inputs', 'separately derived visible warm-up is excluded too'],
   lowload_completion: ['src/utils/sessionExecutionChecklist.ts', 'if (lowLoadOwner) return lowLoadOwner.id;', 'if (false && lowLoadOwner) return lowLoadOwner.id;', 'inputs', 'completing the second session does not complete the first'],
   lowload_partition: ['src/utils/sessionComponents.ts', "(row.composedOptionalKind ?? lowLoadKind) === 'recovery'", "lowLoadKind === 'recovery' || row.composedOptionalKind === 'recovery'", 'inputs', 'each actual exercise appears once in the session checklist'],
-  flush_absent: ['src/rules/weeklyScheduler.ts', "if (inputs.phase !== 'In-season' || entry.game || entry.clubTraining", "if (true || inputs.phase !== 'In-season' || entry.game || entry.clubTraining", 'inputs', 'optional flush attaches without replacing'],
+  flush_absent: ['src/rules/weeklyScheduler.ts', "if (inputs.phase !== 'In-season' || entry.game || entry.clubTraining", "if (true || inputs.phase !== 'In-season' || entry.game || entry.clubTraining", 'gplus', 'optional flush attaches without replacing'],
   flush_unneeded_core: ['src/rules/weeklyScheduler.ts', 'const required = inputs.mildSorenessDays?.includes(entry.dayOfWeek) === true;', 'const required = true;', 'inputs', 'optional flush attaches without replacing'],
   fixture_flush: ['src/utils/fixtureMinimalReplan.ts', 'const source = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts);', 'const source = expired;', 'compiler', 'moving the fixture back restores the visible week exactly'],
   fallback_only: ['src/rules/blockExerciseSelection.ts', '? preferred : inputs.legalCandidates;', '? inputs.legalCandidates : inputs.legalCandidates;', 'inputs', 'automatic selection uses suitable alternatives'],
@@ -98,7 +98,7 @@ if (child) {
     global.window = { localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k), clear: () => storage.clear() } };
     global.fetch = () => { throw Error('NETWORK DISABLED'); };
     let failures = 0;
-    const helper = witness === 'mobility' ? 'mobilityAddJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
+    const helper = witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
       : witness === 'flush_restart' ? 'flushRestartJourney' : 'programmingInputTruth';
     require(path.join(repo, 'src/__tests__/support', helper))[helper](storage, (label, value, detail) => {
       if (!value) failures++;
