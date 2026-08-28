@@ -1047,3 +1047,57 @@ NOT COVERED at this progress save: exact-version final release/build/years,
 complete native icon/refusal tape, final repeated cold journeys and mutations;
 21 legacy UNENFORCED process/verification laws, physical acceptance and recorded
 2 km Skip QA issue. Installation remains on hold; neither phone touched.
+
+## Saved application candidate 7eff7748 — final checks running
+
+Product code remains the scoped 9ec2d842 correction; 7eff7748 adds native tapes
+and the annual displayed-wording guard. Frozen source:
+/private/tmp/lfa-final-acceptance.wVcHpB/source. All 2378 tracked files match
+7eff7748 before and after the clean Release build and four delivered years.
+Build succeeded, not installed. Four strict years pass; 208/208 weekly restart
+checks. Identical bb42e664 inputs produce only eight intended displayed-note
+changes, no other delivered programming differences. Actual adjacent energy
+date-pairs remain 23/year, zero hard-hard, same prior classification.
+
+39/39 selected behaviour mutants, four category mutants and one delivered-year
+wording mutant landed and were caught. Original raw 55 templates/110 stored
+variants remain exact. Actual display comparison: 404 variants, 56 wording
+changes over six templates, zero dose/machine/number/complete-rest differences.
+
+Native four-shape icon tape passed Day/Session/reopen; separate actual expanded
+Week-card tape passed. Visually inspected person versus battery on combined
+Mobility+Recovery and person on Strength/Gunshow+Mobility. G-1 warning decline,
+occupied-day refusal/dismiss/reopen and actual game protection passed. Evidence
+is archived in outputs/final-acceptance-2026-08-28/candidate-7eff7748/native.
+Corrected date helper uses today-Friday for the program's first week (earlier
+Monday is before program start), Monday for later weeks, and actual date headings.
+No programming change was made to accommodate the automation.
+
+NOT COVERED at this progress note: terminal full release result (running), two
+complete final speed-answer journeys (running), physical acceptance/2 km Skip
+QA, and the unchanged 21/211 unenforced law rows. Installation hold remains.
+
+## Final acceptance preparation verified — application 7eff7748
+
+Exact frozen release completed 23/23 units green for 26 current contracts;
+compiler-year acceptance 416/416 weeks across eight distinct athletes. Clean
+Release build succeeded, not installed. Final 2378-file source manifest exactly
+matches the start and Git blobs. Collector verified gate/build/source/years,
+39 behaviour + four category + one actual-year wording mutation receipts and
+all six terminal native logs. Two full independent speed-answer onboarding
+journeys passed. The actual native profile after the second cold reopen retains
+Top-speed only and the canonical skipped time-trial envelope (seconds null).
+The first storage reader incorrectly expected a bare null; it was corrected to
+the existing recordTwoKmTime envelope, with no app/storage change.
+
+Saved handoff: PROGRAMMING_PHONE_ACCEPTANCE_CHECKPOINT_2026-08-28.md and its
+JSON receipt. This final save contains report/receipt and native-tape corrections
+only; application source remains the exact verified 7eff7748 candidate. Other
+seat NOW changes and all original evidence are preserved. No programming choice
+is outstanding from Sam. Approval to install and physical acceptance are still
+Sam's gates, and the whole P01–P22 list is not called finished.
+
+NOT COVERED: physical iPhone acceptance/Release runtime; recorded 2 km Skip
+physical QA; every athlete/availability/alert combination; clinical validation;
+21/211 legacy unenforced law rows. No new exercises or Estimated 1RM. No phone
+installation, reset or wipe; installation hold remains until Sam approves.

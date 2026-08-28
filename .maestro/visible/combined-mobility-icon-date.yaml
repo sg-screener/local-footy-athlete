@@ -7,10 +7,10 @@ appId: com.localfootyathlete.app
       - tapOn:
           id: program-week-next
       - waitForAnimationToEnd
-# Monday is visible without scrolling. Select it, then use the within-week
-# Day controls. This avoids tapping a fixed header while a Week scroll settles.
+# The current week opens on Friday (earlier dates precede program start). Future
+# weeks can select Monday. Both anchors are visible without scrolling.
 - tapOn:
-    id: day-row-mon
+    id: '${Number(WEEK_OFFSET) === 0 ? "day-row-fri" : "day-row-mon"}'
 - waitForAnimationToEnd
 - tapOn:
     id: program-view-today
@@ -22,9 +22,9 @@ appId: com.localfootyathlete.app
       id: program-day-current
     timeout: 15000
 - assertVisible:
-    id: day-row-mon
+    id: '${Number(WEEK_OFFSET) === 0 ? "day-row-fri" : "day-row-mon"}'
 - repeat:
-    times: '${["day-row-mon", "day-row-tue", "day-row-wed", "day-row-thu", "day-row-fri", "day-row-sat", "day-row-sun"].indexOf(DAY_ID)}'
+    times: '${["day-row-mon", "day-row-tue", "day-row-wed", "day-row-thu", "day-row-fri", "day-row-sat", "day-row-sun"].indexOf(DAY_ID) - (Number(WEEK_OFFSET) === 0 ? 4 : 0)}'
     commands:
       - tapOn:
           id: program-day-next

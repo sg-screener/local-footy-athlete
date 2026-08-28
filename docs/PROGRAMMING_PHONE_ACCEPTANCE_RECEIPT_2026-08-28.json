@@ -1,0 +1,62 @@
+{
+  "applicationCandidate": "7eff7748cbd5ec1df9e5a6bb116bbf319f268d36",
+  "trackedFiles": 2378,
+  "sourceUnchanged": true,
+  "release": {
+    "units": 23,
+    "currentContracts": 26,
+    "exit": 0
+  },
+  "releaseBuild": {
+    "clean": true,
+    "installed": false,
+    "appPath": "/private/tmp/lfa-final-acceptance.wVcHpB/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app",
+    "bundleSha256": "fab390f3358fd2f87ff398cf07c048b5686780266dfebba2f87c696da1d6df24",
+    "executableSha256": "2162de4b70351271df6cac746aa679e1dad65cb5e5e8aa713e4f5da8471a07ef"
+  },
+  "compilerYear": {
+    "greenAthleteWeeks": 416,
+    "requiredAthleteWeeks": 416,
+    "distinctAthletes": 8
+  },
+  "deliveredYears": {
+    "worlds": 4,
+    "athleteDays": 1456,
+    "weeklyRestartChecks": 208,
+    "successfulRestarts": 208,
+    "changedNoteOccurrences": 8,
+    "otherProgrammingChanges": 0
+  },
+  "mutations": {
+    "behaviour": 39,
+    "categories": 4,
+    "actualYearWording": 1,
+    "allCaught": true
+  },
+  "native": {
+    "logs": [
+      "native-four-icon-shapes-dated.log",
+      "native-week-cards.log",
+      "native-gminus1-decline.log",
+      "native-occupied-game-refusals.log",
+      "native-speed-journey-1.log",
+      "native-speed-journey-2.log"
+    ],
+    "candidateEquivalentAppSource": true,
+    "persistedProfile": "native-profile-after-reopen.json",
+    "releaseRuntime": false
+  },
+  "diagnosticDebt": {
+    "unenforcedLawRows": 21,
+    "guardedLawRows": 190,
+    "distinctLawRows": 211,
+    "wholeBibleGreen": false
+  },
+  "notCovered": [
+    "Physical phone acceptance and Release runtime on phones",
+    "Recorded onboarding 2 km Skip physical QA",
+    "Full athlete/availability/alert cross-product",
+    "21 unenforced legacy process/verification laws",
+    "New exercises or Estimated 1RM"
+  ]
+}

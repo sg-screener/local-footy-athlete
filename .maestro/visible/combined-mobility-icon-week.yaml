@@ -1,0 +1,42 @@
+appId: com.localfootyathlete.app
+name: Actual Week cards for the four Mobility combinations after reopening
+---
+- runFlow: combined-mobility-icon-open.yaml
+- tapOn:
+    id: program-week-next
+- tapOn:
+    id: day-row-mon
+- assertVisible: Strength \+ Mobility
+- takeScreenshot: artifacts/final/strength-mobility-week-expanded
+- runFlow: combined-mobility-icon-open.yaml
+- scrollUntilVisible:
+    element:
+      id: day-row-fri
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: day-row-fri
+- assertVisible: Gunshow \+ Mobility
+- takeScreenshot: artifacts/final/gunshow-mobility-week-expanded
+- runFlow: combined-mobility-icon-open.yaml
+- tapOn:
+    id: program-week-next
+- scrollUntilVisible:
+    element:
+      id: day-row-wed
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: day-row-wed
+- assertVisible: Mobility
+- takeScreenshot: artifacts/final/standalone-mobility-week-expanded
+- runFlow: combined-mobility-icon-open.yaml
+- scrollUntilVisible:
+    element:
+      id: day-row-sun
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: day-row-sun
+- assertVisible: Mobility \+ Recovery|Recovery \+ Mobility
+- takeScreenshot: artifacts/final/mobility-recovery-week-expanded
