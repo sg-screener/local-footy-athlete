@@ -1,0 +1,37 @@
+{
+  "applicationCandidate": "7eff7748cbd5ec1df9e5a6bb116bbf319f268d36",
+  "authorization": "Sam explicitly approved installation on both phones, preserving all data; no automatic launch required.",
+  "appPath": "/private/tmp/lfa-final-acceptance.wVcHpB/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app",
+  "bundleSha256": "fab390f3358fd2f87ff398cf07c048b5686780266dfebba2f87c696da1d6df24",
+  "executableSha256": "2162de4b70351271df6cac746aa679e1dad65cb5e5e8aa713e4f5da8471a07ef",
+  "rebuiltFromCheckout": false,
+  "installationMode": "In-place devicectl device install app; no uninstall, reset, data clearing or launch commands",
+  "phones": [
+    {
+      "owner": "Sam",
+      "deviceIdentifier": "AFA21856-881E-587B-96D5-60817FD11018",
+      "outcome": "success",
+      "receipt": "outputs/phone-install-7eff7748-2026-08-28/sam-install-attempt-3.json",
+      "installedBundleContainer": "A6E31EC9-1B4C-40C5-95A1-81FD393B7911"
+    },
+    {
+      "owner": "Renee",
+      "deviceIdentifier": "C1972DB0-5B63-562E-81C2-368BBBF1A5AB",
+      "outcome": "success",
+      "receipt": "outputs/phone-install-7eff7748-2026-08-28/renee-install-attempt-2.json",
+      "installedBundleContainer": "C12537F4-EBA6-4955-9941-00081273E0C0"
+    }
+  ],
+  "dataProtection": {
+    "uninstallCommands": 0,
+    "resetCommands": 0,
+    "appDataWritesByAgent": 0,
+    "beforeAfterDataComparison": false
+  },
+  "notCovered": [
+    "Physical user acceptance and post-install Release runtime: apps deliberately not launched",
+    "Recorded onboarding 2 km Skip physical QA",
+    "Byte-for-byte comparison of phone app data before and after updating",
+    "New exercises or Estimated 1RM work; unrelated checkout changes excluded"
+  ]
+}

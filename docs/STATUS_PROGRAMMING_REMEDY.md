@@ -1116,3 +1116,24 @@ included; source/build/year/native/mutation receipts still name exact 7eff7748.
 NOT COVERED remains physical acceptance and recorded 2 km QA, the 21 law rows
 and 12 baseline process-check assertions (different units), full cross-products,
 new exercises and Estimated 1RM. Installation remains held; no phone touched.
+
+## Approved in-place phone installation — exact 7eff7748
+
+Sam explicitly lifted the installation hold for both phones. Installed the
+previously verified signed Release artifact, not a build from the shared
+checkout. main.jsbundle and executable SHA-256 still match the saved acceptance
+receipt. No new exercises, Estimated 1RM or unrelated checkout changes included.
+
+Both physical installations returned success: Renee's iPhone 17 Pro at 21:16
+and Sam's iPhone 16 Pro Max at 21:17 Melbourne on 2026-08-28. Initial unavailable
+and device-locked failures are preserved alongside successful receipts in
+outputs/phone-install-7eff7748-2026-08-28. The install-only command succeeded
+after the phones became reachable/prepared; no security setting was bypassed.
+No uninstall, reset, app-data clearing, restore or automatic launch was used.
+Summary receipt: PROGRAMMING_PHONE_INSTALL_RECEIPT_2026-08-28.json. The original
+pre-install acceptance report remains an unchanged historical verification record.
+
+NOT COVERED: physical acceptance, post-install Release runtime (apps deliberately
+not launched), byte-for-byte before/after app-data comparison, recorded 2 km Skip
+physical QA and previously classified diagnostic debt. The whole original list
+is not declared physically accepted. No further installation is pending.
