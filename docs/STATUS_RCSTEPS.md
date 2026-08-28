@@ -169,3 +169,61 @@ conditioning checkbox and coherent work/rest prescription visible beneath it.
 
 NOT COVERED: final exact-commit release and three-flow rerun, clean native build,
 data-preserving install, physical cold onboarding and Sam's device acceptance.
+
+### Current receipt and additional installation hold
+
+Candidate `0bcc3353` has all three requested simulator flows completed. Real
+non-seeded onboarding, generation, second-week navigation, readiness apply/clear,
+off-season transition and process restart were also reached through the UI.
+The optional original golden tape's text tap on the 2 km skip did not advance;
+a direct tap did. My initial missing-Continue explanation was wrong and is
+withdrawn. The failed tape is not reported green; the continued journey and
+restart have separate receipts. Full details and log paths are in
+`docs/RELEASE_CANDIDATE_RCSTEPS_2026-08-28.md`.
+
+The concurrently written programming-remediation handoff names P13: shoulder
+pressing still present. A fresh copy of the original driver, eight-week male
+run at `0bcc3353`, confirms two distinct press rows on 18 November under the
+active shoulder-4/pressing constraint: Bench Press 2×8 77.5kg, DB Bench Press
+1×10 32.5kg. New evidence is in
+`/private/tmp/rcsteps.gdCdyC/current-shoulder-review/`; original exports untouched.
+The severity-only owner permits `caution` at 4; the Bible separately forbids
+merely lighter painful bench and asks for shoulder-friendly variation. Identity
+corruption is fixed, but that does not settle this distinct trigger-policy issue.
+
+Owner: programming-remediation implementation seat for P13, coordinated with
+rcsteps for the later release. INSTALL HELD pending that resolution or explicit
+Sam direction for a diagnostic-only install. No physical app reset or install
+has been performed. Independent exact-candidate gate and packaging continue.
+
+NOT COVERED: P01–P22 remediation, P13 corrected trigger policy, final clean
+Release packaging, physical install, cold onboarding and Sam acceptance.
+
+### Final independent verification / handoff
+
+Exact candidate `0bcc3353e65d7a80b584925b466af254b1296cdd`: final release gate
+20/20 executable units green for 23 current contracts; three TypeScript scopes
+zero; annual 416/416 athlete-weeks from eight distinct 52-week archetypes, zero
+distinct failure keys, six permanent mutations green. Canonical compiler
+604/604, injury recomposition 106/106, fallback 173/173, Coach 64/64, session
+execution 201/201. Ownership zero/zero among 1,136 reviewed capability owners.
+The three named final simulator flows passed. Real unseeded UI onboarding/phase
+and restart observations are separately scoped above.
+
+Clean isolated Release build succeeded, strict/deep signature passed, version
+1.0.0 (1), embedded JS SHA-256
+`8acfe2c9d83a196ddedd22f0e114fce3f134e77bc16642cacbab6360bd37ffd9`.
+All 2,327 tracked files still match the exact candidate after tests and build.
+Final artifact/receipts/checklist are in
+`docs/RELEASE_CANDIDATE_RCSTEPS_2026-08-28.md`; retained evidence is under
+`outputs/release-candidate-0bcc3353-rcsteps/`.
+
+No install, launch, uninstall or reset was performed on either phone. Sam's
+phone was rediscovered read-only. Step 3 cannot reach physical acceptance while
+P13 remains unresolved; the new pressing evidence is handed to the programming
+remediation owner. These current-contract greens do not certify P01–P22 or
+override the installation hold. Report-only changes after the candidate do not
+change the built source identity.
+
+NOT COVERED: P13 remediation, other P01–P22 changes, physical install/acceptance,
+authorised physical cold onboarding, live Coach/remote services, beta/store.
