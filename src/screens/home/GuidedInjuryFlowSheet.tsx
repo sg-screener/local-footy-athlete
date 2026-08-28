@@ -320,8 +320,6 @@ function GuidedInjuryFlowBody({
                 ? current : current.includes(movement) ? current.filter(value => value !== movement) : [...current, movement])}
             />
           ))}
-          <Button label="Back to severity" testID="injury-pain-done" glow={false}
-            onPress={() => setStep('severity')} />
         </>
       );
     }

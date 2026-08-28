@@ -1,0 +1,48 @@
+appId: com.localfootyathlete.app
+name: Optional pain through simple injury flow, modifier and restart Clear
+tags:
+  - visible
+  - programming-gap
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: home-injured-entry
+    direction: DOWN
+- tapOn:
+    id: home-injured-entry
+- tapOn:
+    id: injury-region-upper_body
+- tapOn:
+    id: injury-area-shoulder
+- scrollUntilVisible:
+    element:
+      id: injury-optional-pain
+    direction: DOWN
+- tapOn:
+    id: injury-optional-pain
+- tapOn:
+    id: injury-pain-pressing
+- tapOn: Back
+- scrollUntilVisible:
+    element:
+      id: injury-severity-slight
+    direction: UP
+- takeScreenshot: artifacts/gap/optional-pain-before-submit
+- tapOn:
+    id: injury-severity-slight
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- takeScreenshot: artifacts/gap/optional-pain-applied
+- runFlow: injury-status-reopen-clear.yaml

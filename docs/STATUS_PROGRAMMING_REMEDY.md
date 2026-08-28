@@ -694,3 +694,10 @@ NOT COVERED: new optional pain/sprint answers on native glass, remaining native
 Add/Swap/game-adjacent/Undo permutations, final exact-version release and revised
 delivered years after these changes, physical-iPhone acceptance. P01–P22 are not
 all closed. Installation hold remains; neither phone was installed to or wiped.
+
+Native 006fa6c1 finding: optional pain's new bottom return button was clipped on
+the long movement list. The attempted tap did not leave that step; this is not
+a completed injury journey. Removed the redundant inline button and retained
+the existing always-visible Back action (pain → severity). Updated binding
+guard passes. The previous screenshot/log is preserved; revised native and
+exact-version verification are required. No scheduling or dose change here.

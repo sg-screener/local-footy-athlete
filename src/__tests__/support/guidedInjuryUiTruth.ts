@@ -13,7 +13,9 @@ export function guidedInjuryUiTruth(ok: (label: string, value: boolean) => void)
     && /<FlowOption\b/.test(rows) && !/selected=/.test(rows));
   ok('injury UI: ordinary severity still submits directly; painful movements are optional',
     rows.includes('submit(false, option);') && sheet.includes('testID="injury-optional-pain"')
-    && sheet.includes("onPress={() => setStep('pain')}") && sheet.includes('testID="injury-pain-done"'));
+    && sheet.includes("onPress={() => setStep('pain')}")
+    && sheet.includes("else if (step === 'pain') {\n      setStep('severity');")
+    && !sheet.includes('testID="injury-pain-done"'));
   ok('injury UI: paused reports preserve painful movements and the separate serious-symptom answer',
     sheet.includes('triggers: preservedTriggers,') && /\n\s+seriousSymptoms,/.test(sheet)
     && sheet.includes('testID="injury-serious-symptoms"'));
