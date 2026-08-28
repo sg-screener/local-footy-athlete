@@ -943,3 +943,61 @@ and the cleared injury banner stays absent. Original failure evidence retained.
 NOT COVERED: exact release rerun after this review-only save; non-flush off-leg
 recovery wording; full-strength warm-up native overlap; refusal-sheet dismissal;
 physical iPhone and 2 km Skip acceptance. Both phones remain untouched.
+
+### Final bb42e664 receipt — installation hold remains
+
+Saved candidate bb42e66475163a6849ce1720ff5b2646fa5866b3; isolated source
+/private/tmp/lfa-release-reviewed.urEcKn/source. App code is identical to 01334a5a;
+only the reviewed ownership fingerprint and seat status changed. Final source
+manifests match all 2,366 tracked Git blobs before and after verification.
+
+- Exact `npm run test:release`: 20/20 units, 23 current contracts, exit 0.
+- Annual compiler: 416/416 athlete-weeks, eight distinct athletes × 52 weeks and
+  weekly restarts, zero distinct failure keys; ownership prerequisite passes.
+- Clean generic iOS Release build succeeded, not installed.
+- Four delivered years, each 52 weeks / 364 days / 52 restarts; 4/4 strict audits.
+  Identical profile/actions/phases versus preserved 263369ba baseline. All 55
+  templates/110 emitted variants and 23 classified adjacent energy pairs/year
+  match; zero hard/hard pairs in those four delivered input worlds.
+- 31 follow-up and four category mutants caught on this exact source. Separate
+  stale-owner review and native duplicate-warm-up controls also fail correctly.
+- Original four C12 expectations rebound at current owner: 152/152 on bb42e664.
+  Additional old diagnostics remain classified debt: slot import, four power
+  expectations, Section 18 onboarding fixture, and law registry 21/210 UNENFORCED
+  plus missing guard/unregistered LR-18. No whole diagnostic-fleet green claim.
+
+Final native bb42e664: cold open preserves earlier Clear and Friday Mobility.
+Tuesday's third-session refusal uses Back → Back and retains strength. Initial
+Done/Close selectors were wrong for this capacity step; original failures stay.
+Severity UI visually verified: neutral 4–5 background/divider, yellow bars retained,
+optional pain visible and separate serious-symptom route. Cancel makes no report.
+
+Full-strength warm-up gap CLOSED ON SIMULATOR: Monday 31 August was strength +
+conditioning. Removed only conditioning through the real menu to free the second
+slot, then Add Mobility → Undo → re-add → terminate/reopen. Actual four warm-up
+drills and six strength exercises retain exact names and doses, with six different
+Mobility drills: 16 placements / 16 distinct names / two sessions. Reopened lists
+match. Existing Gunshow/other Mobility/Recovery tapes remain separate evidence.
+The first new hierarchy reader failed on empty nested row containers; XCTest
+flattens their children into the day card. Corrected bounded extraction proves
+the selected Monday and expanded-row anchors, and excludes headers/footer text.
+Injecting a duplicate warm-up into the added list makes the comparison fail.
+
+Final evidence: outputs/programming-gap-closure-2026-08-28/candidate-bb42e664/.
+verification.json checks terminal gate/build receipts, source identity, annual
+verdict, four strict year audits, comparisons and mutations. The frozen annual
+runner's working-tree annotation reflects untracked generated output, not changed
+tracked source; manifests resolve that distinction explicitly.
+
+Full handoff: docs/PROGRAMMING_RELEASE_FOLLOWUP_2026-08-28.md. P15/P19 implemented,
+P18 unchanged, original-item table separates implementation from acceptance.
+No programming answer is outstanding from Sam. P07 remains open: actual final
+male Week 8 Bike Extensive Tempo still says walk recovery. Browser review names
+the real output; no silent dose/recovery edit was made. Original evidence and
+other-seat NOW changes preserved. This final save is documentation only.
+
+NOT COVERED: P07 resolved non-flush off-leg recovery wording; every native refusal
+route and new speed-answer tiles; historical diagnostic rebinding/law-registry
+debt; every athlete cross-product; clinical validation; physical iPhone acceptance
+and the recorded 2 km Skip QA issue. No phone installation, reset or wipe. The
+whole P01–P22 list is not declared finished and the installation hold remains.
