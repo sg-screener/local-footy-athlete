@@ -60,6 +60,18 @@ C12 category failures were already repaired at the current typed owner; those
 protections and four mutation checks remain. No deleted engine was restored.
 The whole historical `test:bible` fleet is not claimed green.
 
+The optional post-save `test:repo-law-guards` diagnostic reports 51 passed / 12
+failed process assertions on both bb42e664 and the final shared checkout. The
+same assertion names fail: historical report format, inbox/history/budget,
+unreferenced old flows, golden-flow receipts, stopwatch writer and source-anchor
+debt. The new tapes initially lacked discoverable run references; those were
+added below and the comparison proves no new orphaned flow remains. Other
+failure details match except the other seat's preserved, uncommitted NOW file:
+24,667 bytes against a 24,576-byte budget; the committed candidate has 24,427
+bytes. No application behaviour or test threshold was changed. Full classification:
+`repo-law-comparison.json`. These 12 assertions are not the same counting unit
+as the 21 unenforced law-registry rows.
+
 ## Native verification and automation classification
 
 Native runs use an existing Debug simulator shell and candidate-equivalent
@@ -73,6 +85,21 @@ clear of the fixed footer, speed tiles expose combined title/subtitle labels,
 and generation requires the visible Start button. Navigation scripts must use
 selectable dates and cannot treat a successful tap command as proof of Day view.
 These are instrument corrections, not reasons to change correct programming.
+
+Re-runnable native entry points (use `scripts/dev-e2e/run-maestro-ios.sh` with
+the explicit simulator UUID and `E2E_METRO_URL`; never a physical phone):
+
+- `.maestro/visible/combined-mobility-icon-matrix.yaml`: all four Day/Session/reopen shapes.
+- `.maestro/visible/combined-mobility-icon-week.yaml`: expanded Week cards.
+- `.maestro/visible/combined-mobility-icons.yaml`: retained focused Strength + Mobility tape.
+- `.maestro/visible/final-gminus1-decline.yaml`: warning refusal and reopening.
+- `.maestro/visible/final-native-refusals.yaml`: occupied-day refusal and game protection.
+- `.maestro/visible/onboarding-speed-answers.yaml`: dedicated disposable simulator only;
+  two full journeys, including Review and reopening.
+
+The pre-existing untracked `.maestro/visible/gminus1-add-undo-reopen.yaml` is an
+unfinished draft, not delivered acceptance coverage. The final decline tape and
+the prior bb42e664 accepted-Add/Undo evidence are the supported receipts instead.
 
 Native icon checks pass for all four requested shapes: Day, Session, cold
 reopening and actual expanded Week cards. Screenshots are under `native/`.
@@ -179,6 +206,7 @@ Native tapes prove the reached date, sheet result and reopened state.
   onboarding test. No new programming/product answer is needed from Sam.
 - The 21 unenforced legacy process/verification laws remain explicitly separate
   unresolved repo debt, not a waived or green historical test fleet.
+  The 12 baseline process-check failures above remain recorded as well.
 
 ## NOT COVERED
 

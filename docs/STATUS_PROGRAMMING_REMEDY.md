@@ -1101,3 +1101,18 @@ NOT COVERED: physical iPhone acceptance/Release runtime; recorded 2 km Skip
 physical QA; every athlete/availability/alert combination; clinical validation;
 21/211 legacy unenforced law rows. No new exercises or Estimated 1RM. No phone
 installation, reset or wipe; installation hold remains until Sam approves.
+
+Post-save process diagnostic explicitly classified: test:repo-law-guards is
+51 passed / 12 failed on both verified bb42e664 and the current shared checkout.
+New native tapes initially lacked discoverable run references; handoff entry
+points fix that genuine documentation gap. The comparator proves no new orphan
+flow remains and the same 12 assertion names fail. All other failing details
+match except preserved other-seat NOW dirt (24,667 bytes versus 24,576 budget;
+candidate NOW is 24,427). Historical report/inbox/golden-receipt/writer/anchor
+debt remains outside the green current-contract release claim. No threshold or
+correct programming was changed. Final receipt collector passes with this debt
+included; source/build/year/native/mutation receipts still name exact 7eff7748.
+
+NOT COVERED remains physical acceptance and recorded 2 km QA, the 21 law rows
+and 12 baseline process-check assertions (different units), full cross-products,
+new exercises and Estimated 1RM. Installation remains held; no phone touched.

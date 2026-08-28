@@ -50,7 +50,22 @@
     "unenforcedLawRows": 21,
     "guardedLawRows": 190,
     "distinctLawRows": 211,
-    "wholeBibleGreen": false
+    "wholeBibleGreen": false,
+    "repoLawGuard": {
+      "baselinePassed": 51,
+      "baselineFailed": 12,
+      "finalPassed": 51,
+      "finalFailed": 12,
+      "sameFailureNames": true,
+      "newUnreferencedFlows": 0,
+      "sharedUncommittedNow": {
+        "committedNowBytes": 24427,
+        "workingNowBytes": 24667,
+        "budget": 24576,
+        "changedByThisTask": false,
+        "preserved": true
+      }
+    }
   },
   "notCovered": [
     "Physical phone acceptance and Release runtime on phones",
