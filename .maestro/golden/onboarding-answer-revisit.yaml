@@ -1,0 +1,131 @@
+appId: com.localfootyathlete.app
+name: Real onboarding time entry, keyboard skip, answer review and restart
+---
+- runFlow: ../visible/onboarding-critical-answers.yaml
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-TwoKmTimeTrial-edit
+    direction: UP
+- tapOn:
+    id: onboarding-review-TwoKmTimeTrial-edit
+- extendedWaitUntil:
+    visible:
+      id: onboarding-two-km-minutes
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-two-km-minutes
+- eraseText
+- inputText: '6'
+- tapOn:
+    id: onboarding-two-km-seconds
+- eraseText
+- inputText: '45'
+- tapOn: Continue
+- extendedWaitUntil:
+    visible: 'Solid.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Solid.*'
+- extendedWaitUntil:
+    visible: 'Regular.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Regular.*'
+- extendedWaitUntil:
+    visible: 'Consistent.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Consistent.*'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-injury-no
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-injury-no
+- extendedWaitUntil:
+    visible: Generate My Program
+    timeout: 10000
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-TwoKmTimeTrial-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-TwoKmTimeTrial-value
+    text: '6:45'
+- tapOn:
+    id: onboarding-review-TwoKmTimeTrial-edit
+- extendedWaitUntil:
+    visible:
+      id: onboarding-two-km-minutes
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-two-km-minutes
+- eraseText
+- inputText: '1'
+- scrollUntilVisible:
+    element:
+      id: onboarding-two-km-skip
+    direction: DOWN
+- tapOn:
+    id: onboarding-two-km-skip
+- extendedWaitUntil:
+    visible: 'Solid.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Solid.*'
+- extendedWaitUntil:
+    visible: 'Regular.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Regular.*'
+- extendedWaitUntil:
+    visible: 'Consistent.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Consistent.*'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-injury-no
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-injury-no
+- extendedWaitUntil:
+    visible: Generate My Program
+    timeout: 10000
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-TwoKmTimeTrial-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-TwoKmTimeTrial-value
+    text: "Haven't tested"
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-Injuries-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-Injuries-value
+    text: No current issues
+- tapOn: Generate My Program
+- extendedWaitUntil:
+    visible: 'Start your program.*'
+    timeout: 45000
+- tapOn: 'Start your program.*'
+- assertVisible:
+    id: program-screen
+- launchApp:
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: restart-proof
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- takeScreenshot: 'artifacts/ui-walk/onboarding-revisit-${RUN_ID}'

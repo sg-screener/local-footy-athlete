@@ -71,6 +71,7 @@ export interface MaterialisedSession {
   readonly clauseId: string;
   /** Specialist content. Null when the day authorises none. */
   readonly conditioningTemplate: ConditioningTemplate | null;
+  readonly conditioningOffFeet?: boolean;
   readonly conditioningRole: ConditioningRole | null;
   /**
    * WC-139. A SECOND conditioning component on this day, and it is a sprint.
@@ -158,6 +159,10 @@ export function materialiseAuthoredSessions(args: {
       clubTraining: intention.clubTraining,
       game: intention.game,
       optional: intention.optional,
+      // The off-leg preference is resolved against actual dated kit here;
+      // the connector must not reintroduce the unresolved planner preference.
+      conditioningOffFeet: intention.conditioning === 'off_leg'
+        && (facts.availableMachinesByDay?.[intention.dayOfWeek] ?? facts.availableMachines)?.length !== 0,
       // R-130: copied, never decided — the day is not ours to repurpose.
       ...(intention.composedOptional
         ? { composedOptional: intention.composedOptional }
@@ -181,7 +186,7 @@ export function materialiseAuthoredSessions(args: {
           selectionContext: selectionContext(),
           // §3 "Lower + conditioning: prefer off-leg work" — the scheduler already
           // decided that by choosing the category; this passes the same fact on.
-          offFeet: intention.conditioning === 'off_leg',
+          offFeet: base.conditioningOffFeet,
           runOnly: availableMachines?.length === 0 || facts.runOnly,
           availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),

@@ -42,7 +42,7 @@
       "reason": "Zustand registration and empty preference initialisation; all actions delegate to separately reviewed preference-input owners. Guarded storage persists accepted preferences, not generated sessions. Inspected direct persist site and full callee graph."
     },
     "src/store/blockSelectionHistoryStore.ts#<module>": {
-      "fingerprint": "6fb0a152e1b812bd1d6227d063b3df1f51740adc5db8e8dfc6323cf14bd127f1",
+      "fingerprint": "21b1be985ad42bc59c8c45ecda9c5f5fc52dbe9566c036d789b09031f3a56723",
       "classification": "persistence_boundary",
       "reason": "Registers block selection-history input storage, initially empty; reset clears selection inputs and partialize retains selections only. No generated session publication."
     },
@@ -97,7 +97,7 @@
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
-      "fingerprint": "c7203b5ec448caa3cb27e35458152879da5ce7fa4da5e814da3780d7b11ff7c7",
+      "fingerprint": "25e39a20bc612801b51fc9cd96564ad5aeb346a9803413334eec92877f84f76c",
       "classification": "canonical_compiler",
       "reason": "Shared materialisation adapter called by canonicalWeeklyRowCompiler and its fixtureMinimalReplan conditioning compiler. Builds typed components from accepted allocations using shared strength, conditioning and lighter-day materialisers, then normalises rows; no store publication. Inspected complete function including legacy generated-row ingress and both runtime callers."
     },
@@ -227,7 +227,7 @@
       "reason": "Profile transaction builds a fact-free base via the canonical generator, commits profile/input changes atomically, verifies readback and invokes the same reconstruction used by boot."
     },
     "src/rules/scheduleToCoachingPlan.ts#scheduleToCoachingPlan": {
-      "fingerprint": "bde0389aefa6076e70141c75280adab34583a96c7958a18317f356514ed67778",
+      "fingerprint": "8a75efccdf7ec53e6eb893e01aab0f0ea1975694da3d06468e548bf902113d86",
       "classification": "canonical_compiler",
       "reason": "Pure adapter from the canonical scheduler/materializer to typed session allocations, exposure contract and dose intent; no independent placement or store reads."
     },
@@ -412,7 +412,7 @@
       "reason": "Generation-request diagnostic builds a shared planner snapshot for explanation and emits profile/plan metadata only; no accepted program writer."
     },
     "src/rules/materialiseAuthoredSessions.ts#materialiseAuthoredSessions": {
-      "fingerprint": "f3694f89cb1784d90eaad76ec510ed1ed23807a10bc2268f3ce33d924ad1d271",
+      "fingerprint": "a017753bf849f0cb765253dfa9e759047fff2fc908435f3aa9c80bf08cc70111",
       "classification": "canonical_compiler",
       "reason": "Canonical weekly compiler's specialist materializer consumes the sole scheduler's intentions, uses shared conditioning/sprint selection and power policy, and returns declared content metadata."
     },
@@ -1442,7 +1442,7 @@
       "reason": "Visible part headline selection returns signed copy using typed optional kind and existing row names; no programming output."
     },
     "src/rules/conditioningSelection.ts#composeConditioningRows": {
-      "fingerprint": "e7ae23afa6827fd801bd194299dc4cf7b057f07c74dc76c0679388293f38d477",
+      "fingerprint": "b66ccc2349efa64073408b5cd9c47f72ff5adaf1dcfacfb028bb3c40ad7ba1f2",
       "classification": "canonical_compiler",
       "reason": "Shared conditioning template materialiser resolves headline sets once and builds typed warmup/main rows from explicit template inputs."
     },
@@ -2539,7 +2539,7 @@
     "src/services/api/generateProgram.ts#generateProgramLocally": {
       "classification": "canonical_input_writer",
       "reason": "Captures canonical input through canonicalProgramInputFromProfile, calls compileCanonicalProgram once, then records its selection result and diagnostics. No row/exclusion/progression post-pass; the annual detector mutation guards this handoff.",
-      "fingerprint": "ff1515d59ab849c92f41c939fea172db7610cdb9ffb5ffc400bc35719b63c75f"
+      "fingerprint": "2dc5438143d852ad5d8a51c3175037a54b9303f863802c424c62aeb8d63baa34"
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
       "fingerprint": "a38545836e60cee8028971b1e5c92191c139e725d3d19a6786b189b6b863f923",
@@ -2607,7 +2607,7 @@
       "reason": "Pins delivered history inside canonicalWeeklyRowCompiler using the explicit governed boundary."
     },
     "src/rules/canonicalWeeklyLighterDayCompiler.ts#compileCanonicalLighterDayWorkout": {
-      "fingerprint": "649390bc208aeac5ffec8eecf756e75569a8236e9de1037692b7383508affc1c",
+      "fingerprint": "e44d53e36a9f2c9866108d9dc17231d2cb87c0935a0a6600472c5b30fc086a8b",
       "classification": "canonical_compiler",
       "reason": "Single lighter-day row compiler trims typed accessories and composes easy conditioning through shared recipe builders; live acceptance records this result and boot reuses its typed effect."
     },

@@ -219,6 +219,11 @@ const RE_AUTHORED: ReadonlyArray<{
   readonly ruling: string;
   readonly text: string;
 }> = [
+  // R-266 supersedes ONLY the seven flush doses. Keep the old workbook intact
+  // and assert exact reviewed replacement text, never exempt these fields.
+  ...JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/flush-prescriptions-sam-2026-08-28.json'), 'utf8'))
+    .flatMap((row: Record<string, string>) => FIELD_EQUALITY.filter(([, field]) => field in row)
+      .map(([column, field]) => ({ name: row.name, column, text: row[field], ruling: 'R-266, Sam 2026-08-28' }))),
   {
     name: 'Classic 4×4',
     column: 'Effort Cue',
@@ -606,6 +611,12 @@ ok(
   // silent loss one joint further along.
   const unreachable: string[] = [];
   for (const template of CONDITIONING_TEMPLATES) {
+    if (template.automaticSelection === 'retired') {
+      ok('R-266: retired circuit remains readable but cannot enter an automatic pool',
+        template.name === 'Bodyweight Circuit (no-equipment fallback)' && template.permittedModalities.length === 0
+        && !poolForCategoryPublic('glycolytic').includes(template));
+      continue;
+    }
     const categories = quality[template.quality];
     if (categories.length === 0) continue;
     const reachable = categories.some((category) =>
@@ -699,11 +710,11 @@ ok(
       capRule?.ergCapMinutes === 8 && capRule?.excludedModalities?.join(',') === 'ski,row,air_bike',
       JSON.stringify(capRule ?? null));
 
-    const eightMinuteErgRow = CONDITIONING_TEMPLATES.find((t) =>
-      longestWorkIntervalMinutes(t) === 8
-      && renderableModalities(t).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'));
-    ok('an 8-minute row that DOES offer an erg exists — the probe below is not vacuous',
-      eightMinuteErgRow !== undefined, String(eightMinuteErgRow?.name));
+    // The resolved Steady Blocks branch is six minutes now, not its unused
+    // eight-minute alternative. Mutate an actual hard template to the boundary.
+    const eightMinuteErgRow = { ...CONDITIONING_TEMPLATES.find(t => t.name === 'Three-Minute Intervals')!, workPeriod: '8 min hard' };
+    ok('an 8-minute boundary probe DOES offer an erg — the mutation below is not vacuous',
+      longestWorkIntervalMinutes(eightMinuteErgRow) === 8 && renderableModalities(eightMinuteErgRow).includes('row'));
 
     // The probe: re-read the module with the authored ceiling lowered to 7.
     let lowered: string[] = [];
@@ -734,17 +745,17 @@ ok(
     for (const phrase of ['All 5 modalities.', 'Any modality.']) {
       ok(`a synthetic 10-minute "${phrase}" row is still capped`,
         !renderableModalities({
-          modalityNotes: phrase, workPeriod: '10 min continuous',
+          ...eightMinuteErgRow, modalityNotes: phrase, workPeriod: '10 min continuous',
         } as never).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'),
         renderableModalities({
-          modalityNotes: phrase, workPeriod: '10 min continuous',
+          ...eightMinuteErgRow, modalityNotes: phrase, workPeriod: '10 min continuous',
         } as never).join(','));
     }
     // ...and the same row at 8 minutes keeps all five, so the cell above is
     // asserting the CAP and not simply that the branch returns nothing.
     ok('a synthetic 8-minute "All 5 modalities" row keeps all five',
       renderableModalities({
-        modalityNotes: 'All 5 modalities.', workPeriod: '8 min continuous',
+        ...eightMinuteErgRow, modalityNotes: 'All 5 modalities.', workPeriod: '8 min continuous',
       } as never).length === 5);
   }
 }
@@ -972,11 +983,11 @@ ok(
     template.name === 'Flush Intervals 1:1 (1 min / 1 min)');
   ok('[C13] the one-minute flush has one plain title and explicit one-minute work / recovery',
     oneMinuteFlush?.title === 'One-Minute Flush Intervals'
-      && oneMinuteFlush.lines.some((line) => line.label === 'Work' && line.text === '1 min')
+      && oneMinuteFlush.lines.some((line) => line.label === 'Work' && line.text === '1 min easy')
       && oneMinuteFlush.lines.some((line) =>
-        line.label === 'Recovery' && line.text === '1 min easy')
+        line.label === 'Recovery' && line.text === '1 min complete rest, including transitions; after every round, including the last')
       && oneMinuteFlush.lines.some((line) =>
-        line.label === 'Rounds' && line.text === '12'),
+        line.label === 'Rounds' && line.text === '6'),
     `${oneMinuteFlush?.title} :: ${JSON.stringify(oneMinuteFlush?.lines ?? [])}`);
 }
 

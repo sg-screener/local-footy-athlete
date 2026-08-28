@@ -16,6 +16,7 @@ const replace = (from, to) => {
   if (code.split(from).length !== 2) throw Error(`Driver anchor missing or repeated: ${from}`);
   code = code.replace(from, to);
 };
+replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
 if (fullKit) replace('const profile=athleteAnswers(archetype);',
   "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
@@ -32,7 +33,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
   corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured'],
-  notCovered: ['Physical iPhone acceptance', 'Onboarding 2 km skip-tap inconsistency'],
+  notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);
 driver.filename = path.join(output, 'generate-year.cjs');

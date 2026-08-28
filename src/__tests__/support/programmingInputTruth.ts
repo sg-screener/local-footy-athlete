@@ -16,12 +16,18 @@ import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { specialSessionInputTruth } from './specialSessionInputTruth';
 import { conditioningModalityExposure } from './conditioningModalityExposure';
 import { conditioningClarity } from './conditioningClarity';
+import { flushPrescriptionTruth } from './flushPrescriptionTruth';
+import { flushRestartJourney } from './flushRestartJourney';
+import { onboardingTapTruth } from './onboardingTapTruth';
 import { lowLoadAdditionJourney } from './lowLoadAdditionJourney';
 import { programmingSelectionDecisions } from './programmingSelectionDecisions';
 import { gPlusTwoFlushJourney } from './gPlusTwoFlushJourney';
 import { unilateralPriorityJourney } from './unilateralPriorityJourney';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
+  onboardingTapTruth(ok);
+  await flushPrescriptionTruth(storage, ok);
+  await flushRestartJourney(storage, ok);
   await conditioningClarity(storage, ok);
   programmingSelectionDecisions(ok);
   await unilateralPriorityJourney(storage,ok);

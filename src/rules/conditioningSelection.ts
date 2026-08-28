@@ -132,7 +132,7 @@ const STEADY_CAPACITY_TEMPLATES = mustExist([
 ]);
 
 function templatesOfQuality(...qualities: ConditioningQuality[]): ConditioningTemplate[] {
-  return CONDITIONING_TEMPLATES.filter((template) => qualities.includes(template.quality));
+  return CONDITIONING_TEMPLATES.filter((template) => template.automaticSelection !== 'retired' && qualities.includes(template.quality));
 }
 
 /**
@@ -254,7 +254,7 @@ export function demandCategoryFor(
 /** The tier pools the eligibility engine selects from. */
 export function templatesForTier(tier: ConditioningSelectionTier): ConditioningTemplate[] {
   return CONDITIONING_TEMPLATES.filter(
-    (template) => TIER_FOR_QUALITY[template.quality] === tier,
+    (template) => template.automaticSelection !== 'retired' && TIER_FOR_QUALITY[template.quality] === tier,
   );
 }
 
@@ -278,7 +278,8 @@ export function templatesForTier(tier: ConditioningSelectionTier): ConditioningT
  * minute-scale work and the cap does not reach them.
  */
 export function longestWorkIntervalMinutes(template: ConditioningTemplate): number | null {
-  const found = [...String(template.workPeriod ?? '').matchAll(/(\d+)\s*(?:[–-]\s*(\d+)\s*)?min/g)]
+  if (template.intervalPrescription) return template.intervalPrescription.workSeconds / 60;
+  const found = [...conditioningAthletePrescription(template).work.matchAll(/(\d+)\s*(?:[–-]\s*(\d+)\s*)?min/g)]
     .flatMap((match) => [Number(match[1]), match[2] ? Number(match[2]) : Number.NaN])
     .filter((value) => Number.isFinite(value));
   return found.length > 0 ? Math.max(...found) : null;
@@ -381,51 +382,12 @@ const ERG_CAP_MINUTES: number = ERG_CAP_RULE.ergCapMinutes;
 const ERG_CAPPED_MODALITIES: ReadonlySet<ConditioningModality> =
   new Set<ConditioningModality>(ERG_CAP_RULE.excludedModalities);
 
+/** Explicit eligibility, intersected with the resolved prescription's safety
+ * limits. Notes can explain a restriction; they cannot grant permission. */
 export function renderableModalities(template: ConditioningTemplate): ConditioningModality[] {
-  const full = template.modalityNotes.toLowerCase();
-  if (/all 5 modalities|any modality/.test(full)) {
-    // CAPPED, like every other exit. This branch used to return uncapped, and
-    // it is the FIRST one — so a row authored as "all 5 modalities" with a work
-    // interval over 8 min would have shipped a ten-minute Ski block past a cap
-    // Sam wrote as HARD. The identical fallback four lines below was already
-    // capped, and its comment says exactly why; the explicit branch was missed
-    // because the enforcer was tested on its OUTPUT and not on each BRANCH.
-    // Found by moving the authored ceiling to 7 and watching this path ignore
-    // it. Latent, not shipping: no authored row today says "all 5 modalities"
-    // AND exceeds 8 minutes — which is one authored row away from a defect.
-    return cappedErgModalities(template, ['run', 'bike', 'air_bike', 'ski', 'row']);
-  }
-  // A clause like "Ski/Row use 'Steady Blocks'" or "Ski/Row/Air Bike
-  // substitute ..." names modalities the row does NOT render on — it points
-  // them at a different authored row. Those sentences must not read as
-  // renderability.
-  const lower = full
-    .split(/[.;]/)
-    .filter((sentence) => !/\buse\b|substitut/.test(sentence))
-    .join('. ');
-  const out = new Set<ConditioningModality>();
-  const excluded = /ski\s*\/\s*row excluded|no ski\s*\/\s*row|ski\/row excluded/.test(lower);
-  if (/run-only|\brun\b/.test(lower)) out.add('run');
-  if (/\bair bike\b|\bassault\b/.test(lower)) out.add('air_bike');
-  if (lower.replace(/air bike/g, '').includes('bike')) out.add('bike');
-  if (!excluded && /\brow\b|\browing\b|\browers?\b/.test(lower)) out.add('row');
-  if (!excluded && /\bski\b/.test(lower)) out.add('ski');
-  if (/erg only|erg-only/.test(lower)) {
-    out.add('row'); out.add('ski'); out.add('air_bike'); out.add('bike');
-    out.delete('run');
-  }
-  if (/no machine rendering/.test(lower)) {
-    for (const machine of ['bike', 'air_bike', 'ski', 'row'] as const) out.delete(machine);
-    out.add('run');
-  }
-  // Modality-agnostic work (e.g. the bodyweight fallback) names no modality;
-  // treat it as runnable anywhere so no filter can strand it.
-  if (out.size === 0) {
-    // The all-modality fallback is capped too, or a modality-agnostic row would
-    // be the one place a ten-minute Ski block could still ship.
-    return cappedErgModalities(template, ['run', 'bike', 'air_bike', 'ski', 'row']);
-  }
-  return cappedErgModalities(template, [...out]);
+  const permitted = [...template.permittedModalities].filter(modality =>
+    !template.properties.includes('no_ski_row_flywheel') || (modality !== 'ski' && modality !== 'row'));
+  return template.quality === 'flush' ? permitted : cappedErgModalities(template, permitted);
 }
 
 export function rendersOffFeet(template: ConditioningTemplate): boolean {
@@ -551,7 +513,7 @@ export function codDecelPermitted(args: {
 
 /** Parsed low end of the authored total session time, or null. */
 function totalMinutesLow(template: ConditioningTemplate): number | null {
-  const parsed = parseConditioningDose(template.totalSessionTime);
+  const parsed = parseConditioningDose(conditioningAthletePrescription(template).totalSessionTime);
   if (!parsed.ok) return null;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? seconds.min / 60 : null;
@@ -621,7 +583,7 @@ export function selectConditioningTemplate(
   // authored session runs long rather than a dose being invented short.
   const capped = candidates.filter(withinCap);
   if (capped.length > 0) candidates = capped;
-  if (candidates.length === 0) candidates = pool;
+  if (candidates.length === 0) throw new Error(`conditioning_no_eligible_template:${args.category}:${JSON.stringify({ date: args.dateStr, offFeet: args.offFeet, runOnly: args.runOnly, machines: args.availableMachines, role })}`);
 
   const preferred = candidates.find(template => template.name === args.preferredTemplateName);
   if (preferred) return preferred;
@@ -666,7 +628,7 @@ export function offFeetAlternative(
   const template = resolveTemplateByName(name);
   if (!template) return null;
   const pool = CONDITIONING_TEMPLATES.filter(
-    (candidate) => candidate.quality === template.quality && renderableModalities(candidate)
+    (candidate) => candidate.automaticSelection !== 'retired' && candidate.quality === template.quality && renderableModalities(candidate)
       .some(modality => modality !== 'run' && (availableMachines === undefined || availableMachines.includes(modality))),
   );
   if (pool.length === 0) return null;
@@ -700,6 +662,22 @@ export function resolveTemplateByName(name: string): ConditioningTemplate | null
     return byName.get(legacy.resolution.templateName) ?? null;
   }
   return null;
+}
+
+/** Read-ingress lift for history written before flush demand was carried into
+ * the recorder. Preserve names and blocks; split the old aerobic seats into
+ * their actual categories without writing or deleting the athlete's history. */
+export function normalizeConditioningSelectionHistory(history: readonly BlockConditioningSelection[]): BlockConditioningSelection[] {
+  const oldBlocks = new Set(history.filter(entry => entry.category === 'aerobic_base'
+    && resolveTemplateByName(entry.templateName)?.quality === 'flush').map(entry => entry.blockStartISO));
+  return history.map(entry => {
+    if (!oldBlocks.has(entry.blockStartISO)) return entry;
+    const category = resolveTemplateByName(entry.templateName)?.quality === 'flush' ? 'recovery_flush' : entry.category;
+    const siblings = history.filter(other => other.blockStartISO === entry.blockStartISO
+      && (resolveTemplateByName(other.templateName)?.quality === 'flush' ? 'recovery_flush' : other.category) === category)
+      .sort((a, b) => a.seatIndex - b.seatIndex);
+    return { ...entry, category, seatIndex: siblings.indexOf(entry) };
+  });
 }
 
 /* ── Composition (dose parse → rows) ── */
@@ -763,7 +741,7 @@ function conditioningRow(
 
 /** Sets for the headline row: the authored governing quantity, or 1. */
 function headlineSets(template: ConditioningTemplate): number {
-  const parsed = parseConditioningDose(template.setsRounds);
+  const parsed = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);
   if (!parsed.ok) return 1;
   return Math.max(1, Math.round(doseMidpoint(parsed.quantity)));
 }
@@ -783,7 +761,7 @@ function headlineSetsLow(template: ConditioningTemplate): number {
 
 /** Rest seconds for the headline row: the authored rest, when it is a time. */
 function headlineRest(template: ConditioningTemplate): number {
-  const parsed = parseConditioningDose(template.restPeriod);
+  const parsed = parseConditioningDose(conditioningAthletePrescription(template).recovery);
   if (!parsed.ok) return 0;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? Math.round((seconds.min + seconds.max) / 2) : 0;
@@ -857,23 +835,23 @@ export function composeConditioningRows(
   const prefix = opts.idPrefix ?? `cond-${dateStr}`;
   const base = opts.orderBase ?? 1;
   const rows: WorkoutExercise[] = [];
-  if (!opts.omitWarmup) {
+  if (!opts.omitWarmup && template.quality !== 'flush') {
     rows.push(conditioningRow(
       `${prefix}-warmup`, CONDITIONING_WARMUP_ROW_NAME, base, 1, 0,
       CONDITIONING_WARMUP_COPY,
       opts.authoredAtISO,
     ));
   }
-  const resolvedSetsRounds = opts.authoredMinimumDose
+  const resolvedSetsRounds = template.intervalPrescription?.rounds ?? (opts.authoredMinimumDose
     ? headlineSetsLow(template)
-    : headlineSets(template);
+    : headlineSets(template));
   rows.push(
     conditioningRow(
       `${prefix}-main`,
       template.name,
       base + rows.length,
       resolvedSetsRounds,
-      headlineRest(template),
+      template.intervalPrescription?.recoverySeconds ?? headlineRest(template),
       /* ⚠ **THE SIX-FIELD PASTE IS GONE — SAM, 2026-08-20.** This built the
        * athlete's coaching copy by concatenating authored FIELDS, which is how
        * `Sets: 4 reps` reached an athlete counting rounds and how the sheet's
@@ -889,6 +867,12 @@ export function composeConditioningRows(
       opts.authoredAtISO,
     ),
   );
+  if (template.intervalPrescription) {
+    const row = rows[rows.length - 1];
+    row.prescriptionType = 'duration';
+    row.prescribedRepsMin = template.intervalPrescription.workSeconds;
+    row.prescribedRepsMax = template.intervalPrescription.workSeconds;
+  }
   return rows;
 }
 
@@ -967,7 +951,11 @@ export function composeSpeedRows(
 
 /** The authored template's whole-session length, for SpeedBlock display. */
 export function templateDurationMinutes(template: ConditioningTemplate): number {
-  const parsed = parseConditioningDose(template.totalSessionTime);
+  if (template.intervalPrescription) {
+    const { workSeconds, recoverySeconds, rounds } = template.intervalPrescription;
+    return rounds * (workSeconds + recoverySeconds) / 60;
+  }
+  const parsed = parseConditioningDose(conditioningAthletePrescription(template).totalSessionTime);
   if (!parsed.ok) return 15;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? Math.max(1, Math.round((seconds.min + seconds.max) / 120)) : 15;

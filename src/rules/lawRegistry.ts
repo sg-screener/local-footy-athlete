@@ -2481,6 +2481,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'programmingSelectionDecisions, unilateralPriorityJourney, gPlusTwoFlushJourney and lowLoadAdditionJourney are invoked by programmingInputTruth in the canonical suite. The real no-rack/no-barbell journeys hold P16 weekly priority without relabelling or losing bilateral coverage. Initial failures and current verification limits are recorded in PROGRAMMING_FOLLOWUP_2026-08-28.md. Conditioning clarity also checks actual composed prescriptions, available machine sequences and restart.' },
   },
+  {
+    id: 'LAW-short-explicit-recovery-prescriptions',
+    law: 'R-266: all flush prescriptions are easy, off-leg and under 15 minutes including preparation, rests and transitions, with explicit suitable available machine order. Eligibility, displayed dose and calculated duration share the resolved prescription. Incomplete Bodyweight Circuit is retired only from automatic selection; saved references remain readable. G+2 placement and optional/core policy remain unchanged; flush earns no fitness-conditioning credit. Unrelated hard-conditioning limits remain.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-266 — Sam settled flush doses and retirement, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'flushPrescriptionTruth checks all seven identities across machine subsets, numeric/display dose, actual injury compilation and modality changes. flushRestartJourney drives real onboarding and rollover through all seven identities on each supported single machine for both genders. Existing G+2, Clear, Undo and input-truth witnesses remain. First-run failures and exact-version verification are recorded in STATUS_PROGRAMMING_REMEDY.' },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

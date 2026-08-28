@@ -3045,6 +3045,9 @@ async function main(): Promise<void> {
     const compiled = compileCanonicalLighterDayWorkout(original).workout;
     const option = compiled.conditioningBlock?.options[0];
     const easy = option && resolveTemplateByName(option.title);
+    const selectedRecoveryMachine = original.conditioningBlock!.options.some(o =>
+      o.modalitySequence?.some(m => m !== 'run') || ['bike', 'row', 'ski'].includes(o.modality ?? ''));
+    if (selectedRecoveryMachine) {
     ok(`${id}: replaces hard work with an authored flush prescription`, easy?.quality === 'flush' &&
       option!.exerciseIds.every((rowId) => compiled.exercises.some((r) => r.id === rowId &&
         r.exercise?.name === easy.name && r.notes?.includes('Intensity:'))));
@@ -3054,6 +3057,13 @@ async function main(): Promise<void> {
       renderableModalities(easy).includes(option.modality === 'running' ? 'run' : option.modality as 'bike') &&
       (!original.conditioningBlock!.options[0].modality ||
         option.modality === original.conditioningBlock!.options[0].modality));
+    } else {
+      // R-266 supersedes running flushes. This is a stricter equipment check,
+      // not permission to invent an ergo or keep the hard dose under a new name.
+      ok(`${id}: no-machine lighter day removes hard work without inventing running recovery`,
+        !option && !compiled.exercises.some(r => owned.has(r.id)) && !compiled.conditioningCategory
+        && !compiled.conditioningFlavour && compiled.section18ConditioningRole === 'none');
+    }
     ok(`${id}: strength main rows are byte-identical`, original.exercises
       .filter((r) => r.section18Evidence?.role === 'main_strength')
       .every((r) => JSON.stringify(compiled.exercises.find((next) => next.id === r.id)) === JSON.stringify(r)));

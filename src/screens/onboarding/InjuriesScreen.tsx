@@ -126,11 +126,15 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({ navigation }) =>
           <OptionCard
             label="Yes"
             subtext="I need training adjusted"
+            testID="onboarding-injury-yes"
+            disabled={saving}
             onPress={() => setStep('region')}
           />
           <OptionCard
             label="No"
             subtext="No current issues"
+            testID="onboarding-injury-no"
+            disabled={saving}
             onPress={saveNoIssues}
           />
         </View>
@@ -265,16 +269,24 @@ function OptionCard({
   subtext,
   selected = false,
   muted = false,
+  testID,
+  disabled = false,
   onPress,
 }: {
   label: string;
   subtext?: string;
   selected?: boolean;
   muted?: boolean;
+  testID?: string;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
+      testID={testID}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
       style={({ pressed }) => [
         styles.optionCard,
         selected && styles.optionCardSelected,

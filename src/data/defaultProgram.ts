@@ -56,6 +56,7 @@ import {
   rendersOffFeet,
   resolveTemplateByName,
   selectConditioningTemplate,
+  templateDurationMinutes,
   workoutTypeForCategory,
   type AthleteConditioningCategory,
   type ConditioningRole,
@@ -1150,7 +1151,7 @@ export function buildConditioningBlock(
   const template = resolveTemplateByName(headlineName);
   const machines = template ? renderableModalities(template).filter(m => m !== 'run'
     && (availableMachines === undefined || availableMachines.includes(m as never))) : [];
-  const mixedMachines = ([machines.includes('bike') ? 'bike' : 'air_bike', 'ski', 'row'] as const)
+  const mixedMachines = (['bike', 'air_bike', 'ski', 'row'] as const)
     .filter(machine => machines.includes(machine));
   const modalitySequence = modality === 'running' ? ['run' as const]
     : modality === 'mixed' ? mixedMachines.slice(0, Math.max(1, headline.prescribedSets))
@@ -1164,6 +1165,7 @@ export function buildConditioningBlock(
       {
         title: headlineName,
         description: '',
+        ...(template?.quality === 'flush' ? { durationMinutes: templateDurationMinutes(template) } : {}),
         exerciseIds: condBlock.map((ex) => ex.id),
         ...(modality ? { modality } : {}),
         ...(modalitySequence.length ? { modalitySequence } : {}),
@@ -1184,7 +1186,7 @@ export function resolvedBlockModality(
   availableMachines?: ReadonlyArray<'bike' | 'air_bike' | 'row' | 'ski'>,
 ): 'bike' | 'row' | 'ski' | 'running' | 'mixed' | undefined {
   const template = resolveTemplateByName(templateName);
-  if (template && !rendersOffFeet(template)) return 'running';
+  if (template && !rendersOffFeet(template)) return renderableModalities(template).includes('run') ? 'running' : undefined;
   const requested = ergModality === 'bike_erg' ? 'bike' : ergModality;
   if (!template) {
     return requested === 'bike' || requested === 'row' || requested === 'ski' || requested === 'mixed'
@@ -1193,14 +1195,12 @@ export function resolvedBlockModality(
   }
   // Clamp the erg pick to what the AUTHORED notes let this row render on —
   // a ski stamp on a run/bike-only template would be an invented rendering.
-  const machines = new Set(
-    renderableModalities(template)
+  const permittedMachines = renderableModalities(template)
       .filter((m) => m !== 'run')
-      .filter((m) => availableMachines === undefined || availableMachines.includes(m as never))
-      .map((m) => (m === 'air_bike' ? 'bike' : m)),
-  );
+      .filter((m) => availableMachines === undefined || availableMachines.includes(m as never));
+  const machines = new Set(permittedMachines.map((m) => (m === 'air_bike' ? 'bike' : m)));
   const rounds = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);
-  if (requested === 'mixed' && template.quality === 'flush' && machines.size > 1
+  if (requested === 'mixed' && template.quality === 'flush' && permittedMachines.length > 1
     && rounds.ok && doseMidpoint(rounds.quantity) > 1) return 'mixed';
   if ((requested === 'bike' || requested === 'row' || requested === 'ski') && machines.has(requested)) {
     return requested;
@@ -1699,7 +1699,7 @@ export function buildWorkoutsFromCoach(
     // path's, unchanged: combined non-sprint conditioning renders off-feet
     // (the lift owns the legs); combined sprint goes off-feet only when
     // paired with a lower-body lift.
-    const legSparingOffFeet = isCombined
+    const legSparingOffFeet = isCombined && availableMachines.length > 0
       && (selectionCategory !== 'sprint' || strengthRegion === 'lower');
     const selectedTemplate = selectConditioningTemplate({
       category: selectionCategory,

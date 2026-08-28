@@ -112,6 +112,7 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
             Minutes
           </Text>
           <Pressable
+            testID="onboarding-two-km-minutes"
             onPress={() => minutesInputRef.current?.focus()}
             style={[styles.inputShell, minutesFocused && styles.inputFocused]}
           >
@@ -144,6 +145,7 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
             Seconds
           </Text>
           <Pressable
+            testID="onboarding-two-km-seconds"
             onPress={() => secondsInputRef.current?.focus()}
             style={[styles.inputShell, secondsFocused && styles.inputFocused]}
           >
@@ -178,7 +180,7 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
       {/* "Haven't tested" is an ANSWER, worded as one. It commits
           `seconds: null` through the same ingress and moves on. */}
       <View style={styles.skipContainer}>
-        <SelectableTile isSelected={false} onPress={() => commit(null)}>
+        <SelectableTile testID="onboarding-two-km-skip" disabled={saving} isSelected={false} onPress={() => commit(null)}>
           <Text
             variant="bodyEmphasis"
             color={colors.text.secondary}

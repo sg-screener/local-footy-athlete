@@ -165,6 +165,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
       {rows.map((row, index) => (
         <React.Fragment key={`${row.label}-${index}`}>
           <ReviewRow
+            step={row.step}
             label={row.label}
             value={row.value}
             // A row names the step that owns its answer; turning that into
@@ -181,14 +182,16 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
 );
 
 const ReviewRow: React.FC<{
+  step: ReviewRowData['step'];
   label: string;
   value: string;
   onEdit: () => void;
-}> = ({ label, value, onEdit }) => (
+}> = ({ step, label, value, onEdit }) => (
   <View style={styles.reviewRow}>
     <Text style={styles.rowLabel}>{label}</Text>
-    <Text style={styles.rowValue}>{value}</Text>
+    <Text testID={`onboarding-review-${step}-value`} style={styles.rowValue}>{value}</Text>
     <Pressable
+      testID={`onboarding-review-${step}-edit`}
       onPress={onEdit}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={styles.editButton}

@@ -102,8 +102,11 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
   });
 
   let compiled: Workout = { ...workout, exercises: trimmedExercises };
-  if (dropFinisher && block) {
-    changes.push('Dropped the finisher');
+  const optionMachines = (option: NonNullable<Workout['conditioningBlock']>['options'][number]) =>
+    (option.modalitySequence ?? (option.modality === 'bike' || option.modality === 'row' || option.modality === 'ski'
+      ? [option.modality] : [])).filter((m): m is 'bike' | 'air_bike' | 'row' | 'ski' => m !== 'run');
+  if (block && (dropFinisher || (easeConditioning && !block.options.some(option => optionMachines(option).length)))) {
+    changes.push(dropFinisher ? 'Dropped the finisher' : 'Removed hard conditioning; no suitable recovery machine is selected');
     compiled = {
       ...compiled,
       exercises: trimmedExercises.filter((row) => !ownsConditioningRow(row)),
@@ -121,13 +124,13 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
   } else if (easeConditioning && block) {
     // Use a signed flush template, retaining the already accepted modality.
     // The short-role pool prefers a short authored dose; it never invents one.
-    const options = block.options.map((option, index) => {
+    const options = block.options.flatMap((option, index) => {
       const modality = option.modality ?? 'running';
-      const machine = modality === 'running' || modality === 'mixed' ? null : modality;
+      const machines = optionMachines(option);
+      if (machines.length === 0) return [];
       const template = selectConditioningTemplate({
         category: 'recovery_flush', dateStr: `${workout.id}:${index}`, role: 'finisher',
-        offFeet: !!machine, runOnly: modality === 'running',
-        availableMachines: machine ? [machine] : [],
+        offFeet: true, availableMachines: machines,
       });
       const easyRows = composeConditioningRows(template, authoredAtISO.slice(0, 10), {
         idPrefix: `${workout.id}-lighter-${index}`, omitWarmup: true,
@@ -136,9 +139,9 @@ export function compileCanonicalLighterDayWorkout(workout: Workout): LighterDayT
         section18Evidence: { protocolVersion: 1, role: 'conditioning',
           strengthPattern: null, mainStrengthPattern: null, provenance: 'canonical_row_classifier' },
       }));
-      return { rows: easyRows, option: { title: template.name, description: easyRows[0].notes ?? '',
-        exerciseIds: easyRows.map((row) => row.id), modality,
-        intensity: 'Light' as const, durationMinutes: templateDurationMinutes(template) } };
+      return [{ rows: easyRows, option: { title: template.name, description: easyRows[0].notes ?? '',
+        exerciseIds: easyRows.map((row) => row.id), modality, modalitySequence: machines,
+        intensity: 'Light' as const, durationMinutes: templateDurationMinutes(template) } }];
     });
     const remaining = trimmedExercises.filter((row) => !ownsConditioningRow(row));
     const hasStrength = remaining.some((row) => row.section18Evidence?.role === 'main_strength' ||

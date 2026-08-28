@@ -337,7 +337,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
         // Flush is the specialist's demand, not a new stored energy system.
         conditioningCategory: intention.conditioningCategory === 'recovery_flush' ? 'aerobic_base' : intention.conditioningCategory,
         conditioningFlavour: flavourFor(intention.conditioningCategory),
-        conditioningOffFeet: intention.conditioning === 'off_leg',
+        conditioningOffFeet: session.conditioningOffFeet,
         hasCombinedConditioning: isStrength,
         attachedConditioningKind: isStrength ? intention.conditioningRole : undefined,
         section18ConditioningRole: intention.conditioningCategory === 'recovery_flush' ? 'optional_flush' : 'core',

@@ -5,6 +5,20 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  flush_duration: ['src/data/conditioningTemplates.ts', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) {', 'function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) { rounds *= 3;', 'flush', 'complete session is under 15 minutes'],
+  flush_intensity: ['src/data/conditioningTemplates.ts', "intensity: 'Easy, 2–3/10; full conversation throughout'", "intensity: 'Hard, 8/10'", 'flush', 'easy throughout, transitions inside recovery'],
+  flush_transition: ['src/data/conditioningTemplates.ts', 'complete rest, including transitions; after every round, including the last', 'complete rest; take extra time to change machines', 'flush', 'easy throughout, transitions inside recovery'],
+  flush_warmup: ['src/rules/conditioningSelection.ts', "if (!opts.omitWarmup && template.quality !== 'flush')", 'if (!opts.omitWarmup)', 'flush', 'complete session is under 15 minutes'],
+  flush_numeric_drift: ['src/data/conditioningTemplates.ts', 'intervalPrescription: { workSeconds, recoverySeconds, rounds }', 'intervalPrescription: { workSeconds: workSeconds + 30, recoverySeconds, rounds }', 'flush', 'timed dose agrees with numeric rounds/rest'],
+  flush_machine_restriction: ['src/rules/conditioningSelection.ts', "return template.quality === 'flush' ? permitted : cappedErgModalities(template, permitted);", "return template.quality === 'flush' ? ['bike'] : cappedErgModalities(template, permitted);", 'flush', 'every available supported ergo is permitted'],
+  eligibility_prose: ['src/rules/conditioningSelection.ts', 'const permitted = [...template.permittedModalities]', "const permitted = (template.modalityNotes.startsWith('ANY modality.') ? ['run','bike','air_bike','row','ski'] : [...template.permittedModalities])", 'flush', 'descriptive prose cannot change permitted modalities'],
+  unused_duration: ['src/rules/conditioningSelection.ts', 'conditioningAthletePrescription(template).work.matchAll', 'template.workPeriod.matchAll', 'flush', 'resolved six-minute branch'],
+  resolved_rounds: ['src/rules/conditioningSelection.ts', 'const parsed = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);', 'const parsed = parseConditioningDose(template.setsRounds);', 'flush', 'numeric rounds agree with the displayed resolved branch'],
+  retired_circuit: ['src/rules/conditioningSelection.ts', "template.automaticSelection !== 'retired' && qualities.includes(template.quality)", 'qualities.includes(template.quality)', 'flush', 'automatic pool excludes Bodyweight Circuit'],
+  flush_history: ['src/services/api/generateProgram.ts', "require('../../rules/conditioningSelection').demandCategoryFor(\n                allocation.conditioningCategory, allocation.section18ConditioningRole)", 'allocation.conditioningCategory', 'flush_restart', 'new saved history records recovery demand'],
+  flush_credit: ['src/rules/section18EffectiveWeekEvaluator.ts', 'if (isCoreRole(component.role)) {', "if (isCoreRole(component.role) || component.role === 'optional_flush') {", 'flush', 'recovery role never earns fitness-conditioning credit'],
+  onboarding_inset: ['src/components/onboarding/OnboardingLayout.tsx', 'paddingTop: insets.top', 'paddingTop: 0', 'onboarding', 'stable context insets position the screen'],
+  onboarding_skip_binding: ['src/screens/onboarding/TwoKmTimeTrialScreen.tsx', 'onPress={() => commit(null)}', 'onPress={() => commit(420)}', 'onboarding', 'skip and No have distinct button identities'],
   trigger: ['src/rules/injuryExerciseRisk.ts', '  const movement = getExerciseTags(exerciseName)?.movement;', '  return false;\n  const movement = getExerciseTags(exerciseName)?.movement;', 'injury', 'no affected existing row survives'],
   dose: ['src/rules/canonicalWeeklyInjuryCompiler.ts', 'sets: Math.min(originalRow?.prescribedSets ?? 3,\n          substitution.to.prescription?.sets ?? originalRow?.prescribedSets ?? 3)', 'sets: substitution.to.prescription?.sets ?? 3', 'injury', 'does not increase reduced session sets'],
   equipment: ['src/rules/canonicalWeeklyRowCompiler.ts', 'availableEquipment: equipment.tags,\n            availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)\n              .map(([day, capabilities]) => [day, capabilities.tags]))', 'availableEquipment: profile.equipment ?? []', 'inputs', 'conflicting legacy equipment cannot change any final row'],
@@ -19,7 +33,7 @@ const mutants = {
   in_run_selections: ['src/rules/canonicalWeeklyRowCompiler.ts', 'selectionHistory: [...(args.selectionHistory ?? []), ...selections]', 'selectionHistory: args.selectionHistory ?? []', 'inputs', 'accepted conditioning history and final rows survive restart'],
   typed_mode: ['src/utils/conditioningVisibleIdentity.ts', '  return conditioningModeLabel(option?.modality, option?.modalitySequence);', '  return undefined;', 'inputs', 'single prescriptions retain their typed running or off-leg mode'],
   clarity_cue: ['src/rules/conditioningDisplay.ts', 'const cue = athleteSentence(reviewedCopy?.cue ?? template.effortCue ??', 'const cue = athleteSentence(reviewedCopy?.intensity ?? template.effortCue ??', 'inputs', 'cue adds information rather than repeating intensity'],
-  clarity_mixed: ['src/data/defaultProgram.ts', "requested === 'mixed' && template.quality === 'flush' && machines.size > 1", "requested === 'mixed' && machines.size > 1", 'inputs', 'only multi-round flushes mix machines'],
+  clarity_mixed: ['src/data/defaultProgram.ts', "requested === 'mixed' && template.quality === 'flush' && permittedMachines.length > 1", "requested === 'mixed' && permittedMachines.length > 1", 'inputs', 'only multi-round flushes mix machines'],
   clarity_sequence: ['src/data/defaultProgram.ts', '...(modalitySequence.length ? { modalitySequence } : {}),', '...{},', 'inputs', 'actual mode owner names only available machines'],
   no_duplicate_add: ['src/utils/sessionBuilder.ts', 'const alreadyProgrammed = new Set(existingExerciseNames.map(canonicalExerciseName));', 'const alreadyProgrammed = new Set();', 'inputs', 'added session checks every existing drill'],
   separate_mobility: ['src/utils/sessionComponents.ts', 'const key = row.workoutId ?? workout.id ?? kind;', 'const key = kind;', 'inputs', 'second session stays separately visible'],
@@ -48,6 +62,24 @@ const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {
   require(path.join(repo, 'node_modules/sucrase/register'));
   const [file, from, to, witness] = mutants[child];
+  if (witness === 'onboarding') {
+    const read = fs.readFileSync;
+    fs.readFileSync = (filename, ...args) => {
+      const result = read(filename, ...args);
+      if (String(filename) !== path.join(repo, file)) return result;
+      const code = result.toString();
+      if (code.split(from).length !== 2) throw Error(`MUTATION MISSED: ${child}`);
+      console.log(`MUTATION_LANDED=${child}`);
+      return code.replace(from, to);
+    };
+    let failures = 0;
+    require(path.join(repo, 'src/__tests__/support/onboardingTapTruth')).onboardingTapTruth((label, value) => {
+      if (!value) failures++;
+      console.log(value ? 'PASS' : 'FAIL', label);
+    });
+    process.exitCode = failures ? 1 : 0;
+    return;
+  }
   const original = require.extensions['.ts'];
   require.extensions['.ts'] = (module, filename) => {
     if (filename !== path.join(repo, file)) return original(module, filename);
@@ -65,7 +97,8 @@ if (child) {
     global.window = { localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k), clear: () => storage.clear() } };
     global.fetch = () => { throw Error('NETWORK DISABLED'); };
     let failures = 0;
-    const helper = witness === 'mobility' ? 'mobilityAddJourney' : 'programmingInputTruth';
+    const helper = witness === 'mobility' ? 'mobilityAddJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
+      : witness === 'flush_restart' ? 'flushRestartJourney' : 'programmingInputTruth';
     require(path.join(repo, 'src/__tests__/support', helper))[helper](storage, (label, value, detail) => {
       if (!value) failures++;
       console.log(value ? 'PASS' : 'FAIL', label, value ? '' : detail ?? '');

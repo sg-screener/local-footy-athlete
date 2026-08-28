@@ -105,6 +105,16 @@ export interface ConditioningTemplate {
   /** Authored name. The selection vocabulary; never rewritten for display. */
   readonly name: string;
   readonly quality: ConditioningQuality;
+  /** Selection authority: descriptive notes never grant a modality. */
+  readonly permittedModalities: readonly ConditioningModality[];
+  /** Retired entries remain readable for saved sessions, but are not selected. */
+  readonly automaticSelection?: 'retired';
+  /** R-266: one concrete timed flush, including the final recovery/transition. */
+  readonly intervalPrescription?: {
+    readonly workSeconds: number;
+    readonly recoverySeconds: number;
+    readonly rounds: number;
+  };
   /** The six schema values. A template missing any of these is not shippable. */
   readonly workPeriod: string;
   readonly restPeriod: string;
@@ -343,12 +353,31 @@ export const EFFORT_LENGTH_ASSUMPTIONS: readonly EffortLengthAssumption[] = [
  * Every dose below is verbatim from the authored workbook. Generated from the
  * sheet and held to it by `npm run test:conditioning-templates`.
  */
+/** R-266, Sam 2026-08-28: short, easy, off-leg recovery. The first work
+ * interval includes preparation; every recovery (including the last) includes
+ * any machine transition. No separate warm-up/cool-down extends this dose. */
+function timedFlush(workSeconds: number, recoverySeconds: number, rounds: number) {
+  const period = (seconds: number) => seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
+  return {
+    intervalPrescription: { workSeconds, recoverySeconds, rounds },
+    workPeriod: `${period(workSeconds)} easy`,
+    restPeriod: `${period(recoverySeconds)} complete rest, including transitions; after every round, including the last`,
+    setsRounds: `${rounds} rounds`,
+    intensity: 'Easy, 2–3/10; full conversation throughout',
+    workToRest: `${workSeconds / recoverySeconds}:1`,
+    totalSessionTime: `${rounds * (workSeconds + recoverySeconds) / 60} min, including all rests, preparation and transitions`,
+    effortCue: 'Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.',
+    modalityNotes: 'Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery.',
+  } as const;
+}
+
 export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
 
   /* ── Acceleration ── */
   {
     name: '10 m Acceleration Reps',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '≈2 s (10 m)',
     restPeriod: '45–60 s walk-back (full recovery)',
     setsRounds: '6–10 reps',
@@ -366,6 +395,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '20 m Acceleration Reps',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '≈3 s (20 m)',
     restPeriod: '90 s (passive / very easy)',
     setsRounds: '8 reps',
@@ -383,6 +413,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '30 m Acceleration Reps',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '≈4.5 s (30 m)',
     restPeriod: '2 min (full recovery)',
     setsRounds: '4–6 reps',
@@ -400,6 +431,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Hill Acceleration',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '6 s uphill',
     restPeriod: '60–90 s walk-down',
     setsRounds: '8 reps',
@@ -417,6 +449,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Air Bike Accelerations',
     quality: 'acceleration',
+    permittedModalities: ['air_bike'],
     workPeriod: '6 s maximal',
     restPeriod: '60 s easy spin',
     setsRounds: '8 reps',
@@ -434,6 +467,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Team-Training Warm-Up Dose',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '2–3 s (10–20 m)',
     restPeriod: '≈60 s walk-back inside the warm-up',
     setsRounds: '3–4 reps',
@@ -451,6 +485,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Return-to-Speed Ladder',
     quality: 'acceleration',
+    permittedModalities: ['run'],
     workPeriod: '2–3 s (10–20 m)',
     restPeriod: '90 s–2 min (full recovery)',
     setsRounds: '3–6 reps',
@@ -470,6 +505,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Fly 20 (20+20)',
     quality: 'top_end_speed',
+    permittedModalities: ['run'],
     workPeriod: '≈6 s (20 m build + 20 m fly)',
     restPeriod: '2–4 min (full recovery)',
     setsRounds: '3–6 reps',
@@ -487,6 +523,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Fly 30 (30+30)',
     quality: 'top_end_speed',
+    permittedModalities: ['run'],
     workPeriod: '≈8 s (30 m build + 30 m fly)',
     restPeriod: '2–4 min (full recovery)',
     setsRounds: '3–6 reps',
@@ -504,6 +541,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Progressive Sprint Exposure',
     quality: 'top_end_speed',
+    permittedModalities: ['run'],
     workPeriod: '6–8 s (40–60 m)',
     restPeriod: '2–3 min (full recovery)',
     setsRounds: '3–6 reps',
@@ -521,6 +559,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Off-Season Speed Reintroduction',
     quality: 'top_end_speed',
+    permittedModalities: ['run'],
     workPeriod: '≈6 s (flying sprint)',
     restPeriod: '3–4 min (extended recovery)',
     setsRounds: '2–4 reps',
@@ -540,6 +579,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '20 m Shuttle Repeats',
     quality: 'repeat_sprint',
+    permittedModalities: ['run'],
     workPeriod: '≈4 s (20 m shuttle = 2×10 m)',
     restPeriod: '≈21 s (depart every 25 s)',
     setsRounds: '2 sets × 8 reps, 4 min between sets',
@@ -557,6 +597,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '30 m Repeats',
     quality: 'repeat_sprint',
+    permittedModalities: ['run', 'air_bike'],
     workPeriod: '≈4.5 s (30 m)',
     restPeriod: '≈21–26 s (depart every 25–30 s)',
     setsRounds: '2 sets × 6 reps, 4 min between sets',
@@ -574,6 +615,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Sprint Sets (3×5×6 s)',
     quality: 'repeat_sprint',
+    permittedModalities: ['run', 'air_bike'],
     workPeriod: '6 s sprint',
     restPeriod: '24 s between reps; 3 min between sets',
     setsRounds: '3 sets × 5 reps',
@@ -591,6 +633,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '10 s Max Sprint Repeats',
     quality: 'repeat_sprint',
+    permittedModalities: ['run', 'bike', 'air_bike'],
     workPeriod: '10 s max sprint',
     restPeriod: '50 s (start every minute)',
     setsRounds: '6 reps',
@@ -608,6 +651,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '10 s Repeat Efforts',
     quality: 'repeat_sprint',
+    permittedModalities: ['run', 'bike', 'air_bike'],
     workPeriod: '10 s hard',
     restPeriod: '30 s easy',
     setsRounds: '8 rounds',
@@ -627,6 +671,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Up-Back Shuttle',
     quality: 'cod_decel',
+    permittedModalities: ['run'],
     workPeriod: '≈11 s (30 m out, 180° turn, 30 m back)',
     restPeriod: '≈30–40 s walk',
     setsRounds: '15–20 reps inside 10–15 min',
@@ -644,6 +689,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Low-Intensity Deceleration Drills',
     quality: 'cod_decel',
+    permittedModalities: ['run'],
     workPeriod: '≈5 s (jog in, controlled stop over 15–20 m)',
     restPeriod: '30–45 s walk-back',
     setsRounds: '2–4 reps',
@@ -661,6 +707,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Deceleration and Landing Work',
     quality: 'cod_decel',
+    permittedModalities: ['run'],
     workPeriod: '3–5 s per rep (jump-land-stick / run-and-stick)',
     restPeriod: '45–60 s',
     setsRounds: '3–4 reps',
@@ -678,6 +725,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '45-Degree Cut Reps',
     quality: 'cod_decel',
+    permittedModalities: ['run'],
     workPeriod: '≈4 s (10 m in / cut / 10 m out)',
     restPeriod: '60–90 s (full recovery)',
     setsRounds: '4–6 reps',
@@ -697,6 +745,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '20 s Max Sprint — Small Dose',
     quality: 'anaerobic',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
     workPeriod: '20 s flat out',
     restPeriod: '100 s (start every 2 min)',
     setsRounds: '3 reps',
@@ -714,6 +763,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Erg Short-Burst Repeats (15–20 s)',
     quality: 'anaerobic',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '15–20 s hard',
     restPeriod: '45–60 s easy spin/paddle',
     setsRounds: '8–10 reps',
@@ -731,6 +781,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Tabata Finisher',
     quality: 'anaerobic',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
     workPeriod: '20 s hard',
     restPeriod: '10 s easy',
     setsRounds: '8 rounds',
@@ -748,6 +799,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '30 s Very Hard Repeats',
     quality: 'anaerobic',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '30 s',
     restPeriod: '90 s easy',
     setsRounds: '6 reps',
@@ -765,6 +817,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '45 s Hard Repeats',
     quality: 'anaerobic',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '45 s hard',
     restPeriod: '2 min easy',
     setsRounds: '5 reps',
@@ -782,6 +835,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '60 s Max Sustained Effort',
     quality: 'anaerobic',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '60 s all-out',
     restPeriod: '2 min (Sam\'s 1:2 ruling)',
     setsRounds: '4–6 reps',
@@ -799,6 +853,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '150–200 m Hard Repeats',
     quality: 'anaerobic',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '22–30 s (150–200 m)',
     restPeriod: 'Remainder of a 2:00 departure cycle (≈90–98 s)',
     setsRounds: '6 reps, departing every 2:00',
@@ -816,6 +871,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Hill Repeats — hard sustained',
     quality: 'anaerobic',
+    permittedModalities: ['run'],
     workPeriod: '40–60 s hill effort (short variant: 15–20 s over 50–100 m)',
     restPeriod: 'Walk-down, 2–3 min (short variant ≈60–90 s)',
     setsRounds: '4–6 reps (short variant 6–10)',
@@ -833,6 +889,8 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Bodyweight Circuit (no-equipment fallback)',
     quality: 'anaerobic',
+    permittedModalities: [],
+    automaticSelection: 'retired',
     workPeriod: '30–40 s per movement × 4 movements',
     restPeriod: '15–20 s transitions; 90 s between rounds',
     setsRounds: '4–5 rounds',
@@ -852,6 +910,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Classic 4×4',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '4 min hard',
     restPeriod: '3 min complete rest',
     setsRounds: '4 reps',
@@ -872,6 +931,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Three-Minute Intervals',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '3 min hard',
     restPeriod: '2 min easy',
     setsRounds: '6 reps',
@@ -889,6 +949,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Two-Minute Repeats',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '2 min hard',
     restPeriod: '2 min easy',
     setsRounds: '6–8 reps',
@@ -909,6 +970,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'MAS 15:15 Blocks',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '15 s hard',
     restPeriod: '15 s easy',
     setsRounds: '8 rounds × 2–3 blocks, 2 min between blocks',
@@ -929,6 +991,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '30:30 Hard Intermittent',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '30 s hard',
     restPeriod: '30 s easy; 2–3 min between blocks',
     setsRounds: '2 blocks × 5 rounds (5 min per block)',
@@ -946,6 +1009,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Footy Shuttles',
     quality: 'aerobic_power',
+    permittedModalities: ['run'],
     workPeriod: '1 min hard shuttle',
     restPeriod: '1 min walk/jog',
     setsRounds: '3 sets × 5 reps, 3 min between sets',
@@ -963,6 +1027,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '1 km Repeats',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '3.5–4 min (1 km)',
     restPeriod: 'up to 3 min controlled',
     setsRounds: '4–6 reps',
@@ -980,6 +1045,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '400 m Repeats',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '75–80 s (400 m)',
     restPeriod: 'Remainder of a 3:00 departure cycle (≈100–105 s)',
     setsRounds: '4–6 reps, departing every 3:00',
@@ -997,6 +1063,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Erg EMOM',
     quality: 'aerobic_power',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '40 s hard',
     restPeriod: '20 s (remainder of the minute); 2–3 min between blocks',
     setsRounds: '2–3 blocks × 5 rounds (5 min per block)',
@@ -1016,6 +1083,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Continuous Aerobic Run',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike'],
     workPeriod: '30–50 min continuous (duration menu: 30 / 40 / 50 / 60 min — Sam\'s D12 convention preserved)',
     restPeriod: 'none (continuous)',
     setsRounds: '1 block',
@@ -1033,6 +1101,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Long Aerobic Intervals',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike'],
     workPeriod: '10 min steady',
     restPeriod: '2 min easy',
     setsRounds: '3 reps',
@@ -1050,6 +1119,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Steady Blocks (3×8 min or 4×6 min)',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '6–8 min',
     restPeriod: '1–2 min easy',
     setsRounds: '3 × 8 min, or 4 × 6 min',
@@ -1067,6 +1137,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Controlled 10–20 min Blocks',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike'],
     workPeriod: '10–20 min',
     restPeriod: '2–3 min easy',
     setsRounds: '1–2 blocks',
@@ -1084,6 +1155,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Steady 5 min Blocks',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '5 min',
     restPeriod: '1 min easy',
     setsRounds: '5 reps',
@@ -1101,6 +1173,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Aerobic Shuttles',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run'],
     workPeriod: '6 min controlled shuttle',
     restPeriod: '90 s easy',
     setsRounds: '4 reps',
@@ -1118,6 +1191,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Extensive Tempo (100 m repeats)',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '≈16 s per 100 m',
     restPeriod: '30 s walk between reps; 2–3 min between sets',
     setsRounds: '2 sets × 8 reps',
@@ -1135,6 +1209,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '2 min On / 1 min Easy',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '2 min',
     restPeriod: '1 min easy',
     setsRounds: '6–8 rounds',
@@ -1152,6 +1227,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '30:30 Controlled Tempo Blocks',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '30 s on',
     restPeriod: '30 s easy',
     setsRounds: '10–16 rounds',
@@ -1169,6 +1245,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: '1 min On / 1 min Easy Tempo',
     quality: 'aerobic_capacity',
+    permittedModalities: ['run', 'bike', 'air_bike', 'row', 'ski'],
     workPeriod: '1 min',
     restPeriod: '1 min easy',
     setsRounds: '8–12 rounds',
@@ -1188,16 +1265,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Short Flush',
     quality: 'flush',
-    workPeriod: '10–20 min continuous easy',
-    restPeriod: 'none (continuous)',
-    setsRounds: '1 block',
-    intensity: 'Very easy, 3–4/10 — finish better than you started',
-    workToRest: 'continuous',
-    totalSessionTime: '10–20 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(60, 60, 4),
     properties: [],
-    effortCue: 'In and done — should finish feeling better than you started, full stop.',
     baseUnit: 'time',
-    modalityNotes: 'Run/Bike continuous. Ski/Row: one continuous 8–10 min block is the cap-compliant option (rule 3); Air Bike allowed (ruling 5).',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table.',
     source: 'Bible L1500 / L1189 / L527; census \'Flush Run\'',
     changeMark: 'CONFIRMED by Sam (V3 ruling 5) — draft marker removed. MERGED — folds in \'8-12min Easy Flush (Run)\' + \'Short Flush (15-25min)\'',
@@ -1205,16 +1276,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Easy Aerobic Flush',
     quality: 'flush',
-    workPeriod: '20–30 min continuous, or a run/walk mix',
-    restPeriod: 'none (continuous)',
-    setsRounds: '1 block',
-    intensity: 'Easy, 3–6/10; full-conversation pace',
-    workToRest: 'continuous',
-    totalSessionTime: '20–30 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(60, 60, 5),
     properties: [],
-    effortCue: 'Comfortable pace the whole way — walk-jog is a legitimate choice here, not a cop-out.',
     baseUnit: 'time',
-    modalityNotes: 'Run (grass preferred where available), Bike — both continuous, no cap issue. Ski/Row/Air Bike: use the erg or interval flushes below.',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table.',
     source: 'Bible L508–511 / L516 / L1190 / L528; Recovery + Easy aerobic sections; census \'Easy Bike\'',
     changeMark: 'CONFIRMED by Sam (V3 ruling 5) — draft marker removed. MERGED — folds in \'Easy Run / Walk-Jog\', \'Normal Easy Aerobic (25-40min)\' (capped at 30 min here), \'Controlled Easy Grass Run\' (grass becomes a surface note), \'Easy Bike\', ⚑ \'Zone 2 Bike\'',
@@ -1222,16 +1287,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Nasal-Paced Easy',
     quality: 'flush',
-    workPeriod: '20–40 min continuous, nasal-breathing-paced',
-    restPeriod: 'none (continuous)',
-    setsRounds: '1 block',
-    intensity: 'Self-limiting — nasal breathing sets the ceiling',
-    workToRest: 'continuous',
-    totalSessionTime: '20–40 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(60, 60, 5),
     properties: [],
-    effortCue: 'If you have to open your mouth to breathe, you\'re going too hard.',
     baseUnit: 'time',
-    modalityNotes: 'Run/Bike — nasal pacing doesn\'t translate to erg work.',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table.',
     source: 'Bible L510; census \'Long Nasal Run\'; duration filled in v2',
     changeMark: 'CONFIRMED by Sam (V3 ruling 5) — draft marker removed. kept as a distinct method (was \'Long Nasal Run\'); duration made numeric',
@@ -1239,16 +1298,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Erg Flush Blocks',
     quality: 'flush',
-    workPeriod: '8 min easy (or one continuous 8–10 min block on Ski/Row)',
-    restPeriod: '2 min',
-    setsRounds: '3 blocks, rotating bike / ski / row',
-    intensity: 'Easy — low intensity even though it\'s a rotation',
-    workToRest: '4:1',
-    totalSessionTime: '26 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(120, 60, 4),
     properties: [],
-    effortCue: 'Rotate through the ergs so nothing gets boring or overloaded — and keep it genuinely easy.',
     baseUnit: 'time',
-    modalityNotes: 'Ski/Row/Bike rotation; Air Bike allowed. 8 min sits exactly at the cap with no margin (rule 3).',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table. Already mixes machines by construction (see the mid-session mixing property, ruling 5).',
     source: 'Bible L497 / L1318 / L1319 / L4102 / L1341; census \'Easy Ski\' / \'Easy Row\' / \'Light Circuits\'',
     changeMark: 'CONFIRMED by Sam (V3 ruling 5) — draft marker removed. MERGED — folds in \'3x8min Easy Mixed Erg Blocks\', \'Single Continuous Block, 8-10min max (Ski/Row)\', ⚑ \'Light Circuits\'',
@@ -1256,16 +1309,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Flush Intervals 30:30',
     quality: 'flush',
-    workPeriod: '30 s',
-    restPeriod: '30 s easy',
-    setsRounds: '15–30 rounds (to fill 15–30 min)',
-    intensity: '3–4/10 MAX (Sam)',
-    workToRest: '1:1',
-    totalSessionTime: '15–30 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(30, 30, 10),
     properties: ['mid_session_mixing_flush_only'],
-    effortCue: 'Easy flushout — mix of ergos and/or running.',
     baseUnit: 'time',
-    modalityNotes: 'ANY modality. MID-SESSION MIXING ALLOWED (flush-only property, Sam V3 ruling 5): rotate machines and/or running BETWEEN ROUNDS — row a round, bike a round, jog a round. No cap issue: no work interval exceeds 2 min.',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table. Intensity is capped at 3–4/10 by Sam\'s ruling, which is what keeps an interval structure a FLUSH and not a tempo session (cf. the Aerobic Capacity 30:30).',
     source: 'Sam-authored, V3 ruling 5 (2026-07-25)',
     changeMark: 'NEW — Sam-authored (V3 ruling 5)',
@@ -1273,16 +1320,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Flush Intervals 1:1 (1 min / 1 min)',
     quality: 'flush',
-    workPeriod: '1 min',
-    restPeriod: '1 min easy',
-    setsRounds: '8–15 rounds (to fill 15–30 min)',
-    intensity: '3–4/10 MAX (Sam)',
-    workToRest: '1:1',
-    totalSessionTime: '16–30 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(60, 60, 6),
     properties: ['mid_session_mixing_flush_only'],
-    effortCue: 'Easy flushout — mix of ergos and/or running.',
     baseUnit: 'time',
-    modalityNotes: 'ANY modality. MID-SESSION MIXING ALLOWED (flush-only property, Sam V3 ruling 5): rotate machines and/or running BETWEEN ROUNDS — row a round, bike a round, jog a round. No cap issue: no work interval exceeds 2 min.',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table. Intensity is capped at 3–4/10 by Sam\'s ruling, which is what keeps an interval structure a FLUSH and not a tempo session (cf. the Aerobic Capacity 30:30).',
     source: 'Sam-authored, V3 ruling 5 (2026-07-25)',
     changeMark: 'NEW — Sam-authored (V3 ruling 5)',
@@ -1290,16 +1331,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
   {
     name: 'Flush Intervals 2:1 (2 min / 1 min)',
     quality: 'flush',
-    workPeriod: '2 min',
-    restPeriod: '1 min easy',
-    setsRounds: '5–10 rounds (to fill 15–30 min)',
-    intensity: '3–4/10 MAX (Sam)',
-    workToRest: '2:1',
-    totalSessionTime: '15–30 min',
+    permittedModalities: ['bike', 'air_bike', 'row', 'ski'],
+    ...timedFlush(120, 60, 4),
     properties: ['mid_session_mixing_flush_only'],
-    effortCue: 'Easy flushout — mix of ergos and/or running.',
     baseUnit: 'time',
-    modalityNotes: 'ANY modality. MID-SESSION MIXING ALLOWED (flush-only property, Sam V3 ruling 5): rotate machines and/or running BETWEEN ROUNDS — row a round, bike a round, jog a round. No cap issue: no work interval exceeds 2 min.',
     frameworkCheck: 'No framework band — Flush is recovery, not a trained quality, and has no row in Sam\'s governing table. Intensity is capped at 3–4/10 by Sam\'s ruling, which is what keeps an interval structure a FLUSH and not a tempo session (cf. the Aerobic Capacity 30:30).',
     source: 'Sam-authored, V3 ruling 5 (2026-07-25)',
     changeMark: 'NEW — Sam-authored (V3 ruling 5)',

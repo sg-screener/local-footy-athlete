@@ -145,13 +145,13 @@ export const CONDITIONING_COACHING_COPY: Readonly<Record<string, {
   '2 min On / 1 min Easy': { intensity: '70–80% MAS', cue: 'Expect effort to build; the short recovery is intentional.' },
   '30:30 Controlled Tempo Blocks': { intensity: '65–80% MAS', cue: 'Stay controlled; you should still manage a few words at the end.' },
   '1 min On / 1 min Easy Tempo': { intensity: '65–80% MAS, controlled tempo', cue: 'Settle into a consistent rhythm.' },
-  'Short Flush': { intensity: 'Very easy, 3–4/10', cue: 'Finish feeling better than you started.' },
-  'Easy Aerobic Flush': { intensity: 'Easy, 3–6/10; full-conversation pace', cue: 'Stay comfortable throughout.' },
-  'Nasal-Paced Easy': { intensity: 'Limited by nasal breathing', cue: 'Slow down if you need to open your mouth to breathe.' },
+  'Short Flush': { intensity: 'Easy', cue: 'Finish feeling better than you started.' },
+  'Easy Aerobic Flush': { intensity: 'Easy', cue: 'Stay comfortable throughout.' },
+  'Nasal-Paced Easy': { intensity: 'Easy', cue: 'Slow down if you need to open your mouth to breathe.' },
   'Erg Flush Blocks': { intensity: 'Easy', cue: 'Keep the effort gentle throughout.' },
-  'Flush Intervals 30:30': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
-  'Flush Intervals 1:1 (1 min / 1 min)': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
-  'Flush Intervals 2:1 (2 min / 1 min)': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
+  'Flush Intervals 30:30': { intensity: 'Easy', cue: 'Finish feeling better than you started.' },
+  'Flush Intervals 1:1 (1 min / 1 min)': { intensity: 'Easy', cue: 'Finish feeling better than you started.' },
+  'Flush Intervals 2:1 (2 min / 1 min)': { intensity: 'Easy', cue: 'Finish feeling better than you started.' },
 };
 
 /** A display title never doubles as the template's lookup identity. */
@@ -180,13 +180,6 @@ const CONCRETE_DISPLAY_PRESCRIPTIONS: Readonly<Record<
     work: '40–60 s hill effort',
     recovery: 'Walk-down, 2–3 min',
     setsRounds: '4–6 reps',
-  },
-  'Easy Aerobic Flush': {
-    work: '20–30 min continuous',
-  },
-  'Erg Flush Blocks': {
-    work: '8 min easy',
-    setsRounds: '3 blocks',
   },
 };
 
@@ -418,7 +411,7 @@ export function conditioningDisplayLines(
    * semicolon. Sam removed heart-rate copy from conditioning cards on
    * 2026-08-26, so that internal monitoring note is filtered here and the
    * actionable intensity target is the only one rendered. */
-  const reviewedCopy = CONDITIONING_COACHING_COPY[template.name];
+  const reviewedCopy = template.quality === 'flush' ? undefined : CONDITIONING_COACHING_COPY[template.name];
   const clauses = stripAuthoringNotes(reviewedCopy?.intensity ?? template.intensity ?? '')
     .split(';').map((clause) => clause.trim()).filter(Boolean);
   const intensityClauses = clauses.filter((clause) => !isHeartRateClause(clause));
@@ -431,6 +424,7 @@ export function conditioningDisplayLines(
   }
   const cue = athleteSentence(reviewedCopy?.cue ?? template.effortCue ?? '');
   if (cue) lines.push({ label: null, text: cue });
+  if (template.quality === 'flush') lines.push({ label: 'Total', text: prescription.totalSessionTime });
 
   /* ⚠ **THE PACE LINE IS NOT THIS FILE'S, AND THAT IS DELIBERATE.**
    * `rules/masPace.personalPaceLine` already owns it, already reads the

@@ -946,7 +946,8 @@ export function generateProgramLocally(
         for (const allocation of weekPlan.weeklyPlan) {
           const entries = [
             ...(allocation.conditioningCategory && allocation.conditioningVariant
-              ? [{ category: allocation.conditioningCategory, templateName: allocation.conditioningVariant }] : []),
+              ? [{ category: require('../../rules/conditioningSelection').demandCategoryFor(
+                allocation.conditioningCategory, allocation.section18ConditioningRole), templateName: allocation.conditioningVariant }] : []),
             ...(allocation.speedBlock?.templateName
               ? [{ category: 'sprint' as const, templateName: allocation.speedBlock.templateName }] : []),
           ];

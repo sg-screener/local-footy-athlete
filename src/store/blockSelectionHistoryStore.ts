@@ -6,7 +6,7 @@ import {
 } from '../rules/blockExerciseSelection';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { registerQuarantineBoundary } from './refusedPayloadQuarantine';
-import type { BlockConditioningSelection } from '../rules/conditioningSelection';
+import { normalizeConditioningSelectionHistory, type BlockConditioningSelection } from '../rules/conditioningSelection';
 
 /**
  * BLOCK SELECTION HISTORY — the durable carrier for WHICH EXERCISE each block
@@ -88,7 +88,7 @@ export function blockSelectionHistory(): readonly BlockExerciseSelection[] {
 }
 
 export function blockConditioningSelectionHistory(): readonly BlockConditioningSelection[] {
-  return useBlockSelectionHistoryStore.getState().conditioningSelections ?? [];
+  return normalizeConditioningSelectionHistory(useBlockSelectionHistoryStore.getState().conditioningSelections ?? []);
 }
 
 /**

@@ -4,23 +4,7 @@ tags:
   - golden
   - my-status
 ---
-- runFlow: ../visible/onboarding-no-team-training.yaml
-- tapOn: Continue
-- tapOn: Monday
-- tapOn: Tuesday
-- tapOn: Thursday
-- tapOn: Friday
-- tapOn: Continue
-- tapOn: Commercial gym
-- tapOn: Continue
-- tapOn: "Advanced.*"
-- tapOn: "1.5× bodyweight"
-- tapOn: "1.25× bodyweight"
-- tapOn: "I haven't tested it"
-- tapOn: "Solid.*"
-- tapOn: "Regular.*"
-- tapOn: "Consistent.*"
-- tapOn: "No.*No current issues"
+- runFlow: ../visible/onboarding-critical-answers.yaml
 - tapOn: Generate My Program
 - extendedWaitUntil:
     visible: "Start your program.*"

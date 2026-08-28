@@ -223,6 +223,11 @@ export function substitutionDecision(args: {
     if (allowed.includes(candidate)) return { family: candidate, erg: candidate, attempted };
   }
 
+  // R-266: a flush is off-leg recovery on an available suitable ergo. Missing
+  // or injury-ineligible machines cannot turn it into walking or a circuit.
+  if (entry.section18ConditioningRole === 'optional_flush' ||
+      entry.section18ConditioningRole === 'optional_recovery_aerobic') return null;
+
   const modalities = new Set(context.equipment.conditioningModalities);
   attempted.push('treadmill');
   if (modalities.has('treadmill') && !context.injury?.lowerBodyRestricted) {

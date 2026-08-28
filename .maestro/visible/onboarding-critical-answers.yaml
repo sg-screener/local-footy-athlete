@@ -1,0 +1,84 @@
+appId: com.localfootyathlete.app
+name: Real onboarding verifies settled taps and saved answers
+---
+- runFlow: onboarding-no-team-training.yaml
+- tapOn: Continue
+- tapOn: Monday
+- tapOn: Tuesday
+- tapOn: Thursday
+- tapOn: Friday
+- tapOn: Continue
+- tapOn: Commercial gym
+- tapOn: Continue
+- extendedWaitUntil:
+    visible: 'Advanced.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Advanced.*'
+- extendedWaitUntil:
+    visible: '1.5× bodyweight'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: '1.5× bodyweight'
+- extendedWaitUntil:
+    visible: '1.25× bodyweight'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: '1.25× bodyweight'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-two-km-skip
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-two-km-skip
+- extendedWaitUntil:
+    visible: 'Solid.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Solid.*'
+- extendedWaitUntil:
+    visible: 'Regular.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Regular.*'
+- extendedWaitUntil:
+    visible: 'Consistent.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: 'Consistent.*'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-injury-no
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-injury-no
+- extendedWaitUntil:
+    visible: Generate My Program
+    timeout: 10000
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-RecentTrainingLoad-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-RecentTrainingLoad-value
+    text: Consistent
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-TwoKmTimeTrial-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-TwoKmTimeTrial-value
+    text: "Haven't tested"
+- assertVisible:
+    id: onboarding-review-ConditioningLevel-value
+    text: Solid
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-Injuries-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-Injuries-value
+    text: No current issues

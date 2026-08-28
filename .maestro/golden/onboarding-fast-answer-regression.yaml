@@ -1,0 +1,44 @@
+appId: com.localfootyathlete.app
+name: Original fast onboarding text taps retain the intended answers
+---
+- runFlow: ../visible/onboarding-no-team-training.yaml
+- tapOn: Continue
+- tapOn: Monday
+- tapOn: Tuesday
+- tapOn: Thursday
+- tapOn: Friday
+- tapOn: Continue
+- tapOn: Commercial gym
+- tapOn: Continue
+- tapOn: 'Advanced.*'
+- tapOn: '1.5× bodyweight'
+- tapOn: '1.25× bodyweight'
+- tapOn: "I haven't tested it"
+- assertVisible: 'Solid.*'
+- tapOn: 'Solid.*'
+- tapOn: 'Regular.*'
+- tapOn: 'Consistent.*'
+- tapOn: 'No.*No current issues'
+- assertVisible: Generate My Program
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-TwoKmTimeTrial-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-TwoKmTimeTrial-value
+    text: "Haven't tested"
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-Injuries-value
+    direction: DOWN
+- assertVisible:
+    id: onboarding-review-Injuries-value
+    text: No current issues
+- tapOn: Generate My Program
+- extendedWaitUntil:
+    visible: 'Start your program.*'
+    timeout: 45000
+- tapOn: 'Start your program.*'
+- assertVisible:
+    id: program-screen
+- takeScreenshot: 'artifacts/ui-walk/onboarding-fast-${RUN_ID}'

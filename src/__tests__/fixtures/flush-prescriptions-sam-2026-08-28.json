@@ -1,0 +1,76 @@
+[
+  {
+    "name": "Short Flush",
+    "workPeriod": "1 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "4 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "workToRest": "1:1",
+    "totalSessionTime": "8 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Easy Aerobic Flush",
+    "workPeriod": "1 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "5 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "workToRest": "1:1",
+    "totalSessionTime": "10 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Nasal-Paced Easy",
+    "workPeriod": "1 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "5 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "workToRest": "1:1",
+    "totalSessionTime": "10 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Erg Flush Blocks",
+    "workPeriod": "2 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "4 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "workToRest": "2:1",
+    "totalSessionTime": "12 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Flush Intervals 30:30",
+    "workPeriod": "30 s easy",
+    "restPeriod": "30 s complete rest, including transitions; after every round, including the last",
+    "setsRounds": "10 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "totalSessionTime": "10 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Flush Intervals 1:1 (1 min / 1 min)",
+    "workPeriod": "1 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "6 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "totalSessionTime": "12 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  },
+  {
+    "name": "Flush Intervals 2:1 (2 min / 1 min)",
+    "workPeriod": "2 min easy",
+    "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
+    "setsRounds": "4 rounds",
+    "intensity": "Easy, 2–3/10; full conversation throughout",
+    "totalSessionTime": "12 min, including all rests, preparation and transitions",
+    "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
+    "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
+  }
+]

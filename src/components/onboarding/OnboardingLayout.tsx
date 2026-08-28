@@ -4,7 +4,7 @@ import {
   StyleSheet,
   Pressable,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text } from '../common/Text';
@@ -158,7 +158,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    // Use the stack's stable context insets from the first render. A newly
+    // mounted native SafeAreaView could shift answer bounds after accessibility
+    // had reported them (62pt on the recorded simulator).
+    <View style={[styles.safeArea, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
       {/* ─── Header ─── */}
       <View style={styles.header}>
         <Pressable
@@ -197,7 +200,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       >
         {children}
       </KeyboardSafeArea>
-    </SafeAreaView>
+    </View>
   );
 };
 

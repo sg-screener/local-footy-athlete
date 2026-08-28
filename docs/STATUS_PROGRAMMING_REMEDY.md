@@ -433,3 +433,67 @@ Other seat's `docs/NOW.md`, original handoffs and unrelated files remain untouch
 - Onboarding 2 km skip-tap consistency and repeat injury-answer tap reliability.
 - Rendered HTML layout QA: local-file Browser access was rejected; no bypass or
   unperformed visual verification is claimed.
+# Current continuation — R-266 short flushes and onboarding, 2026-08-28
+
+Owner remains programming-remedy. Baseline product `38457383` and report
+`df8f8428` preserved. No phone install/reset/wipe; installation hold remains.
+New evidence: `outputs/flush-remediation-2026-08-28/`. Existing evidence untouched.
+
+Options compared: patch individual flush labels versus put concrete numeric
+doses and explicit permitted modes into the existing catalogue/selector/display
+owners. The latter is implemented; no new planner, architecture or program writer.
+
+First guard: 197 passing / 343 failing assertions over the old prescriptions.
+Seven identities retained; new doses 8–12 minutes including preparation and all
+recovery/transitions. Original workbook untouched; exact replacement-text fixture
+retains equality protection. Typed eligibility also corrects prose exclusions
+on existing sprint templates, retaining hard erg ceilings and flywheel limits.
+The old empty-pool fallback is gone. The existing specialist now passes its
+kit-resolved off-leg preference through the connector rather than reintroducing
+an unresolved preference; explicit injury restrictions remain at their owner.
+
+Expanded matrix: 1,711 assertions passed before adding resolved-count coverage.
+Real rollover first reached only Short Flush in all eight athlete/machine worlds:
+flush history had been recorded as aerobic_base. Recorder now uses the existing
+demand translation; old records receive a non-writing read-ingress lift.
+Second run: 176 assertions passed, all seven distinct templates actually reached
+and restarted on each of four machines for male and female athletes (56 boots).
+Another red: Steady Blocks displayed four six-minute rounds but stored one round;
+composition now reads the already-selected prescription branch. No hard dose was
+invented or intensity/recovery limit relaxed.
+
+Onboarding investigation: original failed No tap used y=406 from bounds
+[20,364][382,449]; settled baseline No is [20,426][382,511], so y=406 hits Yes.
+Original 2 km skip likewise used a pre-inset position. Screenshots in the frozen
+baseline show the previous screen still transitioning after tap completion.
+Shared shell now uses existing context insets from its first render instead of
+late native SafeAreaView padding. Journeys wait for target screen + settled
+animation, use distinct skip/No IDs, and inspect saved Review answers. No answer
+values, transitions or progression policy are changed. Native verification is
+in progress. One fresh reproduction was contaminated by a development reload;
+it is preserved but NOT counted as proof. An isolated snapshot initially failed
+because symlinked dependencies broke Expo entry resolution; corrected by copying
+dependencies, not changing product code.
+
+The 55-template output comparison (110 ordinary/minimum variants) changes seven
+flush doses only, plus Steady Blocks' stored count from one to its already
+displayed four rounds. All 48 non-flush prescriptions retain their displayed
+work/recovery/intensity/cue. Bodyweight Circuit remains readable but retired.
+
+Mutation liveness first exposed a circular numeric-dose comparison; it now
+parses displayed work/rest/total independently and catches numeric drift. The
+credit check initially counted the week's game anchor as app conditioning;
+corrected the instrument to assert appCoreCount=0 and optionalFlushCount=1.
+A mutant promoting flush to core credit now fails that assertion.
+
+Native diagnostic: complete real onboarding plus Review edits (6:45, then
+keyboard-open skip), saved answer checks, generation and no-clear restart passed.
+The first revisit attempt found a test ID hidden by its parent Pressable;
+IDs now name the existing focusable tap target. No answer callback changed.
+Seven changed executable owners were reviewed in the writer census; same
+classifications, no new writer or permission budget. The diagnostic template
+suite's four C12 anchor failures are also reproduced on untouched 38457383.
+
+NOT COVERED: final exact-version release gate, mutation receipts, repeated final
+native onboarding, final year reports and physical device acceptance are pending.
+The original 22-item list is not declared finished.

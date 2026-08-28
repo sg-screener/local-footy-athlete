@@ -6810,3 +6810,24 @@ Guard: `LAW-programming-followup-approved-pools-flush-and-add`,
 `test:canonical-weekly-compiler` (`programmingSelectionDecisions`,
 `unilateralPriorityJourney`, `gPlusTwoFlushJourney`, `lowLoadAdditionJourney`, `conditioningClarity`).
 Findings and NOT COVERED: `docs/PROGRAMMING_FOLLOWUP_2026-08-28.md`.
+
+**R-266** · Sam's settled flush/retirement decisions, 2026-08-28.
+
+Owner: programming-remedy. Retire the incomplete Bodyweight Circuit from
+automatic selection without deleting the entry or saved references. Every flush
+is easy off-leg recovery, strictly under 15 minutes including all rests,
+preparation and transitions. Bike, Air Bike, RowErg and SkiErg are permitted when
+available and suitable; one machine or a displayed round-by-round order is
+allowed. Concrete timed doses are 4×1:1 (Short), 5×1:1 (Easy/Nasal), 4×2:1 (Erg),
+10×30:30, 6×1:1 and 4×2:1. The first round includes preparation and all transitions
+occur inside recovery; the final recovery is counted. This supersedes old flush
+doses/restrictions only. Hard-conditioning limits remain. G+2 placement,
+optional/core rules, availability/injury safeguards and no fitness-conditioning
+credit remain R-265. Eligibility reads explicit permitted modalities and the
+actual resolved prescription, not prose or unused alternatives.
+
+Guard: `LAW-short-explicit-recovery-prescriptions`,
+`test:canonical-weekly-compiler` (`flushPrescriptionTruth`, `flushRestartJourney`,
+`gPlusTwoFlushJourney`, `conditioningClarity`). Original dated workbook remains
+unchanged; seven explicit replacement records are equality-checked. Findings and
+NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
