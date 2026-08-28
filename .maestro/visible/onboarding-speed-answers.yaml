@@ -1,0 +1,98 @@
+appId: com.localfootyathlete.app
+name: Real onboarding acceleration and top-speed answers
+---
+# Run only on the dedicated fresh speed-answer simulator, never a phone.
+- runFlow: onboarding-critical-answers.yaml
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-SprintExposure-edit
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-review-SprintExposure-edit
+- extendedWaitUntil:
+    visible: 'Acceleration only.*'
+    timeout: 10000
+- tapOn: 'Acceleration only.*'
+- extendedWaitUntil:
+    visible: 'Consistent.*'
+    timeout: 10000
+- tapOn: 'Consistent.*'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-injury-no
+    timeout: 10000
+- tapOn:
+    id: onboarding-injury-no
+- extendedWaitUntil:
+    visible: Generate My Program
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-SprintExposure-value
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible:
+    id: onboarding-review-SprintExposure-value
+    text: Acceleration only
+- takeScreenshot: artifacts/final/speed-acceleration-review
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-SprintExposure-edit
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-review-SprintExposure-edit
+- extendedWaitUntil:
+    visible: 'Top-speed only.*'
+    timeout: 10000
+- tapOn: 'Top-speed only.*'
+- extendedWaitUntil:
+    visible: 'Consistent.*'
+    timeout: 10000
+- tapOn: 'Consistent.*'
+- extendedWaitUntil:
+    visible:
+      id: onboarding-injury-no
+    timeout: 10000
+- tapOn:
+    id: onboarding-injury-no
+- extendedWaitUntil:
+    visible: Generate My Program
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: onboarding-review-SprintExposure-value
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible:
+    id: onboarding-review-SprintExposure-value
+    text: Top-speed only
+- takeScreenshot: artifacts/final/speed-top-speed-review
+- tapOn: Generate My Program
+- extendedWaitUntil:
+    visible: 'Start your program.*'
+    timeout: 90000
+- tapOn: 'Start your program.*'
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 90000
+- takeScreenshot: artifacts/final/speed-generated
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 45000
+- takeScreenshot: artifacts/final/speed-reopened

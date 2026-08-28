@@ -1,0 +1,64 @@
+appId: com.localfootyathlete.app
+name: Accumulated combined Mobility icons on Day, Week, Session and reopening
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 45000
+- tapOn:
+    id: program-view-week
+- tapOn:
+    id: program-week-next
+- waitForAnimationToEnd
+- tapOn:
+    id: day-row-mon
+- assertVisible: Strength \+ Mobility
+- takeScreenshot: artifacts/final/strength-mobility-week
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/strength-mobility-day
+- tapOn:
+    id: view-workout-button
+- extendedWaitUntil:
+    visible:
+      id: workout-screen
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: session-execution-icon-mobility
+    direction: UP
+- takeScreenshot: artifacts/final/strength-mobility-session
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 45000
+- tapOn:
+    id: program-view-week
+- tapOn:
+    id: program-week-next
+- waitForAnimationToEnd
+- tapOn:
+    id: day-row-mon
+- tapOn:
+    id: program-view-today
+- assertVisible:
+    id: day-timeline-part-mobility
+- takeScreenshot: artifacts/final/strength-mobility-reopened

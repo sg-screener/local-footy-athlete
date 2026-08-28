@@ -1,6 +1,7 @@
 import type { ConditioningOption, Workout, WorkoutExercise } from '../types/domain';
 import { logger } from './logger';
 import { getSessionComponentRows } from './sessionComponents';
+import { conditioningWordingForModality } from '../rules/conditioningDisplay';
 
 export type ConditioningStructureFamily =
   | 'continuous_aerobic'
@@ -39,6 +40,16 @@ export function conditioningModeLabel(
 export function conditioningModeLabelForRow(workout: Partial<Workout>, id: string): string | undefined {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(id));
   return conditioningModeLabel(option?.modality, option?.modalitySequence);
+}
+
+/** Read-time wording follows the same typed option as the machine label.
+ * Saved rows, dose, completion and selection remain untouched, including history.
+ */
+export function conditioningRowForDisplay<T extends { id?: string; notes?: string | null }>(workout: Partial<Workout>, row: T): T {
+  const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(String(row.id)));
+  if (!option?.modality || !row.notes) return row;
+  const notes = conditioningWordingForModality(row.notes, option.modality);
+  return notes === row.notes ? row : { ...row, notes };
 }
 
 /** One threshold owns the long/short aerobic interval boundary. */

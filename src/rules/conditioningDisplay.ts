@@ -41,6 +41,21 @@
 
 import type { ConditioningQuality, ConditioningTemplate } from '../data/conditioningTemplates';
 import { doseMidpoint, parseConditioningDose } from './conditioningDose';
+import type { ConditioningOption } from '../types/domain';
+
+/** Wording only: the selected mode owns movement instructions, never dose.
+ * Walking/spinning remain ACTIVE recovery; complete rest is never rewritten.
+ * Running distances on time-based machine variants remain visible as equivalents.
+ */
+export function conditioningWordingForModality(text: string, modality?: ConditioningOption['modality']): string {
+  if (!modality) return text;
+  const active = text.replace(/\beasy spin\/paddle\b/gi, 'easy active recovery');
+  if (modality === 'running') return active;
+  return active
+    .replace(/\bwalk(?:-back)?\b/gi, match => /^[A-Z]/.test(match) ? 'Easy active recovery' : 'easy active recovery')
+    .replace(/\((\d+(?:[–-]\d+)?\s*(?:km|m))\)/g, '($1 running equivalent)')
+    .replace(/\bper (\d+\s*m)\b/g, 'per effort ($1 running equivalent)');
+}
 
 export interface ConditioningDisplayLine {
   /** `Work`, `Recovery`, `Rounds`, `Intensity`, or an unlabelled cue. */
@@ -186,6 +201,7 @@ const CONCRETE_DISPLAY_PRESCRIPTIONS: Readonly<Record<
 export function conditioningAthletePrescription(
   template: ConditioningTemplate,
   resolvedSetsRounds?: number | null,
+  modality?: ConditioningOption['modality'],
 ): ConditioningAthletePrescription {
   const override = CONCRETE_DISPLAY_PRESCRIPTIONS[template.name] ?? {};
   const authoredCount = override.setsRounds
@@ -200,8 +216,8 @@ export function conditioningAthletePrescription(
     : authoredCount;
   return {
     title: conditioningDisplayTitleForName(template.name),
-    work: override.work ?? stripAuthoringNotes(template.workPeriod ?? ''),
-    recovery: override.recovery ?? stripAuthoringNotes(template.restPeriod ?? ''),
+    work: conditioningWordingForModality(override.work ?? stripAuthoringNotes(template.workPeriod ?? ''), modality),
+    recovery: conditioningWordingForModality(override.recovery ?? stripAuthoringNotes(template.restPeriod ?? ''), modality),
     setsRounds,
     totalSessionTime: override.totalSessionTime
       ?? stripAuthoringNotes(template.totalSessionTime ?? ''),

@@ -5,6 +5,14 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  component_icon_whole_workout: ['src/rules/dayTimeline.ts', 'const composed = optionalKindForPart(workout, rows);', 'const composed = workout?.composedOptionalKind;', 'icons', 'Day/Week mobility uses its component icon'],
+  component_icon_recovery_person: ['src/rules/sectionIconKinds.ts', "  recovery: 'recovery',\n};\n\n/**\n * THE SESSION SCREEN", "  recovery: 'mobility',\n};\n\n/**\n * THE SESSION SCREEN", 'icons', 'Day/Week recovery uses its component icon'],
+  component_icon_session_battery: ['src/rules/sectionIconKinds.ts', "Readonly<Record<SessionExecutionSectionId, RowIconKind>> = {\n  mobility: 'mobility',", "Readonly<Record<SessionExecutionSectionId, RowIconKind>> = {\n  mobility: 'recovery',", 'icons', 'Session mobility uses the same component icon'],
+  machine_walking_copy: ['src/rules/conditioningDisplay.ts', 'if (!modality) return text;', 'return text;', 'clarity', 'resolved machine instructions contain no walking recovery'],
+  machine_projection_mode: ['src/rules/projectVisibleWeek.ts', 'conditioningDoseValueCopyId(dose.templateName, field, modality)', 'conditioningDoseValueCopyId(dose.templateName, field)', 'clarity', 'Day and Session agree on selected-mode recovery'],
+  game_result_duration: ['src/types/sessionOutcome.ts', 'timeOnGroundMinutes: Number(candidate.timeOnGroundMinutes),', 'timeOnGroundMinutes: Number(candidate.timeOnGroundMinutes) + 1,', 'game', 'complete shared-scale result saves and re-saves'],
+  game_result_scale: ['src/types/sessionOutcome.ts', 'if (!isEffortRating(candidate.bodyRpe)) {', 'if (!isEffortRating(candidate.bodyRpe) || Number(candidate.bodyRpe) > 5) {', 'game', 'complete shared-scale result saves and re-saves'],
+  power_visible_order: ['src/utils/sessionRoles.ts', "  'power',\n  'main_lift',", "  'main_lift',\n  'power',", 'power_diagnostic', 'generated primers lead ordinary lifts'],
   loaded_box_squat_support: ['src/rules/injuryExerciseRisk.ts', '  const rating = tags.injury[bucket];', "  const rating = exerciseName === 'Single-Leg Squat (to Box)' && ['shoulder', 'elbow', 'wrist/hand'].includes(bucket) ? 'good' : tags.injury[bucket];", 'simple_injury', 'prescribed free weights require upper-limb support clearance'],
   loaded_back_extension_support: ['src/rules/injuryExerciseRisk.ts', '  const rating = tags.injury[bucket];', "  const rating = exerciseName === 'Back Extension' && ['shoulder', 'elbow', 'wrist/hand'].includes(bucket) ? 'good' : tags.injury[bucket];", 'simple_injury', 'prescribed free weights require upper-limb support clearance'],
   loaded_hip_thrust_support: ['src/rules/injuryExerciseRisk.ts', '  const rating = tags.injury[bucket];', "  const rating = ['Hip Thrusts', 'Single-Leg Hip Thrust'].includes(exerciseName) && ['elbow', 'wrist/hand'].includes(bucket) ? 'good' : tags.injury[bucket];", 'simple_injury', 'prescribed free weights require upper-limb support clearance'],
@@ -136,6 +144,7 @@ if (child) {
   }
   else if (witness === 'session_durability') require(path.join(repo, 'src/__tests__/sessionChangeDurabilityTests'));
   else if (witness === 'injury') require(path.join(repo, 'src/__tests__/injuryRecompositionTests'));
+  else if (witness === 'power_diagnostic') require(path.join(repo, 'src/__tests__/powerCountingDifferentialTests'));
   else if (witness === 'compiler') require(path.join(repo, 'src/__tests__/canonicalWeeklyCompilerSliceTests'));
   else {
     global.__DEV__ = true;
@@ -143,7 +152,7 @@ if (child) {
     global.window = { localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k), clear: () => storage.clear() } };
     global.fetch = () => { throw Error('NETWORK DISABLED'); };
     let failures = 0;
-    const helper = witness === 'speed' ? 'inseasonSpeedTruth' : witness === 'landmine' ? 'powerOnlyLandmineJourney' : witness === 'simple_injury' ? 'simpleInjurySafetyTruth' : witness === 'lowload_remove' ? 'lowLoadRemovalJourney' : witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
+    const helper = witness === 'icons' ? 'lowLoadAdditionJourney' : witness === 'clarity' ? 'conditioningClarity' : witness === 'game' ? 'gameOutcomeJourney' : witness === 'speed' ? 'inseasonSpeedTruth' : witness === 'landmine' ? 'powerOnlyLandmineJourney' : witness === 'simple_injury' ? 'simpleInjurySafetyTruth' : witness === 'lowload_remove' ? 'lowLoadRemovalJourney' : witness === 'mobility' ? 'mobilityAddJourney' : witness === 'gplus' ? 'gPlusTwoFlushJourney' : witness === 'flush' ? 'flushPrescriptionTruth'
       : witness === 'flush_restart' ? 'flushRestartJourney' : 'programmingInputTruth';
     require(path.join(repo, 'src/__tests__/support', witness === 'landmine' ? 'powerOnlyLandmineTruth' : helper))[helper](storage, (label, value, detail) => {
       if (!value) failures++;
@@ -158,7 +167,7 @@ if (child) {
   const receipts = [];
   for (const [id, [, , , , expected]] of Object.entries(mutants)) {
     const only = process.argv.find(a => a.startsWith('--only='))?.slice(7);
-    if (only && id !== only) continue;
+    if (only && !only.split(',').includes(id)) continue;
     const result = spawnSync(process.execPath, [__filename, `--child=${id}`], { cwd: repo, env: { ...process.env, TZ: 'Australia/Melbourne' }, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
     const log = result.stdout + result.stderr;
     fs.writeFileSync(path.join(output, `${id}.log`), log);

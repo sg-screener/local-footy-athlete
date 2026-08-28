@@ -1701,9 +1701,9 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'Sam 2026-08-11; docs/GAME_FEEDBACK_OWNERSHIP_REASSESSMENT_2026-08-11.md',
     guard: {
       state: 'guarded',
-      by: 'test:game-feedback',
+      by: 'test:canonical-weekly-compiler',
       chainStatus: 'in_chain',
-      receipt: 'BUILT WITH THE RULING 2026-08-11; UPDATED WITH SAM\'S SAME-DAY SCALE CHANGE. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, body effort — 1-5 then, 1-10 since 2026-08-12 — and a 1-5 feel, which is a DIFFERENT scale and did not move). UPDATED AGAIN 2026-08-12 WITH SAM\'S 1-10 SCALE AND SLIDER RULINGS. The suite asserts the effort SLIDER (the chips could not hold ten choices on one row), the exact anchors, and that the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range 11 refuses (6 is now LEGAL and the cell that pinned it moved); no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
+      receipt: 'Rebound 2026-08-28: gameOutcomeJourney in the canonical release compiler enters through real onboarding, adds an actual practice fixture through the accepted fixture transaction, and records scheduled/practice results through the shared session-outcome door. All ten effort values, whole/part duration and feel, re-save, invalid/non-game rejection, unchanged program/profile/modifiers and complete-result restart are checked. Historical UI receipts remain in GAME_FEEDBACK_OWNERSHIP_REASSESSMENT; this rebinding makes no new native game-panel claim.',
     },
   },
   {
@@ -1712,7 +1712,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'Sam 2026-08-11; docs/COPY_SHEET_RULINGS_2026-07-30.md §18-b-ii',
     guard: {
       state: 'guarded',
-      by: 'test:session-execution-checklist + test:game-feedback',
+      by: 'test:session-execution-checklist + test:canonical-weekly-compiler',
       chainStatus: 'in_chain',
       receipt: 'BUILT WITH THE RULING 2026-08-11. The execution gate proves the questions appear only when Team Training was performed, both fields are required, effort is 1-10 (raised 2026-08-12), and the form builds one checklist result containing the measurement. The transaction gate then drives a real team-classified workout and proves the measurement survives the tap adapter, accepted transaction, dated feedback store and durable program envelope.',
     },
@@ -2501,6 +2501,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'docs/RULINGS_REGISTRY.md R-268 — Sam P15/P19 decisions, 2026-08-28.',
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'inseasonSpeedTruth and powerOnlyLandmineJourney exercise the real scheduler/selector and male/female onboarding/restart. Landmine also checks the compiler name-to-slot mapper and 28 authored Primer dates; compiler-year inspects its actual role/evidence through all 416 athlete-weeks. Source mutants cover selection, quality, facts, slot eligibility, Primer evidence/order and display role. Final release status: STATUS_PROGRAMMING_REMEDY.' },
+  },
+  {
+    id: 'LAW-component-typed-mobility-icon',
+    law: 'R-269: each combined-day component resolves its icon from typed identity through the shared icon map. Mobility keeps the existing person and Recovery the battery; labels, programming, completion and persisted history are not identity substitutes or changed by rendering.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-269 — Sam combined Mobility icon request, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'lowLoadAdditionJourney checks actual standalone and combined Strength/Mobility, Gunshow/Mobility and Mobility/Recovery components through projection, Day timeline and Session execution before/after real Add, Undo and restart for both genders. First run failed 24 icon assertions; native combined-day evidence and mutation receipts are recorded in STATUS_PROGRAMMING_REMEDY.' },
   },
 ];
 

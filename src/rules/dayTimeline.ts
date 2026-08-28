@@ -42,7 +42,8 @@ import {
   PART_ICON_KIND,
   type RowIconKind,
 } from './sectionIconKinds';
-import { componentIdFromPartId } from './projectVisibleWeek';
+import { componentIdFromPartId, optionalKindForPart } from './projectVisibleWeek';
+import type { Workout } from '../types/domain';
 import { projectDayDetail } from './visibleDayDetail';
 import type { SignedCopy } from './signedCopy';
 import type { VisibleDay, VisiblePartKind, VisibleRow } from './visibleProjection';
@@ -115,7 +116,8 @@ export interface DayTimelineEntry {
  */
 function iconKindForSection(
   kind: VisiblePartKind,
-  workout: { composedOptionalKind?: string } | null | undefined,
+  workout: (Pick<Workout, 'composedOptionalKind'> & Partial<Pick<Workout, 'exercises'>>) | null | undefined,
+  rows: readonly VisibleRow[],
 ): RowIconKind {
   /*
    * ⚠ **THE WORKOUT IS PASSED IN; IT IS NOT ON `VisibleDay`.** The first version
@@ -124,15 +126,12 @@ function iconKindForSection(
    * like one and silently answered `undefined` every time. The bolt never
    * appeared and nothing failed. A cast that invents a field is not a read.
    */
-  const composed = workout?.composedOptionalKind;
+  const composed = optionalKindForPart(workout, rows);
   // Scoped to the part kinds a composed optional session's CONTENT produces —
   // the same two `partHeadline` names — so a team anchor on a combined day keeps
   // its own glyph.
   if (composed && (kind === 'strength' || kind === 'recovery')) {
-    // The parameter takes a plain `string` so every existing caller still type
-    // checks; an unknown value simply misses the table and falls through.
-    const chosen = COMPOSED_OPTIONAL_ICON_KIND[
-      composed as keyof typeof COMPOSED_OPTIONAL_ICON_KIND];
+    const chosen = COMPOSED_OPTIONAL_ICON_KIND[composed];
     if (chosen) return chosen;
   }
   return PART_ICON_KIND[kind];
@@ -146,7 +145,7 @@ export function dayTimeline(
    * not carry. Optional so every existing caller is unchanged; a caller that
    * omits it gets the part kind's own glyph, which is what the screen did before.
    */
-  workout?: { composedOptionalKind?: string } | null,
+  workout?: Pick<Workout, 'composedOptionalKind'> & Partial<Pick<Workout, 'exercises'>> | null,
   /**
    * The same plan-aware execution receipt that restores the workout checklist.
    * Components covered by it never fall back to stale kind-level completions.
@@ -170,6 +169,6 @@ export function dayTimeline(
       ? recordedExecution.componentCompletions[componentIds[index]]
       : recordedByLegacyComponent[componentIds[index]] ?? null,
     rows: section.rows,
-    iconKind: iconKindForSection(section.kind, workout),
+    iconKind: iconKindForSection(section.kind, workout, section.rows),
   }));
 }

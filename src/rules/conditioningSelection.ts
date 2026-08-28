@@ -1019,10 +1019,10 @@ export interface ConditioningVisibleDose {
   readonly totalSessionTime: string;
 }
 
-export function conditioningVisibleDoseFor(name: string): ConditioningVisibleDose | null {
+export function conditioningVisibleDoseFor(name: string, modality?: import('../types/domain').ConditioningOption['modality']): ConditioningVisibleDose | null {
   const template = resolveTemplateByName(name);
   if (!template) return null;
-  const prescription = conditioningAthletePrescription(template);
+  const prescription = conditioningAthletePrescription(template, undefined, modality);
   return {
     templateName: template.name,
     work: prescription.work,

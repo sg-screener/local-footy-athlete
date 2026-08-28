@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+node "$(dirname "$0")/maestro-device-preflight.cjs" "$@"
+
 if [[ -z "${E2E_METRO_URL:-}" ]]; then
   echo "E2E_METRO_URL is required (for example, http://127.0.0.1:<port>)." >&2
   exit 64

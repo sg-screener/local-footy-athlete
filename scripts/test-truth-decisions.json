@@ -715,7 +715,7 @@
     },
     "test:law-registry": {
       "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
+      "reason": "Classified 2026-08-28: missing game-feedback reference rebound to current accepted gameOutcomeJourney; LR-18 was a legacy census label, not a product law. The 21 UNENFORCED process/verification rows remain explicitly red, not waived, retired or represented as app defects. They require separate repo-wide enforcement work; the release gate is not a whole-Bible-green claim.",
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:legacy-census": {
@@ -841,9 +841,12 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:power-counting": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rebound 2026-08-28: current compiler owns power budgets; retired gateway stripping is not restored. Visible pre-lift ordering replaces obsolete every-row-order-zero. July migration golden retained immutable behind --historical-golden, not today's oracle. Determinism, counting fences, actual power/main-lift reach and budget assertions remain.",
+      "productionPaths": ["src/utils/sessionTemplate.ts", "src/utils/sessionRoles.ts", "src/rules/weeklyScheduler.ts"],
+      "contractRefs": ["R-268", "docs/NORTH_STAR.md"],
+      "witnessScript": "test:power-counting",
+      "evidenceKind": "green_now"
     },
     "test:power-primer-policy": {
       "kind": "rewrite_test",
@@ -955,9 +958,12 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:section18-v2": {
-      "kind": "rewrite_test",
-      "reason": "The stable run died on retired support or a stale call shape. The product subject survives, so rewrite the harness without restoring deleted architecture.",
-      "evidenceKind": "startup_failure"
+      "kind": "current_contract",
+      "reason": "Rebound 2026-08-28: complete current onboarding answers and explicit current kit repair the incomplete diagnostic input. All existing assertions and eight mutation arms remain; no production programming changes.",
+      "productionPaths": ["src/rules/section18EffectiveWeekEvaluator.ts"],
+      "contractRefs": ["docs/LFA_PROGRAMMING_BIBLE.md"],
+      "witnessScript": "test:section18-v2",
+      "evidenceKind": "green_now"
     },
     "test:session-change-sequence": {
       "kind": "rewrite_test",
@@ -1003,9 +1009,12 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:slot-coverage": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Rebound 2026-08-28: deleted pool rotation replaced by existing block selection owner. Seven-slot split expectations replace retired three-row completeness. Actual typed strength intent and resolved kit make generated census nonempty. R-233 Nordic coverage explicitly classified; omission/positive fixtures distinguished. Original missing-slot ceilings unchanged.",
+      "productionPaths": ["src/rules/blockExerciseSelection.ts", "src/rules/sessionSlotCoverage.ts"],
+      "contractRefs": ["R-233", "docs/LFA_PROGRAMMING_BIBLE.md"],
+      "witnessScript": "test:slot-coverage",
+      "evidenceKind": "green_now"
     },
     "test:stage-b-generation-differential": {
       "kind": "test_infrastructure",

@@ -4,7 +4,7 @@ import {
   sessionOrderIsAuthored,
 } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
-import { projectConditioningVisibleIdentity, conditioningModeLabel, conditioningModeLabelForRow } from './conditioningVisibleIdentity';
+import { projectConditioningVisibleIdentity, conditioningModeLabel, conditioningModeLabelForRow, conditioningRowForDisplay } from './conditioningVisibleIdentity';
 import {
   SESSION_ROLE_ORDER,
   classifyExerciseRole,
@@ -452,7 +452,7 @@ export function buildSessionTemplate(
       ? item => item.kind === 'team_training' ? 2 : isOptional(item) ? 1 : 0
       : ordering === 'phase' ? phaseRank : d2Rank).map(item =>
       item.kind === 'exercise' && item.presentation === 'conditioning_phase'
-        ? { ...item, modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
+        ? { ...item, row: conditioningRowForDisplay(workout, item.row), modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
         : item),
   };
 }
@@ -535,7 +535,8 @@ function resolveConditioningOptions(
           title: identity?.attachedLabel ?? option.title,
           description: option.description ?? '',
           modalityLabel: conditioningModeLabel(option.modality, option.modalitySequence),
-          rows: conditioningRows.filter((row: any) => ids.has(String(row?.id))),
+          rows: conditioningRows.filter((row: any) => ids.has(String(row?.id)))
+            .map(row => conditioningRowForDisplay(workout, row)),
         };
       })
       .filter((option: { rows: any[] }) => option.rows.length > 0);

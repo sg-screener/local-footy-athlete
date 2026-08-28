@@ -6,7 +6,7 @@ import { calendarActionsForTest } from './support/calendarActionsForTest';
  * feedback, weights/TT times." §3 R4, what Sam sees: "log a session, force-quit,
  * relaunch — the log is still there. That has never been true."
  *
- * ── LR-18, DIAGNOSED BEFORE BUILDING (the census asked for exactly this) ────
+ * ── LEGACY CENSUS ENTRY 18, DIAGNOSED BEFORE BUILDING ──────────────────────
  *
  * The census entry says: "workoutLogStore.ts has no persist(...), so logged sets
  * do not survive a relaunch. Four readers. EITHER A REAL DATA-LOSS DEFECT OR
@@ -387,7 +387,7 @@ const main = async () => {
       + 'never a decision, and "boot appends nothing" is the plan\'s strongest law');
   });
 
-  // ── 5. LR-18: THE LINE, HELD ─────────────────────────────────────────────
+  // ── 5. LEGACY CENSUS ENTRY 18: THE LINE, HELD ────────────────────────────
   //
   // The census asked for a diagnosis before a build. The diagnosis is that
   // nothing writes this store, so it is not persisted. If a set-logging surface
@@ -420,9 +420,9 @@ const main = async () => {
     walk(SRC);
     assert(callers.length === 0,
       `a product surface now WRITES the workout log (${callers.join(', ')}), so logged sets `
-      + 'are real athlete results that die with the process. LR-18 stops being dead code '
+      + 'are real athlete results that die with the process. Census entry 18 stops being dead code '
       + 'the moment this cell reds: persist the store through the armour recipe, add it to '
-      + '`resetStoresToFreshInstall` in the same commit (the L16 lesson), and pay LR-18');
+      + '`resetStoresToFreshInstall` in the same commit (the L16 lesson), and close census entry 18');
     const source = readFileSync(path.join(SRC, 'store/workoutLogStore.ts'), 'utf8');
     assert(!/persist\(/.test(source),
       'workoutLogStore gained persistence while nothing writes it — that is a durable key '

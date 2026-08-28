@@ -16,7 +16,7 @@
     "test:scenarios:golden": "sucrase-node src/__tests__/scenarioHarness.js --golden",
     "test:scenarios:verbose": "sucrase-node src/__tests__/scenarioHarness.js --verbose",
     "test:qa": "sucrase-node src/__tests__/weekPlanQA.ts",
-    "test:test-truth": "TZ=Australia/Melbourne sucrase-node src/__tests__/testTruthAuditTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/releaseGateContractTests.ts && npm run test:unrunnable-suites && node scripts/test-typecheck-gate.js && npm run test:dev-e2e-seeds",
+    "test:test-truth": "TZ=Australia/Melbourne sucrase-node src/__tests__/testTruthAuditTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/releaseGateContractTests.ts && npm run test:unrunnable-suites && node scripts/test-typecheck-gate.js && npm run test:dev-e2e-seeds && node scripts/test-maestro-device-preflight.cjs",
     "audit:test-truth": "node scripts/test-truth-audit.js",
     "test:release": "node scripts/release-gate.js",
     "test:canonical-weekly-compiler": "TZ=Australia/Melbourne sucrase-node src/__tests__/canonicalWeeklyCompilerSliceTests.ts && npm run test:reset-coach && npm run test:athlete-session-deletion && npm run test:program-hydration-ownership && npm run test:fixture-mutation-transaction && npm run test:temporary-source-facts && npm run test:session-injury-review && npm run test:injury-session-adjustment && npm run test:injury-compiler-preview && npm run test:conditioning-balance-repair",

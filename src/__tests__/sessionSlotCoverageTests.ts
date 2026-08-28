@@ -28,6 +28,12 @@ import {
 } from '../rules/sessionSlotCoverage';
 import type { WorkoutExercise } from '../types/domain';
 import type { EquipmentTag } from '../data/exercisePools';
+import { decideExerciseForBlock, type BlockExerciseSelection } from '../rules/blockExerciseSelection';
+import { composedIdentityFor } from '../rules/composedRowLegality';
+import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
+import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 
 armTotalsOrRed();
 
@@ -362,28 +368,24 @@ console.log('\n[7b] A single-leg hip lift may not rotate into a bilateral hinge'
   // structural assertion about a table is not an assertion about what the
   // athlete is handed. This drives the real rotation over a full block.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { applyPoolRotation } = require('../data/exercisePoolsStrength') as {
-    applyPoolRotation: (
-      name: string,
-      ctx: { miniCycleNumber: number; weekInBlock?: number },
-    ) => { kind: 'name'; name: string } | { kind: 'refused'; slot: string; cause: string };
-  };
-  // R-083 — the rotation may now answer "this kit can do none of these". No kit
-  // is passed here, so it cannot fire; a refusal would mean the outcome shape
-  // changed under this cell, and the empty name reddens the non-vacuity check
-  // one line below rather than passing silently.
-  const rotatePoolName = (
-    name: string,
-    ctx: { miniCycleNumber: number; weekInBlock?: number },
-  ): string => {
-    const outcome = applyPoolRotation(name, ctx);
-    return outcome.kind === 'name' ? outcome.name : '';
-  };
+  // Retired: the deleted index-based applyPoolRotation writer. The existing
+  // block-selection owner now consumes recorded choices and a slot-scoped pool.
+  const legalCandidates = selectableExerciseNames().filter(name =>
+    slotsFilledByRow(row(name)).includes('single_leg_hip')).map(composedIdentityFor);
+  ok('current selection has a real single-leg hip candidate pool', legalCandidates.length > 0);
+  const history: BlockExerciseSelection[] = [];
   const rotated: string[] = [];
   for (let cycle = 1; cycle <= 4; cycle += 1) {
+    const inputs = { phase: 'Pre-season' as const, blockNumber: cycle, slot: 'single_leg_hip' as const,
+      group: null, role: 'single_leg' as const, legalCandidates, previousSelection: history.at(-1) ?? null,
+      currentBlockSelection: null, recentSelections: [...history].reverse(), progressedIdentities: [], pinnedIdentities: [] };
+    const selection = decideExerciseForBlock(inputs);
+    const record: BlockExerciseSelection = { blockNumber: cycle, blockStartISO: `2026-0${cycle + 1}-02`,
+      slot: inputs.slot, group: null, role: inputs.role, identity: selection.identity, seatIndex: 0 };
     for (let week = 1; week <= 4; week += 1) {
-      rotated.push(rotatePoolName('Single-Leg RDL', { miniCycleNumber: cycle, weekInBlock: week }));
+      rotated.push(decideExerciseForBlock({ ...inputs, currentBlockSelection: record }).identity);
     }
+    history.push(record);
   }
   ok('[non-vacuity] rotation was actually exercised over a whole block',
     rotated.length === 16 && rotated.every((name) => name.length > 0));
@@ -433,12 +435,16 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
 
   // A PULL DAY CAN NOW COVER ITS LADDER AT ALL — the cell that would have caught
   // the one-direction constant, and which did not exist when it shipped.
-  const pullDay = sessionSlotCoverage(
-    [row('Barbell Row'), row('Pull-Ups'), row('Bicep Curls')], 'upper_split_pull');
+  // The old three-row "complete" expectation predates the seven-slot split
+  // decision (2026-08-21). Keep direction/order checks against its current shape.
+  const pullRows = ['Barbell Row', 'Pull-Ups', 'Seated Cable Row', 'Neutral-Grip Pulldown',
+    'Bicep Curl (Dumbbell)', 'Shrugs', 'Ab Wheel'].map(name => row(name));
+  const pullDay = sessionSlotCoverage(pullRows, 'upper_split_pull');
   ok('a pull day covered by pull work reports NOTHING missing',
     pullDay.missing.length === 0, JSON.stringify(pullDay.missing));
   const pushDay = sessionSlotCoverage(
-    [row('Bench Press'), row('Overhead Press'), row('Lateral Raise')], 'upper_split_push');
+    ['Bench Press', 'Overhead Press', 'DB Bench Press', 'Half-Kneeling Single-Arm Overhead Press',
+      'Tricep Pushdown', 'Lateral Raise', 'Ab Wheel'].map(name => row(name)), 'upper_split_push');
   ok('a push day covered by push work reports NOTHING missing',
     pushDay.missing.length === 0, JSON.stringify(pushDay.missing));
   // AND THE DIRECTIONS DO NOT SATISFY EACH OTHER — the non-vacuity for the pair
@@ -455,10 +461,10 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   // day by Sam's split sentence — a vertical, a horizontal, and accessory work.
   const realPullDay = sessionSlotCoverage(
     [row('Pull-Ups'), row('Barbell Row'), row('Face Pulls')], 'upper_split_pull');
-  ok('the generator\'s real pull day is COMPLETE, not missing arm work',
-    realPullDay.missing.length === 0, JSON.stringify(realPullDay.missing));
-  ok('...and its face pull is SPENT as the accessory, not counted as a second row',
-    realPullDay.duplicated.length === 0, JSON.stringify(realPullDay.duplicated));
+  ok('the historical three-row pull day is incomplete under the current split contract',
+    realPullDay.missing.includes('biceps') && realPullDay.missing.includes('core'), JSON.stringify(realPullDay.missing));
+  ok('face pulls do not silently replace the required traps or biceps seats',
+    realPullDay.missing.includes('traps') && realPullDay.missing.includes('biceps'));
   // AND THE ANCHOR IS STILL AN ANCHOR — the non-vacuity. Two ROWS with nowhere
   // else to go is still his "two squats" shape and must still report doubled.
   const twoAnchors = sessionSlotCoverage(
@@ -469,7 +475,7 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   // ORDER-INDEPENDENCE, which is the whole reason the matching is exact rather
   // than greedy. The same rows in a different order must give the same answer.
   const reversed = sessionSlotCoverage(
-    [row('Face Pulls'), row('Barbell Row'), row('Pull-Ups')], 'upper_split_pull');
+    [...pullRows].reverse(), 'upper_split_pull');
   ok('the answer does not depend on row order',
     reversed.missing.length === 0 && reversed.duplicated.length === 0,
     `missing=${JSON.stringify(reversed.missing)} dup=${JSON.stringify(reversed.duplicated)}`);
@@ -526,8 +532,10 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
 {
   const { generateProgramLocally } = require('../services/api/generateProgram') as any;
   const CENSUS_BASE = {
+    ...athleteAnswers(ARCHETYPES[6]),
     trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,
+    equipmentAnswer: presetEquipmentAnswer('commercial_gym', '2026-07-13'),
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday',
     recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
@@ -538,6 +546,8 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     ['off-season bodyweight', {
       ...CENSUS_BASE, seasonPhase: 'Off-season',
       equipment: ['Bodyweight Only'], teamTrainingDays: [],
+      seasonFinishedOn: '2026-06-15',
+      equipmentAnswer: { tags: {}, modalities: {}, answeredOn: '2026-07-13' },
     }],
   ];
   // ── A LOWER DAY MUST CONTAIN LOWER WORK ────────────────────────────────
@@ -569,7 +579,7 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
       todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
     });
     for (const workout of (program?.microcycles?.[0]?.workouts ?? [])) {
-      const kind = slotDayKindFor(String(workout.name ?? ''));
+      const kind = slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []);
       if (!kind) continue;
       if (kind === 'lower') {
         // ⚠ THE FIRST VERSION OF THIS ASKED "does the day contain ANY lower
@@ -590,7 +600,8 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
         }
       }
       laddered += 1;
-      const coverage = sessionSlotCoverage(workout.exercises ?? [], kind);
+      const coverage = sessionSlotCoverage(workout.exercises ?? [], kind,
+        resolveEquipmentCapabilities(profile as never).tags as EquipmentTag[]);
       if (coverage.missing.length > 0 || coverage.duplicated.length > 0) {
         deficient.push(`${label} | ${workout.name} [${kind}] missing=${JSON.stringify(coverage.missing)} duplicated=${JSON.stringify(coverage.duplicated)}`);
       }
@@ -654,8 +665,11 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   /** Measured 2026-08-13. Lower it as the gap closes; never raise it. */
   const KIT_VIOLATION_CEILING = 5;
   const bodyweightProfile = {
+    ...athleteAnswers({ ...ARCHETYPES[6], equipment: 'bodyweight', initialPhase: 'Off-season', extraGame: false }),
     trainingLocation: 'Commercial gym', equipment: ['Bodyweight Only'],
     equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,
+    equipmentAnswer: { tags: {}, modalities: {}, answeredOn: '2026-07-13' },
+    seasonFinishedOn: '2026-06-15',
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDays: [], gameDay: 'Saturday', seasonPhase: 'Off-season',
     recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
@@ -712,8 +726,12 @@ console.log('\n[R-084] a slot the kit cannot train is UNAVAILABLE, not MISSING')
   // A no-kit lower day built as well as a no-kit athlete CAN build one.
   const noKitLowerDay = [
     row('Bodyweight Squat'), row('Single-Leg Squat (to Box)'),
-    row('Nordic Lower'), row('Pallof Press'),
+    row('Pallof Press'),
   ];
+  // R-233 permits the hamstring pair to fill single-leg hip. Nordic Lower
+  // therefore cannot be used as a fixture claiming this slot is absent.
+  ok('the approved Nordic option satisfies the single-leg hip slot',
+    !sessionSlotCoverage([...noKitLowerDay, row('Nordic Lower')], 'lower', BODYWEIGHT).missing.includes('single_leg_hip'));
 
   // NON-VACUITY FIRST — if `single_leg_hip` were not required on a lower day at
   // all, every assertion below would pass on nothing.

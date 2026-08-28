@@ -7,6 +7,8 @@ name: Fresh onboarding explicitly accepts no team training
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"
       e2eLaunchPurpose: "initial-cold-launch"
+- waitForAnimationToEnd:
+    timeout: 5000
 - extendedWaitUntil:
     visible:
       id: onboarding-welcome-cta

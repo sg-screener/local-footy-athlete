@@ -558,15 +558,16 @@ const DOSE_LINES: readonly (readonly [ConditioningDoseField, string])[] = [
   ['total_time', 'row.dose.total_time'],
 ];
 
-function doseCopy(row: any): readonly SignedCopy[] {
-  const dose = conditioningVisibleDoseFor(String(row?.exercise?.name ?? row?.name ?? ''));
+function doseCopy(row: any, workout?: Workout | null): readonly SignedCopy[] {
+  const modality = workout?.conditioningBlock?.options.find(option => option.exerciseIds.includes(row.id))?.modality;
+  const dose = conditioningVisibleDoseFor(String(row?.exercise?.name ?? row?.name ?? ''), modality);
   if (!dose) return [];
   // KEYED OFF `dose.templateName`, NOT off the row's name. A stored row may
   // carry a legacy name that Sam's legacy-format map resolves to a real
   // template; the copy sheet registers the AUTHORED name, so a row-name key
   // would find nothing and quietly drop a dose that had just resolved.
   return DOSE_LINES.flatMap(([field, labelId]) => {
-    const valueId = conditioningDoseValueCopyId(dose.templateName, field);
+    const valueId = conditioningDoseValueCopyId(dose.templateName, field, modality);
     // No `catch` and no substitution — `signedCopy` raising `UnsignedCopyError`
     // is this module's declared behaviour for a copy gap (see the header).
     return valueId ? [signedCopy(labelId, { value: signedCopy(valueId) })] : [];
@@ -600,11 +601,11 @@ function rowHasNoPrescriptionLine(row: any, dose: readonly SignedCopy[]): boolea
   return isPlaceholder && (!Number.isFinite(sets) || sets <= 1);
 }
 
-function toVisibleRows(rows: readonly any[]): VisibleRow[] {
+function toVisibleRows(rows: readonly any[], workout?: Workout | null): VisibleRow[] {
   return rows
     .filter((row) => !isComposedPrescriptionRow(row))
     .map((row, index) => {
-      const dose = doseCopy(row);
+      const dose = doseCopy(row, workout);
       return {
         id: String(row?.id ?? `${index}`),
         name: rowName(row),
@@ -659,7 +660,7 @@ function toVisibleRows(rows: readonly any[]): VisibleRow[] {
  * declared by the same rows-conservation law where the day does hold rows for
  * them.
  */
-function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): VisibleRow[] {
+function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail, workout?: Workout | null): VisibleRow[] {
   // POWER ROWS ARE STRENGTH ROWS (Sam, 2026-08-20). There is no `power` branch
   // because there is no power part: `composeDayDetail` merges the two
   // populations into `strengthExercises`, power first, through the session
@@ -667,7 +668,7 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): Visibl
   // becoming a second opinion about their order.
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
-  if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
+  if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises, workout);
   // SPRINT WORK READS UNDER SPEED (Sam, 2026-08-17, surface 3). This returned
   // `[]`, so the `speed` component `getSessionComponents` had already created
   // rendered as a named block with nothing in it, while its rows sat under
@@ -889,7 +890,7 @@ export function project(args: {
         gaps: gapCopy(source.workout),
         parts: day.parts.map((part): VisiblePart => {
           const component = getSessionComponents(source.workout).find(component => component.id === componentIdFromPartId(part.id));
-          const rows = (composed ? rowsForKind(part.kind, composed) : [])
+          const rows = (composed ? rowsForKind(part.kind, composed, source.workout) : [])
             .filter(row => !component?.exerciseIds || component.exerciseIds.includes(row.id));
           return {
             ...part,
@@ -1091,9 +1092,13 @@ const PART_BUCKET_KIND: Readonly<Record<VisiblePartKind, VisiblePartKind>> = {
  * "Strength" is a bucket, and a surface that wanted the bucket used to get the
  * name because there was only one field to ask for.
  */
-function optionalKindForPart(workout: Workout | null | undefined, rows: readonly VisibleRow[]) {
+/** Typed identity of this component, shared by its label and icon. */
+export function optionalKindForPart(
+  workout: (Pick<Workout, 'composedOptionalKind'> & Partial<Pick<Workout, 'exercises'>>) | null | undefined,
+  rows: readonly VisibleRow[],
+) {
   const ids = new Set(rows.map(row => row.id));
-  const kinds = new Set(workout?.exercises.filter(row => ids.has(row.id))
+  const kinds = new Set(workout?.exercises?.filter(row => ids.has(row.id))
     .map(row => row.composedOptionalKind).filter(Boolean));
   return kinds.size === 1 ? [...kinds][0] : workout?.composedOptionalKind;
 }

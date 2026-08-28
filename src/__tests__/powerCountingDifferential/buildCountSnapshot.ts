@@ -56,6 +56,8 @@ import { powerRows } from '../../rules/sessionRowCounting';
 import { projectPower, powerDays, type ProjectedPower } from './powerProjection';
 import { POWER_SCENARIOS, type PowerScenario } from './scenarios';
 import { emptyEvaluationSurfaces } from '../evaluationSurfacesTestSupport';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { sessionOrderIsAuthored } from '../../utils/sessionComponents';
 
 const TODAY_ISO = '2026-07-13';
 
@@ -63,6 +65,9 @@ const TODAY_ISO = '2026-07-13';
 
 export interface DaySnapshot {
   dayOfWeek: number;
+  composedOptionalKind?: Workout['composedOptionalKind'];
+  powerOrderCorrect: boolean;
+  mainLiftCount: number;
   name: string;
   workoutType: string;
   /** Taxonomy units — the classifier the power row would leak into. */
@@ -192,8 +197,18 @@ function countsOnly(
 
 function daySnapshot(workout: Workout): DaySnapshot {
   const rows = getSessionComponentRows(workout);
+  const visibleRows = buildSessionTemplate(workout).items.filter(item => item.kind === 'exercise');
+  const actualPower = visibleRows.filter(item => item.role === 'power');
+  const firstLift = visibleRows.findIndex(item => item.role === 'main_lift');
+  const authoredIds = workout.exercises.filter(row => row.role === 'power').map(row => row.id);
+  const powerOrderCorrect = actualPower.length === authoredIds.length && (sessionOrderIsAuthored(workout)
+    ? JSON.stringify(actualPower.map(item => item.row.id)) === JSON.stringify(authoredIds)
+    : firstLift < 0 || actualPower.every(item => visibleRows.indexOf(item) < firstLift));
   return {
     dayOfWeek: workout.dayOfWeek,
+    composedOptionalKind: workout.composedOptionalKind,
+    powerOrderCorrect,
+    mainLiftCount: visibleRows.filter(item => item.role === 'main_lift').length,
     name: workout.name,
     workoutType: String(workout.workoutType ?? ''),
     taxonomy: classifyDaySessions(workout).map((unit) => ({

@@ -10,13 +10,43 @@ import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
 import { liveAthleteContext } from '../../utils/liveAthleteContext';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { buildSessionExecutionPlan, deriveChecklistComponentCompletions } from '../../utils/sessionExecutionChecklist';
+import { dayTimeline } from '../../rules/dayTimeline';
+import { getSessionComponents } from '../../utils/sessionComponents';
+import type { Workout } from '../../types/domain';
+
+function checkComponentIcons(week: ReturnType<typeof deriveVisibleWeekLive>, date: string,
+  label: string, ok: (label: string, value: boolean, detail?: string) => void) {
+  const workout = week.find(day => day.date === date)?.workout;
+  if (!workout) throw Error(`Missing icon witness ${date}`);
+  const original = JSON.stringify(workout);
+  const day = project({ week, weekStart: week[0].date }).days.find(day => day.date === date)!;
+  const entries = dayTimeline(day, null, workout);
+  const components = getSessionComponents(workout);
+  const execution = buildSessionExecutionPlan({ workout, template: buildSessionTemplate(workout), mobilityFlow: null });
+  for (const kind of ['mobility', 'recovery'] as const) {
+    const owned = components.filter(component => component.kind === kind);
+    if (!owned.length) continue;
+    ok(`${label}: Day/Week ${kind} uses its component icon`, owned.every(component =>
+      entries.find(entry => entry.componentId === component.id)?.iconKind === kind),
+    JSON.stringify(entries.map(entry => ({ id: entry.componentId, icon: entry.iconKind }))));
+    ok(`${label}: Session ${kind} uses the same component icon`, owned.every(component => {
+      const sections = execution.sections.filter(section => section.items.some(item => item.componentId === component.id));
+      return sections.length > 0 && sections.every(section => section.iconKind === kind);
+    }));
+  }
+  const renamed = { ...workout, name: 'Recovery + misleading displayed name' } as Workout;
+  ok(`${label}: icons never infer identity from displayed names`, JSON.stringify(entries.map(e => e.iconKind))
+    === JSON.stringify(dayTimeline(day, null, renamed).map(e => e.iconKind)));
+  ok(`${label}: icon projection never changes programming or completion`, original === JSON.stringify(workout)
+    && entries.every(entry => entry.completion === null));
+}
 
 export async function lowLoadAdditionJourney(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   const date = '2026-09-28';
   for (const gender of ['male', 'female'] as const) for (const [base, addition] of [
     ['mobility', 'mobility'], ['mobility', 'recovery'], ['recovery', 'mobility'],
     ['recovery', 'recovery'], ['manual_mobility', 'mobility'],
-    ['strength', 'mobility'], ['strength', 'recovery'],
+    ['strength', 'mobility'], ['strength', 'recovery'], ['gunshow', 'mobility'],
   ] as const) {
     const profile = athleteAnswers({ id: `no-duplicates-${gender}`, gender,
       days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -28,13 +58,14 @@ export async function lowLoadAdditionJourney(storage: Map<string, string>, ok: (
     const view = () => quiet(() => deriveVisibleWeekLive(date, date));
     let target = view().find(day => base === 'strength' ? !!day.workout?.strengthIntent : day.workout?.composedOptionalKind === 'mobility');
     if (!target) throw Error(`Missing actual generated ${base} witness`);
-    if (base === 'recovery' || base === 'manual_mobility') {
-      const result = quiet(() => applyPlanChange({ change: { kind: 'swap_category', date: target!.date, category: base === 'recovery' ? 'recovery' : 'mobility' },
+    if (base === 'recovery' || base === 'manual_mobility' || base === 'gunshow') {
+      const result = quiet(() => applyPlanChange({ change: { kind: 'swap_category', date: target!.date, category: base === 'manual_mobility' ? 'mobility' : base },
         visibleWeek: view(), todayISO: date, applyOverride: () => undefined }));
       if (!result.ok) throw Error(JSON.stringify(result));
       target = view().find(day => day.date === target!.date)!;
     }
     const before = visibleSignature(view());
+    checkComponentIcons(view(), target.date, `icons/${gender}/${base}/standalone`, ok);
     const original = target.workout!.exercises;
     const ids = new Set(original.map(row => row.id));
     const names = new Set(original.map(row => canonicalExerciseName(row.exercise.name)));
@@ -46,6 +77,7 @@ export async function lowLoadAdditionJourney(storage: Map<string, string>, ok: (
     const rows = view().find(day => day.date === target!.date)!.workout!.exercises;
     const added = rows.filter(row => !ids.has(row.id));
     const label = `no-duplicate/${gender}/${base}+${addition}`;
+    checkComponentIcons(view(), target.date, label, ok);
     ok(`${label}: actual Add preserves existing exercises and creates distinct rows`, result.ok && added.length > 0
       && original.every(row => rows.some(next => next.id === row.id && next.exercise.name === row.exercise.name)), JSON.stringify({result, added: added.map(row => row.exercise.name)}));
     ok(`${label}: added session checks every existing drill, including strength warm-ups`, added.length > 0
@@ -76,6 +108,7 @@ export async function lowLoadAdditionJourney(storage: Map<string, string>, ok: (
     const after = visibleSignature(view());
     const boot = await quietAsync(() => relaunchApp({storage, todayISO: date}));
     ok(`${label}: added content survives restart`, boot.ok && visibleSignature(view()) === after);
+    checkComponentIcons(view(), target.date, `${label}/reopen`, ok);
     const undo = await quietAsync(() => undoLastDecision());
     ok(`${label}: Undo restores the exact earlier day`, undo.outcome === 'undone' && visibleSignature(view()) === before);
     const undoBoot = await quietAsync(() => relaunchApp({storage, todayISO: date}));

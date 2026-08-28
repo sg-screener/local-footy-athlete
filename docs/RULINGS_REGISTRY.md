@@ -6841,6 +6841,15 @@ Guard: `LAW-short-explicit-recovery-prescriptions`,
 unchanged; seven explicit replacement records are equality-checked. Findings and
 NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
 
+**R-269** · Sam's combined-day Mobility icon request, 2026-08-28.
+
+Owner: programming-remedy. Resolve each component's icon from its typed identity
+using the existing shared icon mapping. Mobility uses the person; Recovery keeps
+the battery. No displayed-name inference, new icon, programming or completion
+change. Guard: `LAW-component-typed-mobility-icon`,
+`test:canonical-weekly-compiler` (`lowLoadAdditionJourney`). Native and restart
+verification status and NOT COVERED: `docs/STATUS_PROGRAMMING_REMEDY.md`.
+
 **R-267** · Sam's simple injury-flow decision, 2026-08-28.
 
 Owner: programming-remedy. Main flow stays body area → severity → adjustment;

@@ -1001,3 +1001,49 @@ route and new speed-answer tiles; historical diagnostic rebinding/law-registry
 debt; every athlete cross-product; clinical validation; physical iPhone acceptance
 and the recorded 2 km Skip QA issue. No phone installation, reset or wipe. The
 whole P01–P22 list is not declared finished and the installation hold remains.
+
+## Final acceptance follow-up in progress — 2026-08-28
+
+Owner remains programming-remedy. Baseline 458fb939 (report) / bb42e664
+(verified application) preserved. Scope: remaining P07 wording, native speed
+answers/refusals, classified diagnostics, plus Sam's combined Mobility icon.
+No new exercise, Estimated 1RM, architecture or programming-dose work.
+
+Compared options before edits: reuse the existing typed component resolver and
+shared icon mapping, versus introduce a new display identity layer. The existing
+resolver already owns the correct component identity; extending its use fixes
+the whole combined-day class without a new owner. Conditioning wording similarly
+uses the existing formatter and typed option; stored rows/doses stay unchanged.
+
+First-run evidence in outputs/final-acceptance-2026-08-28: icons-before.log has
+24 failed icon assertions; p07-before.log has 10 failed machine-wording assertions
+across three distinct templates. lowLoadAdditionJourney now covers 16 real
+gender/base/addition coordinates with component icon/completion/restart checks.
+conditioningClarity covers all 55 templates, both authored dose variants and
+seven machine sets, plus actual generated modality changes/restart. Raw dose
+numbers and complete-rest instructions are preserved. Native Strength+Mobility
+Day screenshot shows the existing person icon; broader native run in progress.
+
+Diagnostic classification: slot coverage rebound to existing selection owner,
+current seven-slot split, typed intent and actual kit; Nordic missing-slot
+fixture corrected per R-233. Power gateway-strip/order-zero and July golden
+expectations explicitly retired, immutable golden retained; current budgets,
+counting fences and actual visible ordering remain. Section18 fixture receives
+complete current onboarding answers. These three now enter the release gate.
+Missing game-feedback guard rebound to real scheduled/practice result journeys;
+legacy census entry 18 is no longer misidentified as a law. Law registry now
+fails only its unchanged 21 UNENFORCED rows (21/211 distinct law rows); no waiver
+or invented guard has hidden that repo-wide process/verification debt.
+
+Native failures classified so far: Maestro selected the new simulator but kept
+its old simulator's driver on port 7001; target screenshot and driver process
+prove the mismatch. Isolating the two test simulators fixes the instrument.
+Speed tiles expose combined title/subtitle accessibility labels; use matching
+selectors. Review controls must be centred clear of the fixed footer. Both
+speed answers were visibly confirmed; generation also requires the visible
+Start button. Original failed attempts retained. Final repeat runs pending.
+
+NOT COVERED at this progress save: exact-version final release/build/years,
+complete native icon/refusal tape, final repeated cold journeys and mutations;
+21 legacy UNENFORCED process/verification laws, physical acceptance and recorded
+2 km Skip QA issue. Installation remains on hold; neither phone touched.

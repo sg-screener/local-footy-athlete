@@ -159,9 +159,11 @@ export type ConditioningDoseField = 'work' | 'rest' | 'sets_rounds' | 'total_tim
 export function conditioningDoseValueCopyId(
   templateName: string,
   field: ConditioningDoseField,
+  modality?: import('../types/domain').ConditioningOption['modality'],
 ): string | null {
-  return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}`)
-    ? `${DOSE_VALUE_PREFIX}${field}.${templateName}`
+  const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+  return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}${suffix}`)
+    ? `${DOSE_VALUE_PREFIX}${field}.${templateName}${suffix}`
     : null;
 }
 
@@ -2155,8 +2157,9 @@ export function registerProjectionCopy(): void {
   // writes from the same fields. A trace, not an invention — the same shape as
   // the exercise vocabulary above.
   const doseEntries: SignedCopyEntry[] = [];
-  for (const template of CONDITIONING_TEMPLATES) {
-    const dose = conditioningVisibleDoseFor(template.name);
+  for (const template of CONDITIONING_TEMPLATES) for (const modality of [undefined, 'running', 'bike'] as const) {
+    const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+    const dose = conditioningVisibleDoseFor(template.name, modality);
     if (!dose) continue;
     const fields: readonly (readonly [ConditioningDoseField, string])[] = [
       ['work', dose.work],
@@ -2165,9 +2168,9 @@ export function registerProjectionCopy(): void {
       ['total_time', dose.totalSessionTime],
     ];
     for (const [field, text] of fields) {
-      DOSE_VALUES_REGISTERED.add(`${template.name} ${field}`);
+      DOSE_VALUES_REGISTERED.add(`${template.name} ${field}${suffix}`);
       doseEntries.push({
-        id: `${DOSE_VALUE_PREFIX}${field}.${template.name}`,
+        id: `${DOSE_VALUE_PREFIX}${field}.${template.name}${suffix}`,
         source: 'authored_sheet',
         provenance: 'data/conditioningTemplates.ts — the authored dose sheet, read '
           + 'through conditioningSelection.conditioningVisibleDoseFor so the value '

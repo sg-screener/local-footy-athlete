@@ -31,6 +31,8 @@ import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
 import { ensureProgramSeasonPhaseClock } from '../rules/seasonPhaseClock';
+import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
+import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
 
 let pass = 0;
 let fail = 0;
@@ -268,6 +270,7 @@ function normalParticipation(day: number): Record<number, AnchorParticipationSta
 console.log('\n-- Contract v2 integration and deterministic migration --');
 {
   const profile: OnboardingData = {
+    ...athleteAnswers({ ...ARCHETYPES[6], initialPhase: 'Pre-season', extraGame: false }),
     seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -276,6 +279,7 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
+    equipmentAnswer: presetEquipmentAnswer('commercial_gym', '2026-07-13'),
     experienceLevel: '2-5 years',
     conditioningLevel: 'Elite',
     sprintExposure: '2+ times per week',

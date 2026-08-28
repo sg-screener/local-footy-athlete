@@ -29,10 +29,12 @@ import { guidedInjuryUiTruth } from './guidedInjuryUiTruth';
 import { simpleInjurySafetyTruth } from './simpleInjurySafetyTruth';
 import { powerOnlyLandmineJourney } from './powerOnlyLandmineTruth';
 import { inseasonSpeedTruth } from './inseasonSpeedTruth';
+import { gameOutcomeJourney } from './gameOutcomeJourney';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   conditioningCategoryTruth(ok);
   guidedInjuryUiTruth(ok);
+  await gameOutcomeJourney(storage, ok);
   await powerOnlyLandmineJourney(storage, ok);
   await inseasonSpeedTruth(storage, ok);
   await simpleInjurySafetyTruth(storage, ok);
