@@ -17,6 +17,12 @@ const mutants = {
   specialist_choice: ['src/rules/conditioningSelection.ts', 'if (preferred) return preferred;', 'if (false && preferred) return preferred;', 'inputs', 'equivalent conditioning seats have distinct eligible templates'],
   quality_history: ['src/rules/conditioningSelection.ts', 'if (args.selectionContext) {', 'if (false && args.selectionContext) {', 'inputs', 'accepted identity restores independent of global block number'],
   in_run_selections: ['src/rules/canonicalWeeklyRowCompiler.ts', 'selectionHistory: [...(args.selectionHistory ?? []), ...selections]', 'selectionHistory: args.selectionHistory ?? []', 'inputs', 'accepted conditioning history and final rows survive restart'],
+  typed_mode: ['src/utils/conditioningVisibleIdentity.ts', '  return conditioningModeLabel(option?.modality);', '  return undefined;', 'inputs', 'single prescriptions retain their typed running or off-leg mode'],
+  standalone_mode: ['src/data/defaultProgram.ts', '...(!isStandaloneSpeed ? { conditioningBlock: buildConditioningBlock(', '...(false && !isStandaloneSpeed ? { conditioningBlock: buildConditioningBlock(', 'compiler', 'accumulated authored conditioning retains typed modality including standalone days'],
+  title_as_exposure: ['src/utils/exposureEngine.ts', '${typedModality ? modalityText : displayText}', '${displayText}', 'inputs', 'typed off-leg identity survives every authored title mutation'],
+  authored_kit: ['src/utils/sessionBuilder.ts', 'const names = row.names.filter(name => composedRowIsLegal(name, athlete.equipmentTags));', 'const names = row.names;', 'inputs', 'authored special rows respect the current equipment answer'],
+  fact_replay: ['src/rules/canonicalWeeklyAthleteEditCompiler.ts', 'if (placement.workout && current?.sourceFactAdjustedPlacementId === placement.constraintId &&', 'if (false && placement.workout && current?.sourceFactAdjustedPlacementId === placement.constraintId &&', 'inputs', 'temporary kit restriction reaches special-session rows'],
+  lifting_set_units: ['src/utils/injurySessionAdjustment.ts', 'const keptSets = [...parts.strengthRows, ...parts.supportRows, ...parts.powerRows]', 'const keptSets = rows', 'compiler', 'accumulated injury weeks retain the required strength and conditioning exposures'],
 };
 const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {
@@ -32,6 +38,7 @@ if (child) {
     module._compile(require(path.join(repo, 'node_modules/sucrase')).transform(code, { transforms: ['typescript', 'imports'] }).code, filename);
   };
   if (witness === 'injury') require(path.join(repo, 'src/__tests__/injuryRecompositionTests'));
+  else if (witness === 'compiler') require(path.join(repo, 'src/__tests__/canonicalWeeklyCompilerSliceTests'));
   else {
     global.__DEV__ = true;
     const storage = new Map();

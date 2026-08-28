@@ -168,6 +168,56 @@ P10 cross-phase/day-specific strength spacing still needs broader acceptance;
 P16 alternative-slot policy, special-session equipment exception audit, power
 reachability, all-seven-type UI and actual simulator gestures remain work.
 
+## Further verification findings and corrections
+
+Owner: programming-remedy. The previous pending items remain historical intake,
+not current claims. Source freeze for the next candidate includes:
+
+- P09: typed Run/Bike/RowErg/SkiErg/mixed labels on the real session prescription
+  and the year export. Standalone conditioning now carries the SAME resolved
+  modality owner as combined conditioning; it previously reconstructed only a
+  title and row IDs. No alternate dose or logging control was added.
+- P20: authored special-session slots filter by the resolved kit. Initial tests
+  exposed unavailable Trap Bar/High Box/Bench in Primer and temporary kit facts
+  being overwritten by replayed healthy Add snapshots. A compiler-only receipt
+  names the exact adjusted placement; only that same placement avoids replay.
+  New edits and removals still win. The initial broader placement-id shortcut
+  regressed 41 canonical checks and was withdrawn before this checkpoint.
+- Eighteen real Add journeys (2 genders × 3 kit answers × 3 special types) plus
+  six full-kit pain/restriction/Clear/restart journeys pass. Primer's diagnostic
+  now starts from complete actual onboarding and explicit full kit; 27/27
+  original assertions remain. The canonical suite before the final modality
+  additions passed 1047/1047 assertions; final run is pending below.
+- Full annual verification found conditioning minutes counted as lifting sets
+  in injury replacement capacity: a 41-minute aerobic row exhausted a 16-set
+  lifting ceiling. The existing typed component owner now selects lifting rows
+  for that sum. The 12-week male diagnostic has no programming failures after
+  this fix; the full annual release rerun remains required.
+- Two later female athlete-weeks still lost a conditioning exposure. Pure replay
+  of the captured actual source input proved that a RowErg `20 s Max Sprint`
+  was removed by the exposure filter reading its title as running. Typed
+  modality now owns that classification; the legacy unspecified ingress remains.
+  Three mode checks each failed before (10 of 55 title mutations per mode),
+  then passed after; the actual-running negative control stays red-to-running.
+  Captured weeks now retain 5/5 planned conditioning components. Existing exposure
+  suite: 160/160. This is not a full-year acceptance receipt.
+- Six changed existing capability owners were reviewed at this checkpoint;
+  classifications and authority budgets are unchanged. No guard was weakened.
+- Final report script produces separate male/female original-partial and
+  corrected-commercial years, Speed rows, typed modality, domain-only power
+  rest, and before/after frequency/spacing with explicit units. Original evidence
+  remains untouched. The in-app Browser rejected the local-file preview URL;
+  no alternate browser route was used and no rendered-HTML QA pass is claimed.
+
+P18 question for Sam: what recorded need warrants the optional in-season flush?
+The Bible's examples/doses exist, but section 20.1 forbids filling a free date
+without need. No new need threshold is inferred. The P06/P16, club-speed,
+power-route and second-Mobility/Recovery decisions above remain unresolved.
+
+The final consolidated mutation run, exact-candidate release, regenerated years
+and simulator receipts are pending. Installation remains held. The onboarding
+2 km skip text-tap inconsistency remains OPEN-UNKNOWN, not fixed.
+
 ## NOT COVERED
 
 - Chunks A/C/D/E/F incomplete; no revised-candidate gate or simulator run yet.

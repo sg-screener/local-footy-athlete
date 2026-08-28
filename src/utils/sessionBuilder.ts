@@ -50,6 +50,7 @@ import {
   onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
 import { EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
+import { composedRowIsLegal } from '../rules/composedRowLegality';
 import {
   resolveInjuryRegion,
   routableBodyParts,
@@ -1054,11 +1055,13 @@ export function buildDerivedSession(
   for (const slot of slots) {
     const slotSeedForSource = seed + slotIndex * 7919;
 
-    // ── AUTHORED ROWS — nothing to select ──
+    // Authored dose/order stays fixed; an authored candidate still needs kit.
     if ('authored' in slot) {
       for (const row of slot.authored) {
+        const names = row.names.filter(name => composedRowIsLegal(name, athlete.equipmentTags));
+        if (names.length === 0) continue;
         exercises.push(authoredSlotRowToWorkoutExercise(
-          row, workoutId, order, slotSeedForSource + order,
+          { ...row, names }, workoutId, order, slotSeedForSource + order,
         ));
         order += 1;
       }

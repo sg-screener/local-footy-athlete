@@ -1118,7 +1118,14 @@ export function applyConstraintsToTypedComponents(
     const conditioningOptions = workout.conditioningBlock.options.flatMap((option) => {
       const displayText = `${option.title} ${option.description}`;
       const typedModality = (option as typeof option & { modality?: string }).modality;
-      const isRunning = typedModality === 'running' || /\b(?:run|running|jog)\b/i.test(displayText);
+      // The selected modality owns exposure. An authored title such as "20 s
+      // Max Sprint" may prescribe an erg; it cannot override an explicit Row.
+      // Unspecified legacy components retain the existing text ingress.
+      const isRunning = typedModality ? typedModality === 'running' : /\b(?:run|running|jog)\b/i.test(displayText);
+      const modalityText = typedModality === 'row' ? 'rowing erg'
+        : typedModality === 'ski' ? 'ski erg'
+        : typedModality === 'mixed' ? 'bike rowing erg ski erg'
+        : typedModality === 'bike' ? 'bike' : 'running';
       const typedExposure = workout.conditioningBlock?.intent === 'high-intensity'
         ? isRunning
           ? 'hard running sprint high speed running repeat efforts'
@@ -1126,7 +1133,7 @@ export function applyConstraintsToTypedComponents(
         : workout.conditioningBlock?.intent === 'tempo'
           ? isRunning ? 'tempo running' : 'off-feet tempo conditioning'
           : isRunning ? 'easy aerobic running' : 'easy off-feet aerobic conditioning';
-      if (textIsRemovedByConstraints(`${typedExposure} ${displayText}`, constraints)) {
+      if (textIsRemovedByConstraints(`${typedExposure} ${typedModality ? modalityText : displayText}`, constraints)) {
         for (const id of option.exerciseIds) removeRowIds.add(id);
         return [];
       }

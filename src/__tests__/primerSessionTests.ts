@@ -50,6 +50,15 @@ import { displayReps } from '../rules/prescriptionDisplay';
 import { buildCoachRevisionTemplateWorkout } from '../utils/coachRevisionTemplates';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import type { Workout } from '../types/domain';
+import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
+import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { coldStartThroughOnboarding, quietAsync } from './support/athleteJourney';
+
+const fullKitProfile = { ...athleteAnswers(ARCHETYPES[6]),
+  equipmentAnswer: presetEquipmentAnswer('commercial_gym', '2026-07-13') };
+const fullKitContext = { injuries: [], onboardingData: fullKitProfile,
+  equipmentTags: [...resolveEquipmentCapabilities(fullKitProfile).tags] };
 
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }
@@ -64,7 +73,7 @@ function run(name: string, body: () => void): void {
 /** One Primer, built by the app's own composer. Seeded by date, as production is. */
 function primerOn(dateStr: string): Workout {
   const built = buildDerivedSession(
-    'primer', dateStr, 'primer-tests', 'Athlete-added session', DEFAULT_ATHLETE_CONTEXT,
+    'primer', dateStr, 'primer-tests', 'Athlete-added session', fullKitContext,
   ) as Workout;
   assert(!!built, `the composer returned nothing for ${dateStr}`);
   return built;
@@ -86,6 +95,9 @@ const DATES = Array.from({ length: 40 }, (_, index) => {
   return `2026-${month}-${day}`;
 });
 
+async function main() {
+const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: fullKitProfile, installDayISO: '2026-07-13' }));
+if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
 console.log('\n-- S. Sam\'s authored shape --');
 
 run('S0. NON-VACUITY: the composer really builds a Primer, with rows', () => {
@@ -491,3 +503,5 @@ console.log(`  composed over ${DATES.length} seeds; mobility pool ${MOBILITY_POO
 console.log('  DEPTH (L13): 1 — build the session and evaluate it. Whether a Primer ADDED');
 console.log('  to a live week survives a boot, a rebuild or a game move is NOT covered here.');
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

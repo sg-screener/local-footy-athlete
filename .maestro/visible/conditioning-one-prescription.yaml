@@ -31,6 +31,9 @@ tags:
     timeout: 10000
 - assertVisible:
     id: "workout-exercise-prescription-cond-.*"
+- assertVisible:
+    id: "conditioning-mode-cond-.*"
+    text: "Bike · off-leg"
 - scrollUntilVisible:
     element:
       text: ".*Choose a pace you can repeat across all 4 rounds.*"

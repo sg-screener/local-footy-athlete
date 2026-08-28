@@ -97,7 +97,7 @@
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
-      "fingerprint": "cdcedefd1ba25076a1982d2b7f4657b350f724023bf90d40c444a3afd3c22ace",
+      "fingerprint": "6dab8b0906021fd0f582f2c0ac6c903019d3f84cde5b09d8b2d46dccdbe5a764",
       "classification": "canonical_compiler",
       "reason": "Shared materialisation adapter called by canonicalWeeklyRowCompiler and its fixtureMinimalReplan conditioning compiler. Builds typed components from accepted allocations using shared strength, conditioning and lighter-day materialisers, then normalises rows; no store publication. Inspected complete function including legacy generated-row ingress and both runtime callers."
     },
@@ -117,7 +117,7 @@
       "reason": "Boot/settlement rebuild clears derived in-memory caches, runs canonical generation and grouped ledger compiler transforms, then compiles accepted source facts. Current fixture/session effects never call live mutation resolvers; legacy upgrades are isolated input metadata."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#witnessesForDevE2ESeed": {
-      "fingerprint": "6d28a3c93807c004aa246e2a9d3cf7e8187658734d982b3ad04a36f9298f6301",
+      "fingerprint": "304fe1bc3ba4b556ee6794b3c6f7e3f288d1ccdcf5cf2ef01244c16a2c5732c6",
       "classification": "projection_display",
       "reason": "Builds observer assertions from the unmodified canonical seed and known auxiliary input actions; no program mutation. Updated spent-week witness to typed optional-day eligibility and coach witness to the actual generated hamstring-session identity. Diagnostic matrix passes all initial witnesses."
     },
@@ -557,7 +557,7 @@
       "reason": "Renders supplied day/timeline components and delegates taps to existing action handlers; local UI selection state does not change program contents."
     },
     "src/utils/sessionBuilder.ts#buildDerivedSession": {
-      "fingerprint": "d52fded05187312c3fdc3389bcec3b5867406dd1b098a8782d4afb215453022f",
+      "fingerprint": "ce2020f4e9582b17003d6abc7c7731eff6eebc48f6dcef1a8809a120e41c899e",
       "classification": "canonical_compiler",
       "reason": "Shared optional-session recipe composer for canonical row materialization and accepted add/template candidates; explicit athlete/date inputs, no store publication."
     },
@@ -2372,7 +2372,7 @@
       "fingerprint": "f8587cf37e9160e08d4907aec97240c5f074b1bc5f15bffc0501f79443a54780"
     },
     "src/rules/canonicalWeeklySourceFactCompiler.ts#compileCanonicalSourceFactWeeks": {
-      "fingerprint": "8ccf0e3f79b12bb5bd7b9c994ff445b13eaa0dd413c507fa4bbf958ffe276a06",
+      "fingerprint": "57f7451133dde0d8e3e05515d884f2d34d112977d6715c86e50b8b0aebe78e22",
       "classification": "canonical_compiler",
       "reason": "Canonical source-fact fold compiles explicit dated facts with accepted edits and prior-day boundaries, then runs the shared injury week compiler. Live fact transitions and reconstruction invoke this same stage."
     },
@@ -2457,7 +2457,7 @@
       "fingerprint": "d50b007e48863488a224d0354d615179d373056ddc9c84499de9ab8f8b5ce4b0"
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalAthleteEditedWeek": {
-      "fingerprint": "e66c4fbf9de5df75dfef3f24b6edd0ef128ff2035f44fe54e7809b7556553e70",
+      "fingerprint": "6f5ed858f1f1202a4a6de8a7cce563c5d839571d426e11421aaec1d8bc7d5a21",
       "classification": "canonical_compiler",
       "reason": "Pure canonical athlete-edit fold applies typed placements to cloned input workouts in explicit order; no store access."
     },
@@ -2642,7 +2642,7 @@
       "reason": "Explicit constraint dose/content stage invoked by canonicalWeeklyConstraintCompiler; no independent publisher or store input."
     },
     "src/utils/exposureEngine.ts#applyConstraintsToTypedComponents": {
-      "fingerprint": "51995092e0c3bb641fd8bfb635a0525748045adcb947b27542d5029e8aeadb2c",
+      "fingerprint": "608ee51fecee8c24180edffc093120fa267e7b013abc637e6b36b097ab618820",
       "classification": "canonical_compiler",
       "reason": "Typed component constraint transformation used by the shared canonical constraint stage; accepts explicit constraints and has no persistence."
     },

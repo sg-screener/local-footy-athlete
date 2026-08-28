@@ -2045,6 +2045,12 @@ export function buildWorkoutsFromCoach(
         sessionTier: canonicalTier,
         ...(planEntry.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
         ...(!isStandaloneSpeed ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
+        // The same modality owner as combined work; a later title classifier
+        // cannot recover which available machine the specialist selected.
+        ...(!isStandaloneSpeed ? { conditioningBlock: buildConditioningBlock(
+          planEntry.conditioningFlavour!, condExercises, undefined,
+          resolvedBlockModality(exerciseName, planEntry.ergModality as ErgModality | undefined, availableMachines),
+        ) } : {}),
         // 4B: carry the energy-system category onto conditioning workouts
         // so the rules kernel classifies from the typed field. True speed
         // uses speedBlock instead, so it never looks like conditioning.

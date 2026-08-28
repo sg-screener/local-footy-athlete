@@ -4,6 +4,7 @@ import { applyExclusionsToAuthoredWeek } from '../../rules/exerciseExclusions';
 import { isoDateForWeekday } from '../../utils/appDate';
 import { semanticFingerprint } from '../../utils/programSemanticSnapshot';
 import type { Check } from './results';
+import { resolveTemplateByName } from '../../rules/conditioningSelection';
 
 const rowsModule = require('../../rules/materialiseComposedWeek') as typeof import('../../rules/materialiseComposedWeek');
 const adapterModule = require('../../data/defaultProgram') as typeof import('../../data/defaultProgram');
@@ -23,6 +24,9 @@ export const finalProgramSignature = (value: unknown): string => semanticFingerp
 export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Output, sources: AuthoredRows[]): Check[] {
   const missing: string[] = [];
   const changedIntent: string[] = [];
+  const missingMode = output.program.microcycles.flatMap(week => week.workouts.flatMap(workout =>
+    (workout.conditioningBlock?.options ?? []).filter(option => resolveTemplateByName(option.title) && !option.modality)
+      .map(option => `${week.startDate}/${workout.dayOfWeek}/${option.title}`)));
   let expectedRows = 0;
   for (const source of sources) {
     const retained = applyExclusionsToAuthoredWeek({ workouts: source.workouts,
@@ -67,6 +71,7 @@ export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Out
         })))) },
     { id: 'final_rows_conserved', ok: missing.length === 0, detail: missing.join(',') },
     { id: 'final_strength_intent_conserved', ok: changedIntent.length === 0, detail: changedIntent.join(',') },
+    { id: 'final_authored_conditioning_modality', ok: missingMode.length === 0, detail: missingMode.join(',') },
     { id: 'final_week_identity', ok: output.program.microcycles.length === output.plans.length &&
       new Set(output.program.microcycles.map((w) => w.startDate)).size === output.plans.length },
   ];

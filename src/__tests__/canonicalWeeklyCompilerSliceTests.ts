@@ -3165,6 +3165,16 @@ async function main(): Promise<void> {
   ok('rotated repeat-sprint sessions remain conditioning, not just acceleration and top-end templates',
     repeatedSprintTemplates.length > 0 && repeatedSprintTemplates.every((t) => speedTemplateConditioningCredit(t) === 'full'));
   const phaseJourney = await runAthlete(ARCHETYPES.find((a) => a.id === 'male-6-no-standing-fixture')!, localStorageData, 17);
+  const modalityChecks = phaseJourney.checks.filter(check => check.id === 'final_authored_conditioning_modality');
+  ok('accumulated authored conditioning retains typed modality including standalone days',
+    modalityChecks.length > 0 && modalityChecks.every(check => check.ok),
+    JSON.stringify(modalityChecks.filter(check => !check.ok)));
+  ok('accumulated injury weeks retain the required strength and conditioning exposures',
+    phaseJourney.weeks.filter(week => week.status === 'measured').length === 17 &&
+    phaseJourney.weeks.filter(week => week.status === 'measured').every(week =>
+      week.checks.some(check => check.id === 'programming' && check.ok)),
+    JSON.stringify(phaseJourney.weeks.flatMap(week => week.checks.filter(check => check.id === 'programming' && !check.ok)
+      .map(check => ({ week: week.weekStart, detail: check.detail })))));
   const shiftedWeek = phaseJourney.weeks[16];
   ok('the phase witness reaches accumulated logged history and a genuine phase change',
     phaseJourney.loggedSessions > 90 && phaseJourney.actions.some((a) => a.kind === 'phase_shift' && a.ok) &&

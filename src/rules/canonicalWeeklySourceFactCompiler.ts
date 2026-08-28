@@ -18,6 +18,8 @@ import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import type { CalendarDayType } from '../store/calendarStore';
 import { compileCanonicalInjuryWeek } from './canonicalWeeklyInjuryCompiler';
 import { withPlannedInjuryConditioning } from './canonicalInjuryConditioning';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { composedRowIsLegal } from './composedRowLegality';
 
 export function sourceFactRequiresCompilation(fact: TemporarySourceFact): boolean {
   const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: [fact] }).activeConstraints;
@@ -170,16 +172,29 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
     const effective = rebaseAcceptedEffectiveWeek({ surfaces: { ...input.surfaces,
       weekScopedOverlays: overlays, dateOverrides }, weekStart,
       profile: input.profile, markedDays: { ...input.markedDays } });
+    // Accepted Add content is replayed above the generated overlay. Its optional
+    // rows still answer to the dated kit. Shrink that authored component, never
+    // refill it with new work or overwrite its healthy accepted source; Clear
+    // reconstructs that source through this same compiler.
+    const equipmentWorkoutsByDate = Object.fromEntries(effective.visibleWorkouts.map(workout => {
+      const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
+      const kit = resolveEquipmentCapabilities(input.profile, constraints, dateISO).tags;
+      const exercises = workout.exercises.filter(row =>
+        !(row.composedOptionalKind ?? workout.composedOptionalKind) ||
+        composedRowIsLegal(row.exercise.name, kit));
+      return [dateISO, exercises.length === workout.exercises.length ? workout : { ...workout, exercises }];
+    }));
     const injuryWeek = compileCanonicalInjuryWeek({
-      workoutsByDate: Object.fromEntries(effective.visibleWorkouts.map(workout =>
-        [isoDateForWeekday(weekStart, workout.dayOfWeek), workout])),
+      workoutsByDate: equipmentWorkoutsByDate,
       profile: input.profile, constraints, exclusions: input.surfaces.athleteExclusions ?? [],
       recordedLoads: input.recordedLoads,
     });
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
-      const next = injuryWeek.workoutsByDate[dateISO];
+      let next = injuryWeek.workoutsByDate[dateISO];
       if (next !== workout) {
+        if (workout.athletePlacement?.constraintId) next = { ...next,
+          sourceFactAdjustedPlacementId: workout.athletePlacement.constraintId };
         if (input.surfaces.dateOverrides[dateISO]) dateOverrides[dateISO] = next;
         else overlays[weekStart] = { ...overlays[weekStart], workoutsByDate: {
           ...overlays[weekStart].workoutsByDate, [dateISO]: next,

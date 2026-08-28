@@ -12,8 +12,13 @@ import { generateProgramLocally } from '../../services/api/generateProgram';
 import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { conditioningDisplayLines, conditioningDisplayTitleForName } from '../../rules/conditioningDisplay';
 import type { BlockConditioningSelection } from '../../rules/conditioningSelection';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { specialSessionInputTruth } from './specialSessionInputTruth';
+import { conditioningModalityExposure } from './conditioningModalityExposure';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
+  await conditioningModalityExposure(ok);
+  await specialSessionInputTruth(storage, ok);
   const date = '2026-07-13';
   for (const gender of ['male', 'female'] as const) for (const kit of ['full', 'partial', 'none'] as const) {
     const answer = kit === 'full' ? presetEquipmentAnswer('commercial_gym', date)
@@ -104,6 +109,12 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
         .map(row => row.exercise?.name ?? '');
       ok(`${gender}/${monday}: equivalent conditioning seats have distinct eligible templates`,
         conditioning.length === 3 && new Set(conditioning).size === 3, JSON.stringify(conditioning));
+      const modeRows = week.flatMap(day => buildSessionTemplate(day.workout ?? {}).items
+        .filter(item => item.kind === 'exercise' && item.presentation === 'conditioning_phase'));
+      ok(`${gender}/${monday}: single prescriptions retain their typed running or off-leg mode`,
+        modeRows.length === 3 && modeRows.every(item => !!(item as { modalityLabel?: string }).modalityLabel),
+        JSON.stringify(modeRows.map(item => ({ name: item.kind === 'exercise' ? item.row.exercise?.name : '',
+          mode: (item as { modalityLabel?: string }).modalityLabel }))));
     }
     const beforeBoot = visibleSignature(quiet(() => deriveVisibleWeekLive('2026-10-12', '2026-09-28')));
     const boot = await quietAsync(() => relaunchApp({ storage, todayISO: '2026-09-28' }));

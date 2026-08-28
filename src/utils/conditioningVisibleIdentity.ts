@@ -1,4 +1,4 @@
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { ConditioningOption, Workout, WorkoutExercise } from '../types/domain';
 import { logger } from './logger';
 import { getSessionComponentRows } from './sessionComponents';
 
@@ -18,6 +18,19 @@ export interface ConditioningVisibleIdentity {
   primaryLabel: string;
   attachedLabel: string;
   doseLabel?: string;
+}
+
+/** P09: quality/title and the actual selected mode are separate facts. */
+export function conditioningModeLabel(modality: ConditioningOption['modality']): string | undefined {
+  if (!modality) return undefined;
+  return { bike: 'Bike · off-leg', row: 'RowErg · off-leg', ski: 'SkiErg · off-leg',
+    running: 'Run · running', mixed: 'Mixed modalities' }[modality];
+}
+
+/** Only the typed option owning this row can label it; never parse a lift name. */
+export function conditioningModeLabelForRow(workout: Partial<Workout>, id: string): string | undefined {
+  const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(id));
+  return conditioningModeLabel(option?.modality);
 }
 
 /** One threshold owns the long/short aerobic interval boundary. */

@@ -2894,6 +2894,7 @@ function SessionList({
         <ConditioningPhaseRow
           key={key}
           exercise={item.row}
+          modalityLabel={item.modalityLabel}
           checkbox={checkbox}
           onQuickSwap={onQuickSwap}
           onQuickRemove={onQuickRemove}
@@ -3325,7 +3326,7 @@ function ConditioningChoiceRow({
   onQuickSwap,
   onQuickRemove,
 }: {
-  options: Array<{ title: string; description: string; rows: any[] }>;
+  options: Array<{ title: string; description: string; rows: any[]; modalityLabel?: string }>;
   /**
    * The checklist's checkbox for this row. ⚠ **ONE TICK PER EXECUTION ITEM,
    * NOT PER OPTION.** A choice row is "do one of these" — the checklist counts
@@ -3375,6 +3376,7 @@ function ConditioningChoiceRow({
                   {option.description}
                 </Text>
               ) : null}
+              {option.modalityLabel ? <Text style={styles.conditioningOptionDescription}>{option.modalityLabel}</Text> : null}
               {option.rows.map((exercise: any, idx: number) => (
                 <ConditioningRow
                   key={exercise.id}
@@ -3959,11 +3961,13 @@ function ConditioningPrescriptionCopy({
  */
 function ConditioningPhaseRow({
   exercise,
+  modalityLabel,
   checkbox,
   onQuickSwap,
   onQuickRemove,
 }: {
   exercise: any;
+  modalityLabel?: string;
   /** The checklist's own checkbox for this row. See `renderItem`. */
   checkbox?: React.ReactNode;
   onQuickSwap: (exercise: EditableExercise) => void;
@@ -3995,6 +3999,7 @@ function ConditioningPhaseRow({
             no stepper beside it. */}
         {checkbox ? <View style={styles.addonCheckboxSlot}>{checkbox}</View> : null}
       </View>
+      {modalityLabel ? <Text style={styles.conditioningPhaseBody} testID={`conditioning-mode-${exerciseToken}`}>{modalityLabel}</Text> : null}
       {description ? (
         <ConditioningPrescriptionCopy
           copy={description}

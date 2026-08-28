@@ -244,7 +244,7 @@
     },
     "test:canonical-weekly-compiler": {
       "kind": "current_contract",
-      "reason": "The compiler witness covers scheduling, final rows, typed accepted edits, linked-fact Clear, restart and Undo. Programming remediation adds real full/partial/no-kit onboarding, Mobility Add/Move/Remove/Undo, weekly conditioning seats, accepted quality-specific selection history and all-template display checks. Changed injury-review fixtures now locate actual generated lower/quiet days instead of imposing an old weekday or exercise name; retained-row safety and dose assertions remain. R-237's no-game optional expectation is explicitly superseded by Sam's P03, not removed to hide a failure.",
+      "reason": "The compiler witness covers scheduling, final rows, typed accepted edits, linked-fact Clear, restart and Undo. Programming remediation adds real full/partial/no-kit onboarding, Mobility Add/Move/Remove/Undo, weekly conditioning seats, accepted quality-specific selection history and all-template display checks. Eighteen authored special-session Add journeys cover current kit; full-kit journeys also apply pressing pain and temporary bodyweight-only restrictions, restart and Clear. Typed modality is checked on final prescriptions. Injury lifting-set ceilings exclude conditioning minutes/rounds, with the accumulated annual programming assertion retained. Changed injury-review fixtures locate actual generated lower/quiet days rather than an old weekday/name. The standalone Primer diagnostic now enters complete onboarding with resolved full kit instead of assuming omitted kit exists; its original assertions remain. R-237's no-game optional expectation is explicitly superseded by Sam's P03, not removed to hide a failure.",
       "productionPaths": [
         "src/rules/canonicalWeeklyCompiler.ts",
         "src/rules/canonicalWeeklyAthleteEditState.ts",
@@ -257,6 +257,10 @@
         "src/rules/conditioningSelection.ts",
         "src/rules/weeklyScheduler.ts",
         "src/utils/sessionComponents.ts",
+        "src/utils/sessionBuilder.ts",
+        "src/utils/sessionTemplate.ts",
+        "src/utils/injurySessionAdjustment.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
         "src/store/blockSelectionHistoryStore.ts"
       ],
       "contractRefs": [

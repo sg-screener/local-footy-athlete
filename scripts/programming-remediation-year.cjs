@@ -20,6 +20,10 @@ if (fullKit) replace('const profile=athleteAnswers(archetype);',
   "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
   "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
+replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
+  'role:item.role,modalityLabel:item.modalityLabel,optional:item.optional||undefined,pair:item.superset?.groupId');
+replace('name:o.title,description:o.description,rows:o.rows.map',
+  'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
   "rows:template.items.map(item=>rowView(item,day.workout)),speedRows:app('src/utils/sessionComponents').getSessionComponentRows(day.workout).speedRows.map(row=>rowView({kind:'exercise',presentation:'conditioning_phase',role:'speed',row},day.workout)),conditioningIdentity:app('src/utils/conditioningVisibleIdentity').projectConditioningVisibleIdentity(day.workout),resolvedEquipment:app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(useProfileStore.getState().onboardingData,normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,date),modifiers:");
 fs.mkdirSync(output, { recursive: true });

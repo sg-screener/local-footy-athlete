@@ -6759,7 +6759,7 @@ that REQUIRED lime — and named these very hexes as forbidden — is inverted.
 below last line, completion badge not visible, consistency starts here, totally
 cooked shade, injury region colours.
 
-**R-264** · Sam's programming-remediation direction, 2026-08-28 (P05/P08/P10/P14/P20/P21).
+**R-264** · Sam's programming-remediation direction, 2026-08-28 (P05/P08/P09/P10/P14/P20/P21).
 
 Owner: programming-remedy. Advanced automatic curl choices prefer available
 loaded biceps alternatives; band-only fallback and younger training ages remain.
@@ -6776,6 +6776,12 @@ history store: quality before template, no writes from previews, no cursor
 consumed by rebuilding. Dose remains the authored template's. New blocks may
 rotate; current accepted identities restore whenever feasible. The adapter
 retains the specialist's feasible choice. This does not author extra exposures.
+P09: the existing conditioning component's typed selected modality also reaches
+the session prescription and year report (running versus off-leg). A strength
+exercise name is never a modality input. P20's current-kit requirement includes
+authored Primer/Gunshow/Accessories and dated restrictions on accepted Add rows;
+Clear reconstructs their healthy accepted source instead of storing a filtered
+replacement as a new athlete choice.
 Guard: `LAW-programming-remediation-inputs-and-selection`,
 `test:canonical-weekly-compiler` (`programmingInputTruth`), plus the existing
 `test:weekly-scheduler` contract matrix. Status and NOT COVERED:

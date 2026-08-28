@@ -17,6 +17,7 @@ import { SET_CEILING } from '../rules/weeklyLegality';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { finerPatternIdentityOf } from '../rules/injuryFallbackLadder';
 import { mainPatternForExerciseMovement, type MainStrengthPattern } from '../rules/strengthPatternContributions';
+import { getSessionComponentRows } from './sessionComponents';
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
@@ -478,7 +479,11 @@ export function deriveInjurySessionAdjustment(
   ).trim();
   const keptRowNames = rows.map(rowNameOf).filter(Boolean)
     .filter((name) => !paused.has(normalise(name)));
-  const keptSets = rows
+  // The ceiling counts lifting sets, not minutes/rounds stored in an energy
+  // row's prescribedSets field. A 41-minute aerobic component once consumed
+  // all 16 "sets" and prevented every safe strength replacement from landing.
+  const parts = getSessionComponentRows(workout);
+  const keptSets = [...parts.strengthRows, ...parts.supportRows, ...parts.powerRows]
     .filter((row) => !paused.has(normalise(rowNameOf(row))))
     .reduce((total, row) => total + setsOf(row as { prescribedSets?: number }), 0);
 

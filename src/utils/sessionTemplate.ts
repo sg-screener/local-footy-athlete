@@ -4,7 +4,7 @@ import {
   sessionOrderIsAuthored,
 } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
-import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
+import { projectConditioningVisibleIdentity, conditioningModeLabel, conditioningModeLabelForRow } from './conditioningVisibleIdentity';
 import {
   SESSION_ROLE_ORDER,
   classifyExerciseRole,
@@ -70,11 +70,12 @@ export type SessionTemplateItem =
       superset: SessionSupersetTag | null;
       /** Add-on rows stay no-penalty optional after the box dies. */
       optional: boolean;
+      modalityLabel?: string;
     }
   | {
       kind: 'conditioning_choice';
       role: 'conditioning';
-      options: Array<{ title: string; description: string; rows: any[] }>;
+      options: Array<{ title: string; description: string; rows: any[]; modalityLabel?: string }>;
     }
   | {
       kind: 'team_training';
@@ -448,7 +449,10 @@ export function buildSessionTemplate(
   return {
     mode: 'badged_list',
     ordering,
-    items: orderItems(items, ordering === 'phase' ? phaseRank : d2Rank),
+    items: orderItems(items, ordering === 'phase' ? phaseRank : d2Rank).map(item =>
+      item.kind === 'exercise' && item.presentation === 'conditioning_phase'
+        ? { ...item, modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
+        : item),
   };
 }
 
@@ -518,7 +522,7 @@ export function sessionListLabels(
 function resolveConditioningOptions(
   workout: Partial<Workout>,
   conditioningRows: any[],
-): Array<{ title: string; description: string; rows: any[] }> {
+): Array<{ title: string; description: string; rows: any[]; modalityLabel?: string }> {
   const identity = projectConditioningVisibleIdentity(workout as Workout);
   const block = (workout as any).conditioningBlock;
 
@@ -529,6 +533,7 @@ function resolveConditioningOptions(
         return {
           title: identity?.attachedLabel ?? option.title,
           description: option.description ?? '',
+          modalityLabel: conditioningModeLabel(option.modality),
           rows: conditioningRows.filter((row: any) => ids.has(String(row?.id))),
         };
       })

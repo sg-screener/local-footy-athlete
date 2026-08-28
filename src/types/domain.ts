@@ -928,6 +928,9 @@ export interface AuthoredDayIdentity {
 }
 
 export interface Workout {
+  /** Compiler receipt, not a new athlete decision: this exact placement has
+   * already passed through later source facts. Absent from the healthy base. */
+  sourceFactAdjustedPlacementId?: string;
   /**
    * R-124 — THE SESSION-LEVEL INJURY ADJUSTMENT, DERIVED, NEVER STORED.
    *
