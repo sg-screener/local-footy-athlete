@@ -5,6 +5,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  add_undo_visibility: ['src/rules/journalChanges.ts', "case 'add_exercise': return 'added an exercise';", "case 'add_exercise': return null;", 'session_durability', 'actual Add exposes its newest decision through the shared Undo model'],
+  swap_undo_visibility: ['src/rules/journalChanges.ts', "case 'swap_exercise': return 'swapped an exercise';", "case 'swap_exercise': return null;", 'session_durability', 'actual Swap exposes its newest decision through the shared Undo model'],
   injury_replacement_copy: ['src/utils/injurySessionAdjustment.ts', 'unaffected work: ${work}.', 'safe upper-body and core work.', 'simple_injury', 'summary names the actual unaffected replacement work'],
   speed_unrelated_fatigue: ['src/rules/weeklyScheduler.ts', 'inputs.clubNights.length > 0 && missingSpeedQualities !== null\n      && (inputs.readiness.lowReadiness', 'missingSpeedQualities !== null\n      && (inputs.readiness.lowReadiness', 'speed', 'club-top-up fatigue rule does not refuse existing novice no-club programming'],
   landmine_strength_slot: ['src/rules/sessionSlotCoverage.ts', 'if (tag.power) return [];', 'if (false && tag.power) return [];', 'landmine', 'explosive landmine is absent from every strength slot'],
@@ -123,6 +125,7 @@ if (child) {
     });
     process.exitCode = failures ? 1 : 0;
   }
+  else if (witness === 'session_durability') require(path.join(repo, 'src/__tests__/sessionChangeDurabilityTests'));
   else if (witness === 'injury') require(path.join(repo, 'src/__tests__/injuryRecompositionTests'));
   else if (witness === 'compiler') require(path.join(repo, 'src/__tests__/canonicalWeeklyCompilerSliceTests'));
   else {

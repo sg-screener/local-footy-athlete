@@ -74,6 +74,8 @@ import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { coldStartThroughOnboarding, followTheWeek, quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
+import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
 
 const INSTALL_DAY = '2026-07-13';
 /** A Wednesday inside the athlete's first block, three days after install. */
@@ -204,7 +206,8 @@ async function swap(victim: string, replacement: string): Promise<{ ok: boolean 
     .find(day => day.date === TARGET)?.workout;
   const row = visible?.exercises.find(row => row.exercise?.name === victim);
   if (!row) throw new Error(`Visible swap target absent: ${victim}`);
-  return await quietAsync(() => door()({
+  const seen = undoToastSeenMarker(useDecisionLedgerStore.getState().entries);
+  const result = await quietAsync(() => door()({
     type: 'swap_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
     scope: 'today_only',
@@ -214,16 +217,23 @@ async function swap(victim: string, replacement: string): Promise<{ ok: boolean 
     },
     requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
     }, { todayISO: TARGET })) as { ok: boolean };
+  if (result.ok) ok('actual Swap exposes its newest decision through the shared Undo model',
+    undoToastFor(useDecisionLedgerStore.getState().entries, seen)?.sentence === 'swapped an exercise');
+  return result;
 }
 
 async function add(exercise: string): Promise<{ ok: boolean }> {
-  return await quietAsync(() => door()({
+  const seen = undoToastSeenMarker(useDecisionLedgerStore.getState().entries);
+  const result = await quietAsync(() => door()({
     type: 'add_exercise',
     source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
     scope: 'today_only',
     payload: { date: TARGET, exercise: { name: exercise, sets: 2, repsMin: 8, repsMax: 12 } },
     requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
   }, { todayISO: TARGET })) as { ok: boolean };
+  if (result.ok) ok('actual Add exposes its newest decision through the shared Undo model',
+    undoToastFor(useDecisionLedgerStore.getState().entries, seen)?.sentence === 'added an exercise');
+  return result;
 }
 
 function offeredAddFor(existing: string[]): string {

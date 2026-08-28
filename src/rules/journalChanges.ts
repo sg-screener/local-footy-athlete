@@ -73,7 +73,7 @@ export function phraseFor(entry: DecisionLedgerEntry): string | null {
     case 'fixture_move': return 'moved a fixture';
     case 'reversal': return 'undid a change';
     /**
-     * WHY THIS CASE EXISTS, AND WHY IT MAPS EXACTLY ONE TYPE.
+     * WHY THESE EXERCISE CHANGES MUST HAVE WORDS.
      *
      * `remove_exercise` is recorded on the ledger as a `program_control`
      * decision and IS undoable — `replayableEntries` returns it, so
@@ -83,16 +83,16 @@ export function phraseFor(entry: DecisionLedgerEntry): string | null {
      * the exclusion was written, and the toast was absent — the athlete's only
      * immediate way back from a removal was silently unreachable.
      *
-     * The other `ProgramControlActionType`s stay unmapped ON PURPOSE. A phrase
-     * here is a sentence on the athlete's screen, and inventing eighteen of them
-     * to look complete would put unruled words in front of them — which is the
-     * thing "an unmapped kind shows nothing" was written to prevent. They become
-     * reachable one at a time, each with its own wording, in the slice that
-     * needs it.
+     * Native injury Add/Quick Swap reproduced the same absent-Undo defect.
+     * These existing reversible exercise actions use the same plain wording
+     * as session Add/Swap. Unknown action types still remain unmapped; this
+     * does not introduce a generic success claim or a new Undo implementation.
      */
     case 'program_control': {
       switch (decision.action.type) {
         case 'remove_exercise': return 'removed an exercise';
+        case 'add_exercise': return 'added an exercise';
+        case 'swap_exercise': return 'swapped an exercise';
         default: return null;
       }
     }

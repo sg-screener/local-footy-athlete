@@ -793,3 +793,26 @@ high numeric score. R-267 explicitly supersedes that expectation. Retired only
 that assertion, replacing it with all ten severity scores at the existing
 refusal owner. No product rule was weakened; earlier independent simple-flow
 and native low-score serious-symptom checks already held the current behaviour.
+
+### Native manual Add/Swap, then missing Undo display
+
+Actual shoulder-limited Tuesday session: section plus → Lower body → Hinge
+offers Glute Bridge, not the loaded hinge aggravators. Add → Today only lands;
+Quick Swap immediately changes it to Back Extension. Reopening on 705a4d01 keeps
+the exact row and 17.5 kg load. The failed bare-text load selector is automation:
+the accessible label is "Edit weight, 17.5kg", and both screenshot and hierarchy
+show the retained load. Corrected injury banner is visible after this restart.
+
+NEW app defect: Quick Swap Back Extension → Bosch Hold succeeded, but its Undo
+was absent. The test attempted Undo within 1.6 seconds, not after expiry. The
+shared journal phrase owner maps removal but deliberately maps neither Add nor
+Swap, so Undo's model returns null. Compared a screen-specific toast with adding
+the two missing exercise-action phrases to the existing shared owner; used the
+latter. No new Undo implementation, navigation or stored state. Expanded real
+durability journeys: 48 pass / 8 fail before, 56/56 after. Existing Undo 28/28 and
+journal 13/13 remain green. Both missing-phrase mutants were caught. Clear of
+the limiting injury through My Status passed, retaining accumulated edits.
+
+NOT COVERED: final revised candidate verification; native Undo, severe and
+second-session checks in progress; physical acceptance, including recorded
+2 km Skip QA. No phone installation or reset.
