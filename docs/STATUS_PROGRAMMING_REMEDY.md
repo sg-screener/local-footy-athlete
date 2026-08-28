@@ -369,6 +369,15 @@ Installation remains held. No physical install, launch, reset or wipe was
 performed. Gates green is not physical acceptance. The unchanged onboarding
 flow passed the 2 km skip tap once; its inconsistency is still OPEN-UNKNOWN.
 
+## Follow-up after Sam's five decisions
+
+Owner unchanged: programming-remedy. Baseline `8dbcbc00` and report checkpoint
+`738090ba` preserved. Current implementation and red-first findings are recorded
+in `PROGRAMMING_FOLLOWUP_2026-08-28.md`; that file supersedes the old unanswered
+five-decision list, not the verified candidate receipts above. Work is in
+progress; no new candidate verification or physical acceptance is claimed.
+No phone install, launch, reset or wipe. Other seat's `docs/NOW.md` untouched.
+
 ## NOT COVERED
 
 - Outstanding product decisions; all P01–P22 are not closed.

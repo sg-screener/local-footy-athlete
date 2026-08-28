@@ -216,6 +216,10 @@ export function compileCanonicalWeek(
   };
   const schedule = scheduleWeek({
     ...scheduler,
+    offLegAvailableDays: input.availability
+      ? Object.entries(input.availability.equipmentByDayOfWeek).filter(([, equipment]) =>
+        equipment.conditioningModalities.some(mode => mode !== 'treadmill')).map(([day]) => Number(day))
+      : scheduler.offLegAvailableDays,
     appSprintPermitted: input.injury?.blocksAppSprint !== true,
     appRunningPermitted: input.injury?.lowerBodyRestricted !== true,
     readiness: {

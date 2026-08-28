@@ -2474,6 +2474,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'programmingInputTruth drives real male/female onboarding, conflicting legacy/current kit, full/partial/no-kit restart, advanced/novice/band-only curl candidates, all five usable off-leg aerobic templates and the original transition weeks 3/4. Existing scheduler contract matrix remains required. See STATUS_PROGRAMMING_REMEDY for red-first evidence and candidate verification status.' },
   },
+  {
+    id: 'LAW-programming-followup-approved-pools-flush-and-add',
+    law: 'R-265: Leg Press/conventional Deadlift stay manual/fallback choices; existing block choices restore. Box/Broad/Jump Squat enter the ordinary power pool without invented preference or dose. G+2 in-season off-leg flush is optional unless an explicit mild soreness report makes it required, absent existing conditioning/club, subject to kit and safety. Added Mobility/Recovery must inspect the whole day and contain no repeated exercise; separate sessions, the daily limit, logging, Undo and restart remain.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-265 — Sam answered the five follow-up programming decisions, 2026-08-28.',
+    guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'programmingSelectionDecisions, unilateralPriorityJourney, gPlusTwoFlushJourney and lowLoadAdditionJourney are invoked by programmingInputTruth in the canonical suite. The real no-rack/no-barbell journeys hold P16 weekly priority without relabelling or losing bilateral coverage. Initial failures and current verification limits are recorded in PROGRAMMING_FOLLOWUP_2026-08-28.md. Conditioning clarity also checks actual composed prescriptions, available machine sequences and restart.' },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

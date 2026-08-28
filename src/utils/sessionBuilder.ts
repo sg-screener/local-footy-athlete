@@ -73,6 +73,7 @@ import {
 } from '../rules/mobilitySessionComposition';
 import { eligiblePowerExercises, type PowerPoolEntry } from '../rules/powerExercisePool';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
+import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { PowerFamily } from '../rules/powerPrimerPolicy';
 
 // ─── Athlete Context ───
@@ -1018,6 +1019,7 @@ export function buildDerivedSession(
   reason: string,
   athlete: AthleteContext,
   weekCategoryUsage?: Map<ExerciseCategory, number>,
+  existingExerciseNames: readonly string[] = [],
 ): Workout {
   const meta = SESSION_META[type];
   const seed = dateHash(dateStr);
@@ -1025,6 +1027,8 @@ export function buildDerivedSession(
   // Build constraint sets
   const injuryTags = injuriesToTags(athlete.injuries);
   const equipmentSet = new Set(athlete.equipmentTags);
+  const alreadyProgrammed = new Set(existingExerciseNames.map(canonicalExerciseName));
+  const notAlreadyProgrammed = (row: PoolExercise) => !alreadyProgrammed.has(canonicalExerciseName(row.name));
 
   // Assemble exercises from slots
   const exercises: WorkoutExercise[] = [];
@@ -1037,7 +1041,7 @@ export function buildDerivedSession(
   if (type === 'mobility') {
     for (const movement of composeMobilitySession({
       seed,
-      eligible: filterMobilityPoolForAthlete(athlete),
+      eligible: filterMobilityPoolForAthlete(athlete).filter(notAlreadyProgrammed),
     })) {
       exercises.push(
         poolExerciseToWorkoutExercise(movement, workoutId, order, MOBILITY_ROW_EVIDENCE),
@@ -1098,7 +1102,7 @@ export function buildDerivedSession(
     const inRegion = slot.regions
       ? pool.filter((entry) => slot.regions.indexOf(mobilityRegionOf(entry)) !== -1)
       : pool;
-    const filtered = filterPool(inRegion, injuryTags, equipmentSet);
+    const filtered = filterPool(inRegion, injuryTags, equipmentSet).filter(notAlreadyProgrammed);
     const slotSeed = slotSeedForSource; // prime offset for variety
     const picks = slot.spread
       ? pickAcrossRegions(filtered, slot.count, slot.spread, slotSeed)

@@ -373,14 +373,15 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
 export function buildCoachRevisionTemplateWorkout(
   templateId: string,
   date: string,
+  existingExerciseNames: readonly string[] = [],
 ): Workout | null {
   const def = definitionById(templateId);
   if (!def) return null;
   if (def.category === 'mobility') {
-    return buildMobilityTemplateWorkout(def, date);
+    return buildMobilityTemplateWorkout(def, date, existingExerciseNames);
   }
   if (def.category === 'recovery') {
-    return buildRecoveryTemplateWorkout(def, date);
+    return buildRecoveryTemplateWorkout(def, date, existingExerciseNames);
   }
   // ENGINE-BUILT means "this template names how it is composed", not "this
   // template is one of two categories". It read `category === 'accessories'`,
@@ -466,6 +467,7 @@ export function buildCoachRevisionTemplateWorkout(
 function buildMobilityTemplateWorkout(
   def: CoachRevisionTemplateDefinition,
   date: string,
+  existingExerciseNames: readonly string[],
 ): Workout | null {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
@@ -478,6 +480,8 @@ function buildMobilityTemplateWorkout(
     'coach-template',
     'Athlete-added session',
     ctx.athlete,
+    undefined,
+    existingExerciseNames,
   );
   if (!composed || (composed.exercises ?? []).length === 0) return null;
 
@@ -541,6 +545,7 @@ function buildMobilityTemplateWorkout(
 function buildRecoveryTemplateWorkout(
   def: CoachRevisionTemplateDefinition,
   date: string,
+  existingExerciseNames: readonly string[],
 ): Workout | null {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
@@ -553,6 +558,8 @@ function buildRecoveryTemplateWorkout(
     'coach-template',
     'Athlete-added session',
     ctx.athlete,
+    undefined,
+    existingExerciseNames,
   );
   if (!composed || (composed.exercises ?? []).length === 0) return null;
 

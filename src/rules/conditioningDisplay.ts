@@ -87,6 +87,71 @@ const CONDITIONING_DISPLAY_TITLES: Readonly<Record<string, string>> = {
   'Flush Intervals 1:1 (1 min / 1 min)': 'One-Minute Flush Intervals',
   'Flush Intervals 2:1 (2 min / 1 min)': 'Two-Minute Flush Intervals',
   'Steady Blocks (3×8 min or 4×6 min)': 'Steady Blocks',
+  'Bodyweight Circuit (no-equipment fallback)': 'Bodyweight Circuit',
+};
+
+/** Reviewed display copy, not a second dose catalogue. Intensity targets and
+ * unique safety/recovery instructions are retained; Work/Recovery/counts are
+ * still read from the authored prescription below. R-240, reviewed 2026-08-28. */
+export const CONDITIONING_COACHING_COPY: Readonly<Record<string, {
+  intensity: string;
+  cue: string;
+}>> = {
+  '10 m Acceleration Reps': { intensity: '95–100% maximal', cue: 'Quick, light contacts and a crisp first step.' },
+  '20 m Acceleration Reps': { intensity: '95–100% maximal', cue: 'Keep the drive phase consistent. Stop if it deteriorates.' },
+  '30 m Acceleration Reps': { intensity: '95–100% maximal', cue: 'Accelerate through the rep; this is not a top-speed drill.' },
+  'Hill Acceleration': { intensity: '95–100% maximal uphill', cue: 'Drive forward up the hill.' },
+  'Air Bike Accelerations': { intensity: '95–100% maximal', cue: 'If power drops about 5%, extend recovery or stop.' },
+  'Team-Training Warm-Up Dose': { intensity: '95–100% maximal', cue: 'Include these reps in your club warm-up, not a separate session.' },
+  'Return-to-Speed Ladder': { intensity: '90–95%', cue: 'First exposure back: favour controlled mechanics over extra speed.' },
+  'Fly 20 (20+20)': { intensity: '95–100% max velocity', cue: 'Build smoothly into the fly zone; do not force top speed.' },
+  'Fly 30 (30+30)': { intensity: '95–100% max velocity', cue: 'Build smoothly. Stop if speed drops.' },
+  'Progressive Sprint Exposure': { intensity: '90–100%, smooth build to top speed', cue: 'Keep your mechanics smooth; this is not a time trial.' },
+  'Off-Season Speed Reintroduction': { intensity: '90–95%', cue: 'Prioritise mechanics as you rebuild speed.' },
+  '20 m Shuttle Repeats': { intensity: 'Maximal repeat efforts', cue: 'Walk between reps; keep moving during recovery.' },
+  '30 m Repeats': { intensity: 'Maximal repeat efforts', cue: 'Walk between reps; keep moving during recovery.' },
+  'Sprint Sets (3×5×6 s)': { intensity: 'Maximal', cue: 'Keep the sets consistent. Stop if the final set falls apart.' },
+  '10 s Max Sprint Repeats': { intensity: 'Maximal', cue: 'Reset fully before the next effort.' },
+  '10 s Repeat Efforts': { intensity: 'Very hard', cue: 'Commit to each short effort.' },
+  'Up-Back Shuttle': { intensity: 'Hard but controlled', cue: 'Plant cleanly at the turn; do not slide.' },
+  'Low-Intensity Deceleration Drills': { intensity: 'Low intensity', cue: 'Brake under control rather than stopping abruptly.' },
+  'Deceleration and Landing Work': { intensity: 'Controlled', cue: 'Land quietly and hold your position.' },
+  '45-Degree Cut Reps': { intensity: 'Maximal intent', cue: 'Keep the plant foot under you. Stop if the knee caves inward.' },
+  '20 s Max Sprint — Small Dose': { intensity: 'Maximal', cue: 'Recover fully between efforts.' },
+  'Erg Short-Burst Repeats (15–20 s)': { intensity: 'Very hard', cue: 'Keep each effort sharp rather than grinding.' },
+  'Tabata Finisher': { intensity: 'Maximal', cue: 'Expect the final two rounds to feel very hard.' },
+  '30 s Very Hard Repeats': { intensity: 'Very hard, not maximal', cue: 'Set a pace you can sustain for the full effort.' },
+  '45 s Hard Repeats': { intensity: 'Hard', cue: 'Keep the effort honest as fatigue builds.' },
+  '60 s Max Sustained Effort': { intensity: 'All-out sustained', cue: 'Expect marked fatigue by 45 seconds into each effort.' },
+  '150–200 m Hard Repeats': { intensity: 'Hard', cue: 'Match your pace across reps.' },
+  'Hill Repeats — hard sustained': { intensity: 'Hard, not maximal', cue: 'Keep a consistent effort up the hill.' },
+  'Bodyweight Circuit (no-equipment fallback)': { intensity: 'Hard, sustained', cue: 'Maintain a steady effort through the circuit.' },
+  'Classic 4×4': { intensity: '90–100% MAS', cue: 'Choose a pace you can repeat across all 4 rounds.' },
+  'Three-Minute Intervals': { intensity: '90–100% MAS', cue: 'Keep your output consistent across rounds.' },
+  'Two-Minute Repeats': { intensity: '≈100% MAS', cue: 'Use your target effort rather than starting too fast.' },
+  'MAS 15:15 Blocks': { intensity: '110% MAS', cue: 'Commit to each short effort.' },
+  '30:30 Hard Intermittent': { intensity: '100–110% MAS', cue: 'Repeat the same effort throughout each block; do not sprint.' },
+  'Footy Shuttles': { intensity: 'Hard, controlled', cue: 'Keep the final set as consistent as the first.' },
+  '1 km Repeats': { intensity: '90–100% MAS', cue: 'Aim for even splits rather than a fast first rep.' },
+  '400 m Repeats': { intensity: 'Hard, controlled', cue: 'Keep the pace consistent even as the later reps become uncomfortable.' },
+  'Erg EMOM': { intensity: 'Hard', cue: 'Start promptly at the beginning of each minute.' },
+  'Continuous Aerobic Run': { intensity: '65–80% MAS; conversational', cue: 'Hold a steady pace throughout; avoid a fast finish.' },
+  'Long Aerobic Intervals': { intensity: '70–80% MAS', cue: 'Aim for near-identical output across rounds, not a race.' },
+  'Steady Blocks (3×8 min or 4×6 min)': { intensity: '65–75% MAS, easy-moderate', cue: 'Hold a steady pace for the whole block without surging.' },
+  'Controlled 10–20 min Blocks': { intensity: '70–80% MAS, controlled tempo', cue: 'Maintain the target effort through the end of each block.' },
+  'Steady 5 min Blocks': { intensity: '65–80% MAS, steady-moderate', cue: 'Keep this below a hard interval effort.' },
+  'Aerobic Shuttles': { intensity: '65–75% MAS', cue: 'Keep the shuttles controlled rather than using maximal cuts.' },
+  'Extensive Tempo (100 m repeats)': { intensity: '65–75%', cue: 'Find a game-speed rhythm and repeat the same pace.' },
+  '2 min On / 1 min Easy': { intensity: '70–80% MAS', cue: 'Expect effort to build; the short recovery is intentional.' },
+  '30:30 Controlled Tempo Blocks': { intensity: '65–80% MAS', cue: 'Stay controlled; you should still manage a few words at the end.' },
+  '1 min On / 1 min Easy Tempo': { intensity: '65–80% MAS, controlled tempo', cue: 'Settle into a consistent rhythm.' },
+  'Short Flush': { intensity: 'Very easy, 3–4/10', cue: 'Finish feeling better than you started.' },
+  'Easy Aerobic Flush': { intensity: 'Easy, 3–6/10; full-conversation pace', cue: 'Stay comfortable throughout.' },
+  'Nasal-Paced Easy': { intensity: 'Limited by nasal breathing', cue: 'Slow down if you need to open your mouth to breathe.' },
+  'Erg Flush Blocks': { intensity: 'Easy', cue: 'Keep the effort gentle throughout.' },
+  'Flush Intervals 30:30': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
+  'Flush Intervals 1:1 (1 min / 1 min)': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
+  'Flush Intervals 2:1 (2 min / 1 min)': { intensity: '3–4/10 maximum', cue: 'Keep this a gentle flush, not a hard interval session.' },
 };
 
 /** A display title never doubles as the template's lookup identity. */
@@ -121,6 +186,7 @@ const CONCRETE_DISPLAY_PRESCRIPTIONS: Readonly<Record<
   },
   'Erg Flush Blocks': {
     work: '8 min easy',
+    setsRounds: '3 blocks',
   },
 };
 
@@ -352,7 +418,8 @@ export function conditioningDisplayLines(
    * semicolon. Sam removed heart-rate copy from conditioning cards on
    * 2026-08-26, so that internal monitoring note is filtered here and the
    * actionable intensity target is the only one rendered. */
-  const clauses = stripAuthoringNotes(template.intensity ?? '')
+  const reviewedCopy = CONDITIONING_COACHING_COPY[template.name];
+  const clauses = stripAuthoringNotes(reviewedCopy?.intensity ?? template.intensity ?? '')
     .split(';').map((clause) => clause.trim()).filter(Boolean);
   const intensityClauses = clauses.filter((clause) => !isHeartRateClause(clause));
 
@@ -362,7 +429,7 @@ export function conditioningDisplayLines(
       text: intensityClauses.join('; '),
     });
   }
-  const cue = athleteSentence(template.effortCue ?? '');
+  const cue = athleteSentence(reviewedCopy?.cue ?? template.effortCue ?? '');
   if (cue) lines.push({ label: null, text: cue });
 
   /* ⚠ **THE PACE LINE IS NOT THIS FILE'S, AND THAT IS DELIBERATE.**

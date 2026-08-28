@@ -791,7 +791,7 @@ function partsForWorkout(
   for (const component of components) {
     const componentId = String(component.id);
     if (foldsIntoStrength.has(componentId)) continue;
-    const kind = partKind(componentId, onDay);
+    const kind = partKind(component.kind, onDay);
     parts.push({
       id: partIdFor(date, componentId),
       kind,
@@ -888,7 +888,9 @@ export function project(args: {
         headline: dayHeadline(day.kind, source),
         gaps: gapCopy(source.workout),
         parts: day.parts.map((part): VisiblePart => {
-          const rows = composed ? rowsForKind(part.kind, composed) : [];
+          const component = getSessionComponents(source.workout).find(component => component.id === componentIdFromPartId(part.id));
+          const rows = (composed ? rowsForKind(part.kind, composed) : [])
+            .filter(row => !component?.exerciseIds || component.exerciseIds.includes(row.id));
           return {
             ...part,
             rows,

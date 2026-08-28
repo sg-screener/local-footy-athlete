@@ -103,6 +103,7 @@ export interface AdapterContribution {
   readonly conditioningBlock?: unknown;
   readonly conditioningCategory?: unknown;
   readonly conditioningFlavour?: unknown;
+  readonly section18ConditioningRole?: Workout['section18ConditioningRole'];
   readonly attachedConditioningKind?: unknown;
   readonly conditioningFeasibility?: unknown;
   readonly hasCombinedConditioning?: boolean;
@@ -132,7 +133,7 @@ export interface AdapterContribution {
 
 /** THE ONLY FIELDS AN ADAPTER CONTRIBUTION MAY NAME. */
 const ADAPTER_CONTRIBUTED_FIELDS: readonly string[] = [
-  'conditioningBlock', 'conditioningCategory', 'conditioningFlavour',
+  'conditioningBlock', 'conditioningCategory', 'conditioningFlavour', 'section18ConditioningRole',
   // ⚠ `conditioningOffFeet` was ABSENT from this list, so the merge silently
   // dropped it on every composer day: the scheduler typed `off_leg` (WC-115,
   // lower + conditioning), the adapter stamped it, and the athlete's week said
@@ -177,6 +178,7 @@ export function adapterContributionFrom(adapter: Workout | undefined): AdapterCo
   // are the same statement anyway (`section18EffectiveWeekEvaluator.ts:317-318`).
   if (!source.conditioningBlock) {
     delete contribution.section18Evidence;
+    delete contribution.section18ConditioningRole;
     delete contribution.conditioningCategory;
     contribution.hasCombinedConditioning = false;
   }

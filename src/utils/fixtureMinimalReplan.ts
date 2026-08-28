@@ -371,6 +371,27 @@ function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
   });
 }
 
+/** Reconsider offers from the newly compiled fixture week, never the old week. */
+function withCompilerPlannerOffers(workouts: readonly Workout[], compiled: readonly Workout[]): Workout[] {
+  let result = [...workouts];
+  for (const offer of compiled.filter(workout => workout.section18ConditioningRole === 'optional_flush')) {
+    const existing = result.find(workout => workout.dayOfWeek === offer.dayOfWeek);
+    if (!existing) {
+      // An offer on a compiled combined day cannot restore a removed lift.
+      if (!hasMainStrength(offer)) result.push(offer);
+      continue;
+    }
+    if (isTeamTraining(existing) || getSessionComponentRows(existing).conditioningRows.length > 0
+      || existing.conditioningBlock?.options.length) continue;
+    const rows = getSessionComponentRows(offer).conditioningRows;
+    if (!rows.length) continue;
+    const attached = attachConditioningPreservingCore(existing, { ...offer, exercises: rows,
+      durationMinutes: 0 });
+    result = result.map(workout => workout === existing ? { ...attached, name: existing.name } : workout);
+  }
+  return result;
+}
+
 function visibleResolver(
   args: BuildFixtureMinimalReplanInput,
   contract = args.targetMicrocycle.exposureContractV2!,
@@ -1121,12 +1142,13 @@ export function buildFixtureMinimalReplan(
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
   const fixtureNeutral = fixtureNeutralSource(args);
-  const source = buildDerivedSessionExpiryCandidates({
+  const expired = buildDerivedSessionExpiryCandidates({
     workouts: fixtureNeutral,
     contract,
     weekStart: args.weekStart,
     activeFixtureDates: args.activeFixtureDates,
   })[0]?.workouts ?? fixtureNeutral;
+  const source = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts);
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
   const releasedDays = new Set(args.availability.days

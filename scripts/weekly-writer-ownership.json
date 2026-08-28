@@ -87,17 +87,17 @@
       "reason": "Session stopwatch registration persists only current and lastEnded timing facts. Start/pause/resume/end callbacks call pure stopwatch transforms and never read or write weekly content."
     },
     "src/rules/composeWeek.ts#composeWeek": {
-      "fingerprint": "e63586a2d047723d5bdadfb7e9293ed0fcd62524e13b77265cd9bcccbf312ea6",
+      "fingerprint": "f9a5cbe4fd73185b68dd054bbbcb1c4a5ab9132f890b68ce99bf4cd293adbfe7",
       "classification": "canonical_compiler",
       "reason": "Pure row-composition stage shared by weekly compilation and the strength-template compiler: resolves typed planned patterns, selection history, equipment, exclusions, dose and loads; returns composed rows and coverage gaps without publishing state. All direct write regions inspected."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "a47d78578abfeb1db4b39e05373db8045920e7a9a66b7ad6eeec2412113d99d1",
+      "fingerprint": "75ba3287c967f671be0518d2e1a47396b377088d1803e3c44e4a737665944e75",
       "classification": "canonical_compiler",
       "reason": "Pure weekly scheduling stage: enumerates legal strength placements, fixture precedence, conditioning/sprint demand, running top-ups and optional intentions from explicit inputs; returns intentions or a typed refusal. No persistence or generated-output publication; all direct regions inspected."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
-      "fingerprint": "6dab8b0906021fd0f582f2c0ac6c903019d3f84cde5b09d8b2d46dccdbe5a764",
+      "fingerprint": "c7203b5ec448caa3cb27e35458152879da5ce7fa4da5e814da3780d7b11ff7c7",
       "classification": "canonical_compiler",
       "reason": "Shared materialisation adapter called by canonicalWeeklyRowCompiler and its fixtureMinimalReplan conditioning compiler. Builds typed components from accepted allocations using shared strength, conditioning and lighter-day materialisers, then normalises rows; no store publication. Inspected complete function including legacy generated-row ingress and both runtime callers."
     },
@@ -227,7 +227,7 @@
       "reason": "Profile transaction builds a fact-free base via the canonical generator, commits profile/input changes atomically, verifies readback and invokes the same reconstruction used by boot."
     },
     "src/rules/scheduleToCoachingPlan.ts#scheduleToCoachingPlan": {
-      "fingerprint": "fb03d3c99e1aa5ea704d616af52b40dcea92da352962d46be57db9f50fa39cc3",
+      "fingerprint": "bde0389aefa6076e70141c75280adab34583a96c7958a18317f356514ed67778",
       "classification": "canonical_compiler",
       "reason": "Pure adapter from the canonical scheduler/materializer to typed session allocations, exposure contract and dose intent; no independent placement or store reads."
     },
@@ -297,7 +297,7 @@
       "reason": "Explicit exercise swap resolves one typed target and replacement load, delegates row transformation to the canonical exercise-edit compiler, and publishes through the owned override boundary."
     },
     "src/utils/coachRevisionTemplateContext.ts#liveStoreProvider": {
-      "fingerprint": "0483e40c125ffdf5869966830c39ff385a5b959ff26c41dd9d254ac56ca5e97b",
+      "fingerprint": "a711524fde32aaa6b388e0d49e781aeaee332f769abb4a690268f52a3ed88abf",
       "classification": "canonical_input_writer",
       "reason": "Live picker context reads current accepted profile, phase clock, history and dated equipment/injury facts into explicit composition input; no workout mutation or persistence."
     },
@@ -307,7 +307,7 @@
       "reason": "Game feedback UI constructs typed outcome input and calls the durable outcome transaction; its only local writes are React form/refusal state and diagnostic receipts."
     },
     "src/utils/coachModalitySwap.ts#applyConditioningModalityToWorkout": {
-      "fingerprint": "ceea79ed2c5d1235e519a40e982ec46db98688fab6a0cd2c4368f78082d34b76",
+      "fingerprint": "2e5790cdcaa33c4deba9b2bf2dc4c1dd17b3984b60428eb2555aa1b8478afef2",
       "classification": "canonical_compiler",
       "reason": "Shared pure conditioning-modality transform is called by canonical injury conditioning and the canonical day-constraint preference stage only; no independent live publisher."
     },
@@ -557,7 +557,7 @@
       "reason": "Renders supplied day/timeline components and delegates taps to existing action handlers; local UI selection state does not change program contents."
     },
     "src/utils/sessionBuilder.ts#buildDerivedSession": {
-      "fingerprint": "ce2020f4e9582b17003d6abc7c7731eff6eebc48f6dcef1a8809a120e41c899e",
+      "fingerprint": "8a8f660129e8d759196e8ab595c4fb6eaedfe5a4eb4049aa06f962b84ea9b0b7",
       "classification": "canonical_compiler",
       "reason": "Shared optional-session recipe composer for canonical row materialization and accepted add/template candidates; explicit athlete/date inputs, no store publication."
     },
@@ -672,7 +672,7 @@
       "reason": "Guarded onboarding/profile input publication preserves answered profile fields and records trace metadata; does not create generated sessions."
     },
     "src/utils/coachRevisionTemplates.ts#buildCoachRevisionTemplateWorkout": {
-      "fingerprint": "6bdb629cd364ece2e02b2062f8dd3614d71c7391e85dd580f69464c4801cc223",
+      "fingerprint": "59ab92b7a3f29b6ce00f8071c4edf9862ebf9b42659dcf4bc1acf186e0ccaeb4",
       "classification": "canonical_compiler",
       "reason": "Shared explicit-template candidate materializer used by the accepted plan-change compiler; all callers obtain candidate rows rather than independently publishing output."
     },
@@ -1042,7 +1042,7 @@
       "reason": "Private fixture strength relocation binds supplied template identities and typed fixture dependency history to the destination."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan": {
-      "fingerprint": "41b183e43ff3af71b15dd15c4da295bbb996f2ecd32c39eaf38f9875836b6703",
+      "fingerprint": "2c4ff78e7175a9c9dd0ff8ceee22ca5daaa581d27ef5979958e7ff05cd0f8ab9",
       "classification": "canonical_compiler",
       "reason": "Fixture specialist is invoked at runtime only by compileCanonicalFixtureMutationWeek. It enumerates and validates supplied candidate content, returns the accepted candidate, and never publishes stores; accepted effects preserve the result across restart."
     },
@@ -1097,7 +1097,7 @@
       "reason": "Shape-normalises accepted snapshot fields and historical adjustment metadata at the load boundary; does not author training."
     },
     "src/utils/canonicalPlanChangeCandidateMaterializer.ts#rawCandidate": {
-      "fingerprint": "5d8cc41b4234b273a2b7c82cd537a74ca81d5ce99374a6224f02d6d1a37d0790",
+      "fingerprint": "78167b7865f2b3be4308679b1c330ea3d1f66bd54fd7216ee10cc5c466c038d8",
       "classification": "canonical_compiler",
       "reason": "Session-edit candidate adapter uses the shared template registry and explicit stack/replace intent; games remain protected."
     },
@@ -1222,7 +1222,7 @@
       "reason": "Marks existing unavailable injury rows with explanation metadata without changing exercise selection, dose or placement."
     },
     "src/utils/coachRevisionTemplates.ts#buildMobilityTemplateWorkout": {
-      "fingerprint": "ff157619ece75628fe1d9487714ca267841ea6aacf66f623182ecdfd0c470c5e",
+      "fingerprint": "a181fd6347298ad2fb0680a0ecb6748fe80852ae516c00deb62dd26a5c8681e1",
       "classification": "canonical_input_writer",
       "reason": "Mobility picker packages the existing canonical derived recipe as an explicit accepted Add candidate; no selection algorithm or output persistence."
     },
@@ -1297,7 +1297,7 @@
       "reason": "Creates local fixture-aware calendar marks for contract evaluation, without writing the calendar store."
     },
     "src/utils/coachRevisionTemplates.ts#buildRecoveryTemplateWorkout": {
-      "fingerprint": "fe55d71a502d5bcf42601346893bcf5e2fb545f211dacfca64427ab65db49eb1",
+      "fingerprint": "2a0d589eb4214b4da43207e6ab5bc902bf67c2d9bdc701ca56eeb572b5ddc529",
       "classification": "canonical_input_writer",
       "reason": "Recovery picker packages the shared derived recipe with explicit template identity for accepted Add; no alternate row author."
     },
@@ -1652,7 +1652,7 @@
       "reason": "Read-only semantic adjustment fingerprint built from the normal workout snapshot."
     },
     "src/rules/assembleAuthoredWeek.ts#adapterContributionFrom": {
-      "fingerprint": "35e5e83b32c4541ea9c8dcf0d151f748f1327aa7f6536c90c548bd35090b1787",
+      "fingerprint": "09660a0cd3b279dbe55a0ad0ab63367fb8353b2886a223b8653e8317a97f83b9",
       "classification": "canonical_compiler",
       "reason": "Pure authored-week assembly adapter contributes only non-composer rows and matching metadata; canonical assembly owns final rows."
     },
@@ -2422,7 +2422,7 @@
       "fingerprint": "d31ea01428345204d90b2849a2ab83384d5aadc95c23377fa56c103da83915c7"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
-      "fingerprint": "944b9857e183de891c36cb815aecc54cc6dd8dca0dc434d06e146c0d9f4f8703",
+      "fingerprint": "3e12e8127a485620334a0dc39ad7733ace5a1c5efcf22dfc5bdbcaaef82ca7de",
       "classification": "canonical_compiler",
       "reason": "Canonical weekly orchestrator combines typed fixture, availability, injury, readiness and scheduled-deload inputs through shared scheduler, allocation and dose stages."
     },
@@ -2592,7 +2592,7 @@
       "reason": "Top-level pure program compiler composes canonical weeks, explicit exclusions and canonical progression in one pipeline."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "befea1c96046f3f088e879580662ff6780a67c636d17f603e762f2dc4ec82cdc",
+      "fingerprint": "7c8bb2aba1eef06713c6e6708bb54852326c6b5828f7bb24c943e9d943774806",
       "classification": "canonical_compiler",
       "reason": "Canonical program-week owner orchestrates explicit scheduler, composer, materializer, dose/injury/availability stages and optional top-ups with validation. It returns microcycles and selections; persistence lives outside."
     },
@@ -3220,6 +3220,16 @@
       "classification": "projection_display",
       "reason": "Builds evaluator input views from existing workout references; validation/scoring only, no publication.",
       "fingerprint": "bbc328f4dfeeb46a4fd00939650d7ae52f73b04604405d5b6c6f8b4cf4962aed"
+    },
+    "src/utils/coachRevisionTemplateContext.ts#coachRevisionExistingExerciseNames": {
+      "fingerprint": "5e25e3b8a2bfba444cccd7c30e016a8a0d85f2319d77e2830d7ec40df03427b8",
+      "classification": "projection_display",
+      "reason": "Read-only list of existing day exercise names using the same accepted warm-up, feedback, ledger and recovery-add-on projection as the session. Does not write athlete or program state."
+    },
+    "src/utils/fixtureMinimalReplan.ts#withCompilerPlannerOffers": {
+      "fingerprint": "829a743eaec1b6e1c54f629406e062ec17a57043223d38ee065cf2e46dd89bc3",
+      "classification": "canonical_compiler",
+      "reason": "Private helper of the existing compiler-owned fixture specialist. Reconsiders only the fresh target compiler flush contribution before acceptance, retaining existing lifting and excluding conditioning/team collisions; no alternate planner or persistence writer."
     }
   }
 }

@@ -229,12 +229,18 @@ export function decideExerciseForBlock(
 
   // ── RULE 6 applied first as the BASE ORDER, so every rule below breaks ties
   //    the same authored way. Phase preference is layered on top of it.
+  // Sam, 2026-08-28: these stay manual choices and suitable fallbacks, not
+  // automatic variety while another legal movement can fill the same slot.
+  const fallback = inputs.slot === 'hinge' ? 'Deadlift' : inputs.slot === 'squat' ? 'Leg Press' : null;
+  const preferred = inputs.legalCandidates.filter(id => id !== fallback);
+  const automaticCandidates = fallback && preferred.length > 0 && !inputs.pinnedIdentities.includes(fallback as ComposedExerciseIdentity)
+    ? preferred : inputs.legalCandidates;
   const phaseOrdered = inputs.slot === 'hinge'
     ? orderByPreference(
-      inputs.legalCandidates,
+      automaticCandidates,
       phasePinsSlot(inputs) ? IN_SEASON_HINGE_ORDER : HINGE_PREFERENCE_ORDER,
     )
-    : [...inputs.legalCandidates];
+    : [...automaticCandidates];
 
   const decide = (
     identity: ComposedExerciseIdentity,

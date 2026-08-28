@@ -62,6 +62,8 @@ import {
   codDecelPermitted,
 } from '../rules/conditioningSelection';
 import { selectPowerExercise } from '../rules/powerExercisePool';
+import { parseConditioningDose, doseMidpoint } from '../rules/conditioningDose';
+import { conditioningAthletePrescription } from '../rules/conditioningDisplay';
 import {
   deloadPowerDose,
   applyConditioningDeloadToExercises,
@@ -1127,11 +1129,12 @@ export function validatePairings(
  * exactly one conditioning intent. Aerobic flush was removed from the
  * combined S+C path so it can no longer appear as a secondary block.
  */
-function buildConditioningBlock(
+export function buildConditioningBlock(
   flavour: 'aerobic' | 'tempo' | 'high-intensity',
   condBlock: WorkoutExercise[],
   attachedKind?: AttachedConditioningKind,
   modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed',
+  availableMachines?: ReadonlyArray<'bike' | 'air_bike' | 'row' | 'ski'>,
 ): ConditioningBlock | undefined {
   if (!condBlock || condBlock.length === 0) return undefined;
 
@@ -1144,6 +1147,15 @@ function buildConditioningBlock(
       return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
     }) ?? condBlock[condBlock.length - 1];
   const headlineName = headline.exercise?.name || 'Conditioning';
+  const template = resolveTemplateByName(headlineName);
+  const machines = template ? renderableModalities(template).filter(m => m !== 'run'
+    && (availableMachines === undefined || availableMachines.includes(m as never))) : [];
+  const mixedMachines = ([machines.includes('bike') ? 'bike' : 'air_bike', 'ski', 'row'] as const)
+    .filter(machine => machines.includes(machine));
+  const modalitySequence = modality === 'running' ? ['run' as const]
+    : modality === 'mixed' ? mixedMachines.slice(0, Math.max(1, headline.prescribedSets))
+    : modality === 'bike' ? machines.filter(m => m === 'bike' || m === 'air_bike').slice(0, 1)
+    : machines.filter(m => m === modality).slice(0, 1);
 
   return {
     intent: flavour,
@@ -1154,6 +1166,7 @@ function buildConditioningBlock(
         description: '',
         exerciseIds: condBlock.map((ex) => ex.id),
         ...(modality ? { modality } : {}),
+        ...(modalitySequence.length ? { modalitySequence } : {}),
       },
     ],
   };
@@ -1165,7 +1178,7 @@ function buildConditioningBlock(
  * the erg pick when the block renders off-feet, 'running' when the authored
  * template renders on run only.
  */
-function resolvedBlockModality(
+export function resolvedBlockModality(
   templateName: string,
   ergModality: ErgModality | undefined,
   availableMachines?: ReadonlyArray<'bike' | 'air_bike' | 'row' | 'ski'>,
@@ -1186,7 +1199,9 @@ function resolvedBlockModality(
       .filter((m) => availableMachines === undefined || availableMachines.includes(m as never))
       .map((m) => (m === 'air_bike' ? 'bike' : m)),
   );
-  if (requested === 'mixed' && machines.has('row') && machines.has('ski')) return 'mixed';
+  const rounds = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);
+  if (requested === 'mixed' && template.quality === 'flush' && machines.size > 1
+    && rounds.ok && doseMidpoint(rounds.quantity) > 1) return 'mixed';
   if ((requested === 'bike' || requested === 'row' || requested === 'ski') && machines.has(requested)) {
     return requested;
   }
@@ -2050,6 +2065,7 @@ export function buildWorkoutsFromCoach(
         ...(!isStandaloneSpeed ? { conditioningBlock: buildConditioningBlock(
           planEntry.conditioningFlavour!, condExercises, undefined,
           resolvedBlockModality(exerciseName, planEntry.ergModality as ErgModality | undefined, availableMachines),
+          availableMachines,
         ) } : {}),
         // 4B: carry the energy-system category onto conditioning workouts
         // so the rules kernel classifies from the typed field. True speed
@@ -2387,6 +2403,7 @@ export function buildWorkoutsFromCoach(
           planEntry.ergModality as ErgModality | undefined,
           availableMachines,
         ),
+        availableMachines,
       );
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);

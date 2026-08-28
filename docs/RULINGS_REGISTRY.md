@@ -6786,3 +6786,27 @@ Guard: `LAW-programming-remediation-inputs-and-selection`,
 `test:canonical-weekly-compiler` (`programmingInputTruth`), plus the existing
 `test:weekly-scheduler` contract matrix. Status and NOT COVERED:
 `docs/STATUS_PROGRAMMING_REMEDY.md`.
+
+**R-265** · Sam's five programming follow-up decisions, 2026-08-28.
+
+Owner: programming-remedy. Leg Press and conventional Deadlift remain manual
+choices and suitable fallbacks, not automatic variety ahead of suitable legal
+alternatives. P16's existing direction applies at the weekly slot level: if
+permanent kit leaves Leg Press as the sole suitable bilateral squat, cover that
+pattern once and keep the other lower day's single-leg work without another
+Leg Press. Do not relabel unilateral work, add sets, erase an accepted block
+selection or override an explicit pin. Existing accepted block selections restore. Box Jumps, Broad
+Jumps and Jump Squats join the ordinary power pool without invented lower
+preference than Vertical Jump; dose still belongs to the existing power policy.
+G+2 in-season offers off-leg flush unless conditioning/team training is already
+there; explicit mild soreness makes it required. Actual equipment, safety,
+fixture restrictions and explicit unavailability still bind. A flush does not
+manufacture fitness-conditioning credit. Adding Mobility or Recovery first
+reads every exercise on the destination day, including strength warm-ups, and
+composes a separate session with none of those exercises repeated. Existing
+daily limit, logging and Undo remain. Sam accepted the existing club-speed floor
+policy; R-079's permission is not an instruction to add unnecessary sprint work.
+Guard: `LAW-programming-followup-approved-pools-flush-and-add`,
+`test:canonical-weekly-compiler` (`programmingSelectionDecisions`,
+`unilateralPriorityJourney`, `gPlusTwoFlushJourney`, `lowLoadAdditionJourney`, `conditioningClarity`).
+Findings and NOT COVERED: `docs/PROGRAMMING_FOLLOWUP_2026-08-28.md`.

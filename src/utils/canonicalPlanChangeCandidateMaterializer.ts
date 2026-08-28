@@ -9,6 +9,7 @@ import type { ResolvedDay } from './sessionResolver';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectVisibleDay } from './visibleProgramProjection';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { coachRevisionExistingExerciseNames } from './coachRevisionTemplateContext';
 
 export interface CanonicalPlanChangeCandidateInput {
   change: TemplatePlanChange;
@@ -276,13 +277,29 @@ function rawCandidate(
   source: Workout | null,
   transformTemplate?: (template: Workout) => Workout,
 ): CanonicalPlanChangeCandidateResult | Workout {
-  const built = buildCoachRevisionTemplateWorkout(change.templateId, change.date);
+  const built = buildCoachRevisionTemplateWorkout(change.templateId, change.date,
+    change.kind === 'add_template' ? coachRevisionExistingExerciseNames(source, change.date) : undefined);
   if (!built) {
     return {
       ok: false,
       code: 'unknown_template',
       reason: `Unknown plan-change template ${change.templateId}.`,
     };
+  }
+  // A second instance of the same template owns new rows; existing rows keep
+  // their ids, logs and removal/Undo targets. Identity is deterministic per day.
+  const occupiedIds = new Set(source?.exercises.map(row => row.id));
+  if (change.kind === 'add_template' && (built.composedOptionalKind === 'mobility' || built.workoutType === 'Recovery')) {
+    const occupiedSessions = new Set(source?.exercises.map(row => row.workoutId));
+    const baseId = built.id;
+    let instance = 2;
+    while (occupiedSessions.has(built.id)) built.id = `${baseId}:addition-${instance++}`;
+    built.exercises = built.exercises.map(row => {
+      let id = row.id, suffix = 2;
+      while (occupiedIds.has(id)) id = `${row.id}:addition-${suffix++}`;
+      occupiedIds.add(id);
+      return { ...row, id, workoutId: built.id };
+    });
   }
   const template = transformTemplate ? transformTemplate(built) : built;
   if (source && visibleDayLooksLikeGame({ workout: source })) {

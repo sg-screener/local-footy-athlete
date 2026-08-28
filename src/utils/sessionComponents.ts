@@ -36,10 +36,12 @@ export type SessionComponentCompletionPolicy =
   | 'optional_no_penalty';
 
 export interface SessionComponent {
-  id: SessionComponentKind;
+  id: string;
   kind: SessionComponentKind;
   label: string;
   completionPolicy: SessionComponentCompletionPolicy;
+  /** Exact rows of a composed low-load session, including repeated types. */
+  exerciseIds?: string[];
 }
 
 export type AthleteSessionComponentReductionResult =
@@ -749,8 +751,8 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
 
-  const mobilityRows = renderableRows.filter(row => lowLoadKind === 'mobility' || row.composedOptionalKind === 'mobility');
-  const recoveryRows = renderableRows.filter(row => lowLoadKind === 'recovery' || row.composedOptionalKind === 'recovery');
+  const mobilityRows = renderableRows.filter(row => (row.composedOptionalKind ?? lowLoadKind) === 'mobility');
+  const recoveryRows = renderableRows.filter(row => (row.composedOptionalKind ?? lowLoadKind) === 'recovery');
   const lowLoadIds = new Set([...mobilityRows, ...recoveryRows].map(row => row.id));
 
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
@@ -925,21 +927,17 @@ export function getSessionComponents(
   }
 
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
-  if (mobilityRows.length > 0 || (lowLoadKind === 'mobility' && components.length === 0)) {
-    components.push({
-      id: 'mobility',
-      kind: 'mobility',
-      label: 'mobility',
-      completionPolicy: 'required',
-    });
-  }
-
-  if (recoveryRows.length > 0 || (lowLoadKind === 'recovery' && components.length === 0)) {
-    components.push({
-      id: 'recovery',
-      kind: 'recovery',
-      label: 'recovery work',
-      completionPolicy: 'required',
+  for (const [kind, rows] of [['mobility', mobilityRows], ['recovery', recoveryRows]] as const) {
+    const groups = new Map<string, string[]>();
+    for (const row of rows) {
+      const key = row.workoutId ?? workout.id ?? kind;
+      groups.set(key, [...(groups.get(key) ?? []), row.id]);
+    }
+    if (!groups.size && lowLoadKind === kind && !components.length) groups.set(kind, []);
+    for (const [index, exerciseIds] of [...groups.values()].entries()) components.push({
+      id: index === 0 ? kind : `${kind}-session-${index + 1}`,
+      kind, label: kind === 'mobility' ? 'mobility' : 'recovery work',
+      completionPolicy: 'required', exerciseIds,
     });
   }
 

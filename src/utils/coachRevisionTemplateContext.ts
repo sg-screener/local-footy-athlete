@@ -28,6 +28,11 @@ import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjurySt
 import { buildGenerationConstraintContext } from './generationConstraints';
 import { resolveSeasonPhaseClock, phaseClockMondayISO } from '../rules/seasonPhaseClock';
 import { composedIdentityFor } from '../rules/composedRowLegality';
+import type { Workout } from '../types/domain';
+import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import { selectMobilityPrehabFlow } from './mobilityPrehabFlow';
+import { applyMobilityFlowExerciseDecisions, applyRecoveryAddonExerciseDecisions } from './derivedExerciseDecisions';
+import { performedMobilityMovementIds } from './sessionExecutionChecklist';
 
 export interface CoachRevisionTemplateContext {
   athlete: AthleteContext;
@@ -35,6 +40,11 @@ export interface CoachRevisionTemplateContext {
   gameDates: string[];
   inSeason: boolean;
   strengthComposition?: Omit<ComposerInputs, 'plannedDays'>;
+  dayExerciseReadState?: {
+    performedMovementIds: readonly string[];
+    entries: readonly DecisionLedgerEntry[];
+    excludedExerciseNames: readonly string[];
+  };
 }
 
 export type CoachRevisionTemplateContextProvider =
@@ -114,7 +124,12 @@ function liveStoreProvider(dateISO?: string): CoachRevisionTemplateContext {
       pinnedIdentities: (prefs.pinned ?? []).map(composedIdentityFor),
       progressedIdentities: [], selectionHistory: blockSelectionHistory(),
     };
-    return { athlete, gameDates, inSeason, strengthComposition };
+    const { useDecisionLedgerStore } = require('../store/decisionLedgerStore') as typeof import('../store/decisionLedgerStore');
+    return { athlete, gameDates, inSeason, strengthComposition, dayExerciseReadState: {
+      performedMovementIds: performedMobilityMovementIds(useProgramStore.getState().sessionFeedback[todayISO] ?? null),
+      entries: useDecisionLedgerStore.getState().entries,
+      excludedExerciseNames: prefs.excluded ?? [],
+    } };
   } catch {
     return FALLBACK_CONTEXT;
   }
@@ -128,6 +143,25 @@ export function getCoachRevisionTemplateContext(dateISO?: string): CoachRevision
   } catch {
     return FALLBACK_CONTEXT;
   }
+}
+
+/** Read the same visible exercises as the day/session, including derived work. */
+export function coachRevisionExistingExerciseNames(workout: Workout | null, date: string): string[] {
+  if (!workout) return [];
+  const ctx = getCoachRevisionTemplateContext(date);
+  const read = ctx.dayExerciseReadState ?? { performedMovementIds: [], entries: [], excludedExerciseNames: [] };
+  const visible = applyRecoveryAddonExerciseDecisions({ workout, date, entries: read.entries,
+    excludedExerciseNames: read.excludedExerciseNames });
+  const flow = applyMobilityFlowExerciseDecisions({ date, entries: read.entries,
+    excludedExerciseNames: read.excludedExerciseNames,
+    flow: selectMobilityPrehabFlow({ workout: visible, date, athlete: ctx.athlete,
+      seasonPhase: ctx.strengthComposition?.seasonPhase ?? ctx.athlete.onboardingData?.seasonPhase,
+      isGameWeek: ctx.gameDates.some(game => phaseClockMondayISO(game) === phaseClockMondayISO(date)),
+      performedMovementIds: read.performedMovementIds }),
+  });
+  return [...visible.exercises.map(row => row.exercise.name),
+    ...visible.recoveryAddons?.flatMap(addon => addon.exercises.map(row => row.name)) ?? [],
+    ...flow?.movements.map(movement => movement.exercise.name) ?? []];
 }
 
 /** Test / bootstrap injection point. Pass null to restore the default. */

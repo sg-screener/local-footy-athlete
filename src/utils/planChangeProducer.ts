@@ -641,7 +641,7 @@ export function listPlanChangeOptionsForDay(args: {
   // visible parts. Duplicate strength+strength or conditioning+conditioning
   // is still blocked; rest is owned by bin/remove rather than add.
   const visibleSessionKinds = visibleSessionKindsForSnapshot(snap);
-  const visibleSessionCount = visibleSessionKinds.length;
+  const visibleSessionCount = snap.workout?.sections.length ?? 0;
   const canAddOnTop =
     projected.capabilities.canAdd &&
     visibleSessionCount > 0 &&
@@ -661,7 +661,7 @@ export function listPlanChangeOptionsForDay(args: {
     addOnTopCategories: canAddOnTop
       ? categories.filter((category) => {
           const addedKind = categoryAddsSessionKind(category.id);
-          if (addedKind === 'recovery') return false;
+          if (addedKind === 'recovery') return true;
           return !visibleSessionKinds.includes(addedKind);
         })
       : [],

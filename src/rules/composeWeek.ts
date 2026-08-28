@@ -1480,11 +1480,26 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // ITSELF. `SLOTS_FOR_KIND['full_body_coverage']` is deliberately the whole
     // ten-slot weekly set — the ladder the day draws FROM — so it must never be
     // used as the day's own seven. That is what this branch exists to prevent.
-    const shapeSlots = isCoverageDay && plannedCoverageGaps
+    const authoredShapeSlots = isCoverageDay && plannedCoverageGaps
       ? plannedCoverageGaps
       // R-130a: one switch, one pick — the female tables for female athletes,
       // the male objects untouched for everyone else.
       : slotsForKind(kind, inputs.profile?.gender);
+    // P16: when permanent kit leaves only Leg Press as the suitable bilateral
+    // squat, cover that pattern once and retain the other day's single-leg work.
+    // Do not rename a unilateral lift, add sets, or rewrite an accepted seat.
+    const squatBench = experiencePreferred(slotCandidates('squat').filter(id =>
+      !excluded.has(id) && composedRowIsLegal(id, inputs.kit)), inputs.profile);
+    const nextSquatSeat = seatCountBySlot.get('squat') ?? 0;
+    const acceptedSquatSeat = inputs.selectionHistory.some(entry => entry.slot === 'squat'
+      && selectionSeatIndex(entry) === nextSquatSeat && entry.blockStartISO === inputs.blockStartISO);
+    const singleLegOwnsLowerWork = !inputs.pinnedIdentities.includes(composedIdentityFor('Leg Press'))
+      && !acceptedSquatSeat && usedThisWeek.has(composedIdentityFor('Leg Press'))
+      && squatBench.length > 0 && squatBench.every(id => id === 'Leg Press')
+      && authoredShapeSlots.includes('single_leg_knee') && !prohibited.has('single_leg_knee')
+      && slotCandidates('single_leg_knee').some(id => !excludedToday.has(id) && composedRowIsLegal(id, kitToday));
+    const shapeSlots = singleLegOwnsLowerWork
+      ? authoredShapeSlots.filter(slot => slot !== 'squat') : authoredShapeSlots;
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
     // ordinary week took the else arm: its lower rows came out accessories

@@ -21,16 +21,24 @@ export interface ConditioningVisibleIdentity {
 }
 
 /** P09: quality/title and the actual selected mode are separate facts. */
-export function conditioningModeLabel(modality: ConditioningOption['modality']): string | undefined {
+export function conditioningModeLabel(
+  modality: ConditioningOption['modality'],
+  sequence?: ConditioningOption['modalitySequence'],
+): string | undefined {
   if (!modality) return undefined;
+  if (modality === 'mixed') {
+    const names = sequence?.map(m => ({ run: 'Run', bike: 'Bike', air_bike: 'Air Bike', row: 'RowErg', ski: 'SkiErg' })[m]);
+    return names?.length ? `${names.join(' → ')} · change after each round; repeat this order` : 'Machine selection unavailable';
+  }
+  if (modality === 'bike' && sequence?.[0] === 'air_bike') return 'Air Bike · off-leg';
   return { bike: 'Bike · off-leg', row: 'RowErg · off-leg', ski: 'SkiErg · off-leg',
-    running: 'Run · running', mixed: 'Mixed modalities' }[modality];
+    running: 'Run · running' }[modality];
 }
 
 /** Only the typed option owning this row can label it; never parse a lift name. */
 export function conditioningModeLabelForRow(workout: Partial<Workout>, id: string): string | undefined {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(id));
-  return conditioningModeLabel(option?.modality);
+  return conditioningModeLabel(option?.modality, option?.modalitySequence);
 }
 
 /** One threshold owns the long/short aerobic interval boundary. */

@@ -352,6 +352,10 @@ function componentForTemplateItem(
   item: SessionTemplateItem,
   components: SessionComponent[],
 ): string | null {
+  if (item.kind === 'exercise') {
+    const lowLoadOwner = components.find(component => component.exerciseIds?.includes(item.row.id));
+    if (lowLoadOwner) return lowLoadOwner.id;
+  }
   const ids = new Set(components.map((component) => component.id));
   if (item.kind === 'team_training') return ids.has('team_training') ? 'team_training' : 'session';
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') {

@@ -1149,7 +1149,12 @@ export function applyConditioningModalityToWorkout<
         opt.modality === (from === 'run' ? 'running' : from);
       const modality = !matchesSource ? opt.modality : to === 'run' ? 'running'
         : ['bike', 'row', 'ski'].includes(to) ? to : opt.modality;
-      const modeChanged = modality !== opt.modality;
+      const modalitySequence = !matchesSource ? opt.modalitySequence
+        : to === 'run' ? ['run']
+        : to === 'bike' ? [bikeLabel === 'assault' ? 'air_bike' : 'bike']
+        : to === 'row' || to === 'ski' ? [to] : opt.modalitySequence;
+      const modeChanged = modality !== opt.modality
+        || JSON.stringify(modalitySequence) !== JSON.stringify(opt.modalitySequence);
       let newOptDesc: string | null = rewriteText(opt?.description);
       if (!newOptDesc && newTitle && opt?.title && opt?.description === opt?.title) {
         newOptDesc = newTitle;
@@ -1161,6 +1166,7 @@ export function applyConditioningModalityToWorkout<
       return {
         ...opt,
         modality,
+        modalitySequence,
         title: newTitle ?? opt.title,
         description: newOptDesc ?? opt.description,
       };

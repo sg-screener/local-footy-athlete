@@ -67,6 +67,10 @@ export interface WeeklySchedulerInputs {
   /** Compiler-owned injury safety; field participation is a separate athlete fact. */
   readonly appSprintPermitted?: boolean;
   readonly appRunningPermitted?: boolean;
+  /** Current dated equipment, supplied by the compiler; no machine is assumed. */
+  readonly offLegAvailableDays?: readonly number[];
+  /** Explicit mild soreness reports effective on these dates, not inferred fatigue. */
+  readonly mildSorenessDays?: readonly number[];
   /** Off-season only; decides the §8 overlay. */
   readonly offseasonBlock: OffseasonBlock | null;
   /**
@@ -1423,14 +1427,31 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // P03, 2026-08-28: automatic gendered extras are fixture-relative only.
   // Preserve G−1, including a pre-season practice match; no off-season/no-game
   // offer. This does not govern manual Add or the separate Mobility top-up.
+  const withFlush = withRunning.map((entry): SessionIntention => {
+    // Sam, 2026-08-28: G+2 offers an off-leg flush unless conditioning or club
+    // already occupies the day. It becomes required only with reported mild
+    // soreness. This never borrows a machine or displaces existing work.
+    if (inputs.phase !== 'In-season' || entry.game || entry.clubTraining
+      || entry.conditioning !== null || entry.sprintComponent
+      || inputs.unavailableDays.includes(entry.dayOfWeek)
+      || !inputs.offLegAvailableDays?.includes(entry.dayOfWeek)
+      || scheduledGameProximity(entry.dayOfWeek, inputs).daysSincePreviousGame !== 2
+      || isGameMinusOne(entry.dayOfWeek, inputs) || isGamePlusOne(entry.dayOfWeek, inputs)) return entry;
+    const required = inputs.mildSorenessDays?.includes(entry.dayOfWeek) === true;
+    return { ...entry, owner: entry.owner === 'strength' ? 'strength' : 'conditioning',
+      conditioning: 'off_leg', conditioningCategory: 'recovery_flush',
+      conditioningRole: entry.owner === 'strength' ? (required ? 'component' : 'finisher') : 'standalone',
+      optional: entry.owner === 'strength' ? entry.optional : !required,
+      clauseId: 'R-265' };
+  });
   const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
     if (inputs.phase !== 'Off-season' && fixtureDays.length === 1) {
       const gameIdx = orderIndex(fixtureDays[0]);
-      if (gameIdx <= 0) return withRunning;
+      if (gameIdx <= 0) return withFlush;
       const g1Day = WEEK_ORDER[gameIdx - 1];
-      return withRunning.map((entry) => (
+      return withFlush.map((entry) => (
         entry.dayOfWeek === g1Day
           && entry.owner === 'rest_or_recovery'
           && !entry.clubTraining
@@ -1439,7 +1460,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           : entry
       ));
     }
-    return withRunning;
+    return withFlush;
   })();
 
   const intended = new Set<MovementPattern>();
@@ -1458,7 +1479,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   ]).size;
   // R-261: the combined session keeps both qualities but earns one credit.
   const appConditioningDays = withComposedOptional.filter((day) =>
-    day.conditioning !== null || day.sprintComponent).length;
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush') || day.sprintComponent).length;
   const runningDayCount = withComposedOptional.filter((day) => day.conditioning === 'running').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //
@@ -1485,7 +1506,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // A day OFFERING a composed optional is still a full rest day — the charter's
   // counting row: optional work never breaks rest.
   const fullRestDays = withComposedOptional.filter((day) =>
-    day.owner === 'rest_or_recovery' && !day.clubTraining && !day.game).length;
+    (day.owner === 'rest_or_recovery' || (day.owner === 'conditioning' && day.conditioningCategory === 'recovery_flush'))
+      && !day.clubTraining && !day.game).length;
 
   const demand = {
     mainStrength: needed,

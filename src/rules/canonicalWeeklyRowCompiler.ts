@@ -9,6 +9,8 @@ import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine'
 import { isoDateForWeekday } from '../utils/appDate';
 import { type ActiveConstraint } from '../store/coachUpdatesStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { activeTemporarySourceFacts } from './temporarySourceFact';
+import { filterConstraintsForDate } from '../utils/readinessConstraints';
 import { buildBlockWeekStates } from '../utils/programBlockState';
 import { buildGenerationConstraintContext, type GenerationConstraintContext } from '../utils/generationConstraints';
 import { canonicalWeeklyInjuryStateFrom } from '../rules/canonicalWeeklyInjuryState';
@@ -370,7 +372,18 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       });
       const agePolicy = resolveTrainingAgePolicy(cutoverInputs.experienceLevel);
       const compiled = compileCanonicalWeek({
-        scheduler: schedulerInputs,
+        scheduler: { ...schedulerInputs,
+          mildSorenessDays: [0, 1, 2, 3, 4, 5, 6].filter(day => {
+            const date = isoDateForWeekday(blockState.weekStart, day);
+            const reported = activeTemporarySourceFacts(args.temporarySourceFacts ?? [], date)
+              .flatMap(fact => 'factKind' in fact && fact.factKind === 'soreness' ? [fact.athleteReportedLevel] : []);
+            const legacy = filterConstraintsForDate([...(args.activeConstraints ?? [])], date)
+              .filter(c => c.type === 'soreness' && c.status !== 'resolved').map(c => c.severity);
+            const levels = [...reported, ...legacy];
+            return levels.length > 0 && levels.every(level => level === 'slight'
+              || (typeof level === 'number' && level > 0 && level < 4));
+          }),
+        },
         coaching: cutoverInputs,
         readiness: canonicalReadinessFactFrom(generationConstraints),
         illness: canonicalIllnessFactFrom(generationConstraints),

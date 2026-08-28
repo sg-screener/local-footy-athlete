@@ -533,7 +533,7 @@ function resolveConditioningOptions(
         return {
           title: identity?.attachedLabel ?? option.title,
           description: option.description ?? '',
-          modalityLabel: conditioningModeLabel(option.modality),
+          modalityLabel: conditioningModeLabel(option.modality, option.modalitySequence),
           rows: conditioningRows.filter((row: any) => ids.has(String(row?.id))),
         };
       })

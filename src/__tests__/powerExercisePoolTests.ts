@@ -81,10 +81,13 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Lateral Jump', 'lower', null, []],
   ['Lateral Bounds', 'lower', 'developing', []],
   ['Kneeling Jump', 'lower', 'consistent', []],
+  ['Box Jumps', 'lower', null, ['Box']],
+  ['Broad Jumps', 'lower', null, []],
+  ['Jump Squats', 'lower', null, []],
 ];
 
 ok(
-  'the pool holds exactly Sam\'s seven entries',
+  'the pool holds exactly Sam\'s ten approved entries',
   POWER_EXERCISE_POOL.length === AUTHORED_ENTRIES.length,
   `found ${POWER_EXERCISE_POOL.length}: ${POWER_EXERCISE_POOL.map((e) => e.name).join(', ')}`,
 );
@@ -164,8 +167,8 @@ const inSeasonNames = eligiblePowerExercises(
   ctx({ phase: 'In-season', trainingAge: 'advanced' }),
 ).map((e) => e.name);
 ok(
-  'the in-season lower pool is Vertical Jump + Lateral Jump only',
-  inSeasonNames.slice().sort().join(',') === ['Lateral Jump', 'Vertical Jump'].join(','),
+  'the in-season lower pool includes the three additions approved on 2026-08-28',
+  inSeasonNames.slice().sort().join(',') === ['Box Jumps', 'Broad Jumps', 'Jump Squats', 'Lateral Jump', 'Vertical Jump'].join(','),
   `found: ${inSeasonNames.join(', ')}`,
 );
 

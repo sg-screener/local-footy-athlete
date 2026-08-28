@@ -334,14 +334,13 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
 
     if (template && intention?.conditioningCategory && intention.conditioning !== 'sprint_high_speed') {
       Object.assign(allocation, {
-        conditioningCategory: intention.conditioningCategory,
+        // Flush is the specialist's demand, not a new stored energy system.
+        conditioningCategory: intention.conditioningCategory === 'recovery_flush' ? 'aerobic_base' : intention.conditioningCategory,
         conditioningFlavour: flavourFor(intention.conditioningCategory),
         conditioningOffFeet: intention.conditioning === 'off_leg',
-        hasCombinedConditioning: intention.conditioningRole === 'component',
-        attachedConditioningKind: intention.conditioningRole === 'component'
-          ? 'component' : undefined,
-        section18ConditioningRole: intention.conditioningRole === 'component'
-          ? 'core' : 'core',
+        hasCombinedConditioning: isStrength,
+        attachedConditioningKind: isStrength ? intention.conditioningRole : undefined,
+        section18ConditioningRole: intention.conditioningCategory === 'recovery_flush' ? 'optional_flush' : 'core',
         conditioningVariant: template.name,
       });
     }

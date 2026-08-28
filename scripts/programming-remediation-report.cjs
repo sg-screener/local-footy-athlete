@@ -1,9 +1,11 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const assert = require('node:assert/strict');
 const root = path.resolve(process.argv[2] ?? 'outputs/programming-remedy-2026-08-28');
+const baselineRoot = process.argv[3] ? path.resolve(process.argv[3]) : null;
 const baselinePath = '/Users/samgeurts/.codex/visualizations/2026/08/26/01a03b69-9022-7041-b909-ca28d5e0d275/year-programs.json';
-const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+const originalBaseline = baselineRoot ? null : JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const flatten = rows => rows.flatMap(row => row.choices ? row.choices.flatMap(choice => flatten(choice.rows)) : [row]);
 const daysOf = athlete => athlete.weeks.flatMap(week => week.days);
@@ -38,6 +40,7 @@ const style = 'body{font:15px system-ui;background:#10151a;color:#e8edf0;margin:
 const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${style}</style></head><body><h1>${esc(title)}</h1>${body}</body></html>`;
 const totals = [], comparisons = [], links = [], content = [];
 for (const world of ['original-partial', 'corrected-commercial']) {
+  const baseline = baselineRoot ? JSON.parse(fs.readFileSync(path.join(baselineRoot,world,'year-programs.json'),'utf8')) : originalBaseline;
   const data = JSON.parse(fs.readFileSync(path.join(root, world, 'year-programs.json'), 'utf8'));
   for (const athlete of data.athletes) {
     const title = `${athlete.gender === 'male' ? 'Male' : 'Female'} year · ${world === 'original-partial' ? 'original partial kit' : 'corrected commercial gym'}`;
@@ -55,7 +58,14 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       projectionErrors: days.filter(d => d.projectionError).map(d => ({ date: d.date, error: d.projectionError })) };
     totals.push(total);
     const before = baseline.athletes.find(a => a.gender === athlete.gender);
-    comparisons.push({ world, gender: athlete.gender, beforeRevision: baseline.revision, afterRevision: data.revision,
+    if (baselineRoot) {
+      assert.deepEqual(athlete.profile,before.profile,`${world}/${athlete.gender}: athlete inputs must match`);
+      assert.deepEqual(athlete.actions.map(({date,label})=>({date,label})),before.actions.map(({date,label})=>({date,label})),
+        `${world}/${athlete.gender}: dated athlete actions must match`);
+      assert.deepEqual(athlete.weeks.map(({start,phase,phaseWeek})=>({start,phase,phaseWeek})),
+        before.weeks.map(({start,phase,phaseWeek})=>({start,phase,phaseWeek})),`${world}/${athlete.gender}: phase inputs must match`);
+    }
+    comparisons.push({ world, gender: athlete.gender, beforeRevision: baseline.revision, afterRevision: data.revision, identicalInputs:!!baselineRoot,
       beforeFrequency: frequency(before), afterFrequency: frequency(athlete), beforeSpacing: spacing(before), afterSpacing: spacing(athlete),
       weeks3and4: [2, 3].map(i => ({ week: i + 1, before: before.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })),
         after: athlete.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })) })) });
@@ -69,9 +79,9 @@ for (const world of ['original-partial', 'corrected-commercial']) {
 const units = 'Frequency: one displayed row (choices expanded), including unavailable/Skip rows, NOT active prescriptions, sets, minutes, completions or selector calls. The original export omitted withholding, so before/after compares displayed rows only. Revised trainable and withheld counts are separate in year-summary.json. Warm-ups and newly exported Speed are excluded from before/after frequency because the original omitted Speed. Names are displayed names, not catalogue IDs. Spacing: adjacent calendar-day pairs sharing an Upper, Lower or Conditioning part, including forced adjacency; this is not an avoidability verdict.';
 fs.writeFileSync(path.join(root, 'year-comparison.html'), page('Programming remediation · four year reports', `<ul>${links.join('')}</ul>${content.join('')}`));
 fs.writeFileSync(path.join(root, 'year-summary.json'), JSON.stringify(totals, null, 2));
-fs.writeFileSync(path.join(root, 'before-after-frequency-spacing.json'), JSON.stringify({ baselinePath, units, comparisons }, null, 2));
+fs.writeFileSync(path.join(root, 'before-after-frequency-spacing.json'), JSON.stringify({ baselinePath:baselineRoot??baselinePath, units, comparisons }, null, 2));
 const count = f => Object.values(f).reduce((n, v) => n + v.displayedRowPlacements, 0);
 const lines = comparisons.map(c => `| ${c.world} | ${c.gender} | ${count(c.beforeFrequency)} → ${count(c.afterFrequency)} | ${Object.keys(c.beforeFrequency).length} → ${Object.keys(c.afterFrequency).length} | ${c.beforeSpacing.adjacentCalendarDayPairs} → ${c.afterSpacing.adjacentCalendarDayPairs} |`);
-fs.writeFileSync(path.join(root, 'before-after-summary.md'), `# Before/after programming evidence\n\nOriginal ${baseline.revision}; revised ${totals[0].revision}. Original evidence is unchanged.\n\n${units}\n\n| World | Athlete | Displayed rows (incl. Skip) | Distinct names | Adjacent same-part pairs |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n\nEach world contains 364 athlete-days. Full per-name placements and distinct athlete-days, every adjacency pair and week 3/4 layouts are in before-after-frequency-spacing.json. Corrected commercial kit is a separate input world, not a source-only comparison.\n\n## NOT COVERED\n\nPhysical-device acceptance; original Speed frequency; clinical validation; proof that every adjacent pair is avoidable; onboarding 2 km skip-tap consistency.\n`);
+fs.writeFileSync(path.join(root, 'before-after-summary.md'), `# Before/after programming evidence\n\nBaseline ${comparisons[0].beforeRevision}; revised ${totals[0].revision}. Earlier evidence is unchanged.\n\n${units}\n\n| World | Athlete | Displayed rows (incl. Skip) | Distinct names | Adjacent same-part pairs |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n\nEach world contains 364 athlete-days. Full per-name placements and distinct athlete-days, every adjacency pair and week 3/4 layouts are in before-after-frequency-spacing.json. ${baselineRoot?'Each before/after pair has identical profile, dated action and phase inputs; partial and commercial worlds remain separate.':'Corrected commercial kit is a separate input world, not a source-only comparison.'}\n\n## NOT COVERED\n\nPhysical-device acceptance; original Speed frequency; clinical validation; proof that every adjacent pair is avoidable; onboarding 2 km skip-tap consistency.\n`);
 console.log(JSON.stringify(totals, null, 2));
 if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length)) process.exitCode = 1;

@@ -1293,6 +1293,8 @@ export interface ConditioningOption {
    * keyword-guess the modality from the title — this field is the answer.
    */
   modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed';
+  /** Actual selected equipment, in round order for a mixed flush. */
+  modalitySequence?: Array<'run' | 'bike' | 'air_bike' | 'row' | 'ski'>;
 }
 
 /**

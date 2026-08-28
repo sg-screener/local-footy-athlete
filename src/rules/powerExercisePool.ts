@@ -105,6 +105,23 @@ export const POWER_POOL_REDUCED_TAKEOVER = 'Pogo Hops';
  * four are his 2026-07-23 additions.
  */
 export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
+  // Sam, 2026-08-28: these are ordinary alternatives in the same power slot,
+  // not lower-priority choices or additional volume. Existing policy owns dose.
+  {
+    name: 'Box Jumps', family: 'lower', equipmentRequired: ['Box'],
+    minTrainingAge: null, phaseGate: 'all_phases', inSeasonSafe: true,
+    reducedTakeoverOnly: false, authoredCueIntent: 'Jump up, step down.',
+  },
+  {
+    name: 'Broad Jumps', family: 'lower', equipmentRequired: [],
+    minTrainingAge: null, phaseGate: 'all_phases', inSeasonSafe: true,
+    reducedTakeoverOnly: false, authoredCueIntent: 'Drive forward, land balanced.',
+  },
+  {
+    name: 'Jump Squats', family: 'lower', equipmentRequired: [],
+    minTrainingAge: null, phaseGate: 'all_phases', inSeasonSafe: true,
+    reducedTakeoverOnly: false, authoredCueIntent: 'Quarter squat, jump with intent.',
+  },
   {
     name: 'Vertical Jump',
     family: 'lower',

@@ -8,6 +8,7 @@ import type { ResolvedDay, ScheduleState } from './sessionResolver';
 import { logger } from './logger';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { semanticIntensityRank } from './programSemanticSnapshot';
+import { getSessionComponents } from './sessionComponents';
 
 export const COACH_REVISION_PROPOSAL_SCHEMA_VERSION = 'coach_revision_proposal.v1';
 
@@ -543,11 +544,19 @@ function buildVisibleSections(
   }
 
   if (recoveryItems.length > 0) {
-    sections.push({
-      id: `section:${day.date}:recovery:${workoutId}`,
-      kind: 'recovery',
-      title: recoveryItems.length === 1 ? recoveryItems[0].title : 'Recovery',
-      items: recoveryItems.map((item) => snapshotVisibleItem(item, workout)),
+    const groups = getSessionComponents(workout).filter(component => component.exerciseIds?.length);
+    const remaining = new Set(recoveryItems);
+    for (const group of groups) {
+      const items = recoveryItems.filter(item => item.exerciseIds.some(id => group.exerciseIds!.includes(id)));
+      if (!items.length) continue;
+      items.forEach(item => remaining.delete(item));
+      sections.push({ id: `section:${day.date}:recovery:${workoutId}:${group.id}`,
+        kind:'recovery', title:group.kind === 'mobility' ? 'Mobility' : 'Recovery',
+        items:items.map(item=>snapshotVisibleItem(item,workout)) });
+    }
+    if (remaining.size) sections.push({
+      id: `section:${day.date}:recovery:${workoutId}`, kind:'recovery', title:'Recovery',
+      items:[...remaining].map(item=>snapshotVisibleItem(item,workout)),
     });
   }
 

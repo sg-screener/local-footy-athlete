@@ -15,8 +15,18 @@ import type { BlockConditioningSelection } from '../../rules/conditioningSelecti
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { specialSessionInputTruth } from './specialSessionInputTruth';
 import { conditioningModalityExposure } from './conditioningModalityExposure';
+import { conditioningClarity } from './conditioningClarity';
+import { lowLoadAdditionJourney } from './lowLoadAdditionJourney';
+import { programmingSelectionDecisions } from './programmingSelectionDecisions';
+import { gPlusTwoFlushJourney } from './gPlusTwoFlushJourney';
+import { unilateralPriorityJourney } from './unilateralPriorityJourney';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
+  await conditioningClarity(storage, ok);
+  programmingSelectionDecisions(ok);
+  await unilateralPriorityJourney(storage,ok);
+  await lowLoadAdditionJourney(storage, ok);
+  await gPlusTwoFlushJourney(storage, ok);
   await conditioningModalityExposure(ok);
   await specialSessionInputTruth(storage, ok);
   const date = '2026-07-13';
