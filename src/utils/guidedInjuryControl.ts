@@ -323,9 +323,15 @@ function safeFocusFor(region: GuidedInjuryRegion, serious: boolean): string[] {
   return SAFE_FOCUS[region];
 }
 
+export function pausedInjuryModifierBody(injury: { severity: number; seriousSymptoms?: boolean }): string {
+  return injury.seriousSymptoms
+    ? 'Affected training is paused because you reported serious symptoms. Seek medical or physio advice.'
+    : `You rated this as ${injury.severity} / 10, so affected training is paused until you're ready or cleared to train.`;
+}
+
 function modifierBody(result: GuidedInjuryFlowResult): string {
   if (result.adjustmentLevel === 'training_paused' || result.seriousSymptoms) {
-    return "You rated this as 8-10 / 10, so affected training is paused until you're ready or cleared to train.";
+    return pausedInjuryModifierBody(result);
   }
   const area = displayArea(result.area);
   return `Your program is being adjusted around a ${severityDescriptor(result)} ${area} issue${triggerClause(result.triggers)}.`;

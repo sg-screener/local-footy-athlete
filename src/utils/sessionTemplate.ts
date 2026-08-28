@@ -351,16 +351,15 @@ export function buildSessionTemplate(
    * classified those two as main lifts and sorted them to the TOP. Sam, seeing
    * it: *"the order of the session is important and right now it's wrong"*.
    *
-   * ONE SHARED ROLE IS THE FIX, and it is the SAME fix Mobility and Recovery
-   * already use ten lines above — every row ranks equally, `orderItems` is
-   * stable, so the authored order survives untouched. No second sorting rule was
-   * added; the existing one is simply given nothing to reorder.
+   * Authored order is independent of the row's role. Keep the existing stable
+   * sort and optional grouping, but rank authored rows equally instead of
+   * disguising explosive work as prehab to make the sorter leave it alone.
    */
   const oneRole = sessionOrderIsAuthored(workout);
   for (const row of sessionRows) {
     items.push(exerciseItem(row, 'strength', {
       superset: supersetTags.get(row) ?? null,
-      ...(oneRole ? { role: 'prehab' as const } : {}),
+      ...(oneRole && row.role !== 'power' ? { role: 'prehab' as const } : {}),
       // A row the composer marked skippable joins the OPTIONAL WORK cluster —
       // the same cluster add-on rows use, so there is one optional group on the
       // screen rather than two ways of saying the same thing.
@@ -449,7 +448,9 @@ export function buildSessionTemplate(
   return {
     mode: 'badged_list',
     ordering,
-    items: orderItems(items, ordering === 'phase' ? phaseRank : d2Rank).map(item =>
+    items: orderItems(items, oneRole
+      ? item => item.kind === 'team_training' ? 2 : isOptional(item) ? 1 : 0
+      : ordering === 'phase' ? phaseRank : d2Rank).map(item =>
       item.kind === 'exercise' && item.presentation === 'conditioning_phase'
         ? { ...item, modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
         : item),

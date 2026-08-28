@@ -5,6 +5,12 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
 const mutants = {
+  landmine_strength_slot: ['src/rules/sessionSlotCoverage.ts', 'if (tag.power) return [];', 'if (false && tag.power) return [];', 'landmine', 'explosive landmine is absent from every strength slot'],
+  primer_power_evidence: ['src/utils/sessionBuilder.ts', "role: 'power',\n    power: { family: entry.family, kind: 'primer' },", "role: 'accessory',", 'landmine', 'selected landmine is power without strength credit or changed dose'],
+  primer_role_flattened: ['src/utils/sessionTemplate.ts', "oneRole && row.role !== 'power'", 'oneRole', 'landmine', 'selected landmine is power without strength credit or changed dose'],
+  primer_order_lost: ['src/utils/sessionTemplate.ts', 'items: orderItems(items, oneRole\n', 'items: orderItems(items, false && oneRole\n', 'landmine', 'authored order survives truthful power roles'],
+  injury_paused_copy: ['src/utils/guidedInjuryControl.ts', 'return injury.seriousSymptoms\n', 'return false && injury.seriousSymptoms\n', 'simple_injury', 'paused modifier names serious symptoms instead of inventing a high score'],
+  injury_stale_copy: ['src/utils/activeProgramModifiers.ts', 'body: isSerious ? fallbackBody : c.modifierBody ?? fallbackBody,', 'body: c.modifierBody ?? fallbackBody,', 'simple_injury', 'reopened modifier uses actual safety facts instead of stale saved copy'],
   speed_club_blanket: ['src/rules/weeklyScheduler.ts', 'if (!missing?.length || inputs.readiness.lowReadiness', 'if (inputs.clubNights.length > 0 || !missing?.length || inputs.readiness.lowReadiness', 'speed', 'a club night does not blanket-deny an unmet speed need'],
   speed_quality_erased: ['src/rules/conditioningSelection.ts', "(template) => args.category !== 'sprint' || !args.requestedSpeedQualities", "(template) => true || args.category !== 'sprint' || !args.requestedSpeedQualities", 'speed', 'the delivered template serves only an unmet quality'],
   speed_fact_disconnected: ['src/rules/canonicalWeeklyCompiler.ts', 'sprintExposure: input.coaching.sprintExposure,', 'sprintExposure: undefined,', 'speed', 'actual onboarding/compiler delivers the missing quality only'],

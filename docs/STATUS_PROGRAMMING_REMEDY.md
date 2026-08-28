@@ -701,3 +701,41 @@ a completed injury journey. Removed the redundant inline button and retained
 the existing always-visible Back action (pain → severity). Updated binding
 guard passes. The previous screenshot/log is preserved; revised native and
 exact-version verification are required. No scheduling or dose change here.
+
+### Delivered-year and native findings after 4206b4d1
+
+The completed 006fa6c1 commercial years exposed a missed P19 path: male 1 and
+female 3 late-year accessory occurrences, plus 10 female Primer occurrences
+badged prehab. The composer draws from the shared name-to-slot mapper, not only
+the strength pool. The mapper now excludes power; the existing Primer builder
+stamps real power evidence. The existing presentation sorter preserves authored
+order independently of role. No dose, progression or safety gate was changed.
+Options compared: correct these existing owners, or redesign selection/row
+taxonomy. Existing-owner correction is sufficient and preserves the architecture.
+
+Expanded P19 probe: 42 pass/15 fail before, 77/77 after (including three accepted
+blocks/restart and 28 Primer dates). A new compiler-year invariant checks every
+delivered Landmine role/evidence, including accumulated later weeks. Final years
+now export domain evidence as well as display role for the strict year audit.
+
+Native serious-symptom + mild-severity flow correctly reached Pause and retained
+the modifier across reopening, but its body falsely claimed an 8–10 rating.
+The existing modifier-copy owner now distinguishes serious symptoms from the
+actual numeric severity; the read projection also corrects stale saved copy
+without rewriting history. New numeric-boundary and stale-copy regressions hold
+both paths. The earlier native failure was partly a wrong expected title
+(paused versus Shoulder issue active), and partly this real copy defect.
+
+Native optional pain applied through the real controls; accumulated Clear and
+reopen passed with four modifiers reducing to three, preserving session adds.
+Paused Clear/reopen also passed. Further Add and final candidate checks continue.
+The 4–5 neutral background/divider correction remains visually verified.
+
+Additional diagnostics `test:slot-coverage` and `test:power-counting` fail on both
+the unchanged 263369ba baseline and this candidate: deleted applyPoolRotation
+dependency and a generation fixture refused for missing speed respectively.
+Neither was weakened or represented as a new passing diagnostic. The requested
+four C12 failures remain explicitly retired/replaced by current category checks.
+
+NOT COVERED: final revised-candidate gate/build/years, remaining native safety
+and Add combinations, physical acceptance. Installation remains held; no wipe.

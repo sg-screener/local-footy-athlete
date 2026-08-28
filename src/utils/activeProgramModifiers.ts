@@ -28,6 +28,7 @@ import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { todayISOLocal } from './appDate';
+import { pausedInjuryModifierBody } from './guidedInjuryControl';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 import { logger } from './logger';
 import {
@@ -496,7 +497,7 @@ function injuryModifier(
   const limits = listPreview(c.rules, 'training around this area');
   const isSerious = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
   const fallbackBody = isSerious
-    ? "You rated this as 8-10 / 10, so affected training is paused until you're ready or cleared to train."
+    ? pausedInjuryModifierBody(c)
     : sentence([
         'Your program is being adjusted around this injury.',
         `${severityLabel(c.severity)} ${c.severity}/10.`,
@@ -512,7 +513,9 @@ function injuryModifier(
     // the difference between working AROUND an injury and stopping for it.
     effect: isSerious ? 'training_paused' : 'exercises_swapped',
     title: c.modifierTitle ?? (isSerious ? 'Training paused for injury' : `${displayPart} issue active`),
-    body: c.modifierBody ?? fallbackBody,
+    // Old saved text may claim 8–10 for a low-score serious-symptom report.
+    // The current facts own this safety explanation; history remains intact.
+    body: isSerious ? fallbackBody : c.modifierBody ?? fallbackBody,
     severity: c.severity,
     affects: modifierAffects(c, []),
     actions: c.injuryEpisodeId

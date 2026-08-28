@@ -10,6 +10,7 @@ import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { visibleSignature, signatureDifferences } from '../compilerYear/invariants';
 import { undoLastDecision } from '../../store/undoLastDecision';
 import { applyPlanChange } from '../../utils/planChangeProducer';
+import { selectActiveProgramModifiers } from '../../utils/activeProgramModifiers';
 
 export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (let severity = 1; severity <= 10; severity++) {
@@ -20,6 +21,13 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
     { todayISO: '2026-08-24' });
     ok(`simple-injury/${severity}: serious-symptom stop preserves the reported numeric score`,
       serious.severity === severity && serious.seriousSymptoms === true && serious.adjustmentLevel === 'training_paused');
+    ok(`simple-injury/${severity}: paused modifier names serious symptoms instead of inventing a high score`,
+      /serious symptoms/i.test(serious.modifierBody ?? '') && !/8-10|8–10/.test(serious.modifierBody ?? ''));
+    const restored = selectActiveProgramModifiers({ todayISO: '2026-08-24', activeConstraints: [{
+      ...serious, modifierBody: 'You rated this as 8-10 / 10, so affected training is paused.',
+    }] }).find(modifier => modifier.type === 'injury');
+    ok(`simple-injury/${severity}: reopened modifier uses actual safety facts instead of stale saved copy`,
+      restored?.severity === severity && /serious symptoms/i.test(restored.body) && !/8-10|8–10/.test(restored.body));
     for (const [name, tags] of Object.entries(EXERCISE_TAGS)) {
       if (!['horizontal_push', 'vertical_push'].includes(tags.movement)) continue;
       ok(`simple-injury/${severity}/${name}: explicit pressing pain overrides every generic rating`,

@@ -4,7 +4,8 @@ tags:
   - visible
   - programming-gap
 ---
-# Continues an injury entered through the actual guided screens, not a seed.
+# Continues an injury entered through actual screens in the accumulated world:
+# three existing session-add modifiers must survive clearing only the injury.
 - launchApp:
     clearState: false
     stopApp: true
@@ -19,9 +20,9 @@ tags:
     id: onboarding-welcome-cta
 - tapOn:
     id: modifiers-strip-day-header
-- assertVisible: '1 ACTIVE'
-- tapOn:
-    id: coach-status-modifier-.*
+- assertVisible: '4 ACTIVE'
+- assertVisible: 'Shoulder issue active|Training paused for injury'
+- tapOn: 'Shoulder issue active|Training paused for injury'
 - scrollUntilVisible:
     element:
       text: Injury resolved
@@ -31,9 +32,9 @@ tags:
     text: Injury resolved
 - tapOn: Clear and update program
 - extendedWaitUntil:
-    visible:
-      id: coach-status-empty
+    notVisible: 'Shoulder issue active|Training paused for injury'
     timeout: 30000
+- assertVisible: '3 ACTIVE'
 - takeScreenshot: artifacts/gap/injury-cleared
 - launchApp:
     clearState: false
@@ -47,8 +48,8 @@ tags:
     timeout: 30000
 - tapOn:
     id: modifiers-strip-day-header
-- assertVisible:
-    id: coach-status-empty
+- assertNotVisible: 'Shoulder issue active|Training paused for injury'
+- assertVisible: '3 ACTIVE'
 - takeScreenshot: artifacts/gap/injury-clear-after-reopen
 - tapOn:
     id: coach-status-close

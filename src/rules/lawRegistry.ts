@@ -2500,7 +2500,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'R-268: club attendance does not blanket-deny reported unmet acceleration/top-speed needs; existing timing, injury/fatigue, availability and weekly limits remain. Explosive Landmine Press is selectable only as power, with no strength selection or strength credit and no invented dose.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-268 — Sam P15/P19 decisions, 2026-08-28.',
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
-      receipt: 'inseasonSpeedTruth and powerOnlyLandmineJourney exercise the real scheduler/selector and male/female onboarding/restart. Landmine reaches three real accepted blocks; deliberately restoring club exclusion, erasing quality requests, disconnecting facts or restoring strength fallback is caught. Final release status: STATUS_PROGRAMMING_REMEDY.' },
+      receipt: 'inseasonSpeedTruth and powerOnlyLandmineJourney exercise the real scheduler/selector and male/female onboarding/restart. Landmine also checks the compiler name-to-slot mapper and 28 authored Primer dates; compiler-year inspects its actual role/evidence through all 416 athlete-weeks. Source mutants cover selection, quality, facts, slot eligibility, Primer evidence/order and display role. Final release status: STATUS_PROGRAMMING_REMEDY.' },
   },
 ];
 

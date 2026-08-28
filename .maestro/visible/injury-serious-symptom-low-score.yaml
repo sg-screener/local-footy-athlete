@@ -1,0 +1,43 @@
+appId: com.localfootyathlete.app
+name: Serious symptoms remain independent of the mild severity band
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: home-injured-entry
+    direction: DOWN
+- tapOn:
+    id: home-injured-entry
+- tapOn:
+    id: injury-region-upper_body
+- tapOn:
+    id: injury-area-shoulder
+- scrollUntilVisible:
+    element:
+      id: injury-serious-symptoms
+    direction: DOWN
+- tapOn:
+    id: injury-serious-symptoms
+- scrollUntilVisible:
+    element:
+      id: injury-severity-mild
+    direction: UP
+- tapOn:
+    id: injury-severity-mild
+- assertVisible: Stop affected training
+- takeScreenshot: artifacts/gap/serious-symptom-low-score-stop
+- tapOn: Pause affected training
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- runFlow: injury-status-reopen-clear.yaml

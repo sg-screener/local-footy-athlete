@@ -1447,9 +1447,9 @@
       "reason": "Shared conditioning template materialiser resolves headline sets once and builds typed warmup/main rows from explicit template inputs."
     },
     "src/utils/sessionBuilder.ts#powerEntryToWorkoutExercise": {
-      "fingerprint": "773bb8635e2cf3fb8d541008028cfd5d9b09b3885e14580c93568c834ea5ab2a",
+      "fingerprint": "3c7148da80b7d6e827669078aa02c20ef184aa153c5aea48aece641f4c06b4c1",
       "classification": "canonical_compiler",
-      "reason": "Private optional power-accessory row materialiser uses explicit slot dose and authored pool cue; no independent programming algorithm."
+      "reason": "Private optional power row materialiser uses explicit slot dose/order, authored pool family and cue, and typed power evidence; no independent programming algorithm."
     },
     "src/utils/liveEvaluationSurfaces.ts#liveAcceptedEffectiveWeekSurfaces": {
       "fingerprint": "ef3559a9816810112960982108802de713330f68ea278427118a8be9ec044980",

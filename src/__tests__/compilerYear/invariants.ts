@@ -88,6 +88,11 @@ export function inspectWeek(args: {
   const mispresented = days.flatMap(day => buildSessionTemplate(day.workout).items.filter(item =>
     item.kind === 'exercise' && ['main_strength', 'strength_accessory'].includes(item.row.section18Evidence?.role)
       && item.presentation === 'conditioning_phase').map(item => `${day.date}:${item.kind === 'exercise' ? item.row.exercise?.name : ''}`));
+  const landmineStrength = days.flatMap(day => buildSessionTemplate(day.workout).items.filter(item =>
+    item.kind === 'exercise' && item.row.exercise?.name === 'Explosive Landmine Press'
+      && (item.role !== 'power' || item.row.role !== 'power' || item.row.power?.family !== 'upper'
+        || item.row.section18Evidence?.role !== 'power' || item.row.section18Evidence.mainStrengthPattern !== null))
+    .map(() => day.date));
   let projectionError = '';
   try { project({ week: days, weekStart }); } catch (error) { projectionError = String(error); }
   return [
@@ -103,6 +108,7 @@ export function inspectWeek(args: {
     { id: 'programming', ok: evaluation !== null && blocking.length === 0,
       detail: evaluation ? JSON.stringify(blocking) : 'Missing current typed exposure contract' },
     { id: 'typed_strength_presentation', ok: mispresented.length === 0, detail: mispresented.join(',') },
+    { id: 'landmine_power_only', ok: landmineStrength.length === 0, detail: landmineStrength.join(',') },
     { id: 'signed_final_projection', ok: !projectionError, detail: projectionError },
   ];
 }

@@ -8,6 +8,10 @@ import { ARCHETYPES, athleteAnswers } from '../compilerYear/catalog';
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, rolloverIfDue, setJourneyClock } from './athleteJourney';
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { visibleSignature, signatureDifferences } from '../compilerYear/invariants';
+import { slotsForExerciseName } from '../../rules/sessionSlotCoverage';
+import { buildDerivedSession } from '../../utils/sessionBuilder';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { plusDays } from '../compilerYear/catalog';
 
 export async function powerOnlyLandmineJourney(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   powerOnlyLandmineTruth(ok);
@@ -40,11 +44,31 @@ export async function powerOnlyLandmineJourney(storage: Map<string, string>, ok:
 export function powerOnlyLandmineTruth(ok: (label: string, value: boolean, detail?: string) => void) {
   const name = 'Explosive Landmine Press';
   ok('P19: explosive landmine is absent from every strength slot', classifyPoolSlot(name) === null
+    && slotsForExerciseName(name).length === 0
     && Object.values(STRENGTH_POOLS).every(pool => [pool.anchor, pool.accessory]
       .every(definition => !definition.entries.some(entry => entry.name === name))));
   const classification = classifyGeneratedWorkoutRow({ name, sets: 4, repsMax: 6, index: 0 });
   ok('P19: a saved explosive landmine identity cannot earn main-strength credit',
     classification.kind === 'power' && classification.mainPattern === null && getExerciseTags(name)?.power === true);
+  let primerLandmines = 0;
+  for (let day = 0; day < 28; day++) {
+    const primer = buildDerivedSession('primer', plusDays('2026-08-24', day), 'p19-primer', 'Existing authored Primer', {
+      injuries: [], equipmentTags: ['bodyweight', 'barbell', 'bench', 'rack', 'plyo_box', 'bands'],
+      onboardingData: athleteAnswers({ ...ARCHETYPES[6], extraGame: false }),
+    });
+    const shown = buildSessionTemplate(primer).items.filter(item => item.kind === 'exercise');
+    ok(`P19/Primer/${day}: authored order survives truthful power roles`,
+      JSON.stringify(shown.map(item => item.row.id)) === JSON.stringify(primer.exercises.map(row => row.id)));
+    for (const item of shown.filter(item => item.row.exercise?.name === name)) {
+      primerLandmines++;
+      ok(`P19/Primer/${day}: selected landmine is power without strength credit or changed dose`,
+        item.role === 'power' && item.row.role === 'power' && item.row.power?.family === 'upper'
+        && item.row.section18Evidence?.role === 'power' && item.row.section18Evidence.mainStrengthPattern === null
+        && item.row.prescribedSets === 2 && item.row.prescribedRepsMin === 3 && item.row.prescribedRepsMax === 3,
+        JSON.stringify(item));
+    }
+  }
+  ok('P19: authored Primer selection reaches explosive landmine in the date pool', primerLandmines > 0);
   for (const phase of ['Off-season', 'Pre-season', 'In-season'] as const) {
     const context = { family: 'upper', phase, trainingAge: 'advanced', reduced: false,
       availableEquipment: ['barbell'], blockId: 'p19' } as const;

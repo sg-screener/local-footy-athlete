@@ -942,9 +942,17 @@ function powerEntryToWorkoutExercise(
   const now = new Date().toISOString();
   const id = authoredRowId(entry.name);
   return {
-    // Explosive work in a Primer is not main strength and not a hard exposure —
-    // the session's counting answer (R-129 (c)) is the same as the Gunshow's.
-    section18Evidence: ACCESSORY_ROW_EVIDENCE,
+    // The existing authored slot owns dose/order; the power pool owns role.
+    // A Primer's explosive row must not masquerade as a strength accessory.
+    role: 'power',
+    power: { family: entry.family, kind: 'primer' },
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
+    },
     id: `${workoutId}-ex-${order}`,
     workoutId,
     exerciseId: id,

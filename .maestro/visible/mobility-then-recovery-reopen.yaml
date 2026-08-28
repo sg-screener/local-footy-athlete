@@ -1,0 +1,93 @@
+appId: com.localfootyathlete.app
+name: Second Recovery on Mobility day, Undo and reopening
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- tapOn:
+    id: program-day-next
+- tapOn:
+    id: program-day-next
+- assertVisible:
+    id: day-row-sun
+- tapOn:
+    id: home-plan-options
+- tapOn: Remove session
+- tapOn: Yes, remove it
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: home-add-session
+- tapOn:
+    id: plan-change-type-mobility
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-recovery
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- tapOn:
+    id: undo-toast-action
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertNotVisible:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/gap/mobility-recovery-undone
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-recovery
+- extendedWaitUntil:
+    visible:
+      id: plan-change-done
+    timeout: 30000
+- tapOn:
+    id: plan-change-done
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- tapOn:
+    id: program-day-next
+- tapOn:
+    id: program-day-next
+- assertVisible:
+    id: day-timeline-part-mobility
+- assertVisible:
+    id: day-timeline-part-recovery
+- tapOn:
+    id: day-timeline-part-mobility
+- tapOn:
+    id: day-timeline-part-recovery
+- takeScreenshot: artifacts/gap/mobility-recovery-after-reopen

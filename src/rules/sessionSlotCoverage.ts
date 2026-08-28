@@ -520,6 +520,9 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
     : [];
   const tag = getExerciseTags(name);
   if (!tag) return out;
+  // Power is an overlay, never a strength seat. The name-only path is also
+  // used by the composer before a row exists, so its role guard belongs here.
+  if (tag.power) return [];
   const unilateral = tag.unilateral === true;
 
   // ⚠ A UNILATERAL LIFT FILLS ITS SINGLE-LEG SLOT AND NOT THE BILATERAL ONE.
