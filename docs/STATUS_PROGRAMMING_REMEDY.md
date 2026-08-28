@@ -751,3 +751,38 @@ New male/female real-onboarding cases first fail with the exact missing-speed
 refusal. They now guard no-club generation and restart in the release witness.
 The old four power-golden/strip/order expectations remain a separate diagnostic
 classification, not permission to restore a deleted power-stripping owner.
+
+### Final 8ada years and additional native finding
+
+All four exact 8ada6c67 report years completed: 52 weeks / 364 athlete-days /
+52 successful restarts in each. Strict audit found zero invalid Landmine roles,
+trainable painful presses in the injury window, invalid flushes, missing machine
+instructions or retired automatic circuits. All 55 templates / 110 emitted
+variants exactly match the completed 263369ba wording-and-dose review.
+All 23 adjacent conditioning-or-speed pairs per year retain the individually
+reviewed prescriptions: zero hard/hard, no avoidable improvement among the six
+legal receiver sets. These counts do not mean every exact date pair is mandatory.
+Clean Release build succeeded. Nineteen new deliberate mutants were caught.
+The exact release gate is still running; this is not a full-green claim.
+
+Native limiting shoulder 7/10 on actual Tuesday 1 September strength + club:
+review and accepted session pause all eight affected upper rows, replace the
+warm-up, and retain Bodyweight Squat. Actual Add is reached through the current
+section plus; old session-change-* selectors were retired and are automation
+errors. Day navigation cannot cross Sunday: Week → next week → Tuesday → Day
+reaches the intended date. Earlier Sunday screenshots are not strength-day proof.
+
+NEW genuine native finding: the session banner falsely called the single
+Bodyweight Squat replacement "safe upper-body and core work". Options compared:
+derive the actual added names at the existing summary owner, or introduce a new
+region classification/copy owner. The existing-owner fix is smaller and factual;
+no workout selection, dose or safety rule changes. Real male/female injury
+journeys at 7 and 9 first fail four summary checks (504 pass / 4 fail), then pass
+508/508. Existing injury-session-adjustment suite passes 54/54; its old fixed
+upper-body sentence assertion is replaced with actual added-name agreement.
+The deliberate hard-coded-copy mutant is caught. A revised exact candidate and
+native corrected-copy/restart checks are required after this save.
+
+NOT COVERED: remaining native Add/Swap/severe/strength-plus-Mobility permutations,
+final revised-version release acceptance, physical iPhones and 2 km Skip QA
+acceptance. Installation remains held; no phone was installed to or reset.

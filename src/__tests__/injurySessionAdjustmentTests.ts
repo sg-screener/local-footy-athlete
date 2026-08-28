@@ -63,6 +63,7 @@ import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { INJURY_ADJUSTMENT_MAX_ADDED } from '../utils/injurySessionAdjustment';
 import { SET_CEILING } from '../rules/weeklyLegality';
 import { getExerciseTags } from '../data/exerciseTags';
+import { formatExerciseDisplayName } from '../utils/exerciseDisplay';
 
 const INSTALL_DAY = '2026-07-13';
 /** The actual generated lower-body day, not an assumed weekday layout. */
@@ -289,7 +290,7 @@ async function main(): Promise<void> {
       review.adjustmentSummary);
     ok('and it only claims an adjustment when something was really added',
       !!review.adjustmentSummary && (review.added.length > 0
-        ? /adjusted to safe upper-body and core work/.test(review.adjustmentSummary)
+        ? review.added.every(candidate => review.adjustmentSummary!.includes(formatExerciseDisplayName(candidate.name)))
         : /Nothing safe could be added/.test(review.adjustmentSummary)),
       review.adjustmentSummary);
   }

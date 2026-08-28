@@ -18,6 +18,7 @@ import { POOL_REGISTRY } from '../data/exercisePools';
 import { finerPatternIdentityOf } from '../rules/injuryFallbackLadder';
 import { mainPatternForExerciseMovement, type MainStrengthPattern } from '../rules/strengthPatternContributions';
 import { getSessionComponentRows } from './sessionComponents';
+import { formatExerciseDisplayName } from './exerciseDisplay';
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
@@ -342,8 +343,8 @@ export function chooseInjurySessionAdditions(args: {
  * Sam, 2026-08-21, gave the shape verbatim: *"5 lower-body exercises paused for
  * your knee. Today's session has been adjusted to safe upper-body and core
  * work."* The count and the body part are read from what actually happened; the
- * second half is only claimed when something was actually added, because a
- * session that gained nothing has not been *"adjusted to"* anything.
+ * second half names the actual added work, because the unaffected region is
+ * not always upper body and a session may have room for only one replacement.
  */
 export function injuryAdjustmentSummary(args: {
   pausedCount: number;
@@ -362,7 +363,8 @@ export function injuryAdjustmentSummary(args: {
   if (args.added.length === 0) {
     return `${paused} Nothing safe could be added in its place today.`;
   }
-  return `${paused} Today’s session has been adjusted to safe upper-body and core work.`;
+  const work = args.added.map(candidate => formatExerciseDisplayName(candidate.name)).join(', ');
+  return `${paused} Today’s session has been adjusted with unaffected work: ${work}.`;
 }
 
 /**

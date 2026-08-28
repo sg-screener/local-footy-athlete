@@ -2493,7 +2493,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'R-267: simple body-area/severity/adjustment flow; optional explicit pain overrides ratings at every active band, historical restrictions survive updates/restart, indirect loading counts, and serious symptoms use the independent stop pathway. Existing severity rules and shared owners remain.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-267 — Sam injury-flow decision, 2026-08-28.',
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
-      receipt: 'simpleInjurySafetyTruth, guidedInjuryUiTruth and flushPrescriptionTruth cover severity boundaries, support examples, history/update/Clear/Add/Undo/restart, actual machine restrictions and UI binding. Red-first evidence and native gaps: STATUS_PROGRAMMING_REMEDY.' },
+      receipt: 'simpleInjurySafetyTruth, guidedInjuryUiTruth and flushPrescriptionTruth cover severity boundaries, support examples, history/update/Clear/Add/Undo/restart, actual machine restrictions, truthful replacement summaries and UI binding. Red-first evidence and native gaps: STATUS_PROGRAMMING_REMEDY.' },
   },
   {
     id: 'LAW-speed-quality-and-landmine-power',

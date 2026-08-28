@@ -11,6 +11,7 @@ import { visibleSignature, signatureDifferences } from '../compilerYear/invarian
 import { undoLastDecision } from '../../store/undoLastDecision';
 import { applyPlanChange } from '../../utils/planChangeProducer';
 import { selectActiveProgramModifiers } from '../../utils/activeProgramModifiers';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (let severity = 1; severity <= 10; severity++) {
@@ -86,6 +87,13 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
       const update = await report(severity, []);
       ok(`simple-injury/${gender}/${severity}: simple severity update preserves reported painful movements`,
         update.ok && active()?.triggers.includes('Pressing') === true, JSON.stringify(active()));
+      if (severity >= 7) {
+        const adjustments = view().map(day => day.workout?.injuryAdjustment).filter(adjustment => adjustment?.added.length);
+        ok(`simple-injury/${gender}/${severity}: actual replacement work is reached for the summary check`, adjustments.length > 0);
+        ok(`simple-injury/${gender}/${severity}: summary names the actual unaffected replacement work`,
+          adjustments.length > 0 && adjustments.every(adjustment => adjustment?.added.every(name =>
+            adjustment.summary.includes(formatExerciseDisplayName(name)))), JSON.stringify(adjustments));
+      }
     }
     const beforeBoot = visibleSignature(view()), id = active()?.episodeId;
     const boot = await quietAsync(() => relaunchApp({ storage, todayISO: today }));
