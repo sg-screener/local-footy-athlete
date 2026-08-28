@@ -21,7 +21,7 @@ if (fullKit) replace('const profile=athleteAnswers(archetype);',
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
   "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
-  'role:item.role,modalityLabel:item.modalityLabel,optional:item.optional||undefined,pair:item.superset?.groupId');
+  'role:item.role,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||undefined,pair:item.superset?.groupId');
 replace('name:o.title,description:o.description,rows:o.rows.map',
   'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',

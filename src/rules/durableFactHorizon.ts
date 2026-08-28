@@ -124,9 +124,9 @@ export function readinessDeloadFactScope(args: {
  * The effect window of any fact.
  *
  * Non-injury facts carry their own window; an `until` of `null` is open.
- * Injury episodes still express their reach as `affectedWeeks` — that is
- * Stage 2's subject (see Addendum A), and Stage 1 deliberately reports it
- * unchanged rather than quietly widening a horizon no test covers yet.
+ * Active/improving injury episodes remain true until resolved. Their recorded
+ * affectedWeeks describe the original transaction, not an expiry at rollover.
+ * The accumulated injury journey holds live/restart/Clear across that boundary.
  */
 export function factHorizon(fact: TemporarySourceFact): DurableFactHorizon {
   if (isInjury(fact)) {
@@ -139,7 +139,8 @@ export function factHorizon(fact: TemporarySourceFact): DurableFactHorizon {
     // its affected week is bookkeeping, not licence to rewrite done days.
     return {
       startsFrom: reported && reported > first ? reported : first,
-      endsAfter: addDays(last, 6),
+      endsAfter: fact.status === 'active' || fact.status === 'improving'
+        ? null : addDays(last, 6),
     };
   }
   const nonInjury = fact as { effectiveFrom: string; effectiveUntil: string | null };

@@ -601,7 +601,11 @@ function isRecoveryWorkout(workout: Partial<Workout>): boolean {
 }
 
 function isStandaloneConditioningWorkout(workout: Partial<Workout>): boolean {
-  return workoutTypeHasConditioning(workout) && !isRecoveryWorkout(workout);
+  // Injury recomposition can add approved strength to a former energy-only
+  // container. Its typed rows outrank the container's historical workoutType.
+  const hasTypedStrength = workout.exercises?.some(row =>
+    row.section18Evidence?.role === 'main_strength' || row.section18Evidence?.role === 'strength_accessory');
+  return workoutTypeHasConditioning(workout) && !isRecoveryWorkout(workout) && !hasTypedStrength;
 }
 
 function hasSpeedBlock(workout: Partial<Workout>): boolean {

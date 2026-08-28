@@ -237,7 +237,7 @@
       "reason": "Phase UI only collects answers and submits a profile_setup change through commitProfileProgramTransaction. Build/progress state is local UI, not a program author."
     },
     "src/utils/weekRebuild.ts#rebuildLocalWeekWithinTrace": {
-      "fingerprint": "e840daa978f237f1d5576eee57e303c77c132d7916ee4ad29b39f59999ebe9f1",
+      "fingerprint": "8b6c3df96ecdb5960ac08764b5d27ac74c5278184e17803e4fc17ef6ad1fe4c2",
       "classification": "persistence_boundary",
       "reason": "Rebuild adapter requires typed fixture effects, delegates all fixture material to canonical fixture stages or whole-block material to the canonical generator, and publishes through accepted transactions."
     },
@@ -787,7 +787,7 @@
       "reason": "Builds craft-validation inputs from supplied workouts, anchors and contract flags without changing training."
     },
     "src/utils/programBlockRollover.ts#rolloverProgramBlockWithinTrace": {
-      "fingerprint": "0209a49cb2c1c7c7b2f2ae76e277b2b20b269584d0f2ac9155bbf05a319dc601",
+      "fingerprint": "899271db4ad49459c4445f34a16c2c22533508a9fb50deab1083b716d9007647",
       "classification": "canonical_input_writer",
       "reason": "Rollover captures due block position, invokes canonical regeneration and publishes through commitRebuiltProgram; no separate session construction."
     },
@@ -972,7 +972,7 @@
       "reason": "Shared G-1 route candidate materialiser executes the explicit accepted route via authored deload/accessory/optional builders; exact result becomes session-edit input."
     },
     "src/store/sourceFactCompilation.ts#captureSourceFactCompilerInput": {
-      "fingerprint": "fb5b1ccf8ba6d0499b572f5a32ddcbc40c3b56ac8acc6d1bfc1e889c66328e73",
+      "fingerprint": "d9888d5e4c2e789cd3766b1db6dbc1b2d8d3fd7fa411469a2f4af3ff5a8c538c",
       "classification": "canonical_compiler",
       "reason": "Captures deterministic source-fact compiler inputs from accepted profile, recorded generation anchor, selection replay and earned progression; no output publication."
     },
@@ -1067,7 +1067,7 @@
       "reason": "React diagnostic selector builds a schedule-state DTO from existing stores; no generated output writes."
     },
     "src/utils/weekRebuild.ts#generateProgramForProfile": {
-      "fingerprint": "ca864e0eeaa2527d4a2c3da7246b228948dd60bc1706e10d73bb6f08a81b9e77",
+      "fingerprint": "2429b49cbde7d7a5ae1efb72e2689cfc3de4cbca86f98b1ad01a3b4d3c15214a",
       "classification": "canonical_compiler",
       "reason": "Profile generation adapter resolves explicit availability and delegates program construction to generateProgramLocally and the canonical compiler."
     },
@@ -1402,7 +1402,7 @@
       "reason": "Validates a microcycle against the accepted exposure contract and temporary constraints without modifying it."
     },
     "src/utils/weekRebuild.ts#commitRebuiltProgram": {
-      "fingerprint": "da61ca4a09679f98bc3847b25cea8f7bd74eee93b1e088f2191fb338e28746b2",
+      "fingerprint": "ee770c7c1563795791baf9f14851600a22fcd19a6079925d1fe2330c576365a4",
       "classification": "persistence_boundary",
       "reason": "Installs already compiled block surfaces through acceptedStateTransaction and records the accepted block; callers are boot, rebuild and rollover, not an independent generator."
     },
@@ -1437,7 +1437,7 @@
       "reason": "Day-precedence adapter delegates active accepted removals to compileCanonicalAthleteEditedWeek, rather than a separate removal algorithm."
     },
     "src/rules/projectVisibleWeek.ts#partHeadline": {
-      "fingerprint": "073c0ba3dc9b756a7b251fe7466a247c126911207a8234d015b6047442db458f",
+      "fingerprint": "eec2a7b74ff1856d7c222f7b95335448f22d48516d30ddb6fb2018f91f764c83",
       "classification": "projection_display",
       "reason": "Visible part headline selection returns signed copy using typed optional kind and existing row names; no programming output."
     },
@@ -1782,7 +1782,7 @@
       "reason": "Writes and verifies an Explorer bootstrap record under its diagnostic storage key."
     },
     "src/utils/weekRebuild.ts#generateProgramForProfileFromStore": {
-      "fingerprint": "d879b4fbccc920982d87264cea0b077079b2a8369fb451e6388c0f293bb12539",
+      "fingerprint": "b22d514dfcce6d23358b00496c7fc14f99366fd0d062a824dfa99a04707e782a",
       "classification": "canonical_input_writer",
       "reason": "Captures accepted profile, marks, constraints and earned loads and delegates generation; no alternate session transform."
     },

@@ -9,15 +9,17 @@ import { composeTemporarySourceFactCompatibility, type TemporarySourceFact } fro
 import { getAthletePrefs } from './athletePreferencesStore';
 import { readBlockHistory } from '../rules/blockBoundaryProgression';
 import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
+import { resolveBlockGridPosition } from '../utils/programBlockState';
 
-function captureSourceFactCompilerInput(state: ProgramState, facts: readonly TemporarySourceFact[]): CanonicalWeeklySourceFactInput {
+export function captureSourceFactCompilerInput(state: ProgramState, facts: readonly TemporarySourceFact[]): CanonicalWeeklySourceFactInput {
   const anchor = state.currentProgram?.generationAnchorISO;
   if (!anchor) throw new Error('source_fact_compilation_requires_generation_anchor');
   const context = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
   const profile = acceptedProfileForContext(context, useProfileStore.getState().onboardingData);
   const programsByWeek = Object.fromEntries(state.currentProgram!.microcycles.map(week => {
     const weekStart = week.startDate.slice(0, 10);
-    const position = getBlockPositionForGeneration(weekStart);
+    const position = state.blockState ? resolveBlockGridPosition(state.blockState, weekStart)
+      : getBlockPositionForGeneration(weekStart);
     const input = canonicalProgramInputFromProfile(profile, {
       recordSelections: 'replay', todayISO: weekStart,
       blockNumber: position.blockNumber, blockStartISO: position.blockStart,

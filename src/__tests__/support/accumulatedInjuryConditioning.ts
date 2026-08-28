@@ -1,5 +1,5 @@
 import { athleteAnswers, plusDays } from '../compilerYear/catalog';
-import { visibleSignature } from '../compilerYear/invariants';
+import { signatureDifferences, visibleSignature } from '../compilerYear/invariants';
 import { coldStartThroughOnboarding, followTheWeek, quiet, quietAsync, recordDay,
   relaunchApp, rolloverIfDue, setJourneyClock } from './athleteJourney';
 import { useProgramStore } from '../../store/programStore';
@@ -122,5 +122,40 @@ export async function accumulatedInjuryConditioning(
     const clearBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
     ok(`${gender}: cleared week survives another restart`, clearBoot.ok && visibleSignature(view()) === baseline);
     assertProjection('cleared/restarted');
+    // Re-enter the same accepted restriction, then live through the next
+    // block. A held row is honest Skip, never a trainable press; absence and
+    // withholding are distinct valid outcomes under R-115.
+    const carried = await quietAsync(() => executeProgramControlActionDurably({ type: 'set_injury_modifier',
+      scope: 'current_and_future', payload: { constraint }, source, requiresRebuild: false,
+      createsActiveModifier: true, oneOffOnly: false }, { todayISO: date }));
+    ok(`${gender}: pressing restriction re-enters for rollover`, carried.ok);
+    for (let d = 1; d < 7; d++) {
+      const today = plusDays(weekStart, d); setJourneyClock(today);
+      const logged = await quietAsync(() => recordDay(today, { record: true, completion: 'full',
+        feeling: 'good', soreness: 'none', difficulty: 7, logWeights: true, conditioningRpe: 6 }));
+      if (['refused', 'threw'].includes(logged.result)) throw Error(JSON.stringify(logged));
+    }
+    const nextWeek = plusDays(weekStart, 7); setJourneyClock(nextWeek);
+    const nextBlock = quiet(() => rolloverIfDue(nextWeek));
+    if (nextBlock.refusal) throw Error(JSON.stringify(nextBlock.refusal));
+    quiet(() => followTheWeek(nextWeek));
+    const nextView = () => quiet(() => deriveVisibleWeekLive(nextWeek, nextWeek));
+    const unsafe = () => nextView().flatMap(day => day.workout?.exercises.filter(row =>
+      ['horizontal_push', 'vertical_push'].includes(getExerciseTags(row.exercise.name)?.movement ?? '') &&
+      !row.unavailableForInjury).map(row => `${day.date}:${row.exercise.name}`) ?? []);
+    ok(`${gender}: rollover retains no trainable painful press`, unsafe().length === 0, JSON.stringify(unsafe()));
+    const nextSignature = visibleSignature(nextView());
+    const nextBoot = await quietAsync(() => relaunchApp({ storage, todayISO: nextWeek }));
+    ok(`${gender}: rollover withholding and safe work survive restart`, nextBoot.ok &&
+      visibleSignature(nextView()) === nextSignature && unsafe().length === 0,
+      JSON.stringify({ boot: nextBoot, unsafe: unsafe(), differences: signatureDifferences(nextSignature, visibleSignature(nextView())) }));
+    const clearCarried = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
+      scope: 'current_and_future', payload: { episodeId: carried.createdModifierIds?.[0] }, source,
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false }, { todayISO: nextWeek }));
+    ok(`${gender}: Clear after rollover removes the chosen withholding`, clearCarried.ok &&
+      nextView().every(day => day.workout?.exercises.every(row => !row.unavailableForInjury) ?? true));
+    const clearedNext = visibleSignature(nextView());
+    const clearNextBoot = await quietAsync(() => relaunchApp({ storage, todayISO: nextWeek }));
+    ok(`${gender}: Clear after rollover survives restart`, clearNextBoot.ok && visibleSignature(nextView()) === clearedNext);
   }
 }

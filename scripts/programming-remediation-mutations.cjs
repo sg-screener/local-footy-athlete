@@ -23,6 +23,10 @@ const mutants = {
   authored_kit: ['src/utils/sessionBuilder.ts', 'const names = row.names.filter(name => composedRowIsLegal(name, athlete.equipmentTags));', 'const names = row.names;', 'inputs', 'authored special rows respect the current equipment answer'],
   fact_replay: ['src/rules/canonicalWeeklyAthleteEditCompiler.ts', 'if (placement.workout && current?.sourceFactAdjustedPlacementId === placement.constraintId &&', 'if (false && placement.workout && current?.sourceFactAdjustedPlacementId === placement.constraintId &&', 'inputs', 'temporary kit restriction reaches special-session rows'],
   lifting_set_units: ['src/utils/injurySessionAdjustment.ts', 'const keptSets = [...parts.strengthRows, ...parts.supportRows, ...parts.powerRows]', 'const keptSets = rows', 'compiler', 'accumulated injury weeks retain the required strength and conditioning exposures'],
+  strength_presentation: ['src/utils/sessionComponents.ts', ' && !hasTypedStrength;', ';', 'inputs', 'typed lifting retains its strength presentation in an energy container'],
+  injury_horizon: ['src/rules/durableFactHorizon.ts', "fact.status === 'active' || fact.status === 'improving'\n        ? null : addDays(last, 6)", 'addDays(last, 6)', 'injury', 'rollover withholding and safe work survive restart'],
+  rollover_facts: ['src/utils/programBlockRollover.ts', 'compileSourceFacts: true,', 'compileSourceFacts: false,', 'injury', 'rollover withholding and safe work survive restart'],
+  optional_names: ['src/rules/projectVisibleWeek.ts', 'return kinds.size === 1 ? [...kinds][0] : workout?.composedOptionalKind;', 'return workout?.composedOptionalKind;', 'mobility', 'mixed optional parts retain their own signed names and buckets'],
 };
 const child = process.argv.find(a => a.startsWith('--child='))?.slice(8);
 if (child) {

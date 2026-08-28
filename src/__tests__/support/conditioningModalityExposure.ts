@@ -3,6 +3,7 @@ import { coldStartThroughOnboarding, quiet, quietAsync } from './athleteJourney'
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { applyConstraintsToTypedComponents, buildInjuryConstraint } from '../../utils/exposureEngine';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
 
 /** Metamorphic unit checks on a real generated component, never a stored-state
  * fixture. A title mutation cannot turn an explicitly selected erg into running;
@@ -28,4 +29,18 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
     options: workout.conditioningBlock.options.map(option => ({ ...option, modality: 'running' as const, title: 'Bike intervals' })) } };
   ok('actual running remains blocked even under an erg-looking title',
     !applyConstraintsToTypedComponents(running, [constraint]).workout.conditioningBlock);
+  // Presentation metamorphism over actual generated rows: an injury can put
+  // safe lifting into a former energy-only container. The container title/type
+  // cannot turn those typed lifts into intervals or erase their lifting dose.
+  const strength = quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START)).flatMap(day =>
+    day.workout?.exercises.filter(row => row.section18Evidence?.role === 'main_strength') ?? []);
+  const energyIds = new Set(workout.conditioningBlock.options.flatMap(option => option.exerciseIds));
+  const energy = workout.exercises.filter(row => energyIds.has(row.id));
+  const bad = strength.filter(row => {
+    const mixed = { ...workout, workoutType: 'Conditioning' as const, exercises: [...energy, row] };
+    return !buildSessionTemplate(mixed).items.some(item => item.kind === 'exercise' &&
+      item.row.id === row.id && item.presentation === 'strength' && item.row.prescribedSets === row.prescribedSets);
+  });
+  ok('typed lifting retains its strength presentation in an energy container',
+    strength.length > 0 && energy.length > 0 && bad.length === 0, JSON.stringify(bad.map(row => row.exercise.name)));
 }

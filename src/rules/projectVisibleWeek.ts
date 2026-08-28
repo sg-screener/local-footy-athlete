@@ -893,7 +893,7 @@ export function project(args: {
             ...part,
             rows,
             headline: partHeadline(part.kind, source.workout, rows),
-            bucket: partBucket(part.kind, source.workout),
+            bucket: partBucket(part.kind, source.workout, rows),
             // Ambiguity resolution (Sam, as controller, 2026-07-31): populate from
             // a part's existing signed sub-line where one exists, otherwise null —
             // do not invent prose. No reliable authored sub-line source is wired to
@@ -1089,8 +1089,15 @@ const PART_BUCKET_KIND: Readonly<Record<VisiblePartKind, VisiblePartKind>> = {
  * "Strength" is a bucket, and a surface that wanted the bucket used to get the
  * name because there was only one field to ask for.
  */
-function partBucket(kind: VisiblePartKind, workout: Workout | null | undefined): SignedCopy {
-  const optional = workout?.composedOptionalKind;
+function optionalKindForPart(workout: Workout | null | undefined, rows: readonly VisibleRow[]) {
+  const ids = new Set(rows.map(row => row.id));
+  const kinds = new Set(workout?.exercises.filter(row => ids.has(row.id))
+    .map(row => row.composedOptionalKind).filter(Boolean));
+  return kinds.size === 1 ? [...kinds][0] : workout?.composedOptionalKind;
+}
+
+function partBucket(kind: VisiblePartKind, workout: Workout | null | undefined, rows: readonly VisibleRow[]): SignedCopy {
+  const optional = optionalKindForPart(workout, rows);
   if (optional && (kind === 'strength' || kind === 'recovery')) {
     if (optional === 'recovery') return signedCopy('part.headline.recovery');
     return signedCopy(`part.headline.optional.${optional}`);
@@ -1129,7 +1136,7 @@ function partHeadline(
   // type only for legacy read compatibility and is no longer projected as a
   // session identity. A `team_training` part on a combined day is never the
   // optional session.
-  const optional = workout?.composedOptionalKind;
+  const optional = optionalKindForPart(workout, rows);
   if (optional && (kind === 'strength' || kind === 'recovery')) {
     if (optional === 'recovery') return signedCopy('part.headline.recovery');
     return signedCopy(`part.headline.optional.${optional}`);

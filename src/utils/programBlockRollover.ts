@@ -113,6 +113,7 @@ function rolloverProgramBlockWithinTrace(args: {
     blockNumber: status.nextBlockNumber ?? undefined,
     scope: 'block',
     commit: false,
+    deferSourceFacts: true,
   });
   // The new program, phase clock, selected week/day and every still-relevant
   // future overlay are validated as one candidate and published once. One
@@ -121,6 +122,7 @@ function rolloverProgramBlockWithinTrace(args: {
     weekScopedOverlays: relevantOverlays,
     selectedDate: targetDateISO,
     reason: `program_rollover:${status.nextBlockStart}`,
+    compileSourceFacts: true,
   });
 
   logger.debug('[programBlockRollover] committed', {

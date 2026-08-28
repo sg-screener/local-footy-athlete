@@ -6,6 +6,7 @@ import { applyPlanChange, listPlanChangeOptionsForDay, planChangeCategoryAddsSes
 import { snapshotProjectedDay } from '../../utils/coachRevisionProposal';
 import { undoLastDecision } from '../../store/undoLastDecision';
 import { getSessionComponentRows } from '../../utils/sessionComponents';
+import { project } from '../../rules/projectVisibleWeek';
 
 export async function mobilityAddJourney(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   const date = '2026-09-28';
@@ -42,6 +43,12 @@ export async function mobilityAddJourney(storage: Map<string, string>, ok: (labe
     const snapshot = snapshotProjectedDay(current);
     ok(`${label}: both visible component kinds survive`, !!snapshot.workout?.sections.some(s => s.kind === 'recovery') &&
       !!snapshot.workout?.sections.some(s => s.kind === planChangeCategoryAddsSessionKind(category)), JSON.stringify(snapshot.workout?.sections.map(s => s.kind)));
+    const parts = project({ week: after, weekStart: date }).days.find(day => day.date === target.date)!.parts;
+    const optionalName = { gunshow: 'Gunshow', primer: 'Primer', prehab: 'Accessories' }[category];
+    ok(`${label}: mixed optional parts retain their own signed names and buckets`,
+      parts.some(part => part.headline === 'Mobility' && part.bucket === 'Mobility') &&
+      (!optionalName || parts.some(part => part.headline === optionalName && part.bucket === optionalName)),
+      JSON.stringify(parts.map(part => ({ headline: part.headline, bucket: part.bucket }))));
     const active = visibleSignature(after);
     const boot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
     ok(`${label}: added day survives restart`, boot.ok && visibleSignature(view()) === active);

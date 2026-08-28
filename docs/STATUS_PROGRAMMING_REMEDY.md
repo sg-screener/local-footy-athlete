@@ -218,7 +218,43 @@ The final consolidated mutation run, exact-candidate release, regenerated years
 and simulator receipts are pending. Installation remains held. The onboarding
 2 km skip text-tap inconsistency remains OPEN-UNKNOWN, not fixed.
 
+## Rollover and presentation findings — final candidate preparation
+
+Owner: programming-remedy. The original year exporter omitted unavailable/Skip
+metadata. Its Bottoms-Up KB Press on 24 November was withheld, not trainable.
+The corrected report distinguishes displayed, trainable and withheld rows.
+
+The added real week-8-to-week-9 injury journey found a separate restart mismatch
+in both genders: withheld Explosive Push-up reappeared after restart. Active
+injury constraints were open-ended, but the source-fact horizon stopped at the
+original affectedWeeks. The shared horizon now keeps active/improving injuries
+open. Rollover stages healthy generation then the existing pure source-fact
+compiler before its single accepted-state publication, matching reconstruction.
+This avoids both a new injury writer and a post-publication repair. Same-block,
+rollover, Clear and restart: injury-recomposition 182/182 assertions green.
+
+The year also exposed typed strength inserted into a former Conditioning
+container being rendered as conditioning, hiding its lifting dose. Typed row
+roles now outrank that historical container type. A metamorphic check uses real
+generated energy/lifting rows; annual inspection checks actual mixed sessions.
+The positive presentation and negative running controls pass.
+
+Mobility plus five Add types now retain each component's signed name and bucket.
+Ten real Add/Remove/Move/Undo/restart journeys pass (150 assertions). The native
+Add itself succeeded; its first scratch flow failed because it omitted the
+success sheet's Done tap, not because Add was refused. Final native rerun owed.
+
+Seven changed existing capability owners reviewed: partHeadline, source-input
+capture, rollover coordinator, block commit, both generation adapters and the
+rebuild coordinator. Classifications/budgets unchanged. Typecheck all scopes
+zero errors; session-components 39/39; fact-horizon 14/14. The old diagnostic
+block-rollover suite refuses its incomplete hand-built onboarding before
+rollover (missing gender and ten other required answers); no assertion or input
+contract was weakened. Current real-onboarding witnesses remain authoritative.
+
 ## NOT COVERED
 
-- Chunks A/C/D/E/F incomplete; no revised-candidate gate or simulator run yet.
+- Product questions above remain open; all P01–P22 are not closed.
+- Revised exact-version release, consolidated mutations, regenerated years and
+  final simulator flows are pending. Earlier candidate receipts are diagnostics.
 - No physical installation/acceptance, clinical validation or 2 km tap fix.

@@ -45,6 +45,9 @@ import type {
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { composeTemporarySourceFactCompatibility, type TemporarySourceFact } from '../rules/temporarySourceFact';
+import { compileCanonicalSourceFactWeeks, sourceFactRequiresCompilation } from '../rules/canonicalWeeklySourceFactCompiler';
+import { captureSourceFactCompilerInput } from '../store/sourceFactCompilation';
 import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
 import {
@@ -331,6 +334,8 @@ export interface RebuildLocalWeekArgs {
   acceptedFixtureEffect?: CanonicalAcceptedFixtureEditEffect;
   /** Build only. Used by rollover so future overlays join the same commit. */
   commit?: boolean;
+  /** Rollover stages dated facts after the healthy accepted base, like boot. */
+  deferSourceFacts?: boolean;
   /** Development-only trace metadata; never participates in rebuild decisions. */
   trace?: AthleteActionTraceContext;
   diagnosticSource?: AthleteActionSource;
@@ -376,13 +381,18 @@ export function generateProgramForProfileFromStore(args: {
   todayISO: string;
   blockNumber?: number;
   recordSelections: 'author' | false;
+  deferSourceFacts?: boolean;
 }): TrainingProgram {
   const persistedState = useProgramStore.getState();
+  const baseFacts = args.deferSourceFacts ? persistedState.acceptedMaterialContext.temporarySourceFacts
+    .filter(fact => !sourceFactRequiresCompilation(fact)) : undefined;
   return generateProgramForProfile({
     ...args,
     previousProgram: persistedState.currentProgram,
     markedDays: persistedState.acceptedMaterialContext.markedDays,
-    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+    activeConstraints: baseFacts ? composeTemporarySourceFactCompatibility({ temporarySourceFacts: baseFacts }).activeConstraints
+      : persistedState.acceptedMaterialContext.activeConstraints,
+    ...(baseFacts ? { temporarySourceFacts: baseFacts } : {}),
     // ⚠ **THE FOUR FIELDS WERE WRITTEN OUT HERE BY HAND, AND THAT IS THE EXACT
     // SHAPE THAT PUT TWO OTHER DOORS ON THE ATHLETE'S OLD LOADS.**
     // `statedProgressionInputs` (`programStore`) is the ONE projection of *"what
@@ -416,6 +426,7 @@ export function generateProgramForProfile(args: {
   todayISO: string;
   blockNumber?: number;
   recordSelections: 'author' | false;
+  temporarySourceFacts?: readonly TemporarySourceFact[];
   previousProgram: TrainingProgram | null;
   markedDays: Parameters<typeof resolveProfileTargetWeekAvailability>[0]['markedDays'];
   activeConstraints: Parameters<
@@ -436,6 +447,8 @@ export function generateProgramForProfile(args: {
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   return generateProgramLocally(args.profile, {
     recordSelections: args.recordSelections,
+    ...(args.temporarySourceFacts ? { temporarySourceFacts: args.temporarySourceFacts,
+      activeConstraints: args.activeConstraints, readinessSignal: null } : {}),
     // The rebuild's own publication declares `forward_decision` (R1.3, and the
     // long note at `commitRebuiltProgram`). The GENERATION that produces it is
     // the same decision one layer earlier and must say so, or the strict
@@ -708,6 +721,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
     // THE ROLLOVER AUTHORS THE NEW BLOCK — it is the door that decides what
     // the next block selects, so it may replace the block's rows.
     recordSelections: 'author',
+    deferSourceFacts: args.deferSourceFacts,
   });
 
   // 2. Canonical context + pure sweep decision.
@@ -844,9 +858,16 @@ export function commitRebuiltProgram(
     weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
     selectedDate?: string;
     reason?: string;
+    compileSourceFacts?: boolean;
   } = {},
 ): void {
   const proposal = buildRebuiltProgramSurfaces(program, sweep, options);
+  // Stage the same pure fact compiler used by boot before the single publish.
+  // A fresh block is not already-adjusted source material for its own injury.
+  const state = useProgramStore.getState();
+  const sourceInput = options.compileSourceFacts ? captureSourceFactCompilerInput(
+    { ...state, ...proposal }, state.acceptedMaterialContext.temporarySourceFacts) : null;
+  const sourceCompilation = sourceInput ? compileCanonicalSourceFactWeeks(sourceInput) : null;
   commitAcceptedStateTransaction({
     reason: options.reason ?? 'week_rebuild:block',
     // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). A rebuild publishes a
@@ -860,7 +881,10 @@ export function commitRebuiltProgram(
     // reaches this owner is one.
     operation: 'forward_decision',
     ...(options.profile ? { profile: options.profile } : {}),
-    program: proposal,
+    program: sourceCompilation ? { ...proposal, weekScopedOverlays: sourceCompilation.weekScopedOverlays,
+      dateOverrides: sourceCompilation.dateOverrides } : proposal,
+    ...(sourceInput ? { sourceFactCompilerInput: sourceInput, preserveExactAcceptedWorkouts: true,
+      skipConstraintProjection: true } : {}),
     markedDays: options.markedDays,
     validateWeekStarts: [
       ...program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
