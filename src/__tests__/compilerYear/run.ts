@@ -289,6 +289,9 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         const arithmetic = observations.filter(c => c.id === 'dose_arithmetic');
         checks.push({ id: 'dose_arithmetic', ok: arithmetic.length > 0 && arithmetic.every(c => c.ok),
           detail: arithmetic.filter(c => !c.ok).map(c => c.detail).join(' | ') });
+        const modalities = observations.filter(c => c.id === 'final_authored_conditioning_modality');
+        checks.push({ id: 'final_authored_conditioning_modality', ok: modalities.length > 0 && modalities.every(c => c.ok),
+          detail: modalities.filter(c => !c.ok).map(c => c.detail).join(' | ') });
         checks.push({ id: 'compiler_boundary', ok: finalCompilationReached && observations.every((c) => c.ok),
           detail: finalCompilationReached
             ? observations.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail ?? ''}`).join(' | ')
