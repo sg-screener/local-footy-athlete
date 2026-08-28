@@ -2972,7 +2972,8 @@ async function main(): Promise<void> {
     selectionWeeks.every((w) => w.checks.some((c) => c.id === 'programming' && c.ok)),
     JSON.stringify(selectionWeeks.flatMap((w) => w.checks.filter((c) => !c.ok))));
   ok('the complete compiler conserves specialist rows in the accumulated journey',
-    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'compiler_boundary' && c.ok)));
+    selectionWeeks.every((w) => w.checks.some((c) => c.id === 'compiler_boundary' && c.ok)),
+    JSON.stringify(selectionWeeks.flatMap(w => w.checks.filter(c => c.id === 'compiler_boundary' && !c.ok))));
 
   console.log('\n[final-row rebuild] existing athlete edits survive a fixture regeneration');
   const repairModule = require('../utils/fixtureMinimalReplan') as typeof import('../utils/fixtureMinimalReplan');
@@ -3165,10 +3166,10 @@ async function main(): Promise<void> {
   ok('rotated repeat-sprint sessions remain conditioning, not just acceleration and top-end templates',
     repeatedSprintTemplates.length > 0 && repeatedSprintTemplates.every((t) => speedTemplateConditioningCredit(t) === 'full'));
   const phaseJourney = await runAthlete(ARCHETYPES.find((a) => a.id === 'male-6-no-standing-fixture')!, localStorageData, 17);
-  const modalityChecks = phaseJourney.weeks.flatMap(week => week.checks)
+  const modalityChecks = [...phaseJourney.weeks, ...selectionWeeks].flatMap(week => week.checks)
     .filter(check => check.id === 'final_authored_conditioning_modality');
   ok('accumulated authored conditioning retains typed modality including standalone days',
-    modalityChecks.length === 17 && modalityChecks.every(check => check.ok),
+    modalityChecks.length === 25 && modalityChecks.every(check => check.ok),
     JSON.stringify(modalityChecks.filter(check => !check.ok)));
   ok('accumulated injury weeks retain the required strength and conditioning exposures',
     phaseJourney.weeks.filter(week => week.status === 'measured').length === 17 &&

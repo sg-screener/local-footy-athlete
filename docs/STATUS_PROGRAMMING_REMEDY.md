@@ -270,6 +270,36 @@ restart plus readiness, conditioning and swap. These are not receipts for the
 next revision. Native Release setup failed on absent generated dependency files;
 this was an isolated build setup error, and no app was installed.
 
+### Final broad-gate finding: authored conditioning evidence
+
+`fc242404` is not accepted. Its four 52-week illustration worlds projected and
+restarted cleanly, but the eight-profile release year gate exposed authored
+`Warm-up` rows stamped `strength_accessory` by `inferredRowEvidence`. The row
+already declared `role: conditioning`; the evidence owner ignored it. The
+existing owner now respects conditioning exactly as it already respected power.
+The annual assertion is unchanged. New positive checks cover both emitted rows
+of every one of 55 templates; all 55 warm-ups were red before the fix and green
+after. No name exemption, new classification owner or prescription change.
+
+The mutation audit also improved the witnesses rather than accepting a loose
+failure: standalone-mode removal already failed the compiler-boundary check in
+the eight-week two-fixture journey (Classic 4×4 without modality), but its runner
+expected the separate 17-week no-fixture check. That named check now includes
+both journeys, 25 week observations. The injury-horizon mutation genuinely
+survived output-only assertions because another accepted injury input kept the
+visible restriction; the actual accepted episode's open horizon is now checked
+before rollover too. Focused injury suite is 186/186; horizon mutation caught.
+
+The clean isolated `fc242404` Release build succeeded and its signature verified
+against the host trust store; it is superseded by the evidence correction, not
+an install candidate. The first dependency-symlink attempt could not resolve
+App; local dependency copies fixed the isolated build setup. No phone touched.
+Four standard simulator flows passed at fc242404. An extra actual drag reached
+Sunday from Wednesday, leaving Gunshow behind, but the scratch flow expected
+the sheet Done control instead of the board Save changes. A further full flow
+lost the app during reload; the app subsequently appeared normally. Neither
+scratch failure is a completed native drag/Undo/restart receipt.
+
 ## NOT COVERED
 
 - Product questions above remain open; all P01–P22 are not closed.

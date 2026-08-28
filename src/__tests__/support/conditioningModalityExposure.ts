@@ -5,6 +5,8 @@ import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { applyConstraintsToTypedComponents, buildInjuryConstraint } from '../../utils/exposureEngine';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
+import { composeConditioningRows } from '../../rules/conditioningSelection';
+import { withSection18WorkoutEvidence } from '../../rules/section18WorkoutEvidence';
 
 /** Metamorphic unit checks on a real generated component, never a stored-state
  * fixture. A title mutation cannot turn an explicitly selected erg into running;
@@ -16,6 +18,15 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
   const workout = quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START))
     .find(day => day.workout?.conditioningBlock?.intent === 'high-intensity')?.workout;
   if (!workout?.conditioningBlock?.options.length) throw Error('Real hard-conditioning component not reached');
+  const misclassified = CONDITIONING_TEMPLATES.flatMap(template => {
+    const rows = composeConditioningRows(template, YEAR_START);
+    const evidenced = withSection18WorkoutEvidence({ ...workout, exercises: rows });
+    return evidenced.exercises.filter(row => row.role !== 'conditioning' ||
+      row.section18Evidence?.role !== 'conditioning' || row.section18Evidence.mainStrengthPattern !== null)
+      .map(row => `${template.name}/${row.exercise.name}`);
+  });
+  ok('authored conditioning rows retain conditioning evidence including every warm-up',
+    CONDITIONING_TEMPLATES.length === 55 && misclassified.length === 0, JSON.stringify(misclassified));
   const constraint = buildInjuryConstraint({ region: 'knee', severity: 7 });
   for (const modality of ['bike', 'row', 'ski'] as const) {
     const failures = CONDITIONING_TEMPLATES.filter(template => {

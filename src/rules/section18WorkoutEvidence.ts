@@ -30,12 +30,13 @@ function inferredRowEvidence(
   // enforces, one layer down. `classifyGeneratedWorkoutRow` reads the NAME, and
   // `Explosive Push-up` classifies as a main lift; letting it answer here would
   // stamp main-strength §18 evidence on power work and hand it back every credit
-  // its fence denies. Power is the only role with a Section 18 spelling today;
-  // the rest still come from the classifier.
-  if (row.role === 'power') {
+  // its fence denies. Conditioning has the same authored spelling: even its
+  // structural warm-up is conditioning, never an unknown strength accessory.
+  // Other roles still use the existing canonical classifier.
+  if (row.role === 'power' || row.role === 'conditioning') {
     return {
       protocolVersion: 1,
-      role: 'power',
+      role: row.role,
       strengthPattern: null,
       mainStrengthPattern: null,
       provenance: 'canonical_row_classifier',

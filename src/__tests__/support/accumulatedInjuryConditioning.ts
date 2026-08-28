@@ -10,6 +10,7 @@ import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
 import { project } from '../../rules/projectVisibleWeek';
 import { getExerciseTags } from '../../data/exerciseTags';
+import { factHorizon, factHorizonCoversDate } from '../../rules/durableFactHorizon';
 
 // The reported world: actual onboarding, seven logged weeks, week-eight
 // shoulder restriction during a scheduled deload, including mixed sessions.
@@ -136,6 +137,11 @@ export async function accumulatedInjuryConditioning(
       if (['refused', 'threw'].includes(logged.result)) throw Error(JSON.stringify(logged));
     }
     const nextWeek = plusDays(weekStart, 7); setJourneyClock(nextWeek);
+    const carriedFact = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.find(fact =>
+      'episodeId' in fact && fact.episodeId === carried.createdModifierIds?.[0]);
+    ok(`${gender}: accepted active injury horizon covers the next block without expiring`,
+      !!carriedFact && factHorizon(carriedFact).endsAfter === null && factHorizonCoversDate(carriedFact, nextWeek),
+      JSON.stringify(carriedFact && factHorizon(carriedFact)));
     const nextBlock = quiet(() => rolloverIfDue(nextWeek));
     if (nextBlock.refusal) throw Error(JSON.stringify(nextBlock.refusal));
     quiet(() => followTheWeek(nextWeek));
