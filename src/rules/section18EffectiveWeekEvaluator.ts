@@ -30,6 +30,7 @@ import type {
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
 import { budgetedPowerSession, powerRows } from './sessionRowCounting';
+import { isAthleteAddedSession } from './athletePlacement';
 
 export type Section18FindingSeverity = 'blocking' | 'advisory';
 
@@ -120,14 +121,14 @@ export interface Section18AnchorLedgerRow {
  * How one domain's exposure divides across the governed boundary.
  *
  * `delivered` is history the athlete actually did; `prescribed` is everything in
- * the governed remainder; `appPrescribed` is the part of that remainder the APP
- * authored, excluding exposure the athlete brings from their own team training
- * and game. `delivered + prescribed` is the domain's achieved total, which is
- * what the existing `achievedCount` fields keep reporting.
+ * the governed remainder. The app-owned fields retain authorship on both sides
+ * of that boundary. `delivered + prescribed` is the domain's total workload;
+ * `appDelivered + appPrescribed` is the frequency the planner governs.
  */
 export interface Section18ExposureSplit {
   delivered: number;
   prescribed: number;
+  appDelivered: number;
   appPrescribed: number;
 }
 
@@ -138,7 +139,10 @@ export interface Section18EffectiveWeekLedger {
   /** Day-of-week values that fall before the boundary. */
   historyDays: number[];
   mainStrength: {
+    /** All completed and prescribed main-strength work, including athlete additions. */
     achievedCount: number;
+    /** Only app-programmed main strength; this is the Section 18 governed frequency. */
+    plannerAchievedCount: number;
     sessionDays: number[];
     accessoryOnlySessionCount: number;
     split: Section18ExposureSplit;
@@ -500,6 +504,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   const conditioningCredits: Section18ConditioningCredit[] = [];
   const sprintSources: Section18SprintCreditSource[] = [];
   const mainDays: number[] = [];
+  const mainAppAuthored: boolean[] = [];
   const activeRecoveryDays: number[] = [];
   /** Days carrying work the plan REQUIRED. The Rest law's only input. */
   const requiredWorkDays: number[] = [];
@@ -627,6 +632,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       if (sessionPatterns.length > 0) {
         mainCount += 1;
         mainDays.push(day);
+      mainAppAuthored.push(!isAthleteAddedSession(workout));
         dayMain = true;
         if (rowResult.legacyFallback) legacyFallbacks += 1;
         for (const pattern of PATTERNS) {
@@ -763,16 +769,19 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     days: readonly number[],
     appAuthored: readonly boolean[] = [],
   ): Section18ExposureSplit => {
-    let delivered = 0; let prescribed = 0; let appPrescribed = 0;
+    let delivered = 0; let prescribed = 0; let appDelivered = 0; let appPrescribed = 0;
     days.forEach((day, index) => {
       if (isHistory(day)) {
-        if (wasDelivered(day)) delivered += 1;
+        if (wasDelivered(day)) {
+          delivered += 1;
+          if (appAuthored.length === 0 || appAuthored[index]) appDelivered += 1;
+        }
         return;
       }
       prescribed += 1;
       if (appAuthored.length === 0 || appAuthored[index]) appPrescribed += 1;
     });
-    return { delivered, prescribed, appPrescribed };
+    return { delivered, prescribed, appDelivered, appPrescribed };
   };
 
   const coreCredits = conditioningCredits.filter((credit) => isCoreRole(credit.role));
@@ -784,7 +793,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     sprintSources.map((source) => source.dayOfWeek),
     sprintSources.map((source) => source.kind === 'app_sprint'),
   );
-  const mainSplit = splitDays(mainDays);
+  const mainSplit = splitDays(mainDays, mainAppAuthored);
   const powerSplit = splitDays(primerSources.map((source) => source.dayOfWeek));
 
   return {
@@ -793,6 +802,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     historyDays: [0, 1, 2, 3, 4, 5, 6].filter(isHistory),
     mainStrength: {
       achievedCount: mainCount,
+      plannerAchievedCount: mainSplit.appDelivered + mainSplit.appPrescribed,
       sessionDays: uniq(mainDays),
       accessoryOnlySessionCount: accessoryOnly,
       split: mainSplit,
@@ -895,6 +905,8 @@ function evaluateNumeric(args: {
   evidence?: string[];
   /** How this domain's exposure divides across the governed boundary. */
   split?: Section18ExposureSplit;
+  /** Limits only exposure authored by LFA, while total workload stays observable. */
+  maximumScope?: 'total_exposure' | 'app_authored';
 }): void {
   if (args.actual < args.required) {
     addFinding(args.findings, {
@@ -963,10 +975,14 @@ function evaluateNumeric(args: {
   // says. What changes is that the allowance is what remains after everything
   // the app cannot touch, and the breach is judged on what the app actually
   // prescribed.
-  const delivered = args.split?.delivered ?? 0;
+  const delivered = args.maximumScope === 'app_authored'
+    ? args.split?.appDelivered ?? 0
+    : args.split?.delivered ?? 0;
   const prescribed = args.split ? args.split.prescribed : args.actual;
   const appPrescribed = args.split ? args.split.appPrescribed : args.actual;
-  const athleteOwnedExposure = Math.max(0, prescribed - appPrescribed);
+  const athleteOwnedExposure = args.maximumScope === 'app_authored'
+    ? 0
+    : Math.max(0, prescribed - appPrescribed);
   const prescribedAllowance = args.maximum === null
     ? null
     : Math.max(0, args.maximum - delivered - athleteOwnedExposure);
@@ -1054,7 +1070,7 @@ function assessContract(
       ? 0
       : Math.max(0, actual - policy.permittedMaximum);
   };
-  assess(contract.mainStrength.exposure, ledger.mainStrength.achievedCount);
+  assess(contract.mainStrength.exposure, ledger.mainStrength.plannerAchievedCount);
   assess(contract.conditioning.core, ledger.conditioning.coreCount);
   assess(contract.sprintHighSpeed.exposure, ledger.sprintHighSpeed.achievedCount);
   contract.strengthPatterns.achievedMeaningfulMainLifts = {
@@ -1210,13 +1226,12 @@ export function evaluateSection18EffectiveWeek(
     }
   }
 
-  const strengthTotalForMaximum = contract.mainStrength.exposure.plannerSelectionKind === 'optional'
-    ? ledger.mainStrength.achievedCount
-    : ledger.mainStrength.achievedCount;
   evaluateNumeric({
     findings,
     domain: 'main_strength',
-    actual: strengthTotalForMaximum,
+    // Athlete additions remain in `ledger.mainStrength.achievedCount` for
+    // history/workload, but Section 18 governs only what LFA programmed.
+    actual: ledger.mainStrength.plannerAchievedCount,
     required: contract.mainStrength.exposure.requiredMinimum,
     defaultTarget: contract.mainStrength.exposure.defaultTarget,
     plannerSelectedTarget: contract.mainStrength.exposure.plannerSelectedTarget,
@@ -1226,6 +1241,7 @@ export function evaluateSection18EffectiveWeek(
     reductionMetric: 'main_strength_frequency',
     label: 'Main-strength frequency',
     split: ledger.mainStrength.split,
+    maximumScope: 'app_authored',
     evidence: ledger.mainStrength.sessionDays.map((day) => `${dateForDay(input.weekStart, day)}:main_strength`),
   });
 

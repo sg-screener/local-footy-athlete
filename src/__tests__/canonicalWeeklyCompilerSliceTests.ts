@@ -50,6 +50,7 @@ import {
 import { compileCanonicalWeeklyExerciseEdits } from '../rules/canonicalWeeklyExerciseEditCompiler';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { useProgramStore, projectProgramPersistedInputs } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
 import {
   coldStartThroughOnboarding,
   quiet,
@@ -89,6 +90,8 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { speedBlockForTemplate } from '../rules/speedTemplates';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import { isAthleteAddedSession, isAthletePlacedSession } from '../rules/athletePlacement';
+import { legalAddCandidates, legalAddFamilies } from '../utils/addExerciseCandidates';
 import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { runAthlete } from './compilerYear/run';
@@ -2556,6 +2559,166 @@ async function main(): Promise<void> {
           row.exercise?.name === addName)?.id === actedAddedId,
       JSON.stringify({ actedAddedId, restartedRawTarget }));
   }
+
+  console.log('\n[athlete-owned fifth strength] Add, exercise edits, restart and Undo');
+  localStorageData.clear();
+  const fifthInstall = await coldStartThroughOnboarding({
+    profile: preseasonAthlete(), installDayISO: INSTALL_DAY,
+  });
+  const strengthCount = (): number => quiet(() =>
+    deriveVisibleWeekLive(fifthInstall.blockOneStart, INSTALL_DAY)
+      .filter((day) => day.workout &&
+        classifyVisibleSession(day.workout).contributions.mainStrength > 0).length);
+  const automaticFifthWeek = quiet(() => resolvedDays(
+    fifthInstall.blockOneStart, INSTALL_DAY));
+  const initialStrengthCount = strengthCount();
+  ok('automatic programming never creates a fifth main-strength session',
+    initialStrengthCount <= 4, `automatic=${initialStrengthCount}`);
+
+  let fifthDate = '';
+  let lastAddResult: { ok?: boolean; message?: string } | null = null;
+  for (const day of quiet(() => deriveVisibleWeekLive(
+    fifthInstall.blockOneStart, INSTALL_DAY))) {
+    if (strengthCount() >= 5) break;
+    if (day.workout && classifyVisibleSession(day.workout).contributions.mainStrength > 0) continue;
+    const beforeCount = strengthCount();
+    const result = quiet(() => applyPlanChange({
+      change: { kind: 'add_category', date: day.date, category: 'strength_full' },
+      visibleWeek: quiet(() => deriveVisibleWeekLive(
+        fifthInstall.blockOneStart, INSTALL_DAY)),
+      todayISO: INSTALL_DAY,
+      applyOverride: () => undefined,
+    })) as { ok?: boolean; message?: string };
+    lastAddResult = result;
+    if (result.ok && strengthCount() > beforeCount) fifthDate = day.date;
+  }
+  const fifthRaw = () => quiet(() => deriveVisibleWeekLive(
+    fifthInstall.blockOneStart, INSTALL_DAY))
+    .find((day) => day.date === fifthDate)?.workout;
+  ok('the athlete can deliberately add a fifth main-strength session',
+    strengthCount() === 5 && Boolean(fifthDate),
+    JSON.stringify({ initialStrengthCount, strengthCount: strengthCount(), fifthDate, lastAddResult }));
+  ok('the added fifth is stamped with the existing athlete-placement owner',
+    isAthletePlacedSession(fifthRaw()) && isAthleteAddedSession(fifthRaw()),
+    JSON.stringify(fifthRaw()?.athletePlacement));
+  const afterFifthAdd = quiet(() => resolvedDays(fifthInstall.blockOneStart, INSTALL_DAY));
+  ok('adding the fifth does not delete, reduce or move existing programmed sessions',
+    automaticFifthWeek.every((beforeDay) => {
+      if (beforeDay.rows.length === 0) return true;
+      const afterDay = afterFifthAdd.find((day) => day.dateISO === beforeDay.dateISO);
+      return afterDay && beforeDay.rows.every((beforeRow) =>
+        afterDay.rows.some((afterRow) => JSON.stringify(afterRow) === JSON.stringify(beforeRow)));
+    }), JSON.stringify({ before: automaticFifthWeek, after: afterFifthAdd }));
+
+  const fifthBeforeEdits = fifthRaw();
+  const fifthNames = (fifthBeforeEdits?.exercises ?? [])
+    .map((row) => row.exercise?.name ?? '').filter(Boolean);
+  const fifthEnvironment = quiet(() => resolveTapSwapEnvironment({
+    date: fifthDate,
+    profile: useProfileStore.getState().onboardingData,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    readinessSignal: null,
+  }));
+  const addArgs = {
+    environment: fifthEnvironment,
+    profile: useProfileStore.getState().onboardingData,
+    existingExerciseNames: fifthNames,
+  };
+  const canonicalAddCandidates = quiet(() => legalAddFamilies(addArgs)
+    .flatMap((family) => family.groups.flatMap((group) => group.leaves.flatMap((leaf) =>
+      legalAddCandidates({ ...addArgs, leaf: leaf.id })))));
+  const safeAdd = canonicalAddCandidates[0];
+  ok('the fifth session Add chooser uses the canonical equipment/injury filter',
+    Boolean(safeAdd) && !canonicalAddCandidates.some((candidate) =>
+      candidate.name === 'Medicine-Ball Slams'),
+    canonicalAddCandidates.map((candidate) => candidate.name).join(', '));
+  const exerciseAdd = safeAdd
+    ? await quietAsync(() => executeProgramControlActionDurably({
+        type: 'add_exercise',
+        source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: { date: fifthDate, exercise: safeAdd },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+      }, { todayISO: INSTALL_DAY }))
+    : null;
+  ok('exercise Add edits the athlete-owned fifth without changing its owner',
+    exerciseAdd?.ok === true && isAthleteAddedSession(fifthRaw()) &&
+      fifthRaw()?.exercises.some((row) => row.exercise?.name === safeAdd?.name),
+    JSON.stringify({ exerciseAdd, owner: fifthRaw()?.athletePlacement }));
+
+  const swapFrom = fifthRaw()?.exercises.find((row) => row.exercise?.name !== safeAdd?.name)
+    ?.exercise?.name ?? '';
+  const swapChoice = swapOptionsFor({
+    dateISO: fifthDate,
+    originalExercise: swapFrom,
+    existingExerciseNames: fifthRaw()?.exercises.map((row) => row.exercise?.name ?? '') ?? [],
+  })[0];
+  const exerciseSwap = swapChoice
+    ? await quietAsync(() => executeProgramControlActionDurably({
+        type: 'swap_exercise',
+        source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: {
+          date: fifthDate, fromExercise: swapFrom,
+          toExercise: { name: swapChoice.name, sets: 3, repsMin: 6, repsMax: 8 },
+        },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+      }, { todayISO: INSTALL_DAY }))
+    : null;
+  ok('exercise Swap edits the athlete-owned fifth without changing its owner',
+    exerciseSwap?.ok === true && isAthleteAddedSession(fifthRaw()) &&
+      fifthRaw()?.exercises.some((row) => row.exercise?.name === swapChoice?.name),
+    JSON.stringify({ swapFrom, swapChoice, exerciseSwap, owner: fifthRaw()?.athletePlacement }));
+
+  const fifthBeforeRestart = visibleSignature(quiet(() =>
+    resolvedDays(fifthInstall.blockOneStart, INSTALL_DAY)));
+  const fifthRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  ok('the athlete-added fifth and its exercise edits survive reopening',
+    fifthRestart.ok && strengthCount() === 5 &&
+      visibleSignature(quiet(() => resolvedDays(
+        fifthInstall.blockOneStart, INSTALL_DAY))) === fifthBeforeRestart &&
+      isAthleteAddedSession(fifthRaw()),
+    JSON.stringify({ fifthRestart, owner: fifthRaw()?.athletePlacement }));
+
+  const removeName = safeAdd?.name ?? '';
+  const exerciseRemove = removeName
+    ? await quietAsync(() => executeProgramControlActionDurably({
+        type: 'remove_exercise',
+        source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+        scope: 'today_only', payload: { date: fifthDate, exercise: removeName },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+      }, { todayISO: INSTALL_DAY }))
+    : null;
+  ok('exercise Remove works after reopening and preserves athlete ownership',
+    exerciseRemove?.ok === true && isAthleteAddedSession(fifthRaw()) &&
+      !fifthRaw()?.exercises.some((row) => row.exercise?.name === removeName),
+    JSON.stringify({ exerciseRemove, owner: fifthRaw()?.athletePlacement }));
+  const fifthRemoveRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: INSTALL_DAY,
+  }));
+  const undoRemove = await quietAsync(() => undoLastDecision());
+  ok('Remove survives another reopening and Undo restores only that exercise',
+    fifthRemoveRestart.ok && undoRemove.outcome === 'undone' &&
+      fifthRaw()?.exercises.some((row) => row.exercise?.name === removeName) &&
+      isAthleteAddedSession(fifthRaw()) && strengthCount() === 5,
+    JSON.stringify({ removeRestart: fifthRemoveRestart, undoRemove, owner: fifthRaw()?.athletePlacement }));
+  setJourneyClock(fifthDate);
+  const fifthOutcome = await quietAsync(() => recordDay(fifthDate, {
+    record: true, completion: 'full', feeling: 'good', soreness: 'none',
+    difficulty: 6, logWeights: true,
+  }));
+  const fifthLoggedRestart = await quietAsync(() => relaunchApp({
+    storage: localStorageData, todayISO: fifthDate,
+  }));
+  ok('completed athlete-added strength remains in persisted training history',
+    fifthOutcome.result === 'recorded' && fifthLoggedRestart.ok &&
+      Boolean(useProgramStore.getState().sessionFeedback[fifthDate]) &&
+      isAthleteAddedSession(fifthRaw()),
+    JSON.stringify({ fifthOutcome, fifthLoggedRestart,
+      feedback: useProgramStore.getState().sessionFeedback[fifthDate],
+      owner: fifthRaw()?.athletePlacement }));
 
   console.log('\n[scheduled-deload slice] enter, edit, fixture, restart, undo and leave');
   localStorageData.clear();

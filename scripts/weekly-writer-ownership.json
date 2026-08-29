@@ -122,9 +122,9 @@
       "reason": "Builds observer assertions from the unmodified canonical seed and known auxiliary input actions; no program mutation. Updated spent-week witness to typed optional-day eligibility and coach witness to the actual generated hamstring-session identity. Diagnostic matrix passes all initial witnesses."
     },
     "src/rules/section18EffectiveWeekEvaluator.ts#buildLedger": {
-      "fingerprint": "b73357b5b71741a38273e5adc37f5804902561aeae78e82e46993da639f8bffe",
+      "fingerprint": "76729f2aa6ad946b8ee44b88cc4c20825b75358c88113f09be568265467e7717",
       "classification": "projection_display",
-      "reason": "Exposure evaluator creates a local day-index and credit ledger from supplied sessions/anchors; list pushes mutate only a fresh local index, never the supplied sessions."
+      "reason": "Exposure evaluator creates local day, credit and app/athlete-authorship ledgers from supplied sessions and their canonical AthletePlacement marker; list pushes mutate only fresh local indexes, never the supplied sessions."
     },
     "src/store/coachMutationTransaction.ts#runCoachMutationTransaction.execute": {
       "fingerprint": "c1b10280d97a39deb91fbd937d09b2fe70411e5e0f929b80724c1bc056b11fba",
@@ -582,9 +582,9 @@
       "reason": "Adapts candidate workouts/contracts into the shared canonical week resolver for validation; generated wrapper objects are not stored or independently authored rows."
     },
     "src/rules/acceptedEffectiveWeek.ts#rebaseAcceptedEffectiveWeek": {
-      "fingerprint": "890aa4075f31da4c95800e7ee2a5f1cba99b57bd2624181546d4b98e0ea612ab",
+      "fingerprint": "b4e72e790d32ffeefb055bbcb2339151516e61ab684a47ce40a505d02525ff39",
       "classification": "projection_display",
-      "reason": "Selects accepted surfaces, folds shared athlete-edit compilation and reads canonical final visibility for contract evaluation; returns an inspection snapshot, no publication."
+      "reason": "Selects accepted surfaces, derives typed add-versus-edit provenance from the lower-priority canonical day, folds shared athlete-edit compilation and reads canonical final visibility for contract evaluation; returns an inspection snapshot, no publication."
     },
     "src/components/SessionActionSheet.tsx#SessionActionSheet": {
       "fingerprint": "88845ff59ae0b28fcbd12821270b7d1531a2ab616e7c6d3e2e4ae4412aa4a285",
@@ -1407,7 +1407,7 @@
       "reason": "Installs already compiled block surfaces through acceptedStateTransaction and records the accepted block; callers are boot, rebuild and rollover, not an independent generator."
     },
     "src/rules/canonicalWeeklyAthleteEditState.ts#ownedRest": {
-      "fingerprint": "f6c92c2fb84483716115af40001ffe8e4e576647a023a974bfc344487ba591d5",
+      "fingerprint": "4135bfe5332d7b8cd8688ac9255f5efb10058912058ad580c6e6bbdbb5dbd348",
       "classification": "canonical_compiler",
       "reason": "Private canonical athlete-edit rest materialiser preserves the exact removal identity and clears session contents from explicit accepted constraints."
     },
@@ -2033,8 +2033,8 @@
     },
     "src/rules/canonicalWeeklyAthleteEditState.ts#ownedWorkout": {
       "classification": "canonical_compiler",
-      "fingerprint": "927f396756353fb3bf8670c75e290326cc895126044df7d07ce8a5e73514fcc6",
-      "reason": "Lifts accepted athlete placement into canonical edit input with explicit target date and ownership."
+      "fingerprint": "4240676517d5391f5008a7ba5884de9b563e168cc72aa80cae8ae4f1d4aadd53",
+      "reason": "Lifts accepted athlete placement into canonical edit input with explicit target date, ownership and typed add-versus-edit origin derived from the original canonical workout."
     },
     "src/utils/coachingEngine.ts#plannedPatternsForAllocation": {
       "classification": "projection_display",

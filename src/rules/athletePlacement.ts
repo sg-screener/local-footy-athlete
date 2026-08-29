@@ -59,6 +59,8 @@ export interface AthletePlacement {
   authorship: 'athlete';
   /** Which athlete-owned surface this stamp was derived from. */
   surface: AthletePlacementSurface;
+  /** Whether this placement added a session or edited an existing one. */
+  origin: 'session_add' | 'session_edit';
   /**
    * The owning `UserRemovalConstraint` — the stored truth this is derived from.
    * Null on the `date_override` surface, whose stored truth is the override
@@ -85,6 +87,14 @@ export function isAthletePlacedSession(
   return workout?.athletePlacement?.authorship === 'athlete';
 }
 
+/** True only when the athlete created an additional session. */
+export function isAthleteAddedSession(
+  workout: Workout | null | undefined,
+): boolean {
+  return isAthletePlacedSession(workout) &&
+    workout?.athletePlacement?.origin === 'session_add';
+}
+
 /**
  * May the resolver replace what is on this day with content of its own?
  *
@@ -109,10 +119,12 @@ export function resolverMayDisplace(
 export function athletePlacementFor(args: {
   constraintId: string;
   placedDate: string;
+  origin: AthletePlacement['origin'];
 }): AthletePlacement {
   return {
     authorship: 'athlete',
     surface: 'removal_constraint',
+    origin: args.origin,
     constraintId: args.constraintId,
     placedDate: args.placedDate.slice(0, 10),
   };
@@ -129,10 +141,12 @@ export function athletePlacementFor(args: {
  */
 export function athletePlacementForDateOverride(args: {
   placedDate: string;
+  origin: AthletePlacement['origin'];
 }): AthletePlacement {
   return {
     authorship: 'athlete',
     surface: 'date_override',
+    origin: args.origin,
     constraintId: null,
     placedDate: args.placedDate.slice(0, 10),
   };

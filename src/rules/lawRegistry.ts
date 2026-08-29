@@ -141,6 +141,13 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-athlete-added-strength-outside-planner-cap',
+    law: 'R-274: the four-session strength maximum governs LFA-authored sessions only. True athlete-added strength retains typed AthletePlacement origin through session and exercise edits, restart and Undo; it remains in completed workload/history but outside planner-frequency and Section 18 maximum enforcement. Editing an existing programmed session retains ownership without exempting its frequency. Five app-authored sessions still breach, and safety stays canonical.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-274',
+    guard: { state: 'guarded', by: 'test:section18-v2 + test:canonical-weekly-compiler', chainStatus: 'in_chain',
+      receipt: 'section18ContractV2Tests contrasts five app-authored sessions with four app-authored plus one athlete-added, including delivered history, and proves an athlete edit to an existing session remains governed. canonicalWeeklyCompilerSliceTests uses real onboarding, session Add, canonical Add/Swap candidates, exercise Add/Swap/Remove, repeated process restart, Undo and session logging. Final release receipt: docs/STATUS_INTAKE.md.' },
+  },
+  {
     id: 'LAW-estimated-1rm-last-set-rir',
     law: 'R-272: four chart-only lift alternatives preserve separate histories. Only actual last completed working-set load/reps plus optional RIR 0–4 with effective reps <=15 produce a versioned estimate. Skip/unanswered/open-ended 5+ do not. Pull-ups use session bodyweight and display added load; Bulgarians use one non-dominant-leg total external load. No prescription fallback, program-load changes, confidence badges or PB awards.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-272',

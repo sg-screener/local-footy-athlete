@@ -451,6 +451,7 @@ const stampAthlete = (workout: Workout): Workout => ({
   ...clone(workout),
   athletePlacement: athletePlacementForDateOverride({
     placedDate: dateForDay(workout.dayOfWeek),
+    origin: 'session_edit',
   }),
 });
 

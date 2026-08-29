@@ -33,6 +33,8 @@ import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
 import { ensureProgramSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
 import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
+import { athletePlacementFor } from '../rules/athletePlacement';
+import { auditWeekAgainstCaps, countWeeklyExposures } from '../rules/weeklyExposureCounts';
 
 let pass = 0;
 let fail = 0;
@@ -114,6 +116,13 @@ function strength(
   const expanded = patterns.flatMap((pattern) =>
     Array.from({ length: opts.repeated?.[pattern] ?? 1 }, () => pattern));
   workout.exercises = expanded.map((pattern, index) => row(workout.id, index, 'main_strength', pattern));
+  workout.strengthIntent = {
+    archetype: patterns.some((pattern) => pattern === 'squat' || pattern === 'hinge')
+      ? 'lower' : 'upper',
+    primaryPattern: patterns[0] ?? null,
+    plannedPatterns: [...patterns],
+    effectivePatterns: [...patterns],
+  };
   workout.intensity = opts.hard ? 'High' : 'Moderate';
   if (opts.power) {
     // Power is a ROW with a typed role now, not a block beside the list.
@@ -453,6 +462,75 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
   witnesses.preseasonFifthStrength = evaluate(c, workouts);
   ok('1. pre-season fifth strength is a maximum breach',
     has(witnesses.preseasonFifthStrength, 'maximum_breach', 'main_strength'));
+
+  const athleteFifth = strength(6, ['push']);
+  athleteFifth.athletePlacement = athletePlacementFor({
+    constraintId: 'athlete-add-fifth',
+    placedDate: '2026-07-18',
+    origin: 'session_add',
+  });
+  const athleteOwned = evaluate(c, [
+    strength(1, ['push']), strength(2, ['hinge']), strength(3, ['pull']),
+    strength(5, ['squat']), athleteFifth,
+  ]);
+  ok('1b. an athlete-added fifth remains total training workload',
+    athleteOwned.ledger.mainStrength.achievedCount === 5,
+    athleteOwned.ledger.mainStrength);
+  ok('1c. the planner frequency excludes that athlete-owned fifth',
+    athleteOwned.ledger.mainStrength.plannerAchievedCount === 4 &&
+      athleteOwned.contract.mainStrength.exposure.achievedCount === 4,
+    { ledger: athleteOwned.ledger.mainStrength, contract: athleteOwned.contract.mainStrength.exposure });
+  ok('1d. Section 18 does not report the athlete-owned fifth as app over-programming',
+    !has(athleteOwned, 'maximum_breach', 'main_strength'),
+    athleteOwned.findings);
+  const athleteWeeklyCounts = countWeeklyExposures([
+    strength(1, ['push']), strength(2, ['hinge']), strength(3, ['pull']),
+    strength(5, ['squat']), athleteFifth,
+  ].map((workout) => ({ date: `2026-07-${12 + workout.dayOfWeek}`, workout })));
+  ok('1d-ii. the weekly cap audit keeps five total but governs four app sessions',
+    athleteWeeklyCounts.mainStrengthExposures === 5 &&
+      athleteWeeklyCounts.athleteAddedMainStrengthExposures === 1 &&
+      !auditWeekAgainstCaps(athleteWeeklyCounts)
+        .some((finding) => finding.cap === 'maxMainStrengthSessions' && finding.kind === 'over'),
+    { athleteWeeklyCounts, findings: auditWeekAgainstCaps(athleteWeeklyCounts) });
+
+  const completedContract = JSON.parse(JSON.stringify(c)) as WeeklyExposureContractV2;
+  completedContract.governedFromISO = '2026-07-20';
+  const completedAthleteOwned = evaluateSection18EffectiveWeek({
+    contract: completedContract,
+    workouts: [
+      strength(1, ['push']), strength(2, ['hinge']), strength(3, ['pull']),
+      strength(5, ['squat']), athleteFifth,
+    ],
+    weekStart: '2026-07-13',
+    deliveredDates: new Set(['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-17', '2026-07-18']),
+  });
+  ok('1e. completed athlete-added work stays in history without entering planner frequency',
+    completedAthleteOwned.ledger.mainStrength.split.delivered === 5 &&
+      completedAthleteOwned.ledger.mainStrength.split.appDelivered === 4 &&
+      completedAthleteOwned.ledger.mainStrength.achievedCount === 5 &&
+      completedAthleteOwned.ledger.mainStrength.plannerAchievedCount === 4,
+    completedAthleteOwned.ledger.mainStrength);
+  const strippedOwnership = { ...athleteFifth, athletePlacement: undefined };
+  const ownershipMutation = evaluate(c, [
+    strength(1, ['push']), strength(2, ['hinge']), strength(3, ['pull']),
+    strength(5, ['squat']), strippedOwnership,
+  ]);
+  ok('MUTATION KILLED stripping athlete ownership makes the fifth an app breach',
+    has(ownershipMutation, 'maximum_breach', 'main_strength'),
+    ownershipMutation.ledger.mainStrength);
+  const editedExisting = {
+    ...athleteFifth,
+    athletePlacement: { ...athleteFifth.athletePlacement!, origin: 'session_edit' as const },
+  };
+  const editedExistingEvaluation = evaluate(c, [
+    strength(1, ['push']), strength(2, ['hinge']), strength(3, ['pull']),
+    strength(5, ['squat']), editedExisting,
+  ]);
+  ok('1f. athlete ownership on an existing programmed session does not exempt app frequency',
+    editedExistingEvaluation.ledger.mainStrength.plannerAchievedCount === 5 &&
+      has(editedExistingEvaluation, 'maximum_breach', 'main_strength'),
+    editedExistingEvaluation.ledger.mainStrength);
 }
 
 // 2. Injury-prohibited squat returns during canonical output.

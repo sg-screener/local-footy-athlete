@@ -18,6 +18,7 @@ import {
 import { compileCanonicalAthleteEditedWeek } from './canonicalWeeklyAthleteEditCompiler';
 import type { ExerciseExclusion } from './exerciseExclusions';
 import { athletePlacementForDateOverride } from './athletePlacement';
+import { isExplicitRestStub } from '../utils/workoutContent';
 import { composeDaySurfaces } from './dayPrecedence';
 import { deriveWeekContract } from './derivedWeekContract';
 import { selectStoredWeekDeclaration } from './storedWeekDeclaration';
@@ -257,7 +258,20 @@ export function rebaseAcceptedEffectiveWeek(args: {
       }
       return [{
         ...entry.workout,
-        athletePlacement: athletePlacementForDateOverride({ placedDate: entry.date }),
+        athletePlacement: athletePlacementForDateOverride({
+          placedDate: entry.date,
+          origin: (() => {
+            const lowerPriorityWorkout = Object.prototype.hasOwnProperty.call(
+              overlay?.workoutsByDate ?? {}, entry.date,
+            )
+              ? overlay?.workoutsByDate[entry.date] ?? null
+              : baseMicrocycle?.workouts.find((candidate) =>
+                candidate.dayOfWeek === entry.dayOfWeek) ?? null;
+            return !lowerPriorityWorkout || isExplicitRestStub(lowerPriorityWorkout)
+              ? 'session_add'
+              : 'session_edit';
+          })(),
+        }),
       }];
     }),
     weekStartISO: weekStart,

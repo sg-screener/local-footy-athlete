@@ -73,6 +73,11 @@ function ownedWorkout(args: {
     athletePlacement: athletePlacementFor({
       constraintId: args.constraint.id,
       placedDate: args.dateISO.slice(0, 10),
+      // The accepted addition transaction sets this false because no displaced
+      // app session may be relocated. Swap/move/removal constraints set true.
+      origin: args.constraint.equivalentExposureMayRelocate === false
+        ? 'session_add'
+        : 'session_edit',
     }),
   };
 }
@@ -101,6 +106,7 @@ function ownedRest(
     athletePlacement: athletePlacementFor({
       constraintId: constraint.id,
       placedDate: dateISO,
+      origin: 'session_edit',
     }),
   } as unknown as Workout;
 }

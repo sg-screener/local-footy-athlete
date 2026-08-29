@@ -566,3 +566,81 @@ charts, a section + on a combined day, and completed-record read-only behavior.
 - Assisted pull-ups, withheld exercise variants, new conditioning templates,
   PB awards or automatic training-load changes (deliberately not implemented).
 - Physical phones, remote sync and individual lift-estimation accuracy.
+
+## Athlete-added fifth strength ownership — 2026-08-29
+
+Started from integrated checkpoint `c3f16708`, which contains and preserves
+checkpoint `42ea6626`. The parallel-session option was rejected: the accepted
+addition transaction already records typed intent and the canonical compiler
+already carries `AthletePlacement`. The implemented option extends that same
+marker with `session_add` versus `session_edit` origin, derived from the
+accepted transaction rather than names. This keeps one compiler and one session
+model while separating true additions from later ownership-changing edits.
+
+### Implemented
+
+- Section 18 now records total main-strength workload separately from the
+  app-governed frequency. A true athlete addition remains in total and delivered
+  history but is excluded from the planner maximum. An athlete edit to an
+  existing programmed session remains governed.
+- The weekly exposure audit reports total strength plus the typed athlete-added
+  subset and applies the four-session cap only to the remainder. Five
+  app-programmed sessions still produce a maximum breach.
+- Session Add, exercise Add/Swap/Remove, restart and Undo preserve the existing
+  marker and its addition origin. No session is deleted, reduced or moved to
+  compensate for the fifth.
+- The real Add chooser remains the safety owner. The fifth-session journey uses
+  the athlete's canonical equipment and injury environment; a medicine-ball
+  choice is explicitly absent without its required equipment answer.
+- Ruling R-274 and its in-chain law row bind this distinction to
+  `test:section18-v2` and `test:canonical-weekly-compiler`.
+
+### Verification
+
+- Final `npm run test:release`: **26/26 execution units green**, exit 0.
+- Canonical weekly compiler slice: **10,387 passed, 0 failed**. Its real
+  onboarding journey proves automatic generation stops at four, the athlete
+  adds a fifth without compensating edits, Add/Swap/Remove survive reopening,
+  Undo after reopening restores the removed exercise, completion persists in
+  training history, and ownership remains `session_add` throughout.
+- Section 18 v2: **141 passed, 0 failed**. It contrasts four app plus one athlete
+  addition with five app sessions, covers the delivered-history boundary, and
+  kills mutations that remove ownership or relabel an existing-session edit as
+  an addition.
+- The maintained rendered section Add test initially exposed a valid regression:
+  all athlete-owned placements had been exempted, so an ordinary app-session
+  exercise edit appeared to miss its planner target. The typed origin fix closed
+  it; the maintained check finished **272/272**, and its shared-control suite
+  finished **59/59**. It was not retired or weakened.
+- Annual programming acceptance: **416/416 athlete-weeks**, 8 distinct athletes
+  × 52 weeks, **0** distinct failure keys.
+- Writer census: **1,142/1,142** capability owners reviewed, **0** unresolved,
+  **0** rival authors, **0** derived-output writers. Product, devtool and test
+  typecheck each report **0** errors.
+
+The next defect in this class is caught by the add-versus-edit mutation pair,
+the real accepted Add/restart/Undo journey, the app-only five-session breach
+witness, and the annual compiler gate. A broad ownership predicate can no longer
+quietly exempt an edited app session without reddening both Section 18 and the
+rendered Add flow.
+
+### Unresolved
+
+No unresolved product or safety decision was found in this scope. The diagnostic
+law-registry fleet still reports its previously existing 21 `UNENFORCED` rows;
+R-274 itself is guarded and the maintained release gate is green.
+
+**Gates green, awaiting Sam device acceptance.** No phone was installed or
+wiped.
+
+### NOT COVERED
+
+- Physical iPhone acceptance, a new native Release build, or phone installation;
+  neither phone was installed or wiped.
+- Native pixels/touch behavior for the fifth-session sequence; this change was
+  verified through real application transactions, persistence and rendered
+  control contracts, not a new simulator tape.
+- Android and remote/backend account synchronization.
+- Repair of the full historical diagnostic fleet or its 21 pre-existing
+  unguarded-law rows; this task added one guarded law and ran the maintained
+  release authority.

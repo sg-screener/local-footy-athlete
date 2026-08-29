@@ -6940,3 +6940,22 @@ empty-choice button suppression, not existing equipment/injury/fixture limits.
 Guard: `LAW-session-section-add-context`, `test:session-section-add` and
 `test:session-execution`; full compiler tests retain Move/Undo and annual rules.
 Verification status, safety conflicts and NOT COVERED: `docs/STATUS_INTAKE.md`.
+
+**R-274** · Athlete-added strength ownership and planner cap, 2026-08-29.
+
+Owner: intake. The four-session main-strength maximum governs what LFA
+automatically programs. A deliberately athlete-added fifth session retains the
+existing `AthletePlacement` provenance through session Add, exercise
+Add/Swap/Remove, restart and Undo. True athlete-added strength is excluded from
+the planner-frequency and Section 18 maximum-breach calculation, including
+after completion, while an athlete edit to an existing programmed session is
+still app-frequency. Both remain athlete-owned, and all completed work remains
+in total workload and training history.
+The app must not delete, reduce or move another session to compensate. Five
+app-authored main-strength sessions remain a blocking over-programming defect.
+Equipment and injury legality continue to come from the canonical exercise
+chooser and compiler; this ruling creates no parallel session kind or
+name-based exception.
+Guard: `LAW-athlete-added-strength-outside-planner-cap`,
+`test:section18-v2` and `test:canonical-weekly-compiler`.
+Verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.

@@ -35,6 +35,7 @@ import {
 } from './sessionClassificationAdapter';
 import type { SessionCategory } from './sessionTaxonomy';
 import type { StressContext } from './stressClassification';
+import { isAthleteAddedSession } from './athletePlacement';
 
 // ─── Bible default weekly caps (Section 17.B) ────────────────────────
 
@@ -225,6 +226,8 @@ export interface WeeklyExposureCounts {
   hardExposures: number;
   hardDays: number;
   mainStrengthExposures: number;
+  /** Main-strength exposures deliberately added/placed by the athlete. */
+  athleteAddedMainStrengthExposures?: number;
   /** All conditioning load, INCLUDING team training + games. */
   conditioningExposures: number;
   /** Conditioning the app itself added — excludes team training + games. */
@@ -258,6 +261,7 @@ export function countWeeklyExposures(
 
   let hardExposures = 0;
   let mainStrength = 0;
+  let athleteAddedMainStrength = 0;
   let conditioning = 0;
   let extraConditioning = 0;
   let running = 0;
@@ -276,6 +280,9 @@ export function countWeeklyExposures(
 
       hardExposures += classification.contributions.hardExposures;
       mainStrength += classification.contributions.mainStrength;
+      if (isAthleteAddedSession(w)) {
+        athleteAddedMainStrength += classification.contributions.mainStrength;
+      }
       conditioning += classification.contributions.conditioning;
       extraConditioning += classification.contributions.extraConditioning;
       running += classification.contributions.running;
@@ -303,6 +310,9 @@ export function countWeeklyExposures(
     hardExposures,
     hardDays: classifiedDays.filter((d) => d.isHardDay).length,
     mainStrengthExposures: mainStrength,
+    ...(athleteAddedMainStrength > 0
+      ? { athleteAddedMainStrengthExposures: athleteAddedMainStrength }
+      : {}),
     conditioningExposures: conditioning,
     extraConditioningSessions: extraConditioning,
     runningExposures: running,
@@ -332,11 +342,15 @@ export function auditWeekAgainstCaps(
   const findings: CapFinding[] = [];
   const caps = BIBLE_WEEKLY_CAPS;
 
-  if (counts.mainStrengthExposures > caps.maxMainStrengthSessions) {
+  const appProgrammedMainStrength = Math.max(
+    0,
+    counts.mainStrengthExposures - (counts.athleteAddedMainStrengthExposures ?? 0),
+  );
+  if (appProgrammedMainStrength > caps.maxMainStrengthSessions) {
     findings.push({
       cap: 'maxMainStrengthSessions', kind: 'over',
-      observed: counts.mainStrengthExposures, limit: caps.maxMainStrengthSessions,
-      detail: `${counts.mainStrengthExposures} main strength sessions (Bible max ${caps.maxMainStrengthSessions})`,
+      observed: appProgrammedMainStrength, limit: caps.maxMainStrengthSessions,
+      detail: `${appProgrammedMainStrength} app-programmed main strength sessions (Bible max ${caps.maxMainStrengthSessions}; ${counts.mainStrengthExposures} total workload)`,
     });
   }
   if (counts.runningExposures > caps.maxRunningExposures) {
