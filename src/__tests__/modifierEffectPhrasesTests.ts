@@ -78,7 +78,10 @@ run('all effects including time limits are visible (R-262)', () => {
   assert(isShownOnProgram({ effect: 'unsigned' }),
     'modifiers without a signed phrase have been hidden from Program. They are '
     + 'real and active; a missing phrase is a gap in the WORDS, never a reason '
-    + 'to stop telling the athlete their program changed.');
+      + 'to stop telling the athlete their program changed.');
+  assert(isShownOnProgram({ effect: 'readiness_noted' })
+      && String(signedCopy('readiness.fatigue.noted')).startsWith('Noted'),
+    'a record-only tired report is hidden or described as a program change');
 });
 
 // THE COUNT AND THE LIST ARE THE SAME ARRAY, AND THIS IS WHY IT MATTERS.

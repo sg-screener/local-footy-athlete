@@ -79,8 +79,9 @@ import {
   registerAthleteActionUIOutcome,
 } from '../../dev/e2e/athleteActionUIObservation';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
-import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
+import { datedFatigueReportsFromFacts, isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
 import type { TemporaryScheduleFact } from '../../rules/temporarySourceFact';
+import { resolveFatigueDayPolicy } from '../../rules/fatigueSequencePolicy';
 import { decideChristmasBreakAsk } from '../../rules/christmasBreakAsk';
 import { factHorizonCoversWeek, isOpenHorizon } from '../../rules/durableFactHorizon';
 import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
@@ -1156,10 +1157,10 @@ export function useHomeScreen() {
   }, [handleProgramControlResult]);
 
   // ── Weekly readiness ("I'm sick/flat today") ──
-  // This surface only routes into existing owners: today's readiness signal
-  // for tired/sore, a factual week-scoped cooked report, and week recovery
-  // mode for sick. Independent facts remain active until their exact report
-  // is resolved; busy/away and injury modifiers remain independent.
+  // This surface only routes into existing owners: dated fatigue/soreness
+  // reports, poor-sleep reports, and the illness recovery mode. Fatigue effects
+  // are derived from the dated history; health facts remain active until their
+  // exact report is resolved, while busy/away and injury stay independent.
   const handleApplyWeekReadiness = useCallback(async (
     kind: WeekReadinessAction,
     anchorDateISO: string,
@@ -1184,7 +1185,20 @@ export function useHomeScreen() {
       expectedStatus: 'active',
     });
     await handleProgramControlResult(result);
-    return result;
+    const fatigueLevel = kind === 'tired_today'
+      ? 'slight'
+      : kind === 'flat_today'
+        ? 'moderate'
+        : kind === 'cooked_week' ? 'cooked' : null;
+    if (!fatigueLevel || !result.ok) return { ...result, fatigueLevel, fatigueSequenceTriggered: false };
+    const reports = datedFatigueReportsFromFacts(
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts ?? [],
+    );
+    return {
+      ...result,
+      fatigueLevel,
+      fatigueSequenceTriggered: resolveFatigueDayPolicy(reports, todayISO).consecutiveTrigger,
+    };
   }, [handleProgramControlResult, registerSourceFactRenderObservation, weekDays]);
 
   const handleClearWeekReadiness = useCallback(async (constraintId: string) => {

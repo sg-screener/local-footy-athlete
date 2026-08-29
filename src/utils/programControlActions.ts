@@ -87,7 +87,6 @@ import {
   resolveInjuryEpisode,
 } from '../store/injuryEpisodeTransaction';
 import {
-  reportedLevelDeloads,
   type TemporaryAthleteReportedLevel,
   createTemporaryFatigueFact,
   createTemporaryIllnessFact,
@@ -104,7 +103,7 @@ import {
   type TemporarySourceFactScope,
 } from '../rules/temporarySourceFact';
 import type { FixtureAvailabilityKind } from '../rules/fixtureConditionedAvailability';
-import { durableStateFactScope, readinessDeloadFactScope } from '../rules/durableFactHorizon';
+import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
   transactTemporarySourceFact,
@@ -1992,32 +1991,10 @@ async function executeProgramControlActionDurablyWithinTrace(
           })
         : createTemporaryFatigueFact({
             observedDate: date,
-            // COOKED IS A 7-DAY WINDOW, NOT AN OPEN HOLD (census A1). It used
-            // to take `durableStateFactScope` — illness's open horizon, which
-            // never elapses — so one tap deloaded the athlete forever. Sam's
-            // ruling is that readiness and illness differ in exactly this.
-            // R-038: "Wrecked" IS SEVEN DAYS TOO, NOT JUST "absolutely cooked".
-            // This read `level === 'cooked'`, so the window went to the top tier
-            // and the middle one got a single DATE — a wrecked athlete was
-            // deloaded for ONE day and back at full load by the second.
-            // `reportedLevelDeloads` asks the law (level -> severity -> tier ->
-            // directive) instead of matching a literal, so a new level or a
-            // moved threshold cannot silently lose its window again.
-            // ⚠ `declaredOnISO` IS TODAY, NEVER THE WEEK ANCHOR. The cooked
-            // payload carries `date` = the viewed week's Monday, and deriving
-            // the window from it produced Monday→Sunday — so a Friday
-            // declaration minted a 3-day stump (laterOf clamped the front) and
-            // the athlete was back at full load the next Monday. That is the
-            // exact calendar-week snap THE READINESS LAW forbids: "a ROLLING
-            // WINDOW from the day of the declaration … declaring on a Friday
-            // deloads the following week". Measured 2026-08-26: fact scope was
-            // from 08-14 until 08-16 for a Friday tap; now 08-14 → 08-20.
-            scope: reportedLevelDeloads(reportedReadinessLevel)
-              ? readinessDeloadFactScope({
-                  declaredOnISO: todayISO.slice(0, 10),
-                  todayISO,
-                })
-              : temporaryFactScope({ kind: 'date', date }),
+            // Every tier records only what the athlete said about this date.
+            // One-day effects and a consecutive-day deload are reconstructed
+            // from dated facts by the canonical source-fact compiler.
+            scope: temporaryFactScope({ kind: 'date', date }),
             athleteReportedLevel: reportedReadinessLevel,
             reportKind: action.payload.level === 'cooked' ? 'cooked' : 'fatigue',
             sourceSurface,

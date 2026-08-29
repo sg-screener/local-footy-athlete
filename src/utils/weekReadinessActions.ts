@@ -41,8 +41,8 @@ const READINESS_SOURCE = {
 } as const;
 
 /**
- * Map a readiness tier to the durable action the owner commits. Week-scoped
- * tiers anchor to the viewed week's Monday; today-scoped tiers anchor to today.
+ * Map a readiness tier to the durable action the owner commits. Fatigue is
+ * always dated to today. Health tiers keep their established today/week scope.
  *
  * The three sick doors write the tier and NOTHING else. What each tier does is
  * THE ILLNESS LAW's answer, resolved downstream — this file must never grow a
@@ -106,9 +106,11 @@ export function readinessActionForKind(
   return {
     type: 'set_fatigue_status',
     source: READINESS_SOURCE,
-    scope: cooked ? 'current_week' : 'today_only',
+    // Every fatigue answer is a dated report. Consecutive-day policy is derived
+    // from those facts; no tier writes a week scope or a stored streak counter.
+    scope: 'today_only',
     payload: {
-      date: cooked ? anchorDateISO : todayISO,
+      date: todayISO,
       todayISO,
       level: cooked
         ? 'cooked'

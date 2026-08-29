@@ -19,7 +19,7 @@ const { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } =
 const { ARCHETYPES, athleteAnswers, YEAR_START } = require('./compilerYear/catalog') as typeof import('./compilerYear/catalog');
 const { sourceFactLifecycle, injuryRenderingMutation } = require('./compilerYear/sourceFacts') as typeof import('./compilerYear/sourceFacts');
 const { clearFactLifecycle } = require('./compilerYear/clearFacts') as typeof import('./compilerYear/clearFacts');
-const { createTemporaryFatigueFact, temporaryFactScope } = require('../rules/temporarySourceFact') as typeof import('../rules/temporarySourceFact');
+const { createTemporaryFatigueFact, createTemporaryPoorSleepFact, temporaryFactScope } = require('../rules/temporarySourceFact') as typeof import('../rules/temporarySourceFact');
 const { transactTemporarySourceFact } = require('../store/temporarySourceFactTransaction') as typeof import('../store/temporarySourceFactTransaction');
 const { applyLighterDayForToday } = require('../utils/lighterDayTransaction') as typeof import('../utils/lighterDayTransaction');
 const { decisionLedgerEntries } = require('../store/decisionLedgerStore') as typeof import('../store/decisionLedgerStore');
@@ -55,9 +55,9 @@ async function main(): Promise<void> {
 
   await install();
   const baseline = signature();
-  const primary = createTemporaryFatigueFact({
-    observedDate: YEAR_START, scope: temporaryFactScope({ kind: 'week', date: YEAR_START }),
-    athleteReportedLevel: 'moderate', sourceSurface: 'status_card',
+  const primary = createTemporaryPoorSleepFact({
+    observedDate: YEAR_START, scope: temporaryFactScope({ kind: 'date', date: YEAR_START }),
+    pattern: 'single_night', sourceSurface: 'status_card',
     factId: 'current-facts:readiness-primary', now: `${YEAR_START}T08:00:00.000Z`,
   });
   await quietAsync(() => transactTemporarySourceFact({ operation: 'create', fact: primary, todayISO: YEAR_START }));
@@ -68,7 +68,8 @@ async function main(): Promise<void> {
   const lighterSignature = signature();
   check('lighter-day witness changes real programmed dose', baseline !== lighterSignature);
   const independent = createTemporaryFatigueFact({
-    ...primary, observedDate: YEAR_START, sourceSurface: 'status_card',
+    observedDate: YEAR_START, scope: temporaryFactScope({ kind: 'date', date: YEAR_START }),
+    athleteReportedLevel: 'slight', sourceSurface: 'status_card',
     factId: 'current-facts:independent', now: `${YEAR_START}T09:00:00.000Z`,
   });
   await quietAsync(() => transactTemporarySourceFact({ operation: 'create', fact: independent, todayISO: YEAR_START }));

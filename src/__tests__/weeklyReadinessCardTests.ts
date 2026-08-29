@@ -641,13 +641,14 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // tier→action mapping was extracted from the hook into the pure
   // weekReadinessActions module so both doors route through one testable owner.
   const readinessActionsSrc = fs.readFileSync(`${__dirname}/../utils/weekReadinessActions.ts`, 'utf8') as string;
-  ok('the single readiness owner keeps today and week scopes distinct',
+  ok('the single readiness owner keeps dated fatigue separate from week/open health scopes',
     hookSrc.includes('readinessActionForKind') &&
     /kind === 'cooked_week'/.test(readinessActionsSrc) &&
     /kind === 'poor_sleep_week'/.test(readinessActionsSrc) &&
     /kind === 'sore_today'/.test(readinessActionsSrc) &&
     /kind === 'illness_severe'/.test(readinessActionsSrc) &&
-    /scope: cooked \? 'current_week' : 'today_only'/.test(readinessActionsSrc) &&
+    /scope: 'today_only'/.test(readinessActionsSrc) &&
+    /date: todayISO/.test(readinessActionsSrc) &&
     /scope: week \? 'current_week' : 'today_only'/.test(readinessActionsSrc));
   ok('health taps use the durable canonical source-fact boundary',
     hookSrc.includes('executeProgramControlActionDurably') &&

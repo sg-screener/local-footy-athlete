@@ -33,6 +33,11 @@ import {
   severityIsLimiting,
   severityIsRecordOnly,
 } from './injurySeverityBands';
+import {
+  resolveFatigueDayPolicy,
+  type DatedFatigueReport,
+  type FatigueReportLevel,
+} from './fatigueSequencePolicy';
 
 export const TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION = 1 as const;
 
@@ -748,6 +753,65 @@ function levelScore(level: TemporaryAthleteReportedLevel): number {
   return 3;
 }
 
+function fatigueReportLevel(level: TemporaryAthleteReportedLevel): FatigueReportLevel {
+  if (level === 'cooked' || (typeof level === 'number' && level >= 8)) return 'cooked';
+  if (level === 'moderate' || level === 'high' || (typeof level === 'number' && level >= 4)) {
+    return 'moderate';
+  }
+  return 'slight';
+}
+
+/**
+ * Fatigue history remains factual after its one-day horizon expires. A resolved
+ * report has been cleared by the athlete and therefore cannot complete a later
+ * streak; an expired report still can. No counter or derived streak is stored.
+ */
+export function datedFatigueReportsFromFacts(
+  facts: readonly TemporarySourceFact[],
+): DatedFatigueReport[] {
+  return facts.flatMap((fact): DatedFatigueReport[] =>
+    !isInjurySourceFact(fact) && fact.factKind === 'fatigue' &&
+      (fact.status === 'active' || fact.status === 'expired')
+      ? [{
+          dateISO: fact.observedDate,
+          level: fatigueReportLevel(fact.athleteReportedLevel),
+          factId: fact.factId,
+        }]
+      : []);
+}
+
+/** The canonical constraint for the second consecutive tired date through Sunday. */
+function fatigueSequenceConstraints(
+  facts: readonly TemporarySourceFact[],
+  onDate?: string,
+): ActiveFatigueConstraint[] {
+  const reports = datedFatigueReportsFromFacts(facts);
+  const reportDates = Array.from(new Set(reports.map((report) => report.dateISO))).sort();
+  return reportDates.flatMap((date): ActiveFatigueConstraint[] => {
+    const policy = resolveFatigueDayPolicy(reports, date);
+    if (!policy.consecutiveTrigger || !policy.deloadThroughISO) return [];
+    if (onDate && (onDate < date || onDate > policy.deloadThroughISO)) return [];
+    const sourceFacts = facts.filter((fact) => policy.sourceFactIds.includes(temporarySourceFactId(fact)));
+    const updated = sourceFacts.map((fact) => fact.updatedAt).sort();
+    return [{
+      id: `source-fact:fatigue-sequence:${date}`,
+      type: 'fatigue',
+      severity: 5,
+      status: 'active',
+      startDate: date,
+      expiresAt: policy.deloadThroughISO,
+      lastUpdatedAt: updated[updated.length - 1] ?? `${date}T12:00:00.000Z`,
+      reasonLabel: 'Two tired days in a row',
+      source: 'readiness',
+      temporarySourceFactIds: [...policy.sourceFactIds],
+      modifierAffects: ['current_week'],
+      rules: ['deload from the second tired day through Sunday'],
+      safeFocus: ['Controlled strength dose', 'Easy aerobic conditioning', 'Recovery + mobility'],
+      advice: [],
+    }];
+  });
+}
+
 function projectionScore(
   fact: TemporaryHealthFact,
 ): number {
@@ -1141,7 +1205,12 @@ export function composeTemporarySourceFactCompatibility(args: {
   const localized = localizedSorenessConstraints(activeHealth.filter((fact): fact is TemporarySorenessFact =>
     fact.factKind === 'soreness' && fact.distribution === 'localized'));
   const global = globalConstraints(activeHealth.filter((fact) =>
-    fact.factKind !== 'soreness' || fact.distribution === 'general'));
+    // Current fatigue producers are date-only and derive through the dated
+    // policy below. Preserve old saved week/window fatigue facts through their
+    // compatibility projection until their original horizon ends or is cleared.
+    (fact.factKind !== 'fatigue' || fact.scope.kind !== 'date') &&
+    (fact.factKind !== 'soreness' || fact.distribution === 'general')));
+  const fatigueSequence = fatigueSequenceConstraints(facts, args.onDate);
   const retainedSignals = Object.fromEntries(Object.entries(args.readinessSignalsByDate ?? {})
     .filter(([, signal]) =>
       (signal.temporarySourceFactIds?.length ?? 0) === 0 &&
@@ -1159,6 +1228,7 @@ export function composeTemporarySourceFactCompatibility(args: {
       ...injury.activeConstraints,
       ...localized,
       ...global,
+      ...fatigueSequence,
       ...equipmentProjection(activeEquipment),
       ...scheduleProjection(activeSchedule),
       ...timeCapProjection(activeTimeCaps),

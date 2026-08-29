@@ -23,9 +23,10 @@ export type DeloadConditioningCategory =
  * "Same week, same days — the structure doesn't change, the work shrinks."
  *
  * This is the WHAT. It is deliberately separate from the WHEN, because three
- * doors deload — a scheduled deload week, a low-readiness call (rolling 7
- * days), and an active moderate-or-severe illness — and Sam's law says no door
- * invents its own reductions. A door decides IF; this decides WHAT, once.
+ * doors deload — a scheduled deload week, two consecutive dated fatigue
+ * reports (from the second report through Sunday), and an active
+ * moderate-or-severe illness — and Sam's law says no door invents its own
+ * reductions. A door decides IF; this decides WHAT, once.
  *
  * Two entries supersede shipped behaviour:
  *   conditioningWorkMultiplier — conditioning used to be untouched by a deload

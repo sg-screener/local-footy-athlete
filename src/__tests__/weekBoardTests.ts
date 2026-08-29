@@ -197,7 +197,7 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'), 'utf8');
 
   ok('the pan only activates after a long press, so a flick still scrolls the week',
-    /Gesture\.Pan\(\)\s*\n?\s*\.activateAfterLongPress\(\d+\)/.test(board),
+    /Gesture\.Pan\(\)[\s\S]{0,100}\.activateAfterLongPress\(\d+\)/.test(board),
     'a pan that claimed the touch immediately would steal every scroll past the board');
 
   // Sam's phone, 2026-08-26: leave the week for Day view with the board up,
@@ -235,7 +235,8 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
   ok('a fixture is both draggable and removable on the Week board',
     /return <GestureDetector gesture=\{pan\}>\{content\}<\/GestureDetector>/.test(board)
       && /onPress=\{\(\) => onRemove\(date, box\)\}/.test(board)
-      && !/box\.kind !== 'game'/.test(board));
+      && /moveEnabled=\{row\.date >= todayISO \|\|/.test(board)
+      && /moveSource\.kind === 'game' \? box\.kind === 'game'/.test(board));
 
   // #14, SECOND ROUND (Sam's phone, 2026-08-26: "nope still not working
   // properly"): the immediate glide still landed the box on its OLD day

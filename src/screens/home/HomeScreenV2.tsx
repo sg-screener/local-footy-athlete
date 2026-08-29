@@ -349,6 +349,10 @@ export default function HomeScreenV2() {
    * the screen exactly as the session sections' expanded state does.
    */
   const [weekBoardOpen, setWeekBoardOpen] = useState(false);
+  const [missedMoveSource, setMissedMoveSource] = useState<{
+    date: string;
+    kind: MissedSession['kind'];
+  } | null>(null);
   /**
    * R-245 — opening fingerprint plus a short finish state. Neither is stored:
    * they describe this editing visit, while every underlying transaction keeps
@@ -583,6 +587,7 @@ export default function HomeScreenV2() {
       weekBoardCloseTimerRef.current = null;
     }
     setWeekBoardOpen(false);
+    setMissedMoveSource(null);
     setWeekBoardOpeningFingerprint(null);
     setWeekBoardFinishState('idle');
     setBoardRefusal(null);
@@ -596,6 +601,21 @@ export default function HomeScreenV2() {
     setWeekBoardOpeningFingerprint(currentWeekBoardFingerprint);
     setWeekBoardFinishState('idle');
     setBoardRefusal(null);
+    setMissedMoveSource(null);
+    setExpandedWeekIdx(-1);
+    setWeekBoardOpen(true);
+  }, [currentWeekBoardFingerprint]);
+
+  const openMissedMoveBoard = useCallback((missed: MissedSession) => {
+    if (weekBoardCloseTimerRef.current) {
+      clearTimeout(weekBoardCloseTimerRef.current);
+      weekBoardCloseTimerRef.current = null;
+    }
+    setPreferredProgramView('week');
+    setWeekBoardOpeningFingerprint(currentWeekBoardFingerprint);
+    setWeekBoardFinishState('idle');
+    setBoardRefusal(null);
+    setMissedMoveSource({ date: missed.date, kind: missed.kind });
     setExpandedWeekIdx(-1);
     setWeekBoardOpen(true);
   }, [currentWeekBoardFingerprint]);
@@ -608,6 +628,7 @@ export default function HomeScreenV2() {
     setWeekBoardFinishState('confirmed');
     weekBoardCloseTimerRef.current = setTimeout(() => {
       setWeekBoardOpen(false);
+      setMissedMoveSource(null);
       setWeekBoardOpeningFingerprint(null);
       setWeekBoardFinishState('idle');
       setBoardRefusal(null);
@@ -658,6 +679,18 @@ export default function HomeScreenV2() {
     fromDate: string; toDate: string; box: WeekBoardBox;
   }) => {
     setBoardRefusal(null);
+    const todayISO = todayISOLocal();
+    if (args.fromDate < todayISO && (
+      missedMoveSource?.date !== args.fromDate ||
+      args.toDate < todayISO ||
+      (missedMoveSource.kind === 'game' ? args.box.kind !== 'game'
+        : missedMoveSource.kind === 'team_training' ? args.box.kind !== 'team_training'
+          : args.box.kind === 'game' || args.box.kind === 'team_training')
+    )) {
+      setBoardRefusal(signedCopy('week.board.pastMoveRefusal'));
+      setBoardSettleNonce((nonce) => nonce + 1);
+      return;
+    }
     if (args.box.kind === 'game') {
       const moved = await handleMoveGameOnBoard({
         fromDate: args.fromDate,
@@ -681,7 +714,11 @@ export default function HomeScreenV2() {
      * repeats its refusal.
      */
     const offered = listPlanChangeOptionsForDay({
-      visibleWeek: weekDays, date: args.fromDate, todayISO: todayISOLocal(),
+      visibleWeek: weekDays, date: args.fromDate, todayISO,
+      ...(missedMoveSource ? { pastUnloggedMove: {
+        sourceDate: missedMoveSource.date,
+        kind: missedMoveSource.kind,
+      } } : {}),
     });
     /**
      * ⚠ **THE BOX TRAVELS UNDER A SCOPE THE PRODUCER OFFERS, NOT UNDER ITS OWN
@@ -718,7 +755,7 @@ export default function HomeScreenV2() {
       origin: 'week',
       move: { toDate: args.toDate, scope },
     });
-  }, [handleMoveGameOnBoard, weekBoardRows, weekDays]);
+  }, [handleMoveGameOnBoard, missedMoveSource, weekBoardRows, weekDays]);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
@@ -1236,6 +1273,7 @@ export default function HomeScreenV2() {
               }
             }}
             onSkip={(missed) => { void handleSkipMissedSession(missed); }}
+            onMove={openMissedMoveBoard}
           />
         )}
 
@@ -1374,6 +1412,8 @@ export default function HomeScreenV2() {
                     onMove={handleBoardMove}
                     onRefused={setBoardRefusal}
                     settleNonce={boardSettleNonce}
+                    moveSource={missedMoveSource}
+                    todayISO={todayISOLocal()}
                   />
                 </View>
               )
@@ -1851,10 +1891,21 @@ export default function HomeScreenV2() {
           // sheet transitions to the adjusted/acknowledged state (active is now
           // set); on failure the error acknowledgment is shown in place.
           const result = await handleApplyWeekReadiness(kind, weekAnchorISO);
-          setReadinessAck(buildReadinessAcknowledgment(result));
+          const fatigueAcknowledgment = result?.ok && result.fatigueLevel
+            ? {
+                tone: 'success' as const,
+                message: signedCopy(result.fatigueSequenceTriggered
+                  ? 'readiness.fatigue.sequence'
+                  : result.fatigueLevel === 'cooked'
+                    ? 'readiness.fatigue.rest'
+                    : result.fatigueLevel === 'moderate'
+                      ? 'readiness.fatigue.lighter'
+                      : 'readiness.fatigue.noted'),
+              }
+            : null;
+          setReadinessAck(fatigueAcknowledgment ?? buildReadinessAcknowledgment(result));
           // Opt-in lighter-day / "soften today" offer after a today-scoped report.
-          const todayScoped = kind === 'tired_today' || kind === 'flat_today' || kind === 'poor_sleep_today' ||
-            kind === 'sore_today' || kind === 'illness_mild';
+          const todayScoped = kind === 'poor_sleep_today' || kind === 'sore_today' || kind === 'illness_mild';
           /* Offered ONLY when the trim would change something — the offer and
            * the apply share `lighterDayAvailableForDate`, so "accept" can no
            * longer answer "There is no session to lighten today" (audit #8's
@@ -3760,6 +3811,7 @@ interface MissedSessionNoticeProps {
   visibleWeek: VisibleWeek;
   onLog: (missed: MissedSession) => void;
   onSkip: (missed: MissedSession) => void;
+  onMove: (missed: MissedSession) => void;
 }
 /**
  * ── THE MISSED-SESSION NOTICES — SAM, 2026-08-22 ──
@@ -3770,20 +3822,19 @@ interface MissedSessionNoticeProps {
  * tick the boxes for what they did and hit save & finish and the pop up pops up
  * to fill in feedback) or 'no, skip it' and the session is skipped."*
  *
- * ## WHAT THIS REPLACED, AND WHY EACH PIECE WENT
+ * ## CURRENT THREE-ANSWER CONTRACT — SAM, 2026-08-30
  *
- * A card at the BOTTOM of the screen, below the day, offering THREE answers to
- * one day: "Did it", "Skipped it", "Move it forward".
+ * The question has three answers: "Yes, log it", "No, skip it", and "No, move
+ * it". Move opens the existing Week board with permission for this exact
+ * unlogged thing; the board remains the plan-editing owner.
  *
- * - **The place**: bottom of the scroll, under everything. A question about
- *   whether yesterday happened is the first thing to answer, not the last.
- * - **"Move it forward"** was not a third answer, it was a different question —
- *   a plan edit about the future, which the change sheet owns and still owns.
- *   Answering "did you do it" with "move it" left the day unanswered, so the
- *   card came straight back.
+ * - **The place** remains the top of the scroll: a question about whether
+ *   yesterday happened is answered before the rest of the program.
+ * - **"No, move it"** may unlock only the named past source. It cannot move
+ *   anything to another past date or swap future work back into history.
  * - **One card per DAY** could not serve a Thursday that holds a gym session and
  *   a club night: they are logged through two doors and skipped independently,
- *   so one yes/no cannot answer both. One row per THING now.
+ *   so one answer cannot cover both. One row per THING remains the owner.
  *
  * ## ONE QUESTION ON SCREEN, AND THE NEXT ONE FOLLOWS IT
  *
@@ -3799,7 +3850,7 @@ interface MissedSessionNoticeProps {
  * this) and the session word is the day's own bucket, which is signed copy
  * already. This component composes no character of what the athlete reads.
  */
-function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip }: MissedSessionNoticeProps) {
+function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: MissedSessionNoticeProps) {
   return (
     <View style={styles.missedCard} testID="home-missed-session-prompt">
       {/* ── THE ACTIVE-MODIFIER BOX'S OWN SHAPE — Sam, 2026-08-22: *"MAKE THE POP
@@ -3836,6 +3887,11 @@ function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip }: MissedSessi
             testID={`missed-session-skipped-it-${notice.date}-${notice.kind}`}
             label={signedCopy('missed.prompt.no')}
             onPress={() => onSkip(notice)}
+          />
+          <MissedChip
+            testID={`missed-session-move-it-${notice.date}-${notice.kind}`}
+            label={signedCopy('missed.prompt.move')}
+            onPress={() => onMove(notice)}
           />
         </View>
       </View>

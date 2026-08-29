@@ -52,7 +52,7 @@ export interface WeekBoardRow {
 /** Where a box sits, in board coordinates. Filled by `onLayout`, never guessed. */
 type Frame = { x: number; y: number; width: number; height: number };
 
-export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonce = 0 }: {
+export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonce = 0, moveSource = null, todayISO }: {
   rows: readonly WeekBoardRow[];
   onAdd: (date: string) => void;
   onRemove: (date: string, box: WeekBoardBox) => void;
@@ -68,6 +68,9 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
    * the bump is a no-op for it. Checklist #14, second round.
    */
   settleNonce?: number;
+  /** Catch-up entry authorises dragging only the unlogged thing named by the prompt. */
+  moveSource?: { readonly date: string; readonly kind: 'session' | 'team_training' | 'game' } | null;
+  todayISO: string;
 }) {
   /**
    * ⚠ **THE FRAMES ARE MEASURED, NOT COMPUTED FROM THE STYLESHEET.** A hit-test
@@ -178,6 +181,11 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
                 onAdd={onAdd}
                 onRemove={onRemove}
                 onDrop={handleDrop}
+                moveEnabled={row.date >= todayISO || !!(moveSource && row.date === moveSource.date && (
+                  moveSource.kind === 'game' ? box.kind === 'game'
+                    : moveSource.kind === 'team_training' ? box.kind === 'team_training'
+                      : box.kind !== 'game' && box.kind !== 'team_training' && box.kind !== 'empty'
+                ))}
               />
             ))}
           </View>
@@ -195,7 +203,7 @@ const DROP_REFUSAL_COPY: Record<string, string> = {
   day_full: "That day is full — two sessions is the most.",
 };
 
-function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDrop }: {
+function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDrop, moveEnabled }: {
   box: WeekBoardBox;
   date: string;
   settleNonce?: number;
@@ -203,6 +211,7 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
   onAdd: (date: string) => void;
   onRemove: (date: string, box: WeekBoardBox) => void;
   onDrop: (fromDate: string, boxId: string, px: number, py: number) => 'held' | 'returned';
+  moveEnabled: boolean;
 }) {
   if (box.kind === 'empty') {
     return (
@@ -272,6 +281,7 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
   }, [settleNonce, glideHome]);
 
   const pan = Gesture.Pan()
+    .enabled(moveEnabled)
     .activateAfterLongPress(220)
     .onStart((event) => {
       lifted.value = 1;

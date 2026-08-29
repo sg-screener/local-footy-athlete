@@ -3,7 +3,6 @@ import type { UserRemovalConstraint, Workout } from '../types/domain';
 import {
   canonicalWeeklyAthleteEditStateFrom,
   type CanonicalWeeklyAthleteEditState,
-  type CanonicalWeeklyAthleteEditReductionRequest,
 } from './canonicalWeeklyAthleteEditState';
 import { evaluateSection18EffectiveWeek } from './section18EffectiveWeekEvaluator';
 import type {
@@ -11,6 +10,7 @@ import type {
   Section18ReductionMetric,
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
+import type { WeeklyExposureReductionReason } from './weeklyExposureContract';
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -54,36 +54,40 @@ function addFrequencyReduction(args: {
   metric: Section18ReductionMetric;
   original: number;
   reduced: number;
-  request: CanonicalWeeklyAthleteEditReductionRequest;
+  identity: string;
+  reason: WeeklyExposureReductionReason;
+  detail: string;
   affectedWeek: string;
 }): void {
   if (args.reduced >= args.original) return;
   const prior = args.contract.authorisedReductions.find((existing) =>
-    existing.reason === 'explicit_user_override' && existing.metric === args.metric &&
-    existing.deletionIdentity === args.request.constraintId);
+    existing.reason === args.reason && existing.metric === args.metric &&
+    existing.deletionIdentity === args.identity);
   const entry: Section18AuthorisedReduction = {
     metric: args.metric,
     originalApprovedTarget: Math.max(args.original, prior?.originalApprovedTarget ?? 0),
     reducedTarget: args.reduced,
-    reason: 'explicit_user_override',
+    reason: args.reason,
     scope: args.metric === 'strength_pattern_count' ? 'pattern' : 'week',
     change: 'frequency',
-    detail: `Athlete removed ${args.request.scope} from ${args.request.targetDate}; relocation and substitution were exhausted.`,
+    detail: args.detail,
     provenance: 'live_typed_reduction',
     affectedWeek: args.affectedWeek,
-    deletionIdentity: args.request.constraintId,
+    deletionIdentity: args.identity,
   };
   args.contract.authorisedReductions = args.contract.authorisedReductions.filter((existing) =>
-    !(existing.reason === 'explicit_user_override' && existing.metric === args.metric &&
-      existing.deletionIdentity === args.request.constraintId));
+    !(existing.reason === args.reason && existing.metric === args.metric &&
+      existing.deletionIdentity === args.identity));
   args.contract.authorisedReductions.push(entry);
 }
 
-function reduceContractForRequest(args: {
+export function compileCanonicalFrequencyReducedContract(args: {
   contract: WeeklyExposureContractV2;
   workouts: readonly Workout[];
   weekStartISO: string;
-  request: CanonicalWeeklyAthleteEditReductionRequest;
+  identity: string;
+  reason: WeeklyExposureReductionReason;
+  detail: string;
 }): WeeklyExposureContractV2 {
   const contract = clone(args.contract);
   const ledger = evaluateSection18EffectiveWeek({
@@ -102,7 +106,9 @@ function reduceContractForRequest(args: {
       metric,
       original: Math.max(policy.requiredMinimum, selected),
       reduced: actual,
-      request: args.request,
+      identity: args.identity,
+      reason: args.reason,
+      detail: args.detail,
       affectedWeek: args.weekStartISO,
     });
     policy.requiredMinimum = Math.min(policy.requiredMinimum, actual);
@@ -125,14 +131,16 @@ function reduceContractForRequest(args: {
     metric: 'strength_pattern_count',
     original: contract.strengthPatterns.requiredSafePatterns.length,
     reduced: achievedPatterns.length,
-    request: args.request,
+    identity: args.identity,
+    reason: args.reason,
+    detail: args.detail,
     affectedWeek: args.weekStartISO,
   });
   if (achievedPatterns.length < contract.strengthPatterns.requiredSafePatterns.length) {
     contract.strengthPatterns.requiredSafePatterns = achievedPatterns;
     contract.safety.requiredSafePatterns = achievedPatterns;
     contract.strengthPatterns.intentionalImbalanceReason =
-      `explicit_user_override:${args.request.constraintId}`;
+      `${args.reason}:${args.identity}`;
     contract.strengthPatterns.balanceExpectation = 'not_applicable';
     contract.strengthPatterns.laterSessionRestorationRequired = false;
   }
@@ -172,11 +180,13 @@ export function compileCanonicalAthleteEditedContract(args: {
   });
   let contract = clone(args.contract);
   for (const request of edits.reductionRequests) {
-    contract = reduceContractForRequest({
+    contract = compileCanonicalFrequencyReducedContract({
       contract,
       workouts: args.workouts,
       weekStartISO: args.weekStartISO.slice(0, 10),
-      request,
+      identity: request.constraintId,
+      reason: 'explicit_user_override',
+      detail: `Athlete removed ${request.scope} from ${request.targetDate}; relocation and substitution were exhausted.`,
     });
   }
   return contract;

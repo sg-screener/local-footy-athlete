@@ -20,8 +20,11 @@ import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import { replayableEntries } from '../rules/decisionLedgerReplay';
 import type { ReversibleAdjustmentRecord } from '../rules/reversibleAdjustmentLedger';
 import { lighterDayEffectActive } from '../rules/canonicalWeeklyLighterDayCompiler';
-import { composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint,
+import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility,
+  isTemporarySourceFactConstraint, type TemporaryFatigueFact,
   type TemporarySourceFact } from '../rules/temporarySourceFact';
+import { registerProjectionCopy } from '../rules/projectionCopy';
+import { signedCopy } from '../rules/signedCopy';
 import { useReadinessStore } from '../store/readinessStore';
 import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
@@ -159,6 +162,7 @@ export interface ActiveProgramModifierAction {
  * their program changed — which is why `isShownOnProgram` still shows them.
  */
 export type ActiveProgramModifierEffect =
+  | 'readiness_noted'
   | 'volume_adjusted'
   | 'training_eased'
   | 'exercises_swapped'
@@ -601,7 +605,9 @@ function statusModifier(
      than a short phrase could say. Recorded under `## AWAITING SAM`. */
   const effect: ActiveProgramModifierEffect =
     readinessFactKind === 'illness' ? 'training_eased'
-      : readinessFactKind === 'fatigue' || readinessFactKind === 'poor_sleep' ? 'volume_adjusted'
+      : readinessFactKind === 'fatigue' && 'severity' in c && severityIsRecordOnly(c.severity)
+        ? 'readiness_noted'
+        : readinessFactKind === 'fatigue' || readinessFactKind === 'poor_sleep' ? 'volume_adjusted'
         : readinessFactKind === 'soreness' ? 'unsigned'
           : c.type === 'schedule' && c.scheduleKind === 'time_cap' ? 'session_time_limited'
             : c.type === 'schedule' && c.noteProof?.kind === 'game_change' ? 'week_rebuilt'
@@ -662,6 +668,51 @@ function statusModifier(
       overrideDates: linkedOverrideDates(sourceConstraint),
       reversibleAdjustmentId: c.reversibleAdjustmentId,
       presentationOnlyDismiss: c.presentationOnlyDismiss === true || isLegacyFixtureProjection,
+    },
+  };
+}
+
+/**
+ * A dated fatigue fact owns its visible Status row without becoming a second
+ * program constraint. The canonical source-fact compiler owns the actual
+ * lighter/rest transformation; this projection only makes that accepted fact
+ * clearable and keeps My Status, Day and Week on the same identity.
+ */
+function datedFatigueFactModifier(
+  fact: TemporaryFatigueFact,
+): ActiveProgramModifier | null {
+  if (fact.scope.kind !== 'date') return null;
+  const raw = fact.athleteReportedLevel;
+  const severity = typeof raw === 'number'
+    ? raw
+    : raw === 'cooked' ? 8
+      : raw === 'high' ? 7
+        : raw === 'moderate' ? 5 : 3;
+  const noted = severityIsRecordOnly(severity);
+  const cooked = severityIsLimiting(severity);
+  registerProjectionCopy();
+  const sourceId = `source-fact:${fact.factId}`;
+  return {
+    id: modifierId('active_constraint', sourceId),
+    source: 'active_constraint',
+    sourceId,
+    type: 'temporary_status',
+    effect: noted ? 'readiness_noted' : cooked ? 'training_paused' : 'volume_adjusted',
+    title: readinessFactTitle({ kind: 'fatigue', scope: 'today', severity }),
+    body: signedCopy(noted
+      ? 'readiness.fatigue.noted'
+      : cooked ? 'readiness.fatigue.rest' : 'readiness.fatigue.lighter'),
+    severity,
+    affects: ['current_day'],
+    actions: [
+      { kind: 'clear_status', label: "I'm good now" },
+      { kind: 'update_status', label: 'Update status' },
+    ],
+    payload: {
+      temporarySourceFactIds: [fact.factId],
+      lifecycleKey: sourceId,
+      date: fact.observedDate,
+      expiresAt: fact.effectiveUntil ?? undefined,
     },
   };
 }
@@ -1060,6 +1111,15 @@ export function selectActiveProgramModifiers(
         seen,
         statusModifier(constraint, 'active_constraint'),
       );
+    }
+  }
+
+  // Dated fatigue is intentionally absent from compatibility constraints: its
+  // effect is compiled directly from fact history. Project its active report
+  // here so that removing the old constraint did not remove Status and Clear.
+  for (const fact of activeTemporarySourceFacts(snapshot.temporarySourceFacts ?? [], todayISO)) {
+    if ('factKind' in fact && fact.factKind === 'fatigue') {
+      addUnique(out, seen, datedFatigueFactModifier(fact));
     }
   }
 

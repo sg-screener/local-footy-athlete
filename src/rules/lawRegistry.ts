@@ -2544,6 +2544,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'lowLoadAdditionJourney checks actual standalone and combined Strength/Mobility, Gunshow/Mobility and Mobility/Recovery components through projection, Day timeline and Session execution before/after real Add, Undo and restart for both genders. First run failed 24 icon assertions; native combined-day evidence and mutation receipts are recorded in STATUS_PROGRAMMING_REMEDY.' },
   },
+  {
+    id: 'LAW-dated-fatigue-and-missed-move',
+    law: 'R-275: every fatigue answer is one dated fact. Bit tired records only; Pretty flat slightly reduces that date; Totally cooked removes that date session. Any two consecutive reported calendar dates in any tier order deload from the second date through Sunday and tell the athlete “That’s two tired days in a row.” Same-date repeats do not form a streak, a gap breaks it, cooked remains rest, Clear removes the report from derivation and expiry preserves factual history. The missed-session notice offers Yes log, No skip and No move. Move opens the existing Week board, where only that prompted past unlogged item may move to today/future without swapping future content into the past. The board banner is “Sessions / games”.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-275 — Sam settled the fatigue combinations, cooked rest, exact notice, past unlogged move route and compact board label on 2026-08-29/30.',
+    guard: {
+      state: 'guarded',
+      by: 'test:fatigue-sequence + test:missed-session-prompt + test:plan-change-producer',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-30 by seat `fatiguecatchup`. TWO OPTIONS COMPARED: store a mutable streak/deload counter beside facts, or derive all effects from dated fatigue facts during canonical reconstruction. Dated derivation landed because expiry, Clear, restart and Sunday boundaries have one source of truth. For missed sessions, a new past-session editor was rejected in favour of the existing Week board with a typed prompt authorization. The pure matrix covers all nine two-day tier combinations, same-day repeats, gaps, Sunday/Monday and cooked precedence. Plumbing cells cover dated action scope, expired history, Clear, the shared lighter compiler, cooked null placement, low-readiness contract reduction, signed notice and removal of the old fatigue opt-in offer. The missed-session tape covers three signed answers and the Week-board route. Past-source destination rules remain in the plan-change producer. Mutation receipts and full verification status are in STATUS_FATIGUECATCHUP.md. NOT COVERED: physical-iPhone Release, long-press pixels/animation, VoiceOver speech and a production Supabase round trip.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

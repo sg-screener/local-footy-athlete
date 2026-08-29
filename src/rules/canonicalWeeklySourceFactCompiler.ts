@@ -7,21 +7,24 @@ import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
 import { compileCanonicalProgram } from './canonicalProgramCompiler';
 import { compileWeekOverlay } from './canonicalWeekOverlay';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
-import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, isInjurySourceFact, READINESS_FACT_KINDS,
+import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, datedFatigueReportsFromFacts, isInjurySourceFact, READINESS_FACT_KINDS, temporarySourceFactId,
   type TemporarySourceFact } from './temporarySourceFact';
 import { factHorizon, factHorizonCoversDate, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
 import { isoDateForWeekday } from '../utils/appDate';
 import { isTeamNightMoveFact, buildTeamNightMoveWeekOverlay } from './teamNightMoveDerivation';
 import { activeUserRemovalConstraintsForWeek } from './canonicalWeeklyAthleteEditState';
-import { compileCanonicalAthleteEditedContract } from './canonicalWeeklyAthleteEditCompiler';
+import { compileCanonicalAthleteEditedContract, compileCanonicalFrequencyReducedContract } from './canonicalWeeklyAthleteEditCompiler';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import type { CalendarDayType } from '../store/calendarStore';
 import { compileCanonicalInjuryWeek } from './canonicalWeeklyInjuryCompiler';
 import { withPlannedInjuryConditioning } from './canonicalInjuryConditioning';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { composedRowIsLegal } from './composedRowLegality';
+import { fatiguePoliciesForWeek, resolveFatigueDayPolicy } from './fatigueSequencePolicy';
+import { compileCanonicalLighterDayWorkout } from './canonicalWeeklyLighterDayCompiler';
 
 export function sourceFactRequiresCompilation(fact: TemporarySourceFact): boolean {
+  if (!isInjurySourceFact(fact) && fact.factKind === 'fatigue') return true;
   const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: [fact] }).activeConstraints;
   return constraints.some((constraint) => constraint.type === 'injury' ||
     constraint.type === 'fatigue' || constraint.type === 'equipment' ||
@@ -48,11 +51,29 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
   const overlays = { ...input.surfaces.weekScopedOverlays };
   const changed = new Set<string>();
   const active = activeTemporarySourceFacts(input.facts);
-  const deriving = active.filter(sourceFactRequiresCompilation).sort((a, b) =>
+  // A one-day fatigue fact becomes expired at midnight but remains a factual
+  // report for consecutive-calendar-day policy. Cleared/resolved facts do not.
+  const fatigueHistory = input.facts.filter((fact) =>
+    !isInjurySourceFact(fact) && fact.factKind === 'fatigue' && fact.status === 'expired');
+  const compilationFacts = Array.from(new Map(
+    [...active, ...fatigueHistory].map((fact) => [temporarySourceFactId(fact), fact]),
+  ).values());
+  const deriving = compilationFacts.filter(sourceFactRequiresCompilation).sort((a, b) =>
     factHorizon(a).startsFrom.localeCompare(factHorizon(b).startsFrom) ||
       a.createdAt.localeCompare(b.createdAt));
   const appliedFacts = active.filter(fact => !sourceFactRequiresCompilation(fact));
   for (const fact of deriving) {
+    if (!isInjurySourceFact(fact) && fact.factKind === 'fatigue') {
+      const visibleReports = datedFatigueReportsFromFacts(compilationFacts.filter((candidate) =>
+        factHorizon(candidate).startsFrom <= factHorizon(fact).startsFrom));
+      // "Bit tired" records a fact and nothing else. Do not mint an otherwise
+      // identical week overlay: even a metadata-only workout id change can
+      // disturb logging/Undo plumbing despite leaving the rows looking equal.
+      if (resolveFatigueDayPolicy(visibleReports, fact.observedDate).effect === 'none') {
+        appliedFacts.push(fact);
+        continue;
+      }
+    }
     for (const weekStart of factHorizonWeeks(fact, Object.keys(input.programsByWeek))) {
       const priorCompatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: appliedFacts });
       const world = { ...input.surfaces, ...priorCompatibility,
@@ -70,7 +91,7 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         overlay = result.overlay;
       } else {
         const programInput = input.programsByWeek[weekStart];
-        const visibleFacts = active.filter(candidate =>
+        const visibleFacts = compilationFacts.filter(candidate =>
           factHorizon(candidate).startsFrom <= factHorizon(fact).startsFrom);
         const compatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: visibleFacts });
         const compiled = compileCanonicalProgram({
@@ -134,13 +155,35 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
                 : accepted ? withPlannedInjuryConditioning(accepted, planned) : planned];
             })) };
         }
+        const fatigueReports = datedFatigueReportsFromFacts(visibleFacts);
+        if (fatigueReports.length > 0) {
+          const fatigueByDate = new Map(fatiguePoliciesForWeek(fatigueReports, weekStart)
+            .map((policy) => [policy.dateISO, policy]));
+          overlay = { ...overlay, workoutsByDate: Object.fromEntries(
+            Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
+              const policy = fatigueByDate.get(date);
+              if (!policy || !workout || policy.effect === 'none' || policy.effect === 'deload') {
+                return [date, workout];
+              }
+              if (policy.effect === 'rest') return [date, null];
+              return [date, compileCanonicalLighterDayWorkout(workout).workout];
+            }),
+          ) };
+        }
+        const currentFatiguePolicy = !isInjurySourceFact(fact) && fact.factKind === 'fatigue'
+          ? resolveFatigueDayPolicy(datedFatigueReportsFromFacts(visibleFacts), fact.observedDate)
+          : null;
         overlay = { ...overlay, workoutsByDate: {
           ...(overlays[weekStart]?.workoutsByDate ?? {}),
           ...Object.fromEntries(effective.dates.filter(day => day.date < governedFromISO)
             .map(day => [day.date, effective.visibleWorkouts.find(workout =>
               workout.dayOfWeek === day.dayOfWeek) ?? null])),
           ...Object.fromEntries(Object.entries(overlay.workoutsByDate).filter(([date]) =>
-            factHorizonCoversDate(fact, date))),
+            factHorizonCoversDate(fact, date) || !!(
+              currentFatiguePolicy?.consecutiveTrigger &&
+              currentFatiguePolicy.deloadThroughISO &&
+              date >= currentFatiguePolicy.dateISO && date <= currentFatiguePolicy.deloadThroughISO
+            ))),
         } };
       }
       let contract = overlay.exposureContractV2;
@@ -157,6 +200,25 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
           });
           if (semanticFingerprint(next) === semanticFingerprint(contract)) break;
           contract = next;
+        }
+        const fatigueReports = datedFatigueReportsFromFacts(compilationFacts);
+        const fatiguePolicies = fatiguePoliciesForWeek(fatigueReports, weekStart);
+        const fatigueSourceIds = Array.from(new Set(fatiguePolicies
+          .filter((policy) => policy.effect === 'rest' || policy.effect === 'lighter')
+          .flatMap((policy) => policy.sourceFactIds))).sort();
+        if (fatigueSourceIds.length > 0) {
+          const rebased = rebaseAcceptedEffectiveWeek({
+            surfaces: { ...world, weekScopedOverlays: { ...overlays, [weekStart]: { ...overlay, exposureContractV2: contract } } },
+            weekStart, profile: input.profile, markedDays: { ...input.markedDays },
+          });
+          contract = compileCanonicalFrequencyReducedContract({
+            contract,
+            workouts: rebased.visibleWorkouts,
+            weekStartISO: weekStart,
+            identity: fatigueSourceIds.join('+'),
+            reason: 'low_readiness',
+            detail: `Dated fatigue policy from ${fatigueSourceIds.join(', ')}.`,
+          });
         }
         overlay = { ...overlay, exposureContractV2: contract };
       }

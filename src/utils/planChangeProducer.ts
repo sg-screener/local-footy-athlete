@@ -393,6 +393,8 @@ export type PlanChangeMoveRefusalReason =
    * one sentence guessing which cause it is describing.
    */
   | 'nothing_movable'
+  /** Past work moves only through the unlogged missed-session prompt. */
+  | 'past_not_authorised'
   /** There is movable content, but nowhere in view it could legally go. */
   | 'no_destination';
 
@@ -443,6 +445,8 @@ const MOVE_REFUSAL_COPY: Record<PlanChangeMoveRefusalReason, string> = {
   no_session: "There's nothing on this day to move.",
   nothing_movable:
     "Nothing on this day can be moved to another day.",
+  past_not_authorised:
+    "Past sessions can only be moved from an unlogged-session prompt.",
   no_destination:
     "There's nowhere to move this in the weeks you can edit — every other day is a game, team training, or already full.",
 };
@@ -573,6 +577,7 @@ export function listPlanChangeOptionsForDay(args: {
   visibleWeek: ResolvedDay[];
   date: string;
   todayISO: string;
+  pastUnloggedMove?: { readonly sourceDate: string; readonly kind: 'session' | 'team_training' | 'game' };
 }): PlanChangeDayOptions {
   const empty = (locked: PlanChangeDayOptions['locked']): PlanChangeDayOptions => ({
     date: args.date,
@@ -635,6 +640,9 @@ export function listPlanChangeOptionsForDay(args: {
     visibleWeek: args.visibleWeek,
     date: args.date,
     todayISO: args.todayISO,
+    pastMoveKind: args.pastUnloggedMove?.sourceDate === args.date
+      ? args.pastUnloggedMove.kind
+      : undefined,
   });
 
   // Add-on-top: strength and conditioning can stack until the day has two
@@ -693,6 +701,7 @@ function moveOptionsForDay(args: {
   visibleWeek: ResolvedDay[];
   date: string;
   todayISO: string;
+  pastMoveKind?: 'session' | 'team_training' | 'game';
 }): PlanChangeMoveOptions {
   const refuse = (reason: PlanChangeMoveRefusalReason): PlanChangeMoveOptions => ({
     scopes: [],
@@ -712,14 +721,17 @@ function moveOptionsForDay(args: {
   // passes this gate and offers the `team` scope; picking a destination
   // raises the typed ask.
   const holdsTeamAnchor = args.projected.parts.some((part) => part.kind === 'team_training');
+  if (args.date < args.todayISO && !args.pastMoveKind) return refuse('past_not_authorised');
   if (!args.projected.capabilities.canMoveWholeDay) {
     return args.projected.parts.length === 0 ? refuse('no_session') : refuse('nothing_movable');
   }
 
   // A team night IS a destination (Sam's doubling law, 2026-07-30): the session
   // lands beside the anchor as a combined day. Only game day is excluded.
+  const sourceIsPast = args.date < args.todayISO;
   const candidates = args.visibleWeek.filter((candidate) =>
     candidate.date !== args.date &&
+    (!sourceIsPast || candidate.date >= args.todayISO) &&
     isWithinEditHorizon(candidate.date, args.todayISO) &&
     !protectedAnchorsForDaySnapshot(snapshotProjectedDay(candidate))
       .some((anchor) => anchor.kind === 'game'));
@@ -739,6 +751,12 @@ function moveOptionsForDay(args: {
               ? 'combine' as const
               : 'swap' as const,
         };
+      })
+      .filter((destination) => {
+        if (!sourceIsPast || scope === 'team' || destination.occupiedBy === null) return true;
+        const target = args.visibleWeek.find((candidate) => candidate.date === destination.date);
+        const targetParts = target ? projectedDay(target).parts : [];
+        return targetParts.length > 0 && targetParts.every((part) => part.kind === 'team_training');
       })
       // A SCOPED MOVE MAY LAND ON AN OCCUPIED DAY — Sam's doubling law
       // (2026-07-30, ruling 3), which this filter predated and quietly
@@ -827,11 +845,16 @@ function moveOptionsForDay(args: {
   // A single-component day has nothing to scope: moving "just the gym session"
   // off a day that is only a gym session IS the whole-day move, and offering
   // both would be two names for one action.
-  const offered: PlanChangeMoveScopeId[] = dragsSomethingItShouldNot
+  const allOffered: PlanChangeMoveScopeId[] = dragsSomethingItShouldNot
     ? componentScopes
     : componentScopes.length > 1
       ? ['whole_day', ...componentScopes]
       : ['whole_day'];
+  const offered = sourceIsPast && args.pastMoveKind === 'team_training'
+    ? allOffered.filter((scope) => scope === 'team')
+    : sourceIsPast && args.pastMoveKind === 'session'
+      ? allOffered.filter((scope) => scope !== 'team')
+      : allOffered;
   if (offered.length === 0) return refuse('nothing_movable');
 
   const scopes = offered

@@ -6959,3 +6959,28 @@ name-based exception.
 Guard: `LAW-athlete-added-strength-outside-planner-cap`,
 `test:section18-v2` and `test:canonical-weekly-compiler`.
 Verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
+
+**R-275** · Missed-session move, dated fatigue sequence and Week banner, 2026-08-30.
+
+Owner: fatiguecatchup. The missed-session question has three signed answers:
+“Yes, log it”, “No, skip it” and “No, move it”. Move opens the existing Week
+board and authorises only that prompt's past, unlogged item to move to today or
+the future; it must not turn future work into a past obligation. The board's
+banner reads “Sessions / games”.
+
+Every fatigue choice writes one dated fact. Bit tired is noted only. Pretty flat
+slightly reduces that date through the canonical lighter-day transformation.
+Totally/absolutely cooked means no session on that date and therefore no later
+missed-session chase. Any two consecutive calendar dates with any combination
+of the three choices deload from the second date through Sunday. Cooked remains
+rest on its own date. Same-date repeats do not form a streak; a gap breaks it;
+Sunday followed by Monday opens a fresh Monday-through-Sunday deload. The
+athlete is told: “That’s two tired days in a row.” Clear removes the factual
+report from derivation; expiry does not erase history.
+
+This supersedes R-035/R-038's rolling seven-day readiness horizon and its rule
+that cooked sessions remain offered. Illness remains a separate door and does
+not count toward the fatigue sequence.
+Guard: `LAW-dated-fatigue-and-missed-move`, `test:fatigue-sequence`,
+`test:missed-session-prompt` and `test:plan-change-producer`.
+Verification status and NOT COVERED: `docs/STATUS_FATIGUECATCHUP.md`.

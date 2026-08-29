@@ -1,18 +1,14 @@
 /**
- * TWO missed-session answers, at the TOP of the screen, one per door.
+ * Three missed-session answers, at the TOP of the screen, one per door.
  *
- * ⚠ **THIS SUITE IS INVERTED, NOT WEAKENED — SAM, 2026-08-22.** It pinned three
- * choices ("Did it", "Skipped it", "Move it forward") on a card at the bottom
- * of the Program screen. His ruling: *"right now it pops up at the bottom of the
- * screen ... Notifications at top of screen above or below active modifiers ...
- * 'Yes, log it' ... or 'no, skip it' and the session is skipped"*, and *"i think
- * the current set up has like 4 options but they're unneccesary"*.
+ * The 2026-08-22 ruling moved the prompt to the top and reduced it to log/skip.
+ * Sam's 2026-08-30 ruling restores one narrowly authorised plan-editing answer:
+ * "No, move it", which opens Week and may move only that unlogged past thing.
  *
  * What the old cells were REALLY holding survives here, aimed at the new shape:
  * every answer routes to an existing owner, nothing invents an athlete's
- * answer, and no answer deletes or moves content behind their back. The move
- * pathway is still asserted — on the change sheet, which owns it — because
- * removing the option must not remove the road.
+ * answer, and no answer deletes or moves content behind their back. The Week
+ * board and plan-change producer remain the owners of the actual move.
  *
  * Run: npm run test:missed-session-prompt
  */
@@ -34,20 +30,21 @@ const home = read('screens', 'home', 'HomeScreenV2.tsx');
 const hook = read('screens', 'home', 'useHomeScreen.ts');
 const sheet = read('screens', 'home', 'PlanChangeSheet.tsx');
 const model = read('utils', 'missedSessions.ts');
+const producer = read('utils', 'planChangeProducer.ts');
+const board = read('screens', 'home', 'WeekBoard.tsx');
 
-console.log('\n[1] Exactly two answers, and they are the signed words');
+console.log('\n[1] Exactly three answers, and they are the signed words');
 {
   const start = home.indexOf('function MissedSessionNotice(');
   const end = home.indexOf('function missedQuestion', start);
   ok('notice region found', start >= 0 && end > start);
   const prompt = start >= 0 && end > start ? home.slice(start, end) : '';
-  ok('exactly two chips', (prompt.match(/<MissedChip\b/g) ?? []).length === 2);
+  ok('exactly three chips', (prompt.match(/<MissedChip\b/g) ?? []).length === 3);
   ok('yes reads the signed row', prompt.includes("signedCopy('missed.prompt.yes')"));
   ok('no reads the signed row', prompt.includes("signedCopy('missed.prompt.no')"));
-  // THE THIRD OPTION IS GONE FROM THE SURFACE AND FROM THE TYPE.
-  ok('Move it forward is gone', !home.includes('label="Move it forward"') && !home.includes('move_forward'));
-  ok('the response type carries two answers', /'did_it' \| 'skipped_it'/.test(model)
-    && !model.includes("'move_forward'"));
+  ok('move reads the signed row', prompt.includes("signedCopy('missed.prompt.move')"));
+  ok('the response type carries three answers',
+    /'did_it' \| 'skipped_it' \| 'move_it'/.test(model));
   // THE WORDS ARE THE SHEET'S — including the weekday, which is why the
   // parameter is a signed row rather than a formatted string.
   ok('no question is authored in the screen',
@@ -76,7 +73,7 @@ console.log('\n[2] It is at the TOP of the screen, above both shapes — and ONE
 console.log('\n[2] It is at the TOP of the screen, above both shapes');
 {
   const noticeAt = home.indexOf('<MissedSessionNotice');
-  const weekAt = home.indexOf('{dayFirst ? (');
+  const weekAt = home.indexOf('{dayFirst ? (', noticeAt);
   const dayCardAt = home.indexOf('{dayFirstDay ? renderDayRow');
   ok('mounted before the day/week branch', noticeAt > 0 && weekAt > noticeAt);
   ok('and therefore before the day card', dayCardAt > noticeAt);
@@ -111,18 +108,31 @@ console.log('\n[4] No records an outcome for ONE thing, not a deletion');
   ok('helper invents no feeling', !('feeling' in skipped));
 }
 
-console.log('\n[5] The move road still exists — on the sheet that owns it');
+console.log('\n[5] Move opens Week and uses the board owner');
 {
-  // Removing the OPTION must not remove the pathway: moving a missed session is
-  // a plan edit, and the change sheet is where every other move is made.
-  // The union grew past the two this cell was written against ('add', 'swap',
-  // 'remove' arrived with the change hub); what it holds is that MOVE is one of
-  // them, which is the road the retired option used.
+  ok('move switches to Week and opens the existing board',
+    /const openMissedMoveBoard[\s\S]{0,700}setPreferredProgramView\('week'\)[\s\S]{0,500}setWeekBoardOpen\(true\)/.test(home));
+  ok('the missed identity reaches the board',
+    /setMissedMoveSource\(\{ date: missed\.date, kind: missed\.kind \}\)/.test(home)
+      && /moveSource=\{missedMoveSource\}/.test(home));
+  ok('past permission reaches the producer',
+    /pastUnloggedMove:[\s\S]{0,120}sourceDate: missedMoveSource\.date/.test(home));
+  ok('ordinary past board rows cannot be dragged',
+    /moveEnabled=\{row\.date >= todayISO \|\|/.test(board));
+  ok('catch-up cannot move to another past date',
+    /args\.toDate < todayISO/.test(home)
+      && /!sourceIsPast \|\| candidate\.date >= args\.todayISO/.test(producer));
+  ok('a past source cannot swap future work back into history',
+    /if \(!sourceIsPast \|\| scope === 'team' \|\| destination\.occupiedBy === null\) return true/.test(producer));
+  ok('the prompt kind limits which source scope is offered',
+    /args\.pastMoveKind === 'team_training'[\s\S]{0,180}scope === 'team'/.test(producer)
+      && /args\.pastMoveKind === 'session'[\s\S]{0,180}scope !== 'team'/.test(producer));
   ok('PlanChangeSheet accepts move entry',
     /type PlanChangeInitialAction = [^;]*'move'/.test(sheet)
       && /initialAction\??:\s*PlanChangeInitialAction/.test(sheet));
-  ok('move entry and menu use startMove',
-    /initialAction === 'move'[\s\S]{0,160}startMove\(\)/.test(sheet) &&
+  const moveEntry = sheet.indexOf("initialAction === 'move'");
+  const moveEntryStart = sheet.indexOf('startMove();', moveEntry);
+  ok('move entry and menu use startMove', moveEntry >= 0 && moveEntryStart > moveEntry &&
     /label="Move this session"[\s\S]*?onPress=\{\(\) => startMove\(\)\}/.test(sheet));
   const closedSheetExit = sheet.indexOf('if (!date) return null;');
   ok('closed and open sheet renders call the same hooks',

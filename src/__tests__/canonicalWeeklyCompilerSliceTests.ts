@@ -1301,7 +1301,7 @@ async function main(): Promise<void> {
     visibleSignature(quiet(() => resolvedDays(install.blockOneStart, lighterDate))) === baselineSignature);
   setJourneyClock(INSTALL_DAY);
 
-  console.log('\n[readiness slice] normal -> cooked rolling window -> recovered');
+  console.log('\n[fatigue slice] cooked rest -> recovered -> two-day deload -> restart -> clear');
   const baselineSetsByDate = new Map(visible.map((day) => [
     day.dateISO,
     day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),
@@ -1327,20 +1327,11 @@ async function main(): Promise<void> {
     day.dateISO,
     day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),
   ]));
-  const governedStrengthDays = cookedVisible.filter((day) =>
-    day.dateISO >= declarationDay &&
-    (baselineSetsByDate.get(day.dateISO) ?? 0) > 0);
-  ok('the rolling readiness window reaches real authored training days',
-    governedStrengthDays.length > 0);
-  ok('the compiler-authored readiness week reduces dose inside the window',
-    governedStrengthDays.some((day) =>
-      (cookedSetsByDate.get(day.dateISO) ?? 0) < (baselineSetsByDate.get(day.dateISO) ?? 0)));
-  const beforeWindow = cookedVisible.filter((day) => day.dateISO < declarationDay);
-  ok('readiness does not rewrite days before the declaration',
-    beforeWindow.every((day) =>
-      JSON.stringify(day.rows.map((row) => [row.name, row.sets, row.repsMin, row.repsMax, row.weightKg])) ===
-      JSON.stringify(visible.find((base) => base.dateISO === day.dateISO)?.rows
-        .map((row) => [row.name, row.sets, row.repsMin, row.repsMax, row.weightKg]) ?? [])));
+  ok('the cooked witness reaches a real session and makes only that date rest',
+    (baselineSetsByDate.get(declarationDay) ?? 0) > 0 &&
+      (cookedSetsByDate.get(declarationDay) ?? -1) === 0 &&
+      cookedVisible.filter((day) => day.dateISO !== declarationDay).every((day) =>
+        (cookedSetsByDate.get(day.dateISO) ?? 0) === (baselineSetsByDate.get(day.dateISO) ?? 0)));
 
   const cleared = factId
     ? await quietAsync(() => executeProgramControlActionDurably({
@@ -1357,6 +1348,51 @@ async function main(): Promise<void> {
   const recoveredVisible = quiet(() => resolvedDays(install.blockOneStart, declarationDay));
   ok('clearing readiness restores the accepted visible prescriptions exactly',
     visibleSignature(recoveredVisible) === baselineSignature);
+
+  const firstTiredDay = '2026-07-14';
+  const secondTiredDay = '2026-07-15';
+  const firstTired = await quietAsync(() => executeProgramControlActionDurably(
+    readinessActionForKind('tired_today', {
+      anchorDateISO: install.blockOneStart, todayISO: firstTiredDay,
+    }),
+    { todayISO: firstTiredDay },
+  ));
+  ok('the first tired date records without changing the week', firstTired.ok &&
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, firstTiredDay))) === baselineSignature);
+  const secondTired = await quietAsync(() => executeProgramControlActionDurably(
+    readinessActionForKind('tired_today', {
+      anchorDateISO: install.blockOneStart, todayISO: secondTiredDay,
+    }),
+    { todayISO: secondTiredDay },
+  ));
+  const sequenceVisible = quiet(() => resolvedDays(install.blockOneStart, secondTiredDay));
+  const sequenceSets = new Map(sequenceVisible.map((day) => [
+    day.dateISO, day.rows.reduce((sum, row) => sum + Number(row.sets ?? 0), 0),
+  ]));
+  const sequenceStrengthDays = sequenceVisible.filter((day) => day.dateISO >= secondTiredDay &&
+    (baselineSetsByDate.get(day.dateISO) ?? 0) > 0);
+  ok('the second tired date creates the named Tuesday-through-Sunday constraint', secondTired.ok &&
+    useProgramStore.getState().acceptedMaterialContext.activeConstraints.some((constraint) =>
+      constraint.reasonLabel === 'Two tired days in a row' &&
+      constraint.startDate === secondTiredDay && constraint.expiresAt === '2026-07-19'));
+  ok('the real compiler deloads at least one authored day from day two onward',
+    sequenceStrengthDays.length > 0 && sequenceStrengthDays.some((day) =>
+      (sequenceSets.get(day.dateISO) ?? 0) < (baselineSetsByDate.get(day.dateISO) ?? 0)));
+  const sequenceSignature = visibleSignature(sequenceVisible);
+  await quietAsync(() => relaunchApp({ storage: localStorageData, todayISO: secondTiredDay }));
+  ok('the two-day deload reconstructs exactly after restart',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, secondTiredDay))) === sequenceSignature);
+  for (const id of [secondTired.createdModifierIds?.[0], firstTired.createdModifierIds?.[0]]) {
+    if (!id) continue;
+    await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'today_only', payload: { modifierId: id, date: secondTiredDay },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: secondTiredDay }));
+  }
+  ok('clearing the two reports restores the healthy source exactly',
+    visibleSignature(quiet(() => resolvedDays(install.blockOneStart, secondTiredDay))) === baselineSignature);
 
   console.log('\n[illness slice] mild -> moderate -> severe -> recovered');
   const illnessInstall = await coldStartThroughOnboarding({

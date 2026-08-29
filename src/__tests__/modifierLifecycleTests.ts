@@ -25,7 +25,7 @@ import { transactTemporarySourceFact } from '../store/temporarySourceFactTransac
 import { createTemporaryTimeCapFact, createTemporaryEquipmentFact, createTemporaryScheduleFact, createTemporaryFatigueFact,
   temporaryFactScope } from '../rules/temporarySourceFact';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
-import { visibleSignature } from './compilerYear/invariants';
+import { signatureDifferences, visibleSignature } from './compilerYear/invariants';
 import { applyLighterDayForToday } from '../utils/lighterDayTransaction';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 import { dismissActiveCoachNote } from '../utils/activeCoachNotes';
@@ -170,7 +170,21 @@ async function main() {
     check('overlap/remaining report survives reopening', boot.ok && !noteForFact(first) && !!noteForFact(second), boot.error);
     await clear(second);
   } catch (error) { check('overlap/complete lifecycle', false, String(error)); }
-  for (const kind of ['tired_today', 'poor_sleep_today', 'illness_mild'] as const) {
+  try {
+    await fresh(); const baseline = signature();
+    const id = await quietAsync(readiness('tired_today').apply);
+    const tiredSignature = signature();
+    check('tired_today/is noted without changing the program',
+      tiredSignature === baseline && noteForFact(id)?.effect === 'readiness_noted',
+      JSON.stringify({ differences: signatureDifferences(baseline, tiredSignature), note: noteForFact(id) ?? null }));
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check('tired_today/noted fact and unchanged program survive restart',
+      boot.ok && signature() === baseline && noteForFact(id)?.effect === 'readiness_noted');
+    await clear(id);
+    check('tired_today/Status clear removes the note without changing training',
+      !noteForFact(id) && baseline === signature());
+  } catch (error) { check('tired_today/noted lifecycle', false, String(error)); }
+  for (const kind of ['poor_sleep_today', 'illness_mild'] as const) {
     try {
       await fresh(); const baseline = signature();
       const id = await quietAsync(readiness(kind).apply);

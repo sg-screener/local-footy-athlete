@@ -21,6 +21,7 @@ import { isShownOnProgram } from '../rules/programModifierVisibility';
  * 14, where the compiler found an eleventh family nobody had noticed.
  */
 const EFFECT_COPY_ID: Record<ActiveProgramModifierEffect, string | null> = {
+  readiness_noted: 'readiness.fatigue.noted',
   volume_adjusted: 'modifiers.effect.volume_adjusted',
   training_eased: 'modifiers.effect.training_eased',
   exercises_swapped: 'modifiers.effect.exercises_swapped',

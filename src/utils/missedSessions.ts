@@ -226,19 +226,8 @@ export function programHistoryBoundaryFromCreatedAt(
   return `${y}-${m}-${d}`;
 }
 
-/**
- * TWO ANSWERS, NOT FOUR — Sam, 2026-08-22: *"'Yes, log it' ... or 'no, skip it'
- * and the session is skipped"*, on a prompt that had offered "Did it",
- * "Skipped it" and "Move it forward".
- *
- * **"Move it forward" went, and it was not a fourth opinion — it was a
- * different question.** Moving a session that has already been missed is a
- * PLAN edit about the future; it lives on the change sheet, where every other
- * move does, and the athlete reaches it the same way. Answering "did you do it"
- * with "move it" left the original day unanswered either way, so the prompt
- * came straight back.
- */
-export type MissedSessionResponse = 'did_it' | 'skipped_it';
+/** R-275: attendance yes/no plus an explicit route to reschedule the unlogged item. */
+export type MissedSessionResponse = 'did_it' | 'skipped_it' | 'move_it';
 
 /**
  * A skipped answer records attendance only. "Yes, log it" must go through the

@@ -825,16 +825,12 @@ export function registerProjectionCopy(): void {
      * 2026-08-25 (R-217): the section plus *"will replace the 'add an exercise'
      * option in the 3 dot menu"*. A signed string with no surface is copy the
      * next build finds, trusts as ruled, and puts back on a menu he cleared. */
-    /* R-218 — the Week board's mode banner. It says what the athlete can DO
-     * here, because the board offers three actions at once and a banner naming
-     * only one of them would be the old "pick a day, then say what you meant"
-     * flow wearing new words. */
+    /* R-275 — the compact subject label for the Week board. */
     {
       id: 'week.board.banner',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-26, R-244: the one Week board now '
-        + 'manages both training sessions and games.',
-      text: 'Add, move or remove sessions and games',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275, verbatim.',
+      text: 'Sessions / games',
     },
     {
       id: 'week.board.save',
@@ -849,6 +845,12 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED — Sam, 2026-08-26, R-245: briefly confirm before '
         + 'returning to the ordinary Week view.',
       text: 'Changes saved',
+    },
+    {
+      id: 'week.board.pastMoveRefusal',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275: only the prompted unlogged past item moves.',
+      text: 'Only the unlogged session in this prompt can move out of the past.',
     },
     {
       id: 'week.board.add.title',
@@ -1023,6 +1025,36 @@ export function registerProjectionCopy(): void {
       source: 'sam_ruling',
       provenance: 'SIGNED — Sam, 2026-08-22, verbatim.',
       text: 'No, skip it',
+    },
+    {
+      id: 'missed.prompt.move',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275, verbatim.',
+      text: 'No, move it',
+    },
+    {
+      id: 'readiness.fatigue.noted',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275: bit tired records only.',
+      text: 'Noted — today stays as planned.',
+    },
+    {
+      id: 'readiness.fatigue.lighter',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275: pretty flat slightly reduces today.',
+      text: 'Today’s session is slightly reduced.',
+    },
+    {
+      id: 'readiness.fatigue.rest',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275: absolutely cooked means no session today.',
+      text: 'You’re resting today.',
+    },
+    {
+      id: 'readiness.fatigue.sequence',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-30, R-275: exact notice plus the derived effect.',
+      text: 'That’s two tired days in a row. The rest of this week is deloaded.',
     },
     {
       id: 'feedback.sheet.question',
