@@ -1317,8 +1317,49 @@ ok('[10] Mobility, Strength, Power and contrast rows all reach the one card',
   /<StrengthExerciseCard/.test(mobilityRenderer)
     && (screen.match(/<StrengthExerciseCard/g) ?? []).length >= 2,
   'one card component, every strength-family row');
-ok('[10] Conditioning still renders its own choice row, untouched by this slice',
+ok('[10] Conditioning still renders its own choice row',
   /function ConditioningChoiceRow/.test(screen) && /conditioning-choice-row/.test(screen));
+const conditioningCompletionSource = codeOnly(
+  /function ConditioningCompletionRow\([\s\S]*?(?=\/\*\*\n \* The combined-day)/.exec(screen)?.[0] ?? '',
+);
+const conditioningChoiceSource = codeOnly(
+  /function ConditioningChoiceRow\([\s\S]*?(?=interface StrengthExerciseCardProps)/.exec(screen)?.[0] ?? '',
+);
+const conditioningPhaseSource = codeOnly(
+  /function ConditioningPhaseRow\([\s\S]*?(?=interface ConditioningRowProps)/.exec(screen)?.[0] ?? '',
+);
+const conditioningCompletionStyle = styleBlock('conditioningCompletionRow');
+ok('[10] CONTROL — both conditioning routes, their shared completion owner and its style were found',
+  conditioningCompletionSource.length > 150
+    && conditioningChoiceSource.length > 800
+    && conditioningPhaseSource.length > 800
+    && conditioningCompletionStyle.length > 100,
+  {
+    owner: conditioningCompletionSource.length,
+    choice: conditioningChoiceSource.length,
+    phase: conditioningPhaseSource.length,
+    style: conditioningCompletionStyle.length,
+  });
+ok('[10] choice and phase cards use the one trailing completion owner — never the title header',
+  (conditioningChoiceSource.match(/<ConditioningCompletionRow checkbox=\{checkbox\} \/>/g) ?? []).length === 1
+    && (conditioningPhaseSource.match(/<ConditioningCompletionRow checkbox=\{checkbox\} \/>/g) ?? []).length === 1
+    && !/addonCheckboxSlot/.test(conditioningChoiceSource)
+    && !/addonCheckboxSlot/.test(conditioningPhaseSource)
+    && /<\/Pressable>[\s\S]*\{expanded[\s\S]*<ConditioningCompletionRow checkbox=\{checkbox\} \/>/.test(
+      conditioningChoiceSource,
+    )
+    && /ConditioningPrescriptionCopy[\s\S]*<ConditioningCompletionRow checkbox=\{checkbox\} \/>[\s\S]*<QuickExerciseActions/.test(
+      conditioningPhaseSource,
+    ));
+ok('[10] the conditioning tick owns the same card-right edge without an independent offset',
+  /minHeight:\s*22/.test(conditioningCompletionStyle)
+    && /flexDirection:\s*'row'/.test(conditioningCompletionStyle)
+    && /alignItems:\s*'center'/.test(conditioningCompletionStyle)
+    && /justifyContent:\s*'flex-end'/.test(conditioningCompletionStyle)
+    && !/(padding|margin)(Right|Horizontal)|right:|transform|position:\s*'absolute'/.test(
+      codeOnly(conditioningCompletionStyle),
+    ),
+  conditioningCompletionStyle);
 ok('[10] every checklist call site hands the checkbox down — none dropped it',
   (screen.match(/<ExecutionChecklistItem/g) ?? []).length
     === (screen.match(/\{\(checkbox\) => \(/g) ?? []).length

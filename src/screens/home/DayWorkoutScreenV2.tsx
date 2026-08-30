@@ -3295,6 +3295,22 @@ function AddonRow({
 }
 
 /**
+ * One right-edge completion address for every conditioning card.
+ *
+ * The checklist still owns and builds the checkbox. This component owns only
+ * its placement, after the conditioning content and away from the title's
+ * swap/remove actions. Choice and phase cards must not choose independently.
+ */
+function ConditioningCompletionRow({ checkbox }: { checkbox?: React.ReactNode }) {
+  if (!checkbox) return null;
+  return (
+    <View style={styles.conditioningCompletionRow} testID="conditioning-completion-row">
+      {checkbox}
+    </View>
+  );
+}
+
+/**
  * The combined-day "choose one of N" picker as a single list row.
  *
  * §6 item 4: no separate box and no carve-out from "one list" — one
@@ -3312,9 +3328,9 @@ function ConditioningChoiceRow({
   /**
    * The checklist's checkbox for this row. ⚠ **ONE TICK PER EXECUTION ITEM,
    * NOT PER OPTION.** A choice row is "do one of these" — the checklist counts
-   * it as a single thing done, so the tick belongs on the card's own header
-   * beside the chooser, never inside each option where two ticks would claim
-   * the athlete did both.
+   * it as a single thing done. The shared trailing row keeps that one tick at
+   * the same right edge as every other card, never inside each option where two
+   * ticks would claim the athlete did both.
    */
   checkbox?: React.ReactNode;
   onQuickSwap: (exercise: EditableExercise) => void;
@@ -3345,7 +3361,6 @@ function ConditioningChoiceRow({
         {isChoice ? (
           <Text style={styles.disclosureChevron}>{expanded ? '−' : '+'}</Text>
         ) : null}
-        {checkbox ? <View style={styles.addonCheckboxSlot}>{checkbox}</View> : null}
       </Pressable>
       {expanded
         ? options.map((option, optionIndex) => (
@@ -3371,6 +3386,7 @@ function ConditioningChoiceRow({
             </View>
           ))
         : null}
+      <ConditioningCompletionRow checkbox={checkbox} />
     </View>
   );
 }
@@ -3973,13 +3989,6 @@ function ConditioningPhaseRow({
             {phaseDisplayName}
           </Text>
         </View>
-        {/* On the NAME line, because a conditioning block has no weight stepper
-            to sit beside. ⚠ **NOT `controlsRow`** — that style is the STRENGTH
-            card's single control line and a law counts its uses to keep it
-            single (R, Sam 2026-08-20). This reuses `addonCheckboxSlot`, the
-            shape the add-on row already uses for exactly this case: a tick with
-            no stepper beside it. */}
-        {checkbox ? <View style={styles.addonCheckboxSlot}>{checkbox}</View> : null}
       </View>
       {modalityLabel ? <Text style={styles.conditioningPhaseBody} testID={`conditioning-mode-${exerciseToken}`}>{modalityLabel}</Text> : null}
       {description ? (
@@ -3997,6 +4006,7 @@ function ConditioningPhaseRow({
           {paceLine}
         </Text>
       ) : null}
+      <ConditioningCompletionRow checkbox={checkbox} />
       <QuickExerciseActions
         exercise={editableExerciseForRow(exercise)!}
         onQuickSwap={onQuickSwap}
@@ -6218,6 +6228,13 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontWeight: '500',
     marginTop: 5,
+  },
+  conditioningCompletionRow: {
+    minHeight: 22,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   conditioningPrescriptionLabel: {
     fontWeight: '800',

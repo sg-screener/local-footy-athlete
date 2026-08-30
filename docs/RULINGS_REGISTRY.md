@@ -6744,10 +6744,15 @@ SAM ON GLASS.**
 execution item is wrapped in `ExecutionChecklistItem`, which builds a checkbox
 and hands it to `renderItem`; the two conditioning branches dropped the argument,
 so the section's `0/1`, Select all and the saved receipt were all counting a row
-the athlete could not tick. One tick per execution item — a choice row gets ONE
-on its header, never one per option, or two ticks would claim both were done.
+the athlete could not tick. One tick per execution item — a choice row gets ONE,
+never one per option, or two ticks would claim both were done. **Corrected on
+Sam's physical phone, 2026-08-31:** the first cut put that tick in the title
+header, where swap/remove already own the corner, so it sat one column inboard
+from every other card. Choice and phase cards now pass the same checklist-owned
+tick to one trailing completion row at the card's right edge. The move changes
+no completion id, toggle, saved receipt or option-counting semantics.
 ⚠ `styles.controlsRow` is COUNTED by a law to keep the strength card's control
-line single; the conditioning tick uses `addonCheckboxSlot`.
+line single; conditioning uses its own shared trailing placement owner.
 (b) **An open form cue drops the weight toggle below the last line.** The
 controls are absolute at the card's bottom-right by R (2026-08-20) — pinned so
 they centre against a COLLAPSED row without setting its height — and an expanded
