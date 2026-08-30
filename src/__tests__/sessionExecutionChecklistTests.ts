@@ -918,6 +918,16 @@ const codeOnly = (block: string): string => block
 ok('[10] CONTROL — stripping comments leaves the real declarations behind',
   /borderRadius/.test(codeOnly(weightStyle))
     && /sessionExecutionCheckbox/.test(codeOnly(checkboxStyle)));
+const liveLoadControlSource = codeOnly(controlsRowSource);
+ok('[10] CONTROL — all live load-label routes were found before sizing is asserted',
+  liveLoadControlSource.length > 500
+    && /loadControlMode === 'bodyweight'/.test(liveLoadControlSource)
+    && /loadControlMode === 'band'/.test(liveLoadControlSource)
+    && /Edit weight, \$\{displayedWeight\}/.test(liveLoadControlSource),
+  liveLoadControlSource.slice(0, 500));
+ok('[10] live load labels keep the authored readable size after a stepper update',
+  !/adjustsFontSizeToFit|minimumFontScale/.test(liveLoadControlSource),
+  'native iOS auto-fit can collapse a transiently measured label to its 4pt floor');
 ok('[10] NEITHER control carries an independent vertical offset',
   !OFFSETS.test(codeOnly(checkboxStyle)) && !OFFSETS.test(codeOnly(weightStyle)),
   { checkbox: codeOnly(checkboxStyle), weight: codeOnly(weightStyle) });

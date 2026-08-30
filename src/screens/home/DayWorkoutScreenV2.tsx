@@ -3582,8 +3582,6 @@ function StrengthExerciseCard({
         <Text
           style={styles.weightValueText}
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.75}
         >
           BW
         </Text>
@@ -3625,8 +3623,6 @@ function StrengthExerciseCard({
             <Text
               style={styles.weightValueText}
               numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
             >
               {displayedWeight}
             </Text>
@@ -3659,8 +3655,6 @@ function StrengthExerciseCard({
           <Text
             style={styles.weightValueText}
             numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}
           >
             {displayedWeight}
           </Text>
