@@ -6,6 +6,7 @@ import type { CoachingPlan } from '../utils/coachingEngine';
 import { compileCanonicalProgramWeeks, type CanonicalProgramWeeksInput } from './canonicalWeeklyRowCompiler';
 import { compileCanonicalProgramProgression } from './canonicalWeeklyProgressionCompiler';
 import { applyExclusionsToAuthoredWeek } from './exerciseExclusions';
+import { publishAutomaticProgrammingSelectionTraces } from './programmingSelectionTrace';
 
 export interface CanonicalProgramCompilerInput {
   readonly metadata: Omit<TrainingProgram, 'microcycles'>;
@@ -16,6 +17,7 @@ export interface CanonicalProgramCompilerInput {
 
 export function compileCanonicalProgram(input: CanonicalProgramCompilerInput) {
   const compiled = compileCanonicalProgramWeeks(input.weeks);
+  publishAutomaticProgrammingSelectionTraces(compiled.selectionTraces);
   /**
    * ── REMOVE MEANS REMOVE, IN STORAGE AND NOT ONLY ON THE SCREEN ────────────
    *
@@ -77,4 +79,3 @@ function buildProgramName(data: OnboardingData, plan: CoachingPlan): string {
   const total = plan.coreSessions + plan.optionalSessions + plan.recoverySessions;
   return `${phase} Program — ${core} Core + ${total - core} Support`;
 }
-

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
-import type { AutomaticProgrammingSelectionTrace } from '../rules/programmingSelectionTrace';
+import {
+  installAutomaticProgrammingSelectionTraceObserver,
+  type AutomaticProgrammingSelectionTrace,
+} from '../rules/programmingSelectionTrace';
 
 let passed = 0;
 function check(name: string, fn: () => void): void {
@@ -63,6 +66,17 @@ check('selected trace identities survive into final session rows', () => {
   for (const trace of traces) {
     assert.ok(trace.selected && finalNames.has(trace.selected), `${trace.decisionId}:${trace.selected}`);
   }
+});
+
+check('the scoped compiler observer serves store-driven audits and disposes cleanly', () => {
+  const observed: AutomaticProgrammingSelectionTrace[] = [];
+  const dispose = installAutomaticProgrammingSelectionTraceObserver((batch) => observed.push(...batch));
+  generateProgramLocally(profile, options);
+  dispose();
+  const afterDispose = observed.length;
+  generateProgramLocally(profile, options);
+  assert.ok(afterDispose > 0);
+  assert.equal(observed.length, afterDispose);
 });
 
 console.log(`programming selection trace: ${passed} passed`);

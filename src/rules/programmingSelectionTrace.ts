@@ -69,6 +69,35 @@ export interface AutomaticProgrammingSelectionTrace {
   readonly selectionReason: string;
 }
 
+/**
+ * Diagnostic tap at the compiler boundary. Production has no observer by
+ * default; a lived audit may install one and receives the exact decisions that
+ * the store-driven compiler made, including rebuilds and restart replays.
+ * Returning a disposer keeps the tap scoped and prevents one audit leaking
+ * into another.
+ */
+export type AutomaticProgrammingSelectionTraceObserver = (
+  traces: readonly AutomaticProgrammingSelectionTrace[],
+) => void;
+
+let activeTraceObserver: AutomaticProgrammingSelectionTraceObserver | null = null;
+
+export function installAutomaticProgrammingSelectionTraceObserver(
+  observer: AutomaticProgrammingSelectionTraceObserver,
+): () => void {
+  const previous = activeTraceObserver;
+  activeTraceObserver = observer;
+  return () => {
+    if (activeTraceObserver === observer) activeTraceObserver = previous;
+  };
+}
+
+export function publishAutomaticProgrammingSelectionTraces(
+  traces: readonly AutomaticProgrammingSelectionTrace[],
+): void {
+  if (traces.length > 0) activeTraceObserver?.(traces);
+}
+
 export function rankSelectedFirst(
   candidates: readonly AutomaticCandidateTrace[],
   selected: string | null,
@@ -86,4 +115,3 @@ export function rankSelectedFirst(
     rank: candidate.eligible ? rankByName.get(candidate.name) ?? null : null,
   }));
 }
-
