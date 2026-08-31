@@ -1007,3 +1007,34 @@ unrelated files.
 NOT COVERED at this checkpoint: the new physical-iPhone Release, visual glass
 acceptance, Dynamic Type/VoiceOver, and unrelated display-copy acronyms. The
 canonical programming identity, selection, cues and videos were not changed.
+
+### Physical Release receipt for R-291
+
+- Product checkpoint: `99af5ff8ce1e3b63318431748df98ebe7c5c5144`.
+- Fresh isolated `xcodebuild clean build`, Release/iphoneos: exit 0 and
+  `BUILD SUCCEEDED`.
+- Artifact:
+  `/private/tmp/lfa-phone-atg-99af5ff8.oVii8Z/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app`.
+- Bundle: `com.localfootyathlete.app`, version `1.0.0 (1)`. Standalone
+  `main.jsbundle`: 8,396,427 bytes, SHA-256
+  `12ea5ee4a8b2a088108db3df677a086f0c2fe2ae2fb866560fece57ae256fe18`.
+- Executable SHA-256:
+  `b9967b56984d001681b406e2507076ec3a9e160cf74b808d14b237b6066dbbe1`.
+- Strict/deep signature verification passed under Apple Development: Samuel
+  Geurts, team `66M7FZ6G37`.
+- Fresh device discovery selected only Sam's available paired iPhone 16 Pro Max
+  (`AFA21856-881E-587B-96D5-60817FD11018`); Renee's phone was unavailable and
+  not targeted.
+- In-place installation succeeded into bundle container
+  `03BC38B2-D88A-46A7-BCAF-69775B7569B1`. No uninstall, reset, app-data clearing
+  or data-container operation occurred.
+- Launch succeeded. The later process snapshot still contained the exact newly
+  installed executable as PID 36436, and the device reports version 1.0.0,
+  bundle version 1.
+
+BLOCKED-BY: sam — glass acceptance only. Exact question: does the exercise now
+read `ATG Split Squat` on your phone?
+
+NOT COVERED: visual acceptance of the corrected letters, Dynamic Type,
+VoiceOver and unrelated exercise-name copy. Build, signature, in-place install,
+version query and launch were covered.
