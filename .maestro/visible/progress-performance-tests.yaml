@@ -1,36 +1,35 @@
 appId: com.localfootyathlete.app
-name: Golden - live Progress dashboard
-tags:
-  - e2e
-  - golden
-  - progress
+name: Progress performance tests and measurements
 ---
+- runFlow:
+    when:
+      visible: "Open in “Local Footy Athlete”?"
+    commands:
+      - tapOn:
+          point: "70%, 53%"
+- runFlow:
+    when:
+      visible: "Clear test-harness state and start"
+    commands:
+      - tapOn: "Clear test-harness state and start"
 - extendedWaitUntil:
     visible:
-      id: "e2e-seed-ready-coach-snapshot-populated-journey"
+      id: "tab-progress"
     timeout: 30000
 - tapOn:
     id: "tab-progress"
-- extendedWaitUntil:
-    visible:
-      id: "progress-tab-title"
-    timeout: 15000
-- assertVisible:
-    id: "progress-load-track"
-- assertVisible:
-    id: "progress-load-sweet-spot"
-- assertVisible:
-    id: "progress-load-marker"
-- scrollUntilVisible:
-    element:
-      id: "progress-main-lifts"
-    direction: DOWN
-    visibilityPercentage: 60
 - scrollUntilVisible:
     element:
       id: "progress-performance-tests"
     direction: DOWN
     visibilityPercentage: 60
+- repeat:
+    times: 2
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 28%
+          duration: 450
 - assertVisible: "Performance tests"
 - assertVisible:
     id: "progress-test-aerobic"
@@ -54,9 +53,20 @@ tags:
       id: "progress-test-aerobic"
       text: ".*12:00.*"
     timeout: 30000
-- assertVisible:
+- tapOn:
     id: "progress-test-aerobic"
-    text: ".*Baseline.*"
+- tapOn:
+    id: "progress-select-three_km_tt"
+- tapOn:
+    id: "progress-test-result-input"
+- inputText: "690"
+- tapOn:
+    id: "progress-save-test-result"
+- extendedWaitUntil:
+    visible:
+      id: "progress-test-aerobic"
+      text: ".*11:30.*4.2% improved.*"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: "progress-measurements"
@@ -83,10 +93,17 @@ tags:
       id: "progress-measurements"
     direction: DOWN
     visibilityPercentage: 60
+- repeat:
+    times: 2
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 28%
+          duration: 450
 - assertVisible:
     id: "progress-height-input"
     text: ".*181.*"
 - assertVisible:
     id: "progress-weight-input"
     text: ".*81.*"
-- takeScreenshot: artifacts/ui-walk/progress-dashboard
+- takeScreenshot: artifacts/visible/progress-performance-tests

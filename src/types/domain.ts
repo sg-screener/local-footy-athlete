@@ -47,6 +47,29 @@ export interface TwoKmTimeTrialAnswer {
   readonly source: TwoKmTimeTrialSource;
 }
 
+export type PerformanceTestCategory = 'aerobic' | 'anaerobic' | 'sprint';
+
+export type PerformanceTestId =
+  | 'two_km_tt'
+  | 'three_km_tt'
+  | 'four_hundred_m_run'
+  | 'one_min_air_bike'
+  | 'one_hundred_m_sprint'
+  | 'twenty_m_electronic_sprint';
+
+export interface PerformanceTestResult {
+  readonly testId: PerformanceTestId;
+  /** Seconds for timed tests; calories for the one-minute air-bike test. */
+  readonly value: number;
+  readonly recordedAt: string;
+}
+
+/** One persisted owner for the athlete's chosen tests and their real result history. */
+export interface PerformanceTesting {
+  readonly selections: Readonly<Partial<Record<PerformanceTestCategory, PerformanceTestId>>>;
+  readonly results: readonly PerformanceTestResult[];
+}
+
 // Subscription status types
 export type SubscriptionStatus = 'free' | 'trial' | 'active' | 'cancelled' | 'expired';
 
@@ -247,9 +270,12 @@ export interface OnboardingData {
    * "haven't tested" — not an absence, so a skip is distinguishable from a
    * step never reached.
    *
-   * MAS is DERIVED from this, never stored beside it. See `data/twoKmTimeTrial`.
+   * MAS is DERIVED from this until a newer Progress aerobic result exists,
+   * never stored beside either source. See `data/performanceTests`.
    */
   twoKmTimeTrial?: TwoKmTimeTrialAnswer;
+  /** Current Progress-test choices and result history. Aerobic results can derive MAS. */
+  performanceTesting?: PerformanceTesting;
   conditioningLevel?: ConditioningLevel;
   sprintExposure?: SprintExposure;
   recentTrainingLoad?: RecentTrainingLoad;

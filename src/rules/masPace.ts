@@ -1,5 +1,5 @@
 /**
- * THE ATHLETE'S OWN PACE — the READ half of the 2km time trial.
+ * THE ATHLETE'S OWN PACE — the read half of the selected aerobic time trial.
  *
  * ## WHY THIS EXISTS
  *
@@ -24,8 +24,8 @@
  * at all and every card reprices itself the instant the answer moves.
  *
  * So this module is a pure function of (the words already on the card, the
- * athlete's answer, their level). It stores nothing, and generation does not
- * import it.
+ * athlete's selected 2km/3km result, their legacy 2km answer and their level).
+ * It stores nothing, and generation does not import it.
  *
  * ## AND IT DOES NOT ANSWER Q-001
  *
@@ -42,6 +42,7 @@
 
 import { paceMinPerKm } from './conditioningDisplay';
 import { deriveMas } from '../data/twoKmTimeTrial';
+import { deriveMasFromPerformanceTesting, selectedAerobicResult } from '../data/performanceTests';
 import type { ExperienceLevel, TwoKmTimeTrialAnswer } from '../types/domain';
 import { registerSignedCopy, signedCopy, type SignedCopy,
   derivedNumericText,
@@ -181,6 +182,7 @@ export interface PersonalPaceArgs {
   /** The words already on the card — the row's notes, or a bare intensity. */
   readonly intensityText: string | null | undefined;
   readonly answer: TwoKmTimeTrialAnswer | undefined;
+  readonly performanceTesting?: import('../types/domain').PerformanceTesting;
   /** Undefined only for a profile that has not answered it — see below. */
   readonly experienceLevel: ExperienceLevel | undefined;
 }
@@ -201,13 +203,21 @@ export function personalPaceLine(args: PersonalPaceArgs): SignedCopy | null {
   const band = parseMasBand(args.intensityText);
   if (!band) return null;
 
-  const measured = args.answer?.seconds !== null && args.answer?.seconds !== undefined;
+  const measuredPerformance = selectedAerobicResult(args.performanceTesting) !== null;
+  const measured = measuredPerformance
+    || (args.answer?.seconds !== null && args.answer?.seconds !== undefined);
   if (!measured && !args.experienceLevel) return null;
 
   // `experienceLevel` is only read on the unmeasured branch, which the guard
   // above has already made non-null. The cast keeps the ladder in `deriveMas`
   // as the single owner of "what does a skipped trial get".
-  const mas = deriveMas(args.answer, args.experienceLevel as ExperienceLevel);
+  const mas = measuredPerformance
+    ? deriveMasFromPerformanceTesting(
+      args.performanceTesting,
+      args.answer,
+      args.experienceLevel as ExperienceLevel,
+    )
+    : deriveMas(args.answer, args.experienceLevel as ExperienceLevel);
   /* THE HIGHER %MAS IS THE FASTER PACE, so it leads the range: 90–100% MAS on a
    * 15 km/h athlete reads `4:00–4:27 min/km`, not `4:27–4:00`. */
   const slow = paceForPercent(mas.masKmh, band.lowPct);

@@ -7074,3 +7074,25 @@ their destinations and the status-card layout remain unchanged.
 Guard: `LAW-day-change-card-owns-plan-actions` and
 `test:day-first-timeline`.
 Verification status and NOT COVERED: `docs/STATUS_LEGIBLETYPE.md`.
+
+**R-279** · Compact performance tests, pace authority and body measurements, 2026-08-31.
+
+Owner: progressmetrics. Progress removes the large 2km-only card and places a
+compact Performance tests section below Main Lifts. The athlete chooses one
+test in each category: Aerobic is 2km TT or 3km TT; Anaerobic is 400m run or
+1 min max cal air bike; Sprint is 100m sprint or “20m sprint (electronically
+timed)”. Results persist as one history per test. The newest result compares
+with the previous result for that same test: faster timed results show a green
+down arrow and percentage improved; slower timed results show a red up arrow
+and percentage worse. Air-bike calories reverse that direction and success
+rule. A first result is an honest baseline with no invented percentage.
+
+The selected aerobic result derives running pace from distance divided by time,
+for both 2km and 3km. The existing onboarding 2km answer remains read fallback
+until a new aerobic result exists. The other four tests are progress-only.
+Editable height and weight sit beneath the tests, retain the existing accepted
+measurement bounds and save through the accepted profile/program transaction.
+
+Guard: `LAW-progress-performance-tests-and-measurements` and
+`test:coach-snapshot`.
+Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.

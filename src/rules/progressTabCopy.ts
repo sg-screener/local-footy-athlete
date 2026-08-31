@@ -1,10 +1,17 @@
-/** Athlete-facing Progress words ruled by Sam on 2026-08-24 (R-139). */
+/** Athlete-facing Progress words ruled by Sam in R-139 and R-279. */
 export const PROGRESS_TAB_COPY = {
   title: 'Progress',
   load: 'Load',
   mainLifts: 'Main lifts',
+  performanceTests: 'Performance tests',
+  measurements: 'Measurements',
+  noPerformanceResult: 'No result yet',
+  baseline: 'Baseline',
+  noChange: 'No change',
+  improved: 'improved',
+  worse: 'worse',
+  saveResult: 'Save result',
+  saveMeasurements: 'Save measurements',
   predictedOneRepMax: 'Estimated 1RM',
-  twoKmTimeTrial: '2km time trial',
   noLiftHistory: 'No data yet',
-  notTested: "Haven't tested",
 } as const;

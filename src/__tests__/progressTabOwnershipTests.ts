@@ -14,6 +14,14 @@ import {
   estimateOneRepMaxKg,
 } from '../rules/estimatedOneRepMax';
 import { buildProgressMainLiftHistories } from '../rules/progressMainLiftStrength';
+import {
+  comparePerformanceTestResults,
+  deriveMasFromPerformanceTesting,
+  formatPerformanceTestResult,
+  parsePerformanceTestResult,
+  recordPerformanceTestResult,
+  validatePerformanceTestResult,
+} from '../data/performanceTests';
 
 armTotalsOrRed();
 const ROOT = path.resolve(__dirname, '../..');
@@ -39,7 +47,8 @@ function ok(name: string, condition: unknown): void {
 function progressOwnsVisibleTracking(progress: string, coach: string): boolean {
   return /testID="progress-load-continuum"/.test(progress)
     && /testID="progress-main-lifts"/.test(progress)
-    && /testID="progress-two-km"/.test(progress)
+    && /testID="progress-performance-tests"/.test(progress)
+    && /testID="progress-measurements"/.test(progress)
     && !/CoachDashboard|SnapshotDashboard|coach-dashboard/.test(coach);
 }
 
@@ -60,7 +69,7 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('Progress is mounted through its own screen and stable tab identity',
     /name="ProgressTab"[\s\S]{0,180}?component=\{ProgressTabScreen\}/.test(navigator)
       && /tabBarButtonTestID:\s*'tab-progress'/.test(navigator));
-  ok('Progress owns the visible load continuum, main lifts and 2km sections',
+  ok('Progress owns load, main lifts, compact performance tests and measurements',
     progressOwnsVisibleTracking(progress, coach));
   ok('Coach visibly keeps chat only while its live Snapshot remains private',
     !/<ModifiersStrip/.test(coach)
@@ -82,10 +91,29 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('Progress renders the fixed predicted-1RM histories even when every graph is empty',
     /snapshot\.mainLiftEstimates\.map/.test(progress)
       && !/snapshot\.strengthHistory\.length\s*>\s*0/.test(progress));
-  ok('the 2km card receives the athlete\'s recorded answer, never an invented series',
-    /twoKmTimeTrial/.test(snapshot)
-      && /snapshot\.twoKmTimeTrial/.test(progress)
-      && !/twoKmTimeTrialHistory|fake|sampleData|mockData/.test(progress));
+  ok('the old oversized 2km chart is retired rather than kept beside the new tests',
+    !/function TwoKmChart|testID="progress-two-km"|snapshot\.twoKmTimeTrial/.test(progress));
+  ok('the three compact test categories sit below Main Lifts and above Measurements',
+    progress.indexOf('testID="progress-main-lifts"') >= 0
+      && progress.indexOf('testID="progress-main-lifts"') < progress.indexOf('testID="progress-performance-tests"')
+      && progress.indexOf('testID="progress-performance-tests"') < progress.indexOf('testID="progress-measurements"'));
+  const progressCopy = read('src/rules/progressTabCopy.ts') + read('src/data/performanceTests.ts');
+  ok('the six ruled test choices include the exact electronically timed sprint label',
+    ['2km TT', '3km TT', '400m run', '1 min max cal air bike', '100m sprint', '20m sprint (electronically timed)']
+      .every((label) => progressCopy.includes(`'${label}'`)));
+  ok('performance results and measurements save through the accepted profile transaction',
+    /commitProfileProgramTransaction/.test(progress)
+      && /performanceTesting/.test(progress)
+      && /heightCm/.test(progress)
+      && /weightKg/.test(progress));
+  ok('m:ss tests expose punctuation input and a truthful per-test example',
+    /numbers-and-punctuation/.test(progress)
+      && /inputPlaceholder: '12:00'/.test(progressCopy)
+      && /inputPlaceholder: '1:15'/.test(progressCopy));
+  ok('VoiceOver hears the current test result, trend and both measurement values',
+    /accessibilityLabel=\{`\$\{categoryLabel\(category\)\} test,[\s\S]*?\$\{resultText\}/.test(progress)
+      && /Height in centimetres, \$\{heightInput/.test(progress)
+      && /Weight in kilograms, \$\{weightInput/.test(progress));
   ok('lift charts keep each recorded week and position it through the time-axis owner',
     /buildProgressChartPoints/.test(progress)
       && /dateISO:\s*point\.weekStart/.test(progress)
@@ -182,8 +210,51 @@ console.log('\n[TIMELINE] REAL DATES OWN HORIZONTAL SPACE');
     unordered.map((point) => point.dateISO).join(',') === '2026-05-04,2026-08-24');
 }
 
+console.log('\n[PERFORMANCE TESTS] ONE HISTORY, HONEST DIRECTION');
+{
+  const faster = comparePerformanceTestResults('two_km_tt', 420, 400);
+  ok('a faster timed result is a green downward improvement',
+    faster?.direction === 'down' && faster.status === 'improved'
+      && Math.abs(faster.percent - (20 / 420 * 100)) < 0.0001);
+  const slower = comparePerformanceTestResults('one_hundred_m_sprint', 12.2, 12.8);
+  ok('a slower timed result is a red upward regression',
+    slower?.direction === 'up' && slower.status === 'worse');
+  const moreCalories = comparePerformanceTestResults('one_min_air_bike', 24, 27);
+  const fewerCalories = comparePerformanceTestResults('one_min_air_bike', 24, 21);
+  ok('air-bike calories reverse both the success rule and arrow direction',
+    moreCalories?.direction === 'up' && moreCalories.status === 'improved'
+      && fewerCalories?.direction === 'down' && fewerCalories.status === 'worse');
+  ok('clock, sprint and calorie inputs parse without pretending they share a unit',
+    parsePerformanceTestResult('two_km_tt', '7:15') === 435
+      && parsePerformanceTestResult('twenty_m_electronic_sprint', '3.42') === 3.42
+      && parsePerformanceTestResult('one_min_air_bike', '28') === 28
+      && formatPerformanceTestResult('one_min_air_bike', 28) === '28 cal');
+  ok('the new 2km producer keeps the existing authored 5:00–15:00 refusal',
+    validatePerformanceTestResult('two_km_tt', 240) !== null
+      && validatePerformanceTestResult('two_km_tt', 435) === null);
+  const history = recordPerformanceTestResult(undefined, {
+    testId: 'three_km_tt', value: 720, recordedAt: '2026-08-31T01:00:00.000Z',
+  });
+  ok('the first result becomes a persisted category selection and an honest baseline',
+    history.selections.aerobic === 'three_km_tt'
+      && history.results.length === 1
+      && comparePerformanceTestResults('three_km_tt', undefined, 720) === null);
+  const threeKmMas = deriveMasFromPerformanceTesting(history, {
+    seconds: 600, recordedOn: '2026-08-01', source: 'profile_edit',
+  }, 'Complete beginner');
+  ok('a selected 3km result becomes the measured pace authority over the legacy 2km answer',
+    threeKmMas.source === 'measured' && threeKmMas.seconds === 720
+      && Math.abs(threeKmMas.masKmh - 15) < 0.0001);
+  const legacyMas = deriveMasFromPerformanceTesting(undefined, {
+    seconds: 480, recordedOn: '2026-08-01', source: 'profile_edit',
+  }, 'Complete beginner');
+  ok('an existing athlete keeps their legacy 2km pace until they record a new aerobic test',
+    legacyMas.source === 'measured' && legacyMas.seconds === 480
+      && Math.abs(legacyMas.masKmh - 15) < 0.0001);
+}
+
 console.log(`\nProgress tab totals: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
-console.log('  NOT COVERED: this source/ownership gate does not mount pixels or create 2km history that storage does not hold.');
+console.log('  NOT COVERED: this source/ownership gate does not mount pixels or prove a production persistence round trip.');
 if (failures.length) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1,5 +1,5 @@
 /**
- * 2km TIME TRIAL + MAS — the single owner of the athlete's running pace.
+ * LEGACY 2km TIME TRIAL + SHARED MAS MATH.
  *
  * WHY THIS EXISTS. Every %MAS prescription in the app was a STRING. Fifteen
  * conditioning template rows carry an intensity like '90-100% MAS', and
@@ -9,7 +9,9 @@
  * `masCopy` even held a calculator with zero consumers, written against a MAS
  * that never arrived.
  *
- * THE ARCHITECTURE. Store the time. Derive MAS. Never store MAS.
+ * THE ARCHITECTURE. Store the time. Derive MAS. Never store MAS. New Progress
+ * 2km/3km histories live in `performanceTests`; this file retains the authored
+ * 2km ingress, bounds, defaults and the one base MAS equation they reuse.
  *
  * A stored MAS is a second representation of the same fact, and second
  * representations drift: correct the time and the stale MAS keeps prescribing.

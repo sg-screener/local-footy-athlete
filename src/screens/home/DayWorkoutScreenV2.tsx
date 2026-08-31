@@ -3906,10 +3906,11 @@ function StrengthExerciseCard({
  */
 function usePersonalPace(notes: string | null | undefined) {
   const answer = useProfileStore((s: any) => s.onboardingData?.twoKmTimeTrial);
+  const performanceTesting = useProfileStore((s: any) => s.onboardingData?.performanceTesting);
   const experienceLevel = useProfileStore((s: any) => s.onboardingData?.experienceLevel);
   return React.useMemo(
-    () => personalPaceLine({ intensityText: notes, answer, experienceLevel }),
-    [notes, answer, experienceLevel],
+    () => personalPaceLine({ intensityText: notes, answer, performanceTesting, experienceLevel }),
+    [notes, answer, performanceTesting, experienceLevel],
   );
 }
 

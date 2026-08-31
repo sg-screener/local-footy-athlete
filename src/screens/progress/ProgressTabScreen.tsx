@@ -17,8 +17,28 @@ import {
   coachLoadSummary,
 } from '../../rules/snapshotDashboardCopy';
 import { PROGRESS_TAB_COPY } from '../../rules/progressTabCopy';
-import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
-import type { TwoKmTimeTrialAnswer } from '../../types/domain';
+import type {
+  PerformanceTestCategory,
+  PerformanceTestId,
+  PerformanceTesting,
+} from '../../types/domain';
+import {
+  PERFORMANCE_TEST_CATEGORIES,
+  comparePerformanceTestResults,
+  formatPerformanceTestResult,
+  parsePerformanceTestResult,
+  performanceTestDefinition,
+  performanceTestsForCategory,
+  recordPerformanceTestResult,
+  resultsForPerformanceTest,
+  selectedPerformanceTest,
+  validatePerformanceTestResult,
+} from '../../data/performanceTests';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { validateOnboardingMeasurement } from '../../data/onboardingNumericBounds';
+import { appDateNow, todayISOLocal } from '../../utils/appDate';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import { Button, Sheet, SheetHeader } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
 import {
@@ -172,28 +192,87 @@ function StrengthChart({ history, slot, onChoose }: {
   );
 }
 
-function TwoKmChart({ answer }: { answer: TwoKmTimeTrialAnswer | null }) {
-  const recorded = answer?.seconds !== null && answer?.seconds !== undefined;
+function TrendArrow({ direction, color }: { direction: 'up' | 'down'; color: string }) {
+  const up = direction === 'up';
   return (
-    <View style={styles.chartCard} testID="progress-two-km">
-      <View style={styles.chartHeader}>
-        <Text variant="bodySmallEmphasis" style={styles.chartTitle}>
-          {PROGRESS_TAB_COPY.twoKmTimeTrial}
-        </Text>
-        <Text variant="bodySmallEmphasis" style={styles.chartValue}>
-          {recorded ? formatTwoKmTime(answer!.seconds!) : PROGRESS_TAB_COPY.notTested}
-        </Text>
+    <Svg width={18} height={18} viewBox="0 0 18 18" accessibilityLabel={`${direction} arrow`}>
+      <Line x1="9" y1={up ? 15 : 3} x2="9" y2={up ? 3 : 15} stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Polyline
+        points={up ? '4,8 9,3 14,8' : '4,10 9,15 14,10'}
+        fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function categoryLabel(category: PerformanceTestCategory): string {
+  return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
+function PerformanceTestRow({ category, testing, onPress }: {
+  category: PerformanceTestCategory;
+  testing: PerformanceTesting | undefined;
+  onPress: () => void;
+}) {
+  const testId = selectedPerformanceTest(testing, category);
+  const definition = performanceTestDefinition(testId);
+  const results = resultsForPerformanceTest(testing, testId);
+  const latest = results[results.length - 1];
+  const previous = results[results.length - 2];
+  const comparison = latest
+    ? comparePerformanceTestResults(testId, previous?.value, latest.value)
+    : null;
+  const trendColor = comparison?.status === 'improved' ? colors.status.success : colors.status.error;
+  const resultText = latest
+    ? formatPerformanceTestResult(testId, latest.value)
+    : PROGRESS_TAB_COPY.noPerformanceResult;
+  const trendText = comparison
+    ? `${comparison.percent.toFixed(1)}% ${comparison.status === 'improved'
+      ? PROGRESS_TAB_COPY.improved : PROGRESS_TAB_COPY.worse}`
+    : latest
+      ? (results.length === 1 ? PROGRESS_TAB_COPY.baseline : PROGRESS_TAB_COPY.noChange)
+      : '';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${categoryLabel(category)} test, ${definition.label}, ${resultText}${trendText ? `, ${trendText}` : ''}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.testRow, pressed && styles.rowPressed]}
+      testID={`progress-test-${category}`}
+    >
+      <View style={styles.testIdentity}>
+        <Text variant="labelSmall" style={styles.testCategory}>{categoryLabel(category)}</Text>
+        <Text variant="bodySmallEmphasis" style={styles.testName}>{definition.label}</Text>
       </View>
-      {recorded ? <LineChart points={[{
-        dateISO: answer!.recordedOn,
-        value: answer!.seconds!,
-      }]} higherIsBetter={false} /> : null}
-    </View>
+      <View style={styles.testResult}>
+        <Text variant="bodySmallEmphasis" style={styles.resultValue}>
+          {resultText}
+        </Text>
+        {latest ? (
+          comparison ? (
+            <View style={styles.trendRow}>
+              <TrendArrow direction={comparison.direction} color={trendColor} />
+              <Text variant="caption" style={{ color: trendColor }}>
+                {comparison.percent.toFixed(1)}% {comparison.status === 'improved'
+                  ? PROGRESS_TAB_COPY.improved : PROGRESS_TAB_COPY.worse}
+              </Text>
+            </View>
+          ) : (
+            <Text variant="caption" style={styles.baselineText}>
+              {results.length === 1 ? PROGRESS_TAB_COPY.baseline : PROGRESS_TAB_COPY.noChange}
+            </Text>
+          )
+        ) : null}
+      </View>
+      <Text variant="bodySmallEmphasis" style={styles.chevron}>›</Text>
+    </Pressable>
   );
 }
 
 export default function ProgressTabScreen() {
   const setTrackedLiftChoice = useProfileStore((state) => state.setTrackedLiftChoice);
+  const onboardingData = useProfileStore((state) => state.onboardingData);
+  const performanceTesting = onboardingData?.performanceTesting;
   const { weekDays, visibleWeek } = useResolvedWeek();
   const { modifiers } = useActiveModifiers({ visibleWeekDays: weekDays });
   const snapshot = useLiveAthleteSnapshot({
@@ -201,6 +280,96 @@ export default function ProgressTabScreen() {
     visibleWeek,
     activeModifiers: modifiers,
   });
+  const [activeCategory, setActiveCategory] = React.useState<PerformanceTestCategory | null>(null);
+  const [chosenTest, setChosenTest] = React.useState<PerformanceTestId>('two_km_tt');
+  const [resultInput, setResultInput] = React.useState('');
+  const [resultError, setResultError] = React.useState<string | null>(null);
+  const [savingResult, setSavingResult] = React.useState(false);
+  const [heightInput, setHeightInput] = React.useState(onboardingData?.heightCm?.toString() ?? '');
+  const [weightInput, setWeightInput] = React.useState(onboardingData?.weightKg?.toString() ?? '');
+  const [measurementError, setMeasurementError] = React.useState<string | null>(null);
+  const [measurementSaved, setMeasurementSaved] = React.useState(false);
+  const [savingMeasurements, setSavingMeasurements] = React.useState(false);
+
+  React.useEffect(() => {
+    setHeightInput(onboardingData?.heightCm?.toString() ?? '');
+    setWeightInput(onboardingData?.weightKg?.toString() ?? '');
+  }, [onboardingData?.heightCm, onboardingData?.weightKg]);
+
+  const openTest = (category: PerformanceTestCategory) => {
+    setActiveCategory(category);
+    setChosenTest(selectedPerformanceTest(performanceTesting, category));
+    setResultInput('');
+    setResultError(null);
+  };
+
+  const savePerformanceResult = async () => {
+    const value = parsePerformanceTestResult(chosenTest, resultInput);
+    if (value === null) {
+      setResultError(`Enter a valid ${performanceTestDefinition(chosenTest).inputHint.toLowerCase()}.`);
+      return;
+    }
+    const validationError = validatePerformanceTestResult(chosenTest, value);
+    if (validationError) {
+      setResultError(validationError);
+      return;
+    }
+    setSavingResult(true);
+    setResultError(null);
+    try {
+      const nextTesting = recordPerformanceTestResult(performanceTesting, {
+        testId: chosenTest,
+        value,
+        recordedAt: appDateNow().toISOString(),
+      });
+      const result = await commitProfileProgramTransaction({
+        change: { kind: 'profile_setup', patch: { performanceTesting: nextTesting } },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'progress_performance_test',
+      });
+      if (!result.ok) {
+        setResultError('That result could not be saved. Try again.');
+        return;
+      }
+      setActiveCategory(null);
+      setResultInput('');
+    } catch {
+      setResultError('That result could not be saved. Try again.');
+    } finally {
+      setSavingResult(false);
+    }
+  };
+
+  const saveMeasurements = async () => {
+    const heightCm = Number(heightInput);
+    const weightKg = Number(weightInput);
+    const heightValidation = validateOnboardingMeasurement('heightCm', heightCm);
+    const weightValidation = validateOnboardingMeasurement('weightKg', weightKg);
+    if (!heightValidation.ok || !weightValidation.ok) {
+      setMeasurementSaved(false);
+      setMeasurementError(heightValidation.ok ? weightValidation.message! : heightValidation.message!);
+      return;
+    }
+    setSavingMeasurements(true);
+    setMeasurementError(null);
+    setMeasurementSaved(false);
+    try {
+      const result = await commitProfileProgramTransaction({
+        change: { kind: 'profile_setup', patch: { heightCm, weightKg } },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'progress_measurements',
+      });
+      if (!result.ok) {
+        setMeasurementError('Your measurements could not be saved. Try again.');
+        return;
+      }
+      setMeasurementSaved(true);
+    } catch {
+      setMeasurementError('Your measurements could not be saved. Try again.');
+    } finally {
+      setSavingMeasurements(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -215,9 +384,6 @@ export default function ProgressTabScreen() {
         <ProgressHeading title={PROGRESS_TAB_COPY.title} testID="progress-tab-title" />
         <LoadContinuum load={snapshot.load} />
 
-        <ProgressHeading title={PROGRESS_TAB_COPY.twoKmTimeTrial} />
-        <TwoKmChart answer={snapshot.twoKmTimeTrial} />
-
         <ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />
         <View style={styles.liftGrid}>
           {snapshot.mainLiftEstimates.map((history, index) => (
@@ -227,7 +393,120 @@ export default function ProgressTabScreen() {
           ))}
         </View>
 
+        <ProgressHeading title={PROGRESS_TAB_COPY.performanceTests} testID="progress-performance-tests" />
+        <View style={styles.compactCard}>
+          {PERFORMANCE_TEST_CATEGORIES.map((category) => (
+            <PerformanceTestRow
+              key={category}
+              category={category}
+              testing={performanceTesting}
+              onPress={() => openTest(category)}
+            />
+          ))}
+        </View>
+
+        <ProgressHeading title={PROGRESS_TAB_COPY.measurements} testID="progress-measurements" />
+        <View style={styles.measurementCard}>
+          <View style={styles.measurementFields}>
+            <View style={styles.measurementField}>
+              <Text variant="caption" style={styles.inputLabel}>Height</Text>
+              <View style={styles.inputShell}>
+                <AppTextInput
+                  accessibilityLabel={`Height in centimetres, ${heightInput || 'not entered'}`}
+                  keyboardType="decimal-pad"
+                  onChangeText={(value) => { setHeightInput(value); setMeasurementSaved(false); }}
+                  placeholder="180"
+                  placeholderTextColor={colors.input.placeholder}
+                  style={styles.measurementInput}
+                  testID="progress-height-input"
+                  value={heightInput}
+                />
+                <Text variant="bodySmallEmphasis" style={styles.inputUnit}>cm</Text>
+              </View>
+            </View>
+            <View style={styles.measurementField}>
+              <Text variant="caption" style={styles.inputLabel}>Weight</Text>
+              <View style={styles.inputShell}>
+                <AppTextInput
+                  accessibilityLabel={`Weight in kilograms, ${weightInput || 'not entered'}`}
+                  keyboardType="decimal-pad"
+                  onChangeText={(value) => { setWeightInput(value); setMeasurementSaved(false); }}
+                  placeholder="80"
+                  placeholderTextColor={colors.input.placeholder}
+                  style={styles.measurementInput}
+                  testID="progress-weight-input"
+                  value={weightInput}
+                />
+                <Text variant="bodySmallEmphasis" style={styles.inputUnit}>kg</Text>
+              </View>
+            </View>
+          </View>
+          {measurementError ? <Text variant="caption" style={styles.errorText}>{measurementError}</Text> : null}
+          {measurementSaved ? <Text variant="caption" style={styles.savedText}>Measurements saved</Text> : null}
+          <Button
+            label={PROGRESS_TAB_COPY.saveMeasurements}
+            onPress={() => void saveMeasurements()}
+            loading={savingMeasurements}
+            size="md"
+            glow={false}
+            testID="progress-save-measurements"
+          />
+        </View>
+
       </ScrollView>
+      <Sheet
+        visible={activeCategory !== null}
+        onClose={() => setActiveCategory(null)}
+        dismissable={!savingResult}
+        testID="progress-performance-test-sheet"
+      >
+        {activeCategory ? (
+          <View style={styles.sheetBody}>
+            <SheetHeader title={categoryLabel(activeCategory)} subtitle="Choose a test and record your result" />
+            <View style={styles.testChoices}>
+              {performanceTestsForCategory(activeCategory).map((test) => {
+                const selected = chosenTest === test.id;
+                return (
+                  <Pressable
+                    key={test.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => { setChosenTest(test.id); setResultInput(''); setResultError(null); }}
+                    style={[styles.testChoice, selected && styles.testChoiceSelected]}
+                    testID={`progress-select-${test.id}`}
+                  >
+                    <Text variant="bodySmallEmphasis" style={selected ? styles.testChoiceTextSelected : styles.testChoiceText}>
+                      {test.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text variant="caption" style={styles.inputLabel}>{performanceTestDefinition(chosenTest).inputHint}</Text>
+            <AppTextInput
+              accessibilityLabel={performanceTestDefinition(chosenTest).inputHint}
+              autoFocus
+              keyboardType={performanceTestDefinition(chosenTest).valueKind === 'seconds'
+                && (performanceTestDefinition(chosenTest).distanceMetres ?? 0) > 100
+                ? 'numbers-and-punctuation' : 'decimal-pad'}
+              onChangeText={setResultInput}
+              placeholder={performanceTestDefinition(chosenTest).inputPlaceholder}
+              placeholderTextColor={colors.input.placeholder}
+              style={styles.resultInput}
+              testID="progress-test-result-input"
+              value={resultInput}
+            />
+            {resultError ? <Text variant="caption" style={styles.errorText}>{resultError}</Text> : null}
+            <Button
+              label={PROGRESS_TAB_COPY.saveResult}
+              onPress={() => void savePerformanceResult()}
+              loading={savingResult}
+              glow={false}
+              testID="progress-save-test-result"
+            />
+          </View>
+        ) : null}
+      </Sheet>
     </SafeAreaView>
   );
 }
@@ -296,12 +575,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
   },
-  chartHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
   liftChartHeader: {
     alignItems: 'flex-start',
     flexDirection: 'row',
@@ -325,6 +598,82 @@ const styles = StyleSheet.create({
   chartTitle: { color: colors.text.primary, flex: 1 },
   chartValue: { color: colors.text.accent },
   chartRange: { color: colors.text.tertiary, textAlign: 'center' },
+  compactCard: {
+    backgroundColor: colors.surface.secondary,
+    borderColor: colors.neutral.gray700,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  testRow: {
+    alignItems: 'center',
+    borderBottomColor: colors.surface.tertiary,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 76,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  rowPressed: { backgroundColor: colors.surface.tertiary },
+  testIdentity: { flex: 1, minWidth: 0 },
+  testCategory: { color: colors.text.tertiary, textTransform: 'uppercase' },
+  testName: { color: colors.text.primary, marginTop: spacingValues.xxs },
+  testResult: { alignItems: 'flex-end', flexShrink: 0 },
+  resultValue: { color: colors.text.primary },
+  trendRow: { alignItems: 'center', flexDirection: 'row', gap: spacingValues.xxs, marginTop: spacingValues.xxs },
+  baselineText: { color: colors.text.secondary, marginTop: spacingValues.xxs },
+  chevron: { color: colors.text.secondary, fontSize: 24 },
+  measurementCard: {
+    backgroundColor: colors.surface.secondary,
+    borderColor: colors.neutral.gray700,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  measurementFields: { flexDirection: 'row', gap: spacing.sm },
+  measurementField: { flex: 1, minWidth: 0 },
+  inputLabel: { color: colors.text.secondary, marginBottom: spacing.xs },
+  inputShell: {
+    alignItems: 'center',
+    backgroundColor: colors.input.background,
+    borderColor: colors.input.border,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 50,
+    paddingHorizontal: spacing.md,
+  },
+  measurementInput: { color: colors.input.text, flex: 1, fontSize: 16, paddingVertical: spacing.sm },
+  inputUnit: { color: colors.text.secondary },
+  errorText: { color: colors.status.errorLight },
+  savedText: { color: colors.status.successLight },
+  sheetBody: { gap: spacing.md, paddingTop: spacing.sm },
+  testChoices: { flexDirection: 'row', gap: spacing.sm },
+  testChoice: {
+    alignItems: 'center',
+    borderColor: colors.neutral.gray700,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.sm,
+  },
+  testChoiceSelected: { backgroundColor: colors.accent.lime, borderColor: colors.accent.lime },
+  testChoiceText: { color: colors.text.primary, textAlign: 'center' },
+  testChoiceTextSelected: { color: colors.text.inverse, textAlign: 'center' },
+  resultInput: {
+    backgroundColor: colors.input.background,
+    borderColor: colors.input.border,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    color: colors.input.text,
+    fontSize: 18,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+  },
   emptyChart: {
     alignItems: 'center',
     height: CHART_HEIGHT,

@@ -240,10 +240,11 @@ function progressOwnsTheLoadHero(body: string): boolean {
   const screen = body.slice(screenStart, screenEnd);
   const title = screen.indexOf('testID="progress-tab-title"');
   const load = screen.indexOf('<LoadContinuum load={snapshot.load} />');
-  const twoKm = screen.indexOf('<TwoKmChart answer={snapshot.twoKmTimeTrial} />');
   const lifts = screen.indexOf('testID="progress-main-lifts"');
-  if (title < 0 || load < 0 || twoKm < 0 || lifts < 0) return false;
-  return title < load && load < twoKm && twoKm < lifts
+  const tests = screen.indexOf('testID="progress-performance-tests"');
+  const measurements = screen.indexOf('testID="progress-measurements"');
+  if (title < 0 || load < 0 || lifts < 0 || tests < 0 || measurements < 0) return false;
+  return title < load && load < lifts && lifts < tests && tests < measurements
     && body.includes('testID="progress-load-track"')
     && body.includes('testID="progress-load-sweet-spot"');
 }
@@ -290,12 +291,13 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
     progressOwnsTheLoadHero(progress)
       && glassFlow.includes('id: "progress-load-track"')
       && glassFlow.includes('id: "progress-load-sweet-spot"'));
-  ok('Progress renders chart-ready main-lift history and the recorded 2km answer',
+  ok('Progress renders chart-ready main lifts before compact tests and measurements',
     /snapshot\.mainLiftEstimates/.test(progress)
-      && /snapshot\.twoKmTimeTrial/.test(progress)
+      && !/snapshot\.twoKmTimeTrial|progress-two-km/.test(progress)
       && progressUsesTwoColumnLiftGrid(progress)
       && glassFlow.includes('id: "progress-main-lifts"')
-      && glassFlow.includes('id: "progress-two-km"'));
+      && glassFlow.includes('id: "progress-performance-tests"')
+      && glassFlow.includes('id: "progress-measurements"'));
   ok('the glass flow opens Progress and captures its populated dashboard',
     /id: "tab-progress"/.test(glassFlow)
       && /artifacts\/ui-walk\/progress-dashboard/.test(glassFlow));
