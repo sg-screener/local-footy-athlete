@@ -2,6 +2,54 @@
 
 Owner: `selectionrepair`
 
+## 2026-08-31 current-findings handoff — Step 1: Going Away selection is stable
+
+Going Away's dated equipment substitute no longer consumes the head of a pool.
+After today's equipment, exclusions, experience and same-day collision filters
+have produced the legal candidate set, the temporary row now asks the same typed
+block exercise selector that owns normal automatic choice. Its result is shown
+for that day only; the permanent block record remains the base selection.
+
+Two designs were compared:
+
+1. Hash `legal` locally inside the composer. Rejected because it would create a
+   second exercise-selection policy beside the block selector.
+2. Ask the shared typed selector with today's legal candidates and empty
+   temporary history, without recording its result. Chosen because legality and
+   athlete preference remain upstream, catalogue order cannot decide the row,
+   and the existing temporary-history boundary remains intact.
+
+Regression and liveness receipts:
+
+- Red first: the enriched `test:programming-catalogue-order-year` Going Away
+  tape changed 28 of 728 final athlete-days under catalogue reversal. The unit
+  is final athlete-date presentations across two athletes × 52 weeks; the first
+  four causal athlete-dates were male/female 2027-02-01 and 2027-02-04, with 24
+  later saved-load/prescription differences in this tape.
+- Corrected run: 0 / 728 final athlete-days differ. All four direct Going Away
+  athlete-date rows are present and equal, and every later logged/restarted day
+  is equal.
+- The tape uses the accepted Going Away action after accumulated history and a
+  cold restart, limits Monday–Friday to dumbbells/bands/bench, logs offered
+  sessions, clears the trip through the accepted action and reconstructs every
+  week after restart.
+- `test:equipment-scopes`: 20 / 20. Dated kit changes the real visible week,
+  every row is kit-legal, permanent selections are byte-stable, and the travel
+  world plus restoration survive restart.
+- `test:programming-catalogue-order`: 3 / 3.
+- Mutation: restoring `substitutedToday ? legal[0] : selection.identity`
+  returned the enriched tape to 28 / 728 changed athlete-days. Restoring the
+  shared selector returned it to 0 / 728.
+- The broader `test:exercise-rotation` remains blocked before its first
+  rotation cell by an inherited hand-built profile that omits newly required
+  onboarding fields, beginning with gender. It supplies no result for this
+  change and was not repaired in this scoped checkpoint.
+
+NOT COVERED at this checkpoint: physical iPhone presentation; native Going Away
+sheet taps; athlete profiles beyond the audited male/female inputs; Erg Flush
+modality preservation; and the two unique weight-progression concerns. No PDFs
+were generated and no whole-job completion is claimed.
+
 ## Boundary
 
 - Start from the current shared checkout; never reset to audit checkpoint

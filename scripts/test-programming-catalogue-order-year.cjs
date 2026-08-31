@@ -37,11 +37,13 @@ function run(args) {
 run([
   'scripts/run-programming-catalogue-order-year.cjs',
   '--kit=full',
+  '--going-away',
   `--output=${authored}`,
 ]);
 run([
   'scripts/run-programming-catalogue-order-year.cjs',
   '--kit=full',
+  '--going-away',
   '--reverse-catalogues',
   `--output=${reversed}`,
 ]);
@@ -56,5 +58,27 @@ if (receipt.same !== true || receipt.athleteYears !== 2 ||
     receipt.differingAthleteDays !== 0) {
   throw new Error(`finished-year catalogue-order invariant failed: ${comparison}`);
 }
+const authoredYear = JSON.parse(fs.readFileSync(path.join(authored, 'year-programs.json'), 'utf8'));
+const reversedYear = JSON.parse(fs.readFileSync(path.join(reversed, 'year-programs.json'), 'utf8'));
+const travelDates = ['2027-02-01', '2027-02-04'];
+let directTravelRows = 0;
+for (let athleteIndex = 0; athleteIndex < 2; athleteIndex += 1) {
+  for (const date of travelDates) {
+    const findDay = (year) => year.athletes[athleteIndex].weeks
+      .flatMap((week) => week.days).find((day) => day.date === date);
+    const before = findDay(authoredYear);
+    const after = findDay(reversedYear);
+    if (!before || !after) throw new Error(`Going Away liveness missing ${date}`);
+    if (!before.rows?.some((row) => !['conditioning', 'power'].includes(row.role))) {
+      throw new Error(`Going Away strength-row liveness missing ${date}`);
+    }
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      throw new Error(`Going Away catalogue reversal changed ${authoredYear.athletes[athleteIndex].gender} ${date}`);
+    }
+    directTravelRows += 1;
+  }
+}
+if (directTravelRows !== 4) throw new Error(`expected 4 direct Going Away athlete-date rows, got ${directTravelRows}`);
 console.log(`PASS reversing every automatic catalogue changes ${receipt.differingAthleteDays} / 728 athlete-days across 2 athlete-years`);
+console.log(`PASS ${directTravelRows} direct Going Away athlete-date rows and every later saved/restarted day are identical`);
 console.log('NOT COVERED: physical iPhone, native onboarding taps, athletes outside the audited male/female inputs');

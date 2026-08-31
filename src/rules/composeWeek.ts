@@ -1821,19 +1821,28 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * on the return date with nothing to remember. When BOTH are true of one
        * row the exclusion is named, because it is the half that outlives the
        * trip and the half the athlete can act on. */
-      /* ⚠ **THE SUBSTITUTE IS `legal[0]`, AND A "FRESHEST FIRST" VERSION OF THIS
-       * LINE WAS TRIED AND BACKED OUT THE SAME DAY.** `legal` is already ordered
-       * by `hingePriorityFirst` over `experiencePreferred`, so its head is the
-       * best row this athlete can do today. Preferring an UNUSED candidate
-       * instead shipped an Intermediate athlete `Bodyweight Squat` on a
-       * dumbbells-and-bands kit — caught by cell [4] of
-       * `test:equipment-scopes` — because `Goblet Squat`, the honest loaded
-       * answer, had been used earlier in the week and lost its freshness.
-       * Sam's ruling is the other way round: regressions are for an athlete with
-       * *"no loaded option"*, and this one had one. Week-local variety is the
-       * BASE selection's job, above; the substitute's job is the best legal row. */
+      /* The temporary row uses the SAME typed selector as the base row, but it
+       * is never recorded. `legal` has already applied today's equipment,
+       * exclusions, day collisions and experience preference, so the shared
+       * selector owns only the remaining phase/pin/stable-choice decision.
+       * This keeps the dated answer catalogue-order independent without turning
+       * it into permanent history or reintroducing freshness as a policy. */
       const substitutedToday = !legal.includes(selection.identity);
-      const identity = substitutedToday ? legal[0] : selection.identity;
+      const identity = substitutedToday
+        ? decideExerciseForBlock({
+            phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+            blockNumber: inputs.blockNumber,
+            slot,
+            group: null,
+            role,
+            legalCandidates: legal,
+            previousSelection: null,
+            currentBlockSelection: null,
+            recentSelections: [],
+            progressedIdentities: [],
+            pinnedIdentities: inputs.pinnedIdentities,
+          }).identity
+        : selection.identity;
       const changedByDayIdentity = identitiesThisDay.has(selection.identity)
         || (rdlAlreadyOnDay && RDL_FAMILY_IDENTITIES.has(selection.identity));
       const substitutionCause: NonNullable<ComposedRow['substitutedFor']>['cause'] | undefined =
