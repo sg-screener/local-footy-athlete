@@ -408,3 +408,50 @@ NOT COVERED at this checkpoint: the existing conditioning-template rotation
 restart red, physical-iPhone copy, Step 5's blocked Primer decision,
 release-chain integration and the corrected lived-year rerun. These continue
 in Steps 8–9; the phone remains untouched.
+
+## Step 8 — release-blocking programming-selection gate
+
+The release guard now exercises the finished compiler output, not a sample or
+an isolated selector. `test:programming-catalogue-order-year` generates the
+same complete 52-week male and female athlete programs twice from a corrected
+commercial-gym onboarding fixture: once with every automatic catalogue in its
+authored order and once with all four catalogue families reversed. It compares
+728 final athlete-days after every adapter, repair and projection step.
+
+The guard proved its own liveness on its first run. It failed on 24 / 728 final
+days, all female weeks 29–52. The first differing day was the automatic G-1
+Primer on 2027-04-16: authored order selected `Explosive Landmine Press` and
+`Box Jumps`, reversed order selected `Explosive Push-Up` and `Lateral Jump`.
+The existing compiler traces were byte-identical across that difference,
+showing that `sessionBuilder.pickPowerEntries` was a second, untraced power
+picker using filtered array position.
+
+The repair routes that derived Primer choice through the shared power selector,
+the same accepted block history, and the compiler's trace/output sinks. It does
+not sort the catalogue in place or weaken the mutation. The rerun is green:
+reversing every automatic catalogue changes **0 / 728 final athlete-days across
+2 complete athlete-years**.
+
+The named release gate is `test:programming-selection-release`. It joins the
+full-year order mutation to compiler trace integrity, catalogue reachability,
+power-pool policy, conditioning modality persistence, weekly deload ownership,
+block-two progression, final injury composition and generated-week assembly.
+`test:programming-hierarchy`, already in `test:bible`, now invokes this release
+gate, so it cannot remain a green side script nobody runs.
+
+Verification:
+
+- `test:programming-catalogue-order-year`: PASS, 0 / 728 differing final days.
+- `test:programming-selection-release`: PASS, including 7 / 7 trace cells,
+  5 / 5 reachability cells, 94 / 94 power-pool cells, 3 / 3 modality-restart
+  cells, 11 / 11 deload-owner cells, 41 / 41 block-two cells, 2 / 2 final
+  composition cells and 30 / 30 generated-assembly cells.
+- `test:primer-session`: 27 / 27 after the shared-selector repair.
+- `test:compile`: product 0 and devtools 0; the same four inherited test-scope
+  errors remain in `canonicalWeeklyCompilerSliceTests.ts`,
+  `fatiguePlumbingTests.ts` (2) and `fixtureMutationTransactionTests.ts`.
+
+NOT COVERED at this checkpoint: physical-iPhone execution, native onboarding
+taps, athlete profiles outside the audited male/female inputs, Step 5's blocked
+Primer-length decision, and the final corrected lived-year classification and
+strange-session review in Step 9. The phone remains untouched.

@@ -2164,6 +2164,13 @@ export function buildWorkoutsFromCoach(
           injuries: onboardingData?.injuries ?? [],
           equipmentTags: [...availableEquipment],
           daysToGame: rotationContext?.daysToGameByDay?.[cw.dayOfWeek],
+          powerSelectionHistory: [
+            ...(rotationContext?.powerSelectionHistory ?? []),
+            ...(rotationContext?.powerSelectionsOut ?? []),
+          ],
+          powerSelectionsOut: rotationContext?.powerSelectionsOut,
+          powerSelectionTracesOut: rotationContext?.selectionTracesOut,
+          powerSelectionBlockStartISO: rotationContext?.powerSelectionBlockStartISO,
           ...(onboardingData ? { onboardingData } : {}),
         },
       );

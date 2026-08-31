@@ -658,6 +658,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             composedStrengthDays,
             canonicalDosePolicyByDay: compiledDosePolicyByDay,
             daysToGameByDay: compiledDaysToGame,
+            powerSelectionHistory: args.powerSelectionHistory ?? [],
+            powerSelectionBlockStartISO: blockState.blockStart,
+            powerSelectionsOut: powerSelections,
+            selectionTracesOut: selectionTraces,
             canonicalPlanDoseResolved: true as const,
           },
           {

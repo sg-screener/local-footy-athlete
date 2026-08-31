@@ -8,6 +8,7 @@ const { execFileSync } = require('node:child_process');
 
 const repo = path.resolve(__dirname, '..');
 const reverse = process.argv.includes('--reverse-catalogues');
+const fullKit = process.argv.includes('--kit=full');
 const scopeArg = process.argv.find((arg) => arg.startsWith('--reverse-scope='));
 const reverseScope = scopeArg?.slice('--reverse-scope='.length) ?? 'all';
 const outputArg = process.argv.find((arg) => arg.startsWith('--output='));
@@ -21,6 +22,8 @@ const replace = (from, to) => {
   code = code.replace(from, to);
 };
 replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
+if (fullKit) replace('const profile=athleteAnswers(archetype);',
+  "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
 replace('const events = [];', `const catalogueOrderSelections = [];
 app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionTraceObserver((traces) => {
   catalogueOrderSelections.push(...traces.map((trace) => ({ decisionId: trace.decisionId, selected: trace.selected, reason: trace.selectionReason })));
@@ -55,6 +58,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original,
   sourceDriverSha256: originalHash,
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+  kit: fullKit ? 'onboarding commercial preset' : 'preserved partial audit input',
   catalogueOrder: reverse ? `reversed:${reverseScope}` : 'authored',
   catalogues: ['CONDITIONING_TEMPLATES', 'EXERCISE_TAGS', 'POWER_EXERCISE_POOL', 'every STRENGTH_POOLS anchor/accessory array'],
   notCovered: ['Physical iPhone', 'Native onboarding taps'],

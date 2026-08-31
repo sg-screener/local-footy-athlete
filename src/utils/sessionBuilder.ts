@@ -73,7 +73,13 @@ import {
   mobilityRegionOf,
   type MobilityRegion,
 } from '../rules/mobilitySessionComposition';
-import { eligiblePowerExercises, type PowerPoolEntry } from '../rules/powerExercisePool';
+import {
+  eligiblePowerExercises,
+  selectPowerExerciseWithTrace,
+  type BlockPowerSelection,
+  type PowerPoolEntry,
+} from '../rules/powerExercisePool';
+import type { AutomaticProgrammingSelectionTrace } from '../rules/programmingSelectionTrace';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { PowerFamily } from '../rules/powerPrimerPolicy';
@@ -92,6 +98,11 @@ export interface AthleteContext {
   // this field was its last shadow — carried everywhere, consumed nowhere.
   /** Full onboarding data — used for load estimation (strength levels, bodyweight). */
   onboardingData?: import('../types/domain').OnboardingData;
+  /** Compiler-owned history and evidence sink for automatically placed Primer power. */
+  powerSelectionHistory?: readonly BlockPowerSelection[];
+  powerSelectionsOut?: BlockPowerSelection[];
+  powerSelectionTracesOut?: AutomaticProgrammingSelectionTrace[];
+  powerSelectionBlockStartISO?: string;
 }
 
 /** Default context when no profile data is available. */
@@ -919,10 +930,11 @@ function pickPowerEntries(
   slot: { power: PowerFamily; count: number },
   athlete: AthleteContext,
   seed: number,
+  dateISO: string,
 ): PowerPoolEntry[] {
-  const eligible = eligiblePowerExercises({
+  const context = {
     family: slot.power,
-    phase: 'In-season',
+    phase: 'In-season' as const,
     // ⚠ **`ladderLevelForProfile`, NOT `ladderLevelForOnboardingAnswer`.** The
     // strict resolver THROWS on an answer with no crosswalk row, and this call
     // site is a session build, not a profile validation — an athlete whose
@@ -935,8 +947,14 @@ function pickPowerEntries(
     trainingAge: ladderLevelForProfile(athlete.onboardingData?.experienceLevel),
     reduced: false,
     availableEquipment: athlete.equipmentTags ?? [],
-    blockId: `primer-${seed}`,
-  }).filter(entry => exerciseProgrammingAllows(entry.name, {
+    blockId: athlete.powerSelectionBlockStartISO ?? `primer-${seed}`,
+    kind: 'primer' as const,
+    selectionContext: athlete.powerSelectionBlockStartISO ? {
+      blockStartISO: athlete.powerSelectionBlockStartISO,
+      history: athlete.powerSelectionHistory ?? [],
+    } : undefined,
+  };
+  const eligible = eligiblePowerExercises(context).filter(entry => exerciseProgrammingAllows(entry.name, {
     experienceLevel: athlete.onboardingData?.experienceLevel,
     daysToGame: athlete.daysToGame, route: 'primer',
   }) && athlete.injuries.every(injury => {
@@ -949,7 +967,47 @@ function pickPowerEntries(
   // whose shelf is empty yields no row; it does not borrow from the other one.
   const picks: PowerPoolEntry[] = [];
   for (let index = 0; index < slot.count && index < eligible.length; index++) {
-    picks.push(eligible[(Math.abs(seed) + index * 13) % eligible.length]);
+    const decision = selectPowerExerciseWithTrace(
+      { ...context, seatIndex: index },
+      {
+        dateISO,
+        weekStartISO: athlete.powerSelectionBlockStartISO ?? dateISO,
+        dayOfWeek: new Date(`${dateISO}T12:00:00Z`).getUTCDay(),
+        experience: athlete.onboardingData?.experienceLevel ?? null,
+        injuries: athlete.injuries.map((injury) => injury.bodyArea),
+        daysToGame: athlete.daysToGame ?? null,
+      },
+    );
+    const selected = decision.entry && eligible.some((entry) => entry.name === decision.entry?.name)
+      ? decision.entry
+      : [...eligible].sort((left, right) => left.name.localeCompare(right.name))[index % eligible.length];
+    picks.push(selected);
+    if (athlete.powerSelectionBlockStartISO && athlete.powerSelectionsOut &&
+        !athlete.powerSelectionsOut.some((row) =>
+          row.blockStartISO === athlete.powerSelectionBlockStartISO &&
+          row.family === slot.power && row.seatIndex === index)) {
+      athlete.powerSelectionsOut.push({
+        blockStartISO: athlete.powerSelectionBlockStartISO,
+        family: slot.power,
+        seatIndex: index,
+        exerciseName: selected.name,
+      });
+    }
+    athlete.powerSelectionTracesOut?.push(selected === decision.entry
+      ? decision.trace
+      : {
+          ...decision.trace,
+          selected: selected.name,
+          candidates: decision.trace.candidates.map((candidate) => ({
+            ...candidate,
+            eligible: eligible.some((entry) => entry.name === candidate.name),
+            rejectedBy: eligible.some((entry) => entry.name === candidate.name)
+              ? []
+              : candidate.rejectedBy.length > 0 ? candidate.rejectedBy : ['injury'],
+            rank: candidate.name === selected.name ? 1 : null,
+          })),
+          selectionReason: 'primer_safety_filter_then_stable_power_selection',
+        });
   }
   return picks;
 }
@@ -1107,7 +1165,7 @@ export function buildDerivedSession(
 
     // ── EXPLOSIVE POOL — the power pool's own eligibility owner decides ──
     if ('power' in slot) {
-      for (const entry of pickPowerEntries(slot, athlete, slotSeedForSource)) {
+      for (const entry of pickPowerEntries(slot, athlete, slotSeedForSource, dateStr)) {
         exercises.push(powerEntryToWorkoutExercise(entry, slot, workoutId, order));
         order += 1;
       }

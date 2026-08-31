@@ -154,6 +154,12 @@ export interface PoolDefinition {
 
 export interface RotationContext {
   daysToGameByDay?: Readonly<Partial<Record<number, number | null>>>;
+  /** Accepted prior power choices used by every compiler-owned power picker. */
+  powerSelectionHistory?: readonly import('../rules/powerExercisePool').BlockPowerSelection[];
+  powerSelectionBlockStartISO?: string;
+  powerSelectionsOut?: import('../rules/powerExercisePool').BlockPowerSelection[];
+  /** Shared compiler trace sink; derived Primer power choices write here too. */
+  selectionTracesOut?: import('../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
   /**
    * WRITER: canonical weekly compiler call site in generateProgram.
    * READER: buildWorkoutsFromCoach.
