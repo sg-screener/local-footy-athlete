@@ -5779,6 +5779,37 @@ failed. Seat `warmup`.
 
 ---
 
+**R-218f** · *"this drag and drop screen is so fucking glitchy ... the dragging
+doesn't lock into the next block ... I couldn't move Monday lowers to Wednesday"*
+(Sam, 2026-09-01) · **THE DAY IS THE TARGET; THE LITTLE RECTANGLE IS NOT A
+TINY RELEASE ZONE.**
+
+The old board only chose a target after release, and only when the release
+point sat inside the exact measured box. The date gutter and row gaps were dead
+zones, no destination lit up, and a missed Monday dropped over Wednesday's
+occupied half attempted a forbidden swap back into history even when Wednesday
+had an empty slot.
+
+The board now locks continuously to the nearest measured day and slot. Gaps
+belong to the nearer day; outside the board still cancels. A lime outline and
+haptic tick show the live destination, and the lifted card magnetically settles
+into that slot while the canonical move owner decides. The card is opaque, so
+the destination does not produce doubled text underneath it. A blocked target
+uses the existing refusal owner and red state.
+
+Dragging the exact past unlogged item currently named by the missed-session
+prompt is itself the explicit *No, move it* answer; no preliminary chip tap is
+required. No other past item becomes movable. Because a past move cannot put
+future work back into history, an available destination slot wins across that
+whole day. Ordinary future-to-future drags retain deliberate occupied-slot
+swaps. · `WORKING` — `test:week-board` §5/5b and
+`test:missed-session-prompt`; mutation disabling open-slot preference kills the
+exact Monday-to-Wednesday cell. Real iPhone 17 Pro simulator press-hold-drag
+verified lift, magnetic lock, occupied-session swap, landing and Save changes.
+Seat `weekdragux`.
+
+---
+
 **R-220** · *"pulling a strength day to a strength day just disappeared the
 session that was originally there = it didnt swap them"*, and his answer when
 shown the conflict: **swap them** (Sam, 2026-08-25) · **AN ABSORB ONTO A CLUB

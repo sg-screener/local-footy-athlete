@@ -585,6 +585,18 @@ export default function HomeScreenV2() {
     && currentWeekBoardFingerprint !== weekBoardOpeningFingerprint;
   const weekBoardSaveVisible = weekBoardOpen
     && (weekBoardHasChanges || weekBoardFinishState === 'confirmed');
+  /**
+   * Dragging the missed thing is itself an explicit "No, move it" answer.
+   * Requiring the athlete to tap that chip before the exact same box becomes
+   * draggable made an unlogged Monday look broken in Manage Week on Tuesday.
+   * Only the one missed item currently named by the prompt receives this
+   * permission; every other past row remains locked.
+   */
+  const weekBoardMoveSource = useMemo(() => {
+    if (missedMoveSource) return missedMoveSource;
+    const missed = weekBoardOpen ? missedSessionNotices[0] : null;
+    return missed ? { date: missed.date, kind: missed.kind } : null;
+  }, [missedMoveSource, missedSessionNotices, weekBoardOpen]);
 
   const closeWeekBoard = useCallback(() => {
     if (weekBoardCloseTimerRef.current) {
@@ -686,10 +698,10 @@ export default function HomeScreenV2() {
     setBoardRefusal(null);
     const todayISO = todayISOLocal();
     if (args.fromDate < todayISO && (
-      missedMoveSource?.date !== args.fromDate ||
+      weekBoardMoveSource?.date !== args.fromDate ||
       args.toDate < todayISO ||
-      (missedMoveSource.kind === 'game' ? args.box.kind !== 'game'
-        : missedMoveSource.kind === 'team_training' ? args.box.kind !== 'team_training'
+      (weekBoardMoveSource.kind === 'game' ? args.box.kind !== 'game'
+        : weekBoardMoveSource.kind === 'team_training' ? args.box.kind !== 'team_training'
           : args.box.kind === 'game' || args.box.kind === 'team_training')
     )) {
       setBoardRefusal(signedCopy('week.board.pastMoveRefusal'));
@@ -720,9 +732,9 @@ export default function HomeScreenV2() {
      */
     const offered = listPlanChangeOptionsForDay({
       visibleWeek: weekDays, date: args.fromDate, todayISO,
-      ...(missedMoveSource ? { pastUnloggedMove: {
-        sourceDate: missedMoveSource.date,
-        kind: missedMoveSource.kind,
+      ...(weekBoardMoveSource ? { pastUnloggedMove: {
+        sourceDate: weekBoardMoveSource.date,
+        kind: weekBoardMoveSource.kind,
       } } : {}),
     });
     /**
@@ -760,7 +772,7 @@ export default function HomeScreenV2() {
       origin: 'week',
       move: { toDate: args.toDate, scope },
     });
-  }, [handleMoveGameOnBoard, missedMoveSource, weekBoardRows, weekDays]);
+  }, [handleMoveGameOnBoard, weekBoardMoveSource, weekBoardRows, weekDays]);
 
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
     const projectedWorkout = projectedWorkoutByDate.get(day.date) ?? day.workout;
@@ -1401,7 +1413,7 @@ export default function HomeScreenV2() {
                     onMove={handleBoardMove}
                     onRefused={setBoardRefusal}
                     settleNonce={boardSettleNonce}
-                    moveSource={missedMoveSource}
+                    moveSource={weekBoardMoveSource}
                     todayISO={todayISOLocal()}
                   />
                 </View>

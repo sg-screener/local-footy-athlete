@@ -114,10 +114,13 @@ console.log('\n[5] Move opens Week and uses the board owner');
     /const openMissedMoveBoard[\s\S]{0,700}setPreferredProgramView\('week'\)[\s\S]{0,500}setWeekBoardOpen\(true\)/.test(home));
   ok('the missed identity reaches the board',
     /setMissedMoveSource\(\{ date: missed\.date, kind: missed\.kind \}\)/.test(home)
-      && /moveSource=\{missedMoveSource\}/.test(home));
+      && /moveSource=\{weekBoardMoveSource\}/.test(home));
+  ok('dragging the named missed box directly is itself an explicit move answer',
+    /const weekBoardMoveSource = useMemo/.test(home)
+      && /const missed = weekBoardOpen \? missedSessionNotices\[0\] : null/.test(home));
   ok('past permission reaches the producer',
-    /pastUnloggedMove:[\s\S]{0,120}sourceDate: missedMoveSource\.date/.test(home));
-  ok('ordinary past board rows cannot be dragged',
+    /pastUnloggedMove:[\s\S]{0,120}sourceDate: weekBoardMoveSource\.date/.test(home));
+  ok('past rows stay locked except for the one unlogged thing named by the prompt',
     /moveEnabled=\{row\.date >= todayISO \|\|/.test(board));
   ok('catch-up cannot move to another past date',
     /args\.toDate < todayISO/.test(home)

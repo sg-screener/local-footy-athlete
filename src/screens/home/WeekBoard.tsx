@@ -8,9 +8,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Haptics from 'expo-haptics';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { weekBoardDropRefusal, type WeekBoardBox, type WeekBoardDay } from '../../rules/weekBoard';
+import {
+  resolveWeekBoardSnapTarget,
+  type WeekBoardSnapRow,
+} from './weekBoardSnapTarget';
 
 /**
  * ── THE WEEK BOARD ──────────────────────────────────────────────────────────
@@ -80,11 +85,21 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
    * drawn.
    */
   const frames = React.useRef<Record<string, Frame>>({});
-  const rowTops = React.useRef<Record<string, number>>({});
+  const rowFrames = React.useRef<Record<string, Frame>>({});
   const boxesLeft = React.useRef<Record<string, number>>({});
+  const [lockedTarget, setLockedTarget] = React.useState<{
+    readonly date: string;
+    readonly boxId: string;
+    readonly state: 'ready' | 'blocked';
+  } | null>(null);
+  const [dragSource, setDragSource] = React.useState<{
+    readonly date: string;
+    readonly boxId: string;
+  } | null>(null);
+  const lockedTargetKey = React.useRef('');
 
   const rememberRow = (date: string) => (event: LayoutChangeEvent) => {
-    rowTops.current[date] = event.nativeEvent.layout.y;
+    rowFrames.current[date] = event.nativeEvent.layout;
   };
   const rememberBoxesContainer = (date: string) => (event: LayoutChangeEvent) => {
     boxesLeft.current[date] = event.nativeEvent.layout.x;
@@ -94,24 +109,129 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
     frames.current[`${date}:${boxId}`] = { x, y, width, height };
   };
 
-  /** The box under a point in board coordinates, or null. */
-  const boxAt = (px: number, py: number): { row: WeekBoardRow; box: WeekBoardBox } | null => {
-    for (const row of rows) {
-      const top = rowTops.current[row.date];
-      const left = boxesLeft.current[row.date];
-      if (top === undefined || left === undefined) continue;
-      for (const box of row.board.boxes) {
-        const frame = frames.current[`${row.date}:${box.id}`];
-        if (!frame) continue;
-        const x0 = left + frame.x;
-        const y0 = top + frame.y;
-        if (px >= x0 && px <= x0 + frame.width && py >= y0 && py <= y0 + frame.height) {
-          return { row, box };
-        }
-      }
+  const measuredRows = React.useCallback((): WeekBoardSnapRow[] => rows.flatMap((row) => {
+    const rowFrame = rowFrames.current[row.date];
+    const left = boxesLeft.current[row.date];
+    if (!rowFrame || left === undefined) return [];
+    const boxes = row.board.boxes.flatMap((box) => {
+      const frame = frames.current[`${row.date}:${box.id}`];
+      return frame ? [{
+        box,
+        frame: {
+          x: left + frame.x,
+          y: rowFrame.y + frame.y,
+          width: frame.width,
+          height: frame.height,
+        },
+      }] : [];
+    });
+    return [{ date: row.date, frame: rowFrame, boxes }];
+  }), [rows]);
+
+  const snapTargetAt = React.useCallback((
+    fromDate: string,
+    box: WeekBoardBox,
+    px: number,
+    py: number,
+  ) => resolveWeekBoardSnapTarget({
+    x: px,
+    y: py,
+    sourceKind: box.kind,
+    // A past unlogged session cannot swap future work back into history. If
+    // the destination has room, the useful interpretation is always "put it
+    // in that room", wherever across the day's row the finger happens to be.
+    preferOpenSlot: fromDate < todayISO,
+    rows: measuredRows(),
+  }), [measuredRows, todayISO]);
+
+  const boardPoint = React.useCallback((
+    fromDate: string,
+    boxId: string,
+    localX: number,
+    localY: number,
+  ): { x: number; y: number } | null => {
+    const origin = frames.current[`${fromDate}:${boxId}`];
+    const rowFrame = rowFrames.current[fromDate];
+    const left = boxesLeft.current[fromDate];
+    return origin && rowFrame && left !== undefined
+      ? { x: left + origin.x + localX, y: rowFrame.y + origin.y + localY }
+      : null;
+  }, []);
+
+  const clearLockedTarget = React.useCallback(() => {
+    lockedTargetKey.current = '';
+    setLockedTarget(null);
+  }, []);
+
+  const finishDrag = React.useCallback(() => {
+    clearLockedTarget();
+    setDragSource(null);
+  }, [clearLockedTarget]);
+
+  const beginDrag = React.useCallback((date: string, boxId: string) => {
+    clearLockedTarget();
+    setDragSource({ date, boxId });
+  }, [clearLockedTarget]);
+
+  const previewDrop = React.useCallback((
+    fromDate: string, boxId: string, localX: number, localY: number,
+  ) => {
+    const from = rows.find((row) => row.date === fromDate);
+    const box = from?.board.boxes.find((entry) => entry.id === boxId);
+    const point = boardPoint(fromDate, boxId, localX, localY);
+    const landed = box && point ? snapTargetAt(fromDate, box, point.x, point.y) : null;
+    if (!from || !box || !landed) {
+      if (lockedTargetKey.current) clearLockedTarget();
+      return;
     }
-    return null;
-  };
+    const targetRow = rows.find((row) => row.date === landed.date);
+    if (!targetRow) return;
+    const refusal = weekBoardDropRefusal({
+      box, from: from.board, target: landed.box, to: targetRow.board,
+    });
+    if (refusal === 'same_day') {
+      if (lockedTargetKey.current) clearLockedTarget();
+      return;
+    }
+    const state = !refusal ? 'ready' : 'blocked';
+    const nextKey = `${landed.date}:${landed.box.id}:${state}`;
+    if (nextKey === lockedTargetKey.current) return;
+    lockedTargetKey.current = nextKey;
+    setLockedTarget({ date: landed.date, boxId: landed.box.id, state });
+    void Haptics.selectionAsync().catch(() => undefined);
+  }, [boardPoint, clearLockedTarget, rows, snapTargetAt]);
+
+  const frameInBoard = React.useCallback((date: string, boxId: string): Frame | null => {
+    const frame = frames.current[`${date}:${boxId}`];
+    const rowFrame = rowFrames.current[date];
+    const left = boxesLeft.current[date];
+    return frame && rowFrame && left !== undefined ? {
+      x: left + frame.x,
+      y: rowFrame.y + frame.y,
+      width: frame.width,
+      height: frame.height,
+    } : null;
+  }, []);
+
+  const snapOffsetFor = React.useCallback((date: string, boxId: string) => {
+    if (!dragSource || dragSource.date !== date || dragSource.boxId !== boxId
+      || !lockedTarget || lockedTarget.state !== 'ready') return null;
+    const source = frameInBoard(date, boxId);
+    const target = frameInBoard(lockedTarget.date, lockedTarget.boxId);
+    return source && target
+      ? { x: target.x - source.x, y: target.y - source.y }
+      : null;
+  }, [dragSource, frameInBoard, lockedTarget]);
+
+  // An accepted move removes the source box from its old day. That projection
+  // update is the authoritative end of the drag; clear the magnetic target
+  // only then, rather than flashing the card back home before the move lands.
+  React.useEffect(() => {
+    if (!dragSource) return;
+    const sourceStillExists = rows.some((row) => row.date === dragSource.date
+      && row.board.boxes.some((box) => box.id === dragSource.boxId));
+    if (!sourceStillExists) finishDrag();
+  }, [dragSource, finishDrag, rows]);
 
   /**
    * ⚠ **THE GESTURE REPORTS `x`/`y` RELATIVE TO THE BOX IT STARTED ON**, not to
@@ -135,29 +255,31 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
     const from = rows.find((row) => row.date === fromDate);
     const box = from?.board.boxes.find((entry) => entry.id === boxId);
     if (!from || !box) return 'returned';
-    const origin = frames.current[`${fromDate}:${boxId}`];
-    const rowTop = rowTops.current[fromDate];
-    const left = boxesLeft.current[fromDate];
-    if (!origin || rowTop === undefined || left === undefined) return 'returned';
-    const landed = boxAt(left + origin.x + localX, rowTop + origin.y + localY);
+    const point = boardPoint(fromDate, boxId, localX, localY);
+    const landed = point ? snapTargetAt(fromDate, box, point.x, point.y) : null;
     // Dropped on nothing — the athlete changed their mind. Silence, not an error.
     if (!landed) return 'returned';
+    const targetRow = rows.find((row) => row.date === landed.date);
+    if (!targetRow) return 'returned';
     const refusal = weekBoardDropRefusal({
-      box, from: from.board, target: landed.box, to: landed.row.board,
+      box, from: from.board, target: landed.box, to: targetRow.board,
     });
     if (refusal === 'same_day') return 'returned';
     if (refusal) { onRefused(DROP_REFUSAL_COPY[refusal]); return 'returned'; }
-    onMove({ fromDate, toDate: landed.row.date, box });
+    onMove({ fromDate, toDate: landed.date, box });
     return 'held';
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onMove, onRefused, rows]);
+  }, [boardPoint, onMove, onRefused, rows, snapTargetAt]);
 
   return (
     <View style={styles.board} testID="week-board">
       {rows.map((row) => (
         <View
           key={row.date}
-          style={styles.row}
+          style={[
+            styles.row,
+            lockedTarget?.date === row.date && styles.lockedRow,
+          ]}
           testID={`week-board-day-${row.date}`}
           onLayout={rememberRow(row.date)}
         >
@@ -181,6 +303,12 @@ export function WeekBoard({ rows, onAdd, onRemove, onMove, onRefused, settleNonc
                 onAdd={onAdd}
                 onRemove={onRemove}
                 onDrop={handleDrop}
+                onHover={previewDrop}
+                onDragStart={beginDrag}
+                onDragFinish={finishDrag}
+                snapOffset={snapOffsetFor(row.date, box.id)}
+                dropState={lockedTarget?.date === row.date && lockedTarget.boxId === box.id
+                  ? lockedTarget.state : null}
                 moveEnabled={row.date >= todayISO || !!(moveSource && row.date === moveSource.date && (
                   moveSource.kind === 'game' ? box.kind === 'game'
                     : moveSource.kind === 'team_training' ? box.kind === 'team_training'
@@ -203,7 +331,8 @@ const DROP_REFUSAL_COPY: Record<string, string> = {
   day_full: "That day is full — two sessions is the most.",
 };
 
-function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDrop, moveEnabled }: {
+function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDrop,
+  onHover, onDragStart, onDragFinish, snapOffset, dropState, moveEnabled }: {
   box: WeekBoardBox;
   date: string;
   settleNonce?: number;
@@ -211,6 +340,11 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
   onAdd: (date: string) => void;
   onRemove: (date: string, box: WeekBoardBox) => void;
   onDrop: (fromDate: string, boxId: string, px: number, py: number) => 'held' | 'returned';
+  onHover: (fromDate: string, boxId: string, px: number, py: number) => void;
+  onDragStart: (date: string, boxId: string) => void;
+  onDragFinish: () => void;
+  snapOffset: { readonly x: number; readonly y: number } | null;
+  dropState: 'ready' | 'blocked' | null;
   moveEnabled: boolean;
 }) {
   if (box.kind === 'empty') {
@@ -222,10 +356,17 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
         testID={`week-board-add-${date}`}
         onLayout={onLayout}
         style={({ pressed }) => [
-          styles.box, styles.emptyBox, pressed && styles.boxPressed,
+          styles.box, styles.emptyBox,
+          dropState === 'ready' && styles.dropTargetReady,
+          dropState === 'blocked' && styles.dropTargetBlocked,
+          pressed && styles.boxPressed,
         ]}
       >
-        <MaterialCommunityIcons name="plus" size={18} color={colors.text.tertiary} />
+        <MaterialCommunityIcons
+          name={dropState === 'ready' ? 'arrow-down' : 'plus'}
+          size={18}
+          color={dropState === 'ready' ? colors.text.accent : colors.text.tertiary}
+        />
       </Pressable>
     );
   }
@@ -241,6 +382,9 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
   const lifted = useSharedValue(0);
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
+  const snapX = useSharedValue(0);
+  const snapY = useSharedValue(0);
+  const snapped = useSharedValue(0);
 
   /**
    * ⚠ **`activateAfterLongPress` IS WHAT LETS THIS LIVE INSIDE A SCROLLING
@@ -262,12 +406,25 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  React.useEffect(() => {
+    if (snapOffset) {
+      snapX.value = withTiming(snapOffset.x, { duration: 110 });
+      snapY.value = withTiming(snapOffset.y, { duration: 110 });
+      snapped.value = 1;
+    } else {
+      snapped.value = 0;
+    }
+  }, [snapOffset, snapX, snapY, snapped]);
+
   /** JS side of the drop: ask the board, then either hold or glide home. */
   const finishDrop = React.useCallback((px: number, py: number) => {
-    if (onDrop(date, box.id, px, py) === 'returned') glideHome();
+    if (onDrop(date, box.id, px, py) === 'returned') {
+      glideHome();
+      onDragFinish();
+    }
     // A 'held' box keeps its offset: the accepted move unmounts it onto its
     // new day, and settleNonce covers the flow ending without a change.
-  }, [onDrop, date, box.id, glideHome]);
+  }, [onDrop, date, box.id, glideHome, onDragFinish]);
 
   /* The flow this box's drop dispatched has ENDED (plan-change sheet closed).
    * If the box is still mounted it was not moved — glide it home. Skips the
@@ -277,8 +434,9 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
     if (settleNonce !== lastSettle.current) {
       lastSettle.current = settleNonce;
       glideHome();
+      onDragFinish();
     }
-  }, [settleNonce, glideHome]);
+  }, [settleNonce, glideHome, onDragFinish]);
 
   const pan = Gesture.Pan()
     .enabled(moveEnabled)
@@ -289,10 +447,17 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
       // See the note on `onEnd`.
       startX.value = event.x;
       startY.value = event.y;
+      runOnJS(onDragStart)(date, box.id);
     })
     .onUpdate((event) => {
       dx.value = event.translationX;
       dy.value = event.translationY;
+      runOnJS(onHover)(
+        date,
+        box.id,
+        startX.value + event.translationX,
+        startY.value + event.translationY,
+      );
     })
     .onEnd((event) => {
       /**
@@ -332,23 +497,45 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
       if (!dropDecided.value) {
         dx.value = withTiming(0, { duration: 180 });
         dy.value = withTiming(0, { duration: 180 });
+        runOnJS(onDragFinish)();
       }
     });
 
   const dragStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: dx.value },
-      { translateY: dy.value },
+      { translateX: snapped.value ? snapX.value : dx.value },
+      { translateY: snapped.value ? snapY.value : dy.value },
       { scale: lifted.value ? 1.03 : 1 },
     ] as never,
-    opacity: lifted.value ? 0.92 : 1,
+    opacity: 1,
+    backgroundColor: lifted.value
+      ? '#171A12'
+      : box.kind === 'team_training'
+        ? 'rgba(103,215,255,0.07)'
+        : 'rgba(255,255,255,0.04)',
+    borderWidth: lifted.value ? 1.5 : StyleSheet.hairlineWidth,
+    borderColor: lifted.value
+      ? colors.text.accent
+      : box.kind === 'team_training'
+        ? 'rgba(103,215,255,0.20)'
+        : 'rgba(255,255,255,0.08)',
+    shadowColor: lifted.value ? colors.text.accent : '#000000',
+    shadowOpacity: lifted.value ? 0.24 : 0,
+    shadowRadius: lifted.value ? 14 : 0,
+    shadowOffset: { width: 0, height: lifted.value ? 7 : 0 },
     zIndex: lifted.value ? 20 : 0,
     elevation: lifted.value ? 8 : 0,
   }));
 
   const content = (
     <Animated.View
-      style={[styles.box, box.kind === 'team_training' && styles.teamBox, dragStyle]}
+      style={[
+        styles.box,
+        box.kind === 'team_training' && styles.teamBox,
+        dropState === 'ready' && styles.dropTargetReady,
+        dropState === 'blocked' && styles.dropTargetBlocked,
+        dragStyle,
+      ]}
       testID={`week-board-box-${date}-${box.kind}`}
       onLayout={onLayout}
     >
@@ -372,6 +559,10 @@ function BoardBox({ box, date, settleNonce = 0, onLayout, onAdd, onRemove, onDro
 const styles = StyleSheet.create({
   board: { gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
+  lockedRow: {
+    backgroundColor: 'rgba(190,255,0,0.025)',
+    borderRadius: 14,
+  },
   /* ⚠ **THE DATE IS NOT A BOX — SAM, 2026-08-25 (R-218a): *"the dates don't
    * need to have their own boxes"*.** It was drawn as a filled, rounded cell
    * matching the session boxes beside it, which made the week read as three
@@ -414,6 +605,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderStyle: 'dashed',
     borderColor: 'rgba(255,255,255,0.16)',
+  },
+  dropTargetReady: {
+    borderWidth: 1.5,
+    borderColor: colors.text.accent,
+    backgroundColor: 'rgba(190,255,0,0.10)',
+  },
+  dropTargetBlocked: {
+    borderWidth: 1.5,
+    borderColor: '#FF7A85',
+    backgroundColor: 'rgba(255,122,133,0.08)',
   },
   boxPressed: { opacity: 0.6 },
   boxLabel: { flex: 1, color: colors.text.primary, fontSize: 13, fontWeight: '600' },

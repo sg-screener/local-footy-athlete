@@ -22,6 +22,7 @@ import {
   type WeekBoardBox,
 } from '../rules/weekBoard';
 import { signedCopy } from '../rules/signedCopy';
+import { resolveWeekBoardSnapTarget } from '../screens/home/weekBoardSnapTarget';
 
 // Registers the ruled athlete-facing strings before the direct copy checks.
 registerProjectionCopy();
@@ -213,9 +214,15 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
       && !/height: 58[\s\S]{0,80}hitTest/.test(board),
     'a hit-test built from style constants is a second copy of the layout');
 
-  ok('the gesture\'s box-relative point is converted into board space before hit-testing',
-    /boxAt\(left \+ origin\.x \+ localX, rowTop \+ origin\.y \+ localY\)/.test(board),
+  ok('the gesture\'s box-relative point is converted into board space before target resolution',
+    /x: left \+ origin\.x \+ localX, y: rowFrame\.y \+ origin\.y \+ localY/.test(board),
     'raw x/y would match the same offset inside every row — "wrong day" that is really "wrong space"');
+
+  ok('the locked target updates during the drag instead of being guessed only at release',
+    /\.onUpdate\(\(event\) => \{[\s\S]{0,500}runOnJS\(onHover\)/.test(board)
+      && /dropState === 'ready'/.test(board)
+      && /Haptics\.selectionAsync/.test(board),
+    'a floating card with no live destination gives the athlete no idea where it will land');
 
   /* ⚠ **THE DROP POINT IS START + TRANSLATION, AND THE FIRST BUILD SHIPPED THE
    * BUG THIS CATCHES.** Sam: *"the drag works but i cant seem to drop anything
@@ -248,7 +255,7 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
   ok('a dispatched move HOLDS the box; only a verdict or settleNonce sends it home',
     /'held' \| 'returned'/.test(board)
       && /return 'held';/.test(board)
-      && /=== 'returned'\) glideHome\(\)/.test(board)
+      && /=== 'returned'\) \{[\s\S]{0,100}glideHome\(\)/.test(board)
       && /if \(!dropDecided\.value\) \{/.test(board)
       && /settleNonce !== lastSettle\.current/.test(board)
       && !/dx\.value = 0;/.test(board));
@@ -304,6 +311,60 @@ console.log('\n[5] The drag: long-press to lift, measured frames, one move door'
     'Sam, 2026-08-25: dragging it moves it for this week, no question');
   ok('and it travels by move_team_night, never by move_session',
     /initialMove\.scope === 'team'[\s\S]{0,120}kind: 'move_team_night'/.test(sheet));
+}
+
+/* ══ 5b. Day-wide magnetic targets ══ */
+
+console.log('\n[5b] A drag locks to a day, and a missed session uses its open slot');
+{
+  const session: WeekBoardBox = {
+    id: 'upper', kind: 'session', label: 'Upper Body Pull',
+    scope: 'strength', binScope: 'strength',
+  };
+  const empty: WeekBoardBox = {
+    id: 'empty-wed', kind: 'empty', label: null, scope: null, binScope: null,
+  };
+  const rows = [
+    {
+      date: '2026-09-01', frame: { x: 0, y: 0, width: 330, height: 58 },
+      boxes: [
+        { box: session, frame: { x: 52, y: 0, width: 132, height: 58 } },
+        { box: empty, frame: { x: 194, y: 0, width: 132, height: 58 } },
+      ],
+    },
+    {
+      date: '2026-09-02', frame: { x: 0, y: 66, width: 330, height: 58 },
+      boxes: [
+        { box: session, frame: { x: 52, y: 66, width: 132, height: 58 } },
+        { box: empty, frame: { x: 194, y: 66, width: 132, height: 58 } },
+      ],
+    },
+  ] as const;
+
+  const inGap = resolveWeekBoardSnapTarget({
+    x: 118, y: 63, sourceKind: 'session', preferOpenSlot: false, rows,
+  });
+  ok('the gap between rows locks to the nearer day instead of becoming a dead zone',
+    inGap?.date === '2026-09-02');
+
+  const missedOntoOccupiedHalf = resolveWeekBoardSnapTarget({
+    x: 118, y: 90, sourceKind: 'session', preferOpenSlot: true, rows,
+  });
+  ok('a missed session targets Wednesday\'s open slot even over its occupied half',
+    missedOntoOccupiedHalf?.date === '2026-09-02'
+      && missedOntoOccupiedHalf.box.kind === 'empty',
+    'this is the Monday Lower → Wednesday case from Sam\'s phone');
+
+  const ordinaryOntoOccupiedHalf = resolveWeekBoardSnapTarget({
+    x: 118, y: 90, sourceKind: 'session', preferOpenSlot: false, rows,
+  });
+  ok('an ordinary future drag can still deliberately choose the occupied box to swap',
+    ordinaryOntoOccupiedHalf?.box.id === 'upper');
+
+  ok('letting go outside the board still cancels instead of moving to an edge day',
+    resolveWeekBoardSnapTarget({
+      x: 118, y: -20, sourceKind: 'session', preferOpenSlot: true, rows,
+    }) === null);
 }
 
 /* ══ 5a. Finish editing explicitly ══ */
