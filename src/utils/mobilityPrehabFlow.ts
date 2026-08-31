@@ -270,6 +270,7 @@ function fillMenu(
   menu: SessionFlowMenu,
   athlete: AthleteContext,
   seed: number,
+  sessionExerciseNames: ReadonlySet<string>,
 ): MobilityPrehabFlowMovement[] {
   const movements: MobilityPrehabFlowMovement[] = [];
   const taken = new Set<string>();
@@ -283,6 +284,11 @@ function fillMenu(
     for (let step = 0; step < candidates.length && filled < slot.count; step += 1) {
       const candidate = candidates[(slotSeed + step) % candidates.length];
       if (taken.has(candidate.id)) continue;
+      // Mobility / Warm-up prepares the prescribed work; it is not a second
+      // place to prescribe the same exercise. Filter at the selector so the
+      // slot can take its next legal authored candidate instead of deleting a
+      // duplicate after composition and needlessly shrinking the menu.
+      if (sessionExerciseNames.has(canonicalExerciseName(candidate.name))) continue;
       taken.add(candidate.id);
       movements.push({ exercise: candidate, category: slot.category });
       filled += 1;
@@ -341,6 +347,7 @@ function retainPerformed(
   filled: MobilityPrehabFlowMovement[],
   performedMovementIds: readonly string[],
   athlete: AthleteContext,
+  sessionExerciseNames: ReadonlySet<string>,
 ): MobilityPrehabFlowMovement[] {
   if (performedMovementIds.length === 0) return filled;
 
@@ -354,6 +361,11 @@ function retainPerformed(
     // An id no pool knows is a record of something this build cannot draw. It
     // is skipped rather than turned into a movement with invented content.
     if (!exercise) continue;
+    // R-213 retains completed warm-up history through a changed main lift, but
+    // it must not manufacture two visible prescriptions for one exercise. The
+    // load-bearing session row wins this one collision; every non-conflicting
+    // completed warm-up movement retains the established behavior below.
+    if (sessionExerciseNames.has(canonicalExerciseName(exercise.name))) continue;
     const category = authoredCategoryOf(exercise);
     if (!category) continue;
     restored.push({ exercise, category });
@@ -383,10 +395,27 @@ export function selectMobilityPrehabFlow(
   const menu = SESSION_FLOW_MENUS.find((entry) => entry.dayType === dayType);
   if (!menu) return null;
 
+  const sessionRows = getSessionComponentRows(workout);
+  const sessionExerciseNames = new Set(
+    [
+      ...sessionRows.powerRows,
+      ...sessionRows.speedRows,
+      ...sessionRows.strengthRows,
+      ...sessionRows.supportRows,
+      ...sessionRows.conditioningRows,
+      ...sessionRows.mobilityRows,
+      ...sessionRows.recoveryRows,
+      ...sessionRows.teamTrainingRows,
+    ].map((row) => canonicalExerciseName(
+      String(row?.exercise?.name ?? row?.name ?? '').trim(),
+    )).filter(Boolean),
+  );
+
   const movements = retainPerformed(
-    fillMenu(menu, context.athlete, dateHash(context.date)),
+    fillMenu(menu, context.athlete, dateHash(context.date), sessionExerciseNames),
     context.performedMovementIds,
     context.athlete,
+    sessionExerciseNames,
   );
   // An empty draw is no flow rather than an empty one.
   if (movements.length === 0) return null;
@@ -395,7 +424,8 @@ export function selectMobilityPrehabFlow(
   const traces: AutomaticProgrammingSelectionTrace[] = movements.map((movement, seatIndex) => {
     const seen = seenByCategory.get(movement.category) ?? new Set<string>();
     const candidates = flowSlotCandidates(movement.category, context.athlete).map((candidate) => {
-      const alreadyOnDay = seen.has(candidate.id);
+      const alreadyOnDay = seen.has(candidate.id)
+        || sessionExerciseNames.has(canonicalExerciseName(candidate.name));
       return {
         name: candidate.name,
         eligible: !alreadyOnDay,

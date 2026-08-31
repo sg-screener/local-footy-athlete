@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-warmup-never-repeats-session-exercise',
+    law: 'R-292: a derived Mobility / Warm-up never repeats a canonical exercise identity already prescribed in visible session work; the selector takes the next legal candidate from the same authored slot, and completed-flow retention yields only at that exact load-bearing collision.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-292',
+    guard: {
+      state: 'guarded',
+      by: 'test:mobility-flow',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Sam opened a session containing Crab Walks once in Mobility / Warm-up and again in Strength. The completed two-year audit contained 53 warm-up/main overlaps, proving a class defect. The exact Crab Walks cell and a 224-composition menu/date matrix began red; a performed-warm-up collision cell also began red. The shared selector now excludes every canonical visible-session identity before filling each authored slot and marks the candidate already_on_day in the compiler trace; the exact and matrix cells pass. Removing the exclusion recreates the reds. Final annual/device receipt: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-atg-exercise-display-acronym',
     law: 'R-291: every athlete-facing exercise projection writes ATG Split Squat, never Atg Split Squat; the shared display formatter preserves ATG as an acronym without changing the canonical programming identity.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-291',

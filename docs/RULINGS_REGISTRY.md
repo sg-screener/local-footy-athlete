@@ -7336,3 +7336,21 @@ and programming identities remain unchanged.
 Guard: `LAW-atg-exercise-display-acronym` and `test:exercise-display`.
 Verification status and physical-phone receipt:
 `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-292** · Mobility / Warm-up never repeats a session exercise, 2026-08-31.
+
+Owner: selectionrepair. A derived Mobility / Warm-up flow may not prescribe an
+exercise whose canonical identity already appears in the workout's visible
+Power, Strength, Speed, Conditioning, Mobility or Recovery content. The
+warm-up selector takes the next legal exercise from the same authored slot; it
+does not delete a duplicate after composition or change the main session.
+
+R-213's completed-warm-up retention remains authoritative except at this exact
+collision: if a later session edit puts a completed warm-up exercise into the
+load-bearing session, that main row wins and the flow does not restore a second
+visible prescription for the same movement. Non-conflicting completed warm-up
+movements still survive re-derivation.
+
+Guard: `LAW-warmup-never-repeats-session-exercise` and `test:mobility-flow`.
+Verification status and physical-phone receipt:
+`docs/STATUS_SELECTIONREPAIR.md`.

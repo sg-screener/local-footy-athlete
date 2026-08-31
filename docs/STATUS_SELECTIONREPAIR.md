@@ -1038,3 +1038,59 @@ read `ATG Split Squat` on your phone?
 NOT COVERED: visual acceptance of the corrected letters, Dynamic Type,
 VoiceOver and unrelated exercise-name copy. Build, signature, in-place install,
 version query and launch were covered.
+
+## 2026-08-31 — warm-up repeated an exercise from the main session
+
+Sam opened a generated session whose warm-up contained `Crab Walks` and whose
+main strength work contained the same exercise. This was a real selection defect,
+not a copy-only defect. The derived Mobility/Warm-up selector filled its own menu
+without excluding canonical exercise identities already prescribed in the visible
+session.
+
+The completed two-athlete full-year instrument (2 athletes x 52 weeks, 728
+athlete-days) contained 53 affected athlete-days and 53 duplicate occurrences,
+covering 10 distinct canonical identities: `Banded External Rotation`,
+`Bottoms-Up KB Press`, `Cossack Squat`, `Crab Walks`, `Lateral Lunge`,
+`SL 45° Back Extension Hold`, `Scap Pull Ups`, `Scap Push-Up`,
+`Slant Board Step-Down`, and `Swiss Ball Hamstring Curl`. The exact male and
+female 2026-09-30 witness contained `Crab Walks` in both sections.
+
+Two fixes were compared:
+
+1. Hide a duplicate while rendering the warm-up. Rejected because it silently
+   shrinks the menu and leaves the selector and its trace claiming the duplicate.
+2. Make session identities an input to the selector and take the next legal
+   same-slot candidate. Chosen because the selection owner now enforces the rule
+   and every consumer receives an honest, complete menu.
+
+The selector now compares canonical identities across all visible session-row
+buckets before filling a warm-up slot. It also preserves R-213's completed-row
+retention except at the precise collision boundary: if an athlete completed a
+warm-up row and that identity later becomes load-bearing session work, it yields
+instead of being restored as a duplicate.
+
+Red-first evidence named three failures: the exact `Crab Walks` witness, the
+224-composition collision matrix (4 session shapes x 56 dates), and the performed
+warm-up collision. All three are green after the selection fix. The focused
+mobility-flow suite reports 75 passing cells and 3 inherited UI source-shape
+failures that were already red before this change. Quick exercise actions report
+62 / 62; programming-selection trace 10 / 10; and the complete
+`test:programming-selection-release` chain exits 0.
+
+A fresh real-onboarding two-athlete 52-week generation now reports 0 affected
+athlete-days, 0 duplicate occurrences, and 0 distinct duplicate identities.
+Its year-program JSON SHA-256 is
+`1b34317da8c24fe8da3c287c5ed5f166b4e2504757404ada9a6ca443fe5188f5`.
+R-292 and registry row `LAW-warmup-never-repeats-session-exercise` bind the rule
+to `test:mobility-flow` in `test:bible`.
+
+Compile reports product 0 and devtools 0, with the same four inherited test-only
+errors in three unrelated harness files. The law-registry gate accepts R-292 and
+reports 226 total / 205 guarded, remaining red only on the inherited 21
+`UNENFORCED` rows.
+
+NOT COVERED at this checkpoint: physical-iPhone installation and visual
+acceptance, athlete profiles beyond the preserved male/female year inputs,
+performed-collision execution on glass, Dynamic Type/VoiceOver, and a whole-app
+PASS. The programming defect and its full-year class are covered; L10 acceptance
+still requires Sam's phone.

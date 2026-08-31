@@ -60,6 +60,7 @@ import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { performedMobilityMovementIds } from '../utils/sessionExecutionChecklist';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 
 const src = path.resolve(__dirname, '..');
 
@@ -348,6 +349,82 @@ console.log('\n[2] Filtered like every other pool draw — and it SHRINKS, never
       thin.movements.every((m) => authoredShapeIncludes('upper', m.category)),
     `got ${thin?.movementCount} movements: `
       + `${(thin?.movements ?? []).map((m) => m.category).join(', ')}`,
+  );
+}
+
+console.log('\n[2a] A warm-up never repeats work already prescribed in the session');
+{
+  const crabWalkSession = workoutOf({
+    exercises: [
+      row('Back Squat'),
+      row('RDLs'),
+      row('Reverse Lunges'),
+      row('Hamstring Curl'),
+      row('Crab Walks'),
+    ],
+  });
+  const crabWalkFlow = flowFor(crabWalkSession, { ...IN_SEASON, date: '2026-09-30' });
+  ok(
+    'the exact lived Crab Walks session does not repeat it in Mobility / Warm-up',
+    !movementNames(crabWalkFlow).includes('Crab Walks'),
+    `warm-up ${JSON.stringify(movementNames(crabWalkFlow))}`,
+  );
+
+  const shapes = [
+    { label: 'lower squat', names: ['Back Squat'] },
+    { label: 'lower hinge', names: ['RDLs'] },
+    { label: 'upper', names: ['Bench Press', 'Barbell Row'] },
+    { label: 'full body', names: ['Back Squat', 'Bench Press'] },
+  ] as const;
+  const overlaps: string[] = [];
+  let compared = 0;
+  for (const shape of shapes) {
+    for (let day = 0; day < 56; day += 1) {
+      const date = new Date(Date.UTC(2026, 7, 31 + day)).toISOString().slice(0, 10);
+      const base = workoutOf({ exercises: shape.names.map((name) => row(name)) });
+      const initial = flowFor(base, { ...IN_SEASON, date });
+      const collisionName = initial?.movements[0]?.exercise.name;
+      if (!collisionName) continue;
+      const withCollision = workoutOf({
+        exercises: [...shape.names.map((name) => row(name)), row(collisionName)],
+      });
+      const redrawn = flowFor(withCollision, { ...IN_SEASON, date });
+      const mainNames = new Set(
+        withCollision.exercises.map((entry: any) =>
+          canonicalExerciseName(entry.exercise.name)),
+      );
+      const duplicated = movementNames(redrawn).filter((name) =>
+        mainNames.has(canonicalExerciseName(name)));
+      compared += 1;
+      if (duplicated.length > 0) {
+        overlaps.push(`${shape.label} ${date}: ${duplicated.join(', ')}`);
+      }
+    }
+  }
+  ok('the cross-section matrix reached every menu/date shape', compared === 224,
+    `compared ${compared} / 224`);
+  ok(
+    'all 224 menu/date compositions exclude every existing session exercise',
+    overlaps.length === 0,
+    overlaps.slice(0, 12).join('; '),
+  );
+
+  const performedBase = workoutOf({ exercises: [row('Back Squat')] });
+  const performedFlow = flowFor(performedBase, { ...IN_SEASON, date: '2026-09-01' });
+  const performedMovement = performedFlow!.movements[0];
+  const changedMain = workoutOf({
+    exercises: [row('Back Squat'), row(performedMovement.exercise.name)],
+  });
+  const retainedAfterMainChange = flowFor(changedMain, {
+    ...IN_SEASON,
+    date: '2026-09-01',
+    performedMovementIds: [performedMovement.exercise.id],
+  });
+  ok(
+    'a performed warm-up is not restored as a duplicate after that exercise enters main work',
+    !movementNames(retainedAfterMainChange).some((name) =>
+      canonicalExerciseName(name) === canonicalExerciseName(performedMovement.exercise.name)),
+    `main ${performedMovement.exercise.name}; warm-up ${JSON.stringify(movementNames(retainedAfterMainChange))}`,
   );
 }
 
