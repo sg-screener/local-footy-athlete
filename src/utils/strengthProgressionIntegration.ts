@@ -364,13 +364,23 @@ export function classifyProgressionEligibility(exerciseName: string): ExerciseRo
   return null;
 }
 
+/**
+ * A row must opt into strength progression by both exercise type and compiler
+ * route. Shoulder prehab can contain a low-load press, but its authored purpose
+ * is joint control rather than progressive strength overload; reading only the
+ * display name turned that typed prehab row into an ordinary secondary lift.
+ */
+function rowCanReceiveStrengthProgression(exercise: WorkoutExercise): boolean {
+  if (!participatesInCounting(exercise)) return false;
+  if (exercise.section18Evidence?.slot === 'shoulder_prehab') return false;
+  return classifyProgressionEligibility(exercise.exercise?.name || '') !== null;
+}
+
 export function workoutHasProgressableStrengthRows(workout: Workout): boolean {
   if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') {
     return false;
   }
-  return workout.exercises.some((exercise) =>
-    !!classifyProgressionEligibility(exercise.exercise?.name || '')
-  );
+  return workout.exercises.some(rowCanReceiveStrengthProgression);
 }
 
 /**
@@ -712,7 +722,7 @@ export function applyStrengthProgression(
     // defect outright. It was live the moment power became a row: the name
     // probe below reads `Explosive Push-up` as pressing work and progressed it
     // from 3 sets to 4 in week 4 of a block. Found by the differential harness.
-    if (!participatesInCounting(ex)) return ex;
+    if (!rowCanReceiveStrengthProgression(ex)) return ex;
     const name = ex.exercise?.name || '';
     const role = classifyProgressionEligibility(name);
 

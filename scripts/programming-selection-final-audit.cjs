@@ -87,7 +87,10 @@ const dayRecords = [];
 for (const athlete of year.athletes) {
   for (const week of athlete.weeks) {
     for (const day of week.days) {
-      const rows = flattenRows([...(day.rows ?? []), ...(day.speedRows ?? [])]);
+      const rows = [
+        ...flattenRows(day.rows ?? []).map((row) => ({ ...row, auditSurface: 'session_template' })),
+        ...flattenRows(day.speedRows ?? []).map((row) => ({ ...row, auditSurface: 'speed_component' })),
+      ];
       const record = { athlete, gender: athlete.gender, week, weekStart: week.start, day, rows };
       dayRecords.push(record);
       for (const row of rows) occurrences.push({ ...record, row });
@@ -197,7 +200,7 @@ const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
 const restartFailures = year.athletes.flatMap((athlete) => athlete.restarts
   .filter((restart) => !restart.ok).map((restart) => ({ gender: athlete.gender, ...restart })));
 const missingConditioningModalities = occurrences.filter(({ row }) =>
-  (row.domainRole ?? row.role) === 'conditioning' && resolveTemplateByName(row.name) && !row.modalityLabel)
+  row.auditSurface === 'session_template' && resolveTemplateByName(row.name) && !row.modalityLabel)
   .map(({ gender, day, row }) => ({ gender, date: day.date, template: row.name }));
 const squatlessLowerSessions = dayRecords.filter(({ day, rows }) =>
   (day.parts ?? []).some((part) => part.kind === 'strength' && /lower squat/i.test(part.name)) &&
