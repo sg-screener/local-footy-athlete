@@ -7599,3 +7599,15 @@ matching, cues, video links and programming selection remain unchanged.
 Guard: `LAW-sl-exercise-display-acronym` through chained
 `test:exercise-display`. Verification and NOT COVERED:
 `docs/STATUS_EXERCISEACRONYM.md`.
+
+**R-302** · Strength day headlines choose Speed or Conditioning, 2026-09-01.
+
+Owner: daytitlepriority. Sam ruled that `Strength + Speed` is correct when no
+conditioning is present, but a day containing all three must read
+`Strength + Conditioning`, never `Strength + Speed + Conditioning`. The Speed
+section remains visible and unchanged inside the same day; only its priority in
+the compact day/week headline changes.
+
+Guard: `LAW-strength-day-headline-priority` through chained
+`test:day-first-timeline`. Verification and NOT COVERED:
+`docs/STATUS_DAYTITLEPRIORITY.md`.

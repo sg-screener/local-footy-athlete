@@ -251,6 +251,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-strength-day-headline-priority',
+    law: 'R-302: a Strength day headline names Speed when Speed is the second training quality, but names Conditioning instead when Conditioning is also present. It therefore reads Strength + Speed or Strength + Conditioning, never Strength + Speed + Conditioning, while every typed section remains visible in the timeline.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-302',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `daytitlepriority`. The exact three-part title cell began red while the two-part Strength + Speed control stayed green. The shared visible-day headline owner now removes only the Speed bucket from the compact title when Strength, Speed and Conditioning are all present; the Speed part and rows remain untouched. Removing that priority branch recreates the exact red. The focused day-title tape is 57/57; its chained Week-board continuation retains one unrelated inherited adapter failure. Physical-iPhone Release remains pending.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

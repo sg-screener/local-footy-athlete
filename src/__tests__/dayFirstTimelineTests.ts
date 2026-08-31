@@ -2301,11 +2301,40 @@ run('POWER is not a part — a day\'s power work sits inside Strength, first', (
 //    or strength + conditioning. On the daily it can get more granular and be
 //    like Upper body push and MAS work or whatever it is i think"
 //
-// The week row and the day title say ALL of the day's buckets, joined by his own
-// " + ", in timeline order, each word once.
+// The week row and the day title say the day's PRIMARY buckets, joined by his
+// own " + ", in timeline order, each word once. Speed is named beside Strength
+// until Conditioning is also present; then Conditioning owns the second title
+// seat while the Speed component remains visible in the timeline.
 // ─────────────────────────────────────────────────────────────────────────────
 
-run('a day is named with ALL of its buckets, in timeline order, each word once', () => {
+run('Strength headlines choose Speed OR Conditioning, never all three', () => {
+  world();
+  const titleDay = (kinds: readonly ('strength' | 'speed' | 'conditioning')[]) => ({
+    date: '2026-09-01',
+    kind: 'training',
+    owner: 'plan',
+    headline: signedCopy('day.headline.training'),
+    capabilities: { canAdd: true, canMoveWholeDay: true, canRemoveWholeDay: true, refusal: null },
+    parts: kinds.map((kind, index) => ({
+      id: `part-${kind}-${index}`,
+      kind,
+      headline: signedCopy(`part.headline.${kind}`),
+      bucket: signedCopy(`part.headline.${kind}`),
+      detail: null,
+      rows: [],
+      capabilities: { canSwap: false, canMove: false, canRemove: false, canEditRows: false },
+      countsTowardLoad: true,
+    })),
+  }) as unknown as VisibleDay;
+
+  assert(String(visibleDayLeadHeadline(titleDay(['strength', 'speed']))) === 'Strength + Speed',
+    'Strength + Speed no longer keeps Speed when Conditioning is absent.');
+  assert(String(visibleDayLeadHeadline(titleDay(['strength', 'speed', 'conditioning'])))
+      === 'Strength + Conditioning',
+    'a Strength + Speed + Conditioning day still publishes all three title words.');
+});
+
+run('a day is named with its primary buckets, in timeline order, each word once', () => {
   world();
   let compound = 0;
   let checked = 0;
@@ -2323,6 +2352,10 @@ run('a day is named with ALL of its buckets, in timeline order, each word once',
       for (const part of day.parts) {
         const word = String(part.bucket);
         if (!expected.includes(word)) expected.push(word);
+      }
+      if (expected.includes('Strength') && expected.includes('Conditioning')) {
+        const speedIndex = expected.indexOf('Speed');
+        if (speedIndex >= 0) expected.splice(speedIndex, 1);
       }
       assert(String(visibleDayLeadHeadline(day)) === expected.join(String(JOINER)),
         `${day.date} is named "${visibleDayLeadHeadline(day)}" but holds buckets `

@@ -29,7 +29,7 @@
  * never be one.
  */
 
-import { joinSignedCopy, type SignedCopy } from './signedCopy';
+import { joinSignedCopy, signedCopy, type SignedCopy } from './signedCopy';
 import type {
   VisibleDay,
   VisiblePartKind,
@@ -93,8 +93,10 @@ export interface VisibleDayDetail {
  *     carrying a real squat projects `kind: 'game'` with `parts[0].kind:
  *     'strength'`, and would lead with "Strength" without this. Traced, not
  *     assumed. A fixture's title is its fixture either way.
- *   - Any other day with parts leads with EVERY BUCKET ITS PARTS BELONG TO,
- *     joined by the signed separator, in timeline order, each word once.
+ *   - Any other day with parts leads with its PRIMARY BUCKETS, joined by the
+ *     signed separator, in timeline order, each word once. Strength + Speed is
+ *     the two-part title until Conditioning is present; then the title is
+ *     Strength + Conditioning while Speed remains visible in the timeline.
  *   - Zero parts (rest) falls back to `day.headline`.
  *
  * IT WAS `parts[0].headline` UNTIL 2026-08-08 MORNING, and `parts[0].bucket`
@@ -203,6 +205,17 @@ function dayBuckets(
     if (seen.has(part.bucket)) continue;
     seen.add(part.bucket);
     buckets.push(part.bucket);
+  }
+  /* R-302 — THREE CONTENT SECTIONS DO NOT NEED A THREE-WORD HEADLINE.
+     Speed remains a complete visible part below the title. It owns the second
+     headline seat only when Conditioning is absent; Conditioning takes that
+     seat when both are present. This is presentation priority over typed
+     buckets, not a deletion or reclassification of the Speed session. */
+  const strength = signedCopy('part.headline.strength');
+  const conditioning = signedCopy('part.headline.conditioning');
+  const speed = signedCopy('part.headline.speed');
+  if (seen.has(strength) && seen.has(conditioning) && seen.has(speed)) {
+    return buckets.filter((bucket) => bucket !== speed);
   }
   return buckets;
 }
