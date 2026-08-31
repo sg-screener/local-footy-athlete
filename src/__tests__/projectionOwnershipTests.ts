@@ -54,7 +54,12 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { getSessionComponents } from '../utils/sessionComponents';
-import { partHoldsTheDayDown, project, projectParts } from '../rules/projectVisibleWeek';
+import {
+  partHoldsTheDayDown,
+  project,
+  projectParts,
+  projectSessionComponentsForDay,
+} from '../rules/projectVisibleWeek';
 import { projectDayDetail, visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { UnsignedCopyError, isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
@@ -156,6 +161,32 @@ run('project() agrees with the derivation it succeeds, one ruled fold aside', ()
     'no day in three generated weeks carries both a power and a strength '
     + 'component, so the fold this cell allows for was never exercised — the '
     + 'allowance is untested and the cell is back to asserting 1:1 by accident.');
+});
+
+run('Day and Week share Strength → Speed → Conditioning section order', () => {
+  const components = [
+    { id: 'speed', kind: 'speed', label: 'speed work', completionPolicy: 'required' },
+    { id: 'strength', kind: 'strength', label: 'strength work', completionPolicy: 'required' },
+    { id: 'conditioning', kind: 'conditioning', label: 'conditioning', completionPolicy: 'required' },
+  ] as const;
+  // Non-vacuity/liveness: input deliberately matches the extractor order that
+  // caused the defect. These are typed domain components, not a hand-seeded
+  // athlete state; Sam's photographed session is the reachability witness.
+  assert(JSON.stringify(components.map((component) => component.kind))
+      === JSON.stringify(['speed', 'strength', 'conditioning']),
+    'the ordering exhibit no longer arrives Speed before Strength');
+
+  const parts = projectSessionComponentsForDay({
+    date: '2026-08-31', components, onDay: 'training',
+  });
+  assert(JSON.stringify(parts.map((part) => part.kind))
+      === JSON.stringify(['strength', 'speed', 'conditioning']),
+    `Day/Week structural order is ${JSON.stringify(parts.map((part) => part.kind))}`);
+  assert(JSON.stringify(parts.map((part) => part.id))
+      === JSON.stringify([
+        '2026-08-31:strength', '2026-08-31:speed', '2026-08-31:conditioning',
+      ]),
+    `Day/Week part identities are ${JSON.stringify(parts.map((part) => part.id))}`);
 });
 
 run('project() evaluates without throwing and every headline is registered copy', () => {

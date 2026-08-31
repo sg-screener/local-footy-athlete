@@ -1398,3 +1398,75 @@ test:power-pool` gates.
 NOT COVERED at this checkpoint: native onboarding pixels/taps, the exact saved
 answer on Sam's phone, Android, remote sync, and a whole-app PASS. Neither
 physical phone was touched.
+
+## 2026-08-31 — one Session / Day / Week section order (R-297)
+
+Root cause confirmed. The active Session plan already used an explicit section
+order, but `projectVisibleWeek` emitted the component extractor's arrival order.
+That extractor intentionally returned Speed before Strength, so both the Day
+timeline and expanded Week card showed the wrong order while Session was right.
+Movement Prep was already mounted before the projected parts.
+
+Two options were compared: add a local sort in the Day/Week projection, or move
+the existing active-Session order into one pure typed owner used by both the
+execution plan and visible projection. The shared owner landed because a second
+comparator would allow the same three surfaces to drift again.
+
+Implemented:
+
+- `sessionSectionOrder.ts` now owns the typed section order and the mapping from
+  stored session component kind to execution section.
+- The active Session execution plan consumes that owner rather than keeping its
+  own array and rowless-component mapping.
+- The pure Day/Week projection orders components through the same owner before
+  it mints visible parts. Membership, rows, dose, programming and completion are
+  unchanged.
+- Derived Movement Prep remains first and keeps the flame. Typed standalone or
+  athlete-added Mobility remains Mobility with its person icon.
+
+Regression and liveness receipt:
+
+- Red first: the pure typed component boundary received the extractor's
+  `Speed / Strength / Conditioning` arrival order; `test:projection-ownership`
+  then failed on the Day/Week structural order with exactly that sequence.
+  Sam's photographed session is the reachability witness, rather than a
+  hand-seeded athlete state.
+- After: `test:projection-ownership` is 14 / 14 and requires the exact typed
+  Day/Week projection to return `Strength / Speed / Conditioning`, preserving
+  all three part identities.
+- `test:day-first-timeline` is 56 / 56 and proves the Day renderer mounts its
+  owned Movement Prep before every projected part and preserves projection
+  order without filtering or re-sorting.
+- `test:week-board` passes every ordering/part-conservation cell; the command
+  remains 84 / 85 on one inherited adapter-plan assertion unrelated to this
+  change.
+- The active Session regressions jointly require derived Movement Prep first
+  and `Strength / Speed / Conditioning` for the programmed sections; the
+  existing speed fixture remains unchanged.
+- `test:session-execution` retains two inherited source-shape failures unrelated
+  to this change: upright exercise-name typography and the conditioning card's
+  trailing completion owner. All section-order cells pass.
+- `test:session-execution-checklist` reaches and passes
+  `test:movement-prep-identity` 10 / 10, then stops on those same two inherited
+  `test:session-execution` failures; because the script is an `&&` chain it does
+  not reach `test:mobility-flow` or `test:results-persist` in this run.
+- `test:session-template` passes every Speed/order cell and remains 87 / 88 on
+  one inherited numeric-index source assertion.
+- `test:surface-agreement` remains 3 / 5 on two inherited G+1-rest projection
+  assertions; neither failure involves section order.
+- `test:compile`: product 0 and devtools 0 errors. The gate remains red on four
+  inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+- `test:law-registry`: R-297 is well formed, resolved and guarded. The registry
+  remains red only on the inherited 21 `UNENFORCED` rows: 231 total / 210
+  guarded.
+- `test:ruling-registry` finds no R-297-specific defect and retains its inherited
+  missing R-070 file, UNENFORCED ceiling and uncited-question failures.
+
+R-297 and `LAW-one-session-section-order-on-session-day-and-week` bind the rule
+to the chained `test:projection-ownership + test:session-execution-checklist`
+gates.
+
+NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
+Dynamic Type, VoiceOver reading order, a standalone speed-only day, and a
+whole-app PASS. Neither physical phone was touched.

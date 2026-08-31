@@ -740,10 +740,12 @@ ok('[7] and moving it re-orders nothing else',
 // ── THE PROJECTION OWNS IT, AND THE OWNER SAYS SO.
 const checklistOwner = fs.readFileSync(
   path.resolve(__dirname, '..', 'utils', 'sessionExecutionChecklist.ts'), 'utf8');
+const sectionOrderOwner = fs.readFileSync(
+  path.resolve(__dirname, '..', 'utils', 'sessionSectionOrder.ts'), 'utf8');
 ok('[7] the projection routes the power ROLE into strength',
   /item\.role === 'power'\) return 'strength'/.test(checklistOwner));
 ok('[7] a rowless power COMPONENT lands in strength too',
-  /component\.kind === 'power' \? 'strength'/.test(checklistOwner));
+  /power:\s*'strength'/.test(sectionOrderOwner));
 // ⚠ AND THE PROJECTION KEEPS NO ORDERING AUTHORITY OF ITS OWN. This is the
 // deleted sort's gate: re-introducing one here is what this cell forbids.
 ok('[7] the projection sorts nothing — the composition owner still owns order',
@@ -752,16 +754,16 @@ ok('[7] the projection sorts nothing — the composition owner still owns order'
 // unused. Read the two structures, never the prose: the comment above them
 // names the retired section on purpose, so future readers know what moved.
 const sectionIdUnion = checklistOwner.slice(
-  checklistOwner.indexOf('export type SessionExecutionSectionId'),
+  checklistOwner.indexOf("export type { SessionExecutionSectionId }"),
   checklistOwner.indexOf('export interface SessionExecutionItem'));
 const sectionLabelMap = checklistOwner.slice(
   checklistOwner.indexOf('const SECTION_LABELS'),
-  checklistOwner.indexOf('const SECTION_ORDER'));
-const sectionOrderList = checklistOwner.slice(
-  checklistOwner.indexOf('const SECTION_ORDER'),
-  checklistOwner.indexOf('];', checklistOwner.indexOf('const SECTION_ORDER')));
+  checklistOwner.indexOf('function sectionPresentation'));
+const sectionOrderList = sectionOrderOwner.slice(
+  sectionOrderOwner.indexOf('SESSION_EXECUTION_SECTION_ORDER'),
+  sectionOrderOwner.indexOf('] as const'));
 ok('[7] CONTROL — the three declarations under test were all found',
-  sectionIdUnion.includes("| 'strength'") && sectionLabelMap.includes('strength:')
+  sectionIdUnion.includes('SessionExecutionSectionId') && sectionLabelMap.includes('strength:')
     && sectionOrderList.includes("'strength'"));
 ok('[7] the Power / Primer section is gone from the type, the labels and the order',
   !/\|\s*'power'/.test(sectionIdUnion)

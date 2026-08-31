@@ -35,7 +35,8 @@
 
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
-import { getSessionComponents } from '../utils/sessionComponents';
+import { getSessionComponents, type SessionComponent } from '../utils/sessionComponents';
+import { orderSessionComponentsForExecution } from '../utils/sessionSectionOrder';
 import { composeDayDetail, type ComposedDayDetail } from '../utils/dayDetailComposition';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
@@ -753,7 +754,29 @@ function partsForWorkout(
   onDay: VisibleDayKind,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
-  const components = getSessionComponents(workout);
+  return projectSessionComponentsForDay({
+    date,
+    components: getSessionComponents(workout),
+    onDay,
+  });
+}
+
+/**
+ * The typed component-to-part boundary shared by Day and Week.
+ *
+ * Components are legal domain inputs, not a seeded athlete state. Keeping this
+ * boundary callable lets its order be guarded without manufacturing a stored
+ * athlete state; Sam's photographed session is the reachability witness.
+ */
+export function projectSessionComponentsForDay(args: {
+  date: string;
+  components: readonly SessionComponent[];
+  onDay: VisibleDayKind;
+}): ProjectedDayParts['parts'] {
+  // The component extractor owns membership, not presentation order. It
+  // currently emits Speed before Strength; the execution-section owner is what
+  // all athlete-facing surfaces must follow.
+  const components = orderSessionComponentsForExecution(args.components);
   /*
    * ⚠ **TWO STRENGTH COMPONENTS ARE ONE STRENGTH PART — SAM, 2026-08-20.**
    *
@@ -785,11 +808,11 @@ function partsForWorkout(
   for (const component of components) {
     const componentId = String(component.id);
     if (foldsIntoStrength.has(componentId)) continue;
-    const kind = partKind(component.kind, onDay);
+    const kind = partKind(component.kind, args.onDay);
     parts.push({
-      id: partIdFor(date, componentId),
+      id: partIdFor(args.date, componentId),
       kind,
-      capabilities: partCapabilities(componentId, kind, onDay),
+      capabilities: partCapabilities(componentId, kind, args.onDay),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],
     });
   }

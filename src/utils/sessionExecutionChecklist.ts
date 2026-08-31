@@ -11,6 +11,13 @@ import {
   type RowIconKind,
 } from '../rules/sectionIconKinds';
 import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
+import {
+  executionSectionForComponentKind,
+  SESSION_EXECUTION_SECTION_ORDER,
+  type SessionExecutionSectionId,
+} from './sessionSectionOrder';
+
+export type { SessionExecutionSectionId } from './sessionSectionOrder';
 
 /**
  * ⚠ **THERE IS NO `power` SECTION — SAM, 2026-08-20 (R-110).**
@@ -27,18 +34,6 @@ import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
  * policy still reads `powerRows()`. What changed is which disclosure the row is
  * projected into and where it sits inside it — nothing else.
  */
-export type SessionExecutionSectionId =
-  | 'mobility'
-  | 'speed'
-  | 'strength'
-  | 'primer'
-  | 'accessories'
-  | 'conditioning'
-  | 'team_training'
-  | 'recovery'
-  | 'optional'
-  | 'other';
-
 export interface SessionExecutionItem {
   id: string;
   sectionId: SessionExecutionSectionId;
@@ -347,11 +342,6 @@ function sectionPresentation(
    `rules/dayTimeline`'s copy — two tables answering one question, which is the
    defect R-116 was written about. */
 
-const SECTION_ORDER: SessionExecutionSectionId[] = [
-  'mobility', 'primer', 'strength', 'accessories', 'speed', 'conditioning',
-  'team_training', 'recovery', 'optional', 'other',
-];
-
 /**
  * ⚠ **NOTHING HERE ORDERS THE STRENGTH SECTION, AND THAT IS DELIBERATE.**
  *
@@ -504,15 +494,9 @@ export function buildSessionExecutionPlan(args: {
     if (items.some((item) => item.componentId === component.id)) continue;
     items.push({
       id: `component:${component.id}`,
-      sectionId: component.kind === 'recovery' ? 'recovery'
-        : component.kind === 'mobility' ? 'mobility'
-        : component.kind === 'speed' ? 'speed'
-        : component.kind === 'conditioning' || component.kind === 'finisher' ? 'conditioning'
-        : component.kind === 'team_training' ? 'team_training'
-        // R-110 — a rowless power component opens Strength, same as a row does.
-        : component.kind === 'power' ? 'strength'
-        : component.kind === 'strength' ? 'strength'
-        : 'other',
+      // The same typed component-to-section owner orders Day and Week. This is
+      // a fallback for a component with no template row, not a second policy.
+      sectionId: executionSectionForComponentKind(component.kind),
       componentId: component.id,
       label: component.label,
       templateIndex: null,
@@ -523,7 +507,7 @@ export function buildSessionExecutionPlan(args: {
   // The existing row-level composed identity survives combined days. It owns
   // both the visible section and the Add context; the day's purity marker does
   // not. No name parsing or new programming classification is involved.
-  const sections = SECTION_ORDER.map((id) => {
+  const sections = SESSION_EXECUTION_SECTION_ORDER.map((id) => {
     const ownItems = items.filter((item) => item.sectionId === id);
     const kinds = new Set(ownItems.flatMap(item => {
       const templateItem = item.templateIndex === null ? null : args.template.items[item.templateIndex];

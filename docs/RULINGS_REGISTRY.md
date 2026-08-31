@@ -7449,3 +7449,23 @@ Guard: `LAW-one-medicine-ball-equipment-answer` through the chained
 `test:equipment-vocabulary + test:equipment-answer + test:exercise-intake +
 test:power-pool` gates. Verification status and NOT COVERED:
 `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-297** · One session-section order on Session, Day and Week, 2026-08-31.
+
+Owner: selectionrepair. Every athlete-facing program view presents an ordinary
+combined session in this order:
+
+`Movement Prep → Strength → Speed → Conditioning`
+
+The derived Movement Prep flow is mounted first. Stored workout components then
+follow the same typed execution-section order on the active Session, Day and
+Week views. The component extractor continues to own membership and programming
+semantics; its internal arrival order is not athlete-facing presentation policy.
+
+A typed standalone or athlete-added Mobility session retains the `Mobility`
+name and mobility-person icon ruled in R-294. This ruling changes no selection,
+dose, exposure credit, placement, completion or feedback policy.
+
+Guard: `LAW-one-session-section-order-on-session-day-and-week` through the
+chained `test:projection-ownership + test:session-execution-checklist` gates.
+Verification status and NOT COVERED: `docs/STATUS_SELECTIONREPAIR.md`.

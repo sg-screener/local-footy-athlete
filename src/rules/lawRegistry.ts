@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-one-session-section-order-on-session-day-and-week',
+    law: 'R-297: the active Session, Day and Week views share one typed execution-section order: derived Movement Prep, Strength, Speed, then Conditioning. The component extractor owns membership, never athlete-facing order; standalone or athlete-added Mobility keeps its separate typed identity.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-297',
+    guard: {
+      state: 'guarded',
+      by: 'test:projection-ownership + test:session-execution-checklist',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Two options were compared: sort Day and Week locally after projection, or extract the active Session execution-section order into one pure typed owner and make both execution and projection consume it. The shared owner landed. Red first: the pure typed component boundary received the extractor\'s Speed / Strength / Conditioning arrival order and the new projection cell failed with exactly that Day/Week order; Sam\'s photographed session is the reachability witness rather than a hand-seeded athlete state. After: structural projection returns Strength / Speed / Conditioning, while the existing Day renderer mounts Movement Prep before every projected part and the active Session plan returns Movement Prep / Strength / Speed / Conditioning. Changing the shared order back to Speed before Strength kills the named projection cell. NOT COVERED: physical-phone pixels after this checkpoint, Dynamic Type, VoiceOver and standalone speed-only presentation.',
+    },
+  },
+  {
     id: 'LAW-one-medicine-ball-equipment-answer',
     law: 'R-296: onboarding, Profile and temporary-equipment surfaces expose one Medicine ball answer. That answer permits every approved medicine-ball throw and slam; wall suitability, slam rating and floor/space are athlete judgement, not separate capabilities. New saves use only medicine_ball and older split answers lift at read.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-296',
@@ -2499,8 +2510,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-session-speed-rows-and-order',
-    law: 'A workout carrying a typed speed block renders the block\'s actual prescribed rows in a Speed execution section, never as a generic Session / speed work fallback. The section uses the established session-section and prescription-card treatment. The active-session order is Mobility / Warm-up, Strength, Speed, then Conditioning. Presentation does not alter speed selection, dose or exposure credit.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-287 — Sam required speed work to match the other session sections and sit immediately before Conditioning, after Strength; this supersedes the older screen-order note that put Speed before lifting.',
+    law: 'A workout carrying a typed speed block renders the block\'s actual prescribed rows in a Speed execution section, never as a generic Session / speed work fallback. The section uses the established session-section and prescription-card treatment. The active-session order is Movement Prep, Strength, Speed, then Conditioning. Presentation does not alter speed selection, dose or exposure credit.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-287 — Sam required speed work to match the other session sections and sit immediately before Conditioning, after Strength; R-294 renamed the derived warm-up section Movement Prep, and R-297 extended the same order to Day and Week.',
     guard: {
       state: 'guarded',
       by: 'test:session-template + test:session-execution',
