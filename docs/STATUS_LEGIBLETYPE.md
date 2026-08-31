@@ -125,10 +125,11 @@ step. Visual inspection found no clipped, overlapping or truncated text:
 
 ## NOT COVERED (R-278 starting boundary)
 
-- The focused Day-card cell now passes and signed-copy extraction is 7/7. The
-  Day timeline command is 55 passed / 1 inherited generated-Gunshow failure;
-  the law registry is 13 passed / 1 inherited failure for its 21 named
-  UNENFORCED rows.
+- The focused Day-card cell now passes and signed-copy extraction is 7/7. After
+  concurrent generator work removed the prior Gunshow red, the Day timeline
+  section is 56/0; its chained Week-board section is 84/1 on an unrelated
+  adapter-plan fixture. The law registry is 13 passed / 1 inherited failure for
+  its 21 named UNENFORCED rows.
 - The first simulator selector tried to locate the child Text by its exact
   sentence, but this composite accessible card exposes only its parent id to
   Maestro. That was an instrument miss, not a copy result: its failure
@@ -137,8 +138,10 @@ step. Visual inspection found no clipped, overlapping or truncated text:
 - Visual inspection on iPhone 17 Pro / iOS 26.3 shows the new sentence in full
   over three balanced lines, with no clipping or collision; Tired and Sick are
   unchanged.
+- Deliberate post-commit mutation changed only `your` back to `an`. The Day
+  suite went from 56/0 to 55/1 and named the exact Injured-copy cell; restoring
+  the word returned that section to 56/0.
 
 ## NOT COVERED (R-278 current boundary)
 
-- Deliberate post-commit mutation, physical iPhone, Dynamic Type, VoiceOver and
-  Android.
+- Physical iPhone, Dynamic Type, VoiceOver and Android.
