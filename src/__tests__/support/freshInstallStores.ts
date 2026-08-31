@@ -28,6 +28,7 @@ import { useReadinessStore } from '../../store/readinessStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
+import { useWorkoutLogStore } from '../../store/workoutLogStore';
 import { createEmptyReversibleAdjustmentLedger } from '../../rules/reversibleAdjustmentLedger';
 import type { OnboardingData } from '../../types/domain';
 
@@ -43,6 +44,10 @@ export function resetStoresToFreshInstall(reason: string): void {
   // write over answered prefs, and a fresh install must not bypass the owners.
   useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
+  // The set logger is keyed by stable workout-row ids. Leaving it alive hands
+  // the next synthetic athlete the previous athlete's performed loads whenever
+  // their generated rows reuse an id, contaminating progression and audits.
+  useWorkoutLogStore.getState().clear();
   // R-132: the session stopwatch — a fresh install has timed nothing. The
   // write also gives the store its persistence envelope, which is what the
   // persisted-inputs schema measures declarations against.

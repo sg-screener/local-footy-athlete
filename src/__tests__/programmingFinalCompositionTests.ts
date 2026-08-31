@@ -7,6 +7,8 @@ import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { resolveComposedDose } from '../rules/composedDose';
 import { decideBlockBoundaryLoads, type BlockHistorySignal } from '../rules/blockBoundaryProgression';
 import { applyStrengthProgression, DEFAULT_PROGRESSION_CONTEXT } from '../utils/strengthProgressionIntegration';
+import { resetStoresToFreshInstall } from './support/freshInstallStores';
+import { useWorkoutLogStore } from '../store/workoutLogStore';
 
 let passed = 0;
 function check(name: string, fn: () => void): void {
@@ -127,6 +129,16 @@ check('weekly strength progression cannot overload a typed shoulder-prehab row',
     [2, 6, 8, 8],
   );
   assert.equal(progressed._progressionResults?.['Bottoms-Up KB Press'], undefined);
+});
+
+check('a fresh synthetic athlete cannot inherit the previous athlete workout log', () => {
+  useWorkoutLogStore.getState().logSet('shared-row-id', {
+    id: 'male:set:1', workoutExerciseId: 'shared-row-id', setNumber: 1,
+    actualReps: 6, actualWeightKg: 20,
+  } as never);
+  assert.equal(useWorkoutLogStore.getState().loggedSets.size, 1);
+  resetStoresToFreshInstall('programming-selection-audit:next-athlete');
+  assert.equal(useWorkoutLogStore.getState().loggedSets.size, 0);
 });
 
 console.log(`programming final composition: ${passed} passed`);

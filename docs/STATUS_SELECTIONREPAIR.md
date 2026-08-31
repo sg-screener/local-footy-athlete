@@ -481,15 +481,24 @@ instead of 2 × 6–8 and a qualifying 8 kg history produced
 
 The corrected year then found a second progression owner: weekly strength
 progression looked only at the movement name, classified the typed
-`shoulder_prehab` row as a secondary vertical press, and changed its 8 kg load
-to 7.5 kg before later history reached 20 kg. A third red-first cell reproduced
-that exact route (`8 → 7.5`). The shared row predicate now requires both an
-eligible exercise identity and an eligible compiler route; typed shoulder
-prehab is excluded from weekly overload without naming or capping an exercise.
+`shoulder_prehab` row as a secondary vertical press, and changed an 8 kg test
+row to 7.5 kg. A third red-first cell reproduced that exact route (`8 → 7.5`).
+The shared row predicate now requires both an eligible exercise identity and an
+eligible compiler route; typed shoulder prehab is excluded from weekly overload
+without naming or capping an exercise.
+
+That real leak was not the audit's remaining 20 kg value. A female-only 18-week
+journey kept every Bottoms-Up occurrence and logged performance at 8 kg. The
+value became 20 kg only when the male athlete ran first in the same process:
+`resetStoresToFreshInstall` cleared program feedback and weight overrides but
+not `workoutLogStore.loggedSets`, whose stable row ids let the second synthetic
+athlete inherit the first one's performed sets. The total fresh-install owner
+now calls the workout-log store's own `clear()` door. Its red-first cell was
+`loggedSets.size 1 !== 0`; it is now zero after reset.
 
 Verification:
 
-- `test:programming-final-composition`: 5 / 5.
+- `test:programming-final-composition`: 6 / 6.
 - `test:block-two-progression`: 41 / 41.
 - `test:pools`: the same 478 / 4 baseline as clean checkpoint `959a9b87`; its
   four stale caution/pin expectations are unrelated to dose or progression.
