@@ -938,3 +938,41 @@ athlete profiles beyond the preserved male/female inputs, clinical validation
 of injury programming, and a whole-app PASS. Every requested implementation and
 audit step is complete; athlete-facing DONE remains blocked only on Sam's L10
 device acceptance.
+
+## 2026-08-31 — latest Release rebuilt and installed on Sam's phone
+
+Sam explicitly requested the latest build on his phone. Device discovery found
+two paired devices and targeted only the available iPhone 16 Pro Max owned by
+Sam (`AFA21856-881E-587B-96D5-60817FD11018`). Renee's iPhone was unavailable
+and was not targeted.
+
+- Product checkpoint: `bf97b1790e51cae2f321f9cee9ce6237422749df`.
+  Product source (`src`, `ios`, `package.json`, `app.json`) was clean before and
+  after the build; unrelated shared docs/untracked files were untouched.
+- Fresh `xcodebuild clean build`, Release/iphoneos, with isolated DerivedData:
+  exit 0 and `BUILD SUCCEEDED`.
+- Artifact:
+  `/private/tmp/lfa-phone-bf97b179.IrTKQl/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app`.
+- Bundle: `com.localfootyathlete.app`, version `1.0.0 (1)`. Embedded standalone
+  `main.jsbundle`: 8,396,475 bytes, SHA-256
+  `15b06c87977a2d08b4841d7a65dc869427cc68c9ac91ab4f96d50780117d77eb`.
+- Executable SHA-256:
+  `73e64e798fde57535fe999b104723f305a4a8367e1792aefc7cb1d84a2feb61d`.
+- Strict/deep code-sign verification passed. The bundle is signed by Apple
+  Development: Samuel Geurts for team `66M7FZ6G37`.
+- `devicectl device install app` returned success and installed bundle container
+  `6D1165A9-9B6C-4B8C-9F0D-789A11674A25` as an in-place upgrade. No uninstall,
+  reset, app-data clearing or data-container operation was performed.
+- Launch returned success with PID 36315. A later device process snapshot still
+  contained the exact installed `LocalFootyAthlete` executable, so it did not
+  crash immediately on boot. The installed-app query reports version 1.0.0,
+  bundle version 1.
+
+BLOCKED-BY: sam — glass acceptance. Exact question: can you confirm that your
+existing profile/week is intact, then check an added Primer contains only seven
+short/low-fatigue rows and that the affected injury day reads
+`Injury-Adjusted Session` with sensible off-feet conditioning?
+
+NOT COVERED: Sam's visual/tap acceptance, native onboarding, clinical
+validation, Dynamic Type/VoiceOver, or any whole-app device sweep. Build,
+in-place installation, installed-version query and launch were covered.
